@@ -149,33 +149,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                 // TextArea doesn't lose selection on focus lost, whereas the TextField does.
                 final TextArea textArea = getNode();
                 if (textArea.isFocused()) {
-                    if (PlatformUtil.isIOS()) {
-                        // Special handling of focus on iOS is required to allow to
-                        // control native keyboard, because native keyboard is popped-up only when native
-                        // text component gets focus. When we have JFX keyboard we can remove this code
-                        final Bounds bounds = textArea.getBoundsInParent();
-                        double w = bounds.getWidth();
-                        double h = bounds.getHeight();
-                        Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
-                        String text = textArea.textProperty().getValueSafe();
-
-                        // we need to display native text input component on the place where JFX component is drawn
-                        // all parameters needed to do that are passed to native impl. here
-                        WindowHelper.getPeer(textArea.getScene().getWindow()).requestInput(
-                                text, TextFieldBehavior.TextInputTypes.TEXT_AREA.ordinal(), w, h,
-                                trans.getMxx(), trans.getMxy(), trans.getMxz(), trans.getMxt(),
-                                trans.getMyx(), trans.getMyy(), trans.getMyz(), trans.getMyt(),
-                                trans.getMzx(), trans.getMzy(), trans.getMzz(), trans.getMzt());
-                    }
                     if (!focusGainedByMouseClick) {
                         setCaretAnimating(true);
                     }
                 } else {
 //                    skin.hideCaret();
-                    if (PlatformUtil.isIOS() && textArea.getScene() != null) {
-                        // releasing the focus => we need to hide the native component and also native keyboard
-                        WindowHelper.getPeer(textArea.getScene().getWindow()).releaseInput();
-                    }
                     focusGainedByMouseClick = false;
                     setCaretAnimating(false);
                 }

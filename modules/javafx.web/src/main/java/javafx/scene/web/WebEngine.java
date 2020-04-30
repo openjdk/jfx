@@ -326,6 +326,12 @@ window.setMember("app", javaApp);
  * unconditionally.
  * </p>
  *
+ * <p>
+ * Starting with JavaFX 14, <a href="https://tools.ietf.org/html/rfc7540">HTTP/2</a> support has been added to WebEngine.
+ * This is achieved by using {@link java.net.http.HttpClient} instead of {@link URLConnection}. HTTP/2 is activated
+ * by default when JavaFX 14 (or later) is used with JDK 12 (or later).
+ * </p>
+ *
  * <p><b>Threading</b></p>
  * <p>{@code WebEngine} objects must be created and accessed solely from the
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript

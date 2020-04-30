@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,35 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.skin;
+package javafx.scene.control.skin;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.control.TextField;
 
-public class TextAreaSkinAndroid extends TextAreaSkin {
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import javafx.scene.control.skin.TextFieldSkin;
 
-    public TextAreaSkinAndroid(final TextArea textArea) {
-        super(textArea);
+public class TextFieldSkinAndroid extends TextFieldSkin {
 
-        textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
+    public TextFieldSkinAndroid(final TextField textField) {
+        super(textField);
+
+        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
             public void changed(ObservableValue<? extends Boolean> observable,
                     Boolean wasFocused, Boolean isFocused) {
-                if (textArea.isEditable()) {
+                if (textField.isEditable()) {
                     if (isFocused) {
-                        com.sun.glass.ui.android.SoftwareKeyboard.show();
+                        showSoftwareKeyboard();
                     } else {
-                        com.sun.glass.ui.android.SoftwareKeyboard.hide();
+                        hideSoftwareKeyboard();
                     }
                 }
             }
         });
     }
+
+    native void showSoftwareKeyboard();
+    native void hideSoftwareKeyboard();
+
 }

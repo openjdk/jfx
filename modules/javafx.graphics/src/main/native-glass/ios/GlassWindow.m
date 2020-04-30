@@ -213,6 +213,55 @@ static inline void setWindowFrame(GlassWindow *window, CGFloat x, CGFloat y, CGF
 +(GlassMainView *) getMasterWindowHost {
     return masterWindowHost;
 }
+
+- (BOOL) canBecomeFirstResponder {return YES;}
+
+- (BOOL)hasText {
+        return YES;
+}
+
+- (void)insertText:(NSString *)theText {
+    const char * inputString = [theText UTF8String];
+    for(GlassViewGL * subView in [self->hostView subviews]) {
+        if(subView != nil && [subView isKindOfClass:[GlassViewGL class]] == YES) {
+            [subView doInsertText:theText];
+        }
+    }
+}
+
+- (void)deleteBackward {
+    for(GlassViewGL * subView in [self->hostView subviews]) {
+        if(subView != nil && [subView isKindOfClass:[GlassViewGL class]] == YES) {
+            [subView doDeleteBackward];
+        }
+    }
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextFieldSkinIos_showSoftwareKeyboard
+(JNIEnv *env, jobject jTextFieldSkin)
+{
+    [focusOwner becomeFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextFieldSkinIos_hideSoftwareKeyboard
+(JNIEnv *env, jobject jTextFieldSkin)
+{
+    [focusOwner resignFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextAreaSkinIos_showSoftwareKeyboard
+(JNIEnv *env, jobject jTextAreaSkin)
+{
+    [focusOwner becomeFirstResponder];
+}
+
+JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextAreaSkinIos_hideSoftwareKeyboard
+(JNIEnv *env, jobject jTextAreaSkin)
+{
+    [focusOwner resignFirstResponder];
+}
+
+
 // request subviews to repaint
 - (void) displaySubviews
 {
@@ -1631,25 +1680,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1requestInput
     jdouble myx, jdouble myy, jdouble myz, jdouble myt,
     jdouble mzx, jdouble mzy, jdouble mzz, jdouble mzt)
 {
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-
-    GlassWindow *window = getGlassWindow(env, ptr);
-
-    const char *str;
-    str = (*env)->GetStringUTFChars(env, text, NULL);
-    if (str == nil) {
-        return;
-    }
-    NSString *nsstr = [NSString stringWithUTF8String:str];
-    (*env)->ReleaseStringUTFChars(env, text, str);
-
-    [window requestInput:nsstr type:(int)type width:(double)width height:(double)height
-                     mxx:(double)mxx mxy:(double)mxy mxz:(double)mxz mxt:(double)mxt
-                     myx:(double)myx myy:(double)myy myz:(double)myz myt:(double)myt
-                     mzx:(double)mzx mzy:(double)mzy mzz:(double)mzz mzt:(double)mzt];
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
+    fprintf(stderr, "We should never be here!\n");
+    return;
 }
 
 

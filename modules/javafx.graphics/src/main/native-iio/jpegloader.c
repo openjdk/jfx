@@ -1392,14 +1392,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading the header. */
-        disposeIIO(env, data);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
                     buffer);
             ThrowByName(env, "java/io/IOException", buffer);
         }
-
+        disposeIIO(env, data);
         return 0;
     }
 

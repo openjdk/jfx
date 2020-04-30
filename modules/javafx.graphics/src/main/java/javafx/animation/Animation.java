@@ -28,6 +28,8 @@ package javafx.animation;
 import java.util.HashMap;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -758,10 +760,9 @@ public abstract class Animation {
 
         lastPlayedFinished = false;
 
-        final Duration totalDuration = getTotalDuration();
-        time = time.lessThan(Duration.ZERO) ? Duration.ZERO : time
-                .greaterThan(totalDuration) ? totalDuration : time;
-        final long ticks = fromDuration(time);
+        double millis = time.isIndefinite() ? getCycleDuration().toMillis() :
+            Utils.clamp(0, time.toMillis(), getTotalDuration().toMillis());
+        long ticks = TickCalculation.fromMillis(millis);
 
         if (getStatus() == Status.STOPPED) {
             syncClipEnvelope();

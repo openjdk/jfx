@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,15 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
+package myapp1;     // verbatim from myapp6
 
-#import "GlassView.h"
+public class Constants {
 
-// 2D version of Glass providing Quartz context
-@interface GlassView2D : NSView <GlassView>
-{
-        GlassViewDelegate        *delegate;
+    public static final int SHOWTIME = 2500;
 
-    NSTrackingArea      *trackingArea;
+    // NOTE: these constants must match those in test.launchertest.Constants
+    public static final int ERROR_NONE = 2;
+    public static final int ERROR_UNEXPECTED_EXCEPTION = 4;
+
+    public static final int ERROR_ASSERTION_FAILURE = 28;
 }
-
-- (void)setFrameOrigin:(NSPoint)newOrigin;
-
-@end

@@ -35,7 +35,7 @@ static jclass jAndroidInputDeviceRegistryClass;
 static jclass jMonocleWindowManagerClass;
 
 static jmethodID monocle_gotTouchEventFromNative;
-static jmethodID monocle_gotKeyEventFromNative;
+static jmethodID monocle_dispatchKeyEventFromNative;
 static jmethodID monocle_repaintAll;
 static jmethodID monocle_registerDevice;
 
@@ -57,9 +57,9 @@ void initializeFromJava (JNIEnv *env) {
     monocle_gotTouchEventFromNative = (*env)->GetStaticMethodID(
                                             env, jAndroidInputDeviceRegistryClass, "gotTouchEventFromNative",
                                             "(I[I[I[I[II)V");
-    monocle_gotKeyEventFromNative = (*env)->GetStaticMethodID(
-                                            env, jAndroidInputDeviceRegistryClass, "gotKeyEventFromNative",
-                                            "(II)V");
+    monocle_dispatchKeyEventFromNative = (*env)->GetStaticMethodID(
+                                            env, jAndroidInputDeviceRegistryClass, "dispatchKeyEventFromNative",
+                                            "(II[CI)V");
     monocle_registerDevice = (*env)->GetStaticMethodID(env, jAndroidInputDeviceRegistryClass, "registerDevice","()V");
     GLASS_LOG_FINE("Initializing native Android Bridge done");
 }
@@ -116,7 +116,23 @@ void androidJfx_gotTouchEvent (int count, int* actions, int* ids, int* xs, int* 
 
     (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_gotTouchEventFromNative,
             jcount, jactions, jids, jxs, jys, primary);
+}
 
+void androidJfx_gotKeyEvent (int action, int keyCode, jchar* chars, int count, int mods) {
+    initializeFromNative();
+    if (javaEnv == NULL) {
+        GLASS_LOG_FINE("javaEnv still null, not ready to process touch events");
+        return;
+    }
+    if (deviceRegistered == 0) {
+        deviceRegistered = 1;
+        GLASS_LOG_FINE("This is the first time we have a touch even, register device now");
+        (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_registerDevice);
+    }
+    jcharArray jchars = (*javaEnv)->NewCharArray(javaEnv, count);
+    (*javaEnv)->SetCharArrayRegion(javaEnv, jchars, 0, count, chars);
+    (*javaEnv)->CallStaticVoidMethod(javaEnv, jAndroidInputDeviceRegistryClass, monocle_dispatchKeyEventFromNative,
+                                     action, keyCode, jchars, mods);
 }
 
 void androidJfx_requestGlassToRedraw() {

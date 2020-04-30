@@ -71,7 +71,7 @@ std::unique_ptr<FontPlatformData> FontPlatformData::create(
             family,
             fontDescription.computedSize(),
             isItalic(fontDescription.italic()),
-            isFontWeightBold(fontDescription.weight()));
+            fontDescription.weight() >= boldWeightValue());
     return !wcFont ? nullptr : std::make_unique<FontPlatformData>(wcFont, fontDescription.computedSize());
 }
 
