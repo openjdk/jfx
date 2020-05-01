@@ -1249,14 +1249,14 @@ if (gradle.gradleVersion != jfxGradleVersion) {
 
 // Look for stub runtime in bundled sdk, standalone sdk, or boot JDK
 
-// Allows automatic provisioning of webkit+media shared libraries from an official OpenJfx build
+// Allows automatic provisioning of webkit+media shared libraries from an official OpenJFX build
 defineProperty("STUB_RUNTIME_OPENJFX", "")
 ext.IS_STUB_RUNTIME_OPENJFX = !STUB_RUNTIME_OPENJFX.isBlank()
 
 def String cachedBundledRuntime = cygpath("$projectDir") + "/../caches/modular-sdk"
 def String cachedStandaloneRuntime = cygpath("$projectDir") + "/../caches/sdk"
 def String jdkStubRuntime = cygpath("$JDK_HOME")
-def String openjfxStubRuntime = cygpath("$projectDir") + "/build/openjfxStub"
+def String openjfxStubRuntime = cygpath("$projectDir") + "/buildSrc/build/openjfxStub"
 
 def defaultStubRuntime = ""
 if (file(cachedBundledRuntime).exists()) {
@@ -4335,7 +4335,7 @@ compileTargets { t ->
 
 /******************************************************************************
  *                                                                            *
- *                             OpenJfx Stubs                                  *
+ *                             OpenJFX Stubs                                  *
  *                                                                            *
  *****************************************************************************/
 
@@ -4351,7 +4351,7 @@ if (IS_STUB_RUNTIME_OPENJFX) {
     }
 }
 
-// Extract binary libraries from OpenJfx artifacts for use as stubs
+// Extract binary libraries from OpenJFX artifacts for use as stubs
 task prepOpenJfxStubs(type: Copy) {
     enabled = IS_STUB_RUNTIME_OPENJFX
 

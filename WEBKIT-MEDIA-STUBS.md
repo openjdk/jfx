@@ -17,25 +17,23 @@ If you are not actively working on these sources, you may want to cache the outp
 
 ## Cached libraries
 
-You can place WebKit and Media shared libraries in these folders:
+You can manually place WebKit and Media shared libraries in these folders:
 
-* Unix libraries (*.so or *.dynlib files)
+* Unix libraries (*.so or *.dylib files)
 ````
     $projectDir/../caches/sdk/lib
-    $projectDir/../caches/modular-sdk/modules_libs/$module
-    $JDK_HOME/lib
 ````
 
 * Windows libraries (*.dll files)
 ````
     $projectDir/../caches/sdk/bin
-    $projectDir/../caches/modular-sdk/modules_libs/$module
-    $JDK_HOME/bin
 ````
 
 ## Officially released libraries
 
-You can use officially released libraries by specifying this Gradle property:
+Gradle has a task to automate downloading officially released libraries from MavenCentral.
+
+You can enable the task by specifying this Gradle property:
 
     -PSTUB_RUNTIME_OPENJFX="15-ea+4"
 
@@ -50,4 +48,4 @@ Specify these options to Gradle
 
     -x :web:test
 
-Note that this is fine for local work. But a full test *is* required before submitting a PR, see CONTRIBUTING.md.
+Note that this is fine for local work. But a full test *is* required before submitting a PR, see [CONTRIBUTING.md](https://github.com/openjdk/jfx/blob/master/CONTRIBUTING.md).
