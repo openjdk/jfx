@@ -1249,7 +1249,8 @@ if (gradle.gradleVersion != jfxGradleVersion) {
 
 // Look for stub runtime in bundled sdk, standalone sdk, or boot JDK
 
-// Allows automatic provisioning of webkit+media shared libraries from an official OpenJFX build
+// Allows automatic provisioning of webkit+media shared libraries
+// from official OpenJFX releases, downloaded from MavenCentral
 defineProperty("STUB_RUNTIME_OPENJFX", "")
 ext.IS_STUB_RUNTIME_OPENJFX = !STUB_RUNTIME_OPENJFX.isBlank()
 
