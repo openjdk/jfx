@@ -42,6 +42,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import de.sandec.jmemorybuddy.JMemoryBuddy;
 
 /**
  *
@@ -157,65 +158,55 @@ public class ToggleButtonTest {
     }
 
     @Test public void toggleGroupViaGroupAddAndRemoveClearsReference() {
-        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+        JMemoryBuddy.memoryTest(checker -> {
+            toggleGroup.getToggles().add(toggle);
+            toggleGroup.getToggles().clear();
 
-        toggleGroup.getToggles().add(toggle);
-        toggleGroup.getToggles().clear();
-
-        toggle = null;
-        attemptGC(ref, 5);
-
-        assertNull(ref.get());
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
     }
 
     @Test public void toggleGroupViaToggleSetClearsReference() {
-        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+        JMemoryBuddy.memoryTest(checker -> {
+            toggle.setToggleGroup(toggleGroup);
+            toggle.setToggleGroup(null);
 
-        toggle.setToggleGroup(toggleGroup);
-        toggle.setToggleGroup(null);
-
-        toggle = null;
-        attemptGC(ref, 5);
-
-        assertNull(ref.get());
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
     }
 
     @Test public void toggleGroupViaToggleThenGroupClearsReference() {
-        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+        JMemoryBuddy.memoryTest(checker -> {
+            toggle.setToggleGroup(toggleGroup);
+            toggleGroup.getToggles().clear();
 
-        toggle.setToggleGroup(toggleGroup);
-        toggleGroup.getToggles().clear();
-
-        toggle = null;
-        attemptGC(ref, 5);
-
-        assertNull(ref.get());
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
     }
 
     @Test public void toggleGroupViaGroupThenToggleClearsReference() {
-        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+        JMemoryBuddy.memoryTest(checker -> {
+            toggleGroup.getToggles().add(toggle);
+            toggle.setToggleGroup(null);
 
-        toggleGroup.getToggles().add(toggle);
-        toggle.setToggleGroup(null);
-
-        toggle = null;
-        attemptGC(ref, 5);
-
-        assertNull(ref.get());
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
     }
 
     @Test public void toggleGroupSwitchingClearsReference() {
-        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+        JMemoryBuddy.memoryTest(checker -> {
+            ToggleGroup anotherToggleGroup = new ToggleGroup();
+            toggle.setToggleGroup(toggleGroup);
+            toggle.setToggleGroup(anotherToggleGroup);
+            toggle.setToggleGroup(null);
 
-        ToggleGroup anotherToggleGroup = new ToggleGroup();
-        toggle.setToggleGroup(toggleGroup);
-        toggle.setToggleGroup(anotherToggleGroup);
-        toggle.setToggleGroup(null);
-
-        toggle = null;
-        attemptGC(ref, 5);
-
-        assertNull(ref.get());
+            checker.assertCollectable(toggle);
+            toggle = null;
+        });
     }
 
     /*********************************************************************
@@ -253,22 +244,5 @@ public class ToggleButtonTest {
             PlatformLogger.getLogger(ToggleButtonTest.class.getName()).severe(null, ex);
         }
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
-    }
-
-    private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
-        // Attempt gc n times
-        for (int i = 0; i < n; i++) {
-            System.gc();
-            System.runFinalization();
-
-            if (weakRef.get() == null) {
-                break;
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                fail("InterruptedException occurred during Thread.sleep()");
-            }
-        }
     }
 }

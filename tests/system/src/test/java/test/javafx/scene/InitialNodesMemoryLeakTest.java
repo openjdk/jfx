@@ -85,17 +85,7 @@ public class InitialNodesMemoryLeakTest {
 
     @Test
     public void testRootNodeMemoryLeak() throws Exception {
-        for (int j = 0; j < 10; j++) {
-            System.gc();
-            System.runFinalization();
-
-            if (groupWRef.get() == null) {
-                break;
-            }
-
-            Util.sleep(500);
-        }
-        Assert.assertNull("Couldn't collect Node", groupWRef.get());
+        JMemoryBuddy.assertCollectable("groupWRef");
     }
 
     @AfterClass
