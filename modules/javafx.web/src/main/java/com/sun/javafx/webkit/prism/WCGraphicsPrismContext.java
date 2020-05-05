@@ -530,24 +530,29 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     render(g, shadow, paint, null, node);
                 } else if(state.getClipMaskImageNoClone() != null && (g instanceof MaskTextureGraphics)) {
                     MaskTextureGraphics mg = (MaskTextureGraphics)(g);
-                    RTTexture paintRtTexture = mg.getResourceFactory().createRTTexture((int)w, (int)h,
+                    Rectangle rect = new Rectangle((int)x,(int)y,(int)w,(int)h);
+                    Rectangle transformedRect = new Rectangle();
+                    state.getTransformNoClone().transform(rect, transformedRect);
+                    RTTexture paintRtTexture = mg.getResourceFactory().createRTTexture(
+                            (int) Math.ceil(transformedRect.width),
+                            (int) Math.ceil(transformedRect.height),
                             Texture.WrapMode.CLAMP_NOT_NEEDED);
                     Graphics g1 = paintRtTexture.createGraphics();
                     g1.setPaint(paint);
-                    g1.fillRect(x,y,w,h);
+                    g1.setTransform(PrismGraphicsManager.getPixelScaleTransform());
+                    g1.fillRect(0,0,paintRtTexture.getContentWidth(),paintRtTexture.getContentHeight());
 
                     RTImage maskImage = (RTImage)(state.getClipMaskImageNoClone());
-                    Image nativeMaskImage = maskImage.getImage();
+                    Image nativeMaskImage = Image.fromByteBgraPreData(maskImage.getPixelBuffer(), maskImage.getWidth(),
+                            maskImage.getHeight(), 0, maskImage.getPixelScale());
                     Texture maskTexture = mg.getResourceFactory().createTexture(nativeMaskImage, Texture.Usage.STATIC,
                             Texture.WrapMode.CLAMP_NOT_NEEDED);
                     RTTexture maskRtTexture = mg.getResourceFactory().createRTTexture(nativeMaskImage.getWidth(),
                             nativeMaskImage.getHeight(), Texture.WrapMode.CLAMP_NOT_NEEDED);
                     Graphics g2 = maskRtTexture.createGraphics();
+                    g2.setTransform(PrismGraphicsManager.getPixelScaleTransform());
                     g2.drawTexture(maskTexture, 0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
 
-                    Rectangle rect = new Rectangle((int)x,(int)y,(int)w,(int)h);
-                    Rectangle transformedRect = new Rectangle();
-                    state.getTransformNoClone().transform(rect, transformedRect);
                     mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
                             transformedRect.width, transformedRect.height, 0, 0, 0, 0);
                 } else {
