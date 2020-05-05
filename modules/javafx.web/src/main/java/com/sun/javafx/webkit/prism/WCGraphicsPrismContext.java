@@ -442,6 +442,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                               (int)c.getWidth(), (int)c.getHeight()));
     }
 
+    public void setClip(int cx, int cy, int cw, int ch, WCImage maskImage) {
+        setClip(new Rectangle(cx, cy, cw, ch));
+        state.setClipMaskImage(maskImage);
+    }
+
     public WCRectangle getClip() {
         Rectangle r = state.getClipNoClone();
         return r == null ? null : new WCRectangle(r.x, r.y, r.width, r.height);
@@ -523,6 +528,28 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, 0, 0);
                     render(g, shadow, paint, null, node);
+                } else if(state.getClipMaskImageNoClone() != null && (g instanceof MaskTextureGraphics)) {
+                    MaskTextureGraphics mg = (MaskTextureGraphics)(g);
+                    RTTexture paintRtTexture = mg.getResourceFactory().createRTTexture((int)w, (int)h,
+                            Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    Graphics g1 = paintRtTexture.createGraphics();
+                    g1.setPaint(paint);
+                    g1.fillRect(x,y,w,h);
+
+                    RTImage maskImage = (RTImage)(state.getClipMaskImageNoClone());
+                    Image nativeMaskImage = maskImage.getImage();
+                    Texture maskTexture = mg.getResourceFactory().createTexture(nativeMaskImage, Texture.Usage.STATIC,
+                            Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    RTTexture maskRtTexture = mg.getResourceFactory().createRTTexture(nativeMaskImage.getWidth(),
+                            nativeMaskImage.getHeight(), Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    Graphics g2 = maskRtTexture.createGraphics();
+                    g2.drawTexture(maskTexture, 0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+
+                    Rectangle rect = new Rectangle((int)x,(int)y,(int)w,(int)h);
+                    Rectangle transformedRect = new Rectangle();
+                    state.getTransformNoClone().transform(rect, transformedRect);
+                    mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
+                            transformedRect.width, transformedRect.height, 0, 0, 0, 0);
                 } else {
                     g.setPaint(paint);
                     g.fillRect(x, y, w, h);
@@ -1187,6 +1214,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         private GeneralTransform3D perspectiveTransform;
         private Layer layer;
         private int compositeOperation;
+        private WCImage clipMaskImage;
 
         private ContextState() {
             clip = null;
@@ -1212,6 +1240,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             setAlpha(state.getAlpha());
             setTextMode(state.isTextFill(), state.isTextStroke(), state.isTextClip());
             setCompositeOperation(state.getCompositeOperation());
+            setClipMaskImage(state.getClipMaskImageNoClone());
         }
 
         @Override
@@ -1244,6 +1273,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         private void setPaint(Paint paint) {
             this.paint = paint;
+        }
+
+        private void setClipMaskImage(WCImage image) {
+            this.clipMaskImage = image;
+        }
+
+        private WCImage getClipMaskImageNoClone() {
+            return clipMaskImage;
         }
 
         private Rectangle getClipNoClone() {

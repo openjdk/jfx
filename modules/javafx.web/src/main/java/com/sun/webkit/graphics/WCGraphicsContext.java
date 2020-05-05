@@ -98,6 +98,7 @@ public abstract class WCGraphicsContext {
     public abstract void setClip(WCPath path, boolean isOut);
     public abstract void setClip(int cx, int cy, int cw, int ch);
     public abstract void setClip(WCRectangle clip);
+    public abstract void setClip(int cx, int cy, int cw, int ch, WCImage maskImage);
     public abstract WCRectangle getClip();
 
     public abstract void drawRect(int x, int y, int w, int h);

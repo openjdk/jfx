@@ -305,6 +305,13 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
+    public void setClip(int cx, int cy, int cw, int ch, WCImage maskImage) {
+        logger.resumeCount("SETCLIP_IIII_MASK");
+        gc.setClip(cx, cy, cw, ch, maskImage);
+        logger.suspendCount("SETCLIP_IIII_MASK");
+    }
+
+    @Override
     public WCRectangle getClip() {
         logger.resumeCount("SETCLIP_IIII");
         WCRectangle r = gc.getClip();

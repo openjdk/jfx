@@ -52,6 +52,7 @@
 #include "RenderingQueue.h"
 #include "Font.h"
 #include "TransformationMatrix.h"
+#include "ImageBuffer.h"
 
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 #include "com_sun_webkit_graphics_WCPath.h"
@@ -255,9 +256,17 @@ void GraphicsContext::clip(const FloatRect& rect)
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
 }
 
-void GraphicsContext::clipToImageBuffer(ImageBuffer&, const FloatRect&)
+void GraphicsContext::clipToImageBuffer(ImageBuffer& imageBuffer, const FloatRect& rect)
 {
-    notImplemented();
+    if (paintingDisabled())
+        return;
+
+    RefPtr<Image> copiedImage = imageBuffer.copyImage(BackingStoreCopy::CopyBackingStore, PreserveResolution::Yes);
+    NativeImagePtr nativeImageObject = copiedImage->nativeImageForCurrentFrame(this);
+    m_state.clipBounds.intersect(m_state.transform.mapRect(rect));
+    platformContext()->rq().freeSpace(24)
+    << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII_MASK
+    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height() << nativeImageObject;
 }
 
 IntRect GraphicsContext::clipBounds() const

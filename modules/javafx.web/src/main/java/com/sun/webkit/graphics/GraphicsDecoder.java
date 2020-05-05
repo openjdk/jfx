@@ -85,6 +85,7 @@ public final class GraphicsDecoder  {
     @Native public final static int SET_MITER_LIMIT        = 54;
     @Native public final static int SET_TEXT_MODE          = 55;
     @Native public final static int SET_PERSPECTIVE_TRANSFORM = 56;
+    @Native public final static int SETCLIP_IIII_MASK      = 57;
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(GraphicsDecoder.class.getName());
@@ -232,6 +233,14 @@ public final class GraphicsDecoder  {
                         buf.getInt(),
                         buf.getInt(),
                         buf.getInt());
+                    break;
+                case SETCLIP_IIII_MASK:
+                    gc.setClip(
+                        buf.getInt(),
+                        buf.getInt(),
+                        buf.getInt(),
+                        buf.getInt(),
+                        (WCImage) gm.getRef(buf.getInt()));
                     break;
                 case DRAWRECT:
                     gc.drawRect(
