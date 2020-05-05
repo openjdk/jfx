@@ -1,4 +1,29 @@
-package de.sandec.jmemorybuddy;
+/*
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+package test.util.memory;
 
 import com.sun.management.HotSpotDiagnosticMXBean;
 import javax.management.MBeanServer;
@@ -17,6 +42,8 @@ public class JMemoryBuddy {
     static int steps = 10;
     static int overallTime = 1000;
     static int sleepTime = overallTime / steps;
+    static boolean createHeapdump = false;
+    static int garbageAmount = 999999;
     private static String MX_BEAN_PROXY_TYPE = "com.sun.management:type=HotSpotDiagnostic";
 
     static String outputFolderString = ".";
@@ -25,12 +52,14 @@ public class JMemoryBuddy {
         outputFolderString = System.getProperty("jmemorybuddy.output",".");
         overallTime = Integer.parseInt(System.getProperty("jmemorybuddy.checktime","1000"));
         steps = Integer.parseInt(System.getProperty("jmemorybuddy.steps", "10"));
+        createHeapdump = Boolean.parseBoolean(System.getProperty("jmemorybuddy.createHeapdump", "false"));
+        garbageAmount = Integer.parseInt(System.getProperty("jmemorybuddy.garbageAmount", "10"));
     }
 
     public static void createGarbage() {
         LinkedList list = new LinkedList<Integer>();
         int counter = 0;
-        while(counter < 999999) {
+        while(counter < garbageAmount) {
             counter += 1;
             list.add(1);
         }
@@ -81,13 +110,14 @@ public class JMemoryBuddy {
         }
     }
     public static boolean checkNotCollectable(WeakReference weakReference) {
+        createGarbage();
         System.gc();
         return weakReference.get() != null;
     }
 
     public static void memoryTest(Consumer<MemoryTestAPI> f) {
         LinkedList<WeakReference> toBeCollected = new LinkedList<WeakReference>();
-        LinkedList<WeakReference> toBeNotCollected = new LinkedList<WeakReference>();
+        LinkedList<AssertNotCollectable> toBeNotCollected = new LinkedList<AssertNotCollectable>();
         LinkedList<SetAsReferenced> toBeReferenced = new LinkedList<SetAsReferenced>();
 
         f.accept(new MemoryTestAPI() {
@@ -97,7 +127,7 @@ public class JMemoryBuddy {
             }
             public void assertNotCollectable(Object ref) {
                 if(ref == null) throw new NullPointerException();
-                toBeNotCollected.add(new WeakReference<Object>(ref));
+                toBeNotCollected.add(new AssertNotCollectable(ref));
             }
             public void setAsReferenced(Object ref) {
                 if(ref == null) throw new NullPointerException();
@@ -114,8 +144,8 @@ public class JMemoryBuddy {
         if(stepsLeft == 0) {
             failed = true;
         }
-        for(WeakReference wRef: toBeNotCollected) {
-            if(!checkNotCollectable(wRef)) {
+        for(AssertNotCollectable wRef: toBeNotCollected) {
+            if(!checkNotCollectable(wRef.getWeakReference())) {
                 failed = true;
             };
         }
@@ -125,16 +155,20 @@ public class JMemoryBuddy {
             LinkedList<AssertNotCollectable> toBeNotCollectedMarked = new LinkedList<AssertNotCollectable>();
 
             for(WeakReference wRef: toBeCollected) {
-                toBeCollectedMarked.add(new AssertCollectable(wRef));
+                if(wRef.get() != null) {
+                    toBeCollectedMarked.add(new AssertCollectable(wRef));
+                }
             }
-            for(WeakReference wRef: toBeNotCollected) {
-                toBeNotCollectedMarked.add(new AssertNotCollectable(wRef));
+            for(AssertNotCollectable wRef: toBeNotCollected) {
+                if(wRef.getWeakReference().get() == null) {
+                    toBeNotCollectedMarked.add(wRef);
+                }
             }
             createHeapDump();
             if(toBeNotCollectedMarked.isEmpty()) {
                 throw new AssertionError("The following references should be collected: " + toBeCollectedMarked);
             } else {
-                throw new AssertionError("The following references should be collected: " + toBeCollectedMarked + " and " + toBeNotCollectedMarked.size() + " should not be collected: ");
+                throw new AssertionError("The following references should be collected: " + toBeCollectedMarked + " and " + toBeNotCollected.size() + " should not be collected: " + toBeNotCollectedMarked);
             }
         }
 
@@ -143,15 +177,19 @@ public class JMemoryBuddy {
 
 
     public static void createHeapDump() {
-        try {
-            String dateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
-            String fileName = "heapdump_jmemb_" + dateString + ".hprof";
-            File outputFolder = new File(outputFolderString);
-            String heapdumpFile = new java.io.File(outputFolder,fileName).getAbsolutePath();
-            System.out.println("Creating Heapdump at: " + heapdumpFile);
-            getHotspotMBean().dumpHeap(heapdumpFile, true);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(createHeapdump) {
+            try {
+                String dateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
+                String fileName = "heapdump_jmemb_" + dateString + ".hprof";
+                File outputFolder = new File(outputFolderString);
+                String heapdumpFile = new java.io.File(outputFolder, fileName).getAbsolutePath();
+                System.out.println("Creating Heapdump at: " + heapdumpFile);
+                getHotspotMBean().dumpHeap(heapdumpFile, true);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("No Heapdump was created. You might want to change the configuration to get a HeapDump.");
         }
     }
 
@@ -193,13 +231,20 @@ public class JMemoryBuddy {
 
     static class AssertNotCollectable {
         WeakReference<Object> assertNotCollectable;
+        String originalResultOfToString;
 
-        AssertNotCollectable(WeakReference<Object> ref) {
-            this.assertNotCollectable = ref;
+        AssertNotCollectable(Object ref) {
+            this.assertNotCollectable = new WeakReference<>(ref);
+            originalResultOfToString = ref.toString();
         }
 
         WeakReference<Object> getWeakReference() {
             return assertNotCollectable;
+        }
+
+        @Override
+        public String toString() {
+            return originalResultOfToString;
         }
     }
 
