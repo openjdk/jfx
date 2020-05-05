@@ -74,7 +74,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
      */
     boolean behaveLikeButton = false;
     private ListChangeListener<MenuItem> itemsChangedListener;
-    private ChangeListener<? super Scene> sceneChangeListener;
+    private final ChangeListener<? super Scene> sceneChangeListener;
 
 
     /***************************************************************************
