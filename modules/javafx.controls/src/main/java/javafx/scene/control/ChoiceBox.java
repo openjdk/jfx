@@ -591,6 +591,20 @@ public class ChoiceBox<T> extends Control {
             }
         }
 
+        /**
+         * {@inheritDoc} <p>
+         *
+         * Overridden to clear <code>selectedIndex</code> if <code>selectedItem</code> is not contained
+         * in the <code>items</code>.
+         */
+        @Override
+        public void select(T obj) {
+            super.select(obj);
+            if (obj != null && !choiceBox.getItems().contains(obj)) {
+                setSelectedIndex(-1);
+            }
+        }
+
         /** {@inheritDoc} */
         @Override public void selectPrevious() {
             // overridden to properly handle Separators
