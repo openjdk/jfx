@@ -247,7 +247,6 @@ public class Utils {
         if (hsb[1] < 0) { hsb[1] = 0;} else if (hsb[1] > 1) {hsb[1] = 1;}
         if (hsb[2] < 0) { hsb[2] = 0;} else if (hsb[2] > 1) {hsb[2] = 1;}
         // convert back to color
-        Color c2 = Color.hsb((int)hsb[0], hsb[1], hsb[2],c.getOpacity());
         return Color.hsb((int)hsb[0], hsb[1], hsb[2],c.getOpacity());
 
      /*   var hsb:Number[] = RGBtoHSB(c.red,c.green,c.blue);
