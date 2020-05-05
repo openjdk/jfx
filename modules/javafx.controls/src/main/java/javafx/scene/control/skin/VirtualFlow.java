@@ -2348,8 +2348,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         final double breadthBarLength = isVertical ? snapSizeY(hbar.prefHeight(-1)) : snapSizeX(vbar.prefWidth(-1));
         final double lengthBarBreadth = isVertical ? snapSizeX(vbar.prefWidth(-1)) : snapSizeY(hbar.prefHeight(-1));
 
-        setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
-        setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+        if (!Properties.IS_TOUCH_SUPPORTED) {
+            setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
+            setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+        } else {
+            setViewportBreadth((isVertical ? getWidth() : getHeight()));
+            setViewportLength((isVertical ? getHeight() : getWidth()));
+        }
     }
 
     private void initViewport() {
