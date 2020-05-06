@@ -175,6 +175,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
         if (getSkinnable().isDefaultButton()) {
             setDefaultButton(false);
         }

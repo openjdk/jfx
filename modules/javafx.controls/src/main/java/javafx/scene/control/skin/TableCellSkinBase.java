@@ -133,6 +133,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
         TableColumnBase<?,T> tableColumn = getTableColumn();
         if (tableColumn != null) {
             tableColumn.widthProperty().removeListener(weakColumnWidthListener);

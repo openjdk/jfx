@@ -220,6 +220,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     @Override public void dispose() {
         // FIXME : JDK-8244112 - backout if we are already disposed
         // should check for getSkinnable to be null and return
+        if (getSkinnable() == null) return;
 
         // Cleanup accelerators
         if (getSkinnable().getScene() != null) {

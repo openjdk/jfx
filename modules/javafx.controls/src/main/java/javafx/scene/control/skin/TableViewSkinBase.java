@@ -357,6 +357,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
         final ObjectProperty<ObservableList<S>> itemsProperty = TableSkinUtils.itemsProperty(this);
 
         getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
