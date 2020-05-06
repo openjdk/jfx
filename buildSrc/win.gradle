@@ -219,6 +219,7 @@ def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
 if (file(WinSDKDLLsPath).exists()) {
     ext.WIN.WinSDKDLLNames = [
         "api-ms-win-core-console-l1-1-0.dll",
+        "api-ms-win-core-console-l1-2-0.dll",
         "api-ms-win-core-datetime-l1-1-0.dll",
         "api-ms-win-core-debug-l1-1-0.dll",
         "api-ms-win-core-errorhandling-l1-1-0.dll",
