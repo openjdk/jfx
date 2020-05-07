@@ -137,4 +137,47 @@ public class SVGTest extends TestBase {
             assertTrue("Color should be white:" + pixelAt100x100, isColorsSimilar(Color.WHITE, pixelAt100x100, 1));
         });
     }
+
+    @Test public void testSVGRenderingWithMask() {
+        loadContent(
+                    "<html>\n" +
+                    "  <body style='margin: 0px 0px;'>\n" +
+                    "    <svg width='200' height='200'>\n" +
+                    "      <defs>\n" +
+                    "        <linearGradient id='Gradient'>\n" +
+                    "          <stop offset='0' stop-color='white' stop-opacity='0' />\n" +
+                    "          <stop offset='1' stop-color='white' stop-opacity='1' />\n" +
+                    "        </linearGradient>\n" +
+                    "        <mask id='Mask'>\n" +
+                    "          <rect x='0' y='0' width='200' height='200' fill='url(#Gradient)' />\n" +
+                    "        </mask>\n" +
+                    "      </defs>\n" +
+                    "      <rect x='0' y='0' width='200' height='200' fill='green' />\n" +
+                    "      <rect x='0' y='0' width='200' height='200' fill='red' mask='url(#Mask)' />\n" +
+                    "    </svg>\n" +
+                    "  </body>\n" +
+                    "</html>"
+        );
+        submit(() -> {
+            final WebPage webPage = WebEngineShim.getPage(getEngine());
+            assertNotNull(webPage);
+            final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 200, 200);
+            assertNotNull(img);
+
+            final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
+            assertTrue("Color should be green:" + pixelAt0x0, isColorsSimilar(new Color(0, 128, 0), pixelAt0x0, 5));
+            final Color pixelAt0x199 = new Color(img.getRGB(0, 199), true);
+            assertTrue("Color should be green:" + pixelAt0x199, isColorsSimilar(new Color(0, 128, 0), pixelAt0x199, 5));
+
+            final Color pixelAt100x0 = new Color(img.getRGB(100, 0), true);
+            assertTrue("Color should be almost Cinnamon:" + pixelAt100x0, isColorsSimilar(new Color(128, 64, 0), pixelAt100x0, 20));
+            final Color pixelAt100x199 = new Color(img.getRGB(100, 199), true);
+            assertTrue("Color should be almost Cinnamon:" + pixelAt100x199, isColorsSimilar(new Color(128, 64, 0), pixelAt100x199, 20));
+
+            final Color pixelAt199x0 = new Color(img.getRGB(199, 0), true);
+            assertTrue("Color should be red:" + pixelAt199x0, isColorsSimilar(Color.RED, pixelAt199x0, 5));
+            final Color pixelAt199x199 = new Color(img.getRGB(199, 199), true);
+            assertTrue("Color should be red:" + pixelAt199x199, isColorsSimilar(Color.RED, pixelAt199x199, 5));
+        });
+    }
 }
