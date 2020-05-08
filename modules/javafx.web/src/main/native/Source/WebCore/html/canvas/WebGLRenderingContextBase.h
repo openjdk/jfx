@@ -94,7 +94,8 @@ class HTMLVideoElement;
 
 using WebGLCanvas = WTF::Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 
-class WebGLRenderingContextBase : public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
+class WebGLRenderingContextBase : public GraphicsContext3D::Client, public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
+    WTF_MAKE_ISO_ALLOCATED(WebGLRenderingContextBase);
 public:
     static std::unique_ptr<WebGLRenderingContextBase> create(CanvasBase&, WebGLContextAttributes&, const String&);
     virtual ~WebGLRenderingContextBase();
@@ -330,10 +331,8 @@ public:
         SyntheticLostContext
     };
     void forceLostContext(LostContextMode);
-    void recycleContext();
     void forceRestoreContext();
     void loseContextImpl(LostContextMode);
-    void dispatchContextChangedEvent();
     WEBCORE_EXPORT void simulateContextChanged();
 
     GraphicsContext3D* graphicsContext3D() const { return m_context.get(); }
@@ -358,6 +357,12 @@ public:
 
     // Used for testing only, from Internals.
     WEBCORE_EXPORT void setFailNextGPUStatusCheck();
+
+    // GraphicsContext3D::Client
+    void didComposite() override;
+    void forceContextLost() override;
+    void recycleContext() override;
+    void dispatchContextChangedNotification() override;
 
 protected:
     WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes);
@@ -831,7 +836,6 @@ protected:
     // Check if EXT_draw_buffers extension is supported and if it satisfies the WebGL requirements.
     bool supportsDrawBuffers();
 
-    HTMLCanvasElement* htmlCanvas();
     OffscreenCanvas* offscreenCanvas();
 
     template <typename T> inline Optional<T> checkedAddAndMultiply(T value, T add, T multiply);

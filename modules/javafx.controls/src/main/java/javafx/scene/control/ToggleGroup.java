@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,19 +71,27 @@ public class ToggleGroup {
     private final ObservableList<Toggle> toggles = new VetoableListDecorator<Toggle>(new TrackableObservableList<Toggle>() {
         @Override protected void onChanged(Change<Toggle> c) {
             while (c.next()) {
-                // Look through the removed toggles, and if any of them was the
-                // one and only selected toggle, then we will clear the selected
-                // toggle property.
+                final List<Toggle> addedToggles = c.getAddedSubList();
+
+                // Look through the removed toggles.
                 for (Toggle t : c.getRemoved()) {
+                    // If any of them was the one and only selected toggle,
+                    // then we will clear the selected toggle property.
                     if (t.isSelected()) {
                         selectToggle(null);
+                    }
+
+                    // If the toggle is not added again (below) remove
+                    // the group association.
+                    if (!addedToggles.contains(t)) {
+                        t.setToggleGroup(null);
                     }
                 }
 
                 // A Toggle can only be in one group at any one time. If the
                 // group is changed, then the toggle is removed from the old group prior to
                 // being added to the new group.
-                for (Toggle t: c.getAddedSubList()) {
+                for (Toggle t: addedToggles) {
                     if (!ToggleGroup.this.equals(t.getToggleGroup())) {
                         if (t.getToggleGroup() != null) {
                             t.getToggleGroup().getToggles().remove(t);
@@ -95,7 +103,7 @@ public class ToggleGroup {
                 // Look through all the added toggles and the very first selected
                 // toggle we encounter will become the one we make the selected
                 // toggle for this group.
-                for (Toggle t : c.getAddedSubList()) {
+                for (Toggle t : addedToggles) {
                     if (t.isSelected()) {
                         selectToggle(t);
                         break;

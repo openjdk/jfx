@@ -27,7 +27,7 @@
  * The user can activate tracers by setting the environment variable GST_TRACE
  * to a ';' separated list of tracers.
  *
- * Note that instanciating tracers at runtime is possible but is not thread safe
+ * Note that instantiating tracers at runtime is possible but is not thread safe
  * and needs to be done before any pipeline state is set to PAUSED.
  */
 

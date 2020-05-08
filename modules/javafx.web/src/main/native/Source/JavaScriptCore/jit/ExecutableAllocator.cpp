@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,15 @@
 #include "CodeProfiling.h"
 #include "ExecutableAllocationFuzz.h"
 #include "JSCInlines.h"
+#include <wtf/FileSystem.h>
 #include <wtf/MetaAllocator.h>
 #include <wtf/PageReservation.h>
+#include <wtf/ProcessID.h>
+#include <wtf/SystemTracing.h>
+#include <wtf/WorkQueue.h>
 
 #if OS(DARWIN)
+#include <mach/mach_time.h>
 #include <sys/mman.h>
 #endif
 
@@ -115,7 +120,6 @@ static uintptr_t startOfFixedWritableMemoryPool;
 
 class FixedVMPoolExecutableAllocator;
 static FixedVMPoolExecutableAllocator* allocator = nullptr;
-static ExecutableAllocator* executableAllocator = nullptr;
 
 static bool s_isJITEnabled = true;
 static bool isJITEnabled()
@@ -150,7 +154,7 @@ void ExecutableAllocator::setJITEnabled(bool enabled)
 #endif
 }
 
-class FixedVMPoolExecutableAllocator : public MetaAllocator {
+class FixedVMPoolExecutableAllocator final : public MetaAllocator {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     FixedVMPoolExecutableAllocator()
@@ -204,6 +208,8 @@ public:
 
             addFreshFreeSpace(reservationBase, reservationSize);
 
+            ASSERT(bytesReserved() == reservationSize); // Since our executable memory is fixed-sized, bytesReserved is never changed after initialization.
+
             void* reservationEnd = reinterpret_cast<uint8_t*>(reservationBase) + reservationSize;
 
             m_memoryStart = MacroAssemblerCodePtr<ExecutableMemoryPtrTag>(tagCodePtr<ExecutableMemoryPtrTag>(reservationBase));
@@ -224,20 +230,21 @@ protected:
         return nullptr;
     }
 
-    void notifyNeedPage(void* page) override
+    void notifyNeedPage(void* page, size_t count) override
     {
 #if USE(MADV_FREE_FOR_JIT_MEMORY)
         UNUSED_PARAM(page);
+        UNUSED_PARAM(count);
 #else
-        m_reservation.commit(page, pageSize());
+        m_reservation.commit(page, pageSize() * count);
 #endif
     }
 
-    void notifyPageIsFree(void* page) override
+    void notifyPageIsFree(void* page, size_t count) override
     {
 #if USE(MADV_FREE_FOR_JIT_MEMORY)
         for (;;) {
-            int result = madvise(page, pageSize(), MADV_FREE);
+            int result = madvise(page, pageSize() * count, MADV_FREE);
             if (!result)
                 return;
             ASSERT(result == -1);
@@ -247,7 +254,7 @@ protected:
             }
         }
 #else
-        m_reservation.decommit(page, pageSize());
+        m_reservation.decommit(page, pageSize() * count);
 #endif
     }
 
@@ -404,54 +411,40 @@ private:
     MacroAssemblerCodePtr<ExecutableMemoryPtrTag> m_memoryEnd;
 };
 
-void ExecutableAllocator::initializeAllocator()
-{
-    ASSERT(!allocator);
-    allocator = new FixedVMPoolExecutableAllocator();
-    CodeProfiling::notifyAllocator(allocator);
-
-    executableAllocator = new ExecutableAllocator;
-}
-
-ExecutableAllocator& ExecutableAllocator::singleton()
-{
-    ASSERT(allocator);
-    ASSERT(executableAllocator);
-    return *executableAllocator;
-}
-
-ExecutableAllocator::ExecutableAllocator()
-{
-    ASSERT(allocator);
-}
-
-ExecutableAllocator::~ExecutableAllocator()
-{
-}
-
 FixedVMPoolExecutableAllocator::~FixedVMPoolExecutableAllocator()
 {
     m_reservation.deallocate();
 }
 
+void ExecutableAllocator::initializeUnderlyingAllocator()
+{
+    ASSERT(!allocator);
+    allocator = new FixedVMPoolExecutableAllocator();
+    CodeProfiling::notifyAllocator(allocator);
+}
+
 bool ExecutableAllocator::isValid() const
 {
+    if (!allocator)
+        return Base::isValid();
     return !!allocator->bytesReserved();
 }
 
 bool ExecutableAllocator::underMemoryPressure()
 {
-    MetaAllocator::Statistics statistics = allocator->currentStatistics();
-    return statistics.bytesAllocated > statistics.bytesReserved / 2;
+    if (!allocator)
+        return Base::underMemoryPressure();
+    return allocator->bytesAllocated() > allocator->bytesReserved() / 2;
 }
 
 double ExecutableAllocator::memoryPressureMultiplier(size_t addedMemoryUsage)
 {
-    MetaAllocator::Statistics statistics = allocator->currentStatistics();
-    ASSERT(statistics.bytesAllocated <= statistics.bytesReserved);
-    size_t bytesAllocated = statistics.bytesAllocated + addedMemoryUsage;
+    if (!allocator)
+        return Base::memoryPressureMultiplier(addedMemoryUsage);
+    ASSERT(allocator->bytesAllocated() <= allocator->bytesReserved());
+    size_t bytesAllocated = allocator->bytesAllocated() + addedMemoryUsage;
     size_t bytesAvailable = static_cast<size_t>(
-        statistics.bytesReserved * (1 - executablePoolReservationFraction));
+        allocator->bytesReserved() * (1 - executablePoolReservationFraction));
     if (bytesAllocated >= bytesAvailable)
         bytesAllocated = bytesAvailable;
     double result = 1.0;
@@ -465,6 +458,8 @@ double ExecutableAllocator::memoryPressureMultiplier(size_t addedMemoryUsage)
 
 RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes, void* ownerUID, JITCompilationEffort effort)
 {
+    if (!allocator)
+        return Base::allocate(sizeInBytes, ownerUID, effort);
     if (Options::logExecutableAllocation()) {
         MetaAllocator::Statistics stats = allocator->currentStatistics();
         dataLog("Allocating ", sizeInBytes, " bytes of executable memory with ", stats.bytesAllocated, " bytes allocated, ", stats.bytesReserved, " bytes reserved, and ", stats.bytesCommitted, " committed.\n");
@@ -481,10 +476,9 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes,
 
     if (effort == JITCompilationCanFail) {
         // Don't allow allocations if we are down to reserve.
-        MetaAllocator::Statistics statistics = allocator->currentStatistics();
-        size_t bytesAllocated = statistics.bytesAllocated + sizeInBytes;
+        size_t bytesAllocated = allocator->bytesAllocated() + sizeInBytes;
         size_t bytesAvailable = static_cast<size_t>(
-            statistics.bytesReserved * (1 - executablePoolReservationFraction));
+            allocator->bytesReserved() * (1 - executablePoolReservationFraction));
         if (bytesAllocated > bytesAvailable) {
             if (Options::logExecutableAllocation())
                 dataLog("Allocation failed because bytes allocated ", bytesAllocated,  " > ", bytesAvailable, " bytes available.\n");
@@ -501,7 +495,7 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes,
         return nullptr;
     }
 
-#if USE(POINTER_PROFILING)
+#if CPU(ARM64E)
     void* start = allocator->memoryStart();
     void* end = allocator->memoryEnd();
     void* resultStart = result->start().untaggedPtr();
@@ -514,33 +508,45 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes,
 
 bool ExecutableAllocator::isValidExecutableMemory(const AbstractLocker& locker, void* address)
 {
+    if (!allocator)
+        return Base::isValidExecutableMemory(locker, address);
     return allocator->isInAllocatedMemory(locker, address);
 }
 
 Lock& ExecutableAllocator::getLock() const
 {
+    if (!allocator)
+        return Base::getLock();
     return allocator->getLock();
 }
 
 size_t ExecutableAllocator::committedByteCount()
 {
+    if (!allocator)
+        return Base::committedByteCount();
     return allocator->bytesCommitted();
 }
 
 #if ENABLE(META_ALLOCATOR_PROFILE)
 void ExecutableAllocator::dumpProfile()
 {
+    if (!allocator)
+        return;
     allocator->dumpProfile();
 }
 #endif
 
 void* startOfFixedExecutableMemoryPoolImpl()
 {
+    if (!allocator)
+        return nullptr;
     return allocator->memoryStart();
 }
 
 void* endOfFixedExecutableMemoryPoolImpl()
 {
+    if (!allocator)
+        return nullptr;
     return allocator->memoryEnd();
 }
 
@@ -549,15 +555,89 @@ bool isJITPC(void* pc)
     return allocator && allocator->isJITPC(pc);
 }
 
+void dumpJITMemory(const void* dst, const void* src, size_t size)
+{
+    ASSERT(Options::dumpJITMemoryPath());
+
+#if OS(DARWIN)
+    static int fd = -1;
+    static uint8_t* buffer;
+    static constexpr size_t bufferSize = fixedExecutableMemoryPoolSize;
+    static size_t offset = 0;
+    static Lock dumpJITMemoryLock;
+    static bool needsToFlush = false;
+    static auto flush = [](const AbstractLocker&) {
+        if (fd == -1) {
+            String path = Options::dumpJITMemoryPath();
+            path = path.replace("%pid", String::number(getCurrentProcessID()));
+            fd = open(FileSystem::fileSystemRepresentation(path).data(), O_CREAT | O_TRUNC | O_APPEND | O_WRONLY | O_EXLOCK | O_NONBLOCK, 0666);
+            RELEASE_ASSERT(fd != -1);
+        }
+        write(fd, buffer, offset);
+        offset = 0;
+        needsToFlush = false;
+    };
+
+    static std::once_flag once;
+    static LazyNeverDestroyed<Ref<WorkQueue>> flushQueue;
+    std::call_once(once, [] {
+        buffer = bitwise_cast<uint8_t*>(malloc(bufferSize));
+        flushQueue.construct(WorkQueue::create("jsc.dumpJITMemory.queue", WorkQueue::Type::Serial, WorkQueue::QOS::Background));
+        std::atexit([] {
+            LockHolder locker(dumpJITMemoryLock);
+            flush(locker);
+            close(fd);
+            fd = -1;
+        });
+    });
+
+    static auto enqueueFlush = [](const AbstractLocker&) {
+        if (needsToFlush)
+            return;
+
+        needsToFlush = true;
+        flushQueue.get()->dispatchAfter(Seconds(Options::dumpJITMemoryFlushInterval()), [] {
+            LockHolder locker(dumpJITMemoryLock);
+            if (!needsToFlush)
+                return;
+            flush(locker);
+        });
+    };
+
+    static auto write = [](const AbstractLocker& locker, const void* src, size_t size) {
+        if (UNLIKELY(offset + size > bufferSize))
+            flush(locker);
+        memcpy(buffer + offset, src, size);
+        offset += size;
+        enqueueFlush(locker);
+    };
+
+    LockHolder locker(dumpJITMemoryLock);
+    uint64_t time = mach_absolute_time();
+    uint64_t dst64 = bitwise_cast<uintptr_t>(dst);
+    uint64_t size64 = size;
+    TraceScope(DumpJITMemoryStart, DumpJITMemoryStop, time, dst64, size64);
+    write(locker, &time, sizeof(time));
+    write(locker, &dst64, sizeof(dst64));
+    write(locker, &size64, sizeof(size64));
+    write(locker, src, size);
+#else
+    UNUSED_PARAM(dst);
+    UNUSED_PARAM(src);
+    UNUSED_PARAM(size);
+    RELEASE_ASSERT_NOT_REACHED();
+#endif
+}
+
 } // namespace JSC
 
-#else // !ENABLE(JIT)
+#endif // ENABLE(JIT)
 
 namespace JSC {
 
 static ExecutableAllocator* executableAllocator;
 
-void ExecutableAllocator::initializeAllocator()
+void ExecutableAllocator::initialize()
 {
     executableAllocator = new ExecutableAllocator;
 }
@@ -569,5 +649,3 @@ ExecutableAllocator& ExecutableAllocator::singleton()
 }
 
 } // namespace JSC
-
-#endif // ENABLE(JIT)

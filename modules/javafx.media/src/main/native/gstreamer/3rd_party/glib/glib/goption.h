@@ -81,11 +81,11 @@ typedef struct _GOptionEntry   GOptionEntry;
 typedef enum
 {
   G_OPTION_FLAG_NONE            = 0,
-  G_OPTION_FLAG_HIDDEN      = 1 << 0,
-  G_OPTION_FLAG_IN_MAIN     = 1 << 1,
-  G_OPTION_FLAG_REVERSE     = 1 << 2,
-  G_OPTION_FLAG_NO_ARG      = 1 << 3,
-  G_OPTION_FLAG_FILENAME    = 1 << 4,
+  G_OPTION_FLAG_HIDDEN    = 1 << 0,
+  G_OPTION_FLAG_IN_MAIN   = 1 << 1,
+  G_OPTION_FLAG_REVERSE   = 1 << 2,
+  G_OPTION_FLAG_NO_ARG    = 1 << 3,
+  G_OPTION_FLAG_FILENAME  = 1 << 4,
   G_OPTION_FLAG_OPTIONAL_ARG    = 1 << 5,
   G_OPTION_FLAG_NOALIAS         = 1 << 6
 } GOptionFlags;
@@ -93,11 +93,12 @@ typedef enum
 /**
  * GOptionArg:
  * @G_OPTION_ARG_NONE: No extra argument. This is useful for simple flags.
- * @G_OPTION_ARG_STRING: The option takes a string argument.
+ * @G_OPTION_ARG_STRING: The option takes a UTF-8 string argument.
  * @G_OPTION_ARG_INT: The option takes an integer argument.
  * @G_OPTION_ARG_CALLBACK: The option provides a callback (of type
  *     #GOptionArgFunc) to parse the extra argument.
- * @G_OPTION_ARG_FILENAME: The option takes a filename as argument.
+ * @G_OPTION_ARG_FILENAME: The option takes a filename as argument, which will
+       be in the GLib filename encoding rather than UTF-8.
  * @G_OPTION_ARG_STRING_ARRAY: The option takes a string argument, multiple
  *     uses of the option are collected into an array of strings.
  * @G_OPTION_ARG_FILENAME_ARRAY: The option takes a filename as argument,
@@ -146,9 +147,9 @@ typedef enum
  *  occurred, in which case @error should be set with g_set_error()
  */
 typedef gboolean (*GOptionArgFunc) (const gchar    *option_name,
-                    const gchar    *value,
-                    gpointer        data,
-                    GError        **error);
+            const gchar    *value,
+            gpointer        data,
+            GError        **error);
 
 /**
  * GOptionParseFunc:
@@ -164,9 +165,9 @@ typedef gboolean (*GOptionArgFunc) (const gchar    *option_name,
  *  occurred, in which case @error should be set with g_set_error()
  */
 typedef gboolean (*GOptionParseFunc) (GOptionContext *context,
-                                      GOptionGroup   *group,
-                      gpointer        data,
-                                      GError        **error);
+              GOptionGroup   *group,
+              gpointer        data,
+              GError        **error);
 
 /**
  * GOptionErrorFunc:
@@ -179,9 +180,9 @@ typedef gboolean (*GOptionParseFunc) (GOptionContext *context,
  * The type of function to be used as callback when a parse error occurs.
  */
 typedef void (*GOptionErrorFunc) (GOptionContext *context,
-                  GOptionGroup   *group,
-                  gpointer        data,
-                  GError        **error);
+          GOptionGroup   *group,
+          gpointer        data,
+          GError        **error);
 
 /**
  * G_OPTION_ERROR:
@@ -300,13 +301,13 @@ const gchar *   g_option_context_get_description  (GOptionContext     *context);
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_free             (GOptionContext      *context);
 GLIB_AVAILABLE_IN_ALL
-void        g_option_context_set_help_enabled (GOptionContext      *context,
-                           gboolean     help_enabled);
+void    g_option_context_set_help_enabled (GOptionContext      *context,
+               gboolean   help_enabled);
 GLIB_AVAILABLE_IN_ALL
-gboolean    g_option_context_get_help_enabled (GOptionContext      *context);
+gboolean  g_option_context_get_help_enabled (GOptionContext      *context);
 GLIB_AVAILABLE_IN_ALL
-void        g_option_context_set_ignore_unknown_options (GOptionContext *context,
-                                 gboolean        ignore_unknown);
+void    g_option_context_set_ignore_unknown_options (GOptionContext *context,
+                   gboolean      ignore_unknown);
 GLIB_AVAILABLE_IN_ALL
 gboolean        g_option_context_get_ignore_unknown_options (GOptionContext *context);
 
@@ -318,32 +319,32 @@ gboolean        g_option_context_get_strict_posix           (GOptionContext *con
 
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_add_main_entries (GOptionContext      *context,
-                           const GOptionEntry  *entries,
-                           const gchar         *translation_domain);
+               const GOptionEntry  *entries,
+               const gchar         *translation_domain);
 GLIB_AVAILABLE_IN_ALL
 gboolean        g_option_context_parse            (GOptionContext      *context,
-                           gint                *argc,
-                           gchar             ***argv,
-                           GError             **error);
+               gint                *argc,
+               gchar             ***argv,
+               GError             **error);
 GLIB_AVAILABLE_IN_2_40
 gboolean        g_option_context_parse_strv       (GOptionContext      *context,
                                                    gchar             ***arguments,
                                                    GError             **error);
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_set_translate_func (GOptionContext     *context,
-                             GTranslateFunc      func,
-                             gpointer            data,
-                             GDestroyNotify      destroy_notify);
+                 GTranslateFunc      func,
+                 gpointer            data,
+                 GDestroyNotify      destroy_notify);
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_set_translation_domain (GOptionContext  *context,
-                             const gchar     *domain);
+               const gchar     *domain);
 
 GLIB_AVAILABLE_IN_ALL
 void            g_option_context_add_group      (GOptionContext *context,
-                         GOptionGroup   *group);
+             GOptionGroup   *group);
 GLIB_AVAILABLE_IN_ALL
 void          g_option_context_set_main_group (GOptionContext *context,
-                           GOptionGroup   *group);
+                 GOptionGroup   *group);
 GLIB_AVAILABLE_IN_ALL
 GOptionGroup *g_option_context_get_main_group (GOptionContext *context);
 GLIB_AVAILABLE_IN_ALL
@@ -353,17 +354,17 @@ gchar        *g_option_context_get_help       (GOptionContext *context,
 
 GLIB_AVAILABLE_IN_ALL
 GOptionGroup *g_option_group_new                    (const gchar        *name,
-                             const gchar        *description,
-                             const gchar        *help_description,
-                             gpointer            user_data,
-                             GDestroyNotify      destroy);
+                 const gchar        *description,
+                 const gchar        *help_description,
+                 gpointer            user_data,
+                 GDestroyNotify      destroy);
 GLIB_AVAILABLE_IN_ALL
-void          g_option_group_set_parse_hooks        (GOptionGroup       *group,
-                             GOptionParseFunc    pre_parse_func,
-                             GOptionParseFunc    post_parse_func);
+void        g_option_group_set_parse_hooks      (GOptionGroup       *group,
+                 GOptionParseFunc    pre_parse_func,
+                 GOptionParseFunc  post_parse_func);
 GLIB_AVAILABLE_IN_ALL
-void          g_option_group_set_error_hook     (GOptionGroup       *group,
-                             GOptionErrorFunc    error_func);
+void        g_option_group_set_error_hook     (GOptionGroup       *group,
+                 GOptionErrorFunc  error_func);
 GLIB_DEPRECATED_IN_2_44
 void          g_option_group_free                   (GOptionGroup       *group);
 GLIB_AVAILABLE_IN_2_44
@@ -372,15 +373,15 @@ GLIB_AVAILABLE_IN_2_44
 void          g_option_group_unref                  (GOptionGroup       *group);
 GLIB_AVAILABLE_IN_ALL
 void          g_option_group_add_entries            (GOptionGroup       *group,
-                             const GOptionEntry *entries);
+                 const GOptionEntry *entries);
 GLIB_AVAILABLE_IN_ALL
 void          g_option_group_set_translate_func     (GOptionGroup       *group,
-                             GTranslateFunc      func,
-                             gpointer            data,
-                             GDestroyNotify      destroy_notify);
+                 GTranslateFunc      func,
+                 gpointer            data,
+                 GDestroyNotify      destroy_notify);
 GLIB_AVAILABLE_IN_ALL
 void          g_option_group_set_translation_domain (GOptionGroup       *group,
-                             const gchar        *domain);
+                 const gchar        *domain);
 
 G_END_DECLS
 

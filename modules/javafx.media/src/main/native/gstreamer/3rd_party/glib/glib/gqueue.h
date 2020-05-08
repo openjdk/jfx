@@ -75,13 +75,16 @@ GLIB_AVAILABLE_IN_ALL
 void     g_queue_free           (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_free_full      (GQueue           *queue,
-                GDestroyNotify    free_func);
+        GDestroyNotify    free_func);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_init           (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_clear          (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_queue_is_empty       (GQueue           *queue);
+GLIB_AVAILABLE_IN_2_60
+void     g_queue_clear_full     (GQueue           *queue,
+                                 GDestroyNotify   free_func);
 GLIB_AVAILABLE_IN_ALL
 guint    g_queue_get_length     (GQueue           *queue);
 GLIB_AVAILABLE_IN_ALL
@@ -141,10 +144,20 @@ GLIB_AVAILABLE_IN_ALL
 void     g_queue_insert_before  (GQueue           *queue,
                                  GList            *sibling,
                                  gpointer          data);
+GLIB_AVAILABLE_IN_2_62
+void     g_queue_insert_before_link
+                                (GQueue           *queue,
+                                 GList            *sibling,
+                                 GList            *link_);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_insert_after   (GQueue           *queue,
                                  GList            *sibling,
                                  gpointer          data);
+GLIB_AVAILABLE_IN_2_62
+void     g_queue_insert_after_link
+                                (GQueue           *queue,
+                                 GList            *sibling,
+                                 GList            *link_);
 GLIB_AVAILABLE_IN_ALL
 void     g_queue_insert_sorted  (GQueue           *queue,
                                  gpointer          data,

@@ -88,7 +88,7 @@ Optional<ElementStyle> TextControlInnerContainer::resolveCustomStyle(const Rende
         elementStyle.renderStyle->setOverflowX(Overflow::Hidden);
         elementStyle.renderStyle->setOverflowY(Overflow::Hidden);
     }
-    return WTFMove(elementStyle);
+    return elementStyle;
 }
 
 TextControlInnerElement::TextControlInnerElement(Document& document)
@@ -148,15 +148,14 @@ void TextControlInnerTextElement::defaultEventHandler(Event& event)
     // FIXME: In the future, we should add a way to have default event listeners.
     // Then we would add one to the text field's inner div, and we wouldn't need this subclass.
     // Or possibly we could just use a normal event listener.
-    if (event.isBeforeTextInsertedEvent() || event.type() == eventNames().webkitEditableContentChangedEvent) {
-        RefPtr<Element> shadowAncestor = shadowHost();
+    if (event.isBeforeTextInsertedEvent()) {
         // A TextControlInnerTextElement can have no host if its been detached,
         // but kept alive by an EditCommand. In this case, an undo/redo can
         // cause events to be sent to the TextControlInnerTextElement. To
         // prevent an infinite loop, we must check for this case before sending
         // the event up the chain.
-        if (shadowAncestor)
-            shadowAncestor->defaultEventHandler(event);
+        if (auto host = makeRefPtr(shadowHost()))
+            host->defaultEventHandler(event);
     }
     if (!event.defaultHandled())
         HTMLDivElement::defaultEventHandler(event);
@@ -175,7 +174,7 @@ RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
 Optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
 {
     auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
-    return ElementStyle(std::make_unique<RenderStyle>(WTFMove(style)));
+    return ElementStyle(makeUnique<RenderStyle>(WTFMove(style)));
 }
 
 // MARK: TextControlPlaceholderElement
@@ -183,7 +182,7 @@ Optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const Ren
 inline TextControlPlaceholderElement::TextControlPlaceholderElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomicString("placeholder", AtomicString::ConstructFromLiteral));
+    setPseudo(AtomString("placeholder", AtomString::ConstructFromLiteral));
     setHasCustomStyleResolveCallbacks();
 }
 
@@ -203,7 +202,7 @@ Optional<ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const R
         auto& inputElement = downcast<HTMLInputElement>(controlElement);
         style.renderStyle->setTextOverflow(inputElement.shouldTruncateText(*shadowHostStyle) ? TextOverflow::Ellipsis : TextOverflow::Clip);
     }
-    return WTFMove(style);
+    return style;
 }
 
 // MARK: SearchFieldResultsButtonElement
@@ -253,11 +252,11 @@ bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomicString("-webkit-search-cancel-button", AtomicString::ConstructFromLiteral));
+    setPseudo(AtomString("-webkit-search-cancel-button", AtomString::ConstructFromLiteral));
 #if !PLATFORM(IOS_FAMILY)
     setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
 #endif
-    setAttributeWithoutSynchronization(roleAttr, AtomicString("button", AtomicString::ConstructFromLiteral));
+    setAttributeWithoutSynchronization(roleAttr, AtomString("button", AtomString::ConstructFromLiteral));
 }
 
 Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)

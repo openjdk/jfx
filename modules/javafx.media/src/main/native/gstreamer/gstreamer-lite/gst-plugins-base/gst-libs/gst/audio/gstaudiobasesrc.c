@@ -45,9 +45,6 @@
 GST_DEBUG_CATEGORY_STATIC (gst_audio_base_src_debug);
 #define GST_CAT_DEFAULT gst_audio_base_src_debug
 
-#define GST_AUDIO_BASE_SRC_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_AUDIO_BASE_SRC, GstAudioBaseSrcPrivate))
-
 struct _GstAudioBaseSrcPrivate
 {
   /* the clock slaving algorithm in use */
@@ -97,6 +94,7 @@ _do_init (GType type)
 
 #define gst_audio_base_src_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstAudioBaseSrc, gst_audio_base_src, GST_TYPE_PUSH_SRC,
+    G_ADD_PRIVATE (GstAudioBaseSrc)
     _do_init (g_define_type_id));
 
 static void gst_audio_base_src_set_property (GObject * object, guint prop_id,
@@ -135,8 +133,6 @@ gst_audio_base_src_class_init (GstAudioBaseSrcClass * klass)
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
   gstbasesrc_class = (GstBaseSrcClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstAudioBaseSrcPrivate));
 
   gobject_class->set_property = gst_audio_base_src_set_property;
   gobject_class->get_property = gst_audio_base_src_get_property;
@@ -217,7 +213,7 @@ gst_audio_base_src_class_init (GstAudioBaseSrcClass * klass)
 static void
 gst_audio_base_src_init (GstAudioBaseSrc * audiobasesrc)
 {
-  audiobasesrc->priv = GST_AUDIO_BASE_SRC_GET_PRIVATE (audiobasesrc);
+  audiobasesrc->priv = gst_audio_base_src_get_instance_private (audiobasesrc);
 
   audiobasesrc->buffer_time = DEFAULT_BUFFER_TIME;
   audiobasesrc->latency_time = DEFAULT_LATENCY_TIME;
@@ -1215,7 +1211,7 @@ gst_audio_base_src_post_message (GstElement * element, GstMessage * message)
   GstAudioBaseSrc *src = GST_AUDIO_BASE_SRC (element);
   gboolean ret;
 
-  if (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR) {
+  if (GST_MESSAGE_TYPE (message) == GST_MESSAGE_ERROR && src->ringbuffer) {
     GstAudioRingBuffer *ringbuffer;
 
     GST_INFO_OBJECT (element, "subclass posted error");

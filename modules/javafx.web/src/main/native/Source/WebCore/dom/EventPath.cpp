@@ -25,7 +25,9 @@
 #include "Event.h"
 #include "EventContext.h"
 #include "EventNames.h"
+#include "FullscreenManager.h"
 #include "HTMLSlotElement.h"
+#include "MouseEvent.h"
 #include "Node.h"
 #include "PseudoElement.h"
 #include "ShadowRoot.h"
@@ -58,7 +60,7 @@ static inline bool shouldEventCrossShadowBoundary(Event& event, ShadowRoot& shad
     // Video-only full screen is a mode where we use the shadow DOM as an implementation
     // detail that should not be detectable by the web content.
     if (is<Node>(target)) {
-        if (auto* element = downcast<Node>(target).document().webkitCurrentFullScreenElement()) {
+        if (auto* element = downcast<Node>(target).document().fullscreenManager().currentFullscreenElement()) {
             // FIXME: We assume that if the full screen element is a media element that it's
             // the video-only full screen. Both here and elsewhere. But that is probably wrong.
             if (element->isMediaElement() && shadowRoot.host() == element)
@@ -113,17 +115,17 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
 {
     using MakeEventContext = std::unique_ptr<EventContext> (*)(Node&, EventTarget*, EventTarget*, int closedShadowDepth);
     MakeEventContext makeEventContext = [] (Node& node, EventTarget* currentTarget, EventTarget* target, int closedShadowDepth) {
-        return std::make_unique<EventContext>(&node, currentTarget, target, closedShadowDepth);
+        return makeUnique<EventContext>(&node, currentTarget, target, closedShadowDepth);
     };
     if (is<MouseEvent>(event) || event.isFocusEvent()) {
         makeEventContext = [] (Node& node, EventTarget* currentTarget, EventTarget* target, int closedShadowDepth) -> std::unique_ptr<EventContext> {
-            return std::make_unique<MouseOrFocusEventContext>(node, currentTarget, target, closedShadowDepth);
+            return makeUnique<MouseOrFocusEventContext>(node, currentTarget, target, closedShadowDepth);
         };
     }
 #if ENABLE(TOUCH_EVENTS)
     if (is<TouchEvent>(event)) {
         makeEventContext = [] (Node& node, EventTarget* currentTarget, EventTarget* target, int closedShadowDepth) -> std::unique_ptr<EventContext> {
-            return std::make_unique<TouchEventContext>(node, currentTarget, target, closedShadowDepth);
+            return makeUnique<TouchEventContext>(node, currentTarget, target, closedShadowDepth);
         };
     }
 #endif
@@ -147,7 +149,7 @@ void EventPath::buildPath(Node& originalTarget, Event& event)
                     ASSERT(target);
                     if (target) {
                         if (auto* window = downcast<Document>(*node).domWindow())
-                            m_path.append(std::make_unique<WindowEventContext>(*node, *window, *target, closedShadowDepth));
+                            m_path.append(makeUnique<WindowEventContext>(*node, *window, *target, closedShadowDepth));
                     }
                 }
                 return;
@@ -306,7 +308,7 @@ EventPath::EventPath(const Vector<Element*>& targets)
         ASSERT(target);
         Node* origin = *targets.begin();
         if (!target->isClosedShadowHidden(*origin))
-            m_path.append(std::make_unique<EventContext>(target, target, origin, 0));
+            m_path.append(makeUnique<EventContext>(target, target, origin, 0));
     }
 }
 
@@ -315,7 +317,7 @@ EventPath::EventPath(const Vector<EventTarget*>& targets)
     for (auto* target : targets) {
         ASSERT(target);
         ASSERT(!is<Node>(target));
-        m_path.append(std::make_unique<EventContext>(nullptr, target, *targets.begin(), 0));
+        m_path.append(makeUnique<EventContext>(nullptr, target, *targets.begin(), 0));
     }
 }
 

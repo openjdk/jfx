@@ -420,7 +420,7 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
         if (character == selectedWhitespaceCharacter)
             continue;
         rebalancedString.reserveCapacity(length);
-        rebalancedString.append(string, rebalancedString.length(), i - rebalancedString.length());
+        rebalancedString.appendSubstring(string, rebalancedString.length(), i - rebalancedString.length());
         rebalancedString.append(selectedWhitespaceCharacter);
     }
 
@@ -428,7 +428,7 @@ String stringWithRebalancedWhitespace(const String& string, bool startIsStartOfP
         return string;
 
     rebalancedString.reserveCapacity(length);
-    rebalancedString.append(string, rebalancedString.length(), length - rebalancedString.length());
+    rebalancedString.appendSubstring(string, rebalancedString.length(), length - rebalancedString.length());
     return rebalancedString.toString();
 }
 
@@ -888,7 +888,7 @@ Ref<HTMLElement> createHTMLElement(Document& document, const QualifiedName& name
     return HTMLElementFactory::createElement(name, document);
 }
 
-Ref<HTMLElement> createHTMLElement(Document& document, const AtomicString& tagName)
+Ref<HTMLElement> createHTMLElement(Document& document, const AtomString& tagName)
 {
     return createHTMLElement(document, QualifiedName(nullAtom(), tagName, xhtmlNamespaceURI));
 }
@@ -917,7 +917,7 @@ static Ref<Element> createTabSpanElement(Document& document, Text& tabTextNode)
 
     spanElement->appendChild(tabTextNode);
 
-    return WTFMove(spanElement);
+    return spanElement;
 }
 
 Ref<Element> createTabSpanElement(Document& document, const String& tabText)
@@ -1123,9 +1123,9 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int in
     it.advance(index - 1);
 
     if (!it.atEnd() && it.text()[0] == '\n') {
-        // FIXME: workaround for collapsed range (where only start position is correct) emitted for some emitted newlines (see rdar://5192593)
-        auto range = it.range();
-        if (range->startPosition() == range->endPosition()) {
+        // FIXME: workaround for collapsed range (where only start position is correct) emitted for some emitted newlines.
+        auto iteratorRange = it.range();
+        if (iteratorRange->startPosition() == iteratorRange->endPosition()) {
             it.advance(1);
             if (!it.atEnd())
                 return VisiblePosition(it.range()->startPosition());

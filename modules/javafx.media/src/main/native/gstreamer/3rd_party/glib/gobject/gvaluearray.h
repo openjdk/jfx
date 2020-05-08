@@ -23,7 +23,7 @@
 #error "Only <glib-object.h> can be included directly."
 #endif
 
-#include    <gobject/gvalue.h>
+#include  <gobject/gvalue.h>
 
 G_BEGIN_DECLS
 
@@ -35,7 +35,7 @@ G_BEGIN_DECLS
  *
  * Deprecated: 2.32: Use #GArray instead of #GValueArray
  */
-#define G_TYPE_VALUE_ARRAY (g_value_array_get_type ())
+#define G_TYPE_VALUE_ARRAY (g_value_array_get_type ()) GLIB_DEPRECATED_MACRO_IN_2_32_FOR(G_TYPE_ARRAY)
 
 /* --- typedefs & structs --- */
 typedef struct _GValueArray GValueArray;
@@ -60,43 +60,43 @@ GLIB_DEPRECATED_IN_2_32_FOR(GArray)
 GType           g_value_array_get_type       (void) G_GNUC_CONST;
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValue*     g_value_array_get_nth        (GValueArray   *value_array,
-                          guint      index_);
+GValue*   g_value_array_get_nth      (GValueArray *value_array,
+                guint    index_);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_new        (guint      n_prealloced);
+GValueArray*  g_value_array_new      (guint    n_prealloced);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-void        g_value_array_free       (GValueArray   *value_array);
+void    g_value_array_free       (GValueArray *value_array);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_copy       (const GValueArray *value_array);
+GValueArray*  g_value_array_copy       (const GValueArray *value_array);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_prepend        (GValueArray   *value_array,
-                          const GValue  *value);
+GValueArray*  g_value_array_prepend      (GValueArray *value_array,
+                const GValue  *value);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_append         (GValueArray   *value_array,
-                          const GValue  *value);
+GValueArray*  g_value_array_append       (GValueArray *value_array,
+                const GValue  *value);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_insert         (GValueArray   *value_array,
-                          guint      index_,
-                          const GValue  *value);
+GValueArray*  g_value_array_insert       (GValueArray *value_array,
+                guint    index_,
+                const GValue  *value);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_remove         (GValueArray   *value_array,
-                          guint      index_);
+GValueArray*  g_value_array_remove       (GValueArray *value_array,
+                guint    index_);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_sort       (GValueArray   *value_array,
-                          GCompareFunc   compare_func);
+GValueArray*  g_value_array_sort       (GValueArray *value_array,
+                GCompareFunc   compare_func);
 
 GLIB_DEPRECATED_IN_2_32_FOR(GArray)
-GValueArray*    g_value_array_sort_with_data (GValueArray   *value_array,
-                          GCompareDataFunc   compare_func,
-                          gpointer       user_data);
+GValueArray*  g_value_array_sort_with_data (GValueArray *value_array,
+                GCompareDataFunc   compare_func,
+                gpointer     user_data);
 
 
 G_END_DECLS

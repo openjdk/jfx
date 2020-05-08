@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,9 +32,10 @@
  */
 module javafx.web {
     requires java.desktop;
+    requires java.net.http;
     requires javafx.media;
-    requires jdk.xml.dom;
     requires jdk.jsobject;
+    requires jdk.xml.dom;
 
     requires transitive java.xml;
     requires transitive javafx.base;

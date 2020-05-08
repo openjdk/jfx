@@ -263,7 +263,7 @@ RefPtr<CSSRuleList> CSSStyleSheet::rules()
     unsigned ruleCount = length();
     for (unsigned i = 0; i < ruleCount; ++i)
         ruleList->rules().append(item(i));
-    return WTFMove(ruleList);
+    return ruleList;
 }
 
 ExceptionOr<unsigned> CSSStyleSheet::insertRule(const String& ruleString, unsigned index)
@@ -329,7 +329,7 @@ RefPtr<CSSRuleList> CSSStyleSheet::cssRules()
     if (!canAccessRules())
         return nullptr;
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = std::make_unique<StyleSheetCSSRuleList>(this);
+        m_ruleListCSSOMWrapper = makeUnique<StyleSheetCSSRuleList>(this);
     return m_ruleListCSSOMWrapper.get();
 }
 

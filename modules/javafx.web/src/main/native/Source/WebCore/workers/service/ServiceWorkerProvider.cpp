@@ -28,7 +28,10 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "Document.h"
+#include "SWClientConnection.h"
 #include "SchemeRegistry.h"
+#include <pal/SessionID.h>
 
 namespace WebCore {
 
@@ -63,9 +66,6 @@ void ServiceWorkerProvider::registerServiceWorkerClients()
     setMayHaveRegisteredServiceWorkers();
     for (auto* document : Document::allDocuments()) {
         auto sessionID = document->sessionID();
-        if (!sessionID.isValid())
-            continue;
-
         if (SchemeRegistry::canServiceWorkersHandleURLScheme(document->url().protocol().toStringWithoutCopying()))
             document->setServiceWorkerConnection(&serviceWorkerConnectionForSession(sessionID));
     }

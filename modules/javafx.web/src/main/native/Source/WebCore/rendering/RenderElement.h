@@ -28,6 +28,7 @@
 namespace WebCore {
 
 class ControlStates;
+class KeyframeList;
 class RenderBlock;
 class RenderTreeBuilder;
 
@@ -203,7 +204,7 @@ public:
     RenderBlock* containingBlockForFixedPosition() const;
     RenderBlock* containingBlockForAbsolutePosition() const;
 
-    RespectImageOrientationEnum shouldRespectImageOrientation() const;
+    WEBCORE_EXPORT ImageOrientation imageOrientation() const;
 
     void removeFromRenderFragmentedFlow();
     virtual void resetEnclosingFragmentedFlowAndChildInfoIncludingDescendants(RenderFragmentedFlow*);
@@ -220,6 +221,17 @@ public:
 
     RenderObject* attachRendererInternal(RenderPtr<RenderObject> child, RenderObject* beforeChild);
     RenderPtr<RenderObject> detachRendererInternal(RenderObject&);
+
+    virtual bool startTransition(double /* timeOffset */, CSSPropertyID, const RenderStyle* /* fromStyle */, const RenderStyle* /* toStyle */) { return false; }
+    virtual void transitionPaused(double /* timeOffset */, CSSPropertyID) { }
+    virtual void transitionFinished(CSSPropertyID) { }
+
+    virtual bool startAnimation(double /* timeOffset */, const Animation&, const KeyframeList&) { return false; }
+    virtual void animationPaused(double /* timeOffset */, const String& /* name */) { }
+    virtual void animationSeeked(double /* timeOffset */, const String& /* name */) { }
+    virtual void animationFinished(const String& /* name */) { }
+
+    virtual void suspendAnimations(MonotonicTime = MonotonicTime()) { }
 
 protected:
     enum BaseTypeFlag {
@@ -240,9 +252,6 @@ protected:
 
     enum StylePropagationType { PropagateToAllChildren, PropagateToBlockChildrenOnly };
     void propagateStyleToAnonymousChildren(StylePropagationType);
-
-    LayoutUnit valueForLength(const Length&, LayoutUnit maximumValue) const;
-    LayoutUnit minimumValueForLength(const Length&, LayoutUnit maximumValue) const;
 
     void setFirstChild(RenderObject* child) { m_firstChild = child; }
     void setLastChild(RenderObject* child) { m_lastChild = child; }
@@ -362,16 +371,6 @@ inline void RenderElement::setChildNeedsLayout(MarkingBehavior markParents)
     setNormalChildNeedsLayoutBit(true);
     if (markParents == MarkContainingBlockChain)
         markContainingBlocksForLayout();
-}
-
-inline LayoutUnit RenderElement::valueForLength(const Length& length, LayoutUnit maximumValue) const
-{
-    return WebCore::valueForLength(length, maximumValue);
-}
-
-inline LayoutUnit RenderElement::minimumValueForLength(const Length& length, LayoutUnit maximumValue) const
-{
-    return WebCore::minimumValueForLength(length, maximumValue);
 }
 
 inline bool RenderElement::isRenderLayerModelObject() const

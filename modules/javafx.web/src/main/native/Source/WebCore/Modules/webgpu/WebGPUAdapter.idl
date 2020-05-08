@@ -22,16 +22,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
 [
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
+    InterfaceName=GPUAdapter
 ] interface WebGPUAdapter {
     // readonly attribute DOMString name;
     // readonly attribute WebGPUExtensions extensions;
     // readonly attribute WebGPULimits limits; Don't expose higher limits for now.
 
-    WebGPUDevice createDevice(/*WebGPUDeviceDescriptor descriptor*/);
+    // May reject with DOMException  // TODO: DOMException("OperationError")?
+    Promise<WebGPUDevice> requestDevice(/*GPUDeviceDescriptor descriptor*/);
 };

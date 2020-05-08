@@ -43,7 +43,7 @@ class FloatBox : public FloatAvoider {
 public:
     FloatBox(const Box&, const FloatingState&, const LayoutState&);
 
-    Display::Box::Rect rect() const final;
+    Display::Rect rect() const final;
 
 private:
     bool isLeftAligned() const final { return layoutBox().isLeftFloatingPositioned(); }
@@ -51,7 +51,7 @@ private:
     PositionInContextRoot horizontalPositionCandidate(HorizontalConstraints) final;
     PositionInContextRoot verticalPositionCandidate(PositionInContextRoot) final;
 
-    PositionInContextRoot initialVerticalPosition() const final;
+    PositionInContextRoot initialVerticalPosition() const;
 };
 
 }

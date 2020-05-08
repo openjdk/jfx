@@ -165,7 +165,7 @@ void ImageLoader::updateFromElement()
     if (!document.hasLivingRenderTree())
         return;
 
-    AtomicString attr = element().imageSourceURL();
+    AtomString attr = element().imageSourceURL();
 
     // Avoid loading a URL we already failed to load.
     if (!m_failedLoadURL.isEmpty() && attr == m_failedLoadURL)
@@ -275,6 +275,32 @@ void ImageLoader::updateFromElementIgnoringPreviousError()
     updateFromElement();
 }
 
+static inline void resolvePromises(Vector<RefPtr<DeferredPromise>>& promises)
+{
+    ASSERT(!promises.isEmpty());
+    auto promisesToBeResolved = std::exchange(promises, { });
+    for (auto& promise : promisesToBeResolved)
+        promise->resolve();
+}
+
+static inline void rejectPromises(Vector<RefPtr<DeferredPromise>>& promises, const char* message)
+{
+    ASSERT(!promises.isEmpty());
+    auto promisesToBeRejected = std::exchange(promises, { });
+    for (auto& promise : promisesToBeRejected)
+        promise->reject(Exception { EncodingError, message });
+}
+
+inline void ImageLoader::resolveDecodePromises()
+{
+    resolvePromises(m_decodingPromises);
+}
+
+inline void ImageLoader::rejectDecodePromises(const char* message)
+{
+    rejectPromises(m_decodingPromises, message);
+}
+
 void ImageLoader::notifyFinished(CachedResource& resource)
 {
     ASSERT(m_failedLoadURL.isEmpty());
@@ -299,7 +325,7 @@ void ImageLoader::notifyFinished(CachedResource& resource)
         element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);
 
         if (hasPendingDecodePromises())
-            decodeError("Access control error.");
+            rejectDecodePromises("Access control error.");
 
         ASSERT(!m_hasPendingLoadEvent);
 
@@ -311,7 +337,7 @@ void ImageLoader::notifyFinished(CachedResource& resource)
 
     if (m_image->wasCanceled()) {
         if (hasPendingDecodePromises())
-            decodeError("Loading was canceled.");
+            rejectDecodePromises("Loading was canceled.");
         m_hasPendingLoadEvent = false;
         // Only consider updating the protection ref-count of the Element immediately before returning
         // from this function as doing so might result in the destruction of this ImageLoader.
@@ -388,13 +414,13 @@ void ImageLoader::decode(Ref<DeferredPromise>&& promise)
     m_decodingPromises.append(WTFMove(promise));
 
     if (!element().document().domWindow()) {
-        decodeError("Inactive document.");
+        rejectDecodePromises("Inactive document.");
         return;
     }
 
-    AtomicString attr = element().imageSourceURL();
+    AtomString attr = element().imageSourceURL();
     if (stripLeadingAndTrailingHTMLSpaces(attr).isEmpty()) {
-        decodeError("Missing source URL.");
+        rejectDecodePromises("Missing source URL.");
         return;
     }
 
@@ -402,38 +428,29 @@ void ImageLoader::decode(Ref<DeferredPromise>&& promise)
         decode();
 }
 
-void ImageLoader::decodeError(const char* message)
-{
-    ASSERT(hasPendingDecodePromises());
-    for (auto& promise : m_decodingPromises)
-        promise->reject(Exception { EncodingError, message });
-    m_decodingPromises.clear();
-}
-
 void ImageLoader::decode()
 {
     ASSERT(hasPendingDecodePromises());
 
     if (!element().document().domWindow()) {
-        decodeError("Inactive document.");
+        rejectDecodePromises("Inactive document.");
         return;
     }
 
     if (!m_image || !m_image->image() || m_image->errorOccurred()) {
-        decodeError("Loading error.");
+        rejectDecodePromises("Loading error.");
         return;
     }
 
     Image* image = m_image->image();
     if (!is<BitmapImage>(image)) {
-        decodeError("Invalid image type.");
+        resolveDecodePromises();
         return;
     }
 
     auto& bitmapImage = downcast<BitmapImage>(*image);
     bitmapImage.decode([promises = WTFMove(m_decodingPromises)]() mutable {
-        for (auto& promise : promises)
-            promise->resolve();
+        resolvePromises(promises);
     });
 }
 
@@ -445,7 +462,7 @@ void ImageLoader::timerFired()
 void ImageLoader::dispatchPendingEvent(ImageEventSender* eventSender)
 {
     ASSERT(eventSender == &beforeLoadEventSender() || eventSender == &loadEventSender() || eventSender == &errorEventSender());
-    const AtomicString& eventType = eventSender->eventType();
+    const AtomString& eventType = eventSender->eventType();
     if (eventType == eventNames().beforeloadEvent)
         dispatchPendingBeforeLoadEvent();
     if (eventType == eventNames().loadEvent)

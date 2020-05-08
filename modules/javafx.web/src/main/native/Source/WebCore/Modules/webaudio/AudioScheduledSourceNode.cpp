@@ -35,6 +35,7 @@
 #include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include <algorithm>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
 #if PLATFORM(IOS_FAMILY)
@@ -42,6 +43,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
 
 const double AudioScheduledSourceNode::UnknownTime = -1;
 
@@ -132,6 +135,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize, Aud
 ExceptionOr<void> AudioScheduledSourceNode::start(double when)
 {
     ASSERT(isMainThread());
+    ALWAYS_LOG(LOGIDENTIFIER, when);
 
     context().nodeWillBeginPlayback();
 
@@ -149,6 +153,7 @@ ExceptionOr<void> AudioScheduledSourceNode::start(double when)
 ExceptionOr<void> AudioScheduledSourceNode::stop(double when)
 {
     ASSERT(isMainThread());
+    ALWAYS_LOG(LOGIDENTIFIER, when);
 
     if (m_playbackState == UNSCHEDULED_STATE || m_endTime != UnknownTime)
         return Exception { InvalidStateError };
@@ -172,20 +177,14 @@ void AudioScheduledSourceNode::finish()
     if (!m_hasEndedListener)
         return;
 
-    auto* scriptExecutionContext = this->scriptExecutionContext();
-    if (!scriptExecutionContext)
-        return;
-
-    scriptExecutionContext->postTask([this, protectedThis = makeRef(*this)] (auto&) {
-        // Make sure ActiveDOMObjects have not been stopped after scheduling this task.
-        if (!this->scriptExecutionContext())
+    context().postTask([this, protectedThis = makeRef(*this)] {
+        if (context().isStopped())
             return;
-
         this->dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 
-bool AudioScheduledSourceNode::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool AudioScheduledSourceNode::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     bool success = AudioNode::addEventListener(eventType, WTFMove(listener), options);
     if (success && eventType == eventNames().endedEvent)
@@ -193,7 +192,7 @@ bool AudioScheduledSourceNode::addEventListener(const AtomicString& eventType, R
     return success;
 }
 
-bool AudioScheduledSourceNode::removeEventListener(const AtomicString& eventType, EventListener& listener, const ListenerOptions& options)
+bool AudioScheduledSourceNode::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
 {
     bool success = AudioNode::removeEventListener(eventType, listener, options);
     if (success && eventType == eventNames().endedEvent)

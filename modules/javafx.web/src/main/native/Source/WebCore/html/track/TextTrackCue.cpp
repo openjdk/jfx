@@ -45,15 +45,18 @@
 #include "VTTCue.h"
 #include "VTTRegionList.h"
 #include <wtf/HexNumber.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
-const AtomicString& TextTrackCue::cueShadowPseudoId()
+WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackCue);
+
+const AtomString& TextTrackCue::cueShadowPseudoId()
 {
-    static NeverDestroyed<const AtomicString> cue("cue", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> cue("cue", AtomString::ConstructFromLiteral);
     return cue;
 }
 

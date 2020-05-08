@@ -61,7 +61,7 @@ static inline bool canReferToParentFrameEncoding(const Frame* frame, const Frame
 // This is only called by ScriptController::executeIfJavaScriptURL
 // and always contains the result of evaluating a javascript: url.
 // This is the <iframe src="javascript:'html'"> case.
-void DocumentWriter::replaceDocument(const String& source, Document* ownerDocument)
+void DocumentWriter::replaceDocumentWithResultOfExecutingJavascriptURL(const String& source, Document* ownerDocument)
 {
     m_frame->loader().stopAllLoaders();
 
@@ -108,14 +108,14 @@ bool DocumentWriter::begin()
 Ref<Document> DocumentWriter::createDocument(const URL& url)
 {
     if (!m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->loader().client().shouldAlwaysUsePluginDocument(m_mimeType))
-        return PluginDocument::create(m_frame, url);
+        return PluginDocument::create(*m_frame, url);
 #if PLATFORM(IOS_FAMILY)
     if (MIMETypeRegistry::isPDFMIMEType(m_mimeType) && (m_frame->isMainFrame() || !m_frame->settings().useImageDocumentForSubframePDF()))
-        return SinkDocument::create(m_frame, url);
+        return SinkDocument::create(*m_frame, url);
 #endif
     if (!m_frame->loader().client().hasHTMLView())
         return Document::createNonRenderedPlaceholder(*m_frame, url);
-    return DOMImplementation::createDocument(m_mimeType, m_frame, url);
+    return DOMImplementation::createDocument(m_frame->sessionID(), m_mimeType, m_frame, url);
 }
 
 bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument)
@@ -132,15 +132,11 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
     // If the new document is for a Plugin but we're supposed to be sandboxed from Plugins,
     // then replace the document with one whose parser will ignore the incoming data (bug 39323)
     if (document->isPluginDocument() && document->isSandboxed(SandboxPlugins))
-        document = SinkDocument::create(m_frame, url);
+        document = SinkDocument::create(*m_frame, url);
 
     // FIXME: Do we need to consult the content security policy here about blocked plug-ins?
 
     bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url);
-    if (shouldReuseDefaultView)
-        document->takeDOMWindowFrom(*m_frame->document());
-    else
-        document->createDOMWindow();
 
     // Temporarily extend the lifetime of the existing document so that FrameLoader::clear() doesn't destroy it as
     // we need to retain its ongoing set of upgraded requests in new navigation contexts per <http://www.w3.org/TR/upgrade-insecure-requests/>
@@ -148,7 +144,14 @@ bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* own
     RefPtr<Document> existingDocument = m_frame->document();
     auto* previousContentSecurityPolicy = existingDocument ? existingDocument->contentSecurityPolicy() : nullptr;
 
-    m_frame->loader().clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView);
+    WTF::Function<void()> handleDOMWindowCreation = [this, document = document.copyRef(), url] {
+        if (m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url))
+            document->takeDOMWindowFrom(*m_frame->document());
+        else
+            document->createDOMWindow();
+    };
+
+    m_frame->loader().clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView, true, WTFMove(handleDOMWindowCreation));
     clear();
 
     // m_frame->loader().clear() might fire unload event which could remove the view of the document.
@@ -234,7 +237,10 @@ void DocumentWriter::addData(const char* bytes, size_t length)
 {
     // FIXME: Change these to ASSERT once https://bugs.webkit.org/show_bug.cgi?id=80427 has been resolved.
     RELEASE_ASSERT(m_state != State::NotStarted);
-    RELEASE_ASSERT(m_state != State::Finished);
+    if (m_state == State::Finished) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
     ASSERT(m_parser);
     m_parser->appendBytes(*this, bytes, length);
 }

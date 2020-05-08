@@ -585,9 +585,9 @@ gst_discoverer_stream_info_get_stream_type_nick (GstDiscovererStreamInfo * info)
 
 
 #define GENERIC_ACCESSOR_CODE(parent, parenttype, parentgtype, fieldname, type, failval) \
-  type parent##_get_##fieldname(const parenttype info) {            \
+  type parent##_get_##fieldname(const parenttype info) {      \
     g_return_val_if_fail(G_TYPE_CHECK_INSTANCE_TYPE((info), parentgtype), failval); \
-    return (info)->fieldname;               \
+    return (info)->fieldname;       \
   }
 
 /**
@@ -689,6 +689,7 @@ gst_discoverer_stream_info_get_stream_id (GstDiscovererStreamInfo * info)
   return info->stream_id;
 }
 
+#ifndef GST_REMOVE_DEPRECATED
 /**
  * gst_discoverer_stream_info_get_misc:
  * @info: a #GstDiscovererStreamInfo
@@ -707,6 +708,7 @@ gst_discoverer_stream_info_get_misc (GstDiscovererStreamInfo * info)
 
   return info->misc;
 }
+#endif
 
 /* GstDiscovererContainerInfo */
 
@@ -736,10 +738,10 @@ gst_discoverer_container_info_get_streams (GstDiscovererContainerInfo * info)
 
 /* GstDiscovererAudioInfo */
 
-#define AUDIO_INFO_ACCESSOR_CODE(fieldname, type, failval)      \
+#define AUDIO_INFO_ACCESSOR_CODE(fieldname, type, failval)    \
   GENERIC_ACCESSOR_CODE(gst_discoverer_audio_info, GstDiscovererAudioInfo*, \
-            GST_TYPE_DISCOVERER_AUDIO_INFO,     \
-            fieldname, type, failval)
+      GST_TYPE_DISCOVERER_AUDIO_INFO,   \
+      fieldname, type, failval)
 
 /**
  * gst_discoverer_audio_info_get_channels:
@@ -810,10 +812,10 @@ AUDIO_INFO_ACCESSOR_CODE (language, const gchar *, NULL);
 
 /* GstDiscovererVideoInfo */
 
-#define VIDEO_INFO_ACCESSOR_CODE(fieldname, type, failval)      \
+#define VIDEO_INFO_ACCESSOR_CODE(fieldname, type, failval)    \
   GENERIC_ACCESSOR_CODE(gst_discoverer_video_info, GstDiscovererVideoInfo*, \
-            GST_TYPE_DISCOVERER_VIDEO_INFO,         \
-            fieldname, type, failval)
+      GST_TYPE_DISCOVERER_VIDEO_INFO,     \
+      fieldname, type, failval)
 
 /**
  * gst_discoverer_video_info_get_width:
@@ -929,8 +931,8 @@ gst_discoverer_video_info_is_image (const GstDiscovererVideoInfo * info)
 
 #define SUBTITLE_INFO_ACCESSOR_CODE(fieldname, type, failval)                     \
   GENERIC_ACCESSOR_CODE(gst_discoverer_subtitle_info, GstDiscovererSubtitleInfo*, \
-            GST_TYPE_DISCOVERER_SUBTITLE_INFO,                        \
-            fieldname, type, failval)
+      GST_TYPE_DISCOVERER_SUBTITLE_INFO,                        \
+      fieldname, type, failval)
 
 /**
  * gst_discoverer_subtitle_info_get_language:
@@ -943,10 +945,10 @@ SUBTITLE_INFO_ACCESSOR_CODE (language, const gchar *, NULL);
 
 /* GstDiscovererInfo */
 
-#define DISCOVERER_INFO_ACCESSOR_CODE(fieldname, type, failval)     \
-  GENERIC_ACCESSOR_CODE(gst_discoverer_info, GstDiscovererInfo*,    \
-            GST_TYPE_DISCOVERER_INFO,           \
-            fieldname, type, failval)
+#define DISCOVERER_INFO_ACCESSOR_CODE(fieldname, type, failval)   \
+  GENERIC_ACCESSOR_CODE(gst_discoverer_info, GstDiscovererInfo*,  \
+      GST_TYPE_DISCOVERER_INFO,     \
+      fieldname, type, failval)
 
 /**
  * gst_discoverer_info_get_uri:
@@ -1039,6 +1041,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (seekable, gboolean, FALSE);
 
 DISCOVERER_INFO_ACCESSOR_CODE (live, gboolean, FALSE);
 
+#ifndef GST_REMOVE_DEPRECATED
 /**
  * gst_discoverer_info_get_misc:
  * @info: a #GstDiscovererInfo
@@ -1052,6 +1055,7 @@ DISCOVERER_INFO_ACCESSOR_CODE (live, gboolean, FALSE);
  */
 
 DISCOVERER_INFO_ACCESSOR_CODE (misc, const GstStructure *, NULL);
+#endif
 
 /**
  * gst_discoverer_info_get_tags:

@@ -41,9 +41,14 @@
 #include "glibintl.h"
 
 #if defined (_MSC_VER) && !defined (HAVE_DIRENT_H)
-#include "../build/win32/dirent/dirent.h"
-#include "../build/win32/dirent/wdirent.c"
+#include "dirent/dirent.h"
 #endif
+
+#ifdef GSTREAMER_LITE
+#if defined (_MSC_VER) && !defined (HAVE_DIRENT_H)
+#include "dirent/wdirent.c"
+#endif
+#endif // GSTREAMER_LITE
 
 #include "glib-private.h" /* g_dir_open_with_errno, g_dir_new_from_dirp */
 
@@ -190,6 +195,8 @@ g_dir_new_from_dirp (gpointer dirp)
   return dir;
 #else
   g_assert_not_reached ();
+
+  return NULL;
 #endif
 }
 
@@ -232,17 +239,17 @@ g_dir_read_name (GDir *dir)
     {
       wentry = _wreaddir (dir->wdirp);
       while (wentry
-         && (0 == wcscmp (wentry->d_name, L".") ||
-         0 == wcscmp (wentry->d_name, L"..")))
-    wentry = _wreaddir (dir->wdirp);
+       && (0 == wcscmp (wentry->d_name, L".") ||
+     0 == wcscmp (wentry->d_name, L"..")))
+  wentry = _wreaddir (dir->wdirp);
 
       if (wentry == NULL)
-    return NULL;
+  return NULL;
 
       utf8_name = g_utf16_to_utf8 (wentry->d_name, -1, NULL, NULL, NULL);
 
       if (utf8_name == NULL)
-    continue;       /* Huh, impossible? Skip it anyway */
+  continue;   /* Huh, impossible? Skip it anyway */
 
       strcpy (dir->utf8_buf, utf8_name);
       g_free (utf8_name);

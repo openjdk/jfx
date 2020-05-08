@@ -27,10 +27,13 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLTypeArgument.h"
 #include "WHLSLUnnamedType.h"
+#include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,33 +42,45 @@ namespace WHLSL {
 
 namespace AST {
 
-class ArrayType : public UnnamedType {
-public:
-    ArrayType(Lexer::Token&& origin, UniqueRef<UnnamedType>&& elementType, unsigned numElements)
-        : UnnamedType(WTFMove(origin))
+class ArrayType final : public UnnamedType {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ArrayType);
+    ArrayType(CodeLocation location, Ref<UnnamedType> elementType, unsigned numElements)
+        : UnnamedType(location, Kind::Array)
         , m_elementType(WTFMove(elementType))
         , m_numElements(numElements)
     {
     }
+public:
 
-    virtual ~ArrayType() = default;
+    static Ref<ArrayType> create(CodeLocation location, Ref<UnnamedType> elementType, unsigned numElements)
+    {
+        return adoptRef(*new ArrayType(location, WTFMove(elementType), numElements));
+    }
 
-    ArrayType(const ArrayType&) = delete;
-    ArrayType(ArrayType&&) = default;
-
-    bool isArrayType() const override { return true; }
+    ~ArrayType() = default;
 
     const UnnamedType& type() const { return m_elementType; }
     UnnamedType& type() { return m_elementType; }
     unsigned numElements() const { return m_numElements; }
 
-    UniqueRef<UnnamedType> clone() const override
+    unsigned hash() const
     {
-        return makeUniqueRef<ArrayType>(Lexer::Token(origin()), m_elementType->clone(), m_numElements);
+        return WTF::IntHash<unsigned>::hash(m_numElements) ^ m_elementType->hash();
+    }
+
+    bool operator==(const ArrayType& other) const
+    {
+        return numElements() == other.numElements() && type() == other.type();
+    }
+
+    String toString() const
+    {
+        return makeString(type().toString(), '[', numElements(), ']');
     }
 
 private:
-    UniqueRef<UnnamedType> m_elementType;
+    Ref<UnnamedType> m_elementType;
     unsigned m_numElements;
 };
 
@@ -75,6 +90,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_UNNAMED_TYPE(ArrayType, isArrayType())
+DEFINE_DEFAULT_DELETE(ArrayType)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(ArrayType, isArrayType())
 
 #endif

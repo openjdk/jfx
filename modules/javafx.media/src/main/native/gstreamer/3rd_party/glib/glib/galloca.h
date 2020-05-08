@@ -88,7 +88,7 @@ G_END_DECLS
  *
  * Returns: space for @size bytes, allocated on the stack
  */
-#define g_alloca(size)       alloca (size)
+#define g_alloca(size)     alloca (size)
 /**
  * g_newa:
  * @struct_type: Type of memory chunks to be allocated

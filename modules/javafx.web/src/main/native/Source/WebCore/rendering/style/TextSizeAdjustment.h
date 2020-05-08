@@ -22,7 +22,11 @@
 
 #if ENABLE(TEXT_AUTOSIZING)
 
+#include <wtf/OptionSet.h>
+
 namespace WebCore {
+
+class RenderStyle;
 
 enum TextSizeAdjustmentType { AutoTextSizeAdjustment = -1, NoTextSizeAdjustment = -2 };
 
@@ -44,6 +48,32 @@ public:
 private:
     float m_value;
 };
+
+class AutosizeStatus {
+public:
+    enum class Fields : uint8_t {
+        AvoidSubtree = 1 << 0,
+        FixedHeight = 1 << 1,
+        FixedWidth = 1 << 2,
+        Floating = 1 << 3,
+        OverflowXHidden = 1 << 4,
+        // Adding new values requires giving RenderStyle::InheritedFlags::autosizeStatus additional bits.
+    };
+
+    AutosizeStatus(OptionSet<Fields>);
+    OptionSet<Fields> fields() const { return m_fields; }
+
+    bool contains(Fields) const;
+
+    static float idempotentTextSize(float specifiedSize, float pageScale);
+    static void updateStatus(RenderStyle&);
+
+    static bool probablyContainsASmallFixedNumberOfLines(const RenderStyle&);
+
+private:
+    OptionSet<Fields> m_fields;
+};
+
 
 } // namespace WebCore
 

@@ -29,6 +29,9 @@
  *
  * The version macros get defined by including &lt;gst/pbutils/pbutils.h&gt;.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gstpluginsbaseversion.h"
 

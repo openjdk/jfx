@@ -29,19 +29,19 @@ G_BEGIN_DECLS
 /* slices - fast allocation/release of small memory blocks
  */
 GLIB_AVAILABLE_IN_ALL
-gpointer g_slice_alloc              (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
+gpointer g_slice_alloc            (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
-gpointer g_slice_alloc0             (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
+gpointer g_slice_alloc0           (gsize         block_size) G_GNUC_MALLOC G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
 gpointer g_slice_copy                   (gsize         block_size,
                                          gconstpointer mem_block) G_GNUC_ALLOC_SIZE(1);
 GLIB_AVAILABLE_IN_ALL
-void     g_slice_free1              (gsize         block_size,
-                                         gpointer      mem_block);
+void     g_slice_free1            (gsize         block_size,
+           gpointer      mem_block);
 GLIB_AVAILABLE_IN_ALL
 void     g_slice_free_chain_with_offset (gsize         block_size,
-                     gpointer      mem_chain,
-                     gsize         next_offset);
+           gpointer      mem_chain,
+           gsize         next_offset);
 #define  g_slice_new(type)      ((type*) g_slice_alloc (sizeof (type)))
 #define  g_slice_new0(type)     ((type*) g_slice_alloc0 (sizeof (type)))
 /* MemoryBlockType *
@@ -62,14 +62,14 @@ void     g_slice_free_chain_with_offset (gsize         block_size,
      : ((void) ((type*) 0 == (mem)), (type*) 0))
 #define g_slice_free(type, mem)                                 \
 G_STMT_START {                                                  \
-  if (1) g_slice_free1 (sizeof (type), (mem));          \
-  else   (void) ((type*) 0 == (mem));               \
+  if (1) g_slice_free1 (sizeof (type), (mem));      \
+  else   (void) ((type*) 0 == (mem));         \
 } G_STMT_END
 #define g_slice_free_chain(type, mem_chain, next)               \
 G_STMT_START {                                                  \
-  if (1) g_slice_free_chain_with_offset (sizeof (type),     \
-                 (mem_chain), G_STRUCT_OFFSET (type, next));    \
-  else   (void) ((type*) 0 == (mem_chain));         \
+  if (1) g_slice_free_chain_with_offset (sizeof (type),   \
+                 (mem_chain), G_STRUCT_OFFSET (type, next));  \
+  else   (void) ((type*) 0 == (mem_chain));     \
 } G_STMT_END
 
 /* --- internal debugging API --- */

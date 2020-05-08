@@ -123,13 +123,13 @@ GST_DEBUG_CATEGORY_STATIC (gst_spectrum_debug);
   "layout = (string) interleaved"
 
 /* Spectrum properties */
-#define DEFAULT_POST_MESSAGES           TRUE
-#define DEFAULT_MESSAGE_MAGNITUDE   TRUE
-#define DEFAULT_MESSAGE_PHASE       FALSE
-#define DEFAULT_INTERVAL        (GST_SECOND / 10)
-#define DEFAULT_BANDS           128
-#define DEFAULT_THRESHOLD       -60
-#define DEFAULT_MULTI_CHANNEL       FALSE
+#define DEFAULT_POST_MESSAGES         TRUE
+#define DEFAULT_MESSAGE_MAGNITUDE TRUE
+#define DEFAULT_MESSAGE_PHASE   FALSE
+#define DEFAULT_INTERVAL    (GST_SECOND / 10)
+#define DEFAULT_BANDS     128
+#define DEFAULT_THRESHOLD   -60
+#define DEFAULT_MULTI_CHANNEL   FALSE
 
 enum
 {
@@ -157,6 +157,21 @@ static GstFlowReturn gst_spectrum_transform_ip (GstBaseTransform * trans,
     GstBuffer * in);
 static gboolean gst_spectrum_setup (GstAudioFilter * base,
     const GstAudioInfo * info);
+
+#if defined (GSTREAMER_LITE) && defined (OSX)
+gboolean gst_spectrum_setup_api (GstAudioFilter * base, const GstAudioInfo * info,
+                                 guint bps_user, guint bpf_user) {
+    GstSpectrum *spectrum = GST_SPECTRUM (base);
+    spectrum->bps_user = bps_user;
+    spectrum->bpf_user = bpf_user;
+    return gst_spectrum_setup(base, info);
+}
+
+GstFlowReturn
+gst_spectrum_transform_ip_api (GstBaseTransform * trans, GstBuffer * buffer) {
+    return gst_spectrum_transform_ip(trans, buffer);
+}
+#endif // GSTREAMER_LITE and OSX
 
 static void
 gst_spectrum_class_init (GstSpectrumClass * klass)
@@ -250,6 +265,13 @@ gst_spectrum_init (GstSpectrum * spectrum)
   spectrum->interval = DEFAULT_INTERVAL;
   spectrum->bands = DEFAULT_BANDS;
   spectrum->threshold = DEFAULT_THRESHOLD;
+
+#if defined (GSTREAMER_LITE) && defined (OSX)
+  spectrum->bps_user = 0;
+  spectrum->bpf_user = 0;
+  spectrum->user_data = NULL;
+  spectrum->post_message_callback = NULL;
+#endif // GSTREAMER_LITE and OSX
 
   g_mutex_init (&spectrum->lock);
 }
@@ -626,15 +648,15 @@ gst_spectrum_setup (GstAudioFilter * base, const GstAudioInfo * info)
   g_mutex_lock (&spectrum->lock);
   switch (GST_AUDIO_INFO_FORMAT (info)) {
     case GST_AUDIO_FORMAT_S16:
-        input_data =
+      input_data =
           multi_channel ? input_data_int16_max : input_data_mixed_int16_max;
       break;
     case GST_AUDIO_FORMAT_S24:
-        input_data =
-            multi_channel ? input_data_int24_max : input_data_mixed_int24_max;
+      input_data =
+          multi_channel ? input_data_int24_max : input_data_mixed_int24_max;
       break;
     case GST_AUDIO_FORMAT_S32:
-        input_data =
+      input_data =
           multi_channel ? input_data_int32_max : input_data_mixed_int32_max;
       break;
     case GST_AUDIO_FORMAT_F32:
@@ -646,7 +668,7 @@ gst_spectrum_setup (GstAudioFilter * base, const GstAudioInfo * info)
     default:
       g_assert_not_reached ();
       break;
-    }
+  }
   spectrum->input_data = input_data;
 
   gst_spectrum_reset_state (spectrum);
@@ -714,10 +736,24 @@ gst_spectrum_message_new (GstSpectrum * spectrum, GstClockTime timestamp,
 
   GST_DEBUG_OBJECT (spectrum, "preparing message, bands =%d ", spectrum->bands);
 
+#if defined (GSTREAMER_LITE) && defined (OSX)
+  // When running spectrum directly we cannot figure out time stamps, since we do not
+  // have full pipeline. Caller will be responsible to handle time stamps.
+  if (spectrum->user_data != NULL) {
+    running_time = 0;
+    stream_time = 0;
+  } else {
+    running_time = gst_segment_to_running_time (&trans->segment, GST_FORMAT_TIME,
+      timestamp);
+    stream_time = gst_segment_to_stream_time (&trans->segment, GST_FORMAT_TIME,
+      timestamp);
+  }
+#else // GSTREAMER_LITE and OSX
   running_time = gst_segment_to_running_time (&trans->segment, GST_FORMAT_TIME,
       timestamp);
   stream_time = gst_segment_to_stream_time (&trans->segment, GST_FORMAT_TIME,
       timestamp);
+#endif // GSTREAMER_LITE and OSX
   /* endtime is for backwards compatibility */
   endtime = stream_time + duration;
 
@@ -877,6 +913,12 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
   channels = GST_AUDIO_FILTER_CHANNELS (spectrum);
   bps = GST_AUDIO_FILTER_BPS (spectrum);
   bpf = GST_AUDIO_FILTER_BPF (spectrum);
+#ifdef OSX
+  if (spectrum->bps_user != 0 && spectrum->bpf_user != 0) {
+    bps = spectrum->bps_user;
+    bpf = spectrum->bpf_user;
+  }
+#endif // OSX
   output_channels = spectrum->multi_channel ? channels : 1;
   max_value = (1UL << ((bps << 3) - 1)) - 1;
   bands = spectrum->bands;
@@ -1019,7 +1061,15 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
         m = gst_spectrum_message_new (spectrum, spectrum->message_ts,
             spectrum->interval);
 
+#if defined (GSTREAMER_LITE) && defined (OSX)
+        if (spectrum->post_message_callback != NULL) {
+          spectrum->post_message_callback(GST_ELEMENT (spectrum), m);
+        } else {
+          gst_element_post_message (GST_ELEMENT (spectrum), m);
+        }
+#else // GSTREAMER_LITE && OSX
         gst_element_post_message (GST_ELEMENT (spectrum), m);
+#endif // GSTREAMER_LITE && OSX
 #ifndef GSTREAMER_LITE
       }
 #endif // GSTREAMER_LITE

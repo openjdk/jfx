@@ -79,7 +79,7 @@ typedef enum {
  *                 from the pipeline and unblock all streaming threads.
  * @GST_EVENT_FLUSH_STOP: Stop a flush operation. This event resets the
  *                 running-time of the pipeline.
- * @GST_EVENT_SELECT_STREAMS: A request to select one or more streams (Since 1.10)
+ * @GST_EVENT_SELECT_STREAMS: A request to select one or more streams (Since: 1.10)
  * @GST_EVENT_STREAM_START: Event to mark the start of a new stream. Sent before any
  *                 other serialized event and only sent at the start of a new stream,
  *                 not after flushing seeks.
@@ -88,7 +88,7 @@ typedef enum {
  *                 segment events contains information for clipping buffers and
  *                 converting buffer timestamps to running-time and
  *                 stream-time.
- * @GST_EVENT_STREAM_COLLECTION: A new #GstStreamCollection is available (Since 1.10)
+ * @GST_EVENT_STREAM_COLLECTION: A new #GstStreamCollection is available (Since: 1.10)
  * @GST_EVENT_TAG: A new set of metadata tags has been found in the stream.
  * @GST_EVENT_BUFFERSIZE: Notification of buffering requirements. Currently not
  *                 used yet.
@@ -97,7 +97,7 @@ typedef enum {
  *                          rendering.
  * @GST_EVENT_STREAM_GROUP_DONE: Indicates that there is no more data for
  *                 the stream group ID in the message. Sent before EOS
- *                 in some instances and should be handled mostly the same. (Since 1.10)
+ *                 in some instances and should be handled mostly the same. (Since: 1.10)
  * @GST_EVENT_EOS: End-Of-Stream. No more data is to be expected to follow
  *                 without either a STREAM_START event, or a FLUSH_STOP and a SEGMENT
  *                 event.
@@ -256,6 +256,7 @@ GST_EXPORT GType _gst_event_type;
  * Get the #GstClockTime timestamp of the event. This is the time when the event
  * was created.
  */
+/* FIXME 2.0: Remove the GstEvent::timestamp field */
 #define GST_EVENT_TIMESTAMP(event)      (GST_EVENT_CAST(event)->timestamp)
 
 /**
@@ -410,6 +411,7 @@ struct _GstEvent {
 
   /*< public >*/ /* with COW */
   GstEventType  type;
+  /* FIXME 2.0: Remove the GstEvent::timestamp field */
   guint64       timestamp;
   guint32       seqnum;
 };
@@ -450,6 +452,25 @@ static inline void
 gst_event_unref (GstEvent * event)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (event));
+}
+
+/**
+ * gst_clear_event: (skip)
+ * @event_ptr: a pointer to a #GstEvent reference
+ *
+ * Clears a reference to a #GstEvent.
+ *
+ * @event_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the event is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+static inline void
+gst_clear_event (GstEvent ** event_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) event_ptr);
 }
 
 /* copy event */
@@ -510,10 +531,10 @@ GST_API
 void            gst_event_parse_stream_start    (GstEvent *event, const gchar **stream_id);
 
 GST_API
-void            gst_event_set_stream        (GstEvent *event, GstStream *stream);
+void            gst_event_set_stream    (GstEvent *event, GstStream *stream);
 
 GST_API
-void            gst_event_parse_stream      (GstEvent *event, GstStream **stream);
+void            gst_event_parse_stream    (GstEvent *event, GstStream **stream);
 
 GST_API
 void            gst_event_set_stream_flags      (GstEvent *event, GstStreamFlags flags);
@@ -658,6 +679,12 @@ void            gst_event_parse_seek            (GstEvent *event, gdouble *rate,
                                                  GstSeekFlags *flags,
                                                  GstSeekType *start_type, gint64 *start,
                                                  GstSeekType *stop_type, gint64 *stop);
+
+GST_API
+void            gst_event_set_seek_trickmode_interval (GstEvent *event, GstClockTime interval);
+
+GST_API
+void            gst_event_parse_seek_trickmode_interval (GstEvent *event, GstClockTime *interval);
 
 /* navigation event */
 

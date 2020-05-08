@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -188,7 +188,7 @@ public final class IosApplication extends Application {
     }
 
     private native Object _enterNestedEventLoopImpl();
-    private native void _leaveNestedEventLoopImpl();
+    private native void _leaveNestedEventLoopImpl(Object retValue);
 
     @Override
     protected Object _enterNestedEventLoop() {
@@ -197,7 +197,7 @@ public final class IosApplication extends Application {
 
     @Override
     protected void _leaveNestedEventLoop(Object retValue) {
-        _leaveNestedEventLoopImpl();
+        _leaveNestedEventLoopImpl(retValue);
     }
 
     @Override

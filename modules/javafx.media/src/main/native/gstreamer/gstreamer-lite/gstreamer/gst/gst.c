@@ -122,6 +122,13 @@
 
 #include "gst.h"
 
+#ifdef GSTREAMER_LITE
+#ifdef STATIC_BUILD
+gboolean fxplugins_init (GstPlugin * plugin);
+gboolean fxavplugins_init (GstPlugin * plugin);
+#endif // STATIC_BUILD
+#endif // GSTREAMER_LITE
+
 #define GST_CAT_DEFAULT GST_CAT_GST_INIT
 
 #define MAX_PATH_SPLIT  16
@@ -655,7 +662,7 @@ gst_register_core_elements (GstPlugin * plugin)
 
 /*
  * this bit handles:
- * - initalization of threads if we use them
+ * - initialization of threads if we use them
  * - log handler
  * - initial output
  * - initializes gst_format
@@ -818,6 +825,16 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
       "gstplugins-lite", "gstplugins-lite",
       lite_plugins_init, VERSION, GST_LICENSE, PACKAGE,
       GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#ifdef STATIC_BUILD
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+      "fxplugins", "fxplugin",
+      fxplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+     "fxavplugins", "fxavplugin",
+      fxavplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#endif // STATIC_BUILD
 #endif // GSTREAMER_LITE
 
   /*
@@ -906,7 +923,7 @@ gst_debug_help (void)
         e = gst_element_factory_create (factory, NULL);
         if (e)
           gst_object_unref (e);
-  }
+      }
 
     next:
       features = g_list_next (features);
@@ -1020,7 +1037,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_PLUGIN_PATH:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
+        split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
 #endif /* GST_DISABLE_REGISTRY */
       break;
     case ARG_PLUGIN_LOAD:
@@ -1032,7 +1049,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_REGISTRY_UPDATE_DISABLE:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      _priv_gst_disable_registry_update = TRUE;
+        _priv_gst_disable_registry_update = TRUE;
 #endif
       break;
     case ARG_REGISTRY_FORK_DISABLE:
@@ -1156,6 +1173,7 @@ gst_deinit (void)
 
   _priv_gst_caps_features_cleanup ();
   _priv_gst_caps_cleanup ();
+  _priv_gst_debug_cleanup ();
 
   g_type_class_unref (g_type_class_peek (gst_object_get_type ()));
   g_type_class_unref (g_type_class_peek (gst_pad_get_type ()));

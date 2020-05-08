@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1451,7 +1451,9 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                 }
 
                 if (!pPipeline->m_pEventDispatcher->SendAudioSpectrumEvent(GST_TIME_AS_SECONDS((double)timestamp),
-                    GST_TIME_AS_SECONDS((double)duration)))
+                    GST_TIME_AS_SECONDS((double)duration), false)) // Always false, since GStreamer does not need it,
+                                                                   // but if it will be required such case needs to be
+                                                                   // tested.
                 {
                     if(!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_JNI_SEND_AUDIO_SPECTRUM_EVENT))
                     {

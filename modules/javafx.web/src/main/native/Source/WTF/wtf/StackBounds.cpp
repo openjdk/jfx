@@ -19,9 +19,10 @@
  */
 
 #include "config.h"
+#include <wtf/StackBounds.h>
+
 #include <mutex>
 #include <wtf/NoTailCalls.h>
-#include <wtf/StackBounds.h>
 
 #if OS(DARWIN)
 
@@ -187,9 +188,7 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     VirtualQuery(&stackOrigin, &stackOrigin, sizeof(stackOrigin));
     // stackOrigin.AllocationBase points to the reserved stack memory base address.
 
-    const LPVOID theAllocBase = stackOrigin.AllocationBase;
     void* origin = static_cast<char*>(stackOrigin.BaseAddress) + stackOrigin.RegionSize;
-
     // The stack on Windows consists out of three parts (uncommitted memory, a guard page and present
     // committed memory). The 3 regions have different BaseAddresses but all have the same AllocationBase
     // since they are all from the same VirtualAlloc. The 3 regions are laid out in memory (from high to
@@ -205,8 +204,11 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     //
     // See http://msdn.microsoft.com/en-us/library/ms686774%28VS.85%29.aspx for more information.
 
+    MEMORY_BASIC_INFORMATION uncommittedMemory;
+
+#if PLATFORM(JAVA)
     // look for uncommited memory block.
-    MEMORY_BASIC_INFORMATION uncommittedMemory = { 0 };
+    const LPVOID theAllocBase = stackOrigin.AllocationBase;
     LPVOID a = stackOrigin.AllocationBase;
 
     do {
@@ -215,8 +217,12 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
         a = (LPVOID)((static_cast<char*>(a)) + uncommittedMemory.RegionSize);
     } while (theAllocBase == uncommittedMemory.AllocationBase &&
         uncommittedMemory.State != MEM_RESERVE);
+#else
+    VirtualQuery(stackOrigin.AllocationBase, &uncommittedMemory, sizeof(uncommittedMemory));
+    ASSERT(uncommittedMemory.State == MEM_RESERVE);
+#endif
 
-    MEMORY_BASIC_INFORMATION guardPage{ 0 };
+    MEMORY_BASIC_INFORMATION guardPage;
     VirtualQuery(static_cast<char*>(uncommittedMemory.BaseAddress) + uncommittedMemory.RegionSize, &guardPage, sizeof(guardPage));
     ASSERT(guardPage.Protect & PAGE_GUARD);
 
@@ -232,11 +238,15 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
     ASSERT(stackOrigin.AllocationBase == uncommittedMemory.AllocationBase);
     ASSERT(stackOrigin.AllocationBase == guardPage.AllocationBase);
     ASSERT(stackOrigin.AllocationBase == committedMemory.AllocationBase);
-    // TODO: refine the sanity checks below.
-    //ASSERT(stackOrigin.AllocationBase == uncommittedMemory.BaseAddress);
-    //ASSERT(endOfStack == computedEnd);
+#if !PLATFORM(JAVA)
+    ASSERT(stackOrigin.AllocationBase == uncommittedMemory.BaseAddress);
+    ASSERT(endOfStack == computedEnd);
+#endif
 #endif // NDEBUG
     void* bound = static_cast<char*>(endOfStack) + guardPage.RegionSize;
+#if PLATFORM(JAVA)
+    bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
+#endif
     return StackBounds { origin, bound };
 }
 

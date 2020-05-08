@@ -99,6 +99,7 @@ typedef enum {
  * @GST_QUERY_DRAIN: wait till all serialized data is consumed downstream
  * @GST_QUERY_CONTEXT: query the pipeline-local context from
  *     downstream or upstream (since 1.2)
+ * @GST_QUERY_BITRATE: the bitrate query (since 1.16)
  *
  * Standard predefined Query types
  */
@@ -123,7 +124,8 @@ typedef enum {
   GST_QUERY_ACCEPT_CAPS  = GST_QUERY_MAKE_TYPE (160, FLAG(BOTH)),
   GST_QUERY_CAPS         = GST_QUERY_MAKE_TYPE (170, FLAG(BOTH)),
   GST_QUERY_DRAIN        = GST_QUERY_MAKE_TYPE (180, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_QUERY_CONTEXT      = GST_QUERY_MAKE_TYPE (190, FLAG(BOTH))
+  GST_QUERY_CONTEXT      = GST_QUERY_MAKE_TYPE (190, FLAG(BOTH)),
+  GST_QUERY_BITRATE      = GST_QUERY_MAKE_TYPE (200, FLAG(DOWNSTREAM)),
 } GstQueryType;
 #undef FLAG
 
@@ -258,6 +260,25 @@ gst_query_unref (GstQuery * q)
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (q));
 }
 
+/**
+ * gst_clear_query: (skip)
+ * @query_ptr: a pointer to a #GstQuery reference
+ *
+ * Clears a reference to a #GstQuery.
+ *
+ * @query_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the query is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+static inline void
+gst_clear_query (GstQuery ** query_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) query_ptr);
+}
+
 /* copy query */
 /**
  * gst_query_copy:
@@ -311,6 +332,30 @@ static inline gboolean
 gst_query_replace (GstQuery **old_query, GstQuery *new_query)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_query, (GstMiniObject *) new_query);
+}
+
+/**
+ * gst_query_take:
+ * @old_query: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstQuery to be stolen.
+ * @new_query: (allow-none) (transfer full): pointer to a #GstQuery that will
+ *     replace the query pointed to by @old_query.
+ *
+ * Modifies a pointer to a #GstQuery to point to a different #GstQuery. This
+ * function is similar to gst_query_replace() except that it takes ownership of
+ * @new_query.
+ *
+ * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
+ *
+ * Returns: %TRUE if @new_query was different from @old_query
+ *
+ * Since: 1.16
+ */
+static inline gboolean
+gst_query_take (GstQuery **old_query, GstQuery *new_query)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_query,
+      (GstMiniObject *) new_query);
 }
 
 /* application specific query */
@@ -646,6 +691,17 @@ void            gst_query_set_context              (GstQuery *query, GstContext 
 
 GST_API
 void            gst_query_parse_context            (GstQuery *query, GstContext **context);
+
+/* bitrate query */
+
+GST_API
+GstQuery *      gst_query_new_bitrate              (void) G_GNUC_MALLOC;
+
+GST_API
+void            gst_query_set_bitrate              (GstQuery * query, guint nominal_bitrate);
+
+GST_API
+void            gst_query_parse_bitrate            (GstQuery * query, guint * nominal_bitrate);
 
 #ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstQuery, gst_query_unref)

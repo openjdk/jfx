@@ -109,6 +109,7 @@ C_SOURCES = gstreamer/gst/gst.c \
 			gst-plugins-base/gst-libs/gst/audio/audio.c \
 			gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
 			gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
+                        gst-plugins-base/gst-libs/gst/audio/audio-buffer.c \
 			gst-plugins-base/gst-libs/gst/audio/audio-converter.c \
 			gst-plugins-base/gst-libs/gst/audio/audio-resampler.c \
 			gst-plugins-base/gst-libs/gst/audio/audio-enumtypes.c \

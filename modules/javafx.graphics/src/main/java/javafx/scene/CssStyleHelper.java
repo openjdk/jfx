@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,7 +131,7 @@ final class CssStyleHelper {
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
             node.styleHelper.triggerStates.addAll(triggerStates[0]);
-            node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
 
@@ -298,6 +298,9 @@ final class CssStyleHelper {
         if (currentMap != styleMap) {
             return false;
         }
+
+        //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
+        node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
 
         // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
         // Under this condition, there are no styles for this node _and_ no styles inherit.

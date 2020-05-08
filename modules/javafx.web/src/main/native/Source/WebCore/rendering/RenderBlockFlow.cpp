@@ -24,6 +24,7 @@
 #include "config.h"
 #include "RenderBlockFlow.h"
 
+#include "ComplexLineLayout.h"
 #include "Editor.h"
 #include "FloatingObjects.h"
 #include "Frame.h"
@@ -151,12 +152,18 @@ void RenderBlockFlow::willBeDestroyed()
             parent()->dirtyLinesFromChangedChild(*this);
     }
 
-    m_lineBoxes.deleteLineBoxes();
+    if (m_complexLineLayout)
+        m_complexLineLayout->lineBoxes().deleteLineBoxes();
 
     blockWillBeDestroyed();
 
     // NOTE: This jumps down to RenderBox, bypassing RenderBlock since it would do duplicate work.
     RenderBox::willBeDestroyed();
+}
+
+RenderMultiColumnFlow* RenderBlockFlow::multiColumnFlowSlowCase() const
+{
+    return rareBlockFlowData()->m_multiColumnFlow.get();
 }
 
 RenderBlockFlow* RenderBlockFlow::previousSiblingWithOverhangingFloats(bool& parentHasFloats) const
@@ -388,7 +395,7 @@ void RenderBlockFlow::computeColumnCountAndWidth()
 
     LayoutUnit availWidth = desiredColumnWidth;
     LayoutUnit colGap = columnGap();
-    LayoutUnit colWidth = std::max<LayoutUnit>(1, style().columnWidth());
+    LayoutUnit colWidth = std::max(1_lu, LayoutUnit(style().columnWidth()));
     unsigned colCount = std::max<unsigned>(1, style().columnCount());
 
     if (style().hasAutoColumnWidth() && !style().hasAutoColumnCount()) {
@@ -669,7 +676,11 @@ void RenderBlockFlow::layoutInlineChildren(bool relayoutChildren, LayoutUnit& re
     }
 
     m_simpleLineLayout = nullptr;
-    layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
+
+    if (!m_complexLineLayout)
+        m_complexLineLayout = makeUnique<ComplexLineLayout>(*this);
+
+    m_complexLineLayout->layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
 }
 
 void RenderBlockFlow::layoutBlockChild(RenderBox& child, MarginInfo& marginInfo, LayoutUnit& previousFloatLogicalBottom, LayoutUnit& maxFloatLogicalBottom)
@@ -903,6 +914,45 @@ void RenderBlockFlow::setStaticInlinePositionForChild(RenderBox& child, LayoutUn
         inlinePosition += startOffsetForContent() - startOffsetForContent(blockOffset);
     }
     child.layer()->setStaticInlinePosition(inlinePosition);
+}
+
+LayoutUnit RenderBlockFlow::startAlignedOffsetForLine(LayoutUnit position, IndentTextOrNot shouldIndentText)
+{
+    TextAlignMode textAlign = style().textAlign();
+    bool shouldApplyIndentText = false;
+    switch (textAlign) {
+    case TextAlignMode::Left:
+    case TextAlignMode::WebKitLeft:
+        shouldApplyIndentText = style().isLeftToRightDirection();
+        break;
+    case TextAlignMode::Right:
+    case TextAlignMode::WebKitRight:
+        shouldApplyIndentText = !style().isLeftToRightDirection();
+        break;
+    case TextAlignMode::Start:
+        shouldApplyIndentText = true;
+        break;
+    default:
+        shouldApplyIndentText = false;
+    }
+    // <rdar://problem/15427571>
+    // https://bugs.webkit.org/show_bug.cgi?id=124522
+    // This quirk is for legacy content that doesn't work properly with the center positioning scheme
+    // being honored (e.g., epubs).
+    if (shouldApplyIndentText || settings().useLegacyTextAlignPositionedElementBehavior()) // FIXME: Handle TextAlignMode::End here
+        return startOffsetForLine(position, shouldIndentText);
+
+    // updateLogicalWidthForAlignment() handles the direction of the block so no need to consider it here
+    float totalLogicalWidth = 0;
+    float logicalLeft = logicalLeftOffsetForLine(logicalHeight(), DoNotIndentText);
+    float availableLogicalWidth = logicalRightOffsetForLine(logicalHeight(), DoNotIndentText) - logicalLeft;
+
+    ComplexLineLayout::updateLogicalWidthForAlignment(*this, textAlign, nullptr, nullptr, logicalLeft, totalLogicalWidth, availableLogicalWidth, 0);
+
+    if (!style().isLeftToRightDirection())
+        return LayoutUnit(logicalWidth() - logicalLeft);
+
+    return LayoutUnit(logicalLeft);
 }
 
 RenderBlockFlow::MarginValues RenderBlockFlow::marginValuesForChild(RenderBox& child) const
@@ -1969,7 +2019,7 @@ void RenderBlockFlow::layoutLineGridBox()
 
     setLineGridBox(0);
 
-    auto lineGridBox = std::make_unique<RootInlineBox>(*this);
+    auto lineGridBox = makeUnique<RootInlineBox>(*this);
     lineGridBox->setHasTextChildren(); // Needed to make the line ascent/descent actually be honored in quirks mode.
     lineGridBox->setConstructed();
     GlyphOverflowAndFallbackFontsMap textBoxDataMap;
@@ -2059,10 +2109,10 @@ void RenderBlockFlow::deleteLines()
         m_floatingObjects->clearLineBoxTreePointers();
 
     if (m_simpleLineLayout) {
-        ASSERT(!m_lineBoxes.firstLineBox());
+        ASSERT(!m_complexLineLayout);
         m_simpleLineLayout = nullptr;
-    } else
-        m_lineBoxes.deleteLineBoxTree();
+    } else if (m_complexLineLayout)
+        m_complexLineLayout->lineBoxes().deleteLineBoxTree();
 
     RenderBlock::deleteLines();
 }
@@ -2210,7 +2260,7 @@ void RenderBlockFlow::clipOutFloatingObjects(RenderBlock& rootBlock, const Paint
 
 void RenderBlockFlow::createFloatingObjects()
 {
-    m_floatingObjects = std::make_unique<FloatingObjects>(*this);
+    m_floatingObjects = makeUnique<FloatingObjects>(*this);
 }
 
 void RenderBlockFlow::removeFloatingObjects()
@@ -2899,7 +2949,18 @@ bool RenderBlockFlow::hitTestInlineChildren(const HitTestRequest& request, HitTe
     if (auto simpleLineLayout = this->simpleLineLayout())
         return SimpleLineLayout::hitTestFlow(*this, *simpleLineLayout, request, result, locationInContainer, accumulatedOffset, hitTestAction);
 
-    return m_lineBoxes.hitTest(this, request, result, locationInContainer, accumulatedOffset, hitTestAction);
+    return m_complexLineLayout && m_complexLineLayout->lineBoxes().hitTest(this, request, result, locationInContainer, accumulatedOffset, hitTestAction);
+}
+
+void RenderBlockFlow::addOverflowFromInlineChildren()
+{
+    if (auto simpleLineLayout = this->simpleLineLayout()) {
+        ASSERT(!hasOverflowClip());
+        SimpleLineLayout::collectFlowOverflow(*this, *simpleLineLayout);
+        return;
+    }
+
+    m_complexLineLayout->addOverflowFromInlineChildren();
 }
 
 void RenderBlockFlow::adjustForBorderFit(LayoutUnit x, LayoutUnit& left, LayoutUnit& right) const
@@ -3096,7 +3157,7 @@ GapRects RenderBlockFlow::inlineSelectionGaps(RenderBlock& rootBlock, const Layo
             selectionState() != SelectionStart && selectionState() != SelectionBoth && !isRubyBase())
             result.uniteCenter(blockSelectionGap(rootBlock, rootBlockPhysicalPosition, offsetFromRootBlock, lastLogicalTop, lastLogicalLeft, lastLogicalRight, selTop, cache, paintInfo));
 
-        LayoutRect logicalRect(curr->logicalLeft(), selTop, curr->logicalWidth(), selTop + selHeight);
+        LayoutRect logicalRect { LayoutUnit(curr->logicalLeft()), selTop, LayoutUnit(curr->logicalWidth()), selTop + selHeight };
         logicalRect.move(isHorizontalWritingMode() ? offsetFromRootBlock : offsetFromRootBlock.transposedSize());
         LayoutRect physicalRect = rootBlock.logicalRectToPhysicalRect(rootBlockPhysicalPosition, logicalRect);
         if (!paintInfo || (isHorizontalWritingMode() && physicalRect.y() < paintInfo->rect.maxY() && physicalRect.maxY() > paintInfo->rect.y())
@@ -3412,7 +3473,7 @@ VisiblePosition RenderBlockFlow::positionForPointWithInlineChildren(const Layout
 
     if (closestBox) {
         if (moveCaretToBoundary) {
-            LayoutUnit firstRootBoxWithChildrenTop = std::min<LayoutUnit>(firstRootBoxWithChildren->selectionTop(), firstRootBoxWithChildren->logicalTop());
+            LayoutUnit firstRootBoxWithChildrenTop = std::min(firstRootBoxWithChildren->selectionTop(), LayoutUnit(firstRootBoxWithChildren->logicalTop()));
             if (pointInLogicalContents.y() < firstRootBoxWithChildrenTop
                 || (blocksAreFlipped && pointInLogicalContents.y() == firstRootBoxWithChildrenTop)) {
                 InlineBox* box = firstRootBoxWithChildren->firstLeafChild();
@@ -3465,9 +3526,9 @@ void RenderBlockFlow::addFocusRingRectsForInlineChildren(Vector<LayoutRect>& rec
 {
     ASSERT(childrenInline());
     for (RootInlineBox* curr = firstRootBox(); curr; curr = curr->nextRootBox()) {
-        LayoutUnit top = std::max<LayoutUnit>(curr->lineTop(), curr->top());
-        LayoutUnit bottom = std::min<LayoutUnit>(curr->lineBottom(), curr->top() + curr->height());
-        LayoutRect rect(additionalOffset.x() + curr->x(), additionalOffset.y() + top, curr->width(), bottom - top);
+        LayoutUnit top = std::max(curr->lineTop(), LayoutUnit(curr->top()));
+        LayoutUnit bottom = std::min(curr->lineBottom(), LayoutUnit(curr->top() + curr->height()));
+        LayoutRect rect { LayoutUnit(additionalOffset.x() + curr->x()), additionalOffset.y() + top, LayoutUnit(curr->width()), bottom - top };
         if (!rect.isEmpty())
             rects.append(rect);
     }
@@ -3481,7 +3542,9 @@ void RenderBlockFlow::paintInlineChildren(PaintInfo& paintInfo, const LayoutPoin
         SimpleLineLayout::paintFlow(*this, *simpleLineLayout, paintInfo, paintOffset);
         return;
     }
-    m_lineBoxes.paint(this, paintInfo, paintOffset);
+
+    if (m_complexLineLayout)
+        m_complexLineLayout->lineBoxes().paint(this, paintInfo, paintOffset);
 }
 
 bool RenderBlockFlow::relayoutForPagination()
@@ -3536,7 +3599,7 @@ bool RenderBlockFlow::hasLines() const
     if (auto simpleLineLayout = this->simpleLineLayout())
         return simpleLineLayout->lineCount();
 
-    return lineBoxes().firstLineBox();
+    return m_complexLineLayout && m_complexLineLayout->lineBoxes().firstLineBox();
 }
 
 void RenderBlockFlow::invalidateLineLayoutPath()
@@ -3576,7 +3639,7 @@ void RenderBlockFlow::layoutSimpleLines(bool relayoutChildren, LayoutUnit& repai
     }
     for (auto& renderer : childrenOfType<RenderObject>(*this))
         renderer.clearNeedsLayout();
-    ASSERT(!m_lineBoxes.firstLineBox());
+    ASSERT(!m_complexLineLayout);
     LayoutUnit lineLayoutHeight = SimpleLineLayout::computeFlowHeight(*this, *m_simpleLineLayout);
     LayoutUnit lineLayoutTop = borderAndPaddingBefore();
     repaintLogicalTop = lineLayoutTop;
@@ -3587,7 +3650,10 @@ void RenderBlockFlow::layoutSimpleLines(bool relayoutChildren, LayoutUnit& repai
 void RenderBlockFlow::deleteLineBoxesBeforeSimpleLineLayout()
 {
     ASSERT(lineLayoutPath() == SimpleLinesPath);
-    lineBoxes().deleteLineBoxes();
+
+    if (m_complexLineLayout)
+        m_complexLineLayout->lineBoxes().deleteLineBoxes();
+
     for (auto& renderer : childrenOfType<RenderObject>(*this)) {
         if (is<RenderText>(renderer))
             downcast<RenderText>(renderer).deleteLineBoxesBeforeSimpleLineLayout();
@@ -3596,13 +3662,22 @@ void RenderBlockFlow::deleteLineBoxesBeforeSimpleLineLayout()
         else
             ASSERT_NOT_REACHED();
     }
+
+    m_complexLineLayout = nullptr;
 }
 
 void RenderBlockFlow::ensureLineBoxes()
 {
+    if (!childrenInline())
+        return;
+
     setLineLayoutPath(ForceLineBoxesPath);
+
     if (!m_simpleLineLayout)
         return;
+
+    ASSERT(!m_complexLineLayout);
+    m_complexLineLayout = makeUnique<ComplexLineLayout>(*this);
 
     if (SimpleLineLayout::canUseForLineBoxTree(*this, *m_simpleLineLayout)) {
         SimpleLineLayout::generateLineBoxTree(*this, *m_simpleLineLayout);
@@ -3622,14 +3697,14 @@ void RenderBlockFlow::ensureLineBoxes()
     LayoutUnit repaintLogicalBottom;
     if (isPaginated) {
         PaginatedLayoutStateMaintainer state(*this);
-        layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
+        m_complexLineLayout->layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
         // This matches relayoutToAvoidWidows.
         if (shouldBreakAtLineToAvoidWidow())
-            layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
+            m_complexLineLayout->layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
         // FIXME: This is needed as long as simple and normal line layout produce different line breakings.
         repaint();
     } else
-        layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
+        m_complexLineLayout->layoutLineBoxes(relayoutChildren, repaintLogicalTop, repaintLogicalBottom);
 
     updateLogicalHeight();
     ASSERT(didNeedLayout || logicalHeight() == oldHeight);
@@ -3660,7 +3735,7 @@ RenderBlockFlow::RenderBlockFlowRareData& RenderBlockFlow::ensureRareBlockFlowDa
 void RenderBlockFlow::materializeRareBlockFlowData()
 {
     ASSERT(!hasRareBlockFlowData());
-    m_rareBlockFlowData = std::make_unique<RenderBlockFlow::RenderBlockFlowRareData>(*this);
+    m_rareBlockFlowData = makeUnique<RenderBlockFlow::RenderBlockFlowRareData>(*this);
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -3776,6 +3851,7 @@ void RenderBlockFlow::adjustComputedFontSizes(float size, float visibleWidth)
 
             float lineTextMultiplier = lineCount == ONE_LINE ? oneLineTextMultiplier(text, specifiedSize) : textMultiplier(text, specifiedSize);
             float candidateNewSize = roundf(std::min(minFontSize, specifiedSize * lineTextMultiplier));
+
             if (candidateNewSize > specifiedSize && candidateNewSize != fontDescription.computedSize() && text.textNode() && oldStyle.textSizeAdjust().isAuto())
                 document().textAutoSizing().addTextNode(*text.textNode(), candidateNewSize);
         }
@@ -4189,7 +4265,7 @@ void RenderBlockFlow::computeInlinePreferredLogicalWidths(LayoutUnit& minLogical
 
                 // Add in text-indent. This is added in only once.
                 if (!addedTextIndent && !child->isFloating()) {
-                    LayoutUnit ceiledIndent = textIndent.ceilToFloat();
+                    LayoutUnit ceiledIndent { textIndent.ceilToFloat() };
                     childMin += ceiledIndent;
                     childMax += ceiledIndent;
 

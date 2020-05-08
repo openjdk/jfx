@@ -48,8 +48,8 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_BGRA: reverse rgb with alpha channel last
  * @GST_VIDEO_FORMAT_ARGB: rgb with alpha channel first
  * @GST_VIDEO_FORMAT_ABGR: reverse rgb with alpha channel first
- * @GST_VIDEO_FORMAT_RGB: rgb
- * @GST_VIDEO_FORMAT_BGR: reverse rgb
+ * @GST_VIDEO_FORMAT_RGB: RGB packed into 24 bits without padding (`R-G-B-R-G-B`)
+ * @GST_VIDEO_FORMAT_BGR: reverse RGB packed into 24 bits without padding (`B-G-R-B-G-R`)
  * @GST_VIDEO_FORMAT_Y41B: planar 4:1:1 YUV
  * @GST_VIDEO_FORMAT_Y42B: planar 4:2:2 YUV
  * @GST_VIDEO_FORMAT_YVYU: packed 4:2:2 YUV (Y0-V0-Y1-U0 Y2-V2-Y3-U2 Y4 ...)
@@ -64,7 +64,7 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_GRAY16_BE: 16-bit grayscale, most significant byte first
  * @GST_VIDEO_FORMAT_GRAY16_LE: 16-bit grayscale, least significant byte first
  * @GST_VIDEO_FORMAT_v308: packed 4:4:4 YUV (Y-U-V ...)
- * @GST_VIDEO_FORMAT_IYU2: packed 4:4:4 YUV (U-Y-V ...) (Since 1.10)
+ * @GST_VIDEO_FORMAT_IYU2: packed 4:4:4 YUV (U-Y-V ...) (Since: 1.10)
  * @GST_VIDEO_FORMAT_RGB16: rgb 5-6-5 bits per component
  * @GST_VIDEO_FORMAT_BGR16: reverse rgb 5-6-5 bits per component
  * @GST_VIDEO_FORMAT_RGB15: rgb 5-5-5 bits per component
@@ -113,8 +113,16 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_I422_12LE: planar 4:2:2 YUV, 12 bits per channel (Since: 1.12)
  * @GST_VIDEO_FORMAT_Y444_12BE: planar 4:4:4 YUV, 12 bits per channel (Since: 1.12)
  * @GST_VIDEO_FORMAT_Y444_12LE: planar 4:4:4 YUV, 12 bits per channel (Since: 1.12)
+ * @GST_VIDEO_FORMAT_NV12_10LE40: Fully packed variant of NV12_10LE32 (Since: 1.16)
+ * @GST_VIDEO_FORMAT_Y210: packed 4:2:2 YUV, 10 bits per channel (Since: 1.16)
+ * @GST_VIDEO_FORMAT_Y410: packed 4:4:4 YUV, 10 bits per channel(A-V-Y-U...) (Since: 1.16)
+ * @GST_VIDEO_FORMAT_VUYA: packed 4:4:4 YUV with alpha channel (V0-U0-Y0-A0...) (Since: 1.16)
+ * @GST_VIDEO_FORMAT_BGR10A2_LE: packed 4:4:4 RGB with alpha channel(B-G-R-A), 10 bits for R/G/B channel and MSB 2 bits for alpha channel (Since: 1.16)
  *
  * Enum value describing the most common video formats.
+ *
+ * See the [GStreamer raw video format design document](https://gstreamer.freedesktop.org/documentation/design/mediatype-video-raw.html#formats)
+ * for details about the layout and packing of these formats in memory.
  */
 typedef enum {
   GST_VIDEO_FORMAT_UNKNOWN,
@@ -198,6 +206,11 @@ typedef enum {
   GST_VIDEO_FORMAT_GRAY10_LE32,
   GST_VIDEO_FORMAT_NV12_10LE32,
   GST_VIDEO_FORMAT_NV16_10LE32,
+  GST_VIDEO_FORMAT_NV12_10LE40,
+  GST_VIDEO_FORMAT_Y210,
+  GST_VIDEO_FORMAT_Y410,
+  GST_VIDEO_FORMAT_VUYA,
+  GST_VIDEO_FORMAT_BGR10A2_LE,
 } GstVideoFormat;
 
 #define GST_VIDEO_MAX_PLANES 4
@@ -270,7 +283,7 @@ typedef enum
  *   in the least significant bits of the destination.
  * @GST_VIDEO_PACK_FLAG_INTERLACED: The source is interlaced. The unpacked
  *   format will be interlaced as well with each line containing
- *   information from alternating fields. (Since 1.2)
+ *   information from alternating fields. (Since: 1.2)
  *
  * The different flags that can be used when packing and unpacking.
  */
@@ -540,16 +553,16 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
 # define GST_VIDEO_OE(s) G_STRINGIFY(s)"_LE"
 #endif
 
-#define GST_VIDEO_FORMATS_ALL "{ I420, YV12, YUY2, UYVY, AYUV, RGBx, "  \
+#define GST_VIDEO_FORMATS_ALL "{ I420, YV12, YUY2, UYVY, AYUV, VUYA, RGBx, "  \
   "BGRx, xRGB, xBGR, RGBA, BGRA, ARGB, ABGR, RGB, BGR, Y41B, Y42B, YVYU, " \
-  "Y444, v210, v216, NV12, NV21, GRAY8, GRAY16_BE, GRAY16_LE, v308, RGB16, " \
+  "Y444, v210, v216, Y210, Y410, NV12, NV21, GRAY8, GRAY16_BE, GRAY16_LE, v308, RGB16, " \
   "BGR16, RGB15, BGR15, UYVP, A420, RGB8P, YUV9, YVU9, IYU1, ARGB64, " \
   "AYUV64, r210, I420_10BE, I420_10LE, I422_10BE, I422_10LE, Y444_10BE, " \
   "Y444_10LE, GBR, GBR_10BE, GBR_10LE, NV16, NV24, NV12_64Z32, A420_10BE, " \
   "A420_10LE, A422_10BE, A422_10LE, A444_10BE, A444_10LE, NV61, P010_10BE, " \
-  "P010_10LE, IYU2, VYUY, GBRA, GBRA_10BE, GBRA_10LE, GBR_12BE, GBR_12LE, " \
+  "P010_10LE, IYU2, VYUY, GBRA, GBRA_10BE, GBRA_10LE, BGR10A2_LE, GBR_12BE, GBR_12LE, " \
   "GBRA_12BE, GBRA_12LE, I420_12BE, I420_12LE, I422_12BE, I422_12LE, " \
-  "Y444_12BE, Y444_12LE, GRAY10_LE32, NV12_10LE32, NV16_10LE32 }"
+  "Y444_12BE, Y444_12LE, GRAY10_LE32, NV12_10LE32, NV16_10LE32, NV12_10LE40 }"
 
 /**
  * GST_VIDEO_CAPS_MAKE:

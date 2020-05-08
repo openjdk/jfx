@@ -47,7 +47,7 @@
 
 namespace WebCore {
 
-#if !PLATFORM(COCOA) && !USE(COORDINATED_GRAPHICS)
+#if PLATFORM(IOS_FAMILY) || !ENABLE(ASYNC_SCROLLING)
 Ref<ScrollingCoordinator> ScrollingCoordinator::create(Page* page)
 {
     return adoptRef(*new ScrollingCoordinator(page));
@@ -96,6 +96,11 @@ bool ScrollingCoordinator::coordinatesScrollingForOverflowLayer(const RenderLaye
     return layer.hasCompositedScrollableOverflow();
 }
 
+ScrollingNodeID ScrollingCoordinator::scrollableContainerNodeID(const RenderObject&) const
+{
+    return 0;
+}
+
 EventTrackingRegions ScrollingCoordinator::absoluteEventTrackingRegionsForFrame(const Frame& frame) const
 {
     auto* renderView = frame.contentRenderer();
@@ -108,25 +113,7 @@ EventTrackingRegions ScrollingCoordinator::absoluteEventTrackingRegionsForFrame(
     auto* document = frame.document();
     if (!document)
         return EventTrackingRegions();
-    auto eventTrackingRegions = document->eventTrackingRegions();
-
-#if ENABLE(POINTER_EVENTS)
-    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled()) {
-        if (auto* touchActionElements = frame.document()->touchActionElements()) {
-            auto& touchActionData = eventTrackingRegions.touchActionData;
-            for (const auto& element : *touchActionElements) {
-                ASSERT(element);
-                touchActionData.append({
-                    element->computedTouchActions(),
-                    element->nearestScrollingNodeIDUsingTouchOverflowScrolling(),
-                    element->document().absoluteEventRegionForNode(*element).first
-                });
-            }
-        }
-    }
-#endif
-
-    return eventTrackingRegions;
+    return document->eventTrackingRegions();
 #else
     auto* frameView = frame.view();
     if (!frameView)
@@ -435,10 +422,16 @@ TextStream& operator<<(TextStream& ts, ScrollableAreaParameters scrollableAreaPa
     ts.dumpProperty("vertical scroll elasticity", scrollableAreaParameters.verticalScrollElasticity);
     ts.dumpProperty("horizontal scrollbar mode", scrollableAreaParameters.horizontalScrollbarMode);
     ts.dumpProperty("vertical scrollbar mode", scrollableAreaParameters.verticalScrollbarMode);
+
     if (scrollableAreaParameters.hasEnabledHorizontalScrollbar)
         ts.dumpProperty("has enabled horizontal scrollbar", scrollableAreaParameters.hasEnabledHorizontalScrollbar);
     if (scrollableAreaParameters.hasEnabledVerticalScrollbar)
         ts.dumpProperty("has enabled vertical scrollbar", scrollableAreaParameters.hasEnabledVerticalScrollbar);
+
+    if (scrollableAreaParameters.horizontalScrollbarHiddenByStyle)
+        ts.dumpProperty("horizontal scrollbar hidden by style", scrollableAreaParameters.horizontalScrollbarHiddenByStyle);
+    if (scrollableAreaParameters.verticalScrollbarHiddenByStyle)
+        ts.dumpProperty("vertical scrollbar hidden by style", scrollableAreaParameters.verticalScrollbarHiddenByStyle);
 
     return ts;
 }
@@ -458,11 +451,17 @@ TextStream& operator<<(TextStream& ts, ScrollingNodeType nodeType)
     case ScrollingNodeType::Overflow:
         ts << "overflow-scrolling";
         break;
+    case ScrollingNodeType::OverflowProxy:
+        ts << "overflow-scroll-proxy";
+        break;
     case ScrollingNodeType::Fixed:
         ts << "fixed";
         break;
     case ScrollingNodeType::Sticky:
         ts << "sticky";
+        break;
+    case ScrollingNodeType::Positioned:
+        ts << "positioned";
         break;
     }
     return ts;
@@ -496,6 +495,15 @@ TextStream& operator<<(TextStream& ts, ViewportRectStability stability)
     case ViewportRectStability::ChangingObscuredInsetsInteractively:
         ts << "changing obscured insets interactively";
         break;
+    }
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, ScrollType scrollType)
+{
+    switch (scrollType) {
+    case ScrollType::User: ts << "user"; break;
+    case ScrollType::Programmatic: ts << "programmatic"; break;
     }
     return ts;
 }

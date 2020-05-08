@@ -28,6 +28,7 @@
 #include "FilterOperations.h"
 #include "Image.h"
 #include "LengthFunctions.h"
+#include "NativeImage.h"
 #include "NotImplemented.h"
 #include "TextureMapperShaderProgram.h"
 #include "Timer.h"
@@ -40,6 +41,11 @@
 #include "RefPtrCairo.h"
 #include <cairo.h>
 #include <wtf/text/CString.h>
+#endif
+
+#if USE(DIRECT2D)
+#include <d2d1.h>
+#include <wincodec.h>
 #endif
 
 #if OS(DARWIN)
@@ -156,6 +162,8 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
     cairo_surface_t* surface = frameImage.get();
     imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));
     bytesPerLine = cairo_image_surface_get_stride(surface);
+#elif USE(DIRECT2D)
+    notImplemented();
 #endif
 
     updateContents(imageData, targetRect, offset, bytesPerLine);

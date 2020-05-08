@@ -29,6 +29,7 @@
 #include "CSSAnimationController.h"
 #include "CachedFramePlatformData.h"
 #include "CachedPage.h"
+#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -38,12 +39,15 @@
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "Logging.h"
+#include "NavigationDisabler.h"
 #include "Page.h"
 #include "PageCache.h"
+#include "RenderWidget.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SVGDocumentExtensions.h"
 #include "ScriptController.h"
 #include "SerializedScriptValue.h"
+#include "StyleTreeResolver.h"
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/text/CString.h>
 
@@ -92,44 +96,50 @@ void CachedFrameBase::restore()
     if (m_isMainFrame)
         m_view->setParentVisible(true);
 
-    Frame& frame = m_view->frame();
-    m_cachedFrameScriptData->restore(frame);
+    auto frame = makeRef(m_view->frame());
+    {
+        Style::PostResolutionCallbackDisabler disabler(*m_document);
+        WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
+        NavigationDisabler disableNavigation { nullptr }; // Disable navigation globally.
 
-    if (m_document->svgExtensions())
-        m_document->accessSVGExtensions().unpauseAnimations();
+        m_cachedFrameScriptData->restore(frame.get());
 
-    m_document->resume(ReasonForSuspension::PageCache);
+        if (m_document->svgExtensions())
+            m_document->accessSVGExtensions().unpauseAnimations();
 
-    // It is necessary to update any platform script objects after restoring the
-    // cached page.
-    frame.script().updatePlatformScriptObjects();
+        m_document->resume(ReasonForSuspension::PageCache);
 
-    frame.loader().client().didRestoreFromPageCache();
+        // It is necessary to update any platform script objects after restoring the
+        // cached page.
+        frame->script().updatePlatformScriptObjects();
 
-    pruneDetachedChildFrames();
+        frame->loader().client().didRestoreFromPageCache();
 
-    // Reconstruct the FrameTree. And open the child CachedFrames in their respective FrameLoaders.
-    for (auto& childFrame : m_childFrames) {
-        ASSERT(childFrame->view()->frame().page());
-        frame.tree().appendChild(childFrame->view()->frame());
-        childFrame->open();
-        ASSERT_WITH_SECURITY_IMPLICATION(m_document == frame.document());
+        pruneDetachedChildFrames();
+
+        // Reconstruct the FrameTree. And open the child CachedFrames in their respective FrameLoaders.
+        for (auto& childFrame : m_childFrames) {
+            ASSERT(childFrame->view()->frame().page());
+            frame->tree().appendChild(childFrame->view()->frame());
+            childFrame->open();
+            ASSERT_WITH_SECURITY_IMPLICATION(m_document == frame->document());
+        }
     }
 
 #if PLATFORM(IOS_FAMILY)
     if (m_isMainFrame) {
-        frame.loader().client().didRestoreFrameHierarchyForCachedFrame();
+        frame->loader().client().didRestoreFrameHierarchyForCachedFrame();
 
         if (DOMWindow* domWindow = m_document->domWindow()) {
             // FIXME: Add SCROLL_LISTENER to the list of event types on Document, and use m_document->hasListenerType(). See <rdar://problem/9615482>.
             // FIXME: Can use Document::hasListenerType() now.
-            if (domWindow->scrollEventListenerCount() && frame.page())
-                frame.page()->chrome().client().setNeedsScrollNotifications(frame, true);
+            if (domWindow->scrollEventListenerCount() && frame->page())
+                frame->page()->chrome().client().setNeedsScrollNotifications(frame, true);
         }
     }
 #endif
 
-    frame.view()->didRestoreFromPageCache();
+    frame->view()->didRestoreFromPageCache();
 }
 
 CachedFrame::CachedFrame(Frame& frame)
@@ -143,14 +153,26 @@ CachedFrame::CachedFrame(Frame& frame)
     ASSERT(m_view);
     ASSERT(m_document->pageCacheState() == Document::InPageCache);
 
+    RELEASE_ASSERT(m_document->domWindow());
+    RELEASE_ASSERT(m_document->frame());
+    RELEASE_ASSERT(m_document->domWindow()->frame());
+
+    // FIXME: We have evidence that constructing CachedFrames for descendant frames may detach the document from its frame (rdar://problem/49877867).
+    // This sets the flag to help find the guilty code.
+    m_document->setMayBeDetachedFromFrame(false);
+
     // Create the CachedFrames for all Frames in the FrameTree.
     for (Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
-        m_childFrames.append(std::make_unique<CachedFrame>(*child));
+        m_childFrames.append(makeUnique<CachedFrame>(*child));
+
+    RELEASE_ASSERT(m_document->domWindow());
+    RELEASE_ASSERT(m_document->frame());
+    RELEASE_ASSERT(m_document->domWindow()->frame());
 
     // Active DOM objects must be suspended before we cache the frame script data.
     m_document->suspend(ReasonForSuspension::PageCache);
 
-    m_cachedFrameScriptData = std::make_unique<ScriptCachedFrameData>(frame);
+    m_cachedFrameScriptData = makeUnique<ScriptCachedFrameData>(frame);
 
     m_document->domWindow()->suspendForPageCache();
 
@@ -191,6 +213,7 @@ CachedFrame::CachedFrame(Frame& frame)
     }
 #endif
 
+    m_document->setMayBeDetachedFromFrame(true);
     m_document->detachFromCachedFrame(*this);
 
     ASSERT_WITH_SECURITY_IMPLICATION(!m_documentLoader->isLoading());
@@ -202,8 +225,6 @@ void CachedFrame::open()
     ASSERT(m_document);
     if (!m_isMainFrame)
         m_view->frame().page()->incrementSubframeCount();
-
-    m_document->attachToCachedFrame(*this);
 
     m_view->frame().loader().open(*this);
 }

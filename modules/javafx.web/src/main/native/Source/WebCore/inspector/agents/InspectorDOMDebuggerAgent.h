@@ -38,35 +38,47 @@
 #include <wtf/JSONValues.h>
 #include <wtf/text/WTFString.h>
 
+namespace Inspector {
+class InjectedScriptManager;
+}
+
 namespace WebCore {
 
 class Element;
 class Event;
 class Frame;
-class InspectorDOMAgent;
 class Node;
 class RegisteredEventListener;
 
 typedef String ErrorString;
 
-class InspectorDOMDebuggerAgent final : public InspectorAgentBase, public Inspector::InspectorDebuggerAgent::Listener, public Inspector::DOMDebuggerBackendDispatcherHandler {
+class InspectorDOMDebuggerAgent final : public InspectorAgentBase, public Inspector::DOMDebuggerBackendDispatcherHandler, public Inspector::InspectorDebuggerAgent::Listener {
     WTF_MAKE_NONCOPYABLE(InspectorDOMDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorDOMDebuggerAgent(WebAgentContext&, InspectorDOMAgent*, Inspector::InspectorDebuggerAgent*);
+    InspectorDOMDebuggerAgent(WebAgentContext&, Inspector::InspectorDebuggerAgent*);
     virtual ~InspectorDOMDebuggerAgent();
 
-    // DOMDebugger API
-    void setURLBreakpoint(ErrorString&, const String& url, const bool* optionalIsRegex) final;
-    void removeURLBreakpoint(ErrorString&, const String& url) final;
-    void setEventBreakpoint(ErrorString&, const String& breakpointType, const String& eventName) final;
-    void removeEventBreakpoint(ErrorString&, const String& breakpointType, const String& eventName) final;
-    void setDOMBreakpoint(ErrorString&, int nodeId, const String& type) final;
-    void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type) final;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
+    void discardAgent();
+
+    // DOMDebuggerBackendDispatcherHandler
+    void setURLBreakpoint(ErrorString&, const String& url, const bool* optionalIsRegex);
+    void removeURLBreakpoint(ErrorString&, const String& url);
+    void setEventBreakpoint(ErrorString&, const String& breakpointType, const String* eventName);
+    void removeEventBreakpoint(ErrorString&, const String& breakpointType, const String* eventName);
+    void setDOMBreakpoint(ErrorString&, int nodeId, const String& type);
+    void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type);
+
+    // InspectorDebuggerAgent::Listener
+    void debuggerWasEnabled();
+    void debuggerWasDisabled();
 
     // InspectorInstrumentation
     void willInsertDOMNode(Node& parent);
-    void didInvalidateStyleAttr(Node&);
+    void willInvalidateStyleAttr(Element&);
     void didInsertDOMNode(Node&);
     void willRemoveDOMNode(Node&);
     void didRemoveDOMNode(Node&);
@@ -74,43 +86,37 @@ public:
     void willSendXMLHttpRequest(const String& url);
     void willFetch(const String& url);
     void frameDocumentUpdated(Frame&);
-    void willHandleEvent(const Event&, const RegisteredEventListener&);
+    void willHandleEvent(Event&, const RegisteredEventListener&);
+    void didHandleEvent();
     void willFireTimer(bool oneShot);
     void willFireAnimationFrame();
     void mainFrameDOMContentLoaded();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) final;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) final;
-    void discardAgent() final;
-
-private:
-    // Inspector::InspectorDebuggerAgent::Listener implementation.
-    void debuggerWasEnabled() final;
-    void debuggerWasDisabled() final;
     void disable();
 
+private:
     enum class URLBreakpointSource { Fetch, XHR };
     void breakOnURLIfNeeded(const String& url, URLBreakpointSource);
 
     void descriptionForDOMEvent(Node& target, int breakpointType, bool insertion, JSON::Object& description);
     void updateSubtreeBreakpoints(Node*, uint32_t rootMask, bool set);
     bool hasBreakpoint(Node*, int type);
-    void discardBindings();
 
     RefPtr<Inspector::DOMDebuggerBackendDispatcher> m_backendDispatcher;
-    InspectorDOMAgent* m_domAgent { nullptr };
+    Inspector::InjectedScriptManager& m_injectedScriptManager;
+
     Inspector::InspectorDebuggerAgent* m_debuggerAgent { nullptr };
 
     HashMap<Node*, uint32_t> m_domBreakpoints;
-
-    using EventBreakpointType = Inspector::Protocol::DOMDebugger::EventBreakpointType;
-    HashSet<std::pair<EventBreakpointType, String>,
-        WTF::PairHash<EventBreakpointType, String>,
-        WTF::PairHashTraits<WTF::StrongEnumHashTraits<EventBreakpointType>, WTF::HashTraits<String>>
-    > m_eventBreakpoints;
+    HashSet<String> m_listenerBreakpoints;
 
     enum class URLBreakpointType { RegularExpression, Text };
     HashMap<String, URLBreakpointType> m_urlBreakpoints;
+
+    bool m_pauseOnAllAnimationFramesEnabled { false };
+    bool m_pauseOnAllIntervalsEnabled { false };
+    bool m_pauseOnAllListenersEnabled { false };
+    bool m_pauseOnAllTimeoutsEnabled { false };
     bool m_pauseOnAllURLsEnabled { false };
 };
 

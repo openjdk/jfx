@@ -34,16 +34,16 @@ namespace WHLSL {
 
 namespace Metal {
 
-unsigned long calculateVertexBufferIndex(unsigned long index)
+unsigned calculateVertexBufferIndex(unsigned index)
 {
     // Reserve the first few MTLBuffer slots for argument buffers for GPUBindGroups.
     return index + 8;
 }
 
-} // namespace Metal
+}
 
-} // namespace WHLSL
+}
 
-} // namespace WebCore
+}
 
 #endif // ENABLE(WEBGPU)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,12 @@
 #include "LocalAllocator.h"
 
 #include "AllocatingScope.h"
+#include "FreeListInlines.h"
+#include "GCDeferralContext.h"
+#include "JSCInlines.h"
 #include "LocalAllocatorInlines.h"
 #include "Options.h"
+#include "SuperSampler.h"
 
 namespace JSC {
 
@@ -110,7 +114,7 @@ void* LocalAllocator::allocateSlowCase(GCDeferralContext* deferralContext, Alloc
 {
     SuperSamplerScope superSamplerScope(false);
     Heap& heap = *m_directory->m_heap;
-    ASSERT(heap.vm()->currentThreadIsHoldingAPILock());
+    ASSERT(heap.vm().currentThreadIsHoldingAPILock());
     doTestCollectionsIfNeeded(deferralContext);
 
     ASSERT(!m_directory->markedSpace().isIterating());
@@ -184,8 +188,7 @@ void* LocalAllocator::tryAllocateWithoutCollecting()
             return result;
     }
 
-    if (Options::stealEmptyBlocksFromOtherAllocators()
-        && (Options::tradeDestructorBlocks() || !m_directory->needsDestruction())) {
+    if (Options::stealEmptyBlocksFromOtherAllocators()) {
         if (MarkedBlock::Handle* block = m_directory->m_subspace->findEmptyBlockToSteal()) {
             RELEASE_ASSERT(block->alignedMemoryAllocator() == m_directory->m_subspace->alignedMemoryAllocator());
 

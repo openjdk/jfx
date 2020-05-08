@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import static org.junit.Assert.fail;
 
 import javafx.scene.web.WebEngine;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.*;
 import org.w3c.dom.css.*;
@@ -291,7 +290,6 @@ public class DOMTest extends TestBase {
         });
     }
 
-    @Ignore("Incorrect test, refer JDK-8210955")
     @Test public void testEventListenerCascade() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         submit(() -> {
@@ -342,7 +340,7 @@ public class DOMTest extends TestBase {
                 EventTarget src = ((MouseEvent) evt).getTarget();
                 ((HTMLBodyElement) src).setClassName("newTestClass");
             };
-            ((EventTarget)body).addEventListener("click", listener1, true);
+            ((EventTarget)body).addEventListener("click", listener1, false);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("Java EventHandler does not work directly", "newTestClass", body.getClassName());
 
@@ -350,7 +348,7 @@ public class DOMTest extends TestBase {
                 //OK: stacked ScriptExecutionContext
                 listenerJS.handleEvent(evt);
             };
-            ((EventTarget)body).addEventListener("click", listener2, true);
+            ((EventTarget)body).addEventListener("click", listener2, false);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("JS EventHandler does not work from Java call", "testClass", body.getClassName());
         });
@@ -414,6 +412,26 @@ public class DOMTest extends TestBase {
             final Document document = webEngine.getDocument();
             assertNotNull(document);
             assertNull(document.getDocumentURI());
+        });
+    }
+
+    // JDK-8233747
+    @Test public void testCreateAttribute() {
+        final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
+        submit(() -> {
+            try {
+                //invalid attribute
+                Attr attr = doc.createAttribute(":/test");
+                fail("DOMException expected but not thrown");
+            } catch (DOMException ex) {
+                // Expected.
+            } catch (Throwable ex) {
+                fail("DOMException expected but instead threw " + ex.getClass().getName());
+            }
+
+            String attributeName = "test";
+            Attr attr = doc.createAttribute(attributeName);
+            assertEquals("Created attribute", attributeName, attr.getName());
         });
     }
 

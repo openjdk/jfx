@@ -32,77 +32,163 @@
 #include "WHLSLArrayType.h"
 #include "WHLSLInferTypes.h"
 #include "WHLSLTypeReference.h"
+#include <wtf/HashSet.h>
+#include <wtf/HashTraits.h>
 
 namespace WebCore {
 
 namespace WHLSL {
 
-bool checkDuplicateFunctions(const Program& program)
-{
-    Vector<std::reference_wrapper<const AST::FunctionDeclaration>> functions;
-    for (auto& functionDefinition : program.functionDefinitions())
-        functions.append(functionDefinition);
-    for (auto& nativeFunctionDeclaration : program.nativeFunctionDeclarations())
-        functions.append(nativeFunctionDeclaration);
+class DuplicateFunctionKey {
+public:
+    DuplicateFunctionKey() = default;
+    DuplicateFunctionKey(WTF::HashTableDeletedValueType)
+    {
+        m_function = bitwise_cast<AST::FunctionDeclaration*>(static_cast<uintptr_t>(1));
+    }
 
-    std::sort(functions.begin(), functions.end(), [](const AST::FunctionDeclaration& a, const AST::FunctionDeclaration& b) -> bool {
-        if (a.name().length() < b.name().length())
-            return true;
-        if (a.name().length() > b.name().length())
+    DuplicateFunctionKey(const AST::FunctionDeclaration& function)
+        : m_function(&function)
+    { }
+
+    bool isEmptyValue() const { return !m_function; }
+    bool isHashTableDeletedValue() const { return m_function == bitwise_cast<AST::FunctionDeclaration*>(static_cast<uintptr_t>(1)); }
+
+    unsigned hash() const
+    {
+        unsigned hash = IntHash<size_t>::hash(m_function->parameters().size());
+        hash ^= m_function->name().hash();
+        for (size_t i = 0; i < m_function->parameters().size(); ++i)
+            hash ^= m_function->parameters()[i]->type()->hash();
+
+        if (m_function->isCast())
+            hash ^= m_function->type().hash();
+
+        return hash;
+    }
+
+    bool operator==(const DuplicateFunctionKey& other) const
+    {
+        if (m_function->parameters().size() != other.m_function->parameters().size())
             return false;
-        for (unsigned i = 0; i < a.name().length(); ++i) {
-            if (a.name()[i] < b.name()[i])
-                return true;
-            if (a.name()[i] > b.name()[i])
-                return false;
-        }
-        return false;
-    });
-    for (size_t i = 0; i < functions.size(); ++i) {
-        for (size_t j = i + 1; j < functions.size(); ++i) {
-            if (functions[i].get().name() != functions[j].get().name())
-                break;
-            if (is<AST::NativeFunctionDeclaration>(functions[i].get()) && is<AST::NativeFunctionDeclaration>(functions[j].get()))
-                continue;
-            if (functions[i].get().parameters().size() != functions[j].get().parameters().size())
-                continue;
-            if (functions[i].get().isCast() && !matches(functions[i].get().type(), functions[j].get().type()))
-                continue;
-            bool same = true;
-            for (size_t k = 0; k < functions[i].get().parameters().size(); ++k) {
-                if (!matches(*functions[i].get().parameters()[k].type(), *functions[j].get().parameters()[k].type())) {
-                    same = false;
-                    break;
-                }
-            }
-            if (same)
+
+        if (m_function->name() != other.m_function->name())
+            return false;
+
+        if (m_function->nameSpace() != AST::NameSpace::StandardLibrary
+            && other.m_function->nameSpace() != AST::NameSpace::StandardLibrary
+            && m_function->nameSpace() != other.m_function->nameSpace())
+            return false;
+
+        ASSERT(m_function->isCast() == other.m_function->isCast());
+
+        for (size_t i = 0; i < m_function->parameters().size(); ++i) {
+            if (!matches(*m_function->parameters()[i]->type(), *other.m_function->parameters()[i]->type()))
                 return false;
         }
 
-        if (functions[i].get().name() == "operator&[]" && functions[i].get().parameters().size() == 2
-            && is<AST::ArrayReferenceType>(static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[0].type()))) {
-            auto& type = static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[1].type());
+        if (!m_function->isCast())
+            return true;
+
+        if (matches(m_function->type(), other.m_function->type()))
+            return true;
+
+        return false;
+    }
+
+    struct Hash {
+        static unsigned hash(const DuplicateFunctionKey& key)
+        {
+            return key.hash();
+        }
+
+        static bool equal(const DuplicateFunctionKey& a, const DuplicateFunctionKey& b)
+        {
+            return a == b;
+        }
+
+        static const bool safeToCompareToEmptyOrDeleted = false;
+    };
+
+    struct Traits : public WTF::SimpleClassHashTraits<DuplicateFunctionKey> {
+        static const bool hasIsEmptyValueFunction = true;
+        static bool isEmptyValue(const DuplicateFunctionKey& key) { return key.isEmptyValue(); }
+    };
+
+private:
+    const AST::FunctionDeclaration* m_function { nullptr };
+};
+
+Expected<void, Error> checkDuplicateFunctions(const Program& program)
+{
+    auto passesStaticChecks = [&] (const AST::FunctionDeclaration& function) -> Expected<void, Error> {
+        if (function.name() == "operator&[]" && function.parameters().size() == 2
+            && is<AST::ArrayReferenceType>(static_cast<const AST::UnnamedType&>(*function.parameters()[0]->type()))) {
+            auto& type = static_cast<const AST::UnnamedType&>(*function.parameters()[1]->type());
             if (is<AST::TypeReference>(type)) {
-                if (auto* resolvedType = downcast<AST::TypeReference>(type).resolvedType()) {
+                // FIXME: https://bugs.webkit.org/show_bug.cgi?id=198161 Shouldn't we already know whether the types have been resolved by now?
+                if (auto* resolvedType = downcast<AST::TypeReference>(type).maybeResolvedType()) {
                     if (is<AST::NativeTypeDeclaration>(*resolvedType)) {
                         auto& nativeTypeDeclaration = downcast<AST::NativeTypeDeclaration>(*resolvedType);
                         if (nativeTypeDeclaration.name() == "uint")
-                            return false;
+                            return makeUnexpected(Error("Cannot define array reference ander."));
                     }
                 }
             }
-        } else if (functions[i].get().name() == "operator.length" && functions[i].get().parameters().size() == 1
-            && (is<AST::ArrayReferenceType>(static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[0].type()))
-            || is<AST::ArrayType>(static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[0].type()))))
-            return false;
-        else if (functions[i].get().name() == "operator=="
-            && functions[i].get().parameters().size() == 2
-            && is<AST::ReferenceType>(static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[0].type()))
-            && is<AST::ReferenceType>(static_cast<const AST::UnnamedType&>(*functions[i].get().parameters()[1].type()))
-            && matches(*functions[i].get().parameters()[0].type(), *functions[i].get().parameters()[1].type()))
-            return false;
+        } else if (function.name() == "operator.length" && function.parameters().size() == 1
+            && (is<AST::ArrayReferenceType>(static_cast<const AST::UnnamedType&>(*function.parameters()[0]->type()))
+            || is<AST::ArrayType>(static_cast<const AST::UnnamedType&>(*function.parameters()[0]->type()))))
+            return makeUnexpected(Error("Cannot define operator.length for an array."));
+        else if (function.name() == "operator=="
+            && function.parameters().size() == 2
+            && is<AST::ReferenceType>(static_cast<const AST::UnnamedType&>(*function.parameters()[0]->type()))
+            && is<AST::ReferenceType>(static_cast<const AST::UnnamedType&>(*function.parameters()[1]->type()))
+            && matches(*function.parameters()[0]->type(), *function.parameters()[1]->type()))
+            return makeUnexpected(Error("Cannot define operator== on two reference types."));
+        else if (function.isCast() && function.parameters().isEmpty()) {
+            auto& unifyNode = function.type().unifyNode();
+            if (is<AST::NamedType>(unifyNode) && is<AST::NativeTypeDeclaration>(downcast<AST::NamedType>(unifyNode))) {
+                auto& nativeTypeDeclaration = downcast<AST::NativeTypeDeclaration>(downcast<AST::NamedType>(unifyNode));
+                if (nativeTypeDeclaration.isOpaqueType())
+                    return makeUnexpected(Error("Cannot define a cast on an opaque type."));
+            }
+        }
+
+        return { };
+    };
+
+    HashSet<DuplicateFunctionKey, DuplicateFunctionKey::Hash, DuplicateFunctionKey::Traits> functions;
+
+    auto add = [&] (const AST::FunctionDeclaration& function) -> Expected<void, Error> {
+        auto addResult = functions.add(DuplicateFunctionKey { function });
+        if (!addResult.isNewEntry)
+            return makeUnexpected(Error("Found duplicate function"));
+        return passesStaticChecks(function);
+    };
+
+    for (auto& functionDefinition : program.functionDefinitions()) {
+        auto addResult = add(functionDefinition.get());
+        if (!addResult)
+            return addResult;
     }
-    return true;
+
+    for (auto& nativeFunctionDeclaration : program.nativeFunctionDeclarations()) {
+        // We generate duplicate native function declarations in synthesize constructors.
+        // FIXME: is this right?
+        // https://bugs.webkit.org/show_bug.cgi?id=198580
+        //
+        // Since we do that, we just need to make sure no native function is a duplicate
+        // of a user-defined function.
+
+        // FIXME: Add back this assert once we begin to auto generate these in the compiler
+        // instead of having them in the stdlib
+        // https://bugs.webkit.org/show_bug.cgi?id=198861
+        // ASSERT(passesStaticChecks(nativeFunctionDeclaration.get()));
+        if (functions.contains(DuplicateFunctionKey { nativeFunctionDeclaration.get() }))
+            return makeUnexpected(Error("Duplicate native function."));
+    }
+
+    return { };
 }
 
 } // namespace WHLSL

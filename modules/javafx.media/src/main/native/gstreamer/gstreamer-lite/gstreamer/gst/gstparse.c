@@ -46,8 +46,8 @@
 #endif
 
 G_DEFINE_BOXED_TYPE (GstParseContext, gst_parse_context,
-        (GBoxedCopyFunc) gst_parse_context_copy,
-        (GBoxedFreeFunc) gst_parse_context_free);
+    (GBoxedCopyFunc) gst_parse_context_copy,
+    (GBoxedFreeFunc) gst_parse_context_free);
 
 /**
  * gst_parse_error_quark:
@@ -195,7 +195,7 @@ _gst_parse_escape (const gchar * str)
   in_quotes = FALSE;
 
   while (*str) {
-    if (*str == '"' && (!in_quotes || (in_quotes && *(str - 1) != '\\')))
+    if (*str == '"' && (!in_quotes || *(str - 1) != '\\'))
       in_quotes = !in_quotes;
 
     if (*str == ' ' && !in_quotes)

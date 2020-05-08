@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,6 +263,7 @@ public abstract class Parent extends Node {
     private final List<Node> viewOrderChildren = new ArrayList(1);
 
     void markViewOrderChildrenDirty() {
+        viewOrderChildren.clear();
         NodeHelper.markDirty(this, DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
     }
 
@@ -459,7 +460,7 @@ public abstract class Parent extends Node {
             NodeHelper.markDirty(Parent.this, DirtyBits.NODE_FORCE_SYNC);
 
             if (viewOrderChildrenDirty) {
-                NodeHelper.markDirty(Parent.this, DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
+                markViewOrderChildrenDirty();
             }
         }
 

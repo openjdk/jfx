@@ -28,8 +28,9 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLAddressSpace.h"
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLUnnamedType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,28 +41,34 @@ namespace WHLSL {
 namespace AST {
 
 class ReferenceType : public UnnamedType {
-public:
-    ReferenceType(Lexer::Token&& origin, AddressSpace addressSpace, UniqueRef<UnnamedType>&& elementType)
-        : UnnamedType(WTFMove(origin))
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ReferenceType);
+
+protected:
+    ~ReferenceType() = default;
+
+protected:
+    ReferenceType(CodeLocation location, AddressSpace addressSpace, Ref<UnnamedType> elementType, Kind kind)
+        : UnnamedType(location, kind)
         , m_addressSpace(addressSpace)
         , m_elementType(WTFMove(elementType))
     {
     }
 
-    virtual ~ReferenceType() = default;
 
-    ReferenceType(const ReferenceType&) = delete;
-    ReferenceType(ReferenceType&&) = default;
-
-    bool isReferenceType() const override { return false; }
-
+public:
     AddressSpace addressSpace() const { return m_addressSpace; }
     const UnnamedType& elementType() const { return m_elementType; }
     UnnamedType& elementType() { return m_elementType; }
 
+    unsigned hash() const
+    {
+        return ~m_elementType->hash();
+    }
+
 private:
     AddressSpace m_addressSpace;
-    UniqueRef<UnnamedType> m_elementType;
+    Ref<UnnamedType> m_elementType;
 };
 
 } // namespace AST
@@ -70,6 +77,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_UNNAMED_TYPE(ReferenceType, isReferenceType())
+DEFINE_DEFAULT_DELETE(ReferenceType)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(ReferenceType, isReferenceType())
 
 #endif

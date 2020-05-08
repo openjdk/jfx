@@ -261,16 +261,16 @@ name_is_valid (const gchar * name, GstPadPresence presence)
             ("invalid name template %s: conversion specification must be of"
             " type '%%d', '%%u' or '%%s' for GST_PAD_REQUEST padtemplate",
             name);
-      return FALSE;
-    }
+        return FALSE;
+      }
 
       if (*(str + 1) == 's' && (*(str + 2) != '\0' || has_s)) {
         g_warning
             ("invalid name template %s: conversion specification of type '%%s'"
             "only can be used once in the GST_PAD_REQUEST padtemplate at the "
             "very end and not allowed any other characters with '%%s'", name);
-      return FALSE;
-    }
+        return FALSE;
+      }
 
       if (*(str + 1) == 's') {
         has_s = TRUE;
@@ -279,7 +279,7 @@ name_is_valid (const gchar * name, GstPadPresence presence)
       underscore = strchr (str, '_');
       str = strchr (str + 1, '%');
 
-      if (str && (!underscore || (underscore && str < underscore))) {
+      if (str && (!underscore || str < underscore)) {
         g_warning
             ("invalid name template %s: each of conversion specifications "
             "must be separated by an underscore", name);
@@ -333,7 +333,7 @@ gst_static_pad_template_get (GstStaticPadTemplate * pad_template)
  *
  * Converts a #GstStaticPadTemplate into a #GstPadTemplate with a type.
  *
- * Returns: (transfer floating): a new #GstPadTemplate.
+ * Returns: (transfer floating) (nullable): a new #GstPadTemplate.
  *
  * Since: 1.14
  */
@@ -410,7 +410,7 @@ gst_pad_template_new (const gchar * name_template,
  * Creates a new pad template with a name according to the given template
  * and with the given arguments.
  *
- * Returns: (transfer floating): a new #GstPadTemplate.
+ * Returns: (transfer floating) (nullable): a new #GstPadTemplate.
  *
  * Since: 1.14
  */

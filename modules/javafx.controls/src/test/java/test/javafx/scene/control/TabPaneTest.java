@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import javafx.scene.control.SelectionModel;
+import javafx.scene.control.Skin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -461,6 +463,27 @@ public class TabPaneTest {
 
         tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
         assertSame(TabPane.TabDragPolicy.FIXED, tabPane.getTabDragPolicy());
+    }
+
+    @Test public void tabDragPolicyReorderAndAsymmetricMouseEvent() {
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        root.getChildren().add(tabPane);
+        show();
+
+        root.layout();
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+75, yval+20));
+        tk.firePulse();
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, xval+75, yval+20));
+        tk.firePulse();
     }
 
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
@@ -1134,27 +1157,26 @@ public class TabPaneTest {
     }
 
     // Test for JDK-8154039
-    WeakReference<Tab> weakTab;
     @Test public void testSelectNonChildTab() {
         tabPane.getTabs().addAll(tab1);
         root.getChildren().add(tabPane);
         show();
         tk.firePulse();
-        weakTab = new WeakReference<>(new Tab("NonChildTab"));
+        WeakReference<Tab> weakTab = new WeakReference<>(new Tab("NonChildTab"));
         tabPane.getSelectionModel().select(weakTab.get());
         tk.firePulse();
-        attemptGC(10);
+        attemptGC(10, weakTab);
         tk.firePulse();
         assertNull(weakTab.get());
     }
 
-    private void attemptGC(int n) {
+    private void attemptGC(int n, WeakReference<?> weakRef) {
         // Attempt gc n times
         for (int i = 0; i < n; i++) {
             System.gc();
             System.runFinalization();
 
-            if (weakTab.get() == null) {
+            if (weakRef.get() == null) {
                 break;
             }
             try {
@@ -1185,5 +1207,42 @@ public class TabPaneTest {
 
     private int sortCompare(Tab t1, Tab t2) {
         return t2.getText().compareTo(t1.getText());
+    }
+
+    class TabPaneSkin1 extends TabPaneSkin {
+        TabPaneSkin1(TabPane tabPane) {
+            super(tabPane);
+        }
+    }
+
+    @Ignore("JDK-8242621")
+    @Test
+    public void testNPEOnSwitchSkinAndChangeSelection() {
+        // Because of JDK-8242621, this test fails with NPE.
+        tabPane.getTabs().addAll(tab1, tab2);
+        root.getChildren().add(tabPane);
+        stage.show();
+        tk.firePulse();
+
+        tabPane.setSkin(new TabPaneSkin1(tabPane));
+        tk.firePulse();
+        tabPane.getSelectionModel().select(1);
+        tk.firePulse();
+    }
+
+    @Test
+    public void testSMLeakOnSwitchSkinAndSM() {
+        tabPane.getTabs().addAll(tab1, tab2);
+        root.getChildren().add(tabPane);
+        stage.show();
+        tk.firePulse();
+
+        WeakReference<SelectionModel<Tab>> weakSMRef = new WeakReference<>(tabPane.getSelectionModel());
+        tabPane.setSkin(new TabPaneSkin1(tabPane));
+        tk.firePulse();
+        tabPane.setSelectionModel(TabPaneShim.getTabPaneSelectionModel(tabPane));
+        tk.firePulse();
+        attemptGC(10, weakSMRef);
+        assertNull(weakSMRef.get());
     }
 }

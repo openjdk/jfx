@@ -1,9 +1,6 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define to 1 if you have the <ansidecl.h> header file. */
-/* #undef HAVE_ANSIDECL_H */
-
 /* Define to 1 if you have the `clock_gettime' function. */
 
 
@@ -161,7 +158,7 @@
 #define PACKAGE_NAME "libxslt"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libxslt 1.1.33"
+#define PACKAGE_STRING "libxslt 1.1.34"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libxslt"
@@ -170,7 +167,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.1.33"
+#define PACKAGE_VERSION "1.1.34"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -198,10 +195,13 @@
 
 
 /* Version number of package */
-#define VERSION "1.1.33"
+#define VERSION "1.1.34"
 
 /* Define if debugging support is enabled */
 /* #undef WITH_DEBUGGER */
+
+/* Define if profiling support is enabled */
+/* #undef WITH_PROFILER */
 
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */
@@ -212,12 +212,3 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 /* #undef _POSIX_SOURCE */
-
-/* Using the Win32 Socket implementation */
-/* #undef _WINSOCKAPI_ */
-
-/* Win32 Std C name mangling work-around */
-/* #undef snprintf */
-
-/* Win32 Std C name mangling work-around */
-/* #undef vsnprintf */

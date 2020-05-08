@@ -30,25 +30,38 @@
 
 #include "GPUCommandBuffer.h"
 #include "GPUQueue.h"
+#include "Logging.h"
 #include "WebGPUCommandBuffer.h"
 
 namespace WebCore {
 
-RefPtr<WebGPUQueue> WebGPUQueue::create(RefPtr<GPUQueue>&& queue)
+Ref<WebGPUQueue> WebGPUQueue::create(RefPtr<GPUQueue>&& queue)
 {
-    return queue ? adoptRef(new WebGPUQueue(queue.releaseNonNull())) : nullptr;
+    return adoptRef(*new WebGPUQueue(WTFMove(queue)));
 }
 
-WebGPUQueue::WebGPUQueue(Ref<GPUQueue>&& queue)
+WebGPUQueue::WebGPUQueue(RefPtr<GPUQueue>&& queue)
     : m_queue(WTFMove(queue))
 {
 }
 
-void WebGPUQueue::submit(Vector<RefPtr<WebGPUCommandBuffer>>&& buffers)
+void WebGPUQueue::submit(const Vector<RefPtr<WebGPUCommandBuffer>>& buffers)
 {
-    auto gpuBuffers = buffers.map([] (const auto& buffer) -> Ref<const GPUCommandBuffer> {
-        return buffer->commandBuffer();
-    });
+    if (!m_queue) {
+        LOG(WebGPU, "GPUQueue::submit(): Invalid operation!");
+        return;
+    }
+    Vector<Ref<GPUCommandBuffer>> gpuBuffers;
+    gpuBuffers.reserveCapacity(buffers.size());
+
+    for (auto& buffer : buffers) {
+        if (!buffer || !buffer->commandBuffer()) {
+            LOG(WebGPU, "GPUQueue::submit(): Invalid GPUCommandBuffer in list!");
+            return;
+        }
+        gpuBuffers.uncheckedAppend(makeRef(*buffer->commandBuffer()));
+    }
+
     m_queue->submit(WTFMove(gpuBuffers));
 }
 

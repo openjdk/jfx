@@ -71,17 +71,20 @@ public:
     }
     Wasm::MemoryMode memoryMode() { return memory()->memory().mode(); }
 
-    JSWebAssemblyTable* table() { return m_table.get(); }
-    void setTable(VM& vm, JSWebAssemblyTable* value) {
-        ASSERT(!table());
-        m_table.set(vm, this, value);
-        instance().setTable(makeRef(*table()->table()));
+    JSWebAssemblyTable* table(unsigned i) { return m_tables[i].get(); }
+    void setTable(VM& vm, uint32_t index, JSWebAssemblyTable* value)
+    {
+        ASSERT(index < m_tables.size());
+        ASSERT(!table(index));
+        m_tables[index].set(vm, this, value);
+        instance().setTable(index, makeRef(*table(index)->table()));
     }
 
     JSWebAssemblyModule* module() const { return m_module.get(); }
 
     static size_t offsetOfInstance() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_instance); }
     static size_t offsetOfCallee() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_callee); }
+    static size_t offsetOfVM() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_vm); }
 
 protected:
     JSWebAssemblyInstance(VM&, Structure*, Ref<Wasm::Instance>&&);
@@ -91,12 +94,13 @@ protected:
 
 private:
     Ref<Wasm::Instance> m_instance;
+    VM* m_vm;
 
     WriteBarrier<JSWebAssemblyModule> m_module;
     WriteBarrier<JSWebAssemblyCodeBlock> m_codeBlock;
     WriteBarrier<JSModuleNamespaceObject> m_moduleNamespaceObject;
     WriteBarrier<JSWebAssemblyMemory> m_memory;
-    WriteBarrier<JSWebAssemblyTable> m_table;
+    Vector<WriteBarrier<JSWebAssemblyTable>> m_tables;
     WriteBarrier<WebAssemblyToJSCallee> m_callee;
 };
 

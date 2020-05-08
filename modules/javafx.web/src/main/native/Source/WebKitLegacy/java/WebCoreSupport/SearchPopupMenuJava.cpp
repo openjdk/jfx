@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,12 +46,12 @@ bool SearchPopupMenuJava::enabled()
     return false;
 }
 
-void SearchPopupMenuJava::saveRecentSearches(const AtomicString&, const Vector<RecentSearch>&)
+void SearchPopupMenuJava::saveRecentSearches(const AtomString&, const Vector<RecentSearch>&)
 {
     notImplemented();
 }
 
-void SearchPopupMenuJava::loadRecentSearches(const AtomicString&, Vector<RecentSearch>&)
+void SearchPopupMenuJava::loadRecentSearches(const AtomString&, Vector<RecentSearch>&)
 {
     notImplemented();
 }

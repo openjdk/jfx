@@ -303,6 +303,51 @@ qtdemux_dump_stsd_avc1 (GstQTDemux * qtdemux, GstByteReader * data, guint size,
   return TRUE;
 }
 
+
+static gboolean
+qtdemux_dump_stsd_av01 (GstQTDemux * qtdemux, GstByteReader * data, guint size,
+    int depth)
+{
+  guint compressor_len;
+  char compressor_name[32];
+
+  /* Size of av01 = 78 bytes */
+  if (size < (6 + 2 + 4 + 12 + 2 + 2 + 4 + 4 + 4 + 2 + 1 + 31 + 2 + 2))
+    return FALSE;
+
+  gst_byte_reader_skip_unchecked (data, 6);
+  GST_LOG_OBJECT (qtdemux, "%*s    data reference:%d", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    version/rev.:  %08x", depth, "",
+      GET_UINT32 (data));
+  gst_byte_reader_skip_unchecked (data, 12);    /* pre-defined & reserved */
+  GST_LOG_OBJECT (qtdemux, "%*s    width:         %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    height:        %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    horiz. resol:  %g", depth, "",
+      GET_FP32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    vert. resol.:  %g", depth, "",
+      GET_FP32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    data size:     %u", depth, "",
+      GET_UINT32 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    frame count:   %u", depth, "",
+      GET_UINT16 (data));
+  /* something is not right with this, it's supposed to be a string but it's
+   * not apparently, so just skip this for now */
+  compressor_len = MAX (GET_UINT8 (data), 31);
+  memcpy (compressor_name, gst_byte_reader_get_data_unchecked (data, 31), 31);
+  compressor_name[compressor_len] = 0;
+  GST_LOG_OBJECT (qtdemux, "%*s    compressor:    %s", depth, "",
+      compressor_name);
+  GST_LOG_OBJECT (qtdemux, "%*s    depth:         %u", depth, "",
+      GET_UINT16 (data));
+  GST_LOG_OBJECT (qtdemux, "%*s    color table ID:%u", depth, "",
+      GET_UINT16 (data));
+
+  return TRUE;
+}
+
 gboolean
 qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
 {
@@ -351,6 +396,10 @@ qtdemux_dump_stsd (GstQTDemux * qtdemux, GstByteReader * data, int depth)
             !gst_byte_reader_get_uint32_be (&sub, &num_entries))
           return FALSE;
         if (!qtdemux_dump_unknown (qtdemux, &sub, depth + 1))
+          return FALSE;
+        break;
+      case FOURCC_av01:
+        if (!qtdemux_dump_stsd_av01 (qtdemux, &sub, size, depth + 1))
           return FALSE;
         break;
       default:

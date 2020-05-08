@@ -28,9 +28,9 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLStatement.h"
 #include <memory>
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -39,31 +39,30 @@ namespace WHLSL {
 
 namespace AST {
 
-class IfStatement : public Statement {
+class IfStatement final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    IfStatement(Lexer::Token&& origin, UniqueRef<Expression>&& conditional, UniqueRef<Statement>&& body, Optional<UniqueRef<Statement>>&& elseBody)
-        : Statement(WTFMove(origin))
+    IfStatement(CodeLocation location, UniqueRef<Expression>&& conditional, UniqueRef<Statement>&& body, std::unique_ptr<Statement>&& elseBody)
+        : Statement(location, Kind::If)
         , m_conditional(WTFMove(conditional))
         , m_body(WTFMove(body))
         , m_elseBody(WTFMove(elseBody))
     {
     }
 
-    virtual ~IfStatement() = default;
+    ~IfStatement() = default;
 
     IfStatement(const IfStatement&) = delete;
     IfStatement(IfStatement&&) = default;
 
-    bool isIfStatement() const override { return true; }
-
     Expression& conditional() { return m_conditional; }
     Statement& body() { return m_body; }
-    Statement* elseBody() { return m_elseBody ? &*m_elseBody : nullptr; }
+    Statement* elseBody() { return m_elseBody.get(); }
 
 private:
     UniqueRef<Expression> m_conditional;
     UniqueRef<Statement> m_body;
-    Optional<UniqueRef<Statement>> m_elseBody;
+    std::unique_ptr<Statement> m_elseBody;
 };
 
 } // namespace AST
@@ -71,6 +70,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(IfStatement)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(IfStatement, isIfStatement())
 

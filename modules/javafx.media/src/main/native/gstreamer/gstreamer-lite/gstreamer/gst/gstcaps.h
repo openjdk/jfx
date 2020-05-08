@@ -238,27 +238,30 @@ gst_caps_unref (GstCaps * caps)
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (caps));
 }
 
-/* copy caps */
 /**
- * gst_caps_copy:
- * @caps: a #GstCaps.
+ * gst_clear_caps: (skip)
+ * @caps_ptr: a pointer to a #GstCaps reference
  *
- * Creates a new #GstCaps as a copy of the old @caps. The new caps will have a
- * refcount of 1, owned by the caller. The structures are copied as well.
+ * Clears a reference to a #GstCaps.
  *
- * Note that this function is the semantic equivalent of a gst_caps_ref()
- * followed by a gst_caps_make_writable(). If you only want to hold on to a
- * reference to the data, you should use gst_caps_ref().
+ * @caps_ptr must not be %NULL.
  *
- * When you are finished with the caps, call gst_caps_unref() on it.
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the caps is decreased and the pointer is set to %NULL.
  *
- * Returns: the new #GstCaps
+ * Since: 1.16
  */
-static inline GstCaps *
-gst_caps_copy (const GstCaps * caps)
+static inline void
+gst_clear_caps (GstCaps ** caps_ptr)
 {
-  return GST_CAPS (gst_mini_object_copy (GST_MINI_OBJECT_CAST (caps)));
+  gst_clear_mini_object ((GstMiniObject **) caps_ptr);
 }
+
+/* copy caps */
+GST_API
+GstCaps * gst_caps_copy (const GstCaps * caps);
+
+#define gst_caps_copy(caps) GST_CAPS (gst_mini_object_copy (GST_MINI_OBJECT_CAST (caps)))
 
 /**
  * gst_caps_is_writable:
@@ -482,6 +485,10 @@ void              gst_caps_set_features            (GstCaps *caps,
                                                     guint          index,
                                                     GstCapsFeatures * features);
 GST_API
+void              gst_caps_set_features_simple        (GstCaps *caps,
+                                                       GstCapsFeatures * features);
+
+GST_API
 GstCapsFeatures * gst_caps_get_features            (const GstCaps *caps,
                                                     guint          index);
 GST_API
@@ -529,8 +536,8 @@ GST_API
 gboolean          gst_caps_is_always_compatible    (const GstCaps *caps1,
                                                     const GstCaps *caps2);
 GST_API
-gboolean          gst_caps_is_subset           (const GstCaps *subset,
-                            const GstCaps *superset);
+gboolean          gst_caps_is_subset       (const GstCaps *subset,
+                const GstCaps *superset);
 GST_API
 gboolean          gst_caps_is_subset_structure     (const GstCaps *caps,
                                                     const GstStructure *structure);
@@ -539,31 +546,31 @@ gboolean          gst_caps_is_subset_structure_full (const GstCaps *caps,
                                                      const GstStructure *structure,
                                                      const GstCapsFeatures *features);
 GST_API
-gboolean          gst_caps_is_equal        (const GstCaps *caps1,
-                            const GstCaps *caps2);
+gboolean          gst_caps_is_equal      (const GstCaps *caps1,
+                const GstCaps *caps2);
 GST_API
 gboolean          gst_caps_is_equal_fixed          (const GstCaps *caps1,
-                            const GstCaps *caps2);
+                const GstCaps *caps2);
 GST_API
 gboolean          gst_caps_can_intersect           (const GstCaps * caps1,
-                            const GstCaps * caps2);
+                const GstCaps * caps2);
 GST_API
-gboolean          gst_caps_is_strictly_equal       (const GstCaps *caps1,
-                            const GstCaps *caps2);
+gboolean          gst_caps_is_strictly_equal     (const GstCaps *caps1,
+                const GstCaps *caps2);
 
 
 /* operations */
 
 GST_API
 GstCaps *         gst_caps_intersect               (GstCaps *caps1,
-                            GstCaps *caps2) G_GNUC_WARN_UNUSED_RESULT;
+                GstCaps *caps2) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstCaps *         gst_caps_intersect_full          (GstCaps *caps1,
-                            GstCaps *caps2,
+                GstCaps *caps2,
                                                     GstCapsIntersectMode mode) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
-GstCaps *         gst_caps_subtract        (GstCaps *minuend,
-                            GstCaps *subtrahend) G_GNUC_WARN_UNUSED_RESULT;
+GstCaps *         gst_caps_subtract      (GstCaps *minuend,
+                GstCaps *subtrahend) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstCaps *         gst_caps_normalize               (GstCaps *caps) G_GNUC_WARN_UNUSED_RESULT;
 

@@ -23,11 +23,11 @@
 #include "config.h"
 #endif
 
-#ifdef _WIN32
+#include <gst/audio/audio.h>
+#ifdef G_OS_WIN32
 #include <windows.h>
 #endif
 
-#include <gst/audio/audio.h>
 #include "gstaudioutilsprivate.h"
 
 /*
@@ -217,15 +217,15 @@ exit:
   return res;
 }
 
-#ifdef _WIN32
+#ifdef G_OS_WIN32
 /* *INDENT-OFF* */
 static struct
 {
   HMODULE dll;
   gboolean tried_loading;
 
-    HANDLE (WINAPI * AvSetMmThreadCharacteristics) (LPCSTR, LPDWORD);
-    BOOL (WINAPI * AvRevertMmThreadCharacteristics) (HANDLE);
+  FARPROC AvSetMmThreadCharacteristics;
+  FARPROC AvRevertMmThreadCharacteristics;
 } _gst_audio_avrt_tbl = { 0 };
 /* *INDENT-ON* */
 #endif
@@ -233,7 +233,7 @@ static struct
 static gboolean
 __gst_audio_init_thread_priority (void)
 {
-#ifdef _WIN32
+#ifdef G_OS_WIN32
   if (_gst_audio_avrt_tbl.tried_loading)
     return _gst_audio_avrt_tbl.dll != NULL;
 
@@ -261,19 +261,22 @@ __gst_audio_init_thread_priority (void)
 /*
  * Increases the priority of the thread it's called from
  */
-gpointer
+gboolean
 __gst_audio_set_thread_priority (void)
 {
-  if (!__gst_audio_init_thread_priority ())
-    return NULL;
-
-#ifdef _WIN32
+#ifdef G_OS_WIN32
   DWORD taskIndex = 0;
+#endif
+
+  if (!__gst_audio_init_thread_priority ())
+    return FALSE;
+
+#ifdef G_OS_WIN32
   /* This is only used from ringbuffer thread functions, so we don't need to
    * ever need to revert the thread priorities. */
   return _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics (TEXT ("Pro Audio"),
-      &taskIndex);
+      &taskIndex) != 0;
 #else
-  return NULL;
+  return TRUE;
 #endif
 }

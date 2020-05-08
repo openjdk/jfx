@@ -37,9 +37,8 @@
 #include <wtf/DateMath.h>
 #include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/CString.h>
+#include <wtf/Optional.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 
@@ -98,12 +97,24 @@ static inline bool skipValue(const String& str, unsigned& pos)
     return pos != start;
 }
 
+// True if characters which satisfy the predicate are present, incrementing
+// "pos" to the next character which does not satisfy the predicate.
+// Note: might return pos == str.length().
+static inline bool skipWhile(const String& str, unsigned& pos, const WTF::Function<bool(const UChar)>& predicate)
+{
+    const unsigned start = pos;
+    const unsigned len = str.length();
+    while (pos < len && predicate(str[pos]))
+        ++pos;
+    return pos != start;
+}
+
 // See RFC 7230, Section 3.1.2.
 bool isValidReasonPhrase(const String& value)
 {
     for (unsigned i = 0; i < value.length(); ++i) {
         UChar c = value[i];
-        if (c == 0x7F || c > 0xFF || (c < 0x20 && c != '\t'))
+        if (c == 0x7F || !isLatin1(c) || (c < 0x20 && c != '\t'))
             return false;
     }
     return true;
@@ -120,7 +131,7 @@ bool isValidHTTPHeaderValue(const String& value)
         return false;
     for (unsigned i = 0; i < value.length(); ++i) {
         c = value[i];
-        ASSERT(c <= 0xFF);
+        ASSERT(isLatin1(c));
         if (c == 0x00 || c == 0x0A || c == 0x0D)
             return false;
     }
@@ -136,6 +147,35 @@ static bool isDelimiterCharacter(const UChar c)
         || c == ']' || c == '{' || c == '}');
 }
 
+// See RFC 7230, Section 3.2.6.
+static inline bool isVisibleCharacter(const UChar c)
+{
+    // VCHAR = %x21-7E
+    return (c >= 0x21 && c <= 0x7E);
+}
+
+// See RFC 7230, Section 3.2.6.
+static inline bool isOctectInFieldContentCharacter(const UChar c)
+{
+    // obs-text = %x80-FF
+    return (c >= 0x80 && c <= 0xFF);
+}
+
+// See RFC 7230, Section 3.2.6.
+static bool isCommentTextCharacter(const UChar c)
+{
+    // ctext = HTAB / SP
+    //       / %x21-27 ; '!'-'''
+    //       / %x2A-5B ; '*'-'['
+    //       / %x5D-7E ; ']'-'~'
+    //       / obs-text
+    return (c == '\t' || c == ' '
+        || (c >= 0x21 && c <= 0x27)
+        || (c >= 0x2A && c <= 0x5B)
+        || (c >= 0x5D && c <= 0x7E)
+        || isOctectInFieldContentCharacter(c));
+}
+
 // See RFC 7231, Section 5.3.2.
 bool isValidAcceptHeaderValue(const String& value)
 {
@@ -146,7 +186,7 @@ bool isValidAcceptHeaderValue(const String& value)
         if (isASCIIAlphanumeric(c) || c == ',' || c == '/' || c == ';' || c == '=')
             continue;
 
-        ASSERT(c <= 0xFF);
+        ASSERT(isLatin1(c));
         if (c == 0x7F || (c < 0x20 && c != '\t'))
             return false;
 
@@ -175,20 +215,135 @@ bool isValidLanguageHeaderValue(const String& value)
 }
 
 // See RFC 7230, Section 3.2.6.
+static inline bool isHTTPTokenCharacter(const UChar c)
+{
+    // Any VCHAR, except delimiters
+    return c > 0x20 && c < 0x7F && !isDelimiterCharacter(c);
+}
+
+// See RFC 7230, Section 3.2.6.
 bool isValidHTTPToken(const String& value)
 {
     if (value.isEmpty())
         return false;
     auto valueStringView = StringView(value);
     for (UChar c : valueStringView.codeUnits()) {
-        if (c <= 0x20 || c >= 0x7F
-            || c == '(' || c == ')' || c == '<' || c == '>' || c == '@'
-            || c == ',' || c == ';' || c == ':' || c == '\\' || c == '"'
-            || c == '/' || c == '[' || c == ']' || c == '?' || c == '='
-            || c == '{' || c == '}')
-        return false;
+        if (!isHTTPTokenCharacter(c))
+            return false;
     }
     return true;
+}
+
+// True if the character at the given position satisifies a predicate, incrementing "pos" by one.
+// Note: Might return pos == str.length()
+static inline bool skipCharacter(const String& value, unsigned& pos, WTF::Function<bool(const UChar)>&& predicate)
+{
+    if (pos < value.length() && predicate(value[pos])) {
+        ++pos;
+        return true;
+    }
+    return false;
+}
+
+// True if the "expected" character is at the given position, incrementing "pos" by one.
+// Note: Might return pos == str.length()
+static inline bool skipCharacter(const String& value, unsigned& pos, const UChar expected)
+{
+    return skipCharacter(value, pos, [expected](const UChar c) {
+        return c == expected;
+    });
+}
+
+// True if a quoted pair is present, incrementing "pos" to the position after the quoted pair.
+// Note: Might return pos == str.length()
+// See RFC 7230, Section 3.2.6.
+static constexpr auto QuotedPairStartCharacter = '\\';
+static bool skipQuotedPair(const String& value, unsigned& pos)
+{
+    // quoted-pair = "\" ( HTAB / SP / VCHAR / obs-text )
+    if (!skipCharacter(value, pos, QuotedPairStartCharacter))
+        return false;
+
+    return skipCharacter(value, pos, '\t')
+        || skipCharacter(value, pos, ' ')
+        || skipCharacter(value, pos, isVisibleCharacter)
+        || skipCharacter(value, pos, isOctectInFieldContentCharacter);
+}
+
+// True if a comment is present, incrementing "pos" to the position after the comment.
+// Note: Might return pos == str.length()
+// See RFC 7230, Section 3.2.6.
+static constexpr auto CommentStartCharacter = '(';
+static constexpr auto CommentEndCharacter = ')';
+static bool skipComment(const String& value, unsigned& pos)
+{
+    // comment = "(" *( ctext / quoted-pair / comment ) ")"
+    // ctext   = HTAB / SP / %x21-27 / %x2A-5B / %x5D-7E / obs-text
+    if (!skipCharacter(value, pos, CommentStartCharacter))
+        return false;
+
+    const unsigned end = value.length();
+    while (pos < end && value[pos] != CommentEndCharacter) {
+        switch (value[pos]) {
+        case CommentStartCharacter:
+            if (!skipComment(value, pos))
+                return false;
+            break;
+        case QuotedPairStartCharacter:
+            if (!skipQuotedPair(value, pos))
+                return false;
+            break;
+        default:
+            if (!skipWhile(value, pos, isCommentTextCharacter))
+                return false;
+        }
+    }
+    return skipCharacter(value, pos, CommentEndCharacter);
+}
+
+// True if an HTTP header token is present, incrementing "pos" to the position after it.
+// Note: Might return pos == str.length()
+// See RFC 7230, Section 3.2.6.
+static bool skipHTTPToken(const String& value, unsigned& pos)
+{
+    return skipWhile(value, pos, isHTTPTokenCharacter);
+}
+
+// True if a product specifier (as in an User-Agent header) is present, incrementing "pos" to the position after it.
+// Note: Might return pos == str.length()
+// See RFC 7231, Section 5.5.3.
+static bool skipUserAgentProduct(const String& value, unsigned& pos)
+{
+    // product         = token ["/" product-version]
+    // product-version = token
+    if (!skipHTTPToken(value, pos))
+        return false;
+    if (skipCharacter(value, pos, '/'))
+        return skipHTTPToken(value, pos);
+    return true;
+}
+
+// See RFC 7231, Section 5.5.3
+bool isValidUserAgentHeaderValue(const String& value)
+{
+    // User-Agent = product *( RWS ( product / comment ) )
+    unsigned pos = 0;
+    if (!skipUserAgentProduct(value, pos))
+        return false;
+
+    while (pos < value.length()) {
+        if (!skipWhiteSpace(value, pos))
+            return false;
+        if (value[pos] == CommentStartCharacter) {
+            if (!skipComment(value, pos))
+                return false;
+        } else {
+            if (!skipUserAgentProduct(value, pos))
+                return false;
+        }
+    }
+
+    return pos == value.length();
 }
 
 static const size_t maxInputSampleSize = 128;
@@ -486,7 +641,7 @@ ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header)
 
 // For example: "HTTP/1.1 200 OK" => "OK".
 // Note that HTTP/2 does not include a reason phrase, so we return the empty atom.
-AtomicString extractReasonPhraseFromHTTPStatusLine(const String& statusLine)
+AtomString extractReasonPhraseFromHTTPStatusLine(const String& statusLine)
 {
     StringView view = statusLine;
     size_t spacePos = view.find(' ');
@@ -496,7 +651,7 @@ AtomicString extractReasonPhraseFromHTTPStatusLine(const String& statusLine)
     if (spacePos == notFound)
         return emptyAtom();
 
-    return view.substring(spacePos + 1).toAtomicString();
+    return view.substring(spacePos + 1).toAtomString();
 }
 
 XFrameOptionsDisposition parseXFrameOptionsHeader(const String& header)
@@ -729,7 +884,7 @@ size_t parseHTTPHeader(const char* start, size_t length, String& failureReason, 
     }
 
     nameSize = name.size();
-    nameStr = StringView(reinterpret_cast<const LChar*>(namePtr), nameSize);
+    nameStr = StringView(namePtr, nameSize);
 
     for (; p < end && *p == 0x20; p++) { }
 
@@ -860,19 +1015,26 @@ bool isCrossOriginSafeRequestHeader(HTTPHeaderName name, const String& value)
 {
     switch (name) {
     case HTTPHeaderName::Accept:
-        return isValidAcceptHeaderValue(value);
+        if (!isValidAcceptHeaderValue(value))
+            return false;
+        break;
     case HTTPHeaderName::AcceptLanguage:
     case HTTPHeaderName::ContentLanguage:
-        return isValidLanguageHeaderValue(value);
+        if (!isValidLanguageHeaderValue(value))
+            return false;
+        break;
     case HTTPHeaderName::ContentType: {
         // Preflight is required for MIME types that can not be sent via form submission.
         String mimeType = extractMIMETypeFromMediaType(value);
-        return equalLettersIgnoringASCIICase(mimeType, "application/x-www-form-urlencoded") || equalLettersIgnoringASCIICase(mimeType, "multipart/form-data") || equalLettersIgnoringASCIICase(mimeType, "text/plain");
+        if (!(equalLettersIgnoringASCIICase(mimeType, "application/x-www-form-urlencoded") || equalLettersIgnoringASCIICase(mimeType, "multipart/form-data") || equalLettersIgnoringASCIICase(mimeType, "text/plain")))
+            return false;
+        break;
     }
     default:
         // FIXME: Should we also make safe other headers (DPR, Downlink, Save-Data...)? That would require validating their values.
         return false;
     }
+    return value.length() <= 128;
 }
 
 // Implements <https://fetch.spec.whatwg.org/#concept-method-normalize>.

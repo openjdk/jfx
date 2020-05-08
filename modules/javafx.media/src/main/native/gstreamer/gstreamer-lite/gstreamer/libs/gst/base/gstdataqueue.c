@@ -28,6 +28,9 @@
  * also provides size-related functionality. This object should be used for
  * any #GstElement that wishes to provide some sort of queueing functionality.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gst/gst.h>
 #include "string.h"
@@ -129,14 +132,13 @@ static guint gst_data_queue_signals[LAST_SIGNAL] = { 0 };
 }
 
 #define parent_class gst_data_queue_parent_class
-G_DEFINE_TYPE_WITH_CODE (GstDataQueue, gst_data_queue, G_TYPE_OBJECT, _do_init);
+G_DEFINE_TYPE_WITH_CODE (GstDataQueue, gst_data_queue, G_TYPE_OBJECT,
+    G_ADD_PRIVATE (GstDataQueue) _do_init);
 
 static void
 gst_data_queue_class_init (GstDataQueueClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (GstDataQueuePrivate));
 
   gobject_class->set_property = gst_data_queue_set_property;
   gobject_class->get_property = gst_data_queue_get_property;
@@ -191,9 +193,7 @@ gst_data_queue_class_init (GstDataQueueClass * klass)
 static void
 gst_data_queue_init (GstDataQueue * queue)
 {
-  queue->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (queue, GST_TYPE_DATA_QUEUE,
-      GstDataQueuePrivate);
+  queue->priv = gst_data_queue_get_instance_private (queue);
 
   queue->priv->cur_level.visible = 0;   /* no content */
   queue->priv->cur_level.bytes = 0;     /* no content */
@@ -562,7 +562,7 @@ _gst_data_queue_wait_non_empty (GstDataQueue * queue)
 /**
  * gst_data_queue_pop: (skip)
  * @queue: a #GstDataQueue.
- * @item: pointer to store the returned #GstDataQueueItem.
+ * @item: (out): pointer to store the returned #GstDataQueueItem.
  *
  * Retrieves the first @item available on the @queue. If the queue is currently
  * empty, the call will block until at least one item is available, OR the
@@ -632,7 +632,7 @@ is_of_type (gconstpointer a, gconstpointer b)
 /**
  * gst_data_queue_peek: (skip)
  * @queue: a #GstDataQueue.
- * @item: pointer to store the returned #GstDataQueueItem.
+ * @item: (out): pointer to store the returned #GstDataQueueItem.
  *
  * Retrieves the first @item available on the @queue without removing it.
  * If the queue is currently empty, the call will block until at least
@@ -759,7 +759,7 @@ gst_data_queue_limits_changed (GstDataQueue * queue)
 /**
  * gst_data_queue_get_level: (skip)
  * @queue: The #GstDataQueue
- * @level: the location to store the result
+ * @level: (out): the location to store the result
  *
  * Get the current level of the queue.
  *

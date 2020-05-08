@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,12 +41,12 @@
 #include "JSModuleNamespaceObject.h"
 #include "JSModuleRecord.h"
 #include "JSSourceCode.h"
+#include "JSWebAssembly.h"
 #include "ModuleAnalyzer.h"
 #include "Nodes.h"
 #include "ObjectConstructor.h"
 #include "Parser.h"
 #include "ParserError.h"
-#include "WebAssemblyPrototype.h"
 
 namespace JSC {
 
@@ -86,6 +86,7 @@ const ClassInfo JSModuleLoader::s_info = { "ModuleLoader", &Base::s_info, &modul
     loadModule                     JSBuiltin                                  DontEnum|Function 3
     linkAndEvaluateModule          JSBuiltin                                  DontEnum|Function 2
     requestImportModule            JSBuiltin                                  DontEnum|Function 3
+    dependencyKeysIfEvaluated      JSBuiltin                                  DontEnum|Function 1
     getModuleNamespaceObject       moduleLoaderGetModuleNamespaceObject       DontEnum|Function 1
     parseModule                    moduleLoaderParseModule                    DontEnum|Function 2
     requestedModules               moduleLoaderRequestedModules               DontEnum|Function 1
@@ -108,7 +109,7 @@ void JSModuleLoader::finishCreation(ExecState* exec, VM& vm, JSGlobalObject* glo
     ASSERT(inherits(vm, info()));
     JSMap* map = JSMap::create(exec, vm, globalObject->mapStructure());
     scope.releaseAssertNoException();
-    putDirect(vm, Identifier::fromString(&vm, "registry"), map);
+    putDirect(vm, Identifier::fromString(vm, "registry"), map);
 }
 
 // ------------------------------ Functions --------------------------------
@@ -116,9 +117,33 @@ void JSModuleLoader::finishCreation(ExecState* exec, VM& vm, JSGlobalObject* glo
 static String printableModuleKey(ExecState* exec, JSValue key)
 {
     VM& vm = exec->vm();
-    if (key.isString() || key.isSymbol())
-        return key.toPropertyKey(exec).impl();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (key.isString() || key.isSymbol()) {
+        auto propertyName = key.toPropertyKey(exec);
+        scope.assertNoException(); // This is OK since this function is just for debugging purpose.
+        return propertyName.impl();
+    }
     return vm.propertyNames->emptyIdentifier.impl();
+}
+
+JSArray* JSModuleLoader::dependencyKeysIfEvaluated(ExecState* exec, JSValue key)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* function = jsCast<JSObject*>(get(exec, vm.propertyNames->builtinNames().dependencyKeysIfEvaluatedPublicName()));
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    CallData callData;
+    CallType callType = JSC::getCallData(vm, function, callData);
+    ASSERT(callType != CallType::None);
+
+    MarkedArgumentBuffer arguments;
+    arguments.append(key);
+
+    JSValue result = call(exec, function, callType, callData, this, arguments);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+
+    return jsDynamicCast<JSArray*>(vm, result);
 }
 
 JSValue JSModuleLoader::provideFetch(ExecState* exec, JSValue key, const SourceCode& sourceCode)
@@ -216,7 +241,7 @@ JSInternalPromise* JSModuleLoader::requestImportModule(ExecState* exec, const Id
     ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer arguments;
-    arguments.append(jsString(exec, moduleKey.impl()));
+    arguments.append(jsString(vm, moduleKey.impl()));
     arguments.append(parameters);
     arguments.append(scriptFetcher);
     ASSERT(!arguments.hasOverflowed());
@@ -336,6 +361,11 @@ JSValue JSModuleLoader::evaluate(ExecState* exec, JSValue key, JSValue moduleRec
     if (globalObject->globalObjectMethodTable()->moduleLoaderEvaluate)
         return globalObject->globalObjectMethodTable()->moduleLoaderEvaluate(globalObject, exec, this, key, moduleRecordValue, scriptFetcher);
 
+    return evaluateNonVirtual(exec, key, moduleRecordValue, scriptFetcher);
+}
+
+JSValue JSModuleLoader::evaluateNonVirtual(ExecState* exec, JSValue, JSValue moduleRecordValue, JSValue)
+{
     if (auto* moduleRecord = jsDynamicCast<AbstractModuleRecord*>(exec->vm(), moduleRecordValue))
         return moduleRecord->evaluate(exec);
     return jsUndefined();
@@ -383,14 +413,14 @@ EncodedJSValue JSC_HOST_CALL moduleLoaderParseModule(ExecState* exec)
 
 #if ENABLE(WEBASSEMBLY)
     if (sourceCode.provider()->sourceType() == SourceProviderSourceType::WebAssembly)
-        return JSValue::encode(WebAssemblyPrototype::instantiate(exec, deferred, moduleKey, jsSourceCode));
+        return JSValue::encode(JSWebAssembly::instantiate(exec, deferred, moduleKey, jsSourceCode));
 #endif
 
     CodeProfiling profile(sourceCode);
 
     ParserError error;
     std::unique_ptr<ModuleProgramNode> moduleProgramNode = parse<ModuleProgramNode>(
-        &vm, sourceCode, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        vm, sourceCode, Identifier(), JSParserBuiltinMode::NotBuiltin,
         JSParserStrictMode::Strict, JSParserScriptMode::Module, SourceParseMode::ModuleAnalyzeMode, SuperBinding::NotNeeded, error);
     if (error.isValid())
         return reject(error.toErrorObject(exec->lexicalGlobalObject(), sourceCode));
@@ -417,7 +447,7 @@ EncodedJSValue JSC_HOST_CALL moduleLoaderRequestedModules(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     size_t i = 0;
     for (auto& key : moduleRecord->requestedModules()) {
-        result->putDirectIndex(exec, i++, jsString(exec, key.get()));
+        result->putDirectIndex(exec, i++, jsString(vm, key.get()));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
     return JSValue::encode(result);

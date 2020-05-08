@@ -1466,7 +1466,7 @@ regex_compile (const gchar         *pattern,
     *compile_options_out = compile_options;
 
   return re;
-        }
+}
 
 /**
  * g_regex_get_pattern:
@@ -2054,7 +2054,7 @@ g_regex_get_string_number (const GRegex *regex,
  * As a special case, the result of splitting the empty string ""
  * is an empty vector, not a vector containing a single string.
  * The reason for this special case is that being able to represent
- * a empty vector is typically more useful than consistent handling
+ * an empty vector is typically more useful than consistent handling
  * of empty elements. If you do need to represent empty elements,
  * you'll need to check for the empty string before calling this
  * function.
@@ -2101,7 +2101,7 @@ g_regex_split_simple (const gchar        *pattern,
  *
  * As a special case, the result of splitting the empty string "" is an
  * empty vector, not a vector containing a single string. The reason for
- * this special case is that being able to represent a empty vector is
+ * this special case is that being able to represent an empty vector is
  * typically more useful than consistent handling of empty elements. If
  * you do need to represent empty elements, you'll need to check for the
  * empty string before calling this function.
@@ -2144,7 +2144,7 @@ g_regex_split (const GRegex     *regex,
  *
  * As a special case, the result of splitting the empty string "" is an
  * empty vector, not a vector containing a single string. The reason for
- * this special case is that being able to represent a empty vector is
+ * this special case is that being able to represent an empty vector is
  * typically more useful than consistent handling of empty elements. If
  * you do need to represent empty elements, you'll need to check for the
  * empty string before calling this function.
@@ -2537,6 +2537,7 @@ expand_escape (const gchar        *replacement,
           base = 8;
           p = g_utf8_next_char (p);
         }
+      G_GNUC_FALLTHROUGH;
     case '1':
     case '2':
     case '3':
@@ -2594,7 +2595,7 @@ expand_escape (const gchar        *replacement,
   tmp_error = g_error_new (G_REGEX_ERROR,
                            G_REGEX_ERROR_REPLACE,
                            _("Error while parsing replacement "
-                             "text \"%s\" at char %lu: %s"),
+                             "text '%s' at char %lu: %s"),
                            replacement,
                            (gulong)(p - replacement),
                            error_detail);

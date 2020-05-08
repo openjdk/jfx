@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -175,7 +175,7 @@ public final class Platform {
 
     /**
      * Returns true if the calling thread is the JavaFX Application Thread.
-     * Use this call the ensure that a given task is being executed
+     * Use this call to ensure that a given task is being executed
      * (or not being executed) on the JavaFX Application Thread.
      *
      * @return true if running on the JavaFX Application Thread

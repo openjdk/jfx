@@ -50,17 +50,23 @@ public:
     virtual ~FormattingContext();
 
     virtual void layout() const = 0;
-    void layoutOutOfFlowDescendants(const Box&) const;
+    void layoutOutOfFlowContent() const;
 
     struct IntrinsicWidthConstraints {
+        void expand(LayoutUnit horizontalValue);
+        IntrinsicWidthConstraints& operator+=(const IntrinsicWidthConstraints&);
+
         LayoutUnit minimum;
         LayoutUnit maximum;
     };
-    virtual void computeIntrinsicWidthConstraints() const = 0;
+    virtual IntrinsicWidthConstraints computedIntrinsicWidthConstraints() const = 0;
 
     static Display::Box mapBoxToAncestor(const LayoutState&, const Box&, const Container& ancestor);
     static LayoutUnit mapTopToAncestor(const LayoutState&, const Box&, const Container& ancestor);
-    static Point mapCoordinateToAncestor(const LayoutState&, Point, const Container& containingBlock, const Container& ancestor);
+    static LayoutUnit mapLeftToAncestor(const LayoutState&, const Box&, const Container& ancestor);
+    static LayoutUnit mapRightToAncestor(const LayoutState&, const Box&, const Container& ancestor);
+    static Point mapPointToAncestor(const LayoutState&, Point, const Container& from, const Container& to);
+    static Point mapPointToDescendent(const LayoutState&, Point, const Container& from, const Container& to);
 
 protected:
     using LayoutQueue = Vector<const Box*>;
@@ -106,6 +112,8 @@ protected:
 
         static FormattingContext::IntrinsicWidthConstraints constrainByMinMaxWidth(const Box&, IntrinsicWidthConstraints);
 
+        static LayoutUnit contentHeightForFormattingContextRoot(const LayoutState&, const Box&);
+
     protected:
         enum class HeightType { Min, Max, Normal };
         static Optional<LayoutUnit> computedHeightValue(const LayoutState&, const Box&, HeightType);
@@ -135,6 +143,19 @@ private:
     WeakPtr<const Box> m_root;
     FormattingState& m_formattingState;
 };
+
+inline void FormattingContext::IntrinsicWidthConstraints::expand(LayoutUnit horizontalValue)
+{
+    minimum += horizontalValue;
+    maximum += horizontalValue;
+}
+
+inline FormattingContext::IntrinsicWidthConstraints& FormattingContext::IntrinsicWidthConstraints::operator+=(const IntrinsicWidthConstraints& other)
+{
+    minimum += other.minimum;
+    maximum += other.maximum;
+    return *this;
+}
 
 }
 }

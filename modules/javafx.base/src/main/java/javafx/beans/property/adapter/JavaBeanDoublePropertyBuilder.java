@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,10 +61,7 @@ public final class JavaBeanDoublePropertyBuilder {
 
     private final JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
-    /**
-     * <b>Do not use this constructor.</b> It will be deprecated in the next version. Use {@link #create()} instead.
-     */
-    public JavaBeanDoublePropertyBuilder() {}
+    private JavaBeanDoublePropertyBuilder() {}
 
     /**
      * Creates a new instance of {@code JavaBeanDoublePropertyBuilder}.

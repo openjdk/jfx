@@ -939,7 +939,7 @@ gst_queue_handle_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
 #ifdef GSTREAMER_LITE
       // Pause task on pad only if it is linked
       if (gst_pad_is_linked (queue->srcpad)) {
-          gst_pad_pause_task (queue->srcpad);
+        gst_pad_pause_task (queue->srcpad);
       }
 #else // GSTREAMER_LITE
       gst_pad_pause_task (queue->srcpad);
@@ -1026,7 +1026,7 @@ gst_queue_handle_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
 
               break;
             default:
-          goto out_eos;
+              goto out_eos;
           }
         }
 
@@ -1083,7 +1083,7 @@ gst_queue_handle_sink_query (GstPad * pad, GstObject * parent, GstQuery * query)
         GST_QUEUE_SIGNAL_ADD (queue);
         while (queue->srcresult == GST_FLOW_OK &&
             queue->last_handled_query != query)
-        g_cond_wait (&queue->query_handled, &queue->qlock);
+          g_cond_wait (&queue->query_handled, &queue->qlock);
         queue->last_handled_query = NULL;
         if (queue->srcresult != GST_FLOW_OK)
           goto out_flushing;
@@ -1209,12 +1209,12 @@ gst_queue_chain_buffer_or_list (GstPad * pad, GstObject * parent,
     GstBuffer *buffer = GST_BUFFER_CAST (obj);
 
     timestamp = GST_BUFFER_DTS_OR_PTS (buffer);
-  duration = GST_BUFFER_DURATION (buffer);
+    duration = GST_BUFFER_DURATION (buffer);
 
-  GST_CAT_LOG_OBJECT (queue_dataflow, queue, "received buffer %p of size %"
-      G_GSIZE_FORMAT ", time %" GST_TIME_FORMAT ", duration %"
-      GST_TIME_FORMAT, buffer, gst_buffer_get_size (buffer),
-      GST_TIME_ARGS (timestamp), GST_TIME_ARGS (duration));
+    GST_CAT_LOG_OBJECT (queue_dataflow, queue, "received buffer %p of size %"
+        G_GSIZE_FORMAT ", time %" GST_TIME_FORMAT ", duration %"
+        GST_TIME_FORMAT, buffer, gst_buffer_get_size (buffer),
+        GST_TIME_ARGS (timestamp), GST_TIME_ARGS (duration));
   } else {
     GST_CAT_LOG_OBJECT (queue_dataflow, queue,
         "received buffer list %p with %u buffers", obj,
@@ -1276,14 +1276,14 @@ gst_queue_chain_buffer_or_list (GstPad * pad, GstObject * parent,
   if (queue->tail_needs_discont) {
     if (!is_list) {
       GstBuffer *buffer = GST_BUFFER_CAST (obj);
-    GstBuffer *subbuffer = gst_buffer_make_writable (buffer);
+      GstBuffer *subbuffer = gst_buffer_make_writable (buffer);
 
-    if (subbuffer) {
-      buffer = subbuffer;
-      GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
-    } else {
-      GST_DEBUG_OBJECT (queue, "Could not mark buffer as DISCONT");
-    }
+      if (subbuffer) {
+        buffer = subbuffer;
+        GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
+      } else {
+        GST_DEBUG_OBJECT (queue, "Could not mark buffer as DISCONT");
+      }
 
       obj = GST_MINI_OBJECT_CAST (buffer);
     } else {
@@ -1378,24 +1378,24 @@ next:
 
   if (GST_IS_BUFFER (data) || is_list) {
     if (!is_list) {
-    GstBuffer *buffer;
+      GstBuffer *buffer;
 
-    buffer = GST_BUFFER_CAST (data);
+      buffer = GST_BUFFER_CAST (data);
 
-    if (queue->head_needs_discont) {
-      GstBuffer *subbuffer = gst_buffer_make_writable (buffer);
+      if (queue->head_needs_discont) {
+        GstBuffer *subbuffer = gst_buffer_make_writable (buffer);
 
-      if (subbuffer) {
-        buffer = subbuffer;
-        GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
-      } else {
-        GST_DEBUG_OBJECT (queue, "Could not mark buffer as DISCONT");
+        if (subbuffer) {
+          buffer = subbuffer;
+          GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_DISCONT);
+        } else {
+          GST_DEBUG_OBJECT (queue, "Could not mark buffer as DISCONT");
+        }
+        queue->head_needs_discont = FALSE;
       }
-      queue->head_needs_discont = FALSE;
-    }
 
-    GST_QUEUE_MUTEX_UNLOCK (queue);
-    result = gst_pad_push (queue->srcpad, buffer);
+      GST_QUEUE_MUTEX_UNLOCK (queue);
+      result = gst_pad_push (queue->srcpad, buffer);
     } else {
       GstBufferList *buffer_list;
 
@@ -1569,12 +1569,12 @@ out_flushing:
     GstFlowReturn ret = queue->srcresult;
 
 #ifdef GSTREAMER_LITE
-      // Pause task on pad only if it is linked
-      if (gst_pad_is_linked (queue->srcpad)) {
-          gst_pad_pause_task (queue->srcpad);
-      }
-#else // GSTREAMER_LITE
+    // Pause task on pad only if it is linked
+    if (gst_pad_is_linked (queue->srcpad)) {
       gst_pad_pause_task (queue->srcpad);
+    }
+#else // GSTREAMER_LITE
+    gst_pad_pause_task (queue->srcpad);
 #endif // GSTREAMER_LITE
 
     GST_CAT_LOG_OBJECT (queue_dataflow, queue,

@@ -118,6 +118,8 @@ RegistrationDatabase::~RegistrationDatabase()
 
 void RegistrationDatabase::postTaskToWorkQueue(Function<void()>&& task)
 {
+    ASSERT(isMainThread());
+
     m_workQueue->dispatch([protectedThis = makeRef(*this), task = WTFMove(task)]() mutable {
         task();
     });
@@ -128,31 +130,20 @@ void RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
     ASSERT(!isMainThread());
     ASSERT(!m_database);
 
-    cleanOldDatabases(m_databaseDirectory);
+    auto databaseDirectory = this->databaseDirectoryIsolatedCopy();
+    cleanOldDatabases(databaseDirectory);
 
     LOG(ServiceWorker, "ServiceWorker RegistrationDatabase opening file %s", fullFilename.utf8().data());
 
-    String errorMessage;
-    auto scopeExit = makeScopeExit([this, protectedThis = makeRef(*this), errorMessage = &errorMessage] {
-        ASSERT_UNUSED(errorMessage, !errorMessage->isNull());
+    SQLiteFileSystem::ensureDatabaseDirectoryExists(databaseDirectory);
 
-#if RELEASE_LOG_DISABLED
-        LOG_ERROR("Failed to open Service Worker registration database: %s", errorMessage->utf8().data());
-#else
-        RELEASE_LOG_ERROR(ServiceWorker, "Failed to open Service Worker registration database: %{public}s", errorMessage->utf8().data());
-#endif
-
-        m_database = nullptr;
-        callOnMainThread([protectedThis = protectedThis.copyRef()] {
-            protectedThis->databaseFailedToOpen();
-        });
-    });
-
-    SQLiteFileSystem::ensureDatabaseDirectoryExists(m_databaseDirectory);
-
-    m_database = std::make_unique<SQLiteDatabase>();
+    m_database = makeUnique<SQLiteDatabase>();
     if (!m_database->open(fullFilename)) {
-        errorMessage = "Failed to open registration database";
+        RELEASE_LOG_ERROR(ServiceWorker, "Failed to open Service Worker registration database");
+        m_database = nullptr;
+        callOnMainThread([this, protectedThis = makeRef(*this)] {
+            databaseFailedToOpen();
+        });
         return;
     }
 
@@ -161,15 +152,26 @@ void RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
     // necessary run on the same thread every time (as per GCD documentation).
     m_database->disableThreadingChecks();
 
-    errorMessage = ensureValidRecordsTable();
-    if (!errorMessage.isNull())
+    auto doRecoveryAttempt = [&] {
+        // Delete the database and re-create it.
+        m_database = nullptr;
+        SQLiteFileSystem::deleteDatabaseFile(fullFilename);
+        openSQLiteDatabase(fullFilename);
+    };
+
+    String errorMessage = ensureValidRecordsTable();
+    if (!errorMessage.isNull()) {
+        RELEASE_LOG_ERROR(ServiceWorker, "ensureValidRecordsTable failed, reason: %{public}s", errorMessage.utf8().data());
+        doRecoveryAttempt();
         return;
+    }
 
     errorMessage = importRecords();
-    if (!errorMessage.isNull())
+    if (!errorMessage.isNull()) {
+        RELEASE_LOG_ERROR(ServiceWorker, "importRecords failed, reason: %{public}s", errorMessage.utf8().data());
+        doRecoveryAttempt();
         return;
-
-    scopeExit.release();
+    }
 }
 
 void RegistrationDatabase::importRecordsIfNecessary()
@@ -217,10 +219,7 @@ String RegistrationDatabase::ensureValidRecordsTable()
     if (currentSchema == recordsTableSchema() || currentSchema == recordsTableSchemaAlternate())
         return { };
 
-    // This database has a Records table but it is not a schema we expect.
-    // Trying to recover by deleting the data contained within is dangerous so
-    // we should consider this an unrecoverable error.
-    RELEASE_ASSERT_NOT_REACHED();
+    return makeString("Unexpected schema: ", currentSchema);
 }
 
 static String updateViaCacheToString(ServiceWorkerUpdateViaCache update)
@@ -271,14 +270,31 @@ static Optional<WorkerType> stringToWorkerType(const String& type)
     return WTF::nullopt;
 }
 
-void RegistrationDatabase::pushChanges(Vector<ServiceWorkerContextData>&& datas, CompletionHandler<void()>&& completionHandler)
+void RegistrationDatabase::pushChanges(const HashMap<ServiceWorkerRegistrationKey, Optional<ServiceWorkerContextData>>& changedRegistrations, CompletionHandler<void()>&& completionHandler)
 {
-    postTaskToWorkQueue([this, datas = crossThreadCopy(datas), completionHandler = WTFMove(completionHandler)]() mutable {
-        doPushChanges(WTFMove(datas));
+    Vector<ServiceWorkerContextData> updatedRegistrations;
+    Vector<ServiceWorkerRegistrationKey> removedRegistrations;
+    for (auto& keyValue : changedRegistrations) {
+        if (keyValue.value)
+            updatedRegistrations.append(keyValue.value->isolatedCopy());
+        else
+            removedRegistrations.append(keyValue.key.isolatedCopy());
+    }
+
+    postTaskToWorkQueue([this, updatedRegistrations = WTFMove(updatedRegistrations), removedRegistrations = WTFMove(removedRegistrations), completionHandler = WTFMove(completionHandler)]() mutable {
+        doPushChanges(updatedRegistrations, removedRegistrations);
 
         if (!completionHandler)
             return;
 
+        callOnMainThread(WTFMove(completionHandler));
+    });
+}
+
+void RegistrationDatabase::close(CompletionHandler<void()>&& completionHandler)
+{
+    postTaskToWorkQueue([this, completionHandler = WTFMove(completionHandler)]() mutable {
+        m_database = nullptr;
         callOnMainThread(WTFMove(completionHandler));
     });
 }
@@ -289,13 +305,13 @@ void RegistrationDatabase::clearAll(CompletionHandler<void()>&& completionHandle
         m_database = nullptr;
 
         SQLiteFileSystem::deleteDatabaseFile(m_databaseFilePath);
-        SQLiteFileSystem::deleteEmptyDatabaseDirectory(m_databaseDirectory);
+        SQLiteFileSystem::deleteEmptyDatabaseDirectory(databaseDirectoryIsolatedCopy());
 
         callOnMainThread(WTFMove(completionHandler));
     });
 }
 
-void RegistrationDatabase::doPushChanges(Vector<ServiceWorkerContextData>&& datas)
+void RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>& updatedRegistrations, const Vector<ServiceWorkerRegistrationKey>& removedRegistrations)
 {
     if (!m_database) {
         openSQLiteDatabase(m_databaseFilePath);
@@ -312,19 +328,17 @@ void RegistrationDatabase::doPushChanges(Vector<ServiceWorkerContextData>&& data
         return;
     }
 
-    for (auto& data : datas) {
-        if (data.registration.identifier == ServiceWorkerRegistrationIdentifier()) {
-            SQLiteStatement sql(*m_database, "DELETE FROM Records WHERE key = ?");
-            if (sql.prepare() != SQLITE_OK
-                || sql.bindText(1, data.registration.key.toDatabaseKey()) != SQLITE_OK
-                || sql.step() != SQLITE_DONE) {
-                RELEASE_LOG_ERROR(ServiceWorker, "Failed to remove registration data from records table (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
-                return;
-            }
-
-            continue;
+    for (auto& registration : removedRegistrations) {
+        SQLiteStatement sql(*m_database, "DELETE FROM Records WHERE key = ?");
+        if (sql.prepare() != SQLITE_OK
+            || sql.bindText(1, registration.toDatabaseKey()) != SQLITE_OK
+            || sql.step() != SQLITE_DONE) {
+            RELEASE_LOG_ERROR(ServiceWorker, "Failed to remove registration data from records table (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
+            return;
         }
+    }
 
+    for (auto& data : updatedRegistrations) {
         WTF::Persistence::Encoder cspEncoder;
         data.contentSecurityPolicy.encode(cspEncoder);
 
@@ -351,7 +365,7 @@ void RegistrationDatabase::doPushChanges(Vector<ServiceWorkerContextData>&& data
 
     transaction.commit();
 
-    LOG(ServiceWorker, "Pushed %zu changes to ServiceWorker registration database", datas.size());
+    LOG(ServiceWorker, "Updated ServiceWorker registration database (%zu added/updated registrations and %zu removed registrations", updatedRegistrations.size(), removedRegistrations.size());
 }
 
 String RegistrationDatabase::importRecords()

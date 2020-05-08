@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
@@ -180,7 +182,7 @@ public class ChoiceBox<T> extends Control {
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
-                if (sm.getSelectedItem() != null && ! valueProperty().isBound()) {
+                if (!valueProperty().isBound()) {
                     ChoiceBox.this.setValue(sm.getSelectedItem());
                 }
             }
@@ -503,6 +505,9 @@ public class ChoiceBox<T> extends Control {
     // package for testing
     static class ChoiceBoxSelectionModel<T> extends SingleSelectionModel<T> {
         private final ChoiceBox<T> choiceBox;
+        private ChangeListener<ObservableList<T>> itemsObserver;
+        private ListChangeListener<T> itemsContentObserver;
+        private WeakListChangeListener<T> weakItemsContentObserver;
 
         public ChoiceBoxSelectionModel(final ChoiceBox<T> cb) {
             if (cb == null) {
@@ -520,7 +525,7 @@ public class ChoiceBox<T> extends Control {
              */
 
             // watching for changes to the items list content
-            final ListChangeListener<T> itemsContentObserver = c -> {
+            itemsContentObserver = c -> {
                 if (choiceBox.getItems() == null || choiceBox.getItems().isEmpty()) {
                     setSelectedIndex(-1);
                 } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
@@ -530,17 +535,18 @@ public class ChoiceBox<T> extends Control {
                     }
                 }
             };
+            weakItemsContentObserver = new WeakListChangeListener<>(itemsContentObserver);
             if (this.choiceBox.getItems() != null) {
-                this.choiceBox.getItems().addListener(itemsContentObserver);
+                this.choiceBox.getItems().addListener(weakItemsContentObserver);
             }
 
             // watching for changes to the items list
-            ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+            itemsObserver = (valueModel, oldList, newList) -> {
                 if (oldList != null) {
-                    oldList.removeListener(itemsContentObserver);
+                    oldList.removeListener(weakItemsContentObserver);
                 }
                 if (newList != null) {
-                    newList.addListener(itemsContentObserver);
+                    newList.addListener(weakItemsContentObserver);
                 }
                 setSelectedIndex(-1);
                 if (getSelectedItem() != null) {
@@ -550,7 +556,9 @@ public class ChoiceBox<T> extends Control {
                     }
                 }
             };
-            this.choiceBox.itemsProperty().addListener(itemsObserver);
+            // TBD: use pattern as f.i. in listView selectionModel (invalidationListener to really
+            // get all changes - including list of same content - of the list-valued property)
+            this.choiceBox.itemsProperty().addListener(new WeakChangeListener<>(itemsObserver));
         }
 
         // API Implementation
@@ -579,6 +587,20 @@ public class ChoiceBox<T> extends Control {
 
             if (choiceBox.isShowing()) {
                 choiceBox.hide();
+            }
+        }
+
+        /**
+         * {@inheritDoc} <p>
+         *
+         * Overridden to clear <code>selectedIndex</code> if <code>selectedItem</code> is not contained
+         * in the <code>items</code>.
+         */
+        @Override
+        public void select(T obj) {
+            super.select(obj);
+            if (obj != null && !choiceBox.getItems().contains(obj)) {
+                setSelectedIndex(-1);
             }
         }
 

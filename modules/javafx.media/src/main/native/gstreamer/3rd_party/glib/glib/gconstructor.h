@@ -28,6 +28,8 @@
 #elif defined (_MSC_VER) && (_MSC_VER >= 1500)
 /* Visual studio 2008 and later has _Pragma */
 
+#include <stdlib.h>
+
 #define G_HAS_CONSTRUCTORS 1
 
 /* We do some weird things to avoid the constructors being optimized

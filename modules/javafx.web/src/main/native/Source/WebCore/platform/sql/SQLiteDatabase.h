@@ -53,7 +53,8 @@ public:
     WEBCORE_EXPORT SQLiteDatabase();
     WEBCORE_EXPORT ~SQLiteDatabase();
 
-    WEBCORE_EXPORT bool open(const String& filename, bool forWebSQLDatabase = false);
+    enum class OpenMode { ReadOnly, ReadWrite, ReadWriteCreate };
+    WEBCORE_EXPORT bool open(const String& filename, OpenMode = OpenMode::ReadWriteCreate);
     bool isOpen() const { return m_db; }
     WEBCORE_EXPORT void close();
 
@@ -64,7 +65,7 @@ public:
 
     WEBCORE_EXPORT bool tableExists(const String&);
     void clearAllTables();
-    int runVacuumCommand();
+    WEBCORE_EXPORT int runVacuumCommand();
     int runIncrementalVacuumCommand();
 
     bool transactionInProgress() const { return m_transactionInProgress; }
@@ -137,10 +138,13 @@ public:
     WEBCORE_EXPORT void disableThreadingChecks() {}
 #endif
 
+    WEBCORE_EXPORT static void setIsDatabaseOpeningForbidden(bool);
+
 private:
     static int authorizerFunction(void*, int, const char*, const char*, const char*, const char*);
 
     void enableAuthorizer(bool enable);
+    void useWALJournalMode();
 
     int pageSize();
 
@@ -153,6 +157,8 @@ private:
 #ifndef NDEBUG
     bool m_sharable { false };
 #endif
+
+    bool m_useWAL { false };
 
     Lock m_authorizerLock;
     RefPtr<DatabaseAuthorizer> m_authorizer;

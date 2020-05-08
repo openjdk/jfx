@@ -109,10 +109,10 @@ enum
 };
 
 static GstStaticPadTemplate sink_template_factory =
-GST_STATIC_PAD_TEMPLATE ("sink",
+    GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("audio/x-wav")
+    GST_STATIC_CAPS ("audio/x-wav;audio/x-rf64")
     );
 
 #define DEBUG_INIT \
@@ -319,7 +319,7 @@ gst_wavparse_init (GstWavParse * wavparse)
       GST_DEBUG_FUNCPTR (gst_wavparse_pad_query));
   gst_pad_set_event_function (wavparse->srcpad,
       GST_DEBUG_FUNCPTR (gst_wavparse_srcpad_event));
-    gst_element_add_pad (GST_ELEMENT_CAST (wavparse), wavparse->srcpad);
+  gst_element_add_pad (GST_ELEMENT_CAST (wavparse), wavparse->srcpad);
 }
 
 static gboolean
@@ -408,7 +408,7 @@ gst_wavparse_perform_seek (GstWavParse * wav, GstEvent * event)
   gboolean update;
   GstSegment seeksegment = { 0, };
   gint64 last_stop;
-  guint32 seqnum = 0;
+  guint32 seqnum = GST_SEQNUM_INVALID;
 
   if (event) {
     GST_DEBUG_OBJECT (wav, "doing seek with event");
@@ -481,7 +481,8 @@ gst_wavparse_perform_seek (GstWavParse * wav, GstEvent * event)
       /* BYTE seek event */
       event = gst_event_new_seek (rate, GST_FORMAT_BYTES, flags, cur_type, cur,
           stop_type, stop);
-      gst_event_set_seqnum (event, seqnum);
+      if (seqnum != GST_SEQNUM_INVALID)
+        gst_event_set_seqnum (event, seqnum);
       res = gst_pad_push_event (wav->sinkpad, event);
     }
     return res;
@@ -498,10 +499,11 @@ gst_wavparse_perform_seek (GstWavParse * wav, GstEvent * event)
    * blocking in preroll). */
   if (flush) {
     GstEvent *fevent;
-      GST_DEBUG_OBJECT (wav, "sending flush start");
+    GST_DEBUG_OBJECT (wav, "sending flush start");
 
     fevent = gst_event_new_flush_start ();
-    gst_event_set_seqnum (fevent, seqnum);
+    if (seqnum != GST_SEQNUM_INVALID)
+      gst_event_set_seqnum (fevent, seqnum);
     gst_pad_push_event (wav->sinkpad, gst_event_ref (fevent));
     gst_pad_push_event (wav->srcpad, fevent);
   } else {
@@ -584,17 +586,18 @@ gst_wavparse_perform_seek (GstWavParse * wav, GstEvent * event)
       wav->end_offset, GST_TIME_ARGS (seeksegment.start), GST_TIME_ARGS (stop));
 
   /* prepare for streaming again */
-    if (flush) {
+  if (flush) {
     GstEvent *fevent;
 
-      /* if we sent a FLUSH_START, we now send a FLUSH_STOP */
-      GST_DEBUG_OBJECT (wav, "sending flush stop");
+    /* if we sent a FLUSH_START, we now send a FLUSH_STOP */
+    GST_DEBUG_OBJECT (wav, "sending flush stop");
 
     fevent = gst_event_new_flush_stop (TRUE);
-    gst_event_set_seqnum (fevent, seqnum);
+    if (seqnum != GST_SEQNUM_INVALID)
+      gst_event_set_seqnum (fevent, seqnum);
     gst_pad_push_event (wav->sinkpad, gst_event_ref (fevent));
     gst_pad_push_event (wav->srcpad, fevent);
-    }
+  }
 
   /* now we did the seek and can activate the new segment values */
   memcpy (&wav->segment, &seeksegment, sizeof (GstSegment));
@@ -614,7 +617,8 @@ gst_wavparse_perform_seek (GstWavParse * wav, GstEvent * event)
   if (wav->start_segment)
     gst_event_unref (wav->start_segment);
   wav->start_segment = gst_event_new_segment (&wav->segment);
-  gst_event_set_seqnum (wav->start_segment, seqnum);
+  if (seqnum != GST_SEQNUM_INVALID)
+    gst_event_set_seqnum (wav->start_segment, seqnum);
 
   /* mark discont if we are going to stream from another position. */
   if (last_stop != wav->segment.position) {
@@ -1408,7 +1412,7 @@ gst_wavparse_stream_headers (GstWavParse * wav)
             data = gst_adapter_map (wav->adapter, data_size);
 #ifdef GSTREAMER_LITE
             if (data == NULL) {
-                goto header_read_error;
+              goto header_read_error;
             }
 #endif // GSTREAMER_LITE
             wav->fact = GST_READ_UINT32_LE (data);
@@ -1761,7 +1765,7 @@ gst_wavparse_stream_headers (GstWavParse * wav)
    * so we do not end up with too many of them */
   /* var abuse */
   if (gst_wavparse_time_to_bytepos (wav, 40 * GST_MSECOND, &upstream_size))
-  wav->max_buf_size = upstream_size;
+    wav->max_buf_size = upstream_size;
   else
     wav->max_buf_size = 0;
   wav->max_buf_size = MAX (wav->max_buf_size, MAX_BUFFER_SIZE);
@@ -1775,8 +1779,8 @@ gst_wavparse_stream_headers (GstWavParse * wav)
   /* ERROR */
 exit:
   {
-      g_free (codec_name);
-      g_free (header);
+    g_free (codec_name);
+    g_free (header);
     if (caps)
       gst_caps_unref (caps);
     return res;
@@ -1961,28 +1965,28 @@ gst_wavparse_add_src_pad (GstWavParse * wav, GstBuffer * buf)
 
   g_assert (wav->caps != NULL);
 
-    s = gst_caps_get_structure (wav->caps, 0);
+  s = gst_caps_get_structure (wav->caps, 0);
   if (s && gst_structure_has_name (s, "audio/x-raw") && buf != NULL) {
-      GstTypeFindProbability prob;
-      GstCaps *tf_caps;
+    GstTypeFindProbability prob;
+    GstCaps *tf_caps;
 
-      tf_caps = gst_type_find_helper_for_buffer (GST_OBJECT (wav), buf, &prob);
-      if (tf_caps != NULL) {
-        GST_LOG ("typefind caps = %" GST_PTR_FORMAT ", P=%d", tf_caps, prob);
-        if (gst_wavparse_have_dts_caps (tf_caps, prob)) {
-          GST_INFO_OBJECT (wav, "Found DTS marker in file marked as raw PCM");
-          gst_caps_unref (wav->caps);
-          wav->caps = tf_caps;
+    tf_caps = gst_type_find_helper_for_buffer (GST_OBJECT (wav), buf, &prob);
+    if (tf_caps != NULL) {
+      GST_LOG ("typefind caps = %" GST_PTR_FORMAT ", P=%d", tf_caps, prob);
+      if (gst_wavparse_have_dts_caps (tf_caps, prob)) {
+        GST_INFO_OBJECT (wav, "Found DTS marker in file marked as raw PCM");
+        gst_caps_unref (wav->caps);
+        wav->caps = tf_caps;
 
-          gst_tag_list_add (wav->tags, GST_TAG_MERGE_REPLACE,
-              GST_TAG_AUDIO_CODEC, "dts", NULL);
-        } else {
-          GST_DEBUG_OBJECT (wav, "found caps %" GST_PTR_FORMAT " for stream "
-              "marked as raw PCM audio, but ignoring for now", tf_caps);
-          gst_caps_unref (tf_caps);
-        }
+        gst_tag_list_add (wav->tags, GST_TAG_MERGE_REPLACE,
+            GST_TAG_AUDIO_CODEC, "dts", NULL);
+      } else {
+        GST_DEBUG_OBJECT (wav, "found caps %" GST_PTR_FORMAT " for stream "
+            "marked as raw PCM audio, but ignoring for now", tf_caps);
+        gst_caps_unref (tf_caps);
       }
     }
+  }
 
   gst_pad_set_caps (wav->srcpad, wav->caps);
 
@@ -2048,8 +2052,8 @@ iterate_adapter:
       wav->end_offset = upstream_size;
 
       /* Get the next n bytes and output them, if we can */
-  if (wav->dataleft == 0 || wav->dataleft < wav->blockalign)
-    goto found_eos;
+      if (wav->dataleft == 0 || wav->dataleft < wav->blockalign)
+        goto found_eos;
     } else {
       goto found_eos;
     }
@@ -2321,33 +2325,33 @@ pause:
             ("No valid input found before end of stream"));
         gst_pad_push_event (wav->srcpad, gst_event_new_eos ());
       } else {
-      /* add pad before we perform EOS */
-      if (G_UNLIKELY (wav->first)) {
-        wav->first = FALSE;
-        gst_wavparse_add_src_pad (wav, NULL);
-      }
+        /* add pad before we perform EOS */
+        if (G_UNLIKELY (wav->first)) {
+          wav->first = FALSE;
+          gst_wavparse_add_src_pad (wav, NULL);
+        }
 
-      /* perform EOS logic */
-      if (wav->segment.flags & GST_SEEK_FLAG_SEGMENT) {
-        GstClockTime stop;
+        /* perform EOS logic */
+        if (wav->segment.flags & GST_SEEK_FLAG_SEGMENT) {
+          GstClockTime stop;
 
-        if ((stop = wav->segment.stop) == -1)
-          stop = wav->segment.duration;
+          if ((stop = wav->segment.stop) == -1)
+            stop = wav->segment.duration;
 
-        gst_element_post_message (GST_ELEMENT_CAST (wav),
-            gst_message_new_segment_done (GST_OBJECT_CAST (wav),
-                wav->segment.format, stop));
+          gst_element_post_message (GST_ELEMENT_CAST (wav),
+              gst_message_new_segment_done (GST_OBJECT_CAST (wav),
+                  wav->segment.format, stop));
           gst_pad_push_event (wav->srcpad,
               gst_event_new_segment_done (wav->segment.format, stop));
-      } else {
+        } else {
           gst_pad_push_event (wav->srcpad, gst_event_new_eos ());
-      }
+        }
       }
     } else if (ret == GST_FLOW_NOT_LINKED || ret < GST_FLOW_EOS) {
       /* for fatal errors we post an error message, post the error
        * first so the app knows about the error first. */
       GST_ELEMENT_FLOW_ERROR (wav, ret);
-        gst_pad_push_event (wav->srcpad, gst_event_new_eos ());
+      gst_pad_push_event (wav->srcpad, gst_event_new_eos ());
     }
     return;
   }
@@ -2550,14 +2554,14 @@ gst_wavparse_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
         GST_ELEMENT_ERROR (wav, STREAM, WRONG_TYPE, (NULL),
             ("No valid input found before end of stream"));
       } else {
-      /* add pad if needed so EOS is seen downstream */
-      if (G_UNLIKELY (wav->first)) {
-        wav->first = FALSE;
-        gst_wavparse_add_src_pad (wav, NULL);
-      } else {
-        /* stream leftover data in current segment */
-        gst_wavparse_flush_data (wav);
-      }
+        /* add pad if needed so EOS is seen downstream */
+        if (G_UNLIKELY (wav->first)) {
+          wav->first = FALSE;
+          gst_wavparse_add_src_pad (wav, NULL);
+        } else {
+          /* stream leftover data in current segment */
+          gst_wavparse_flush_data (wav);
+        }
       }
 
       /* fall-through */
@@ -2566,7 +2570,7 @@ gst_wavparse_sink_event (GstPad * pad, GstObject * parent, GstEvent * event)
       GstClockTime dur;
 
       if (wav->adapter)
-      gst_adapter_clear (wav->adapter);
+        gst_adapter_clear (wav->adapter);
       wav->discont = TRUE;
       dur = wav->segment.duration;
       gst_segment_init (&wav->segment, wav->segment.format);
@@ -2819,6 +2823,25 @@ gst_wavparse_pad_query (GstPad * pad, GstObject * parent, GstQuery * query)
       }
       break;
     }
+    case GST_QUERY_SEGMENT:
+    {
+      GstFormat format;
+      gint64 start, stop;
+
+      format = wav->segment.format;
+
+      start =
+          gst_segment_to_stream_time (&wav->segment, format,
+          wav->segment.start);
+      if ((stop = wav->segment.stop) == -1)
+        stop = wav->segment.duration;
+      else
+        stop = gst_segment_to_stream_time (&wav->segment, format, stop);
+
+      gst_query_set_segment (query, wav->segment.rate, format, start, stop);
+      res = TRUE;
+      break;
+    }
     default:
       res = gst_pad_query_default (pad, parent, query);
       break;
@@ -2943,7 +2966,7 @@ gst_wavparse_sink_activate (GstPad * sinkpad, GstObject * parent)
     goto activate_push;
 
   GST_DEBUG_OBJECT (sinkpad, "activating pull");
-    wav->streaming = FALSE;
+  wav->streaming = FALSE;
   return gst_pad_activate_mode (sinkpad, GST_PAD_MODE_PULL, TRUE);
 
 activate_push:
@@ -2967,13 +2990,13 @@ gst_wavparse_sink_activate_mode (GstPad * sinkpad, GstObject * parent,
       res = TRUE;
       break;
     case GST_PAD_MODE_PULL:
-  if (active) {
-    /* if we have a scheduler we can start the task */
+      if (active) {
+        /* if we have a scheduler we can start the task */
         res = gst_pad_start_task (sinkpad, (GstTaskFunction) gst_wavparse_loop,
             sinkpad, NULL);
-  } else {
+      } else {
         res = gst_pad_stop_task (sinkpad);
-  }
+      }
       break;
     default:
       res = FALSE;

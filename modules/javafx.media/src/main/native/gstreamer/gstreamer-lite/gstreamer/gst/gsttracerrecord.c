@@ -208,6 +208,7 @@ gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...)
     G_VALUE_COLLECT_INIT (&val, type, varargs, G_VALUE_NOCOPY_CONTENTS, &err);
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
+      g_free (err);
       break;
     }
     /* see boxed_proxy_collect_value */

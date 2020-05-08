@@ -27,6 +27,7 @@
 #include "GIFImageDecoder.h"
 #include "ICOImageDecoder.h"
 #include "JPEGImageDecoder.h"
+#include "NotImplemented.h"
 #include "PNGImageDecoder.h"
 #include "SharedBuffer.h"
 #if USE(OPENJPEG)
@@ -152,47 +153,6 @@ RefPtr<ScalableImageDecoder> ScalableImageDecoder::create(SharedBuffer& data, Al
     return nullptr;
 }
 
-namespace {
-
-enum MatchType {
-    Exact,
-    UpperBound,
-    LowerBound
-};
-
-inline void fillScaledValues(Vector<int>& scaledValues, double scaleRate, int length)
-{
-    double inflateRate = 1. / scaleRate;
-    scaledValues.reserveCapacity(static_cast<int>(length * scaleRate + 0.5));
-    for (int scaledIndex = 0; ; ++scaledIndex) {
-        int index = static_cast<int>(scaledIndex * inflateRate + 0.5);
-        if (index >= length)
-            break;
-        scaledValues.append(index);
-    }
-}
-
-template <MatchType type> int getScaledValue(const Vector<int>& scaledValues, int valueToMatch, int searchStart)
-{
-    if (scaledValues.isEmpty())
-        return valueToMatch;
-
-    const int* dataStart = scaledValues.data();
-    const int* dataEnd = dataStart + scaledValues.size();
-    const int* matched = std::lower_bound(dataStart + searchStart, dataEnd, valueToMatch);
-    switch (type) {
-    case Exact:
-        return matched != dataEnd && *matched == valueToMatch ? matched - dataStart : -1;
-    case LowerBound:
-        return matched != dataEnd && *matched == valueToMatch ? matched - dataStart : matched - dataStart - 1;
-    case UpperBound:
-    default:
-        return matched != dataEnd ? matched - dataStart : -1;
-    }
-}
-
-}
-
 bool ScalableImageDecoder::frameIsCompleteAtIndex(size_t index) const
 {
     LockHolder lockHolder(m_mutex);
@@ -211,7 +171,7 @@ bool ScalableImageDecoder::frameHasAlphaAtIndex(size_t index) const
 
     auto& frame = m_frameBufferCache[index];
     if (!frame.isComplete())
-    return true;
+        return true;
     return frame.hasAlpha();
 }
 
@@ -263,47 +223,11 @@ NativeImagePtr ScalableImageDecoder::createFrameImageAtIndex(size_t index, Subsa
     return buffer->backingStore()->image();
 }
 
-void ScalableImageDecoder::prepareScaleDataIfNecessary()
+#if USE(DIRECT2D)
+void ScalableImageDecoder::setTargetContext(ID2D1RenderTarget*)
 {
-    m_scaled = false;
-    m_scaledColumns.clear();
-    m_scaledRows.clear();
-
-    int width = size().width();
-    int height = size().height();
-    int numPixels = height * width;
-    if (m_maxNumPixels <= 0 || numPixels <= m_maxNumPixels)
-        return;
-
-    m_scaled = true;
-    double scale = sqrt(m_maxNumPixels / (double)numPixels);
-    fillScaledValues(m_scaledColumns, scale, width);
-    fillScaledValues(m_scaledRows, scale, height);
+    notImplemented();
 }
-
-int ScalableImageDecoder::upperBoundScaledX(int origX, int searchStart)
-{
-    return getScaledValue<UpperBound>(m_scaledColumns, origX, searchStart);
-}
-
-int ScalableImageDecoder::lowerBoundScaledX(int origX, int searchStart)
-{
-    return getScaledValue<LowerBound>(m_scaledColumns, origX, searchStart);
-}
-
-int ScalableImageDecoder::upperBoundScaledY(int origY, int searchStart)
-{
-    return getScaledValue<UpperBound>(m_scaledRows, origY, searchStart);
-}
-
-int ScalableImageDecoder::lowerBoundScaledY(int origY, int searchStart)
-{
-    return getScaledValue<LowerBound>(m_scaledRows, origY, searchStart);
-}
-
-int ScalableImageDecoder::scaledY(int origY, int searchStart)
-{
-    return getScaledValue<Exact>(m_scaledRows, origY, searchStart);
-}
+#endif
 
 }

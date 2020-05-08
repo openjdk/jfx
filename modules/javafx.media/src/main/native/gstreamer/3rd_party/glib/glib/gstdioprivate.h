@@ -51,9 +51,11 @@ int g_win32_stat_utf8     (const gchar       *filename,
 int g_win32_lstat_utf8    (const gchar       *filename,
                            GWin32PrivateStat *buf);
 
-int g_win32_readlink_utf8 (const gchar *filename,
-                           gchar       *buf,
-                           gsize        buf_size);
+int g_win32_readlink_utf8 (const gchar       *filename,
+                           gchar             *buf,
+                           gsize              buf_size,
+                           gchar            **alloc_buf,
+                           gboolean           terminate);
 
 int g_win32_fstat         (int                fd,
                            GWin32PrivateStat *buf);

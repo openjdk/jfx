@@ -55,9 +55,10 @@ public:
     WEBCORE_EXPORT void addSelfToGlobalObjectInWorld(DOMWrapperWorld&);
 
     void loaded();
-    void requestSetDockSide(const String&);
     void closeWindow();
     void reopen();
+    void reset();
+
     void bringToFront();
     void inspectedURLChanged(const String&);
 
@@ -69,8 +70,12 @@ public:
 
     String userInterfaceLayoutDirection();
 
+    void requestSetDockSide(const String&);
+
     void setAttachedWindowHeight(unsigned);
     void setAttachedWindowWidth(unsigned);
+
+    void setSheetRect(float x, float y, unsigned width, unsigned height);
 
     void startWindowDrag();
     void moveWindowBy(float x, float y) const;

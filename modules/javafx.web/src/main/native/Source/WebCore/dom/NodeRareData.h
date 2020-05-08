@@ -29,7 +29,8 @@
 #include "QualifiedName.h"
 #include "TagCollection.h"
 #include <wtf/HashSet.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -95,20 +96,20 @@ public:
     }
 
     struct NodeListCacheMapEntryHash {
-        static unsigned hash(const std::pair<unsigned char, AtomicString>& entry)
+        static unsigned hash(const std::pair<unsigned char, AtomString>& entry)
         {
-            return DefaultHash<AtomicString>::Hash::hash(entry.second) + entry.first;
+            return DefaultHash<AtomString>::Hash::hash(entry.second) + entry.first;
         }
-        static bool equal(const std::pair<unsigned char, AtomicString>& a, const std::pair<unsigned char, AtomicString>& b) { return a.first == b.first && DefaultHash<AtomicString>::Hash::equal(a.second, b.second); }
-        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<AtomicString>::Hash::safeToCompareToEmptyOrDeleted;
+        static bool equal(const std::pair<unsigned char, AtomString>& a, const std::pair<unsigned char, AtomString>& b) { return a.first == b.first && DefaultHash<AtomString>::Hash::equal(a.second, b.second); }
+        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<AtomString>::Hash::safeToCompareToEmptyOrDeleted;
     };
 
-    typedef HashMap<std::pair<unsigned char, AtomicString>, LiveNodeList*, NodeListCacheMapEntryHash> NodeListAtomicNameCacheMap;
-    typedef HashMap<std::pair<unsigned char, AtomicString>, HTMLCollection*, NodeListCacheMapEntryHash> CollectionCacheMap;
+    typedef HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash> NodeListAtomicNameCacheMap;
+    typedef HashMap<std::pair<unsigned char, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash> CollectionCacheMap;
     typedef HashMap<QualifiedName, TagCollectionNS*> TagCollectionNSCache;
 
     template<typename T, typename ContainerType>
-    ALWAYS_INLINE Ref<T> addCacheWithAtomicName(ContainerType& container, const AtomicString& name)
+    ALWAYS_INLINE Ref<T> addCacheWithAtomicName(ContainerType& container, const AtomString& name)
     {
         NodeListAtomicNameCacheMap::AddResult result = m_atomicNameCaches.fastAdd(namedNodeListKey<T>(name), nullptr);
         if (!result.isNewEntry)
@@ -119,7 +120,7 @@ public:
         return list;
     }
 
-    ALWAYS_INLINE Ref<TagCollectionNS> addCachedTagCollectionNS(ContainerNode& node, const AtomicString& namespaceURI, const AtomicString& localName)
+    ALWAYS_INLINE Ref<TagCollectionNS> addCachedTagCollectionNS(ContainerNode& node, const AtomString& namespaceURI, const AtomString& localName)
     {
         QualifiedName name(nullAtom(), localName, namespaceURI);
         TagCollectionNSCache::AddResult result = m_tagCollectionNSCache.fastAdd(name, nullptr);
@@ -132,7 +133,7 @@ public:
     }
 
     template<typename T, typename ContainerType>
-    ALWAYS_INLINE Ref<T> addCachedCollection(ContainerType& container, CollectionType collectionType, const AtomicString& name)
+    ALWAYS_INLINE Ref<T> addCachedCollection(ContainerType& container, CollectionType collectionType, const AtomString& name)
     {
         CollectionCacheMap::AddResult result = m_cachedCollections.fastAdd(namedCollectionKey(collectionType, name), nullptr);
         if (!result.isNewEntry)
@@ -162,7 +163,7 @@ public:
     }
 
     template <class NodeListType>
-    void removeCacheWithAtomicName(NodeListType* list, const AtomicString& name = starAtom())
+    void removeCacheWithAtomicName(NodeListType* list, const AtomString& name = starAtom())
     {
         ASSERT(list == m_atomicNameCaches.get(namedNodeListKey<NodeListType>(name)));
         if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list->ownerNode()))
@@ -170,7 +171,7 @@ public:
         m_atomicNameCaches.remove(namedNodeListKey<NodeListType>(name));
     }
 
-    void removeCachedTagCollectionNS(HTMLCollection& collection, const AtomicString& namespaceURI, const AtomicString& localName)
+    void removeCachedTagCollectionNS(HTMLCollection& collection, const AtomString& namespaceURI, const AtomString& localName)
     {
         QualifiedName name(nullAtom(), localName, namespaceURI);
         ASSERT(&collection == m_tagCollectionNSCache.get(name));
@@ -179,7 +180,7 @@ public:
         m_tagCollectionNSCache.remove(name);
     }
 
-    void removeCachedCollection(HTMLCollection* collection, const AtomicString& name = starAtom())
+    void removeCachedCollection(HTMLCollection* collection, const AtomString& name = starAtom())
     {
         ASSERT(collection == m_cachedCollections.get(namedCollectionKey(collection->type(), name)));
         if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(collection->ownerNode()))
@@ -215,15 +216,15 @@ public:
     }
 
 private:
-    std::pair<unsigned char, AtomicString> namedCollectionKey(CollectionType type, const AtomicString& name)
+    std::pair<unsigned char, AtomString> namedCollectionKey(CollectionType type, const AtomString& name)
     {
-        return std::pair<unsigned char, AtomicString>(type, name);
+        return std::pair<unsigned char, AtomString>(type, name);
     }
 
     template <class NodeListType>
-    std::pair<unsigned char, AtomicString> namedNodeListKey(const AtomicString& name)
+    std::pair<unsigned char, AtomString> namedNodeListKey(const AtomString& name)
     {
-        return std::pair<unsigned char, AtomicString>(NodeListTypeIdentifier<NodeListType>::value(), name);
+        return std::pair<unsigned char, AtomString>(NodeListTypeIdentifier<NodeListType>::value(), name);
     }
 
     bool deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(Node&);
@@ -246,7 +247,7 @@ public:
     NodeMutationObserverData() { }
 };
 
-class NodeRareData : public NodeRareDataBase {
+class NodeRareData {
     WTF_MAKE_NONCOPYABLE(NodeRareData); WTF_MAKE_FAST_ALLOCATED;
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
@@ -256,31 +257,35 @@ public:
         MutationObserver = 1 << 2,
 
         TabIndex = 1 << 3,
-        StyleFlags = 1 << 4,
-        MinimumSize = 1 << 5,
-        ScrollingPosition = 1 << 6,
-        ComputedStyle = 1 << 7,
-        Dataset = 1 << 8,
-        ClassList = 1 << 9,
-        ShadowRoot = 1 << 10,
-        CustomElementQueue = 1 << 11,
-        AttributeMap = 1 << 12,
-        InteractionObserver = 1 << 13,
-        PseudoElements = 1 << 14,
+        MinimumSize = 1 << 4,
+        ScrollingPosition = 1 << 5,
+        ComputedStyle = 1 << 6,
+        Dataset = 1 << 7,
+        ClassList = 1 << 8,
+        ShadowRoot = 1 << 9,
+        CustomElementQueue = 1 << 10,
+        AttributeMap = 1 << 11,
+        InteractionObserver = 1 << 12,
+        PseudoElements = 1 << 13,
     };
 #endif
 
-    NodeRareData(RenderObject* renderer)
-        : NodeRareDataBase(renderer)
-        , m_connectedFrameCount(0)
-    { }
+    enum class Type { Element, Node };
+
+    NodeRareData(Type type = Type::Node)
+        : m_connectedFrameCount(0)
+        , m_isElementRareData(type == Type::Element)
+    {
+    }
+
+    bool isElementRareData() { return m_isElementRareData; }
 
     void clearNodeLists() { m_nodeLists = nullptr; }
     NodeListsNodeData* nodeLists() const { return m_nodeLists.get(); }
     NodeListsNodeData& ensureNodeLists()
     {
         if (!m_nodeLists)
-            m_nodeLists = std::make_unique<NodeListsNodeData>();
+            m_nodeLists = makeUnique<NodeListsNodeData>();
         return *m_nodeLists;
     }
 
@@ -288,7 +293,7 @@ public:
     NodeMutationObserverData& ensureMutationObserverData()
     {
         if (!m_mutationObserverData)
-            m_mutationObserverData = std::make_unique<NodeMutationObserverData>();
+            m_mutationObserverData = makeUnique<NodeMutationObserverData>();
         return *m_mutationObserverData;
     }
 
@@ -319,7 +324,8 @@ public:
 #endif
 
 private:
-    unsigned m_connectedFrameCount : 10; // Must fit Page::maxNumberOfFrames.
+    unsigned m_connectedFrameCount : 31; // Must fit Page::maxNumberOfFrames.
+    unsigned m_isElementRareData : 1;
 
     std::unique_ptr<NodeListsNodeData> m_nodeLists;
     std::unique_ptr<NodeMutationObserverData> m_mutationObserverData;
@@ -333,12 +339,6 @@ inline bool NodeListsNodeData::deleteThisAndUpdateNodeRareDataIfAboutToRemoveLas
         return false;
     ownerNode.clearNodeLists();
     return true;
-}
-
-inline NodeRareData* Node::rareData() const
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(hasRareData());
-    return static_cast<NodeRareData*>(m_data.m_rareData);
 }
 
 inline NodeRareData& Node::ensureRareData()

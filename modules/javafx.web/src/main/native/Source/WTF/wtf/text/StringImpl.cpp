@@ -27,7 +27,7 @@
 
 #include <wtf/ProcessID.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/ExternalStringImpl.h>
 #include <wtf/text/StringBuffer.h>
@@ -102,7 +102,7 @@ void StringStats::printStats()
 }
 #endif
 
-StringImpl::StaticStringImpl StringImpl::s_atomicEmptyString("", StringImpl::StringAtomic);
+StringImpl::StaticStringImpl StringImpl::s_emptyAtomString("", StringImpl::StringAtom);
 
 StringImpl::~StringImpl()
 {
@@ -112,10 +112,10 @@ StringImpl::~StringImpl()
 
     STRING_STATS_REMOVE_STRING(*this);
 
-    if (isAtomic()) {
+    if (isAtom()) {
         ASSERT(!isSymbol());
         if (length())
-            AtomicStringImpl::remove(static_cast<AtomicStringImpl*>(this));
+            AtomStringImpl::remove(static_cast<AtomStringImpl*>(this));
     } else if (isSymbol()) {
         auto& symbol = static_cast<SymbolImpl&>(*this);
         auto* symbolRegistry = symbol.symbolRegistry();
@@ -518,7 +518,7 @@ upconvert:
     return newImpl;
 }
 
-static inline bool needsTurkishCasingRules(const AtomicString& localeIdentifier)
+static inline bool needsTurkishCasingRules(const AtomString& localeIdentifier)
 {
     // Either "tr" or "az" locale, with case sensitive comparison and allowing for an ignored subtag.
     UChar first = localeIdentifier[0];
@@ -528,7 +528,7 @@ static inline bool needsTurkishCasingRules(const AtomicString& localeIdentifier)
         && (localeIdentifier.length() == 2 || localeIdentifier[2] == '-');
 }
 
-Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomicString& localeIdentifier)
+Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomString& localeIdentifier)
 {
     // Use the more-optimized code path most of the time.
     // Assuming here that the only locale-specific lowercasing is the Turkish casing rules.
@@ -564,7 +564,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomicString& loc
     return newString;
 }
 
-Ref<StringImpl> StringImpl::convertToUppercaseWithLocale(const AtomicString& localeIdentifier)
+Ref<StringImpl> StringImpl::convertToUppercaseWithLocale(const AtomString& localeIdentifier)
 {
     // Use the more-optimized code path most of the time.
     // Assuming here that the only locale-specific lowercasing is the Turkish casing rules,
@@ -1756,11 +1756,11 @@ UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned lengt
         char* bufferEnd = buffer + bufferSize;
         while (characters < charactersEnd) {
             // Use strict conversion to detect unpaired surrogates.
-            ConversionResult result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd, true);
-            ASSERT(result != targetExhausted);
+            auto result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd);
+            ASSERT(result != TargetExhausted);
             // Conversion fails when there is an unpaired surrogate.
             // Put replacement character (U+FFFD) instead of the unpaired surrogate.
-            if (result != conversionOK) {
+            if (result != ConversionOK) {
                 ASSERT((0xD800 <= *characters && *characters <= 0xDFFF));
                 // There should be room left, since one UChar hasn't been converted.
                 ASSERT((buffer + 3) <= bufferEnd);
@@ -1771,17 +1771,17 @@ UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned lengt
     } else {
         bool strict = mode == StrictConversion;
         const UChar* originalCharacters = characters;
-        ConversionResult result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferSize, strict);
-        ASSERT(result != targetExhausted); // (length * 3) should be sufficient for any conversion
+        auto result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferSize, strict);
+        ASSERT(result != TargetExhausted); // (length * 3) should be sufficient for any conversion
 
         // Only produced from strict conversion.
-        if (result == sourceIllegal) {
+        if (result == SourceIllegal) {
             ASSERT(strict);
             return UTF8ConversionError::IllegalSource;
         }
 
         // Check for an unconverted high surrogate.
-        if (result == sourceExhausted) {
+        if (result == SourceExhausted) {
             if (strict)
                 return UTF8ConversionError::SourceExhausted;
             // This should be one unpaired high surrogate. Treat it the same
@@ -1809,8 +1809,8 @@ Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const LChar
     Vector<char, 1024> bufferVector(length * 3);
     char* buffer = bufferVector.data();
     const LChar* source = characters;
-    ConversionResult result = convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
-    ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
+    bool success = convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
+    ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
     return CString(bufferVector.data(), buffer - bufferVector.data());
 }
 
@@ -1854,9 +1854,8 @@ Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(unsigned o
 
     if (is8Bit()) {
         const LChar* characters = this->characters8() + offset;
-
-        ConversionResult result = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
-        ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
+        auto success = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
+        ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
     } else {
         UTF8ConversionError error = utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode);
         if (error != UTF8ConversionError::None)

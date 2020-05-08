@@ -33,13 +33,13 @@ G_BEGIN_DECLS
  * An opaque video overlay rectangle object. A rectangle contains a single
  * overlay rectangle which can be added to a composition.
  */
-#define GST_TYPE_VIDEO_OVERLAY_RECTANGLE            \
+#define GST_TYPE_VIDEO_OVERLAY_RECTANGLE      \
   (gst_video_overlay_rectangle_get_type ())
-#define GST_VIDEO_OVERLAY_RECTANGLE_CAST(obj)           \
+#define GST_VIDEO_OVERLAY_RECTANGLE_CAST(obj)     \
   ((GstVideoOverlayRectangle *)(obj))
-#define GST_VIDEO_OVERLAY_RECTANGLE(obj)            \
+#define GST_VIDEO_OVERLAY_RECTANGLE(obj)      \
   (GST_VIDEO_OVERLAY_RECTANGLE_CAST(obj))
-#define GST_IS_VIDEO_OVERLAY_RECTANGLE(obj)         \
+#define GST_IS_VIDEO_OVERLAY_RECTANGLE(obj)     \
   (GST_IS_MINI_OBJECT_TYPE(obj, GST_TYPE_VIDEO_OVERLAY_RECTANGLE))
 
 typedef struct _GstVideoOverlayRectangle      GstVideoOverlayRectangle;
@@ -87,8 +87,8 @@ gst_video_overlay_rectangle_unref (GstVideoOverlayRectangle * comp)
  */
 typedef enum {
   GST_VIDEO_OVERLAY_FORMAT_FLAG_NONE = 0,
-  GST_VIDEO_OVERLAY_FORMAT_FLAG_PREMULTIPLIED_ALPHA = 1,
-  GST_VIDEO_OVERLAY_FORMAT_FLAG_GLOBAL_ALPHA = 2
+  GST_VIDEO_OVERLAY_FORMAT_FLAG_PREMULTIPLIED_ALPHA = (1<<0),
+  GST_VIDEO_OVERLAY_FORMAT_FLAG_GLOBAL_ALPHA = (1<<1)
 } GstVideoOverlayFormatFlags;
 
 #define GST_CAPS_FEATURE_META_GST_VIDEO_OVERLAY_COMPOSITION "meta:GstVideoOverlayComposition"
@@ -193,13 +193,13 @@ void                         gst_video_overlay_rectangle_set_global_alpha       
  * An opaque video overlay composition object. A composition contains
  * multiple overlay rectangles.
  */
-#define GST_TYPE_VIDEO_OVERLAY_COMPOSITION          \
+#define GST_TYPE_VIDEO_OVERLAY_COMPOSITION      \
   (gst_video_overlay_composition_get_type ())
-#define GST_VIDEO_OVERLAY_COMPOSITION_CAST(obj)         \
+#define GST_VIDEO_OVERLAY_COMPOSITION_CAST(obj)     \
   ((GstVideoOverlayComposition *)(obj))
-#define GST_VIDEO_OVERLAY_COMPOSITION(obj)          \
+#define GST_VIDEO_OVERLAY_COMPOSITION(obj)      \
   (GST_VIDEO_OVERLAY_COMPOSITION_CAST(obj))
-#define GST_IS_VIDEO_OVERLAY_COMPOSITION(obj)           \
+#define GST_IS_VIDEO_OVERLAY_COMPOSITION(obj)     \
   (GST_IS_MINI_OBJECT_TYPE(obj, GST_TYPE_VIDEO_OVERLAY_COMPOSITION))
 
 typedef struct _GstVideoOverlayComposition      GstVideoOverlayComposition;

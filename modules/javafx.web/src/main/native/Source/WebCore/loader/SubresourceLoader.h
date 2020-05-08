@@ -37,14 +37,13 @@ namespace WebCore {
 
 class CachedResource;
 class CachedResourceLoader;
-class DocumentLoader;
 class NetworkLoadMetrics;
 class ResourceRequest;
 class SecurityOrigin;
 
 class SubresourceLoader final : public ResourceLoader {
 public:
-    WEBCORE_EXPORT static void create(DocumentLoader&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
+    WEBCORE_EXPORT static void create(Frame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
 
     virtual ~SubresourceLoader();
 
@@ -67,7 +66,7 @@ public:
     void didReceiveResponsePolicy();
 
 private:
-    SubresourceLoader(DocumentLoader&, CachedResource&, const ResourceLoaderOptions&);
+    SubresourceLoader(Frame&, CachedResource&, const ResourceLoaderOptions&);
 
     void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) override;
 

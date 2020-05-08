@@ -46,6 +46,7 @@
 #include "DFGDoesGC.h"
 #include "DFGDominators.h"
 #include "DFGInPlaceAbstractState.h"
+#include "DFGLivenessAnalysisPhase.h"
 #include "DFGMayExit.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSRExitFuzz.h"
@@ -82,6 +83,7 @@
 #include "JSLexicalEnvironment.h"
 #include "JSMap.h"
 #include "OperandsInlines.h"
+#include "ProbeContext.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
 #include "ScopedArgumentsTable.h"
@@ -155,6 +157,29 @@ public:
         , m_interpreter(state.graph, m_state)
         , m_indexMaskingMode(Options::enableSpectreMitigations() ?  IndexMaskingEnabled : IndexMaskingDisabled)
     {
+        if (Options::validateAbstractInterpreterState()) {
+            performLivenessAnalysis(m_graph);
+
+            // We only use node liveness here, not combined liveness, as we only track
+            // AI state for live nodes.
+            for (DFG::BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+                NodeSet live;
+
+                for (NodeFlowProjection node : block->ssa->liveAtTail) {
+                    if (node.kind() == NodeFlowProjection::Primary)
+                        live.addVoid(node.node());
+                }
+
+                for (unsigned i = block->size(); i--; ) {
+                    Node* node = block->at(i);
+                    live.remove(node);
+                    m_graph.doToChildren(node, [&] (Edge child) {
+                        live.addVoid(child.node());
+                    });
+                    m_liveInToNode.add(node, live);
+                }
+            }
+        }
     }
 
     void lower()
@@ -474,6 +499,8 @@ private:
             return;
         }
 
+        m_aiCheckedNodes.clear();
+
         m_availabilityCalculator.beginBlock(m_highBlock);
 
         m_state.reset();
@@ -508,6 +535,133 @@ private:
         }
     }
 
+    void validateAIState(Node* node)
+    {
+        if (!m_graphDump) {
+            StringPrintStream out;
+            m_graph.dump(out);
+            m_graphDump = out.toString();
+        }
+
+        switch (node->op()) {
+        case MovHint:
+        case ZombieHint:
+        case JSConstant:
+        case LazyJSConstant:
+        case DoubleConstant:
+        case Int52Constant:
+        case GetStack:
+        case PutStack:
+        case KillStack:
+        case ExitOK:
+            return;
+        default:
+            break;
+        }
+
+        // Before we execute node.
+        NodeSet& live = m_liveInToNode.find(node)->value;
+        unsigned highParentIndex = node->index();
+        {
+            uint64_t hash = WTF::intHash(highParentIndex);
+            if (hash >= static_cast<uint64_t>((static_cast<double>(std::numeric_limits<unsigned>::max()) + 1) * Options::validateAbstractInterpreterStateProbability()))
+                return;
+        }
+
+        for (Node* node : live) {
+            if (node->isPhantomAllocation())
+                continue;
+
+            if (node->op() == CheckInBounds)
+                continue;
+
+            AbstractValue value = m_interpreter.forNode(node);
+            {
+                auto iter = m_aiCheckedNodes.find(node);
+                if (iter != m_aiCheckedNodes.end()) {
+                    AbstractValue checkedValue = iter->value;
+                    if (checkedValue == value) {
+                        if (!(value.m_type & SpecCell))
+                            continue;
+                    }
+                }
+                m_aiCheckedNodes.set(node, value);
+            }
+
+            FlushFormat flushFormat;
+            LValue input;
+            if (node->hasJSResult()) {
+                input = lowJSValue(Edge(node, UntypedUse));
+                flushFormat = FlushedJSValue;
+            } else if (node->hasDoubleResult()) {
+                input = lowDouble(Edge(node, DoubleRepUse));
+                flushFormat = FlushedDouble;
+            } else if (node->hasInt52Result()) {
+                input = strictInt52ToJSValue(lowStrictInt52(Edge(node, Int52RepUse)));
+                flushFormat = FlushedInt52;
+            } else
+                continue;
+
+            unsigned highChildIndex = node->index();
+
+            String graphDump = m_graphDump;
+
+            PatchpointValue* patchpoint = m_out.patchpoint(Void);
+            patchpoint->effects = Effects::none();
+            patchpoint->effects.writesLocalState = true;
+            patchpoint->appendSomeRegister(input);
+            patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+                GPRReg reg = InvalidGPRReg;
+                FPRReg fpReg = InvalidFPRReg;
+                if (flushFormat == FlushedDouble)
+                    fpReg = params[0].fpr();
+                else
+                    reg = params[0].gpr();
+                jit.probe([=] (Probe::Context& context) {
+                    JSValue input;
+                    double doubleInput;
+
+                    auto dumpAndCrash = [&] {
+                        dataLogLn("Validation failed at node: @", highParentIndex);
+                        dataLogLn("Failed validating live value: @", highChildIndex);
+                        dataLogLn();
+                        dataLogLn("Expected AI value = ", value);
+                        if (flushFormat != FlushedDouble)
+                            dataLogLn("Unexpected value = ", input);
+                        else
+                            dataLogLn("Unexpected double value = ", doubleInput);
+                        dataLogLn();
+                        dataLogLn(graphDump);
+                        CRASH();
+                    };
+
+                    if (flushFormat == FlushedDouble) {
+                        doubleInput = context.fpr(fpReg);
+                        SpeculatedType type;
+                        if (!std::isnan(doubleInput))
+                            type = speculationFromValue(jsDoubleNumber(doubleInput));
+                        else if (isImpureNaN(doubleInput))
+                            type = SpecDoubleImpureNaN;
+                        else
+                            type = SpecDoublePureNaN;
+
+                        if (!value.couldBeType(type))
+                            dumpAndCrash();
+                    } else {
+                        input = JSValue::decode(context.gpr(reg));
+                        if (flushFormat == FlushedInt52) {
+                            RELEASE_ASSERT(input.isAnyInt());
+                            input = jsDoubleNumber(input.asAnyInt());
+                        }
+                        if (!value.validateOSREntryValue(input, flushFormat))
+                            dumpAndCrash();
+                    }
+
+                });
+            });
+        }
+    }
+
     bool compileNode(unsigned nodeIndex)
     {
         if (!m_state.isValid()) {
@@ -522,10 +676,11 @@ private:
         if (verboseCompilationEnabled())
             dataLog("Lowering ", m_node, "\n");
 
-        m_availableRecoveries.shrink(0);
-
         m_interpreter.startExecuting();
         m_interpreter.executeKnownEdgeTypes(m_node);
+
+        if (Options::validateAbstractInterpreterState())
+            validateAIState(m_node);
 
         if (validateDFGDoesGC) {
             bool expectDoesGC = doesGC(m_graph, m_node);
@@ -625,6 +780,9 @@ private:
         case ArithDiv:
             compileArithDiv();
             break;
+        case ValueMod:
+            compileValueMod();
+            break;
         case ArithMod:
             compileArithMod();
             break;
@@ -634,6 +792,9 @@ private:
             break;
         case ArithAbs:
             compileArithAbs();
+            break;
+        case ValuePow:
+            compileValuePow();
             break;
         case ArithPow:
             compileArithPow();
@@ -665,6 +826,9 @@ private:
         case ArithUnary:
             compileArithUnary();
             break;
+        case ValueBitNot:
+            compileValueBitNot();
+            break;
         case ArithBitNot:
             compileArithBitNot();
             break;
@@ -689,8 +853,11 @@ private:
         case BitRShift:
             compileBitRShift();
             break;
-        case BitLShift:
-            compileBitLShift();
+        case ArithBitLShift:
+            compileArithBitLShift();
+            break;
+        case ValueBitLShift:
+            compileValueBitLShift();
             break;
         case BitURShift:
             compileBitURShift();
@@ -1774,9 +1941,9 @@ private:
             break;
         default:
             if (isInt32Speculation(value.m_type))
-            setInt32(m_out.load32(payloadFor(data->machineLocal)));
-        else
-            setJSValue(m_out.load64(addressFor(data->machineLocal)));
+                setInt32(m_out.load32(payloadFor(data->machineLocal)));
+            else
+                setJSValue(m_out.load64(addressFor(data->machineLocal)));
             break;
         }
     }
@@ -1907,11 +2074,11 @@ private:
         }
 
         CodeBlock* baselineCodeBlock = m_ftlState.graph.baselineCodeBlockFor(m_node->origin.semantic);
-        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(m_node->origin.semantic.bytecodeIndex);
-        const Instruction* instruction = baselineCodeBlock->instructions().at(m_node->origin.semantic.bytecodeIndex).ptr();
+        unsigned bytecodeIndex = m_node->origin.semantic.bytecodeIndex();
+        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(bytecodeIndex);
         auto repatchingFunction = operationValueAddOptimize;
         auto nonRepatchingFunction = operationValueAdd;
-        compileBinaryMathIC<JITAddGenerator>(arithProfile, instruction, repatchingFunction, nonRepatchingFunction);
+        compileBinaryMathIC<JITAddGenerator>(arithProfile, repatchingFunction, nonRepatchingFunction);
     }
 
     void compileValueSub()
@@ -1926,11 +2093,11 @@ private:
         }
 
         CodeBlock* baselineCodeBlock = m_ftlState.graph.baselineCodeBlockFor(m_node->origin.semantic);
-        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(m_node->origin.semantic.bytecodeIndex);
-        const Instruction* instruction = baselineCodeBlock->instructions().at(m_node->origin.semantic.bytecodeIndex).ptr();
+        unsigned bytecodeIndex = m_node->origin.semantic.bytecodeIndex();
+        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(bytecodeIndex);
         auto repatchingFunction = operationValueSubOptimize;
         auto nonRepatchingFunction = operationValueSub;
-        compileBinaryMathIC<JITSubGenerator>(arithProfile, instruction, repatchingFunction, nonRepatchingFunction);
+        compileBinaryMathIC<JITSubGenerator>(arithProfile, repatchingFunction, nonRepatchingFunction);
     }
 
     void compileValueMul()
@@ -1945,16 +2112,16 @@ private:
         }
 
         CodeBlock* baselineCodeBlock = m_ftlState.graph.baselineCodeBlockFor(m_node->origin.semantic);
-        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(m_node->origin.semantic.bytecodeIndex);
-        const Instruction* instruction = baselineCodeBlock->instructions().at(m_node->origin.semantic.bytecodeIndex).ptr();
+        unsigned bytecodeIndex = m_node->origin.semantic.bytecodeIndex();
+        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(bytecodeIndex);
         auto repatchingFunction = operationValueMulOptimize;
         auto nonRepatchingFunction = operationValueMul;
-        compileBinaryMathIC<JITMulGenerator>(arithProfile, instruction, repatchingFunction, nonRepatchingFunction);
+        compileBinaryMathIC<JITMulGenerator>(arithProfile, repatchingFunction, nonRepatchingFunction);
     }
 
     template <typename Generator, typename Func1, typename Func2,
         typename = std::enable_if_t<std::is_function<typename std::remove_pointer<Func1>::type>::value && std::is_function<typename std::remove_pointer<Func2>::type>::value>>
-    void compileUnaryMathIC(ArithProfile* arithProfile, const Instruction* instruction, Func1 repatchingFunction, Func2 nonRepatchingFunction)
+    void compileUnaryMathIC(ArithProfile* arithProfile, Func1 repatchingFunction, Func2 nonRepatchingFunction)
     {
         Node* node = m_node;
 
@@ -1980,7 +2147,7 @@ private:
 #endif
 
                 Box<MathICGenerationState> mathICGenerationState = Box<MathICGenerationState>::create();
-                JITUnaryMathIC<Generator>* mathIC = jit.codeBlock()->addMathIC<Generator>(arithProfile, instruction);
+                JITUnaryMathIC<Generator>* mathIC = jit.codeBlock()->addMathIC<Generator>(arithProfile);
                 mathIC->m_generator = Generator(JSValueRegs(params[0].gpr()), JSValueRegs(params[1].gpr()), params.gpScratch(0));
 
                 bool shouldEmitProfiling = false;
@@ -2040,7 +2207,7 @@ private:
 
     template <typename Generator, typename Func1, typename Func2,
         typename = std::enable_if_t<std::is_function<typename std::remove_pointer<Func1>::type>::value && std::is_function<typename std::remove_pointer<Func2>::type>::value>>
-    void compileBinaryMathIC(ArithProfile* arithProfile, const Instruction* instruction, Func1 repatchingFunction, Func2 nonRepatchingFunction)
+    void compileBinaryMathIC(ArithProfile* arithProfile, Func1 repatchingFunction, Func2 nonRepatchingFunction)
     {
         Node* node = m_node;
 
@@ -2074,7 +2241,7 @@ private:
 #endif
 
                 Box<MathICGenerationState> mathICGenerationState = Box<MathICGenerationState>::create();
-                JITBinaryMathIC<Generator>* mathIC = jit.codeBlock()->addMathIC<Generator>(arithProfile, instruction);
+                JITBinaryMathIC<Generator>* mathIC = jit.codeBlock()->addMathIC<Generator>(arithProfile);
                 mathIC->m_generator = Generator(leftOperand, rightOperand, JSValueRegs(params[0].gpr()),
                     JSValueRegs(params[1].gpr()), JSValueRegs(params[2].gpr()), params.fpScratch(0),
                     params.fpScratch(1), params.gpScratch(0), InvalidFPRReg);
@@ -2173,8 +2340,8 @@ private:
         }
 
         case Int52RepUse: {
-            if (!abstractValue(m_node->child1()).couldBeType(SpecInt52Only)
-                && !abstractValue(m_node->child2()).couldBeType(SpecInt52Only)) {
+            if (!abstractValue(m_node->child1()).couldBeType(SpecNonInt32AsInt52)
+                && !abstractValue(m_node->child2()).couldBeType(SpecNonInt32AsInt52)) {
                 Int52Kind kind;
                 LValue left = lowWhicheverInt52(m_node->child1(), kind);
                 LValue right = lowInt52(m_node->child2(), kind);
@@ -2206,11 +2373,11 @@ private:
             }
 
             CodeBlock* baselineCodeBlock = m_ftlState.graph.baselineCodeBlockFor(m_node->origin.semantic);
-            ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(m_node->origin.semantic.bytecodeIndex);
-            const Instruction* instruction = baselineCodeBlock->instructions().at(m_node->origin.semantic.bytecodeIndex).ptr();
+            unsigned bytecodeIndex = m_node->origin.semantic.bytecodeIndex();
+            ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(bytecodeIndex);
             auto repatchingFunction = operationValueSubOptimize;
             auto nonRepatchingFunction = operationValueSub;
-            compileBinaryMathIC<JITSubGenerator>(arithProfile, instruction, repatchingFunction, nonRepatchingFunction);
+            compileBinaryMathIC<JITSubGenerator>(arithProfile, repatchingFunction, nonRepatchingFunction);
             break;
         }
 
@@ -2384,6 +2551,24 @@ private:
         }
     }
 
+    void compileValueMod()
+    {
+        if (m_node->binaryUseKind() == BigIntUse) {
+            LValue left = lowBigInt(m_node->child1());
+            LValue right = lowBigInt(m_node->child2());
+
+            LValue result = vmCall(pointerType(), m_out.operation(operationModBigInt), m_callFrame, left, right);
+            setJSValue(result);
+            return;
+        }
+
+        DFG_ASSERT(m_graph, m_node, m_node->binaryUseKind() == UntypedUse, m_node->binaryUseKind());
+        LValue left = lowJSValue(m_node->child1());
+        LValue right = lowJSValue(m_node->child2());
+        LValue result = vmCall(Int64, m_out.operation(operationValueMod), m_callFrame, left, right);
+        setJSValue(result);
+    }
+
     void compileArithMod()
     {
         switch (m_node->binaryUseKind()) {
@@ -2537,6 +2722,23 @@ private:
         LValue argument = lowJSValue(m_node->child1());
         LValue result = vmCall(Double, m_out.operation(DFG::arithUnaryOperation(m_node->arithUnaryType())), m_callFrame, argument);
         setDouble(result);
+    }
+
+    void compileValuePow()
+    {
+        if (m_node->isBinaryUseKind(BigIntUse)) {
+            LValue base = lowBigInt(m_node->child1());
+            LValue exponent = lowBigInt(m_node->child2());
+
+            LValue result = vmCall(pointerType(), m_out.operation(operationPowBigInt), m_callFrame, base, exponent);
+            setJSValue(result);
+            return;
+        }
+
+        LValue base = lowJSValue(m_node->child1());
+        LValue exponent = lowJSValue(m_node->child2());
+        LValue result = vmCall(Int64, m_out.operation(operationValuePow), m_callFrame, base, exponent);
+        setJSValue(result);
     }
 
     void compileArithPow()
@@ -2838,11 +3040,11 @@ private:
     {
         DFG_ASSERT(m_graph, m_node, m_node->child1().useKind() == UntypedUse);
         CodeBlock* baselineCodeBlock = m_ftlState.graph.baselineCodeBlockFor(m_node->origin.semantic);
-        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(m_node->origin.semantic.bytecodeIndex);
-        const Instruction* instruction = baselineCodeBlock->instructions().at(m_node->origin.semantic.bytecodeIndex).ptr();
+        unsigned bytecodeIndex = m_node->origin.semantic.bytecodeIndex();
+        ArithProfile* arithProfile = baselineCodeBlock->arithProfileForBytecodeOffset(bytecodeIndex);
         auto repatchingFunction = operationArithNegateOptimize;
         auto nonRepatchingFunction = operationArithNegate;
-        compileUnaryMathIC<JITNegGenerator>(arithProfile, instruction, repatchingFunction, nonRepatchingFunction);
+        compileUnaryMathIC<JITNegGenerator>(arithProfile, repatchingFunction, nonRepatchingFunction);
     }
 
     void compileArithNegate()
@@ -2868,7 +3070,7 @@ private:
         }
 
         case Int52RepUse: {
-            if (!abstractValue(m_node->child1()).couldBeType(SpecInt52Only)) {
+            if (!abstractValue(m_node->child1()).couldBeType(SpecNonInt32AsInt52)) {
                 Int52Kind kind;
                 LValue value = lowWhicheverInt52(m_node->child1(), kind);
                 LValue result = m_out.neg(value);
@@ -2898,15 +3100,22 @@ private:
         }
     }
 
-    void compileArithBitNot()
+    void compileValueBitNot()
     {
-        if (m_node->child1().useKind() == UntypedUse) {
-            LValue operand = lowJSValue(m_node->child1());
-            LValue result = vmCall(Int64, m_out.operation(operationValueBitNot), m_callFrame, operand);
+        if (m_node->child1().useKind() == BigIntUse) {
+            LValue operand = lowBigInt(m_node->child1());
+            LValue result = vmCall(pointerType(), m_out.operation(operationBitNotBigInt), m_callFrame, operand);
             setJSValue(result);
             return;
         }
 
+        LValue operand = lowJSValue(m_node->child1());
+        LValue result = vmCall(Int64, m_out.operation(operationValueBitNot), m_callFrame, operand);
+        setJSValue(result);
+    }
+
+    void compileArithBitNot()
+    {
         setInt32(m_out.bitNot(lowInt32(m_node->child1())));
     }
 
@@ -2978,15 +3187,26 @@ private:
             m_out.bitAnd(lowInt32(m_node->child2()), m_out.constInt32(31))));
     }
 
-    void compileBitLShift()
+    void compileArithBitLShift()
     {
-        if (m_node->isBinaryUseKind(UntypedUse)) {
-            emitBinaryBitOpSnippet<JITLeftShiftGenerator>(operationValueBitLShift);
-            return;
-        }
         setInt32(m_out.shl(
             lowInt32(m_node->child1()),
             m_out.bitAnd(lowInt32(m_node->child2()), m_out.constInt32(31))));
+    }
+
+    void compileValueBitLShift()
+    {
+        if (m_node->isBinaryUseKind(BigIntUse)) {
+            LValue left = lowBigInt(m_node->child1());
+            LValue right = lowBigInt(m_node->child2());
+
+            LValue result = vmCall(pointerType(), m_out.operation(operationBitLShiftBigInt), m_callFrame, left, right);
+            setJSValue(result);
+            return;
+        }
+
+        ASSERT(m_node->isBinaryUseKind(UntypedUse));
+        emitBinaryBitOpSnippet<JITLeftShiftGenerator>(operationValueBitLShift);
     }
 
     void compileBitURShift()
@@ -3677,7 +3897,7 @@ private:
 
         DFG_ASSERT(m_graph, m_node, isTypedView(m_node->arrayMode().typedArrayType()), m_node->arrayMode().typedArrayType());
         LValue vector = m_out.loadPtr(cell, m_heaps.JSArrayBufferView_vector);
-        setStorage(caged(Gigacage::Primitive, vector));
+        setStorage(caged(Gigacage::Primitive, vector, cell));
     }
 
     void compileCheckArray()
@@ -3721,14 +3941,15 @@ private:
 
         m_out.appendTo(notNull, continuation);
 
-        LValue butterflyPtr = caged(Gigacage::JSValue, m_out.loadPtr(basePtr, m_heaps.JSObject_butterfly));
+        LValue butterflyPtr = caged(Gigacage::JSValue, m_out.loadPtr(basePtr, m_heaps.JSObject_butterfly), basePtr);
         LValue arrayBufferPtr = m_out.loadPtr(butterflyPtr, m_heaps.Butterfly_arrayBuffer);
 
-        LValue vectorPtr = caged(Gigacage::Primitive, vector);
+        LValue vectorPtr = caged(Gigacage::Primitive, vector, basePtr);
 
         // FIXME: This needs caging.
         // https://bugs.webkit.org/show_bug.cgi?id=175515
         LValue dataPtr = m_out.loadPtr(arrayBufferPtr, m_heaps.ArrayBuffer_data);
+        dataPtr = removeArrayPtrTag(dataPtr);
 
         ValueFromBlock wastefulOut = m_out.anchor(m_out.sub(vectorPtr, dataPtr));
 
@@ -4240,7 +4461,7 @@ private:
 
     void compileGetMyArgumentByVal()
     {
-        InlineCallFrame* inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame;
+        InlineCallFrame* inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame();
 
         LValue originalIndex = lowInt32(m_node->child2());
 
@@ -4405,7 +4626,7 @@ private:
                 }
 
                 contiguousPutByValOutOfBounds(
-                    codeBlock()->isStrictMode()
+                    m_graph.isStrictModeFor(m_node->origin.semantic)
                         ? (m_node->op() == PutByValDirect ? operationPutByValDirectBeyondArrayBoundsStrict : operationPutByValBeyondArrayBoundsStrict)
                         : (m_node->op() == PutByValDirect ? operationPutByValDirectBeyondArrayBoundsNonStrict : operationPutByValBeyondArrayBoundsNonStrict),
                     base, storage, index, value, continuation);
@@ -4431,7 +4652,7 @@ private:
                 }
 
                 contiguousPutByValOutOfBounds(
-                    codeBlock()->isStrictMode()
+                    m_graph.isStrictModeFor(m_node->origin.semantic)
                         ? (m_node->op() == PutByValDirect ? operationPutDoubleByValDirectBeyondArrayBoundsStrict : operationPutDoubleByValBeyondArrayBoundsStrict)
                         : (m_node->op() == PutByValDirect ? operationPutDoubleByValDirectBeyondArrayBoundsNonStrict : operationPutDoubleByValBeyondArrayBoundsNonStrict),
                     base, storage, index, value, continuation);
@@ -4471,7 +4692,7 @@ private:
             LValue isOutOfBounds = m_out.aboveOrEqual(
                 index, m_out.load32NonNegative(storage, m_heaps.ArrayStorage_vectorLength));
 
-            auto slowPathFunction = codeBlock()->isStrictMode()
+            auto slowPathFunction = m_graph.isStrictModeFor(m_node->origin.semantic)
                 ? (m_node->op() == PutByValDirect ? operationPutByValDirectBeyondArrayBoundsStrict : operationPutByValBeyondArrayBoundsStrict)
                 : (m_node->op() == PutByValDirect ? operationPutByValDirectBeyondArrayBoundsNonStrict : operationPutByValBeyondArrayBoundsNonStrict);
             if (!arrayMode.isOutOfBounds()) {
@@ -4674,14 +4895,12 @@ private:
                 Output::StoreType storeType;
 
                 Edge& element = m_graph.varArgChild(m_node, elementOffset);
+                speculate(element);
                 if (m_node->arrayMode().type() != Array::Double) {
                     value = lowJSValue(element, ManualOperandSpeculation);
-                    if (m_node->arrayMode().type() == Array::Int32)
-                        DFG_ASSERT(m_graph, m_node, !m_interpreter.needsTypeCheck(element, SpecInt32Only));
                     storeType = Output::Store64;
                 } else {
                     value = lowDouble(element);
-                    DFG_ASSERT(m_graph, m_node, !m_interpreter.needsTypeCheck(element, SpecDoubleReal));
                     storeType = Output::StoreDouble;
                 }
 
@@ -4720,6 +4939,11 @@ private:
                 return;
             }
 
+            for (unsigned elementIndex = 0; elementIndex < elementCount; ++elementIndex) {
+                Edge element = m_graph.varArgChild(m_node, elementIndex + elementOffset);
+                speculate(element);
+            }
+
             LValue prevLength = m_out.load32(storage, m_heaps.Butterfly_publicLength);
             LValue newLength = m_out.add(prevLength, m_out.constInt32(elementCount));
 
@@ -4756,12 +4980,9 @@ private:
                 Output::StoreType storeType;
                 if (m_node->arrayMode().type() != Array::Double) {
                     value = lowJSValue(element, ManualOperandSpeculation);
-                    if (m_node->arrayMode().type() == Array::Int32)
-                        DFG_ASSERT(m_graph, m_node, !m_interpreter.needsTypeCheck(element, SpecInt32Only));
                     storeType = Output::Store64;
                 } else {
                     value = lowDouble(element);
-                    DFG_ASSERT(m_graph, m_node, !m_interpreter.needsTypeCheck(element, SpecDoubleReal));
                     storeType = Output::StoreDouble;
                 }
 
@@ -5238,7 +5459,7 @@ private:
         RegisteredStructure structure = m_graph.registerStructure(m_graph.globalObjectFor(m_node->origin.semantic)->activationStructure());
         JSValue initializationValue = m_node->initializationValueForActivation();
         ASSERT(initializationValue.isUndefined() || initializationValue == jsTDZValue());
-        if (table->singletonScope()->isStillValid()) {
+        if (table->singleton().isStillValid()) {
             LValue callResult = vmCall(
                 Int64,
                 m_out.operation(operationCreateActivationDirect), m_callFrame, weakStructure(structure),
@@ -5299,7 +5520,7 @@ private:
         LValue scope = lowCell(m_node->child1());
 
         FunctionExecutable* executable = m_node->castOperand<FunctionExecutable*>();
-        if (executable->singletonFunction()->isStillValid()) {
+        if (executable->singleton().isStillValid()) {
             LValue callResult =
                 isGeneratorFunction ? vmCall(Int64, m_out.operation(operationNewGeneratorFunction), m_callFrame, scope, weakPointer(executable)) :
                 isAsyncFunction ? vmCall(Int64, m_out.operation(operationNewAsyncFunction), m_callFrame, scope, weakPointer(executable)) :
@@ -5344,7 +5565,24 @@ private:
         m_out.storePtr(weakPointer(executable), fastObject, m_heaps.JSFunction_executable);
         m_out.storePtr(m_out.intPtrZero, fastObject, m_heaps.JSFunction_rareData);
 
-        mutatorFence();
+        VM& vm = this->vm();
+        if (executable->isAnonymousBuiltinFunction()) {
+            mutatorFence();
+            Allocator allocator = allocatorForNonVirtualConcurrently<FunctionRareData>(vm, sizeof(FunctionRareData), AllocatorForMode::AllocatorIfExists);
+            LValue rareData = allocateCell(m_out.constIntPtr(allocator.localAllocator()), vm.functionRareDataStructure.get(), slowPath);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_allocator);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_structure);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_prototype);
+            m_out.storePtr(m_out.intPtrOne, rareData, m_heaps.FunctionRareData_objectAllocationProfileWatchpoint);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_internalFunctionAllocationProfile_structure);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_boundFunctionStructure);
+            m_out.storePtr(m_out.intPtrZero, rareData, m_heaps.FunctionRareData_allocationProfileClearingWatchpoint);
+            m_out.store32As8(m_out.int32One, rareData, m_heaps.FunctionRareData_hasReifiedName);
+            m_out.store32As8(m_out.int32Zero, rareData, m_heaps.FunctionRareData_hasReifiedLength);
+            mutatorFence();
+            m_out.storePtr(rareData, fastObject, m_heaps.JSFunction_rareData);
+        } else
+            mutatorFence();
 
         ValueFromBlock fastResult = m_out.anchor(fastObject);
         m_out.jump(continuation);
@@ -5353,7 +5591,6 @@ private:
 
         Vector<LValue> slowPathArguments;
         slowPathArguments.append(scope);
-        VM& vm = this->vm();
         LValue callResult = lazySlowPath(
             [=, &vm] (const Vector<Location>& locations) -> RefPtr<LazySlowPath::Generator> {
                 auto* operation = operationNewFunctionWithInvalidatedReallocationWatchpoint;
@@ -5820,7 +6057,7 @@ private:
                     CheckValue* lengthCheck = nullptr;
                     if (use->op() == PhantomSpread) {
                         if (use->child1()->op() == PhantomCreateRest) {
-                            InlineCallFrame* inlineCallFrame = use->child1()->origin.semantic.inlineCallFrame;
+                            InlineCallFrame* inlineCallFrame = use->child1()->origin.semantic.inlineCallFrame();
                             unsigned numberOfArgumentsToSkip = use->child1()->numberOfArgumentsToSkip();
                             LValue spreadLength = cachedSpreadLengths.ensure(inlineCallFrame, [&] () {
                                 return getSpreadLengthFromInlineCallFrame(inlineCallFrame, numberOfArgumentsToSkip);
@@ -5864,7 +6101,7 @@ private:
                             index = m_out.add(index, m_out.constIntPtr(array->length()));
                         } else {
                             RELEASE_ASSERT(use->child1()->op() == PhantomCreateRest);
-                            InlineCallFrame* inlineCallFrame = use->child1()->origin.semantic.inlineCallFrame;
+                            InlineCallFrame* inlineCallFrame = use->child1()->origin.semantic.inlineCallFrame();
                             unsigned numberOfArgumentsToSkip = use->child1()->numberOfArgumentsToSkip();
 
                             LValue length = m_out.zeroExtPtr(cachedSpreadLengths.get(inlineCallFrame));
@@ -6056,7 +6293,7 @@ private:
             LBasicBlock continuation = m_out.newBlock();
             LBasicBlock lastNext = m_out.insertNewBlocksBefore(loopHeader);
 
-            InlineCallFrame* inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame;
+            InlineCallFrame* inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame();
             unsigned numberOfArgumentsToSkip = m_node->child1()->numberOfArgumentsToSkip();
             LValue sourceStart = getArgumentsStart(inlineCallFrame, numberOfArgumentsToSkip);
             LValue length = getSpreadLengthFromInlineCallFrame(inlineCallFrame, numberOfArgumentsToSkip);
@@ -6281,6 +6518,20 @@ private:
                 m_out.castToInt32(m_out.lShr(byteSize, m_out.constIntPtr(3))),
                 m_out.int64Zero,
                 m_heaps.typedArrayProperties);
+
+#if CPU(ARM64E)
+            {
+                LValue sizePtr = m_out.zeroExtPtr(size);
+                PatchpointValue* authenticate = m_out.patchpoint(pointerType());
+                authenticate->appendSomeRegister(storage);
+                authenticate->append(sizePtr, B3::ValueRep(B3::ValueRep::SomeLateRegister));
+                authenticate->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+                    jit.move(params[1].gpr(), params[0].gpr());
+                    jit.tagArrayPtr(params[2].gpr(), params[0].gpr());
+                });
+                storage = authenticate;
+            }
+#endif
 
             ValueFromBlock haveStorage = m_out.anchor(storage);
 
@@ -6541,6 +6792,7 @@ private:
             numKids = 2;
         }
 
+        LBasicBlock emptyCase = m_out.newBlock();
         LBasicBlock slowPath = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
 
@@ -6549,18 +6801,8 @@ private:
         LValue result = allocateCell(
             m_out.constIntPtr(allocator.localAllocator()), vm().stringStructure.get(), slowPath);
 
-        m_out.storePtr(m_out.bitOr(kids[0], m_out.constIntPtr(JSString::isRopeInPointer)), result, m_heaps.JSRopeString_fiber0);
-
-        m_out.store32(m_out.castToInt32(kids[1]), result, m_heaps.JSRopeString_fiber1Lower);
-        m_out.store32As16(m_out.castToInt32(m_out.lShr(kids[1], m_out.constInt32(32))), result, m_heaps.JSRopeString_fiber1Upper);
-
-        if (numKids == 3) {
-            m_out.store32(m_out.castToInt32(kids[2]), result, m_heaps.JSRopeString_fiber2Lower);
-            m_out.store32As16(m_out.castToInt32(m_out.lShr(kids[2], m_out.constInt32(32))), result, m_heaps.JSRopeString_fiber2Upper);
-        } else {
-            m_out.store32(m_out.int32Zero, result, m_heaps.JSRopeString_fiber2Lower);
-            m_out.store32As16(m_out.int32Zero, result, m_heaps.JSRopeString_fiber2Upper);
-        }
+        // This puts nullptr for the first fiber. It makes visitChildren safe even if this JSRopeString is discarded due to the speculation failure in the following path.
+        m_out.storePtr(m_out.constIntPtr(JSString::isRopeInPointer), result, m_heaps.JSRopeString_fiber0);
 
         auto getFlagsAndLength = [&] (Edge& edge, LValue child) {
             if (JSString* string = edge->dynamicCastConstant<JSString*>(vm())) {
@@ -6577,7 +6819,7 @@ private:
             m_out.branch(isRopeString(child, edge), unsure(ropeCase), unsure(notRopeCase));
 
             LBasicBlock lastNext = m_out.appendTo(ropeCase, notRopeCase);
-            ValueFromBlock flagsForRope = m_out.anchor(m_out.load16ZeroExt32(child, m_heaps.JSRopeString_flags));
+            ValueFromBlock flagsForRope = m_out.anchor(m_out.load32NonNegative(child, m_heaps.JSRopeString_flags));
             ValueFromBlock lengthForRope = m_out.anchor(m_out.load32NonNegative(child, m_heaps.JSRopeString_length));
             m_out.jump(continuation);
 
@@ -6600,7 +6842,7 @@ private:
                 FlagsAndLength flagsAndLength = getFlagsAndLength(edge, child);
                 LValue flags = m_out.bitAnd(previousFlagsAndLength.flags, flagsAndLength.flags);
                 CheckValue* lengthCheck = m_out.speculateAdd(previousFlagsAndLength.length, flagsAndLength.length);
-            blessSpeculation(lengthCheck, Uncountable, noValue(), nullptr, m_origin);
+                blessSpeculation(lengthCheck, Uncountable, noValue(), nullptr, m_origin);
                 return FlagsAndLength {
                     flags,
                     lengthCheck
@@ -6608,14 +6850,29 @@ private:
             };
             flagsAndLength = mergeFlagsAndLength(edges[i], kids[i], flagsAndLength);
         }
-        m_out.store32As16(flagsAndLength.flags, result, m_heaps.JSRopeString_flags);
-        m_out.store32(flagsAndLength.length, result, m_heaps.JSRopeString_length);
+
+        m_out.storePtr(
+            m_out.bitOr(
+                m_out.bitOr(kids[0], m_out.constIntPtr(JSString::isRopeInPointer)),
+                m_out.bitAnd(m_out.constIntPtr(JSRopeString::is8BitInPointer), m_out.zeroExtPtr(flagsAndLength.flags))),
+            result, m_heaps.JSRopeString_fiber0);
+        m_out.storePtr(
+            m_out.bitOr(m_out.zeroExtPtr(flagsAndLength.length), m_out.shl(kids[1], m_out.constInt32(32))),
+            result, m_heaps.JSRopeString_fiber1);
+        if (numKids == 2)
+            m_out.storePtr(m_out.lShr(kids[1], m_out.constInt32(32)), result, m_heaps.JSRopeString_fiber2);
+        else
+            m_out.storePtr(m_out.bitOr(m_out.lShr(kids[1], m_out.constInt32(32)), m_out.shl(kids[2], m_out.constInt32(16))), result, m_heaps.JSRopeString_fiber2);
 
         mutatorFence();
-        ValueFromBlock fastResult = m_out.anchor(m_out.select(m_out.isZero32(flagsAndLength.length), weakPointer(jsEmptyString(&m_graph.m_vm)), result));
+        ValueFromBlock fastResult = m_out.anchor(result);
+        m_out.branch(m_out.isZero32(flagsAndLength.length), rarely(emptyCase), usually(continuation));
+
+        LBasicBlock lastNext = m_out.appendTo(emptyCase, slowPath);
+        ValueFromBlock emptyResult = m_out.anchor(weakPointer(jsEmptyString(m_graph.m_vm)));
         m_out.jump(continuation);
 
-        LBasicBlock lastNext = m_out.appendTo(slowPath, continuation);
+        m_out.appendTo(slowPath, continuation);
         LValue slowResultValue;
         VM& vm = this->vm();
         switch (numKids) {
@@ -6643,7 +6900,7 @@ private:
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
-        setJSValue(m_out.phi(Int64, fastResult, slowResult));
+        setJSValue(m_out.phi(Int64, fastResult, emptyResult, slowResult));
     }
 
     void compileStringCharAt()
@@ -6721,20 +6978,19 @@ private:
             results.append(m_out.anchor(m_out.intPtrZero));
         } else {
             JSGlobalObject* globalObject = m_graph.globalObjectFor(m_node->origin.semantic);
+            Structure* stringPrototypeStructure = globalObject->stringPrototype()->structure(vm());
+            Structure* objectPrototypeStructure = globalObject->objectPrototype()->structure(vm());
+            WTF::loadLoadFence();
 
-            bool prototypeChainIsSane = false;
             if (globalObject->stringPrototypeChainIsSane()) {
                 // FIXME: This could be captured using a Speculation mode that means
                 // "out-of-bounds loads return a trivial value", something like
                 // SaneChainOutOfBounds.
                 // https://bugs.webkit.org/show_bug.cgi?id=144668
 
-                m_graph.registerAndWatchStructureTransition(globalObject->stringPrototype()->structure(vm()));
-                m_graph.registerAndWatchStructureTransition(globalObject->objectPrototype()->structure(vm()));
+                m_graph.registerAndWatchStructureTransition(stringPrototypeStructure);
+                m_graph.registerAndWatchStructureTransition(objectPrototypeStructure);
 
-                prototypeChainIsSane = globalObject->stringPrototypeChainIsSane();
-            }
-            if (prototypeChainIsSane) {
                 LBasicBlock negativeIndex = m_out.newBlock();
 
                 results.append(m_out.anchor(m_out.constInt64(JSValue::encode(jsUndefined()))));
@@ -6822,7 +7078,7 @@ private:
         LBasicBlock continuation = m_out.newBlock();
 
         m_out.branch(
-            m_out.aboveOrEqual(value, m_out.constInt32(maxSingleCharacterString)),
+            m_out.above(value, m_out.constInt32(maxSingleCharacterString)),
             rarely(slowCase), usually(smallIntCase));
 
         LBasicBlock lastNext = m_out.appendTo(smallIntCase, slowCase);
@@ -7633,7 +7889,7 @@ private:
         patchpoint->append(m_tagTypeNumber, ValueRep::reg(GPRInfo::tagTypeNumberRegister));
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         patchpoint->clobberLate(RegisterSet::volatileRegistersForJSCall());
-        patchpoint->resultConstraint = ValueRep::reg(GPRInfo::returnValueGPR);
+        patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
         CodeOrigin codeOrigin = codeOriginDescriptionOfCallSite();
         State* state = &m_ftlState;
@@ -7752,7 +8008,7 @@ private:
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         if (!isTail) {
             patchpoint->clobberLate(RegisterSet::volatileRegistersForJSCall());
-            patchpoint->resultConstraint = ValueRep::reg(GPRInfo::returnValueGPR);
+            patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
         }
 
         CodeOrigin codeOrigin = codeOriginDescriptionOfCallSite();
@@ -8046,7 +8302,7 @@ private:
             }
 
             RELEASE_ASSERT(target->op() == PhantomCreateRest);
-            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame;
+            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame();
             unsigned numberOfArgumentsToSkip = target->numberOfArgumentsToSkip();
             LValue length = cachedSpreadLengths.ensure(inlineCallFrame, [&] () {
                 return m_out.zeroExtPtr(this->getSpreadLengthFromInlineCallFrame(inlineCallFrame, numberOfArgumentsToSkip));
@@ -8073,7 +8329,7 @@ private:
 
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         patchpoint->clobber(RegisterSet::volatileRegistersForJSCall()); // No inputs will be in a volatile register.
-        patchpoint->resultConstraint = ValueRep::reg(GPRInfo::returnValueGPR);
+        patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
         patchpoint->numGPScratchRegisters = 0;
 
@@ -8209,7 +8465,7 @@ private:
                         }
 
                         RELEASE_ASSERT(target->op() == PhantomCreateRest);
-                        InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame;
+                        InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame();
 
                         unsigned numberOfArgumentsToSkip = target->numberOfArgumentsToSkip();
 
@@ -8375,7 +8631,7 @@ private:
 
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         patchpoint->clobberLate(RegisterSet::volatileRegistersForJSCall());
-        patchpoint->resultConstraint = ValueRep::reg(GPRInfo::returnValueGPR);
+        patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
         // This is the minimum amount of call arg area stack space that all JS->JS calls always have.
         unsigned minimumJSCallAreaSize =
@@ -8489,9 +8745,9 @@ private:
                     CCallHelpers::JumpList slowCase;
                     InlineCallFrame* inlineCallFrame;
                     if (node->child3())
-                        inlineCallFrame = node->child3()->origin.semantic.inlineCallFrame;
+                        inlineCallFrame = node->child3()->origin.semantic.inlineCallFrame();
                     else
-                        inlineCallFrame = node->origin.semantic.inlineCallFrame;
+                        inlineCallFrame = node->origin.semantic.inlineCallFrame();
 
                     // emitSetupVarargsFrameFastCase modifies the stack pointer if it succeeds.
                     emitSetupVarargsFrameFastCase(*vm, jit, scratchGPR2, scratchGPR1, scratchGPR2, scratchGPR3, inlineCallFrame, data->firstVarArgOffset, slowCase);
@@ -8632,7 +8888,7 @@ private:
         patchpoint->append(m_tagTypeNumber, ValueRep::reg(GPRInfo::tagTypeNumberRegister));
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         patchpoint->clobberLate(RegisterSet::volatileRegistersForJSCall());
-        patchpoint->resultConstraint = ValueRep::reg(GPRInfo::returnValueGPR);
+        patchpoint->resultConstraints = { ValueRep::reg(GPRInfo::returnValueGPR) };
 
         CodeOrigin codeOrigin = codeOriginDescriptionOfCallSite();
         State* state = &m_ftlState;
@@ -8735,9 +8991,9 @@ private:
         LoadVarargsData* data = m_node->loadVarargsData();
         InlineCallFrame* inlineCallFrame;
         if (m_node->child1())
-            inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame;
+            inlineCallFrame = m_node->child1()->origin.semantic.inlineCallFrame();
         else
-            inlineCallFrame = m_node->origin.semantic.inlineCallFrame;
+            inlineCallFrame = m_node->origin.semantic.inlineCallFrame();
 
         LValue length = nullptr;
         LValue lengthIncludingThis = nullptr;
@@ -8884,7 +9140,7 @@ private:
             }
 
             ASSERT(target->op() == PhantomCreateRest);
-            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame;
+            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame();
             unsigned numberOfArgumentsToSkip = target->numberOfArgumentsToSkip();
             spreadLengths.append(cachedSpreadLengths.ensure(inlineCallFrame, [&] () {
                 return this->getSpreadLengthFromInlineCallFrame(inlineCallFrame, numberOfArgumentsToSkip);
@@ -8935,7 +9191,7 @@ private:
             }
 
             RELEASE_ASSERT(target->op() == PhantomCreateRest);
-            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame;
+            InlineCallFrame* inlineCallFrame = target->origin.semantic.inlineCallFrame();
 
             LValue sourceStart = this->getArgumentsStart(inlineCallFrame, target->numberOfArgumentsToSkip());
             LValue spreadLength = m_out.zeroExtPtr(cachedSpreadLengths.get(inlineCallFrame));
@@ -9286,7 +9542,7 @@ private:
             patchpoint->effects = Effects::forCall();
             patchpoint->clobber(RegisterSet { X86Registers::eax, X86Registers::edx });
             // The low 32-bits of rdtsc go into rax.
-            patchpoint->resultConstraint = ValueRep::reg(X86Registers::eax);
+            patchpoint->resultConstraints = { ValueRep::reg(X86Registers::eax) };
             patchpoint->setGenerator( [=] (CCallHelpers& jit, const B3::StackmapGenerationParams&) {
                 jit.rdtsc();
             });
@@ -9660,19 +9916,21 @@ private:
 
         m_out.appendTo(notInt32NumberCase, notNaNCase);
         LValue doubleValue = unboxDouble(key);
+        ValueFromBlock normalizedNaNResult = m_out.anchor(m_out.constInt64(JSValue::encode(jsNaN())));
         m_out.branch(m_out.doubleNotEqualOrUnordered(doubleValue, doubleValue), unsure(continuation), unsure(notNaNCase));
 
         m_out.appendTo(notNaNCase, convertibleCase);
         LValue integerValue = m_out.doubleToInt(doubleValue);
         LValue integerValueConvertedToDouble = m_out.intToDouble(integerValue);
+        ValueFromBlock doubleResult = m_out.anchor(key);
         m_out.branch(m_out.doubleNotEqualOrUnordered(doubleValue, integerValueConvertedToDouble), unsure(continuation), unsure(convertibleCase));
 
         m_out.appendTo(convertibleCase, continuation);
-        ValueFromBlock slowResult = m_out.anchor(boxInt32(integerValue));
+        ValueFromBlock boxedIntResult = m_out.anchor(boxInt32(integerValue));
         m_out.jump(continuation);
 
         m_out.appendTo(continuation, lastNext);
-        setJSValue(m_out.phi(Int64, fastResult, slowResult));
+        setJSValue(m_out.phi(Int64, fastResult, normalizedNaNResult, doubleResult, boxedIntResult));
     }
 
     void compileGetMapBucket()
@@ -10215,17 +10473,17 @@ private:
         switch (m_node->child2().useKind()) {
         case StringUse: {
             LBasicBlock isNonEmptyString = m_out.newBlock();
-            LBasicBlock isAtomicString = m_out.newBlock();
+            LBasicBlock isAtomString = m_out.newBlock();
 
             keyAsValue = lowString(m_node->child2());
             m_out.branch(isNotRopeString(keyAsValue, m_node->child2()), usually(isNonEmptyString), rarely(slowCase));
 
-            lastNext = m_out.appendTo(isNonEmptyString, isAtomicString);
+            lastNext = m_out.appendTo(isNonEmptyString, isAtomString);
             uniquedStringImpl = m_out.loadPtr(keyAsValue, m_heaps.JSString_value);
-            LValue isNotAtomic = m_out.testIsZero32(m_out.load32(uniquedStringImpl, m_heaps.StringImpl_hashAndFlags), m_out.constInt32(StringImpl::flagIsAtomic()));
-            m_out.branch(isNotAtomic, rarely(slowCase), usually(isAtomicString));
+            LValue isNotAtomic = m_out.testIsZero32(m_out.load32(uniquedStringImpl, m_heaps.StringImpl_hashAndFlags), m_out.constInt32(StringImpl::flagIsAtom()));
+            m_out.branch(isNotAtomic, rarely(slowCase), usually(isAtomString));
 
-            m_out.appendTo(isAtomicString, slowCase);
+            m_out.appendTo(isAtomString, slowCase);
             break;
         }
         case SymbolUse: {
@@ -10254,7 +10512,7 @@ private:
             m_out.appendTo(isNonEmptyString, notStringCase);
             LValue implFromString = m_out.loadPtr(keyAsValue, m_heaps.JSString_value);
             ValueFromBlock stringResult = m_out.anchor(implFromString);
-            LValue isNotAtomic = m_out.testIsZero32(m_out.load32(implFromString, m_heaps.StringImpl_hashAndFlags), m_out.constInt32(StringImpl::flagIsAtomic()));
+            LValue isNotAtomic = m_out.testIsZero32(m_out.load32(implFromString, m_heaps.StringImpl_hashAndFlags), m_out.constInt32(StringImpl::flagIsAtom()));
             m_out.branch(isNotAtomic, rarely(slowCase), usually(hasUniquedStringImpl));
 
             m_out.appendTo(notStringCase, isSymbolCase);
@@ -10274,7 +10532,7 @@ private:
 
         ASSERT(keyAsValue);
 
-        // Note that we don't test if the hash is zero here. AtomicStringImpl's can't have a zero
+        // Note that we don't test if the hash is zero here. AtomStringImpl's can't have a zero
         // hash, however, a SymbolImpl may. But, because this is a cache, we don't care. We only
         // ever load the result from the cache if the cache entry matches what we are querying for.
         // So we either get super lucky and use zero for the hash and somehow collide with the entity
@@ -10394,7 +10652,7 @@ private:
         patchpoint->append(m_tagMask, ValueRep::lateReg(GPRInfo::tagMaskRegister));
         patchpoint->append(m_tagTypeNumber, ValueRep::lateReg(GPRInfo::tagTypeNumberRegister));
         patchpoint->numGPScratchRegisters = 2;
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
 
         RefPtr<PatchpointExceptionHandle> exceptionHandle =
@@ -11087,7 +11345,6 @@ private:
 
         LValue scope = lowCell(m_graph.varArgChild(m_node, 1));
         SymbolTable* table = m_node->castOperand<SymbolTable*>();
-        ASSERT(table == m_graph.varArgChild(m_node, 0)->castConstant<SymbolTable*>(vm()));
         RegisteredStructure structure = m_graph.registerStructure(m_graph.globalObjectFor(m_node->origin.semantic)->activationStructure());
 
         LBasicBlock slowPath = m_out.newBlock();
@@ -11275,7 +11532,6 @@ private:
         FrozenValue* regexp = m_node->cellOperand();
         LValue lastIndex = lowJSValue(m_node->child1());
         ASSERT(regexp->cell()->inherits<RegExp>(vm()));
-        ASSERT(m_node->castOperand<RegExp*>()->isValid());
 
         LBasicBlock slowCase = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
@@ -11284,9 +11540,8 @@ private:
 
         auto structure = m_graph.registerStructure(m_graph.globalObjectFor(m_node->origin.semantic)->regExpStructure());
         LValue fastResultValue = allocateObject<RegExpObject>(structure, m_out.intPtrZero, slowCase);
-        m_out.storePtr(frozenPointer(regexp), fastResultValue, m_heaps.RegExpObject_regExp);
+        m_out.storePtr(frozenPointer(regexp), fastResultValue, m_heaps.RegExpObject_regExpAndLastIndexIsNotWritableFlag);
         m_out.store64(lastIndex, fastResultValue, m_heaps.RegExpObject_lastIndex);
-        m_out.store32As8(m_out.constInt32(true), m_out.address(fastResultValue, m_heaps.RegExpObject_lastIndexIsWritable));
         mutatorFence();
         ValueFromBlock fastResult = m_out.anchor(fastResultValue);
         m_out.jump(continuation);
@@ -11372,7 +11627,9 @@ private:
 
             speculate(
                 ExoticObjectMode, noValue(), nullptr,
-                m_out.isZero32(m_out.load8ZeroExt32(regExp, m_heaps.RegExpObject_lastIndexIsWritable)));
+                m_out.testNonZeroPtr(
+                    m_out.loadPtr(regExp, m_heaps.RegExpObject_regExpAndLastIndexIsNotWritableFlag),
+                    m_out.constIntPtr(RegExpObject::lastIndexIsNotWritableFlag)));
 
             m_out.store64(value, regExp, m_heaps.RegExpObject_lastIndex);
             return;
@@ -11469,12 +11726,12 @@ private:
 
     ArgumentsLength getArgumentsLength()
     {
-        return getArgumentsLength(m_node->origin.semantic.inlineCallFrame);
+        return getArgumentsLength(m_node->origin.semantic.inlineCallFrame());
     }
 
     LValue getCurrentCallee()
     {
-        if (InlineCallFrame* frame = m_node->origin.semantic.inlineCallFrame) {
+        if (InlineCallFrame* frame = m_node->origin.semantic.inlineCallFrame()) {
             if (frame->isClosureCall)
                 return m_out.loadPtr(addressFor(frame->calleeRecovery.virtualRegister()));
             return weakPointer(frame->calleeRecovery.constant().asCell());
@@ -11490,7 +11747,7 @@ private:
 
     LValue getArgumentsStart()
     {
-        return getArgumentsStart(m_node->origin.semantic.inlineCallFrame);
+        return getArgumentsStart(m_node->origin.semantic.inlineCallFrame());
     }
 
     template<typename Functor>
@@ -12024,7 +12281,7 @@ private:
         Vector<ValueFromBlock, 5> results;
 
         m_out.appendTo(emptyCase, notEmptyCase);
-        results.append(m_out.anchor(weakPointer(jsEmptyString(&vm()))));
+        results.append(m_out.anchor(weakPointer(jsEmptyString(vm()))));
         m_out.jump(continuation);
 
         m_out.appendTo(notEmptyCase, oneCharCase);
@@ -12193,7 +12450,7 @@ private:
     void compilePutDynamicVar()
     {
         UniquedStringImpl* uid = m_graph.identifiers()[m_node->identifierNumber()];
-        setJSValue(vmCall(Void, m_out.operation(operationPutDynamicVar),
+        setJSValue(vmCall(Void, m_out.operation(m_graph.isStrictModeFor(m_node->origin.semantic) ? operationPutDynamicVarStrict : operationPutDynamicVarNonStrict),
             m_callFrame, lowCell(m_node->child1()), lowJSValue(m_node->child2()), m_out.constIntPtr(uid), m_out.constInt32(m_node->getPutInfo())));
     }
 
@@ -12322,16 +12579,16 @@ private:
 
         unsigned argumentCountIncludingThis = signature->argumentCount + 1;
         LValue result;
-        assertIsTaggedWith(reinterpret_cast<void*>(signature->unsafeFunction), CFunctionPtrTag);
+        auto function = CFunctionPtr(signature->functionWithoutTypeCheck);
         switch (argumentCountIncludingThis) {
         case 1:
-            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EP>(signature->unsafeFunction)), m_callFrame, operands[0]);
+            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EP>(function.get())), m_callFrame, operands[0]);
             break;
         case 2:
-            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EPP>(signature->unsafeFunction)), m_callFrame, operands[0], operands[1]);
+            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EPP>(function.get())), m_callFrame, operands[0], operands[1]);
             break;
         case 3:
-            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EPPP>(signature->unsafeFunction)), m_callFrame, operands[0], operands[1], operands[2]);
+            result = vmCall(Int64, m_out.operation(reinterpret_cast<J_JITOperation_EPPP>(function.get())), m_callFrame, operands[0], operands[1], operands[2]);
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -12376,7 +12633,7 @@ private:
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
         patchpoint->numGPScratchRegisters = domJIT->numGPScratchRegisters;
         patchpoint->numFPScratchRegisters = domJIT->numFPScratchRegisters;
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
 
         State* state = &m_ftlState;
         Node* node = m_node;
@@ -12492,7 +12749,7 @@ private:
             indexToCheck = m_out.add(indexToCheck, m_out.constInt64(data.byteSize - 1));
         speculate(OutOfBounds, noValue(), nullptr, m_out.aboveOrEqual(indexToCheck, length));
 
-        LValue vector = caged(Gigacage::Primitive, m_out.loadPtr(dataView, m_heaps.JSArrayBufferView_vector));
+        LValue vector = caged(Gigacage::Primitive, m_out.loadPtr(dataView, m_heaps.JSArrayBufferView_vector), dataView);
 
         TypedPointer pointer(m_heaps.typedArrayProperties, m_out.add(vector, m_out.zeroExtPtr(index)));
 
@@ -12651,7 +12908,7 @@ private:
             RELEASE_ASSERT_NOT_REACHED();
         }
 
-        LValue vector = caged(Gigacage::Primitive, m_out.loadPtr(dataView, m_heaps.JSArrayBufferView_vector));
+        LValue vector = caged(Gigacage::Primitive, m_out.loadPtr(dataView, m_heaps.JSArrayBufferView_vector), dataView);
         TypedPointer pointer(m_heaps.typedArrayProperties, m_out.add(vector, m_out.zeroExtPtr(index)));
 
         if (data.isFloatingPoint) {
@@ -12982,7 +13239,7 @@ private:
         if (scratchFPRUsage == NeedScratchFPR)
             patchpoint->numFPScratchRegisters++;
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         patchpoint->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -13045,7 +13302,7 @@ private:
             preparePatchpointForExceptions(patchpoint);
         patchpoint->numGPScratchRegisters = 1;
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         patchpoint->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -13101,7 +13358,7 @@ private:
         patchpoint->numGPScratchRegisters = 1;
         patchpoint->numFPScratchRegisters = 1;
         patchpoint->clobber(RegisterSet::macroScratchRegisters());
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
         State* state = &m_ftlState;
         patchpoint->setGenerator(
             [=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
@@ -13182,7 +13439,7 @@ private:
         else
             patchpoint->appendSomeRegisterWithClobber(allocator);
         patchpoint->numGPScratchRegisters++;
-        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->resultConstraints = { ValueRep::SomeEarlyRegister };
 
         m_out.appendSuccessor(usually(continuation));
         m_out.appendSuccessor(rarely(slowPath));
@@ -13622,7 +13879,7 @@ private:
                     edge, CellCaseSpeculatesObject, SpeculateNullOrUndefined,
                     ManualOperandSpeculation));
         case StringUse:
-            return m_out.notEqual(lowString(edge), weakPointer(jsEmptyString(&m_graph.m_vm)));
+            return m_out.notEqual(lowString(edge), weakPointer(jsEmptyString(m_graph.m_vm)));
         case StringOrOtherUse: {
             LValue value = lowJSValue(edge, ManualOperandSpeculation);
 
@@ -13634,7 +13891,7 @@ private:
 
             LBasicBlock lastNext = m_out.appendTo(cellCase, notCellCase);
             FTL_TYPE_CHECK(jsValueValue(value), edge, (~SpecCellCheck) | SpecString, isNotString(value));
-            ValueFromBlock stringResult = m_out.anchor(m_out.notEqual(value, weakPointer(jsEmptyString(&m_graph.m_vm))));
+            ValueFromBlock stringResult = m_out.anchor(m_out.notEqual(value, weakPointer(jsEmptyString(m_graph.m_vm))));
             m_out.jump(continuation);
 
             m_out.appendTo(notCellCase, continuation);
@@ -13691,7 +13948,7 @@ private:
                 unsure(bigIntCase), unsure(notStringOrBigIntCase));
 
             m_out.appendTo(stringCase, bigIntCase);
-            results.append(m_out.anchor(m_out.notEqual(value, weakPointer(jsEmptyString(&m_graph.m_vm)))));
+            results.append(m_out.anchor(m_out.notEqual(value, weakPointer(jsEmptyString(m_graph.m_vm)))));
             m_out.jump(continuation);
 
             m_out.appendTo(bigIntCase, notStringOrBigIntCase);
@@ -13899,17 +14156,61 @@ private:
         }
     }
 
-    LValue caged(Gigacage::Kind kind, LValue ptr)
+    LValue untagArrayPtr(LValue ptr, LValue size)
     {
+#if CPU(ARM64E)
+        PatchpointValue* authenticate = m_out.patchpoint(pointerType());
+        authenticate->appendSomeRegister(ptr);
+        authenticate->append(size, B3::ValueRep(B3::ValueRep::SomeLateRegister));
+        authenticate->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.move(params[1].gpr(), params[0].gpr());
+            jit.untagArrayPtr(params[2].gpr(), params[0].gpr());
+        });
+        return authenticate;
+#else
+        UNUSED_PARAM(size);
+        return ptr;
+#endif
+    }
+
+    LValue removeArrayPtrTag(LValue ptr)
+    {
+#if CPU(ARM64E)
+        PatchpointValue* authenticate = m_out.patchpoint(pointerType());
+        authenticate->appendSomeRegister(ptr);
+        authenticate->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.move(params[1].gpr(), params[0].gpr());
+            jit.removeArrayPtrTag(params[0].gpr());
+        });
+        return authenticate;
+#endif
+        return ptr;
+    }
+
+    LValue caged(Gigacage::Kind kind, LValue ptr, LValue base)
+    {
+        auto doUntagArrayPtr = [&](LValue taggedPtr) {
+#if CPU(ARM64E)
+            if (kind == Gigacage::Primitive) {
+                LValue size = m_out.load32(base, m_heaps.JSArrayBufferView_length);
+                return untagArrayPtr(taggedPtr, size);
+            }
+            return ptr;
+#else
+            UNUSED_PARAM(taggedPtr);
+            return ptr;
+#endif
+        };
+
 #if GIGACAGE_ENABLED
         if (!Gigacage::isEnabled(kind))
-            return ptr;
+            return doUntagArrayPtr(ptr);
 
         if (kind == Gigacage::Primitive && Gigacage::canPrimitiveGigacageBeDisabled()) {
             if (vm().primitiveGigacageEnabled().isStillValid())
                 m_graph.watchpoints().addLazily(vm().primitiveGigacageEnabled());
             else
-                return ptr;
+                return doUntagArrayPtr(ptr);
         }
 
         LValue basePtr = m_out.constIntPtr(Gigacage::basePtr(kind));
@@ -13917,6 +14218,20 @@ private:
 
         LValue masked = m_out.bitAnd(ptr, mask);
         LValue result = m_out.add(masked, basePtr);
+
+#if CPU(ARM64E)
+        if (kind == Gigacage::Primitive) {
+            PatchpointValue* merge = m_out.patchpoint(pointerType());
+            merge->append(result, B3::ValueRep(B3::ValueRep::SomeLateRegister));
+            merge->appendSomeRegister(ptr);
+            merge->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+                jit.move(params[2].gpr(), params[0].gpr());
+                jit.bitFieldInsert64(params[1].gpr(), 0, 64 - MacroAssembler::numberOfPACBits, params[0].gpr());
+            });
+
+            result = doUntagArrayPtr(merge);
+        }
+#endif // CPU(ARM64E)
 
         // Make sure that B3 doesn't try to do smart reassociation of these pointer bits.
         // FIXME: In an ideal world, B3 would not do harmful reassociations, and if it did, it would be able
@@ -13930,10 +14245,11 @@ private:
         // and possibly other smart things if we want to be able to remove this opaque.
         // https://bugs.webkit.org/show_bug.cgi?id=175493
         return m_out.opaque(result);
-#else
-        UNUSED_PARAM(kind);
-        return ptr;
 #endif
+
+        UNUSED_PARAM(kind);
+        UNUSED_PARAM(base);
+        return doUntagArrayPtr(ptr);
     }
 
     void buildSwitch(SwitchData* data, LType type, LValue switchValue)
@@ -14475,7 +14791,7 @@ private:
             return;
         }
 
-        if (m_node->shouldSpeculateAnyInt()) {
+        if (m_node->shouldSpeculateInt52()) {
             setStrictInt52(m_out.zeroExt(result, Int64));
             return;
         }
@@ -14775,7 +15091,7 @@ private:
                                 linkBuffer.link(generatorJump,
                                     CodeLocationLabel<JITThunkPtrTag>(vm->getCTIStub(lazySlowPathGenerationThunkGenerator).code()));
 
-                                std::unique_ptr<LazySlowPath> lazySlowPath = std::make_unique<LazySlowPath>();
+                                std::unique_ptr<LazySlowPath> lazySlowPath = makeUnique<LazySlowPath>();
 
                                 auto linkedPatchableJump = CodeLocationJump<JSInternalPtrTag>(linkBuffer.locationOf<JSInternalPtrTag>(patchableJump));
 
@@ -15175,7 +15491,7 @@ private:
             return result;
         }
 
-        DFG_CRASH(m_graph, m_node, "Value not defined");
+        DFG_CRASH(m_graph, m_node, makeString("Value not defined: ", String::number(edge.node()->index())).ascii().data());
         return 0;
     }
 
@@ -15697,6 +16013,11 @@ private:
                 if (value.isCell() && value.asCell()->type() == StringType && !asString(value)->isRope())
                     return m_out.booleanFalse;
             }
+            String value = edge->tryGetString(m_graph);
+            if (!value.isNull()) {
+                // If this value is LazyValue, it will be converted to JSString, and the result must be non-rope string.
+                return m_out.booleanFalse;
+            }
         }
 
         return m_out.testNonZeroPtr(m_out.loadPtr(string, m_heaps.JSString_value), m_out.constIntPtr(JSString::isRopeInPointer));
@@ -15710,6 +16031,11 @@ private:
             if (JSValue value = provenValue(edge)) {
                 if (value.isCell() && value.asCell()->type() == StringType && !asString(value)->isRope())
                     return m_out.booleanTrue;
+            }
+            String value = edge->tryGetString(m_graph);
+            if (!value.isNull()) {
+                // If this value is LazyValue, it will be converted to JSString, and the result must be non-rope string.
+                return m_out.booleanTrue;
             }
         }
 
@@ -16118,7 +16444,7 @@ private:
             BadType, jsValueValue(string), edge.node(),
             m_out.testIsZero32(
                 m_out.load32(stringImpl, m_heaps.StringImpl_hashAndFlags),
-                m_out.constInt32(StringImpl::flagIsAtomic())));
+                m_out.constInt32(StringImpl::flagIsAtom())));
         m_interpreter.filter(edge, SpecStringIdent | ~SpecString);
     }
 
@@ -16335,6 +16661,9 @@ private:
 
         LBasicBlock lastNext = m_out.appendTo(isWasteful, continuation);
         LValue vector = m_out.loadPtr(base, m_heaps.JSArrayBufferView_vector);
+        // FIXME: We could probably make this a mask.
+        // https://bugs.webkit.org/show_bug.cgi?id=197701
+        vector = removeArrayPtrTag(vector);
         speculate(Uncountable, jsValueValue(vector), m_node, m_out.isZero64(vector));
         m_out.jump(continuation);
 
@@ -16529,7 +16858,7 @@ private:
             // to baz and baz is inlined in bar. And then baz makes a tail-call to jaz,
             // and jaz is inlined in baz. We want the callframe for jaz to appear to
             // have caller be bar.
-            codeOrigin = *codeOrigin.inlineCallFrame->getCallerSkippingTailCalls();
+            codeOrigin = *codeOrigin.inlineCallFrame()->getCallerSkippingTailCalls();
         }
 
         return codeOrigin;
@@ -16570,11 +16899,7 @@ private:
         if (!willCatchException)
             return PatchpointExceptionHandle::defaultHandle(m_ftlState);
 
-        if (verboseCompilationEnabled()) {
-            dataLog("    Patchpoint exception OSR exit #", m_ftlState.jitCode->osrExitDescriptors.size(), " with availability: ", availabilityMap(), "\n");
-            if (!m_availableRecoveries.isEmpty())
-                dataLog("        Available recoveries: ", listDump(m_availableRecoveries), "\n");
-        }
+        dataLogLnIf(verboseCompilationEnabled(), "    Patchpoint exception OSR exit #", m_ftlState.jitCode->osrExitDescriptors.size(), " with availability: ", availabilityMap());
 
         bool exitOK = true;
         NodeOrigin origin = m_origin.withForExitAndExitOK(opCatchOrigin, exitOK);
@@ -16628,11 +16953,7 @@ private:
         ExitKind kind, FormattedValue lowValue, const MethodOfGettingAValueProfile& profile, LValue failCondition,
         NodeOrigin origin, bool isExceptionHandler = false)
     {
-        if (verboseCompilationEnabled()) {
-            dataLog("    OSR exit #", m_ftlState.jitCode->osrExitDescriptors.size(), " with availability: ", availabilityMap(), "\n");
-            if (!m_availableRecoveries.isEmpty())
-                dataLog("        Available recoveries: ", listDump(m_availableRecoveries), "\n");
-        }
+        dataLogLnIf(verboseCompilationEnabled(), "    OSR exit #", m_ftlState.jitCode->osrExitDescriptors.size(), " with availability: ", availabilityMap());
 
         DFG_ASSERT(m_graph, m_node, origin.exitOK);
 
@@ -16826,18 +17147,6 @@ private:
             }
         }
 
-        for (unsigned i = 0; i < m_availableRecoveries.size(); ++i) {
-            AvailableRecovery recovery = m_availableRecoveries[i];
-            if (recovery.node() != node)
-                continue;
-            ExitValue result = ExitValue::recovery(
-                recovery.opcode(), arguments.size(), arguments.size() + 1,
-                recovery.format());
-            arguments.append(recovery.left());
-            arguments.append(recovery.right());
-            return result;
-        }
-
         LoweredNodeValue value = m_int32Values.get(node);
         if (isValid(value))
             return exitArgument(arguments, DataFormatInt32, value.value());
@@ -16902,18 +17211,6 @@ private:
 
         // Doubles and Int52 have been converted by ValueRep()
         DFG_CRASH(m_graph, m_node, toCString("Cannot find value for node: ", node).data());
-    }
-
-    void addAvailableRecovery(
-        Node* node, RecoveryOpcode opcode, LValue left, LValue right, DataFormat format)
-    {
-        m_availableRecoveries.append(AvailableRecovery(node, opcode, left, right, format));
-    }
-
-    void addAvailableRecovery(
-        Edge edge, RecoveryOpcode opcode, LValue left, LValue right, DataFormat format)
-    {
-        addAvailableRecovery(edge.node(), opcode, left, right, format);
     }
 
     void setInt32(Node* node, LValue value)
@@ -17006,6 +17303,7 @@ private:
         PatchpointValue* patchpoint = m_out.patchpoint(Void);
         patchpoint->effects = Effects::none();
         patchpoint->effects.writesLocalState = true;
+        patchpoint->effects.reads = HeapRange::top();
         patchpoint->append(value, ValueRep::ColdAny);
         patchpoint->setGenerator([=] (CCallHelpers&, const StackmapGenerationParams&) { });
     }
@@ -17185,8 +17483,6 @@ private:
 
     LocalOSRAvailabilityCalculator m_availabilityCalculator;
 
-    Vector<AvailableRecovery, 3> m_availableRecoveries;
-
     InPlaceAbstractState m_state;
     AbstractInterpreter<InPlaceAbstractState> m_interpreter;
     DFG::BasicBlock* m_highBlock;
@@ -17200,6 +17496,11 @@ private:
     NodeOrigin m_origin;
     unsigned m_nodeIndex;
     Node* m_node;
+
+    // These are used for validating AI state.
+    HashMap<Node*, NodeSet> m_liveInToNode;
+    HashMap<Node*, AbstractValue> m_aiCheckedNodes;
+    String m_graphDump;
 };
 
 } // anonymous namespace

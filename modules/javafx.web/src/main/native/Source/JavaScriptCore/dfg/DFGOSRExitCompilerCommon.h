@@ -41,11 +41,11 @@ void reifyInlinedCallFrames(CCallHelpers&, const OSRExitBase&);
 void adjustAndJumpToTarget(VM&, CCallHelpers&, const OSRExitBase&);
 
 template <typename JITCodeType>
-void adjustFrameAndStackInOSRExitCompilerThunk(MacroAssembler& jit, VM* vm, JITCode::JITType jitType)
+void adjustFrameAndStackInOSRExitCompilerThunk(MacroAssembler& jit, VM& vm, JITType jitType)
 {
-    ASSERT(jitType == JITCode::DFGJIT || jitType == JITCode::FTLJIT);
+    ASSERT(jitType == JITType::DFGJIT || jitType == JITType::FTLJIT);
 
-    bool isFTLOSRExit = jitType == JITCode::FTLJIT;
+    bool isFTLOSRExit = jitType == JITType::FTLJIT;
     RegisterSet registersToPreserve;
     registersToPreserve.set(GPRInfo::regT0);
     if (isFTLOSRExit) {
@@ -58,7 +58,7 @@ void adjustFrameAndStackInOSRExitCompilerThunk(MacroAssembler& jit, VM* vm, JITC
     if (isFTLOSRExit)
         scratchSize += sizeof(void*);
 
-    ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(scratchSize);
+    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(scratchSize);
     char* buffer = static_cast<char*>(scratchBuffer->dataBuffer());
 
     jit.pushToSave(GPRInfo::regT1);
@@ -80,7 +80,7 @@ void adjustFrameAndStackInOSRExitCompilerThunk(MacroAssembler& jit, VM* vm, JITC
     jit.popToRestore(GPRInfo::regT1);
 
     // We need to reset FP in the case of an exception.
-    jit.loadPtr(vm->addressOfCallFrameForCatch(), GPRInfo::regT0);
+    jit.loadPtr(vm.addressOfCallFrameForCatch(), GPRInfo::regT0);
     MacroAssembler::Jump didNotHaveException = jit.branchTestPtr(MacroAssembler::Zero, GPRInfo::regT0);
     jit.move(GPRInfo::regT0, GPRInfo::callFrameRegister);
     didNotHaveException.link(&jit);

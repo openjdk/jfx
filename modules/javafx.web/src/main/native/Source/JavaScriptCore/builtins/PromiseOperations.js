@@ -148,7 +148,7 @@ function createResolvingFunctions(promise)
         alreadyResolved = true;
 
         if (resolution === promise)
-            return @rejectPromise(promise, new @TypeError("Resolve a promise with itself"));
+            return @rejectPromise(promise, @makeTypeError("Resolve a promise with itself"));
 
         if (!@isObject(resolution))
             return @fulfillPromise(promise, resolution);
@@ -215,9 +215,6 @@ function promiseResolveThenableJob(promiseToResolve, thenable, then)
 function initializePromise(executor)
 {
     "use strict";
-
-    if (typeof executor !== 'function')
-        @throwTypeError("Promise constructor takes a function argument");
 
     @putByIdDirectPrivate(this, "promiseState", @promiseStatePending);
     @putByIdDirectPrivate(this, "promiseReactions", []);

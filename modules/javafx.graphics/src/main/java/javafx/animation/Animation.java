@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package javafx.animation;
 import java.util.HashMap;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -256,7 +258,7 @@ public abstract class Animation {
     /* Package-private for testing purposes */
     ClipEnvelope clipEnvelope;
 
-    private boolean lastPlayedFinished = false;
+    private boolean lastPlayedFinished = true;
 
     private boolean lastPlayedForward = true;
     /**
@@ -417,7 +419,7 @@ public abstract class Animation {
 
     /**
      * Read-only variable to indicate the total duration of this
-     * {@code Animation}, including repeats. A {@code Animation} with a {@code cycleCount}
+     * {@code Animation}, including repeats. An {@code Animation} with a {@code cycleCount}
      * of {@code Animation.INDEFINITE} will have a {@code totalDuration} of
      * {@code Duration.INDEFINITE}.
      *
@@ -758,10 +760,9 @@ public abstract class Animation {
 
         lastPlayedFinished = false;
 
-        final Duration totalDuration = getTotalDuration();
-        time = time.lessThan(Duration.ZERO) ? Duration.ZERO : time
-                .greaterThan(totalDuration) ? totalDuration : time;
-        final long ticks = fromDuration(time);
+        double millis = time.isIndefinite() ? getCycleDuration().toMillis() :
+            Utils.clamp(0, time.toMillis(), getTotalDuration().toMillis());
+        long ticks = TickCalculation.fromMillis(millis);
 
         if (getStatus() == Status.STOPPED) {
             syncClipEnvelope();
@@ -961,7 +962,7 @@ public abstract class Animation {
 
     /**
      * Stops the animation and resets the play head to its initial position. If
-     * the animation is not currently running, this method has no effect.
+     * the animation is already stopped, this method has no effect.
      * <p>
      * Note: <ul>
      * <li>{@code stop()} is an asynchronous call, the {@code Animation} may not stop
@@ -978,6 +979,7 @@ public abstract class Animation {
             clipEnvelope.abortCurrentPulse();
             doStop();
             jumpTo(Duration.ZERO);
+            lastPlayedFinished = true;
         }
     }
 

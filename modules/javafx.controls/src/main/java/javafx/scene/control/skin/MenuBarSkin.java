@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -866,7 +866,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                                         setSystemMenu(stage);
                                     }
                                 } else {
-                                    if (curMBSkin != null && curMBSkin.getSkinnable() != null &&
+                                    if (getSkinnable().isUseSystemMenuBar() &&
+                                            curMBSkin != null && curMBSkin.getSkinnable() != null &&
                                             curMBSkin.getSkinnable().isUseSystemMenuBar()) {
                                         curMBSkin.getSkinnable().setUseSystemMenuBar(false);
                                     }

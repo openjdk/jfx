@@ -26,7 +26,6 @@
 #include "IsoTLS.h"
 
 #include "Environment.h"
-#include "Gigacage.h"
 #include "IsoTLSEntryInlines.h"
 #include "IsoTLSInlines.h"
 #include "IsoTLSLayout.h"
@@ -54,7 +53,7 @@ void IsoTLS::scavenge()
 
 IsoTLS::IsoTLS()
 {
-    BASSERT(!PerProcess<Environment>::get()->isDebugHeapEnabled());
+    BASSERT(!Environment::get()->isDebugHeapEnabled());
 }
 
 IsoTLS* IsoTLS::ensureEntries(unsigned offset)
@@ -77,32 +76,30 @@ IsoTLS* IsoTLS::ensureEntries(unsigned offset)
         });
 
     IsoTLS* tls = get();
-    IsoTLSLayout& layout = *PerProcess<IsoTLSLayout>::get();
+    IsoTLSLayout& layout = *IsoTLSLayout::get();
 
     IsoTLSEntry* oldLastEntry = tls ? tls->m_lastEntry : nullptr;
     RELEASE_BASSERT(!oldLastEntry || oldLastEntry->offset() < offset);
 
-    IsoTLSEntry* startEntry = oldLastEntry ? oldLastEntry : layout.head();
+    IsoTLSEntry* startEntry = oldLastEntry ? oldLastEntry->m_next : layout.head();
+    RELEASE_BASSERT(startEntry);
 
     IsoTLSEntry* targetEntry = startEntry;
-    size_t requiredCapacity = 0;
-    if (startEntry) {
-        for (;;) {
-            RELEASE_BASSERT(targetEntry);
-            RELEASE_BASSERT(targetEntry->offset() <= offset);
-            if (targetEntry->offset() == offset)
-                break;
-            targetEntry = targetEntry->m_next;
-        }
+    for (;;) {
         RELEASE_BASSERT(targetEntry);
-        requiredCapacity = targetEntry->extent();
+        RELEASE_BASSERT(targetEntry->offset() <= offset);
+        if (targetEntry->offset() == offset)
+            break;
+        targetEntry = targetEntry->m_next;
     }
+    RELEASE_BASSERT(targetEntry);
+    size_t requiredCapacity = targetEntry->extent();
 
     if (!tls || requiredCapacity > tls->m_capacity) {
         size_t requiredSize = sizeForCapacity(requiredCapacity);
         size_t goodSize = roundUpToMultipleOf(vmPageSize(), requiredSize);
         size_t goodCapacity = capacityForSize(goodSize);
-        void* memory = vmAllocate(goodSize);
+        void* memory = vmAllocate(goodSize, VMTag::IsoHeap);
         IsoTLS* newTLS = new (memory) IsoTLS();
         newTLS->m_capacity = goodCapacity;
         if (tls) {
@@ -116,22 +113,22 @@ IsoTLS* IsoTLS::ensureEntries(unsigned offset)
                     entry->move(src, dst);
                     entry->destruct(src);
                 });
-            vmDeallocate(tls, tls->size());
+            size_t oldSize = tls->size();
+            tls->~IsoTLS();
+            vmDeallocate(tls, oldSize);
         }
         tls = newTLS;
         set(tls);
     }
 
-    if (startEntry) {
-        startEntry->walkUpToInclusive(
-            targetEntry,
-            [&] (IsoTLSEntry* entry) {
-                entry->construct(tls->m_data + entry->offset());
-            });
+    startEntry->walkUpToInclusive(
+        targetEntry,
+        [&] (IsoTLSEntry* entry) {
+            entry->construct(tls->m_data + entry->offset());
+        });
 
-        tls->m_lastEntry = targetEntry;
-        tls->m_extent = targetEntry->extent();
-    }
+    tls->m_lastEntry = targetEntry;
+    tls->m_extent = targetEntry->extent();
 
     return tls;
 }
@@ -145,6 +142,9 @@ void IsoTLS::destructor(void* arg)
             entry->scavenge(data);
             entry->destruct(data);
         });
+    size_t oldSize = tls->size();
+    tls->~IsoTLS();
+    vmDeallocate(tls, oldSize);
 }
 
 size_t IsoTLS::sizeForCapacity(unsigned capacity)
@@ -167,7 +167,7 @@ void IsoTLS::forEachEntry(const Func& func)
 {
     if (!m_lastEntry)
         return;
-    PerProcess<IsoTLSLayout>::get()->head()->walkUpToInclusive(
+    IsoTLSLayout::get()->head()->walkUpToInclusive(
         m_lastEntry,
         [&] (IsoTLSEntry* entry) {
             func(entry, m_data + entry->offset());
@@ -183,19 +183,16 @@ void IsoTLS::determineMallocFallbackState()
             if (s_mallocFallbackState != MallocFallbackState::Undecided)
                 return;
 
-#if GIGACAGE_ENABLED
-            if (!Gigacage::shouldBeEnabled()) {
+            if (Environment::get()->isDebugHeapEnabled()) {
                 s_mallocFallbackState = MallocFallbackState::FallBackToMalloc;
                 return;
             }
+
             const char* env = getenv("bmalloc_IsoHeap");
             if (env && (!strcasecmp(env, "false") || !strcasecmp(env, "no") || !strcmp(env, "0")))
                 s_mallocFallbackState = MallocFallbackState::FallBackToMalloc;
             else
                 s_mallocFallbackState = MallocFallbackState::DoNotFallBack;
-#else
-            s_mallocFallbackState = MallocFallbackState::FallBackToMalloc;
-#endif
         });
 }
 

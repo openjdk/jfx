@@ -53,6 +53,11 @@
 
 #include <math.h>
 
+struct _GstControlBindingPrivate
+{
+  GWeakRef object;
+};
+
 #define GST_CAT_DEFAULT control_binding_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
 
@@ -70,12 +75,7 @@ static void gst_control_binding_dispose (GObject * object);
 static void gst_control_binding_finalize (GObject * object);
 
 G_DEFINE_ABSTRACT_TYPE_WITH_CODE (GstControlBinding, gst_control_binding,
-    GST_TYPE_OBJECT, _do_init);
-
-struct _GstControlBindingPrivate
-{
-  GWeakRef object;
-};
+    GST_TYPE_OBJECT, G_ADD_PRIVATE (GstControlBinding) _do_init);
 
 enum
 {
@@ -91,8 +91,6 @@ static void
 gst_control_binding_class_init (GstControlBindingClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (GstControlBindingPrivate));
 
   gobject_class->constructor = gst_control_binding_constructor;
   gobject_class->set_property = gst_control_binding_set_property;
@@ -116,9 +114,7 @@ gst_control_binding_class_init (GstControlBindingClass * klass)
 static void
 gst_control_binding_init (GstControlBinding * binding)
 {
-  binding->ABI.abi.priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (binding, GST_TYPE_CONTROL_BINDING,
-      GstControlBindingPrivate);
+  binding->ABI.abi.priv = gst_control_binding_get_instance_private (binding);
   g_weak_ref_init (&binding->ABI.abi.priv->object, NULL);
 }
 
@@ -176,8 +172,9 @@ gst_control_binding_dispose (GObject * object)
   GstControlBinding *self = GST_CONTROL_BINDING (object);
 
   /* we did not took a reference */
-  g_object_remove_weak_pointer ((GObject *) self->__object,
-      (gpointer *) & self->__object);
+  if (self->__object)
+    g_object_remove_weak_pointer ((GObject *) self->__object,
+        (gpointer *) & self->__object);
   self->__object = NULL;
   g_weak_ref_clear (&self->ABI.abi.priv->object);
 

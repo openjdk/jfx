@@ -296,6 +296,30 @@ gst_object_ref_sink (gpointer object)
 }
 
 /**
+ * gst_clear_object: (skip)
+ * @object_ptr: a pointer to a #GstObject reference
+ *
+ * Clears a reference to a #GstObject.
+ *
+ * @object_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing.
+ * Otherwise, the reference count of the object is decreased using
+ * gst_object_unref() and the pointer is set to %NULL.
+ *
+ * A macro is also included that allows this function to be used without
+ * pointer casts.
+ *
+ * Since: 1.16
+ **/
+#undef gst_clear_object
+void
+gst_clear_object (GstObject ** object_ptr)
+{
+  g_clear_pointer (object_ptr, gst_object_unref);
+}
+
+/**
  * gst_object_replace:
  * @oldobj: (inout) (transfer full) (nullable): pointer to a place of
  *     a #GstObject to replace
@@ -1424,7 +1448,7 @@ gst_object_get_g_value_array (GstObject * object, const gchar * property_name,
  *
  * Obtain the control-rate for this @object. Audio processing #GstElement
  * objects will use this rate to sub-divide their processing loop and call
- * gst_object_sync_values() inbetween. The length of the processing segment
+ * gst_object_sync_values() in between. The length of the processing segment
  * should be up to @control-rate nanoseconds.
  *
  * If the @object is not under property control, this will return
@@ -1450,7 +1474,7 @@ gst_object_get_control_rate (GstObject * object)
  *
  * Change the control-rate for this @object. Audio processing #GstElement
  * objects will use this rate to sub-divide their processing loop and call
- * gst_object_sync_values() inbetween. The length of the processing segment
+ * gst_object_sync_values() in between. The length of the processing segment
  * should be up to @control-rate nanoseconds.
  *
  * The control-rate should not change if the element is in %GST_STATE_PAUSED or

@@ -35,9 +35,10 @@
 
 namespace WebCore {
 
-class DynamicsCompressorKernel {
+class DynamicsCompressorKernel final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    DynamicsCompressorKernel(float sampleRate, unsigned numberOfChannels);
+    explicit DynamicsCompressorKernel(float sampleRate, unsigned numberOfChannels);
 
     void setNumberOfChannels(unsigned);
 

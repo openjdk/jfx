@@ -23,6 +23,7 @@
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -42,8 +43,8 @@ public:
     WEBCORE_EXPORT unsigned length() const;
     WEBCORE_EXPORT StyleSheet* item(unsigned index);
 
-    CSSStyleSheet* namedItem(const AtomicString&) const;
-    Vector<AtomicString> supportedPropertyNames();
+    CSSStyleSheet* namedItem(const AtomString&) const;
+    Vector<AtomString> supportedPropertyNames();
 
     Node* ownerNode() const;
 
@@ -54,7 +55,7 @@ private:
     StyleSheetList(ShadowRoot&);
     const Vector<RefPtr<StyleSheet>>& styleSheets() const;
 
-    Document* m_document { nullptr };
+    WeakPtr<Document> m_document;
     ShadowRoot* m_shadowRoot { nullptr };
     Vector<RefPtr<StyleSheet>> m_detachedStyleSheets;
 };

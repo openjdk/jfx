@@ -27,7 +27,8 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,16 +40,17 @@ namespace AST {
 class EnumerationDefinition;
 class EnumerationMember;
 
-class EnumerationMemberLiteral : public Expression {
+class EnumerationMemberLiteral final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    EnumerationMemberLiteral(Lexer::Token&& origin, String&& left, String&& right)
-        : Expression(WTFMove(origin))
+    EnumerationMemberLiteral(CodeLocation location, String&& left, String&& right)
+        : Expression(location, Kind::EnumerationMemberLiteral)
         , m_left(WTFMove(left))
         , m_right(WTFMove(right))
     {
     }
 
-    virtual ~EnumerationMemberLiteral() = default;
+    ~EnumerationMemberLiteral() = default;
 
     explicit EnumerationMemberLiteral(const EnumerationMemberLiteral&) = delete;
     EnumerationMemberLiteral(EnumerationMemberLiteral&&) = default;
@@ -56,11 +58,9 @@ public:
     EnumerationMemberLiteral& operator=(const EnumerationMemberLiteral&) = delete;
     EnumerationMemberLiteral& operator=(EnumerationMemberLiteral&&) = default;
 
-    bool isEnumerationMemberLiteral() const override { return true; }
-
-    static EnumerationMemberLiteral wrap(Lexer::Token&& origin, String&& left, String&& right, EnumerationDefinition& enumerationDefinition, EnumerationMember& enumerationMember)
+    static EnumerationMemberLiteral wrap(CodeLocation location, String&& left, String&& right, EnumerationDefinition& enumerationDefinition, EnumerationMember& enumerationMember)
     {
-        EnumerationMemberLiteral result(WTFMove(origin), WTFMove(left), WTFMove(right));
+        EnumerationMemberLiteral result(location, WTFMove(left), WTFMove(right));
         result.m_enumerationDefinition = &enumerationDefinition;
         result.m_enumerationMember = &enumerationMember;
         return result;
@@ -71,8 +71,9 @@ public:
 
     EnumerationMemberLiteral clone() const
     {
-        auto result = EnumerationMemberLiteral(Lexer::Token(origin()), String(m_left), String(m_right));
+        auto result = EnumerationMemberLiteral(codeLocation(), String(m_left), String(m_right));
         result.m_enumerationMember = m_enumerationMember;
+        copyTypeTo(result);
         return result;
     }
 
@@ -114,6 +115,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(EnumerationMemberLiteral)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(EnumerationMemberLiteral, isEnumerationMemberLiteral())
 
