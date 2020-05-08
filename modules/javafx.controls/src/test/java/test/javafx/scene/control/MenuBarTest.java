@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,9 +71,32 @@ public class MenuBarTest {
     private Stage stage;
 
     @Before public void setup() {
+        setUncaughtExceptionHandler();
+
         tk = (StubToolkit)Toolkit.getToolkit();
         menuBar = new MenuBar();
         menuBar.setUseSystemMenuBar(false);
+    }
+
+    @After public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     protected void startApp(Parent root) {
@@ -452,7 +476,6 @@ public class MenuBarTest {
     }
 
     @Test public void testKeyNavigationWithAllDisabledMenuItems() {
-
         // Test key navigation with a single disabled menu in menubar
         VBox root = new VBox();
         Menu menu1 = new Menu("Menu1");

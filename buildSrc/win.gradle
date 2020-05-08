@@ -190,22 +190,18 @@ if (hasProperty('toolchainDir')) {
 def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$CPU_BITS"
 
 def WINDOWS_DLL_VER = WINDOWS_VS_VER
-ext.MSVCR = null
-ext.MSVCP = null
 
 def windowsCRTVer = System.getenv("WINDOWS_CRT_VER") ?: WINDOWS_CRT_VER
 if (WINDOWS_VS_VER == "150") {
     WINDOWS_DLL_VER = "140"
-    ext.MSVCR = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT/vcruntime${WINDOWS_DLL_VER}.dll")
-    ext.MSVCP = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT/msvcp${WINDOWS_DLL_VER}.dll")
 }
 
 def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
 if (file(vs2017DllPath).exists()) {
     ext.WIN.VS2017DLLNames = [
-        "concrt140.dll",
         "msvcp140.dll",
-        "vcruntime140.dll"
+        "vcruntime140.dll",
+        "vcruntime140_1.dll"
     ];
     ext.WIN.VS2017DLLs = []
     ext.WIN.VS2017DLLNames.each { vsdll->
