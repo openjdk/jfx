@@ -33,10 +33,13 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ChoiceBoxShim;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuItem;
@@ -314,6 +317,41 @@ public class ChoiceBoxSelectionTest {
         assertEquals(uncontained, box.getValue());
     }
 
+    //------------- tests for JDK-8242001
+
+    /**
+     * Testing JDK-8242001: box value not updated on replacing selection model.
+     *
+     * Happens if replacing.selectedItem == null
+     *
+     */
+    @Test
+    public void testSyncedContainedValueReplaceSMEmpty() {
+        box.setValue(box.getItems().get(1));
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(replaceSM.getSelectedItem(), box.getValue());
+    }
+
+    @Test
+    public void testSyncedUncontainedValueReplaceSMEmpty() {
+        box.setValue(uncontained);
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(replaceSM.getSelectedItem(), box.getValue());
+    }
+
+    @Test
+    public void testSyncedBoundValueReplaceSMEmpty() {
+        StringProperty valueSource = new SimpleStringProperty("stickyValue");
+        box.valueProperty().bind(valueSource);
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(valueSource.get(), box.getValue());
+    }
 
     //----------- setup and sanity test for initial state
 
