@@ -551,6 +551,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     Graphics g2 = maskRtTexture.createGraphics();
                     g2.setTransform(PrismGraphicsManager.getPixelScaleTransform());
                     g2.drawTexture(maskTexture, 0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+                    maskTexture.dispose();
                     if(g instanceof MaskTextureGraphics) {
                         MaskTextureGraphics mg = (MaskTextureGraphics) (g);
                         mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
@@ -574,6 +575,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         PrEffectHelper.render(blend, g, transformedRect.x, transformedRect.y, null);
                         g.setTransform(tx);
                     }
+                    paintRtTexture.dispose();
+                    maskRtTexture.dispose();
                 } else {
                     g.setPaint(paint);
                     g.fillRect(x, y, w, h);
