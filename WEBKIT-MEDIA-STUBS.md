@@ -10,7 +10,7 @@ Specify these Gradle properties to enable building of WebKit and Media libraries
 
     -PCOMPILE_WEBKIT=true -PCOMPILE_MEDIA=true
 
-Note that these take some time to build.
+Note that these require additional build tooling and take some time to build.
 
 If you are not actively working on these sources, you may want to cache the output by copying it to one of the folders mentioned below.
 
