@@ -552,7 +552,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     g2.setTransform(PrismGraphicsManager.getPixelScaleTransform());
                     g2.drawTexture(maskTexture, 0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
                     maskTexture.dispose();
-                    if(g instanceof MaskTextureGraphics) {
+                    if(g instanceof MaskTextureGraphics && !(g instanceof PrinterGraphics)) {
                         MaskTextureGraphics mg = (MaskTextureGraphics) (g);
                         mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
                                 transformedRect.width, transformedRect.height, 0, 0, 0, 0);
