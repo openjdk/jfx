@@ -191,7 +191,7 @@ public class TabPanePermuteGetTabsTest {
 
     // Test for JDK-8237602
     @Test
-    public void testPermutGetTabsWithMoreTabs1() {
+    public void testAddingNewTabsWithExistingTabsAtSameIndex() {
         // Step #1
         Util.runAndWait(() -> {
             tabPane.getTabs().setAll(tab[0], tab[1]);
