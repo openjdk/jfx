@@ -327,6 +327,10 @@ JNIEXPORT void JNICALL Java_javafx_scene_control_skin_TextAreaSkinIos_hideSoftwa
     return self;
 }
 
+- (UIKeyboardType) keyboardType
+{
+    return UIKeyboardTypeASCIICapable;
+}
 
 #pragma mark ---
 

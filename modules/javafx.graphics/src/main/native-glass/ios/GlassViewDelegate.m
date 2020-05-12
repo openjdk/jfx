@@ -554,17 +554,11 @@ static jint getTouchStateFromPhase(int phase)
 }
 
 
-- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code chars:(char)chr modifiers:(int)modif;
+- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code unicode:(int)unicode modifiers:(int)modif
 {
     GET_MAIN_JENV;
 
-    jchar jc[1] = {(jchar) chr};
-    jcharArray jChars = (*env)->NewCharArray(env, 1);
-    (*env)->SetCharArrayRegion(env, jChars, 0, 1, jc);
-
-    (*env)->CallVoidMethod(env, self.jView, mat_jViewNotifyKey, type, code, jChars, modif);
-
-    (*env)->DeleteLocalRef(env, jChars);
+    (*env)->CallVoidMethod(env, self.jView, mat_jViewNotifyKey, type, code, unicode, modif);
 
     GLASS_CHECK_EXCEPTION(env);
 }
@@ -715,7 +709,7 @@ static BOOL isTouchEnded(int phase)
 -(BOOL)textFieldShouldReturn:(UITextField *)textField{
     [self sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
                                           keyCode:com_sun_glass_events_KeyEvent_VK_ENTER
-                                            chars:(char)13
+                                          unicode:(char)13
                                         modifiers:0];
 
     [[GlassWindow getMasterWindow] resignFocusOwner];
