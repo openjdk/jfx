@@ -1424,7 +1424,7 @@ void addNative(Project project, String name) {
                 cleanTask.delete "$libRootDir/${t.name}"
             }
             nativeTask.dependsOn(linkTask)
-            if (IS_WINDOWS && t.name == "win") {
+            if (IS_WINDOWS && t.name == "win" && (!IS_STATIC_BUILD || name == "glass")) {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, group: "Build") {
                     description = "Compiles native sources for $name"
                     matches = ".*\\.rc"
