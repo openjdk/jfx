@@ -300,19 +300,15 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
         };
         menuBarFocusedPropertyListener = (ov, t, t1) -> {
-            if (t1) {
+            unSelectMenus();
+            if (t1 && !container.getChildren().isEmpty()) {
                 // RT-23147 when MenuBar's focusTraversable is true the first
                 // menu will visually indicate focus
-                unSelectMenus();
-                if (!container.getChildren().isEmpty()) {
-                    menuModeStart(0);
-                    openMenuButton = ((MenuBarButton)container.getChildren().get(0));
-                    setFocusedMenuIndex(0);
-                    openMenuButton.setHover();
-                }
-            } else {
-                unSelectMenus();
-             }
+                menuModeStart(0);
+                openMenuButton = ((MenuBarButton)container.getChildren().get(0));
+                setFocusedMenuIndex(0);
+                openMenuButton.setHover();
+            }
          };
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
         Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
