@@ -29,7 +29,7 @@
 
 <html lang="en">
 <head>
-<link href="fxml.css" type="text/css" rel="stylesheet"/>    
+<link href="fxml.css" type="text/css" rel="stylesheet"/>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
 <title>Introduction to FXML | JavaFX @FXVERSION@</title>
 <meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX @FXVERSION@ applications."/>
@@ -597,13 +597,13 @@ myText = This is the text!
  <tr><th scope="row">- <br/>(unary operator)</th><td>Unary minus operator, applied on a number</td>
  <tr><th scope="row">! <br/>(unary operator)</th><td>Unary negation of a boolean</td></tr>
  <tr><th scope="row">+ - <br />
- 			* /
- 			%</th> <td>Numerical binary operators</td></tr>
+                        * /
+                        %</th> <td>Numerical binary operators</td></tr>
  <tr><th scope="row">&amp;&amp; ||</th><td>Boolean binary operators</td></tr>
  <tr><th scope="row">&gt; &gt;= <br />
- 		   &lt; &lt;= <br />
- 		   == !=</th>
- 		   <td>Binary operators of comparison.<br/> Both arguments must be of type Comparable</td></tr>
+                   &lt; &lt;= <br />
+                   == !=</th>
+                   <td>Binary operators of comparison.<br/> Both arguments must be of type Comparable</td></tr>
 </table>
 
 <h3><a id="static_property_attributes">Static Properties</a></h3>
@@ -700,15 +700,15 @@ Previous example using an expression handler:
 </pre>
 
 <p> With the controller that contains a field like this </p>
-    
+
 <pre class="code">
 public class MyController {
-    
+
     &#64;FXML
     public EventHandler&lt;ActionEvent&gt; onActionHandler = new EventHandler&lt;&gt;() { ... }
 
     ...
-}  
+}
 </pre>
 
 <p> Note that other kinds of expressions, like <a href="#expression_binding">binding expressions</a>
@@ -718,7 +718,7 @@ public class MyController {
 <p> Collections and object properties cannot be listen to using <span class="code">setOn<span class="variable">Event</span>()</span> methods.
     For these reason, special handler methods need to be used.
 <span class="code">ObservableList</span>, <span class="code">ObservableMap</span> or <span class="code">ObservableSet</span>
- uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListner.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter respectively.
+ uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListener.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter respectively.
 </p>
 <pre class="code">
 &lt;VBox fx:controller="com.foo.MyController"
@@ -763,7 +763,7 @@ attribute must be used.</p>
 &lt;VBox fx:controller="com.foo.MyController"
     xmlns:fx="http://javafx.com/fxml" onParentChange="#handleParentChange"/&gt;
 </pre>
-    
+
 <p>Note that collections and properties do not currently support scripting handlers.</p>
 
 <h2><a id="scripting">Scripting</a></h2>
@@ -843,7 +843,7 @@ importClass(java.lang.System);
 function handleButtonAction(event) {
    System.out.println('You clicked me!');
 }
-</pre> 
+</pre>
 
 <h2><a id="controllers">Controllers</a></h2>
 <p>While it can be convenient to write simple event handlers in script, either inline or defined in external files, it is often preferable to define more complex application logic in a compiled, strongly-typed language such as Java. As discussed earlier, the <span class="code">fx:controller</span> attribute allows a caller to associate a "controller" class with an FXML document. A controller is a compiled class that implements the "code behind" the object hierarchy defined by the document.</p>
@@ -1104,3 +1104,4 @@ module. A type is reflectively accessible if the module
 </p>
 </body>
 </html>
+
