@@ -2446,11 +2446,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             else {
                 if (isVertical) {
                     double prefHeight = hbar.prefHeight(viewportBreadth);
-                    hbar.resizeRelocate(0, viewportLength-prefHeight,
+                    hbar.resizeRelocate(0, viewportLength - prefHeight,
                             viewportBreadth, prefHeight);
                 } else {
                     double prefWidth = vbar.prefWidth(viewportBreadth);
-                    vbar.resizeRelocate(viewportLength-prefWidth, 0,
+                    vbar.resizeRelocate(viewportLength - prefWidth, 0,
                             prefWidth, viewportBreadth);
                 }
             }
@@ -2525,10 +2525,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             else {
                 if (isVertical) {
                     double prefWidth = vbar.prefWidth(viewportLength);
-                    vbar.resizeRelocate(viewportBreadth-prefWidth, 0, prefWidth, viewportLength);
+                    vbar.resizeRelocate(viewportBreadth - prefWidth, 0, prefWidth, viewportLength);
                 } else {
                     double prefHeight = hbar.prefHeight(-1);
-                    hbar.resizeRelocate(0, viewportBreadth-prefHeight, viewportLength, prefHeight);
+                    hbar.resizeRelocate(0, viewportBreadth - prefHeight, viewportLength, prefHeight);
                 }
             }
         }
