@@ -31,11 +31,11 @@ public class ControlShim extends Control {
     /**
      * Installs the default skin for the given control.
      *
-     * Note that this has no noticeable effect if the the control's
+     * Note that this has no noticeable effect if the control's
      * skin already is set to the default skin (see skinProperty for
      * implementations details).
      *
-     * @param control the control the set the default skin on
+     * @param control the control to set the default skin on
      */
     public static void installDefaultSkin(Control control) {
         control.setSkin(control.createDefaultSkin());
