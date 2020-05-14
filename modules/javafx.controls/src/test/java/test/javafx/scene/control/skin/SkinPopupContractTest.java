@@ -47,10 +47,10 @@ public class SkinPopupContractTest {
 
     @Test
     public void testContextMenuSkinDispose() {
-        ContextMenu tooltip = new ContextMenu();
-        tooltip.setSkin(new ContextMenuSkin(tooltip));
-        tooltip.getSkin().dispose();
-        tooltip.getSkin().dispose();
+        ContextMenu contextMenu = new ContextMenu();
+        contextMenu.setSkin(new ContextMenuSkin(contextMenu));
+        contextMenu.getSkin().dispose();
+        contextMenu.getSkin().dispose();
     }
 
 }
