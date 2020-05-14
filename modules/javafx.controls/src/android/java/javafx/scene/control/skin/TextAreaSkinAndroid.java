@@ -25,25 +25,26 @@
 
 package javafx.scene.control.skin;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.input.MouseEvent;
 
 public class TextAreaSkinAndroid extends TextAreaSkin {
 
     public TextAreaSkinAndroid(final TextArea textArea) {
         super(textArea);
 
-        textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> observable,
-                    Boolean wasFocused, Boolean isFocused) {
-                if (textArea.isEditable()) {
-                    if (isFocused) {
-                        showSoftwareKeyboard();
-                    } else {
-                        hideSoftwareKeyboard();
-                    }
+        textArea.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            if (textArea.isEditable() && textArea.isFocused()) {
+                showSoftwareKeyboard();
+            }
+        });
+
+        textArea.focusedProperty().addListener((observable, wasFocused, isFocused) -> {
+            if (textArea.isEditable()) {
+                if (isFocused) {
+                    showSoftwareKeyboard();
+                } else {
+                    hideSoftwareKeyboard();
                 }
             }
         });
