@@ -664,12 +664,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
 
     // view specific
     mat_jViewClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/ios/IosView"));
+    mat_jViewNotifyKey = (*env)->GetMethodID(env, mat_jViewClass, "notifyUnicode", "(IIII)V");
     jclass mat_jViewBaseClass = (*env)->FindClass(env, "com/sun/glass/ui/View");
     GLASS_CHECK_EXCEPTION(env);
 
     mat_jViewNotifyResize = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyResize", "(II)V");
     mat_jViewNotifyRepaint = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyRepaint", "(IIII)V");
-    mat_jViewNotifyKey = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyKey", "(II[CI)V");
     mat_jViewNotifyMouse = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyMouse", "(IIIIIIIZZ)V");
     mat_jViewNotifyInputMethod = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
     mat_jViewNotifyView = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyView", "(I)V");

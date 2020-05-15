@@ -34,7 +34,7 @@ WIN.compileSWT = true;
 WIN.includeNull3d = true
 
 // Lambda for naming the generated libs
-WIN.library = { name -> return "${name}.dll" as String }
+WIN.library = { name -> return (IS_STATIC_BUILD ? "${name}.lib" : "${name}.dll") as String }
 
 WIN.libDest = "bin"
 WIN.modLibDest = "lib"
@@ -116,8 +116,12 @@ def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
+if (IS_STATIC_BUILD) ccFlags.add("/DSTATIC_BUILD")
 
-def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no", "/dynamicbase", "/nxcompat"];
+def linkFlags = ["/nologo"]
+if (!IS_STATIC_BUILD) {
+    linkFlags += ["/dll", "/manifest", "/opt:REF", "/incremental:no", "/dynamicbase", "/nxcompat"]
+}
 if (!IS_64) linkFlags.add("/safeseh");
 if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
 
@@ -150,7 +154,7 @@ if (hasProperty('toolchainDir')) {
                       : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
 }
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
-def linker = IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe")
+def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
 if (WINDOWS_VS_VER != "100") {
     winSdkBinDir += "/$CPU_BITS"
@@ -219,6 +223,7 @@ def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
 if (file(WinSDKDLLsPath).exists()) {
     ext.WIN.WinSDKDLLNames = [
         "api-ms-win-core-console-l1-1-0.dll",
+        "api-ms-win-core-console-l1-2-0.dll",
         "api-ms-win-core-datetime-l1-1-0.dll",
         "api-ms-win-core-debug-l1-1-0.dll",
         "api-ms-win-core-errorhandling-l1-1-0.dll",
@@ -290,7 +295,7 @@ def rcFlags = [
     "/d", "\"JFX_BUILD_ID=${rcVerBuild}\"",
     "/d", "\"JFX_COPYRIGHT=Copyright \u00A9 ${rcVerCopyrYear}\"",
     "/d", "\"JFX_FVER=${rcVerFile}\"",
-    "/d", "\"JFX_FTYPE=0x2L\"",
+    "/d", "\"JFX_FTYPE=${IS_STATIC_BUILD ? "0x7L" : "0x2L" }\"",
     "/nologo"
 ];
 
@@ -313,10 +318,10 @@ WIN.glass.rcFlags = [
 WIN.glass.ccFlags = [ccFlags, "/WX"].flatten()
 if (WINDOWS_VS_VER != "100") WIN.glass.ccFlags -= ["/WX"]
 WIN.glass.linker = linker
-WIN.glass.linkFlags = [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
+WIN.glass.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "delayimp.lib", "gdi32.lib", "urlmon.lib", "Comdlg32.lib",
         "winmm.lib", "imm32.lib", "shell32.lib", "Uiautomationcore.lib", "dwmapi.lib",
         "/DELAYLOAD:user32.dll", "/DELAYLOAD:urlmon.dll", "/DELAYLOAD:winmm.dll", "/DELAYLOAD:shell32.dll",
-        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"].flatten()
+        "/DELAYLOAD:Uiautomationcore.dll", "/DELAYLOAD:dwmapi.dll"]).flatten()
 WIN.glass.lib = "glass"
 
 WIN.decora = [:]
@@ -361,7 +366,7 @@ WIN.prismD3D.nativeSource = [
 WIN.prismD3D.compiler = compiler
 WIN.prismD3D.ccFlags = [ccFlags, "/Ibuild/headers/PrismD3D"].flatten()
 WIN.prismD3D.linker = linker
-WIN.prismD3D.linkFlags = [linkFlags, "user32.lib"].flatten()
+WIN.prismD3D.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "user32.lib"]).flatten()
 WIN.prismD3D.lib = "prism_d3d"
 WIN.prismD3D.rcCompiler = rcCompiler;
 WIN.prismD3D.rcSource = defaultRcSource
@@ -391,7 +396,7 @@ WIN.prismES2.nativeSource = [
 WIN.prismES2.compiler = compiler
 WIN.prismES2.ccFlags = ["/Ob1", "/GF", "/Gy", "/GS", "/DWIN32", ccFlags].flatten()
 WIN.prismES2.linker = linker
-WIN.prismES2.linkFlags = [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"].flatten()
+WIN.prismES2.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "/SUBSYSTEM:WINDOWS", "opengl32.lib", "gdi32.lib", "user32.lib", "kernel32.lib"]).flatten()
 WIN.prismES2.lib = "prism_es2"
 WIN.prismES2.rcCompiler = rcCompiler;
 WIN.prismES2.rcSource = defaultRcSource
@@ -407,7 +412,7 @@ WIN.font.compiler = compiler
 WIN.font.ccFlags = ["/DJFXFONT_PLUS", "/D_WIN32_WINNT=0x0601", ccFlags].flatten()
 WIN.font.ccFlags -= ["/DUNICODE", "/D_UNICODE"]
 WIN.font.linker = linker
-WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"].flatten()
+WIN.font.linkFlags = (IS_STATIC_BUILD ? [linkFlags] : [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"]).flatten()
 WIN.font.lib = "javafx_font"
 WIN.font.rcCompiler = rcCompiler;
 WIN.font.rcSource = defaultRcSource

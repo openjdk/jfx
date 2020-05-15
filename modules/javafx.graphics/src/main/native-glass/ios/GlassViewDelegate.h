@@ -74,7 +74,7 @@ typedef __attribute__((NSObject)) CFMutableDictionaryRef GlassMutableDictionaryR
 - (void)sendJavaMouseEvent:(CGPoint)viewPoint type:(int)type button:(int)button;
 
 // Java events callbacks
-- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code chars:(char)chr modifiers:(int)modif;
+- (void)sendJavaKeyEventWithType:(int)type keyCode:(int)code unicode:(int)unicode modifiers:(int)modif;
 
 - (void)sendJavaTouchEvent:(UIEvent *)theEvent;
 

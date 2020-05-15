@@ -1107,7 +1107,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, s, wrapWidth, wrapHeight, truncationStyle, ellipsisString, text.getBoundsType());
+                result = Utils.computeClippedWrappedText(font, s, wrapWidth, wrapHeight, labeled.getLineSpacing(), truncationStyle, ellipsisString, text.getBoundsType());
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
