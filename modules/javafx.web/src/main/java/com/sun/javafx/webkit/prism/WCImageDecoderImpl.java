@@ -294,7 +294,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         int dur = (meta == null || meta.delayTime == null) ? 0 : meta.delayTime;
         // Many annoying ads try to animate too fast.
         // See RT-13535 or <http://webkit.org/b/36082>.
-        if (dur < 11) dur = 100;
+        if (dur < 51) dur = 100;
         return dur;
     }
 
