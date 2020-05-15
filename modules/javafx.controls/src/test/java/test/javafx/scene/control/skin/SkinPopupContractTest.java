@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,39 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.scene.control;
 
-import javafx.beans.property.StringProperty;
+package test.javafx.scene.control.skin;
 
-public class ControlShim extends Control {
+import org.junit.Test;
 
-    /**
-     * Installs the default skin for the given control.
-     *
-     * Note that this has no noticeable effect if the control's
-     * skin already is set to the default skin (see skinProperty for
-     * implementations details).
-     *
-     * @param control the control to set the default skin on
-     */
-    public static void installDefaultSkin(Control control) {
-        control.setSkin(control.createDefaultSkin());
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Tooltip;
+import javafx.scene.control.skin.ContextMenuSkin;
+import javafx.scene.control.skin.TooltipSkin;
+
+/**
+ * Tests for Skinnables that are not Controls.
+ */
+public class SkinPopupContractTest {
+
+    @Test
+    public void testTooltipSkinDispose() {
+        Tooltip tooltip = new Tooltip();
+        tooltip.setSkin(new TooltipSkin(tooltip));
+        tooltip.getSkin().dispose();
+        tooltip.getSkin().dispose();
     }
 
-    public static StringProperty skinClassNameProperty(Control c) {
-        return c.skinClassNameProperty();
-    }
-
-    public static void layoutChildren(Control c) {
-        c.layoutChildren();
-    }
-
-    public static  double computePrefWidth(Control c, double height) {
-        return c.computePrefWidth(height);
-    }
-
-    public static  double computePrefHeight(Control c, double width) {
-        return c.computePrefHeight(width);
+    @Test
+    public void testContextMenuSkinDispose() {
+        ContextMenu contextMenu = new ContextMenu();
+        contextMenu.setSkin(new ContextMenuSkin(contextMenu));
+        contextMenu.getSkin().dispose();
+        contextMenu.getSkin().dispose();
     }
 
 }
