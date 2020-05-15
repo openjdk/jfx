@@ -48,7 +48,9 @@ import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
+import javafx.print.JobSettings;
 import javafx.print.PageLayout;
+import javafx.print.PageRange;
 import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.util.Callback;
@@ -1609,10 +1611,23 @@ final public class WebEngine {
         float height = (float) pl.getPrintableHeight();
         int pageCount = page.beginPrinting(width, height);
 
-        for (int i = 0; i < pageCount; i++) {
-            if (printStatusOK(job)) {
-                Node printable = new Printable(page, i, width);
-                job.printPage(printable);
+        JobSettings jobSettings = job.getJobSettings();
+        if(jobSettings.getPageRanges() != null) {
+            PageRange[] pageRanges = jobSettings.getPageRanges();
+            for (PageRange p : pageRanges) {
+                for (int i = p.getStartPage(); i <= p.getEndPage() && i <= pageCount; ++i) {
+                    if (printStatusOK(job)) {
+                        Node printable = new Printable(page, i - 1, width);
+                        job.printPage(printable);
+                    }
+                }
+            }
+        } else {
+            for (int i = 0; i < pageCount; i++) {
+                if (printStatusOK(job)) {
+                    Node printable = new Printable(page, i, width);
+                    job.printPage(printable);
+                }
             }
         }
         page.endPrinting();
