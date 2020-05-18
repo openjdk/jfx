@@ -31,8 +31,8 @@ import static javafx.concurrent.Worker.State.SUCCEEDED;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.WebPageShim;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.Color;
 import java.io.File;
 import javafx.concurrent.Worker.State;
 import javafx.scene.Scene;
