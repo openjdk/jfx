@@ -23,10 +23,10 @@
  * questions.
  */
 
-package test.javafx.scene.control.skin;
+package test.com.sun.javafx.scene.control.infrastructure;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
-import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
@@ -34,66 +34,56 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static javafx.scene.control.ControlShim.*;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
+
+import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
 import javafx.scene.control.Control;
-import javafx.scene.control.TextArea;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8244112:
- * skin must not blow if dispose is called more than once.
- * <p>
- * This test is parameterized in the type of control.
+ * Example of writing a test for a streak of similar issues,
+ * here f.i. memory leak in behavior.
+ *
+ * Note: doesn't have postfix _Test_ to not be included in
+ * default testing.
  */
 @RunWith(Parameterized.class)
-public class SkinDisposeContractTest {
+public class ControlBehaviorTestExample {
 
     private Control control;
     private Class<Control> controlClass;
 
     /**
-     * Skin must support multiple calls to dispose.
-     * <p>
-     * default -> dispose -> dispose
-     * <p>
-     * Errors on second dispose are JDK-8243940.
-     * Failures/errors on first dispose (or before) are other errors - controls
-     * are commented with issue reference
-     *
+     * Create behavior -> dispose behavior -> gc
      */
     @Test
-    public void testDefaultDispose() {
-        installDefaultSkin(control);
-        control.getSkin().dispose();
-        control.getSkin().dispose();
+    public void testMemoryLeakDisposeBehavior() {
+        WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(control));
+        assertNotNull(weakRef.get());
+        weakRef.get().dispose();
+        attemptGC(weakRef);
+        assertNull("behavior must be gc'ed", weakRef.get());
     }
 
-  //---------------- parameterized
+//------------ parameters
 
     // Note: name property not supported before junit 4.11
-    // Note: collection of single values supported since 4.12
     @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
-        List<Class<Control>> controlClasses = getControlClasses();
-        // @Ignore("8244419")
-        controlClasses.remove(TextArea.class);
-        return asArrays(controlClasses);
+        return asArrays(getControlClassesWithBehavior());
     }
 
-    public SkinDisposeContractTest(Class<Control> controlClass) {
+    public ControlBehaviorTestExample(Class<Control> controlClass) {
         this.controlClass = controlClass;
     }
 
-//----------------------
-
-    @After
-    public void cleanup() {
-        Thread.currentThread().setUncaughtExceptionHandler(null);
-    }
+//------------ setup
 
     @Before
     public void setup() {
+        assertNotNull(controlClass);
+
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -101,7 +91,13 @@ public class SkinDisposeContractTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
+
         control = createControl(controlClass);
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
 }

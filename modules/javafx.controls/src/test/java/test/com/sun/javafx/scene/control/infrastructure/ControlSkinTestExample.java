@@ -23,8 +23,9 @@
  * questions.
  */
 
-package test.javafx.scene.control.skin;
+package test.com.sun.javafx.scene.control.infrastructure;
 
+import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,65 +36,65 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static javafx.scene.control.ControlShim.*;
+import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
+import javafx.scene.control.Button;
 import javafx.scene.control.Control;
-import javafx.scene.control.TextArea;
+import javafx.scene.control.Label;
+import javafx.scene.shape.Rectangle;
 
 /**
- * Test for https://bugs.openjdk.java.net/browse/JDK-8244112:
- * skin must not blow if dispose is called more than once.
- * <p>
- * This test is parameterized in the type of control.
+ * Example of writing a test for a streak of similar issues,
+ * adding controls instantiated by constructors with parameters.
+ *
+ * Note that LabelSkin without graphic passes the test, while
+ * one with graphic fails.
  */
 @RunWith(Parameterized.class)
-public class SkinDisposeContractTest {
+public class ControlSkinTestExample {
 
     private Control control;
-    private Class<Control> controlClass;
+
+//--------- tests
 
     /**
-     * Skin must support multiple calls to dispose.
-     * <p>
-     * default -> dispose -> dispose
-     * <p>
-     * Errors on second dispose are JDK-8243940.
-     * Failures/errors on first dispose (or before) are other errors - controls
-     * are commented with issue reference
-     *
+     * default skin -> set alternative
      */
     @Test
-    public void testDefaultDispose() {
+    public void testMemoryLeakAlternativeSkin() {
         installDefaultSkin(control);
-        control.getSkin().dispose();
-        control.getSkin().dispose();
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(control));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
 
-  //---------------- parameterized
+//------------ parameters
 
     // Note: name property not supported before junit 4.11
-    // Note: collection of single values supported since 4.12
     @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
-        List<Class<Control>> controlClasses = getControlClasses();
-        // @Ignore("8244419")
-        controlClasses.remove(TextArea.class);
-        return asArrays(controlClasses);
+        List<Control> controls = getControls();
+        // add controls that are leaking in some configurations
+        List<Control> addedControls = List.of(
+                new Label("", new Rectangle())
+                , new Button("", new Rectangle())
+                );
+        controls.addAll(addedControls);
+        return asArrays(controls);
     }
 
-    public SkinDisposeContractTest(Class<Control> controlClass) {
-        this.controlClass = controlClass;
+    public ControlSkinTestExample(Control control) {
+        this.control = control;
     }
 
-//----------------------
-
-    @After
-    public void cleanup() {
-        Thread.currentThread().setUncaughtExceptionHandler(null);
-    }
+//------------ setup
 
     @Before
     public void setup() {
+        assertNotNull(control);
+
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -101,7 +102,11 @@ public class SkinDisposeContractTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
-        control = createControl(controlClass);
+    }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
 }
