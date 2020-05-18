@@ -557,14 +557,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
                                 transformedRect.width, transformedRect.height, 0, 0, 0, 0);
                     } else {
-                        Screen screen = g.getAssociatedScreen();
-                        FilterContext filterContext;
-                        if (screen == null) {
-                            ResourceFactory factory = g.getResourceFactory();
-                            filterContext = PrFilterContext.getPrinterContext(factory);
-                        } else {
-                            filterContext = PrFilterContext.getInstance(screen);
-                        }
+                        FilterContext filterContext = getFilterContext(g);
                         PrDrawable imagePrDrawable = PrDrawable.create(filterContext, paintRtTexture);
                         PrDrawable maskPrDrawable = PrDrawable.create(filterContext, maskRtTexture);
                         Blend blend = new Blend(Blend.Mode.SRC_IN,
