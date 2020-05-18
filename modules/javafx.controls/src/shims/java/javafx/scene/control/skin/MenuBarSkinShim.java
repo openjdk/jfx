@@ -56,4 +56,9 @@ public class MenuBarSkinShim {
     public static int getFocusedIndex(MenuBarSkin skin) {
         return skin.getFocusedMenuIndex();
     }
+
+    public static void setFocusedIndex(MenuBarSkin skin, int index) {
+        skin.setFocusedIndex(index);
+    }
+
 }

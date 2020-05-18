@@ -131,7 +131,23 @@ public class MenuBarTest {
         menuBar.getScene().getWindow().requestFocus();
 
         int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
-        assertEquals(focusedIndex, -1);
+        assertEquals(-1, focusedIndex);
+    }
+
+    @Test public void testSimulateTraverseIntoEmptyMenubar() {
+        menuBar.setFocusTraversable(true);
+
+        AnchorPane root = new AnchorPane();
+        root.getChildren().add(menuBar);
+        startApp(root);
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        // simulate notification from traversalListener
+        MenuBarSkinShim.setFocusedIndex(skin, 0);
+        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        assertEquals(-1, focusedIndex);
     }
 
     @Test public void getMenusHasSizeZero() {
@@ -310,7 +326,7 @@ public class MenuBarTest {
 
         // check if focusedMenuIndex is reset to -1 so navigation happens.
         int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
-        assertEquals(focusedIndex, -1);
+        assertEquals(-1, focusedIndex);
     }
 
     @Test public void testMenuOnShownEventFiringWithKeyNavigation() {
@@ -695,6 +711,6 @@ public class MenuBarTest {
 
         // check if focusedMenuIndex is 0 (menu1 is still in selected state).
         int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
-        assertEquals(focusedIndex, 0);
+        assertEquals(0, focusedIndex);
     }
 }
