@@ -76,6 +76,7 @@ public class TextAreaSkinAndroid extends TextAreaSkin {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
         getSkinnable().removeEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
         getSkinnable().focusedProperty().removeListener(weakFocusChangeListener);
         super.dispose();

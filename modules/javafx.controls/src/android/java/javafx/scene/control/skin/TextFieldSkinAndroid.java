@@ -77,6 +77,7 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
         getSkinnable().addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
         getSkinnable().focusedProperty().removeListener(weakFocusChangeListener);
         super.dispose();
