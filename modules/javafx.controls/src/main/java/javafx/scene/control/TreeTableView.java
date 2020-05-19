@@ -2558,9 +2558,10 @@ public class TreeTableView<S> extends Control {
                         int length = e.getTo() - e.getFrom();
                         HashMap<Integer, Integer> pMap = new HashMap<> (length);
                         for (int i = e.getFrom(); i < e.getTo(); i++) {
-                            pMap.put(i, e.getChange().getPermutation(i));
+                            if (e.getChange().wasPermutated()) {
+                                pMap.put(i, e.getChange().getPermutation(i));
+                            }
                         }
-
                         // (2)
                         List<TreeTablePosition<S,?>> selectedIndices = new ArrayList<>(getSelectedCells());
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,6 +82,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -143,6 +144,8 @@ public class TreeTableViewTest {
             private TreeItem<String> gregorySmith;
 
     @Before public void setup() {
+        setUncaughtExceptionHandler();
+
         treeTableView = new TreeTableView<String>();
         sm = treeTableView.getSelectionModel();
         fm = treeTableView.getFocusModel();
@@ -181,6 +184,10 @@ public class TreeTableViewTest {
         );
     }
 
+    @After public void cleanup() {
+        removeUncaughtExceptionHandler();
+    }
+
     private void installChildren() {
         root = new TreeItem<String>("Root");
         child1 = new TreeItem<String>("Child 1");
@@ -207,6 +214,21 @@ public class TreeTableViewTest {
 //        sb.append(" \nAnchor: " + getAnchor());
         return sb.toString();
     }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
 
     @Test public void ensureCorrectInitialState() {
         installChildren();
@@ -4892,7 +4914,6 @@ public class TreeTableViewTest {
                                          TreeTableView.TreeTableViewSelectionModel<String> sm,
                                          int rowToSelect,
                                          TreeTableColumn<String,String> columnToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedCells().size());
         assertEquals(4, sm.getSelectedIndices().size());
@@ -5759,7 +5780,6 @@ public class TreeTableViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -6076,7 +6096,6 @@ public class TreeTableViewTest {
         assertEquals(1, itemsEventCount.get());
 
         step.set(1);
-        System.out.println("about to collapse now");
         childNode1.setExpanded(false); // collapse Child Node 1 and expect both children to be deselected
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
@@ -6114,8 +6133,6 @@ public class TreeTableViewTest {
 
         view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
             if (childNode1.isExpanded()) return;
-            System.out.println(sm.getSelectedIndices());
-            System.out.println(sm.getSelectedItems());
             assertTrue(sm.isSelected(1));
             assertFalse(sm.isSelected(2));
             assertFalse(sm.isSelected(3));
