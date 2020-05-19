@@ -533,9 +533,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     Rectangle transformedRect = new Rectangle();
                     state.getTransformNoClone().transform(rect, transformedRect);
                     RTTexture paintRtTexture = g.getResourceFactory().createRTTexture(
-                            (int) Math.ceil(transformedRect.width),
-                            (int) Math.ceil(transformedRect.height),
-                            Texture.WrapMode.CLAMP_NOT_NEEDED);
+                            transformedRect.width, transformedRect.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                     Graphics g1 = paintRtTexture.createGraphics();
                     g1.setPaint(paint);
                     g1.setTransform(PrismGraphicsManager.getPixelScaleTransform());
