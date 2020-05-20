@@ -459,7 +459,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
         NSArray *items = [pasteboard pasteboardItems];
         if ([items count] > 0)
         {
-            jclass jcls = (*env)->FindClass(env, "java/lang/Object");
+            jclass jcls = (*env)->FindClass(env, "[Ljava/lang/String;");
             GLASS_CHECK_EXCEPTION(env);
             utfs = (*env)->NewObjectArray(env, (jsize)[items count], jcls, NULL);
             GLASS_CHECK_EXCEPTION(env);
