@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -310,6 +310,8 @@ public class FXMLLoader_ExpressionTest {
 
     @Test
     public void testEscapeSequences() throws IOException {
+        System.err.println("Below warning about - deprecated escape sequence - is expected from this test.");
+
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("expression_escapechars.fxml"));
         fxmlLoader.load();
 
