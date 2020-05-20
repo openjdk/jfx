@@ -41,22 +41,12 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ColorPicker;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Hyperlink;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MenuButton;
 import javafx.scene.control.PasswordField;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeView;
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
@@ -86,7 +76,7 @@ public class BehaviorMemoryLeakTest {
     //---------------- parameterized
 
     // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters //(name = "{index}: {0} ")
+    @Parameterized.Parameters // (name = "{index}: {0} ")
     public static Collection<Object[]> data() {
         List<Class<Control>> controlClasses = getControlClassesWithBehavior();
         // FIXME as part of JDK-8241364
@@ -94,31 +84,11 @@ public class BehaviorMemoryLeakTest {
         // step 1: file issues (where not yet done), add informal ignore to entry
         // step 2: fix and remove from list
         List<Class<? extends Control>> leakingClasses = List.of(
-                // @Ignore("8245282")
-                Button.class,
-                // @Ignore("8245282")
-                CheckBox.class,
-                // @Ignore("8245282")
-                ColorPicker.class,
-                // @Ignore("8245282")
-                ComboBox.class,
-                // @Ignore("8245282")
-                DatePicker.class,
-                // @Ignore("8245282")
-                Hyperlink.class,
                 ListView.class,
-                // @Ignore("8245282")
-                MenuButton.class,
                 PasswordField.class,
-                // @Ignore("8245282")
-                RadioButton.class,
-                // @Ignore("8245282")
-                SplitMenuButton.class,
                 TableView.class,
                 TextArea.class,
                 TextField.class,
-                // @Ignore("8245282")
-                ToggleButton.class,
                 TreeTableView.class,
                 TreeView.class
          );
