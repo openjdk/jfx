@@ -218,17 +218,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             selectionHandle1.setManaged(false);
             selectionHandle2.setManaged(false);
 
-            caretHandle.visibleProperty().bind(new BooleanBinding() {
-                { bind(control.focusedProperty(), control.anchorProperty(),
-                        control.caretPositionProperty(), control.disabledProperty(),
-                        control.editableProperty(), control.lengthProperty(), displayCaret);}
-                @Override protected boolean computeValue() {
-                    return (displayCaret.get() && control.isFocused() &&
-                            control.getCaretPosition() == control.getAnchor() &&
-                            !control.isDisabled() && control.isEditable() &&
-                            control.getLength() > 0);
-                }
-            });
+            if (PlatformUtil.isIOS()) {
+                caretHandle.setVisible(false);
+            } else {
+                caretHandle.visibleProperty().bind(new BooleanBinding() {
+                    {
+                        bind(control.focusedProperty(), control.anchorProperty(),
+                                control.caretPositionProperty(), control.disabledProperty(),
+                                control.editableProperty(), control.lengthProperty(), displayCaret);
+                    }
+
+                    @Override
+                    protected boolean computeValue() {
+                        return (displayCaret.get() && control.isFocused() &&
+                                control.getCaretPosition() == control.getAnchor() &&
+                                !control.isDisabled() && control.isEditable() &&
+                                control.getLength() > 0);
+                    }
+                });
+            }
 
 
             selectionHandle1.visibleProperty().bind(new BooleanBinding() {
