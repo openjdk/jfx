@@ -51,3 +51,8 @@
     -fx-skin: "javafx.scene.control.skin.TextAreaSkinIos";
 }
 
+.selection-handle {
+    -fx-shape: "M100,100m-75,0a75,75,0,1,0,150,0a75,75,0,1,0,-150,0";
+    -fx-pref-width: 12;
+    -fx-pref-height: 12;
+}
