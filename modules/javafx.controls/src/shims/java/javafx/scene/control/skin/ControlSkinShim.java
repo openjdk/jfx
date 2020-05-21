@@ -31,9 +31,6 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 import javafx.scene.control.Skin;
 
-/**
- *
- */
 public class ControlSkinShim {
 
     /**
@@ -41,7 +38,7 @@ public class ControlSkinShim {
      *
      * @param skin the skin to get the behavior from
      * @return the value of the skin's behavior field
-     * @throws RuntimeException with the exception thrown by the reflective access
+     * @throws RuntimeException wrapped around the exception thrown by the reflective access
      */
     public static BehaviorBase<?> getBehavior(Skin<?> skin) {
         try {

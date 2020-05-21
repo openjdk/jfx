@@ -89,6 +89,8 @@ public class ControlSkinFactoryTest {
             Class<Control> controlClass = (Class<Control>) controlClasses[i][0];
             Control control = createControl(controlClass);
             Skin<?> old = replaceSkin(control);
+            assertNotNull(control.getSkin());
+            assertNotSame(old, control.getSkin());
         }
     }
 
