@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package test.javafx.scene.control.skin;
 
 import java.util.ArrayList;
@@ -49,7 +50,6 @@ import static org.junit.Assert.*;
  *
  * All basically the same issue: the listChangeListener is not correctly
  * updating the tab headers.
- *
  */
 public class TabPaneSkinHeaderOrderTest {
 
