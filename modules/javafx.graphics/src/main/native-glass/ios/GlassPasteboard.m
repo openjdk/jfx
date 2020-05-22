@@ -310,7 +310,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_ios_IosPasteboard__1getUTFs
         NSArray *items = [pasteboard items];
         if ([items count] > 0)
         {
-            utfs = (*env)->NewObjectArray(env, [items count], (*env)->FindClass(env, "java/lang/Object"), NULL);
+            utfs = (*env)->NewObjectArray(env, [items count], (*env)->FindClass(env, "[Ljava/lang/String;"), NULL);
             for (int i=0; i<[items count]; i++)
             {
                 NSDictionary *item = [items objectAtIndex:i];
