@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,13 +38,10 @@ import com.sun.javafx.image.impl.IntArgb;
 import com.sun.javafx.image.impl.IntArgbPre;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.stage.Stage;
 import org.junit.Test;
 import static test.util.Util.TIMEOUT;
 
-public class ImageRaceTest extends Application {
+public class ImageRaceTest {
     static boolean verbose;
     static List<Initializer> initalizers = new ArrayList<>();
     static volatile boolean ready = false;
@@ -72,13 +69,6 @@ public class ImageRaceTest extends Application {
             init.get();
             if (verbose) System.err.println(getName()+" done");
         }
-    }
-
-    @Override
-    public void start(Stage stage) {
-        forkAndJoinInitializers();
-
-        Platform.exit();
     }
 
     void forkAndJoinInitializers() {
@@ -111,11 +101,6 @@ public class ImageRaceTest extends Application {
                 }
             }
         } catch (InterruptedException ex) {}
-    }
-
-    public static void main(String[] args) {
-        init(args);
-        Application.launch(args);
     }
 
     static void init(String[] args) {
