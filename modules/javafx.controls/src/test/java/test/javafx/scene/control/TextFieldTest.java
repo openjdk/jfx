@@ -464,12 +464,15 @@ public class TextFieldTest {
     }
 
     @Test public void replaceSelectionAtEndWithListener() {
-        StringBuilder log = new StringBuilder();
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
         txtField.setText("x xxx");
         txtField.selectRange(2, 5);
-        txtField.selectedTextProperty().addListener((__, ___, selection) -> log.append("|" + selection));
+        txtField.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
+        txtField.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
         txtField.replaceSelection("a");
-        assertEquals("|", log.toString());
+        assertEquals("|", selectedTextLog.toString());
+        assertEquals("|3,3", selectionLog.toString());
         assertEquals("x a", txtField.getText());
     }
 

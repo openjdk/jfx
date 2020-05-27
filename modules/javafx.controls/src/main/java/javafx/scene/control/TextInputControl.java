@@ -1243,14 +1243,16 @@ public abstract class TextInputControl extends Control {
             getContent().delete(start, end, value.isEmpty());
             length -= (end - start);
         }
+        doSelectRange(anchor, caretPosition);
         if (value != null) {
-            doSelectRange(0, 0); // clear selection before replacing to avoid JDK-8176270
             getContent().insert(start, value, true);
             adjustmentAmount = value.length() - (getLength() - length);
-            anchor -= adjustmentAmount;
-            caretPosition -= adjustmentAmount;
+            if (adjustmentAmount != 0) {
+                anchor -= adjustmentAmount;
+                caretPosition -= adjustmentAmount;
+                doSelectRange(anchor, caretPosition);
+            }
         }
-        doSelectRange(anchor, caretPosition);
         return adjustmentAmount;
     }
 

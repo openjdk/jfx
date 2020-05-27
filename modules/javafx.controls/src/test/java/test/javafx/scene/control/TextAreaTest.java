@@ -504,12 +504,15 @@ public class TextAreaTest {
     }
 
     @Test public void replaceSelectionAtEndWithListener() {
-        StringBuilder log = new StringBuilder();
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
         txtArea.setText("x xxx");
         txtArea.selectRange(2, 5);
-        txtArea.selectedTextProperty().addListener((__, ___, selection) -> log.append("|" + selection));
+        txtArea.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
+        txtArea.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
         txtArea.replaceSelection("a");
-        assertEquals("|", log.toString());
+        assertEquals("|", selectedTextLog.toString());
+        assertEquals("|3,3", selectionLog.toString());
         assertEquals("x a", txtArea.getText());
     }
 }
