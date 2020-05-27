@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -421,10 +421,17 @@ public class ChoiceBoxTest {
         assertFalse(box.isShowing());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyShowingViaCSS() {
-//        box.impl_cssSet("-fx-showing", true);
+        box.setStyle("-fx-showing: true;");
+        box.applyCss();
         assertFalse(box.isShowing());
+
+        box.show();
+        assertTrue(box.isShowing());
+
+        box.setStyle("-fx-showing: false;");
+        box.applyCss();
+        assertTrue(box.isShowing());
     }
 
     @Test public void settingShowingSetsPseudoClass() {
