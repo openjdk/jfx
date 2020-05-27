@@ -37,10 +37,10 @@ import javafx.stage.Stage;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import test.util.Util;
 
+import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -96,7 +96,6 @@ public class SVGTest {
      * @bug 8223298
      * summary Checks if svg pattern is displayed properly
      */
-    @Ignore("JDK-8243110")
     @Test public void testSVGRenderingWithPattern() {
         final CountDownLatch webViewStateLatch = new CountDownLatch(1);
         final String htmlSVGContent = "\n"
@@ -114,9 +113,22 @@ public class SVGTest {
             + "</html>";
 
         Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    webView.requestFocus();
+                }
+            });
+
             assertNotNull(webView);
             webView.getEngine().loadContent(htmlSVGContent);
-            webViewStateLatch.countDown();
+
+            webView.focusedProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    webViewStateLatch.countDown();
+                }
+            });
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
