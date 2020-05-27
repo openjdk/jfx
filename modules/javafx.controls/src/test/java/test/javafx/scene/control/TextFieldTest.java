@@ -70,6 +70,21 @@ public class TextFieldTest {
     @Before public void setup() {
         txtField = new TextField();
         dummyTxtField = new TextField("dummy");
+        setUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************
@@ -451,10 +466,11 @@ public class TextFieldTest {
     @Test public void replaceSelectionAtEndWithListener() {
         StringBuilder log = new StringBuilder();
         txtField.setText("x xxx");
-        txtField.selectedTextProperty().addListener((__, ___, selection) -> log.append("."));
         txtField.selectRange(2, 5);
+        txtField.selectedTextProperty().addListener((__, ___, selection) -> log.append("|" + selection));
         txtField.replaceSelection("a");
-        assertFalse(log.toString().isEmpty());
+        assertEquals("|", log.toString());
+        assertEquals("x a", txtField.getText());
     }
 
 
@@ -463,7 +479,7 @@ public class TextFieldTest {
      */
     private void initStage() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
@@ -475,5 +491,6 @@ public class TextFieldTest {
         if (stage != null) {
             stage.hide();
         }
+        removeUncaughtExceptionHandler();
     }
 }

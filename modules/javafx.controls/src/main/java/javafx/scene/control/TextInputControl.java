@@ -166,7 +166,7 @@ public abstract class TextInputControl extends Control {
                 int length = txt.length();
                 if (end > start + length) end = length;
                 if (start > length-1) start = end = 0;
-                return txt.substring(start, Utils.clamp(0, end, txt.length()));
+                return txt.substring(start, end);
             }
         });
 
@@ -1244,6 +1244,7 @@ public abstract class TextInputControl extends Control {
             length -= (end - start);
         }
         if (value != null) {
+            doSelectRange(0, 0); // clear selection before replacing to avoid JDK-8176270
             getContent().insert(start, value, true);
             adjustmentAmount = value.length() - (getLength() - length);
             anchor -= adjustmentAmount;
