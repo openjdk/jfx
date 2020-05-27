@@ -120,6 +120,8 @@ public abstract class TextInputControl extends Control {
         public int length();
     }
 
+    private boolean blockSelectedTextUpdate;
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -154,21 +156,8 @@ public abstract class TextInputControl extends Control {
         });
 
         // Bind the selected text to be based on the selection and text properties
-        selectedText.bind(new StringBinding() {
-            { bind(selection, text); }
-            @Override protected String computeValue() {
-                String txt = text.get();
-                IndexRange sel = selection.get();
-                if (txt == null || sel == null) return "";
-
-                int start = sel.getStart();
-                int end = sel.getEnd();
-                int length = txt.length();
-                if (end > start + length) end = length;
-                if (start > length-1) start = end = 0;
-                return txt.substring(start, end);
-            }
-        });
+        selection.addListener((ob, o, n) -> updateSelectedText());
+        text.addListener((ob, o, n) -> updateSelectedText());
 
         focusedProperty().addListener((ob, o, n) -> {
             if (n) {
@@ -182,6 +171,23 @@ public abstract class TextInputControl extends Control {
 
         // Specify the default style class
         getStyleClass().add("text-input");
+    }
+
+    private void updateSelectedText() {
+        if (!blockSelectedTextUpdate) {
+            String txt = text.get();
+            IndexRange sel = selection.get();
+            if (txt == null || sel == null) {
+                selectedText.set("");
+            } else {
+                int start = sel.getStart();
+                int end = sel.getEnd();
+                int length = txt.length();
+                if (end > start + length) end = length;
+                if (start > length-1) start = end = 0;
+                selectedText.set(txt.substring(start, end));
+            }
+        }
     }
 
     /***************************************************************************
@@ -1237,23 +1243,26 @@ public abstract class TextInputControl extends Control {
     private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
         // RT-16566: Need to take into account stripping of chars into the
         // final anchor & caret position
-        int length = getLength();
-        int adjustmentAmount = 0;
-        if (end != start) {
-            getContent().delete(start, end, value.isEmpty());
-            length -= (end - start);
-        }
-        doSelectRange(anchor, caretPosition);
-        if (value != null) {
-            getContent().insert(start, value, true);
-            adjustmentAmount = value.length() - (getLength() - length);
-            if (adjustmentAmount != 0) {
+        blockSelectedTextUpdate = true;
+        try {
+            int length = getLength();
+            int adjustmentAmount = 0;
+            if (end != start) {
+                getContent().delete(start, end, value.isEmpty());
+                length -= (end - start);
+            }
+            if (value != null) {
+                getContent().insert(start, value, true);
+                adjustmentAmount = value.length() - (getLength() - length);
                 anchor -= adjustmentAmount;
                 caretPosition -= adjustmentAmount;
-                doSelectRange(anchor, caretPosition);
             }
+            doSelectRange(anchor, caretPosition);
+            return adjustmentAmount;
+        } finally {
+            blockSelectedTextUpdate = false;
+            updateSelectedText();
         }
-        return adjustmentAmount;
     }
 
     private <T> void updateText(TextFormatter<T> formatter) {

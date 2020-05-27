@@ -53,6 +53,8 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
+import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.TextInputControlShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -461,6 +463,22 @@ public class TextFieldTest {
         keyboard.doKeyPress(ENTER);
         assertEquals("actionHandler must be notified", 1, actions.size());
         assertTrue("action must be consumed ", actions.get(0).isConsumed());
+    }
+
+    @Test public void replaceSelectionWithFilteredCharacters() {
+        txtField.setText("x xxxyyy");
+        txtField.selectRange(2, 5);
+        txtField.setTextFormatter(new TextFormatter<>(this::noDigits));
+        txtField.replaceSelection("a1234a");
+        assertEquals("x aayyy", txtField.getText());
+        assertEquals(4, txtField.getSelection().getStart());
+        assertEquals(4, txtField.getSelection().getStart());
+    }
+
+    private Change noDigits(Change change) {
+        Change filtered = change.clone();
+        filtered.setText(change.getText().replaceAll("[0-9]","\n"));
+        return filtered;
     }
 
     @Test public void replaceSelectionAtEndWithListener() {
