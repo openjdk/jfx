@@ -267,7 +267,7 @@ public class AnimationTest {
     public void testJumpTo_IndefiniteCycleDuration() {
         animation.shim_setCycleDuration(Duration.INDEFINITE);
 
-        // TicksCalculation defines TICKS_PER_MILLI == 6 
+        // TicksCalculation defines TICKS_PER_MILLI == 6
         //
         // Jumping to the end of Duration.INDEFINITE, which has Double.POSITIVE_INFINITY millis, sets the ticks to
         // Math.round(Double.POSITIVE_INFINITY * TICKS_PER_MILLI), which is Long.MAX_VALUE as per Math#round specs.
