@@ -132,6 +132,7 @@ public class SVGTest {
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        Util.sleep(1000);
 
         Util.runAndWait(() -> {
             WritableImage snapshot = svgTestApp.primaryStage.getScene().snapshot(null);
