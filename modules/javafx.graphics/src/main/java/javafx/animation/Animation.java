@@ -387,24 +387,6 @@ public abstract class Animation {
     private ReadOnlyDoubleProperty currentRate;
     private static final double DEFAULT_CURRENT_RATE = 0.0;
 
-    /**
-     * The current rate changes in 3 cases:
-     * <ol>
-     * <li> When the rate is changed.
-     * <li> When the status is changed (paused/stopped/resumed/started).
-     * <li> When switching between a forwards and backwards cycle.
-     * </ol>
-     *
-     * 1 happens when the user changes the rate of the animation or its root parent.
-     * 2 happens when the user changes the status or when the animation is finished.
-     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor
-     */
-    private void doSetCurrentRate(double value) {
-        if (currentRate != null || !areNearEqual(value, DEFAULT_CURRENT_RATE)) {
-            ((CurrentRateProperty) currentRateProperty()).set(value);
-        }
-    }
-
     public final double getCurrentRate() {
         return (currentRate == null) ? DEFAULT_CURRENT_RATE : currentRate.get();
     }
@@ -421,6 +403,26 @@ public abstract class Animation {
           doSetCurrentRate(currentRate);
 //      }
   }
+
+    /**
+     * The current rate changes in 3 cases:
+     * <ol>
+     * <li> When the rate is changed.
+     * <li> When the status is changed (paused/stopped/resumed/started).
+     * <li> When switching between a forwards and backwards cycle.
+     * </ol>
+     *
+     * 1 happens when the user changes the rate of the animation or its root parent.
+     * 2 happens when the user changes the status or when the animation is finished.
+     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor
+     *
+     * @param value the value of the new current rate
+     */
+    private void doSetCurrentRate(double value) {
+        if (currentRate != null || !areNearEqual(value, DEFAULT_CURRENT_RATE)) {
+            ((CurrentRateProperty) currentRateProperty()).set(value);
+        }
+    }
 
     /**
      * Read-only variable to indicate the duration of one cycle of this

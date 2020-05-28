@@ -45,7 +45,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         super(animation);
     }
 
-    protected boolean autoReverse() {
+    protected boolean isAutoReverse() {
         return autoReverse;
     }
 
@@ -58,7 +58,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         return Math.round((ticks - deltaTicks) * Math.abs(newRate / rate));
      }
 
-    protected boolean changedDirection(double newRate) {
+    protected boolean isDirectionChanged(double newRate) {
         return newRate * rate < 0;
     }
 

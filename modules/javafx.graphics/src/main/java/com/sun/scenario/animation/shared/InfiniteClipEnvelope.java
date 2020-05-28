@@ -61,7 +61,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
         if (status != Status.STOPPED) {
             setInternalCurrentRate((Math.abs(currentRate - rate) < EPSILON) ? newRate : -newRate);
             deltaTicks = ticks - ticksRateChange(newRate);
-            if (changedDirection(newRate)) {
+            if (isDirectionChanged(newRate)) {
                 final long delta = 2 * cycleTicks - cyclePos;
                 deltaTicks += delta;
                 ticks += delta;

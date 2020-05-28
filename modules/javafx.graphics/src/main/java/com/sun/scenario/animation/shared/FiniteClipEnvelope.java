@@ -70,7 +70,7 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     @Override
     public void setRate(double newRate) {
-        final boolean toggled = changedDirection(newRate);
+        final boolean toggled = isDirectionChanged(newRate);
         final long newTicks = toggled ? totalTicks - ticks : ticks;
         final Status status = animation.getStatus();
         if (status != Status.STOPPED) {
