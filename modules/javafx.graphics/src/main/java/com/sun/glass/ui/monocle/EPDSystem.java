@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -177,7 +177,7 @@ class EPDSystem {
     static final int FB_POWERDOWN_DISABLE = -1;
 
     /**
-     * Initialization waveform (0x0...0xF → 0xF in ~4000 ms). Clears the screen
+     * Initialization waveform (0x0...0xF to 0xF in ~4000 ms). Clears the screen
      * to all white.
      * <p>
      * "A first exemplary drive scheme provides waveforms that may be used to
@@ -189,7 +189,7 @@ class EPDSystem {
     static final int WAVEFORM_MODE_INIT = 0;
 
     /**
-     * Direct update waveform (0x0...0xF → 0x0 or 0xF in ~260 ms). Changes gray
+     * Direct update waveform (0x0...0xF to 0x0 or 0xF in ~260 ms). Changes gray
      * pixels to black or white.
      * <p>
      * "A second exemplary drive scheme provides waveforms that may be used to
@@ -201,7 +201,7 @@ class EPDSystem {
     static final int WAVEFORM_MODE_DU = 1;
 
     /**
-     * Gray 4-level waveform (0x0...0xF → 0x0, 0x5, 0xA, or 0xF in ~500 ms).
+     * Gray 4-level waveform (0x0...0xF to 0x0, 0x5, 0xA, or 0xF in ~500 ms).
      * Supports 2-bit grayscale images and text with lower quality.
      * <p>
      * "A third exemplary drive scheme provides waveforms that may be used to
@@ -214,8 +214,8 @@ class EPDSystem {
     static final int WAVEFORM_MODE_GC4 = 3;
 
     /**
-     * Gray 16-level waveform (0x0...0xF → 0x0...0xF in ~760 ms). Supports 4-bit
-     * grayscale images and text with high quality.
+     * Gray 16-level waveform (0x0...0xF to 0x0...0xF in ~760 ms). Supports
+     * 4-bit grayscale images and text with high quality.
      * <p>
      * "A fourth exemplary drive scheme provides waveforms that may be used to
      * change the display state of a pixel from any initial display state to a
@@ -227,7 +227,7 @@ class EPDSystem {
     static final int WAVEFORM_MODE_GC16 = 2;
 
     /**
-     * Animation waveform (0x0 or 0xF → 0x0 or 0xF in ~120 ms). Provides a fast
+     * Animation waveform (0x0 or 0xF to 0x0 or 0xF in ~120 ms). Provides a fast
      * 1-bit black-and-white animation mode of up to eight frames per second.
      * <p>
      * "A fifth exemplary drive scheme provides waveforms that may be used to
@@ -345,9 +345,11 @@ class EPDSystem {
     }
 
     /**
-     * Passes an integer parameter by value to the device driver through the
-     * IOCTL interface. ({@link LinuxSystem#ioctl}, instead, takes a pointer as
-     * its third parameter, passing its data by reference.)
+     * Calls the {@code ioctl} system function, passing a <i>write</i> integer
+     * parameter. This method is more convenient than passing the pointer to an
+     * {@code IntStructure} with {@link LinuxSystem#ioctl} and can be used when
+     * the request code is created by {@link LinuxSystem#IOW} for setting an
+     * integer value.
      *
      * @param fd an open file descriptor
      * @param request a device-dependent request code
@@ -358,7 +360,7 @@ class EPDSystem {
     native int ioctl(long fd, int request, int value);
 
     /**
-     * A structure for passing an integer by value in an IOCTL call.
+     * A structure for passing the pointer to an integer in an IOCTL call.
      */
     static class IntStructure extends C.Structure {
 
@@ -379,11 +381,11 @@ class EPDSystem {
             return BYTES;
         }
 
-        int getInteger(long p) {
+        int get(long p) {
             return data.get(VALUE);
         }
 
-        void setInteger(long p, int value) {
+        void set(long p, int value) {
             data.put(VALUE, value);
         }
     }

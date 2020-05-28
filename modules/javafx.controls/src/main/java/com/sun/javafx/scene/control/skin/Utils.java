@@ -417,17 +417,27 @@ public class Utils {
     }
 
     public static String computeClippedWrappedText(Font font, String text, double width,
-                                            double height, OverrunStyle truncationStyle,
+                                            double height, double lineSpacing, OverrunStyle truncationStyle,
                                             String ellipsisString, TextBoundsType boundsType) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
 
+        // The height given does not need to include the line spacing after
+        // the last line to be able to render that last line correctly.
+        //
+        // However the calculations include the line spacing as part of a
+        // line's height.  In order to not cut off the last line because its
+        // line spacing wouldn't fit, the height used for the calculation
+        // is increased here with the line spacing amount.
+
+        height += lineSpacing;
+
         String ellipsis = (truncationStyle == CLIP) ? "" : ellipsisString;
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
-        double eHeight = computeTextHeight(font, ellipsis, 0, boundsType);
+        double eHeight = computeTextHeight(font, ellipsis, 0, lineSpacing, boundsType);
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
@@ -438,7 +448,7 @@ public class Utils {
         helper.setFont(font);
         helper.setWrappingWidth((int)Math.ceil(width));
         helper.setBoundsType(boundsType);
-        helper.setLineSpacing(0);
+        helper.setLineSpacing(lineSpacing);
 
         boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
                             truncationStyle == LEADING_WORD_ELLIPSIS);

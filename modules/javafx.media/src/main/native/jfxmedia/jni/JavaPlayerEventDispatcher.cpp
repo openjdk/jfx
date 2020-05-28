@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,7 +155,7 @@ void CJavaPlayerEventDispatcher::Init(JNIEnv *env, jobject PlayerInstance, CMedi
 
         if (!hasException)
         {
-            m_SendAudioSpectrumEventMethod  = env->GetMethodID(klass, "sendAudioSpectrumEvent", "(DD)V");
+            m_SendAudioSpectrumEventMethod  = env->GetMethodID(klass, "sendAudioSpectrumEvent", "(DDZ)V");
             hasException = javaEnv.reportException();
         }
 
@@ -541,7 +541,8 @@ bool CJavaPlayerEventDispatcher::SendDurationUpdateEvent(double time)
     return bSucceeded;
 }
 
-bool CJavaPlayerEventDispatcher::SendAudioSpectrumEvent(double time, double duration)
+bool CJavaPlayerEventDispatcher::SendAudioSpectrumEvent(double time, double duration,
+                                                        bool queryTimestamp)
 {
     bool bSucceeded = false;
     CJavaEnvironment jenv(m_PlayerVM);
@@ -549,7 +550,8 @@ bool CJavaPlayerEventDispatcher::SendAudioSpectrumEvent(double time, double dura
     if (pEnv) {
         jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
         if (localPlayer) {
-            pEnv->CallVoidMethod(localPlayer, m_SendAudioSpectrumEventMethod, time, duration);
+            pEnv->CallVoidMethod(localPlayer, m_SendAudioSpectrumEventMethod, time,
+                                              duration, queryTimestamp);
             pEnv->DeleteLocalRef(localPlayer);
 
             bSucceeded = !jenv.reportException();

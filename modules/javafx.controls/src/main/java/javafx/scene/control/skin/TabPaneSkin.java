@@ -69,6 +69,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -195,12 +196,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         initializeTabListener();
+        updateSelectionModel();
 
-        registerChangeListener(control.getSelectionModel().selectedItemProperty(), e -> {
-            isSelectingTab = true;
-            selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-            getSkinnable().requestLayout();
-        });
+        registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.sideProperty(), e -> updateTabPosition());
         registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
         registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(getSkinnable().getHeight()));
@@ -257,8 +255,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     };
 
-
-
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -267,6 +263,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+            selectionModel = null;
+        }
+
         super.dispose();
 
         if (behavior != null) {
@@ -429,6 +430,25 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      *                                                                         *
      **************************************************************************/
 
+    private SelectionModel<Tab> selectionModel;
+    private InvalidationListener selectionChangeListener = observable -> {
+        isSelectingTab = true;
+        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
+        getSkinnable().requestLayout();
+    };
+    private WeakInvalidationListener weakSelectionChangeListener =
+            new WeakInvalidationListener(selectionChangeListener);
+
+    private void updateSelectionModel() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+        }
+        selectionModel = getSkinnable().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().addListener(weakSelectionChangeListener);
+        }
+    }
+
     private static int getRotation(Side pos) {
         switch (pos) {
             case TOP:
@@ -559,7 +579,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         getSkinnable().getTabs().addListener((ListChangeListener<Tab>) c -> {
             List<Tab> tabsToRemove = new ArrayList<>();
             List<Tab> tabsToAdd = new ArrayList<>();
-            int insertPos = -1;
 
             while (c.next()) {
                 if (c.wasPermutated()) {
@@ -599,7 +618,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
                 if (c.wasAdded()) {
                     tabsToAdd.addAll(c.getAddedSubList());
-                    insertPos = c.getFrom();
                 }
             }
 
@@ -627,7 +645,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                 }
 
-                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+                if (!tabsToAdd.isEmpty()) {
+                    addTabs(tabsToAdd, getSkinnable().getTabs().indexOf(tabsToAdd.get(0)));
+                }
                 for (Pair<Integer, TabHeaderSkin> move : headersToMove) {
                     tabHeaderArea.moveTab(move.getKey(), move.getValue());
                 }
@@ -971,8 +991,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
-            headersRegion.getChildren().remove(tabHeaderSkin);
-            headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            if (moveToIndex != headersRegion.getChildren().indexOf(tabHeaderSkin)) {
+                headersRegion.getChildren().remove(tabHeaderSkin);
+                headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            }
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {

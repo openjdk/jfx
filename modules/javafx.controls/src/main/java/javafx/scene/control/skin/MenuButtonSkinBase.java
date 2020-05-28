@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import com.sun.javafx.scene.control.LabeledImpl;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
@@ -73,7 +74,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
      */
     boolean behaveLikeButton = false;
     private ListChangeListener<MenuItem> itemsChangedListener;
-
+    private final ChangeListener<? super Scene> sceneChangeListener;
 
 
     /***************************************************************************
@@ -146,11 +147,18 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
         if (getSkinnable().getScene() != null) {
             ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
         }
-        control.sceneProperty().addListener((scene, oldValue, newValue) -> {
+
+        sceneChangeListener = (scene, oldValue, newValue) -> {
+            if (oldValue != null) {
+                ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), oldValue);
+            }
+
+             // FIXME: null skinnable should not happen
             if (getSkinnable() != null && getSkinnable().getScene() != null) {
                 ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
-        });
+        };
+        control.sceneProperty().addListener(sceneChangeListener);
 
         // Register listeners
         registerChangeListener(control.showingProperty(), e -> {
@@ -210,6 +218,15 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+
+        // Cleanup accelerators
+        if (getSkinnable().getScene() != null) {
+            ControlAcceleratorSupport.removeAcceleratorsFromScene(getSkinnable().getItems(), getSkinnable().getScene());
+        }
+
+        // Remove listeners
+        getSkinnable().sceneProperty().removeListener(sceneChangeListener);
         getSkinnable().getItems().removeListener(itemsChangedListener);
         super.dispose();
         if (popup != null ) {

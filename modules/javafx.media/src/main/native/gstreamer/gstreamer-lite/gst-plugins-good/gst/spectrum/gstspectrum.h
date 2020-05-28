@@ -40,6 +40,15 @@ typedef struct _GstSpectrumChannel GstSpectrumChannel;
 typedef void (*GstSpectrumInputData)(const guint8 * in, gfloat * out,
     guint len, guint channels, gfloat max_value, guint op, guint nfft);
 
+#if defined (GSTREAMER_LITE) && defined (OSX)
+// Used to overwrite post_message callback to get spectrum messages in OSXPlatform.
+// We cannot use GST_ELEMENT_GET_CLASS(spectrum)->post_message, since it will
+// change callback for all instances of spectrum elements and it will conflict
+// with GStreamer platform.
+typedef gboolean (*PostMessageCallbackProc)(GstElement * element,
+                                            GstMessage * message);
+#endif // GSTREAMER_LITE and OSX
+
 struct _GstSpectrumChannel
 {
   gfloat *input;
@@ -86,6 +95,7 @@ struct _GstSpectrum
   guint bps_user; // User provided values to avoid more complex spectrum initialization
   guint bpf_user;
   void *user_data;
+  PostMessageCallbackProc post_message_callback;
 #endif // GSTREAMER_LITE and OSX
 };
 

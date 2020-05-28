@@ -96,7 +96,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 } else {
                     overrideUIScale = 1.0f;
                 }
-                // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+                // Load required Microsoft runtime DLLs on Windows platforms
                 Toolkit.loadMSWindowsLibraries();
                 Application.loadNativeLibrary();
                 return null;

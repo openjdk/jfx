@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.com.sun.webkit;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.SharedBuffer;
 import com.sun.webkit.SharedBufferShim;
 import com.sun.webkit.WebPage;
@@ -50,6 +52,10 @@ public class SharedBufferTest {
 
     @BeforeClass
     public static void beforeClass() throws ClassNotFoundException {
+        if (PlatformUtil.isWindows()) {
+            // Must load Microsoft libs before loading jfxwebkit.dll
+            Toolkit.loadMSWindowsLibraries();
+        }
         Class.forName(WebPage.class.getName());
     }
 
