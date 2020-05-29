@@ -129,10 +129,9 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     }
 
     /**
-     * Specifies whether we ought to show handles. We should do it on touch platforms, but not
-     * iOS (and maybe not Android either?)
+     * Specifies whether we ought to show handles. We should do it on touch platforms
      */
-    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED;
 
     private final static boolean IS_FXVK_SUPPORTED = Platform.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD);
 
@@ -219,17 +218,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
             selectionHandle1.setManaged(false);
             selectionHandle2.setManaged(false);
 
-            caretHandle.visibleProperty().bind(new BooleanBinding() {
-                { bind(control.focusedProperty(), control.anchorProperty(),
-                        control.caretPositionProperty(), control.disabledProperty(),
-                        control.editableProperty(), control.lengthProperty(), displayCaret);}
-                @Override protected boolean computeValue() {
-                    return (displayCaret.get() && control.isFocused() &&
-                            control.getCaretPosition() == control.getAnchor() &&
-                            !control.isDisabled() && control.isEditable() &&
-                            control.getLength() > 0);
-                }
-            });
+            if (PlatformUtil.isIOS()) {
+                caretHandle.setVisible(false);
+            } else {
+                caretHandle.visibleProperty().bind(new BooleanBinding() {
+                    {
+                        bind(control.focusedProperty(), control.anchorProperty(),
+                                control.caretPositionProperty(), control.disabledProperty(),
+                                control.editableProperty(), control.lengthProperty(), displayCaret);
+                    }
+
+                    @Override
+                    protected boolean computeValue() {
+                        return (displayCaret.get() && control.isFocused() &&
+                                control.getCaretPosition() == control.getAnchor() &&
+                                !control.isDisabled() && control.isEditable() &&
+                                control.getLength() > 0);
+                    }
+                });
+            }
 
 
             selectionHandle1.visibleProperty().bind(new BooleanBinding() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,33 @@
  * questions.
  */
 
-package test.sandbox;
+package javafx.scene.control.skin;
 
-/**
- * Global constants for sandbox tests.
- */
-public class Constants {
+import java.lang.reflect.Field;
 
-    // Test timeout in milliseconds
-    public static final int TIMEOUT = 30000;
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
-    // Time in milliseconds to show the stage
-    public static final int SHOWTIME = 2500;
+import javafx.scene.control.Skin;
 
-    // Error exit codes. Note that 0 and 1 are reserved for normal exit and
-    // failure to launch java, respectively
-    public static final int ERROR_NONE = 2;
+public class ControlSkinShim {
 
-    public static final int ERROR_TIMEOUT = 3;
-    public static final int ERROR_SECURITY_EXCEPTION = 4;
-    public static final int ERROR_NO_SECURITY_EXCEPTION = 5;
-    public static final int ERROR_UNEXPECTED_EXCEPTION = 6;
+    /**
+     * Reflectively accesses and returns the value of the skin's behavior field.
+     *
+     * @param skin the skin to get the behavior from
+     * @return the value of the skin's behavior field
+     * @throws RuntimeException wrapped around the exception thrown by the reflective access
+     */
+    public static BehaviorBase<?> getBehavior(Skin<?> skin) {
+        try {
+            Field field = skin.getClass().getDeclaredField("behavior");
+            field.setAccessible(true);
+            return (BehaviorBase<?>) field.get(skin);
+        } catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+            throw new RuntimeException("failed access to behavior in " + skin.getClass(), e);
+        }
+    }
 
-    // No need to ever create an instance of this class
-    private Constants() {}
 
+    private ControlSkinShim() {}
 }
