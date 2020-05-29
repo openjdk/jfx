@@ -113,6 +113,7 @@ public class SVGTest {
             + "</html>";
 
         Util.runAndWait(() -> {
+            assertNotNull(webView);
             webView.getEngine().getLoadWorker().stateProperty().
                 addListener((observable, oldValue, newValue) -> {
                 if (newValue == SUCCEEDED) {
@@ -120,15 +121,14 @@ public class SVGTest {
                 }
             });
 
-            assertNotNull(webView);
-            webView.getEngine().loadContent(htmlSVGContent);
-
             webView.focusedProperty().
                 addListener((observable, oldValue, newValue) -> {
                 if (newValue) {
                     webViewStateLatch.countDown();
                 }
             });
+
+            webView.getEngine().loadContent(htmlSVGContent);
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
