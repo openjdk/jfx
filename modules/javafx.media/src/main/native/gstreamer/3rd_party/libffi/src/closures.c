@@ -198,7 +198,7 @@ ffi_trampoline_table_alloc (void)
   /* Allocate two pages -- a config page and a placeholder page */
   config_page = 0x0;
   kt = vm_allocate (mach_task_self (), &config_page, PAGE_MAX_SIZE * 2,
-		    VM_FLAGS_ANYWHERE);
+            VM_FLAGS_ANYWHERE);
   if (kt != KERN_SUCCESS)
     return NULL;
 
@@ -210,8 +210,8 @@ ffi_trampoline_table_alloc (void)
   trampoline_page_template &= ~1UL;
 #endif
   kt = vm_remap (mach_task_self (), &trampoline_page, PAGE_MAX_SIZE, 0x0,
-		 VM_FLAGS_OVERWRITE, mach_task_self (), trampoline_page_template,
-		 FALSE, &cur_prot, &max_prot, VM_INHERIT_SHARE);
+         VM_FLAGS_OVERWRITE, mach_task_self (), trampoline_page_template,
+         FALSE, &cur_prot, &max_prot, VM_INHERIT_SHARE);
   if (kt != KERN_SUCCESS)
     {
       vm_deallocate (mach_task_self (), config_page, PAGE_MAX_SIZE * 2);
@@ -232,10 +232,10 @@ ffi_trampoline_table_alloc (void)
     {
       ffi_trampoline_table_entry *entry = &table->free_list_pool[i];
       entry->trampoline =
-	(void *) (table->trampoline_page + (i * FFI_TRAMPOLINE_SIZE));
+    (void *) (table->trampoline_page + (i * FFI_TRAMPOLINE_SIZE));
 
       if (i < table->free_count - 1)
-	entry->next = &table->free_list_pool[i + 1];
+    entry->next = &table->free_list_pool[i + 1];
     }
 
   table->free_list = table->free_list_pool;
@@ -277,16 +277,16 @@ ffi_closure_alloc (size_t size, void **code)
     {
       table = ffi_trampoline_table_alloc ();
       if (table == NULL)
-	{
-	  pthread_mutex_unlock (&ffi_trampoline_lock);
-	  free (closure);
-	  return NULL;
-	}
+    {
+      pthread_mutex_unlock (&ffi_trampoline_lock);
+      free (closure);
+      return NULL;
+    }
 
       /* Insert the new table at the top of the list */
       table->next = ffi_trampoline_tables;
       if (table->next != NULL)
-	table->next->prev = table;
+    table->next->prev = table;
 
       ffi_trampoline_tables = table;
     }
@@ -336,7 +336,7 @@ ffi_closure_free (void *ptr)
       table->prev = NULL;
       table->next = ffi_trampoline_tables;
       if (ffi_trampoline_tables != NULL)
-	ffi_trampoline_tables->prev = table;
+    ffi_trampoline_tables->prev = table;
 
       ffi_trampoline_tables = table;
     }

@@ -92,12 +92,12 @@ void ffi_prep_types (ffi_abi abi);
 
 /* Used internally, but overridden by some architectures */
 ffi_status ffi_prep_cif_core(ffi_cif *cif,
-			     ffi_abi abi,
-			     unsigned int isvariadic,
-			     unsigned int nfixedargs,
-			     unsigned int ntotalargs,
-			     ffi_type *rtype,
-			     ffi_type **atypes);
+                 ffi_abi abi,
+                 unsigned int isvariadic,
+                 unsigned int nfixedargs,
+                 unsigned int ntotalargs,
+                 ffi_type *rtype,
+                 ffi_type **atypes);
 
 /* Translate a data pointer to a code pointer.  Needed for closures on
    some targets.  */

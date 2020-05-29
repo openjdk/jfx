@@ -249,7 +249,7 @@ typedef struct {
 typedef union {
   ffi_sarg  sint;
   ffi_arg   uint;
-  float	    flt;
+  float     flt;
   char      data[FFI_SIZEOF_ARG];
   void*     ptr;
 } ffi_raw;
@@ -258,11 +258,11 @@ typedef union {
 /* This is a special case for mips64/n32 ABI (and perhaps others) where
    sizeof(void *) is 4 and FFI_SIZEOF_ARG is 8.  */
 typedef union {
-  signed int	sint;
-  unsigned int	uint;
-  float		flt;
-  char		data[FFI_SIZEOF_JAVA_RAW];
-  void*		ptr;
+  signed int    sint;
+  unsigned int  uint;
+  float     flt;
+  char      data[FFI_SIZEOF_JAVA_RAW];
+  void*     ptr;
 } ffi_java_raw;
 #else
 typedef ffi_raw ffi_java_raw;
@@ -288,7 +288,7 @@ FFI_API
 void ffi_java_raw_call (ffi_cif *cif,
             void (*fn)(void),
             void *rvalue,
-			ffi_java_raw *avalue) __attribute__((deprecated));
+            ffi_java_raw *avalue) __attribute__((deprecated));
 #endif
 
 FFI_API
@@ -334,7 +334,7 @@ FFI_API ffi_status
 ffi_prep_closure (ffi_closure*,
           ffi_cif *,
           void (*fun)(ffi_cif*,void*,void**,void*),
-		  void *user_data)
+          void *user_data)
 #if defined(__GNUC__) && (((__GNUC__ * 100) + __GNUC_MINOR__) >= 405)
   __attribute__((deprecated ("use ffi_prep_closure_loc instead")))
 #elif defined(__GNUC__) && __GNUC__ >= 3
@@ -421,14 +421,14 @@ FFI_API ffi_status
 ffi_prep_java_raw_closure (ffi_java_raw_closure*,
                    ffi_cif *cif,
                    void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
-		           void *user_data) __attribute__((deprecated));
+                   void *user_data) __attribute__((deprecated));
 
 FFI_API ffi_status
 ffi_prep_java_raw_closure_loc (ffi_java_raw_closure*,
                    ffi_cif *cif,
                    void (*fun)(ffi_cif*,void*,ffi_java_raw*,void*),
                    void *user_data,
-			       void *codeloc) __attribute__((deprecated));
+                   void *codeloc) __attribute__((deprecated));
 #endif
 
 #endif /* FFI_CLOSURES */
@@ -442,10 +442,10 @@ typedef struct {
 } ffi_go_closure;
 
 FFI_API ffi_status ffi_prep_go_closure (ffi_go_closure*, ffi_cif *,
-				void (*fun)(ffi_cif*,void*,void**,void*));
+                void (*fun)(ffi_cif*,void*,void**,void*));
 
 FFI_API void ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
-		  void **avalue, void *closure);
+          void **avalue, void *closure);
 
 #endif /* FFI_GO_CLOSURES */
 
@@ -474,7 +474,7 @@ void ffi_call(ffi_cif *cif,
 
 FFI_API
 ffi_status ffi_get_struct_offsets (ffi_abi abi, ffi_type *struct_type,
-				   size_t *offsets);
+                   size_t *offsets);
 
 /* Useful for eliminating compiler warnings.  */
 #define FFI_FN(f) ((void (*)(void))f)

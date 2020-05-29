@@ -52,7 +52,7 @@ static ffi_status initialize_aggregate(ffi_type *arg, size_t *offsets)
   while ((*ptr) != NULL)
     {
       if (UNLIKELY(((*ptr)->size == 0)
-		    && (initialize_aggregate((*ptr), NULL) != FFI_OK)))
+            && (initialize_aggregate((*ptr), NULL) != FFI_OK)))
     return FFI_BAD_TYPEDEF;
 
       /* Perform a sanity check on the argument type */
@@ -60,7 +60,7 @@ static ffi_status initialize_aggregate(ffi_type *arg, size_t *offsets)
 
       arg->size = FFI_ALIGN(arg->size, (*ptr)->alignment);
       if (offsets)
-	*offsets++ = arg->size;
+    *offsets++ = arg->size;
       arg->size += (*ptr)->size;
 
       arg->alignment = (arg->alignment > (*ptr)->alignment) ?
@@ -170,7 +170,7 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
 
       /* Initialize any uninitialized aggregate type definitions */
       if (((*ptr)->size == 0)
-	  && (initialize_aggregate((*ptr), NULL) != FFI_OK))
+      && (initialize_aggregate((*ptr), NULL) != FFI_OK))
     return FFI_BAD_TYPEDEF;
 
 #ifndef FFI_TARGET_HAS_COMPLEX_TYPE
@@ -185,7 +185,7 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
     {
       /* Add any padding if necessary */
       if (((*ptr)->alignment - 1) & bytes)
-	    bytes = (unsigned)FFI_ALIGN(bytes, (*ptr)->alignment);
+        bytes = (unsigned)FFI_ALIGN(bytes, (*ptr)->alignment);
 
 #ifdef TILE
       if (bytes < 10 * FFI_SIZEOF_ARG &&
@@ -201,7 +201,7 @@ ffi_status FFI_HIDDEN ffi_prep_cif_core(ffi_cif *cif, ffi_abi abi,
         bytes = 6*4;
 #endif
 
-	  bytes += (unsigned int)STACK_ARG_SIZE((*ptr)->size);
+      bytes += (unsigned int)STACK_ARG_SIZE((*ptr)->size);
     }
 #endif
     }

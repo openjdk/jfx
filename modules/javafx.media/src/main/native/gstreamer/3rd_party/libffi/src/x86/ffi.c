@@ -119,57 +119,57 @@ ffi_prep_cif_machdep(ffi_cif *cif)
 #ifndef X86
       /* ??? This should be a different ABI rather than an ifdef.  */
       if (cif->rtype->size == 1)
-	flags = X86_RET_STRUCT_1B;
+    flags = X86_RET_STRUCT_1B;
       else if (cif->rtype->size == 2)
-	flags = X86_RET_STRUCT_2B;
+    flags = X86_RET_STRUCT_2B;
       else if (cif->rtype->size == 4)
-	flags = X86_RET_INT32;
+    flags = X86_RET_INT32;
       else if (cif->rtype->size == 8)
-	flags = X86_RET_INT64;
+    flags = X86_RET_INT64;
       else
 #endif
-	{
-	do_struct:
-	  switch (cabi)
-	    {
-	    case FFI_THISCALL:
-	    case FFI_FASTCALL:
-	    case FFI_STDCALL:
-	    case FFI_MS_CDECL:
-	      flags = X86_RET_STRUCTARG;
+    {
+    do_struct:
+      switch (cabi)
+        {
+        case FFI_THISCALL:
+        case FFI_FASTCALL:
+        case FFI_STDCALL:
+        case FFI_MS_CDECL:
+          flags = X86_RET_STRUCTARG;
               break;
             default:
-	      flags = X86_RET_STRUCTPOP;
-	      break;
+          flags = X86_RET_STRUCTPOP;
+          break;
             }
-	  /* Allocate space for return value pointer.  */
-	  bytes += FFI_ALIGN (sizeof(void*), FFI_SIZEOF_ARG);
+      /* Allocate space for return value pointer.  */
+      bytes += FFI_ALIGN (sizeof(void*), FFI_SIZEOF_ARG);
         }
       break;
     case FFI_TYPE_COMPLEX:
       switch (cif->rtype->elements[0]->type)
         {
-	case FFI_TYPE_DOUBLE:
-	case FFI_TYPE_LONGDOUBLE:
-	case FFI_TYPE_SINT64:
-	case FFI_TYPE_UINT64:
-	  goto do_struct;
-	case FFI_TYPE_FLOAT:
-	case FFI_TYPE_INT:
-	case FFI_TYPE_SINT32:
-	case FFI_TYPE_UINT32:
-	  flags = X86_RET_INT64;
-	  break;
-	case FFI_TYPE_SINT16:
-	case FFI_TYPE_UINT16:
-	  flags = X86_RET_INT32;
-	  break;
-	case FFI_TYPE_SINT8:
-	case FFI_TYPE_UINT8:
-	  flags = X86_RET_STRUCT_2B;
-	  break;
-	default:
-	  return FFI_BAD_TYPEDEF;
+    case FFI_TYPE_DOUBLE:
+    case FFI_TYPE_LONGDOUBLE:
+    case FFI_TYPE_SINT64:
+    case FFI_TYPE_UINT64:
+      goto do_struct;
+    case FFI_TYPE_FLOAT:
+    case FFI_TYPE_INT:
+    case FFI_TYPE_SINT32:
+    case FFI_TYPE_UINT32:
+      flags = X86_RET_INT64;
+      break;
+    case FFI_TYPE_SINT16:
+    case FFI_TYPE_UINT16:
+      flags = X86_RET_INT32;
+      break;
+    case FFI_TYPE_SINT8:
+    case FFI_TYPE_UINT8:
+      flags = X86_RET_STRUCT_2B;
+      break;
+    default:
+      return FFI_BAD_TYPEDEF;
         }
       break;
     default:
@@ -216,19 +216,19 @@ extend_basic_type(void *arg, int type)
 
 struct call_frame
 {
-  void *ebp;		/* 0 */
-  void *retaddr;	/* 4 */
-  void (*fn)(void);	/* 8 */
-  int flags;		/* 12 */
-  void *rvalue;		/* 16 */
-  unsigned regs[3];	/* 20-28 */
+  void *ebp;        /* 0 */
+  void *retaddr;    /* 4 */
+  void (*fn)(void); /* 8 */
+  int flags;        /* 12 */
+  void *rvalue;     /* 16 */
+  unsigned regs[3]; /* 20-28 */
 };
 
 struct abi_params
 {
-  int dir;		/* parameter growth direction */
-  int static_chain;	/* the static chain register used by gcc */
-  int nregs;		/* number of register parameters */
+  int dir;      /* parameter growth direction */
+  int static_chain; /* the static chain register used by gcc */
+  int nregs;        /* number of register parameters */
   int regs[3];
 };
 
@@ -257,7 +257,7 @@ extern void FFI_DECLARE_FASTCALL ffi_call_i386(struct call_frame *, char *) FFI_
 
 static void
 ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
-	      void **avalue, void *closure)
+          void **avalue, void *closure)
         {
   size_t rsize, bytes;
   struct call_frame *frame;
@@ -276,18 +276,18 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
         {
       switch (flags)
         {
-	case X86_RET_FLOAT:
-	case X86_RET_DOUBLE:
-	case X86_RET_LDOUBLE:
-	case X86_RET_STRUCTPOP:
-	case X86_RET_STRUCTARG:
-	  /* The float cases need to pop the 387 stack.
-	     The struct cases need to pass a valid pointer to the callee.  */
-	  rsize = cif->rtype->size;
+    case X86_RET_FLOAT:
+    case X86_RET_DOUBLE:
+    case X86_RET_LDOUBLE:
+    case X86_RET_STRUCTPOP:
+    case X86_RET_STRUCTARG:
+      /* The float cases need to pop the 387 stack.
+         The struct cases need to pass a valid pointer to the callee.  */
+      rsize = cif->rtype->size;
       break;
     default:
-	  /* We can pretend that the callee returns nothing.  */
-	  flags = X86_RET_VOID;
+      /* We can pretend that the callee returns nothing.  */
+      flags = X86_RET_VOID;
       break;
     }
     }
@@ -310,10 +310,10 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
     case X86_RET_STRUCTARG:
       /* The pointer is passed as the first argument.  */
       if (pabi->nregs > 0)
-	{
-	  frame->regs[pabi->regs[0]] = (unsigned)rvalue;
-	  narg_reg = 1;
-	  break;
+    {
+      frame->regs[pabi->regs[0]] = (unsigned)rvalue;
+      narg_reg = 1;
+      break;
 }
       /* fallthru */
     case X86_RET_STRUCTPOP:
@@ -332,59 +332,59 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
 
       if (z <= FFI_SIZEOF_ARG && t != FFI_TYPE_STRUCT)
 {
-	  ffi_arg val = extend_basic_type (valp, t);
+      ffi_arg val = extend_basic_type (valp, t);
 
-	  if (t != FFI_TYPE_FLOAT && narg_reg < pabi->nregs)
-	    frame->regs[pabi->regs[narg_reg++]] = val;
-	  else if (dir < 0)
+      if (t != FFI_TYPE_FLOAT && narg_reg < pabi->nregs)
+        frame->regs[pabi->regs[narg_reg++]] = val;
+      else if (dir < 0)
     {
-	      argp -= 4;
-	      *(ffi_arg *)argp = val;
+          argp -= 4;
+          *(ffi_arg *)argp = val;
     }
-	  else
+      else
     {
-	      *(ffi_arg *)argp = val;
-	      argp += 4;
+          *(ffi_arg *)argp = val;
+          argp += 4;
     }
-	}
+    }
   else
-	{
-	  size_t za = FFI_ALIGN (z, FFI_SIZEOF_ARG);
-	  size_t align = FFI_SIZEOF_ARG;
-
-	  /* Issue 434: For thiscall and fastcall, if the paramter passed
-	     as 64-bit integer or struct, all following integer paramters
-	     will be passed on stack.  */
-	  if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
-	      && (t == FFI_TYPE_SINT64
-		  || t == FFI_TYPE_UINT64
-		  || t == FFI_TYPE_STRUCT))
-	    narg_reg = 2;
-
-	  /* Alignment rules for arguments are quite complex.  Vectors and
-	     structures with 16 byte alignment get it.  Note that long double
-	     on Darwin does have 16 byte alignment, and does not get this
-	     alignment if passed directly; a structure with a long double
-	     inside, however, would get 16 byte alignment.  Since libffi does
-	     not support vectors, we need non concern ourselves with other
-	     cases.  */
-	  if (t == FFI_TYPE_STRUCT && ty->alignment >= 16)
-	    align = 16;
-
-	  if (dir < 0)
     {
-	      /* ??? These reverse argument ABIs are probably too old
-		 to have cared about alignment.  Someone should check.  */
-	      argp -= za;
-	      memcpy (argp, valp, z);
+      size_t za = FFI_ALIGN (z, FFI_SIZEOF_ARG);
+      size_t align = FFI_SIZEOF_ARG;
+
+      /* Issue 434: For thiscall and fastcall, if the paramter passed
+         as 64-bit integer or struct, all following integer paramters
+         will be passed on stack.  */
+      if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
+          && (t == FFI_TYPE_SINT64
+          || t == FFI_TYPE_UINT64
+          || t == FFI_TYPE_STRUCT))
+        narg_reg = 2;
+
+      /* Alignment rules for arguments are quite complex.  Vectors and
+         structures with 16 byte alignment get it.  Note that long double
+         on Darwin does have 16 byte alignment, and does not get this
+         alignment if passed directly; a structure with a long double
+         inside, however, would get 16 byte alignment.  Since libffi does
+         not support vectors, we need non concern ourselves with other
+         cases.  */
+      if (t == FFI_TYPE_STRUCT && ty->alignment >= 16)
+        align = 16;
+
+      if (dir < 0)
+    {
+          /* ??? These reverse argument ABIs are probably too old
+         to have cared about alignment.  Someone should check.  */
+          argp -= za;
+          memcpy (argp, valp, z);
     }
-	  else
-	    {
-	      argp = (char *)FFI_ALIGN (argp, align);
-	      memcpy (argp, valp, z);
-	      argp += za;
+      else
+        {
+          argp = (char *)FFI_ALIGN (argp, align);
+          memcpy (argp, valp, z);
+          argp += za;
 }
-	}
+    }
     }
   FFI_ASSERT (dir > 0 || argp == stack);
 
@@ -399,7 +399,7 @@ ffi_call (ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
 
 void
 ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
-	     void **avalue, void *closure)
+         void **avalue, void *closure)
 {
   ffi_call_int (cif, fn, rvalue, avalue, closure);
 }
@@ -412,11 +412,11 @@ void FFI_HIDDEN ffi_closure_REGISTER(void);
 
 struct closure_frame
 {
-  unsigned rettemp[4];				/* 0 */
-  unsigned regs[3];				/* 16-24 */
-  ffi_cif *cif;					/* 28 */
-  void (*fun)(ffi_cif*,void*,void**,void*);	/* 32 */
-  void *user_data;				/* 36 */
+  unsigned rettemp[4];              /* 0 */
+  unsigned regs[3];             /* 16-24 */
+  ffi_cif *cif;                 /* 28 */
+  void (*fun)(ffi_cif*,void*,void**,void*); /* 32 */
+  void *user_data;              /* 36 */
 };
 
 int FFI_HIDDEN FFI_DECLARE_FASTCALL
@@ -443,10 +443,10 @@ ffi_closure_inner (struct closure_frame *frame, char *stack)
     case X86_RET_STRUCTARG:
       if (pabi->nregs > 0)
         {
-	  rvalue = (void *)frame->regs[pabi->regs[0]];
-	  narg_reg = 1;
-	  frame->rettemp[0] = (unsigned)rvalue;
-	  break;
+      rvalue = (void *)frame->regs[pabi->regs[0]];
+      narg_reg = 1;
+      frame->rettemp[0] = (unsigned)rvalue;
+      break;
         }
       /* fallthru */
     case X86_RET_STRUCTPOP:
@@ -469,49 +469,49 @@ ffi_closure_inner (struct closure_frame *frame, char *stack)
 
       if (z <= FFI_SIZEOF_ARG && t != FFI_TYPE_STRUCT)
     {
-	  if (t != FFI_TYPE_FLOAT && narg_reg < pabi->nregs)
-	    valp = &frame->regs[pabi->regs[narg_reg++]];
-	  else if (dir < 0)
+      if (t != FFI_TYPE_FLOAT && narg_reg < pabi->nregs)
+        valp = &frame->regs[pabi->regs[narg_reg++]];
+      else if (dir < 0)
       {
-	      argp -= 4;
-	      valp = argp;
+          argp -= 4;
+          valp = argp;
       }
-	  else
-	    {
-	      valp = argp;
-	      argp += 4;
+      else
+        {
+          valp = argp;
+          argp += 4;
     }
-	}
+    }
       else
     {
-	  size_t za = FFI_ALIGN (z, FFI_SIZEOF_ARG);
-	  size_t align = FFI_SIZEOF_ARG;
+      size_t za = FFI_ALIGN (z, FFI_SIZEOF_ARG);
+      size_t align = FFI_SIZEOF_ARG;
 
-	  /* See the comment in ffi_call_int.  */
-	  if (t == FFI_TYPE_STRUCT && ty->alignment >= 16)
-	    align = 16;
+      /* See the comment in ffi_call_int.  */
+      if (t == FFI_TYPE_STRUCT && ty->alignment >= 16)
+        align = 16;
 
-	  /* Issue 434: For thiscall and fastcall, if the paramter passed
-	     as 64-bit integer or struct, all following integer paramters
-	     will be passed on stack.  */
-	  if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
-	      && (t == FFI_TYPE_SINT64
-		  || t == FFI_TYPE_UINT64
-		  || t == FFI_TYPE_STRUCT))
-	    narg_reg = 2;
+      /* Issue 434: For thiscall and fastcall, if the paramter passed
+         as 64-bit integer or struct, all following integer paramters
+         will be passed on stack.  */
+      if ((cabi == FFI_THISCALL || cabi == FFI_FASTCALL)
+          && (t == FFI_TYPE_SINT64
+          || t == FFI_TYPE_UINT64
+          || t == FFI_TYPE_STRUCT))
+        narg_reg = 2;
 
-	  if (dir < 0)
+      if (dir < 0)
         {
-	      /* ??? These reverse argument ABIs are probably too old
-		 to have cared about alignment.  Someone should check.  */
-	      argp -= za;
-	      valp = argp;
+          /* ??? These reverse argument ABIs are probably too old
+         to have cared about alignment.  Someone should check.  */
+          argp -= za;
+          valp = argp;
         }
       else
         {
-	      argp = (char *)FFI_ALIGN (argp, align);
-	      valp = argp;
-	      argp += za;
+          argp = (char *)FFI_ALIGN (argp, align);
+          valp = argp;
+          argp += za;
         }
         }
 
@@ -578,7 +578,7 @@ void FFI_HIDDEN ffi_go_closure_STDCALL(void);
 
 ffi_status
 ffi_prep_go_closure (ffi_go_closure* closure, ffi_cif* cif,
-		     void (*fun)(ffi_cif*,void*,void**,void*))
+             void (*fun)(ffi_cif*,void*,void**,void*))
     {
   void (*dest)(void);
 
@@ -635,7 +635,7 @@ ffi_prep_raw_closure_loc (ffi_raw_closure *closure,
     {
       case FFI_TYPE_STRUCT:
       case FFI_TYPE_LONGDOUBLE:
-	return FFI_BAD_TYPEDEF;
+    return FFI_BAD_TYPEDEF;
     }
 
   switch (cif->abi)
@@ -683,21 +683,21 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *avalue)
   if (rvalue == NULL)
     {
       switch (flags)
-	{
-	case X86_RET_FLOAT:
-	case X86_RET_DOUBLE:
-	case X86_RET_LDOUBLE:
-	case X86_RET_STRUCTPOP:
-	case X86_RET_STRUCTARG:
-	  /* The float cases need to pop the 387 stack.
-	     The struct cases need to pass a valid pointer to the callee.  */
-	  rsize = cif->rtype->size;
-	  break;
-	default:
-	  /* We can pretend that the callee returns nothing.  */
-	  flags = X86_RET_VOID;
-	  break;
-	}
+    {
+    case X86_RET_FLOAT:
+    case X86_RET_DOUBLE:
+    case X86_RET_LDOUBLE:
+    case X86_RET_STRUCTPOP:
+    case X86_RET_STRUCTARG:
+      /* The float cases need to pop the 387 stack.
+         The struct cases need to pass a valid pointer to the callee.  */
+      rsize = cif->rtype->size;
+      break;
+    default:
+      /* We can pretend that the callee returns nothing.  */
+      flags = X86_RET_VOID;
+      break;
+    }
     }
 
   bytes = STACK_ALIGN (cif->bytes);
@@ -717,10 +717,10 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *avalue)
     case X86_RET_STRUCTARG:
       /* The pointer is passed as the first argument.  */
       if (pabi->nregs > 0)
-	{
-	  frame->regs[pabi->regs[0]] = (unsigned)rvalue;
-	  narg_reg = 1;
-	  break;
+    {
+      frame->regs[pabi->regs[0]] = (unsigned)rvalue;
+      narg_reg = 1;
+      break;
 }
       /* fallthru */
     case X86_RET_STRUCTPOP:
@@ -739,15 +739,15 @@ ffi_raw_call(ffi_cif *cif, void (*fn)(void), void *rvalue, ffi_raw *avalue)
 
       if (z <= FFI_SIZEOF_ARG && t != FFI_TYPE_STRUCT && t != FFI_TYPE_FLOAT)
     {
-	  ffi_arg val = extend_basic_type (avalue, t);
-	  frame->regs[pabi->regs[narg_reg++]] = val;
-	  z = FFI_SIZEOF_ARG;
+      ffi_arg val = extend_basic_type (avalue, t);
+      frame->regs[pabi->regs[narg_reg++]] = val;
+      z = FFI_SIZEOF_ARG;
     }
   else
     {
-	  memcpy (argp, avalue, z);
-	  z = FFI_ALIGN (z, FFI_SIZEOF_ARG);
-	  argp += z;
+      memcpy (argp, avalue, z);
+      z = FFI_ALIGN (z, FFI_SIZEOF_ARG);
+      argp += z;
     }
       avalue += z;
       bytes -= z;
