@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@
 
 #define NPException    "java/lang/NullPointerException"
 #define AIOOBException "java/lang/ArrayIndexOutOfBoundsException"
+#define OOMError       "java/lang/OutOfMemoryError"
 #define IError         "java/lang/InternalError"
 
 #define CheckNPE(env, a)                                \
@@ -71,11 +72,25 @@ static void Throw(JNIEnv *env, char *throw_class_name, char *detail) {
     }
 }
 
+static char * errorToString(jint errorCode) {
+    switch (errorCode) {
+        case ERROR_NONE:
+            return NULL;
+        case ERROR_OOM:
+            return "Out of Memory";
+        case ERROR_AIOOBE:
+            return "[PathConsumer";
+        default:
+            return "Unknown error";
+    }
+}
+
 static char * feedConsumer
     (JNIEnv *env, PathConsumer *consumer,
      jfloatArray coordsArray, jint coordSize,
      jbyteArray commandsArray, jint numCommands)
 {
+    jint status = ERROR_NONE;
     char *failure = NULL;
     jfloat *coords;
 
@@ -94,8 +109,11 @@ static char * feedConsumer
                         if (coordoff + 2 > coordSize) {
                             failure = "[not enough coordinates for moveTo";
                         } else {
-                            consumer->moveTo(consumer,
+                            status = consumer->moveTo(consumer,
                                              coords[coordoff+0], coords[coordoff+1]);
+                            if (status != ERROR_NONE) {
+                                failure = errorToString(status);
+                            }
                             coordoff += 2;
                         }
                         break;
@@ -103,8 +121,11 @@ static char * feedConsumer
                         if (coordoff + 2 > coordSize) {
                             failure = "[not enough coordinates for lineTo";
                         } else {
-                            consumer->lineTo(consumer,
+                            status = consumer->lineTo(consumer,
                                              coords[coordoff+0], coords[coordoff+1]);
+                            if (status != ERROR_NONE) {
+                                failure = errorToString(status);
+                            }
                             coordoff += 2;
                         }
                         break;
@@ -112,9 +133,12 @@ static char * feedConsumer
                         if (coordoff + 4 > coordSize) {
                             failure = "[not enough coordinates for quadTo";
                         } else {
-                            consumer->quadTo(consumer,
+                            status = consumer->quadTo(consumer,
                                              coords[coordoff+0], coords[coordoff+1],
                                              coords[coordoff+2], coords[coordoff+3]);
+                            if (status != ERROR_NONE) {
+                                failure = errorToString(status);
+                            }
                             coordoff += 4;
                         }
                         break;
@@ -122,15 +146,21 @@ static char * feedConsumer
                         if (coordoff + 6 > coordSize) {
                             failure = "[not enough coordinates for curveTo";
                         } else {
-                            consumer->curveTo(consumer,
+                            status = consumer->curveTo(consumer,
                                               coords[coordoff+0], coords[coordoff+1],
                                               coords[coordoff+2], coords[coordoff+3],
                                               coords[coordoff+4], coords[coordoff+5]);
+                            if (status != ERROR_NONE) {
+                                failure = errorToString(status);
+                            }
                             coordoff += 6;
                         }
                         break;
                     case SEG_CLOSE:
-                        consumer->closePath(consumer);
+                        status = consumer->closePath(consumer);
+                        if (status != ERROR_NONE) {
+                            failure = errorToString(status);
+                        }
                         break;
                     default:
                         failure = "unrecognized Path segment";
@@ -141,7 +171,10 @@ static char * feedConsumer
         }
         (*env)->ReleasePrimitiveArrayCritical(env, coordsArray, coords, JNI_ABORT);
         if (failure == NULL) {
-            consumer->pathDone(consumer);
+            status = consumer->pathDone(consumer);
+            if (status != ERROR_NONE) {
+                failure = errorToString(status);
+            }
         }
     }
     return failure;
@@ -211,7 +244,14 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceFillAlphas
             } else {
                 ac.alphas = (*env)->GetPrimitiveArrayCritical(env, maskArray, 0);
                 if (ac.alphas != NULL) {
-                    Renderer_produceAlphas(&renderer, &ac);
+                    jint status;
+                    if ((status = Renderer_produceAlphas(&renderer, &ac)) != ERROR_NONE) {
+                        if (status == ERROR_OOM) {
+                            Throw(env, OOMError, "produceAlphas");
+                        } else {
+                            Throw(env, AIOOBException, "produceAlphas");
+                        }
+                    }
                     (*env)->ReleasePrimitiveArrayCritical(env, maskArray, ac.alphas, 0);
                 }
             }
@@ -300,7 +340,14 @@ Java_com_sun_prism_impl_shape_NativePiscesRasterizer_produceStrokeAlphas
             } else {
                 ac.alphas = (*env)->GetPrimitiveArrayCritical(env, maskArray, 0);
                 if (ac.alphas != NULL) {
-                    Renderer_produceAlphas(&renderer, &ac);
+                    jint status;
+                    if ((status = Renderer_produceAlphas(&renderer, &ac)) != ERROR_NONE) {
+                        if (status == ERROR_OOM) {
+                            Throw(env, OOMError, "produceAlphas");
+                        } else {
+                            Throw(env, AIOOBException, "produceAlphas");
+                        }
+                    }
                     (*env)->ReleasePrimitiveArrayCritical(env, maskArray, ac.alphas, 0);
                 }
             }
