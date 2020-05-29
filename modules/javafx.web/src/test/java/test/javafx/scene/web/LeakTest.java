@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,9 +32,7 @@ import com.sun.webkit.WebPage;
 import java.io.File;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.concurrent.Worker.State;
@@ -50,7 +48,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 public class LeakTest extends TestBase {
 
@@ -82,37 +79,32 @@ public class LeakTest extends TestBase {
     }
 
     @Test public void testGarbageCollectability() throws InterruptedException {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8234540
+        final int count = 3;
+        Reference<?>[] willGC = new Reference[count];
 
-        final BlockingQueue<WeakReference<WebPage>> webPageRefQueue =
-                new LinkedBlockingQueue<WeakReference<WebPage>>();
         submit(() -> {
             WebView webView = new WebView();
-            WeakReference<WebView> webViewRef =
-                    new WeakReference<WebView>(webView);
-            WeakReference<WebEngine> webEngineRef =
-                    new WeakReference<WebEngine>(webView.getEngine());
-            webPageRefQueue.add(
-                    new WeakReference<WebPage>(
-                            WebEngineShim.getPage(webView.getEngine())));
-            webView = null;
-            System.gc();
-            assertNull("WebView has not been GCed", webViewRef.get());
-            assertNull("WebEngine has not been GCed", webEngineRef.get());
+            willGC[0] = new WeakReference<WebView>(webView);
+            willGC[1] = new WeakReference<WebEngine>(webView.getEngine());
+            willGC[2] = new WeakReference<WebPage>(WebEngineShim.getPage(webView.getEngine()));
         });
 
-        WeakReference<WebPage> webPageRef = webPageRefQueue.take();
-        long endTime = System.currentTimeMillis() + 5000;
-        while (true) {
+        Thread.sleep(SLEEP_TIME);
+
+        for (int i = 0; i < 5; i++) {
             System.gc();
-            if (webPageRef.get() == null) {
+            System.runFinalization();
+
+            if (isAllElementsNull(willGC)) {
                 break;
             }
-            if (System.currentTimeMillis() > endTime) {
-                fail("WebPage has not been GCed");
-            }
-            Thread.sleep(100);
+
+            Thread.sleep(SLEEP_TIME);
         }
+
+        assertNull("WebView has not been GCed", willGC[0].get());
+        assertNull("WebEngine has not been GCed", willGC[1].get());
+        assertNull("WebPage has not been GCed", willGC[2].get());
     }
 
     private static boolean isAllElementsNull(Reference<?>[] array) {
