@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,41 +51,41 @@ static PathDoneFunc     Stroker_pathDone;
 
 #define this (*((Stroker *) pStroker))
 
-static void drawJoin(PathConsumer *pStroker,
+static jint drawJoin(PathConsumer *pStroker,
                      jfloat pdx, jfloat pdy,
                      jfloat x0, jfloat y0,
                      jfloat dx, jfloat dy,
                      jfloat omx, jfloat omy,
                      jfloat mx, jfloat my);
 
-static void drawRoundJoin2(PathConsumer *pStroker,
+static jint drawRoundJoin2(PathConsumer *pStroker,
                            jfloat cx, jfloat cy,
                            jfloat omx, jfloat omy,
                            jfloat mx, jfloat my,
                            jboolean rev);
 
-static void drawBezApproxForArc(PathConsumer *pStroker,
+static jint drawBezApproxForArc(PathConsumer *pStroker,
                                 const jfloat cx, const jfloat cy,
                                 const jfloat omx, const jfloat omy,
                                 const jfloat mx, const jfloat my,
                                 jboolean rev);
 
-static void emitMoveTo(PathConsumer *pStroker, const jfloat x0, const jfloat y0);
+static jint emitMoveTo(PathConsumer *pStroker, const jfloat x0, const jfloat y0);
 
-static void emitLineTo(PathConsumer *pStroker, const jfloat x1, const jfloat y1,
+static jint emitLineTo(PathConsumer *pStroker, const jfloat x1, const jfloat y1,
                        const jboolean rev);
 
-static void emitCurveTo(PathConsumer *pStroker,
+static jint emitCurveTo(PathConsumer *pStroker,
                         const jfloat x0, const jfloat y0,
                         const jfloat x1, const jfloat y1,
                         const jfloat x2, const jfloat y2,
                         const jfloat x3, const jfloat y3, const jboolean rev);
 
-static void emitClose(PathConsumer *pStroker);
+static jint emitClose(PathConsumer *pStroker);
 
-static void emitReverse(PathConsumer *pStroker);
+static jint emitReverse(PathConsumer *pStroker);
 
-static void finish(PathConsumer *pStroker);
+static jint finish(PathConsumer *pStroker);
 
 extern void PolyStack_init(PolyStack *pStack);
 
@@ -93,19 +93,19 @@ extern void PolyStack_destroy(PolyStack *pStack);
 
 extern jboolean PolyStack_isEmpty(PolyStack *pStack);
 
-extern void PolyStack_pushLine(PolyStack *pStack,
+extern jint PolyStack_pushLine(PolyStack *pStack,
                                jfloat x, jfloat y);
 
-extern void PolyStack_pushCubic(PolyStack *pStack,
+extern jint PolyStack_pushCubic(PolyStack *pStack,
                                 jfloat x0, jfloat y0,
                                 jfloat x1, jfloat y1,
                                 jfloat x2, jfloat y2);
 
-extern void PolyStack_pushQuad(PolyStack *pStack,
+extern jint PolyStack_pushQuad(PolyStack *pStack,
                                jfloat x0, jfloat y0,
                                jfloat x1, jfloat y1);
 
-extern void PolyStack_pop(PolyStack *pStack, PathConsumer *io);
+extern jint PolyStack_pop(PolyStack *pStack, PathConsumer *io);
 
     /**
      * Constructs a <code>Stroker</code>.
@@ -213,7 +213,7 @@ static jboolean isCW(const jfloat dx1, const jfloat dy1,
 // it to floating point, so that's why the divisions by 2^16 are there.
 #define ROUND_JOIN_THRESHOLD   (1000/65536.0f)
 
-static void drawRoundJoin(PathConsumer *pStroker,
+static jint drawRoundJoin(PathConsumer *pStroker,
                           jfloat x, jfloat y,
                           jfloat omx, jfloat omy, jfloat mx, jfloat my,
                           jboolean rev,
@@ -222,14 +222,14 @@ static void drawRoundJoin(PathConsumer *pStroker,
     jfloat domx, domy, len;
 
     if ((omx == 0 && omy == 0) || (mx == 0 && my == 0)) {
-        return;
+        return ERROR_NONE;
     }
 
     domx = omx - mx;
     domy = omy - my;
     len = domx*domx + domy*domy;
     if (len < threshold) {
-        return;
+        return ERROR_NONE;
     }
 
     if (rev) {
@@ -238,15 +238,17 @@ static void drawRoundJoin(PathConsumer *pStroker,
         mx = -mx;
         my = -my;
     }
-    drawRoundJoin2(pStroker, x, y, omx, omy, mx, my, rev);
+    return drawRoundJoin2(pStroker, x, y, omx, omy, mx, my, rev);
 }
 
-static void drawRoundJoin2(PathConsumer *pStroker,
+static jint drawRoundJoin2(PathConsumer *pStroker,
                            jfloat cx, jfloat cy,
                            jfloat omx, jfloat omy,
                            jfloat mx, jfloat my,
                            jboolean rev)
 {
+    jint status = ERROR_NONE;
+
     // The sign of the dot product of mx,my and omx,omy is equal to the
     // the sign of the cosine of ext
     // (ext is the angle between omx,omy and mx,my).
@@ -258,7 +260,7 @@ static void drawRoundJoin2(PathConsumer *pStroker,
 
     switch (numCurves) {
     case 1:
-        drawBezApproxForArc(pStroker, cx, cy, omx, omy, mx, my, rev);
+        status = drawBezApproxForArc(pStroker, cx, cy, omx, omy, mx, my, rev);
         break;
     case 2:
         {
@@ -288,15 +290,19 @@ static void drawRoundJoin2(PathConsumer *pStroker,
                 mmx = -mmx;
                 mmy = -mmy;
             }
-            drawBezApproxForArc(pStroker, cx, cy, omx, omy, mmx, mmy, rev);
-            drawBezApproxForArc(pStroker, cx, cy, mmx, mmy, mx, my, rev);
+            status = drawBezApproxForArc(pStroker, cx, cy, omx, omy, mmx, mmy, rev);
+            if (status != ERROR_NONE) {
+                return status;
+            }
+            status = drawBezApproxForArc(pStroker, cx, cy, mmx, mmy, mx, my, rev);
             break;
         }
     }
+    return status;
 }
 
 // the input arc defined by omx,omy and mx,my must span <= 90 degrees.
-static void drawBezApproxForArc(PathConsumer *pStroker,
+static jint drawBezApproxForArc(PathConsumer *pStroker,
                                 const jfloat cx, const jfloat cy,
                                 const jfloat omx, const jfloat omy,
                                 const jfloat mx, const jfloat my,
@@ -326,28 +332,33 @@ static void drawBezApproxForArc(PathConsumer *pStroker,
     x3 = x4 + cv * my;
     y3 = y4 - cv * mx;
 
-    emitCurveTo(pStroker, x1, y1, x2, y2, x3, y3, x4, y4, rev);
+    return emitCurveTo(pStroker, x1, y1, x2, y2, x3, y3, x4, y4, rev);
 }
 
-static void drawRoundCap(PathConsumer *pStroker, jfloat cx, jfloat cy, jfloat mx, jfloat my) {
+static jint drawRoundCap(PathConsumer *pStroker, jfloat cx, jfloat cy, jfloat mx, jfloat my) {
+    jint status = ERROR_NONE;
     const jfloat C = 0.5522847498307933f;
     // the first and second arguments of the following two calls
     // are really will be ignored by emitCurveTo (because of the false),
     // but we put them in anyway, as opposed to just giving it 4 zeroes,
     // because it's just 4 additions and it's not good to rely on this
     // sort of assumption (right now it's true, but that may change).
-    emitCurveTo(pStroker,
+    status = emitCurveTo(pStroker,
                 cx+mx,      cy+my,
                 cx+mx-C*my, cy+my+C*mx,
                 cx-my+C*mx, cy+mx+C*my,
                 cx-my,      cy+mx,
                 JNI_FALSE);
-    emitCurveTo(pStroker,
+    if (status != ERROR_NONE) {
+        return status;
+    }
+    status = emitCurveTo(pStroker,
                 cx-my,      cy+mx,
                 cx-my-C*mx, cy+mx-C*my,
                 cx-mx-C*my, cy-my+C*mx,
                 cx-mx,      cy-my,
                 JNI_FALSE);
+    return status;
 }
 
 // Return the intersection point of the lines (x0, y0) -> (x1, y1)
@@ -415,7 +426,7 @@ static void safecomputeMiter(const jfloat x0, const jfloat y0,
     m[off] = y0 + t*y10;
 }
 
-static void drawMiter(PathConsumer *pStroker,
+static jint drawMiter(PathConsumer *pStroker,
                       const jfloat pdx, const jfloat pdy,
                       const jfloat x0, const jfloat y0,
                       const jfloat dx, const jfloat dy,
@@ -427,7 +438,7 @@ static void drawMiter(PathConsumer *pStroker,
     if ((mx == omx && my == omy) ||
         (pdx == 0 && pdy == 0) ||
         (dx == 0 && dy == 0)) {
-        return;
+        return ERROR_NONE;
     }
 
     if (rev) {
@@ -444,22 +455,29 @@ static void drawMiter(PathConsumer *pStroker,
     lenSq = (this.miter[0]-x0)*(this.miter[0]-x0) + (this.miter[1]-y0)*(this.miter[1]-y0);
 
     if (lenSq < this.miterLimitSq) {
-        emitLineTo(pStroker, this.miter[0], this.miter[1], rev);
+        return emitLineTo(pStroker, this.miter[0], this.miter[1], rev);
     }
+    return ERROR_NONE;
 }
 
-static void Stroker_moveTo(PathConsumer *pStroker, jfloat x0, jfloat y0) {
+static jint Stroker_moveTo(PathConsumer *pStroker, jfloat x0, jfloat y0) {
+    jint status = ERROR_NONE;
     if (this.prev == DRAWING_OP_TO) {
-        finish(pStroker);
+        status = finish(pStroker);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
     this.sx0 = this.cx0 = x0;
     this.sy0 = this.cy0 = y0;
     this.cdx = this.sdx = 1;
     this.cdy = this.sdy = 0;
     this.prev = MOVE_TO;
+    return status;
 }
 
-static void Stroker_lineTo(PathConsumer *pStroker, jfloat x1, jfloat y1) {
+static jint Stroker_lineTo(PathConsumer *pStroker, jfloat x1, jfloat y1) {
+    jint status = ERROR_NONE;
     jfloat dx = x1 - this.cx0;
     jfloat dy = y1 - this.cy0;
     jfloat mx, my;
@@ -471,15 +489,30 @@ static void Stroker_lineTo(PathConsumer *pStroker, jfloat x1, jfloat y1) {
     mx = this.offset[0][0];
     my = this.offset[0][1];
 
-    drawJoin(pStroker,
+    status = drawJoin(pStroker,
              this.cdx, this.cdy, this.cx0, this.cy0,
              dx, dy, this.cmx, this.cmy, mx, my);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
-    emitLineTo(pStroker, this.cx0 + mx, this.cy0 + my, JNI_FALSE);
-    emitLineTo(pStroker, x1 + mx, y1 + my, JNI_FALSE);
+    status = emitLineTo(pStroker, this.cx0 + mx, this.cy0 + my, JNI_FALSE);
+    if (status != ERROR_NONE) {
+        return status;
+    }
+    status = emitLineTo(pStroker, x1 + mx, y1 + my, JNI_FALSE);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
-    emitLineTo(pStroker, this.cx0 - mx, this.cy0 - my, JNI_TRUE);
-    emitLineTo(pStroker, x1 - mx, y1 - my, JNI_TRUE);
+    status = emitLineTo(pStroker, this.cx0 - mx, this.cy0 - my, JNI_TRUE);
+    if (status != ERROR_NONE) {
+        return status;
+    }
+    status = emitLineTo(pStroker, x1 - mx, y1 - my, JNI_TRUE);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
     this.cmx = mx;
     this.cmy = my;
@@ -488,129 +521,187 @@ static void Stroker_lineTo(PathConsumer *pStroker, jfloat x1, jfloat y1) {
     this.cx0 = x1;
     this.cy0 = y1;
     this.prev = DRAWING_OP_TO;
+    return status;
 }
 
-static void Stroker_closePath(PathConsumer *pStroker) {
+static jint Stroker_closePath(PathConsumer *pStroker) {
+    jint status = ERROR_NONE;
     if (this.prev != DRAWING_OP_TO) {
         if (this.prev == CLOSE) {
-            return;
+            return status;
         }
-        emitMoveTo(pStroker, this.cx0, this.cy0 - this.lineWidth2);
+        status = emitMoveTo(pStroker, this.cx0, this.cy0 - this.lineWidth2);
+        if (status != ERROR_NONE) {
+            return status;
+        }
         this.cmx = this.smx = 0;
         this.cmy = this.smy = -this.lineWidth2;
         this.cdx = this.sdx = 1;
         this.cdy = this.sdy = 0;
-        finish(pStroker);
-        return;
+        return finish(pStroker);
     }
 
     if (this.cx0 != this.sx0 || this.cy0 != this.sy0) {
-        Stroker_lineTo(pStroker, this.sx0, this.sy0);
+        status = Stroker_lineTo(pStroker, this.sx0, this.sy0);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
 
-    drawJoin(pStroker,
+    status = drawJoin(pStroker,
              this.cdx, this.cdy, this.cx0, this.cy0,
              this.sdx, this.sdy, this.cmx, this.cmy,
              this.smx, this.smy);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
-    emitLineTo(pStroker, this.sx0 + this.smx, this.sy0 + this.smy, JNI_FALSE);
+    status = emitLineTo(pStroker, this.sx0 + this.smx, this.sy0 + this.smy, JNI_FALSE);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
-    emitMoveTo(pStroker, this.sx0 - this.smx, this.sy0 - this.smy);
-    emitReverse(pStroker);
+    status = emitMoveTo(pStroker, this.sx0 - this.smx, this.sy0 - this.smy);
+    if (status != ERROR_NONE) {
+        return status;
+    }
+    status = emitReverse(pStroker);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
     this.prev = CLOSE;
-    emitClose(pStroker);
+    return emitClose(pStroker);
 }
 
-static void emitReverse(PathConsumer *pStroker) {
+static jint emitReverse(PathConsumer *pStroker) {
+    jint status = ERROR_NONE;
     while (!PolyStack_isEmpty(&this.reverse)) {
-        PolyStack_pop(&this.reverse, this.out);
+        status = PolyStack_pop(&this.reverse, this.out);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
+    return status;
 }
 
-static void Stroker_pathDone(PathConsumer *pStroker) {
+static jint Stroker_pathDone(PathConsumer *pStroker) {
+    jint status = ERROR_NONE;
     if (this.prev == DRAWING_OP_TO) {
-        finish(pStroker);
+        status = finish(pStroker);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
 
-    this.out->pathDone(this.out);
+    status = this.out->pathDone(this.out);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     // this shouldn't matter since this object won't be used
     // after the call to this method.
     this.prev = CLOSE;
+    return status;
 }
 
-static void finish(PathConsumer *pStroker) {
+static jint finish(PathConsumer *pStroker) {
+    jint status = ERROR_NONE;
     if (this.capStyle == CAP_ROUND) {
-        drawRoundCap(pStroker, this.cx0, this.cy0, this.cmx, this.cmy);
+        status = drawRoundCap(pStroker, this.cx0, this.cy0, this.cmx, this.cmy);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     } else if (this.capStyle == CAP_SQUARE) {
-        emitLineTo(pStroker, this.cx0 - this.cmy + this.cmx, this.cy0 + this.cmx + this.cmy, JNI_FALSE);
-        emitLineTo(pStroker, this.cx0 - this.cmy - this.cmx, this.cy0 + this.cmx - this.cmy, JNI_FALSE);
+        status = emitLineTo(pStroker, this.cx0 - this.cmy + this.cmx, this.cy0 + this.cmx + this.cmy, JNI_FALSE);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+        status = emitLineTo(pStroker, this.cx0 - this.cmy - this.cmx, this.cy0 + this.cmx - this.cmy, JNI_FALSE);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
 
-    emitReverse(pStroker);
-
-    if (this.capStyle == CAP_ROUND) {
-        drawRoundCap(pStroker, this.sx0, this.sy0, -this.smx, -this.smy);
-    } else if (this.capStyle == CAP_SQUARE) {
-        emitLineTo(pStroker, this.sx0 + this.smy - this.smx, this.sy0 - this.smx - this.smy, JNI_FALSE);
-        emitLineTo(pStroker, this.sx0 + this.smy + this.smx, this.sy0 - this.smx + this.smy, JNI_FALSE);
+    status = emitReverse(pStroker);
+    if (status != ERROR_NONE) {
+        return status;
     }
 
-    emitClose(pStroker);
+    if (this.capStyle == CAP_ROUND) {
+        status = drawRoundCap(pStroker, this.sx0, this.sy0, -this.smx, -this.smy);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+    } else if (this.capStyle == CAP_SQUARE) {
+        status = emitLineTo(pStroker, this.sx0 + this.smy - this.smx, this.sy0 - this.smx - this.smy, JNI_FALSE);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+        status = emitLineTo(pStroker, this.sx0 + this.smy + this.smx, this.sy0 - this.smx + this.smy, JNI_FALSE);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+    }
+
+    return emitClose(pStroker);
 }
 
-static void emitMoveTo(PathConsumer *pStroker, const jfloat x0, const jfloat y0) {
-    this.out->moveTo(this.out, x0, y0);
+static jint emitMoveTo(PathConsumer *pStroker, const jfloat x0, const jfloat y0) {
+    return this.out->moveTo(this.out, x0, y0);
 }
 
-static void emitLineTo(PathConsumer *pStroker, const jfloat x1, const jfloat y1,
+static jint emitLineTo(PathConsumer *pStroker, const jfloat x1, const jfloat y1,
                        const jboolean rev)
 {
     if (rev) {
-        PolyStack_pushLine(&this.reverse, x1, y1);
+        return PolyStack_pushLine(&this.reverse, x1, y1);
     } else {
-        this.out->lineTo(this.out, x1, y1);
+        return this.out->lineTo(this.out, x1, y1);
     }
 }
 
-static void emitQuadTo(PathConsumer *pStroker,
+static jint emitQuadTo(PathConsumer *pStroker,
                        const jfloat x0, const jfloat y0,
                        const jfloat x1, const jfloat y1,
                        const jfloat x2, const jfloat y2, const jboolean rev)
 {
     if (rev) {
-        PolyStack_pushQuad(&this.reverse, x0, y0, x1, y1);
+        return PolyStack_pushQuad(&this.reverse, x0, y0, x1, y1);
     } else {
-        this.out->quadTo(this.out, x1, y1, x2, y2);
+        return this.out->quadTo(this.out, x1, y1, x2, y2);
     }
 }
 
-static void emitCurveTo(PathConsumer *pStroker,
+static jint emitCurveTo(PathConsumer *pStroker,
                         const jfloat x0, const jfloat y0,
                         const jfloat x1, const jfloat y1,
                         const jfloat x2, const jfloat y2,
                         const jfloat x3, const jfloat y3, const jboolean rev)
 {
     if (rev) {
-        PolyStack_pushCubic(&this.reverse, x0, y0, x1, y1, x2, y2);
+        return PolyStack_pushCubic(&this.reverse, x0, y0, x1, y1, x2, y2);
     } else {
-        this.out->curveTo(this.out, x1, y1, x2, y2, x3, y3);
+        return this.out->curveTo(this.out, x1, y1, x2, y2, x3, y3);
     }
 }
 
-static void emitClose(PathConsumer *pStroker) {
-    this.out->closePath(this.out);
+static jint emitClose(PathConsumer *pStroker) {
+    return this.out->closePath(this.out);
 }
 
-static void drawJoin(PathConsumer *pStroker,
+static jint drawJoin(PathConsumer *pStroker,
                      jfloat pdx, jfloat pdy,
                      jfloat x0, jfloat y0,
                      jfloat dx, jfloat dy,
                      jfloat omx, jfloat omy,
                      jfloat mx, jfloat my)
 {
+    jint status = ERROR_NONE;
     if (this.prev != DRAWING_OP_TO) {
-        emitMoveTo(pStroker, x0 + mx, y0 + my);
+        status = emitMoveTo(pStroker, x0 + mx, y0 + my);
+        if (status != ERROR_NONE) {
+            return status;
+        }
         this.sdx = dx;
         this.sdy = dy;
         this.smx = mx;
@@ -618,17 +709,27 @@ static void drawJoin(PathConsumer *pStroker,
     } else {
         jboolean cw = isCW(pdx, pdy, dx, dy);
         if (this.joinStyle == JOIN_MITER) {
-            drawMiter(pStroker, pdx, pdy, x0, y0, dx, dy, omx, omy, mx, my, cw);
+            status = drawMiter(pStroker, pdx, pdy, x0, y0, dx, dy, omx, omy, mx, my, cw);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         } else if (this.joinStyle == JOIN_ROUND) {
-            drawRoundJoin(pStroker,
+            status = drawRoundJoin(pStroker,
                           x0, y0,
                           omx, omy,
                           mx, my, cw,
                           ROUND_JOIN_THRESHOLD);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         }
-        emitLineTo(pStroker, x0, y0, !cw);
+        status = emitLineTo(pStroker, x0, y0, !cw);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
     this.prev = DRAWING_OP_TO;
+    return status;
 }
 
 static jboolean withinULP(const jfloat x1, const jfloat y1,
@@ -1066,11 +1167,12 @@ static jint findSubdivPoints(PathConsumer *pStroker,
     return ret;
 }
 
-static void Stroker_curveTo(PathConsumer *pStroker,
+static jint Stroker_curveTo(PathConsumer *pStroker,
                            jfloat x1, jfloat y1,
                            jfloat x2, jfloat y2,
                            jfloat x3, jfloat y3)
 {
+    jint status = ERROR_NONE;
     jfloat xf, yf, dxs, dys, dxf, dyf;
     jfloat mx, my;
     jint nSplits;
@@ -1113,8 +1215,7 @@ static void Stroker_curveTo(PathConsumer *pStroker,
     }
     if (dxs == 0.0f && dys == 0.0f) {
         // this happens iff the "curve" is just a point
-        Stroker_lineTo(pStroker, middle[0], middle[1]);
-        return;
+        return Stroker_lineTo(pStroker, middle[0], middle[1]);
     }
 
     // if these vectors are too small, normalize them, to avoid future
@@ -1133,10 +1234,13 @@ static void Stroker_curveTo(PathConsumer *pStroker,
     computeOffset(dxs, dys, this.lineWidth2, this.offset[0]);
     mx = this.offset[0][0];
     my = this.offset[0][1];
-    drawJoin(pStroker,
+    status = drawJoin(pStroker,
              this.cdx, this.cdy, this.cx0, this.cy0,
              dxs, dys, this.cmx, this.cmy,
              mx, my);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
     nSplits = findSubdivPoints(pStroker, middle, subdivTs, 8, this.lineWidth2);
     prevT = 0.0f;
@@ -1153,18 +1257,36 @@ static void Stroker_curveTo(PathConsumer *pStroker,
     for (i = 0; i <= nSplits; i++) {
         kind = computeOffsetCubic(pStroker, middle, i*6, lp, rp);
         if (kind != 0) {
-            emitLineTo(pStroker, lp[0], lp[1], JNI_FALSE);
+            status = emitLineTo(pStroker, lp[0], lp[1], JNI_FALSE);
+            if (status != ERROR_NONE) {
+                return status;
+            }
             switch(kind) {
             case 8:
-                emitCurveTo(pStroker, lp[0], lp[1], lp[2], lp[3], lp[4], lp[5], lp[6], lp[7], JNI_FALSE);
-                emitCurveTo(pStroker, rp[0], rp[1], rp[2], rp[3], rp[4], rp[5], rp[6], rp[7], JNI_TRUE);
+                status = emitCurveTo(pStroker, lp[0], lp[1], lp[2], lp[3], lp[4], lp[5], lp[6], lp[7], JNI_FALSE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
+                status = emitCurveTo(pStroker, rp[0], rp[1], rp[2], rp[3], rp[4], rp[5], rp[6], rp[7], JNI_TRUE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
                 break;
             case 4:
-                emitLineTo(pStroker, lp[2], lp[3], JNI_FALSE);
-                emitLineTo(pStroker, rp[0], rp[1], JNI_TRUE);
+                status = emitLineTo(pStroker, lp[2], lp[3], JNI_FALSE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
+                status = emitLineTo(pStroker, rp[0], rp[1], JNI_TRUE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
                 break;
             }
-            emitLineTo(pStroker, rp[kind - 2], rp[kind - 1], JNI_TRUE);
+            status = emitLineTo(pStroker, rp[kind - 2], rp[kind - 1], JNI_TRUE);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         }
     }
 
@@ -1175,12 +1297,14 @@ static void Stroker_curveTo(PathConsumer *pStroker,
     this.cx0 = xf;
     this.cy0 = yf;
     this.prev = DRAWING_OP_TO;
+    return status;
 }
 
-static void Stroker_quadTo(PathConsumer *pStroker,
+static jint Stroker_quadTo(PathConsumer *pStroker,
                           jfloat x1, jfloat y1,
                           jfloat x2, jfloat y2)
 {
+    jint status = ERROR_NONE;
     jfloat xf, yf, dxs, dys, dxf, dyf;
     jfloat mx, my;
     jint nSplits, i, kind;
@@ -1205,8 +1329,7 @@ static void Stroker_quadTo(PathConsumer *pStroker,
     }
     if (dxs == 0.0f && dys == 0.0f) {
         // this happens iff the "curve" is just a point
-        Stroker_lineTo(pStroker, middle[0], middle[1]);
-        return;
+        return Stroker_lineTo(pStroker, middle[0], middle[1]);
     }
     // if these vectors are too small, normalize them, to avoid future
     // precision problems.
@@ -1224,10 +1347,13 @@ static void Stroker_quadTo(PathConsumer *pStroker,
     computeOffset(dxs, dys, this.lineWidth2, this.offset[0]);
     mx = this.offset[0][0];
     my = this.offset[0][1];
-    drawJoin(pStroker,
+    status = drawJoin(pStroker,
              this.cdx, this.cdy, this.cx0, this.cy0,
              dxs, dys, this.cmx, this.cmy,
              mx, my);
+    if (status != ERROR_NONE) {
+        return status;
+    }
 
     nSplits = findSubdivPoints(pStroker, middle, subdivTs, 6, this.lineWidth2);
     prevt = 0.0f;
@@ -1244,18 +1370,36 @@ static void Stroker_quadTo(PathConsumer *pStroker,
     for (i = 0; i <= nSplits; i++) {
         kind = computeOffsetQuad(pStroker, middle, i*4, lp, rp);
         if (kind != 0) {
-            emitLineTo(pStroker, lp[0], lp[1], JNI_FALSE);
+            status = emitLineTo(pStroker, lp[0], lp[1], JNI_FALSE);
+            if (status != ERROR_NONE) {
+                return status;
+            }
             switch(kind) {
             case 6:
-                emitQuadTo(pStroker, lp[0], lp[1], lp[2], lp[3], lp[4], lp[5], JNI_FALSE);
-                emitQuadTo(pStroker, rp[0], rp[1], rp[2], rp[3], rp[4], rp[5], JNI_TRUE);
+                status = emitQuadTo(pStroker, lp[0], lp[1], lp[2], lp[3], lp[4], lp[5], JNI_FALSE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
+                status = emitQuadTo(pStroker, rp[0], rp[1], rp[2], rp[3], rp[4], rp[5], JNI_TRUE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
                 break;
             case 4:
-                emitLineTo(pStroker, lp[2], lp[3], JNI_FALSE);
-                emitLineTo(pStroker, rp[0], rp[1], JNI_TRUE);
+                status = emitLineTo(pStroker, lp[2], lp[3], JNI_FALSE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
+                status = emitLineTo(pStroker, rp[0], rp[1], JNI_TRUE);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
                 break;
             }
-            emitLineTo(pStroker, rp[kind - 2], rp[kind - 1], JNI_TRUE);
+            status = emitLineTo(pStroker, rp[kind - 2], rp[kind - 1], JNI_TRUE);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         }
     }
 
@@ -1266,6 +1410,7 @@ static void Stroker_quadTo(PathConsumer *pStroker,
     this.cx0 = xf;
     this.cy0 = yf;
     this.prev = DRAWING_OP_TO;
+    return status;
 }
 
 // a stack of polynomial curves where each curve shares endpoints with
@@ -1305,10 +1450,13 @@ jboolean PolyStack_isEmpty(PolyStack *pStack) {
     return this.numCurves == 0;
 }
 
-static void ensureSpace(PolyStack *pStack, jint n) {
+static jint ensureSpace(PolyStack *pStack, jint n) {
     if (this.end + n >= this.curvesSIZE) {
         jint newSize = (this.end + n) * 2;
         jfloat *newCurves = new_float(newSize);
+        if (!newCurves) {
+            return ERROR_OOM;
+        }
         System_arraycopy(this.curves, 0, newCurves, 0, this.end);
         free(this.curves);
         this.curves = newCurves;
@@ -1317,19 +1465,26 @@ static void ensureSpace(PolyStack *pStack, jint n) {
     if (this.numCurves >= this.curveTypesSIZE) {
         jint newSize = this.numCurves * 2;
         jint *newTypes = new_int(newSize);
+        if (!newTypes) {
+            return ERROR_OOM;
+        }
         System_arraycopy(this.curveTypes, 0, newTypes, 0, this.numCurves);
         free(this.curveTypes);
         this.curveTypes = newTypes;
         this.curveTypesSIZE = newSize;
     }
+    return ERROR_NONE;
 }
 
-void PolyStack_pushCubic(PolyStack *pStack,
+jint PolyStack_pushCubic(PolyStack *pStack,
                          jfloat x0, jfloat y0,
                          jfloat x1, jfloat y1,
                          jfloat x2, jfloat y2)
 {
-    ensureSpace(pStack, 6);
+    jint status = ensureSpace(pStack, 6);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.curveTypes[this.numCurves++] = 8;
     // assert(x0 == lastX && y0 == lastY)
 
@@ -1337,26 +1492,35 @@ void PolyStack_pushCubic(PolyStack *pStack,
     this.curves[this.end++] = x2;    this.curves[this.end++] = y2;
     this.curves[this.end++] = x1;    this.curves[this.end++] = y1;
     this.curves[this.end++] = x0;    this.curves[this.end++] = y0;
+    return status;
 }
 
-void PolyStack_pushQuad(PolyStack *pStack,
+jint PolyStack_pushQuad(PolyStack *pStack,
                         jfloat x0, jfloat y0,
                         jfloat x1, jfloat y1)
 {
-    ensureSpace(pStack, 4);
+    jint status = ensureSpace(pStack, 4);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.curveTypes[this.numCurves++] = 6;
     // assert(x0 == lastX && y0 == lastY)
     this.curves[this.end++] = x1;    this.curves[this.end++] = y1;
     this.curves[this.end++] = x0;    this.curves[this.end++] = y0;
+    return status;
 }
 
-void PolyStack_pushLine(PolyStack *pStack,
+jint PolyStack_pushLine(PolyStack *pStack,
                         jfloat x, jfloat y)
 {
-    ensureSpace(pStack, 2);
+    jint status = ensureSpace(pStack, 2);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.curveTypes[this.numCurves++] = 4;
     // assert(x0 == lastX && y0 == lastY)
     this.curves[this.end++] = x;    this.curves[this.end++] = y;
+    return status;
 }
 
 //@SuppressWarnings("unused")
@@ -1370,7 +1534,8 @@ jint PolyStack_pop(PolyStack *pStack, jfloat pts[]) {
 }
 */
 
-void PolyStack_pop(PolyStack *pStack, PathConsumer *io) {
+jint PolyStack_pop(PolyStack *pStack, PathConsumer *io) {
+    jint status = ERROR_NONE;
     jint type;
 
     this.numCurves--;
@@ -1378,19 +1543,20 @@ void PolyStack_pop(PolyStack *pStack, PathConsumer *io) {
     this.end -= (type - 2);
     switch(type) {
     case 8:
-        io->curveTo(io,
+        status = io->curveTo(io,
                     this.curves[this.end+0], this.curves[this.end+1],
                     this.curves[this.end+2], this.curves[this.end+3],
                     this.curves[this.end+4], this.curves[this.end+5]);
         break;
     case 6:
-        io->quadTo(io,
+        status = io->quadTo(io,
                    this.curves[this.end+0], this.curves[this.end+1],
                    this.curves[this.end+2], this.curves[this.end+3]);
-            break;
+        break;
     case 4:
-        io->lineTo(io, this.curves[this.end], this.curves[this.end+1]);
+        status = io->lineTo(io, this.curves[this.end], this.curves[this.end+1]);
     }
+    return status;
 }
 
 //@Override

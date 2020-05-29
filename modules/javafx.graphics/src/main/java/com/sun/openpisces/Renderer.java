@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -139,11 +139,13 @@ public final class Renderer implements PathConsumer2D {
     private static final int CURX = 1;
     // NEXT and OR are meant to be indeces into "int" fields, but arrays must
     // be homogenous, so every field is a float. However floats can represent
-    // exactly up to 26 bit ints, so we're ok.
+    // exactly up to 24 bit ints, so we're ok as long as we check for overflow.
     private static final int OR   = 2;
     private static final int SLOPE = 3;
     private static final int NEXT = 4;
     private static final int SIZEOF_EDGE = 5;
+
+    private static final int MAX_EDGE_IDX = 1 << 24;
 
     private int sampleRowMin;
     private int sampleRowMax;
@@ -162,6 +164,9 @@ public final class Renderer implements PathConsumer2D {
     private void addEdgeToBucket(final int eptr, final int bucket) {
         // we could implement this in terms of insertEdge, but this is a special
         // case, so we optimize a bit.
+        if (edgeBuckets[bucket*2] >= MAX_EDGE_IDX) {
+            throw new ArrayIndexOutOfBoundsException(edgeBuckets[bucket*2]);
+        }
         edges[eptr+NEXT] = edgeBuckets[bucket*2];
         edgeBuckets[bucket*2] = eptr + 1;
         edgeBuckets[bucket*2 + 1] += 2;
@@ -294,6 +299,12 @@ public final class Renderer implements PathConsumer2D {
             if (x1 > edgeMaxX) { edgeMaxX = x1; }
         }
 
+        final int bucketIdx = firstCrossing - boundsMinY;
+        final int nextCurrEdge = edgeBuckets[bucketIdx*2];
+        if (nextCurrEdge >= MAX_EDGE_IDX) {
+            throw new ArrayIndexOutOfBoundsException(nextCurrEdge);
+        }
+
         final int ptr = numEdges * SIZEOF_EDGE;
         edges = Helpers.widenArray(edges, ptr, SIZEOF_EDGE);
         numEdges++;
@@ -301,7 +312,6 @@ public final class Renderer implements PathConsumer2D {
         edges[ptr+CURX] = x1 + (firstCrossing + 0.5f - y1) * slope;
         edges[ptr+SLOPE] = slope;
         edges[ptr+YMAX] = lastCrossing;
-        final int bucketIdx = firstCrossing - boundsMinY;
         addEdgeToBucket(ptr, bucketIdx);
         edgeBuckets[(lastCrossing - boundsMinY)*2 + 1] |= 1;
     }
