@@ -438,6 +438,11 @@ DEFAULT_MMAP_THRESHOLD       default: 256K
 
 */
 
+#if defined __linux__ && !defined _GNU_SOURCE
+/* mremap() on Linux requires this via sys/mman.h */
+#define _GNU_SOURCE 1
+#endif
+
 #ifndef WIN32
 #ifdef _WIN32
 #define WIN32 1
@@ -1954,11 +1959,11 @@ struct malloc_segment {
 
 # define get_segment_flags(S)   (IS_MMAPPED_BIT)
 # define set_segment_flags(S,v) \
-  (((v) != IS_MMAPPED_BIT) ? (ABORT, (v)) :             \
-   (((S)->exec_offset =                         \
-     mmap_exec_offset((S)->base, (S)->size)),               \
-    (mmap_exec_offset((S)->base + (S)->exec_offset, (S)->size) !=   \
-     (S)->exec_offset) ? (ABORT, (v)) :                 \
+  (((v) != IS_MMAPPED_BIT) ? (ABORT, (v)) :				\
+   (((S)->exec_offset =							\
+     mmap_exec_offset((S)->base, (S)->size)),				\
+    (mmap_exec_offset((S)->base + (S)->exec_offset, (S)->size) !=	\
+     (S)->exec_offset) ? (ABORT, (v)) :					\
    (mmap_exec_offset((S)->base, (S)->size) = 0), (v)))
 
   /* We use an offset here, instead of a pointer, because then, when
@@ -2291,7 +2296,7 @@ static size_t traverse_and_check(mstate m);
 #define treebin_at(M,i)     (&((M)->treebins[i]))
 
 /* assign tree index for size S to variable I */
-#if defined(__GNUC__) && defined(i386)
+#if defined(__GNUC__) && defined(__i386__)
 #define compute_tree_index(S, I)\
 {\
   size_t X = S >> TREEBIN_SHIFT;\
@@ -2356,7 +2361,7 @@ static size_t traverse_and_check(mstate m);
 
 /* index corresponding to given bit */
 
-#if defined(__GNUC__) && defined(i386)
+#if defined(__GNUC__) && defined(__i386__)
 #define compute_bit2idx(X, I)\
 {\
   unsigned int J;\

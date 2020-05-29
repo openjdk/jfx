@@ -29,11 +29,11 @@
    DEALINGS IN THE SOFTWARE.
    ----------------------------------------------------------------------- */
 
-/* This defines a Java- and 64-bit specific variant of the raw API. */
-/* It assumes that "raw" argument blocks look like Java stacks on a */
-/* 64-bit machine.  Arguments that can be stored in a single stack  */
-/* stack slots (longs, doubles) occupy 128 bits, but only the first */
-/* 64 bits are actually used.                       */
+/* This defines a Java- and 64-bit specific variant of the raw API.	*/
+/* It assumes that "raw" argument blocks look like Java stacks on a	*/
+/* 64-bit machine.  Arguments that can be stored in a single stack	*/
+/* stack slots (longs, doubles) occupy 128 bits, but only the first	*/
+/* 64 bits are actually used.						*/
 
 #include <ffi.h>
 #include <ffi_common.h>
@@ -58,7 +58,7 @@ ffi_java_raw_size (ffi_cif *cif)
       result += 2 * FFI_SIZEOF_JAVA_RAW;
       break;
     case FFI_TYPE_STRUCT:
-      /* No structure parameters in Java.   */
+	  /* No structure parameters in Java.	*/
       abort();
     case FFI_TYPE_COMPLEX:
       /* Not supported yet.  */
@@ -114,7 +114,7 @@ ffi_java_raw_to_ptrarray (ffi_cif *cif, ffi_java_raw *raw, void **args)
     default:
       *args = raw;
       raw +=
-        ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+	    FFI_ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
     }
     }
 
@@ -142,7 +142,7 @@ ffi_java_raw_to_ptrarray (ffi_cif *cif, ffi_java_raw *raw, void **args)
 #else /* FFI_SIZEOF_JAVA_RAW != 8 */
     *args = (void*) raw;
     raw +=
-      ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+	  FFI_ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
 #endif /* FFI_SIZEOF_JAVA_RAW == 8 */
     }
 
@@ -230,11 +230,11 @@ ffi_java_ptrarray_to_raw (ffi_cif *cif, void **args, ffi_java_raw *raw)
 
     default:
 #if FFI_SIZEOF_JAVA_RAW == 8
-      FFI_ASSERT(0);    /* Should have covered all cases */
+	  FFI_ASSERT(0);	/* Should have covered all cases */
 #else
       memcpy ((void*) raw->data, (void*)*args, (*tp)->size);
       raw +=
-        ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
+	    FFI_ALIGN ((*tp)->size, sizeof(ffi_java_raw)) / sizeof(ffi_java_raw);
 #endif
     }
     }
@@ -319,7 +319,7 @@ void ffi_java_raw_call (ffi_cif *cif, void (*fn)(void), void *rvalue,
   ffi_java_rvalue_to_raw (cif, rvalue);
 }
 
-#if FFI_CLOSURES        /* base system provides closures */
+#if FFI_CLOSURES		/* base system provides closures */
 
 static void
 ffi_java_translate_args (ffi_cif *cif, void *rvalue,
