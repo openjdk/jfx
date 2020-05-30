@@ -107,8 +107,6 @@ public class SkinMemoryLeakTest {
         List<Class<? extends Control>> leakingClasses = List.of(
                 Accordion.class,
                 ButtonBar.class,
-                // @Ignore("8244657")
-                ChoiceBox.class,
                 ColorPicker.class,
                 ComboBox.class,
                 DatePicker.class,
@@ -132,7 +130,6 @@ public class SkinMemoryLeakTest {
                 TextArea.class,
                 // @Ignore("8240506")
                 TextField.class,
-                ToolBar.class,
                 TreeCell.class,
                 TreeTableRow.class,
                 TreeTableView.class,
