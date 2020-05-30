@@ -2289,4 +2289,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     ContextMenu test_getTabsMenu() {
         return tabHeaderArea.controlButtons.popup;
     }
+
+    void test_disableAnimations() {
+        closeTabAnimation.set(TabAnimation.NONE);
+        openTabAnimation.set(TabAnimation.NONE);
+    }
 }
