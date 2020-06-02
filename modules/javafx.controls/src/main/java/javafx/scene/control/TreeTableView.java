@@ -1805,7 +1805,7 @@ public class TreeTableView<S> extends Control {
     }
 
     boolean sortingInProgress;
-    protected boolean isSortingInProgress() {
+    boolean isSortingInProgress() {
         return sortingInProgress;
     }
 
