@@ -77,6 +77,17 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
         nonFixedColumnIndex = treeTableView == null || tableColumn == null ? -1 : treeTableView.getVisibleLeafIndex(tableColumn);
     }
 
+    // A call to 'treeTableView.getTreeItem(row)' may result in TreeModificationEvent being triggered.
+    // This causes issue by triggering a new TreeModificationEvent while one TreeModificationEvent
+    // is being handled currently.
+    // This is kind of a copy constructor with different value for row.
+    TreeTablePosition(@NamedArg("treeTableView") TreeTablePosition<S, T> pos, @NamedArg("row") int row) {
+        super(row, pos.getTableColumn());
+        this.controlRef = new WeakReference<>(pos.getTreeTableView());
+        this.treeItemRef = new WeakReference<>(pos.getTreeItem());
+        nonFixedColumnIndex = pos.getColumn();
+    }
+
 
 
     /***************************************************************************
