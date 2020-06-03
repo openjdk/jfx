@@ -1804,7 +1804,7 @@ public class TreeTableView<S> extends Control {
         return visibleLeafColumns.get(column);
     }
 
-    boolean sortingInProgress;
+    private boolean sortingInProgress;
     boolean isSortingInProgress() {
         return sortingInProgress;
     }
