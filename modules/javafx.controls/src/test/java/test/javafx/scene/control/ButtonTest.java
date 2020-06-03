@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.Skin;
 import org.junit.Before;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
@@ -204,10 +203,21 @@ public class ButtonTest {
         assertPseudoClassDoesNotExist(btn, "default");
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyDefaultButtonViaCSS() {
-//        btn.impl_cssSet("-fx-default-button", true);
+        // By default, 'btn' is not a default button
+        // Making it a default button via CSS should not succeed
+        btn.setStyle("-fx-default-button: true;");
+        btn.applyCss();
         assertFalse(btn.isDefaultButton());
+
+        // Set button to be a default button
+        btn.setDefaultButton(true);
+        assertTrue(btn.isDefaultButton());
+
+        // Making it a non-default button via CSS should not succeed
+        btn.setStyle("-fx-default-button: false;");
+        btn.applyCss();
+        assertTrue(btn.isDefaultButton());
     }
 
     @Test public void defaultButtonPropertyHasBeanReference() {
@@ -346,10 +356,21 @@ public class ButtonTest {
         tk.firePulse();
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyCancelButtonViaCSS() {
-//        btn.impl_cssSet("-fx-cancel-button", true);
+        // By default, 'btn' is not a cancel button
+        // Making it a cancel button via CSS should not succeed
+        btn.setStyle("-fx-cancel-button: true;");
+        btn.applyCss();
         assertFalse(btn.isCancelButton());
+
+        // Make button a cancel-button
+        btn.setCancelButton(true);
+        assertTrue(btn.isCancelButton());
+
+        // Making it a non-cancel button via CSS should not succeed
+        btn.setStyle("-fx-cancel-button: false;");
+        btn.applyCss();
+        assertTrue(btn.isCancelButton());
     }
 
     @Test public void cancelButtonPropertyHasBeanReference() {
@@ -410,7 +431,6 @@ public class ButtonTest {
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
         popupMenu.setOnShown(w -> {
-            System.out.println("popup shown");
             count++;
         });
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -787,6 +787,9 @@ public class PlatformImpl {
                 if (PlatformUtil.isAndroid()) {
                     uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/android.css");
                 }
+                if (PlatformUtil.isIOS()) {
+                    uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/ios.css");
+                }
             }
 
             if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
@@ -815,6 +818,9 @@ public class PlatformImpl {
             }
             if (PlatformUtil.isAndroid()) {
                 uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/android.css");
+            }
+            if (PlatformUtil.isIOS()) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/ios.css");
             }
 
             if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {

@@ -36,9 +36,7 @@ typedef HRESULT WINAPI FnDirect3DCreate9Ex(UINT SDKVersion, IDirect3D9Ex**);
 FnDirect3DCreate9 * pD3D9FactoryFunction = 0;
 FnDirect3DCreate9Ex * pD3D9FactoryExFunction = 0;
 
-extern jboolean checkAndClearException(JNIEnv *env);
-
-jboolean checkAndClearException(JNIEnv *env) {
+static jboolean checkAndClearException(JNIEnv *env) {
     if (!env->ExceptionCheck()) {
         return JNI_FALSE;
     }
@@ -77,6 +75,7 @@ IDirect3D9Ex * Direct3DCreate9Ex() {
     return SUCCEEDED(hr) ? pD3D : 0;
 }
 
+#ifndef STATIC_BUILD
 BOOL APIENTRY DllMain( HANDLE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved)
@@ -91,6 +90,7 @@ BOOL APIENTRY DllMain( HANDLE hModule,
     }
     return TRUE;
 }
+#endif // STATIC_BUILD
 
 struct ConfigJavaStaticClass : IConfig {
     JNIEnv *_env; jclass _psClass;
@@ -127,6 +127,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
         return false;
     }
 
+#ifdef STATIC_BUILD
+    loadD3DLibrary();
+#endif // STATIC_BUILD
+
     TraceLn(NWT_TRACE_INFO, "D3DPipeline_nInit");
     D3DPipelineManager *pMgr = D3DPipelineManager::CreateInstance(ConfigJavaStaticClass(env, psClass));
 
@@ -154,6 +158,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose(JNIEnv *pEnv,
     if (D3DPipelineManager::GetInstance()) {
         D3DPipelineManager::DeleteInstance();
     }
+
+#ifdef STATIC_BUILD
+    freeD3DLibrary();
+#endif // STATIC_BUILD
 }
 
 

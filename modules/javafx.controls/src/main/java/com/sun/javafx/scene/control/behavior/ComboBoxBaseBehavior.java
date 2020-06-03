@@ -26,6 +26,8 @@
 package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.control.inputmap.InputMap;
+
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
@@ -47,6 +49,7 @@ import static com.sun.javafx.scene.control.inputmap.InputMap.MouseMapping;
 public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     private final InputMap<ComboBoxBase<T>> inputMap;
+    private InvalidationListener focusListener = this::focusChanged;
 
     /***************************************************************************
      *                                                                         *
@@ -102,7 +105,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         enterReleased.setAutoConsume(false);
 
         // ComboBoxBase also cares about focus
-        comboBox.focusedProperty().addListener(this::focusChanged);
+        comboBox.focusedProperty().addListener(focusListener);
 
         // Only add this if we're on an embedded platform that supports 5-button navigation
         if (Utils.isTwoLevelFocus()) {
@@ -112,7 +115,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
 
     @Override public void dispose() {
         if (tlFocus != null) tlFocus.dispose();
-        getNode().focusedProperty().removeListener(this::focusChanged);
+        getNode().focusedProperty().removeListener(focusListener);
         super.dispose();
     }
 

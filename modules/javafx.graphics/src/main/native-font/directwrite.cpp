@@ -51,7 +51,7 @@ typedef HRESULT (WINAPI*D2D1CreateFactoryProc)(
   void **factory
 );
 
-jboolean checkAndClearException(JNIEnv* env)
+static jboolean checkAndClearException(JNIEnv* env)
 {
     jthrowable t = env->ExceptionOccurred();
     if (!t) {

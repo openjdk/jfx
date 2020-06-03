@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -324,6 +324,12 @@ window.setMember("app", javaApp);
  * Alternatively, a class is reflectively accessible if the module
  * {@link Module#isExported(String) exports} the containing package
  * unconditionally.
+ * </p>
+ *
+ * <p>
+ * Starting with JavaFX 14, <a href="https://tools.ietf.org/html/rfc7540">HTTP/2</a> support has been added to WebEngine.
+ * This is achieved by using {@link java.net.http.HttpClient} instead of {@link URLConnection}. HTTP/2 is activated
+ * by default when JavaFX 14 (or later) is used with JDK 12 (or later).
  * </p>
  *
  * <p><b>Threading</b></p>

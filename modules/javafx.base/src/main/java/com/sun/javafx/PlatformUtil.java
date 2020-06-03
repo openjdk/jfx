@@ -238,8 +238,7 @@ public class PlatformUtil {
             // Strip everything after the last "/" or "\" to get rid of the jar filename
             int lastIndexOfSlash = Math.max(
                     s.lastIndexOf('/'), s.lastIndexOf('\\'));
-            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath())
-                    .getParentFile();
+            return new File(new URL(s.substring(0, lastIndexOfSlash + 1)).getPath());
         } catch (MalformedURLException e) {
             return null;
         }

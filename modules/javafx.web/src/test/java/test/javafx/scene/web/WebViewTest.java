@@ -26,6 +26,7 @@
 package test.javafx.scene.web;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import java.io.File;
 import java.util.concurrent.FutureTask;
@@ -87,6 +88,30 @@ public class WebViewTest extends TestBase {
     private void setZoom(final WebView view, final float zoom) throws Exception {
         submit(() -> {
             view.setZoom(zoom);
+        });
+    }
+
+    /**
+     * @test
+     * @bug 8191758
+     * To make sure extra-heavy weights of the system font can be achieved
+     */
+    @Test public void testFontWeights() {
+        loadContent(
+            "<!DOCTYPE html><html><head></head>" +
+            "<body>" +
+            "   <div style=\"font: 19px system-ui\">" +
+            "       <div style=\"font-style: italic;\">" +
+            "           <span id=\"six\" style=\"font-weight: 600;\">Hello, World</span>" +
+            "           <span id=\"nine\" style=\"font-weight: 900;\">Hello, World</span>" +
+            "       </div>" +
+            "   </div>" +
+            "</body> </html>"
+            );
+        submit(() -> {
+            assertFalse("Font weight test failed ",
+                (Boolean) getEngine().executeScript(
+                "document.getElementById('six').offsetWidth == document.getElementById('nine').offsetWidth"));
         });
     }
 }
