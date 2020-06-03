@@ -676,8 +676,8 @@ public class JFXPanel extends JComponent {
             pixelsIm = null;
         } else {
             BufferedImage oldIm = pixelsIm;
-            int newPixelW = (int) Math.ceil(pWidth * newScaleFactorX);
-            int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
+            int newPixelW = (int) Math.round(pWidth * newScaleFactorX);
+            int newPixelH = (int) Math.round(pHeight * newScaleFactorY);
             pixelsIm = new BufferedImage(newPixelW, newPixelH,
                                          SwingFXUtils.getBestBufferedImageType(
                                              scenePeer.getPixelFormat(), null, false));
