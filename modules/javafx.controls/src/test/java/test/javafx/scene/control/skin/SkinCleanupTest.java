@@ -27,8 +27,10 @@ package test.javafx.scene.control.skin;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import static javafx.collections.FXCollections.*;
 import static javafx.scene.control.ControlShim.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
@@ -37,6 +39,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -51,6 +54,47 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+  //-------------- listView
+
+    @Test
+    public void testListViewAddItems() {
+        ListView<String> listView = new ListView<>();
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.getItems().add("addded");
+    }
+
+    @Test
+    public void testListViewRefresh() {
+        ListView<String> listView = new ListView<>();
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.refresh();
+    }
+
+    @Test
+    public void testListViewSetItems() {
+        ListView<String> listView = new ListView<>();
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.setItems(observableArrayList());
+    }
+
+//-------- choiceBox, toolBar
+
+    /**
+     * FIXME: Left-over from ChoiceBox fix.
+     * NPE on sequence setItems -> modify items after skin is replaced.
+     */
+    @Test @Ignore("8246202")
+    public void testChoiceBoxSetItems() {
+        ChoiceBox<String> box = new ChoiceBox<>();
+        installDefaultSkin(box);
+        replaceSkin(box);
+        box.setItems(observableArrayList("one"));
+        box.getItems().add("added");
+    }
 
     /**
      * NPE when adding items after skin is replaced
