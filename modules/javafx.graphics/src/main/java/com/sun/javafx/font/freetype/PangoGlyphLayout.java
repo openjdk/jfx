@@ -135,7 +135,8 @@ class PangoGlyphLayout extends GlyphLayout {
 
         /* Itemize */
         long start = OSPango.g_utf8_offset_to_pointer(str, run.getStart());
-        long end = OSPango.g_utf8_offset_to_pointer(str, run.getEnd());
+        long utflen = OSPango.g_utf8_strlen(str,-1);
+        long end = OSPango.g_utf8_offset_to_pointer(str, utflen);
         long runs = OSPango.pango_itemize(context, str, (int)(start - str), (int)(end - start), attrList, 0);
 
         if (runs != 0) {
