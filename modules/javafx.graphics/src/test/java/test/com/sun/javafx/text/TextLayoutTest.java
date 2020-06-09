@@ -35,6 +35,7 @@ import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.text.GlyphLayout;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -93,6 +94,11 @@ public class TextLayoutTest {
         for (int i = 0; i < runs.length; i++) {
             assertEquals("run " +i, complex[i], runs[i].isComplex());
         }
+    }
+
+    @Test public void utf16chars() {
+         GlyphLayout layout = GlyphLayout.getInstance();
+         assertNotNull(layout);
     }
 
     @SuppressWarnings("deprecation")
