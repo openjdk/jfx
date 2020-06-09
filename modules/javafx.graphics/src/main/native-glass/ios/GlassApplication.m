@@ -62,6 +62,7 @@ jmethodID mat_jViewNotifyResize = 0;
 jmethodID mat_jViewNotifyRepaint = 0;
 jmethodID mat_jViewNotifyKey = 0;
 jmethodID mat_jViewNotifyMouse = 0;
+jmethodID mat_jViewNotifyMenu = 0;
 jmethodID mat_jViewNotifyInputMethod = 0;
 jmethodID mat_jViewNotifyView = 0;
 
@@ -671,6 +672,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
     mat_jViewNotifyResize = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyResize", "(II)V");
     mat_jViewNotifyRepaint = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyRepaint", "(IIII)V");
     mat_jViewNotifyMouse = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyMouse", "(IIIIIIIZZ)V");
+    mat_jViewNotifyMenu = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyMenu", "(IIIIZ)V");
     mat_jViewNotifyInputMethod = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
     mat_jViewNotifyView = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyView", "(I)V");
     GLASS_CHECK_EXCEPTION(env);

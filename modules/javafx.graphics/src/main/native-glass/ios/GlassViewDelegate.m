@@ -375,6 +375,19 @@ static jint getTouchStateFromPhase(int phase)
 }
 
 
+- (void)handleLongPressGesture:(UILongPressGestureRecognizer*)sender {
+    if (sender.state == UIGestureRecognizerStateBegan) {
+        // Simulate right-click
+        CGPoint viewPoint = [sender locationInView:self.uiView.superview];
+        [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_ENTER button:com_sun_glass_events_MouseEvent_BUTTON_NONE];
+        [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_DOWN button:com_sun_glass_events_MouseEvent_BUTTON_RIGHT];
+    } else if (sender.state == UIGestureRecognizerStateEnded) {
+        // Prevent touch ended event
+        self.mouseTouch = nil;
+    }
+}
+
+
 - (id)initWithView:(UIScrollView*)view withJview:(jobject)jview
 {
     self = [super init];
@@ -422,6 +435,15 @@ static jint getTouchStateFromPhase(int phase)
         [panGestureRecognizer setCancelsTouchesInView:NO];
         [panGestureRecognizer setDelaysTouchesBegan:NO];
         [panGestureRecognizer setDelaysTouchesEnded:NO];
+        //LongPress
+        UILongPressGestureRecognizer *longPressGesture =
+            [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGesture:)];
+        [longPressGesture setCancelsTouchesInView:NO];
+        [longPressGesture setDelaysTouchesEnded:NO];
+        [longPressGesture setDelaysTouchesBegan:NO];
+        [self.uiView addGestureRecognizer:longPressGesture];
+        [longPressGesture setDelegate:ggDelegate];
+        [longPressGesture release];
     }
     return self;
 }
@@ -551,6 +573,13 @@ static jint getTouchStateFromPhase(int phase)
                            (jint)viewPoint.x, (jint)viewPoint.y, (jint)viewPoint.x, (jint)viewPoint.y,
                            modifiers, isPopupTrigger, isSynthesized);
     GLASS_CHECK_EXCEPTION(env);
+
+    if (isPopupTrigger) {
+        jboolean isKeyboardTrigger = JNI_FALSE;
+        (*env)->CallVoidMethod(env, self.jView, mat_jViewNotifyMenu,
+                               (jint)viewPoint.x, (jint)viewPoint.y, (jint)viewPoint.x, (jint)viewPoint.y, isKeyboardTrigger);
+        GLASS_CHECK_EXCEPTION(env);
+    }
 }
 
 
