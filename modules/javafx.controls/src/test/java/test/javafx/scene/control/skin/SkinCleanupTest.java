@@ -39,6 +39,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.Pane;
@@ -54,6 +55,31 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+// ------------------ ListCell
+
+    @Test
+    public void testListCellReplaceListViewWithNull() {
+        ListCell<Object> cell =  new ListCell<>();
+        ListView<Object> listView = new ListView<>();
+        cell.updateListView(listView);
+        installDefaultSkin(cell);
+        cell.updateListView(null);
+        listView.setFixedCellSize(100);
+    }
+
+   @Test
+   public void testListCellPrefHeightOnReplaceListView() {
+       ListCell<Object> cell =  new ListCell<>();
+       cell.updateListView(new ListView<>());
+       installDefaultSkin(cell);
+       ListView<Object> listView = new ListView<>();
+       listView.setFixedCellSize(100);
+       cell.updateListView(listView);
+       assertEquals("fixed cell set to value of new listView",
+               cell.getListView().getFixedCellSize(),
+               cell.prefHeight(-1), 1);
+   }
 
   //-------------- listView
 
