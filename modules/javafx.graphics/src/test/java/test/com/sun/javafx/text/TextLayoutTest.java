@@ -26,6 +26,7 @@
 package test.com.sun.javafx.text;
 
 import javafx.scene.text.Font;
+import com.sun.javafx.text.TextRun;
 
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.RectBounds;
@@ -36,6 +37,7 @@ import com.sun.javafx.scene.text.FontHelper;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.TextRun;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -96,9 +98,19 @@ public class TextLayoutTest {
         }
     }
 
+    @Ignore() // ignored since StubFontLoader used in tests return fonts with null resources
     @Test public void utf16chars() {
-         GlyphLayout layout = GlyphLayout.getInstance();
-         assertNotNull(layout);
+        GlyphLayout layout = GlyphLayout.getInstance();
+        assertNotNull(layout);
+        char[] text = new char[5];
+        text[0] = 0xD83D;
+        text[1] = 0xDC68;
+        text[2] = 0xD83C;
+        text[3] = 0xDFFE;
+        text[4] = 0x17FF;
+        TextRun run = new TextRun(0, 5, (byte)0, true, 0, null, 0, false);
+        PGFont font = (PGFont) FontHelper.getNativeFont(Font.getDefault());
+        layout.layout(run, font, null, text);
     }
 
     @SuppressWarnings("deprecation")
