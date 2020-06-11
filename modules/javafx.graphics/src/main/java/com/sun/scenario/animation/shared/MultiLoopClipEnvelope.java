@@ -36,6 +36,19 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
     protected boolean autoReverse;
 
     /**
+     * true if the animations was started in the positive direction, false if negative.
+     * This is needed to resolve ambiguities in current rate calculation. For example, we have an animation
+     * with auto-reverse and a cycle count of 2, and we put the play-head in the middle of cycle 0 from the
+     * positive side (or cycle 1 from the negative side). If we set the rate to -1 and play, the play direction
+     * can be either:
+     * <ul>
+     *  <li> positive because we are in a reverse cycle (cycle 1 from the end) of a negative rate
+     *  <li> negative because we are playing a positive cycle (cycle 0 from the start) in reverse
+     * <ul>
+     */
+    protected boolean startedPositive;
+
+    /**
      * The current position of the play head in its current cycle.
      * cyclePos = ticks % cycleTicks, so 0 <= cyclePos <= cycleTicks.
      */
@@ -54,15 +67,44 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         this.autoReverse = autoReverse;
     }
 
-    protected long ticksRateChange(double newRate) {
-        return Math.round((ticks - deltaTicks) * Math.abs(newRate / rate));
-     }
+    public double calculateCurrentRunningRate() {
+        double curRate = (!isAutoReverse() || isDuringEvenCycle()) ? rate : -rate;
+//        if (autoReverse && !isDuringEvenCycle()) {
+//            curRate = -curRate;
+//        }
+        return curRate;
+    }
+
+    protected boolean isDuringEvenCycle() {
+//      if (rate > 0) {
+        // 0 - 11999 T
+        // 12k - 23999 F
+        // 24k - 25999 T
+        // 36k F
+        boolean b = ticks % (2 * cycleTicks) < cycleTicks;
+        System.out.println("isDuringEvenCycle = " + b);
+        return b;
+//      } else {
+        // 0 F
+        // 1 - 12k T
+        // 12001 - 24k F
+        // 24001 - 36k T
+//          boolean b = ticks % (2 * cycleTicks) < cycleTicks;
+//          return b;
+//      }
+    }
 
     protected boolean isDirectionChanged(double newRate) {
         return newRate * rate < 0;
     }
 
-    protected boolean isDuringEvenCycle() {
-        return ticks % (2 * cycleTicks) < cycleTicks;
+    protected long ticksRateChange(double newRate) {
+        return Math.round((ticks - deltaTicks) * Math.abs(newRate / rate));
+     }
+
+    @Override
+    public void start() {
+        super.start();
+        startedPositive = !(rate <= 0); // TODO: rate == 0 should be handled. it's in Animation
     }
 }

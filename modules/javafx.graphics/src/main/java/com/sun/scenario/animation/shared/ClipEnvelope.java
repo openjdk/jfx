@@ -67,7 +67,6 @@ public abstract class ClipEnvelope {
      * The current position of the play head. 0 <= ticks <= totalTicks
      */
     protected long ticks = 0;
-    protected double currentRate = rate;
     protected boolean inTimePulse = false;
     protected boolean aborted = false;
 
@@ -94,19 +93,24 @@ public abstract class ClipEnvelope {
     public abstract ClipEnvelope setCycleCount(int cycleCount);
     public abstract void setRate(double rate);
 
-    protected abstract double calculateCurrentRate();
-
-    protected void setInternalCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
-    }
+    /**
+     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation.
+     * If the animation is not running, this value represents the rate at which the animation will run once it's played.
+     * The value is always +rate or -rate (since STOPPED and PAUSED states are ignored). The sign is determined by the
+     * position of the play head and by the values of the autoReverse property and startPositive:
+     * <ul>
+     * <li> autoReverse = false: currentRate = +rate.
+     * <li> autoReverse = true:
+     *   <ul>
+     *   <li> the play head is during an even cycle (relative to the starting direction): currentRate = +rate.
+     *   <li> the play head is during an odd cycle (relative to the starting direction): currentRate = -rate.
+     *   </ul>
+     * </ul>
+     */
+    public abstract double calculateCurrentRunningRate();
 
     protected void setCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
-    }
-
-    public double getCurrentRate() {
-        return currentRate;
     }
 
     protected long ticksRateChange(double newRate) {
@@ -122,8 +126,12 @@ public abstract class ClipEnvelope {
     }
 
     public void start() {
-        setCurrentRate(calculateCurrentRate());
-        deltaTicks = ticks;
+        deltaTicks = ticks; // after stopping, ticks is always 0, so this is relevant only if jumpedTo after stop, then start
+    }
+
+    public void stop() {
+        ticks = 0;
+        deltaTicks = 0;
     }
 
     public abstract void timePulse(long currentTick);

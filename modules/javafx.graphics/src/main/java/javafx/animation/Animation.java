@@ -272,6 +272,9 @@ public abstract class Animation {
     Animation parent = null;
 
     /**
+     * The ClipEnvelope is responsible for calculating the playing head position (ticks) for operations like playing and
+     * jumping. It can also be used to calculate the currentRate for a running (or an about-to-run) animation.
+     * <p> 
      * The type of ClipEnvelope for the animation is determined by its cycleCount and cycleDuration
      * and is updated when these values change.
      * <p>
@@ -281,7 +284,6 @@ public abstract class Animation {
 
     private boolean lastPlayedFinished = true;
 
-    private boolean lastPlayedForward = true;
     /**
      * Defines the direction/speed at which the {@code Animation} is expected to
      * be played.
@@ -321,7 +323,6 @@ public abstract class Animation {
 
                 @Override
                 public void invalidated() {
-                    final double newRate = getRate();
                     if (isRunningEmbedded()) {
                         if (isBound()) {
                             unbind();
@@ -329,26 +330,25 @@ public abstract class Animation {
                         set(oldRate);
                         throw new IllegalArgumentException("Cannot set rate of embedded animation while running.");
                     }
+
+                    final double newRate = getRate();
+                    // none 0 -> 0
                     if (isNearZero(newRate)) {
-                        if (isRunning()) {
-                            lastPlayedForward = areNearEqual(getCurrentRate(), oldRate);
-                        }
+//                      if (!isPaused()) { // is not paused check needed?
                         doSetCurrentRate(0.0);
                         pauseReceiver();
+//                    }
+                    // ? -> 1
                     } else {
+                        clipEnvelope.setRate(newRate);
                         if (isRunning()) {
-                            final double currentRate = getCurrentRate();
-                            if (isNearZero(currentRate)) {
-                                doSetCurrentRate(lastPlayedForward ? newRate : -newRate);
+                            // 0 -> 1
+                            if (isNearZero(getCurrentRate())) {
                                 resumeReceiver();
-                            } else {
-                                final boolean playingForward = areNearEqual(currentRate, oldRate);
-                                doSetCurrentRate(playingForward ? newRate : -newRate);
                             }
+                            doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                         }
-                        oldRate = newRate;
                     }
-                    clipEnvelope.setRate(newRate);
                 }
 
                 @Override
@@ -398,11 +398,13 @@ public abstract class Animation {
         return currentRate;
     }
 
+    /**
+     * Sets the current rate by the clip envelope through the animation accessor. Called when a cycle is alternated and
+     * autoReverse is on. 
+     */
     void setCurrentRate(double currentRate) {
-//      if (getStatus() == Status.RUNNING) {
-          doSetCurrentRate(currentRate);
-//      }
-  }
+        doSetCurrentRate(currentRate);
+    }
 
     /**
      * The current rate changes in 3 cases:
@@ -412,9 +414,9 @@ public abstract class Animation {
      * <li> When switching between a forwards and backwards cycle.
      * </ol>
      *
-     * 1 happens when the user changes the rate of the animation or its root parent.
-     * 2 happens when the user changes the status or when the animation is finished.
-     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor
+     * 1 happens when the user changes the rate of the animation or its root parent.<br>
+     * 2 happens when the user changes the status or when the animation is finished.<br>
+     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor.
      *
      * @param value the value of the new current rate
      */
@@ -985,7 +987,7 @@ public abstract class Animation {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
         switch (getStatus()) {
-            case STOPPED:
+            case STOPPED: // TODO: what if started with rate = 0 ?
                 if (startable(true)) {
                     final double rate = getRate();
                     if (lastPlayedFinished) {
@@ -1005,6 +1007,7 @@ public abstract class Animation {
             case PAUSED:
                 doResume();
                 if (!isNearZero(getRate())) {
+                    doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                     resumeReceiver();
                 }
                 break;
@@ -1014,15 +1017,16 @@ public abstract class Animation {
 
     void doStart(boolean forceSync) {
         sync(forceSync);
-        setStatus(Status.RUNNING);
+//      if (getRate() != 0) {
+            doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
+//      }
         clipEnvelope.start();
-        doSetCurrentRate(clipEnvelope.getCurrentRate());
         lastPulse = 0;
+        setStatus(Status.RUNNING);
     }
 
     void doResume() {
         setStatus(Status.RUNNING);
-        doSetCurrentRate(lastPlayedForward ? getRate() : -getRate());
     }
 
     /**
@@ -1052,8 +1056,9 @@ public abstract class Animation {
         if (!paused) {
             timer.removePulseReceiver(pulseReceiver);
         }
-        setStatus(Status.STOPPED);
+        clipEnvelope.stop();
         doSetCurrentRate(0.0);
+        setStatus(Status.STOPPED);
     }
 
     /**
@@ -1071,18 +1076,18 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot pause when embedded in another animation");
         }
-        if (isRunning()) {
-            clipEnvelope.abortCurrentPulse();
+        if (isRunning()) { // TODO: cannot pause a stopped animation?
+            clipEnvelope.abortCurrentPulse(); // why abort current pulse?
             pauseReceiver();
             doPause();
         }
     }
 
     void doPause() {
-        final double currentRate = getCurrentRate();
-        if (!isNearZero(currentRate)) {
-            lastPlayedForward = areNearEqual(getCurrentRate(), getRate());
-        }
+//        final double currentRate = getCurrentRate();
+//        if (!isNearZero(currentRate)) {
+//            lastPlayedForward = areNearEqual(getCurrentRate(), getRate());
+//        }
         doSetCurrentRate(0.0);
         setStatus(Status.PAUSED);
     }

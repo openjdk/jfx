@@ -70,9 +70,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
 
     @Override
     public void setRate(double newRate) {
-        final Status status = animation.getStatus();
-        if (status != Status.STOPPED) {
-            setInternalCurrentRate((Math.abs(currentRate - rate) < EPSILON) ? newRate : -newRate);
+        if (animation.getStatus() != Status.STOPPED) {
             deltaTicks = ticks - ticksRateChange(newRate);
             abortCurrentPulse();
         }
@@ -80,7 +78,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    protected double calculateCurrentRate() {
+    public double calculateCurrentRunningRate() {
         return rate;
     }
 
@@ -98,12 +96,12 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
         inTimePulse = true;
 
         try {
-            long ticksChange = Math.round(currentTick * currentRate);
-            ticks = Utils.clamp(0, deltaTicks + ticksChange, cycleTicks);
+            long ticksChange = Math.round(currentTick * rate); // curRate == rate
+            ticks = Utils.clamp(0, deltaTicks + ticksChange, cycleTicks); // cycleTicks == totalTicks
             AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
 
-            final boolean reachedEnd = (currentRate > 0)? (ticks == cycleTicks) : (ticks == 0);
-            if(reachedEnd && !aborted) {
+            final boolean reachedEnd = (rate > 0) ? (ticks == cycleTicks) : (ticks == 0);
+            if (reachedEnd && !aborted) {
                 AnimationAccessor.getDefault().finished(animation);
             }
         } finally {
@@ -112,17 +110,21 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    public void jumpTo(long ticks) {
+    public void jumpTo(long newTicks) {
         if (cycleTicks == 0L) {
             return;
         }
-        final long newTicks = Utils.clamp(0, ticks, cycleTicks);
-        deltaTicks += (newTicks - this.ticks);
-        this.ticks = newTicks;
 
-        AnimationAccessor.getDefault().jumpTo(animation, newTicks, cycleTicks, false);
+        final long oldTicks = ticks;
+        ticks = Utils.clamp(0, newTicks, cycleTicks);
+        final long delta = ticks - oldTicks;
+        if (delta == 0) {
+            return;
+        }
+        deltaTicks += delta;
+
+        AnimationAccessor.getDefault().jumpTo(animation, ticks, cycleTicks, false);
 
         abortCurrentPulse();
     }
-
 }
