@@ -89,6 +89,11 @@ import java.util.List;
  */
 public abstract class SpinnerValueFactory<T> {
 
+    /**
+     * Creates a default SpinnerValueFactory.
+     */
+    public SpinnerValueFactory() {}
+
     /***************************************************************************
      *                                                                         *
      * Private fields                                                          *
