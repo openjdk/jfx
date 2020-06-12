@@ -49,7 +49,7 @@ INCLUDES = -I$(SRCBASE_DIR) \
 	   -I$(SRCBASE_DIR)/glib \
 	   -I$(SRCBASE_DIR)/build/osx \
 	   -I$(LIBFFI_DIR)/include \
-	   -I$(LIBFFI_DIR)/include/x64
+	   -I$(LIBFFI_DIR)/include/mac/x64
 
 LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -Wl,-framework \

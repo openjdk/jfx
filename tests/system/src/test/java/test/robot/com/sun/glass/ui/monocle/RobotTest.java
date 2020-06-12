@@ -30,6 +30,7 @@ import javafx.application.Platform;
 import javafx.geometry.Point2D;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.robot.Robot;
 
 import org.junit.Before;
@@ -38,6 +39,13 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * This is a generic test for Glass robot. It is in the monocle.input package
@@ -52,6 +60,52 @@ public class RobotTest {
         TestLogShim.reset();
         TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
+    }
+
+    @Test
+    public void clickKeyModifierTest() throws Exception {
+        runWithKeyPress(KeyCode.CONTROL, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'CTRL'", evt -> {
+            assertTrue("Ctrl should be down",evt.isControlDown());
+        });
+        runWithKeyPress(KeyCode.SHIFT, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'SHIFT'", evt -> {
+            assertTrue("Shift should be down",evt.isShiftDown());
+        });
+        runWithKeyPress(KeyCode.ALT, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'ALT'", evt -> {
+            assertTrue("Alt should be down",evt.isAltDown());
+        });
+    }
+
+    private void runWithKeyPress(KeyCode code, MouseButton button, String message, Consumer<MouseEvent> test) throws Exception {
+        TestApplication.getStage().getScene().setOnMouseClicked(
+                (e) -> {
+                    test.accept(e);
+                    TestLogShim.format("Clicked at %.0f, %.0f with modifier '%s'", e.getScreenX(), e.getScreenY(), modifierString(e));
+                }
+        );
+
+        Platform.runLater(() -> {
+            Robot robot = new Robot();
+            robot.mouseMove(300, 400);
+            robot.keyPress(code);
+            robot.mousePress(button);
+            robot.mouseRelease(button);
+            robot.keyRelease(code);
+        });
+        TestLogShim.waitForLog(message);
+    }
+
+    private static String modifierString(MouseEvent evt) {
+        List<String> modifiers = new ArrayList<>();
+        if(evt.isAltDown()) {
+            modifiers.add("ALT");
+        }
+        if(evt.isControlDown()) {
+            modifiers.add("CTRL");
+        }
+        if(evt.isShiftDown()) {
+            modifiers.add("SHIFT");
+        }
+        return modifiers.stream().collect(Collectors.joining(", "));
     }
 
     @Test

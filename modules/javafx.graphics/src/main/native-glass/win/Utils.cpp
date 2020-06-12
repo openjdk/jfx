@@ -109,7 +109,11 @@ jint GetModifiers()
 
 extern "C" {
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
+#else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+#endif
 {
     memset(&javaIDs, 0, sizeof(javaIDs));
     jvm = vm;

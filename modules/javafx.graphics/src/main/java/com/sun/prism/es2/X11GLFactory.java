@@ -42,7 +42,7 @@ class X11GLFactory extends GLFactory {
     private GLGPUInfo preQualificationFilter[] = {
         new GLGPUInfo("advanced micro devices", null),
         new GLGPUInfo("ati", null),
-        new GLGPUInfo("intel open source technology center", null),
+        new GLGPUInfo("intel", null),
         new GLGPUInfo("nvidia", null),
         new GLGPUInfo("nouveau", null),
         new GLGPUInfo("x.org", null)

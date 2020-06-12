@@ -8,5 +8,7 @@ if (ENABLE_API_TESTS)
 endif ()
 
 if (PORT STREQUAL "Java")
-    add_subdirectory(DumpRenderTree/java)
+    if (NOT DEFINED STATIC_BUILD)
+        add_subdirectory(DumpRenderTree/java)
+    endif ()
 endif ()

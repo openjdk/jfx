@@ -36,23 +36,23 @@ else # debug
 endif
 
 ifeq ($(ARCH), x32)
-    INCLUDES += -I$(SRCBASE_DIR)/include/x86
+    INCLUDES += -I$(SRCBASE_DIR)/include/win/x86
     CFLAGS += -DX86_WIN32
     LIBFLAGS += -MACHINE:x86
 
     C_SOURCES += src/x86/ffi.c
-    ASM_SOURCES = src/x86/win32.S
+    ASM_SOURCES = src/x86/sysv_intel.S
     ASM_FLAGS = -DX86_WIN32
 
     ML = ml.exe
     MLFLAGS = -safeseh
 else
-    INCLUDES += -I$(SRCBASE_DIR)/include/x64
+    INCLUDES += -I$(SRCBASE_DIR)/include/win/x64
     CFLAGS += -DX86_WIN64
     LIBFLAGS += -MACHINE:x64
 
-    C_SOURCES += src/x86/ffi.c
-    ASM_SOURCES = src/x86/win64.S
+    C_SOURCES += src/x86/ffiw64.c
+    ASM_SOURCES = src/x86/win64_intel.S
     ASM_FLAGS = -DX86_WIN64
 
     ML = ml64.exe

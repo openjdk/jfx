@@ -29,15 +29,17 @@ import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ChoiceBoxShim;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.MenuItem;
@@ -51,17 +53,22 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
- * Temporary collection of tests around state of toggle in popup.
+ * Collection of tests around state related to selection.
  * <p>
  *
+ * Tests that toggles are un/selected as required (JDK-8242489).
+ *
  * Note that the selection should be correct even if the
- * popup has not yet been shown! That's hampered by JDK-8242489 (see
- * analysis in bug).
+ * popup has not yet been shown.
  *
  * <p>
  * Need to test (testBaseToggle):
  * a) initial sync of selection state: selected toggle must be that of selectedIndex or none
  * b) change selection state after skin: selected toggle must follow
+ *
+ * <p>
+ *
+ * Tests around selectedIndex and uncontained value (testSynced).
  *
  */
 public class ChoiceBoxSelectionTest {
@@ -266,13 +273,9 @@ public class ChoiceBoxSelectionTest {
         assertToggleSelected(box, selectedIndex);
     }
 
-    //------------- ignored tests, other issues
+    //------------- tests for JDK-8241999
 
-    /**
-     * Issue "8241999": toggle not unselected on setting uncontained value.
-     */
     @Test
-    @Ignore("8241999")
     public void testSyncedToggleUncontainedValue() {
         SingleSelectionModel<String> sm = box.getSelectionModel();
         sm.select(2);
@@ -285,11 +288,69 @@ public class ChoiceBoxSelectionTest {
      * Base reason for "8241999": selected index not sync'ed.
      */
     @Test
-    @Ignore("8241999")
     public void testSyncedSelectedIndexUncontained() {
         box.setValue(box.getItems().get(1));
         box.setValue(uncontained);
-        assertEquals(-1, box.getSelectionModel().getSelectedIndex());
+        assertEquals("selectedIndex for uncontained value ", -1, box.getSelectionModel().getSelectedIndex());
+    }
+
+    /**
+     * From review of JDK-8087555:
+     * select contained -> select uncontained -> clearselection -> nulls value
+     */
+    @Test
+    public void testSyncedSelectedOnPreselectedThenUncontained() {
+        box.setValue(box.getItems().get(1));
+        box.setValue(uncontained);
+        box.getSelectionModel().clearSelection();
+        assertEquals("uncontained value must be unchanged after clearSelection", uncontained, box.getValue());
+    }
+
+    /**
+     * From review of JDK-8087555:
+     * select uncontained -> clearselection -> nulls value
+     */
+    @Test
+    public void testSyncedClearSelectionUncontained() {
+        box.setValue(uncontained);
+        box.getSelectionModel().clearSelection();
+        assertEquals(uncontained, box.getValue());
+    }
+
+    //------------- tests for JDK-8242001
+
+    /**
+     * Testing JDK-8242001: box value not updated on replacing selection model.
+     *
+     * Happens if replacing.selectedItem == null
+     *
+     */
+    @Test
+    public void testSyncedContainedValueReplaceSMEmpty() {
+        box.setValue(box.getItems().get(1));
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(replaceSM.getSelectedItem(), box.getValue());
+    }
+
+    @Test
+    public void testSyncedUncontainedValueReplaceSMEmpty() {
+        box.setValue(uncontained);
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(replaceSM.getSelectedItem(), box.getValue());
+    }
+
+    @Test
+    public void testSyncedBoundValueReplaceSMEmpty() {
+        StringProperty valueSource = new SimpleStringProperty("stickyValue");
+        box.valueProperty().bind(valueSource);
+        SingleSelectionModel<String> replaceSM = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
+        assertNull(replaceSM.getSelectedItem());
+        box.setSelectionModel(replaceSM);
+        assertEquals(valueSource.get(), box.getValue());
     }
 
     //----------- setup and sanity test for initial state

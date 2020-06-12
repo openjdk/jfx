@@ -50,6 +50,20 @@
         } \
     } while (0)
 
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_javafx_font(JavaVM *vm, void *reserved) {
+#ifdef JNI_VERSION_1_8
+    JNIEnv *env;
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
+        return JNI_VERSION_1_4;
+    }
+    return JNI_VERSION_1_8;
+#else
+    return JNI_VERSION_1_4;
+#endif // JNI_VERSION_1_8
+}
+#endif // STATIC_BUILD
+
 JNIEXPORT jbyteArray JNICALL
 Java_com_sun_javafx_font_PrismFontFactory_getFontPath(JNIEnv *env, jobject thiz)
 {

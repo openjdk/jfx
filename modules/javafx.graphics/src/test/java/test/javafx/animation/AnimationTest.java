@@ -267,6 +267,17 @@ public class AnimationTest {
     public void testJumpTo_IndefiniteCycleDuration() {
         animation.shim_setCycleDuration(Duration.INDEFINITE);
 
+        // TicksCalculation defines TICKS_PER_MILLI == 6
+        //
+        // Jumping to the end of Duration.INDEFINITE, which has Double.POSITIVE_INFINITY millis, sets the ticks to
+        // Math.round(Double.POSITIVE_INFINITY * TICKS_PER_MILLI), which is Long.MAX_VALUE as per Math#round specs.
+        // The multiplication by 6 gets lost here because of the infinity rules of Double.
+        //
+        // getCurrentTime() takes the ticks and returns a duration by calculating millis = ticks / TICKS_PER_MILI,
+        // which is Long.MAX_VALUE / 6.
+        //
+        // This means that the conversion Duration -> ticks -> Duration loses information, and the maximum duration is less
+        // than Long.MAX_VALUE.
         animation.jumpTo("end");
         assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
     }

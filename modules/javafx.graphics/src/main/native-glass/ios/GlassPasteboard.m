@@ -310,17 +310,21 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_ios_IosPasteboard__1getUTFs
         NSArray *items = [pasteboard items];
         if ([items count] > 0)
         {
-            utfs = (*env)->NewObjectArray(env, [items count], (*env)->FindClass(env, "java/lang/Object"), NULL);
+            utfs = (*env)->NewObjectArray(env, (jsize)[items count], (*env)->FindClass(env, "[Ljava/lang/String;"), NULL);
             for (int i=0; i<[items count]; i++)
             {
                 NSDictionary *item = [items objectAtIndex:i];
 
-                NSEnumerator *e = [item keyEnumerator];
-                NSString *type;
-                while ((type = [e nextObject])) {
-                    jobjectArray array = (*env)->NewObjectArray(env, 1, (*env)->FindClass(env, "java/lang/String"), NULL);
-                    (*env)->SetObjectArrayElement(env, array, 0, (*env)->NewStringUTF(env, [type UTF8String]));
-                    (*env)->SetObjectArrayElement(env, utfs, i, array);
+                NSArray *keys = [item allKeys];
+                if ([keys count] > 0)
+                {
+                    jobjectArray array = (*env)->NewObjectArray(env, (jsize)[keys count], (*env)->FindClass(env, "java/lang/String"), NULL);
+                    for (int j=0; j<[keys count]; j++)
+                    {
+                        NSString *type = [keys objectAtIndex:j];
+                        (*env)->SetObjectArrayElement(env, array, j, (*env)->NewStringUTF(env, [type UTF8String]));
+                    }
+                    (*env)->SetObjectArrayElement(env, utfs, (jsize)i, array);
                 }
             }
         }
