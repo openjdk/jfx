@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,12 @@
 
 package javafx.scene.control.skin;
 
+import java.util.List;
+
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.TabPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.Node;
 
 public class TabPaneSkinShim {
 
@@ -33,4 +38,12 @@ public class TabPaneSkinShim {
         return tpSkin.test_getTabsMenu();
     }
 
+    public static void disableAnimations(TabPaneSkin tpSkin) {
+        tpSkin.test_disableAnimations();
+    }
+
+    public static List<Node> getTabHeaders(TabPane tabPane) {
+        StackPane headersRegion = (StackPane) tabPane.lookup(".headers-region");
+        return headersRegion.getChildren();
+    }
 }

@@ -11,7 +11,7 @@ LIBFFI_DIR = ../../../$(THIRD_PARTY_DIR)/libffi
 DEP_DIRS = $(BUILD_DIR) $(OBJBASE_DIR)
 
 C_SOURCES = gatomicarray.c \
-	    gbinding.c \
+	   gbinding.c \
             gboxed.c \
             gclosure.c \
             genums.c \
@@ -39,7 +39,7 @@ INCLUDES = -I$(SRCBASE_DIR) \
            -I$(SRCBASE_DIR)/glib \
            -I$(SRCBASE_DIR)/gobject \
            -I$(SRCBASE_DIR)/build/win32/vs100 \
-	   -I$(LIBFFI_DIR)/include
+	  -I$(LIBFFI_DIR)/include
 
 CFLAGS =   -DWIN32 \
            -D_WINDOWS \
@@ -50,11 +50,11 @@ CFLAGS =   -DWIN32 \
            -DHAVE_CONFIG_H \
            -DG_LOG_DOMAIN=\"Glib-GObject\" \
            -D_MBCS \
-	   -DG_OS_WIN32 \
-	   -DFFI_BUILDING \
+	  -DG_OS_WIN32 \
+	  -DFFI_BUILDING \
            -DG_DISABLE_DEPRECATED \
            $(INCLUDES) \
-	   $(COMPILER_FLAGS)
+	  $(COMPILER_FLAGS)
 
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
@@ -67,11 +67,11 @@ endif
 
 ifeq ($(ARCH), x32)
     LIBFLAGS += -MACHINE:x86
-    INCLUDES += -I$(LIBFFI_DIR)/include/x86
+    INCLUDES += -I$(LIBFFI_DIR)/include/win/x86
 else
     CFLAGS += -D_WIN64
     LIBFLAGS += -MACHINE:x64
-    INCLUDES += -I$(LIBFFI_DIR)/include/x64
+    INCLUDES += -I$(LIBFFI_DIR)/include/win/x64
 endif
 
 OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))

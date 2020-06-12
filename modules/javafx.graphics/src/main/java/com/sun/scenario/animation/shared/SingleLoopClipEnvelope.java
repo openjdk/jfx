@@ -25,34 +25,18 @@
 
 package com.sun.scenario.animation.shared;
 
+import com.sun.javafx.util.Utils;
+
 import javafx.animation.Animation;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
+/**
+ * Clip envelope implementation for a single cycle: cycleCount = 1 or cycleDuration = indefinite
+ */
 public class SingleLoopClipEnvelope extends ClipEnvelope {
 
     private int cycleCount;
-
-    @Override
-    public void setRate(double rate) {
-        final Status status = animation.getStatus();
-        if (status != Status.STOPPED) {
-            setInternalCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
-            deltaTicks = ticks - Math.round((ticks - deltaTicks) * rate / this.rate);
-            abortCurrentPulse();
-        }
-        this.rate = rate;
-    }
-
-    @Override
-    public void setAutoReverse(boolean autoReverse) {
-        // ignore autoReverse
-    }
-
-    @Override
-    protected double calculateCurrentRate() {
-        return rate;
-    }
 
     protected SingleLoopClipEnvelope(Animation animation) {
         super(animation);
@@ -62,8 +46,8 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    public boolean wasSynched() {
-        return super.wasSynched() && cycleCount != 0;
+    public void setAutoReverse(boolean autoReverse) {
+        // ignore autoReverse
     }
 
     @Override
@@ -85,6 +69,27 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
+    public void setRate(double newRate) {
+        final Status status = animation.getStatus();
+        if (status != Status.STOPPED) {
+            setInternalCurrentRate((Math.abs(currentRate - rate) < EPSILON) ? newRate : -newRate);
+            deltaTicks = ticks - ticksRateChange(newRate);
+            abortCurrentPulse();
+        }
+        rate = newRate;
+    }
+
+    @Override
+    protected double calculateCurrentRate() {
+        return rate;
+    }
+
+    @Override
+    public boolean wasSynched() {
+        return super.wasSynched() && cycleCount != 0;
+    }
+
+    @Override
     public void timePulse(long currentTick) {
         if (cycleTicks == 0L) {
             return;
@@ -93,7 +98,8 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
         inTimePulse = true;
 
         try {
-            ticks = ClipEnvelope.checkBounds(deltaTicks + Math.round(currentTick * currentRate), cycleTicks);
+            long ticksChange = Math.round(currentTick * currentRate);
+            ticks = Utils.clamp(0, deltaTicks + ticksChange, cycleTicks);
             AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
 
             final boolean reachedEnd = (currentRate > 0)? (ticks == cycleTicks) : (ticks == 0);
@@ -110,7 +116,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
         if (cycleTicks == 0L) {
             return;
         }
-        final long newTicks = ClipEnvelope.checkBounds(ticks, cycleTicks);
+        final long newTicks = Utils.clamp(0, ticks, cycleTicks);
         deltaTicks += (newTicks - this.ticks);
         this.ticks = newTicks;
 

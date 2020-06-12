@@ -16,7 +16,8 @@ TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 CFLAGS += -c \
          -Werror=implicit-function-declaration \
          -fPIC \
-         -DGSTREAMER_LITE
+         -DGSTREAMER_LITE \
+         -DX86_64
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -24,16 +25,18 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
-INCLUDES = -I$(SRCBASE_DIR)/include -I$(SRCBASE_DIR)/include/x64
+INCLUDES = -I$(SRCBASE_DIR)/include -I$(SRCBASE_DIR)/include/mac/x64
 
 C_SOURCES = src/closures.c \
-	    src/java_raw_api.c \
-	    src/prep_cif.c \
-	    src/raw_api.c \
-	    src/types.c \
-            src/x86/ffi64.c \
+	   src/java_raw_api.c \
+	   src/prep_cif.c \
+	   src/raw_api.c \
+	   src/types.c \
+	   src/x86/ffi64.c \
+            src/x86/ffiw64.c
 
-ASM_SOURCES = src/x86/darwin64.S
+ASM_SOURCES = src/x86/unix64.S \
+              src/x86/win64.S
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 OBJECTS  = $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES))\
