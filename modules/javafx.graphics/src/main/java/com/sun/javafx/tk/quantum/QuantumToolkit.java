@@ -1520,28 +1520,16 @@ public final class QuantumToolkit extends Toolkit {
                 rt.unlock();
             }
 
-            private int computeOptimumTileSize(int size, int maxSize) {
-                return computeOptimumTileSize(size, maxSize, null);
-            }
 
-            private int computeOptimumTileSize(int size, int maxSize, boolean[] isDivExact) {
-                // This method attempts to find the smallest exact divider for the provided `size`
-                // while the result of the division is less than `maxSize`.
-                // It tests all potential dividers from 2 to 6 and returns the result of the division
-                // if all conditions can be satisfied or, failing that, `maxSize`.
-                // If non-null, the value for `isDivExact` is set so as to reflect whether or not
-                // an exact divider could be found.
-                for (int n = 2; n <= 6; n++) {
+            private int computeTileSize(int size, int maxSize) {
+                // If 'size' divided by either 2 or 3 produce an exact result
+                // and is lesser that the specified maxSize, then use this value
+                // as the tile size, as this makes the tiling process more efficient.
+                for (int n = 1; n <= 3; n++) {
                     int optimumSize = size / n;
                     if (optimumSize <= maxSize && optimumSize * n == size) {
-                        if (isDivExact != null && isDivExact.length > 0) {
-                            isDivExact[0] = true;
-                        }
                         return optimumSize;
                     }
-                }
-                if (isDivExact != null && isDivExact.length > 0) {
-                    isDivExact[0]= false;
                 }
                 return maxSize;
             }
@@ -1579,49 +1567,67 @@ public final class QuantumToolkit extends Toolkit {
                             pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(IntBuffer.allocate(w * h), w, h));
                         }
                         // Find out if it is possible to divide up the image in tiles of the same size
-                        int tileWidth = computeOptimumTileSize(w, maxTextureSize);
-                        var exactHeightDivFound = new boolean[]{false};
-                        int tileHeight = computeOptimumTileSize(h, maxTextureSize, exactHeightDivFound);
+                        int tileWidth = computeTileSize(w, maxTextureSize);
+                        int tileHeight = computeTileSize(h, maxTextureSize);
                         IntBuffer buffer = IntBuffer.allocate(tileWidth * tileHeight);
-                        // In order to minimize the number of time we have to resize the underlying
-                        // surface for capturing a tile, choose a dimension that has an exact divider
-                        // (if any) to be processed in the inner most loop.
-                        // E.g. looping on width then height in the example bellow requires four
-                        // surface resizing, whereas the opposite requires only two:
-                        //
-                        //       for (w;;)                    for (h;;)
-                        //           for(h;;)                     for(w;;)
-                        //       -----------------           -----------------
-                        //       |       |       |           |       |       |
-                        //       |   1   |   3   |           |   1   |   2   |
-                        //    h  |       |       |        h  |       |       |
-                        //       -----------------           -----------------
-                        //       |   2   |   4   |           |   3   |   4   |
-                        //       -----------------           -----------------
-                        //               w                           w
 
+                        // M represents the middle set of tiles each with a size of tileW x tileH.
+                        // R is the right hand column of tiles,
+                        // B is the bottom row,
+                        // C is the corner:
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        //       .           .        .      .
+                        // +-----------+-----------+  .  +-------+
+                        // |     B     |     B     |  .  |   C   |
+                        // +-----------+-----------+  .  +-------+
 
-
-                        if (exactHeightDivFound[0]) {
-                            for (int xOffset = 0; xOffset < w; xOffset += tileWidth) {
-                                tileWidth = Math.min(tileWidth, w - xOffset);
-                                for (int yOffset = 0; yOffset < h; yOffset += tileHeight) {
-                                    tileHeight = Math.min(tileHeight, h - yOffset);
-                                    renderTile(x, xOffset, y, yOffset, tileWidth, tileHeight,
-                                            buffer, rf, tileRttCache, pImage);
-                                }
+                        // Walk through all same-size "M" tiles
+                        int xOffset = 0;
+                        int yOffset = 0;
+                        var mTileWidth = tileWidth;
+                        var mTileHeight = tileHeight;
+                        while (mTileWidth == tileWidth && xOffset < w) {
+                            yOffset = 0;
+                            mTileHeight = tileHeight;
+                            while (mTileHeight == tileHeight && yOffset < h) {
+                                renderTile(x, xOffset, y, yOffset, mTileWidth, mTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                                yOffset += tileHeight;
+                                mTileHeight = Math.min(tileHeight, h - yOffset);
                             }
-                        } else {
-                            for (int yOffset = 0; yOffset < h; yOffset += tileHeight) {
-                                tileHeight = Math.min(tileHeight, h - yOffset);
-                                for (int xOffset = 0; xOffset < w; xOffset += tileWidth) {
-                                    tileWidth = Math.min(tileWidth, w - xOffset);
-                                    renderTile(x, xOffset, y, yOffset, tileWidth, tileHeight,
-                                            buffer, rf, tileRttCache, pImage);
-                                }
-                            }
+                            xOffset += tileWidth;
+                            mTileWidth = Math.min(tileWidth, w - xOffset);
                         }
-                    } else {
+                        // Walk through remaining same-width "B" tiles, if any
+                        int bOffset = 0;
+                        int bTileHeight = tileHeight;
+                        while (bTileHeight == tileHeight && bOffset < h) {
+                            renderTile(x, xOffset, y, bOffset, mTileWidth, bTileHeight, buffer, rf, tileRttCache, pImage);
+                            bOffset += tileHeight;
+                            bTileHeight = Math.min(tileHeight, h - bOffset);
+                        }
+                        // Walk through remaining same-height "R" tiles, if any
+                        int rOffset = 0;
+                        int rTileWidth = tileWidth;
+                        while (rTileWidth == tileWidth && rOffset < w) {
+                            renderTile(x, rOffset, y, yOffset, rTileWidth, mTileHeight, buffer, rf, tileRttCache, pImage);
+                            rOffset += tileWidth;
+                            rTileWidth = Math.min(tileWidth, w - rOffset);
+                        }
+                        // Render corner "C" tile if needed
+                        if (bOffset > 0 && rOffset > 0) {
+                            renderTile(x, rOffset, y, bOffset, rTileWidth, bTileHeight, buffer, rf, tileRttCache, pImage);
+                        }
+                    }
+                    else {
                         // The requested size for the screenshot fits max texture size,
                         // so we can directly render it in the target image.
                         renderWholeImage(x, y, w, h, rf, pImage);
