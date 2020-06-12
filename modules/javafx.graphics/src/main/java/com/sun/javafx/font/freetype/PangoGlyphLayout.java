@@ -35,7 +35,7 @@ import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.TextRun;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 class PangoGlyphLayout extends GlyphLayout {
@@ -84,7 +84,7 @@ class PangoGlyphLayout extends GlyphLayout {
         return true;
     }
 
-    private Map<TextRun, Long> runUtf8 = new HashMap<>();
+    private Map<TextRun, Long> runUtf8 = new LinkedHashMap<>();
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
         /* Create the pango font and attribute list */
         FontResource fr = font.getFontResource();
@@ -133,10 +133,10 @@ class PangoGlyphLayout extends GlyphLayout {
         if (str == null) {
             char[] rtext = Arrays.copyOfRange(text, run.getStart(), run.getEnd());
             str = OSPango.g_utf16_to_utf8(rtext);
-            runUtf8.put(run, str);
             if (check(str, "Failed allocating UTF-8 buffer.", context, desc, attrList)) {
                 return;
             }
+            runUtf8.put(run, str);
         }
 
         /* Itemize */
