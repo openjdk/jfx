@@ -1480,7 +1480,7 @@ public final class QuantumToolkit extends Toolkit {
 
             private void renderTile(int x, int xOffset, int y, int yOffset, int w, int h,
                                     IntBuffer buffer, ResourceFactory rf, QuantumImage tileImg, QuantumImage targetImg) {
-                com.sun.prism.RTTexture rt = tileImg.getRT(w, h, rf);
+                RTTexture rt = tileImg.getRT(w, h, rf);
                 if (rt == null) {
                     return;
                 }
@@ -1499,7 +1499,7 @@ public final class QuantumToolkit extends Toolkit {
             }
 
             private void renderWholeImage(int x, int y, int w, int h, ResourceFactory rf, QuantumImage pImage) {
-                com.sun.prism.RTTexture rt = pImage.getRT(w, h, rf);
+                RTTexture rt = pImage.getRT(w, h, rf);
                 if (rt == null) {
                     return;
                 }
