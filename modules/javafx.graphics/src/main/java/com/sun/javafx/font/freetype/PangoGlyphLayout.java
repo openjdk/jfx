@@ -86,9 +86,6 @@ class PangoGlyphLayout extends GlyphLayout {
 
     private Map<TextRun, Long> runUtf8 = new HashMap<>();
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
-        for (char c: text) {
-            if (c == 0) c = '\f';
-        }
         /* Create the pango font and attribute list */
         FontResource fr = font.getFontResource();
         boolean composite = fr instanceof CompositeFontResource;
@@ -143,10 +140,9 @@ class PangoGlyphLayout extends GlyphLayout {
         }
 
         /* Itemize */
-        long start = OSPango.g_utf8_offset_to_pointer(str, run.getStart());
         long utflen = OSPango.g_utf8_strlen(str,-1);
         long end = OSPango.g_utf8_offset_to_pointer(str, utflen);
-        long runs = OSPango.pango_itemize(context, str, (int)(start - str), (int)(end - start), attrList, 0);
+        long runs = OSPango.pango_itemize(context, str, 0, (int)(end - str), attrList, 0);
 
         if (runs != 0) {
             /* Shape all PangoItem into PangoGlyphString */
