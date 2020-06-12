@@ -1492,7 +1492,7 @@ public final class QuantumToolkit extends Toolkit {
                 } else {
                     rt.readPixels(buffer, rt.getContentX(), rt.getContentY(), w, h);
                 }
-                //Copy tile's pixel into the target image
+                //Copy tile's pixels into the target image
                 targetImg.image.setPixels(xOffset, yOffset, w, h,
                         javafx.scene.image.PixelFormat.getIntArgbPreInstance(), buffer, w);
                 rt.unlock();
