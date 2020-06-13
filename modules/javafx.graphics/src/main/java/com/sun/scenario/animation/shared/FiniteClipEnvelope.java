@@ -88,7 +88,6 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
       rate = newRate;
   }
 
-    // Fails on auto-reverse even cycle count when switching
    @Override
    protected boolean isDuringEvenCycle() {
        System.out.println("startPositive = " + startedPositive);

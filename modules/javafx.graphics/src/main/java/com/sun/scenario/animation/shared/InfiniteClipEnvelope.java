@@ -60,7 +60,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
     @Override
     public void setRate(double rate) {
         if (animation.getStatus() != Status.STOPPED) {
-            boolean switchedDirection = isDirectionChanged(rate);
+            boolean switchedDirection = false;// isDirectionChanged(rate);
             deltaTicks = ticks + (switchedDirection ? ticksRateChange(rate) : -ticksRateChange(rate));
             if (switchedDirection) {
                 final long delta = 2 * cycleTicks - cyclePos;
@@ -75,14 +75,22 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     protected boolean isDuringEvenCycle() {
         if (rate > 0) {
-            boolean b = ticks % (2 * cycleTicks) < cycleTicks;
+            boolean b = isDuringPosEvenCycle();
             System.out.println("isDuringEvenCycle = " + b);
             return b;
         } else {
-            boolean b = (2 * cycleTicks - ticks) % (2 * cycleTicks) < cycleTicks;
+            boolean b = isDuringNegEvenCycle();
             System.out.println("isDuringEvenCycle = " + b);
             return b;
         }
+    }
+
+    protected boolean isDuringPosEvenCycle() {
+        return ticks % (2 * cycleTicks) < cycleTicks;
+    }
+
+    protected boolean isDuringNegEvenCycle() {
+        return (2 * cycleTicks - ticks) % (2 * cycleTicks) < cycleTicks;
     }
 
     @Override
