@@ -98,13 +98,9 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         return newRate * rate < 0;
     }
 
-    protected long ticksRateChange(double newRate) {
-        return Math.round((ticks - deltaTicks) * Math.abs(newRate / rate));
-     }
-
     @Override
     public void start() {
         super.start();
-        startedPositive = !(rate <= 0); // TODO: rate == 0 should be handled. it's in Animation
+        startedPositive = rate >= 0; // TODO: rate == 0 should be handled. it's in Animation
     }
 }

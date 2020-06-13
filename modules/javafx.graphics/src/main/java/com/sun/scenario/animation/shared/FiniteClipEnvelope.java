@@ -76,17 +76,17 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     @Override
     public void setRate(double newRate) {
-//        final boolean toggled = isDirectionChanged(newRate);
-//        final long newTicks = toggled ? totalTicks - ticks : ticks;
-        if (animation.getStatus() != Status.STOPPED) {
+//      boolean switchedDirection = newRate * rate < 0;
+//      final long newTicks = switchedDirection ? totalTicks - ticks : ticks;
+      if (animation.getStatus() != Status.STOPPED) {
 //          deltaTicks = newTicks - (switchedDirection ? -1 : 1) * ticksRateChange(newRate); d + T - 2t
-            deltaTicks = ticks - ticksRateChange(newRate);
-            abortCurrentPulse();
-        }
-//        ticks = newTicks;
-        System.out.println("Finite setRate ticks = " + ticks);
-        rate = newRate;
-    }
+          deltaTicks = ticks - ticksRateChange(newRate);
+          abortCurrentPulse();
+      }
+//      ticks = newTicks;
+      System.out.println("Finite setRate ticks = " + ticks);
+      rate = newRate;
+  }
 
     // Fails on auto-reverse even cycle count when switching
    @Override
