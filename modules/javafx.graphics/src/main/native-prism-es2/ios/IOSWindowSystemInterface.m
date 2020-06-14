@@ -82,7 +82,9 @@ jboolean clearCurrentContext(void *context) {
 }
 
 jboolean deleteContext(void *context) {
-    // fprintf(stderr, "IOSWindowSystemInterface : deleteContext unimp\n");
+    if (pulseLoggingRequested) {
+        fprintf(stderr, "IOSWindowSystemInterface : deleteContext unimp\n");
+    }
     return JNI_FALSE;
 }
 
@@ -92,7 +94,9 @@ jboolean flushBuffer(void *context) {
 }
 
 void setSwapInterval(void *context, int interval) {
-    // fprintf(stderr, "IOSWindowSystemInterface : setSwapInterval unimp\n");
+    if (pulseLoggingRequested) {
+        fprintf(stderr, "IOSWindowSystemInterface : setSwapInterval unimp\n");
+    }
 }
 
 
