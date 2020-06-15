@@ -374,83 +374,133 @@ public class TreeTableViewTest {
     private int countSelectedItemChangeEvent;
     private int countSelectedIndicesChangeEvent;
     private int countSelectedItemsChangeEvent;
-    private TreeItem<String> selectedItem;
-    private List<TreeTablePosition<String,?>> selectedCellsBeforePermutation;
+    private TreeItem<String> selectedItemBefore;
+    private List<TreeItem<String>> selectedItemsBefore;
+    private List<Integer> selectedIndicesBefore;
+    private List<TreeTablePosition<String,?>> selectedCellsBefore;
 
     @Test public void testSelectionUpdatesCorrectlyAfterSort() {
-        TreeTableColumn<String, String> col = initSortTestStructure();
-        setupForPermutationTest();
-        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
+        TreeTableColumn<String, String> col = setupForPermutationTest();
         treeTableView.getSortOrder().add(col);
-        VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
         verifySelectionAfterPermutation();
     }
 
     @Test public void testSelectionUpdatesCorrectlyAfterRootSetAll() {
-        initSortTestStructure();
         setupForPermutationTest();
-        treeTableView.getRoot().getChildren().setAll(banana, apple, orange);
+        reverseChildrenOrder(treeTableView.getRoot());
         verifySelectionAfterPermutation();
     }
 
     @Test public void testSelectionUpdatesCorrectlyAfterChildSetAll() {
-        initSortTestStructure();
         setupForPermutationTest();
-        banana.getChildren().setAll(banana.getChildren().get(2), banana.getChildren().get(0), banana.getChildren().get(1));
+        reverseChildrenOrder(((TreeItem<String>)sm.getSelectedItem()).getParent());
         verifySelectionAfterPermutation();
     }
 
-    private void setupForPermutationTest() {
+    private void reverseChildrenOrder(TreeItem<String> treeItem) {
+        List<TreeItem<String>> childrenReversed = new ArrayList<>();
+        int childrenSize = treeItem.getChildren().size();
+        for (int i = 0; i < childrenSize; i++) {
+            childrenReversed.add(treeItem.getChildren().get(childrenSize - 1 - i));
+        }
+        treeItem.getChildren().setAll(childrenReversed);
+    }
+
+    private TreeTableColumn<String, String> setupForPermutationTest() {
         countSelectedIndexChangeEvent = 0;
         countSelectedItemChangeEvent = 0;
         countSelectedIndicesChangeEvent = 0;
         countSelectedItemsChangeEvent = 0;
 
-        apple.getChildren().addAll(new TreeItem("Apple3"), new TreeItem("Apple2"), new TreeItem("Apple1"));
-        apple.setExpanded(true);
-        orange.getChildren().addAll(new TreeItem("Orange3"), new TreeItem("Orange2"), new TreeItem("Orange1"));
-        orange.setExpanded(true);
-        banana.getChildren().addAll(new TreeItem("Banana3"), new TreeItem("Banana2"), new TreeItem("Banana1"));
-        banana.setExpanded(true);
+        TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
+        col.setSortType(DESCENDING);
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
+        treeTableView.getColumns().add(col);
+
+        TreeItem<String> treeRoot = new TreeItem<String>("root");
+        treeRoot.setExpanded(true);
+        treeTableView.setRoot(treeRoot);
+
+        final int FIRST_LEVEL_COUNT = 8;
+        for (int i = 0; i < FIRST_LEVEL_COUNT; i++) {
+            TreeItem<String> ti = new TreeItem<>( "" + i);
+            ti.setExpanded(true);
+            treeRoot.getChildren().add(ti);
+
+            for (int j = 0; j < FIRST_LEVEL_COUNT - 1; j++) {
+                TreeItem<String> tj = new TreeItem<>("" + i + j);
+                tj.setExpanded(true);
+                ti.getChildren().add(tj);
+
+                for (int k = 0; k < FIRST_LEVEL_COUNT - 2; k++) {
+                    TreeItem<String> tk = new TreeItem<>("" + i + j + k);
+                    tk.setExpanded(true);
+                    tj.getChildren().add(tk);
+
+                    for (int l = 0; l < FIRST_LEVEL_COUNT - 3; l++) {
+                        TreeItem<String> tl = new TreeItem<>("" + i + j + k + l);
+                        tl.setExpanded(true);
+                        tk.getChildren().add(tl);
+
+                        for (int m = 0; m < FIRST_LEVEL_COUNT - 4; m++) {
+                            TreeItem<String> tm = new TreeItem<>("" + i + j + k + l + m);
+                            tl.getChildren().add(tm);
+                        }
+                    }
+                }
+            }
+        }
 
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.selectIndices(2, 5, 8, 10);
+        int indices[] = new int[] {1, 400, 800, 1200, 1600, 2000, 2400, 2800, 3200, 3600, 4000, 4400, 4800, 5200, 5600, 6000, 6400};
+        sm.selectIndices(1, 400, 800, 1200, 1600, 2000, 2400, 2800, 3200, 3600, 4000, 4400, 4800, 5200, 5600, 6000, 6400);
 
         // Sanity checks
-        assertEquals(4, sm.getSelectedIndices().size());
-        assertEquals(10, sm.getSelectedIndex());
-        assertEquals(treeTableView.getTreeItem(10), sm.getSelectedItem());
+        assertEquals(indices.length, sm.getSelectedIndices().size());
+        assertEquals(indices.length, sm.getSelectedItems().size());
+        assertEquals(indices.length, sm.getSelectedCells().size());
+        assertEquals(indices[indices.length - 1], sm.getSelectedIndex());
+        assertEquals(treeTableView.getTreeItem(indices[indices.length - 1]), sm.getSelectedItem());
 
-        selectedItem = (TreeItem<String>) sm.getSelectedItem();
-        selectedCellsBeforePermutation = new ArrayList<>(sm.getSelectedCells());
+        selectedItemBefore = (TreeItem<String>) sm.getSelectedItem();
+        selectedItemsBefore = new ArrayList<>(sm.getSelectedItems());
+        selectedIndicesBefore = new ArrayList<>(sm.getSelectedIndices());
+        selectedCellsBefore = new ArrayList<>(sm.getSelectedCells());
 
         sm.selectedIndexProperty().addListener(ov -> {
             countSelectedIndexChangeEvent++;
+            assertEquals(selectedItemBefore, treeTableView.getTreeItem(sm.getSelectedIndex()));
         });
         sm.selectedItemProperty().addListener(l -> {
             countSelectedItemChangeEvent++;
         });
         sm.getSelectedIndices().addListener((ListChangeListener) c -> {
             countSelectedIndicesChangeEvent++;
+            c.next();
+            if (c.wasRemoved()) {
+                assertTrue(selectedIndicesBefore.equals(c.getRemoved()));
+            }
+            verifySelectedIndices(c.getAddedSubList());
+            verifySelectedIndices(c.getList());
         });
         sm.getSelectedItems().addListener((ListChangeListener) c -> {
             countSelectedItemsChangeEvent++;
+            c.next();
+            if (c.wasRemoved()) {
+                verifySelectedItems(c.getRemoved());
+            }
+            verifySelectedItems(c.getAddedSubList());
+            verifySelectedItems(c.getList());
         });
+
+        return col;
     }
 
-    private void verifySelectionAfterPermutation() {
-        assertEquals("Selected index should be updated", treeTableView.getRow(selectedItem), sm.getSelectedIndex());
-        assertEquals("Selected Item should remain same", selectedItem, sm.getSelectedItem());
-
-        final List<TreeTablePosition<String,?>> selectedCellsAfterPermutation =
-                new ArrayList<>(sm.getSelectedCells());
-        assertEquals("The number of selected items before and after permutation, should remain same",
-                selectedCellsBeforePermutation.size(), selectedCellsAfterPermutation.size());
-        // Verify that the cells that were selected before permutation,
-        // remain selected after permutation.
-        for (TreeTablePosition beforePos : selectedCellsBeforePermutation) {
+    private void verifySelectedCells(List<TreeTablePosition<String, ?>> selectedCells) {
+        assertEquals(selectedCellsBefore.size(), selectedCells.size());
+        for (TreeTablePosition beforePos : selectedCellsBefore) {
             boolean isCellStillSelected = false;
-            for (TreeTablePosition afterPos : selectedCellsAfterPermutation) {
+            for (TreeTablePosition afterPos : selectedCells) {
                 if ((beforePos.getTreeItem() == afterPos.getTreeItem()) &&
                         (beforePos.getTableColumn() == afterPos.getTableColumn()) &&
                         (beforePos.getColumn() == afterPos.getColumn())) {
@@ -460,10 +510,35 @@ public class TreeTableViewTest {
             assertTrue("The item (" + beforePos.getRow() + ", " + beforePos.getColumn() +
                     ") lost selection during permutation", isCellStillSelected);
         }
+    }
+
+    private void verifySelectedItems(List<TreeItem<String>> selectedItems) {
+        assertEquals(selectedItemsBefore.size(), selectedItems.size());
+        for (TreeItem<String> item : selectedItemsBefore) {
+            assertTrue("The item (" + item + ") lost selection during permutation",
+                    selectedItems.contains(item));
+        }
+    }
+
+    private void verifySelectedIndices(List<Integer> currentIndices) {
+        assertEquals(selectedIndicesBefore.size(), currentIndices.size());
+        for (Integer row : currentIndices) {
+            assertTrue(selectedItemsBefore.contains(treeTableView.getTreeItem(row)));
+        }
+    }
+
+    private void verifySelectionAfterPermutation() {
         assertEquals(1, countSelectedIndexChangeEvent);
         assertEquals(0, countSelectedItemChangeEvent);
         assertEquals(1, countSelectedIndicesChangeEvent);
         assertEquals(1, countSelectedItemsChangeEvent);
+
+        assertEquals("Selected Item should remain same", selectedItemBefore, sm.getSelectedItem());
+        assertEquals("Selected index should be updated", treeTableView.getRow(selectedItemBefore), sm.getSelectedIndex());
+
+        verifySelectedCells(sm.getSelectedCells());
+        verifySelectedItems(sm.getSelectedItems());
+        verifySelectedIndices(sm.getSelectedIndices());
     }
 
     @Ignore("This test is only valid if sort event consumption should revert changes")

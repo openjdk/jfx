@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1809,6 +1810,11 @@ public class TreeTableView<S> extends Control {
         return sortingInProgress;
     }
 
+    private boolean sortTreeOfSelectedItems = true;
+    boolean isSortTreeOfSelectedItems() {
+        return sortTreeOfSelectedItems;
+    }
+
     /**
      * The sort method forces the TreeTableView to re-run its sorting algorithm. More
      * often than not it is not necessary to call this method directly, as it is
@@ -1855,6 +1861,16 @@ public class TreeTableView<S> extends Control {
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
 
+        if (getSortMode() == TreeSortMode.ALL_DESCENDANTS && isSortTreeOfSelectedItems()) {
+            Set<TreeItem<S>> sortedParents = new HashSet<>();
+            for (TreeTablePosition<S,?> selectedPosition : prevState) {
+                TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
+                while (parent != null && sortedParents.add(parent)) {
+                    parent.getChildren();
+                    parent = parent.getParent();
+                }
+            }
+        }
         getSelectionModel().stopAtomic();
 
         if (success == null || ! success) {
@@ -2553,8 +2569,8 @@ public class TreeTableView<S> extends Control {
                         // Get the current selection.
                         // Create a new selection with updated index(row).
                         // Update the current selection with new selection.
-                        // If sorting is in progress then Selection change events will be sent from
-                        // sort() method, and should not be sent from here.
+                        // If sorting is in progress then one Selection change event will be sent from
+                        // TreeTableView.sort() method, and should not be sent from here.
                         // else, in case otherwise, the selection change events would be generated.
                         // Do not call shiftSelection() in case of permutation change(when shift == 0).
 
@@ -2572,7 +2588,6 @@ public class TreeTableView<S> extends Control {
                         if (selectionIndicesChanged) {
                             if (treeTableView.isSortingInProgress()) {
                                 startAtomic();
-                                quietClearSelection();
                                 selectedCellsMap.setAll(updatedSelection);
                                 stopAtomic();
                             } else {
