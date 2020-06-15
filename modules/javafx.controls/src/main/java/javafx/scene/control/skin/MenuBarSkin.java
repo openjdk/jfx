@@ -471,9 +471,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
     }
 
-    private void setFocusedMenuIndex(int index) {
-        focusedMenuIndex = (index >= -1 && index < getSkinnable().getMenus().size())? index : -1;
-        focusedMenu = (focusedMenuIndex != -1)? getSkinnable().getMenus().get(index) : null;
+    /**
+     * This method is package scoped as it is used in this class as well as for testing
+     */
+    void setFocusedMenuIndex(int index) {
+        focusedMenuIndex = (index >= -1 && index < getSkinnable().getMenus().size()) ? index : -1;
+        focusedMenu = (focusedMenuIndex != -1) ? getSkinnable().getMenus().get(index) : null;
 
         if (focusedMenuIndex != -1) {
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
@@ -758,10 +761,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     int getFocusedMenuIndex() {
         return focusedMenuIndex;
-    }
-
-    void setFocusedIndex(int index) {
-        this.setFocusedMenuIndex(0);
     }
 
     private boolean menusContainCustomMenuItem() {

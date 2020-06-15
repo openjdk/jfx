@@ -130,7 +130,7 @@ public class MenuBarTest {
 
         menuBar.getScene().getWindow().requestFocus();
 
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(-1, focusedIndex);
     }
 
@@ -145,8 +145,8 @@ public class MenuBarTest {
         assertTrue(skin != null);
 
         // simulate notification from traversalListener
-        MenuBarSkinShim.setFocusedIndex(skin, 0);
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        MenuBarSkinShim.setFocusedMenuIndex(skin, 0);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(-1, focusedIndex);
     }
 
@@ -325,7 +325,7 @@ public class MenuBarTest {
         tk.firePulse();
 
         // check if focusedMenuIndex is reset to -1 so navigation happens.
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(-1, focusedIndex);
     }
 
@@ -710,7 +710,7 @@ public class MenuBarTest {
         assertFalse(menu1.isShowing());
 
         // check if focusedMenuIndex is 0 (menu1 is still in selected state).
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
         assertEquals(0, focusedIndex);
     }
 }
