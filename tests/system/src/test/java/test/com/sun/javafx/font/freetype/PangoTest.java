@@ -83,7 +83,7 @@ public class PangoTest {
     public static void setupOnce() throws Exception {
         // Start the Application
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for Application to launch", 
+        assertTrue("Timeout waiting for Application to launch",
                 launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
         assertEquals(0, launchLatch.getCount());
     }
