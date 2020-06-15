@@ -1145,18 +1145,24 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (newText != null) {
-                getContent().delete(start, start + newText.length(), oldText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (newText != null) {
+                    getContent().delete(start, start + newText.length(), oldText.isEmpty());
+                }
 
-            if (oldText != null) {
-                getContent().insert(start, oldText, true);
-                doSelectRange(start, start + oldText.length());
-            } else {
-                doSelectRange(start, start + newText.length());
-            }
+                if (oldText != null) {
+                    getContent().insert(start, oldText, true);
+                    doSelectRange(start, start + oldText.length());
+                } else {
+                    doSelectRange(start, start + newText.length());
+                }
 
-            undoChange = undoChange.prev;
+                undoChange = undoChange.prev;
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
+            }
         }
         updateUndoRedoState();
     }
@@ -1174,15 +1180,21 @@ public abstract class TextInputControl extends Control {
             final String newText = undoChange.newText;
             final String oldText = undoChange.oldText;
 
-            if (oldText != null) {
-                getContent().delete(start, start + oldText.length(), newText.isEmpty());
-            }
+            blockSelectedTextUpdate = true;
+            try {
+                if (oldText != null) {
+                    getContent().delete(start, start + oldText.length(), newText.isEmpty());
+                }
 
-            if (newText != null) {
-                getContent().insert(start, newText, true);
-                doSelectRange(start + newText.length(), start + newText.length());
-            } else {
-                doSelectRange(start, start);
+                if (newText != null) {
+                    getContent().insert(start, newText, true);
+                    doSelectRange(start + newText.length(), start + newText.length());
+                } else {
+                    doSelectRange(start, start);
+                }
+            } finally {
+                blockSelectedTextUpdate = false;
+                updateSelectedText();
             }
         }
         updateUndoRedoState();

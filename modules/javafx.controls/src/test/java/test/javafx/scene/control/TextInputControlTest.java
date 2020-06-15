@@ -52,6 +52,8 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import com.sun.javafx.tk.Toolkit;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -85,6 +87,25 @@ public class TextInputControlTest {
 
     @Before public void setup() throws Exception {
         textInput = (TextInputControl) type.newInstance();
+        setUncaughtExceptionHandler();
+    }
+
+    @After public void cleanup() {
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /******************************************************
@@ -1863,6 +1884,20 @@ public class TextInputControlTest {
 
         textInput.undo();
         assertEquals("", textInput.getText());
+    }
+
+    @Test public void test_redo_replaceText_selectionShortening() {
+        textInput.setText("0123456789");
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.replaceText(8, 10, "x");
+        assertEquals("01234567x", textInput.getText());
+
+        textInput.undo();
+        assertEquals("0123456789", textInput.getText());
+
+        textInput.redo();
+        assertEquals("01234567x", textInput.getText());
     }
 
     // Test for JDK-8178418
