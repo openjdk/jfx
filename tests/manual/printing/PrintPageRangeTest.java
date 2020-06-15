@@ -77,8 +77,6 @@ public class PrintPageRangeTest extends Application {
                     "     Note: In printed pages, first page should start with approx <HTML Line No. 50>.\n" +
                     " 7. if Yes then Test Passed else Test Failed";
 
-    static final String initialURL = "https://en.wikipedia.org/wiki/Java_version_history";
-
     private String createHtmlPage() {
         StringBuilder htmlStringBuilder = new StringBuilder();
         htmlStringBuilder.append("<html><head></head><body>");
