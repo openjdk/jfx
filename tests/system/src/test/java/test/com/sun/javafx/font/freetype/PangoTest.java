@@ -34,6 +34,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import org.junit.Test;
 import org.junit.AfterClass;
@@ -73,37 +74,26 @@ public class PangoTest {
             pane = new VBox(10);
             Scene scene = new Scene(pane, 400, 200);
             stage.setScene(scene);
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(launchLatch::countDown));
             stage.show();
-            launchLatch.countDown();
         }
     }
 
     @BeforeClass
-    public static void setupOnce() {
+    public static void setupOnce() throws Exception {
         // Start the Application
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
-
+        assertTrue("Timeout waiting for Application to launch", 
+                launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
         assertEquals(0, launchLatch.getCount());
     }
-
-
 
     @AfterClass
     public static void teardownOnce() {
         Platform.exit();
     }
 
-    private void addTextToPane(Text text) {
+    private void addTextToPane(Text text) throws Exception {
         final CountDownLatch rDone = new CountDownLatch(1);
         Platform.runLater(() -> {
             text.layoutYProperty().addListener(inv -> {
@@ -111,18 +101,11 @@ public class PangoTest {
             });
             pane.getChildren().add(text);
         });
-
-        try {
-            if (!rDone.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for runLater");
-            }
-        } catch (InterruptedException ex) {
-            throw new AssertionFailedError("Unexpected exception waiting for runLater");
-        }
+        assertTrue("Timeout waiting for runLater", rDone.await(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void testZeroChar() {
+    public void testZeroChar() throws Exception {
         String FULL_UNICODE_SET;
         StringBuilder builder = new StringBuilder();
         for (int character = 0; character < 10000; character++) {
@@ -135,7 +118,7 @@ public class PangoTest {
     }
 
     @Test
-    public void testSurrogatePair() {
+    public void testSurrogatePair() throws Exception {
         StringBuilder builder = new StringBuilder();
         builder.append(Character.toChars(55358));
         builder.append(Character.toChars(56605));
