@@ -449,7 +449,7 @@ public class JFXPanel extends JComponent {
                 // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
-                if(stagePeer != null) {
+                if (stagePeer != null) {
                     int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
                     stagePeer.setFocused(true, focusCause);
                 }
