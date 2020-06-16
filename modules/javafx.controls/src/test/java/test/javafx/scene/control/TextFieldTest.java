@@ -481,20 +481,6 @@ public class TextFieldTest {
         return filtered;
     }
 
-    @Test public void replaceSelectionAtEndWithListener() {
-        StringBuilder selectedTextLog = new StringBuilder();
-        StringBuilder selectionLog = new StringBuilder();
-        txtField.setText("x xxx");
-        txtField.selectRange(2, 5);
-        txtField.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
-        txtField.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
-        txtField.replaceSelection("a");
-        assertEquals("|", selectedTextLog.toString());
-        assertEquals("|3,3", selectionLog.toString());
-        assertEquals("x a", txtField.getText());
-    }
-
-
     /**
      * Helper method to init the stage only if really needed.
      */

@@ -502,17 +502,4 @@ public class TextAreaTest {
         dummyTxtArea.deleteText(0,6);
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "another");
     }
-
-    @Test public void replaceSelectionAtEndWithListener() {
-        StringBuilder selectedTextLog = new StringBuilder();
-        StringBuilder selectionLog = new StringBuilder();
-        txtArea.setText("x xxx");
-        txtArea.selectRange(2, 5);
-        txtArea.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
-        txtArea.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
-        txtArea.replaceSelection("a");
-        assertEquals("|", selectedTextLog.toString());
-        assertEquals("|3,3", selectionLog.toString());
-        assertEquals("x a", txtArea.getText());
-    }
 }

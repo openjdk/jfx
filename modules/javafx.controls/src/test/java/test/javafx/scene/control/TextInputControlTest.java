@@ -1900,6 +1900,50 @@ public class TextInputControlTest {
         assertEquals("01234567x", textInput.getText());
     }
 
+    @Test public void replaceSelectionAtEndWithListener() {
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        textInput.setText("x xxx");
+        textInput.selectRange(2, 5);
+        textInput.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
+        textInput.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
+        textInput.replaceSelection("a");
+        assertEquals("|", selectedTextLog.toString());
+        assertEquals("|3,3", selectionLog.toString());
+        assertEquals("x a", textInput.getText());
+    }
+
+    @Test public void testSelectionProperties() {
+        textInput.setText("abcdefghij");
+
+        StringBuilder selectedTextLog = new StringBuilder();
+        StringBuilder selectionLog = new StringBuilder();
+        StringBuilder textLog = new StringBuilder();
+        textInput.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
+        textInput.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
+        textInput.textProperty().addListener((__, ___, text) -> textLog.append("|" + text));
+
+        textInput.selectRange(3, 6);
+        assertEquals("|def", selectedTextLog.toString());
+        assertEquals("|3,6", selectionLog.toString());
+        assertEquals("", textLog.toString());
+
+        textInput.replaceSelection("xyz");
+        assertEquals("|def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij", textLog.toString());
+
+        textInput.undo();
+        assertEquals("|def||def", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij", textLog.toString());
+
+        textInput.redo();
+        assertEquals("|def||def|", selectedTextLog.toString());
+        assertEquals("|3,6|6,6|3,6|6,6", selectionLog.toString());
+        assertEquals("|abcxyzghij|abcdefghij|abcxyzghij", textLog.toString());
+    }
+
     // Test for JDK-8178418
     @Test public void UndoRedoSpaceSequence() {
         Toolkit tk = (StubToolkit)Toolkit.getToolkit();
