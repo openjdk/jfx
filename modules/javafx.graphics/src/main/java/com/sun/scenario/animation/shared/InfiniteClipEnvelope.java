@@ -94,7 +94,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    public void timePulse(long currentTick) {
+    public void timePulse(long destinationTick) {
         if (cycleTicks == 0L) {
             return;
         }
@@ -106,7 +106,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
             System.out.println("curRate = " + currentRate);
 
             final long oldTicks = ticks;
-            long ticksChange = Math.round(currentTick * Math.abs(rate));
+            long ticksChange = Math.round(destinationTick * rate);
             ticks = Math.max(0, deltaTicks + ticksChange);
 
             long overallDelta = ticks - oldTicks; // overall delta between current position and new position

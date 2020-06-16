@@ -217,7 +217,7 @@ public abstract class Transition extends Animation {
     @Override
     void doJumpTo(long currentTicks, long cycleTicks, boolean forceJump) {
         setCurrentTicks(currentTicks);
-        if (getStatus() != Status.STOPPED || forceJump) {
+        if (!isStopped() || forceJump) {
             sync(false);
             interpolate(calculateFraction(currentTicks, cycleTicks));
         }

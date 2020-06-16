@@ -202,7 +202,7 @@ public final class Timeline extends Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot stop when embedded in another animation");
         }
-        if (getStatus() == Status.RUNNING) {
+        if (isRunning()) {
             clipCore.abort();
         }
         super.stop();
