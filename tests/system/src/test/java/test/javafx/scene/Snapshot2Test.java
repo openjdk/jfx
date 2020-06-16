@@ -27,13 +27,18 @@ package test.javafx.scene;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.SnapshotResult;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Transform;
 import javafx.util.Callback;
@@ -243,6 +248,33 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
+    private void setupImageScene(int width, int height) {
+        Util.runAndWait(() -> {
+            WritableImage image = new WritableImage(width, height);
+            // Initialize image with noise
+            var pixWriter = image.getPixelWriter();
+            assertNotNull(pixWriter);
+            IntStream.range(0, width).parallel()
+                    .forEach(x -> IntStream.range(0, height).parallel()
+                            .forEach(y -> pixWriter.setColor(x, y, Color.rgb(
+                                    ThreadLocalRandom.current().nextInt(0, 256),
+                                    ThreadLocalRandom.current().nextInt(0, 256),
+                                    ThreadLocalRandom.current().nextInt(0, 256)))));
+            tmpNode = new ImageView(image);
+            Group root = new Group();
+            tmpScene = new Scene(root, width, height);
+            root.getChildren().add(tmpNode);
+            if (live) {
+                tmpStage = new TestStage(tmpScene);
+                assertNotNull(tmpScene.getWindow());
+                tmpStage.show();
+            }
+            else {
+                assertNull(tmpScene.getWindow());
+            }
+        });
+    }
+
     // Test snapshot of a simple scene
 
     @Test
@@ -319,6 +351,142 @@ public class Snapshot2Test extends SnapshotCommon {
         }, snapshotParams, img);
     }
 
+    // Test tiled snapshots
+    
+    private void doTestTiledSnapshotImm(int w, int h) {
+        setupImageScene(w, h);
+        Image original = ((ImageView) tmpNode).getImage();
+        assertNotNull(original);
+        WritableImage buffer = useImage ? new WritableImage(w, h) : null;
+        Util.runAndWait(() -> {
+            WritableImage snapshot = tmpNode.snapshot(null, buffer);
+            assertNotNull(snapshot);
+            if (buffer != null) {
+                assertSame(buffer, snapshot);
+            }
+            assertTrue(comparePixels(original, snapshot));
+        });
+    }
+
+    private void doTestTiledSnapshotDefer(int w, int h) {
+        setupImageScene(w, h);
+        Image original = ((ImageView) tmpNode).getImage();
+        assertNotNull(original);
+        WritableImage buffer = useImage ? new WritableImage(w, h) : null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (buffer != null) {
+                assertSame(buffer, result.getImage());
+            }
+            assertTrue(comparePixels(original, result.getImage()));
+            return null;
+        }, null, buffer);
+    }
+
+    private boolean comparePixels(Image imageA, Image imageB) {
+        if (imageA == null) {
+            return false;
+        }
+        if (imageB == null) {
+            return false;
+        }
+        int width = (int)imageA.getWidth();
+        if (width != (int)imageB.getWidth()) {
+            return false;
+        }
+        int height = (int)imageA.getHeight();
+        if (height != (int)imageB.getHeight()) {
+            return false;
+        }
+        var pixRdrA = imageA.getPixelReader();
+        var pixRdrB = imageB.getPixelReader();
+        return IntStream.range(0, width).parallel()
+                .allMatch(x -> IntStream.range(0, height).parallel()
+                        .allMatch(y -> pixRdrA.getArgb(x, y) == pixRdrB.getArgb(x, y)));
+    }
+
+    @Test
+    public void testSnapshot2x1TilesSameSizeImm() {
+        doTestTiledSnapshotImm(4100, 10);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(4101, 10);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesSameSizeImm() {
+        doTestTiledSnapshotImm(10, 4100);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(10, 4101);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameSizeImm() {
+        doTestTiledSnapshotImm(4100, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(4101, 4101);
+    }
+    
+    @Test
+    public void testSnapshot2x2TilesSameHeightImm() {
+        doTestTiledSnapshotImm(4101, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameWidthImm() {
+        doTestTiledSnapshotImm(4100, 4101);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(4100, 10);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(4101, 10);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(10, 4100);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(10, 4101);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(4100, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(4101, 4101);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameHeightDefer() {
+        doTestTiledSnapshotDefer(4101, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameWidthDefer() {
+        doTestTiledSnapshotDefer(4100, 4101);
+    }
+
     // Test node snapshot with a scale transform
 
     private void doTestSnapshotScaleNodeImm(int xScale, int yScale) {
@@ -339,7 +507,7 @@ public class Snapshot2Test extends SnapshotCommon {
             assertEquals(HEIGHT, (int)wimg.getHeight());
         });
     }
-
+    
     private void doTestSnapshotScaleNodeDefer(int xScale, int yScale) {
         setupSimpleScene();
         final SnapshotParameters snapshotParams = new SnapshotParameters();
@@ -391,7 +559,7 @@ public class Snapshot2Test extends SnapshotCommon {
     public void testSnapshotBigYScaleNodeDefer() {
         doTestSnapshotScaleNodeDefer(1, 200);
     }
-
+    
     // Test node snapshot with a 90 degree rotate transform
 
     @Test
