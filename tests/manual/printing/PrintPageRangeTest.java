@@ -80,7 +80,7 @@ public class PrintPageRangeTest extends Application {
     private String createHtmlPage() {
         StringBuilder htmlStringBuilder = new StringBuilder();
         htmlStringBuilder.append("<html><head></head><body>");
-        for(int i = 0; i < 500; ++i) {
+        for (int i = 0; i < 500; ++i) {
             htmlStringBuilder.append("<p> HTML Line No. ");
             htmlStringBuilder.append(i);
             htmlStringBuilder.append(" </p>");
@@ -119,12 +119,12 @@ public class PrintPageRangeTest extends Application {
         return scene;
     }
 
-    private void SetMessage(String msg) {
+    private void setMessage(String msg) {
         bottomMessageLabel.setText(msg);
         System.out.println(msg);
     }
     private void runTest() {
-        SetMessage("START OF PRINT JOB");
+        setMessage("START OF PRINT JOB");
         PrinterJob job = PrinterJob.createPrinterJob();
         if (job != null) {
             Window window = webView.getScene() != null ? webView.getScene().getWindow() : null;
@@ -135,6 +135,6 @@ public class PrintPageRangeTest extends Application {
                 }
             }
         }
-        SetMessage("END OF PRINT JOB");
+        setMessage("END OF PRINT JOB");
     }
 }

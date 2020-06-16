@@ -1612,7 +1612,7 @@ final public class WebEngine {
         int pageCount = page.beginPrinting(width, height);
 
         JobSettings jobSettings = job.getJobSettings();
-        if(jobSettings.getPageRanges() != null) {
+        if (jobSettings.getPageRanges() != null) {
             PageRange[] pageRanges = jobSettings.getPageRanges();
             for (PageRange p : pageRanges) {
                 for (int i = p.getStartPage(); i <= p.getEndPage() && i <= pageCount; ++i) {
