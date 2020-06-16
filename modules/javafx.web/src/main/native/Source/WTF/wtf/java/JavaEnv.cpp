@@ -111,7 +111,11 @@ extern "C" {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
 #include <crtdbg.h>
 #endif
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL JNI_OnLoad_jfxwebkit(JavaVM* vm, void*)
+#else
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
+#endif
 {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
     _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_FILE );

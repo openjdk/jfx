@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,8 @@ public class ModuleLauncherTest {
     private static final String modulePath4 = System.getProperty("launchertest.testapp4.module.path");
     private static final String modulePath5 = System.getProperty("launchertest.testapp5.module.path");
     private static final String modulePath6 = System.getProperty("launchertest.testapp6.module.path");
+    private static final String modulePathScript1 = System.getProperty("launchertest.testscriptapp1.module.path");
+
     private static final String moduleName = "mymod";
 
     private final int testExitCode = ERROR_NONE;
@@ -272,6 +274,11 @@ public class ModuleLauncherTest {
     @Test (timeout = 15000)
     public void testModuleFXMLQualOpened() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLQualOpened");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment() throws Exception {
+        doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
 }

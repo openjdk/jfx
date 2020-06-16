@@ -83,6 +83,7 @@ class OSPango {
     /* Miscellaneous (glib, fontconfig) */
     static final native long g_utf8_offset_to_pointer(long str, long offset);
     static final native long g_utf8_pointer_to_offset(long str, long pos);
+    static final native long g_utf8_strlen(long str, long max);
     static final native long g_utf16_to_utf8(char[] str);
     static final native void g_free(long ptr);
     static final native int g_list_length(long list);

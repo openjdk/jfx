@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ LINUX.library = { name -> return (IS_STATIC_BUILD ? "lib${name}.a" : "lib${name}
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
         "-fstack-protector",
-        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration", "-Werror=trampolines"] // warning flags
+        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=trampolines"] // warning flags
 
 if (!IS_64) {
     commonFlags += "-m32"
@@ -54,11 +54,14 @@ if (IS_STATIC_BUILD) {
 }
 
 // Specify the compilation parameters and link parameters
-def ccFlags = [
+def cppFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
         "-ffunction-sections", "-fdata-sections",
         IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-DNDEBUG"]].flatten()
-def ccFlagsGTK3 = ccFlags
+
+def cFlags = [cppFlags, "-Werror=implicit-function-declaration"].flatten()
+
+def ccFlagsGTK3 = cppFlags
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def dynamicLinkFlags = ["-static-libgcc", "-static-libstdc++", "-shared", commonFlags,
                  "-z", "relro",
@@ -79,7 +82,7 @@ if (hasProperty('toolchainDir')) {
     toolchainDir = ""
 }
 
-def gtk2CCFlags = [  ];
+def gtk2CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk2LinkFlags = [ ];
 def gtk3LinkFlags = [ ];
@@ -222,7 +225,7 @@ FileTree ft_gtk = fileTree("${project(":graphics").projectDir}/src/main/native-g
 LINUX.glass.glass = [:]
 LINUX.glass.glass.nativeSource = ft_gtk_launcher.getFiles()
 LINUX.glass.glass.compiler = compiler
-LINUX.glass.glass.ccFlags = [ccFlags, "-Werror"].flatten()
+LINUX.glass.glass.ccFlags = [cppFlags, "-Werror"].flatten()
 LINUX.glass.glass.linker = linker
 LINUX.glass.glass.linkFlags = IS_STATIC_BUILD? linkFlags : [linkFlags, "-lX11", "-ldl"].flatten()
 LINUX.glass.glass.lib = "glass"
@@ -231,8 +234,8 @@ LINUX.glass.glassgtk2 = [:]
 LINUX.glass.glassgtk2.nativeSource =  ft_gtk.getFiles()
 LINUX.glass.glassgtk2.compiler = compiler
 LINUX.glass.glassgtk2.ccFlags = IS_STATIC_BUILD ?
-        ["-fno-threadsafe-statics", ccFlags, gtk2CCFlags].flatten() :
-        [ccFlags, gtk2CCFlags, "-Werror"].flatten()
+        ["-fno-threadsafe-statics", cppFlags, gtk2CCFlags].flatten() :
+        [cppFlags, gtk2CCFlags, "-Werror"].flatten()
 LINUX.glass.glassgtk2.linker = linker
 LINUX.glass.glassgtk2.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk2LinkFlags].flatten()
 LINUX.glass.glassgtk2.lib = "glassgtk2"
@@ -241,15 +244,15 @@ LINUX.glass.glassgtk3 = [:]
 LINUX.glass.glassgtk3.nativeSource =  ft_gtk.getFiles()
 LINUX.glass.glassgtk3.compiler = compiler
 LINUX.glass.glassgtk3.ccFlags = IS_STATIC_BUILD ?
-        ["-fno-threadsafe-statics", ccFlags, gtk3CCFlags].flatten() :
-        [ccFlags, gtk3CCFlags, "-Werror"].flatten()
+        ["-fno-threadsafe-statics", cppFlags, gtk3CCFlags].flatten() :
+        [cppFlags, gtk3CCFlags, "-Werror"].flatten()
 LINUX.glass.glassgtk3.linker = linker
 LINUX.glass.glassgtk3.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk3LinkFlags].flatten()
 LINUX.glass.glassgtk3.lib = "glassgtk3"
 
 LINUX.decora = [:]
 LINUX.decora.compiler = compiler
-LINUX.decora.ccFlags = [ccFlags, "-ffast-math"].flatten()
+LINUX.decora.ccFlags = [cppFlags, "-ffast-math"].flatten()
 LINUX.decora.linker = linker
 LINUX.decora.linkFlags = [linkFlags].flatten()
 LINUX.decora.lib = "decora_sse"
@@ -257,7 +260,7 @@ LINUX.decora.lib = "decora_sse"
 LINUX.prism = [:]
 LINUX.prism.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism")
 LINUX.prism.compiler = compiler
-LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
+LINUX.prism.ccFlags = [cFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
 LINUX.prism.lib = "prism_common"
@@ -265,7 +268,7 @@ LINUX.prism.lib = "prism_common"
 LINUX.prismSW = [:]
 LINUX.prismSW.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism-sw")
 LINUX.prismSW.compiler = compiler
-LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
+LINUX.prismSW.ccFlags = [cFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
 LINUX.prismSW.lib = "prism_sw"
@@ -275,7 +278,7 @@ LINUX.iio.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-iio"),
     file("${project("graphics").projectDir}/src/main/native-iio/libjpeg")]
 LINUX.iio.compiler = compiler
-LINUX.iio.ccFlags = [ccFlags].flatten()
+LINUX.iio.ccFlags = [cFlags].flatten()
 LINUX.iio.linker = linker
 LINUX.iio.linkFlags = [linkFlags].flatten()
 LINUX.iio.lib = "javafx_iio"
@@ -287,7 +290,7 @@ LINUX.prismES2.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-prism-es2/x11")
 ]
 LINUX.prismES2.compiler = compiler
-LINUX.prismES2.ccFlags = ["-DLINUX", ccFlags].flatten()
+LINUX.prismES2.ccFlags = ["-DLINUX", cFlags].flatten()
 LINUX.prismES2.linker = linker
 LINUX.prismES2.linkFlags =IS_STATIC_BUILD ? linkFlags : [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2.lib = "prism_es2"
@@ -296,7 +299,7 @@ def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
 LINUX.font.compiler = compiler
 LINUX.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
-LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
+LINUX.font.ccFlags = ["-DJFXFONT_PLUS", cppFlags].flatten()
 LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
 LINUX.font.lib = "javafx_font"
@@ -304,7 +307,7 @@ LINUX.font.lib = "javafx_font"
 LINUX.fontFreetype = [:]
 LINUX.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 LINUX.fontFreetype.compiler = compiler
-LINUX.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, freetypeCCFlags].flatten()
+LINUX.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", cFlags, freetypeCCFlags].flatten()
 LINUX.fontFreetype.linker = linker
 LINUX.fontFreetype.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, freetypeLinkFlags].flatten()
 LINUX.fontFreetype.lib = "javafx_font_freetype"
@@ -312,7 +315,7 @@ LINUX.fontFreetype.lib = "javafx_font_freetype"
 LINUX.fontPango = [:]
 LINUX.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 LINUX.fontPango.compiler = compiler
-LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
+LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", cFlags, pangoCCFlags].flatten()
 LINUX.fontPango.linker = linker
 LINUX.fontPango.linkFlags =IS_STATIC_BUILD ? linkFlags : [linkFlags, pangoLinkFlags].flatten()
 LINUX.fontPango.lib = "javafx_font_pango"

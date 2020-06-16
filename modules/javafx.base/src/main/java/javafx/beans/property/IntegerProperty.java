@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package javafx.beans.property;
+
+import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
@@ -142,10 +144,8 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * @see #asObject()
      * @since JavaFX 8.0
      */
-     public static IntegerProperty integerProperty(final Property<Integer> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+    public static IntegerProperty integerProperty(final Property<Integer> property) {
+        Objects.requireNonNull(property, "Property cannot be null");
         return new IntegerPropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
@@ -184,7 +184,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      */
     @Override
     public ObjectProperty<Integer> asObject() {
-        return new ObjectPropertyBase<Integer> () {
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, IntegerProperty.this);
             }

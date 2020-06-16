@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,7 +148,7 @@ public class Utils {
     }
 
     public static Point2D computeMnemonicPosition(Font font, String text, int mnemonicIndex, double wrappingWidth,
-                                                  double lineSpacing) {
+                                                  double lineSpacing, boolean isRTL) {
         // Input validation
         if ((font == null) || (text == null) ||
             (mnemonicIndex < 0) || (mnemonicIndex > text.length())) {
@@ -165,8 +165,9 @@ public class Utils {
         int start = 0;
         int i = 0;
         int totalLines = layout.getLines().length;
+        int lineLength = 0;
         while (i < totalLines) {
-            int lineLength = layout.getLines()[i].getLength();
+            lineLength = layout.getLines()[i].getLength();
 
             if ((mnemonicIndex >= start) &&
                 (mnemonicIndex < (start + lineLength))) {
@@ -182,6 +183,10 @@ public class Utils {
         // in line numbered 'i'
         double lineHeight = layout.getBounds().getHeight() / totalLines;
         double x = Utils.computeTextWidth(font, text.substring(start, mnemonicIndex), 0);
+        if (isRTL) {
+            double lineWidth = Utils.computeTextWidth(font, text.substring(start, (start + lineLength - 1)), 0);
+            x = lineWidth - x;
+        }
 
         double y = (lineHeight * (i+1));
         // Adjust y offset for linespacing except for the last line.
@@ -412,17 +417,27 @@ public class Utils {
     }
 
     public static String computeClippedWrappedText(Font font, String text, double width,
-                                            double height, OverrunStyle truncationStyle,
+                                            double height, double lineSpacing, OverrunStyle truncationStyle,
                                             String ellipsisString, TextBoundsType boundsType) {
         if (font == null) {
             throw new IllegalArgumentException("Must specify a font");
         }
 
+        // The height given does not need to include the line spacing after
+        // the last line to be able to render that last line correctly.
+        //
+        // However the calculations include the line spacing as part of a
+        // line's height.  In order to not cut off the last line because its
+        // line spacing wouldn't fit, the height used for the calculation
+        // is increased here with the line spacing amount.
+
+        height += lineSpacing;
+
         String ellipsis = (truncationStyle == CLIP) ? "" : ellipsisString;
         int eLen = ellipsis.length();
         // Do this before using helper, as it's not reentrant.
         double eWidth = computeTextWidth(font, ellipsis, 0);
-        double eHeight = computeTextHeight(font, ellipsis, 0, boundsType);
+        double eHeight = computeTextHeight(font, ellipsis, 0, lineSpacing, boundsType);
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
@@ -433,7 +448,7 @@ public class Utils {
         helper.setFont(font);
         helper.setWrappingWidth((int)Math.ceil(width));
         helper.setBoundsType(boundsType);
-        helper.setLineSpacing(0);
+        helper.setLineSpacing(lineSpacing);
 
         boolean leading =  (truncationStyle == LEADING_ELLIPSIS ||
                             truncationStyle == LEADING_WORD_ELLIPSIS);

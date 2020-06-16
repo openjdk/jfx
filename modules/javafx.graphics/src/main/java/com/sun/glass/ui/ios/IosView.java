@@ -82,5 +82,10 @@ final class IosView extends View {
     @Override protected void _uploadPixels(long ptr, Pixels pixels) {
         throw new RuntimeException("IosView._uploadPixels() UNIMPLEMENTED.");
     }
+
+    private void notifyUnicode(int type, int keyCode, int unicode, int modifiers) {
+        notifyKey(type, keyCode, new char[] {(char) unicode}, modifiers);
+    }
+
 }
 

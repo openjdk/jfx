@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package javafx.beans.property;
+
+import java.util.Objects;
 
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
@@ -133,9 +135,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      * @since JavaFX 8.0
      */
     public static BooleanProperty booleanProperty(final Property<Boolean> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+        Objects.requireNonNull(property, "Property cannot be null");
         return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
             {
                 BidirectionalBinding.bind(this, property);
@@ -164,7 +164,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      */
     @Override
     public ObjectProperty<Boolean> asObject() {
-        return new ObjectPropertyBase<Boolean> () {
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bind(this, BooleanProperty.this);
             }

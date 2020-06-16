@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.binding;
 
-import javafx.beans.Observable;
 import javafx.beans.WeakListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
@@ -35,13 +34,13 @@ import javafx.util.StringConverter;
 import java.lang.ref.WeakReference;
 import java.text.Format;
 import java.text.ParseException;
+import java.util.Objects;
 
 public abstract class BidirectionalBinding<T> implements ChangeListener<T>, WeakListener {
 
     private static void checkParameters(Object property1, Object property2) {
-        if ((property1 == null) || (property2 == null)) {
-            throw new NullPointerException("Both properties must be specified.");
-        }
+        Objects.requireNonNull(property1, "Both properties must be specified.");
+        Objects.requireNonNull(property2, "Both properties must be specified.");
         if (property1 == property2) {
             throw new IllegalArgumentException("Cannot bind property to itself");
         }
@@ -69,10 +68,8 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
 
     public static Object bind(Property<String> stringProperty, Property<?> otherProperty, Format format) {
         checkParameters(stringProperty, otherProperty);
-        if (format == null) {
-            throw new NullPointerException("Format cannot be null");
-        }
-        final StringConversionBidirectionalBinding<?> binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
+        Objects.requireNonNull(format, "Format cannot be null");
+        final var binding = new StringFormatBidirectionalBinding(stringProperty, otherProperty, format);
         stringProperty.setValue(format.format(otherProperty.getValue()));
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
@@ -81,10 +78,8 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
 
     public static <T> Object bind(Property<String> stringProperty, Property<T> otherProperty, StringConverter<T> converter) {
         checkParameters(stringProperty, otherProperty);
-        if (converter == null) {
-            throw new NullPointerException("Converter cannot be null");
-        }
-        final StringConversionBidirectionalBinding<T> binding = new StringConverterBidirectionalBinding<T>(stringProperty, otherProperty, converter);
+        Objects.requireNonNull(converter, "Converter cannot be null");
+        final var binding = new StringConverterBidirectionalBinding<>(stringProperty, otherProperty, converter);
         stringProperty.setValue(converter.toString(otherProperty.getValue()));
         stringProperty.addListener(binding);
         otherProperty.addListener(binding);
