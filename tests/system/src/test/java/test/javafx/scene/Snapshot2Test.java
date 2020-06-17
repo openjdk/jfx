@@ -352,7 +352,7 @@ public class Snapshot2Test extends SnapshotCommon {
     }
 
     // Test tiled snapshots
-    
+
     private void doTestTiledSnapshotImm(int w, int h) {
         setupImageScene(w, h);
         Image original = ((ImageView) tmpNode).getImage();
@@ -436,7 +436,7 @@ public class Snapshot2Test extends SnapshotCommon {
     public void testSnapshot2x2TilesDifferentSizeImm() {
         doTestTiledSnapshotImm(4101, 4101);
     }
-    
+
     @Test
     public void testSnapshot2x2TilesSameHeightImm() {
         doTestTiledSnapshotImm(4101, 4100);
@@ -507,7 +507,7 @@ public class Snapshot2Test extends SnapshotCommon {
             assertEquals(HEIGHT, (int)wimg.getHeight());
         });
     }
-    
+
     private void doTestSnapshotScaleNodeDefer(int xScale, int yScale) {
         setupSimpleScene();
         final SnapshotParameters snapshotParams = new SnapshotParameters();
@@ -559,7 +559,7 @@ public class Snapshot2Test extends SnapshotCommon {
     public void testSnapshotBigYScaleNodeDefer() {
         doTestSnapshotScaleNodeDefer(1, 200);
     }
-    
+
     // Test node snapshot with a 90 degree rotate transform
 
     @Test
