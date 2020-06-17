@@ -414,7 +414,7 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot2x1TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(4101, 10);
+        doTestTiledSnapshotImm(4099, 10);
     }
 
     @Test
@@ -424,7 +424,7 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot1x2TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(10, 4101);
+        doTestTiledSnapshotImm(10, 4099);
     }
 
     @Test
@@ -434,17 +434,17 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot2x2TilesDifferentSizeImm() {
-        doTestTiledSnapshotImm(4101, 4101);
+        doTestTiledSnapshotImm(4099, 4099);
     }
 
     @Test
     public void testSnapshot2x2TilesSameHeightImm() {
-        doTestTiledSnapshotImm(4101, 4100);
+        doTestTiledSnapshotImm(4099, 4100);
     }
 
     @Test
     public void testSnapshot2x2TilesSameWidthImm() {
-        doTestTiledSnapshotImm(4100, 4101);
+        doTestTiledSnapshotImm(4100, 4099);
     }
 
     @Test
@@ -454,7 +454,7 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot2x1TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(4101, 10);
+        doTestTiledSnapshotDefer(4099, 10);
     }
 
     @Test
@@ -464,7 +464,7 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot1x2TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(10, 4101);
+        doTestTiledSnapshotDefer(10, 4099);
     }
 
     @Test
@@ -474,17 +474,17 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @Test
     public void testSnapshot2x2TilesDifferentSizeDefer() {
-        doTestTiledSnapshotDefer(4101, 4101);
+        doTestTiledSnapshotDefer(4099, 4099);
     }
 
     @Test
     public void testSnapshot2x2TilesSameHeightDefer() {
-        doTestTiledSnapshotDefer(4101, 4100);
+        doTestTiledSnapshotDefer(4099, 4100);
     }
 
     @Test
     public void testSnapshot2x2TilesSameWidthDefer() {
-        doTestTiledSnapshotDefer(4100, 4101);
+        doTestTiledSnapshotDefer(4100, 4099);
     }
 
     // Test node snapshot with a scale transform
