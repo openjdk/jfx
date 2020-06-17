@@ -1810,11 +1810,6 @@ public class TreeTableView<S> extends Control {
         return sortingInProgress;
     }
 
-    private boolean sortTreeOfSelectedItems = true;
-    boolean isSortTreeOfSelectedItems() {
-        return sortTreeOfSelectedItems;
-    }
-
     /**
      * The sort method forces the TreeTableView to re-run its sorting algorithm. More
      * often than not it is not necessary to call this method directly, as it is
@@ -1861,7 +1856,7 @@ public class TreeTableView<S> extends Control {
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
 
-        if (getSortMode() == TreeSortMode.ALL_DESCENDANTS && isSortTreeOfSelectedItems()) {
+        if (getSortMode() == TreeSortMode.ALL_DESCENDANTS) {
             Set<TreeItem<S>> sortedParents = new HashSet<>();
             for (TreeTablePosition<S,?> selectedPosition : prevState) {
                 TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
