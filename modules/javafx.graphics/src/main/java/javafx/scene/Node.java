@@ -9367,14 +9367,14 @@ public abstract class Node implements EventTarget, Styleable {
 
     // package so that StyleHelper can get at it
     final ObservableSet<PseudoClass> pseudoClassStates = new PseudoClassState();
+    final ObservableSet<PseudoClass> unmodifiablePseudoClassStates =
+            FXCollections.unmodifiableObservableSet(pseudoClassStates);
     /**
      * @return The active pseudo-class states of this Node, wrapped in an unmodifiable ObservableSet
      * @since JavaFX 8.0
      */
     public final ObservableSet<PseudoClass> getPseudoClassStates() {
-
-        return FXCollections.unmodifiableObservableSet(pseudoClassStates);
-
+        return unmodifiablePseudoClassStates;
     }
 
     // Walks up the tree telling each parent that the pseudo class state of

@@ -161,6 +161,13 @@ public class NodeTest {
      *                                                                         *
      **************************************************************************/
 
+    @Test
+    public void testGetPseudoClassStatesShouldReturnSameSet() {
+        Rectangle node = new Rectangle();
+        assertSame("getPseudoClassStates() should always return the same instance",
+                node.getPseudoClassStates(), node.getPseudoClassStates());
+    }
+
 // TODO disable this because it depends on TestNode
 //    @Test public void testPeerNotifiedOfVisibilityChanges() {
 //        Rectangle rect = new Rectangle();
