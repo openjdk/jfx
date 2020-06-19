@@ -254,12 +254,14 @@ public class Snapshot2Test extends SnapshotCommon {
             // Initialize image with noise
             var pixWriter = image.getPixelWriter();
             assertNotNull(pixWriter);
-            IntStream.range(0, width).parallel()
-                    .forEach(x -> IntStream.range(0, height).parallel()
-                            .forEach(y -> pixWriter.setColor(x, y, Color.rgb(
-                                    ThreadLocalRandom.current().nextInt(0, 256),
-                                    ThreadLocalRandom.current().nextInt(0, 256),
-                                    ThreadLocalRandom.current().nextInt(0, 256)))));
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    pixWriter.setColor(x, y, Color.rgb(
+                            ThreadLocalRandom.current().nextInt(0, 256),
+                            ThreadLocalRandom.current().nextInt(0, 256),
+                            ThreadLocalRandom.current().nextInt(0, 256)));
+                }
+            }
             tmpNode = new ImageView(image);
             Group root = new Group();
             tmpScene = new Scene(root, width, height);
@@ -402,9 +404,14 @@ public class Snapshot2Test extends SnapshotCommon {
         }
         var pixRdrA = imageA.getPixelReader();
         var pixRdrB = imageB.getPixelReader();
-        return IntStream.range(0, width).parallel()
-                .allMatch(x -> IntStream.range(0, height).parallel()
-                        .allMatch(y -> pixRdrA.getArgb(x, y) == pixRdrB.getArgb(x, y)));
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (pixRdrA.getArgb(x, y) != pixRdrB.getArgb(x, y)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Test
