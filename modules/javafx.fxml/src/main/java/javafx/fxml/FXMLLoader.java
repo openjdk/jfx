@@ -1568,14 +1568,15 @@ public class FXMLLoader {
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
                         StringBuilder sb = new StringBuilder();
-                        char[] charBuffer = new char[4096];
+                        final int bufSize = 4096;
+                        char[] charBuffer = new char[bufSize];
                         int n;
                         do {
-                          n = scriptReader.read(charBuffer,0,4096);
+                          n = scriptReader.read(charBuffer,0,bufSize);
                           if (n > 0) {
                               sb.append(new String(charBuffer,0,n));
                           }
-                        } while (n == 4096);
+                        } while (n > -1);
                         script = sb.toString();
                     } catch (IOException exception) {
                         throw constructLoadException(exception);
@@ -1594,12 +1595,10 @@ public class FXMLLoader {
                             }
                             if (compiledScript != null) {
                                compiledScript.eval();
-                            }
-                            else {        // fallback to uncompiled mode
+                            } else { // fallback to uncompiled mode
                                engine.eval(script);
                             }
-                        }
-                        else {
+                        } else {
                            engine.eval(script);
                         }
                     } catch (ScriptException exception) {
@@ -1635,12 +1634,10 @@ public class FXMLLoader {
                         }
                         if (compiledScript != null) {
                            compiledScript.eval();
-                        }
-                        else {        // fallback to uncompiled mode
+                        } else { // fallback to uncompiled mode
                            scriptEngine.eval(script);
-                            }
-                    }
-                    else {
+                        }
+                    } else {
                        scriptEngine.eval(script);
                     }
                 } catch (ScriptException exception) {
@@ -1768,8 +1765,7 @@ public class FXMLLoader {
             try {
                 if (isCompiled) {
                    compiledScript.eval(localBindings);
-                }
-                else {
+                } else {
                    scriptEngine.eval(script, localBindings);
                 }
             } catch (ScriptException exception){
