@@ -676,8 +676,8 @@ public class JFXPanel extends JComponent {
             pixelsIm = null;
         } else {
             BufferedImage oldIm = pixelsIm;
-            int newPixelW = (int) Math.round(pWidth * newScaleFactorX);
-            int newPixelH = (int) Math.round(pHeight * newScaleFactorY);
+            int newPixelW = (int) Math.ceil(pWidth * newScaleFactorX);
+            int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
             pixelsIm = new BufferedImage(newPixelW, newPixelH,
                                          SwingFXUtils.getBestBufferedImageType(
                                              scenePeer.getPixelFormat(), null, false));
@@ -685,8 +685,8 @@ public class JFXPanel extends JComponent {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;
                 // Transform old size to the new coordinate space.
-                int oldW = (int)Math.round(oldIm.getWidth() * ratioX);
-                int oldH = (int)Math.round(oldIm.getHeight() * ratioY);
+                int oldW = (int)Math.ceil(oldIm.getWidth() * ratioX);
+                int oldH = (int)Math.ceil(oldIm.getHeight() * ratioY);
 
                 Graphics g = pixelsIm.getGraphics();
                 try {
