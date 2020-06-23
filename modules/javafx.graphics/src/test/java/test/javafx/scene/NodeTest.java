@@ -44,7 +44,10 @@ import test.com.sun.javafx.test.objects.TestScene;
 import test.com.sun.javafx.test.objects.TestStage;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
+import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
@@ -59,8 +62,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Comparator;
+import java.util.Set;
+
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
@@ -164,8 +170,53 @@ public class NodeTest {
     @Test
     public void testGetPseudoClassStatesShouldReturnSameSet() {
         Rectangle node = new Rectangle();
+        Set<PseudoClass> set1 = node.getPseudoClassStates();
+        Set<PseudoClass> set2 = node.getPseudoClassStates();
         assertSame("getPseudoClassStates() should always return the same instance",
-                node.getPseudoClassStates(), node.getPseudoClassStates());
+                set1, set2);
+    }
+
+    @Test(expected=UnsupportedOperationException.class)
+    public void testPseudoClassStatesIsUnmodifiable() {
+        Node node = new Rectangle();
+        node.getPseudoClassStates().add(PseudoClass.getPseudoClass("dummy"));
+    }
+
+    @Test
+    public void testUnmodifiablePseudoClassStatesEqualsBackingStates() {
+        Rectangle node = new Rectangle();
+        PseudoClass pseudo = PseudoClass.getPseudoClass("Pseudo");
+        node.pseudoClassStateChanged(pseudo, true);
+        assertEquals(1, node.getPseudoClassStates().size());
+        assertEquals(NodeShim.pseudoClassStates(node).size(), node.getPseudoClassStates().size());
+        assertTrue(NodeShim.pseudoClassStates(node).contains(pseudo));
+        assertTrue(node.getPseudoClassStates().contains(pseudo));
+    }
+
+    private boolean isInvalidationListenerInvoked;
+    private boolean isChangeListenerInvoked;
+    @Test
+    public void testPseudoClassStatesListenersAreInvoked() {
+        Rectangle node = new Rectangle();
+        node.getPseudoClassStates().addListener((InvalidationListener) inv -> {
+            isInvalidationListenerInvoked = true;
+        });
+        node.getPseudoClassStates().addListener((SetChangeListener<PseudoClass>) c -> {
+            isChangeListenerInvoked = true;
+        });
+
+        PseudoClass pseudo = PseudoClass.getPseudoClass("Pseudo");
+        node.pseudoClassStateChanged(pseudo, true);
+        assertTrue(isInvalidationListenerInvoked);
+        assertTrue(isChangeListenerInvoked);
+    }
+
+    @Test
+    public void testPseudoClassStatesNotGCed() {
+        Node node = new Rectangle();
+        WeakReference<Set<?>> weakRef = new WeakReference<>(node.getPseudoClassStates());
+        TestUtils.attemptGC(weakRef);
+        assertNotNull("pseudoClassStates must not be gc'ed", weakRef.get());
     }
 
 // TODO disable this because it depends on TestNode
