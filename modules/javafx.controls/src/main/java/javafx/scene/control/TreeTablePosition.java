@@ -77,7 +77,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
         nonFixedColumnIndex = treeTableView == null || tableColumn == null ? -1 : treeTableView.getVisibleLeafIndex(tableColumn);
     }
 
-    // Copy-like constructor with a different row.
+    // Not public API. A Copy-like constructor with a different row.
     // It is used for updating the selection when the TreeItems are
     // sorted using TreeTableView.sort() or reordered using setAll().
     TreeTablePosition(@NamedArg("treeTableView") TreeTablePosition<S, T> pos, @NamedArg("row") int row) {

@@ -1853,16 +1853,24 @@ public class TreeTableView<S> extends Control {
 
         // get the sort policy and run it
         Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
-        if (sortPolicy == null) return;
+        if (sortPolicy == null) {
+            sortingInProgress = false;
+            return;
+        }
         Boolean success = sortPolicy.call(this);
 
         if (getSortMode() == TreeSortMode.ALL_DESCENDANTS) {
             Set<TreeItem<S>> sortedParents = new HashSet<>();
             for (TreeTablePosition<S,?> selectedPosition : prevState) {
-                TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
-                while (parent != null && sortedParents.add(parent)) {
-                    parent.getChildren();
-                    parent = parent.getParent();
+                // This null check is not required ideally.
+                // The selectedPosition.getTreeItem() should always return a valid TreeItem.
+                // But, it is possible to be null due to JDK-8248217.
+                if (selectedPosition.getTreeItem() != null) {
+                    TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
+                    while (parent != null && sortedParents.add(parent)) {
+                        parent.getChildren();
+                        parent = parent.getParent();
+                    }
                 }
             }
         }
