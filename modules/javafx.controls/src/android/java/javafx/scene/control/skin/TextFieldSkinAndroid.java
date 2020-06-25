@@ -46,12 +46,8 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
     };
 
     private final ChangeListener<Boolean> focusChangeListener = (observable, wasFocused, isFocused) -> {
-        if (getSkinnable().isEditable()) {
-            if (isFocused) {
-                showSoftwareKeyboard();
-            } else {
-                hideSoftwareKeyboard();
-            }
+        if (wasFocused && !isFocused) {
+            hideSoftwareKeyboard();
         }
     };
     private final WeakChangeListener<Boolean> weakFocusChangeListener = new WeakChangeListener<>(focusChangeListener);
