@@ -68,30 +68,20 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
     }
 
     public double calculateCurrentRunningRate() {
-        double curRate = (!isAutoReverse() || isDuringEvenCycle()) ? rate : -rate;
-//        if (autoReverse && !isDuringEvenCycle()) {
-//            curRate = -curRate;
-//        }
+        boolean b = shouldNegateRate();
+        System.out.println("shouldNegateRate = " + b);
+        double curRate = b ? -rate : rate;
         return curRate;
     }
 
-    protected boolean isDuringEvenCycle() {
-//      if (rate > 0) {
-        // 0 - 11999 T
-        // 12k - 23999 F
-        // 24k - 25999 T
-        // 36k F
-        boolean b = ticks % (2 * cycleTicks) < cycleTicks;
-        System.out.println("isDuringEvenCycle = " + b);
-        return b;
-//      } else {
-        // 0 F
-        // 1 - 12k T
-        // 12001 - 24k F
-        // 24001 - 36k T
-//          boolean b = ticks % (2 * cycleTicks) < cycleTicks;
-//          return b;
-//      }
+    private boolean shouldNegateRate() {
+        return isAutoReverse() && !isDuringEffectiveEvenCycle();
+    }
+
+    private boolean isDuringEffectiveEvenCycle() {
+        boolean effectiveEven = getCycleNum() % 2 == 0;
+        System.out.println("isDuringEffectiveEvenCycle = " + effectiveEven);
+        return effectiveEven;
     }
 
     protected boolean isDirectionChanged(double newRate) {

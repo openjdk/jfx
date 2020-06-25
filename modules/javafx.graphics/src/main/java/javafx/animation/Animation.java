@@ -818,7 +818,7 @@ public abstract class Animation {
 
         lastPlayedFinished = false;
 
-        double millis = time.isIndefinite() ? getCycleDuration().toMillis() :
+        double millis = time.isIndefinite() ? getCycleDuration().toMillis() * 2 :
             Utils.clamp(0, time.toMillis(), getTotalDuration().toMillis());
         long ticks = TickCalculation.fromMillis(millis);
 

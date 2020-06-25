@@ -73,7 +73,7 @@ public abstract class ClipEnvelope {
     protected ClipEnvelope(Animation animation) {
         this.animation = animation;
         if (animation != null) {
-            cycleTicks = TickCalculation.fromDuration(animation.getCycleDuration());
+            updateCycleTicks(animation.getCycleDuration());
             rate = animation.getRate();
         }
     }
@@ -92,6 +92,7 @@ public abstract class ClipEnvelope {
     public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
     public abstract ClipEnvelope setCycleCount(int cycleCount);
     public abstract void setRate(double rate);
+    public abstract int getCycleNum();
 
     /**
      * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation.

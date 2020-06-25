@@ -78,6 +78,11 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
+    public int getCycleNum() {
+        return 0;
+    }
+
+    @Override
     public double calculateCurrentRunningRate() {
         return rate;
     }
