@@ -28,7 +28,6 @@ package com.sun.scenario.animation.shared;
 import com.sun.javafx.util.Utils;
 
 import javafx.animation.Animation;
-import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 /**
@@ -69,15 +68,6 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    public void setRate(double newRate) {
-        if (animation.getStatus() != Status.STOPPED) {
-            deltaTicks = ticks - ticksRateChange(newRate);
-            abortCurrentPulse();
-        }
-        rate = newRate;
-    }
-
-    @Override
     public int getCycleNum() {
         return 0;
     }
@@ -93,25 +83,18 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    public void timePulse(long currentTick) {
-        if (cycleTicks == 0L) {
-            return;
-        }
-        aborted = false;
-        inTimePulse = true;
+    protected boolean hasReachedEnd() {
+        return rate > 0 ? ticks == cycleTicks : ticks == 0;
+    }
 
-        try {
-            long ticksChange = Math.round(currentTick * rate); // curRate == rate
-            ticks = Utils.clamp(0, deltaTicks + ticksChange, cycleTicks); // cycleTicks == totalTicks
-            AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
+    @Override
+    protected long calculateNewTicks(long newDest) {
+        return Utils.clamp(0, deltaTicks + newDest, cycleTicks);
+    }
 
-            final boolean reachedEnd = (rate > 0) ? (ticks == cycleTicks) : (ticks == 0);
-            if (reachedEnd && !aborted) {
-                AnimationAccessor.getDefault().finished(animation);
-            }
-        } finally {
-            inTimePulse = false;
-        }
+    @Override
+    protected void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd) {
+        AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
     }
 
     @Override

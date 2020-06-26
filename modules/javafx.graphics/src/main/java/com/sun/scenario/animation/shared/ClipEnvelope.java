@@ -25,9 +25,11 @@
 
 package com.sun.scenario.animation.shared;
 
-import javafx.animation.Animation;
-import javafx.util.Duration;
 import com.sun.javafx.animation.TickCalculation;
+
+import javafx.animation.Animation;
+import javafx.animation.Animation.Status;
+import javafx.util.Duration;
 
 /**
  * An instance of ClipEnvelope handles the loop-part of a clip.
@@ -91,8 +93,15 @@ public abstract class ClipEnvelope {
     public abstract void setAutoReverse(boolean autoReverse);
     public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
     public abstract ClipEnvelope setCycleCount(int cycleCount);
-    public abstract void setRate(double rate);
     public abstract int getCycleNum();
+
+    public void setRate(double newRate) {
+        if (animation.getStatus() != Status.STOPPED) {
+            deltaTicks = ticks - Math.round((ticks - deltaTicks) * newRate / rate);
+            abortCurrentPulse();
+        }
+        rate = newRate;
+    }
 
     /**
      * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation.
@@ -114,10 +123,6 @@ public abstract class ClipEnvelope {
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
     }
 
-    protected long ticksRateChange(double newRate) {
-        return Math.round((ticks - deltaTicks) * newRate / rate);
-     }
-
     protected void updateCycleTicks(Duration cycleDuration) {
         cycleTicks = TickCalculation.fromDuration(cycleDuration);
     }
@@ -135,7 +140,63 @@ public abstract class ClipEnvelope {
         deltaTicks = 0;
     }
 
-    public abstract void timePulse(long currentTick);
+    public final void timePulse(long newDest) {
+        if (cycleTicks == 0L) {
+            return;
+        }
+        aborted = false;
+        inTimePulse = true;
+
+        try {
+            doTimePulse(newDest);
+        } finally {
+            inTimePulse = false;
+        }
+    }
+
+    private void doTimePulse(long newDest) {
+        System.out.println("dest = " + newDest);
+
+        double currentRate = calculateCurrentRunningRate();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("rate, curRate = " + rate + ", " + currentRate);
+
+        newDest = Math.round(newDest * rate);
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("new dest = " + newDest);
+
+        final long oldTicks = ticks;
+        ticks = calculateNewTicks(newDest);
+        // overall delta between current position and new position. always >= 0
+        long overallDelta = Math.abs(ticks - oldTicks);
+        if (!animation.getCuePoints().isEmpty()) {
+            System.out.println("deltaTicks = " + deltaTicks);
+            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + overallDelta);
+        }
+
+        if (overallDelta == 0) {
+            System.out.println("delta = 0");
+            return;
+        }
+
+        final boolean reachedEnd = hasReachedEnd();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("reachedEnd = " + reachedEnd);
+
+        doPlayTo(currentRate, overallDelta, reachedEnd);
+
+        if (reachedEnd && !aborted) {
+            if (!animation.getCuePoints().isEmpty())
+                System.out.println("finished");
+            AnimationAccessor.getDefault().finished(animation);
+        }
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println();
+    }
+
+    protected abstract long calculateNewTicks(long newDest);
+    protected abstract boolean hasReachedEnd();
+    protected abstract void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd);
 
     public abstract void jumpTo(long ticks);
 

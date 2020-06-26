@@ -68,24 +68,63 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
     }
 
     public double calculateCurrentRunningRate() {
-        boolean b = shouldNegateRate();
-        System.out.println("shouldNegateRate = " + b);
-        double curRate = b ? -rate : rate;
+        boolean negateRate = isAutoReverse() && !isDuringEffectiveEvenCycle();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("shouldNegateRate = " + negateRate);
+        double curRate = negateRate ? -rate : rate;
         return curRate;
     }
 
-    private boolean shouldNegateRate() {
-        return isAutoReverse() && !isDuringEffectiveEvenCycle();
-    }
-
     private boolean isDuringEffectiveEvenCycle() {
-        boolean effectiveEven = getCycleNum() % 2 == 0;
-        System.out.println("isDuringEffectiveEvenCycle = " + effectiveEven);
+        int cycleNum = getCycleNum();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("getCycleNum() = " + cycleNum);
+        boolean effectiveEven = cycleNum % 2 == 0;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("isDuringEffectiveEvenCycle = " + effectiveEven);
         return effectiveEven;
     }
 
-    protected boolean isDirectionChanged(double newRate) {
-        return newRate * rate < 0;
+    @Override
+    protected void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd) {
+        // delta to reach end of cycle, always >= 0. 0 if at the start/end of a cycle
+        long cycleDelta = currentRate > 0 ? cycleTicks - cyclePos : cyclePos;
+        System.out.println("cycleDelta = " + cycleDelta);
+
+        // check if the end of the cycle is inside the range of [currentTick, destinationTick]
+        // If yes, advance to the end of the cycle and pass the rest of the ticks to the next cycle.
+        // If the next cycle is completed, continue to the next etc.
+        //long leftoverTicks = Math.abs(overallDelta) - cycleDelta;
+        while (overallDelta >= cycleDelta) {
+            cyclePos = (currentRate > 0) ? cycleTicks : 0;
+            System.out.println("finishing cycle cyclePos = " + cyclePos + " ------------------------");
+            AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
+            if (aborted) {
+                return;
+            }
+            overallDelta -= cycleDelta;
+            System.out.println("leftover delta = " + overallDelta);
+
+            if (overallDelta > 0 || !reachedEnd) {
+                if (autoReverse) { // change direction
+                    setCurrentRate(-currentRate);
+                    currentRate = -currentRate;
+                    System.out.println("switching direction to " + currentRate + " ------------------------");
+                } else { // jump back to the the cycle
+                    cyclePos = (currentRate > 0) ? 0 : cycleTicks;
+                    System.out.println("restaring cycle cyclePos = " + cyclePos + " ------------------------");
+                    AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
+                }
+            }
+            cycleDelta = cycleTicks;
+        }
+
+        if (overallDelta > 0/* && !reachedEnd */) {
+//            cyclePos += Math.signum(currentRate) * overallDelta;
+            cyclePos += (currentRate > 0) ? overallDelta : -overallDelta;
+            System.out.println("new cyclePos = " + cyclePos);
+            AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
+        }
     }
 
     @Override

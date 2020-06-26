@@ -75,103 +75,20 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    public void setRate(double newRate) {
-      if (animation.getStatus() != Status.STOPPED) {
-          deltaTicks = ticks - ticksRateChange(newRate);
-          abortCurrentPulse();
-      }
-      System.out.println("Finite setRate ticks = " + ticks);
-      rate = newRate;
-    }
-
-    @Override
     public int getCycleNum() {
         long effectiveTicks = startedPositive ? ticks : totalTicks - ticks;
         return (int) (effectiveTicks / cycleTicks);
     }
 
-   @Override
-   public void timePulse(long newDest) {
-       if (cycleTicks == 0L) {
-           return;
-       }
-       aborted = false;
-       inTimePulse = true;
+    @Override
+    protected boolean hasReachedEnd() {
+        return rate > 0 ? ticks == totalTicks : ticks == 0;
+    }
 
-       System.out.println("dest = " + newDest);
-
-       try {
-           double currentRate = calculateCurrentRunningRate();
-           System.out.println("rate, curRate = " + rate + ", " + currentRate);
-
-           newDest = Math.round(newDest * rate);
-           System.out.println("new dest = " + newDest);
-
-           final long oldTicks = ticks;
-           ticks = Utils.clamp(0, newDest + deltaTicks, totalTicks);
-           long overallDelta = Math.abs(ticks - oldTicks); // overall delta between current position and new position. always >= 0
-           System.out.println("deltaTicks = " + deltaTicks);
-           System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + overallDelta);
-
-           if (overallDelta == 0) {
-               System.out.println("delta = 0");
-//               return;
-           }
-
-           final boolean reachedEnd = (rate > 0) ? (ticks == totalTicks) : (ticks == 0);
-           System.out.println("reachedEnd = " + reachedEnd);
-
-           System.out.println("cyclePos = " + cyclePos);
-
-           // delta to reach end of cycle, always >= 0. 0 if at the start/end of a cycle
-           long cycleDelta = currentRate > 0 ? cycleTicks - cyclePos : cyclePos;
-           System.out.println("cycleDelta = " + cycleDelta);
-
-           // check if the end of the cycle is inside the range of [currentTick, destinationTick]
-           // If yes, advance to the end of the cycle and pass the rest of the ticks to the next cycle.
-           // If the next cycle is completed, continue to the next etc.
-           //long leftoverTicks = Math.abs(overallDelta) - cycleDelta;
-           while (overallDelta >= cycleDelta) {
-               cyclePos = (currentRate > 0) ? cycleTicks : 0;
-               System.out.println("finishing cycle cyclePos = " + cyclePos + " ------------------------");
-               AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-               if (aborted) {
-                   return;
-               }
-               overallDelta -= cycleDelta;
-               System.out.println("leftover delta = " + overallDelta);
-
-               if (overallDelta > 0 || !reachedEnd) {
-                   if (autoReverse) { // change direction
-                       setCurrentRate(-currentRate);
-                       currentRate = -currentRate;
-                       System.out.println("switching direction to " + currentRate + " ------------------------");
-                   } else { // jump back to the the cycle
-                       cyclePos = (currentRate > 0) ? 0 : cycleTicks;
-                       System.out.println("restaring cycle cyclePos = " + cyclePos + " ------------------------");
-                       AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
-                   }
-               }
-               cycleDelta = cycleTicks;
-           }
-
-           if (overallDelta > 0/* && !reachedEnd */) {
-//               cyclePos += Math.signum(currentRate) * overallDelta;
-               cyclePos += (currentRate > 0) ? overallDelta : -overallDelta;
-               System.out.println("new cyclePos = " + cyclePos);
-               AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-           }
-
-           if (reachedEnd && !aborted) {
-               System.out.println("finished");
-               AnimationAccessor.getDefault().finished(animation);
-           }
-           System.out.println();
-
-       } finally {
-           inTimePulse = false;
-       }
-   }
+    @Override
+    protected long calculateNewTicks(long newDest) {
+        return Utils.clamp(0, deltaTicks + newDest, totalTicks);
+    }
 
     @Override
     public void jumpTo(long newTicks) {

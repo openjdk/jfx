@@ -58,99 +58,28 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    public void setRate(double newRate) {
-        if (animation.getStatus() != Status.STOPPED) {
-//            boolean switchedDirection = false;// isDirectionChanged(rate);
-//            deltaTicks = ticks + (switchedDirection ? ticksRateChange(rate) : -ticksRateChange(rate));
-//            if (switchedDirection) {
-//                final long delta = 2 * cycleTicks - cyclePos;
-//                deltaTicks += delta;
-//                ticks += delta;
-//            }
-            deltaTicks = ticks - ticksRateChange(newRate);
-            abortCurrentPulse();
-        }
-        System.out.println("");
-        rate = newRate;
-    }
-
-    @Override
     public int getCycleNum() {
-        long effectiveTicks = startedPositive ? ticks : ticks +  cycleTicks;
-        return (int) (effectiveTicks / cycleTicks);
+        if (startedPositive) {
+            long cycleNum = ticks / cycleTicks;
+            long i = ticks >= 0 ? cycleNum : cycleNum - 1;
+            System.out.println("getCycleNum effectiveNum = " + i);
+            return (int) i;
+        } else {
+            long cycleNum = -(ticks - cycleTicks) / cycleTicks;
+            long i = ticks <= cycleTicks ? cycleNum : cycleNum - 1;
+            System.out.println("getCycleNum effectiveNum = " + i);
+            return (int) i;
+        }
     }
 
     @Override
-    public void timePulse(long newDest) {
-        if (cycleTicks == 0L) {
-            return;
-        }
-        aborted = false;
-        inTimePulse = true;
+    protected boolean hasReachedEnd() {
+        return false;
+    }
 
-        System.out.println("dest = " + newDest);
-
-        try {
-            double currentRate = calculateCurrentRunningRate();
-            System.out.println("rate, curRate = " + rate + ", " + currentRate);
-
-            newDest = Math.round(newDest * rate);
-            System.out.println("new dest = " + newDest);
-
-            final long oldTicks = ticks;
-            ticks = newDest + deltaTicks;
-            long overallDelta = Math.abs(ticks - oldTicks); // overall delta between current position and new position. always >= 0
-            System.out.println("deltaTicks = " + deltaTicks);
-            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + overallDelta);
-
-            if (overallDelta == 0) {
-                System.out.println("delta = 0");
-//                return;
-            }
-
-            System.out.println("cyclePos = " + cyclePos);
-
-            // delta to reach end of cycle, always >= 0. 0 if at the start/end of a cycle
-            long cycleDelta = currentRate > 0 ? cycleTicks - cyclePos : cyclePos;
-            System.out.println("cycleDelta = " + cycleDelta);
-
-            // check if the end of the cycle is inside the range of [currentTick, destinationTick]
-            // If yes, advance step by step
-            while (overallDelta >= cycleDelta) {
-                cyclePos = (currentRate > 0) ? cycleTicks : 0;
-                System.out.println("finishing cycle cyclePos = " + cyclePos + " ------------------------");
-                AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-                if (aborted) {
-                    return;
-                }
-                overallDelta -= cycleDelta;
-                System.out.println("leftover delta = " + overallDelta);
-
-                if (overallDelta > 0) {
-                    if (autoReverse) { // change direction
-                        setCurrentRate(-currentRate);
-                        currentRate = -currentRate;
-                        System.out.println("switching direction to " + currentRate + " ------------------------");
-                    } else { // jump back to the the cycle
-                        cyclePos = (currentRate > 0) ? 0 : cycleTicks;
-                        System.out.println("restaring cycle cyclePos = " + cyclePos + " ------------------------");
-                        AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
-                    }
-                }
-                cycleDelta = cycleTicks;
-            }
-
-            if (overallDelta > 0) {
-                cyclePos += (currentRate > 0) ? overallDelta : -overallDelta;
-                System.out.println("new cyclePos = " + cyclePos);
-                AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-            }
-
-            System.out.println();
-
-        } finally {
-            inTimePulse = false;
-        }
+    @Override
+    protected long calculateNewTicks(long newDest) {
+        return deltaTicks + newDest;
     }
 
     /**
@@ -163,7 +92,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
             return;
         }
         final long oldTicks = ticks;
-        ticks = Math.max(0, newTicks) % (2 * cycleTicks + 1);
+        ticks = Math.max(0, newTicks) % (2 * cycleTicks);
         
         System.out.println("jump new ticks = " + ticks);
         final long delta = ticks - oldTicks;
@@ -173,9 +102,9 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
         deltaTicks += delta;
         cyclePos = ticks % cycleTicks;
         if (autoReverse && animation.getStatus() == Status.RUNNING) {
-            double currentRate = calculateCurrentRunningRate();
-            setCurrentRate(currentRate); // needed? a pulse calculates the rate anyway, but needed if cached
-            System.out.println("jump new cur rate = " + currentRate);
+//            double currentRate = calculateCurrentRunningRate();
+//            setCurrentRate(currentRate); // needed? a pulse calculates the rate anyway, but needed if cached
+//            System.out.println("jump new cur rate = " + currentRate);
         }
         if ((cyclePos == 0) && (ticks != 0)) { // TODO: check when pos = 0 and when pos = cycleticks
             cyclePos = cycleTicks;

@@ -818,7 +818,7 @@ public abstract class Animation {
 
         lastPlayedFinished = false;
 
-        double millis = time.isIndefinite() ? getCycleDuration().toMillis() * 2 :
+        double millis = time.isIndefinite() ? getCycleDuration().toMillis() :
             Utils.clamp(0, time.toMillis(), getTotalDuration().toMillis());
         long ticks = TickCalculation.fromMillis(millis);
 
@@ -1007,7 +1007,7 @@ public abstract class Animation {
             case PAUSED:
                 doResume();
                 if (!isNearZero(getRate())) {
-                    doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
+//                    doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                     resumeReceiver();
                 }
                 break;
@@ -1018,7 +1018,7 @@ public abstract class Animation {
     void doStart(boolean forceSync) {
         sync(forceSync);
 //      if (getRate() != 0) {
-            doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
+//          doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
 //      }
         clipEnvelope.start();
         lastPulse = 0;
