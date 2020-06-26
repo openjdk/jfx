@@ -90,7 +90,7 @@ class LinuxEventBuffer {
      */
     synchronized boolean put(ByteBuffer event) throws
             InterruptedException {
-        boolean isSync = event.getInt(eventStruct.getTypeIndex()) == 0
+        boolean isSync = event.getShort(eventStruct.getTypeIndex()) == 0
                 && event.getInt(eventStruct.getValueIndex()) == 0;
         while (bb.limit() - bb.position() < event.limit()) {
             // Block if bb is full. This should be the
