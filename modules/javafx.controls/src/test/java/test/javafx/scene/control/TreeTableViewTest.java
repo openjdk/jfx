@@ -397,7 +397,7 @@ public class TreeTableViewTest {
         verifySelectionAfterPermutation();
     }
 
-    @Ignore("JDK-8248217")
+    @Ignore("JDK-8193442")
     @Test public void testSelectionUpdatesCorrectlyAfterRemovingSelectedItem() {
         setupForPermutationTest();
         TreeItem<String> parentOfSelectedTreeItem = ((TreeItem<String>)sm.getSelectedItem()).getParent();
@@ -408,7 +408,7 @@ public class TreeTableViewTest {
         verifySelectionAfterPermutation();
     }
 
-    @Ignore("JDK-8248217")
+    @Ignore("JDK-8248389")
     @Test public void testSelectionUpdatesCorrectlyAfterAddingAnItemBeforeSelectedItem() {
         setupForPermutationTest();
         TreeItem<String> parentOfSelectedTreeItem = ((TreeItem<String>)sm.getSelectedItem()).getParent();
@@ -428,7 +428,7 @@ public class TreeTableViewTest {
         verifySelectionAfterPermutation();
     }
 
-    @Ignore("JDK-8248217")
+    @Ignore("JDK-8193442")
     @Test public void testSelectionUpdatesCorrectlyAfterChildReverseRemoveOneAndSetAll() {
         setupForPermutationTest();
         TreeItem<String> parentTreeItem = ((TreeItem<String>)sm.getSelectedItem()).getParent();
@@ -438,9 +438,8 @@ public class TreeTableViewTest {
         verifySelectionAfterPermutation();
     }
 
-    @Ignore("JDK-8248217")
+    @Ignore("JDK-8193442")
     @Test public void testSelectionUpdatesCorrectlyAfterChildRemoveOneAndSetAll() {
-        TreeTableColumn<String, String> col = setupForPermutationTest();
         TreeItem<String> parentTreeItem = ((TreeItem<String>)sm.getSelectedItem()).getParent();
         List<TreeItem<String>> children = new ArrayList<>(parentTreeItem.getChildren());
         children.remove(0);
@@ -448,7 +447,7 @@ public class TreeTableViewTest {
         verifySelectionAfterPermutation();
     }
 
-    @Ignore("JDK-8248217")
+    @Ignore("JDK-8193442")
     @Test public void testSelectionUpdatesCorrectlyAfterChildRemoveOneAndSetAllAndSort() {
         TreeTableColumn<String, String> col = setupForPermutationTest();
         TreeItem<String> parentTreeItem = ((TreeItem<String>)sm.getSelectedItem()).getParent();
