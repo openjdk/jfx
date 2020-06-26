@@ -284,5 +284,3 @@ public class FXMLScriptDeployment2Compile_Fail_Compilation extends Application {
         }
     }
 }
-
-

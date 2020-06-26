@@ -31,8 +31,7 @@ import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 
-public class RgfPseudoCompiledScript extends CompiledScript
-{
+public class RgfPseudoCompiledScript extends CompiledScript {
     String code = null;
     ScriptEngine scriptEngine = null;
 
@@ -50,11 +49,10 @@ public class RgfPseudoCompiledScript extends CompiledScript
     }
 
     public Object eval() throws ScriptException {
-            return scriptEngine.eval("RgfPseudoCompiledScript.eval(): " + code );
+        return scriptEngine.eval("RgfPseudoCompiledScript.eval(): " + code );
     }
 
     public ScriptEngine getEngine() {
         return scriptEngine;
     }
 }
-

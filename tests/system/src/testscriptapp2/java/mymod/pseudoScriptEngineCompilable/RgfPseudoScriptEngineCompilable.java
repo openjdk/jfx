@@ -139,5 +139,3 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return sb.toString();
     }
 }
-
-

@@ -1572,9 +1572,9 @@ public class FXMLLoader {
                         char[] charBuffer = new char[bufSize];
                         int n;
                         do {
-                          n = scriptReader.read(charBuffer,0,bufSize);
-                          if (n > 0) {
-                              sb.append(new String(charBuffer,0,n));
+                            n = scriptReader.read(charBuffer,0,bufSize);
+                            if (n > 0) {
+                                sb.append(new String(charBuffer,0,n));
                           }
                         } while (n > -1);
                         script = sb.toString();
@@ -1591,18 +1591,19 @@ public class FXMLLoader {
                             try {
                                 compiledScript=((Compilable) engine).compile(script);
                             } catch (ScriptException compileExc) {
-                               Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
+                                Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                    "\", falling back to evaluating script in uncompiled mode");
                             }
                             if (compiledScript != null) {
-                               compiledScript.eval();
+                                compiledScript.eval();
                             } else { // fallback to uncompiled mode
-                               engine.eval(script);
+                                engine.eval(script);
                             }
                         } else {
-                           engine.eval(script);
+                            engine.eval(script);
                         }
                     } catch (ScriptException exception) {
-                        System.err.println(filename+": caused ScriptException");
+                        System.err.println(filename + ": caused ScriptException");
                         exception.printStackTrace();
                     }
                 }
@@ -1630,18 +1631,19 @@ public class FXMLLoader {
                         try {
                             compiledScript=((Compilable) scriptEngine).compile(script);
                         } catch (ScriptException compileExc) {
-                            Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
+                            Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                "\", falling back to evaluating script in uncompiled mode");
                         }
                         if (compiledScript != null) {
-                           compiledScript.eval();
+                            compiledScript.eval();
                         } else { // fallback to uncompiled mode
-                           scriptEngine.eval(script);
+                            scriptEngine.eval(script);
                         }
                     } else {
-                       scriptEngine.eval(script);
+                        scriptEngine.eval(script);
                     }
                 } catch (ScriptException exception) {
-                    System.err.println(filename+": caused ScriptException\n"+exception.getMessage());
+                    System.err.println(filename + ": caused ScriptException\n" + exception.getMessage());
                 }
             }
         }
@@ -1741,14 +1743,15 @@ public class FXMLLoader {
             this.scriptEngine = scriptEngine;
             this.filename = filename;
             if (scriptEngine instanceof Compilable  && compileScript) {
-               try {
-                  // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
-                  scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
-                  this.compiledScript = ((Compilable) scriptEngine).compile(script);
-                  this.isCompiled = true;
-               } catch (ScriptException compileExc){
-                    Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
-               }
+                try {
+                    // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
+                    scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
+                    this.compiledScript = ((Compilable) scriptEngine).compile(script);
+                    this.isCompiled = true;
+                } catch (ScriptException compileExc) {
+                    Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                        "\", falling back to evaluating script in uncompiled mode");
+                }
             }
         }
 
@@ -1768,8 +1771,8 @@ public class FXMLLoader {
                 } else {
                    scriptEngine.eval(script, localBindings);
                 }
-            } catch (ScriptException exception){
-                throw new RuntimeException(filename+": caused ScriptException", exception);
+            } catch (ScriptException exception) {
+                throw new RuntimeException(filename + ": caused ScriptException", exception);
             }
         }
     }
@@ -3634,5 +3637,3 @@ public class FXMLLoader {
         }
     }
 }
-
-
