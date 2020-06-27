@@ -306,5 +306,3 @@ public class ModuleLauncherTest {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Fail_Compilation");
     }
 }
-
-

@@ -107,23 +107,23 @@ public class FXMLScriptDeployment2Compile_On extends Application {
         btn.fire();
         btn.fireEvent(new ActionEvent());
         btn.fireEvent(new MouseEvent(MouseEvent.MOUSE_CLICKED,
-                                       0,       // double x,
-                                       0,       // double y,
-                                       0,       // double screenX,
-                                       0,       // double screenY,
-                                       MouseButton.PRIMARY,         // MouseButton button,
-                                       0,       // int clickCount,
-                                       false,   // boolean shiftDown,
-                                       false,   // boolean controlDown,
-                                       false,   // boolean altDown,
-                                       false,   // boolean metaDown,
-                                       true,    // boolean primaryButtonDown,
-                                       false,   // boolean middleButtonDown,
-                                       false,   // boolean secondaryButtonDown,
-                                       false,   // boolean synthesized,
-                                       false,   // boolean popupTrigger,
-                                       false,   // boolean stillSincePress,
-                                       null     // PickResult pickResult
+                                     0,       // double x,
+                                     0,       // double y,
+                                     0,       // double screenX,
+                                     0,       // double screenY,
+                                     MouseButton.PRIMARY,         // MouseButton button,
+                                     0,       // int clickCount,
+                                     false,   // boolean shiftDown,
+                                     false,   // boolean controlDown,
+                                     false,   // boolean altDown,
+                                     false,   // boolean metaDown,
+                                     true,    // boolean primaryButtonDown,
+                                     false,   // boolean middleButtonDown,
+                                     false,   // boolean secondaryButtonDown,
+                                     false,   // boolean synthesized,
+                                     false,   // boolean popupTrigger,
+                                     false,   // boolean stillSincePress,
+                                     null     // PickResult pickResult
                                      )
                       );
 
@@ -171,7 +171,7 @@ public class FXMLScriptDeployment2Compile_On extends Application {
         final String LOCATION = "location";    // always FXML File hosting script controller code
         final String RESOURCES = "resources";   // always null in this test
 
-        for (Integer invocation = 1; invocation <= invocationList.size(); invocation++) {
+        for (int invocation = 1; invocation <= invocationList.size(); invocation++) {
             InvocationInfos entry = (InvocationInfos) invocationList.get(invocation - 1);
             String script = entry.script;
             TreeMap<Integer,TreeMap> scopes = (TreeMap) entry.bindings;
@@ -238,22 +238,26 @@ public class FXMLScriptDeployment2Compile_On extends Application {
             switch (invocation) {
                 case 1:
                     Util.assertEndsWith  ("demo_02_topscript.sqtmc", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_topscript.sqtmc file - pseudo script", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_topscript.sqtmc " +
+                                          "file - pseudo script", script);
                     break;
 
                 case 2:
                     Util.assertEndsWith  ("demo_02_middlescript.sqtmc", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_middlescript.sqtmc file - pseudo script", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_middlescript.sqtmc " +
+                                          "file - pseudo script", script);
                     break;
 
                 case 3:
                     Util.assertEndsWith("demo_02_on.fxml-script_starting_at_line_52", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_on.fxml embedded script sqtmc - line # 52", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_on.fxml embedded " +
+                                          "script sqtmc - line # 52", script);
                     break;
 
                 case 4:
                     Util.assertEndsWith  ("demo_02_bottomscript.sqtmc", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_bottomscript.sqtmc file - pseudo script", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_bottomscript.sqtmc " +
+                                          "file - pseudo script", script);
                     break;
 
                 case 5:
@@ -268,17 +272,20 @@ public class FXMLScriptDeployment2Compile_On extends Application {
 
                 case 7:     // same as case 8 (same button clicked)
                     Util.assertEndsWith("demo_02_on.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - ActionEvent - line # 45 -", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml " +
+                                          "embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 8:     // same as case 7 (same button clicked)
                     Util.assertEndsWith("demo_02_on.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - ActionEvent - line # 45 -", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml " +
+                                          "embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 9:
                     Util.assertEndsWith("demo_02_on.fxml-onMouseClicked_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - MouseClicked - line # 44", script);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml " +
+                                          "embedded event - MouseClicked - line # 44", script);
                     break;
             }
         }

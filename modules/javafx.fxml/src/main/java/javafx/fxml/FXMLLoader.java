@@ -1564,7 +1564,7 @@ public class FXMLLoader {
                     engineBindings.put(engine.FILENAME, filename);
 
                     InputStreamReader scriptReader = null;
-                    String script=null;
+                    String script = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
                         StringBuilder sb = new StringBuilder();
@@ -1589,7 +1589,7 @@ public class FXMLLoader {
                         if (engine instanceof Compilable && compileScript) {
                             CompiledScript compiledScript = null;
                             try {
-                                compiledScript=((Compilable) engine).compile(script);
+                                compiledScript = ((Compilable) engine).compile(script);
                             } catch (ScriptException compileExc) {
                                 Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
                                     "\", falling back to evaluating script in uncompiled mode");
@@ -1629,7 +1629,7 @@ public class FXMLLoader {
                     if (scriptEngine instanceof Compilable && compileScript) {
                         CompiledScript compiledScript = null;
                         try {
-                            compiledScript=((Compilable) scriptEngine).compile(script);
+                            compiledScript = ((Compilable) scriptEngine).compile(script);
                         } catch (ScriptException compileExc) {
                             Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
                                 "\", falling back to evaluating script in uncompiled mode");
@@ -1736,7 +1736,7 @@ public class FXMLLoader {
         public final ScriptEngine scriptEngine;
         public final String filename;
         public CompiledScript compiledScript;
-        public boolean isCompiled=false;
+        public boolean isCompiled = false;
 
         public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;
@@ -2757,9 +2757,9 @@ public class FXMLLoader {
         } else if (piTarget.equals(IMPORT_PROCESSING_INSTRUCTION)) {
             processImport();
         } else if (piTarget.equals(COMPILE_PROCESSING_INSTRUCTION)) {
-            String strCompile=xmlStreamReader.getPIData().trim();
+            String strCompile = xmlStreamReader.getPIData().trim();
             // if PIData() is empty string then default to true, otherwise use Boolean.parseBoolean(string) to determine the boolean value
-            compileScript = (strCompile.length()==0 ? true : Boolean.parseBoolean(strCompile));
+            compileScript = (strCompile.length() == 0 ? true : Boolean.parseBoolean(strCompile));
         }
     }
 
