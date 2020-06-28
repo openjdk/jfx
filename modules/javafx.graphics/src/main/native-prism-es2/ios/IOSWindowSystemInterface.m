@@ -82,9 +82,7 @@ jboolean clearCurrentContext(void *context) {
 }
 
 jboolean deleteContext(void *context) {
-    if (pulseLoggingRequested) {
-        fprintf(stderr, "IOSWindowSystemInterface : deleteContext unimp\n");
-    }
+    fprintf(stderr, "IOSWindowSystemInterface : deleteContext unimp\n");
     return JNI_FALSE;
 }
 
