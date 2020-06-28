@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
  */
 final class MonocleTimer extends Timer {
     private static final String THREAD_NAME = "Monocle Timer";
-    private static final int POOL_SIZE = 1;
 
     private static ScheduledThreadPoolExecutor scheduler;
     private ScheduledFuture<?> task;
@@ -54,7 +53,7 @@ final class MonocleTimer extends Timer {
 
     @Override protected long _start(final Runnable runnable, int period) {
         if (scheduler == null) {
-            scheduler = new ScheduledThreadPoolExecutor(POOL_SIZE, target -> {
+            scheduler = new ScheduledThreadPoolExecutor(1, target -> {
                 Thread thread = new Thread(target, THREAD_NAME);
                 thread.setDaemon(true);
                 return thread;
