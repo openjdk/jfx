@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
+
+import javafx.animation.Interpolator;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -251,16 +253,25 @@ public class Snapshot2Test extends SnapshotCommon {
     private void setupImageScene(int width, int height) {
         Util.runAndWait(() -> {
             WritableImage image = new WritableImage(width, height);
-            // Initialize image with noise
+            // Initialize image with a bilinear gradient
             var pixWriter = image.getPixelWriter();
             assertNotNull(pixWriter);
+            double stepX = 1.0 / (width - 1);
+            double stepY = 1.0 / (height - 1);
+            double tX = 0;
+            double tY = 0;
             for (int x = 0; x < width; x++) {
                 for (int y = 0; y < height; y++) {
-                    pixWriter.setColor(x, y, Color.rgb(
-                            ThreadLocalRandom.current().nextInt(0, 256),
-                            ThreadLocalRandom.current().nextInt(0, 256),
-                            ThreadLocalRandom.current().nextInt(0, 256)));
+                    pixWriter.setColor(x, y, (Color) Interpolator.LINEAR.interpolate(
+                            Interpolator.LINEAR.interpolate(Color.CYAN, Color.YELLOW, tX),
+                            Interpolator.LINEAR.interpolate(Color.MAGENTA, Color.WHITE, tX),
+                            tY));
+                    tX += stepX;
+                    tX = tX > 1 ? 1 : tX;
                 }
+                tY += stepY;
+                tY = tY > 1 ? 1 : tY;
+                tX = 0;
             }
             tmpNode = new ImageView(image);
             Group root = new Group();
