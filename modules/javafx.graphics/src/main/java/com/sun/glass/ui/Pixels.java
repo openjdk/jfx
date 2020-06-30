@@ -191,8 +191,13 @@ public abstract class Pixels {
      * @return the original pixels buffer, unmodified
      */
     public final Buffer getBuffer() {
-        assert this.bytes != null || this.ints != null;
-        return this.bytes != null ? this.bytes : this.ints;
+        if (this.bytes != null) {
+            return this.bytes;
+        } else if (this.ints != null) {
+            return this.ints;
+        } else {
+            throw new RuntimeException("Unexpected Pixels state.");
+        }
     }
 
     /*

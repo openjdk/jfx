@@ -231,14 +231,7 @@ class EPDScreen implements NativeScreen {
 
     @Override
     public synchronized void uploadPixels(Buffer b, int x, int y, int width, int height, float alpha) {
-        assert b.mark() == b;
         pixels.composePixels(b, x, y, width, height, alpha);
-        /*
-         * When enabled, throws an InvalidMarkException if the buffer is
-         * modified by a clear, flip, or rewind operation on another thread
-         * while in use by this method on the JavaFX Application Thread.
-         */
-        assert b.reset() == b;
     }
 
     @Override
