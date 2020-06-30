@@ -1606,25 +1606,29 @@ public final class QuantumToolkit extends Toolkit {
                             xOffset += tileWidth;
                             mTileWidth = Math.min(tileWidth, w - xOffset);
                         }
-                        // Walk through remaining same-width "B" tiles, if any
-                        int bOffset = 0;
-                        int bTileHeight = tileHeight;
-                        while (bTileHeight == tileHeight && bOffset < h) {
-                            renderTile(x, xOffset, y, bOffset, mTileWidth, bTileHeight, buffer, rf, tileRttCache, pImage);
-                            bOffset += tileHeight;
-                            bTileHeight = Math.min(tileHeight, h - bOffset);
-                        }
                         // Walk through remaining same-height "R" tiles, if any
                         int rOffset = 0;
-                        int rTileWidth = tileWidth;
-                        while (rTileWidth == tileWidth && rOffset < w) {
-                            renderTile(x, rOffset, y, yOffset, rTileWidth, mTileHeight, buffer, rf, tileRttCache, pImage);
-                            rOffset += tileWidth;
-                            rTileWidth = Math.min(tileWidth, w - rOffset);
+                        int rTileHeight = tileHeight;
+                        if (mTileWidth > 0) {
+                            while (rTileHeight == tileHeight && rOffset < h) {
+                                renderTile(x, xOffset, y, rOffset, mTileWidth, rTileHeight, buffer, rf, tileRttCache, pImage);
+                                rOffset += tileHeight;
+                                rTileHeight = Math.min(tileHeight, h - rOffset);
+                            }
+                        }
+                        // Walk through remaining same-width "B" tiles, if any
+                        int bOffset = 0;
+                        int bTileWidth = tileWidth;
+                        if (mTileHeight > 0) {
+                            while (bTileWidth == tileWidth && bOffset < w) {
+                                renderTile(x, bOffset, y, yOffset, bTileWidth, mTileHeight, buffer, rf, tileRttCache, pImage);
+                                bOffset += tileWidth;
+                                bTileWidth = Math.min(tileWidth, w - bOffset);
+                            }
                         }
                         // Render corner "C" tile if needed
-                        if (bOffset > 0 && rOffset > 0) {
-                            renderTile(x, rOffset, y, bOffset, rTileWidth, bTileHeight, buffer, rf, tileRttCache, pImage);
+                        if (mTileWidth > 0 && mTileHeight > 0 && rOffset > 0 && bOffset > 0) {
+                            renderTile(x, bOffset, y, rOffset, bTileWidth, rTileHeight, buffer, rf, tileRttCache, pImage);
                         }
                     }
                     else {
