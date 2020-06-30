@@ -2862,15 +2862,7 @@ project(":media") {
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
-                            Map winEnv = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-
-                            String sdkDir = System.getenv("BASECLASSES_SDK_DIR");
-                            if (sdkDir == null) {
-                                sdkDir = "C:/Program Files/Microsoft SDKs/Windows/v7.1" // Default value
-                                winEnv["BASECLASSES_SDK_DIR"] = sdkDir
-                            }
-                            environment(winEnv)
-
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             args("RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.fxpluginsRcFile}")
                         }
                     }
