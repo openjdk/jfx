@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -1804,6 +1805,11 @@ public class TreeTableView<S> extends Control {
         return visibleLeafColumns.get(column);
     }
 
+    private boolean sortingInProgress;
+    boolean isSortingInProgress() {
+        return sortingInProgress;
+    }
+
     /**
      * The sort method forces the TreeTableView to re-run its sorting algorithm. More
      * often than not it is not necessary to call this method directly, as it is
@@ -1814,6 +1820,7 @@ public class TreeTableView<S> extends Control {
      * something external changes and a sort is required.
      */
     public void sort() {
+        sortingInProgress = true;
         final ObservableList<TreeTableColumn<S,?>> sortOrder = getSortOrder();
 
         // update the Comparator property
@@ -1832,6 +1839,7 @@ public class TreeTableView<S> extends Control {
             // sortLock = true;
             // TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
             // sortLock = false;
+            sortingInProgress = false;
             return;
         }
 
@@ -1845,9 +1853,27 @@ public class TreeTableView<S> extends Control {
 
         // get the sort policy and run it
         Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
-        if (sortPolicy == null) return;
+        if (sortPolicy == null) {
+            sortingInProgress = false;
+            return;
+        }
         Boolean success = sortPolicy.call(this);
 
+        if (getSortMode() == TreeSortMode.ALL_DESCENDANTS) {
+            Set<TreeItem<S>> sortedParents = new HashSet<>();
+            for (TreeTablePosition<S,?> selectedPosition : prevState) {
+                // This null check is not required ideally.
+                // The selectedPosition.getTreeItem() should always return a valid TreeItem.
+                // But, it is possible to be null due to JDK-8248217.
+                if (selectedPosition.getTreeItem() != null) {
+                    TreeItem<S> parent = selectedPosition.getTreeItem().getParent();
+                    while (parent != null && sortedParents.add(parent)) {
+                        parent.getChildren();
+                        parent = parent.getParent();
+                    }
+                }
+            }
+        }
         getSelectionModel().stopAtomic();
 
         if (success == null || ! success) {
@@ -1872,7 +1898,6 @@ public class TreeTableView<S> extends Control {
                         removed.add(prevItem);
                     }
                 }
-
                 if (!removed.isEmpty()) {
                     // the sort operation effectively permutates the selectedCells list,
                     // but we cannot fire a permutation event as we are talking about
@@ -1883,7 +1908,10 @@ public class TreeTableView<S> extends Control {
                     sm.fireCustomSelectedCellsListChangeEvent(c);
                 }
             }
+            getSelectionModel().setSelectedIndex(getRow(getSelectionModel().getSelectedItem()));
+            getFocusModel().focus(getSelectionModel().getSelectedIndex());
         }
+        sortingInProgress = false;
     }
 
     /**
@@ -2540,68 +2568,40 @@ public class TreeTableView<S> extends Control {
                         shift += -count + 1;
                         startRow++;
                     } else if (e.wasPermutated()) {
-                        // General approach:
-                        //   -- detected a sort has happened
-                        //   -- Create a permutation lookup map (1)
-                        //   -- dump all the selected indices into a list (2)
-                        //   -- create a list containing the new indices (3)
-                        //   -- for each previously-selected index (4)
-                        //     -- if index is in the permutation lookup map
-                        //       -- add the new index to the new indices list
-                        //   -- Perform batch selection (5)
+                        // Approach:
+                        // Get the current selection.
+                        // Create a new selection with updated index(row).
+                        // Update the current selection with new selection.
+                        // If sorting is in progress then one Selection change event will be sent from
+                        // TreeTableView.sort() method, and should not be sent from here.
+                        // else, in case otherwise, the selection change events would be generated.
+                        // Do not call shiftSelection() in case of permutation change(when shift == 0).
 
-                        startAtomic();
+                        List<TreeTablePosition<S, ?>> currentSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
+                        List<TreeTablePosition<S, ?>> updatedSelection = new ArrayList<>();
 
-                        final int offset = startRow + 1;
-
-                        // (1)
-                        int length = e.getTo() - e.getFrom();
-                        HashMap<Integer, Integer> pMap = new HashMap<> (length);
-                        for (int i = e.getFrom(); i < e.getTo(); i++) {
-                            pMap.put(i, e.getChange().getPermutation(i));
-                        }
-
-                        // (2)
-                        List<TreeTablePosition<S,?>> selectedIndices = new ArrayList<>(getSelectedCells());
-
-                        // (3)
-                        List<TreeTablePosition<S,?>> newIndices = new ArrayList<>(selectedIndices.size());
-
-                        // (4)
                         boolean selectionIndicesChanged = false;
-                        for (int i = 0; i < selectedIndices.size(); i++) {
-                            final TreeTablePosition<S,?> oldIndex = selectedIndices.get(i);
-                            final int oldRow = oldIndex.getRow() - offset;
-
-                            if (pMap.containsKey(oldRow)) {
-                                int newIndex = pMap.get(oldRow) + offset;
-
-                                selectionIndicesChanged = selectionIndicesChanged || newIndex != oldRow;
-
-                                newIndices.add(new TreeTablePosition<>(oldIndex.getTreeTableView(), newIndex, oldIndex.getTableColumn()));
+                        for (TreeTablePosition<S, ?> selectedCell : currentSelection) {
+                            int newRow = treeTableView.getRow(selectedCell.getTreeItem());
+                            if (selectedCell.getRow() != newRow) {
+                                selectionIndicesChanged = true;
                             }
-
-                            // check if the root element of this event was selected, so that we can retain it
-                            if (oldIndex.getRow() == startRow) {
-                                newIndices.add(new TreeTablePosition<>(oldIndex.getTreeTableView(), oldIndex.getRow(), oldIndex.getTableColumn()));
-                            }
+                            updatedSelection.add(new TreeTablePosition<>(selectedCell, newRow));
                         }
-
                         if (selectionIndicesChanged) {
-                            // (5)
-                            quietClearSelection();
-                            stopAtomic();
-
-                            selectedCellsMap.setAll(newIndices);
-
-                            final int offsetOldIndex = oldSelectedIndex - offset;
-                            if (offsetOldIndex >= 0 && offsetOldIndex < getItemCount()) {
-                                int newIndex = e.getChange().getPermutation(offsetOldIndex);
-                                setSelectedIndex(newIndex + offset);
-                                focus(newIndex + offset);
+                            if (treeTableView.isSortingInProgress()) {
+                                startAtomic();
+                                selectedCellsMap.setAll(updatedSelection);
+                                stopAtomic();
+                            } else {
+                                startAtomic();
+                                quietClearSelection();
+                                stopAtomic();
+                                selectedCellsMap.setAll(updatedSelection);
+                                int selectedIndex = treeTableView.getRow(getSelectedItem());
+                                setSelectedIndex(selectedIndex);
+                                focus(selectedIndex);
                             }
-                        } else {
-                            stopAtomic();
                         }
                     } else if (e.wasAdded()) {
                         // shuffle selection by the number of added items
@@ -2663,42 +2663,44 @@ public class TreeTableView<S> extends Control {
                     }
                 } while (e.getChange() != null && e.getChange().next());
 
-                shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
-                    @Override public Void call(ShiftParams param) {
+                if (shift != 0) {
+                    shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
+                        @Override public Void call(ShiftParams param) {
 
-                        // we make the shifts atomic, as otherwise listeners to
-                        // the items / indices lists get a lot of intermediate
-                        // noise. They eventually get the summary event fired
-                        // from within shiftSelection, so this is ok.
-                        startAtomic();
+                            // we make the shifts atomic, as otherwise listeners to
+                            // the items / indices lists get a lot of intermediate
+                            // noise. They eventually get the summary event fired
+                            // from within shiftSelection, so this is ok.
+                            startAtomic();
 
-                        final int clearIndex = param.getClearIndex();
-                        final int setIndex = param.getSetIndex();
-                        TreeTablePosition<S,?> oldTP = null;
-                        if (clearIndex > -1) {
-                            for (int i = 0; i < selectedCellsMap.size(); i++) {
-                                TreeTablePosition<S,?> tp = selectedCellsMap.get(i);
-                                if (tp.getRow() == clearIndex) {
-                                    oldTP = tp;
-                                    selectedCellsMap.remove(tp);
-                                } else if (tp.getRow() == setIndex && !param.isSelected()) {
-                                    selectedCellsMap.remove(tp);
+                            final int clearIndex = param.getClearIndex();
+                            final int setIndex = param.getSetIndex();
+                            TreeTablePosition<S,?> oldTP = null;
+                            if (clearIndex > -1) {
+                                for (int i = 0; i < selectedCellsMap.size(); i++) {
+                                    TreeTablePosition<S,?> tp = selectedCellsMap.get(i);
+                                    if (tp.getRow() == clearIndex) {
+                                        oldTP = tp;
+                                        selectedCellsMap.remove(tp);
+                                    } else if (tp.getRow() == setIndex && !param.isSelected()) {
+                                        selectedCellsMap.remove(tp);
+                                    }
                                 }
                             }
+
+                            if (oldTP != null && param.isSelected()) {
+                                TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
+                                        treeTableView, param.getSetIndex(), oldTP.getTableColumn());
+
+                                selectedCellsMap.add(newTP);
+                            }
+
+                            stopAtomic();
+
+                            return null;
                         }
-
-                        if (oldTP != null && param.isSelected()) {
-                            TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
-                                    treeTableView, param.getSetIndex(), oldTP.getTableColumn());
-
-                            selectedCellsMap.add(newTP);
-                        }
-
-                        stopAtomic();
-
-                        return null;
-                    }
-                });
+                    });
+                }
             }
         };
 

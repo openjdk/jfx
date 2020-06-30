@@ -137,5 +137,23 @@ public class JFXPanelTest {
 
         Assert.assertEquals(1, pressedEventCounter[0]);
     }
+
+    @Test
+    public void testClickOnEmptyJFXPanel() throws Exception {
+        CountDownLatch firstPressedEventLatch = new CountDownLatch(1);
+
+        SwingUtilities.invokeLater(() -> {
+            TestFXPanel fxPnl = new TestFXPanel();
+
+            MouseEvent e = new MouseEvent(fxPnl, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
+                    5, 5, 1, false, MouseEvent.BUTTON1);
+
+            fxPnl.processMouseEventPublic(e);
+
+            firstPressedEventLatch.countDown();
+        });
+
+        Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
+    }
 }
 
