@@ -1585,8 +1585,8 @@ public final class QuantumToolkit extends Toolkit {
                         // +-----------+-----------+  .  +-------+
                         // |     B     |     B     |  .  |   C   |
                         // +-----------+-----------+  .  +-------+
-                        int mTileWidth = computeTileSize(w, maxTextureSize);
-                        int mTileHeight = computeTileSize(h, maxTextureSize);
+                        final int mTileWidth = computeTileSize(w, maxTextureSize);
+                        final int mTileHeight = computeTileSize(h, maxTextureSize);
                         IntBuffer buffer = IntBuffer.allocate(mTileWidth * mTileHeight);
                         // Walk through all same-size "M" tiles
                         int mTileXOffset = 0;
@@ -1598,8 +1598,8 @@ public final class QuantumToolkit extends Toolkit {
                             }
                         }
                         // Walk through remaining same-height "R" tiles, if any
-                        int rTileXOffset = mTileXOffset;
-                        int rTileWidth = w - rTileXOffset;
+                        final int rTileXOffset = mTileXOffset;
+                        final int rTileWidth = w - rTileXOffset;
                         if (rTileWidth > 0) {
                             for (int rTileYOffset = 0; (rTileYOffset + mTileHeight) <= h; rTileYOffset += mTileHeight) {
                                 renderTile(x, rTileXOffset, y, rTileYOffset, rTileWidth, mTileHeight,
@@ -1607,8 +1607,8 @@ public final class QuantumToolkit extends Toolkit {
                             }
                         }
                         // Walk through remaining same-width "B" tiles, if any
-                        int bTileYOffset = mTileYOffset;
-                        int bTileHeight = h - bTileYOffset;
+                        final int bTileYOffset = mTileYOffset;
+                        final int bTileHeight = h - bTileYOffset;
                         if (bTileHeight > 0) {
                             for (int bTileXOffset = 0; (bTileXOffset + mTileWidth) <= w; bTileXOffset += mTileWidth) {
                                 renderTile(x, bTileXOffset, y, bTileYOffset, mTileWidth, bTileHeight,
