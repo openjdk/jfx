@@ -27,8 +27,6 @@ package test.javafx.scene;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.IntStream;
 
 import javafx.animation.Interpolator;
 import javafx.geometry.Rectangle2D;

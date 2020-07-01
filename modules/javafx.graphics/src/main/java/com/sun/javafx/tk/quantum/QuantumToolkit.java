@@ -1554,19 +1554,20 @@ public final class QuantumToolkit extends Toolkit {
 
                 boolean errored = false;
                 // A temp QuantumImage used only as a RTT cache for rendering tiles.
-                var tileRttCache = new QuantumImage((com.sun.prism.Image) null);
+                QuantumImage tileRttCache = null;
                 try {
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
                             (QuantumImage) params.platformImage : new QuantumImage((com.sun.prism.Image) null);
 
                     int maxTextureSize = rf.getMaximumTextureSize();
                     if (h > maxTextureSize || w > maxTextureSize) {
-                        // The requested size for the screenshot is too big to fit a single texture,
+                        tileRttCache = new QuantumImage((com.sun.prism.Image) null);
+                        // The requested size for the snapshot is too big to fit a single texture,
                         // so we need to take several snapshot tiles and merge them into pImage
                         if (pImage.image == null) {
                             pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(IntBuffer.allocate(w * h), w, h));
                         }
-                        // Find out if it is possible to divide up the image in tiles of the same size
+                        // Determine the initial dimensions of the tiles
                         int tileWidth = computeTileSize(w, maxTextureSize);
                         int tileHeight = computeTileSize(h, maxTextureSize);
                         IntBuffer buffer = IntBuffer.allocate(tileWidth * tileHeight);
@@ -1632,7 +1633,7 @@ public final class QuantumToolkit extends Toolkit {
                         }
                     }
                     else {
-                        // The requested size for the screenshot fits max texture size,
+                        // The requested size for the snapshot fits max texture size,
                         // so we can directly render it in the target image.
                         renderWholeImage(x, y, w, h, rf, pImage);
                     }
@@ -1641,7 +1642,9 @@ public final class QuantumToolkit extends Toolkit {
                     errored = true;
                     t.printStackTrace(System.err);
                 } finally {
-                    tileRttCache.dispose();
+                    if (tileRttCache != null) {
+                        tileRttCache.dispose();
+                    }
                     Disposer.cleanUp();
                     rf.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
                 }
