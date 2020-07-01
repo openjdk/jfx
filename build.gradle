@@ -1249,9 +1249,15 @@ if (gradle.gradleVersion != jfxGradleVersion) {
 
 // Look for stub runtime in bundled sdk, standalone sdk, or boot JDK
 
+// Allows automatic provisioning of webkit+media shared libraries
+// from official OpenJFX releases, downloaded from MavenCentral
+defineProperty("STUB_RUNTIME_OPENJFX", "")
+ext.IS_STUB_RUNTIME_OPENJFX = !STUB_RUNTIME_OPENJFX.isBlank()
+
 def String cachedBundledRuntime = cygpath("$projectDir") + "/../caches/modular-sdk"
 def String cachedStandaloneRuntime = cygpath("$projectDir") + "/../caches/sdk"
 def String jdkStubRuntime = cygpath("$JDK_HOME")
+def String openjfxStubRuntime = cygpath("$projectDir") + "/buildSrc/build/openjfxStub"
 
 def defaultStubRuntime = ""
 if (file(cachedBundledRuntime).exists()) {
@@ -1260,6 +1266,8 @@ if (file(cachedBundledRuntime).exists()) {
     defaultStubRuntime = cachedStandaloneRuntime
 } else if (BUILD_CLOSED) {
     defaultStubRuntime = cachedBundledRuntime
+} else if (IS_STUB_RUNTIME_OPENJFX) {
+    defaultStubRuntime = openjfxStubRuntime
 } else {
     defaultStubRuntime = jdkStubRuntime
 }
@@ -3373,16 +3381,21 @@ project(":web") {
 
     test {
         doFirst {
-            if (!IS_COMPILE_WEBKIT) {
-                println "*****************************************************"
+            if (IS_STUB_RUNTIME_OPENJFX) {
+                println "********************************************************"
+                println "WARNING: running web tests with officially built webkit."
+                println "The webkit native library may not be compatible with the"
+                println "source tree you are using."
+                println "If tests fail, try compiling webkit instead."
+                println "See WEBKIT-MEDIA-STUBS.md"
+                println "********************************************************"
+            } else if (!IS_COMPILE_WEBKIT) {
+                println "******************************************************"
                 println "WARNING: running web tests without building webkit."
                 println "The webkit native library will be copied from the JDK,"
                 println "which might lead to failures in some web tests."
-                println "To avoid these failures, you should either build"
-                println "webkit locally, copy the native webkit library from a"
-                println "recent build, or skip execution of web test cases with"
-                println "'-x :web:test'"
-                println "*****************************************************"
+                println "See WEBKIT-MEDIA-STUBS.md"
+                println "******************************************************"
             }
         }
         // Run web tests in headless mode
@@ -4323,6 +4336,36 @@ compileTargets { t ->
 
 /******************************************************************************
  *                                                                            *
+ *                             OpenJFX Stubs                                  *
+ *                                                                            *
+ *****************************************************************************/
+
+configurations {
+    openjfxStubs
+}
+
+if (IS_STUB_RUNTIME_OPENJFX) {
+    def String platform = IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : ""
+    dependencies {
+        openjfxStubs "org.openjfx:javafx-media:$STUB_RUNTIME_OPENJFX:$platform@jar"
+        openjfxStubs "org.openjfx:javafx-web:$STUB_RUNTIME_OPENJFX:$platform@jar"
+    }
+}
+
+// Extract binary libraries from OpenJFX artifacts for use as stubs
+task prepOpenJfxStubs(type: Copy) {
+    enabled = IS_STUB_RUNTIME_OPENJFX
+
+    from configurations.openjfxStubs.files.collect { zipTree(it) }
+    include("*.dll")
+    include("*.dylib")
+    include("*.so")
+    into IS_WINDOWS ? file("$openjfxStubRuntime/bin") : file("$openjfxStubRuntime/lib")
+}
+
+
+/******************************************************************************
+ *                                                                            *
  *                               Modules                                      *
  *                                                                            *
  *****************************************************************************/
@@ -4915,7 +4958,7 @@ compileTargets { t ->
             }
         }
 
-        def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: mediaProject.assemble) {
+        def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.media native libraries"
 
@@ -4952,7 +4995,7 @@ compileTargets { t ->
             }
         }
 
-        def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: webProject.assemble) {
+        def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.web native libraries"
 
