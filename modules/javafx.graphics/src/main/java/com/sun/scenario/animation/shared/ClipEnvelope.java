@@ -66,7 +66,7 @@ public abstract class ClipEnvelope {
     protected long deltaTicks = 0;
 
     /**
-     * The current position of the play head. 0 <= ticks <= totalTicks
+     * The current position of the play head. 0 <= ticks <= totalTicks for finite cycles, any value for infinite cycles.
      */
     protected long ticks = 0;
     protected boolean inTimePulse = false;
@@ -90,11 +90,35 @@ public abstract class ClipEnvelope {
         }
     }
 
+    /**
+     * Called by the Animation to updates its ClipEnvelope's autoReverse value.
+     * @see Animation#autoReverseProperty()
+     */
     public abstract void setAutoReverse(boolean autoReverse);
+
+    /**
+     * Called by the Animation to updates its ClipEnvelope's cycleDuration value.
+     * @see Animation#cycleDurationProperty()
+     */
     public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
+
+    /**
+     * Called by the Animation to updates its ClipEnvelope's cycleCount value.
+     * @see Animation#cycleCountProperty()
+     */
     public abstract ClipEnvelope setCycleCount(int cycleCount);
+
+    /**
+     * Calculates the cycle number the animation is currently at. The number is relative to the starting position of the
+     * animation; if the animation if played from the end, ticks == totalTicks will be at cycle 0, if played from the start,
+     * it will be at the value of cycleCount.
+     */
     public abstract int getCycleNum();
 
+    /**
+     * Called by the Animation to updates its ClipEnvelope's rate value. Animation guarantees that newRate != 0.
+     * @see Animation#rateProperty()
+     */
     public void setRate(double newRate) {
         if (animation.getStatus() != Status.STOPPED) {
             deltaTicks = ticks - Math.round((ticks - deltaTicks) * newRate / rate);
@@ -104,26 +128,26 @@ public abstract class ClipEnvelope {
     }
 
     /**
-     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation.
+     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation. An Animation will call
+     * this method to update its currentRate property.
+     * <p>
      * If the animation is not running, this value represents the rate at which the animation will run once it's played.
      * The value is always +rate or -rate (since STOPPED and PAUSED states are ignored). The sign is determined by the
-     * position of the play head and by the values of the autoReverse property and startPositive:
-     * <ul>
-     * <li> autoReverse = false: currentRate = +rate.
-     * <li> autoReverse = true:
-     *   <ul>
-     *   <li> the play head is during an even cycle (relative to the starting direction): currentRate = +rate.
-     *   <li> the play head is during an odd cycle (relative to the starting direction): currentRate = -rate.
-     *   </ul>
-     * </ul>
+     * position of the play head and by the values of autoReverse and startPositive:<br>
+     * If autoReverse == false then currentRate = +rate. Otherwise, if {@link #getCycleNum()} is even then currentRate = +rate,
+     * and if odd then currentRate = -rate.
      */
     public abstract double calculateCurrentRunningRate();
 
-    protected void setCurrentRate(double currentRate) {
+    /**
+     * Sets the current rate of the Animation by its ClipEnvelope. Called when a cycle ended with autoReverse and the
+     * current rate should be flipped.
+     */
+    protected final void setAnimationCurrentRate(double currentRate) {
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
     }
 
-    protected void updateCycleTicks(Duration cycleDuration) {
+    protected final void updateCycleTicks(Duration cycleDuration) {
         cycleTicks = TickCalculation.fromDuration(cycleDuration);
     }
 
@@ -135,12 +159,7 @@ public abstract class ClipEnvelope {
         deltaTicks = ticks; // after stopping, ticks is always 0, so this is relevant only if jumpedTo after stop, then start
     }
 
-    public void stop() {
-        ticks = 0;
-        deltaTicks = 0;
-    }
-
-    public final void timePulse(long newDest) {
+    public void timePulse(long newDest) {
         if (cycleTicks == 0L) {
             return;
         }
@@ -155,7 +174,8 @@ public abstract class ClipEnvelope {
     }
 
     private void doTimePulse(long newDest) {
-        System.out.println("dest = " + newDest);
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("dest = " + newDest);
 
         double currentRate = calculateCurrentRunningRate();
         if (!animation.getCuePoints().isEmpty())
@@ -166,16 +186,17 @@ public abstract class ClipEnvelope {
             System.out.println("new dest = " + newDest);
 
         final long oldTicks = ticks;
-        ticks = calculateNewTicks(newDest);
-        // overall delta between current position and new position. always >= 0
-        long overallDelta = Math.abs(ticks - oldTicks);
+        ticks = calculatePulseTicks(newDest);
+        long ticksChange = Math.abs(ticks - oldTicks);
         if (!animation.getCuePoints().isEmpty()) {
             System.out.println("deltaTicks = " + deltaTicks);
-            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + overallDelta);
+            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + ticksChange);
         }
 
-        if (overallDelta == 0) {
-            System.out.println("delta = 0");
+        if (ticksChange == 0) {
+            new Throwable().printStackTrace();
+            if (!animation.getCuePoints().isEmpty())
+                System.out.println("delta = 0");
             return;
         }
 
@@ -183,7 +204,7 @@ public abstract class ClipEnvelope {
         if (!animation.getCuePoints().isEmpty())
             System.out.println("reachedEnd = " + reachedEnd);
 
-        doPlayTo(currentRate, overallDelta, reachedEnd);
+        doPlayTo(currentRate, ticksChange, reachedEnd);
 
         if (reachedEnd && !aborted) {
             if (!animation.getCuePoints().isEmpty())
@@ -194,9 +215,9 @@ public abstract class ClipEnvelope {
             System.out.println();
     }
 
-    protected abstract long calculateNewTicks(long newDest);
+    protected abstract long calculatePulseTicks(long newDest);
     protected abstract boolean hasReachedEnd();
-    protected abstract void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd);
+    protected abstract void doPlayTo(double currentRate, long ticksChange, boolean reachedEnd);
 
     public abstract void jumpTo(long ticks);
 

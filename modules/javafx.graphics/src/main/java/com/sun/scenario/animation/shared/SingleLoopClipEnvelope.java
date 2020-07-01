@@ -88,12 +88,12 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    protected long calculateNewTicks(long newDest) {
+    protected long calculatePulseTicks(long newDest) {
         return Utils.clamp(0, deltaTicks + newDest, cycleTicks);
     }
 
     @Override
-    protected void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd) {
+    protected void doPlayTo(double currentRate, long ticksChange, boolean reachedEnd) {
         AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
     }
 

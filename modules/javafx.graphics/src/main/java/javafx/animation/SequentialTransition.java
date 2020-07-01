@@ -695,13 +695,13 @@ public final class SequentialTransition extends Transition {
         }
         if (oldIndex == curIndex) {
             if (currentRate == 0) {
-                offsetTicks += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.getCurrentRate());
+                offsetTicks += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.calculateCurrentRunningRate());
             } else {
                 offsetTicks += currentRate > 0 ? newTicks - oldTicks : oldTicks - newTicks;
             }
         } else {
             if (currentRate == 0) {
-                if (this.clipEnvelope.getCurrentRate() > 0) {
+                if (this.clipEnvelope.calculateCurrentRunningRate() > 0) {
                     offsetTicks = Math.max(0, newTicks - currentDelay);
                 } else {
                     offsetTicks = startTimes[curIndex] + durations[curIndex] - newTicks;

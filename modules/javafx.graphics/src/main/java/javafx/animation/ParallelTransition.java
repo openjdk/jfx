@@ -547,7 +547,7 @@ public final class ParallelTransition extends Transition {
 
                     offsetTicks[i] = (getCurrentRate() > 0)? newTicks - delays[i] : add(durations[i], delays[i]) - newTicks;
                 } else if (status == Status.PAUSED) {
-                    offsetTicks[i] += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.getCurrentRate());
+                    offsetTicks[i] += (newTicks - oldTicks) * Math.signum(this.clipEnvelope.calculateCurrentRunningRate());
                 } else {
                     offsetTicks[i] += (getCurrentRate() > 0) ? newTicks - oldTicks : oldTicks - newTicks;
                 }

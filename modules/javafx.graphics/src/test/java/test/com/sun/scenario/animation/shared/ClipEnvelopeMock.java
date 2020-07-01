@@ -39,6 +39,7 @@ public class ClipEnvelopeMock extends ClipEnvelope {
     public double getRate() {
         return rate;
     }
+
     private boolean autoReverse;
 
     public boolean getAutoReverse() {
@@ -116,7 +117,29 @@ public class ClipEnvelopeMock extends ClipEnvelope {
     }
 
     @Override
-    protected double calculateCurrentRate() {
+    public double calculateCurrentRunningRate() {
         return rate;
+    }
+
+    @Override
+    public int getCycleNum() {
+        return 0;
+    }
+
+    @Override
+    protected long calculatePulseTicks(long newDest) {
+        return ticks + newDest;
+    }
+
+    @Override
+    protected boolean hasReachedEnd() {
+        // TODO Auto-generated method stub
+        return false;
+    }
+
+    @Override
+    protected void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd) {
+        // TODO Auto-generated method stub
+        
     }
 }

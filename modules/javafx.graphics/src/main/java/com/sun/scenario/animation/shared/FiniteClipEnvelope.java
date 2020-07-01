@@ -86,7 +86,7 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    protected long calculateNewTicks(long newDest) {
+    protected long calculatePulseTicks(long newDest) {
         return Utils.clamp(0, deltaTicks + newDest, totalTicks);
     }
 
@@ -107,7 +107,7 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
         deltaTicks += delta;
         cyclePos = ticks % cycleTicks;
         if (autoReverse && animation.getStatus() == Status.RUNNING) {
-             setCurrentRate(calculateCurrentRunningRate()); // needed? a pulse calculates the rate anyway, but needed if cached
+             setAnimationCurrentRate(calculateCurrentRunningRate()); // needed? a pulse calculates the rate anyway, but needed if cached
         } 
         if ((cyclePos == 0) && (ticks != 0)) { // TODO: check when pos = 0 and when pos = cycleticks
             cyclePos = cycleTicks;

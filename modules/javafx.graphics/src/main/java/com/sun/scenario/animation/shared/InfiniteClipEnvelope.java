@@ -59,17 +59,16 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     @Override
     public int getCycleNum() {
+        long cycleNum;
         if (startedPositive) {
-            long cycleNum = ticks / cycleTicks;
-            long i = ticks >= 0 ? cycleNum : cycleNum - 1;
-            System.out.println("getCycleNum effectiveNum = " + i);
-            return (int) i;
+            cycleNum = ticks / cycleTicks;
+            cycleNum = ticks >= 0 ? cycleNum : cycleNum - 1;
         } else {
-            long cycleNum = -(ticks - cycleTicks) / cycleTicks;
-            long i = ticks <= cycleTicks ? cycleNum : cycleNum - 1;
-            System.out.println("getCycleNum effectiveNum = " + i);
-            return (int) i;
+            cycleNum = -(ticks - cycleTicks) / cycleTicks;
+            cycleNum = ticks <= cycleTicks ? cycleNum : cycleNum - 1;
         }
+        System.out.println("getCycleNum cycleNum = " + cycleNum);
+        return (int) cycleNum;
     }
 
     @Override
@@ -78,7 +77,7 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    protected long calculateNewTicks(long newDest) {
+    protected long calculatePulseTicks(long newDest) {
         return deltaTicks + newDest;
     }
 
@@ -94,13 +93,27 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
         final long oldTicks = ticks;
         ticks = Math.max(0, newTicks) % (2 * cycleTicks);
         
-        System.out.println("jump new ticks = " + ticks);
-        final long delta = ticks - oldTicks;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new ticks = " + ticks);
+            
+        final long delta = Math.abs(ticks - oldTicks);
         if (delta == 0) {
+            if (!animation.getCuePoints().isEmpty()) {
+                System.out.println("jump new delta = 0");
+                new Throwable().printStackTrace();
+            }
+                
             return;
         }
+
         deltaTicks += delta;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new deltaTicks = " + deltaTicks);
+            
         cyclePos = ticks % cycleTicks;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new cyclePos = " + cyclePos);
+        
         if (autoReverse && animation.getStatus() == Status.RUNNING) {
 //            double currentRate = calculateCurrentRunningRate();
 //            setCurrentRate(currentRate); // needed? a pulse calculates the rate anyway, but needed if cached
@@ -111,6 +124,8 @@ public class InfiniteClipEnvelope extends MultiLoopClipEnvelope {
         }
         AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
         abortCurrentPulse();
-        System.out.println();
+        
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println();
     }
 }

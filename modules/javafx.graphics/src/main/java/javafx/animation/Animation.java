@@ -990,7 +990,8 @@ public abstract class Animation {
             case STOPPED: // TODO: what if started with rate = 0 ?
                 if (startable(true)) {
                     final double rate = getRate();
-                    if (lastPlayedFinished) {
+                    if (lastPlayedFinished ) {
+                    
                         jumpTo(rate < 0 ? getTotalDuration() : Duration.ZERO);
                     }
                     doStart(true);
@@ -1056,7 +1057,6 @@ public abstract class Animation {
         if (!paused) {
             timer.removePulseReceiver(pulseReceiver);
         }
-        clipEnvelope.stop();
         doSetCurrentRate(0.0);
         setStatus(Status.STOPPED);
     }
