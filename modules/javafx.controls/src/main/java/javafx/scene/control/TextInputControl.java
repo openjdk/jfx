@@ -182,9 +182,6 @@ public abstract class TextInputControl extends Control {
             } else {
                 int start = sel.getStart();
                 int end = sel.getEnd();
-                int length = txt.length();
-                if (end > start + length) end = length;
-                if (start > length-1) start = end = 0;
                 selectedText.set(txt.substring(start, end));
             }
         }
