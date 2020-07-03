@@ -930,6 +930,11 @@ public class JFXPanel extends JComponent {
         jfxPanelIOP.postEvent(this, new InvocationEvent(this, r));
     }
 
+    // Package scope method for testing
+    final BufferedImage test_getPixelsIm(){
+        return pixelsIm;
+    }
+
     private class HostContainer implements HostInterface {
 
         @Override

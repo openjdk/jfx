@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,34 @@
  * questions.
  */
 
-package test.javafx.embed.swing;
-
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import junit.framework.AssertionFailedError;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.lang.reflect.Field;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+package test.robot.javafx.embed.swing;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static test.util.Util.TIMEOUT;
 
-public class JDK8220484Test {
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.image.BufferedImage;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.embed.swing.JFXPanelShim;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import junit.framework.AssertionFailedError;
+
+public class JFXPanelScaledTest {
     static CountDownLatch launchLatch;
 
     private static MyApp myApp;
@@ -55,7 +59,7 @@ public class JDK8220484Test {
     static int cnt;
 
     @BeforeClass
-    public static void setupOnce() {
+    public static void setupOnce() throws Exception {
         System.setProperty("sun.java2d.uiScale.enabled", "true");
         System.setProperty("sun.java2d.uiScale", "125%");
         System.setProperty("glass.win.uiScale", "1.25");
@@ -66,52 +70,40 @@ public class JDK8220484Test {
         SwingUtilities.invokeLater(() -> {
             myApp = new MyApp();
         });
-
-        try {
-            if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch (" + (5 * TIMEOUT) + " seconds)");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+        if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
+            throw new AssertionFailedError("Timeout waiting for Application to launch (" + (5 * TIMEOUT) + " seconds)");
         }
     }
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.exit();
+        if (myApp != null) {
+            SwingUtilities.invokeLater(myApp::dispose);
+        }
     }
 
     @Test
     public void testScale() throws Exception {
         // Get the Swing-side BackBuffer
-        Field fpixelsIm = JFXPanel.class.getDeclaredField("pixelsIm");
-        fpixelsIm.setAccessible(true);
-        BufferedImage pixelsIm = (BufferedImage) fpixelsIm.get(myApp.jfxPanel);
-
-
+        BufferedImage pixelsIm = JFXPanelShim.getPixelsIm(myApp.jfxPanel);
         assertEquals(127, pixelsIm.getWidth());
         assertEquals(127, pixelsIm.getHeight());
 
-        // if all is ok, this area has a gray shading
-        // if the buffer is off, there is a dark gray diagonal which should be the right border
-        Color c = new Color(181, 181, 181);
+        // if all is ok, there is a black border on the right side
+        // if the buffer is off, there is a black diagonal which should be the right
+        // border
+        Color c = new Color(0, 0, 0);
         int colorOfDiagonal = c.getRGB();
         for (int x = 10; x < 45; x++) {
             for (int y = 90; y < 115; y++) {
-                if(colorOfDiagonal == pixelsIm.getRGB( x, y )) {
-                    fail( "image is skewed" );
+                if (colorOfDiagonal == pixelsIm.getRGB(x, y)) {
+                    fail("image is skewed");
                 }
             }
         }
     }
 
     public static class MyApp extends JFrame {
-
-        /**
-         *
-         */
         private static final long serialVersionUID = 1L;
         private final JFXPanel jfxPanel;
 
@@ -127,20 +119,21 @@ public class JDK8220484Test {
             Platform.runLater(() -> initFX(jfxPanel));
 
             // Give it time to paint and resize the buffers
-            // the issues only appears if the buffer has been resized, not on the initial creation.
+            // the issues only appears if the buffer has been resized, not on the initial
+            // creation.
             cnt = 0;
             t = new Timer(500, (e) -> {
                 switch (cnt) {
-                    case 0:
-                        jfxPanel.setSize(new Dimension(201, 201));
-                        break;
-                    case 1:
-                        jfxPanel.setSize(new Dimension(101, 101));
-                        break;
-                    case 2:
-                        t.stop();
-                        launchLatch.countDown();
-                        break;
+                case 0:
+                    jfxPanel.setSize(new Dimension(201, 201));
+                    break;
+                case 1:
+                    jfxPanel.setSize(new Dimension(101, 101));
+                    break;
+                case 2:
+                    t.stop();
+                    launchLatch.countDown();
+                    break;
                 }
                 cnt++;
             });
@@ -148,7 +141,10 @@ public class JDK8220484Test {
         }
 
         private static void initFX(JFXPanel fxPanel) {
-            Scene scene = new Scene(new Button("Test"));
+            Region region = new Region();
+            region.setStyle("-fx-background-color: #FFFFFF;" + "-fx-border-color: #000000;"
+                    + "-fx-border-width: 0 5px 0 0;" + "-fx-border-style: solid");
+            Scene scene = new Scene(region);
             fxPanel.setScene(scene);
         }
     }
