@@ -25,10 +25,17 @@
 
 package javafx.animation;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Objects;
 
+import com.sun.javafx.animation.TickCalculation;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
+import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.shared.ClipEnvelope;
+import com.sun.scenario.animation.shared.PulseReceiver;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -47,14 +54,6 @@ import javafx.collections.ObservableMap;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-import com.sun.javafx.animation.TickCalculation;
-import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.animation.shared.ClipEnvelope;
-import com.sun.scenario.animation.shared.PulseReceiver;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * The class {@code Animation} provides the core functionality of all animations
@@ -181,7 +180,7 @@ public abstract class Animation {
     }
 
     void resumeReceiver() {
-        if (paused) {
+      if (paused) {
             final long deltaTime = now() - pauseTime;
             startTime += deltaTime;
             paused = false;
@@ -314,7 +313,7 @@ public abstract class Animation {
     }
 
     public final double getRate() {
-        return (rate == null)? DEFAULT_RATE : rate.get();
+        return (rate == null) ? DEFAULT_RATE : rate.get();
     }
 
     public final DoubleProperty rateProperty() {
@@ -334,19 +333,14 @@ public abstract class Animation {
                     final double newRate = getRate();
                     // none 0 -> 0
                     if (isNearZero(newRate)) {
-//                      if (!isPaused()) { // is not paused check needed?
-                        doSetCurrentRate(0.0);
                         pauseReceiver();
-//                    }
-                    // ? -> 1
+                        doSetCurrentRate(0.0);
+                    // anything -> none 0
                     } else {
                         clipEnvelope.setRate(newRate);
-                        if (isRunning()) {
-                            // 0 -> 1
-                            if (isNearZero(getCurrentRate())) {
-                                resumeReceiver();
-                            }
-                            doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
+                        // 0 -> none 0
+                        if (isNearZero(getCurrentRate()) && isRunning()) {
+                            resumeReceiver();
                         }
                     }
                 }
@@ -990,8 +984,7 @@ public abstract class Animation {
             case STOPPED: // TODO: what if started with rate = 0 ?
                 if (startable(true)) {
                     final double rate = getRate();
-                    if (lastPlayedFinished ) {
-                    
+                    if (lastPlayedFinished) {
                         jumpTo(rate < 0 ? getTotalDuration() : Duration.ZERO);
                     }
                     doStart(true);
@@ -1008,7 +1001,6 @@ public abstract class Animation {
             case PAUSED:
                 doResume();
                 if (!isNearZero(getRate())) {
-//                    doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                     resumeReceiver();
                 }
                 break;
@@ -1016,11 +1008,13 @@ public abstract class Animation {
         }
     }
 
+    /////////////////
+    // CHECK WHAT THE do METHODS HAD AND WHAT TTHE PARTS THAT CALLED THEM HAD. PARENT TRANSITIONS USE THESE
+    // SO MAKE SURE THE CONTENTS REMAIN
+    //////////////////
+
     void doStart(boolean forceSync) {
         sync(forceSync);
-//      if (getRate() != 0) {
-//          doSetCurrentRate(clipEnvelope.calculateCurrentRunningRate());
-//      }
         clipEnvelope.start();
         lastPulse = 0;
         setStatus(Status.RUNNING);
@@ -1084,10 +1078,6 @@ public abstract class Animation {
     }
 
     void doPause() {
-//        final double currentRate = getCurrentRate();
-//        if (!isNearZero(currentRate)) {
-//            lastPlayedForward = areNearEqual(getCurrentRate(), getRate());
-//        }
         doSetCurrentRate(0.0);
         setStatus(Status.PAUSED);
     }

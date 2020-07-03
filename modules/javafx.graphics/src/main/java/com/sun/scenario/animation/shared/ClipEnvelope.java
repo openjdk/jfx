@@ -194,7 +194,6 @@ public abstract class ClipEnvelope {
         }
 
         if (ticksChange == 0) {
-            new Throwable().printStackTrace();
             if (!animation.getCuePoints().isEmpty())
                 System.out.println("delta = 0");
             return;
