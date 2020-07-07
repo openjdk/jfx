@@ -931,7 +931,7 @@ public class JFXPanel extends JComponent {
     }
 
     // Package scope method for testing
-    final BufferedImage test_getPixelsIm(){
+    final BufferedImage test_getPixelsIm() {
         return pixelsIm;
     }
 

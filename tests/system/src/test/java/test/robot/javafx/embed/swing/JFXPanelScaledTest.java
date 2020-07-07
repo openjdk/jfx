@@ -26,6 +26,7 @@
 package test.robot.javafx.embed.swing;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static test.util.Util.TIMEOUT;
 
@@ -58,6 +59,11 @@ public class JFXPanelScaledTest {
     private static Timer t;
     static int cnt;
 
+    /* Base size, so that with a scaling of 125% there are different results for Math.round and Math.ceil */
+    final static int TAGET_BASE_SIZE = 101;
+
+    final static int TARGET_SCALED_SIZE = (int) Math.ceil(TAGET_BASE_SIZE *1.25);
+
     @BeforeClass
     public static void setupOnce() throws Exception {
         System.setProperty("sun.java2d.uiScale.enabled", "true");
@@ -70,9 +76,8 @@ public class JFXPanelScaledTest {
         SwingUtilities.invokeLater(() -> {
             myApp = new MyApp();
         });
-        if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-            throw new AssertionFailedError("Timeout waiting for Application to launch (" + (5 * TIMEOUT) + " seconds)");
-        }
+        assertTrue("Timeout waiting for Application to launch",
+                launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @AfterClass
@@ -86,8 +91,8 @@ public class JFXPanelScaledTest {
     public void testScale() throws Exception {
         // Get the Swing-side BackBuffer
         BufferedImage pixelsIm = JFXPanelShim.getPixelsIm(myApp.jfxPanel);
-        assertEquals(127, pixelsIm.getWidth());
-        assertEquals(127, pixelsIm.getHeight());
+        assertEquals(TARGET_SCALED_SIZE, pixelsIm.getWidth());
+        assertEquals(TARGET_SCALED_SIZE, pixelsIm.getHeight());
 
         // if all is ok, there is a black border on the right side
         // if the buffer is off, there is a black diagonal which should be the right
@@ -128,7 +133,7 @@ public class JFXPanelScaledTest {
                     jfxPanel.setSize(new Dimension(201, 201));
                     break;
                 case 1:
-                    jfxPanel.setSize(new Dimension(101, 101));
+                    jfxPanel.setSize(new Dimension(TAGET_BASE_SIZE, TAGET_BASE_SIZE));
                     break;
                 case 2:
                     t.stop();

@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.robot.javafx.embed.swt;
+package test.javafx.embed.swt;
 
 import static org.junit.Assert.fail;
 
@@ -52,6 +52,9 @@ public class FXCanvasScaledTest {
 
     static Display display;
 
+    /* Base size, so that with a scaling of 125% there are different results for Math.round and Math.ceil */
+    final static int TAGET_BASE_SIZE = 101;
+
     @Test(timeout = 10000)
     public void testScale() throws Throwable {
         System.setProperty("sun.java2d.uiScale.enabled", "true");
@@ -77,7 +80,7 @@ public class FXCanvasScaledTest {
                         display.asyncExec(() -> canvas.setBounds(0, 0, 201, 201));
                         break;
                     case 1:
-                        display.asyncExec(() -> canvas.setBounds(0, 0, 101, 101));
+                        display.asyncExec(() -> canvas.setBounds(0, 0, TAGET_BASE_SIZE, TAGET_BASE_SIZE));
                         break;
                     case 2:
                         t.cancel();
