@@ -127,7 +127,7 @@ public class ClipEnvelopeMock extends ClipEnvelope {
     }
 
     @Override
-    protected long calculatePulseTicks(long newDest) {
+    protected long calculateNewTicks(long newDest) {
         return ticks + newDest;
     }
 
@@ -138,7 +138,19 @@ public class ClipEnvelopeMock extends ClipEnvelope {
     }
 
     @Override
-    protected void doPlayTo(double currentRate, long overallDelta, boolean reachedEnd) {
+    protected void playTo(double currentRate, long overallDelta, boolean reachedEnd) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    protected void calculateCyclePosition() {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    protected void jump() {
         // TODO Auto-generated method stub
         
     }

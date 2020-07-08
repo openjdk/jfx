@@ -26,6 +26,7 @@
 package com.sun.scenario.animation.shared;
 
 import javafx.animation.Animation;
+import javafx.animation.Animation.Status;
 
 /**
  * Clip envelope for multi-cycle animations. In this case, autoReverse and cyclePosition (which can be different from ticks)
@@ -63,6 +64,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         this.autoReverse = autoReverse;
     }
 
+    @Override
     public double calculateCurrentRunningRate() {
         if (!animation.getCuePoints().isEmpty())
             System.out.println("getCycleNum() = " + getCycleNum());
@@ -73,7 +75,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    protected void doPlayTo(double currentRate, long ticksChange, boolean reachedEnd) {
+    protected void playTo(double currentRate, long ticksChange, boolean reachedEnd) {
         long ticksToEndOfCycle = currentRate > 0 ? cycleTicks - cyclePos : cyclePos;
         System.out.println("cyclePos = " + cyclePos);
         System.out.println("cycleDelta = " + ticksToEndOfCycle);
@@ -81,7 +83,6 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         // check if the end of the cycle is inside the range of [currentTick, destinationTick]
         // If yes, advance to the end of the cycle and pass the rest of the ticks to the next cycle.
         // If the next cycle is completed, continue to the next etc.
-        //long leftoverTicks = Math.abs(overallDelta) - cycleDelta;
         while (ticksChange >= ticksToEndOfCycle) {
             cyclePos = (currentRate > 0) ? cycleTicks : 0;
             System.out.println("finishing cycle cyclePos = " + cyclePos + " ------------------------");
@@ -107,11 +108,32 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         }
 
         if (ticksChange > 0/* && !reachedEnd */) {
-//            cyclePos += Math.signum(currentRate) * overallDelta;
+//            cyclePos += Math.signum(currentRate) * ticksChange;
             cyclePos += (currentRate > 0) ? ticksChange : -ticksChange;
             System.out.println("new cyclePos = " + cyclePos);
             AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
         }
+    }
+
+    @Override
+    protected void calculateCyclePosition() {
+        cyclePos = ticks % cycleTicks;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new cyclePos = " + cyclePos);
+
+        if (autoReverse && animation.getStatus() == Status.RUNNING) {
+//          needed? a pulse calculates the rate anyway, but needed if cached
+            setAnimationCurrentRate(calculateCurrentRunningRate());
+            System.out.println("jump new cur rate = " + calculateCurrentRunningRate());
+        }
+        if ((cyclePos == 0) && (ticks != 0)) { // TODO: check when pos = 0 and when pos = cycleticks
+            cyclePos = cycleTicks;
+        }
+    }
+
+    @Override
+    public void jump() {
+        AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
     }
 
     @Override

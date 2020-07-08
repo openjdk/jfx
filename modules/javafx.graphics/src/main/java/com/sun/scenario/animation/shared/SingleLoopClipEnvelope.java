@@ -88,31 +88,22 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     }
 
     @Override
-    protected long calculatePulseTicks(long newDest) {
+    protected long calculateNewTicks(long newDest) {
         return Utils.clamp(0, deltaTicks + newDest, cycleTicks);
     }
 
     @Override
-    protected void doPlayTo(double currentRate, long ticksChange, boolean reachedEnd) {
+    protected void playTo(double currentRate, long ticksChange, boolean reachedEnd) {
         AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
     }
 
     @Override
-    public void jumpTo(long newTicks) {
-        if (cycleTicks == 0L) {
-            return;
-        }
+    protected void calculateCyclePosition() {
+        // no cycle position
+    }
 
-        final long oldTicks = ticks;
-        ticks = Utils.clamp(0, newTicks, cycleTicks);
-        final long delta = ticks - oldTicks;
-        if (delta == 0) {
-            return;
-        }
-        deltaTicks += delta;
-
+    @Override
+    protected void jump() {
         AnimationAccessor.getDefault().jumpTo(animation, ticks, cycleTicks, false);
-
-        abortCurrentPulse();
     }
 }

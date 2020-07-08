@@ -91,8 +91,10 @@ public class SingleLoopClipEnvelopeTest {
 
     @Test
     public void testJump() {
+        // Jumping to the same location is ignored in the implementation, so AnimationMock#doJumpTo
+        // is not called and the Command is not set to JUMP
         clip.jumpTo(0);
-        animation.check(Command.JUMP, 0, CYCLE_TICKS);
+        animation.check(Command.NONE, 0, CYCLE_TICKS);
 
         clip.jumpTo(6 * 300);
         animation.check(Command.JUMP, 6 * 300, CYCLE_TICKS);

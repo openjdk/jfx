@@ -128,8 +128,8 @@ public abstract class ClipEnvelope {
     }
 
     /**
-     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation. An Animation will call
-     * this method to update its currentRate property.
+     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation. An Animation can call
+     * this method to get its current running rate.
      * <p>
      * If the animation is not running, this value represents the rate at which the animation will run once it's played.
      * The value is always +rate or -rate (since STOPPED and PAUSED states are ignored). The sign is determined by the
@@ -186,7 +186,7 @@ public abstract class ClipEnvelope {
             System.out.println("new dest = " + newDest);
 
         final long oldTicks = ticks;
-        ticks = calculatePulseTicks(newDest);
+        ticks = calculateNewTicks(newDest);
         long ticksChange = Math.abs(ticks - oldTicks);
         if (!animation.getCuePoints().isEmpty()) {
             System.out.println("deltaTicks = " + deltaTicks);
@@ -203,7 +203,7 @@ public abstract class ClipEnvelope {
         if (!animation.getCuePoints().isEmpty())
             System.out.println("reachedEnd = " + reachedEnd);
 
-        doPlayTo(currentRate, ticksChange, reachedEnd);
+        playTo(currentRate, ticksChange, reachedEnd);
 
         if (reachedEnd && !aborted) {
             if (!animation.getCuePoints().isEmpty())
@@ -214,11 +214,46 @@ public abstract class ClipEnvelope {
             System.out.println();
     }
 
-    protected abstract long calculatePulseTicks(long newDest);
+    protected abstract long calculateNewTicks(long newDest);
     protected abstract boolean hasReachedEnd();
-    protected abstract void doPlayTo(double currentRate, long ticksChange, boolean reachedEnd);
+    protected abstract void playTo(double currentRate, long ticksChange, boolean reachedEnd);
 
-    public abstract void jumpTo(long ticks);
+    public void jumpTo(long newDest) {
+        if (cycleTicks == 0L) {
+            return;
+        }
+        doJumpTo(newDest);
+        jump();
+        abortCurrentPulse();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println();
+    }
+
+    private void doJumpTo(long newDest) {
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump newDest = " + newDest);
+        final long oldTicks = ticks;
+        ticks = newDest;// calculateNewTicks(newDest);
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new ticks = " + ticks);
+
+        final long ticksChange = ticks - oldTicks;
+        if (ticksChange == 0) {
+            if (!animation.getCuePoints().isEmpty()) {
+                System.out.println("jump ticksChange = 0");
+            }
+            return;
+        }
+
+        deltaTicks += ticksChange;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new deltaTicks = " + deltaTicks);
+
+        calculateCyclePosition();
+    }
+
+    protected abstract void calculateCyclePosition();
+    protected abstract void jump();
 
     public final void abortCurrentPulse() {
         if (inTimePulse) {

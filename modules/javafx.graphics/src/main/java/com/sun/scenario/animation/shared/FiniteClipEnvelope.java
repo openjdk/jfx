@@ -28,7 +28,6 @@ package com.sun.scenario.animation.shared;
 import com.sun.javafx.util.Utils;
 
 import javafx.animation.Animation;
-import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 /**
@@ -86,38 +85,7 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
     }
 
     @Override
-    protected long calculatePulseTicks(long newDest) {
+    protected long calculateNewTicks(long newDest) {
         return Utils.clamp(0, deltaTicks + newDest, totalTicks);
-    }
-
-    @Override
-    public void jumpTo(long newTicks) {
-        if (cycleTicks == 0L) {
-            return;
-        }
-
-        final long oldTicks = ticks;
-        ticks = Utils.clamp(0, newTicks, totalTicks);
-        final long delta = ticks - oldTicks;
-//        System.out.println("delta = " + delta);
-        if (delta == 0) {
-//            System.out.println();
-//            return;
-        }
-        deltaTicks += delta;
-        cyclePos = ticks % cycleTicks;
-        if (autoReverse && animation.getStatus() == Status.RUNNING) {
-             setAnimationCurrentRate(calculateCurrentRunningRate()); // needed? a pulse calculates the rate anyway, but needed if cached
-        } 
-        if ((cyclePos == 0) && (ticks != 0)) { // TODO: check when pos = 0 and when pos = cycleticks
-            cyclePos = cycleTicks;
-        }
-
-//        System.out.println("pos = " + TickCalculation.toMillis(pos));
-//        System.out.println("rate = " + rate);
-        AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
-        abortCurrentPulse();
-
-//        System.out.println();
     }
 }

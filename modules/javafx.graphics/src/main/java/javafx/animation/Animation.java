@@ -1008,11 +1008,6 @@ public abstract class Animation {
         }
     }
 
-    /////////////////
-    // CHECK WHAT THE do METHODS HAD AND WHAT TTHE PARTS THAT CALLED THEM HAD. PARENT TRANSITIONS USE THESE
-    // SO MAKE SURE THE CONTENTS REMAIN
-    //////////////////
-
     void doStart(boolean forceSync) {
         sync(forceSync);
         clipEnvelope.start();
