@@ -69,6 +69,7 @@ public abstract class ClipEnvelope {
      * The current position of the play head. 0 <= ticks <= totalTicks for finite cycles, any value for infinite cycles.
      */
     protected long ticks = 0;
+
     protected boolean inTimePulse = false;
     protected boolean aborted = false;
 
@@ -233,18 +234,18 @@ public abstract class ClipEnvelope {
         if (!animation.getCuePoints().isEmpty())
             System.out.println("jump newDest = " + newDest);
         final long oldTicks = ticks;
-        ticks = newDest;// calculateNewTicks(newDest);
-        if (!animation.getCuePoints().isEmpty())
-            System.out.println("jump new ticks = " + ticks);
-
+        ticks = newDest;
         final long ticksChange = ticks - oldTicks;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + ticksChange);
         if (ticksChange == 0) {
             if (!animation.getCuePoints().isEmpty()) {
                 System.out.println("jump ticksChange = 0");
             }
-            return;
+//            return;
         }
-
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump old deltaTicks = " + deltaTicks);
         deltaTicks += ticksChange;
         if (!animation.getCuePoints().isEmpty())
             System.out.println("jump new deltaTicks = " + deltaTicks);

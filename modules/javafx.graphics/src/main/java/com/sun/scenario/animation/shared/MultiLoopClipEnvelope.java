@@ -117,6 +117,8 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
 
     @Override
     protected void calculateCyclePosition() {
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump old cyclePos = " + cyclePos);
         cyclePos = ticks % cycleTicks;
         if (!animation.getCuePoints().isEmpty())
             System.out.println("jump new cyclePos = " + cyclePos);
@@ -128,6 +130,7 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
         }
         if ((cyclePos == 0) && (ticks != 0)) { // TODO: check when pos = 0 and when pos = cycleticks
             cyclePos = cycleTicks;
+            System.out.println("(cyclePos == 0) && (ticks != 0) --> new cyclePos = " + cyclePos);
         }
     }
 
