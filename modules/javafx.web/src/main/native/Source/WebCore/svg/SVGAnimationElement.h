@@ -24,7 +24,6 @@
 
 #pragma once
 
-#include "SVGExternalResourcesRequired.h"
 #include "SVGSMILElement.h"
 #include "SVGTests.h"
 #include "UnitBezier.h"
@@ -38,7 +37,7 @@ class TimeContainer;
 // the value during the animation since the value can be animated itself.
 enum AnimatedPropertyValueType { RegularPropertyValue, CurrentColorValue, InheritValue };
 
-class SVGAnimationElement : public SVGSMILElement, public SVGExternalResourcesRequired, public SVGTests {
+class SVGAnimationElement : public SVGSMILElement, public SVGTests {
     WTF_MAKE_ISO_ALLOCATED(SVGAnimationElement);
 public:
     float getStartTime() const;
@@ -86,7 +85,7 @@ public:
 protected:
     SVGAnimationElement(const QualifiedName&, Document&);
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGExternalResourcesRequired, SVGTests>;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
     const SVGPropertyRegistry& propertyRegistry() const override { return m_propertyRegistry; }
 
     virtual void resetAnimation();
@@ -103,7 +102,7 @@ protected:
 
     // from SVGSMILElement
     void startedActiveInterval() override;
-    void updateAnimation(float percent, unsigned repeat, SVGSMILElement* resultElement) override;
+    void updateAnimation(float percent, unsigned repeat) override;
 
     AnimatedPropertyValueType m_fromPropertyValueType { RegularPropertyValue };
     AnimatedPropertyValueType m_toPropertyValueType { RegularPropertyValue };
@@ -121,7 +120,7 @@ private:
     virtual bool calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString) = 0;
     virtual bool calculateFromAndToValues(const String& fromString, const String& toString) = 0;
     virtual bool calculateFromAndByValues(const String& fromString, const String& byString) = 0;
-    virtual void calculateAnimatedValue(float percent, unsigned repeatCount, SVGSMILElement* resultElement) = 0;
+    virtual void calculateAnimatedValue(float percent, unsigned repeatCount) = 0;
     virtual Optional<float> calculateDistance(const String& /*fromString*/, const String& /*toString*/) = 0;
 
     void currentValuesForValuesAnimation(float percent, float& effectivePercent, String& from, String& to);

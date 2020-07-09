@@ -74,7 +74,9 @@ enum PageSizeType {
 // This struct is for rarely used non-inherited CSS3, CSS2, and WebKit-specific properties.
 // By grouping them together, we save space, and only allocate this object when someone
 // actually uses one of these properties.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 class StyleRareNonInheritedData : public RefCounted<StyleRareNonInheritedData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 public:
     static Ref<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
     Ref<StyleRareNonInheritedData> copy() const;
@@ -135,8 +137,8 @@ public:
 
     RefPtr<StyleReflection> boxReflect;
 
-    std::unique_ptr<AnimationList> animations;
-    std::unique_ptr<AnimationList> transitions;
+    RefPtr<AnimationList> animations;
+    RefPtr<AnimationList> transitions;
 
     FillLayer mask;
     NinePieceImage maskBoxImage;
@@ -181,6 +183,7 @@ public:
 
     unsigned userDrag : 2; // UserDrag
     unsigned textOverflow : 1; // Whether or not lines that spill out should be truncated with "..."
+    unsigned useSmoothScrolling : 1; // ScrollBehavior
     unsigned marginBeforeCollapse : 2; // MarginCollapse
     unsigned marginAfterCollapse : 2; // MarginCollapse
     unsigned appearance : 6; // EAppearance

@@ -25,10 +25,14 @@
 
 #pragma once
 
+#include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
+
+class AnimationList;
+class WebAnimation;
 
 inline double secondsToWebAnimationsAPITime(const Seconds time)
 {
@@ -59,6 +63,8 @@ struct WebAnimationsMarkableDoubleTraits {
 };
 
 using MarkableDouble = Markable<double, WebAnimationsMarkableDoubleTraits>;
+
+bool compareAnimationsByCompositeOrder(WebAnimation&, WebAnimation&, const AnimationList*);
 
 } // namespace WebCore
 

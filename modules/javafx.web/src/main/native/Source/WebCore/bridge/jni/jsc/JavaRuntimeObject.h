@@ -37,13 +37,13 @@ class JavaRuntimeObject : public RuntimeObject {
 public:
     typedef RuntimeObject Base;
 
-    static JavaRuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, RefPtr<JavaInstance> javaInstance)
+    static JavaRuntimeObject* create(JSGlobalObject* globalObject, RefPtr<JavaInstance> javaInstance)
     {
         VM& vm = globalObject->vm();
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
-        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeObject>(exec);
-        JavaRuntimeObject* object = new (NotNull, allocateCell<JavaRuntimeObject>(vm.heap)) JavaRuntimeObject(exec, globalObject, domStructure, javaInstance);
+        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeObject>(globalObject);
+        JavaRuntimeObject* object = new (NotNull, allocateCell<JavaRuntimeObject>(vm.heap)) JavaRuntimeObject(globalObject, domStructure, javaInstance);
         object->finishCreation(globalObject);
         return object;
     }
@@ -58,7 +58,7 @@ public:
     }
 
 private:
-    JavaRuntimeObject(ExecState*, JSGlobalObject*, Structure*, RefPtr<JavaInstance>);
+    JavaRuntimeObject(JSGlobalObject*, Structure*, RefPtr<JavaInstance>);
     void finishCreation(JSGlobalObject*);
 };
 

@@ -79,6 +79,8 @@ final class UIClientImpl implements UIClient {
             }
         });
 
+        page.resetToConsistentStateBeforeTesting();
+
         // This call is needed to add the main frame to WebPage.frames list.
         // TODO: investigate why it's not added automatically (via WebPage.fwkFrameCreated) and fix.
         page.getMainFrame();

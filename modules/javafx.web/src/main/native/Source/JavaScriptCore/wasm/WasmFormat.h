@@ -54,6 +54,8 @@ namespace Wasm {
 struct CompilationContext;
 struct ModuleInformation;
 
+using BlockSignature = const Signature*;
+
 enum class TableElementType : uint8_t {
     Anyref,
     Funcref
@@ -138,7 +140,7 @@ struct Export {
 
 String makeString(const Name& characters);
 
-struct Global {
+struct GlobalInformation {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
     enum Mutability : uint8_t {
         // FIXME auto-generate this. https://bugs.webkit.org/show_bug.cgi?id=165231
@@ -146,16 +148,22 @@ struct Global {
         Immutable = 0
     };
 
-    enum InitializationType {
+    enum InitializationType : uint8_t {
         IsImport,
         FromGlobalImport,
         FromRefFunc,
         FromExpression
     };
 
+    enum class BindingMode : uint8_t {
+        EmbeddedInInstance = 0,
+        Portable,
+    };
+
     Mutability mutability;
     Type type;
     InitializationType initializationType { IsImport };
+    BindingMode bindingMode { BindingMode::EmbeddedInInstance };
     uint64_t initialBitsOrImportNumber { 0 };
 };
 

@@ -38,8 +38,12 @@ class JSWorkletGlobalScope;
 class WorkletGlobalScope;
 
 class JSWorkletGlobalScopeBase : public JSDOMGlobalObject {
-    using Base = JSDOMGlobalObject;
 public:
+    using Base = JSDOMGlobalObject;
+
+    template<typename, JSC::SubspaceAccess>
+    static void subspaceFor(JSC::VM&) { RELEASE_ASSERT_NOT_REACHED(); }
+
     static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
@@ -59,7 +63,7 @@ public:
     static bool shouldInterruptScript(const JSC::JSGlobalObject*);
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
-    static void queueTaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
+    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
 
     void clearDOMGuardedObjects();
 
@@ -76,10 +80,10 @@ private:
 
 // Returns a JSWorkletGlobalScope or jsNull()
 // Always ignores the execState and passed globalObject, WorkletGlobalScope is itself a globalObject and will always use its own prototype chain.
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, WorkletGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, WorkletGlobalScope* scope) { return scope ? toJS(exec, globalObject, *scope) : JSC::jsNull(); }
-JSC::JSValue toJS(JSC::ExecState*, WorkletGlobalScope&);
-inline JSC::JSValue toJS(JSC::ExecState* exec, WorkletGlobalScope* scope) { return scope ? toJS(exec, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, JSDOMGlobalObject*, WorkletGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, WorkletGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, globalObject, *scope) : JSC::jsNull(); }
+JSC::JSValue toJS(JSC::JSGlobalObject*, WorkletGlobalScope&);
+inline JSC::JSValue toJS(JSC::JSGlobalObject* lexicalGlobalObject, WorkletGlobalScope* scope) { return scope ? toJS(lexicalGlobalObject, *scope) : JSC::jsNull(); }
 
 JSWorkletGlobalScope* toJSWorkletGlobalScope(JSC::VM&, JSC::JSValue);
 

@@ -166,13 +166,13 @@ void CallLinkInfo::clearLastSeenCallee()
     m_lastSeenCalleeOrExecutable.clear();
 }
 
-JSObject* CallLinkInfo::lastSeenCallee()
+JSObject* CallLinkInfo::lastSeenCallee() const
 {
     RELEASE_ASSERT(!isDirect());
     return jsCast<JSObject*>(m_lastSeenCalleeOrExecutable.get());
 }
 
-bool CallLinkInfo::haveLastSeenCallee()
+bool CallLinkInfo::haveLastSeenCallee() const
 {
     RELEASE_ASSERT(!isDirect());
     return !!m_lastSeenCalleeOrExecutable;
@@ -190,11 +190,11 @@ ExecutableBase* CallLinkInfo::executable()
     return jsCast<ExecutableBase*>(m_lastSeenCalleeOrExecutable.get());
 }
 
-void CallLinkInfo::setMaxNumArguments(unsigned value)
+void CallLinkInfo::setMaxArgumentCountIncludingThis(unsigned value)
 {
     RELEASE_ASSERT(isDirect());
     RELEASE_ASSERT(value);
-    m_maxNumArguments = value;
+    m_maxArgumentCountIncludingThis = value;
 }
 
 void CallLinkInfo::visitWeak(VM& vm)
@@ -209,7 +209,7 @@ void CallLinkInfo::visitWeak(VM& vm)
     if (isLinked()) {
         if (stub()) {
             if (!stub()->visitWeak(vm)) {
-                if (Options::verboseOSR()) {
+                if (UNLIKELY(Options::verboseOSR())) {
                     dataLog(
                         "At ", m_codeOrigin, ", ", RawPointer(this), ": clearing call stub to ",
                         listDump(stub()->variants()), ", stub routine ", RawPointer(stub()),
@@ -220,14 +220,14 @@ void CallLinkInfo::visitWeak(VM& vm)
             }
         } else if (!vm.heap.isMarked(m_calleeOrCodeBlock.get())) {
             if (isDirect()) {
-                if (Options::verboseOSR()) {
+                if (UNLIKELY(Options::verboseOSR())) {
                     dataLog(
                         "Clearing call to ", RawPointer(codeBlock()), " (",
                         pointerDump(codeBlock()), ").\n");
                 }
             } else {
                 if (callee()->type() == JSFunctionType) {
-                    if (Options::verboseOSR()) {
+                    if (UNLIKELY(Options::verboseOSR())) {
                         dataLog(
                             "Clearing call to ",
                             RawPointer(callee()), " (",
@@ -236,14 +236,14 @@ void CallLinkInfo::visitWeak(VM& vm)
                     }
                     handleSpecificCallee(static_cast<JSFunction*>(callee()));
                 } else {
-                    if (Options::verboseOSR())
+                    if (UNLIKELY(Options::verboseOSR()))
                         dataLog("Clearing call to ", RawPointer(callee()), ".\n");
                     m_clearedByGC = true;
                 }
             }
             unlink(vm);
         } else if (isDirect() && !vm.heap.isMarked(m_lastSeenCalleeOrExecutable.get())) {
-            if (Options::verboseOSR()) {
+            if (UNLIKELY(Options::verboseOSR())) {
                 dataLog(
                     "Clearing call to ", RawPointer(executable()),
                     " because the executable is dead.\n");

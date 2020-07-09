@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -30,7 +30,7 @@ class GetterSetter;
 class StringConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static StringConstructor* create(VM& vm, Structure* structure, StringPrototype* stringPrototype, GetterSetter*)
     {
@@ -50,8 +50,9 @@ private:
     StringConstructor(VM&, Structure*);
     void finishCreation(VM&, StringPrototype*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(StringConstructor, InternalFunction);
 
-JSString* JSC_HOST_CALL stringFromCharCode(ExecState*, int32_t);
-JSString* stringConstructor(ExecState*, JSValue);
+JSString* JSC_HOST_CALL stringFromCharCode(JSGlobalObject*, int32_t);
+JSString* stringConstructor(JSGlobalObject*, JSValue);
 
 } // namespace JSC

@@ -45,9 +45,7 @@
 #include "PlatformScreen.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
-#include "StyleResolver.h"
 #include "Theme.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -147,7 +145,7 @@ static bool applyRestrictor(MediaQuery::Restrictor r, bool value)
     return r == MediaQuery::Not ? !value : value;
 }
 
-bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, StyleResolver* styleResolver) const
+bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, MediaQueryDynamicResults* dynamicResults, Mode mode) const
 {
     LOG_WITH_STREAM(MediaQueries, stream << "MediaQueryEvaluator::evaluate on " << (m_document ? m_document->url().string() : emptyString()));
 
@@ -168,17 +166,34 @@ bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, StyleResolver*
         if (mediaTypeMatch(query.mediaType())) {
             auto& expressions = query.expressions();
             // Iterate through expressions, stop if any of them eval to false (AND semantics).
+            bool isDynamic = false;
             size_t j = 0;
             for (; j < expressions.size(); ++j) {
                 bool expressionResult = evaluate(expressions[j]);
-                if (styleResolver && isViewportDependent(expressions[j].mediaFeature()))
-                    styleResolver->addViewportDependentMediaQueryResult(expressions[j], expressionResult);
-                if (styleResolver && isAccessibilitySettingsDependent(expressions[j].mediaFeature()))
-                    styleResolver->addAccessibilitySettingsDependentMediaQueryResult(expressions[j], expressionResult);
-                if (styleResolver && isAppearanceDependent(expressions[j].mediaFeature()))
-                    styleResolver->addAppearanceDependentMediaQueryResult(expressions[j], expressionResult);
+                if (dynamicResults) {
+                    if (isViewportDependent(expressions[j].mediaFeature())) {
+                        isDynamic = true;
+                        dynamicResults->viewport.append({ expressions[j], expressionResult });
+                    }
+                    if (isAppearanceDependent(expressions[j].mediaFeature())) {
+                        isDynamic = true;
+                        dynamicResults->appearance.append({ expressions[j], expressionResult });
+                    }
+                    if (isAccessibilitySettingsDependent(expressions[j].mediaFeature())) {
+                        isDynamic = true;
+                        dynamicResults->accessibilitySettings.append({ expressions[j], expressionResult });
+                    }
+                }
+                if (mode == Mode::AlwaysMatchDynamic && isDynamic)
+                    continue;
+
                 if (!expressionResult)
                     break;
+            }
+
+            if (mode == Mode::AlwaysMatchDynamic && isDynamic) {
+                result = true;
+                continue;
             }
 
             // Assume true if we are at the end of the list, otherwise assume false.
@@ -191,37 +206,17 @@ bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, StyleResolver*
     return result;
 }
 
-bool MediaQueryEvaluator::evaluate(const MediaQuerySet& querySet, Vector<MediaQueryResult>& viewportDependentResults, Vector<MediaQueryResult>& appearanceDependentResults) const
+bool MediaQueryEvaluator::evaluateForChanges(const MediaQueryDynamicResults& dynamicResults) const
 {
-    auto& queries = querySet.queryVector();
-    if (!queries.size())
-        return true;
+    auto hasChanges = [&](auto& dynamicResultsVector) {
+        for (auto& dynamicResult : dynamicResultsVector) {
+            if (evaluate(dynamicResult.expression) != dynamicResult.result)
+                return true;
+        }
+        return false;
+    };
 
-    bool result = false;
-    for (size_t i = 0; i < queries.size() && !result; ++i) {
-        auto& query = queries[i];
-
-        if (query.ignored())
-            continue;
-
-        if (mediaTypeMatch(query.mediaType())) {
-            auto& expressions = query.expressions();
-            size_t j = 0;
-            for (; j < expressions.size(); ++j) {
-                bool expressionResult = evaluate(expressions[j]);
-                if (isViewportDependent(expressions[j].mediaFeature()))
-                    viewportDependentResults.append({ expressions[j], expressionResult });
-                if (isAppearanceDependent(expressions[j].mediaFeature()))
-                    appearanceDependentResults.append({ expressions[j], expressionResult });
-                if (!expressionResult)
-                    break;
-            }
-            result = applyRestrictor(query.restrictor(), expressions.size() == j);
-        } else
-            result = applyRestrictor(query.restrictor(), false);
-    }
-
-    return result;
+    return hasChanges(dynamicResults.viewport) || hasChanges(dynamicResults.appearance) || hasChanges(dynamicResults.accessibilitySettings);
 }
 
 template<typename T, typename U> bool compareValue(T a, U b, MediaFeaturePrefix op)
@@ -245,7 +240,7 @@ static String aspectRatioValueAsString(CSSValue* value)
         return emptyString();
 
     auto& aspectRatio = downcast<CSSAspectRatioValue>(*value);
-    return makeString(FormattedNumber::fixedWidth(aspectRatio.numeratorValue(), 6), '/', FormattedNumber::fixedWidth(aspectRatio.denominatorValue(), 6));
+    return makeString(aspectRatio.numeratorValue(), '/', aspectRatio.denominatorValue());
 }
 
 #endif
@@ -262,7 +257,7 @@ static Optional<double> doubleValue(CSSValue* value)
 {
     if (!is<CSSPrimitiveValue>(value) || !downcast<CSSPrimitiveValue>(*value).isNumber())
         return WTF::nullopt;
-    return downcast<CSSPrimitiveValue>(*value).doubleValue(CSSPrimitiveValue::CSS_NUMBER);
+    return downcast<CSSPrimitiveValue>(*value).doubleValue(CSSUnitType::CSS_NUMBER);
 }
 
 static bool zeroEvaluate(CSSValue* value, MediaFeaturePrefix op)
@@ -428,7 +423,7 @@ static bool evaluateResolution(CSSValue* value, Frame& frame, MediaFeaturePrefix
         return false;
 
     auto& resolution = downcast<CSSPrimitiveValue>(*value);
-    float resolutionValue = resolution.isNumber() ? resolution.floatValue() : resolution.floatValue(CSSPrimitiveValue::CSS_DPPX);
+    float resolutionValue = resolution.isNumber() ? resolution.floatValue() : resolution.floatValue(CSSUnitType::CSS_DPPX);
     bool result = compareValue(deviceScaleFactor, resolutionValue, op);
     LOG_WITH_STREAM(MediaQueries, stream << "  evaluateResolution: " << op << " " << resolutionValue << " device scale factor " << deviceScaleFactor << ": " << result);
     return result;
@@ -449,6 +444,33 @@ static bool resolutionEvaluate(CSSValue* value, const CSSToLengthConversionData&
     UNUSED_PARAM(op);
     return false;
 #endif
+}
+
+static bool dynamicRangeEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
+{
+    if (!value)
+        return false;
+
+    if (!frame.settings().hdrMediaCapabilitiesEnabled())
+        return false;
+
+    bool supportsHighDynamicRange;
+
+    if (frame.settings().forcedSupportsHighDynamicRangeValue() == Settings::ForcedAccessibilityValue::On)
+        supportsHighDynamicRange = true;
+    else if (frame.settings().forcedSupportsHighDynamicRangeValue() == Settings::ForcedAccessibilityValue::Off)
+        supportsHighDynamicRange = false;
+    else
+        supportsHighDynamicRange = screenSupportsHighDynamicRange(frame.mainFrame().view());
+
+    switch (downcast<CSSPrimitiveValue>(*value).valueID()) {
+    case CSSValueHigh:
+        return supportsHighDynamicRange;
+    case CSSValueStandard:
+        return true;
+    default:
+        return false; // Any unknown value should not be considered a match.
+    }
 }
 
 static bool gridEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix op)

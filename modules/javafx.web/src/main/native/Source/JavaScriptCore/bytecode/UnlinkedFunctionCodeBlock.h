@@ -34,7 +34,13 @@ class CachedFunctionCodeBlock;
 class UnlinkedFunctionCodeBlock final : public UnlinkedCodeBlock {
 public:
     typedef UnlinkedCodeBlock Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.unlinkedFunctionCodeBlockSpace<mode>();
+    }
 
     static UnlinkedFunctionCodeBlock* create(VM& vm, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
     {

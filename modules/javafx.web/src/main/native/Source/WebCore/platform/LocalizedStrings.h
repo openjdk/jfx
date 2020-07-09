@@ -68,7 +68,7 @@ namespace WebCore {
     String contextMenuItemTagStop();
     String contextMenuItemTagReload();
     String contextMenuItemTagCut();
-    String contextMenuItemTagPaste();
+    WEBCORE_EXPORT String contextMenuItemTagPaste();
 #if PLATFORM(GTK)
     String contextMenuItemTagDelete();
     String contextMenuItemTagInputMethods();
@@ -186,6 +186,9 @@ namespace WebCore {
     String AXMonthFieldText();
     String AXNumberFieldText();
     String AXWeekFieldText();
+    String AXARIAContentGroupText(const String& ariaType);
+    String AXHorizontalRuleDescriptionText();
+    String AXMarkText();
 
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
@@ -203,9 +206,6 @@ namespace WebCore {
     String weekFormatInLDML();
 #endif
 #if PLATFORM(COCOA)
-    String AXARIAContentGroupText(const String& ariaType);
-    String AXHorizontalRuleDescriptionText();
-    String AXMarkText();
 #if ENABLE(METER_ELEMENT)
     String AXMeterGaugeRegionOptimumText();
     String AXMeterGaugeRegionSuboptimalText();

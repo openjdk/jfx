@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,19 +81,21 @@ bool JITFinalizer::finalizeFunction()
 
 void JITFinalizer::finalizeCommon()
 {
-    // Some JIT finalizers may have added more constants. Shrink-to-fit those things now.
-    m_plan.codeBlock()->constants().shrinkToFit();
-    m_plan.codeBlock()->constantsSourceCodeRepresentation().shrinkToFit();
+    CodeBlock* codeBlock = m_plan.codeBlock();
 
 #if ENABLE(FTL_JIT)
-    m_jitCode->optimizeAfterWarmUp(m_plan.codeBlock());
+    m_jitCode->optimizeAfterWarmUp(codeBlock);
 #endif // ENABLE(FTL_JIT)
 
     if (UNLIKELY(m_plan.compilation()))
-        m_plan.vm()->m_perBytecodeProfiler->addCompilation(m_plan.codeBlock(), *m_plan.compilation());
+        m_plan.vm()->m_perBytecodeProfiler->addCompilation(codeBlock, *m_plan.compilation());
 
     if (!m_plan.willTryToTierUp())
-        m_plan.codeBlock()->baselineVersion()->m_didFailFTLCompilation = true;
+        codeBlock->baselineVersion()->m_didFailFTLCompilation = true;
+
+    // The codeBlock is now responsible for keeping many things alive (e.g. frozen values)
+    // that were previously kept alive by the plan.
+    m_plan.vm()->heap.writeBarrier(codeBlock);
 }
 
 } } // namespace JSC::DFG

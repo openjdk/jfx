@@ -49,6 +49,11 @@ enum class AnimateChange {
     RunningStateChange      = 1 << 2, // Animation "running or paused" changed.
 };
 
+enum class AnimationImpact {
+    RequiresRecomposite     = 1 << 0,
+    ForcesStackingContext   = 1 << 1
+};
+
 class AnimationBase : public RefCounted<AnimationBase>
     , public CSSPropertyBlendingClient {
     friend class CompositeAnimation;
@@ -137,7 +142,7 @@ public:
     bool waitingForStartTime() const { return m_animationState == AnimationState::StartWaitResponse; }
     bool waitingForStyleAvailable() const { return m_animationState == AnimationState::StartWaitStyleAvailable; }
 
-    bool isAccelerated() const override { return m_isAccelerated; }
+    bool isAccelerated() const { return m_isAccelerated; }
 
     virtual Optional<Seconds> timeToNextService();
 

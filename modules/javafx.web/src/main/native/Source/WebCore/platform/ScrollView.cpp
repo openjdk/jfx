@@ -206,21 +206,73 @@ IntPoint ScrollView::contentsScrollPosition() const
     return scrollPosition();
 }
 
-void ScrollView::setContentsScrollPosition(const IntPoint& position)
+void ScrollView::setContentsScrollPosition(const IntPoint& position, ScrollClamping clamping)
 {
 #if PLATFORM(IOS_FAMILY)
     if (platformWidget())
         setActualScrollPosition(position);
 #endif
-    setScrollPosition(position);
+    setScrollPosition(position, clamping);
 }
 
-#if !PLATFORM(IOS_FAMILY)
+FloatRect ScrollView::exposedContentRect() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (platformWidget())
+        return platformExposedContentRect();
+#endif
+
+    const ScrollView* parent = this->parent();
+    if (!parent)
+        return m_delegatedScrollingGeometry ? m_delegatedScrollingGeometry->exposedContentRect : FloatRect();
+
+    IntRect parentViewExtentContentRect = enclosingIntRect(parent->exposedContentRect());
+    IntRect selfExtentContentRect = rootViewToContents(parentViewExtentContentRect);
+    selfExtentContentRect.intersect(boundsRect());
+    return selfExtentContentRect;
+}
+
+void ScrollView::setExposedContentRect(const FloatRect& rect)
+{
+    ASSERT(!platformWidget());
+
+    if (!m_delegatedScrollingGeometry)
+        m_delegatedScrollingGeometry = DelegatedScrollingGeometry();
+
+    m_delegatedScrollingGeometry->exposedContentRect = rect;
+}
+
+FloatSize ScrollView::unobscuredContentSize() const
+{
+    ASSERT(m_delegatedScrollingGeometry);
+    if (m_delegatedScrollingGeometry)
+        return m_delegatedScrollingGeometry->unobscuredContentSize;
+    return { };
+}
+
+void ScrollView::setUnobscuredContentSize(const FloatSize& size)
+{
+    ASSERT(!platformWidget());
+    if (m_delegatedScrollingGeometry && size == m_delegatedScrollingGeometry->unobscuredContentSize)
+        return;
+
+    if (!m_delegatedScrollingGeometry)
+        m_delegatedScrollingGeometry = DelegatedScrollingGeometry();
+
+    m_delegatedScrollingGeometry->unobscuredContentSize = size;
+    unobscuredContentSizeChanged();
+}
+
 IntRect ScrollView::unobscuredContentRect(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
+    if (platformWidget())
+        return platformUnobscuredContentRect(scrollbarInclusion);
+
+    if (m_delegatedScrollingGeometry)
+        return IntRect(m_scrollPosition, roundedIntSize(m_delegatedScrollingGeometry->unobscuredContentSize));
+
     return unobscuredContentRectInternal(scrollbarInclusion);
 }
-#endif
 
 IntRect ScrollView::unobscuredContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
@@ -461,7 +513,7 @@ void ScrollView::completeUpdatesAfterScrollTo(const IntSize& scrollDelta)
     updateCompositingLayersAfterScrolling();
 }
 
-void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
+void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollView::setScrollPosition " << scrollPosition);
 
@@ -473,12 +525,12 @@ void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
         return;
     }
 
-    ScrollPosition newScrollPosition = !delegatesScrolling() ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
+    ScrollPosition newScrollPosition = (!delegatesScrolling() && clamping == ScrollClamping::Clamped) ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
 
     if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && newScrollPosition == this->scrollPosition())
         return;
 
-    if (requestScrollPositionUpdate(newScrollPosition))
+    if (requestScrollPositionUpdate(newScrollPosition, currentScrollType(), clamping))
         return;
 
     updateScrollbars(newScrollPosition);
@@ -1528,7 +1580,7 @@ bool ScrollView::platformCanBlitOnScroll() const
 
 IntRect ScrollView::platformVisibleContentRect(bool) const
 {
-    return IntRect();
+    return { };
 }
 
 float ScrollView::platformTopContentInset() const
@@ -1542,17 +1594,27 @@ void ScrollView::platformSetTopContentInset(float)
 
 IntSize ScrollView::platformVisibleContentSize(bool) const
 {
-    return IntSize();
+    return { };
 }
 
 IntRect ScrollView::platformVisibleContentRectIncludingObscuredArea(bool) const
 {
-    return IntRect();
+    return { };
 }
 
 IntSize ScrollView::platformVisibleContentSizeIncludingObscuredArea(bool) const
 {
-    return IntSize();
+    return { };
+}
+
+IntRect ScrollView::platformUnobscuredContentRect(VisibleContentRectIncludesScrollbars) const
+{
+    return { };
+}
+
+FloatRect ScrollView::platformExposedContentRect() const
+{
+    return { };
 }
 
 void ScrollView::platformSetContentsSize()

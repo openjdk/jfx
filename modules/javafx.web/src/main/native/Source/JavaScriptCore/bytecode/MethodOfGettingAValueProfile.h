@@ -31,14 +31,17 @@
 // these #if's will disappear...
 #if ENABLE(DFG_JIT)
 
+#include "BytecodeIndex.h"
 #include "GPRInfo.h"
+#include "Operands.h"
 
 namespace JSC {
 
+class UnaryArithProfile;
+class BinaryArithProfile;
 class CCallHelpers;
 class CodeBlock;
 class LazyOperandValueProfileKey;
-struct ArithProfile;
 struct ValueProfile;
 
 class MethodOfGettingAValueProfile {
@@ -57,11 +60,20 @@ public:
             m_kind = None;
     }
 
-    MethodOfGettingAValueProfile(ArithProfile* profile)
+    MethodOfGettingAValueProfile(UnaryArithProfile* profile)
     {
         if (profile) {
-            m_kind = ArithProfileReady;
-            u.arithProfile = profile;
+            m_kind = UnaryArithProfileReady;
+            u.unaryArithProfile = profile;
+        } else
+            m_kind = None;
+    }
+
+    MethodOfGettingAValueProfile(BinaryArithProfile* profile)
+    {
+        if (profile) {
+            m_kind = BinaryArithProfileReady;
+            u.binaryArithProfile = profile;
         } else
             m_kind = None;
     }
@@ -78,18 +90,24 @@ private:
     enum Kind {
         None,
         Ready,
-        ArithProfileReady,
+        UnaryArithProfileReady,
+        BinaryArithProfileReady,
         LazyOperand
     };
 
     Kind m_kind;
-    union {
+    union Data {
+        Data()
+            : profile(nullptr)
+        { }
+
         ValueProfile* profile;
-        ArithProfile* arithProfile;
+        UnaryArithProfile* unaryArithProfile;
+        BinaryArithProfile* binaryArithProfile;
         struct {
             CodeBlock* codeBlock;
-            unsigned bytecodeOffset;
-            int operand;
+            BytecodeIndex bytecodeOffset;
+            Operand operand;
         } lazyOperand;
     } u;
 };

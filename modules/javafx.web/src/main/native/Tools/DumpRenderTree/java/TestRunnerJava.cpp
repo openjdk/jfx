@@ -593,7 +593,7 @@ unsigned TestRunner::imageCountInGeneralPasteboard() const
 
 void TestRunner::forceImmediateCompletion()
 {
-    fprintf(testResult, "ERROR: TestRunner::forceImmediateCompletion() not implemented\n");
+    notifyDone();
 }
 
 void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)

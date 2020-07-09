@@ -140,7 +140,7 @@ AudioContext::AudioContext(Document& document)
     , m_logIdentifier(uniqueLogIdentifier())
 #endif
     , m_mediaSession(PlatformMediaSession::create(*this))
-    , m_eventQueue(makeUnique<GenericEventQueue>(*this))
+    , m_eventQueue(MainThreadGenericEventQueue::create(*this))
 {
     // According to spec AudioContext must die only after page navigate.
     // Lets mark it as ActiveDOMObject with pending activity and unmark it in clear method.
@@ -158,7 +158,7 @@ AudioContext::AudioContext(Document& document)
 }
 
 // Constructor for offline (non-realtime) rendering.
-AudioContext::AudioContext(Document& document, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate)
+AudioContext::AudioContext(Document& document, AudioBuffer* renderTarget)
     : ActiveDOMObject(document)
 #if !RELEASE_LOG_DISABLED
     , m_logger(document.logger())
@@ -166,12 +166,12 @@ AudioContext::AudioContext(Document& document, unsigned numberOfChannels, size_t
 #endif
     , m_isOfflineContext(true)
     , m_mediaSession(PlatformMediaSession::create(*this))
-    , m_eventQueue(makeUnique<GenericEventQueue>(*this))
+    , m_eventQueue(MainThreadGenericEventQueue::create(*this))
+    , m_renderTarget(renderTarget)
 {
     constructCommon();
 
     // Create a new destination for offline rendering.
-    m_renderTarget = AudioBuffer::create(numberOfChannels, numberOfFrames, sampleRate);
     m_destinationNode = OfflineAudioDestinationNode::create(*this, m_renderTarget.get());
 }
 
@@ -336,16 +336,24 @@ void AudioContext::stop()
     ASSERT(document());
     document()->updateIsPlayingMedia();
 
-    m_eventQueue->close();
-
     uninitialize();
     clear();
 }
 
-bool AudioContext::canSuspendForDocumentSuspension() const
+void AudioContext::suspend(ReasonForSuspension)
 {
-    // FIXME: We should be able to suspend while rendering as well with some more code.
-    return m_state == State::Suspended || m_state == State::Closed;
+    if (state() == State::Running) {
+        m_mediaSession->beginInterruption(PlatformMediaSession::PlaybackSuspended);
+        document()->updateIsPlayingMedia();
+    }
+}
+
+void AudioContext::resume()
+{
+    if (state() == State::Interrupted) {
+        m_mediaSession->endInterruption(PlatformMediaSession::MayResumePlaying);
+        document()->updateIsPlayingMedia();
+    }
 }
 
 const char* AudioContext::activeDOMObjectName() const
@@ -1231,7 +1239,7 @@ void AudioContext::decrementActiveSourceCount()
     --m_activeSourceCount;
 }
 
-void AudioContext::suspend(DOMPromiseDeferred<void>&& promise)
+void AudioContext::suspendRendering(DOMPromiseDeferred<void>&& promise)
 {
     if (isOfflineContext() || m_isStopScheduled) {
         promise.reject(InvalidStateError);
@@ -1260,7 +1268,7 @@ void AudioContext::suspend(DOMPromiseDeferred<void>&& promise)
     });
 }
 
-void AudioContext::resume(DOMPromiseDeferred<void>&& promise)
+void AudioContext::resumeRendering(DOMPromiseDeferred<void>&& promise)
 {
     if (isOfflineContext() || m_isStopScheduled) {
         promise.reject(InvalidStateError);

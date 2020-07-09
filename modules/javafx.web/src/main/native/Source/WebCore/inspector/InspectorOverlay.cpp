@@ -221,8 +221,8 @@ static void drawOutlinedQuadWithClip(GraphicsContext& context, const FloatQuad& 
     context.setStrokeThickness(0);
     context.fillPath(quadToPath(quad, bounds));
 
-    context.setCompositeOperation(CompositeDestinationOut);
-    context.setFillColor(Color::createUnchecked(255, 0, 0));
+    context.setCompositeOperation(CompositeOperator::DestinationOut);
+    context.setFillColor(Color(255, 0, 0));
     context.fillPath(quadToPath(clipQuad, bounds));
 }
 
@@ -315,23 +315,23 @@ static void drawShapeHighlight(GraphicsContext& context, Node& node, Highlight::
             };
 
             switch (pathElement.type) {
-            case PathElementMoveToPoint:
+            case PathElement::Type::MoveToPoint:
                 newPath.moveTo(localToRoot(0));
                 break;
 
-            case PathElementAddLineToPoint:
+            case PathElement::Type::AddLineToPoint:
                 newPath.addLineTo(localToRoot(0));
                 break;
 
-            case PathElementAddCurveToPoint:
+            case PathElement::Type::AddCurveToPoint:
                 newPath.addBezierCurveTo(localToRoot(0), localToRoot(1), localToRoot(2));
                 break;
 
-            case PathElementAddQuadCurveToPoint:
+            case PathElement::Type::AddQuadCurveToPoint:
                 newPath.addQuadCurveTo(localToRoot(0), localToRoot(1));
                 break;
 
-            case PathElementCloseSubpath:
+            case PathElement::Type::CloseSubpath:
                 newPath.closeSubpath();
                 break;
             }
@@ -791,7 +791,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
 
                 GraphicsContextStateSaver verticalLabelStateSaver(context);
                 context.translate(zoom(x) + 0.5f, scrollY);
-                context.drawText(font, TextRun(String::numberToStringFixedPrecision(x)), { 2, drawTopEdge ? rulerLabelSize : rulerLabelSize - rulerSize + font.fontMetrics().height() - 1.0f });
+                context.drawText(font, TextRun(String::number(x)), { 2, drawTopEdge ? rulerLabelSize : rulerLabelSize - rulerSize + font.fontMetrics().height() - 1.0f });
             }
         }
 
@@ -829,7 +829,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
                 GraphicsContextStateSaver horizontalLabelStateSaver(context);
                 context.translate(scrollX, zoom(y) + 0.5f);
                 context.rotate(drawLeftEdge ? -piOverTwoFloat : piOverTwoFloat);
-                context.drawText(font, TextRun(String::numberToStringFixedPrecision(y)), { 2, drawLeftEdge ? rulerLabelSize : rulerLabelSize - rulerSize });
+                context.drawText(font, TextRun(String::number(y)), { 2, drawLeftEdge ? rulerLabelSize : rulerLabelSize - rulerSize });
             }
         }
     }
@@ -844,9 +844,7 @@ void InspectorOverlay::drawRulers(GraphicsContext& context, const InspectorOverl
         font.update(nullptr);
 
         auto viewportRect = pageView->visualViewportRect();
-        auto viewportWidthText = String::numberToStringFixedPrecision(viewportRect.width() / pageZoomFactor);
-        auto viewportHeightText = String::numberToStringFixedPrecision(viewportRect.height() / pageZoomFactor);
-        TextRun viewportTextRun(makeString(viewportWidthText, "px", ' ', multiplicationSign, ' ', viewportHeightText, "px"));
+        TextRun viewportTextRun(makeString(viewportRect.width() / pageZoomFactor, "px", ' ', multiplicationSign, ' ', viewportRect.height() / pageZoomFactor, "px"));
 
         const float margin = 4;
         const float padding = 2;

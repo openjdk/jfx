@@ -28,6 +28,7 @@
 #include "FrameView.h"
 
 #include "AXObjectCache.h"
+#include "BackForwardCache.h"
 #include "BackForwardController.h"
 #include "CSSAnimationController.h"
 #include "CachedImage.h"
@@ -40,6 +41,7 @@
 #include "DeprecatedGlobalSettings.h"
 #include "DocumentLoader.h"
 #include "DocumentMarkerController.h"
+#include "Editor.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FloatRect.h"
@@ -68,7 +70,6 @@
 #include "MemoryCache.h"
 #include "OverflowEvent.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "PageOverlayController.h"
 #include "ProgressTracker.h"
 #include "RenderEmbeddedObject.h"
@@ -101,7 +102,7 @@
 #include "TiledBacking.h"
 #include "VelocityData.h"
 #include "VisualViewport.h"
-#include "WheelEventTestTrigger.h"
+#include "WheelEventTestMonitor.h"
 #include <wtf/text/TextStream.h>
 
 #include <wtf/IsoMallocInlines.h>
@@ -127,7 +128,11 @@
 #include "LocalDefaultSystemAppearance.h"
 #endif
 
-#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(frame().page() && frame().page()->isAlwaysOnLoggingAllowed(), Layout, "%p - FrameView::" fmt, this, ##__VA_ARGS__)
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#include "LayoutContext.h"
+#endif
+
+#define FRAMEVIEW_RELEASE_LOG_IF_ALLOWED(channel, fmt, ...) RELEASE_LOG_IF(frame().page() && frame().page()->isAlwaysOnLoggingAllowed(), channel, "%p - [frame=%p, main=%d] FrameView::" fmt, this, &frame(), frame().isMainFrame(), ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -524,22 +529,33 @@ void FrameView::updateCanHaveScrollbars()
         setCanHaveScrollbars(true);
 }
 
-Ref<Scrollbar> FrameView::createScrollbar(ScrollbarOrientation orientation)
+RefPtr<Element> FrameView::rootElementForCustomScrollbarPartStyle(PseudoId partPseudoId) const
 {
     // FIXME: We need to update the scrollbar dynamically as documents change (or as doc elements and bodies get discovered that have custom styles).
-    Document* doc = frame().document();
+    auto* document = frame().document();
+    if (!document)
+        return nullptr;
 
     // Try the <body> element first as a scrollbar source.
-    HTMLElement* body = doc ? doc->bodyOrFrameset() : nullptr;
-    if (body && body->renderer() && body->renderer()->style().hasPseudoStyle(PseudoId::Scrollbar))
-        return RenderScrollbar::createCustomScrollbar(*this, orientation, body);
+    auto* body = document->bodyOrFrameset();
+    if (body && body->renderer() && body->renderer()->style().hasPseudoStyle(partPseudoId))
+        return body;
 
     // If the <body> didn't have a custom style, then the root element might.
-    Element* docElement = doc ? doc->documentElement() : nullptr;
-    if (docElement && docElement->renderer() && docElement->renderer()->style().hasPseudoStyle(PseudoId::Scrollbar))
-        return RenderScrollbar::createCustomScrollbar(*this, orientation, docElement);
+    auto* docElement = document->documentElement();
+    if (docElement && docElement->renderer() && docElement->renderer()->style().hasPseudoStyle(partPseudoId))
+        return docElement;
+
+    return nullptr;
+}
+
+Ref<Scrollbar> FrameView::createScrollbar(ScrollbarOrientation orientation)
+{
+    if (auto element = rootElementForCustomScrollbarPartStyle(PseudoId::Scrollbar))
+        return RenderScrollbar::createCustomScrollbar(*this, orientation, element.get());
 
     // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
+    // FIXME: Seems bad to do this for cross-origin frames.
     RenderWidget* frameRenderer = frame().ownerRenderer();
     if (frameRenderer && frameRenderer->style().hasPseudoStyle(PseudoId::Scrollbar))
         return RenderScrollbar::createCustomScrollbar(*this, orientation, nullptr, &frame());
@@ -548,9 +564,9 @@ Ref<Scrollbar> FrameView::createScrollbar(ScrollbarOrientation orientation)
     return ScrollView::createScrollbar(orientation);
 }
 
-void FrameView::didRestoreFromPageCache()
+void FrameView::didRestoreFromBackForwardCache()
 {
-    // When restoring from page cache, the main frame stays in place while subframes get swapped in.
+    // When restoring from back/forward cache, the main frame stays in place while subframes get swapped in.
     // We update the scrollable area set to ensure that scrolling data structures get invalidated.
     updateScrollableAreaSet();
 }
@@ -596,7 +612,7 @@ void FrameView::setContentsSize(const IntSize& size)
 
     if (frame().isMainFrame()) {
         page->pageOverlayController().didChangeDocumentSize();
-        PageCache::singleton().markPagesForContentsSizeChanged(*page);
+        BackForwardCache::singleton().markPagesForContentsSizeChanged(*page);
     }
     layoutContext().enableSetNeedsLayout();
 }
@@ -781,6 +797,18 @@ void FrameView::willRecalcStyle()
         return;
 
     renderView->compositor().willRecalcStyle();
+}
+
+void FrameView::styleDidChange()
+{
+    ScrollView::styleDidChange();
+    RenderView* renderView = this->renderView();
+    if (!renderView)
+        return;
+
+    RenderLayer* layerTreeMutationRoot = renderView->takeStyleChangeLayerTreeMutationRoot();
+    if (layerTreeMutationRoot && !needsLayout())
+        layerTreeMutationRoot->updateLayerPositionsAfterStyleChange();
 }
 
 bool FrameView::updateCompositingLayersAfterStyleChange()
@@ -1191,8 +1219,8 @@ void FrameView::adjustScrollbarsForLayout(bool isFirstLayout)
         if (hMode == ScrollbarAuto)
             setHorizontalScrollbarMode(ScrollbarAlwaysOff); // This causes a horizontal scrollbar to disappear.
         ASSERT(frame().page());
-        if (frame().page()->expectsWheelEventTriggers())
-            scrollAnimator().setWheelEventTestTrigger(frame().page()->testTrigger());
+        if (frame().page()->isMonitoringWheelEvents())
+            scrollAnimator().setWheelEventTestMonitor(frame().page()->wheelEventTestMonitor());
         setScrollbarModes(hMode, vMode);
         setScrollbarsSuppressed(false, true);
     } else if (hMode != horizontalScrollbarMode() || vMode != verticalScrollbarMode())
@@ -1402,6 +1430,41 @@ void FrameView::logMockScrollAnimatorMessage(const String& message) const
     builder.appendLiteral("FrameView: ");
     builder.append(message);
     document->addConsoleMessage(MessageSource::Other, MessageLevel::Debug, builder.toString());
+}
+
+bool FrameView::styleHidesScrollbarWithOrientation(ScrollbarOrientation orientation) const
+{
+    auto element = rootElementForCustomScrollbarPartStyle(PseudoId::Scrollbar);
+    if (!element)
+        return false;
+    auto* renderer = element->renderer();
+    ASSERT(renderer); // rootElementForCustomScrollbarPart assures that it's not null.
+
+    StyleScrollbarState scrollbarState;
+    scrollbarState.scrollbarPart = ScrollbarBGPart;
+    scrollbarState.orientation = orientation;
+    auto scrollbarStyle = renderer->getUncachedPseudoStyle({ PseudoId::Scrollbar, scrollbarState }, &renderer->style());
+    return scrollbarStyle && scrollbarStyle->display() == DisplayType::None;
+}
+
+bool FrameView::horizontalScrollbarHiddenByStyle() const
+{
+    if (managesScrollbars()) {
+        auto* scrollbar = horizontalScrollbar();
+        return scrollbar && scrollbar->isHiddenByStyle();
+    }
+
+    return styleHidesScrollbarWithOrientation(HorizontalScrollbar);
+}
+
+bool FrameView::verticalScrollbarHiddenByStyle() const
+{
+    if (managesScrollbars()) {
+        auto* scrollbar = verticalScrollbar();
+        return scrollbar && scrollbar->isHiddenByStyle();
+    }
+
+    return styleHidesScrollbarWithOrientation(VerticalScrollbar);
 }
 
 void FrameView::setCannotBlitToWindow()
@@ -2118,12 +2181,12 @@ void FrameView::restoreScrollbar()
 bool FrameView::scrollToFragment(const URL& url)
 {
     String fragmentIdentifier = url.fragmentIdentifier();
-    if (scrollToAnchor(fragmentIdentifier))
+    if (scrollToFragmentInternal(fragmentIdentifier))
         return true;
 
     // Try again after decoding the ref, based on the document's encoding.
     if (TextResourceDecoder* decoder = frame().document()->decoder()) {
-        if (scrollToAnchor(decodeURLEscapeSequences(fragmentIdentifier, decoder->encoding())))
+        if (scrollToFragmentInternal(decodeURLEscapeSequences(fragmentIdentifier, decoder->encoding())))
             return true;
     }
 
@@ -2131,7 +2194,7 @@ bool FrameView::scrollToFragment(const URL& url)
     return false;
 }
 
-bool FrameView::scrollToAnchor(const String& fragmentIdentifier)
+bool FrameView::scrollToFragmentInternal(const String& fragmentIdentifier)
 {
     LOG(Scrolling, "FrameView::scrollToAnchor %s", fragmentIdentifier.utf8().data());
 
@@ -2141,13 +2204,7 @@ bool FrameView::scrollToAnchor(const String& fragmentIdentifier)
 
     ASSERT(frame().document());
     auto& document = *frame().document();
-
-    if (!document.haveStylesheetsLoaded()) {
-        document.setGotoAnchorNeededAfterStylesheetsLoad(true);
-        return false;
-    }
-
-    document.setGotoAnchorNeededAfterStylesheetsLoad(false);
+    RELEASE_ASSERT(document.haveStylesheetsLoaded());
 
     Element* anchorElement = document.findAnchor(fragmentIdentifier);
 
@@ -2222,7 +2279,7 @@ void FrameView::scrollElementToRect(const Element& element, const IntRect& rect)
     setScrollPosition(IntPoint(bounds.x() - centeringOffsetX - rect.x(), bounds.y() - centeringOffsetY - rect.y()));
 }
 
-void FrameView::setScrollPosition(const ScrollPosition& scrollPosition)
+void FrameView::setScrollPosition(const ScrollPosition& scrollPosition, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "FrameView::setScrollPosition " << scrollPosition << " , clearing anchor");
 
@@ -2233,9 +2290,9 @@ void FrameView::setScrollPosition(const ScrollPosition& scrollPosition)
     m_shouldScrollToFocusedElement = false;
     m_delayedScrollToFocusedElementTimer.stop();
     Page* page = frame().page();
-    if (page && page->expectsWheelEventTriggers())
-        scrollAnimator().setWheelEventTestTrigger(page->testTrigger());
-    ScrollView::setScrollPosition(scrollPosition);
+    if (page && page->isMonitoringWheelEvents())
+        scrollAnimator().setWheelEventTestMonitor(page->wheelEventTestMonitor());
+    ScrollView::setScrollPosition(scrollPosition, clamping);
 
     setCurrentScrollType(oldScrollType);
 }
@@ -2423,6 +2480,11 @@ void FrameView::scrollPositionChanged(const ScrollPosition& oldPosition, const S
     LOG_WITH_STREAM(Scrolling, stream << "FrameView " << this << " scrollPositionChanged from " << oldPosition << " to " << newPosition << " (scale " << frameScaleFactor() << " )");
     updateLayoutViewport();
     viewportContentsChanged();
+
+    if (auto* renderView = this->renderView()) {
+        if (auto* layer = renderView->layer())
+            frame().editor().renderLayerDidScroll(*layer);
+    }
 }
 
 void FrameView::applyRecursivelyWithVisibleRect(const WTF::Function<void (FrameView& frameView, const IntRect& visibleRect)>& apply)
@@ -2554,7 +2616,7 @@ bool FrameView::isRubberBandInProgress() const
     return false;
 }
 
-bool FrameView::requestScrollPositionUpdate(const ScrollPosition& position)
+bool FrameView::requestScrollPositionUpdate(const ScrollPosition& position, ScrollType scrollType, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "FrameView::requestScrollPositionUpdate " << position);
 
@@ -2566,7 +2628,7 @@ bool FrameView::requestScrollPositionUpdate(const ScrollPosition& position)
 #if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
     if (Page* page = frame().page()) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
-            return scrollingCoordinator->requestScrollPositionUpdate(*this, position);
+            return scrollingCoordinator->requestScrollPositionUpdate(*this, position, scrollType, clamping);
     }
 #else
     UNUSED_PARAM(position);
@@ -2745,14 +2807,12 @@ void FrameView::layoutOrVisualViewportChanged()
     }
 }
 
-#if PLATFORM(IOS_FAMILY)
-
 void FrameView::unobscuredContentSizeChanged()
 {
+#if PLATFORM(IOS_FAMILY)
     updateTiledBackingAdaptiveSizing();
-}
-
 #endif
+}
 
 static LayerFlushThrottleState::Flags determineLayerFlushThrottleState(Page& page)
 {
@@ -3361,21 +3421,10 @@ void FrameView::sendResizeEventIfNeeded()
     }
 #endif
 
+    LOG_WITH_STREAM(Events, stream << "FrameView" << this << "sendResizeEventIfNeeded scheduling resize event for document" << frame().document() << ", size " << currentSize);
+    frame().document()->setNeedsDOMWindowResizeEvent();
+
     bool isMainFrame = frame().isMainFrame();
-    bool canSendResizeEventSynchronously = isMainFrame && !m_shouldAutoSize;
-
-    LOG(Events, "FrameView %p sendResizeEventIfNeeded sending resize event, size %dx%d (canSendResizeEventSynchronously %d)", this, currentSize.width(), currentSize.height(), canSendResizeEventSynchronously);
-
-    Ref<Event> resizeEvent = Event::create(eventNames().resizeEvent, Event::CanBubble::No, Event::IsCancelable::No);
-    if (canSendResizeEventSynchronously)
-        frame().document()->dispatchWindowEvent(resizeEvent);
-    else {
-        // FIXME: Queueing this event for an unpredictable time in the future seems
-        // intrinsically racy. By the time this resize event fires, the frame might
-        // be resized again, so we could end up with two resize events for the same size.
-        frame().document()->enqueueWindowEvent(WTFMove(resizeEvent));
-    }
-
     if (InspectorInstrumentation::hasFrontends() && isMainFrame) {
         if (Page* page = frame().page()) {
             if (InspectorClient* inspectorClient = page->inspectorController().inspectorClient())
@@ -3653,11 +3702,13 @@ void FrameView::invalidateScrollbarRect(Scrollbar& scrollbar, const IntRect& rec
 
 float FrameView::visibleContentScaleFactor() const
 {
-    if (!frame().isMainFrame() || !frame().settings().delegatesPageScaling())
+    if (!frame().isMainFrame())
         return 1;
 
     Page* page = frame().page();
-    if (!page)
+    // FIXME: This !delegatesScaling() is confusing, and the opposite behavior to Frame::frameScaleFactor().
+    // This function should probably be renamed to delegatedPageScaleFactor().
+    if (!page || !page->delegatesScaling())
         return 1;
 
     return page->pageScaleFactor();
@@ -3812,7 +3863,7 @@ void FrameView::updateScrollCorner()
         Element* body = doc ? doc->bodyOrFrameset() : nullptr;
         if (body && body->renderer()) {
             renderer = body->renderer();
-            cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(PseudoId::ScrollbarCorner), &renderer->style());
+            cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
         }
 
         if (!cornerStyle) {
@@ -3820,14 +3871,15 @@ void FrameView::updateScrollCorner()
             Element* docElement = doc ? doc->documentElement() : nullptr;
             if (docElement && docElement->renderer()) {
                 renderer = docElement->renderer();
-                cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(PseudoId::ScrollbarCorner), &renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
             }
         }
 
         if (!cornerStyle) {
             // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
+            // FIXME: Seems wrong to do this for cross-origin frames.
             if (RenderWidget* renderer = frame().ownerRenderer())
-                cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(PseudoId::ScrollbarCorner), &renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle({ PseudoId::ScrollbarCorner }, &renderer->style());
         }
     }
 
@@ -4103,8 +4155,11 @@ void FrameView::paintContents(GraphicsContext& context, const IntRect& dirtyRect
     else
         fillWithWarningColor = true;
 
-    if (fillWithWarningColor)
-        context.fillRect(dirtyRect, Color(255, 64, 255));
+    if (fillWithWarningColor) {
+        IntRect debugRect = frameRect();
+        debugRect.intersect(dirtyRect);
+        context.fillRect(debugRect, Color(255, 64, 255));
+    }
 #endif
 
     RenderView* renderView = this->renderView();
@@ -4113,12 +4168,20 @@ void FrameView::paintContents(GraphicsContext& context, const IntRect& dirtyRect
         return;
     }
 
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
+        if (auto* layoutState = layoutContext().layoutFormattingState())
+            Layout::LayoutContext::paint(*layoutState, context, dirtyRect);
+        return;
+    }
+#endif
+
     if (!layoutContext().inPaintableState())
         return;
 
     ASSERT(!needsLayout());
     if (needsLayout()) {
-        RELEASE_LOG_IF_ALLOWED("FrameView::paintContents() - not painting because render tree needs layout (is main frame %d)", frame().isMainFrame());
+        FRAMEVIEW_RELEASE_LOG_IF_ALLOWED(Layout, "paintContents: Not painting because render tree needs layout");
         return;
     }
 
@@ -4264,7 +4327,7 @@ void FrameView::updateLayoutAndStyleIfNeededRecursive()
             break;
     }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto needsStyleRecalc = [&] {
         DescendantsDeque deque;
         while (auto view = nextRenderedDescendant(deque)) {
@@ -4283,7 +4346,7 @@ void FrameView::updateLayoutAndStyleIfNeededRecursive()
         }
         return false;
     };
-#endif
+#endif // ASSERT_ENABLED
 
     ASSERT(!needsStyleRecalc());
     ASSERT(!needsLayout());
@@ -5036,8 +5099,8 @@ void FrameView::didAddScrollbar(Scrollbar* scrollbar, ScrollbarOrientation orien
 {
     ScrollableArea::didAddScrollbar(scrollbar, orientation);
     Page* page = frame().page();
-    if (page && page->expectsWheelEventTriggers())
-        scrollAnimator().setWheelEventTestTrigger(page->testTrigger());
+    if (page && page->isMonitoringWheelEvents())
+        scrollAnimator().setWheelEventTestMonitor(page->wheelEventTestMonitor());
     if (AXObjectCache* cache = axObjectCache())
         cache->handleScrollbarUpdate(this);
 }
@@ -5088,7 +5151,7 @@ void FrameView::fireLayoutRelatedMilestonesIfNeeded()
 
     if (milestonesAchieved && frame().isMainFrame()) {
         if (milestonesAchieved.contains(DidFirstVisuallyNonEmptyLayout))
-            RELEASE_LOG_IF_ALLOWED("fireLayoutRelatedMilestonesIfNeeded() - firing first visually non-empty layout milestone on the main frame");
+            FRAMEVIEW_RELEASE_LOG_IF_ALLOWED(Layout, "fireLayoutRelatedMilestonesIfNeeded: Firing first visually non-empty layout milestone on the main frame");
         frame().loader().didReachLayoutMilestone(milestonesAchieved);
     }
 }

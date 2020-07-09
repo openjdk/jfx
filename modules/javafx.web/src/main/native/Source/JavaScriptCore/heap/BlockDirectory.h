@@ -26,6 +26,7 @@
 #pragma once
 
 #include "AllocationFailureMode.h"
+#include "BlockDirectoryBits.h"
 #include "CellAttributes.h"
 #include "FreeList.h"
 #include "LocalAllocator.h"
@@ -44,41 +45,16 @@ class IsoCellSet;
 class MarkedSpace;
 class LLIntOffsetsExtractor;
 
-#define FOR_EACH_BLOCK_DIRECTORY_BIT(macro) \
-    macro(live, Live) /* The set of block indices that have actual blocks. */\
-    macro(empty, Empty) /* The set of all blocks that have no live objects. */ \
-    macro(allocated, Allocated) /* The set of all blocks that are full of live objects. */\
-    macro(canAllocateButNotEmpty, CanAllocateButNotEmpty) /* The set of all blocks are neither empty nor retired (i.e. are more than minMarkedBlockUtilization full). */ \
-    macro(destructible, Destructible) /* The set of all blocks that may have destructors to run. */\
-    macro(eden, Eden) /* The set of all blocks that have new objects since the last GC. */\
-    macro(unswept, Unswept) /* The set of all blocks that could be swept by the incremental sweeper. */\
-    \
-    /* These are computed during marking. */\
-    macro(markingNotEmpty, MarkingNotEmpty) /* The set of all blocks that are not empty. */ \
-    macro(markingRetired, MarkingRetired) /* The set of all blocks that are retired. */
-
-// FIXME: We defined canAllocateButNotEmpty and empty to be exclusive:
-//
-//     canAllocateButNotEmpty & empty == 0
-//
-// Instead of calling it canAllocate and making it inclusive:
-//
-//     canAllocate & empty == empty
-//
-// The latter is probably better. I'll leave it to a future bug to fix that, since breathing on
-// this code leads to regressions for days, and it's not clear that making this change would
-// improve perf since it would not change the collector's behavior, and either way the directory
-// has to look at both bitvectors.
-// https://bugs.webkit.org/show_bug.cgi?id=162121
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BlockDirectory);
 
 class BlockDirectory {
     WTF_MAKE_NONCOPYABLE(BlockDirectory);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(BlockDirectory);
 
     friend class LLIntOffsetsExtractor;
 
 public:
-    BlockDirectory(Heap*, size_t cellSize);
+    BlockDirectory(size_t cellSize);
     ~BlockDirectory();
     void setSubspace(Subspace*);
     void lastChanceToFinalize();
@@ -98,7 +74,6 @@ public:
     bool needsDestruction() const { return m_attributes.destruction == NeedsDestruction; }
     DestructionMode destruction() const { return m_attributes.destruction; }
     HeapCell::Kind cellKind() const { return m_attributes.cellKind; }
-    Heap* heap() { return m_heap; }
 
     bool isFreeListedCell(const void* target);
 
@@ -115,9 +90,9 @@ public:
     Lock& bitvectorLock() { return m_bitvectorLock; }
 
 #define BLOCK_DIRECTORY_BIT_ACCESSORS(lowerBitName, capitalBitName)     \
-    bool is ## capitalBitName(const AbstractLocker&, size_t index) const { return m_ ## lowerBitName[index]; } \
+    bool is ## capitalBitName(const AbstractLocker&, size_t index) const { return m_bits.is ## capitalBitName(index); } \
     bool is ## capitalBitName(const AbstractLocker& locker, MarkedBlock::Handle* block) const { return is ## capitalBitName(locker, block->index()); } \
-    void setIs ## capitalBitName(const AbstractLocker&, size_t index, bool value) { m_ ## lowerBitName[index] = value; } \
+    void setIs ## capitalBitName(const AbstractLocker&, size_t index, bool value) { m_bits.setIs ## capitalBitName(index, value); } \
     void setIs ## capitalBitName(const AbstractLocker& locker, MarkedBlock::Handle* block, bool value) { setIs ## capitalBitName(locker, block->index(), value); }
     FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_ACCESSORS)
 #undef BLOCK_DIRECTORY_BIT_ACCESSORS
@@ -126,7 +101,7 @@ public:
     void forEachBitVector(const AbstractLocker&, const Func& func)
     {
 #define BLOCK_DIRECTORY_BIT_CALLBACK(lowerBitName, capitalBitName) \
-        func(m_ ## lowerBitName);
+        func(m_bits.lowerBitName());
         FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_CALLBACK);
 #undef BLOCK_DIRECTORY_BIT_CALLBACK
     }
@@ -135,7 +110,7 @@ public:
     void forEachBitVectorWithName(const AbstractLocker&, const Func& func)
     {
 #define BLOCK_DIRECTORY_BIT_CALLBACK(lowerBitName, capitalBitName) \
-        func(m_ ## lowerBitName, #capitalBitName);
+        func(m_bits.lowerBitName(), #capitalBitName);
         FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_CALLBACK);
 #undef BLOCK_DIRECTORY_BIT_CALLBACK
     }
@@ -166,17 +141,14 @@ private:
 
     MarkedBlock::Handle* findBlockForAllocation(LocalAllocator&);
 
-    MarkedBlock::Handle* tryAllocateBlock();
+    MarkedBlock::Handle* tryAllocateBlock(Heap&);
 
     Vector<MarkedBlock::Handle*> m_blocks;
     Vector<unsigned> m_freeBlockIndices;
 
     // Mutator uses this to guard resizing the bitvectors. Those things in the GC that may run
     // concurrently to the mutator must lock this when accessing the bitvectors.
-#define BLOCK_DIRECTORY_BIT_DECLARATION(lowerBitName, capitalBitName) \
-    FastBitVector m_ ## lowerBitName;
-    FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_DECLARATION)
-#undef BLOCK_DIRECTORY_BIT_DECLARATION
+    BlockDirectoryBits m_bits;
     Lock m_bitvectorLock;
     Lock m_localAllocatorsLock;
     CellAttributes m_attributes;
@@ -184,13 +156,13 @@ private:
     unsigned m_cellSize;
 
     // After you do something to a block based on one of these cursors, you clear the bit in the
-    // corresponding bitvector and leave the cursor where it was.
-    size_t m_emptyCursor { 0 };
-    size_t m_unsweptCursor { 0 }; // Points to the next block that is a candidate for incremental sweeping.
+    // corresponding bitvector and leave the cursor where it was. We can use unsigned instead of size_t since
+    // this number is bound by capacity of Vector m_blocks, which must be within unsigned.
+    unsigned m_emptyCursor { 0 };
+    unsigned m_unsweptCursor { 0 }; // Points to the next block that is a candidate for incremental sweeping.
 
     // FIXME: All of these should probably be references.
     // https://bugs.webkit.org/show_bug.cgi?id=166988
-    Heap* m_heap { nullptr };
     Subspace* m_subspace { nullptr };
     BlockDirectory* m_nextDirectory { nullptr };
     BlockDirectory* m_nextDirectoryInSubspace { nullptr };

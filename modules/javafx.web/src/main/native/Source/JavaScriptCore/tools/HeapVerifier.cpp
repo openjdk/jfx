@@ -26,6 +26,7 @@
 #include "config.h"
 #include "HeapVerifier.h"
 
+#include "ButterflyInlines.h"
 #include "CodeBlockInlines.h"
 #include "HeapIterationScope.h"
 #include "JSCInlines.h"
@@ -408,7 +409,7 @@ void HeapVerifier::checkIfRecorded(HeapCell* cell)
 {
     bool found = false;
     const char* const prefix = "  ";
-    static const bool verbose = true;
+    static constexpr bool verbose = true;
 
     for (int cycleIndex = 0; cycleIndex > -m_numberOfCycles; cycleIndex--) {
         GCCycle& cycle = cycleForIndex(cycleIndex);

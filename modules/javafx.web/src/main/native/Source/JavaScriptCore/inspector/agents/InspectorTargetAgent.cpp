@@ -32,6 +32,7 @@ namespace Inspector {
 
 InspectorTargetAgent::InspectorTargetAgent(FrontendRouter& frontendRouter, BackendDispatcher& backendDispatcher)
     : InspectorAgentBase("Target"_s)
+    , m_router(frontendRouter)
     , m_frontendDispatcher(makeUnique<TargetFrontendDispatcher>(frontendRouter))
     , m_backendDispatcher(TargetBackendDispatcher::create(backendDispatcher, this))
 {
@@ -51,12 +52,28 @@ void InspectorTargetAgent::willDestroyFrontendAndBackend(DisconnectReason)
     disconnectFromTargets();
 
     m_isConnected = false;
+    m_shouldPauseOnStart = false;
 }
 
-void InspectorTargetAgent::exists(ErrorString&)
+void InspectorTargetAgent::setPauseOnStart(ErrorString&, bool pauseOnStart)
 {
-    // Intentionally do nothing to return success.
-    // FIXME: Remove this when the local inspector has switched over to the modern path.
+    m_shouldPauseOnStart = pauseOnStart;
+}
+
+void InspectorTargetAgent::resume(ErrorString& errorString, const String& targetId)
+{
+    auto* target = m_targets.get(targetId);
+    if (!target) {
+        errorString = "Missing target for given targetId"_s;
+        return;
+    }
+
+    if (!target->isPaused()) {
+        errorString = "Target for given targetId is not paused"_s;
+        return;
+    }
+
+    target->resume();
 }
 
 void InspectorTargetAgent::sendMessageToTarget(ErrorString& errorString, const String& targetId, const String& message)
@@ -80,8 +97,6 @@ void InspectorTargetAgent::sendMessageFromTargetToFrontend(const String& targetI
 static Protocol::Target::TargetInfo::Type targetTypeToProtocolType(InspectorTargetType type)
 {
     switch (type) {
-    case InspectorTargetType::JavaScriptContext:
-        return Protocol::Target::TargetInfo::Type::JavaScript;
     case InspectorTargetType::Page:
         return Protocol::Target::TargetInfo::Type::Page;
     case InspectorTargetType::DedicatedWorker:
@@ -91,15 +106,20 @@ static Protocol::Target::TargetInfo::Type targetTypeToProtocolType(InspectorTarg
     }
 
     ASSERT_NOT_REACHED();
-    return Protocol::Target::TargetInfo::Type::JavaScript;
+    return Protocol::Target::TargetInfo::Type::Page;
 }
 
 static Ref<Protocol::Target::TargetInfo> buildTargetInfoObject(const InspectorTarget& target)
 {
-    return Protocol::Target::TargetInfo::create()
+    auto result = Protocol::Target::TargetInfo::create()
         .setTargetId(target.identifier())
         .setType(targetTypeToProtocolType(target.type()))
         .release();
+    if (target.isProvisional())
+        result->setIsProvisional(true);
+    if (target.isPaused())
+        result->setIsPaused(true);
+    return result;
 }
 
 void InspectorTargetAgent::targetCreated(InspectorTarget& target)
@@ -110,7 +130,9 @@ void InspectorTargetAgent::targetCreated(InspectorTarget& target)
     if (!m_isConnected)
         return;
 
-    target.connect(frontendChannel());
+    if (m_shouldPauseOnStart)
+        target.pause();
+    target.connect(connectionType());
 
     m_frontendDispatcher->targetCreated(buildTargetInfoObject(target));
 }
@@ -122,27 +144,38 @@ void InspectorTargetAgent::targetDestroyed(InspectorTarget& target)
     if (!m_isConnected)
         return;
 
-    target.disconnect(frontendChannel());
-
     m_frontendDispatcher->targetDestroyed(target.identifier());
+}
+
+void InspectorTargetAgent::didCommitProvisionalTarget(const String& oldTargetID, const String& committedTargetID)
+{
+    if (!m_isConnected)
+        return;
+
+    auto* target = m_targets.get(committedTargetID);
+    if (!target)
+        return;
+
+    m_frontendDispatcher->didCommitProvisionalTarget(oldTargetID, committedTargetID);
+}
+
+FrontendChannel::ConnectionType InspectorTargetAgent::connectionType() const
+{
+    return m_router.hasLocalFrontend() ? Inspector::FrontendChannel::ConnectionType::Local : Inspector::FrontendChannel::ConnectionType::Remote;
 }
 
 void InspectorTargetAgent::connectToTargets()
 {
-    auto& channel = frontendChannel();
-
     for (InspectorTarget* target : m_targets.values()) {
-        target->connect(channel);
+        target->connect(connectionType());
         m_frontendDispatcher->targetCreated(buildTargetInfoObject(*target));
     }
 }
 
 void InspectorTargetAgent::disconnectFromTargets()
 {
-    auto& channel = frontendChannel();
-
     for (InspectorTarget* target : m_targets.values())
-        target->disconnect(channel);
+        target->disconnect();
 }
 
 } // namespace Inspector

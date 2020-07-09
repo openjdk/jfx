@@ -65,7 +65,7 @@ public:
     const AtomString& defaultNamespace() { return m_defaultNamespace; }
     const AtomString& namespaceURIFromPrefix(const AtomString& prefix);
 
-    void parseAuthorStyleSheet(const CachedCSSStyleSheet*, const SecurityOrigin*);
+    bool parseAuthorStyleSheet(const CachedCSSStyleSheet*, const SecurityOrigin*);
     WEBCORE_EXPORT bool parseString(const String&);
 
     bool isCacheable() const;
@@ -146,6 +146,8 @@ public:
 
     void setAsOpaque() { m_parserContext.isContentOpaque = true; }
     bool isContentOpaque() const { return m_parserContext.isContentOpaque; }
+
+    void setLoadErrorOccured() { m_didLoadErrorOccur = true; }
 
 private:
     WEBCORE_EXPORT StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext&);

@@ -30,6 +30,7 @@
 #include "WasmModuleInformation.h"
 #include "WasmParser.h"
 #include "WasmSections.h"
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/SHA1.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -37,6 +38,11 @@
 namespace JSC { namespace Wasm {
 
 class StreamingParserClient {
+public:
+    virtual ~StreamingParserClient() = default;
+    virtual bool didReceiveSectionData(Section) { return true; };
+    virtual bool didReceiveFunctionData(unsigned, const FunctionData&) = 0;
+    virtual void didFinishParsing() { }
 };
 
 class StreamingParser {
@@ -67,12 +73,14 @@ public:
 
     enum class IsEndOfStream { Yes, No };
 
-    StreamingParser(ModuleInformation&);
+    StreamingParser(ModuleInformation&, StreamingParserClient&);
 
     State addBytes(const uint8_t* bytes, size_t length) { return addBytes(bytes, length, IsEndOfStream::No); }
     State finalize();
 
-    const String& errorMessage() const { return m_errorMessage; }
+    String errorMessage() const { return crossThreadCopy(m_errorMessage); }
+
+    void reportError() { moveToStateIfNotFailed(failOnState(State::FatalError)); }
 
 private:
     static constexpr unsigned moduleHeaderSize = 8;
@@ -92,11 +100,13 @@ private:
     Optional<Vector<uint8_t>> consume(const uint8_t* bytes, size_t, size_t&, size_t);
     Expected<uint32_t, State> consumeVarUInt32(const uint8_t* bytes, size_t, size_t&, IsEndOfStream);
 
+    void moveToStateIfNotFailed(State);
     template <typename ...Args> NEVER_INLINE State WARN_UNUSED_RETURN fail(Args...);
 
     State failOnState(State);
 
     Ref<ModuleInformation> m_info;
+    StreamingParserClient& m_client;
     Vector<uint8_t> m_remaining;
     String m_errorMessage;
 
@@ -114,6 +124,7 @@ private:
 
     uint32_t m_functionSize { 0 };
 
+    Lock m_stateLock;
     State m_state { State::ModuleHeader };
     Section m_section { Section::Begin };
     Section m_previousKnownSection { Section::Begin };

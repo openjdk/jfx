@@ -32,7 +32,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGCircleElement);
 
 inline SVGCircleElement::SVGCircleElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::circleTag));
 
@@ -54,16 +53,15 @@ void SVGCircleElement::parseAttribute(const QualifiedName& name, const AtomStrin
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::cxAttr)
-        m_cx->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_cx->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::cyAttr)
-        m_cy->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_cy->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::rAttr)
-        m_r->setBaseValInternal(SVGLengthValue::construct(LengthModeOther, value, parseError, ForbidNegativeLengths));
+        m_r->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Other, value, parseError, SVGLengthNegativeValuesMode::Forbid));
 
     reportAttributeParsingError(parseError, name, value);
 
     SVGGeometryElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -75,7 +73,6 @@ void SVGCircleElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGGeometryElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 RenderPtr<RenderElement> SVGCircleElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

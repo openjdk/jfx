@@ -600,7 +600,7 @@ KeyboardUIMode ChromeClientJava::keyboardUIMode()
     return KeyboardAccessTabsToLinks;
 }
 
-void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigned)
+void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigned, const String& toolTip, TextDirection)
 {
     static Node* mouseOverNode = 0;
     Element* urlElement = htr.URLElement();
@@ -617,19 +617,20 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
             mouseOverNode = 0;
         }
     }
+    setToolTip(toolTip);
 }
 
-void ChromeClientJava::setToolTip(const String& tooltip, TextDirection)
+void ChromeClientJava::setToolTip(const String& toolTip)
 {
     using namespace ChromeClientJavaInternal;
     JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
-    JLString tooltipStr(NULL);
-    if (tooltip.length() > 0) {
-        tooltipStr = tooltip.toJavaString(env);
+    JLString toolTipStr(NULL);
+    if (toolTip.length() > 0) {
+        toolTipStr = toolTip.toJavaString(env);
     }
-    env->CallVoidMethod(m_webPage, setTooltipMID, (jstring)tooltipStr);
+    env->CallVoidMethod(m_webPage, setTooltipMID, (jstring)toolTipStr);
     WTF::CheckAndClearException(env);
 }
 

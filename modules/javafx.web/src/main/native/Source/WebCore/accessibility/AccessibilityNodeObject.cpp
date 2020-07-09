@@ -106,10 +106,10 @@ Ref<AccessibilityNodeObject> AccessibilityNodeObject::create(Node* node)
     return adoptRef(*new AccessibilityNodeObject(node));
 }
 
-void AccessibilityNodeObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
+void AccessibilityNodeObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
     // AccessibilityObject calls clearChildren.
-    AccessibilityObject::detach(detachmentType, cache);
+    AccessibilityObject::detachRemoteParts(detachmentType);
     m_node = nullptr;
 }
 
@@ -912,7 +912,7 @@ bool AccessibilityNodeObject::isGroup() const
     return role == AccessibilityRole::Group || role == AccessibilityRole::TextGroup || role == AccessibilityRole::ApplicationGroup || role == AccessibilityRole::ApplicationTextGroup;
 }
 
-AccessibilityObject* AccessibilityNodeObject::selectedRadioButton()
+AXCoreObject* AccessibilityNodeObject::selectedRadioButton()
 {
     if (!isRadioGroup())
         return nullptr;
@@ -925,14 +925,14 @@ AccessibilityObject* AccessibilityNodeObject::selectedRadioButton()
     return nullptr;
 }
 
-AccessibilityObject* AccessibilityNodeObject::selectedTabItem()
+AXCoreObject* AccessibilityNodeObject::selectedTabItem()
 {
     if (!isTabList())
         return nullptr;
 
     // FIXME: Is this valid? ARIA tab items support aria-selected; not aria-checked.
     // Find the child tab item that is selected (ie. the intValue == 1).
-    AccessibilityObject::AccessibilityChildrenVector tabs;
+    AXCoreObject::AccessibilityChildrenVector tabs;
     tabChildren(tabs);
 
     for (const auto& child : children()) {
@@ -1104,7 +1104,7 @@ void AccessibilityNodeObject::changeValueByStep(bool increase)
 
     value += increase ? step : -step;
 
-    setValue(String::numberToStringFixedPrecision(value));
+    setValue(String::number(value));
 
     auto objectCache = axObjectCache();
     if (objectCache)
@@ -1122,7 +1122,7 @@ void AccessibilityNodeObject::changeValueByPercent(float percentChange)
         step = std::abs(percentChange) * (1 / percentChange);
 
     value += step;
-    setValue(String::numberToStringFixedPrecision(value));
+    setValue(String::number(value));
 
     auto objectCache = axObjectCache();
     if (objectCache)
@@ -1467,7 +1467,7 @@ void AccessibilityNodeObject::helpText(Vector<AccessibilityText>& textOrder) con
         auto matchFunc = [] (const AccessibilityObject& object) {
             return object.isFieldset() && !object.ariaDescribedByAttribute().isEmpty();
         };
-        if (const auto* parent = AccessibilityObject::matchedParent(*this, false, WTFMove(matchFunc)))
+        if (const auto* parent = Accessibility::findAncestor<AccessibilityObject>(*this, false, WTFMove(matchFunc)))
             textOrder.append(AccessibilityText(parent->ariaDescribedByAttribute(), AccessibilityTextSource::Summary));
     }
 
@@ -1513,11 +1513,11 @@ void AccessibilityNodeObject::ariaLabeledByText(Vector<AccessibilityText>& textO
         Vector<Element*> elements;
         ariaLabeledByElements(elements);
 
-        Vector<RefPtr<AccessibilityObject>> axElements;
+        Vector<AXCoreObject*> axElements;
         for (const auto& element : elements)
             axElements.append(objectCache->getOrCreate(element));
 
-        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative, WTFMove(axElements)));
+        textOrder.append(AccessibilityText(ariaLabeledBy, AccessibilityTextSource::Alternative, axElements));
     }
 }
 
@@ -1770,7 +1770,7 @@ String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMo
     if (is<Text>(node))
         return downcast<Text>(*node).wholeText();
 
-    bool isAriaVisible = AccessibilityObject::matchedParent(*this, true, [] (const AccessibilityObject& object) {
+    bool isAriaVisible = Accessibility::findAncestor<AccessibilityObject>(*this, true, [] (const AccessibilityObject& object) {
         return equalLettersIgnoringASCIICase(object.getAttribute(aria_hiddenAttr), "false");
     }) != nullptr;
 

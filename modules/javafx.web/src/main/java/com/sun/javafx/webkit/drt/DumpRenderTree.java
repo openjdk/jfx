@@ -45,6 +45,8 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.Map;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
 import javafx.scene.web.WebEngine;
 
@@ -70,10 +72,26 @@ public final class DumpRenderTree {
     private EventSender eventSender;
 
     private CountDownLatch latch;
+    private Timer timer;
     private String testPath;
     private boolean loaded;
     private boolean waiting;
     private boolean complete;
+
+    static class RenderUpdateHelper extends TimerTask {
+        private WebPage webPage;
+
+        public RenderUpdateHelper(WebPage webPage) {
+            this.webPage = webPage;
+        }
+
+        @Override
+        public void run() {
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                    webPage.forceRepaint();
+            });
+        }
+    };
 
     static class ThemeClientImplStub extends ThemeClient {
         @Override
@@ -153,7 +171,7 @@ public final class DumpRenderTree {
             testString = testString.substring(0, t);
         }
         this.testPath = testString;
-        init(testString, pixelsHash);
+        initTest(testString, pixelsHash);
         return testString;
     }
 
@@ -181,8 +199,15 @@ public final class DumpRenderTree {
         // initialize default toolkit
         final CountDownLatch latch = new CountDownLatch(1);
         PlatformImpl.startup(() -> {
-            new WebEngine();    // initialize Webkit classes
+            // initialize Webkit classes
+            try {
+                Class.forName(WebEngine.class.getName());
+                Class.forName(WebPage.class.getName());
+            } catch (Exception e) {}
+
             System.loadLibrary("DumpRenderTreeJava");
+            initDRT();
+            new WebEngine();
             drt = new DumpRenderTree();
             PageCache.setCapacity(1);
             latch.countDown();
@@ -194,6 +219,9 @@ public final class DumpRenderTree {
     boolean complete() { return this.complete; }
 
     private void resetToConsistentStateBeforeTesting(final TestOptions options) {
+        // Reset native objects associated with WebPage
+        webPage.resetToConsistentStateBeforeTesting();
+
         // Assign default values for all supported TestOptions
         webPage.overridePreference("experimental:CSSCustomPropertiesAndValuesEnabled", "false");
         webPage.overridePreference("enableColorFilter", "false");
@@ -202,8 +230,6 @@ public final class DumpRenderTree {
         for (Map.Entry<String, String> option : options.getOptions().entrySet()) {
             webPage.overridePreference(option.getKey(), option.getValue());
         }
-        // Reset native objects associated with WebPage
-        webPage.resetToConsistentStateBeforeTesting();
     }
 
     private void reset(final TestOptions options) {
@@ -245,13 +271,22 @@ public final class DumpRenderTree {
         Invoker.getInvoker().invokeOnEventThread(() -> {
             run(testString, l);
         });
+
+        timer = new Timer();
+        TimerTask task = new RenderUpdateHelper(webPage);
+        timer.schedule(task, 1000/60, 1000/60);
         // wait until test is finished
         l.await();
+        task.cancel();
+        timer.cancel();
+        final CountDownLatch latchForEvents = new CountDownLatch(1);
         Invoker.getInvoker().invokeOnEventThread(() -> {
             mlog("dispose");
             webPage.stop();
             dispose();
+            latchForEvents.countDown();
         });
+        latchForEvents.await();
     }
 
     // called from native
@@ -334,7 +369,8 @@ public final class DumpRenderTree {
         this.latch.countDown();
     }
 
-    private static native void init(String testPath, String pixelsHash);
+    private static native void initDRT();
+    private static native void initTest(String testPath, String pixelsHash);
     private static native void didClearWindowObject(long pContext,
             long pWindowObject, EventSender eventSender);
     private static native void dispose();

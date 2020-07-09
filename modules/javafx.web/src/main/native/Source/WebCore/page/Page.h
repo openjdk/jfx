@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -40,7 +40,7 @@
 #include "UserInterfaceLayoutDirection.h"
 #include "ViewportArguments.h"
 #include "VisibilityState.h"
-#include "WheelEventTestTrigger.h"
+#include "WheelEventTestMonitor.h"
 #include <memory>
 #include <pal/SessionID.h>
 #include <wtf/Assertions.h>
@@ -69,6 +69,10 @@
 #include "MediaPlaybackTargetContext.h"
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
+#include "DeviceOrientationUpdateProvider.h"
+#endif
+
 namespace JSC {
 class Debugger;
 }
@@ -79,39 +83,34 @@ namespace IDBClient {
 class IDBConnectionToServer;
 }
 
+class ActivityStateChangeObserver;
 class AlternativeTextClient;
 class ApplicationCacheStorage;
 class AuthenticatorCoordinator;
 class BackForwardController;
-class BackForwardClient;
 class CacheStorageProvider;
 class Chrome;
-class ChromeClient;
 class Color;
-class ContextMenuClient;
 class ContextMenuController;
 class CookieJar;
-class DOMRect;
 class DOMRectList;
 class DatabaseProvider;
 class DiagnosticLoggingClient;
 class DragCaretController;
-class DragClient;
 class DragController;
 class EditorClient;
 class Element;
 class FocusController;
 class Frame;
-class FrameLoaderClient;
-class HistoryItem;
 class HTMLMediaElement;
-class UserInputBridge;
+class HistoryItem;
 class InspectorClient;
 class InspectorController;
 class LibWebRTCProvider;
 class LowPowerModeNotifier;
 class MediaCanStartListener;
 class MediaPlaybackTarget;
+class MediaRecorderProvider;
 class PageConfiguration;
 class PageConsoleClient;
 class PageDebuggable;
@@ -128,49 +127,39 @@ class PluginViewBase;
 class PointerCaptureController;
 class PointerLockController;
 class ProgressTracker;
-class ProgressTrackerClient;
 class Range;
 class RenderObject;
-class RenderTheme;
 class ResourceUsageOverlay;
-class VisibleSelection;
 class ScrollLatchingState;
-class ScrollableArea;
 class ScrollingCoordinator;
 class ServicesOverlayController;
 class Settings;
 class SocketProvider;
+class SpeechSynthesisClient;
 class StorageNamespace;
 class StorageNamespaceProvider;
 class UserContentProvider;
+class UserContentURLPattern;
+class UserInputBridge;
 class ValidationMessageClient;
-class ActivityStateChangeObserver;
+class VisibleSelection;
 class VisitedLinkStore;
 class WebGLStateTracker;
-class SpeechSynthesisClient;
 class WheelEventDeltaFilter;
 
-typedef uint64_t SharedStringHash;
-
-enum FindDirection {
-    FindDirectionForward,
-    FindDirectionBackward
-};
-
-enum class EventThrottlingBehavior {
-    Responsive,
-    Unresponsive
-};
-
-enum class CompositingPolicy : uint8_t {
-    Normal,
-    Conservative, // Used in low memory situations.
-};
+using SharedStringHash = uint32_t;
 
 enum class CanWrap : bool;
 enum class DidWrap : bool;
 enum class RouteSharingPolicy : uint8_t;
 enum class ShouldTreatAsContinuingLoad : bool;
+
+enum class EventThrottlingBehavior : bool { Responsive, Unresponsive };
+
+enum class CompositingPolicy : bool {
+    Normal,
+    Conservative, // Used in low memory situations.
+};
 
 class Page : public Supplementable<Page>, public CanMakeWeakPtr<Page> {
     WTF_MAKE_NONCOPYABLE(Page);
@@ -204,7 +193,7 @@ public:
     bool canStartMedia() const { return m_canStartMedia; }
 
     EditorClient& editorClient() { return m_editorClient.get(); }
-    PlugInClient* plugInClient() const { return m_plugInClient; }
+    PlugInClient* plugInClient() const { return m_plugInClient.get(); }
 
     Frame& mainFrame() { return m_mainFrame.get(); }
     const Frame& mainFrame() const { return m_mainFrame.get(); }
@@ -305,13 +294,14 @@ public:
     WEBCORE_EXPORT void dispatchBeforePrintEvent();
     WEBCORE_EXPORT void dispatchAfterPrintEvent();
 
-    // find all the Ranges for the matching text.
+    // Find all the Ranges for the matching text.
     // Upon return, indexForSelection will be one of the following:
     // 0 if there is no user selection
     // the index of the first range after the user selection
     // NoMatchAfterUserSelection if there is no matching text after the user selection.
     enum { NoMatchAfterUserSelection = -1 };
     WEBCORE_EXPORT void findStringMatchingRanges(const String&, FindOptions, int maxCount, Vector<RefPtr<Range>>&, int& indexForSelection);
+
 #if PLATFORM(COCOA)
     void platformInitialize();
     WEBCORE_EXPORT void addSchedulePair(Ref<SchedulePair>&&);
@@ -344,6 +334,9 @@ public:
 
     void didStartProvisionalLoad();
     void didFinishLoad(); // Called when the load has been committed in the main frame.
+
+    bool delegatesScaling() const { return m_delegatesScaling; }
+    WEBCORE_EXPORT void setDelegatesScaling(bool);
 
     // The view scale factor is multiplied into the page scale factor by all
     // callers of setPageScaleFactor.
@@ -413,7 +406,7 @@ public:
 
     // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
     // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
-    // FrameViews in the page cache, but FrameView::pagination() only affects the current
+    // FrameViews in the back/forward cache, but FrameView::pagination() only affects the current
     // FrameView.
     const Pagination& pagination() const { return m_pagination; }
     WEBCORE_EXPORT void setPagination(const Pagination&);
@@ -429,11 +422,11 @@ public:
     WheelEventDeltaFilter* wheelEventDeltaFilter() { return m_recentWheelEventDeltaFilter.get(); }
     PageOverlayController& pageOverlayController() { return *m_pageOverlayController; }
 
-#if PLATFORM(MAC)
-#if ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)
+#if PLATFORM(MAC) && (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION))
     ServicesOverlayController& servicesOverlayController() { return *m_servicesOverlayController; }
-#endif // ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)
+#endif
 
+#if PLATFORM(MAC)
     ScrollLatchingState* latchingState();
     void pushNewLatchingState();
     void popLatchingState();
@@ -548,15 +541,13 @@ public:
 
     WEBCORE_EXPORT void suspendActiveDOMObjectsAndAnimations();
     WEBCORE_EXPORT void resumeActiveDOMObjectsAndAnimations();
-    void suspendDeviceMotionAndOrientationUpdates();
-    void resumeDeviceMotionAndOrientationUpdates();
 
 #ifndef NDEBUG
     void setIsPainting(bool painting) { m_isPainting = painting; }
     bool isPainting() const { return m_isPainting; }
 #endif
 
-    AlternativeTextClient* alternativeTextClient() const { return m_alternativeTextClient; }
+    AlternativeTextClient* alternativeTextClient() const { return m_alternativeTextClient.get(); }
 
     bool hasSeenPlugin(const String& serviceType) const;
     WEBCORE_EXPORT bool hasSeenAnyPlugin() const;
@@ -584,6 +575,10 @@ public:
     void allowPrompts();
     bool arePromptsAllowed();
 
+    void forbidSynchronousLoads();
+    void allowSynchronousLoads();
+    bool areSynchronousLoadsAllowed();
+
     void mainFrameLoadStarted(const URL&, FrameLoadType);
 
     void setLastSpatialNavigationCandidateCount(unsigned count) { m_lastSpatialNavigationCandidatesCount = count; }
@@ -593,6 +588,7 @@ public:
     DatabaseProvider& databaseProvider() { return m_databaseProvider; }
     CacheStorageProvider& cacheStorageProvider() { return m_cacheStorageProvider; }
     SocketProvider& socketProvider() { return m_socketProvider; }
+    MediaRecorderProvider& mediaRecorderProvider() { return m_mediaRecorderProvider; }
     CookieJar& cookieJar() { return m_cookieJar.get(); }
 
     StorageNamespaceProvider& storageNamespaceProvider() { return m_storageNamespaceProvider.get(); }
@@ -607,7 +603,6 @@ public:
 
     WEBCORE_EXPORT PAL::SessionID sessionID() const;
     WEBCORE_EXPORT void setSessionID(PAL::SessionID);
-    WEBCORE_EXPORT void enableLegacyPrivateBrowsing(bool privateBrowsingEnabled);
     bool usesEphemeralSession() const { return m_sessionID.isEphemeral(); }
 
     MediaProducer::MediaStateFlags mediaState() const { return m_mediaState; }
@@ -627,6 +622,9 @@ public:
     WEBCORE_EXPORT void resumeAllMediaBuffering();
     bool mediaBufferingIsSuspended() const { return m_mediaBufferingIsSuspended; }
 
+    void setHasResourceLoadClient(bool has) { m_hasResourceLoadClient = has; }
+    bool hasResourceLoadClient() const { return m_hasResourceLoadClient; }
+
 #if ENABLE(MEDIA_SESSION)
     WEBCORE_EXPORT void handleMediaEvent(MediaEventType);
     WEBCORE_EXPORT void setVolumeOfMediaElement(double, uint64_t);
@@ -639,19 +637,18 @@ public:
     void playbackTargetPickerClientStateDidChange(uint64_t, MediaProducer::MediaStateFlags);
     WEBCORE_EXPORT void setMockMediaPlaybackTargetPickerEnabled(bool);
     WEBCORE_EXPORT void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetContext::State);
+    WEBCORE_EXPORT void mockMediaPlaybackTargetPickerDismissPopup();
 
     WEBCORE_EXPORT void setPlaybackTarget(uint64_t, Ref<MediaPlaybackTarget>&&);
     WEBCORE_EXPORT void playbackTargetAvailabilityDidChange(uint64_t, bool);
     WEBCORE_EXPORT void setShouldPlayToPlaybackTarget(uint64_t, bool);
+    WEBCORE_EXPORT void playbackTargetPickerWasDismissed(uint64_t);
 #endif
 
-    RefPtr<WheelEventTestTrigger> testTrigger() const { return m_testTrigger; }
-    WEBCORE_EXPORT WheelEventTestTrigger& ensureTestTrigger();
-    void clearTrigger() { m_testTrigger = nullptr; }
-    bool expectsWheelEventTriggers() const { return !!m_testTrigger; }
-
-    void setIsForSanitizingWebContent() { m_isForSanitizingWebContent = true; }
-    bool isForSanitizingWebContent() const { return m_isForSanitizingWebContent; }
+    RefPtr<WheelEventTestMonitor> wheelEventTestMonitor() const { return m_wheelEventTestMonitor; }
+    WEBCORE_EXPORT WheelEventTestMonitor& ensureWheelEventTestMonitor();
+    void clearWheelEventTestMonitor() { m_wheelEventTestMonitor = nullptr; }
+    bool isMonitoringWheelEvents() const { return !!m_wheelEventTestMonitor; }
 
 #if ENABLE(VIDEO)
     bool allowsMediaDocumentInlinePlayback() const { return m_allowsMediaDocumentInlinePlayback; }
@@ -680,11 +677,8 @@ public:
     String captionUserPreferencesStyleSheet();
     void setCaptionUserPreferencesStyleSheet(const String&);
 
-    bool isResourceCachingDisabled() const { return m_resourceCachingDisabled || m_resourceCachingDisabledOverride; }
-    void setResourceCachingDisabled(bool disabled) { m_resourceCachingDisabled = disabled; }
-
-    // Web Inspector can override whatever value is set via WebKit SPI, but only while it is open.
-    void setResourceCachingDisabledOverride(bool disabled) { m_resourceCachingDisabledOverride = disabled; }
+    bool isResourceCachingDisabledByWebInspector() const { return m_resourceCachingDisabledByWebInspector; }
+    void setResourceCachingDisabledByWebInspector(bool disabled) { m_resourceCachingDisabledByWebInspector = disabled; }
 
     Optional<EventThrottlingBehavior> eventThrottlingBehaviorOverride() const { return m_eventThrottlingBehaviorOverride; }
     void setEventThrottlingBehaviorOverride(Optional<EventThrottlingBehavior> throttling) { m_eventThrottlingBehaviorOverride = throttling; }
@@ -703,10 +697,6 @@ public:
     bool isOnlyNonUtilityPage() const;
     bool isUtilityPage() const { return m_isUtilityPage; }
 
-#if ENABLE(DATA_INTERACTION)
-    WEBCORE_EXPORT bool hasSelectionAtPosition(const FloatPoint&) const;
-#endif
-
     bool isLowPowerModeEnabled() const;
     WEBCORE_EXPORT void setLowPowerModeEnabledOverrideForTesting(Optional<bool>);
 
@@ -718,6 +708,17 @@ public:
     PerformanceLogging& performanceLogging() const { return *m_performanceLogging; }
 
     void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);
+
+    WEBCORE_EXPORT Vector<Ref<Element>> editableElementsInRect(const FloatRect&) const;
+
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
+    DeviceOrientationUpdateProvider* deviceOrientationUpdateProvider() const { return m_deviceOrientationUpdateProvider.get(); }
+#endif
+
+    WEBCORE_EXPORT void forEachDocument(const WTF::Function<void(Document&)>&) const;
+    void forEachMediaElement(const WTF::Function<void(HTMLMediaElement&)>&);
+
+    bool shouldDisableCorsForRequestTo(const URL&) const;
 
 private:
     struct Navigation {
@@ -732,11 +733,7 @@ private:
     void setIsVisibleInternal(bool);
     void setIsVisuallyIdleInternal(bool);
 
-#if ASSERT_DISABLED
-    void checkSubframeCountConsistency() const { }
-#else
     void checkSubframeCountConsistency() const;
-#endif
 
     enum ShouldHighlightMatches { DoNotHighlightMatches, HighlightMatches };
     enum ShouldMarkMatches { DoNotMarkMatches, MarkMatches };
@@ -752,8 +749,6 @@ private:
     Vector<Ref<PluginViewBase>> pluginViews();
 
     void handleLowModePowerChange(bool);
-
-    void forEachDocument(const WTF::Function<void(Document&)>&);
 
     enum class TimerThrottlingState { Disabled, Enabled, EnabledIncreasing };
     void hiddenPageDOMTimerThrottlingStateChanged();
@@ -791,7 +786,7 @@ private:
     RefPtr<PluginData> m_pluginData;
 
     UniqueRef<EditorClient> m_editorClient;
-    PlugInClient* m_plugInClient;
+    std::unique_ptr<PlugInClient> m_plugInClient;
     std::unique_ptr<ValidationMessageClient> m_validationMessageClient;
     std::unique_ptr<DiagnosticLoggingClient> m_diagnosticLoggingClient;
     std::unique_ptr<PerformanceLoggingClient> m_performanceLoggingClient;
@@ -804,6 +799,7 @@ private:
     std::unique_ptr<SpeechSynthesisClient> m_speechSynthesisClient;
 #endif
 
+    UniqueRef<MediaRecorderProvider> m_mediaRecorderProvider;
     UniqueRef<LibWebRTCProvider> m_libWebRTCProvider;
     RTCController m_rtcController;
 
@@ -899,7 +895,7 @@ private:
 #ifndef NDEBUG
     bool m_isPainting { false };
 #endif
-    AlternativeTextClient* m_alternativeTextClient;
+    std::unique_ptr<AlternativeTextClient> m_alternativeTextClient;
 
     bool m_scriptedAnimationsSuspended { false };
     const std::unique_ptr<PageConsoleClient> m_consoleClient;
@@ -917,6 +913,7 @@ private:
 
     unsigned m_lastSpatialNavigationCandidatesCount { 0 };
     unsigned m_forbidPromptsDepth { 0 };
+    unsigned m_forbidSynchronousLoadsDepth { 0 };
 
     Ref<SocketProvider> m_socketProvider;
     Ref<CookieJar> m_cookieJar;
@@ -927,8 +924,7 @@ private:
     Ref<StorageNamespaceProvider> m_storageNamespaceProvider;
     Ref<UserContentProvider> m_userContentProvider;
     Ref<VisitedLinkStore> m_visitedLinkStore;
-    RefPtr<WheelEventTestTrigger> m_testTrigger;
-
+    RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
     HashSet<ActivityStateChangeObserver*> m_activityStateChangeObservers;
 
 #if ENABLE(RESOURCE_USAGE)
@@ -950,9 +946,15 @@ private:
     bool m_allowsPlaybackControlsForAutoplayingAudio { false };
     bool m_showAllPlugins { false };
     bool m_controlledByAutomation { false };
-    bool m_resourceCachingDisabled { false };
-    bool m_resourceCachingDisabledOverride { false };
+    bool m_resourceCachingDisabledByWebInspector { false };
     bool m_isUtilityPage;
+    bool m_shouldEnableICECandidateFilteringByDefault { true };
+    bool m_mediaPlaybackIsSuspended { false };
+    bool m_mediaBufferingIsSuspended { false };
+    bool m_inUpdateRendering { false };
+    bool m_hasResourceLoadClient { false };
+    bool m_delegatesScaling { false };
+
     UserInterfaceLayoutDirection m_userInterfaceLayoutDirection { UserInterfaceLayoutDirection::LTR };
 
     // For testing.
@@ -968,9 +970,9 @@ private:
     std::unique_ptr<PerformanceLogging> m_performanceLogging;
 #if PLATFORM(MAC)
     Vector<ScrollLatchingState> m_latchingState;
-#if ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)
-    std::unique_ptr<ServicesOverlayController> m_servicesOverlayController;
 #endif
+#if PLATFORM(MAC) && (ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION))
+    std::unique_ptr<ServicesOverlayController> m_servicesOverlayController;
 #endif
 
     std::unique_ptr<WheelEventDeltaFilter> m_recentWheelEventDeltaFilter;
@@ -990,12 +992,11 @@ private:
 
     Optional<ViewportArguments> m_overrideViewportArguments;
 
-    bool m_shouldEnableICECandidateFilteringByDefault { true };
-    bool m_mediaPlaybackIsSuspended { false };
-    bool m_mediaBufferingIsSuspended { false };
-    bool m_inUpdateRendering { false };
+#if ENABLE(DEVICE_ORIENTATION) && PLATFORM(IOS_FAMILY)
+    RefPtr<DeviceOrientationUpdateProvider> m_deviceOrientationUpdateProvider;
+#endif
 
-    bool m_isForSanitizingWebContent { false };
+    Vector<UserContentURLPattern> m_corsDisablingPatterns;
 };
 
 inline PageGroup& Page::group()
@@ -1004,5 +1005,13 @@ inline PageGroup& Page::group()
         initGroup();
     return *m_group;
 }
+
+#if !ASSERT_ENABLED
+
+inline void Page::checkSubframeCountConsistency() const
+{
+}
+
+#endif // !ASSERT_ENABLED
 
 } // namespace WebCore

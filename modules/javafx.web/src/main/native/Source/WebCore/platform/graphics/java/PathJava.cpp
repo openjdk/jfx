@@ -46,7 +46,7 @@ namespace WebCore {
 
 static GraphicsContext& scratchContext()
 {
-    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f), Unaccelerated);
+    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f), RenderingMode::Unaccelerated);
     static GraphicsContext &context = img->context();
     return context;
 }
@@ -444,9 +444,7 @@ void Path::apply(const PathApplierFunction& function) const
             "currentSegment", "([D)I");
         ASSERT(midCurrentSegment);
 
-        PathElement pelement;
-        FloatPoint points[3];
-        pelement.points = points;
+        PathElement pathElement;
 
         JLocalRef<jdoubleArray> coords(env->NewDoubleArray(6));
         while(JNI_FALSE == env->CallBooleanMethod(iter, midIsDone)) {
@@ -458,31 +456,31 @@ void Path::apply(const PathApplierFunction& function) const
             jdouble *data = env->GetDoubleArrayElements(coords, &isCopy);
             switch (type) {
             case com_sun_webkit_graphics_WCPathIterator_SEG_MOVETO:
-                pelement.type = PathElementMoveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(pelement);
+                pathElement.type = PathElement::Type::MoveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_LINETO:
-                pelement.type = PathElementAddLineToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddLineToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_QUADTO:
-                pelement.type = PathElementAddQuadCurveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                pelement.points[1] = FloatPoint(data[2],data[3]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddQuadCurveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                pathElement.points[1] = FloatPoint(data[2],data[3]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CUBICTO:
-                pelement.type = PathElementAddCurveToPoint;
-                pelement.points[0] = FloatPoint(data[0],data[1]);
-                pelement.points[1] = FloatPoint(data[2],data[3]);
-                pelement.points[2] = FloatPoint(data[4],data[5]);
-                function(pelement);
+                pathElement.type = PathElement::Type::AddCurveToPoint;
+                pathElement.points[0] = FloatPoint(data[0],data[1]);
+                pathElement.points[1] = FloatPoint(data[2],data[3]);
+                pathElement.points[2] = FloatPoint(data[4],data[5]);
+                function(pathElement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CLOSE:
-                pelement.type = PathElementCloseSubpath;
-                function(pelement);
+                pathElement.type = PathElement::Type::CloseSubpath;
+                function(pathElement);
                 break;
             }
             env->ReleaseDoubleArrayElements(coords, data, JNI_ABORT);
@@ -492,7 +490,7 @@ void Path::apply(const PathApplierFunction& function) const
     }
 }
 
-bool Path::strokeContains(StrokeStyleApplier *applier, const FloatPoint& p) const
+bool Path::strokeContains(StrokeStyleApplier& applier, const FloatPoint& p) const
 {
     ASSERT(m_path);
 
@@ -502,10 +500,7 @@ bool Path::strokeContains(StrokeStyleApplier *applier, const FloatPoint& p) cons
     // Stroke style is set to SolidStroke if the path is not dashed, else it
     // is unchanged. Setting it to NoStroke enables us to detect the switch.
     gc.setStrokeStyle(NoStroke);
-
-    if (applier) {
-        applier->strokeStyle(&gc);
-    }
+    applier.strokeStyle(&gc);
 
     float thickness = gc.strokeThickness();
     StrokeStyle strokeStyle = gc.strokeStyle();

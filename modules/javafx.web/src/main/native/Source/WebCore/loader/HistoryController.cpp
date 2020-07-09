@@ -31,6 +31,7 @@
 #include "config.h"
 #include "HistoryController.h"
 
+#include "BackForwardCache.h"
 #include "BackForwardController.h"
 #include "CachedPage.h"
 #include "Document.h"
@@ -44,7 +45,6 @@
 #include "HistoryItem.h"
 #include "Logging.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "ScrollingCoordinator.h"
 #include "SerializedScriptValue.h"
 #include "SharedStringHash.h"
@@ -74,7 +74,7 @@ void HistoryController::saveScrollPositionAndViewStateToItem(HistoryItem* item)
     if (!item || !frameView)
         return;
 
-    if (m_frame.document()->pageCacheState() != Document::NotInPageCache)
+    if (m_frame.document()->backForwardCacheState() != Document::NotInBackForwardCache)
         item->setScrollPosition(frameView->cachedScrollPosition());
     else
         item->setScrollPosition(frameView->scrollPosition());
@@ -137,9 +137,9 @@ void HistoryController::restoreScrollPositionAndViewState()
     auto view = makeRefPtr(m_frame.view());
 
     // FIXME: There is some scrolling related work that needs to happen whenever a page goes into the
-    // page cache and similar work that needs to occur when it comes out. This is where we do the work
+    // back/forward cache and similar work that needs to occur when it comes out. This is where we do the work
     // that needs to happen when we exit, and the work that needs to happen when we enter is in
-    // Document::setIsInPageCache(bool). It would be nice if there was more symmetry in these spots.
+    // Document::setIsInBackForwardCache(bool). It would be nice if there was more symmetry in these spots.
     // https://bugs.webkit.org/show_bug.cgi?id=98698
     if (view) {
         Page* page = m_frame.page();
@@ -261,8 +261,8 @@ void HistoryController::invalidateCurrentItemCachedPage()
     if (!currentItem())
         return;
 
-    // When we are pre-commit, the currentItem is where any page cache data resides.
-    std::unique_ptr<CachedPage> cachedPage = PageCache::singleton().take(*currentItem(), m_frame.page());
+    // When we are pre-commit, the currentItem is where any back/forward cache data resides.
+    std::unique_ptr<CachedPage> cachedPage = BackForwardCache::singleton().take(*currentItem(), m_frame.page());
     if (!cachedPage)
         return;
 
@@ -272,7 +272,7 @@ void HistoryController::invalidateCurrentItemCachedPage()
 
     ASSERT(cachedPage->document() == m_frame.document());
     if (cachedPage->document() == m_frame.document()) {
-        cachedPage->document()->setPageCacheState(Document::NotInPageCache);
+        cachedPage->document()->setBackForwardCacheState(Document::NotInBackForwardCache);
         cachedPage->clear();
     }
 }
@@ -355,7 +355,7 @@ void HistoryController::updateForReload()
     LOG(History, "HistoryController %p updateForReload: Updating History for reload in frame %p (main frame %d) %s", this, &m_frame, m_frame.isMainFrame(), m_frame.loader().documentLoader() ? m_frame.loader().documentLoader()->url().string().utf8().data() : "");
 
     if (m_currentItem) {
-        PageCache::singleton().remove(*m_currentItem);
+        BackForwardCache::singleton().remove(*m_currentItem);
 
         if (m_frame.loader().loadType() == FrameLoadType::Reload || m_frame.loader().loadType() == FrameLoadType::ReloadFromOrigin)
             saveScrollPositionAndViewStateToItem(m_currentItem.get());
@@ -381,14 +381,14 @@ void HistoryController::updateForStandardLoad(HistoryUpdateType updateType)
 
     FrameLoader& frameLoader = m_frame.loader();
 
-    bool needPrivacy = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
+    bool usesEphemeralSession = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
     const URL& historyURL = frameLoader.documentLoader()->urlForHistory();
 
     if (!frameLoader.documentLoader()->isClientRedirect()) {
         if (!historyURL.isEmpty()) {
             if (updateType != UpdateAllExceptBackForwardList)
                 updateBackForwardListClippedAtTarget(true);
-            if (!needPrivacy) {
+            if (!usesEphemeralSession) {
                 frameLoader.client().updateGlobalHistory();
                 frameLoader.documentLoader()->setDidCreateGlobalHistoryEntry(true);
                 if (frameLoader.documentLoader()->unreachableURL().isEmpty())
@@ -400,7 +400,7 @@ void HistoryController::updateForStandardLoad(HistoryUpdateType updateType)
         updateCurrentItem();
     }
 
-    if (!historyURL.isEmpty() && !needPrivacy) {
+    if (!historyURL.isEmpty() && !usesEphemeralSession) {
         if (Page* page = m_frame.page())
             addVisitedLink(*page, historyURL);
 
@@ -413,14 +413,14 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
 {
     LOG(History, "HistoryController %p updateForRedirectWithLockedBackForwardList: Updating History for redirect load in frame %p (main frame %d) %s", this, &m_frame, m_frame.isMainFrame(), m_frame.loader().documentLoader() ? m_frame.loader().documentLoader()->url().string().utf8().data() : "");
 
-    bool needPrivacy = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
+    bool usesEphemeralSession = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
     const URL& historyURL = m_frame.loader().documentLoader()->urlForHistory();
 
     if (m_frame.loader().documentLoader()->isClientRedirect()) {
         if (!m_currentItem && !m_frame.tree().parent()) {
             if (!historyURL.isEmpty()) {
                 updateBackForwardListClippedAtTarget(true);
-                if (!needPrivacy) {
+                if (!usesEphemeralSession) {
                     m_frame.loader().client().updateGlobalHistory();
                     m_frame.loader().documentLoader()->setDidCreateGlobalHistoryEntry(true);
                     if (m_frame.loader().documentLoader()->unreachableURL().isEmpty())
@@ -436,7 +436,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
             parentFrame->loader().history().currentItem()->setChildItem(createItem());
     }
 
-    if (!historyURL.isEmpty() && !needPrivacy) {
+    if (!historyURL.isEmpty() && !usesEphemeralSession) {
         if (Page* page = m_frame.page())
             addVisitedLink(*page, historyURL);
 
@@ -456,10 +456,10 @@ void HistoryController::updateForClientRedirect()
         m_currentItem->clearScrollPosition();
     }
 
-    bool needPrivacy = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
+    bool usesEphemeralSession = m_frame.page() ? m_frame.page()->usesEphemeralSession() : true;
     const URL& historyURL = m_frame.loader().documentLoader()->urlForHistory();
 
-    if (!historyURL.isEmpty() && !needPrivacy) {
+    if (!historyURL.isEmpty() && !usesEphemeralSession) {
         if (Page* page = m_frame.page())
             addVisitedLink(*page, historyURL);
     }
@@ -551,15 +551,16 @@ void HistoryController::updateForSameDocumentNavigation()
     if (!page)
         return;
 
-    if (page->usesEphemeralSession())
-        return;
+    bool usesEphemeralSession = page->usesEphemeralSession();
+    if (!usesEphemeralSession)
+        addVisitedLink(*page, m_frame.document()->url());
 
-    addVisitedLink(*page, m_frame.document()->url());
     m_frame.mainFrame().loader().history().recursiveUpdateForSameDocumentNavigation();
 
     if (m_currentItem) {
         m_currentItem->setURL(m_frame.document()->url());
-        m_frame.loader().client().updateGlobalHistory();
+        if (!usesEphemeralSession)
+            m_frame.loader().client().updateGlobalHistory();
     }
 }
 

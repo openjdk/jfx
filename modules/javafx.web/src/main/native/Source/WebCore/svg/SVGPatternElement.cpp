@@ -47,7 +47,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPatternElement);
 
 inline SVGPatternElement::SVGPatternElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGFitToViewBox(this)
     , SVGTests(this)
     , SVGURIReference(this)
@@ -93,20 +92,19 @@ void SVGPatternElement::parseAttribute(const QualifiedName& name, const AtomStri
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError, ForbidNegativeLengths));
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError, SVGLengthNegativeValuesMode::Forbid));
     else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError, ForbidNegativeLengths));
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError, SVGLengthNegativeValuesMode::Forbid));
 
     reportAttributeParsingError(parseError, name, value);
 
     SVGElement::parseAttribute(name, value);
     SVGURIReference::parseAttribute(name, value);
     SVGTests::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
     SVGFitToViewBox::parseAttribute(name, value);
 }
 
@@ -125,7 +123,6 @@ void SVGPatternElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 void SVGPatternElement::childrenChanged(const ChildChange& change)

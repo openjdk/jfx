@@ -38,14 +38,15 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTTPHeaderNames.h"
+#include "HTTPHeaderValues.h"
 #include "InspectorInstrumentation.h"
+#include "LegacySchemeRegistry.h"
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
 #include "ResourceHandle.h"
-#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "SubresourceLoader.h"
 #include <wtf/CompletionHandler.h>
@@ -63,6 +64,8 @@
 #define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(cachedResourceLoader.isAlwaysOnLoggingAllowed(), Network, "%p - CachedResource::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CachedResource);
 
 ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
 {
@@ -126,10 +129,17 @@ CachedResource::CachedResource(CachedResourceRequest&& request, Type type, const
     , m_fragmentIdentifierForRequest(request.releaseFragmentIdentifier())
     , m_origin(request.releaseOrigin())
     , m_initiatorName(request.initiatorName())
-    , m_loadPriority(defaultPriorityForResourceType(type))
     , m_type(type)
+    , m_preloadResult(PreloadResult::PreloadNotReferenced)
+    , m_responseTainting(ResourceResponse::Tainting::Basic)
+    , m_loadPriority(defaultPriorityForResourceType(type))
+    , m_status(Pending)
+    , m_requestedFromNetworkingLayer(false)
+    , m_inCache(false)
+    , m_loading(false)
     , m_isLinkPreload(request.isLinkPreload())
     , m_hasUnknownEncoding(request.isLinkPreload())
+    , m_switchingClientsToRevalidatedResource(false)
     , m_ignoreForRequestCount(request.ignoreForRequestCount())
 {
     ASSERT(m_sessionID.isValid());
@@ -154,8 +164,17 @@ CachedResource::CachedResource(const URL& url, Type type, const PAL::SessionID& 
     , m_cookieJar(cookieJar)
     , m_responseTimestamp(WallTime::now())
     , m_fragmentIdentifierForRequest(CachedResourceRequest::splitFragmentIdentifierFromRequestURL(m_resourceRequest))
-    , m_status(Cached)
     , m_type(type)
+    , m_preloadResult(PreloadResult::PreloadNotReferenced)
+    , m_responseTainting(ResourceResponse::Tainting::Basic)
+    , m_status(Cached)
+    , m_requestedFromNetworkingLayer(false)
+    , m_inCache(false)
+    , m_loading(false)
+    , m_isLinkPreload(false)
+    , m_hasUnknownEncoding(false)
+    , m_switchingClientsToRevalidatedResource(false)
+    , m_ignoreForRequestCount(false)
 {
     ASSERT(m_sessionID.isValid());
 #ifndef NDEBUG
@@ -195,23 +214,23 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     }
     Frame& frame = *cachedResourceLoader.frame();
 
-    // Prevent new loads if we are in the PageCache or being added to the PageCache.
+    // Prevent new loads if we are in the BackForwardCache or being added to the BackForwardCache.
     // We query the top document because new frames may be created in pagehide event handlers
-    // and their pageCacheState will not reflect the fact that they are about to enter page
+    // and their backForwardCacheState will not reflect the fact that they are about to enter page
     // cache.
     if (auto* topDocument = frame.mainFrame().document()) {
-        switch (topDocument->pageCacheState()) {
-        case Document::NotInPageCache:
+        switch (topDocument->backForwardCacheState()) {
+        case Document::NotInBackForwardCache:
             break;
-        case Document::AboutToEnterPageCache:
+        case Document::AboutToEnterBackForwardCache:
             // Beacons are allowed to go through in 'pagehide' event handlers.
             if (shouldUsePingLoad(type()))
                 break;
-            RELEASE_LOG_IF_ALLOWED("load: About to enter page cache (frame = %p)", &frame);
+            RELEASE_LOG_IF_ALLOWED("load: About to enter back/forward cache (frame = %p)", &frame);
             failBeforeStarting();
             return;
-        case Document::InPageCache:
-            RELEASE_LOG_IF_ALLOWED("load: Already in page cache (frame = %p)", &frame);
+        case Document::InBackForwardCache:
+            RELEASE_LOG_IF_ALLOWED("load: Already in back/forward cache (frame = %p)", &frame);
             failBeforeStarting();
             return;
         }
@@ -244,7 +263,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
         if (!lastModified.isEmpty() || !eTag.isEmpty()) {
             ASSERT(cachedResourceLoader.cachePolicy(type(), url()) != CachePolicyReload);
             if (cachedResourceLoader.cachePolicy(type(), url()) == CachePolicyRevalidate)
-                m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
+                m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
             if (!lastModified.isEmpty())
                 m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::IfModifiedSince, lastModified);
             if (!eTag.isEmpty())
@@ -309,7 +328,7 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
             failBeforeStarting();
             return;
         }
-        m_status = Pending;
+        setStatus(Pending);
     });
 }
 
@@ -396,7 +415,7 @@ void CachedResource::cancelLoad()
 void CachedResource::finish()
 {
     if (!errorOccurred())
-        m_status = Cached;
+        setStatus(Cached);
 }
 
 void CachedResource::setCrossOrigin()
@@ -454,7 +473,7 @@ Seconds CachedResource::freshnessLifetime(const ResourceResponse& response) cons
             // Don't cache non-HTTP main resources since we can't check for freshness.
             // FIXME: We should not cache subresources either, but when we tried this
             // it caused performance and flakiness issues in our test infrastructure.
-            if (m_type == Type::MainResource || SchemeRegistry::shouldAlwaysRevalidateURLScheme(protocol.toStringWithoutCopying()))
+            if (m_type == Type::MainResource || LegacySchemeRegistry::shouldAlwaysRevalidateURLScheme(protocol.toStringWithoutCopying()))
                 return 0_us;
         }
 
@@ -478,7 +497,7 @@ void CachedResource::setResponse(const ResourceResponse& response)
 {
     ASSERT(m_response.type() == ResourceResponse::Type::Default);
     m_response = response;
-    m_varyingHeaderValues = collectVaryingRequestHeaders(cookieJar(), m_resourceRequest, m_response, sessionID());
+    m_varyingHeaderValues = collectVaryingRequestHeaders(cookieJar(), m_resourceRequest, m_response);
 
 #if ENABLE(SERVICE_WORKER)
     if (m_response.source() == ResourceResponse::Source::ServiceWorker) {
@@ -860,25 +879,13 @@ bool CachedResource::varyHeaderValuesMatch(const ResourceRequest& request)
     if (m_varyingHeaderValues.isEmpty())
         return true;
 
-    return verifyVaryingRequestHeaders(cookieJar(), m_varyingHeaderValues, request, sessionID());
+    return verifyVaryingRequestHeaders(cookieJar(), m_varyingHeaderValues, request);
 }
 
 unsigned CachedResource::overheadSize() const
 {
     static const int kAverageClientsHashMapSize = 384;
     return sizeof(CachedResource) + m_response.memoryUsage() + kAverageClientsHashMapSize + m_resourceRequest.url().string().length() * 2;
-}
-
-bool CachedResource::areAllClientsXMLHttpRequests() const
-{
-    if (type() != Type::RawResource)
-        return false;
-
-    for (auto& client : m_clients) {
-        if (!client.key->isXMLHttpRequest())
-            return false;
-    }
-    return true;
 }
 
 void CachedResource::setLoadPriority(const Optional<ResourceLoadPriority>& loadPriority)
@@ -927,6 +934,16 @@ void CachedResource::tryReplaceEncodedData(SharedBuffer& newBuffer)
     m_data->clear();
     m_data->append(newBuffer);
     didReplaceSharedBufferContents();
+}
+
+#endif
+
+#if USE(QUICK_LOOK)
+
+void CachedResource::previewResponseReceived(const ResourceResponse& response)
+{
+    ASSERT(response.url().protocolIs(QLPreviewProtocol));
+    CachedResource::responseReceived(response);
 }
 
 #endif

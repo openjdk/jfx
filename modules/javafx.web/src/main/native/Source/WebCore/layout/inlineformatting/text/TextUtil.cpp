@@ -28,53 +28,64 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "BreakLines.h"
 #include "FontCascade.h"
+#include "InlineTextItem.h"
+#include "RenderBox.h"
 #include "RenderStyle.h"
 
 namespace WebCore {
 namespace Layout {
 
-Optional<unsigned> TextUtil::hyphenPositionBefore(const InlineItem&, unsigned, unsigned)
+InlineLayoutUnit TextUtil::width(const InlineTextItem& inlineTextItem, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
 {
-    return WTF::nullopt;
+    // Fast path for collapsed whitespace.
+    if (inlineTextItem.isCollapsible()) {
+        auto font = inlineTextItem.style().fontCascade();
+        return font.spaceWidth() + font.wordSpacing();
+    }
+    return TextUtil::width(inlineTextItem.layoutBox(), from, to, contentLogicalLeft);
 }
 
-LayoutUnit TextUtil::width(const Box& inlineBox, unsigned from, unsigned to, LayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::width(const Box& inlineBox, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
 {
     auto& style = inlineBox.style();
     auto& font = style.fontCascade();
     if (!font.size() || from == to)
         return 0;
 
-    auto text = inlineBox.textContent();
+    auto& textContext = *inlineBox.textContext();
+    auto& text = textContext.content;
     ASSERT(to <= text.length());
-
-    if (font.isFixedPitch())
-        return fixedPitchWidth(text, style, from, to, contentLogicalLeft);
-
     auto hasKerningOrLigatures = font.enableKerning() || font.requiresShaping();
     auto measureWithEndSpace = hasKerningOrLigatures && to < text.length() && text[to] == ' ';
     if (measureWithEndSpace)
         ++to;
-    LayoutUnit width;
-    auto tabWidth = style.collapseWhiteSpace() ? TabSize(0) : style.tabSize();
-
-    WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
-    if (tabWidth)
-        run.setTabSize(true, tabWidth);
-    width = font.width(run);
+    float width = 0;
+    if (textContext.canUseSimplifiedContentMeasuring) {
+        if (font.isFixedPitch())
+            width = fixedPitchWidth(text, style, from, to, contentLogicalLeft);
+        else
+            width = font.widthForSimpleText(StringView(text).substring(from, to - from));
+    } else {
+        auto tabWidth = style.collapseWhiteSpace() ? TabSize(0) : style.tabSize();
+        WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
+        if (tabWidth)
+            run.setTabSize(true, tabWidth);
+        width = font.width(run);
+    }
 
     if (measureWithEndSpace)
         width -= (font.spaceWidth() + font.wordSpacing());
 
-    return std::max<LayoutUnit>(0, width);
+    return std::max<InlineLayoutUnit>(0 , InlineLayoutUnit(width));
 }
 
-LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, unsigned from, unsigned to, LayoutUnit contentLogicalLeft)
+InlineLayoutUnit TextUtil::fixedPitchWidth(const StringView& text, const RenderStyle& style, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft)
 {
     auto& font = style.fontCascade();
     auto monospaceCharacterWidth = font.spaceWidth();
-    LayoutUnit width;
+    float width = 0;
     for (auto i = from; i < to; ++i) {
         auto character = text[i];
         if (character >= ' ' || character == '\n')
@@ -86,28 +97,20 @@ LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, unsi
             width += font.wordSpacing();
     }
 
-    return width;
+    return std::max<InlineLayoutUnit>(0, InlineLayoutUnit(width));
 }
 
-bool TextUtil::isTrimmableContent(const InlineItem& inlineItem)
+TextUtil::SplitData TextUtil::split(const Box& inlineBox, unsigned startPosition, unsigned length, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft)
 {
-    if (!is<InlineTextItem>(inlineItem))
-        return false;
-    auto& inlineTextItem = downcast<InlineTextItem>(inlineItem);
-    return inlineTextItem.isWhitespace() && inlineTextItem.style().collapseWhiteSpace();
-}
-
-TextUtil::SplitData TextUtil::split(const Box& inlineBox, unsigned startPosition, unsigned length, LayoutUnit textWidth, LayoutUnit availableWidth, LayoutUnit contentLogicalLeft)
-{
-    // FIXME This should take hypens into account.
     ASSERT(availableWidth >= 0);
     auto left = startPosition;
     // Pathological case of (extremely)long string and narrow lines.
     // Adjust the range so that we can pick a reasonable midpoint.
-    LayoutUnit averageCharacterWidth = textWidth / length;
-    auto right = std::min<unsigned>(left + (2 * availableWidth / averageCharacterWidth).toUnsigned(), (startPosition + length - 1));
+    InlineLayoutUnit averageCharacterWidth = textWidth / length;
+    unsigned offset = toLayoutUnit(2 * availableWidth / averageCharacterWidth).toUnsigned();
+    auto right = std::min<unsigned>(left + offset, (startPosition + length - 1));
     // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
-    LayoutUnit leftSideWidth = 0;
+    InlineLayoutUnit leftSideWidth = 0;
     while (left < right) {
         auto middle = (left + right) / 2;
         auto width = TextUtil::width(inlineBox, startPosition, middle + 1, contentLogicalLeft);
@@ -123,6 +126,28 @@ TextUtil::SplitData TextUtil::split(const Box& inlineBox, unsigned startPosition
         }
     }
     return { startPosition, right - startPosition, leftSideWidth };
+}
+
+unsigned TextUtil::findNextBreakablePosition(LazyLineBreakIterator& lineBreakIterator, unsigned startPosition, const RenderStyle& style)
+{
+    auto keepAllWordsForCJK = style.wordBreak() == WordBreak::KeepAll;
+    auto breakNBSP = style.autoWrap() && style.nbspMode() == NBSPMode::Space;
+
+    if (keepAllWordsForCJK) {
+        if (breakNBSP)
+            return nextBreakablePositionKeepingAllWords(lineBreakIterator, startPosition);
+        return nextBreakablePositionKeepingAllWordsIgnoringNBSP(lineBreakIterator, startPosition);
+    }
+
+    if (lineBreakIterator.mode() == LineBreakIteratorMode::Default) {
+        if (breakNBSP)
+            return WebCore::nextBreakablePosition(lineBreakIterator, startPosition);
+        return nextBreakablePositionIgnoringNBSP(lineBreakIterator, startPosition);
+    }
+
+    if (breakNBSP)
+        return nextBreakablePositionWithoutShortcut(lineBreakIterator, startPosition);
+    return nextBreakablePositionIgnoringNBSPWithoutShortcut(lineBreakIterator, startPosition);
 }
 
 }

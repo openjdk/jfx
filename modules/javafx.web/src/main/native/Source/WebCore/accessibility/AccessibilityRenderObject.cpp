@@ -133,9 +133,9 @@ Ref<AccessibilityRenderObject> AccessibilityRenderObject::create(RenderObject* r
     return adoptRef(*new AccessibilityRenderObject(renderer));
 }
 
-void AccessibilityRenderObject::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
+void AccessibilityRenderObject::detachRemoteParts(AccessibilityDetachmentType detachmentType)
 {
-    AccessibilityNodeObject::detach(detachmentType, cache);
+    AccessibilityNodeObject::detachRemoteParts(detachmentType);
 
     detachRemoteSVGRoot();
 
@@ -976,7 +976,7 @@ OptionSet<SpeakAs> AccessibilityRenderObject::speakAsProperty() const
     return m_renderer->style().speakAs();
 }
 
-void AccessibilityRenderObject::addRadioButtonGroupChildren(AccessibilityObject* parent, AccessibilityChildrenVector& linkedUIElements) const
+void AccessibilityRenderObject::addRadioButtonGroupChildren(AXCoreObject* parent, AccessibilityChildrenVector& linkedUIElements) const
 {
     for (const auto& child : parent->children()) {
         if (child->roleValue() == AccessibilityRole::RadioButton)
@@ -995,7 +995,7 @@ void AccessibilityRenderObject::addRadioButtonGroupMembers(AccessibilityChildren
     if (is<HTMLInputElement>(node)) {
         HTMLInputElement& input = downcast<HTMLInputElement>(*node);
         for (auto& radioSibling : input.radioButtonGroup()) {
-            if (AccessibilityObject* object = axObjectCache()->getOrCreate(radioSibling))
+            if (AccessibilityObject* object = axObjectCache()->getOrCreate(radioSibling.ptr()))
                 linkedUIElements.append(object);
         }
     } else {
@@ -1033,7 +1033,7 @@ bool AccessibilityRenderObject::hasTextAlternative() const
 bool AccessibilityRenderObject::hasPopup() const
 {
     // Return true if this has the aria-haspopup attribute, or if it has an ancestor of type link with the aria-haspopup attribute.
-    return AccessibilityObject::matchedParent(*this, true, [this] (const AccessibilityObject& object) {
+    return Accessibility::findAncestor<AccessibilityObject>(*this, true, [this] (const AccessibilityObject& object) {
         return (this == &object) ? !equalLettersIgnoringASCIICase(object.popupValue(), "false")
             : object.isLink() && !equalLettersIgnoringASCIICase(object.popupValue(), "false");
     });
@@ -1281,7 +1281,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
 
     if (is<RenderText>(*m_renderer)) {
         // static text beneath MenuItems and MenuButtons are just reported along with the menu item, so it's ignored on an individual level
-        AccessibilityObject* parent = parentObjectUnignored();
+        AXCoreObject* parent = parentObjectUnignored();
         if (parent && (parent->isMenuItem() || parent->ariaRoleAttribute() == AccessibilityRole::MenuButton))
             return true;
         auto& renderText = downcast<RenderText>(*m_renderer);
@@ -1433,7 +1433,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
     }
 
     if (m_renderer->isListMarker()) {
-        AccessibilityObject* parent = parentObjectUnignored();
+        AXCoreObject* parent = parentObjectUnignored();
         return parent && !parent->isListItem();
     }
 
@@ -1570,7 +1570,7 @@ String AccessibilityRenderObject::selectedText() const
     return doAXStringForRange(documentBasedSelectedTextRange());
 }
 
-const AtomString& AccessibilityRenderObject::accessKey() const
+String AccessibilityRenderObject::accessKey() const
 {
     Node* node = m_renderer->node();
     if (!is<Element>(node))
@@ -2370,7 +2370,7 @@ IntRect AccessibilityRenderObject::doAXBoundsForRangeUsingCharacterOffset(const 
     return IntRect();
 }
 
-AccessibilityObject* AccessibilityRenderObject::accessibilityImageMapHitTest(HTMLAreaElement* area, const IntPoint& point) const
+AXCoreObject* AccessibilityRenderObject::accessibilityImageMapHitTest(HTMLAreaElement* area, const IntPoint& point) const
 {
     if (!area)
         return nullptr;
@@ -2393,7 +2393,7 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityImageMapHitTest(HTM
     return nullptr;
 }
 
-AccessibilityObjectInterface* AccessibilityRenderObject::remoteSVGElementHitTest(const IntPoint& point) const
+AXCoreObject* AccessibilityRenderObject::remoteSVGElementHitTest(const IntPoint& point) const
 {
     AccessibilityObject* remote = remoteSVGRootElement(Create);
     if (!remote)
@@ -2403,7 +2403,7 @@ AccessibilityObjectInterface* AccessibilityRenderObject::remoteSVGElementHitTest
     return remote->accessibilityHitTest(IntPoint(offset));
 }
 
-AccessibilityObjectInterface* AccessibilityRenderObject::elementAccessibilityHitTest(const IntPoint& point) const
+AXCoreObject* AccessibilityRenderObject::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (isSVGImage())
         return remoteSVGElementHitTest(point);
@@ -2417,7 +2417,7 @@ static bool shouldUseShadowHostForHitTesting(Node* shadowHost)
     return shadowHost && !shadowHost->hasTagName(videoTag);
 }
 
-AccessibilityObjectInterface* AccessibilityRenderObject::accessibilityHitTest(const IntPoint& point) const
+AXCoreObject* AccessibilityRenderObject::accessibilityHitTest(const IntPoint& point) const
 {
     if (!m_renderer || !m_renderer->hasLayer())
         return nullptr;
@@ -2450,7 +2450,7 @@ AccessibilityObjectInterface* AccessibilityRenderObject::accessibilityHitTest(co
     if (!obj)
         return nullptr;
 
-    AccessibilityObject* result = obj->document().axObjectCache()->getOrCreate(obj);
+    AXCoreObject* result = obj->document().axObjectCache()->getOrCreate(obj);
     result->updateChildrenIfNecessary();
 
     // Allow the element to perform any hit-testing it might need to do to reach non-render children.
@@ -2458,7 +2458,7 @@ AccessibilityObjectInterface* AccessibilityRenderObject::accessibilityHitTest(co
 
     if (result && result->accessibilityIsIgnored()) {
         // If this element is the label of a control, a hit test should return the control.
-        AccessibilityObject* controlObject = result->correspondingControlForLabelElement();
+        AXCoreObject* controlObject = result->correspondingControlForLabelElement();
         if (controlObject && !controlObject->exposesTitleUIElement())
             return controlObject;
 
@@ -3136,7 +3136,7 @@ void AccessibilityRenderObject::addImageMapChildren()
         if (!areaObject.accessibilityIsIgnored())
             m_children.append(&areaObject);
         else
-            axObjectCache()->remove(areaObject.axObjectID());
+            axObjectCache()->remove(areaObject.objectID());
     }
 }
 
@@ -3308,7 +3308,7 @@ void AccessibilityRenderObject::addHiddenChildren()
     for (Node* child = node->firstChild(); child; child = child->nextSibling()) {
         if (child->renderer()) {
             // Find out where the last render sibling is located within m_children.
-            AccessibilityObject* childObject = axObjectCache()->get(child->renderer());
+            AXCoreObject* childObject = axObjectCache()->get(child->renderer());
             if (childObject && childObject->accessibilityIsIgnored()) {
                 auto& children = childObject->children();
                 if (children.size())
@@ -3525,7 +3525,7 @@ void AccessibilityRenderObject::selectedChildren(AccessibilityChildrenVector& re
         ariaSelectedRows(result);
         return;
     case AccessibilityRole::TabList:
-        if (AccessibilityObject* selectedTab = selectedTabItem())
+        if (AXCoreObject* selectedTab = selectedTabItem())
             result.append(selectedTab);
         return;
     case AccessibilityRole::List:
@@ -3563,18 +3563,17 @@ void AccessibilityRenderObject::visibleChildren(AccessibilityChildrenVector& res
 {
     ASSERT(result.isEmpty());
 
-    // only listboxes are asked for their visible children.
-    if (ariaRoleAttribute() != AccessibilityRole::ListBox) {
-        // native list boxes would be AccessibilityListBoxes, so only check for aria list boxes
-        ASSERT_NOT_REACHED();
+    // Only listboxes are asked for their visible children.
+    // Native list boxes would be AccessibilityListBoxes, so only check for aria list boxes.
+    if (ariaRoleAttribute() != AccessibilityRole::ListBox)
         return;
-    }
     return ariaListboxVisibleChildren(result);
 }
 
 void AccessibilityRenderObject::tabChildren(AccessibilityChildrenVector& result)
 {
-    ASSERT(roleValue() == AccessibilityRole::TabList);
+    if (roleValue() != AccessibilityRole::TabList)
+        return;
 
     for (const auto& child : children()) {
         if (child->isTabItem())
@@ -3582,7 +3581,7 @@ void AccessibilityRenderObject::tabChildren(AccessibilityChildrenVector& result)
     }
 }
 
-const String& AccessibilityRenderObject::actionVerb() const
+String AccessibilityRenderObject::actionVerb() const
 {
 #if !PLATFORM(IOS_FAMILY)
     // FIXME: Need to add verbs for select elements.

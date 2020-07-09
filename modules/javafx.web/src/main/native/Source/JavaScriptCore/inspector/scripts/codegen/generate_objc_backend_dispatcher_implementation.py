@@ -98,12 +98,16 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
             'domainName': domain.domain_name,
             'commandName': command.command_name,
             'parameters': ', '.join(parameters),
+            'respondsToSelector': self._generate_responds_to_selector_for_command(domain, command),
             'successCallback': self._generate_success_block_for_command(domain, command),
             'conversions': self._generate_conversions_for_command(domain, command),
             'invocation': self._generate_invocation_for_command(domain, command),
         }
 
         return self.wrap_with_guard_for_domain(domain, Template(ObjCTemplates.BackendDispatcherHeaderDomainHandlerImplementation).substitute(None, **command_args))
+
+    def _generate_responds_to_selector_for_command(self, domain, command):
+        return '[m_delegate respondsToSelector:@selector(%sWithErrorCallback:successCallback:%s)]' % (command.command_name, ''.join(map(lambda parameter: '%s:' % parameter.parameter_name, command.call_parameters)))
 
     def _generate_success_block_for_command(self, domain, command):
         lines = []
@@ -205,13 +209,14 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
             in_param_name = 'in_%s' % parameter.parameter_name
             objc_in_param_expression = 'o_%s' % in_param_name
             if not parameter.is_optional:
-                # FIXME: we don't handle optional enum values in commands here because it isn't used anywhere yet.
-                # We'd need to change the delegate's signature to take Optional for optional enum values.
                 if isinstance(parameter.type, EnumType):
                     objc_in_param_expression = '%s.value()' % objc_in_param_expression
 
                 pairs.append('%s:%s' % (parameter.parameter_name, objc_in_param_expression))
             else:
+                if isinstance(parameter.type, EnumType):
+                    objc_in_param_expression = '%s.value()' % objc_in_param_expression
+
                 optional_expression = '(%s ? &%s : nil)' % (in_param_name, objc_in_param_expression)
                 pairs.append('%s:%s' % (parameter.parameter_name, optional_expression))
         return '    [m_delegate %s%s];' % (command.command_name, ' '.join(pairs))

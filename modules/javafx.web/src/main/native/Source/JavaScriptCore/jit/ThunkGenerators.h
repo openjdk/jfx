@@ -37,7 +37,6 @@ class VM;
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromCallSlowPathGenerator(VM&);
 
-MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunk(VM*, CallLinkInfo&, CodeSpecializationKind);
 MacroAssemblerCodeRef<JITThunkPtrTag> linkCallThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> linkPolymorphicCallThunkGenerator(VM&);
 
@@ -55,6 +54,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> stringGetByValGenerator(VM&);
 
 MacroAssemblerCodeRef<JITThunkPtrTag> charCodeAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> charAtThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> stringPrototypeCodePointAtThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> clz32ThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> fromCharCodeThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> absThunkGenerator(VM&);
@@ -68,6 +68,6 @@ MacroAssemblerCodeRef<JITThunkPtrTag> imulThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> randomThunkGenerator(VM&);
 MacroAssemblerCodeRef<JITThunkPtrTag> truncThunkGenerator(VM&);
 
-MacroAssemblerCodeRef<JITThunkPtrTag> boundThisNoArgsFunctionCallGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> boundFunctionCallGenerator(VM&);
 }
 #endif // ENABLE(JIT)

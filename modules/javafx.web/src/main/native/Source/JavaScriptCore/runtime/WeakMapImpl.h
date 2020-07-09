@@ -192,13 +192,14 @@ public:
 };
 
 template <typename WeakMapBucketType>
-class WeakMapImpl : public JSDestructibleObject {
-    using Base = JSDestructibleObject;
+class WeakMapImpl : public JSNonFinalObject {
+    using Base = JSNonFinalObject;
     using WeakMapBufferType = WeakMapBuffer<WeakMapBucketType>;
 
 public:
     using BucketType = WeakMapBucketType;
 
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
     static void visitChildren(JSCell*, SlotVisitor&);
@@ -305,7 +306,7 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
     {
-        if (isWeakMap())
+        if constexpr (isWeakMap())
             return vm.weakMapSpace<mode>();
         return vm.weakSetSpace<mode>();
     }
@@ -443,7 +444,7 @@ private:
 
     ALWAYS_INLINE void checkConsistency() const
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             uint32_t size = 0;
             auto* buffer = this->buffer();
             for (uint32_t index = 0; index < m_capacity; ++index) {
@@ -468,7 +469,7 @@ private:
 
     ALWAYS_INLINE void assertBufferIsEmpty() const
     {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             for (unsigned i = 0; i < m_capacity; i++)
                 ASSERT((buffer() + i)->isEmpty());
         }

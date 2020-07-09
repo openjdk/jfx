@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -63,7 +63,6 @@
 #include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptState.h"
 #include "ScriptableDocumentParser.h"
 #include "SubresourceLoader.h"
@@ -77,9 +76,12 @@
 #include <JavaScriptCore/IdentifiersFactory.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/JSONValues.h>
 #include <wtf/Lock.h>
 #include <wtf/RefPtr.h>
@@ -87,6 +89,7 @@
 #include <wtf/persistence/PersistentEncoder.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/WTFString.h>
 
 typedef Inspector::NetworkBackendDispatcherHandler::LoadResourceCallback LoadResourceCallback;
 
@@ -104,7 +107,7 @@ public:
     {
     }
 
-    virtual ~InspectorThreadableLoaderClient() = default;
+    ~InspectorThreadableLoaderClient() override = default;
 
     void didReceiveResponse(unsigned long, const ResourceResponse& response) override
     {
@@ -298,6 +301,7 @@ static Ref<Inspector::Protocol::Network::Request> buildObjectForResourceRequest(
 static Inspector::Protocol::Network::Response::Source responseSource(ResourceResponse::Source source)
 {
     switch (source) {
+    case ResourceResponse::Source::DOMCache:
     case ResourceResponse::Source::ApplicationCache:
         // FIXME: Add support for ApplicationCache in inspector.
     case ResourceResponse::Source::Unknown:
@@ -312,6 +316,8 @@ static Inspector::Protocol::Network::Response::Source responseSource(ResourceRes
         return Inspector::Protocol::Network::Response::Source::DiskCache;
     case ResourceResponse::Source::ServiceWorker:
         return Inspector::Protocol::Network::Response::Source::ServiceWorker;
+    case ResourceResponse::Source::InspectorOverride:
+        return Inspector::Protocol::Network::Response::Source::InspectorOverride;
     }
 
     ASSERT_NOT_REACHED();
@@ -827,11 +833,40 @@ void InspectorNetworkAgent::enable()
 void InspectorNetworkAgent::disable(ErrorString&)
 {
     m_enabled = false;
+    m_interceptionEnabled = false;
+    m_intercepts.clear();
     m_instrumentingAgents.setInspectorNetworkAgent(nullptr);
     m_resourcesData->clear();
     m_extraRequestHeaders.clear();
 
+    continuePendingResponses();
+
     setResourceCachingDisabled(false);
+}
+
+bool InspectorNetworkAgent::shouldIntercept(URL url)
+{
+    url.removeFragmentIdentifier();
+
+    String urlString = url.string();
+    if (urlString.isEmpty())
+        return false;
+
+    for (auto& intercept : m_intercepts) {
+        auto searchStringType = intercept.isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ExactString;
+        auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(intercept.url, intercept.caseSensitive, searchStringType);
+        if (regex.match(urlString) != -1)
+            return true;
+    }
+
+    return false;
+}
+
+void InspectorNetworkAgent::continuePendingResponses()
+{
+    for (auto& pendingInterceptResponse : m_pendingInterceptResponses.values())
+        pendingInterceptResponse->respondWithOriginalResponse();
+    m_pendingInterceptResponses.clear();
 }
 
 void InspectorNetworkAgent::setExtraHTTPHeaders(ErrorString&, const JSON::Object& headers)
@@ -950,7 +985,7 @@ WebSocket* InspectorNetworkAgent::webSocketForRequestId(const String& requestId)
     return nullptr;
 }
 
-static JSC::JSValue webSocketAsScriptValue(JSC::ExecState& state, WebSocket* webSocket)
+static JSC::JSValue webSocketAsScriptValue(JSC::JSGlobalObject& state, WebSocket* webSocket)
 {
     JSC::JSLockHolder lock(&state);
     return toJS(&state, deprecatedGlobalObjectForPrototype(&state), webSocket);
@@ -981,6 +1016,152 @@ void InspectorNetworkAgent::resolveWebSocket(ErrorString& errorString, const Str
 
     String objectGroupName = objectGroup ? *objectGroup : String();
     result = injectedScript.wrapObject(webSocketAsScriptValue(state, webSocket), objectGroupName);
+}
+
+void InspectorNetworkAgent::setInterceptionEnabled(ErrorString& errorString, bool enabled)
+{
+    if (m_interceptionEnabled == enabled) {
+        errorString = m_interceptionEnabled ? "Interception already enabled"_s : "Interception already disabled"_s;
+        return;
+    }
+
+    m_interceptionEnabled = enabled;
+
+    if (!m_interceptionEnabled)
+        continuePendingResponses();
+}
+
+void InspectorNetworkAgent::addInterception(ErrorString& errorString, const String& url, const bool* optionalCaseSensitive, const bool* optionalIsRegex, const String* networkStageString)
+{
+    if (networkStageString) {
+        auto networkStage = Inspector::Protocol::InspectorHelpers::parseEnumValueFromString<Inspector::Protocol::Network::NetworkStage>(*networkStageString);
+        if (!networkStage) {
+            errorString = makeString("Unknown networkStage: "_s, *networkStageString);
+            return;
+        }
+    }
+
+    Intercept intercept;
+    intercept.url = url;
+    if (optionalCaseSensitive)
+        intercept.caseSensitive = *optionalCaseSensitive;
+    if (optionalIsRegex)
+        intercept.isRegex = *optionalIsRegex;
+
+    // FIXME: Support intercepting requests.
+
+    if (!m_intercepts.appendIfNotContains(intercept))
+        errorString = "Intercept for given url and given isRegex already exists"_s;
+}
+
+void InspectorNetworkAgent::removeInterception(ErrorString& errorString, const String& url, const bool* optionalCaseSensitive, const bool* optionalIsRegex, const String* networkStageString)
+{
+    if (networkStageString) {
+        auto networkStage = Inspector::Protocol::InspectorHelpers::parseEnumValueFromString<Inspector::Protocol::Network::NetworkStage>(*networkStageString);
+        if (!networkStage) {
+            errorString = makeString("Unknown networkStage: "_s, *networkStageString);
+            return;
+        }
+    }
+
+    Intercept intercept;
+    intercept.url = url;
+    if (optionalCaseSensitive)
+        intercept.caseSensitive = *optionalCaseSensitive;
+    if (optionalIsRegex)
+        intercept.isRegex = *optionalIsRegex;
+
+    // FIXME: Support intercepting requests.
+
+    if (!m_intercepts.removeAll(intercept))
+        errorString = "Missing intercept for given url and given isRegex"_s;
+}
+
+bool InspectorNetworkAgent::willInterceptRequest(const ResourceRequest& request)
+{
+    if (!m_interceptionEnabled)
+        return false;
+
+    return shouldIntercept(request.url());
+}
+
+bool InspectorNetworkAgent::shouldInterceptResponse(const ResourceResponse& response)
+{
+    if (!m_interceptionEnabled)
+        return false;
+
+    return shouldIntercept(response.url());
+}
+
+void InspectorNetworkAgent::interceptResponse(const ResourceResponse& response, unsigned long identifier, CompletionHandler<void(const ResourceResponse&, RefPtr<SharedBuffer>)>&& handler)
+{
+    ASSERT(m_enabled);
+    ASSERT(m_interceptionEnabled);
+
+    String requestId = IdentifiersFactory::requestId(identifier);
+    if (m_pendingInterceptResponses.contains(requestId)) {
+        ASSERT_NOT_REACHED();
+        handler(response, nullptr);
+        return;
+    }
+
+    m_pendingInterceptResponses.set(requestId, makeUnique<PendingInterceptResponse>(response, WTFMove(handler)));
+
+    m_frontendDispatcher->responseIntercepted(requestId, buildObjectForResourceResponse(response, nullptr));
+}
+
+void InspectorNetworkAgent::interceptContinue(ErrorString& errorString, const String& requestId)
+{
+    auto pendingInterceptResponse = m_pendingInterceptResponses.take(requestId);
+    if (!pendingInterceptResponse) {
+        errorString = "Missing pending intercept response for given requestId"_s;
+        return;
+    }
+
+    pendingInterceptResponse->respondWithOriginalResponse();
+}
+
+void InspectorNetworkAgent::interceptWithResponse(ErrorString& errorString, const String& requestId, const String& content, bool base64Encoded, const String* mimeType, const int* status, const String* statusText, const JSON::Object* headers)
+{
+    auto pendingInterceptResponse = m_pendingInterceptResponses.take(requestId);
+    if (!pendingInterceptResponse) {
+        errorString = "Missing pending intercept response for given requestId"_s;
+        return;
+    }
+
+    ResourceResponse overrideResponse(pendingInterceptResponse->originalResponse());
+    overrideResponse.setSource(ResourceResponse::Source::InspectorOverride);
+
+    if (status)
+        overrideResponse.setHTTPStatusCode(*status);
+    if (statusText)
+        overrideResponse.setHTTPStatusText(*statusText);
+    if (mimeType)
+        overrideResponse.setMimeType(*mimeType);
+    if (headers) {
+        HTTPHeaderMap explicitHeaders;
+        for (auto& header : *headers) {
+            String headerValue;
+            if (header.value->asString(headerValue))
+                explicitHeaders.add(header.key, headerValue);
+        }
+        overrideResponse.setHTTPHeaderFields(WTFMove(explicitHeaders));
+        overrideResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, overrideResponse.mimeType());
+    }
+
+    RefPtr<SharedBuffer> overrideData;
+    if (base64Encoded) {
+        Vector<uint8_t> buffer;
+        if (!base64Decode(content, buffer)) {
+            errorString = "Unable to decode given content"_s;
+            pendingInterceptResponse->respondWithOriginalResponse();
+            return;
+        }
+        overrideData = SharedBuffer::create(WTFMove(buffer));
+    } else
+        overrideData = SharedBuffer::create(content.utf8().data(), content.utf8().length());
+
+    pendingInterceptResponse->respond(overrideResponse, overrideData);
 }
 
 bool InspectorNetworkAgent::shouldTreatAsText(const String& mimeType)

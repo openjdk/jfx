@@ -28,6 +28,7 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
 
+#include "GenericTaskQueue.h"
 #include "MediaPlaybackTargetContext.h"
 #include "MediaPlaybackTargetPicker.h"
 #include <wtf/text/WTFString.h>
@@ -48,15 +49,14 @@ public:
     void invalidatePlaybackTargets() override;
 
     void setState(const String&, MediaPlaybackTargetContext::State);
+    void dismissPopup();
 
 private:
     bool externalOutputDeviceAvailable() override;
     Ref<MediaPlaybackTarget> playbackTarget() override;
 
-    void timerFired();
-
     String m_deviceName;
-    RunLoop::Timer<MediaPlaybackTargetPickerMock> m_timer;
+    GenericTaskQueue<Timer> m_taskQueue;
     MediaPlaybackTargetContext::State m_state { MediaPlaybackTargetContext::Unknown };
     bool m_showingMenu { false };
 };

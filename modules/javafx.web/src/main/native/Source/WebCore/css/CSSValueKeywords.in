@@ -433,7 +433,6 @@ katakana-iroha
 inline
 block
 list-item
-compact
 inline-block
 table
 inline-table
@@ -1013,6 +1012,7 @@ visibleStroke
 painted
 fill
 stroke
+bounding-box
 //all
 //none
 
@@ -1297,6 +1297,8 @@ translate3d
 // transform-box
 // border-box
 // view-box
+// stroke-box
+// content-box
 fill-box
 
 // motion path
@@ -1306,9 +1308,11 @@ calc
 -webkit-calc
 min
 max
+clamp
+
+from-image
 
 #if defined(ENABLE_CSS_IMAGE_RESOLUTION) && ENABLE_CSS_IMAGE_RESOLUTION
-from-image
 snap
 #endif
 
@@ -1384,6 +1388,10 @@ pan-y
 pinch-zoom
 #endif
 
+// scroll-behavior
+// auto
+smooth
+
 // hanging-punctuation
 allow-end
 first
@@ -1438,3 +1446,7 @@ browser
 
 // text-decoration-thickness, text-underline-offset
 from-font
+
+// dynamic-range
+standard
+high

@@ -39,7 +39,9 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(CanvasCaptureMediaStreamTrack);
 Ref<CanvasCaptureMediaStreamTrack> CanvasCaptureMediaStreamTrack::create(Document& document, Ref<HTMLCanvasElement>&& canvas, Optional<double>&& frameRequestRate)
 {
     auto source = CanvasCaptureMediaStreamTrack::Source::create(canvas.get(), WTFMove(frameRequestRate));
-    return adoptRef(*new CanvasCaptureMediaStreamTrack(document, WTFMove(canvas), WTFMove(source)));
+    auto track = adoptRef(*new CanvasCaptureMediaStreamTrack(document, WTFMove(canvas), WTFMove(source)));
+    track->suspendIfNeeded();
+    return track;
 }
 
 CanvasCaptureMediaStreamTrack::CanvasCaptureMediaStreamTrack(Document& document, Ref<HTMLCanvasElement>&& canvas, Ref<CanvasCaptureMediaStreamTrack::Source>&& source)
@@ -65,6 +67,11 @@ Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source
         source->captureCanvas();
     });
     return source;
+}
+
+const char* CanvasCaptureMediaStreamTrack::activeDOMObjectName() const
+{
+    return "CanvasCaptureMediaStreamTrack";
 }
 
 // FIXME: Give source id and name
@@ -193,7 +200,9 @@ RefPtr<MediaStreamTrack> CanvasCaptureMediaStreamTrack::clone()
     if (!scriptExecutionContext())
         return nullptr;
 
-    return adoptRef(*new CanvasCaptureMediaStreamTrack(downcast<Document>(*scriptExecutionContext()), m_canvas.copyRef(), m_private->clone()));
+    auto track = adoptRef(*new CanvasCaptureMediaStreamTrack(downcast<Document>(*scriptExecutionContext()), m_canvas.copyRef(), m_private->clone()));
+    track->suspendIfNeeded();
+    return track;
 }
 
 }

@@ -134,8 +134,8 @@ list(APPEND WebKitLegacy_SOURCES
 )
 
 # for DRT
-list(APPEND WebKitLegacy_LIBRARIES
-    PRIVATE WebCoreTestSupport${DEBUG_SUFFIX}
+list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
+    WebCoreTestSupport${DEBUG_SUFFIX}
     ${ICU_I18N_LIBRARIES}
     ${ICU_DATA_LIBRARIES}
     ${ICU_LIBRARIES}

@@ -37,15 +37,14 @@ public:
     static Ref<AccessibilityList> create(RenderObject*);
     virtual ~AccessibilityList();
 
-    bool isUnorderedList() const;
-    bool isOrderedList() const;
-    bool isDescriptionList() const;
-
     AccessibilityRole roleValue() const override;
-
 private:
     explicit AccessibilityList(RenderObject*);
     bool isList() const override { return true; }
+    bool isUnorderedList() const override;
+    bool isOrderedList() const override;
+    bool isDescriptionList() const override;
+
     bool computeAccessibilityIsIgnored() const override;
     AccessibilityRole determineAccessibilityRole() override;
     bool childHasPseudoVisibleListItemMarkers(RenderObject*);

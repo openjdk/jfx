@@ -27,6 +27,7 @@
 
 #if ENABLE(JIT)
 
+#include "BytecodeIndex.h"
 #include "MacroAssembler.h"
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
@@ -67,7 +68,7 @@ private:
     MacroAssembler::Label firstSlowLabel();
 
     struct DumpedOp {
-        unsigned index;
+        BytecodeIndex bytecodeIndex;
         CString disassembly;
     };
     Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);

@@ -36,12 +36,14 @@
 
 namespace WebCore {
 
+using namespace JSC;
+
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMObject);
 
 JSDOMObject::JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
     : Base(globalObject.vm(), structure)
 {
-    ASSERT(scriptExecutionContext() || globalObject.classInfo() == JSRemoteDOMWindow::info());
+    ASSERT(scriptExecutionContext() || globalObject.classInfo(globalObject.vm()) == JSRemoteDOMWindow::info());
 }
 
 JSC::CompleteSubspace* outputConstraintSubspaceFor(JSC::VM& vm)
@@ -49,22 +51,17 @@ JSC::CompleteSubspace* outputConstraintSubspaceFor(JSC::VM& vm)
     return &static_cast<JSVMClientData*>(vm.clientData)->outputConstraintSpace();
 }
 
-JSC::CompleteSubspace* globalObjectOutputConstraintSubspaceFor(JSC::VM& vm)
+JSC::JSValue cloneAcrossWorlds(JSC::JSGlobalObject& lexicalGlobalObject, const JSDOMObject& owner, JSC::JSValue value)
 {
-    return &static_cast<JSVMClientData*>(vm.clientData)->globalObjectOutputConstraintSpace();
-}
-
-JSC::JSValue cloneAcrossWorlds(JSC::ExecState& state, const JSDOMObject& owner, JSC::JSValue value)
-{
-    if (isWorldCompatible(state, value))
+    if (isWorldCompatible(lexicalGlobalObject, value))
         return value;
     // FIXME: Is it best to handle errors by returning null rather than throwing an exception?
-    auto serializedValue = SerializedScriptValue::create(state, value, SerializationErrorMode::NonThrowing);
+    auto serializedValue = SerializedScriptValue::create(lexicalGlobalObject, value, SerializationErrorMode::NonThrowing);
     if (!serializedValue)
         return JSC::jsNull();
-    // FIXME: Why is owner->globalObject() better than state.lexicalGlobalObject() here?
-    // Unlike this, isWorldCompatible uses state.lexicalGlobalObject(); should the two match?
-    return serializedValue->deserialize(state, owner.globalObject());
+    // FIXME: Why is owner->globalObject() better than lexicalGlobalObject.lexicalGlobalObject() here?
+    // Unlike this, isWorldCompatible uses lexicalGlobalObject.lexicalGlobalObject(); should the two match?
+    return serializedValue->deserialize(lexicalGlobalObject, owner.globalObject());
 }
 
 } // namespace WebCore

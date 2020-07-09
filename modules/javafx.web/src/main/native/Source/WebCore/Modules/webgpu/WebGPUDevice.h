@@ -27,16 +27,16 @@
 
 #if ENABLE(WEBGPU)
 
+#include "EventTarget.h"
 #include "GPUDevice.h"
 #include "GPUErrorScopes.h"
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include "WebGPUAdapter.h"
 #include "WebGPUQueue.h"
 #include "WebGPUSwapChainDescriptor.h"
-#include <wtf/Ref.h>
+#include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -72,19 +72,27 @@ struct WebGPUShaderModuleDescriptor;
 
 enum class GPUErrorFilter;
 
+template<typename IDLType> class DOMPromiseDeferred;
+
 using ErrorIDLUnion = IDLUnion<IDLInterface<GPUOutOfMemoryError>, IDLInterface<GPUValidationError>>;
 using ErrorPromise = DOMPromiseDeferred<IDLNullable<ErrorIDLUnion>>;
 
-class WebGPUDevice : public RefCounted<WebGPUDevice> {
+class WebGPUDevice : public RefCounted<WebGPUDevice>, public EventTargetWithInlineData, public CanMakeWeakPtr<WebGPUDevice> {
+    WTF_MAKE_ISO_ALLOCATED(WebGPUDevice);
 public:
-    static RefPtr<WebGPUDevice> tryCreate(Ref<const WebGPUAdapter>&&);
+    virtual ~WebGPUDevice();
+
+    static RefPtr<WebGPUDevice> tryCreate(ScriptExecutionContext&, Ref<const WebGPUAdapter>&&);
+
+    static HashSet<WebGPUDevice*>& instances(const LockHolder&);
+    static Lock& instancesMutex();
 
     const WebGPUAdapter& adapter() const { return m_adapter.get(); }
     GPUDevice& device() { return m_device.get(); }
     const GPUDevice& device() const { return m_device.get(); }
 
     Ref<WebGPUBuffer> createBuffer(const GPUBufferDescriptor&) const;
-    Vector<JSC::JSValue> createBufferMapped(JSC::ExecState&, const GPUBufferDescriptor&) const;
+    Vector<JSC::JSValue> createBufferMapped(JSC::JSGlobalObject&, const GPUBufferDescriptor&) const;
     Ref<WebGPUTexture> createTexture(const GPUTextureDescriptor&) const;
     Ref<WebGPUSampler> createSampler(const GPUSamplerDescriptor&) const;
 
@@ -93,8 +101,8 @@ public:
     Ref<WebGPUBindGroup> createBindGroup(const WebGPUBindGroupDescriptor&) const;
 
     Ref<WebGPUShaderModule> createShaderModule(const WebGPUShaderModuleDescriptor&) const;
-    Ref<WebGPURenderPipeline> createRenderPipeline(const WebGPURenderPipelineDescriptor&) const;
-    Ref<WebGPUComputePipeline> createComputePipeline(const WebGPUComputePipelineDescriptor&) const;
+    Ref<WebGPURenderPipeline> createRenderPipeline(const WebGPURenderPipelineDescriptor&);
+    Ref<WebGPUComputePipeline> createComputePipeline(const WebGPUComputePipelineDescriptor&);
 
     Ref<WebGPUCommandEncoder> createCommandEncoder() const;
 
@@ -103,8 +111,22 @@ public:
     void pushErrorScope(GPUErrorFilter filter) { m_errorScopes->pushErrorScope(filter); }
     void popErrorScope(ErrorPromise&&);
 
+    ScriptExecutionContext* scriptExecutionContext() const final { return &m_scriptExecutionContext; }
+
+    using RefCounted::ref;
+    using RefCounted::deref;
+
 private:
-    WebGPUDevice(Ref<const WebGPUAdapter>&&, Ref<GPUDevice>&&);
+    WebGPUDevice(ScriptExecutionContext&, Ref<const WebGPUAdapter>&&, Ref<GPUDevice>&&);
+
+    // EventTarget
+    EventTargetInterface eventTargetInterface() const final { return WebGPUDeviceEventTargetInterfaceType; }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
+
+    void dispatchUncapturedError(GPUError&&);
+
+    ScriptExecutionContext& m_scriptExecutionContext;
 
     Ref<const WebGPUAdapter> m_adapter;
     Ref<GPUDevice> m_device;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,6 +42,7 @@ ObjectInitializationScope::ObjectInitializationScope(VM& vm)
 
 ObjectInitializationScope::~ObjectInitializationScope()
 {
+    m_vm.heap.mutatorFence();
     if (!m_object)
         return;
     verifyPropertiesAreInitialized(m_object);
@@ -103,7 +104,7 @@ void ObjectInitializationScope::verifyPropertiesAreInitialized(JSObject* object)
 
     for (int64_t i = 0; i < static_cast<int64_t>(structure->outOfLineCapacity()); i++) {
         // We rely on properties past the last offset be zero for concurrent GC.
-        if (i + firstOutOfLineOffset > structure->lastOffset())
+        if (i + firstOutOfLineOffset > structure->maxOffset())
             ASSERT(isSafeEmptyValueForGCScanning(butterfly->propertyStorage()[-i - 1].get()));
         else if (isScribbledValue(butterfly->propertyStorage()[-i - 1].get())) {
             dataLogLn("Found scribbled property at i = ", -i - 1);

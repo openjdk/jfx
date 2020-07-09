@@ -110,7 +110,7 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     << (jint)nStops;
 
     for (const auto& cs : stops) {
-        int rgba = (int)cs.color.rgb();
+        int rgba = (int)cs.color.rgb().value();
         context->rq()
         << (jint)rgba << (jfloat)cs.offset;
     }
@@ -206,7 +206,7 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFFI
     << rect.x() << rect.y()
     << rect.width() << rect.height()
-    << (jint)color.rgb();
+    << (jint)color.rgb().value();
 }
 
 void GraphicsContext::fillRect(const FloatRect& rect)
@@ -228,7 +228,7 @@ void GraphicsContext::fillRect(const FloatRect& rect)
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),
-            CompositeCopy);
+            CompositeOperator::Copy);
     } else {
         if (m_state.fillGradient) {
             setGradient(
@@ -316,7 +316,7 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
         platformContext()->rq() << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
         << (jint)focusRect.x() << (jint)focusRect.y()
         << (jint)focusRect.width() << (jint)focusRect.height()
-        << (jint)color.rgb();
+        << (jint)color.rgb().value();
     }
 }
 
@@ -474,7 +474,7 @@ void GraphicsContext::setPlatformFillColor(const Color& col)
 
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
-    << (jint)col.rgb();
+    << (jint)col.rgb().value();
 }
 
 void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
@@ -508,7 +508,7 @@ void GraphicsContext::setPlatformStrokeColor(const Color& col)
 
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKECOLOR
-    << (jint)col.rgb();
+    << (jint)col.rgb().value();
 }
 
 void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
@@ -575,7 +575,7 @@ void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Co
 
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
-    << width << height << blur << (jint)color.rgb();
+    << width << height << blur << (jint)color.rgb().value();
 }
 
 void GraphicsContext::clearPlatformShadow()
@@ -833,7 +833,7 @@ void GraphicsContext::fillPath(const Path& path)
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),
-            CompositeCopy);
+            CompositeOperator::Copy);
         restorePlatformState();
     } else {
         if (m_state.fillGradient) {
@@ -886,7 +886,7 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
     << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
     << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
     << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
-    << (jint)color.rgb();
+    << (jint)color.rgb().value();
 }
 
 void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color)

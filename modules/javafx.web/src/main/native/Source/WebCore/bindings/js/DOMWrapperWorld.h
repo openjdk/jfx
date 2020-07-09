@@ -32,9 +32,15 @@ typedef HashMap<void*, JSC::Weak<JSC::JSObject>> DOMObjectWrapperMap;
 
 class DOMWrapperWorld : public RefCounted<DOMWrapperWorld> {
 public:
-    static Ref<DOMWrapperWorld> create(JSC::VM& vm, bool isNormal = false)
+    enum class Type {
+        Normal,   // Main (e.g. Page)
+        User,     // User Scripts (e.g. Extensions)
+        Internal, // WebKit Internal (e.g. Media Controls)
+    };
+
+    static Ref<DOMWrapperWorld> create(JSC::VM& vm, Type type = Type::Internal, const String& name = { })
     {
-        return adoptRef(*new DOMWrapperWorld(vm, isNormal));
+        return adoptRef(*new DOMWrapperWorld(vm, type, name));
     }
     WEBCORE_EXPORT ~DOMWrapperWorld();
 
@@ -52,19 +58,24 @@ public:
 
     DOMObjectWrapperMap& wrappers() { return m_wrappers; }
 
-    bool isNormal() const { return m_isNormal; }
+    Type type() const { return m_type; }
+    bool isNormal() const { return m_type == Type::Normal; }
+
+    const String& name() const { return m_name; }
 
     JSC::VM& vm() const { return m_vm; }
 
 protected:
-    DOMWrapperWorld(JSC::VM&, bool isNormal);
+    DOMWrapperWorld(JSC::VM&, Type, const String& name);
 
 private:
     JSC::VM& m_vm;
     HashSet<WindowProxy*> m_jsWindowProxies;
     DOMObjectWrapperMap m_wrappers;
 
-    bool m_isNormal;
+    String m_name;
+    Type m_type { Type::Internal };
+
     bool m_shadowRootIsAlwaysOpen { false };
     bool m_shouldDisableOverrideBuiltinsBehavior { false };
 };
@@ -75,15 +86,15 @@ WEBCORE_EXPORT DOMWrapperWorld& mainThreadNormalWorld();
 inline DOMWrapperWorld& debuggerWorld() { return mainThreadNormalWorld(); }
 inline DOMWrapperWorld& pluginWorld() { return mainThreadNormalWorld(); }
 
-DOMWrapperWorld& currentWorld(JSC::ExecState&);
+DOMWrapperWorld& currentWorld(JSC::JSGlobalObject&);
 DOMWrapperWorld& worldForDOMObject(JSC::JSObject&);
 
 // Helper function for code paths that must not share objects across isolated DOM worlds.
-bool isWorldCompatible(JSC::ExecState&, JSC::JSValue);
+bool isWorldCompatible(JSC::JSGlobalObject&, JSC::JSValue);
 
-inline DOMWrapperWorld& currentWorld(JSC::ExecState& state)
+inline DOMWrapperWorld& currentWorld(JSC::JSGlobalObject& lexicalGlobalObject)
 {
-    return JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject())->world();
+    return JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->world();
 }
 
 inline DOMWrapperWorld& worldForDOMObject(JSC::JSObject& object)
@@ -91,9 +102,9 @@ inline DOMWrapperWorld& worldForDOMObject(JSC::JSObject& object)
     return JSC::jsCast<JSDOMGlobalObject*>(object.globalObject())->world();
 }
 
-inline bool isWorldCompatible(JSC::ExecState& state, JSC::JSValue value)
+inline bool isWorldCompatible(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
 {
-    return !value.isObject() || &worldForDOMObject(*value.getObject()) == &currentWorld(state);
+    return !value.isObject() || &worldForDOMObject(*value.getObject()) == &currentWorld(lexicalGlobalObject);
 }
 
 } // namespace WebCore

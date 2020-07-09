@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,18 +39,17 @@
 namespace JSC {
 
 namespace GetterSetterAccessCaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
-GetterSetterAccessCase::GetterSetterAccessCase(VM& vm, JSCell* owner, AccessType accessType, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, bool viaProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
-    : Base(vm, owner, accessType, offset, structure, conditionSet, viaProxy, additionalSet, WTFMove(prototypeAccessChain))
+GetterSetterAccessCase::GetterSetterAccessCase(VM& vm, JSCell* owner, AccessType accessType, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, bool viaProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+    : Base(vm, owner, accessType, identifier, offset, structure, conditionSet, viaProxy, additionalSet, WTFMove(prototypeAccessChain))
 {
     m_customSlotBase.setMayBeNull(vm, owner, customSlotBase);
 }
 
-
 std::unique_ptr<AccessCase> GetterSetterAccessCase::create(
-    VM& vm, JSCell* owner, AccessType type, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet,
+    VM& vm, JSCell* owner, AccessType type, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet,
     bool viaProxy, WatchpointSet* additionalSet, FunctionPtr<OperationPtrTag> customGetter, JSObject* customSlotBase,
     Optional<DOMAttributeAnnotation> domAttribute, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
@@ -63,18 +62,18 @@ std::unique_ptr<AccessCase> GetterSetterAccessCase::create(
         ASSERT_NOT_REACHED();
     };
 
-    std::unique_ptr<GetterSetterAccessCase> result(new GetterSetterAccessCase(vm, owner, type, offset, structure, conditionSet, viaProxy, additionalSet, customSlotBase, WTFMove(prototypeAccessChain)));
+    std::unique_ptr<GetterSetterAccessCase> result(new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaProxy, additionalSet, customSlotBase, WTFMove(prototypeAccessChain)));
     result->m_domAttribute = domAttribute;
     result->m_customAccessor = customGetter ? FunctionPtr<OperationPtrTag>(customGetter) : nullptr;
     return result;
 }
 
-std::unique_ptr<AccessCase> GetterSetterAccessCase::create(VM& vm, JSCell* owner, AccessType type, Structure* structure, PropertyOffset offset,
+std::unique_ptr<AccessCase> GetterSetterAccessCase::create(VM& vm, JSCell* owner, AccessType type, Structure* structure, CacheableIdentifier identifier, PropertyOffset offset,
     const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain, FunctionPtr<OperationPtrTag> customSetter,
     JSObject* customSlotBase)
 {
     ASSERT(type == Setter || type == CustomValueSetter || type == CustomAccessorSetter);
-    std::unique_ptr<GetterSetterAccessCase> result(new GetterSetterAccessCase(vm, owner, type, offset, structure, conditionSet, false, nullptr, customSlotBase, WTFMove(prototypeAccessChain)));
+    std::unique_ptr<GetterSetterAccessCase> result(new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, false, nullptr, customSlotBase, WTFMove(prototypeAccessChain)));
     result->m_customAccessor = customSetter ? FunctionPtr<OperationPtrTag>(customSetter) : nullptr;
     return result;
 }
@@ -138,11 +137,8 @@ void GetterSetterAccessCase::emitDOMJITGetter(AccessGenerationState& state, cons
     Vector<FPRReg> fpScratch;
     Vector<SnippetParams::Value> regs;
 
-    ScratchRegisterAllocator allocator(stubInfo.patch.usedRegisters);
-    allocator.lock(baseGPR);
-#if USE(JSVALUE32_64)
-    allocator.lock(stubInfo.patch.baseTagGPR);
-#endif
+    ScratchRegisterAllocator allocator(stubInfo.usedRegisters);
+    allocator.lock(stubInfo.baseRegs());
     allocator.lock(valueRegs);
     allocator.lock(scratchGPR);
 

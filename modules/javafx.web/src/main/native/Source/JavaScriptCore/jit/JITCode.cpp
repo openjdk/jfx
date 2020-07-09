@@ -32,6 +32,8 @@
 
 namespace JSC {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
+
 JITCode::JITCode(JITType jitType, ShareAttribute shareAttribute)
     : m_jitType(jitType)
     , m_shareAttribute(shareAttribute)
@@ -89,6 +91,10 @@ FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
 {
     RELEASE_ASSERT_NOT_REACHED();
     return 0;
+}
+
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+{
 }
 
 JITCodeWithCodeRef::JITCodeWithCodeRef(JITType jitType)

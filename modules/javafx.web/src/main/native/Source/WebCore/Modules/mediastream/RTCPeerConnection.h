@@ -96,7 +96,7 @@ public:
     };
 
     using AlgorithmIdentifier = Variant<JSC::Strong<JSC::JSObject>, String>;
-    static void generateCertificate(JSC::ExecState&, AlgorithmIdentifier&&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
+    static void generateCertificate(JSC::JSGlobalObject&, AlgorithmIdentifier&&, DOMPromiseDeferred<IDLInterface<RTCCertificate>>&&);
 
     // 4.3.2 RTCPeerConnection Interface
     void queuedCreateOffer(RTCOfferOptions&&, PeerConnection::SessionDescriptionPromise&&);
@@ -142,7 +142,7 @@ public:
     ExceptionOr<Ref<RTCRtpTransceiver>> addTransceiver(AddTransceiverTrackOrKind&&, const RTCRtpTransceiverInit&);
 
     // 6.1 Peer-to-peer data API
-    ExceptionOr<Ref<RTCDataChannel>> createDataChannel(ScriptExecutionContext&, String&&, RTCDataChannelInit&&);
+    ExceptionOr<Ref<RTCDataChannel>> createDataChannel(String&&, RTCDataChannelInit&&);
 
     // 8.2 Statistics API
     void getStats(MediaStreamTrack*, Ref<DeferredPromise>&&);
@@ -165,7 +165,7 @@ public:
 
     void scheduleNegotiationNeededEvent();
 
-    void fireEvent(Event&);
+    void dispatchEventWhenFeasible(Ref<Event>&&);
 
     void disableICECandidateFiltering() { m_backend->disableICECandidateFiltering(); }
     void enableICECandidateFiltering() { m_backend->enableICECandidateFiltering(); }
@@ -175,6 +175,10 @@ public:
     // ActiveDOMObject.
     bool hasPendingActivity() const final;
 
+    Document* document();
+
+    void doTask(Function<void()>&&);
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
@@ -183,7 +187,12 @@ public:
 #endif
 
 private:
-    RTCPeerConnection(ScriptExecutionContext&);
+    template<typename PromiseType> void addPendingPromise(PromiseType& promise)
+    {
+        promise.whenSettled([pendingActivity = makePendingActivity(*this)] { });
+    }
+
+    RTCPeerConnection(Document&);
 
     ExceptionOr<void> initializeConfiguration(RTCConfiguration&&);
     Ref<RTCRtpTransceiver> completeAddTransceiver(Ref<RTCRtpSender>&&, const RTCRtpTransceiverInit&, const String& trackId, const String& trackKind);
@@ -202,7 +211,8 @@ private:
     // ActiveDOMObject
     WEBCORE_EXPORT void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
 
     void updateConnectionState();
     bool doClose();
@@ -228,7 +238,8 @@ private:
     RTCConfiguration m_configuration;
     RTCController* m_controller { nullptr };
     Vector<RefPtr<RTCCertificate>> m_certificates;
-    RefPtr<PendingActivity<RTCPeerConnection>> m_pendingActivity;
+    bool m_shouldDelayTasks { false };
+    Vector<Function<void()>> m_pendingTasks;
 };
 
 } // namespace WebCore

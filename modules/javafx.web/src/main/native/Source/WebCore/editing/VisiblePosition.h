@@ -102,6 +102,8 @@ public:
     // FIXME: navigation with transforms should be smarter.
     WEBCORE_EXPORT int lineDirectionPointForBlockDirectionNavigation() const;
 
+    WEBCORE_EXPORT FloatRect absoluteSelectionBoundsForLine() const;
+
     // This is a tentative enhancement of operator== to account for affinity.
     // FIXME: Combine this function with operator==
     bool equals(const VisiblePosition&) const;
@@ -164,6 +166,8 @@ WEBCORE_EXPORT Element* enclosingBlockFlowElement(const VisiblePosition&);
 
 bool isFirstVisiblePositionInNode(const VisiblePosition&, const Node*);
 bool isLastVisiblePositionInNode(const VisiblePosition&, const Node*);
+
+bool areVisiblePositionsInSameTreeScope(const VisiblePosition&, const VisiblePosition&);
 
 WTF::TextStream& operator<<(WTF::TextStream&, EAffinity);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const VisiblePosition&);

@@ -27,23 +27,31 @@
 
 #if ENABLE(WEBGL)
 
+#include "ContextDestructionObserver.h"
 #include "WebGLSharedObject.h"
-#include <wtf/Forward.h>
+#include <wtf/HashMap.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/Lock.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
+class ScriptExecutionContext;
+class WebGLRenderingContextBase;
 class WebGLShader;
 
-class WebGLProgram final : public WebGLSharedObject {
+class WebGLProgram final : public WebGLSharedObject, public ContextDestructionObserver {
 public:
     static Ref<WebGLProgram> create(WebGLRenderingContextBase&);
     virtual ~WebGLProgram();
 
-    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances(const LockHolder&);
+    static HashMap<WebGLProgram*, WebGLRenderingContextBase*>& instances(const WTF::LockHolder&);
     static Lock& instancesMutex();
 
+    void contextDestroyed() final;
+
     unsigned numActiveAttribLocations();
-    GC3Dint getActiveAttribLocation(GC3Duint index);
+    GCGLint getActiveAttribLocation(GCGLuint index);
 
     bool isUsingVertexAttrib0();
 
@@ -58,22 +66,22 @@ public:
     // Also, we invalidate the cached program info.
     void increaseLinkCount();
 
-    WebGLShader* getAttachedShader(GC3Denum);
+    WebGLShader* getAttachedShader(GCGLenum);
     bool attachShader(WebGLShader*);
     bool detachShader(WebGLShader*);
 
 protected:
     WebGLProgram(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
 
 private:
-    void cacheActiveAttribLocations(GraphicsContext3D*);
+    void cacheActiveAttribLocations(GraphicsContextGLOpenGL*);
     void cacheInfoIfNeeded();
 
-    Vector<GC3Dint> m_activeAttribLocations;
+    Vector<GCGLint> m_activeAttribLocations;
 
-    GC3Dint m_linkStatus { 0 };
+    GCGLint m_linkStatus { 0 };
 
     // This is used to track whether a WebGLUniformLocation belongs to this program or not.
     unsigned m_linkCount { 0 };

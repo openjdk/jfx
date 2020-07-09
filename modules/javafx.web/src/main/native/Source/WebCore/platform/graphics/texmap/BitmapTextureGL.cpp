@@ -24,9 +24,8 @@
 
 #if USE(TEXTURE_MAPPER_GL)
 
-#include "Extensions3D.h"
+#include "ExtensionsGL.h"
 #include "FilterOperations.h"
-#include "Image.h"
 #include "LengthFunctions.h"
 #include "NativeImage.h"
 #include "NotImplemented.h"
@@ -64,13 +63,14 @@ BitmapTextureGL* toBitmapTextureGL(BitmapTexture* texture)
 
 BitmapTextureGL::BitmapTextureGL(const TextureMapperContextAttributes& contextAttributes, const Flags, GLint internalFormat)
     : m_contextAttributes(contextAttributes)
+    , m_format(GL_RGBA)
 {
     if (internalFormat != GL_DONT_CARE) {
-        m_internalFormat = m_format = internalFormat;
+        m_internalFormat = internalFormat;
         return;
     }
 
-    m_internalFormat = m_format = GL_RGBA;
+    m_internalFormat = GL_RGBA;
 }
 
 void BitmapTextureGL::didReset()
@@ -168,6 +168,25 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
 
     updateContents(imageData, targetRect, offset, bytesPerLine);
 }
+
+#if USE(ANGLE)
+void BitmapTextureGL::setPendingContents(RefPtr<Image>&& image)
+{
+    m_pendingContents = image;
+}
+
+void BitmapTextureGL::updatePendingContents(const IntRect& targetRect, const IntPoint& offset)
+{
+    if (!m_pendingContents)
+        return;
+
+    if (!isValid()) {
+        IntSize textureSize(m_pendingContents->size());
+        reset(textureSize);
+    }
+    updateContents(m_pendingContents.get(), targetRect, offset);
+}
+#endif
 
 static unsigned getPassesRequiredForFilter(FilterOperation::OperationType type)
 {

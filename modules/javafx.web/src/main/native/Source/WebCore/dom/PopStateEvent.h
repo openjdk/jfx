@@ -35,6 +35,7 @@ class History;
 class SerializedScriptValue;
 
 class PopStateEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(PopStateEvent);
 public:
     virtual ~PopStateEvent();
     static Ref<PopStateEvent> create(RefPtr<SerializedScriptValue>&&, History*);
@@ -49,7 +50,7 @@ public:
     const JSValueInWrappedObject& state() const { return m_state; }
     SerializedScriptValue* serializedState() const { return m_serializedState.get(); }
 
-    RefPtr<SerializedScriptValue> trySerializeState(JSC::ExecState&);
+    RefPtr<SerializedScriptValue> trySerializeState(JSC::JSGlobalObject&);
 
     History* history() const { return m_history.get(); }
 

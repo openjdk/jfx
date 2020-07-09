@@ -57,6 +57,10 @@ bool clobbersExitState(Graph& graph, Node* node)
     case ArrayifyToStructure:
     case Arrayify:
     case NewObject:
+    case NewPromise:
+    case NewGenerator:
+    case NewAsyncGenerator:
+    case NewArrayIterator:
     case NewRegexp:
     case NewSymbol:
     case NewStringObject:
@@ -66,6 +70,8 @@ bool clobbersExitState(Graph& graph, Node* node)
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
+    case PhantomNewArrayIterator:
+    case MaterializeNewInternalFieldObject:
     case PhantomCreateActivation:
     case MaterializeCreateActivation:
     case PhantomNewRegexp:
@@ -77,7 +83,7 @@ bool clobbersExitState(Graph& graph, Node* node)
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case FilterCallLinkStatus:
-    case FilterGetByIdStatus:
+    case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
         // These do clobber memory, but nothing that is observable. It may be nice to separate the

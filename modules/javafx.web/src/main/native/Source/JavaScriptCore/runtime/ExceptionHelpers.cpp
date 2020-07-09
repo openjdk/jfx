@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,10 +47,10 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(TerminatedExecutionError);
 
 const ClassInfo TerminatedExecutionError::s_info = { "TerminatedExecutionError", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(TerminatedExecutionError) };
 
-JSValue TerminatedExecutionError::defaultValue(const JSObject*, ExecState* exec, PreferredPrimitiveType hint)
+JSValue TerminatedExecutionError::defaultValue(const JSObject*, JSGlobalObject* globalObject, PreferredPrimitiveType hint)
 {
     if (hint == PreferString)
-        return jsNontrivialString(exec->vm(), String("JavaScript execution terminated."_s));
+        return jsNontrivialString(globalObject->vm(), String("JavaScript execution terminated."_s));
     return JSValue(PNaN);
 }
 
@@ -67,29 +67,24 @@ bool isTerminatedExecutionException(VM& vm, Exception* exception)
     return exception->value().inherits<TerminatedExecutionError>(vm);
 }
 
-JSObject* createStackOverflowError(ExecState* exec)
+JSObject* createStackOverflowError(JSGlobalObject* globalObject)
 {
-    return createStackOverflowError(exec, exec->lexicalGlobalObject());
-}
-
-JSObject* createStackOverflowError(ExecState* exec, JSGlobalObject* globalObject)
-{
-    auto* error = createRangeError(exec, globalObject, "Maximum call stack size exceeded."_s);
+    auto* error = createRangeError(globalObject, "Maximum call stack size exceeded."_s);
     jsCast<ErrorInstance*>(error)->setStackOverflowError();
     return error;
 }
 
-JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
+JSObject* createUndefinedVariableError(JSGlobalObject* globalObject, const Identifier& ident)
 {
     if (ident.isPrivateName())
-        return createReferenceError(exec, makeString("Can't find private variable: PrivateSymbol.", ident.string()));
-    return createReferenceError(exec, makeString("Can't find variable: ", ident.string()));
+        return createReferenceError(globalObject, makeString("Can't find private variable: PrivateSymbol.", ident.string()));
+    return createReferenceError(globalObject, makeString("Can't find variable: ", ident.string()));
 }
 
-String errorDescriptionForValue(ExecState* exec, JSValue v)
+String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
 {
     if (v.isString()) {
-        String string = asString(v)->value(exec);
+        String string = asString(v)->value(globalObject);
         if (!string)
             return string;
         return tryMakeString('"', string, '"');
@@ -98,14 +93,14 @@ String errorDescriptionForValue(ExecState* exec, JSValue v)
     if (v.isSymbol())
         return asSymbol(v)->descriptiveString();
     if (v.isObject()) {
-        VM& vm = exec->vm();
+        VM& vm = globalObject->vm();
         CallData callData;
         JSObject* object = asObject(v);
         if (object->methodTable(vm)->getCallData(object, callData) != CallType::None)
-            return vm.smallStrings.functionString()->value(exec);
+            return vm.smallStrings.functionString()->value(globalObject);
         return JSObject::calculatedClassName(object);
     }
-    return v.toString(exec)->value(exec);
+    return v.toString(globalObject)->value(globalObject);
 }
 
 static String defaultApproximateSourceError(const String& originalMessage, const String& sourceText)
@@ -135,7 +130,7 @@ static String functionCallBase(const String& sourceText)
     if (sourceLength < 2 || sourceText[idx] != ')') {
         // For function calls that have many new lines in between their open parenthesis
         // and their closing parenthesis, the text range passed into the message appender
-        // will not inlcude the text in between these parentheses, it will just be the desired
+        // will not include the text in between these parentheses, it will just be the desired
         // text that precedes the parentheses.
         return String();
     }
@@ -234,7 +229,7 @@ static String invalidParameterInSourceAppender(const String& originalMessage, co
     if (sourceText.find("in") != inIndex)
         return makeString(originalMessage, " (evaluating '", sourceText, "')");
 
-    static const unsigned inLength = 2;
+    static constexpr unsigned inLength = 2;
     String rightHandSide = sourceText.substring(inIndex + inLength).simplifyWhiteSpace();
     return makeString(rightHandSide, " is not an Object. (evaluating '", sourceText, "')");
 }
@@ -250,7 +245,7 @@ inline String invalidParameterInstanceofSourceAppender(const String& content, co
     if (sourceText.find("instanceof") != instanceofIndex)
         return makeString(originalMessage, " (evaluating '", sourceText, "')");
 
-    static const unsigned instanceofLength = 10;
+    static constexpr unsigned instanceofLength = 10;
     String rightHandSide = sourceText.substring(instanceofIndex + instanceofLength).simplifyWhiteSpace();
     return makeString(rightHandSide, content, ". (evaluating '", sourceText, "')");
 }
@@ -265,89 +260,92 @@ static String invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppende
     return invalidParameterInstanceofSourceAppender("[Symbol.hasInstance] is not a function, undefined, or null"_s, originalMessage, sourceText, runtimeType, occurrence);
 }
 
-JSObject* createError(ExecState* exec, JSValue value, const String& message, ErrorInstance::SourceAppender appender)
+JSObject* createError(JSGlobalObject* globalObject, JSValue value, const String& message, ErrorInstance::SourceAppender appender)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    String valueDescription = errorDescriptionForValue(exec, value);
-    ASSERT(scope.exception() || !!valueDescription);
-    if (!valueDescription) {
+    String valueDescription = errorDescriptionForValue(globalObject, value);
+    if (scope.exception() || !valueDescription) {
+        // When we see an exception, we're not returning immediately because
+        // we're in a CatchScope, i.e. no exceptions are thrown past this scope.
+        // We're using a CatchScope because the contract for createError() is
+        // that it only creates an error object; it doesn't throw it.
         scope.clearException();
-        return createOutOfMemoryError(exec);
+        return createOutOfMemoryError(globalObject);
     }
     String errorMessage = tryMakeString(valueDescription, ' ', message);
     if (!errorMessage)
-        return createOutOfMemoryError(exec);
+        return createOutOfMemoryError(globalObject);
     scope.assertNoException();
-    JSObject* exception = createTypeError(exec, errorMessage, appender, runtimeTypeForValue(vm, value));
+    JSObject* exception = createTypeError(globalObject, errorMessage, appender, runtimeTypeForValue(vm, value));
     ASSERT(exception->isErrorInstance());
 
     return exception;
 }
 
-JSObject* createInvalidFunctionApplyParameterError(ExecState* exec, JSValue value)
+JSObject* createInvalidFunctionApplyParameterError(JSGlobalObject* globalObject, JSValue value)
 {
-    return createTypeError(exec, "second argument to Function.prototype.apply must be an Array-like object"_s, defaultSourceAppender, runtimeTypeForValue(exec->vm(), value));
+    return createTypeError(globalObject, "second argument to Function.prototype.apply must be an Array-like object"_s, defaultSourceAppender, runtimeTypeForValue(globalObject->vm(), value));
 }
 
-JSObject* createInvalidInParameterError(ExecState* exec, JSValue value)
+JSObject* createInvalidInParameterError(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, "is not an Object."_s, invalidParameterInSourceAppender);
+    return createError(globalObject, value, "is not an Object."_s, invalidParameterInSourceAppender);
 }
 
-JSObject* createInvalidInstanceofParameterErrorNotFunction(ExecState* exec, JSValue value)
+JSObject* createInvalidInstanceofParameterErrorNotFunction(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, " is not a function"_s, invalidParameterInstanceofNotFunctionSourceAppender);
+    return createError(globalObject, value, " is not a function"_s, invalidParameterInstanceofNotFunctionSourceAppender);
 }
 
-JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(ExecState* exec, JSValue value)
+JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, "[Symbol.hasInstance] is not a function, undefined, or null"_s, invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppender);
+    return createError(globalObject, value, "[Symbol.hasInstance] is not a function, undefined, or null"_s, invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppender);
 }
 
-JSObject* createNotAConstructorError(ExecState* exec, JSValue value)
+JSObject* createNotAConstructorError(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, "is not a constructor"_s, defaultSourceAppender);
+    return createError(globalObject, value, "is not a constructor"_s, defaultSourceAppender);
 }
 
-JSObject* createNotAFunctionError(ExecState* exec, JSValue value)
+JSObject* createNotAFunctionError(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, "is not a function"_s, notAFunctionSourceAppender);
+    return createError(globalObject, value, "is not a function"_s, notAFunctionSourceAppender);
 }
 
-JSObject* createNotAnObjectError(ExecState* exec, JSValue value)
+JSObject* createNotAnObjectError(JSGlobalObject* globalObject, JSValue value)
 {
-    return createError(exec, value, "is not an object"_s, defaultSourceAppender);
+    return createError(globalObject, value, "is not an object"_s, defaultSourceAppender);
 }
 
-JSObject* createErrorForInvalidGlobalAssignment(ExecState* exec, const String& propertyName)
+JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject* globalObject, const String& propertyName)
 {
-    return createReferenceError(exec, makeString("Strict mode forbids implicit creation of global property '", propertyName, '\''));
+    return createReferenceError(globalObject, makeString("Strict mode forbids implicit creation of global property '", propertyName, '\''));
 }
 
-JSObject* createTDZError(ExecState* exec)
+JSObject* createTDZError(JSGlobalObject* globalObject)
 {
-    return createReferenceError(exec, "Cannot access uninitialized variable.");
+    return createReferenceError(globalObject, "Cannot access uninitialized variable.");
 }
 
-Exception* throwOutOfMemoryError(ExecState* exec, ThrowScope& scope)
+Exception* throwOutOfMemoryError(JSGlobalObject* globalObject, ThrowScope& scope)
 {
-    return throwException(exec, scope, createOutOfMemoryError(exec));
+    return throwException(globalObject, scope, createOutOfMemoryError(globalObject));
 }
 
-Exception* throwStackOverflowError(ExecState* exec, ThrowScope& scope)
+Exception* throwStackOverflowError(JSGlobalObject* globalObject, ThrowScope& scope)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     ErrorHandlingScope errorScope(vm);
-    return throwException(exec, scope, createStackOverflowError(exec));
+    return throwException(globalObject, scope, createStackOverflowError(globalObject));
 }
 
-Exception* throwTerminatedExecutionException(ExecState* exec, ThrowScope& scope)
+Exception* throwTerminatedExecutionException(JSGlobalObject* globalObject, ThrowScope& scope)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     ErrorHandlingScope errorScope(vm);
-    return throwException(exec, scope, createTerminatedExecutionException(&vm));
+    return throwException(globalObject, scope, createTerminatedExecutionException(&vm));
 }
 
 } // namespace JSC

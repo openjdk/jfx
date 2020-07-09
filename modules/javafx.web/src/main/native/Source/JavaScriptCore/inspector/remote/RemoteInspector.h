@@ -47,17 +47,15 @@ typedef RetainPtr<NSDictionary> TargetListing;
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/SocketConnection.h>
 typedef GRefPtr<GVariant> TargetListing;
 typedef struct _GCancellable GCancellable;
-typedef struct _GDBusConnection GDBusConnection;
-typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
 #include "RemoteConnectionToTarget.h"
 #include "RemoteInspectorConnectionClient.h"
 #include <wtf/JSONValues.h>
-#include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace Inspector {
@@ -93,6 +91,15 @@ public:
             bool acceptInsecureCertificates { false };
 #if USE(GLIB)
             Vector<std::pair<String, String>> certificates;
+            struct Proxy {
+                String type;
+                Optional<String> ftpURL;
+                Optional<String> httpURL;
+                Optional<String> httpsURL;
+                Optional<String> socksURL;
+                Vector<String> ignoreAddressList;
+            };
+            Optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
             Optional<bool> allowInsecureMediaCapture;
@@ -150,8 +157,12 @@ public:
     void sendMessageToTarget(TargetID, const char* message);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    static void setConnectionIdentifier(PlatformSocketType);
-    static void setServerPort(uint16_t);
+    void requestAutomationSession(const String& sessionID, const Client::SessionCapabilities&);
+
+    bool isConnected() const { return !!m_clientConnection; }
+    void connect(ConnectionID);
+
+    void setBackendCommandsPath(const String& backendCommandsPath) { m_backendCommandsPath = backendCommandsPath; }
 #endif
 
 private:
@@ -166,8 +177,8 @@ private:
     void setupXPCConnectionIfNeeded();
 #endif
 #if USE(GLIB)
-    void setupConnection(GRefPtr<GDBusConnection>&&);
-    static const GDBusInterfaceVTable s_interfaceVTable;
+    void setupConnection(Ref<SocketConnection>&&);
+    static const SocketConnection::MessageHandlers& messageHandlers();
 
     void receivedGetTargetListMessage();
     void receivedSetupMessage(TargetID);
@@ -214,10 +225,15 @@ private:
 
     void sendWebInspectorEvent(const String&);
 
-    void receivedGetTargetListMessage(const Event&);
-    void receivedSetupMessage(const Event&);
-    void receivedDataMessage(const Event&);
-    void receivedCloseMessage(const Event&);
+    void setupInspectorClient(const Event&);
+    void setupTarget(const Event&);
+    void frontendDidClose(const Event&);
+    void sendMessageToBackend(const Event&);
+    void startAutomationSession(const Event&);
+
+    void receivedAutomationSessionRequestMessage(const Event&);
+
+    String backendCommands() const;
 #endif
     static bool startEnabled;
 
@@ -235,14 +251,16 @@ private:
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
 #endif
 #if USE(GLIB)
-    GRefPtr<GDBusConnection> m_dbusConnection;
+    RefPtr<SocketConnection> m_socketConnection;
     GRefPtr<GCancellable> m_cancellable;
 #endif
 
 #if USE(INSPECTOR_SOCKET_SERVER)
-    static PlatformSocketType s_connectionIdentifier;
-    static uint16_t s_serverPort;
-    Optional<ConnectionID> m_clientID;
+    // Connection from RemoteInspectorClient or WebDriver.
+    Optional<ConnectionID> m_clientConnection;
+    bool m_readyToPushListings { false };
+
+    String m_backendCommandsPath;
 #endif
 
     RemoteInspector::Client* m_client { nullptr };

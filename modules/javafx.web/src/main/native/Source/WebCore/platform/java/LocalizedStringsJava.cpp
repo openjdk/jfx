@@ -522,6 +522,16 @@ String AXDefinitionListDefinitionText()
     return getLocalizedProperty("AXDefinitionListDefinitionText");
 }
 
+String AXFigureText()
+{
+    return getLocalizedProperty("AXFigureText");
+}
+
+String AXARIAContentGroupText(const String& ariaType)
+{
+    return getLocalizedProperty(String("AXARIAContentGroupText") + ariaType);
+}
+
 String AXButtonActionVerb()
 {
     return getLocalizedProperty("AXButtonActionVerb");

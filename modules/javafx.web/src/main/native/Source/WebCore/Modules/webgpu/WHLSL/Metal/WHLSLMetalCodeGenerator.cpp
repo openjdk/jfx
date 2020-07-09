@@ -41,7 +41,7 @@ namespace Metal {
 
 static constexpr bool dumpMetalCode = false;
 
-static StringView metalCodeProlog()
+static StringView metalCodePrologue()
 {
     return StringView {
         "#include <metal_stdlib>\n"
@@ -53,7 +53,56 @@ static StringView metalCodeProlog()
         "\n"
         "using namespace metal;\n"
         "\n"
+        "template <typename T, int Cols, int Rows>\n"
+        "struct WSLMatrix\n"
+        "{\n"
+        "    vec<T, Rows> columns[Cols];\n"
+        "    private:\n"
+        "    public:\n"
+        "    inline WSLMatrix() thread = default;\n"
+        "    inline WSLMatrix() constant = default;\n"
+        "    inline WSLMatrix(const thread WSLMatrix<T, Cols, Rows> &that) thread = default;\n"
+        "    inline WSLMatrix(const device WSLMatrix<T, Cols, Rows> &that) thread = default;\n"
+        "    inline WSLMatrix(const constant WSLMatrix<T, Cols, Rows> &that) thread = default;\n"
+        "    inline WSLMatrix(const threadgroup WSLMatrix<T, Cols, Rows> &that) thread = default;\n"
+        "    inline WSLMatrix(const thread WSLMatrix<T, Cols, Rows> &that) constant = default;\n"
+        "    inline WSLMatrix(const device WSLMatrix<T, Cols, Rows> &that) constant = default;\n"
+        "    inline WSLMatrix(const constant WSLMatrix<T, Cols, Rows> &that) constant = default;\n"
+        "    inline WSLMatrix(const threadgroup WSLMatrix<T, Cols, Rows> &that) constant = default;\n"
+        "    public:\n"
+        "    inline thread vec<T, Rows> &operator[](int r) thread\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline device vec<T, Rows> &operator[](int r) device\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline threadgroup vec<T, Rows> &operator[](int r) threadgroup\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline const thread vec<T, Rows> &operator[](int r) const thread\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline const device vec<T, Rows> &operator[](int r) const device\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline const constant vec<T, Rows> &operator[](int r) const constant\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "    inline const threadgroup vec<T, Rows> &operator[](int r) const threadgroup\n"
+        "    {\n"
+        "        return columns[r];\n"
+        "    }\n"
+        "};\n"
+
+
     };
+
 }
 
 static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
@@ -67,7 +116,7 @@ static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
 RenderMetalCode generateMetalCode(Program& program, MatchedRenderSemantics&& matchedSemantics, Layout& layout)
 {
     StringBuilder stringBuilder;
-    stringBuilder.append(metalCodeProlog());
+    stringBuilder.append(metalCodePrologue());
 
     TypeNamer typeNamer(program);
     typeNamer.emitMetalTypes(stringBuilder);
@@ -82,7 +131,7 @@ RenderMetalCode generateMetalCode(Program& program, MatchedRenderSemantics&& mat
 ComputeMetalCode generateMetalCode(Program& program, MatchedComputeSemantics&& matchedSemantics, Layout& layout)
 {
     StringBuilder stringBuilder;
-    stringBuilder.append(metalCodeProlog());
+    stringBuilder.append(metalCodePrologue());
 
     TypeNamer typeNamer(program);
     typeNamer.emitMetalTypes(stringBuilder);

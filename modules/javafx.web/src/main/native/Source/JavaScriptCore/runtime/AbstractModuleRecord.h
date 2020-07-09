@@ -37,10 +37,18 @@ class JSMap;
 
 // Based on the Source Text Module Record
 // http://www.ecma-international.org/ecma-262/6.0/#sec-source-text-module-records
-class AbstractModuleRecord : public JSDestructibleObject {
+class AbstractModuleRecord : public JSNonFinalObject {
     friend class LLIntOffsetsExtractor;
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, SubspaceAccess>
+    static void subspaceFor(VM&)
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
 
     // https://tc39.github.io/ecma262/#sec-source-text-module-records
     struct ExportEntry {
@@ -101,12 +109,12 @@ public:
         Identifier localName;
     };
 
-    Resolution resolveExport(ExecState*, const Identifier& exportName);
-    Resolution resolveImport(ExecState*, const Identifier& localName);
+    Resolution resolveExport(JSGlobalObject*, const Identifier& exportName);
+    Resolution resolveImport(JSGlobalObject*, const Identifier& localName);
 
-    AbstractModuleRecord* hostResolveImportedModule(ExecState*, const Identifier& moduleName);
+    AbstractModuleRecord* hostResolveImportedModule(JSGlobalObject*, const Identifier& moduleName);
 
-    JSModuleNamespaceObject* getModuleNamespace(ExecState*);
+    JSModuleNamespaceObject* getModuleNamespace(JSGlobalObject*);
 
     JSModuleEnvironment* moduleEnvironment()
     {
@@ -119,21 +127,20 @@ public:
         return m_moduleEnvironment.get();
     }
 
-    void link(ExecState*, JSValue scriptFetcher);
-    JS_EXPORT_PRIVATE JSValue evaluate(ExecState*);
+    void link(JSGlobalObject*, JSValue scriptFetcher);
+    JS_EXPORT_PRIVATE JSValue evaluate(JSGlobalObject*);
 
 protected:
     AbstractModuleRecord(VM&, Structure*, const Identifier&);
-    void finishCreation(ExecState*, VM&);
+    void finishCreation(JSGlobalObject*, VM&);
 
     static void visitChildren(JSCell*, SlotVisitor&);
-    static void destroy(JSCell*);
 
     WriteBarrier<JSModuleEnvironment> m_moduleEnvironment;
 
 private:
     struct ResolveQuery;
-    static Resolution resolveExportImpl(ExecState*, const ResolveQuery&);
+    static Resolution resolveExportImpl(JSGlobalObject*, const ResolveQuery&);
     Optional<Resolution> tryGetCachedResolution(UniquedStringImpl* exportName);
     void cacheResolution(UniquedStringImpl* exportName, const Resolution&);
 

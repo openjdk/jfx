@@ -26,7 +26,6 @@
 #include "CachedResourceHandle.h"
 #include "DragActions.h"
 #include "DragImage.h"
-#include <pal/SessionID.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -40,7 +39,7 @@ class Element;
 class FileList;
 class File;
 class Pasteboard;
-enum class WebContentReadingPolicy;
+enum class WebContentReadingPolicy : bool;
 
 class DataTransfer : public RefCounted<DataTransfer> {
 #if PLATFORM(JAVA)
@@ -51,7 +50,7 @@ public:
     enum class StoreMode { Invalid, ReadWrite, Readonly, Protected };
 
     static Ref<DataTransfer> createForCopyAndPaste(const Document&, StoreMode, std::unique_ptr<Pasteboard>&&);
-    static Ref<DataTransfer> createForInputEvent(const Document&, const String& plainText, const String& htmlText);
+    static Ref<DataTransfer> createForInputEvent(const String& plainText, const String& htmlText);
 
     WEBCORE_EXPORT ~DataTransfer();
 
@@ -63,6 +62,7 @@ public:
 
     DataTransferItemList& items();
     Vector<String> types() const;
+
     Vector<String> typesForItemList() const;
 
     FileList& files() const;
@@ -90,7 +90,7 @@ public:
     void commitToPasteboard(Pasteboard&);
 
 #if ENABLE(DRAG_SUPPORT)
-    static Ref<DataTransfer> createForDrag(const Document&);
+    static Ref<DataTransfer> createForDrag();
     static Ref<DataTransfer> createForDragStartEvent(const Document&);
     static Ref<DataTransfer> createForDrop(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
     static Ref<DataTransfer> createForUpdatingDropTarget(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
@@ -121,7 +121,7 @@ public:
 
 private:
     enum class Type { CopyAndPaste, DragAndDropData, DragAndDropFiles, InputEvent };
-    DataTransfer(const Document&, StoreMode, std::unique_ptr<Pasteboard>, Type = Type::CopyAndPaste);
+    DataTransfer(StoreMode, std::unique_ptr<Pasteboard>, Type = Type::CopyAndPaste);
 
 #if ENABLE(DRAG_SUPPORT)
     bool forDrag() const { return m_type == Type::DragAndDropData || m_type == Type::DragAndDropFiles; }
@@ -138,7 +138,6 @@ private:
     Vector<String> types(AddFilesType) const;
     Vector<Ref<File>> filesFromPasteboardAndItemList() const;
 
-    PAL::SessionID m_sessionID;
     String m_originIdentifier;
     StoreMode m_storeMode;
     std::unique_ptr<Pasteboard> m_pasteboard;

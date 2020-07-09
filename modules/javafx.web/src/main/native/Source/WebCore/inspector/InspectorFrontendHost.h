@@ -81,13 +81,21 @@ public:
     void moveWindowBy(float x, float y) const;
 
     bool isRemote() const;
-    String localizedStringsURL();
-    String backendCommandsURL();
-    String debuggableType();
-    unsigned inspectionLevel();
+    String localizedStringsURL() const;
+    String backendCommandsURL() const;
+    unsigned inspectionLevel() const;
 
-    String platform();
-    String port();
+    String platform() const;
+    String port() const;
+
+    struct DebuggableInfo {
+        String debuggableType;
+        String targetPlatformName;
+        String targetBuildVersion;
+        String targetProductVersion;
+        bool targetIsSimulator;
+    };
+    DebuggableInfo debuggableInfo() const;
 
     void copyText(const String& text);
     void killText(const String& text, bool shouldPrependToKillRing, bool shouldStartNewSequence);
@@ -111,11 +119,18 @@ public:
     void dispatchEventAsContextMenuEvent(Event&);
 
     bool isUnderTest();
+    bool isExperimentalBuild();
     void unbufferedLog(const String& message);
 
     void beep();
     void inspectInspector();
     bool isBeingInspected();
+
+    bool supportsDiagnosticLogging();
+#if ENABLE(INSPECTOR_TELEMETRY)
+    bool diagnosticLoggingAvailable();
+    void logDiagnosticEvent(const String& eventName, const String& payload);
+#endif
 
 private:
 #if ENABLE(CONTEXT_MENUS)

@@ -30,6 +30,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
@@ -39,10 +40,13 @@ class ProgressTrackerClient;
 struct ProgressItem;
 
 class ProgressTracker {
-    WTF_MAKE_NONCOPYABLE(ProgressTracker); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ProgressTracker);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit ProgressTracker(ProgressTrackerClient&);
+    explicit ProgressTracker(UniqueRef<ProgressTrackerClient>&&);
     ~ProgressTracker();
+
+    ProgressTrackerClient& client() { return m_client.get(); }
 
     static unsigned long createUniqueIdentifier();
 
@@ -69,7 +73,7 @@ private:
 
     static unsigned long s_uniqueIdentifier;
 
-    ProgressTrackerClient& m_client;
+    UniqueRef<ProgressTrackerClient> m_client;
     RefPtr<Frame> m_originatingProgressFrame;
     HashMap<unsigned long, std::unique_ptr<ProgressItem>> m_progressItems;
     Timer m_progressHeartbeatTimer;

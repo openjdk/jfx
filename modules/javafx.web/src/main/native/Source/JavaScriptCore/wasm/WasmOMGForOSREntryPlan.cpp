@@ -40,7 +40,6 @@
 #include "WasmMemory.h"
 #include "WasmNameSection.h"
 #include "WasmSignatureInlines.h"
-#include "WasmValidate.h"
 #include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
@@ -51,10 +50,10 @@
 namespace JSC { namespace Wasm {
 
 namespace WasmOMGForOSREntryPlanInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
-OMGForOSREntryPlan::OMGForOSREntryPlan(Context* context, Ref<Module>&& module, Ref<BBQCallee>&& callee, uint32_t functionIndex, uint32_t loopIndex, MemoryMode mode, CompletionTask&& task)
+OMGForOSREntryPlan::OMGForOSREntryPlan(Context* context, Ref<Module>&& module, Ref<Callee>&& callee, uint32_t functionIndex, uint32_t loopIndex, MemoryMode mode, CompletionTask&& task)
     : Base(context, makeRef(const_cast<ModuleInformation&>(module->moduleInformation())), WTFMove(task))
     , m_module(WTFMove(module))
     , m_codeBlock(*m_module->codeBlockFor(mode))
@@ -79,12 +78,11 @@ void OMGForOSREntryPlan::work(CompilationEffort)
 
     SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[m_functionIndex];
     const Signature& signature = SignatureInformation::get(signatureIndex);
-    ASSERT(validateFunction(function.data.data(), function.data.size(), signature, m_moduleInformation.get()));
 
     Vector<UnlinkedWasmToWasmCall> unlinkedCalls;
     CompilationContext context;
     unsigned osrEntryScratchBufferSize = 0;
-    auto parseAndCompileResult = parseAndCompile(context, function.data.data(), function.data.size(), signature, unlinkedCalls, osrEntryScratchBufferSize, m_moduleInformation.get(), m_mode, CompilationMode::OMGForOSREntryMode, m_functionIndex, m_loopIndex);
+    auto parseAndCompileResult = parseAndCompile(context, function, signature, unlinkedCalls, osrEntryScratchBufferSize, m_moduleInformation.get(), m_mode, CompilationMode::OMGForOSREntryMode, m_functionIndex, m_loopIndex);
 
     if (UNLIKELY(!parseAndCompileResult)) {
         fail(holdLock(m_lock), makeString(parseAndCompileResult.error(), "when trying to tier up ", String::number(m_functionIndex)));
@@ -99,7 +97,7 @@ void OMGForOSREntryPlan::work(CompilationEffort)
     }
 
     omgEntrypoint.compilation = makeUnique<B3::Compilation>(
-        FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "WebAssembly OMGForOSREntry function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::OMGForOSREntryMode, linkBuffer, B3CompilationPtrTag, "WebAssembly OMGForOSREntry function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
 
     omgEntrypoint.calleeSaveRegisters = WTFMove(parseAndCompileResult.value()->entrypoint.calleeSaveRegisters);
@@ -127,10 +125,25 @@ void OMGForOSREntryPlan::work(CompilationEffort)
     {
         auto locker = holdLock(m_codeBlock->m_lock);
         {
-            auto locker = holdLock(m_callee->tierUpCount()->getLock());
-            m_callee->setOSREntryCallee(callee.copyRef());
-            m_callee->tierUpCount()->osrEntryTriggers()[m_loopIndex] = TierUpCount::TriggerReason::CompilationDone;
-            m_callee->tierUpCount()->m_compilationStatusForOMGForOSREntry = TierUpCount::CompilationStatus::Compiled;
+            switch (m_callee->compilationMode()) {
+            case CompilationMode::LLIntMode: {
+                LLIntCallee* llintCallee = static_cast<LLIntCallee*>(m_callee.ptr());
+                auto locker = holdLock(llintCallee->tierUpCounter().m_lock);
+                llintCallee->setOSREntryCallee(callee.copyRef());
+                llintCallee->tierUpCounter().m_loopCompilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
+                break;
+            }
+            case CompilationMode::BBQMode: {
+                BBQCallee* bbqCallee = static_cast<BBQCallee*>(m_callee.ptr());
+                auto locker = holdLock(bbqCallee->tierUpCount()->getLock());
+                bbqCallee->setOSREntryCallee(callee.copyRef());
+                bbqCallee->tierUpCount()->osrEntryTriggers()[m_loopIndex] = TierUpCount::TriggerReason::CompilationDone;
+                bbqCallee->tierUpCount()->m_compilationStatusForOMGForOSREntry = TierUpCount::CompilationStatus::Compiled;
+                break;
+            }
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
+            }
         }
         WTF::storeStoreFence();
         // It is possible that a new OMG callee is added while we release m_codeBlock->lock.
@@ -146,7 +159,7 @@ void OMGForOSREntryPlan::work(CompilationEffort)
             MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
         }
     }
-    dataLogLnIf(WasmOMGForOSREntryPlanInternal::verbose, "Finished OMGForOSREntry ", m_functionIndex, " with tier up count at: ", m_callee->tierUpCount()->count());
+    dataLogLnIf(WasmOMGForOSREntryPlanInternal::verbose, "Finished OMGForOSREntry ", m_functionIndex);
     complete(holdLock(m_lock));
 }
 
