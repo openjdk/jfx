@@ -472,7 +472,7 @@ public class TextFieldTest {
         txtField.replaceSelection("a1234a");
         assertEquals("x aayyy", txtField.getText());
         assertEquals(4, txtField.getSelection().getStart());
-        assertEquals(4, txtField.getSelection().getStart());
+        assertEquals(4, txtField.getSelection().getEnd());
     }
 
     private Change noDigits(Change change) {

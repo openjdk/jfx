@@ -1905,8 +1905,8 @@ public class TextInputControlTest {
         StringBuilder selectionLog = new StringBuilder();
         textInput.setText("x xxx");
         textInput.selectRange(2, 5);
-        textInput.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
-        textInput.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
         textInput.replaceSelection("a");
         assertEquals("|", selectedTextLog.toString());
         assertEquals("|3,3", selectionLog.toString());
@@ -1919,9 +1919,9 @@ public class TextInputControlTest {
         StringBuilder selectedTextLog = new StringBuilder();
         StringBuilder selectionLog = new StringBuilder();
         StringBuilder textLog = new StringBuilder();
-        textInput.selectedTextProperty().addListener((__, ___, selection) -> selectedTextLog.append("|" + selection));
-        textInput.selectionProperty().addListener((__, ___, selection) -> selectionLog.append("|" + selection.getStart() + "," + selection.getEnd()));
-        textInput.textProperty().addListener((__, ___, text) -> textLog.append("|" + text));
+        textInput.selectedTextProperty().addListener((observable, oldValue, newValue) -> selectedTextLog.append("|" + newValue));
+        textInput.selectionProperty().addListener((observable, oldValue, newValue) -> selectionLog.append("|" + newValue.getStart() + "," + newValue.getEnd()));
+        textInput.textProperty().addListener((observable, oldValue, newValue) -> textLog.append("|" + newValue));
 
         textInput.selectRange(3, 6);
         assertEquals("|def", selectedTextLog.toString());
