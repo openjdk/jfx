@@ -167,8 +167,11 @@ public abstract class Pixels {
         return this.bytesPerComponent;
     }
 
-    /*
-     * Return the original pixels buffer.
+    /**
+     * Rewinds and returns the buffer used to create this {@code Pixels} object.
+     *
+     * @return the original pixels buffer with its position set to zero and its
+     * mark discarded
      */
     public final Buffer getPixels() {
         if (this.bytes != null) {
@@ -176,6 +179,21 @@ public abstract class Pixels {
             return this.bytes;
         } else if (this.ints != null) {
             this.ints.rewind();
+            return this.ints;
+        } else {
+            throw new RuntimeException("Unexpected Pixels state.");
+        }
+    }
+
+    /**
+     * Returns the buffer used to create this {@code Pixels} object.
+     *
+     * @return the original pixels buffer, unmodified
+     */
+    public final Buffer getBuffer() {
+        if (this.bytes != null) {
+            return this.bytes;
+        } else if (this.ints != null) {
             return this.ints;
         } else {
             throw new RuntimeException("Unexpected Pixels state.");

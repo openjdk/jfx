@@ -582,9 +582,11 @@ class EPDFrameBuffer {
      */
     ByteBuffer getOffscreenBuffer() {
         /*
-         * Allocates a direct byte buffer to avoid bug JDK-8201567,
-         * "QuantumRenderer modifies buffer in use by JavaFX Application Thread"
-         * <https://bugs.openjdk.java.net/browse/JDK-8201567>.
+         * In this case, a direct byte buffer outside of the normal heap is
+         * faster than a non-direct byte buffer on the heap. The frame rate is
+         * roughly 10 to 40 percent faster for a framebuffer with 8 bits per
+         * pixel and 40 to 60 percent faster for a framebuffer with 16 bits per
+         * pixel, depending on the device processor and screen size.
          */
         int size = xresVirtual * yres * Integer.BYTES;
         return ByteBuffer.allocateDirect(size);
