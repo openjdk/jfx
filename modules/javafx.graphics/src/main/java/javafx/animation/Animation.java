@@ -180,7 +180,7 @@ public abstract class Animation {
     }
 
     void resumeReceiver() {
-      if (paused) {
+        if (paused) {
             final long deltaTime = now() - pauseTime;
             startTime += deltaTime;
             paused = false;
@@ -992,7 +992,7 @@ public abstract class Animation {
                     if (isNearZero(rate)) {
                         pauseReceiver();
                     } else {
-
+                        setCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                     }
                 } else {
                     runHandler(getOnFinished());
@@ -1002,6 +1002,7 @@ public abstract class Animation {
                 doResume();
                 if (!isNearZero(getRate())) {
                     resumeReceiver();
+                    setCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                 }
                 break;
             case RUNNING: // no-op

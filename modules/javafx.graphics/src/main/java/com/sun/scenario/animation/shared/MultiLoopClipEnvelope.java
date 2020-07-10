@@ -40,11 +40,10 @@ abstract class MultiLoopClipEnvelope extends ClipEnvelope {
      * true if the animations was started in the positive direction, false if negative.
      * This is needed to resolve ambiguities in current rate calculation. For example, we have an animation
      * with auto-reverse and a cycle count of 2, and we put the play-head in the middle of cycle 0 from the
-     * positive side (or cycle 1 from the negative side). If we set the rate to -1 and play, the play direction
-     * can be either:
+     * positive side (or cycle 1 from the negative side). The current rate can be either:
      * <ul>
-     *  <li> positive because we are in a reverse cycle (cycle 1 from the end) of a negative rate
-     *  <li> negative because we are playing a positive cycle (cycle 0 from the start) in reverse
+     *  <li> with the rate because we are in an even cycle of a positive rate
+     *  <li> against the rate because we are in an odd cycle of a negative rate
      * <ul>
      */
     protected boolean startedPositive;
