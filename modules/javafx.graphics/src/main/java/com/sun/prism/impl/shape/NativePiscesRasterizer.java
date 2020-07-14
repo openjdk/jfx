@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.util.Logging;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.impl.PrismSettings;
 import java.nio.ByteBuffer;
@@ -153,21 +154,30 @@ public class NativePiscesRasterizer implements ShapeRasterizer {
             cachedMask = new byte[csize];
             cachedBuffer = ByteBuffer.wrap(cachedMask);
         }
-        if (stroke != null) {
-            produceStrokeAlphas(p2d.getFloatCoordsNoClone(),
-                                p2d.getCommandsNoClone(),
-                                p2d.getNumCommands(),
-                                stroke.getLineWidth(), stroke.getEndCap(),
-                                stroke.getLineJoin(), stroke.getMiterLimit(),
-                                stroke.getDashArray(), stroke.getDashPhase(),
-                                mxx, mxy, mxt, myx, myy, myt,
-                                bounds, cachedMask);
-        } else {
-            produceFillAlphas(p2d.getFloatCoordsNoClone(),
-                              p2d.getCommandsNoClone(),
-                              p2d.getNumCommands(), p2d.getWindingRule() == Path2D.WIND_NON_ZERO,
-                              mxx, mxy, mxt, myx, myy, myt,
-                              bounds, cachedMask);
+        try {
+            if (stroke != null) {
+                produceStrokeAlphas(p2d.getFloatCoordsNoClone(),
+                                    p2d.getCommandsNoClone(),
+                                    p2d.getNumCommands(),
+                                    stroke.getLineWidth(), stroke.getEndCap(),
+                                    stroke.getLineJoin(), stroke.getMiterLimit(),
+                                    stroke.getDashArray(), stroke.getDashPhase(),
+                                    mxx, mxy, mxt, myx, myy, myt,
+                                    bounds, cachedMask);
+            } else {
+                produceFillAlphas(p2d.getFloatCoordsNoClone(),
+                                  p2d.getCommandsNoClone(),
+                                  p2d.getNumCommands(), p2d.getWindingRule() == Path2D.WIND_NON_ZERO,
+                                  mxx, mxy, mxt, myx, myy, myt,
+                                  bounds, cachedMask);
+            }
+        } catch (Throwable ex) {
+            if (PrismSettings.verbose) {
+                ex.printStackTrace();
+            }
+            Logging.getJavaFXLogger().warning("Cannot rasterize Shape: "
+                    + ex.toString());
+            return emptyData;
         }
         x = bounds[0];
         y = bounds[1];
