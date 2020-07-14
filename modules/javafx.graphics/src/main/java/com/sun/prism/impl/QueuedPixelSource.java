@@ -100,7 +100,7 @@ public class QueuedPixelSource implements PixelSource {
     private boolean usesSameBuffer(Pixels p1, Pixels p2) {
         if (p1 == p2) return true;
         if (p1 == null || p2 == null) return false;
-        return (p1.getPixels() == p2.getPixels());
+        return (p1.getBuffer() == p2.getBuffer());
     }
 
     /**
