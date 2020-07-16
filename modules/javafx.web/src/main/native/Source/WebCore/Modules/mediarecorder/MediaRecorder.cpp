@@ -34,12 +34,11 @@
 #include "EventNames.h"
 #include "MediaRecorderErrorEvent.h"
 #include "MediaRecorderPrivate.h"
+#include "MediaRecorderProvider.h"
+#include "Page.h"
 #include "SharedBuffer.h"
+#include "WindowEventLoop.h"
 #include <wtf/IsoMallocInlines.h>
-
-#if PLATFORM(COCOA)
-#include "MediaRecorderPrivateAVFImpl.h"
-#endif
 
 namespace WebCore {
 
@@ -49,11 +48,14 @@ creatorFunction MediaRecorder::m_customCreator = nullptr;
 
 ExceptionOr<Ref<MediaRecorder>> MediaRecorder::create(Document& document, Ref<MediaStream>&& stream, Options&& options)
 {
-    auto privateInstance = MediaRecorder::getPrivateImpl(stream->privateStream());
+    auto privateInstance = MediaRecorder::createMediaRecorderPrivate(document, stream->privateStream());
     if (!privateInstance)
         return Exception { NotSupportedError, "The MediaRecorder is unsupported on this platform"_s };
     auto recorder = adoptRef(*new MediaRecorder(document, WTFMove(stream), WTFMove(privateInstance), WTFMove(options)));
     recorder->suspendIfNeeded();
+    recorder->m_private->setErrorCallback([recorder = recorder.copyRef()](auto&& exception) mutable {
+        recorder->dispatchError(WTFMove(*exception));
+    });
     return recorder;
 }
 
@@ -62,14 +64,19 @@ void MediaRecorder::setCustomPrivateRecorderCreator(creatorFunction creator)
     m_customCreator = creator;
 }
 
-std::unique_ptr<MediaRecorderPrivate> MediaRecorder::getPrivateImpl(const MediaStreamPrivate& stream)
+std::unique_ptr<MediaRecorderPrivate> MediaRecorder::createMediaRecorderPrivate(Document& document, const MediaStreamPrivate& stream)
 {
     if (m_customCreator)
         return m_customCreator();
 
 #if PLATFORM(COCOA)
-    return MediaRecorderPrivateAVFImpl::create(stream);
+    auto* page = document.page();
+    if (!page)
+        return nullptr;
+
+    return page->mediaRecorderProvider().createMediaRecorderPrivate(stream);
 #else
+    UNUSED_PARAM(document);
     UNUSED_PARAM(stream);
     return nullptr;
 #endif
@@ -93,20 +100,35 @@ MediaRecorder::~MediaRecorder()
     stopRecordingInternal();
 }
 
+Document* MediaRecorder::document() const
+{
+    return downcast<Document>(scriptExecutionContext());
+}
+
 void MediaRecorder::stop()
 {
     m_isActive = false;
     stopRecordingInternal();
 }
 
+void MediaRecorder::suspend(ReasonForSuspension reason)
+{
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    if (!m_isActive || state() == RecordingState::Inactive)
+        return;
+
+    stopRecordingInternal();
+
+    scheduleDeferredTask([this] {
+        dispatchEvent(MediaRecorderErrorEvent::create(eventNames().errorEvent, Exception { UnknownError, "MediaStream recording was interrupted"_s }));
+    });
+}
+
 const char* MediaRecorder::activeDOMObjectName() const
 {
     return "MediaRecorder";
-}
-
-bool MediaRecorder::canSuspendForDocumentSuspension() const
-{
-    return false; // FIXME: We should do better here as this prevents entering PageCache.
 }
 
 ExceptionOr<void> MediaRecorder::startRecording(Optional<int> timeslice)
@@ -133,10 +155,31 @@ ExceptionOr<void> MediaRecorder::stopRecording()
 
         stopRecordingInternal();
         ASSERT(m_state == RecordingState::Inactive);
-        dispatchEvent(BlobEvent::create(eventNames().dataavailableEvent, Event::CanBubble::No, Event::IsCancelable::No, createRecordingDataBlob()));
+        m_private->fetchData([this, protectedThis = makeRef(*this)](auto&& buffer, auto& mimeType) {
+            if (!m_isActive)
+                return;
+
+            dispatchEvent(BlobEvent::create(eventNames().dataavailableEvent, Event::CanBubble::No, Event::IsCancelable::No, buffer ? Blob::create(buffer.releaseNonNull(), mimeType) : Blob::create()));
+
+            if (!m_isActive)
+                return;
+
+            dispatchEvent(Event::create(eventNames().stopEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        });
+    });
+    return { };
+}
+
+ExceptionOr<void> MediaRecorder::requestData()
+{
+    if (state() == RecordingState::Inactive)
+        return Exception { InvalidStateError, "The MediaRecorder's state cannot be inactive"_s };
+
+    m_private->fetchData([this, protectedThis = makeRef(*this)](auto&& buffer, auto& mimeType) {
         if (!m_isActive)
             return;
-        dispatchEvent(Event::create(eventNames().stopEvent, Event::CanBubble::No, Event::IsCancelable::No));
+
+        dispatchEvent(BlobEvent::create(eventNames().dataavailableEvent, Event::CanBubble::No, Event::IsCancelable::No, buffer ? Blob::create(buffer.releaseNonNull(), mimeType) : Blob::create()));
     });
     return { };
 }
@@ -153,23 +196,21 @@ void MediaRecorder::stopRecordingInternal()
     m_private->stopRecording();
 }
 
-Ref<Blob> MediaRecorder::createRecordingDataBlob()
-{
-    auto data = m_private->fetchData();
-    if (!data)
-        return Blob::create(scriptExecutionContext()->sessionID());
-    return Blob::create(scriptExecutionContext()->sessionID(), *data, m_private->mimeType());
-}
-
 void MediaRecorder::didAddOrRemoveTrack()
 {
     scheduleDeferredTask([this] {
         if (!m_isActive || state() == RecordingState::Inactive)
             return;
         stopRecordingInternal();
-        auto event = MediaRecorderErrorEvent::create(eventNames().errorEvent, Exception { UnknownError, "Track cannot be added to or removed from the MediaStream while recording is happening"_s });
-        dispatchEvent(WTFMove(event));
+        dispatchError(Exception { UnknownError, "Track cannot be added to or removed from the MediaStream while recording is happening"_s });
     });
+}
+
+void MediaRecorder::dispatchError(Exception&& exception)
+{
+    if (!m_isActive)
+        return;
+    dispatchEvent(MediaRecorderErrorEvent::create(eventNames().errorEvent, WTFMove(exception)));
 }
 
 void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
@@ -196,11 +237,11 @@ void MediaRecorder::audioSamplesAvailable(MediaStreamTrackPrivate& track, const 
 void MediaRecorder::scheduleDeferredTask(Function<void()>&& function)
 {
     ASSERT(function);
-    auto* scriptExecutionContext = this->scriptExecutionContext();
-    if (!scriptExecutionContext)
+    auto* document = this->document();
+    if (!document)
         return;
 
-    scriptExecutionContext->postTask([protectedThis = makeRef(*this), function = WTFMove(function)] (auto&) {
+    document->eventLoop().queueTask(TaskSource::Networking, [pendingActivity = makePendingActivity(*this), function = WTFMove(function)] {
         function();
     });
 }

@@ -48,7 +48,9 @@ static inline bool isAnonymousRubyInlineBlock(const RenderObject* object)
         || !isRuby(object->parent())
         || is<RenderRubyRun>(*object)
         || (object->isInline() && (object->isBeforeContent() || object->isAfterContent()))
-        || (object->isAnonymous() && is<RenderBlock>(*object) && object->style().display() == DisplayType::InlineBlock));
+        || (object->isAnonymous() && is<RenderBlock>(*object) && object->style().display() == DisplayType::InlineBlock)
+        || object->isRenderMultiColumnFlow()
+        || object->isRenderMultiColumnSet());
 
     return object
         && isRuby(object->parent())
@@ -72,7 +74,7 @@ static inline bool isRubyAfterBlock(const RenderObject* object)
         && downcast<RenderBlock>(*object).firstChild()->style().styleType() == PseudoId::After;
 }
 
-#ifndef ASSERT_DISABLED
+#if ASSERT_ENABLED
 static inline bool isRubyChildForNormalRemoval(const RenderObject& object)
 {
     return object.isRubyRun()
@@ -82,7 +84,7 @@ static inline bool isRubyChildForNormalRemoval(const RenderObject& object)
     || object.isRenderMultiColumnSet()
     || isAnonymousRubyInlineBlock(&object);
 }
-#endif
+#endif // ASSERT_ENABLED
 
 static inline RenderBlock* rubyBeforeBlock(const RenderElement* ruby)
 {
@@ -109,7 +111,7 @@ static RenderRubyRun* lastRubyRun(const RenderElement* ruby)
     if (child && !is<RenderRubyRun>(*child))
         child = child->previousSibling();
     if (!is<RenderRubyRun>(child)) {
-        ASSERT(!child || child->isBeforeContent() || child == rubyBeforeBlock(ruby));
+        ASSERT(!child || child->isBeforeContent() || child == rubyBeforeBlock(ruby) || child->isRenderMultiColumnFlow() || child->isRenderMultiColumnSet());
         return nullptr;
     }
     return downcast<RenderRubyRun>(child);
@@ -213,6 +215,7 @@ void RenderTreeBuilder::Ruby::attach(RenderRubyRun& parent, RenderPtr<RenderObje
             RenderElement* ruby = parent.parent();
             ASSERT(isRuby(ruby));
             auto newRun = RenderRubyRun::staticCreateRubyRun(ruby);
+            auto& run = *newRun;
             m_builder.attach(*ruby, WTFMove(newRun), parent.nextSibling());
             // Add the new ruby text and move the old one to the new run
             // Note: Doing it in this order and not using RenderRubyRun's methods,
@@ -221,7 +224,7 @@ void RenderTreeBuilder::Ruby::attach(RenderRubyRun& parent, RenderPtr<RenderObje
             m_builder.blockFlowBuilder().attach(parent, WTFMove(child), beforeChild);
             auto takenBeforeChild = m_builder.blockBuilder().detach(parent, *beforeChild);
 
-            m_builder.attach(*newRun, WTFMove(takenBeforeChild));
+            m_builder.attach(run, WTFMove(takenBeforeChild));
             return;
         }
         if (parent.hasRubyBase()) {
@@ -383,9 +386,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Ruby::detach(RenderRubyAsInline& pare
     // If the child's parent is *this (must be a ruby run or generated content or anonymous block),
     // just use the normal remove method.
     if (child.parent() == &parent) {
-#ifndef ASSERT_DISABLED
         ASSERT(isRubyChildForNormalRemoval(child));
-#endif
         return m_builder.detachFromRenderElement(parent, child);
     }
     // If the child's parent is an anoymous block (must be generated :before/:after content)
@@ -407,9 +408,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Ruby::detach(RenderRubyAsBlock& paren
     // If the child's parent is *this (must be a ruby run or generated content or anonymous block),
     // just use the normal remove method.
     if (child.parent() == &parent) {
-#ifndef ASSERT_DISABLED
         ASSERT(isRubyChildForNormalRemoval(child));
-#endif
         return m_builder.blockBuilder().detach(parent, child);
     }
     // If the child's parent is an anoymous block (must be generated :before/:after content)

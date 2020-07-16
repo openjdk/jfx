@@ -29,11 +29,13 @@
 
 #include "ContextDestructionObserver.h"
 #include "ExceptionOr.h"
+#include "PostMessageOptions.h"
 #include "ServiceWorkerClientData.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/RefCounted.h>
 
 namespace JSC {
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -59,7 +61,7 @@ public:
 
     Identifier identifier() const { return m_data.identifier; }
 
-    ExceptionOr<void> postMessage(ScriptExecutionContext&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&& transfer);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
 
 protected:
     ServiceWorkerClient(ServiceWorkerGlobalScope&, ServiceWorkerClientData&&);

@@ -237,11 +237,8 @@ void TextTrack::setMode(Mode mode)
         m_client->textTrackRemoveCues(*this, *m_cues);
 
     if (mode != Mode::Showing && m_cues) {
-        for (size_t i = 0; i < m_cues->length(); ++i) {
-            RefPtr<TextTrackCue> cue = m_cues->item(i);
-            if (cue->isRenderable())
-                toVTTCue(cue.get())->removeDisplayTree();
-        }
+        for (size_t i = 0; i < m_cues->length(); ++i)
+            m_cues->item(i)->removeDisplayTree();
     }
 
     m_mode = mode;
@@ -441,9 +438,11 @@ void TextTrack::cueDidChange(TextTrackCue* cue)
 
 int TextTrack::trackIndex()
 {
-    ASSERT(m_mediaElement);
-    if (!m_trackIndex)
+    if (!m_trackIndex) {
+        if (!m_mediaElement)
+            return 0;
         m_trackIndex = m_mediaElement->ensureTextTracks().getTrackIndex(*this);
+    }
     return m_trackIndex.value();
 }
 
@@ -468,9 +467,11 @@ TextTrackCueList& TextTrack::ensureTextTrackCueList()
 
 int TextTrack::trackIndexRelativeToRenderedTracks()
 {
-    ASSERT(m_mediaElement);
-    if (!m_renderedTrackIndex)
+    if (!m_renderedTrackIndex) {
+        if (!m_mediaElement)
+            return 0;
         m_renderedTrackIndex = m_mediaElement->ensureTextTracks().getTrackIndexRelativeToRenderedTracks(*this);
+    }
     return m_renderedTrackIndex.value();
 }
 

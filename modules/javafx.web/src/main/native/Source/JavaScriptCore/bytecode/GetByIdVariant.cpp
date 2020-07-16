@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "GetByIdVariant.h"
 
+#include "CacheableIdentifierInlines.h"
 #include "CallLinkStatus.h"
 #include "JSCInlines.h"
 #include <wtf/ListDump.h>
@@ -33,19 +34,21 @@
 namespace JSC {
 
 GetByIdVariant::GetByIdVariant(
+    CacheableIdentifier identifier,
     const StructureSet& structureSet, PropertyOffset offset,
     const ObjectPropertyConditionSet& conditionSet,
     std::unique_ptr<CallLinkStatus> callLinkStatus,
     JSFunction* intrinsicFunction,
     FunctionPtr<OperationPtrTag> customAccessorGetter,
-    Optional<DOMAttributeAnnotation> domAttribute)
+    std::unique_ptr<DOMAttributeAnnotation> domAttribute)
     : m_structureSet(structureSet)
     , m_conditionSet(conditionSet)
     , m_offset(offset)
     , m_callLinkStatus(WTFMove(callLinkStatus))
     , m_intrinsicFunction(intrinsicFunction)
     , m_customAccessorGetter(customAccessorGetter)
-    , m_domAttribute(domAttribute)
+    , m_domAttribute(WTFMove(domAttribute))
+    , m_identifier(WTFMove(identifier))
 {
     if (!structureSet.size()) {
         ASSERT(offset == invalidOffset);
@@ -58,19 +61,23 @@ GetByIdVariant::GetByIdVariant(
 GetByIdVariant::~GetByIdVariant() { }
 
 GetByIdVariant::GetByIdVariant(const GetByIdVariant& other)
-    : GetByIdVariant()
+    : GetByIdVariant(other.m_identifier)
 {
     *this = other;
 }
 
 GetByIdVariant& GetByIdVariant::operator=(const GetByIdVariant& other)
 {
+    m_identifier = other.m_identifier;
     m_structureSet = other.m_structureSet;
     m_conditionSet = other.m_conditionSet;
     m_offset = other.m_offset;
     m_intrinsicFunction = other.m_intrinsicFunction;
     m_customAccessorGetter = other.m_customAccessorGetter;
-    m_domAttribute = other.m_domAttribute;
+    if (other.m_domAttribute)
+        m_domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*other.m_domAttribute);
+    else
+        m_domAttribute = nullptr;
     if (other.m_callLinkStatus)
         m_callLinkStatus = makeUnique<CallLinkStatus>(*other.m_callLinkStatus);
     else
@@ -101,6 +108,12 @@ inline bool GetByIdVariant::canMergeIntrinsicStructures(const GetByIdVariant& ot
 
 bool GetByIdVariant::attemptToMerge(const GetByIdVariant& other)
 {
+    if (!!m_identifier != !!other.m_identifier)
+        return false;
+
+    if (m_identifier && (m_identifier != other.m_identifier))
+        return false;
+
     if (m_offset != other.m_offset)
         return false;
 
@@ -144,6 +157,11 @@ bool GetByIdVariant::attemptToMerge(const GetByIdVariant& other)
     return true;
 }
 
+void GetByIdVariant::visitAggregate(SlotVisitor& visitor)
+{
+    m_identifier.visitAggregate(visitor);
+}
+
 void GetByIdVariant::markIfCheap(SlotVisitor& visitor)
 {
     m_structureSet.markIfCheap(visitor);
@@ -169,13 +187,13 @@ void GetByIdVariant::dump(PrintStream& out) const
 
 void GetByIdVariant::dumpInContext(PrintStream& out, DumpContext* context) const
 {
+    out.print("<");
+    out.print("id='", m_identifier, "', ");
     if (!isSet()) {
-        out.print("<empty>");
+        out.print("empty>");
         return;
     }
-
-    out.print(
-        "<", inContext(structureSet(), context), ", ", inContext(m_conditionSet, context));
+    out.print(inContext(structureSet(), context), ", ", inContext(m_conditionSet, context));
     out.print(", offset = ", offset());
     if (m_callLinkStatus)
         out.print(", call = ", *m_callLinkStatus);

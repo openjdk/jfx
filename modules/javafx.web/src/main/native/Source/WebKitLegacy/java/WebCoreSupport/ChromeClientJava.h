@@ -107,9 +107,9 @@ public:
     // End methods used by HostWindow.
 
     void contentsSizeChanged(Frame&, const IntSize&) const override;
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) override;
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) override;
 
-    void setToolTip(const String&, TextDirection) override;
+    void setToolTip(const String&);
 
     void print(Frame&) override;
 

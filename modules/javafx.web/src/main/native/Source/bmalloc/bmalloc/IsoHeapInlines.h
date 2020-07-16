@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,16 @@
 
 namespace bmalloc { namespace api {
 
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+template<typename Type>
+IsoHeap<Type>::IsoHeap(const char* heapClass)
+    : m_zone(malloc_create_zone(0, 0))
+{
+    if (heapClass)
+        malloc_set_zone_name(m_zone, heapClass);
+}
+#endif
+
 template<typename Type>
 void* IsoHeap<Type>::allocate()
 {
@@ -85,6 +95,7 @@ void IsoHeap<Type>::initialize()
     // when IsoHeap::isInitialized returns true, we need to store the value to m_impl *after*
     // all the initialization finishes.
     auto* heap = new IsoHeapImpl<Config>();
+    heap->addToAllIsoHeaps();
     setAllocatorOffset(heap->allocatorOffset());
     setDeallocatorOffset(heap->deallocatorOffset());
     auto* atomic = reinterpret_cast<std::atomic<IsoHeapImpl<Config>*>*>(&m_impl);
@@ -103,7 +114,7 @@ auto IsoHeap<Type>::impl() -> IsoHeapImpl<Config>&
 public: \
     static ::bmalloc::api::IsoHeap<isoType>& bisoHeap() \
     { \
-        static ::bmalloc::api::IsoHeap<isoType> heap; \
+        static ::bmalloc::api::IsoHeap<isoType> heap("WebKit_"#isoType); \
         return heap; \
     } \
     \
@@ -130,7 +141,7 @@ using __makeBisoMallocedInlineMacroSemicolonifier = int
 #define MAKE_BISO_MALLOCED_IMPL(isoType) \
 ::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \
 { \
-    static ::bmalloc::api::IsoHeap<isoType> heap; \
+    static ::bmalloc::api::IsoHeap<isoType> heap("WebKit "#isoType); \
     return heap; \
 } \
 \
@@ -151,7 +162,7 @@ struct MakeBisoMallocedImplMacroSemicolonifier##isoType { }
 template<> \
 ::bmalloc::api::IsoHeap<isoType>& isoType::bisoHeap() \
 { \
-    static ::bmalloc::api::IsoHeap<isoType> heap; \
+    static ::bmalloc::api::IsoHeap<isoType> heap("WebKit_"#isoType); \
     return heap; \
 } \
 \

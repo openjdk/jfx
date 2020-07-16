@@ -72,7 +72,7 @@ WorkerMessagingProxy::~WorkerMessagingProxy()
         || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().thread() == &Thread::current()));
 }
 
-void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const String& sourceCode, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, MonotonicTime timeOrigin, JSC::RuntimeFlags runtimeFlags, PAL::SessionID sessionID)
+void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, const String& name, const String& userAgent, bool isOnline, const String& sourceCode, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, MonotonicTime timeOrigin, ReferrerPolicy referrerPolicy, JSC::RuntimeFlags runtimeFlags)
 {
     // FIXME: This need to be revisited when we support nested worker one day
     ASSERT(m_scriptExecutionContext);
@@ -88,10 +88,11 @@ void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, const St
 
     SocketProvider* socketProvider = document.socketProvider();
 
-    auto thread = DedicatedWorkerThread::create(scriptURL, name, identifier, userAgent, isOnline, sourceCode, *this, *this, *this, startMode, contentSecurityPolicyResponseHeaders, shouldBypassMainWorldContentSecurityPolicy, document.topOrigin(), timeOrigin, proxy, socketProvider, runtimeFlags, sessionID);
+    WorkerParameters params = { scriptURL, name, identifier, userAgent, isOnline, contentSecurityPolicyResponseHeaders, shouldBypassMainWorldContentSecurityPolicy, timeOrigin, referrerPolicy };
+    auto thread = DedicatedWorkerThread::create(params, sourceCode, *this, *this, *this, startMode, document.topOrigin(), proxy, socketProvider, runtimeFlags);
 
     workerThreadCreated(thread.get());
-    thread->start(nullptr);
+    thread->start();
 
     m_inspectorProxy->workerStarted(m_scriptExecutionContext.get(), thread.ptr(), scriptURL);
 }
@@ -104,7 +105,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& m
             return;
 
         auto ports = MessagePort::entanglePorts(context, WTFMove(message.transferredPorts));
-        workerObject->dispatchEvent(MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
+        ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::PostedMessageQueue, MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
     });
 }
 
@@ -128,6 +129,22 @@ void WorkerMessagingProxy::postMessageToWorkerGlobalScope(MessageWithMessagePort
         m_queuedEarlyTasks.append(makeUnique<ScriptExecutionContext::Task>(WTFMove(task)));
 }
 
+void WorkerMessagingProxy::suspendForBackForwardCache()
+{
+    if (m_workerThread)
+        m_workerThread->suspend();
+    else
+        m_askedToSuspend = true;
+}
+
+void WorkerMessagingProxy::resumeForBackForwardCache()
+{
+    if (m_workerThread)
+        m_workerThread->resume();
+    else
+        m_askedToSuspend = false;
+}
+
 void WorkerMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
     // FIXME: In case of nested workers, this should go directly to the root Document context.
@@ -139,7 +156,7 @@ Ref<CacheStorageConnection> WorkerMessagingProxy::createCacheStorageConnection()
 {
     ASSERT(isMainThread());
     auto& document = downcast<Document>(*m_scriptExecutionContext);
-    return document.page()->cacheStorageProvider().createCacheStorageConnection(document.page()->sessionID());
+    return document.page()->cacheStorageProvider().createCacheStorageConnection();
 }
 
 bool WorkerMessagingProxy::postTaskForModeToWorkerGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
@@ -154,18 +171,14 @@ bool WorkerMessagingProxy::postTaskForModeToWorkerGlobalScope(ScriptExecutionCon
 
 void WorkerMessagingProxy::postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL)
 {
-    m_scriptExecutionContext->postTask([this, errorMessage = errorMessage.isolatedCopy(), sourceURL = sourceURL.isolatedCopy(), lineNumber, columnNumber] (ScriptExecutionContext& context) {
+    m_scriptExecutionContext->postTask([this, errorMessage = errorMessage.isolatedCopy(), sourceURL = sourceURL.isolatedCopy(), lineNumber, columnNumber] (ScriptExecutionContext&) {
         Worker* workerObject = this->workerObject();
         if (!workerObject)
             return;
 
         // We don't bother checking the askedToTerminate() flag here, because exceptions should *always* be reported even if the thread is terminated.
         // This is intentionally different than the behavior in MessageWorkerTask, because terminated workers no longer deliver messages (section 4.6 of the WebWorker spec), but they do report exceptions.
-
-        auto event = ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { });
-        workerObject->dispatchEvent(event);
-        if (!event->defaultPrevented())
-            context.reportException(errorMessage, lineNumber, columnNumber, sourceURL, nullptr, nullptr);
+        ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }));
     });
 }
 
@@ -177,12 +190,12 @@ void WorkerMessagingProxy::postMessageToDebugger(const String& message)
     });
 }
 
-void WorkerMessagingProxy::setResourceCachingDisabled(bool disabled)
+void WorkerMessagingProxy::setResourceCachingDisabledByWebInspector(bool disabled)
 {
     postTaskToLoader([disabled] (ScriptExecutionContext& context) {
         ASSERT(isMainThread());
         if (auto* page = downcast<Document>(context).page())
-            page->setResourceCachingDisabled(disabled);
+            page->setResourceCachingDisabledByWebInspector(disabled);
     });
 }
 
@@ -194,6 +207,11 @@ void WorkerMessagingProxy::workerThreadCreated(DedicatedWorkerThread& workerThre
         // Worker.terminate() could be called from JS before the thread was created.
         m_workerThread->stop(nullptr);
     } else {
+        if (m_askedToSuspend) {
+            m_askedToSuspend = false;
+            m_workerThread->suspend();
+        }
+
         ASSERT(!m_unconfirmedMessageCount);
         m_unconfirmedMessageCount = m_queuedEarlyTasks.size();
         m_workerThreadHadPendingActivity = true; // Worker initialization means a pending activity.

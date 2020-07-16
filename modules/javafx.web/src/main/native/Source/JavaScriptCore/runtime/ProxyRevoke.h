@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@ class ProxyObject;
 class ProxyRevoke final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     template<typename CellType, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -51,7 +51,7 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
-    void finishCreation(VM&, const char* name, ProxyObject*);
+    void finishCreation(VM&, ProxyObject*);
     static void visitChildren(JSCell*, SlotVisitor&);
     JSValue proxy() { return m_proxy.get(); }
     void setProxyToNull(VM& vm) { return m_proxy.set(vm, this, jsNull()); }

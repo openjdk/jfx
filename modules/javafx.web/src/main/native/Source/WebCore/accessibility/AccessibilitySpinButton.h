@@ -37,8 +37,8 @@ public:
 
     void setSpinButtonElement(SpinButtonElement* spinButton) { m_spinButtonElement = spinButton; }
 
-    AccessibilityObject* incrementButton();
-    AccessibilityObject* decrementButton();
+    AXCoreObject* incrementButton() override;
+    AXCoreObject* decrementButton() override;
 
     void step(int amount);
 
@@ -46,7 +46,6 @@ private:
     AccessibilitySpinButton();
 
     AccessibilityRole roleValue() const override { return AccessibilityRole::SpinButton; }
-    bool isSpinButton() const override { return true; }
     bool isNativeSpinButton() const override { return true; }
     void addChildren() override;
     LayoutRect elementRect() const override;
@@ -59,7 +58,7 @@ public:
     static Ref<AccessibilitySpinButtonPart> create();
     virtual ~AccessibilitySpinButtonPart() = default;
 
-    bool isIncrementor() const { return m_isIncrementor; }
+    bool isIncrementor() const override { return m_isIncrementor; }
     void setIsIncrementor(bool value) { m_isIncrementor = value; }
 
 private:

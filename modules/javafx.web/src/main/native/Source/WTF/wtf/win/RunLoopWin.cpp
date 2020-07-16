@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -118,6 +118,18 @@ void RunLoop::wakeUp()
     // FIXME: No need to wake up the run loop if we've already called dispatch
     // before the run loop has had the time to respond.
     ::PostMessage(m_runLoopMessageWindow, PerformWorkMessage, reinterpret_cast<WPARAM>(this), 0);
+}
+
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
+{
+    MSG message;
+    if (!::GetMessage(&message, 0, 0, 0))
+        return CycleResult::Stop;
+
+    ::TranslateMessage(&message);
+    ::DispatchMessage(&message);
+
+    return CycleResult::Continue;
 }
 
 // RunLoop::Timer

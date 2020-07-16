@@ -37,9 +37,10 @@ public:
 
 private:
     friend LazyNeverDestroyed<CSSRevertValue>;
-    CSSRevertValue()
+    CSSRevertValue(StaticCSSValueTag)
         : CSSValue(RevertClass)
     {
+        makeStatic();
     }
 };
 

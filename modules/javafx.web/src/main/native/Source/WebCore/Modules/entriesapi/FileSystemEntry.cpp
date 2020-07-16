@@ -28,10 +28,12 @@
 
 #include "DOMException.h"
 #include "DOMFileSystem.h"
+#include "Document.h"
 #include "ErrorCallback.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemEntryCallback.h"
 #include "ScriptExecutionContext.h"
+#include "WindowEventLoop.h"
 #include <wtf/FileSystem.h>
 #include <wtf/IsoMallocInlines.h>
 
@@ -60,9 +62,9 @@ const char* FileSystemEntry::activeDOMObjectName() const
     return "FileSystemEntry";
 }
 
-bool FileSystemEntry::canSuspendForDocumentSuspension() const
+Document* FileSystemEntry::document() const
 {
-    return !hasPendingActivity();
+    return downcast<Document>(scriptExecutionContext());
 }
 
 void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSystemEntryCallback>&& successCallback, RefPtr<ErrorCallback>&& errorCallback)
@@ -70,14 +72,20 @@ void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSyst
     if (!successCallback && !errorCallback)
         return;
 
-    filesystem().getParent(context, *this, [pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) {
-        if (result.hasException()) {
-            if (errorCallback)
-                errorCallback->handleEvent(DOMException::create(result.releaseException()));
+    filesystem().getParent(context, *this, [this, pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) mutable {
+        auto* document = this->document();
+        if (!document)
             return;
-        }
-        if (successCallback)
-            successCallback->handleEvent(result.releaseReturnValue());
+
+        document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = WTFMove(result), pendingActivity = WTFMove(pendingActivity)]() mutable {
+            if (result.hasException()) {
+                if (errorCallback)
+                    errorCallback->handleEvent(DOMException::create(result.releaseException()));
+                return;
+            }
+            if (successCallback)
+                successCallback->handleEvent(result.releaseReturnValue());
+        });
     });
 }
 

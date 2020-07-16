@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,10 @@ namespace JSC {
 
 class MacroAssemblerX86 : public MacroAssemblerX86Common {
 public:
-    static const unsigned numGPRs = 8;
-    static const unsigned numFPRs = 8;
+    static constexpr unsigned numGPRs = 8;
+    static constexpr unsigned numFPRs = 8;
 
-    static const Scale ScalePtr = TimesFour;
+    static constexpr Scale ScalePtr = TimesFour;
 
     using MacroAssemblerX86Common::add32;
     using MacroAssemblerX86Common::and32;
@@ -98,6 +98,11 @@ public:
     void or32(RegisterID reg, AbsoluteAddress address)
     {
         m_assembler.orl_rm(reg, address.m_ptr);
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        m_assembler.orw_im(imm.m_value, address.m_ptr);
     }
 
     void sub32(TrustedImm32 imm, AbsoluteAddress address)

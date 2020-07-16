@@ -33,6 +33,7 @@
 #include "JITCode.h"
 #include "JSCInlines.h"
 #include "Options.h"
+#include "WasmCompilationMode.h"
 #include <wtf/CompilationThread.h>
 
 #if OS(LINUX)
@@ -46,6 +47,22 @@ bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
     if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
         return true;
     return Options::dumpDisassembly();
+}
+
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode mode)
+{
+    if (Options::asyncDisassembly() || Options::dumpDisassembly() || Options::dumpWasmDisassembly())
+        return true;
+    switch (mode) {
+    case Wasm::CompilationMode::BBQMode:
+        return Options::dumpBBQDisassembly();
+    case Wasm::CompilationMode::OMGMode:
+    case Wasm::CompilationMode::OMGForOSREntryMode:
+        return Options::dumpOMGDisassembly();
+    default:
+        break;
+    }
+    return false;
 }
 
 LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithoutDisassemblyImpl()
@@ -193,7 +210,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
             jumpsToLink[i].setFrom(writePtr);
         }
     } else {
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             for (unsigned i = 0; i < jumpCount; ++i)
                 ASSERT(!MacroAssembler::canCompact(jumpsToLink[i].type()));
         }
@@ -228,21 +245,24 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
 
     recordLinkOffsets(m_assemblerStorage, readPtr, initialSize, readPtr - writePtr);
 
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
-    auto memcpyFunction = tagCFunctionPtr<CopyFunctionPtrTag>(memcpy);
-#else
-    auto memcpyFunction = tagCFunctionPtr<CopyFunctionPtrTag>(performJITMemcpy);
-#endif
     for (unsigned i = 0; i < jumpCount; ++i) {
         uint8_t* location = codeOutData + jumpsToLink[i].from();
         uint8_t* target = codeOutData + jumpsToLink[i].to() - executableOffsetFor(jumpsToLink[i].to());
-        MacroAssembler::link(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target, memcpyFunction);
+#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+        MacroAssembler::link<memcpy>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
+#else
+        MacroAssembler::link<performJITMemcpy>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
+#endif
     }
 
     size_t compactSize = writePtr + initialSize - readPtr;
     if (!m_executableMemory) {
         size_t nopSizeInBytes = initialSize - compactSize;
-        MacroAssembler::AssemblerType_T::fillNops(outData + compactSize, nopSizeInBytes, memcpy);
+#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+        Assembler::fillNops<memcpy>(outData + compactSize, nopSizeInBytes);
+#else
+        Assembler::fillNops<performJITMemcpy>(outData + compactSize, nopSizeInBytes);
+#endif
     }
 
 #if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)

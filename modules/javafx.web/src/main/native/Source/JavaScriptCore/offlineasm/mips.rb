@@ -43,6 +43,8 @@ require 'risc'
 # $t8 =>            (scratch)
 # $t9 =>            (stores the callee of a call opcode)
 # $gp =>            (globals)
+# $s0 => csr0       (callee-save, metadataTable)
+# $s1 => csr1       (callee-save, PB)
 # $s4 =>            (callee-save used to preserve $gp across calls)
 # $ra => lr
 # $sp => sp
@@ -99,6 +101,7 @@ MIPS_ZERO_REG = SpecialRegister.new("$zero")
 MIPS_GP_REG = SpecialRegister.new("$gp")
 MIPS_GPSAVE_REG = SpecialRegister.new("$s4")
 MIPS_CALL_REG = SpecialRegister.new("$t9")
+MIPS_RETURN_ADDRESS_REG = SpecialRegister.new("$ra")
 MIPS_TEMP_FPRS = [SpecialRegister.new("$f16")]
 MIPS_SCRATCH_FPR = SpecialRegister.new("$f18")
 
@@ -137,6 +140,8 @@ class RegisterID
             "$fp"
         when "csr0"
             "$s0"
+        when "csr1"
+            "$s1"
         when "lr"
             "$ra"
         when "sp"
@@ -527,7 +532,7 @@ def mipsLowerMisplacedImmediates(list)
                 end
             when /^(addi|subi)/
                 newList << node.riscLowerMalformedImmediatesRecurse(newList, -0x7fff..0x7fff)
-            when "andi", "andp", "ori", "orp", "xori", "xorp"
+            when "andi", "andp", "ori", "orp", "orh", "xori", "xorp"
                 newList << node.riscLowerMalformedImmediatesRecurse(newList, 0..0xffff)
             else
                 newList << node
@@ -680,7 +685,17 @@ def mipsAddPICCode(list)
         | node |
         myList << node
         if node.is_a? Label
-            myList << Instruction.new(node.codeOrigin, "pichdr", [])
+            # FIXME: [JSC] checkpoint_osr_exit_from_inlined_call_trampoline is a return location
+            # and we should name it properly.
+            # https://bugs.webkit.org/show_bug.cgi?id=208236
+            if node.name =~ /^.*_return_location(?:_(?:wide16|wide32))?$/ or node.name.start_with?("_checkpoint_osr_exit_from_inlined_call_trampoline")
+                # We need to have a special case for return location labels because they are always
+                # reached from a `ret` instruction. In this case, we need to proper reconfigure `$gp`
+                # using `$ra` instead of using `$t9`.
+                myList << Instruction.new(node.codeOrigin, "pichdr", [MIPS_RETURN_ADDRESS_REG])
+            else
+                myList << Instruction.new(node.codeOrigin, "pichdr", [MIPS_CALL_REG])
+            end
         end
     }
     myList
@@ -723,7 +738,7 @@ class Sequence
         result = riscLowerMalformedAddressesDouble(result)
         result = riscLowerMisplacedImmediates(result, ["storeb", "storei", "storep"])
         result = mipsLowerMisplacedImmediates(result)
-        result = riscLowerMalformedImmediates(result, -0x7fff..0x7fff)
+        result = riscLowerMalformedImmediates(result, -0x7fff..0x7fff, -0x7fff..0x7fff)
         result = mipsLowerMisplacedAddresses(result)
         result = riscLowerMisplacedAddresses(result)
         result = riscLowerRegisterReuse(result)
@@ -854,7 +869,7 @@ class Instruction
             end
         when "andi", "andp"
             emitMIPSCompact("and", "and", operands)
-        when "ori", "orp"
+        when "ori", "orp", "orh"
             emitMIPSCompact("or", "orr", operands)
         when "oris"
             emitMIPSCompact("or", "orrs", operands)
@@ -906,7 +921,7 @@ class Instruction
             emitMIPS("mul.d", operands)
         when "sqrtd"
             $asm.puts "sqrt.d #{mipsFlippedOperands(operands)}"
-        when "ci2d"
+        when "ci2ds"
             raise "invalid ops of #{self.inspect} at #{codeOriginString}" unless operands[1].is_a? FPRegisterID and operands[0].register?
             $asm.puts "mtc1 #{operands[0].mipsOperand}, #{operands[1].mipsOperand}"
             $asm.puts "cvt.d.w #{operands[1].mipsOperand}, #{operands[1].mipsOperand}"
@@ -1061,7 +1076,7 @@ class Instruction
         when "sltu", "sltub"
             $asm.puts "sltu #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
         when "pichdr"
-            $asm.putStr("OFFLINE_ASM_CPLOAD(#{MIPS_CALL_REG.mipsOperand})")
+            $asm.putStr("OFFLINE_ASM_CPLOAD(#{operands[0].mipsOperand})")
         when "memfence"
             $asm.puts "sync"
         else

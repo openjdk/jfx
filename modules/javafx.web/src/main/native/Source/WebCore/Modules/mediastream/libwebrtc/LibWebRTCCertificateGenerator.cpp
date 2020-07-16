@@ -27,12 +27,14 @@
 
 #if USE(LIBWEBRTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "JSRTCCertificate.h"
 #include "LibWebRTCMacros.h"
+#include "RTCCertificate.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/rtc_base/rtccertificategenerator.h>
+#include <webrtc/rtc_base/rtc_certificate_generator.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 

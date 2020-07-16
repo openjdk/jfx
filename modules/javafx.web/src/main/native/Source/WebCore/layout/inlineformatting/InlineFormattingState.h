@@ -27,41 +27,44 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayRun.h"
+#include "DisplayInlineContent.h"
 #include "FormattingState.h"
 #include "InlineItem.h"
-#include "InlineLineBox.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/OptionSet.h>
 
 namespace WebCore {
 namespace Layout {
 
-// Temp
-using InlineItems = Vector<std::unique_ptr<InlineItem>>;
-using InlineRuns = Vector<std::unique_ptr<Display::Run>>;
-using LineBoxes = Vector<LineBox>;
+using InlineItems = Vector<InlineItem>;
+
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingState);
 public:
     InlineFormattingState(Ref<FloatingState>&&, LayoutState&);
-    virtual ~InlineFormattingState();
+    ~InlineFormattingState();
 
     InlineItems& inlineItems() { return m_inlineItems; }
-    void addInlineItem(std::unique_ptr<InlineItem>&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
+    const InlineItems& inlineItems() const { return m_inlineItems; }
+    void addInlineItem(InlineItem&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
 
-    InlineRuns& inlineRuns() { return m_inlineRuns; }
-    void addInlineRun(std::unique_ptr<Display::Run>&& inlineRun) { m_inlineRuns.append(WTFMove(inlineRun)); }
-
-    LineBoxes& lineBoxes() { return m_lineBoxes; }
-    void addLineBox(LineBox lineBox) { m_lineBoxes.append(lineBox); }
+    const Display::InlineContent* displayInlineContent() const { return m_displayInlineContent.get(); }
+    Display::InlineContent& ensureDisplayInlineContent();
+    void clearDisplayInlineContent() { m_displayInlineContent = nullptr; }
 
 private:
+    // Cacheable input to line layout.
     InlineItems m_inlineItems;
-    InlineRuns m_inlineRuns;
-    LineBoxes m_lineBoxes;
+
+    RefPtr<Display::InlineContent> m_displayInlineContent;
 };
+
+inline Display::InlineContent& InlineFormattingState::ensureDisplayInlineContent()
+{
+    if (!m_displayInlineContent)
+        m_displayInlineContent = adoptRef(*new Display::InlineContent);
+    return *m_displayInlineContent;
+}
 
 }
 }

@@ -45,11 +45,6 @@ DragClientJava::~DragClientJava()
 {
 }
 
-void DragClientJava::dragControllerDestroyed()
-{
-    delete this;
-}
-
 void DragClientJava::willPerformDragDestinationAction(
     DragDestinationAction,
     const DragData&)

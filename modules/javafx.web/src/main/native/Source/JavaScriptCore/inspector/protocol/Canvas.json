@@ -1,7 +1,8 @@
 {
     "domain": "Canvas",
-    "availability": ["web"],
     "description": "Canvas domain allows tracking of canvases that have an associated graphics context. Tracks canvases in the DOM and CSS canvases created with -webkit-canvas.",
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "types": [
         {
             "id": "CanvasId",
@@ -20,23 +21,28 @@
             "description": "The type of rendering context backing the canvas element."
         },
         {
+            "id": "ProgramType",
+            "type": "string",
+            "enum": ["compute", "render"]
+        },
+        {
             "id": "ShaderType",
             "type": "string",
-            "enum": ["fragment", "vertex"],
-            "description": "Shader type. WebGL supports vertex and fragment shaders."
+            "enum": ["compute", "fragment", "vertex"]
         },
         {
             "id": "ContextAttributes",
             "type": "object",
             "description": "Drawing surface attributes.",
             "properties": [
-                { "name": "alpha", "type": "boolean", "optional": true },
-                { "name": "depth", "type": "boolean", "optional": true },
-                { "name": "stencil", "type": "boolean", "optional": true },
-                { "name": "antialias", "type": "boolean", "optional": true },
-                { "name": "premultipliedAlpha", "type": "boolean", "optional": true },
-                { "name": "preserveDrawingBuffer", "type": "boolean", "optional": true },
-                { "name": "failIfMajorPerformanceCaveat", "type": "boolean", "optional": true }
+                { "name": "alpha", "type": "boolean", "optional": true, "description": "WebGL, WebGL2, ImageBitmapRenderingContext" },
+                { "name": "depth", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "stencil", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "antialias", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "premultipliedAlpha", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "preserveDrawingBuffer", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "failIfMajorPerformanceCaveat", "type": "boolean", "optional": true, "description": "WebGL, WebGL2" },
+                { "name": "powerPreference", "type": "string", "optional": true, "description": "WebGL, WebGL2, WebGPU" }
             ]
         },
         {
@@ -51,6 +57,17 @@
                 { "name": "contextAttributes", "$ref": "ContextAttributes", "optional": true, "description": "Context attributes for rendering contexts." },
                 { "name": "memoryCost", "type": "number", "optional": true, "description": "Memory usage of the canvas in bytes." },
                 { "name": "backtrace", "type": "array", "items": { "$ref": "Console.CallFrame" }, "optional": true, "description": "Backtrace that was captured when this canvas context was created." }
+            ]
+        },
+        {
+            "id": "ShaderProgram",
+            "type": "object",
+            "description": "Information about a WebGL/WebGL2 shader program or WebGPU shader pipeline.",
+            "properties": [
+                { "name": "programId", "$ref": "ProgramId" },
+                { "name": "programType", "$ref": "ProgramType" },
+                { "name": "canvasId", "$ref": "CanvasId"} ,
+                { "name": "sharesVertexFragmentShader", "type": "boolean", "optional": true, "description": "Indicates whether the vertex and fragment shader modules are the same object for a render shader pipleine for a WebGPU device." }
             ]
         }
     ],
@@ -84,8 +101,8 @@
             ]
         },
         {
-            "name": "requestCSSCanvasClientNodes",
-            "description": "Gets all the nodes that are using this canvas via -webkit-canvas.",
+            "name": "requestClientNodes",
+            "description": "Gets all <code>-webkit-canvas</code> nodes or active <code>HTMLCanvasElement</code> for a <code>WebGPUDevice</code>.",
             "parameters": [
                 { "name": "canvasId", "$ref": "CanvasId" }
             ],
@@ -94,8 +111,8 @@
             ]
         },
         {
-            "name": "resolveCanvasContext",
-            "description": "Resolves JavaScript canvas context object for given canvasId.",
+            "name": "resolveContext",
+            "description": "Resolves JavaScript canvas/device context object for given canvasId.",
             "parameters": [
                 { "name": "canvasId", "$ref": "CanvasId", "description": "Canvas identifier." },
                 { "name": "objectGroup", "type": "string", "optional": true, "description": "Symbolic group name that can be used to release multiple objects." }
@@ -135,7 +152,7 @@
                 { "name": "shaderType", "$ref": "ShaderType" }
             ],
             "returns": [
-                { "name": "content", "type": "string" }
+                { "name": "source", "type": "string" }
             ]
         },
         {
@@ -192,7 +209,7 @@
             ]
         },
         {
-            "name": "cssCanvasClientNodesChanged",
+            "name": "clientNodesChanged",
             "parameters": [
                 { "name": "canvasId", "$ref": "CanvasId", "description": "Identifier of canvas that changed." }
             ]
@@ -222,14 +239,13 @@
         {
             "name": "programCreated",
             "parameters": [
-                { "name": "canvasId", "$ref": "CanvasId", "description": "Canvas identifier." },
-                { "name": "programId", "$ref": "ProgramId", "description": "Program identifier." }
+                { "name": "shaderProgram", "$ref": "ShaderProgram" }
             ]
         },
         {
             "name": "programDeleted",
             "parameters": [
-                { "name": "programId", "$ref": "ProgramId", "description": "Program identifier." }
+                { "name": "programId", "$ref": "ProgramId" }
             ]
         }
     ]

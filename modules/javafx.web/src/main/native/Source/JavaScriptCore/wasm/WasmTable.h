@@ -89,7 +89,7 @@ protected:
     const TableElementType m_type;
     const Optional<uint32_t> m_maximum;
 
-    MallocPtr<WriteBarrier<Unknown>> m_jsValues;
+    MallocPtr<WriteBarrier<Unknown>, VMMalloc> m_jsValues;
     JSObject* m_owner;
 };
 
@@ -98,6 +98,8 @@ public:
     JS_EXPORT_PRIVATE ~FuncRefTable() = default;
 
     void setFunction(uint32_t, JSObject*, WasmToWasmImportableFunction, Instance*);
+    const WasmToWasmImportableFunction& function(uint32_t) const;
+    Instance* instance(uint32_t) const;
 
     static ptrdiff_t offsetOfFunctions() { return OBJECT_OFFSETOF(FuncRefTable, m_importableFunctions); }
     static ptrdiff_t offsetOfInstances() { return OBJECT_OFFSETOF(FuncRefTable, m_instances); }
@@ -105,9 +107,9 @@ public:
 private:
     FuncRefTable(uint32_t initial, Optional<uint32_t> maximum);
 
-    MallocPtr<WasmToWasmImportableFunction> m_importableFunctions;
+    MallocPtr<WasmToWasmImportableFunction, VMMalloc> m_importableFunctions;
     // call_indirect needs to do an Instance check to potentially context switch when calling a function to another instance. We can hold raw pointers to Instance here because the embedder ensures that Table keeps all the instances alive. We couldn't hold a Ref here because it would cause cycles.
-    MallocPtr<Instance*> m_instances;
+    MallocPtr<Instance*, VMMalloc> m_instances;
 
     friend class Table;
 };

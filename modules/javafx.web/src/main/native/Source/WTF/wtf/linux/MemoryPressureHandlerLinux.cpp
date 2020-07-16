@@ -34,6 +34,7 @@
 #include <wtf/MemoryFootprint.h>
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/Threading.h>
 
 #define LOG_CHANNEL_PREFIX Log
 

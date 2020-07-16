@@ -208,7 +208,7 @@ bool RenderThemeJava::paintWidget(
             (jint)widgetIndex,
             (jint)state,
             (jint)rect.width(), (jint)rect.height(),
-            (jint)bgColor,
+            (jint)bgColor.value(),
             (jobject)JLObject(extParams.isEmpty()
                 ? nullptr
                 : env->NewDirectByteBuffer(
@@ -320,7 +320,7 @@ bool RenderThemeJava::paintButton(const RenderObject&o, const PaintInfo& i, cons
     return paintWidget(JNI_EXPAND(BUTTON), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
+void RenderThemeJava::adjustTextFieldStyle(RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -330,7 +330,7 @@ bool RenderThemeJava::paintTextField(const RenderObject&o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustSearchFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
+void RenderThemeJava::adjustSearchFieldStyle(RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -340,7 +340,7 @@ bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextAreaStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustTextAreaStyle(RenderStyle& style, const Element*) const
 {
     if (style.paddingTop().isIntrinsicOrAuto())
         style.setPaddingTop(Length(1, Fixed));
@@ -353,7 +353,7 @@ bool RenderThemeJava::paintTextArea(const RenderObject&o, const PaintInfo& i, co
     return paintTextField(o, i, r);
 }
 
-void RenderThemeJava::adjustButtonStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustButtonStyle(RenderStyle& style, const Element*) const
 {
     if (style.appearance() == PushButtonPart) {
         // Ignore line-height.
@@ -436,10 +436,10 @@ void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontC
     fontDescription = *cachedDesc;
 }
 
-void RenderThemeJava::adjustSliderTrackStyle(StyleResolver& selector, RenderStyle& style, const Element* element) const
+void RenderThemeJava::adjustSliderTrackStyle(RenderStyle& style, const Element* element) const
 {
     //utatodo: we need to measure the control in Java theme.
-    RenderTheme::adjustSliderTrackStyle(selector, style, element);
+    RenderTheme::adjustSliderTrackStyle(style, element);
 }
 
 bool RenderThemeJava::paintSliderTrack(const RenderObject&object, const PaintInfo& info, const IntRect& rect)
@@ -503,7 +503,7 @@ bool RenderThemeJava::paintSliderThumb(const RenderObject&, const PaintInfo&, co
     return false;
 }
 
-void RenderThemeJava::adjustMenuListStyle(StyleResolver&, RenderStyle& style, const Element*) const
+void RenderThemeJava::adjustMenuListStyle(RenderStyle& style, const Element*) const
 {
     // Add in the padding that we'd like to use.
     style.setPaddingRight(Length(20.0f + style.paddingRight().value(), Fixed));
@@ -515,10 +515,10 @@ bool RenderThemeJava::paintMenuList(const RenderObject& o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(MENU_LIST), o, i, rect);
 }
 
-void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver& selector, RenderStyle& style, const Element* e) const
+void RenderThemeJava::adjustMenuListButtonStyle(RenderStyle& style, const Element* e) const
 {
     style.resetBorderRadius();
-    adjustMenuListStyle(selector, style, e);
+    adjustMenuListStyle(style, e);
 }
 
 bool RenderThemeJava::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)

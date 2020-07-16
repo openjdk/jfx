@@ -56,12 +56,6 @@ enum class IndexRecordType;
 
 namespace IDBServer {
 
-class IDBBackingStoreTemporaryFileHandler {
-public:
-    virtual ~IDBBackingStoreTemporaryFileHandler() = default;
-    virtual void accessToTemporaryFileComplete(const String& path) = 0;
-};
-
 class IDBBackingStore {
 public:
     virtual ~IDBBackingStore() { RELEASE_ASSERT(!isMainThread()); }
@@ -91,7 +85,6 @@ public:
     virtual IDBError maybeUpdateKeyGeneratorNumber(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, double newKeyNumber) = 0;
     virtual IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) = 0;
     virtual IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) = 0;
-    virtual bool prefetchCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier) = 0;
 
     virtual IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) = 0;
     virtual void deleteBackingStore() = 0;
@@ -100,7 +93,6 @@ public:
     virtual bool isEphemeral() = 0;
 
     virtual void close() = 0;
-    virtual uint64_t databaseSize() const = 0;
 
     virtual bool hasTransaction(const IDBResourceIdentifier&) const = 0;
 protected:

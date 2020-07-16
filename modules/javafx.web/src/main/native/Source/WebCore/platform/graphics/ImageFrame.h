@@ -27,7 +27,6 @@
 
 #include "Color.h"
 #include "DecodingOptions.h"
-#include "ImageBackingStore.h"
 #include "ImageOrientation.h"
 #include "ImageTypes.h"
 #include "IntSize.h"
@@ -61,7 +60,6 @@ public:
     bool isComplete() const { return m_decodingStatus == DecodingStatus::Complete; }
 
     IntSize size() const;
-    IntSize sizeRespectingOrientation() const { return !m_orientation.usesWidthAsHeight() ? size() : size().transposedSize(); }
     unsigned frameBytes() const { return hasNativeImage() ? (size().area() * sizeof(uint32_t)).unsafeGet() : 0; }
     SubsamplingLevel subsamplingLevel() const { return m_subsamplingLevel; }
 

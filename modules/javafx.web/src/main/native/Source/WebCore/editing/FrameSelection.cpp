@@ -377,7 +377,9 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
     m_xPosForVerticalArrowNavigation = NoXPosForVerticalArrowNavigation();
     selectFrameElementInParentIfFullySelected();
     m_frame->editor().respondToChangedSelection(oldSelection, options);
-    m_frame->document()->enqueueDocumentEvent(Event::create(eventNames().selectionchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    // https://www.w3.org/TR/selection-api/#selectionchange-event
+    // FIXME: Spec doesn't specify which task source to use.
+    m_frame->document()->queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().selectionchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     return true;
 }
@@ -2064,7 +2066,7 @@ void FrameSelection::focusedOrActiveStateChanged()
         setSelectionFromNone();
     setCaretVisibility(activeAndFocused ? Visible : Hidden);
 
-    // Because StyleResolver::checkOneSelector() and
+    // Because Style::Resolver::checkOneSelector() and
     // RenderTheme::isFocused() check if the frame is active, we have to
     // update style and theme state that depended on those.
     if (Element* element = document->focusedElement()) {

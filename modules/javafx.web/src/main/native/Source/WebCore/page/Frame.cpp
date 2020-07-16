@@ -31,6 +31,7 @@
 #include "Frame.h"
 
 #include "ApplyStyleCommand.h"
+#include "BackForwardCache.h"
 #include "BackForwardController.h"
 #include "CSSAnimationController.h"
 #include "CSSComputedStyleDeclaration.h"
@@ -73,7 +74,6 @@
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "ProcessWarming.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTableCell.h"
@@ -230,7 +230,7 @@ void Frame::setView(RefPtr<FrameView>&& view)
     // Prepare for destruction now, so any unload event handlers get run and the DOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
     // these calls to work.
-    if (!view && m_doc && m_doc->pageCacheState() != Document::InPageCache)
+    if (!view && m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
         m_doc->prepareForDestruction();
 
     if (m_view)
@@ -275,7 +275,7 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     }
 #endif
 
-    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
+    if (m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
         m_doc->prepareForDestruction();
 
     m_doc = newDocument.copyRef();
@@ -557,10 +557,15 @@ void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSiz
     ResourceCacheValidationSuppressor validationSuppressor(m_doc->cachedResourceLoader());
 
     m_doc->setPrinting(printing);
-    auto& frameView = *view();
-    frameView.adjustMediaTypeForPrinting(printing);
+    view()->adjustMediaTypeForPrinting(printing);
 
+    // FIXME: Consider invoking Page::updateRendering or an equivalent.
     m_doc->styleScope().didChangeStyleSheetEnvironment();
+    m_doc->evaluateMediaQueriesAndReportChanges();
+    if (!view())
+        return;
+
+    auto& frameView = *view();
     if (shouldUsePrintingLayout())
         frameView.forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
     else {
@@ -629,7 +634,7 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
 
     document->setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorld(ScriptSourceCode(script.source(), URL(script.url())), world);
+    m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
 }
 
 RenderView* Frame::contentRenderer() const
@@ -706,7 +711,7 @@ void Frame::willDetachPage()
     // - When calling Frame::setView() with a null FrameView*. This is always done before calling
     //   Frame::willDetachPage (this function.) Hence the assertion below.
     //
-    // - When adding a document to the page cache, the tree is torn down before instantiating
+    // - When adding a document to the back/forward cache, the tree is torn down before instantiating
     //   the CachedPage+CachedFrame object tree.
     ASSERT(!document() || !document()->renderView());
 }
@@ -914,7 +919,10 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || &page->mainFrame() != this || settings().delegatesPageScaling())
+    if (!page || !isMainFrame())
+        return 1;
+
+    if (page->delegatesScaling())
         return 1;
 
     return page->pageScaleFactor();
@@ -952,7 +960,12 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
     m_doc->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 
     // Frame::clearTimers() suspended animations and pending relayouts.
-    animation().resumeAnimationsForDocument(m_doc.get());
+
+    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+        if (auto* timeline = m_doc->existingTimeline())
+            timeline->resumeAnimations();
+    } else
+        animation().resumeAnimationsForDocument(m_doc.get());
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }
@@ -1011,11 +1024,6 @@ void Frame::selfOnlyDeref()
         dropChildren();
 
     deref();
-}
-
-PAL::SessionID Frame::sessionID() const
-{
-    return m_loader->client().sessionID();
 }
 
 } // namespace WebCore

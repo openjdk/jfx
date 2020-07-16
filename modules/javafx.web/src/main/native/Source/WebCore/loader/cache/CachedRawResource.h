@@ -69,6 +69,10 @@ private:
     Optional<SharedBufferDataView> calculateIncrementalDataChunk(const SharedBuffer*) const;
     void notifyClientsDataWasReceived(const char* data, unsigned length);
 
+#if USE(QUICK_LOOK)
+    void previewResponseReceived(const ResourceResponse&) final;
+#endif
+
     unsigned long m_identifier;
     bool m_allowEncodedDataReplacement;
     bool m_inIncrementalDataNotify { false };

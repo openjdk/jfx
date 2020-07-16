@@ -101,8 +101,8 @@ public:
     float minValueForRange() const override;
     float stepValueForRange() const override;
 
-    AccessibilityObject* selectedRadioButton() override;
-    AccessibilityObject* selectedTabItem() override;
+    AXCoreObject* selectedRadioButton() override;
+    AXCoreObject* selectedTabItem() override;
     AccessibilityButtonState checkboxOrRadioValue() const override;
 
     unsigned hierarchicalLevel() const override;
@@ -132,7 +132,6 @@ public:
     AccessibilityObject* parentObject() const override;
     AccessibilityObject* parentObjectIfExists() const override;
 
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
     void childrenChanged() override;
     void updateAccessibilityRole() override;
 
@@ -143,6 +142,7 @@ public:
 
 protected:
     explicit AccessibilityNodeObject(Node*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
 
     AccessibilityRole m_ariaRole { AccessibilityRole::Unknown };
     mutable AccessibilityRole m_roleForMSAA { AccessibilityRole::Unknown };

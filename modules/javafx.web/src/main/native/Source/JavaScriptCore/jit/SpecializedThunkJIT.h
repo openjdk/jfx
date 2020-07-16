@@ -36,14 +36,14 @@ namespace JSC {
 
     class SpecializedThunkJIT : public JSInterfaceJIT {
     public:
-        static const int ThisArgument = -1;
+        static constexpr int ThisArgument = -1;
         SpecializedThunkJIT(VM& vm, int expectedArgCount)
             : JSInterfaceJIT(&vm)
         {
             emitFunctionPrologue();
             emitSaveThenMaterializeTagRegisters();
             // Check that we have the expected number of arguments
-            m_failures.append(branch32(NotEqual, payloadFor(CallFrameSlot::argumentCount), TrustedImm32(expectedArgCount + 1)));
+            m_failures.append(branch32(NotEqual, payloadFor(CallFrameSlot::argumentCountIncludingThis), TrustedImm32(expectedArgCount + 1)));
         }
 
         explicit SpecializedThunkJIT(VM& vm)
@@ -55,13 +55,13 @@ namespace JSC {
 
         void loadDoubleArgument(int argument, FPRegisterID dst, RegisterID scratch)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             m_failures.append(emitLoadDouble(src, dst, scratch));
         }
 
         void loadCellArgument(int argument, RegisterID dst)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             m_failures.append(emitLoadJSCell(src, dst));
         }
 
@@ -73,7 +73,7 @@ namespace JSC {
 
         void loadInt32Argument(int argument, RegisterID dst, Jump& failTarget)
         {
-            unsigned src = CallFrame::argumentOffset(argument);
+            VirtualRegister src = virtualRegisterForArgumentIncludingThis(argument + 1);
             failTarget = emitLoadInt32(src, dst);
         }
 
@@ -114,10 +114,10 @@ namespace JSC {
 #if USE(JSVALUE64)
             moveDoubleTo64(src, regT0);
             Jump zero = branchTest64(Zero, regT0);
-            sub64(tagTypeNumberRegister, regT0);
+            sub64(numberTagRegister, regT0);
             Jump done = jump();
             zero.link(this);
-            move(tagTypeNumberRegister, regT0);
+            move(numberTagRegister, regT0);
             done.link(this);
 #else
             moveDoubleToInts(src, regT0, regT1);
@@ -182,7 +182,7 @@ namespace JSC {
         void tagReturnAsInt32()
         {
 #if USE(JSVALUE64)
-            or64(tagTypeNumberRegister, regT0);
+            or64(numberTagRegister, regT0);
 #else
             move(TrustedImm32(JSValue::Int32Tag), regT1);
 #endif

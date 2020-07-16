@@ -26,16 +26,21 @@
 #include "config.h"
 #include "PageConfiguration.h"
 
+#include "AlternativeTextClient.h"
 #include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
 #include "CacheStorageProvider.h"
 #include "CookieJar.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
+#include "DragClient.h"
 #include "EditorClient.h"
 #include "LibWebRTCProvider.h"
+#include "MediaRecorderProvider.h"
 #include "PerformanceLoggingClient.h"
+#include "PlugInClient.h"
 #include "PluginInfoProvider.h"
+#include "ProgressTrackerClient.h"
 #include "SocketProvider.h"
 #include "SpeechSynthesisClient.h"
 #include "StorageNamespaceProvider.h"
@@ -51,13 +56,16 @@
 
 namespace WebCore {
 
-PageConfiguration::PageConfiguration(UniqueRef<EditorClient>&& editorClient, Ref<SocketProvider>&& socketProvider, UniqueRef<LibWebRTCProvider>&& libWebRTCProvider, Ref<CacheStorageProvider>&& cacheStorageProvider, Ref<BackForwardClient>&& backForwardClient, Ref<CookieJar>&& cookieJar)
-    : editorClient(WTFMove(editorClient))
+PageConfiguration::PageConfiguration(PAL::SessionID sessionID, UniqueRef<EditorClient>&& editorClient, Ref<SocketProvider>&& socketProvider, UniqueRef<LibWebRTCProvider>&& libWebRTCProvider, Ref<CacheStorageProvider>&& cacheStorageProvider, Ref<BackForwardClient>&& backForwardClient, Ref<CookieJar>&& cookieJar, UniqueRef<ProgressTrackerClient>&& progressTrackerClient, UniqueRef<MediaRecorderProvider>&& mediaRecorderProvider)
+    : sessionID(sessionID)
+    , editorClient(WTFMove(editorClient))
     , socketProvider(WTFMove(socketProvider))
     , libWebRTCProvider(WTFMove(libWebRTCProvider))
+    , progressTrackerClient(WTFMove(progressTrackerClient))
     , backForwardClient(WTFMove(backForwardClient))
     , cookieJar(WTFMove(cookieJar))
     , cacheStorageProvider(WTFMove(cacheStorageProvider))
+    , mediaRecorderProvider(WTFMove(mediaRecorderProvider))
 {
 }
 

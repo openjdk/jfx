@@ -25,38 +25,67 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include "JSInternalFieldObjectImpl.h"
 
 namespace JSC {
 
-class JSPromise : public JSNonFinalObject {
+class JSPromiseConstructor;
+class JSPromise : public JSInternalFieldObjectImpl<2> {
 public:
-    using Base = JSNonFinalObject;
+    using Base = JSInternalFieldObjectImpl<2>;
 
-    static JSPromise* create(VM&, Structure*);
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.promiseSpace;
+    }
+
+    JS_EXPORT_PRIVATE static JSPromise* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
     enum class Status : unsigned {
-        Pending = 1,
-        Fulfilled,
-        Rejected
+        Pending = 0, // Making this as 0, so that, we can change the status from Pending to others without masking.
+        Fulfilled = 1,
+        Rejected = 2,
     };
+    static constexpr uint32_t isHandledFlag = 4;
+    static constexpr uint32_t isFirstResolvingFunctionCalledFlag = 8;
+    static constexpr uint32_t stateMask = 0b11;
+
+    enum class Field : unsigned {
+        Flags = 0,
+        ReactionsOrResult = 1,
+    };
+    static_assert(numberOfInternalFields == 2);
 
     JS_EXPORT_PRIVATE Status status(VM&) const;
     JS_EXPORT_PRIVATE JSValue result(VM&) const;
     JS_EXPORT_PRIVATE bool isHandled(VM&) const;
 
-    // Initialize the promise with the executor.
-    // This may raise a JS exception.
-    void initialize(ExecState*, JSGlobalObject*, JSValue executor);
+    JS_EXPORT_PRIVATE static JSPromise* resolvedPromise(JSGlobalObject*, JSValue);
 
-    JS_EXPORT_PRIVATE static JSPromise* resolve(JSGlobalObject&, JSValue);
+    JS_EXPORT_PRIVATE void resolve(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE void reject(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE void reject(JSGlobalObject*, Exception*);
+
+    struct DeferredData {
+        WTF_FORBID_HEAP_ALLOCATION;
+    public:
+        JSPromise* promise { nullptr };
+        JSFunction* resolve { nullptr };
+        JSFunction* reject { nullptr };
+    };
+    static DeferredData createDeferredData(JSGlobalObject*, JSPromiseConstructor*);
+
+    static void visitChildren(JSCell*, SlotVisitor&);
 
 protected:
     JSPromise(VM&, Structure*);
     void finishCreation(VM&);
+
+    uint32_t flags() const;
 };
 
 } // namespace JSC

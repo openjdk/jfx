@@ -26,6 +26,7 @@
 #include "config.h"
 #include "MemoryRelease.h"
 
+#include "BackForwardCache.h"
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"
 #include "CachedResourceLoader.h"
@@ -39,10 +40,10 @@
 #include "HTMLMediaElement.h"
 #include "InlineStyleSheetOwner.h"
 #include "InspectorInstrumentation.h"
+#include "LayoutIntegrationLineLayout.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "RenderTheme.h"
 #include "ScrollingThread.h"
 #include "StyleScope.h"
@@ -68,8 +69,14 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     clearWidthCaches();
     TextPainter::clearGlyphDisplayLists();
 
-    for (auto* document : Document::allDocuments())
+    for (auto* document : Document::allDocuments()) {
         document->clearSelectorQueryCache();
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+        if (auto* renderView = document->renderView())
+            LayoutIntegration::LineLayout::releaseCaches(*renderView);
+#endif
+    }
 
     if (maintainMemoryCache == MaintainMemoryCache::No)
         MemoryCache::singleton().pruneDeadResourcesToSize(0);
@@ -77,12 +84,12 @@ static void releaseNoncriticalMemory(MaintainMemoryCache maintainMemoryCache)
     InlineStyleSheetOwner::clearCache();
 }
 
-static void releaseCriticalMemory(Synchronous synchronous, MaintainPageCache maintainPageCache, MaintainMemoryCache maintainMemoryCache)
+static void releaseCriticalMemory(Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
 {
     // Right now, the only reason we call release critical memory while not under memory pressure is if the process is about to be suspended.
-    if (maintainPageCache == MaintainPageCache::No) {
+    if (maintainBackForwardCache == MaintainBackForwardCache::No) {
         PruningReason pruningReason = MemoryPressureHandler::singleton().isUnderMemoryPressure() ? PruningReason::MemoryPressure : PruningReason::ProcessSuspended;
-        PageCache::singleton().pruneToSizeNow(0, pruningReason);
+        BackForwardCache::singleton().pruneToSizeNow(0, pruningReason);
     }
 
     if (maintainMemoryCache == MaintainMemoryCache::No) {
@@ -118,14 +125,14 @@ static void releaseCriticalMemory(Synchronous synchronous, MaintainPageCache mai
     }
 }
 
-void releaseMemory(Critical critical, Synchronous synchronous, MaintainPageCache maintainPageCache, MaintainMemoryCache maintainMemoryCache)
+void releaseMemory(Critical critical, Synchronous synchronous, MaintainBackForwardCache maintainBackForwardCache, MaintainMemoryCache maintainMemoryCache)
 {
     TraceScope scope(MemoryPressureHandlerStart, MemoryPressureHandlerEnd, static_cast<uint64_t>(critical), static_cast<uint64_t>(synchronous));
 
     if (critical == Critical::Yes) {
         // Return unused pages back to the OS now as this will likely give us a little memory to work with.
         WTF::releaseFastMallocFreeMemory();
-        releaseCriticalMemory(synchronous, maintainPageCache, maintainMemoryCache);
+        releaseCriticalMemory(synchronous, maintainBackForwardCache, maintainMemoryCache);
     }
 
     releaseNoncriticalMemory(maintainMemoryCache);

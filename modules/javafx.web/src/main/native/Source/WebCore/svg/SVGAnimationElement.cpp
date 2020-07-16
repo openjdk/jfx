@@ -49,7 +49,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimationElement);
 
 SVGAnimationElement::SVGAnimationElement(const QualifiedName& tagName, Document& document)
     : SVGSMILElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGTests(this)
 {
 }
@@ -136,7 +135,6 @@ bool SVGAnimationElement::isSupportedAttribute(const QualifiedName& attrName)
     static const auto supportedAttributes = makeNeverDestroyed([] {
         HashSet<QualifiedName> set;
         SVGTests::addSupportedAttributes(set);
-        SVGExternalResourcesRequired::addSupportedAttributes(set);
         set.add({
             SVGNames::valuesAttr.get(),
             SVGNames::keyTimesAttr.get(),
@@ -203,7 +201,6 @@ void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomSt
 
     SVGSMILElement::parseAttribute(name, value);
     SVGTests::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGAnimationElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -565,7 +562,7 @@ void SVGAnimationElement::startedActiveInterval()
         m_animationValid = calcMode == CalcMode::Paced || !hasAttributeWithoutSynchronization(SVGNames::keyPointsAttr) || (m_keyTimes.size() > 1 && m_keyTimes.size() == m_keyPoints.size());
 }
 
-void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount, SVGSMILElement* resultElement)
+void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount)
 {
     if (!m_animationValid)
         return;
@@ -593,7 +590,7 @@ void SVGAnimationElement::updateAnimation(float percent, unsigned repeatCount, S
     else
         effectivePercent = percent;
 
-    calculateAnimatedValue(effectivePercent, repeatCount, resultElement);
+    calculateAnimatedValue(effectivePercent, repeatCount);
 }
 
 void SVGAnimationElement::computeCSSPropertyValue(SVGElement* element, CSSPropertyID id, String& valueString)

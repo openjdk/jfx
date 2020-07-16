@@ -13,19 +13,12 @@ endif ()
 
 add_subdirectory(JavaScriptCore)
 
-if (ENABLE_GRAPHICS_CONTEXT_3D)
+if (ENABLE_GRAPHICS_CONTEXT_GL)
     add_subdirectory(ThirdParty/ANGLE)
 endif ()
 
 if (ENABLE_API_TESTS)
     add_subdirectory(ThirdParty/gtest)
-endif ()
-
-if (USE_OPENVR)
-    # OpenVR is compiled with -stdlib=libc++ as default if Clang is used.
-    # Disable USE_LIBCXX not to use -stdlib=libc++.
-    option(USE_LIBCXX "Uses libc++ instead of libstdc++" OFF)
-    add_subdirectory(ThirdParty/openvr)
 endif ()
 
 if (USE_XDGMIME)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,15 +32,15 @@
 
 namespace JSC {
 
-IntrinsicGetterAccessCase::IntrinsicGetterAccessCase(VM& vm, JSCell* owner, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
-    : Base(vm, owner, IntrinsicGetter, offset, structure, conditionSet, WTFMove(prototypeAccessChain))
+IntrinsicGetterAccessCase::IntrinsicGetterAccessCase(VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+    : Base(vm, owner, IntrinsicGetter, identifier, offset, structure, conditionSet, WTFMove(prototypeAccessChain))
 {
     m_intrinsicFunction.set(vm, owner, intrinsicFunction);
 }
 
-std::unique_ptr<AccessCase> IntrinsicGetterAccessCase::create(VM& vm, JSCell* owner, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
+std::unique_ptr<AccessCase> IntrinsicGetterAccessCase::create(VM& vm, JSCell* owner, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, JSFunction* intrinsicFunction, std::unique_ptr<PolyProtoAccessChain> prototypeAccessChain)
 {
-    return std::unique_ptr<AccessCase>(new IntrinsicGetterAccessCase(vm, owner, offset, structure, conditionSet, intrinsicFunction, WTFMove(prototypeAccessChain)));
+    return std::unique_ptr<AccessCase>(new IntrinsicGetterAccessCase(vm, owner, identifier, offset, structure, conditionSet, intrinsicFunction, WTFMove(prototypeAccessChain)));
 }
 
 IntrinsicGetterAccessCase::~IntrinsicGetterAccessCase()

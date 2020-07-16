@@ -70,8 +70,8 @@ inline bool Heap::worldIsStopped() const
 ALWAYS_INLINE bool Heap::isMarked(const void* rawCell)
 {
     HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
-    if (cell->isLargeAllocation())
-        return cell->largeAllocation().isMarked();
+    if (cell->isPreciseAllocation())
+        return cell->preciseAllocation().isMarked();
     MarkedBlock& block = cell->markedBlock();
     return block.isMarked(m_objectSpace.markingVersion(), cell);
 }
@@ -79,8 +79,8 @@ ALWAYS_INLINE bool Heap::isMarked(const void* rawCell)
 ALWAYS_INLINE bool Heap::testAndSetMarked(HeapVersion markingVersion, const void* rawCell)
 {
     HeapCell* cell = bitwise_cast<HeapCell*>(rawCell);
-    if (cell->isLargeAllocation())
-        return cell->largeAllocation().testAndSetMarked();
+    if (cell->isPreciseAllocation())
+        return cell->preciseAllocation().testAndSetMarked();
     MarkedBlock& block = cell->markedBlock();
     Dependency dependency = block.aboutToMark(markingVersion);
     return block.testAndSetMarked(cell, dependency);
@@ -188,7 +188,7 @@ inline void Heap::decrementDeferralDepthAndGCIfNeeded()
     ASSERT(!Thread::mayBeGCThread() || m_worldIsStopped);
     m_deferralDepth--;
 
-    if (UNLIKELY(m_didDeferGCWork)) {
+    if (UNLIKELY(m_didDeferGCWork) || Options::forceDidDeferGCWork()) {
         decrementDeferralDepthAndGCIfNeededSlow();
 
         // Here are the possible relationships between m_deferralDepth and m_didDeferGCWork.

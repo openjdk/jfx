@@ -34,11 +34,17 @@ namespace JSC {
 
 class CustomGetterSetter : public JSCell {
 public:
-    typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    using Base = JSCell;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    typedef PropertySlot::GetValueFunc CustomGetter;
-    typedef PutPropertySlot::PutValueFunc CustomSetter;
+    using CustomGetter = PropertySlot::GetValueFunc;
+    using CustomSetter = PutPropertySlot::PutValueFunc;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.customGetterSetterSpace;
+    }
 
     static CustomGetterSetter* create(VM& vm, CustomGetter customGetter, CustomSetter customSetter)
     {
@@ -70,7 +76,7 @@ private:
     CustomSetter m_setter;
 };
 
-JS_EXPORT_PRIVATE bool callCustomSetter(ExecState*, CustomGetterSetter::CustomSetter, bool isAccessor, JSValue thisValue, JSValue);
-JS_EXPORT_PRIVATE bool callCustomSetter(ExecState*, JSValue customGetterSetter, bool isAccessor, JSObject* slotBase, JSValue thisValue, JSValue);
+JS_EXPORT_PRIVATE bool callCustomSetter(JSGlobalObject*, CustomGetterSetter::CustomSetter, bool isAccessor, JSValue thisValue, JSValue);
+JS_EXPORT_PRIVATE bool callCustomSetter(JSGlobalObject*, JSValue customGetterSetter, bool isAccessor, JSObject* slotBase, JSValue thisValue, JSValue);
 
 } // namespace JSC

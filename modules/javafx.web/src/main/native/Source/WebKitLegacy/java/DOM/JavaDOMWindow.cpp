@@ -1186,7 +1186,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_confirmImpl(JNI
     , jstring message)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->confirm(String(env, message));
+    return IMPL->confirmForBindings(String(env, message));
 }
 
 

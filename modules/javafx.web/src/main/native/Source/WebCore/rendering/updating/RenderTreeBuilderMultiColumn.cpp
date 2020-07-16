@@ -31,6 +31,7 @@
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderTreeBuilder.h"
 #include "RenderTreeBuilderBlock.h"
+#include "RenderView.h"
 
 namespace WebCore {
 
@@ -280,6 +281,9 @@ RenderObject* RenderTreeBuilder::MultiColumn::processPossibleSpannerDescendant(R
     RenderObject* nextRendererInFragmentedFlow = spannerPlacehoderCandidate(descendant, flow);
     RenderObject* insertBeforeMulticolChild = nullptr;
     RenderObject* nextDescendant = &descendant;
+
+    if (!multicolContainer)
+        return nullptr;
 
     if (isValidColumnSpanner(flow, descendant)) {
         // This is a spanner (column-span:all). Such renderers are moved from where they would

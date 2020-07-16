@@ -30,7 +30,6 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
 #include "JSValueInWrappedObject.h"
 #include "PaymentAddress.h"
 #include "PaymentComplete.h"
@@ -42,10 +41,12 @@ class Document;
 class PaymentRequest;
 struct PaymentValidationErrors;
 
+template<typename IDLType> class DOMPromiseDeferred;
+
 class PaymentResponse final : public ActiveDOMObject, public EventTargetWithInlineData, public RefCounted<PaymentResponse> {
     WTF_MAKE_ISO_ALLOCATED(PaymentResponse);
 public:
-    using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::ExecState&)>;
+    using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
 
     static Ref<PaymentResponse> create(ScriptExecutionContext* context, PaymentRequest& request)
     {
@@ -97,8 +98,8 @@ private:
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final { return "PaymentResponse"; }
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
+    void suspend(ReasonForSuspension) final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return PaymentResponseEventTargetInterfaceType; }
@@ -123,7 +124,7 @@ private:
     String m_payerEmail;
     String m_payerPhone;
     State m_state { State::Created };
-    Optional<DOMPromiseDeferred<void>> m_retryPromise;
+    std::unique_ptr<DOMPromiseDeferred<void>> m_retryPromise;
     RefPtr<PendingActivity<PaymentResponse>> m_pendingActivity;
 };
 

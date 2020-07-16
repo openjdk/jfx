@@ -74,6 +74,7 @@ enum LayerTreeAsTextBehaviorFlags {
     LayerTreeAsTextIncludeBackingStoreAttached  = 1 << 9,
     LayerTreeAsTextIncludeRootLayerProperties   = 1 << 10,
     LayerTreeAsTextIncludeEventRegion           = 1 << 11,
+    LayerTreeAsTextIncludeDeepColor             = 1 << 12,
     LayerTreeAsTextShowAll                      = 0xFFFF
 };
 typedef unsigned LayerTreeAsTextBehavior;
@@ -102,7 +103,7 @@ public:
     // Notification that this layer requires a flush before the next display refresh.
     virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) { }
 
-    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, OptionSet<GraphicsLayerPaintingPhase>, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) { }
+    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) { }
     virtual void didChangePlatformLayerForLayer(const GraphicsLayer*) { }
 
     // Provides current transform (taking transform-origin and animations into account). Input matrix has been

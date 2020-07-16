@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@
 namespace JSC { namespace DFG {
 
 class SSAConversionPhase : public Phase {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
 public:
     SSAConversionPhase(Graph& graph)
@@ -97,14 +97,14 @@ public:
 
                 if (oldRoot->isCatchEntrypoint) {
                     ASSERT(!!entrypointIndex);
-                    m_graph.m_entrypointIndexToCatchBytecodeOffset.add(entrypointIndex, oldRoot->bytecodeBegin);
+                    m_graph.m_entrypointIndexToCatchBytecodeIndex.add(entrypointIndex, oldRoot->bytecodeBegin);
                 }
             }
 
             RELEASE_ASSERT(entrySwitchData->cases[0] == m_graph.block(0)); // We strongly assume the normal call entrypoint is the first item in the list.
 
             const bool exitOK = false;
-            NodeOrigin origin { CodeOrigin(0), CodeOrigin(0), exitOK };
+            NodeOrigin origin { CodeOrigin(BytecodeIndex(0)), CodeOrigin(BytecodeIndex(0)), exitOK };
             newRoot->appendNode(
                 m_graph, SpecNone, EntrySwitch, origin, OpInfo(entrySwitchData));
 
@@ -158,8 +158,8 @@ public:
                     childNode = m_insertionSet.insertNode(
                         nodeIndex, node->variableAccessData()->prediction(),
                         GetStack, node->origin,
-                        OpInfo(m_graph.m_stackAccessData.add(variable->local(), variable->flushFormat())));
-                    if (!ASSERT_DISABLED)
+                        OpInfo(m_graph.m_stackAccessData.add(variable->operand(), variable->flushFormat())));
+                    if (ASSERT_ENABLED)
                         m_argumentGetters.add(childNode);
                     m_argumentMapping.add(node, childNode);
                 }
@@ -178,7 +178,7 @@ public:
                 VariableAccessData* variable = m_variableForSSAIndex[ssaVariable->index()];
 
                 // Prune by liveness. This doesn't buy us much other than compile times.
-                Node* headNode = block->variablesAtHead.operand(variable->local());
+                Node* headNode = block->variablesAtHead.operand(variable->operand());
                 if (!headNode)
                     return nullptr;
 
@@ -300,7 +300,7 @@ public:
                         ASSERT(!node->replacement());
                     }
                     if (verbose)
-                        dataLog("Mapping: ", VirtualRegister(valueForOperand.operandForIndex(i)), " -> ", node, "\n");
+                        dataLog("Mapping: ", valueForOperand.operandForIndex(i), " -> ", node, "\n");
                     valueForOperand[i] = node;
                 }
             }
@@ -313,11 +313,11 @@ public:
                 VariableAccessData* variable = m_variableForSSAIndex[phiDef->variable()->index()];
 
                 m_insertionSet.insert(phiInsertionPoint, phiDef->value());
-                valueForOperand.operand(variable->local()) = phiDef->value();
+                valueForOperand.operand(variable->operand()) = phiDef->value();
 
                 m_insertionSet.insertNode(
                     phiInsertionPoint, SpecNone, MovHint, block->at(0)->origin.withInvalidExit(),
-                    OpInfo(variable->local().offset()), phiDef->value()->defaultEdge());
+                    OpInfo(variable->operand()), phiDef->value()->defaultEdge());
             }
 
             if (block->at(0)->origin.exitOK)
@@ -337,7 +337,7 @@ public:
                 case MovHint: {
                     m_insertionSet.insertNode(
                         nodeIndex, SpecNone, KillStack, node->origin,
-                        OpInfo(node->unlinkedLocal().offset()));
+                        OpInfo(node->unlinkedOperand()));
                     node->origin.exitOK = false; // KillStack clobbers exit.
                     break;
                 }
@@ -349,19 +349,19 @@ public:
                     if (!!(node->flags() & NodeIsFlushed)) {
                         node->convertToPutStack(
                             m_graph.m_stackAccessData.add(
-                                variable->local(), variable->flushFormat()));
+                                variable->operand(), variable->flushFormat()));
                     } else
                         node->remove(m_graph);
 
                     if (verbose)
-                        dataLog("Mapping: ", variable->local(), " -> ", child, "\n");
-                    valueForOperand.operand(variable->local()) = child;
+                        dataLog("Mapping: ", variable->operand(), " -> ", child, "\n");
+                    valueForOperand.operand(variable->operand()) = child;
                     break;
                 }
 
                 case GetStack: {
                     ASSERT(m_argumentGetters.contains(node));
-                    valueForOperand.operand(node->stackAccessData()->local) = node;
+                    valueForOperand.operand(node->stackAccessData()->operand) = node;
                     break;
                 }
 
@@ -371,8 +371,8 @@ public:
 
                     node->remove(m_graph);
                     if (verbose)
-                        dataLog("Replacing node ", node, " with ", valueForOperand.operand(variable->local()), "\n");
-                    node->setReplacement(valueForOperand.operand(variable->local()));
+                        dataLog("Replacing node ", node, " with ", valueForOperand.operand(variable->operand()), "\n");
+                    node->setReplacement(valueForOperand.operand(variable->operand()));
                     break;
                 }
 
@@ -385,7 +385,7 @@ public:
                 case PhantomLocal: {
                     ASSERT(node->child1().useKind() == UntypedUse);
                     VariableAccessData* variable = node->variableAccessData();
-                    node->child1() = valueForOperand.operand(variable->local())->defaultEdge();
+                    node->child1() = valueForOperand.operand(variable->operand())->defaultEdge();
                     node->remove(m_graph);
                     break;
                 }
@@ -425,10 +425,12 @@ public:
                     // is not exitOK.
                     UseKind useKind = uncheckedUseKindFor(format);
 
+                    dataLogLnIf(verbose, "Inserting Upsilon for ", variable->operand(), " propagating ", valueForOperand.operand(variable->operand()), " to ", phiNode);
+
                     m_insertionSet.insertNode(
                         upsilonInsertionPoint, SpecNone, Upsilon, upsilonOrigin,
                         OpInfo(phiNode), Edge(
-                            valueForOperand.operand(variable->local()),
+                            valueForOperand.operand(variable->operand()),
                             useKind));
                 }
             }

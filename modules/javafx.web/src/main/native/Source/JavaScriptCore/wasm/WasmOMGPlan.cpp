@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,6 @@
 #include "WasmMemory.h"
 #include "WasmNameSection.h"
 #include "WasmSignatureInlines.h"
-#include "WasmValidate.h"
 #include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
@@ -51,7 +50,7 @@
 namespace JSC { namespace Wasm {
 
 namespace WasmOMGPlanInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 OMGPlan::OMGPlan(Context* context, Ref<Module>&& module, uint32_t functionIndex, MemoryMode mode, CompletionTask&& task)
@@ -77,12 +76,11 @@ void OMGPlan::work(CompilationEffort)
 
     SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[m_functionIndex];
     const Signature& signature = SignatureInformation::get(signatureIndex);
-    ASSERT(validateFunction(function.data.data(), function.data.size(), signature, m_moduleInformation.get()));
 
     Vector<UnlinkedWasmToWasmCall> unlinkedCalls;
     unsigned osrEntryScratchBufferSize;
     CompilationContext context;
-    auto parseAndCompileResult = parseAndCompile(context, function.data.data(), function.data.size(), signature, unlinkedCalls, osrEntryScratchBufferSize, m_moduleInformation.get(), m_mode, CompilationMode::OMGMode, m_functionIndex, UINT32_MAX);
+    auto parseAndCompileResult = parseAndCompile(context, function, signature, unlinkedCalls, osrEntryScratchBufferSize, m_moduleInformation.get(), m_mode, CompilationMode::OMGMode, m_functionIndex, UINT32_MAX);
 
     if (UNLIKELY(!parseAndCompileResult)) {
         fail(holdLock(m_lock), makeString(parseAndCompileResult.error(), "when trying to tier up ", String::number(m_functionIndex)));
@@ -97,7 +95,7 @@ void OMGPlan::work(CompilationEffort)
     }
 
     omgEntrypoint.compilation = makeUnique<B3::Compilation>(
-        FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "WebAssembly OMG function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
+        FINALIZE_WASM_CODE_FOR_MODE(CompilationMode::OMGMode, linkBuffer, B3CompilationPtrTag, "WebAssembly OMG function[%i] %s name %s", m_functionIndex, signature.toString().ascii().data(), makeString(IndexOrName(functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace))).ascii().data()),
         WTFMove(context.wasmEntrypointByproducts));
 
     omgEntrypoint.calleeSaveRegisters = WTFMove(parseAndCompileResult.value()->entrypoint.calleeSaveRegisters);
@@ -107,7 +105,7 @@ void OMGPlan::work(CompilationEffort)
         ASSERT(m_codeBlock.ptr() == m_module->codeBlockFor(mode()));
         Ref<OMGCallee> callee = OMGCallee::create(WTFMove(omgEntrypoint), functionIndexSpace, m_moduleInformation->nameSection->get(functionIndexSpace), WTFMove(unlinkedCalls));
         MacroAssembler::repatchPointer(parseAndCompileResult.value()->calleeMoveLocation, CalleeBits::boxWasm(callee.ptr()));
-        ASSERT(!m_codeBlock->m_optimizedCallees[m_functionIndex]);
+        ASSERT(!m_codeBlock->m_omgCallees[m_functionIndex]);
         entrypoint = callee->entrypoint();
 
         // We want to make sure we publish our callee at the same time as we link our callsites. This enables us to ensure we
@@ -115,12 +113,19 @@ void OMGPlan::work(CompilationEffort)
         // will update. It's also ok if they publish their code before we reset the instruction caches because after we release
         // the lock our code is ready to be published too.
         LockHolder holder(m_codeBlock->m_lock);
-        m_codeBlock->m_optimizedCallees[m_functionIndex] = callee.copyRef();
+        m_codeBlock->m_omgCallees[m_functionIndex] = callee.copyRef();
         {
-            BBQCallee& bbqCallee = *static_cast<BBQCallee*>(m_codeBlock->m_callees[m_functionIndex].get());
-            auto locker = holdLock(bbqCallee.tierUpCount()->getLock());
-            bbqCallee.setReplacement(callee.copyRef());
-            bbqCallee.tierUpCount()->m_compilationStatusForOMG = TierUpCount::CompilationStatus::Compiled;
+            if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[m_functionIndex].get()) {
+                auto locker = holdLock(bbqCallee->tierUpCount()->getLock());
+                bbqCallee->setReplacement(callee.copyRef());
+                bbqCallee->tierUpCount()->m_compilationStatusForOMG = TierUpCount::CompilationStatus::Compiled;
+            }
+            if (m_codeBlock->m_llintCallees) {
+                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(m_functionIndex).get();
+                auto locker = holdLock(llintCallee.tierUpCounter().m_lock);
+                llintCallee.setReplacement(callee.copyRef());
+                llintCallee.tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
+            }
         }
         for (auto& call : callee->wasmToWasmCallsites()) {
             MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
@@ -155,14 +160,23 @@ void OMGPlan::work(CompilationEffort)
 
         for (unsigned i = 0; i < m_codeBlock->m_wasmToWasmCallsites.size(); ++i) {
             repatchCalls(m_codeBlock->m_wasmToWasmCallsites[i]);
-            if (OMGCallee* replacementCallee = static_cast<BBQCallee*>(m_codeBlock->m_callees[i].get())->replacement())
-                repatchCalls(replacementCallee->wasmToWasmCallsites());
-            if (OMGForOSREntryCallee* osrEntryCallee = static_cast<BBQCallee*>(m_codeBlock->m_callees[i].get())->osrEntryCallee())
-                repatchCalls(osrEntryCallee->wasmToWasmCallsites());
+            if (m_codeBlock->m_llintCallees) {
+                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(i).get();
+                if (JITCallee* replacementCallee = llintCallee.replacement())
+                    repatchCalls(replacementCallee->wasmToWasmCallsites());
+                if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee())
+                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
+            }
+            if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[i].get()) {
+                if (OMGCallee* replacementCallee = bbqCallee->replacement())
+                    repatchCalls(replacementCallee->wasmToWasmCallsites());
+                if (OMGForOSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
+                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
+            }
         }
     }
 
-    dataLogLnIf(WasmOMGPlanInternal::verbose, "Finished OMG ", m_functionIndex, " with tier up count at: ", static_cast<BBQCallee*>(m_codeBlock->m_callees[m_functionIndex].get())->tierUpCount()->count());
+    dataLogLnIf(WasmOMGPlanInternal::verbose, "Finished OMG ", m_functionIndex);
     complete(holdLock(m_lock));
 }
 

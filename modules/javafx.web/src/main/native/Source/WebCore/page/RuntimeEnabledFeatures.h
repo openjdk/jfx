@@ -47,9 +47,6 @@ public:
     void setBlankAnchorTargetImpliesNoOpenerEnabled(bool isEnabled) { m_blankAnchorTargetImpliesNoOpenerEnabled = isEnabled; }
     bool blankAnchorTargetImpliesNoOpenerEnabled() const { return m_blankAnchorTargetImpliesNoOpenerEnabled; }
 
-    void setDisplayContentsEnabled(bool isEnabled) { m_isDisplayContentsEnabled = isEnabled; }
-    bool displayContentsEnabled() const { return m_isDisplayContentsEnabled; }
-
     void setLinkPreloadEnabled(bool isEnabled) { m_isLinkPreloadEnabled = isEnabled; }
     bool linkPreloadEnabled() const { return m_isLinkPreloadEnabled; }
 
@@ -112,8 +109,19 @@ public:
     void setWebAnimationsCSSIntegrationEnabled(bool isEnabled) { m_isWebAnimationsCSSIntegrationEnabled = isEnabled; }
     bool webAnimationsCSSIntegrationEnabled() const { return m_areWebAnimationsEnabled && m_isWebAnimationsCSSIntegrationEnabled; }
 
-    void setImageBitmapOffscreenCanvasEnabled(bool isEnabled) { m_isImageBitmapOffscreenCanvasEnabled = isEnabled; }
-    bool imageBitmapOffscreenCanvasEnabled() const { return m_isImageBitmapOffscreenCanvasEnabled; }
+    void setWebAnimationsCompositeOperationsEnabled(bool areEnabled) { m_areWebAnimationsCompositeOperationsEnabled = areEnabled; }
+    bool webAnimationsCompositeOperationsEnabled() const { return m_areWebAnimationsCompositeOperationsEnabled; }
+
+    void setWebAnimationsMutableTimelinesEnabled(bool areEnabled) { m_areWebAnimationsMutableTimelinesEnabled = areEnabled; }
+    bool webAnimationsMutableTimelinesEnabled() const { return m_areWebAnimationsMutableTimelinesEnabled; }
+
+    void setImageBitmapEnabled(bool isEnabled) { m_isImageBitmapEnabled = isEnabled; }
+    bool imageBitmapEnabled() const { return m_isImageBitmapEnabled; }
+
+#if ENABLE(OFFSCREEN_CANVAS)
+    void setOffscreenCanvasEnabled(bool isEnabled) { m_isOffscreenCanvasEnabled = isEnabled; }
+    bool offscreenCanvasEnabled() const { return m_isOffscreenCanvasEnabled; }
+#endif
 
     void setCacheAPIEnabled(bool isEnabled) { m_isCacheAPIEnabled = isEnabled; }
     bool cacheAPIEnabled() const { return m_isCacheAPIEnabled; }
@@ -127,13 +135,8 @@ public:
     bool fetchAPIKeepAliveEnabled() const { return m_fetchAPIKeepAliveEnabled; }
     void setFetchAPIKeepAliveEnabled(bool isEnabled) { m_fetchAPIKeepAliveEnabled = isEnabled; }
 
-    bool spectreGadgetsEnabled() const;
-
     void setInspectorAdditionsEnabled(bool isEnabled) { m_inspectorAdditionsEnabled = isEnabled; }
     bool inspectorAdditionsEnabled() const { return m_inspectorAdditionsEnabled; }
-
-    void setWebVREnabled(bool isEnabled) { m_webVREnabled = isEnabled; }
-    bool webVREnabled() const { return m_webVREnabled; }
 
     void setAccessibilityObjectModelEnabled(bool isEnabled) { m_accessibilityObjectModelEnabled = isEnabled; }
     bool accessibilityObjectModelEnabled() const { return m_accessibilityObjectModelEnabled; }
@@ -147,17 +150,11 @@ public:
     void setIsITPDatabaseEnabled(bool isEnabled) { m_isITPDatabaseEnabled = isEnabled; }
     bool isITPDatabaseEnabled() const { return m_isITPDatabaseEnabled; }
 
-    void setIsITPSessionSwitchingEnabled(bool isEnabled) { m_isITPSessionSwitchingEnabled = isEnabled; }
-    bool isITPSessionSwitchingEnabled() const { return m_isITPSessionSwitchingEnabled; }
-
     void setRestrictedHTTPResponseAccess(bool isEnabled) { m_isRestrictedHTTPResponseAccess = isEnabled; }
     bool restrictedHTTPResponseAccess() const { return m_isRestrictedHTTPResponseAccess; }
 
     void setCrossOriginResourcePolicyEnabled(bool isEnabled) { m_crossOriginResourcePolicyEnabled = isEnabled; }
     bool crossOriginResourcePolicyEnabled() const { return m_crossOriginResourcePolicyEnabled; }
-
-    void setWebGLCompressedTextureASTCSupportEnabled(bool isEnabled) { m_isWebGLCompressedTextureASTCSupportEnabled = isEnabled; }
-    bool webGLCompressedTextureASTCSupportEnabled() const { return m_isWebGLCompressedTextureASTCSupportEnabled; }
 
     void setServerTimingEnabled(bool isEnabled) { m_isServerTimingEnabled = isEnabled; }
     bool serverTimingEnabled() const { return m_isServerTimingEnabled; }
@@ -186,6 +183,9 @@ public:
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     void setLayoutFormattingContextEnabled(bool isEnabled) { m_layoutFormattingContextEnabled = isEnabled; }
     bool layoutFormattingContextEnabled() const { return m_layoutFormattingContextEnabled; }
+
+    void setLayoutFormattingContextIntegrationEnabled(bool isEnabled) { m_layoutFormattingContextIntegrationEnabled = isEnabled; }
+    bool layoutFormattingContextIntegrationEnabled() const { return m_layoutFormattingContextIntegrationEnabled; }
 #endif
 
 #if ENABLE(CSS_PAINTING_API)
@@ -206,6 +206,9 @@ public:
 
     void setKeygenElementEnabled(bool isEnabled) { m_keygenElementEnabled = isEnabled; }
     bool keygenElementEnabled() const { return m_keygenElementEnabled; }
+
+    void setHighlightAPIEnabled(bool isEnabled) { m_highlightAPIEnabled = isEnabled; }
+    bool highlightAPIEnabled() const { return m_highlightAPIEnabled; }
 
 #if ENABLE(ATTACHMENT_ELEMENT)
     void setAttachmentElementEnabled(bool areEnabled) { m_isAttachmentElementEnabled = areEnabled; }
@@ -233,8 +236,6 @@ public:
     void setWebRTCDTMFEnabled(bool isEnabled) { m_isWebRTCDTMFEnabled = isEnabled; }
     bool webRTCVP8CodecEnabled() const { return m_isWebRTCVP8CodecEnabled; }
     void setWebRTCVP8CodecEnabled(bool isEnabled) { m_isWebRTCVP8CodecEnabled = isEnabled; }
-    bool webRTCUnifiedPlanEnabled() const { return m_isWebRTCUnifiedPlanEnabled; }
-    void setWebRTCUnifiedPlanEnabled(bool isEnabled) { m_isWebRTCUnifiedPlanEnabled = isEnabled; }
     bool peerConnectionEnabled() const { return m_isPeerConnectionEnabled; }
     void setPeerConnectionEnabled(bool isEnabled) { m_isPeerConnectionEnabled = isEnabled; }
     bool webRTCMDNSICECandidatesEnabled() const { return m_isWebRTCMDNSICECandidatesEnabled; }
@@ -373,6 +374,9 @@ public:
     void setLazyImageLoadingEnabled(bool areEnabled) { m_lazyImageLoadingEnabled = areEnabled; }
     bool lazyImageLoadingEnabled() const { return m_lazyImageLoadingEnabled; }
 
+    void setCSSShadowPartsEnabled(bool isEnabled) { m_isCSSShadowPartsEnabled = isEnabled; }
+    bool cssShadowPartsEnabled() const { return m_isCSSShadowPartsEnabled; }
+
     WEBCORE_EXPORT static RuntimeEnabledFeatures& sharedFeatures();
 
 #if HAVE(NSURLSESSION_WEBSOCKET)
@@ -382,6 +386,14 @@ public:
 
     bool secureContextChecksEnabled() const { return m_secureContextChecksEnabled; }
     void setSecureContextChecksEnabled(bool isEnabled) { m_secureContextChecksEnabled = isEnabled; }
+
+    void setIsInAppBrowserPrivacyEnabled(bool isEnabled) { m_isInAppBrowserPrivacyEnabled = isEnabled; }
+    bool isInAppBrowserPrivacyEnabled() const { return m_isInAppBrowserPrivacyEnabled; }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    void setIsAccessibilityIsolatedTreeEnabled(bool isEnabled) { m_accessibilityIsolatedTree = isEnabled; }
+    bool isAccessibilityIsolatedTreeEnabled() const { return m_accessibilityIsolatedTree; }
+#endif
 
 private:
     // Never instantiate.
@@ -398,7 +410,6 @@ private:
     bool m_isWebAuthenticationEnabled { false };
     bool m_isWebAuthenticationLocalAuthenticatorEnabled { false };
     bool m_isSecureContextAttributeEnabled { false };
-    bool m_isDisplayContentsEnabled { true };
     bool m_isShadowDOMEnabled { true };
     bool m_areCustomElementsEnabled { true };
     bool m_isMenuItemElementEnabled { false };
@@ -407,22 +418,24 @@ private:
     bool m_isCustomPasteboardDataEnabled { false };
     bool m_isWebShareEnabled { false };
     bool m_inputEventsEnabled { true };
-    bool m_areWebAnimationsEnabled { false };
-    bool m_isWebAnimationsCSSIntegrationEnabled { false };
-    bool m_isImageBitmapOffscreenCanvasEnabled { true };
+    bool m_areWebAnimationsEnabled { true };
+    bool m_isWebAnimationsCSSIntegrationEnabled { true };
+    bool m_areWebAnimationsCompositeOperationsEnabled { false };
+    bool m_areWebAnimationsMutableTimelinesEnabled { false };
+    bool m_isImageBitmapEnabled { true };
+#if ENABLE(OFFSCREEN_CANVAS)
+    bool m_isOffscreenCanvasEnabled { false };
+#endif
     bool m_isCacheAPIEnabled { false };
     bool m_isFetchAPIEnabled { true };
     bool m_isWebSocketEnabled { true };
     bool m_fetchAPIKeepAliveEnabled { false };
     bool m_inspectorAdditionsEnabled { false };
-    bool m_webVREnabled { false };
     bool m_accessibilityObjectModelEnabled { false };
     bool m_ariaReflectionEnabled { true };
     bool m_itpDebugMode { false };
-    bool m_isITPSessionSwitchingEnabled { true };
     bool m_isRestrictedHTTPResponseAccess { true };
     bool m_crossOriginResourcePolicyEnabled { true };
-    bool m_isWebGLCompressedTextureASTCSupportEnabled { false };
     bool m_isServerTimingEnabled { false };
     bool m_experimentalPlugInSandboxProfilesEnabled { false };
     bool m_disabledAdaptationsMetaTagEnabled { false };
@@ -432,12 +445,14 @@ private:
     bool m_pointerEventsEnabled { true };
     bool m_syntheticEditingCommandsEnabled { true };
     bool m_dialogElementEnabled { false };
-    bool m_webSQLEnabled { true };
+    bool m_webSQLEnabled { false };
     bool m_keygenElementEnabled { false };
     bool m_pageAtRuleSupportEnabled { false };
+    bool m_highlightAPIEnabled { false };
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
     bool m_layoutFormattingContextEnabled { false };
+    bool m_layoutFormattingContextIntegrationEnabled { true };
 #endif
 
 #if ENABLE(CSS_PAINTING_API)
@@ -466,7 +481,6 @@ private:
 #if ENABLE(WEB_RTC)
     bool m_isWebRTCDTMFEnabled { true };
     bool m_isWebRTCVP8CodecEnabled { true };
-    bool m_isWebRTCUnifiedPlanEnabled { true };
     bool m_isPeerConnectionEnabled { true };
     bool m_isWebRTCMDNSICECandidatesEnabled { false };
     bool m_isWebRTCH264SimulcastEnabled { true };
@@ -561,7 +575,7 @@ private:
     Optional<bool> m_touchEventsEnabled;
 #endif
 
-    bool m_isITPDatabaseEnabled { false };
+    bool m_isITPDatabaseEnabled { true };
 
     bool m_referrerPolicyAttributeEnabled { false };
     bool m_interruptAudioOnPageVisibilityChangeEnabled { false };
@@ -574,6 +588,13 @@ private:
 
     bool m_lazyImageLoadingEnabled { false };
     bool m_secureContextChecksEnabled { true };
+    bool m_isCSSShadowPartsEnabled { true };
+
+    bool m_isInAppBrowserPrivacyEnabled { false };
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    bool m_accessibilityIsolatedTree { false };
+#endif
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;
 };

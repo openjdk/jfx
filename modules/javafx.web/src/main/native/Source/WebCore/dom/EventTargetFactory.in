@@ -7,6 +7,7 @@ ApplePaySession conditional=APPLE_PAY
 AudioNode conditional=WEB_AUDIO
 AudioContext conditional=WEB_AUDIO
 AudioTrackList conditional=VIDEO_TRACK
+Clipboard
 DedicatedWorkerGlobalScope
 DOMApplicationCache
 DOMWindow
@@ -28,10 +29,12 @@ MediaStreamTrack conditional=MEDIA_STREAM
 MessagePort
 Node
 Notification conditional=NOTIFICATIONS
-OffscreenCanvas
+OffscreenCanvas conditional=OFFSCREEN_CANVAS
 PaymentRequest conditional=PAYMENT_REQUEST
 PaymentResponse conditional=PAYMENT_REQUEST
 Performance
+PictureInPictureWindow conditional=PICTURE_IN_PICTURE_API
+RemotePlayback conditional=WIRELESS_PLAYBACK_TARGET
 RTCDataChannel conditional=WEB_RTC
 RTCDTMFSender conditional=WEB_RTC
 RTCPeerConnection conditional=WEB_RTC
@@ -45,10 +48,10 @@ SpeechSynthesisUtterance conditional=SPEECH_SYNTHESIS
 TextTrack conditional=VIDEO_TRACK
 TextTrackCue conditional=VIDEO_TRACK
 TextTrackList conditional=VIDEO_TRACK
-VRDisplay
 VideoTrackList conditional=VIDEO_TRACK
 VisualViewport
 WebAnimation
+WebGPUDevice conditional=WEBGPU
 WebKitMediaKeySession conditional=LEGACY_ENCRYPTED_MEDIA
 WebSocket
 Worker

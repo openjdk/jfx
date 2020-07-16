@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,9 +33,9 @@
 namespace bmalloc {
 
 template<typename Config>
-class IsoTLSDeallocatorEntry : public DefaultIsoTLSEntry<IsoDeallocator<Config>> {
+class IsoTLSDeallocatorEntry final : public DefaultIsoTLSEntry<IsoDeallocator<Config>> {
 public:
-    IsoTLSDeallocatorEntry(const std::lock_guard<Mutex>&);
+    template<typename T> friend class IsoTLSEntryHolder;
     ~IsoTLSDeallocatorEntry();
 
     // This is used as the heap lock, since heaps in the same size class share the same deallocator
@@ -43,7 +43,10 @@ public:
     Mutex lock;
 
 private:
+    IsoTLSDeallocatorEntry(const LockHolder&);
+
     void construct(void* entry) override;
+    void scavenge(void* entry) override;
 };
 
 } // namespace bmalloc

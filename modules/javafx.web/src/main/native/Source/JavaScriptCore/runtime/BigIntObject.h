@@ -35,6 +35,12 @@ class BigIntObject final : public JSWrapperObject {
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.bigIntObjectSpace<mode>();
+    }
+
     static BigIntObject* create(VM&, JSGlobalObject*, JSBigInt*);
 
     DECLARE_EXPORT_INFO;
@@ -46,9 +52,9 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
 
-    static String toStringName(const JSObject*, ExecState*);
+    static String toStringName(const JSObject*, JSGlobalObject*);
 
 protected:
     JS_EXPORT_PRIVATE void finishCreation(VM&, JSBigInt*);

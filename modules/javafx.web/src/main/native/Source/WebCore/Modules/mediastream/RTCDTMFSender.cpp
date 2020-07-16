@@ -30,6 +30,7 @@
 
 #include "RTCDTMFSenderBackend.h"
 #include "RTCDTMFToneChangeEvent.h"
+#include "RTCRtpSender.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -145,11 +146,6 @@ void RTCDTMFSender::stop()
 const char* RTCDTMFSender::activeDOMObjectName() const
 {
     return "RTCDTMFSender";
-}
-
-bool RTCDTMFSender::canSuspendForDocumentSuspension() const
-{
-    return !m_sender || m_sender->isStopped();
 }
 
 } // namespace WebCore

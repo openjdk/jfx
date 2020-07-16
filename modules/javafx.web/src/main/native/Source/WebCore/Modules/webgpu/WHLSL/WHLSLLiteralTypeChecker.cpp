@@ -30,7 +30,6 @@
 
 #include "WHLSLIntegerLiteralType.h"
 #include "WHLSLNativeTypeDeclaration.h"
-#include "WHLSLNullLiteralType.h"
 #include "WHLSLProgram.h"
 #include "WHLSLTypeReference.h"
 #include "WHLSLVisitor.h"
@@ -39,7 +38,7 @@ namespace WebCore {
 
 namespace WHLSL {
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static AST::NativeTypeDeclaration* getNativeTypeDeclaration(AST::ResolvableType& resolvableType)
 {
     if (!is<AST::TypeReference>(resolvableType.resolvedType()))
@@ -73,20 +72,15 @@ private:
         ASSERT(nativeTypeDeclaration);
         ASSERT(nativeTypeDeclaration->canRepresentUnsignedInteger()(unsignedIntegerLiteralType.value()));
     }
-
-    void visit(AST::NullLiteralType& nullLiteralType) override
-    {
-        ASSERT(nullLiteralType.maybeResolvedType());
-    }
 };
-#endif
+#endif // ASSERT_ENABLED
 
 void checkLiteralTypes(Program& program)
 {
-#if ASSERT_DISABLED
-    UNUSED_PARAM(program);
-#else
+#if ASSERT_ENABLED
     LiteralTypeChecker().Visitor::visit(program);
+#else
+    UNUSED_PARAM(program);
 #endif
 }
 

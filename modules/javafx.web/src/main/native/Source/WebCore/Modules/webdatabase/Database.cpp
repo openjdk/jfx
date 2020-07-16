@@ -52,6 +52,7 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
+#include "WindowEventLoop.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
@@ -684,10 +685,11 @@ void Database::resetAuthorizer()
 
 void Database::runTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<VoidCallback>&& successCallback, RefPtr<SQLTransactionWrapper>&& wrapper, bool readOnly)
 {
+    ASSERT(isMainThread());
     LockHolder locker(m_transactionInProgressMutex);
     if (!m_isTransactionQueueEnabled) {
         if (errorCallback) {
-            callOnMainThread([errorCallback = makeRef(*errorCallback)]() {
+            m_document->eventLoop().queueTask(TaskSource::Networking, [errorCallback = makeRef(*errorCallback)]() {
                 errorCallback->handleEvent(SQLError::create(SQLError::UNKNOWN_ERR, "database has been closed"));
             });
         }
@@ -701,8 +703,10 @@ void Database::runTransaction(RefPtr<SQLTransactionCallback>&& callback, RefPtr<
 
 void Database::scheduleTransactionCallback(SQLTransaction* transaction)
 {
-    callOnMainThread([transaction = makeRefPtr(transaction)] {
-        transaction->performPendingCallback();
+    callOnMainThread([this, protectedThis = makeRef(*this), transaction = makeRefPtr(transaction)] {
+        m_document->eventLoop().queueTask(TaskSource::Networking, [transaction = transaction.copyRef()] {
+            transaction->performPendingCallback();
+        });
     });
 }
 

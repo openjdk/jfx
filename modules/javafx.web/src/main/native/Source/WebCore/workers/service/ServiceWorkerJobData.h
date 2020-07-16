@@ -41,10 +41,10 @@ namespace WebCore {
 struct ServiceWorkerJobData {
     using Identifier = ServiceWorkerJobDataIdentifier;
     ServiceWorkerJobData(SWServerConnectionIdentifier, const DocumentOrWorkerIdentifier& sourceContext);
-    ServiceWorkerJobData(const ServiceWorkerJobData&) = default;
-    ServiceWorkerJobData() = default;
 
     SWServerConnectionIdentifier connectionIdentifier() const { return m_identifier.connectionIdentifier; }
+
+    bool isEquivalent(const ServiceWorkerJobData&) const;
 
     URL scriptURL;
     URL clientCreationURL;
@@ -56,14 +56,14 @@ struct ServiceWorkerJobData {
     ServiceWorkerRegistrationOptions registrationOptions;
 
     Identifier identifier() const { return m_identifier; }
-    ServiceWorkerRegistrationKey registrationKey() const;
+    WEBCORE_EXPORT ServiceWorkerRegistrationKey registrationKey() const;
     ServiceWorkerJobData isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<ServiceWorkerJobData> decode(Decoder&);
 
 private:
-    WEBCORE_EXPORT explicit ServiceWorkerJobData(const Identifier&);
+    ServiceWorkerJobData() = default;
 
     Identifier m_identifier;
 };
@@ -91,7 +91,8 @@ Optional<ServiceWorkerJobData> ServiceWorkerJobData::decode(Decoder& decoder)
     if (!identifier)
         return WTF::nullopt;
 
-    ServiceWorkerJobData jobData { WTFMove(*identifier) };
+    ServiceWorkerJobData jobData;
+    jobData.m_identifier = *identifier;
 
     if (!decoder.decode(jobData.scriptURL))
         return WTF::nullopt;

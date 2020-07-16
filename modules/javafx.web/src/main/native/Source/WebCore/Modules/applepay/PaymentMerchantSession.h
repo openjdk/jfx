@@ -31,7 +31,8 @@
 #include <wtf/RetainPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -47,7 +48,7 @@ public:
     {
     }
 
-    static Optional<PaymentMerchantSession> fromJS(JSC::ExecState&, JSC::JSValue, String& errorMessage);
+    static Optional<PaymentMerchantSession> fromJS(JSC::JSGlobalObject&, JSC::JSValue, String& errorMessage);
 
     PKPaymentMerchantSession *pkPaymentMerchantSession() const { return m_pkPaymentMerchantSession.get(); }
 

@@ -26,7 +26,7 @@
 
 #include "VisitedLinkStoreJava.h"
 
-#include <WebCore/PageCache.h>
+#include <WebCore/BackForwardCache.h>
 #include <wtf/NeverDestroyed.h>
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,7 @@
 namespace JSC { namespace DFG {
 
 class StrengthReductionPhase : public Phase {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
 public:
     StrengthReductionPhase(Graph& graph)
@@ -93,7 +93,7 @@ private:
             break;
 
         case ArithBitLShift:
-        case BitRShift:
+        case ArithBitRShift:
         case BitURShift:
             if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
                 convertToIdentityOverChild1();
@@ -285,17 +285,17 @@ private:
             }
 
             Node* setLocal = nullptr;
-            VirtualRegister local = m_node->local();
+            Operand operand = m_node->operand();
 
             for (unsigned i = m_nodeIndex; i--;) {
                 Node* node = m_block->at(i);
 
-                if (node->op() == SetLocal && node->local() == local) {
+                if (node->op() == SetLocal && node->operand() == operand) {
                     setLocal = node;
                     break;
                 }
 
-                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, local)))
+                if (accessesOverlap(m_graph, node, AbstractHeap(Stack, operand)))
                     break;
 
             }
@@ -606,12 +606,7 @@ private:
 
                 m_graph.watchpoints().addLazily(globalObject->havingABadTimeWatchpoint());
 
-                Structure* structure;
-                if ((m_node->op() == RegExpExec || m_node->op() == RegExpExecNonGlobalOrSticky) && regExp->hasNamedCaptures())
-                    structure = globalObject->regExpMatchesArrayWithGroupsStructure();
-                else
-                    structure = globalObject->regExpMatchesArrayStructure();
-
+                Structure* structure = globalObject->regExpMatchesArrayStructure();
                 if (structure->indexingType() != ArrayWithContiguous) {
                     // This is further protection against a race with haveABadTime.
                     if (verbose)
@@ -674,8 +669,10 @@ private:
 
                         UniquedStringImpl* indexUID = vm().propertyNames->index.impl();
                         UniquedStringImpl* inputUID = vm().propertyNames->input.impl();
+                        UniquedStringImpl* groupsUID = vm().propertyNames->groups.impl();
                         unsigned indexIndex = m_graph.identifiers().ensure(indexUID);
                         unsigned inputIndex = m_graph.identifiers().ensure(inputUID);
+                        unsigned groupsIndex = m_graph.identifiers().ensure(groupsUID);
 
                         unsigned firstChild = m_graph.m_varArgChildren.size();
                         m_graph.m_varArgChildren.append(
@@ -702,6 +699,14 @@ private:
                         m_graph.m_varArgChildren.append(Edge(stringNode, UntypedUse));
                         data->m_properties.append(
                             PromotedLocationDescriptor(NamedPropertyPLoc, inputIndex));
+
+                        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=176464
+                        // Implement strength reduction optimization for named capture groups.
+                        m_graph.m_varArgChildren.append(
+                            m_insertionSet.insertConstantForUse(
+                                m_nodeIndex, origin, jsUndefined(), UntypedUse));
+                        data->m_properties.append(
+                            PromotedLocationDescriptor(NamedPropertyPLoc, groupsIndex));
 
                         auto materializeString = [&] (const String& string) -> Node* {
                             if (string.isNull())
@@ -898,9 +903,7 @@ private:
             if (!lastIndex && builder.isEmpty())
                 m_node->convertToIdentityOn(stringNode);
             else {
-                if (lastIndex < string.length())
-                    builder.appendSubstring(string, lastIndex, string.length() - lastIndex);
-
+                builder.appendSubstring(string, lastIndex);
                 m_node->convertToLazyJSConstant(m_graph, LazyJSValue::newString(m_graph, builder.toString()));
             }
 

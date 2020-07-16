@@ -25,16 +25,15 @@
 
 #pragma once
 
+#include "ContentSecurityPolicyResponseHeaders.h"
 #include "WorkerRunLoop.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/RefCounted.h>
-
-namespace PAL {
-class SessionID;
-}
+#include <wtf/URL.h>
+#include <wtf/threads/BinarySemaphore.h>
 
 namespace WebCore {
 
@@ -58,6 +57,21 @@ class IDBConnectionProxy;
 
 struct WorkerThreadStartupData;
 
+struct WorkerParameters {
+public:
+    URL scriptURL;
+    String name;
+    String identifier;
+    String userAgent;
+    bool isOnline;
+    ContentSecurityPolicyResponseHeaders contentSecurityPolicyResponseHeaders;
+    bool shouldBypassMainWorldContentSecurityPolicy;
+    MonotonicTime timeOrigin;
+    ReferrerPolicy referrerPolicy;
+
+    WorkerParameters isolatedCopy() const;
+};
+
 class WorkerThread : public ThreadSafeRefCounted<WorkerThread> {
 public:
     virtual ~WorkerThread();
@@ -65,8 +79,10 @@ public:
     static HashSet<WorkerThread*>& workerThreads(const LockHolder&);
     static Lock& workerThreadsMutex();
 
-    WEBCORE_EXPORT void start(WTF::Function<void(const String&)>&& evaluateCallback);
     void stop(WTF::Function<void()>&& terminatedCallback);
+
+    void suspend();
+    void resume();
 
     Thread* thread() const { return m_thread.get(); }
     WorkerRunLoop& runLoop() { return m_runLoop; }
@@ -91,10 +107,10 @@ public:
     String identifier() const { return m_identifier; }
 
 protected:
-    WorkerThread(const URL&, const String& name, const String& identifier, const String& userAgent, bool isOnline, const String& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, const SecurityOrigin& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags, PAL::SessionID);
+    WorkerThread(const WorkerParameters&, const String& sourceCode, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerReportingProxy&, WorkerThreadStartMode, const SecurityOrigin& topOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, JSC::RuntimeFlags);
 
     // Factory method for creating a new worker context for the thread.
-    virtual Ref<WorkerGlobalScope> createWorkerGlobalScope(const URL&, Ref<SecurityOrigin>&&, const String& name, const String& identifier, const String& userAgent, bool isOnline, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, PAL::SessionID) = 0;
+    virtual Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) = 0;
 
     // Executes the event loop for the worker thread. Derived classes can override to perform actions before/after entering the event loop.
     virtual void runEventLoop();
@@ -104,9 +120,13 @@ protected:
     IDBClient::IDBConnectionProxy* idbConnectionProxy();
     SocketProvider* socketProvider();
 
+    void start(Function<void(const String&)>&& evaluateCallback);
+
 private:
     void workerThread();
     virtual bool isServiceWorkerThread() const { return false; }
+
+    virtual void finishedEvaluatingScript() { }
 
     RefPtr<Thread> m_thread;
     String m_identifier;
@@ -134,6 +154,8 @@ private:
     RefPtr<SocketProvider> m_socketProvider;
 
     WTF::Function<void()> m_stoppedCallback;
+    BinarySemaphore m_suspensionSemaphore;
+    bool m_isSuspended { false };
 };
 
 } // namespace WebCore

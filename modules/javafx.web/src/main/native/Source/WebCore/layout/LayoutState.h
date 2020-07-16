@@ -31,12 +31,9 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
-#include <wtf/OptionSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-
-class RenderView;
 
 namespace Display {
 class Box;
@@ -44,72 +41,99 @@ class Box;
 
 namespace Layout {
 
-enum class StyleDiff;
-class Box;
 class FormattingContext;
 class FormattingState;
+class BlockFormattingState;
+class InlineFormattingState;
+class TableFormattingState;
 
-// LayoutState is the entry point for layout. It takes the initial containing block which acts as the root of the layout context.
-// LayoutState::layout() generates the display tree for the root container's subtree (it does not run layout on the root though).
-// Note, while the initial containing block is entry point for the initial layout, it does not necessarily need to be the entry point of any
-// subsequent layouts (subtree layout). A non-initial, subtree layout could be initiated on multiple formatting contexts.
-// Each formatting context has an entry point for layout, which potenitally means multiple entry points per layout frame.
-// LayoutState also holds the formatting states. They cache formatting context specific data to enable performant incremental layouts.
-class LayoutState {
+class LayoutState : public CanMakeWeakPtr<LayoutState> {
     WTF_MAKE_ISO_ALLOCATED(LayoutState);
 public:
-    LayoutState(const Container& initialContainingBlock);
+    LayoutState(const Document&, const Container& rootContainer);
+    ~LayoutState();
 
-    // FIXME: This is a temporary entry point for LFC layout.
-    static void run(const RenderView&);
+    FormattingState& ensureFormattingState(const Container& formattingContextRoot);
+    InlineFormattingState& ensureInlineFormattingState(const Container& formattingContextRoot);
+    BlockFormattingState& ensureBlockFormattingState(const Container& formattingContextRoot);
+    TableFormattingState& ensureTableFormattingState(const Container& formattingContextRoot);
 
-    void updateLayout();
-    void styleChanged(const Box&, StyleDiff);
-    enum class QuirksMode { No, Limited, Yes };
-    void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
-
-    enum class UpdateType {
-        Overflow = 1 << 0,
-        Position = 1 << 1,
-        Size     = 1 << 2,
-        All      = Overflow | Position | Size
-    };
-    void markNeedsUpdate(const Box&, OptionSet<UpdateType>);
-    bool needsUpdate(const Box&) const;
+    FormattingState& establishedFormattingState(const Container& formattingRoot) const;
+    InlineFormattingState& establishedInlineFormattingState(const Container& formattingContextRoot) const;
+    BlockFormattingState& establishedBlockFormattingState(const Container& formattingContextRoot) const;
+    TableFormattingState& establishedTableFormattingState(const Container& formattingContextRoot) const;
 
     FormattingState& formattingStateForBox(const Box&) const;
-    FormattingState& establishedFormattingState(const Box& formattingRoot) const;
-    bool hasFormattingState(const Box& formattingRoot) const { return m_formattingStates.contains(&formattingRoot); }
-    FormattingState& createFormattingStateForFormattingRootIfNeeded(const Box& formattingRoot);
+    bool hasInlineFormattingState(const Container& formattingRoot) const { return m_inlineFormattingStates.contains(&formattingRoot); }
 
-    std::unique_ptr<FormattingContext> createFormattingContext(const Box& formattingContextRoot);
 #ifndef NDEBUG
     void registerFormattingContext(const FormattingContext&);
     void deregisterFormattingContext(const FormattingContext& formattingContext) { m_formattingContextList.remove(&formattingContext); }
 #endif
 
-    Display::Box& displayBoxForLayoutBox(const Box& layoutBox) const;
-    bool hasDisplayBox(const Box& layoutBox) const { return m_layoutToDisplayBox.contains(&layoutBox); }
+    Display::Box& displayBoxForRootLayoutBox();
+    Display::Box& ensureDisplayBoxForLayoutBox(const Box&);
+    const Display::Box& displayBoxForLayoutBox(const Box&) const;
 
+    bool hasDisplayBox(const Box&) const;
+
+    enum class QuirksMode { No, Limited, Yes };
     bool inQuirksMode() const { return m_quirksMode == QuirksMode::Yes; }
     bool inLimitedQuirksMode() const { return m_quirksMode == QuirksMode::Limited; }
     bool inNoQuirksMode() const { return m_quirksMode == QuirksMode::No; }
-    // For testing purposes only
-    void verifyAndOutputMismatchingLayoutTree(const RenderView&) const;
+
+    const Container& root() const { return *m_rootContainer; }
+
+    // LFC integration only. Full LFC has proper ICB access.
+    void setViewportSize(const LayoutSize&);
+    LayoutSize viewportSize() const;
+    bool isIntegratedRootBoxFirstChild() const { return m_isIntegratedRootBoxFirstChild; }
+    void setIsIntegratedRootBoxFirstChild(bool);
 
 private:
-    const Container& initialContainingBlock() const { return *m_initialContainingBlock; }
-    void layoutFormattingContextSubtree(const Box&);
+    void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
+    Display::Box& ensureDisplayBoxForLayoutBoxSlow(const Box&);
 
-    WeakPtr<const Container> m_initialContainingBlock;
-    HashSet<const Container*> m_formattingContextRootListForLayout;
-    HashMap<const Box*, std::unique_ptr<FormattingState>> m_formattingStates;
+    HashMap<const Container*, std::unique_ptr<InlineFormattingState>> m_inlineFormattingStates;
+    HashMap<const Container*, std::unique_ptr<BlockFormattingState>> m_blockFormattingStates;
+    HashMap<const Container*, std::unique_ptr<TableFormattingState>> m_tableFormattingStates;
+
+    std::unique_ptr<InlineFormattingState> m_rootInlineFormattingStateForIntegration;
+
 #ifndef NDEBUG
     HashSet<const FormattingContext*> m_formattingContextList;
 #endif
-    mutable HashMap<const Box*, std::unique_ptr<Display::Box>> m_layoutToDisplayBox;
+    HashMap<const Box*, std::unique_ptr<Display::Box>> m_layoutToDisplayBox;
     QuirksMode m_quirksMode { QuirksMode::No };
+
+    WeakPtr<const Container> m_rootContainer;
+
+    // LFC integration only.
+    LayoutSize m_viewportSize;
+    bool m_isIntegratedRootBoxFirstChild { false };
 };
+
+inline bool LayoutState::hasDisplayBox(const Box& layoutBox) const
+{
+    if (layoutBox.cachedDisplayBoxForLayoutState(*this))
+        return true;
+    return m_layoutToDisplayBox.contains(&layoutBox);
+}
+
+inline Display::Box& LayoutState::ensureDisplayBoxForLayoutBox(const Box& layoutBox)
+{
+    if (auto* displayBox = layoutBox.cachedDisplayBoxForLayoutState(*this))
+        return *displayBox;
+    return ensureDisplayBoxForLayoutBoxSlow(layoutBox);
+}
+
+inline const Display::Box& LayoutState::displayBoxForLayoutBox(const Box& layoutBox) const
+{
+    if (auto* displayBox = layoutBox.cachedDisplayBoxForLayoutState(*this))
+        return *displayBox;
+    ASSERT(m_layoutToDisplayBox.contains(&layoutBox));
+    return *m_layoutToDisplayBox.get(&layoutBox);
+}
 
 #ifndef NDEBUG
 inline void LayoutState::registerFormattingContext(const FormattingContext& formattingContext)
@@ -119,6 +143,19 @@ inline void LayoutState::registerFormattingContext(const FormattingContext& form
     m_formattingContextList.add(&formattingContext);
 }
 #endif
+
+// These Layout::Box function are here to allow inlining.
+inline bool Box::canCacheForLayoutState(const LayoutState& layoutState) const
+{
+    return !m_cachedLayoutState || m_cachedLayoutState.get() == &layoutState;
+}
+
+inline Display::Box* Box::cachedDisplayBoxForLayoutState(const LayoutState& layoutState) const
+{
+    if (m_cachedLayoutState.get() != &layoutState)
+        return nullptr;
+    return m_cachedDisplayBoxForLayoutState.get();
+}
 
 }
 }

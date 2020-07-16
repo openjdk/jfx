@@ -35,9 +35,14 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TableGrid);
 
+TableGrid::Column::Column(const Box* columnBox)
+    : m_columnBox(makeWeakPtr(columnBox))
+{
+}
+
 void TableGrid::Column::setWidthConstraints(FormattingContext::IntrinsicWidthConstraints widthConstraints)
 {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_hasWidthConstraints = true;
 #endif
     m_widthConstraints = widthConstraints;
@@ -51,7 +56,7 @@ FormattingContext::IntrinsicWidthConstraints TableGrid::Column::widthConstraints
 
 void TableGrid::Column::setLogicalWidth(LayoutUnit computedLogicalWidth)
 {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_hasComputedWidth = true;
 #endif
     m_computedLogicalWidth = computedLogicalWidth;
@@ -65,7 +70,7 @@ LayoutUnit TableGrid::Column::logicalWidth() const
 
 void TableGrid::Column::setLogicalLeft(LayoutUnit computedLogicalLeft)
 {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_hasComputedLeft = true;
 #endif
     m_computedLogicalLeft = computedLogicalLeft;
@@ -77,15 +82,20 @@ LayoutUnit TableGrid::Column::logicalLeft() const
     return m_computedLogicalLeft;
 }
 
-void TableGrid::ColumnsContext::addColumn()
+bool TableGrid::Column::hasFixedWidth() const
 {
-    m_columns.append({ });
+    // FIXME: This only covers the <col> attribute case.
+    return columnBox() && columnBox()->columnWidth();
 }
 
-void TableGrid::ColumnsContext::useAsLogicalWidth(WidthConstraintsType type)
+void TableGrid::ColumnsContext::addColumn(const Box* columnBox)
 {
-    for (auto& column : m_columns)
-        column.setLogicalWidth(type == WidthConstraintsType::Minimum ? column.widthConstraints().minimum : column.widthConstraints().maximum);
+    m_columns.append({ columnBox });
+}
+
+TableGrid::Row::Row(const Box& rowBox)
+    : m_layoutBox(rowBox)
+{
 }
 
 TableGrid::CellInfo::CellInfo(const Box& tableCellBox, SlotPosition position, CellSize size)
@@ -142,12 +152,12 @@ void TableGrid::appendCell(const Box& tableCellBox)
         }
     }
     // Initialize columns/rows if needed.
-    auto missingNumberOfColumns = std::max<unsigned>(0, (initialSlotPosition.x() + columnSpan) - m_columnsContext.columns().size());
-    for (unsigned column = 0; column < missingNumberOfColumns; ++column)
+    auto missingNumberOfColumns = std::max<int>(0, initialSlotPosition.x() + columnSpan - m_columnsContext.columns().size());
+    for (auto column = 0; column < missingNumberOfColumns; ++column)
         m_columnsContext.addColumn();
 
     if (isInNewRow)
-        m_rows.append({ });
+        m_rows.append({ *tableCellBox.parent() });
 
     m_cellList.add(WTFMove(cellInfo));
 }
@@ -163,13 +173,17 @@ void TableGrid::removeCell(const Box& tableCellBox)
     UNUSED_PARAM(tableCellBox);
 }
 
-FormattingContext::IntrinsicWidthConstraints TableGrid::widthConstraints() const
+FormattingContext::IntrinsicWidthConstraints TableGrid::widthConstraints()
 {
-    // FIXME: We should probably cache this value.
-    auto widthConstraints = FormattingContext::IntrinsicWidthConstraints { };
+    // FIXME: Add constraint invalidation for incremental layouts.
+    if (m_intrinsicWidthConstraints)
+        return *m_intrinsicWidthConstraints;
+
+    m_intrinsicWidthConstraints = FormattingContext::IntrinsicWidthConstraints { };
     for (auto& column : m_columnsContext.columns())
-        widthConstraints += column.widthConstraints();
-    return widthConstraints;
+        *m_intrinsicWidthConstraints += column.widthConstraints();
+    m_intrinsicWidthConstraints->expand(totalHorizontalSpacing());
+    return *m_intrinsicWidthConstraints;
 }
 
 }

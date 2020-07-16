@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -61,35 +61,15 @@ void initializeMainThread()
     });
 }
 
-#if PLATFORM(COCOA)
 #if !USE(WEB_THREAD)
-void initializeMainThreadToProcessMainThread()
-{
-    std::call_once(initializeKey, [] {
-        initializeThreading();
-        initializeMainThreadToProcessMainThreadPlatform();
-    });
-}
-#else
-void initializeWebThread()
-{
-    static std::once_flag initializeKey;
-    std::call_once(initializeKey, [] {
-        initializeWebThreadPlatform();
-    });
-}
-#endif // !USE(WEB_THREAD)
-#endif // PLATFORM(COCOA)
-
-#if !USE(WEB_THREAD)
-bool canAccessThreadLocalDataForThread(Thread& thread)
+bool canCurrentThreadAccessThreadLocalData(Thread& thread)
 {
     return &thread == &Thread::current();
 }
 #endif
 
 // 0.1 sec delays in UI is approximate threshold when they become noticeable. Have a limit that's half of that.
-static const auto maxRunLoopSuspensionTime = 50_ms;
+static constexpr auto maxRunLoopSuspensionTime = 50_ms;
 
 void dispatchFunctionsFromMainThread()
 {

@@ -37,6 +37,7 @@
 #include "ErrorEvent.h"
 #include "JSDOMExceptionHandling.h"
 #include "JSDOMWindow.h"
+#include "LegacySchemeRegistry.h"
 #include "MessagePort.h"
 #include "Navigator.h"
 #include "Page.h"
@@ -45,7 +46,6 @@
 #include "ResourceRequest.h"
 #include "SWClientConnection.h"
 #include "SWContextManager.h"
-#include "SchemeRegistry.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ScriptState.h"
@@ -123,13 +123,13 @@ void ScriptExecutionContext::removeFromContextsMap()
     }
 }
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 
 inline void ScriptExecutionContext::checkConsistency() const
 {
 }
 
-#else
+#else // ASSERT_ENABLED
 
 void ScriptExecutionContext::checkConsistency() const
 {
@@ -145,13 +145,13 @@ void ScriptExecutionContext::checkConsistency() const
     }
 }
 
-#endif
+#endif // ASSERT_ENABLED
 
 ScriptExecutionContext::~ScriptExecutionContext()
 {
     checkConsistency();
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (m_contextIdentifier) {
         Locker<Lock> locker(allScriptExecutionContextsMapLock);
         ASSERT_WITH_MESSAGE(!allScriptExecutionContextsMap().contains(m_contextIdentifier),
@@ -159,7 +159,7 @@ ScriptExecutionContext::~ScriptExecutionContext()
     }
 
     m_inScriptExecutionContextDestructor = true;
-#endif
+#endif // ASSERT_ENABLED
 
 #if ENABLE(SERVICE_WORKER)
     setActiveServiceWorker(nullptr);
@@ -168,7 +168,7 @@ ScriptExecutionContext::~ScriptExecutionContext()
     while (auto* destructionObserver = m_destructionObservers.takeAny())
         destructionObserver->contextDestroyed();
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_inScriptExecutionContextDestructor = false;
 #endif
 }
@@ -222,38 +222,11 @@ void ScriptExecutionContext::didLoadResourceSynchronously()
 {
 }
 
-bool ScriptExecutionContext::canSuspendActiveDOMObjectsForDocumentSuspension(Vector<ActiveDOMObject*>* unsuspendableObjects)
-{
-    checkConsistency();
-
-    bool canSuspend = true;
-
-    forEachActiveDOMObject([&](auto& activeDOMObject) {
-        if (!activeDOMObject.canSuspendForDocumentSuspension()) {
-            canSuspend = false;
-            if (unsuspendableObjects)
-                unsuspendableObjects->append(&activeDOMObject);
-            else
-                return ShouldContinue::No;
-        }
-        return ShouldContinue::Yes;
-    });
-
-    if (unsuspendableObjects) {
-        // Remove activeDOMObjects that have been destroyed while we were iterating above.
-        unsuspendableObjects->removeAllMatching([&](auto* activeDOMObject) {
-            return !m_activeDOMObjects.contains(activeDOMObject);
-        });
-    }
-
-    return canSuspend;
-}
-
 void ScriptExecutionContext::forEachActiveDOMObject(const Function<ShouldContinue(ActiveDOMObject&)>& apply) const
 {
     // It is not allowed to run arbitrary script or construct new ActiveDOMObjects while we are iterating over ActiveDOMObjects.
     // An ASSERT_WITH_SECURITY_IMPLICATION or RELEASE_ASSERT will fire if this happens, but it's important to code
-    // canSuspendActiveDOMObjectsForDocumentSuspension() / suspend() / resume() / stop() functions so it will not happen!
+    // suspend() / resume() / stop() functions so it will not happen!
     ScriptDisallowedScope scriptDisallowedScope;
     SetForScope<bool> activeDOMObjectAdditionForbiddenScope(m_activeDOMObjectAdditionForbidden, true);
 
@@ -278,7 +251,7 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ReasonForSuspension why)
     checkConsistency();
 
     if (m_activeDOMObjectsAreSuspended) {
-        // A page may subsequently suspend DOM objects, say as part of entering the page cache, after the embedding
+        // A page may subsequently suspend DOM objects, say as part of entering the back/forward cache, after the embedding
         // client requested the page be suspended. We ignore such requests so long as the embedding client requested
         // the suspension first. See <rdar://problem/13754896> for more details.
         ASSERT(m_reasonForSuspendingActiveDOMObjects == ReasonForSuspension::PageWillBeSuspended);
@@ -301,15 +274,16 @@ void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
 
     if (m_reasonForSuspendingActiveDOMObjects != why)
         return;
-    m_activeDOMObjectsAreSuspended = false;
 
     forEachActiveDOMObject([](auto& activeDOMObject) {
         activeDOMObject.resume();
         return ShouldContinue::Yes;
     });
 
-    // In case there were pending messages at the time the script execution context entered PageCache,
-    // make sure those get dispatched shortly after restoring from PageCache.
+    m_activeDOMObjectsAreSuspended = false;
+
+    // In case there were pending messages at the time the script execution context entered the BackForwardCache,
+    // make sure those get dispatched shortly after restoring from the BackForwardCache.
     processMessageWithMessagePortsSoon();
 }
 
@@ -396,7 +370,7 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
         logExceptionToConsole(exception->m_errorMessage, exception->m_sourceURL, exception->m_lineNumber, exception->m_columnNumber, WTFMove(exception->m_callStack));
 }
 
-void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::ExecState& state, JSC::JSPromise& promise, RefPtr<Inspector::ScriptCallStack>&& callStack)
+void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::JSGlobalObject& state, JSC::JSPromise& promise, RefPtr<Inspector::ScriptCallStack>&& callStack)
 {
     Page* page = nullptr;
     if (is<Document>(this))
@@ -420,7 +394,7 @@ void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::ExecState& sta
     addConsoleMessage(WTFMove(message));
 }
 
-void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* state, unsigned long requestIdentifier)
+void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, JSC::JSGlobalObject* state, unsigned long requestIdentifier)
 {
     addMessage(source, level, message, sourceURL, lineNumber, columnNumber, 0, state, requestIdentifier);
 }
@@ -535,12 +509,12 @@ bool ScriptExecutionContext::hasPendingActivity() const
     return false;
 }
 
-JSC::ExecState* ScriptExecutionContext::execState()
+JSC::JSGlobalObject* ScriptExecutionContext::execState()
 {
     if (is<Document>(*this)) {
         Document& document = downcast<Document>(*this);
         auto* frame = document.frame();
-        return frame ? frame->script().globalObject(mainThreadNormalWorld())->globalExec() : nullptr;
+        return frame ? frame->script().globalObject(mainThreadNormalWorld()) : nullptr;
     }
 
     if (is<WorkerGlobalScope>(*this))
@@ -574,7 +548,7 @@ bool ScriptExecutionContext::allowsMediaDevices() const
 bool ScriptExecutionContext::hasServiceWorkerScheme() const
 {
     ASSERT(securityOrigin());
-    return SchemeRegistry::isServiceWorkerContainerCustomScheme(securityOrigin()->protocol());
+    return LegacySchemeRegistry::isServiceWorkerContainerCustomScheme(securityOrigin()->protocol());
 }
 
 #if ENABLE(SERVICE_WORKER)
@@ -612,25 +586,16 @@ ServiceWorkerContainer* ScriptExecutionContext::serviceWorkerContainer()
     return navigator ? &navigator->serviceWorker() : nullptr;
 }
 
-bool ScriptExecutionContext::postTaskTo(const DocumentOrWorkerIdentifier& contextIdentifier, WTF::Function<void(ScriptExecutionContext&)>&& task)
+ServiceWorkerContainer* ScriptExecutionContext::ensureServiceWorkerContainer()
 {
-    ASSERT(isMainThread());
+    NavigatorBase* navigator = nullptr;
+    if (is<Document>(*this)) {
+        if (auto* window = downcast<Document>(*this).domWindow())
+            navigator = &window->navigator();
+    } else
+        navigator = &downcast<WorkerGlobalScope>(*this).navigator();
 
-    bool wasPosted = false;
-    switchOn(contextIdentifier, [&] (DocumentIdentifier identifier) {
-        auto* document = Document::allDocumentsMap().get(identifier);
-        if (!document)
-            return;
-        document->postTask([task = WTFMove(task)](auto& scope) {
-            task(scope);
-        });
-        wasPosted= true;
-    }, [&](ServiceWorkerIdentifier identifier) {
-        wasPosted = SWContextManager::singleton().postTaskToServiceWorker(identifier, [task = WTFMove(task)](auto& scope) {
-            task(scope);
-        });
-    });
-    return wasPosted;
+    return navigator ? &navigator->serviceWorker() : nullptr;
 }
 
 #endif

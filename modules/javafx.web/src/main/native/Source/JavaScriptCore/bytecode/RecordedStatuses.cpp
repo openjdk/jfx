@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,10 +51,10 @@ CallLinkStatus* RecordedStatuses::addCallLinkStatus(const CodeOrigin& codeOrigin
     return result;
 }
 
-GetByIdStatus* RecordedStatuses::addGetByIdStatus(const CodeOrigin& codeOrigin, const GetByIdStatus& status)
+GetByStatus* RecordedStatuses::addGetByStatus(const CodeOrigin& codeOrigin, const GetByStatus& status)
 {
-    auto statusPtr = makeUnique<GetByIdStatus>(status);
-    GetByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<GetByStatus>(status);
+    GetByStatus* result = statusPtr.get();
     gets.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
@@ -73,6 +73,12 @@ InByIdStatus* RecordedStatuses::addInByIdStatus(const CodeOrigin& codeOrigin, co
     InByIdStatus* result = statusPtr.get();
     ins.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
+}
+
+void RecordedStatuses::visitAggregate(SlotVisitor& slotVisitor)
+{
+    for (auto& pair : gets)
+        pair.second->visitAggregate(slotVisitor);
 }
 
 void RecordedStatuses::markIfCheap(SlotVisitor& slotVisitor)

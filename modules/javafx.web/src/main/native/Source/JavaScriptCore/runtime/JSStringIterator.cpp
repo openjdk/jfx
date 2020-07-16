@@ -27,35 +27,35 @@
 #include "config.h"
 #include "JSStringIterator.h"
 
-#include "BuiltinNames.h"
 #include "JSCInlines.h"
+#include "JSInternalFieldObjectImplInlines.h"
 
 namespace JSC {
 
 const ClassInfo JSStringIterator::s_info = { "String Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSStringIterator) };
 
-void JSStringIterator::finishCreation(VM& vm, JSGlobalObject*, JSString* iteratedString)
+void JSStringIterator::finishCreation(VM& vm, JSString* iteratedString)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirect(vm, vm.propertyNames->builtinNames().iteratedStringPrivateName(), iteratedString);
-    putDirect(vm, vm.propertyNames->builtinNames().stringIteratorNextIndexPrivateName(), jsNumber(0));
+    internalField(Field::Index).set(vm, this, jsNumber(0));
+    internalField(Field::IteratedString).set(vm, this, iteratedString);
 }
 
-JSValue JSStringIterator::iteratedValue(ExecState* exec) const
+JSStringIterator* JSStringIterator::clone(JSGlobalObject* globalObject)
 {
-    return getDirect(exec->vm(), exec->vm().propertyNames->builtinNames().iteratedStringPrivateName());
-}
-
-JSStringIterator* JSStringIterator::clone(ExecState* exec)
-{
-    VM& vm = exec->vm();
-    JSValue iteratedString = getDirect(vm, vm.propertyNames->builtinNames().iteratedStringPrivateName());
-    JSValue nextIndex = getDirect(vm, vm.propertyNames->builtinNames().stringIteratorNextIndexPrivateName());
-
-    auto clone = JSStringIterator::create(exec, exec->jsCallee()->globalObject(vm)->stringIteratorStructure(), asString(iteratedString));
-    clone->putDirect(vm, vm.propertyNames->builtinNames().stringIteratorNextIndexPrivateName(), nextIndex);
+    VM& vm = globalObject->vm();
+    JSString* iteratedString = jsCast<JSString*>(this->iteratedString());
+    auto* clone = JSStringIterator::create(vm, globalObject->stringIteratorStructure(), iteratedString);
+    clone->internalField(Field::Index).set(vm, clone, this->index());
     return clone;
+}
+
+void JSStringIterator::visitChildren(JSCell* cell, SlotVisitor& visitor)
+{
+    auto* thisObject = jsCast<JSStringIterator*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(thisObject, visitor);
 }
 
 } // namespace JSC

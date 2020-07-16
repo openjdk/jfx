@@ -77,7 +77,7 @@ const String& Navigator::userAgent() const
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
         ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::UserAgent);
     if (m_userAgent.isNull())
-        m_userAgent = frame->loader().userAgentForJavaScript(frame->document()->url());
+        m_userAgent = frame->loader().userAgent(frame->document()->url());
     return m_userAgent;
 }
 
@@ -127,7 +127,9 @@ void Navigator::share(ScriptExecutionContext& context, ShareData data, Ref<Defer
         }
     }
 
-    if (!UserGestureIndicator::processingUserGesture()) {
+    auto* window = this->window();
+    // Note that the specification does not indicate we should consume user activation. We are intentionally stricter here.
+    if (!window || !window->consumeTransientActivation()) {
         promise->reject(NotAllowedError);
         return;
     }

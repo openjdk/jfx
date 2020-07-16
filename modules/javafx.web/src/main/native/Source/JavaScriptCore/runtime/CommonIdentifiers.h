@@ -49,6 +49,7 @@
     macro(Promise) \
     macro(Reflect) \
     macro(RegExp) \
+    macro(RemotePlayback) \
     macro(Set) \
     macro(SharedArrayBuffer) \
     macro(String) \
@@ -96,6 +97,7 @@
     macro(displayName) \
     macro(done) \
     macro(dotAll) \
+    macro(entries) \
     macro(enumerable) \
     macro(era) \
     macro(eval) \
@@ -135,6 +137,7 @@
     macro(isWatchpoint) \
     macro(jettisonReason) \
     macro(join) \
+    macro(keys) \
     macro(lastIndex) \
     macro(length) \
     macro(line) \
@@ -196,6 +199,7 @@
     macro(unicode) \
     macro(usage) \
     macro(value) \
+    macro(values) \
     macro(valueOf) \
     macro(weekday) \
     macro(writable) \

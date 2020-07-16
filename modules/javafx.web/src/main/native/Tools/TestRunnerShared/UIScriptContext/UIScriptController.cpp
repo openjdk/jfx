@@ -58,7 +58,7 @@ DeviceOrientation* toDeviceOrientation(JSContextRef context, JSValueRef value)
     return nullptr;
 }
 
-#if !PLATFORM(GTK) && !PLATFORM(COCOA)
+#if !PLATFORM(GTK) && !PLATFORM(COCOA) && !PLATFORM(WIN) && !PLATFORM(WPE)
 Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
 {
     return adoptRef(*new UIScriptController(context));
@@ -105,24 +105,24 @@ JSValueRef UIScriptController::didEndFormControlInteractionCallback() const
     return m_context->callbackWithID(CallbackTypeDidEndFormControlInteraction);
 }
 
-void UIScriptController::setDidShowForcePressPreviewCallback(JSValueRef callback)
+void UIScriptController::setDidShowContextMenuCallback(JSValueRef callback)
 {
-    m_context->registerCallback(callback, CallbackTypeDidShowForcePressPreview);
+    m_context->registerCallback(callback, CallbackTypeDidShowContextMenu);
 }
 
-JSValueRef UIScriptController::didShowForcePressPreviewCallback() const
+JSValueRef UIScriptController::didShowContextMenuCallback() const
 {
-    return m_context->callbackWithID(CallbackTypeDidShowForcePressPreview);
+    return m_context->callbackWithID(CallbackTypeDidShowContextMenu);
 }
 
-void UIScriptController::setDidDismissForcePressPreviewCallback(JSValueRef callback)
+void UIScriptController::setDidDismissContextMenuCallback(JSValueRef callback)
 {
-    m_context->registerCallback(callback, CallbackTypeDidDismissForcePressPreview);
+    m_context->registerCallback(callback, CallbackTypeDidDismissContextMenu);
 }
 
-JSValueRef UIScriptController::didDismissForcePressPreviewCallback() const
+JSValueRef UIScriptController::didDismissContextMenuCallback() const
 {
-    return m_context->callbackWithID(CallbackTypeDidDismissForcePressPreview);
+    return m_context->callbackWithID(CallbackTypeDidDismissContextMenu);
 }
 
 void UIScriptController::setWillBeginZoomingCallback(JSValueRef callback)
@@ -229,6 +229,14 @@ void UIScriptController::uiScriptComplete(JSStringRef result)
 {
     m_context->requestUIScriptCompletion(result);
     clearAllCallbacks();
+}
+
+void UIScriptController::dismissMenu()
+{
+}
+
+void UIScriptController::chooseMenuAction(JSStringRef, JSValueRef)
+{
 }
 
 }
