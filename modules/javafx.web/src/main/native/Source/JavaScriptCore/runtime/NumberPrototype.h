@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2011 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,8 +26,8 @@ namespace JSC {
 
 class NumberPrototype final : public NumberObject {
 public:
-    typedef NumberObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = NumberObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static NumberPrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
@@ -49,12 +49,14 @@ protected:
 private:
     NumberPrototype(VM&, Structure*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(NumberPrototype, NumberObject);
 
-EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(ExecState*);
+EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(JSGlobalObject*, CallFrame*);
 JSString* int32ToString(VM&, int32_t value, int32_t radix);
 JSString* int52ToString(VM&, int64_t value, int32_t radix);
 JSString* numberToString(VM&, double value, int32_t radix);
 String toStringWithRadix(double doubleValue, int32_t radix);
-int32_t extractToStringRadixArgument(ExecState*, JSValue radixValue, ThrowScope&);
+int32_t extractToStringRadixArgument(JSGlobalObject*, JSValue radixValue, ThrowScope&);
 
 } // namespace JSC

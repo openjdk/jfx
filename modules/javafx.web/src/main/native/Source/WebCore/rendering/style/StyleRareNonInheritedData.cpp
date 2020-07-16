@@ -34,8 +34,11 @@
 #include "StyleScrollSnapPoints.h"
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareNonInheritedData);
 
 StyleRareNonInheritedData::StyleRareNonInheritedData()
     : opacity(RenderStyle::initialOpacity())
@@ -63,6 +66,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
 #endif
     , willChange(RenderStyle::initialWillChange())
     , mask(FillLayerType::Mask)
+    , maskBoxImage(NinePieceImage::Type::Mask)
     , objectPosition(RenderStyle::initialObjectPosition())
     , shapeOutside(RenderStyle::initialShapeOutside())
     , shapeMargin(RenderStyle::initialShapeMargin())
@@ -85,6 +89,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , backfaceVisibility(static_cast<unsigned>(RenderStyle::initialBackfaceVisibility()))
     , userDrag(static_cast<unsigned>(RenderStyle::initialUserDrag()))
     , textOverflow(static_cast<unsigned>(RenderStyle::initialTextOverflow()))
+    , useSmoothScrolling(static_cast<unsigned>(RenderStyle::initialUseSmoothScrolling()))
     , marginBeforeCollapse(static_cast<unsigned>(MarginCollapse::Collapse))
     , marginAfterCollapse(static_cast<unsigned>(MarginCollapse::Collapse))
     , appearance(static_cast<unsigned>(RenderStyle::initialAppearance()))
@@ -110,7 +115,6 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , columnGap(RenderStyle::initialColumnGap())
     , rowGap(RenderStyle::initialRowGap())
 {
-    maskBoxImage.setMaskDefaults();
 }
 
 inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInheritedData& o)
@@ -144,8 +148,8 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , boxShadow(o.boxShadow ? makeUnique<ShadowData>(*o.boxShadow) : nullptr)
     , willChange(o.willChange)
     , boxReflect(o.boxReflect)
-    , animations(o.animations ? makeUnique<AnimationList>(*o.animations) : nullptr)
-    , transitions(o.transitions ? makeUnique<AnimationList>(*o.transitions) : nullptr)
+    , animations(o.animations ? o.animations->copy() : o.animations)
+    , transitions(o.transitions ? o.transitions->copy() : o.transitions)
     , mask(o.mask)
     , maskBoxImage(o.maskBoxImage)
     , pageSize(o.pageSize)
@@ -179,6 +183,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , backfaceVisibility(o.backfaceVisibility)
     , userDrag(o.userDrag)
     , textOverflow(o.textOverflow)
+    , useSmoothScrolling(o.useSmoothScrolling)
     , marginBeforeCollapse(o.marginBeforeCollapse)
     , marginAfterCollapse(o.marginAfterCollapse)
     , appearance(o.appearance)
@@ -277,6 +282,7 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && backfaceVisibility == o.backfaceVisibility
         && userDrag == o.userDrag
         && textOverflow == o.textOverflow
+        && useSmoothScrolling == o.useSmoothScrolling
         && marginBeforeCollapse == o.marginBeforeCollapse
         && marginAfterCollapse == o.marginAfterCollapse
         && appearance == o.appearance

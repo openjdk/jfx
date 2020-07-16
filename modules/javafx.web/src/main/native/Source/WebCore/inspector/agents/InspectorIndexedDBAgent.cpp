@@ -222,7 +222,7 @@ public:
         return adoptRef(*new DatabaseLoader(context, WTFMove(requestCallback)));
     }
 
-    virtual ~DatabaseLoader() = default;
+    ~DatabaseLoader() override = default;
 
     void execute(IDBDatabase& database) override
     {
@@ -356,7 +356,7 @@ public:
         return adoptRef(*new OpenCursorCallback(injectedScript, WTFMove(requestCallback), skipCount, pageSize));
     }
 
-    virtual ~OpenCursorCallback() = default;
+    ~OpenCursorCallback() override = default;
 
     bool operator==(const EventListener& other) const override
     {
@@ -404,10 +404,10 @@ public:
             return;
         }
 
-        auto* state = context.execState();
-        auto key =  toJS(*state, *state->lexicalGlobalObject(), cursor->key());
-        auto primaryKey = toJS(*state, *state->lexicalGlobalObject(), cursor->primaryKey());
-        auto value = deserializeIDBValueToJSValue(*state, cursor->value());
+        auto* lexicalGlobalObject = context.execState();
+        auto key =  toJS(*lexicalGlobalObject, *lexicalGlobalObject, cursor->key());
+        auto primaryKey = toJS(*lexicalGlobalObject, *lexicalGlobalObject, cursor->primaryKey());
+        auto value = deserializeIDBValueToJSValue(*lexicalGlobalObject, cursor->value());
         auto dataEntry = DataEntry::create()
             .setKey(m_injectedScript.wrapObject(key, String(), true))
             .setPrimaryKey(m_injectedScript.wrapObject(primaryKey, String(), true))
@@ -447,7 +447,7 @@ public:
         return adoptRef(*new DataLoader(context, WTFMove(requestCallback), injectedScript, objectStoreName, indexName, WTFMove(idbKeyRange), skipCount, pageSize));
     }
 
-    virtual ~DataLoader() = default;
+    ~DataLoader() override = default;
 
     void execute(IDBDatabase& database) override
     {
@@ -651,7 +651,7 @@ public:
         return adoptRef(*new ClearObjectStoreListener(WTFMove(requestCallback)));
     }
 
-    virtual ~ClearObjectStoreListener() = default;
+    ~ClearObjectStoreListener() override = default;
 
     bool operator==(const EventListener& other) const override
     {

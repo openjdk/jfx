@@ -39,6 +39,7 @@
 #include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCTestRunnerUtils.h>
 #include <JavaScriptCore/JSContextRef.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <JavaScriptCore/JSObjectRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
@@ -585,6 +586,9 @@ static JSValueRef overridePreferenceCallback(JSContextRef context, JSObjectRef f
     auto value = adopt(JSValueToStringCopy(context, arguments[1], exception));
     ASSERT(!*exception);
 
+    // Should use `<!-- webkit-test-runner [ enableBackForwardCache=true ] -->` instead.
+    RELEASE_ASSERT(!JSStringIsEqualToUTF8CString(key.get(), "WebKitUsesBackForwardCachePreferenceKey"));
+
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->overridePreference(key.get(), value.get());
 
@@ -1126,6 +1130,30 @@ static JSValueRef setPrivateBrowsingEnabledCallback(JSContextRef context, JSObje
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->setPrivateBrowsingEnabled(JSValueToBoolean(context, arguments[0]));
+
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef setShouldSwapToEphemeralSessionOnNextNavigationCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    // Has mac & windows implementation
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setShouldSwapToEphemeralSessionOnNextNavigation(JSValueToBoolean(context, arguments[0]));
+
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef setShouldSwapToDefaultSessionOnNextNavigationCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    // Has mac & windows implementation
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setShouldSwapToDefaultSessionOnNextNavigation(JSValueToBoolean(context, arguments[0]));
 
     return JSValueMakeUndefined(context);
 }
@@ -2008,12 +2036,8 @@ static JSValueRef accummulateLogsForChannel(JSContextRef context, JSObjectRef fu
     ASSERT(!*exception);
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-#if OS(WINDOWS) && PLATFORM(JAVA)
-    // FIXME : error LNK2019: unresolved external symbol
-    // controller->setAccummulateLogsForChannel(channel.get());
-#else
     controller->setAccummulateLogsForChannel(channel.get());
-#endif
+
     return JSValueMakeUndefined(context);
 }
 
@@ -2225,7 +2249,9 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setPopupBlockingEnabled", setPopupBlockingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPluginsEnabled", setPluginsEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPrinting", setPrintingCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setPrivateBrowsingEnabled", setPrivateBrowsingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setPrivateBrowsingEnabled_DEPRECATED", setPrivateBrowsingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setShouldSwapToEphemeralSessionOnNextNavigation", setShouldSwapToEphemeralSessionOnNextNavigationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setShouldSwapToDefaultSessionOnNextNavigation", setShouldSwapToDefaultSessionOnNextNavigationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSerializeHTTPLoads", setSerializeHTTPLoadsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSpatialNavigationEnabled", setSpatialNavigationEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setStopProvisionalFrameLoads", setStopProvisionalFrameLoadsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2389,12 +2415,7 @@ void TestRunner::setAccummulateLogsForChannel(JSStringRef channel)
     auto buffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(channel, buffer.get(), maxLength + 1);
 
-#if OS(WINDOWS) && PLATFORM(JAVA)
-    // FIXME : error LNK2019: unresolved external symbol
-    // WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
-#else
     WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
-#endif
 }
 
 typedef WTF::HashMap<unsigned, JSValueRef> CallbackMap;
@@ -2495,12 +2516,7 @@ void TestRunner::uiScriptDidComplete(const String& result, unsigned callbackID)
 
 void TestRunner::setAllowsAnySSLCertificate(bool allowsAnySSLCertificate)
 {
-#if OS(WINDOWS) && PLATFORM(JAVA)
-    // FIXME : error LNK2019: unresolved external symbol
-    // WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
-#else
     WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
-#endif
 }
 
 void TestRunner::setOpenPanelFiles(JSContextRef context, JSValueRef filesValue)
@@ -2550,4 +2566,14 @@ void TestRunner::setOpenPanelFilesMediaIcon(JSContextRef context, JSValueRef med
 void TestRunner::cleanup()
 {
     clearTestRunnerCallbacks();
+}
+
+void TestRunner::willNavigate()
+{
+    if (m_shouldSwapToEphemeralSessionOnNextNavigation || m_shouldSwapToDefaultSessionOnNextNavigation) {
+        ASSERT(m_shouldSwapToEphemeralSessionOnNextNavigation != m_shouldSwapToDefaultSessionOnNextNavigation);
+        setPrivateBrowsingEnabled(m_shouldSwapToEphemeralSessionOnNextNavigation);
+        m_shouldSwapToEphemeralSessionOnNextNavigation = false;
+        m_shouldSwapToDefaultSessionOnNextNavigation = false;
+    }
 }

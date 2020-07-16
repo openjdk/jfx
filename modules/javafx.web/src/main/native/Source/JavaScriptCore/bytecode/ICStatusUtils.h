@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "ExitFlag.h"
 
 namespace JSC {
@@ -42,7 +43,7 @@ bool appendICStatusVariant(VariantVectorType& variants, const VariantType& varia
             for (unsigned j = 0; j < variants.size(); ++j) {
                 if (i == j)
                     continue;
-                if (variants[j].structureSet().overlaps(mergedVariant.structureSet()))
+                if (variants[j].overlaps(mergedVariant))
                     return false;
             }
             return true;
@@ -53,7 +54,7 @@ bool appendICStatusVariant(VariantVectorType& variants, const VariantType& varia
     // overlap but it's possible that an inline cache got into a weird state. We are
     // defensive and bail if we detect crazy.
     for (unsigned i = 0; i < variants.size(); ++i) {
-        if (variants[i].structureSet().overlaps(variant.structureSet()))
+        if (variants[i].overlaps(variant))
             return false;
     }
 
@@ -71,7 +72,7 @@ void filterICStatusVariants(VariantVectorType& variants, const StructureSet& set
         });
 }
 
-ExitFlag hasBadCacheExitSite(CodeBlock* profiledBlock, unsigned bytecodeIndex);
+ExitFlag hasBadCacheExitSite(CodeBlock* profiledBlock, BytecodeIndex);
 
 } // namespace JSC
 

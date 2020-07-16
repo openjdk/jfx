@@ -33,7 +33,6 @@
 #include "CSSPropertyParserHelpers.h"
 #include "MediaFeatureNames.h"
 #include "MediaQueryParserContext.h"
-#include "RuntimeEnabledFeatures.h"
 #include <wtf/text/TextStream.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -41,7 +40,7 @@ namespace WebCore {
 
 static inline bool featureWithValidIdent(const AtomString& mediaFeature, const CSSPrimitiveValue& value, const MediaQueryParserContext& context)
 {
-    if (value.primitiveType() != CSSPrimitiveValue::UnitType::CSS_IDENT)
+    if (value.primitiveType() != CSSUnitType::CSS_IDENT)
         return false;
 
     return mediaFeature == MediaFeatureNames::orientation
@@ -58,7 +57,8 @@ static inline bool featureWithValidIdent(const AtomString& mediaFeature, const C
     || (mediaFeature == MediaFeatureNames::prefersColorScheme)
 #endif
     || mediaFeature == MediaFeatureNames::prefersReducedMotion
-    || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)));
+    || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)))
+    || mediaFeature == MediaFeatureNames::dynamicRange;
 }
 
 static inline bool featureWithValidDensity(const String& mediaFeature, const CSSPrimitiveValue& value)

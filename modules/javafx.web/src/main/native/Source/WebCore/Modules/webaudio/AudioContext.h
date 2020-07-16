@@ -30,7 +30,6 @@
 #include "AudioBus.h"
 #include "AudioDestinationNode.h"
 #include "EventTarget.h"
-#include "JSDOMPromiseDeferred.h"
 #include "MediaCanStartListener.h"
 #include "MediaProducer.h"
 #include "PlatformMediaSession.h"
@@ -45,6 +44,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
+#include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -64,8 +64,8 @@ class DelayNode;
 class Document;
 class DynamicsCompressorNode;
 class GainNode;
-class GenericEventQueue;
 class HTMLMediaElement;
+class MainThreadGenericEventQueue;
 class MediaElementAudioSourceNode;
 class MediaStream;
 class MediaStreamAudioDestinationNode;
@@ -76,6 +76,8 @@ class PeriodicWave;
 class ScriptProcessorNode;
 class SecurityOrigin;
 class WaveShaperNode;
+
+template<typename IDLType> class DOMPromiseDeferred;
 
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
 // For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism.
@@ -124,11 +126,8 @@ public:
 
     AudioListener* listener() { return m_listener.get(); }
 
-    using ActiveDOMObject::suspend;
-    using ActiveDOMObject::resume;
-
-    void suspend(DOMPromiseDeferred<void>&&);
-    void resume(DOMPromiseDeferred<void>&&);
+    void suspendRendering(DOMPromiseDeferred<void>&&);
+    void resumeRendering(DOMPromiseDeferred<void>&&);
     void close(DOMPromiseDeferred<void>&&);
 
     enum class State { Suspended, Running, Interrupted, Closed };
@@ -292,9 +291,12 @@ public:
     const SecurityOrigin* origin() const;
     void addConsoleMessage(MessageSource, MessageLevel, const String& message);
 
+    // EventTarget
+    ScriptExecutionContext* scriptExecutionContext() const final;
+
 protected:
     explicit AudioContext(Document&);
-    AudioContext(Document&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
+    AudioContext(Document&, AudioBuffer* renderTarget);
 
     static bool isSampleRateRangeGood(float sampleRate);
     void clearPendingActivity();
@@ -321,7 +323,6 @@ private:
     void mediaCanStart(Document&) override;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final;
     void dispatchEvent(Event&) final;
 
     // MediaProducer
@@ -336,8 +337,9 @@ private:
     void derefNode(AudioNode&);
 
     // ActiveDOMObject API.
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
     void stop() override;
-    bool canSuspendForDocumentSuspension() const override;
     const char* activeDOMObjectName() const override;
 
     // When the context goes away, there might still be some sources which haven't finished playing.
@@ -417,7 +419,7 @@ private:
     Vector<Vector<DOMPromiseDeferred<void>>> m_stateReactions;
 
     std::unique_ptr<PlatformMediaSession> m_mediaSession;
-    std::unique_ptr<GenericEventQueue> m_eventQueue;
+    UniqueRef<MainThreadGenericEventQueue> m_eventQueue;
 
     RefPtr<AudioBuffer> m_renderTarget;
     RefPtr<AudioDestinationNode> m_destinationNode;

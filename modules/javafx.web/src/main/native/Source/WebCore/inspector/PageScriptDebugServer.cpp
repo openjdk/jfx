@@ -29,7 +29,6 @@
 
 #include "CommonVM.h"
 #include "Document.h"
-#include "EventLoop.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "InspectorController.h"
@@ -116,19 +115,20 @@ void PageScriptDebugServer::runEventLoopWhilePausedInternal()
 
     m_page.incrementNestedRunLoopCount();
 
-    EventLoop loop;
-    while (!m_doneProcessingDebuggerEvents && !loop.ended())
-        loop.cycle();
+    while (!m_doneProcessingDebuggerEvents) {
+        if (RunLoop::cycle() == RunLoop::CycleResult::Stop)
+            break;
+    }
 
     m_page.decrementNestedRunLoopCount();
 }
 
-bool PageScriptDebugServer::isContentScript(ExecState* state) const
+bool PageScriptDebugServer::isContentScript(JSGlobalObject* state) const
 {
     return &currentWorld(*state) != &mainThreadNormalWorld();
 }
 
-void PageScriptDebugServer::reportException(ExecState* state, JSC::Exception* exception) const
+void PageScriptDebugServer::reportException(JSGlobalObject* state, JSC::Exception* exception) const
 {
     WebCore::reportException(state, exception);
 }

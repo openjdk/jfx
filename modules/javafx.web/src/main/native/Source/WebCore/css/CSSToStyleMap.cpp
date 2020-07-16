@@ -45,29 +45,24 @@
 
 namespace WebCore {
 
-CSSToStyleMap::CSSToStyleMap(StyleResolver* resolver)
-    : m_resolver(resolver)
+CSSToStyleMap::CSSToStyleMap(Style::BuilderState& builderState)
+    : m_builderState(builderState)
 {
 }
 
 RenderStyle* CSSToStyleMap::style() const
 {
-    return m_resolver->style();
-}
-
-const RenderStyle* CSSToStyleMap::rootElementStyle() const
-{
-    return m_resolver->rootElementStyle();
+    return &m_builderState.style();
 }
 
 bool CSSToStyleMap::useSVGZoomRules() const
 {
-    return m_resolver->useSVGZoomRules();
+    return m_builderState.useSVGZoomRules();
 }
 
 RefPtr<StyleImage> CSSToStyleMap::styleImage(CSSValue& value)
 {
-    return m_resolver->styleImage(value);
+    return m_builderState.createStyleImage(value);
 }
 
 void CSSToStyleMap::mapFillAttachment(CSSPropertyID propertyID, FillLayer& layer, const CSSValue& value)
@@ -214,7 +209,7 @@ void CSSToStyleMap::mapFillSize(CSSPropertyID propertyID, FillLayer& layer, cons
         break;
     default:
         ASSERT(fillSize.type == FillSizeType::Size);
-        if (!convertToLengthSize(primitiveValue, m_resolver->state().cssToLengthConversionData(), fillSize.size))
+        if (!convertToLengthSize(primitiveValue, m_builderState.cssToLengthConversionData(), fillSize.size))
             return;
         break;
     }
@@ -236,9 +231,9 @@ void CSSToStyleMap::mapFillXPosition(CSSPropertyID propertyID, FillLayer& layer,
     Length length;
     if (pair) {
         ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionX || propertyID == CSSPropertyWebkitMaskPositionX);
-        length = StyleBuilderConverter::convertLength(*m_resolver, *pair->second());
+        length = Style::BuilderConverter::convertLength(m_builderState, *pair->second());
     } else
-        length = StyleBuilderConverter::convertPositionComponentX(*m_resolver, value);
+        length = Style::BuilderConverter::convertPositionComponentX(m_builderState, value);
 
     layer.setXPosition(length);
     if (pair)
@@ -260,9 +255,9 @@ void CSSToStyleMap::mapFillYPosition(CSSPropertyID propertyID, FillLayer& layer,
     Length length;
     if (pair) {
         ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPositionY || propertyID == CSSPropertyWebkitMaskPositionY);
-        length = StyleBuilderConverter::convertLength(*m_resolver, *pair->second());
+        length = Style::BuilderConverter::convertLength(m_builderState, *pair->second());
     } else
-        length = StyleBuilderConverter::convertPositionComponentY(*m_resolver, value);
+        length = Style::BuilderConverter::convertPositionComponentY(m_builderState, value);
 
     layer.setYPosition(length);
     if (pair)
@@ -409,7 +404,7 @@ void CSSToStyleMap::mapAnimationName(Animation& layer, const CSSValue& value)
     if (primitiveValue.valueID() == CSSValueNone)
         layer.setIsNoneAnimation(true);
     else
-        layer.setName(primitiveValue.stringValue(), m_resolver->state().styleScopeOrdinal());
+        layer.setName(primitiveValue.stringValue(), m_builderState.styleScopeOrdinal());
 }
 
 void CSSToStyleMap::mapAnimationPlayState(Animation& layer, const CSSValue& value)
@@ -568,19 +563,19 @@ void CSSToStyleMap::mapNinePieceImageSlice(CSSValue& value, NinePieceImage& imag
     if (slices->top()->isPercentage())
         box.top() = Length(slices->top()->doubleValue(), Percent);
     else
-        box.top() = Length(slices->top()->intValue(CSSPrimitiveValue::CSS_NUMBER), Fixed);
+        box.top() = Length(slices->top()->intValue(CSSUnitType::CSS_NUMBER), Fixed);
     if (slices->bottom()->isPercentage())
         box.bottom() = Length(slices->bottom()->doubleValue(), Percent);
     else
-        box.bottom() = Length((int)slices->bottom()->floatValue(CSSPrimitiveValue::CSS_NUMBER), Fixed);
+        box.bottom() = Length((int)slices->bottom()->floatValue(CSSUnitType::CSS_NUMBER), Fixed);
     if (slices->left()->isPercentage())
         box.left() = Length(slices->left()->doubleValue(), Percent);
     else
-        box.left() = Length(slices->left()->intValue(CSSPrimitiveValue::CSS_NUMBER), Fixed);
+        box.left() = Length(slices->left()->intValue(CSSUnitType::CSS_NUMBER), Fixed);
     if (slices->right()->isPercentage())
         box.right() = Length(slices->right()->doubleValue(), Percent);
     else
-        box.right() = Length(slices->right()->intValue(CSSPrimitiveValue::CSS_NUMBER), Fixed);
+        box.right() = Length(slices->right()->intValue(CSSUnitType::CSS_NUMBER), Fixed);
     image.setImageSlices(box);
 
     // Set our fill mode.
@@ -593,7 +588,7 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
         return LengthBox();
 
     // Get our zoom value.
-    CSSToLengthConversionData conversionData = useSVGZoomRules() ? m_resolver->state().cssToLengthConversionData().copyWithAdjustedZoom(1.0f) : m_resolver->state().cssToLengthConversionData();
+    CSSToLengthConversionData conversionData = useSVGZoomRules() ? m_builderState.cssToLengthConversionData().copyWithAdjustedZoom(1.0f) : m_builderState.cssToLengthConversionData();
 
     // Retrieve the primitive value.
     auto& borderWidths = downcast<CSSPrimitiveValue>(value);
@@ -604,28 +599,28 @@ LengthBox CSSToStyleMap::mapNinePieceImageQuad(CSSValue& value)
     if (slices->top()->isNumber())
         box.top() = Length(slices->top()->intValue(), Relative);
     else if (slices->top()->isPercentage())
-        box.top() = Length(slices->top()->doubleValue(CSSPrimitiveValue::CSS_PERCENTAGE), Percent);
+        box.top() = Length(slices->top()->doubleValue(CSSUnitType::CSS_PERCENTAGE), Percent);
     else if (slices->top()->valueID() != CSSValueAuto)
         box.top() = slices->top()->computeLength<Length>(conversionData);
 
     if (slices->right()->isNumber())
         box.right() = Length(slices->right()->intValue(), Relative);
     else if (slices->right()->isPercentage())
-        box.right() = Length(slices->right()->doubleValue(CSSPrimitiveValue::CSS_PERCENTAGE), Percent);
+        box.right() = Length(slices->right()->doubleValue(CSSUnitType::CSS_PERCENTAGE), Percent);
     else if (slices->right()->valueID() != CSSValueAuto)
         box.right() = slices->right()->computeLength<Length>(conversionData);
 
     if (slices->bottom()->isNumber())
         box.bottom() = Length(slices->bottom()->intValue(), Relative);
     else if (slices->bottom()->isPercentage())
-        box.bottom() = Length(slices->bottom()->doubleValue(CSSPrimitiveValue::CSS_PERCENTAGE), Percent);
+        box.bottom() = Length(slices->bottom()->doubleValue(CSSUnitType::CSS_PERCENTAGE), Percent);
     else if (slices->bottom()->valueID() != CSSValueAuto)
         box.bottom() = slices->bottom()->computeLength<Length>(conversionData);
 
     if (slices->left()->isNumber())
         box.left() = Length(slices->left()->intValue(), Relative);
     else if (slices->left()->isPercentage())
-        box.left() = Length(slices->left()->doubleValue(CSSPrimitiveValue::CSS_PERCENTAGE), Percent);
+        box.left() = Length(slices->left()->doubleValue(CSSUnitType::CSS_PERCENTAGE), Percent);
     else if (slices->left()->valueID() != CSSValueAuto)
         box.left() = slices->left()->computeLength<Length>(conversionData);
 
@@ -645,36 +640,36 @@ void CSSToStyleMap::mapNinePieceImageRepeat(CSSValue& value, NinePieceImage& ima
     CSSValueID firstIdentifier = pair->first()->valueID();
     CSSValueID secondIdentifier = pair->second()->valueID();
 
-    ENinePieceImageRule horizontalRule;
+    NinePieceImageRule horizontalRule;
     switch (firstIdentifier) {
     case CSSValueStretch:
-        horizontalRule = StretchImageRule;
+        horizontalRule = NinePieceImageRule::Stretch;
         break;
     case CSSValueRound:
-        horizontalRule = RoundImageRule;
+        horizontalRule = NinePieceImageRule::Round;
         break;
     case CSSValueSpace:
-        horizontalRule = SpaceImageRule;
+        horizontalRule = NinePieceImageRule::Space;
         break;
     default: // CSSValueRepeat
-        horizontalRule = RepeatImageRule;
+        horizontalRule = NinePieceImageRule::Repeat;
         break;
     }
     image.setHorizontalRule(horizontalRule);
 
-    ENinePieceImageRule verticalRule;
+    NinePieceImageRule verticalRule;
     switch (secondIdentifier) {
     case CSSValueStretch:
-        verticalRule = StretchImageRule;
+        verticalRule = NinePieceImageRule::Stretch;
         break;
     case CSSValueRound:
-        verticalRule = RoundImageRule;
+        verticalRule = NinePieceImageRule::Round;
         break;
     case CSSValueSpace:
-        verticalRule = SpaceImageRule;
+        verticalRule = NinePieceImageRule::Space;
         break;
     default: // CSSValueRepeat
-        verticalRule = RepeatImageRule;
+        verticalRule = NinePieceImageRule::Repeat;
         break;
     }
     image.setVerticalRule(verticalRule);

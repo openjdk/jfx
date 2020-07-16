@@ -43,7 +43,7 @@ struct SameSizeAsElementRareData : NodeRareData {
 #endif
     LayoutSize sizeForResizing;
     IntPoint savedLayerScrollPosition;
-    void* pointers[8];
+    void* pointers[11];
 #if ENABLE(INTERSECTION_OBSERVER)
     void* intersectionObserverData;
 #endif

@@ -107,6 +107,7 @@ namespace WebCore {
     macro(devicemotion) \
     macro(deviceorientation) \
     macro(dischargingtimechange) \
+    macro(disconnect) \
     macro(downloading) \
     macro(drag) \
     macro(dragend) \
@@ -122,6 +123,7 @@ namespace WebCore {
     macro(endEvent) \
     macro(ended) \
     macro(enter) \
+    macro(enterpictureinpicture) \
     macro(error) \
     macro(exit) \
     macro(fetch) \
@@ -153,6 +155,7 @@ namespace WebCore {
     macro(keystatuseschange) \
     macro(keyup) \
     macro(languagechange) \
+    macro(leavepictureinpicture) \
     macro(levelchange) \
     macro(load) \
     macro(loadeddata) \
@@ -213,6 +216,7 @@ namespace WebCore {
     macro(ratechange) \
     macro(readystatechange) \
     macro(rejectionhandled) \
+    macro(remove) \
     macro(removesourcebuffer) \
     macro(removestream) \
     macro(removetrack) \
@@ -267,6 +271,7 @@ namespace WebCore {
     macro(transitionend) \
     macro(transitionrun) \
     macro(transitionstart) \
+    macro(uncapturederror) \
     macro(unhandledrejection) \
     macro(unload) \
     macro(unmute) \

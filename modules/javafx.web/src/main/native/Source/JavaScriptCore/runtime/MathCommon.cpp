@@ -30,7 +30,7 @@
 
 namespace JSC {
 
-#if PLATFORM(IOS_FAMILY) && CPU(ARM_THUMB2)
+#if OS(DARWIN) && CPU(ARM_THUMB2)
 
 // The following code is taken from netlib.org:
 //   http://www.netlib.org/fdlibm/fdlibm.h
@@ -479,7 +479,7 @@ extern "C" {
 double jsRound(double value)
 {
     double integer = ceil(value);
-    return integer - (integer - value > 0.5);
+    return integer - (integer - 0.5 > value);
 }
 
 #if CALLING_CONVENTION_IS_STDCALL || CPU(ARM_THUMB2)

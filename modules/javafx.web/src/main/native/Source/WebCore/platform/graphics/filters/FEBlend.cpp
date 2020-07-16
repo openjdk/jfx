@@ -72,7 +72,7 @@ void FEBlend::platformApplySoftware()
         return;
 
     filterContext.drawImageBuffer(*imageBuffer2, drawingRegionOfInputImage(in2->absolutePaintRect()));
-    filterContext.drawImageBuffer(*imageBuffer, drawingRegionOfInputImage(in->absolutePaintRect()), IntRect(IntPoint(), imageBuffer->logicalSize()), { CompositeSourceOver, m_mode });
+    filterContext.drawImageBuffer(*imageBuffer, drawingRegionOfInputImage(in->absolutePaintRect()), IntRect(IntPoint(), imageBuffer->logicalSize()), { CompositeOperator::SourceOver, m_mode });
 }
 #endif
 
@@ -80,7 +80,7 @@ TextStream& FEBlend::externalRepresentation(TextStream& ts, RepresentationType r
 {
     ts << indent << "[feBlend";
     FilterEffect::externalRepresentation(ts, representation);
-    ts << " mode=\"" << (m_mode == BlendMode::Normal ? "normal" : compositeOperatorName(CompositeSourceOver, m_mode)) << "\"]\n";
+    ts << " mode=\"" << (m_mode == BlendMode::Normal ? "normal" : compositeOperatorName(CompositeOperator::SourceOver, m_mode)) << "\"]\n";
 
     TextStream::IndentScope indentScope(ts);
     inputEffect(0)->externalRepresentation(ts, representation);

@@ -115,6 +115,19 @@ void IDBConnectionProxy::completeOpenDBRequest(const IDBResultData& resultData)
     if (!request)
         return;
 
+    if (request->isContextSuspended()) {
+        switch (resultData.type()) {
+        case IDBResultType::OpenDatabaseUpgradeNeeded: {
+            abortOpenAndUpgradeNeeded(resultData.databaseConnectionIdentifier(), resultData.transactionInfo().identifier());
+            auto result = IDBResultData::error(resultData.requestIdentifier(), IDBError { UnknownError, "Version change transaction on cached page is aborted to unblock other connections"_s });
+            request->performCallbackOnOriginThread(*request, &IDBOpenDBRequest::requestCompleted, result);
+            return;
+        }
+        default:
+            break;
+        }
+    }
+
     request->performCallbackOnOriginThread(*request, &IDBOpenDBRequest::requestCompleted, resultData);
 }
 
@@ -225,7 +238,8 @@ void IDBConnectionProxy::openCursor(TransactionOperation& operation, const IDBCu
 void IDBConnectionProxy::iterateCursor(TransactionOperation& operation, const IDBIterateCursorData& data)
 {
     const IDBRequestData requestData { operation };
-    saveOperation(operation);
+    if (data.option != IndexedDB::CursorIterateOption::DoNotReply)
+        saveOperation(operation);
 
     callConnectionOnMainThread(&IDBConnectionToServer::iterateCursor, requestData, data);
 }
@@ -268,12 +282,18 @@ void IDBConnectionProxy::fireVersionChangeEvent(uint64_t databaseConnectionIdent
     if (!database)
         return;
 
+    if (database->isContextSuspended()) {
+        didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer::Yes);
+        database->performCallbackOnOriginThread(*database, &IDBDatabase::connectionToServerLost, IDBError { UnknownError, "Connection on cached page closed to unblock other connections"_s});
+        return;
+    }
+
     database->performCallbackOnOriginThread(*database, &IDBDatabase::fireVersionChangeEvent, requestIdentifier, requestedVersion);
 }
 
-void IDBConnectionProxy::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier)
+void IDBConnectionProxy::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
-    callConnectionOnMainThread(&IDBConnectionToServer::didFireVersionChangeEvent, databaseConnectionIdentifier, requestIdentifier);
+    callConnectionOnMainThread(&IDBConnectionToServer::didFireVersionChangeEvent, databaseConnectionIdentifier, requestIdentifier, connectionClosed);
 }
 
 void IDBConnectionProxy::notifyOpenDBRequestBlocked(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion)
@@ -403,19 +423,10 @@ void IDBConnectionProxy::didCloseFromServer(uint64_t databaseConnectionIdentifie
         database = m_databaseConnectionMap.get(databaseConnectionIdentifier);
     }
 
-    // If the IDBDatabase object is gone, message back to the server so it doesn't hang
-    // waiting for a reply that will never come.
-    if (!database) {
-        m_connectionToServer.confirmDidCloseFromServer(databaseConnectionIdentifier);
+    if (!database)
         return;
-    }
 
     database->performCallbackOnOriginThread(*database, &IDBDatabase::didCloseFromServer, error);
-}
-
-void IDBConnectionProxy::confirmDidCloseFromServer(IDBDatabase& database)
-{
-    callConnectionOnMainThread(&IDBConnectionToServer::confirmDidCloseFromServer, database.databaseConnectionIdentifier());
 }
 
 void IDBConnectionProxy::connectionToServerLost(const IDBError& error)
@@ -529,6 +540,8 @@ void IDBConnectionProxy::forgetTransaction(IDBTransaction& transaction)
 template<typename KeyType, typename ValueType>
 void removeItemsMatchingCurrentThread(HashMap<KeyType, ValueType>& map)
 {
+    // FIXME: Revisit when introducing WebThread aware thread comparison.
+    // https://bugs.webkit.org/show_bug.cgi?id=204345
     auto& currentThread = Thread::current();
 
     Vector<KeyType> keys;
@@ -540,6 +553,25 @@ void removeItemsMatchingCurrentThread(HashMap<KeyType, ValueType>& map)
 
     for (auto& key : keys)
         map.remove(key);
+}
+
+template<typename KeyType, typename ValueType>
+void setMatchingItemsContextSuspended(ScriptExecutionContext& currentContext, HashMap<KeyType, ValueType>& map, bool isContextSuspended)
+{
+    // FIXME: Revisit when introducing WebThread aware thread comparison.
+    // https://bugs.webkit.org/show_bug.cgi?id=204345
+    auto& currentThread = Thread::current();
+    for (auto& iterator : map) {
+        if (&iterator.value->originThread() != &currentThread)
+            continue;
+
+        auto* context = iterator.value->scriptExecutionContext();
+        if (!context)
+            continue;
+
+        if (context == &currentContext)
+            iterator.value->setIsContextSuspended(isContextSuspended);
+    }
 }
 
 void IDBConnectionProxy::forgetActivityForCurrentThread()
@@ -563,6 +595,18 @@ void IDBConnectionProxy::forgetActivityForCurrentThread()
     {
         Locker<Lock> lock(m_transactionOperationLock);
         removeItemsMatchingCurrentThread(m_activeOperations);
+    }
+}
+
+void IDBConnectionProxy::setContextSuspended(ScriptExecutionContext& currentContext, bool isContextSuspended)
+{
+    {
+        Locker<Lock> lock(m_databaseConnectionMapLock);
+        setMatchingItemsContextSuspended(currentContext, m_databaseConnectionMap, isContextSuspended);
+    }
+    {
+        Locker<Lock> lock(m_openDBRequestMapLock);
+        setMatchingItemsContextSuspended(currentContext, m_openDBRequestMap, isContextSuspended);
     }
 }
 

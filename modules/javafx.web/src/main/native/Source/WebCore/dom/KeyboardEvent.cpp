@@ -31,8 +31,11 @@
 #include "Frame.h"
 #include "PlatformKeyboardEvent.h"
 #include "WindowsKeyboardCodes.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(KeyboardEvent);
 
 static inline const AtomString& eventTypeForKeyboardEventType(PlatformEvent::Type type)
 {
@@ -78,13 +81,19 @@ static inline KeyboardEvent::KeyLocationCode keyLocationCode(const PlatformKeybo
     switch (key.windowsVirtualKeyCode()) {
     case VK_LCONTROL:
     case VK_LSHIFT:
-    case VK_LMENU:
-    case VK_LWIN:
+    case VK_LMENU: // Left Option/Alt
+    case VK_LWIN: // Left Command/Windows key (Natural keyboard)
         return KeyboardEvent::DOM_KEY_LOCATION_LEFT;
     case VK_RCONTROL:
     case VK_RSHIFT:
-    case VK_RMENU:
-    case VK_RWIN:
+    case VK_RMENU: // Right Option/Alt
+    case VK_RWIN: // Right Windows key (Natural keyboard)
+#if PLATFORM(COCOA)
+    // FIXME: WebCore maps the right command key to VK_APPS even though the USB HID spec.,
+    // <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>, states that it
+    // should map to the same key as the right Windows key (VK_RWIN).
+    case VK_APPS: // Right Command
+#endif
         return KeyboardEvent::DOM_KEY_LOCATION_RIGHT;
     default:
         return KeyboardEvent::DOM_KEY_LOCATION_STANDARD;
@@ -97,12 +106,8 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     : UIEventWithKeyState(eventTypeForKeyboardEventType(key.type()), CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
         key.timestamp().approximateMonotonicTime(), view.copyRef(), 0, key.modifiers(), IsTrusted::Yes)
     , m_underlyingPlatformEvent(makeUnique<PlatformKeyboardEvent>(key))
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     , m_key(key.key())
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
     , m_code(key.code())
-#endif
     , m_keyIdentifier(key.keyIdentifier())
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
@@ -118,12 +123,8 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
 
 inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& initializer)
     : UIEventWithKeyState(eventType, initializer)
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     , m_key(initializer.key)
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
     , m_code(initializer.code)
-#endif
     , m_keyIdentifier(initializer.keyIdentifier)
     , m_location(initializer.keyLocation ? *initializer.keyLocation : initializer.location)
     , m_repeat(initializer.repeat)
@@ -170,14 +171,8 @@ void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bo
     m_repeat = false;
     m_underlyingPlatformEvent = nullptr;
     m_which = WTF::nullopt;
-
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
     m_code = { };
-#endif
-
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     m_key = { };
-#endif
 
 #if PLATFORM(COCOA)
     m_handledByInputMethod = false;

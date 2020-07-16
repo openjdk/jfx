@@ -28,22 +28,24 @@
 #if ENABLE(WEBGPU)
 
 #include "GPURequestAdapterOptions.h"
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
-class ScriptExecutionContext;
+class Document;
 class WebGPUDevice;
+
+template<typename IDLType> class DOMPromiseDeferred;
 
 class WebGPUAdapter : public RefCounted<WebGPUAdapter> {
 public:
     static Ref<WebGPUAdapter> create(Optional<GPURequestAdapterOptions>&&);
 
     using DeviceRequestPromise = DOMPromiseDeferred<IDLInterface<WebGPUDevice>>;
-    void requestDevice(DeviceRequestPromise&&) const;
+    void requestDevice(Document&, DeviceRequestPromise&&) const;
 
     const Optional<GPURequestAdapterOptions>& options() const { return m_options; }
 

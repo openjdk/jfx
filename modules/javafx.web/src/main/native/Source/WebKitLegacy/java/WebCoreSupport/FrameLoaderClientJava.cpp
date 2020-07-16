@@ -339,16 +339,6 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
     frame()->createView(IntRect(pageRect).size(), backgroundColor, /* fixedLayoutSize */ { }, /* fixedVisibleContentRect */ { });
 }
 
-void FrameLoaderClientJava::didSaveToPageCache()
-{
-    notImplemented();
-}
-
-void FrameLoaderClientJava::didRestoreFromPageCache()
-{
-    notImplemented();
-}
-
 WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
 {
     return DocumentLoader::create(request, substituteData);
@@ -1061,6 +1051,11 @@ bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error)
     return !(error.isCancellation() || (error.errorCode() == WebKitErrorFrameLoadInterruptedByPolicyChange));
 }
 
+void FrameLoaderClientJava::didRestoreFromBackForwardCache()
+{
+    // FIXME: openjfx2.26 Raise Bug to track fwd / back cache
+}
+
 bool FrameLoaderClientJava::canCachePage() const
 {
     return true;
@@ -1114,7 +1109,7 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     }
 
     JSGlobalContextRef context = toGlobalRef(frame()->script().globalObject(
-            mainThreadNormalWorld())->globalExec());
+            mainThreadNormalWorld()));
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
 
     env->CallVoidMethod(m_webPage, didClearWindowObjectMID,
@@ -1127,7 +1122,7 @@ void FrameLoaderClientJava::registerForIconNotification()
     //notImplemented();
 }
 
-void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&)
+void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&)
 {
     //notImplemented();
 }
@@ -1167,11 +1162,6 @@ Optional<PageIdentifier> FrameLoaderClientJava::pageID() const
 Optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
 {
     return WTF::nullopt;
-}
-
-PAL::SessionID FrameLoaderClientJava::sessionID() const
-{
-    return m_frame && m_frame->page() ? m_frame->page()->sessionID() : PAL::SessionID::defaultSessionID();
 }
 
 }

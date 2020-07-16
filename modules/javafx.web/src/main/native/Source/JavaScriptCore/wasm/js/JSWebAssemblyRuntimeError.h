@@ -35,15 +35,16 @@ class JSWebAssemblyRuntimeError final : public ErrorInstance {
 public:
     typedef ErrorInstance Base;
 
-    static JSWebAssemblyRuntimeError* create(ExecState*, VM&, Structure*, const String&);
+    static JSWebAssemblyRuntimeError* create(JSGlobalObject*, VM&, Structure*, const String&);
 
     DECLARE_INFO;
 
 protected:
     JSWebAssemblyRuntimeError(VM&, Structure*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSWebAssemblyRuntimeError, ErrorInstance);
 
-JSObject* createJSWebAssemblyRuntimeError(ExecState*, VM&, const String&);
+JSObject* createJSWebAssemblyRuntimeError(JSGlobalObject*, VM&, const String&);
 
 } // namespace JSC
 

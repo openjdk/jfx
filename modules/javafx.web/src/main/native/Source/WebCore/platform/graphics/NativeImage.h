@@ -65,11 +65,16 @@ typedef RefPtr<SharedBitmap> NativeImagePtr;
 typedef RefPtr<RQRef> NativeImagePtr;
 #endif
 
-IntSize nativeImageSize(const NativeImagePtr&);
+WEBCORE_EXPORT IntSize nativeImageSize(const NativeImagePtr&);
 bool nativeImageHasAlpha(const NativeImagePtr&);
 Color nativeImageSinglePixelSolidColor(const NativeImagePtr&);
 
 void drawNativeImage(const NativeImagePtr&, GraphicsContext&, const FloatRect&, const FloatRect&, const IntSize&, const ImagePaintingOptions&);
 void clearNativeImageSubimages(const NativeImagePtr&);
+
+class NativeImageHandle {
+public:
+    NativeImagePtr image;
+};
 
 }

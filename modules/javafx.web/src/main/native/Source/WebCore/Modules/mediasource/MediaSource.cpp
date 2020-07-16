@@ -101,7 +101,7 @@ MediaSource::MediaSource(ScriptExecutionContext& context)
     : ActiveDOMObject(&context)
     , m_duration(MediaTime::invalidTime())
     , m_pendingSeekTime(MediaTime::invalidTime())
-    , m_asyncEventQueue(*this)
+    , m_asyncEventQueue(MainThreadGenericEventQueue::create(*this))
 #if !RELEASE_LOG_DISABLED
     , m_logger(downcast<Document>(context).logger())
 #endif
@@ -130,7 +130,7 @@ void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate
     //    Run the "If the media data cannot be fetched at all, due to network errors, causing the user agent to give up trying
     //    to fetch the resource" steps of the resource fetch algorithm's media data processing steps list.
     if (!isClosed()) {
-        m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkError);
+        m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::NetworkError);
         return;
     }
 
@@ -243,7 +243,7 @@ void MediaSource::seekToTime(const MediaTime& time)
     if (!hasBufferedTime(time)) {
         // 1. If the HTMLMediaElement.readyState attribute is greater than HAVE_METADATA,
         // then set the HTMLMediaElement.readyState attribute to HAVE_METADATA.
-        m_private->setReadyState(MediaPlayer::HaveMetadata);
+        m_private->setReadyState(MediaPlayer::ReadyState::HaveMetadata);
 
         // 2. The media element waits until an appendBuffer() or an appendStream() call causes the coded
         // frame processing algorithm to set the HTMLMediaElement.readyState attribute to a value greater
@@ -426,7 +426,7 @@ void MediaSource::monitorSourceBuffers()
 
     // Note, the behavior if activeSourceBuffers is empty is undefined.
     if (!m_activeSourceBuffers) {
-        m_private->setReadyState(MediaPlayer::HaveNothing);
+        m_private->setReadyState(MediaPlayer::ReadyState::HaveNothing);
         return;
     }
 
@@ -441,7 +441,7 @@ void MediaSource::monitorSourceBuffers()
         // 1. Set the HTMLMediaElement.readyState attribute to HAVE_METADATA.
         // 2. If this is the first transition to HAVE_METADATA, then queue a task to fire a simple event
         // named loadedmetadata at the media element.
-        m_private->setReadyState(MediaPlayer::HaveMetadata);
+        m_private->setReadyState(MediaPlayer::ReadyState::HaveMetadata);
 
         // 3. Abort these steps.
         return;
@@ -456,7 +456,7 @@ void MediaSource::monitorSourceBuffers()
         // 1. Set the HTMLMediaElement.readyState attribute to HAVE_ENOUGH_DATA.
         // 2. Queue a task to fire a simple event named canplaythrough at the media element.
         // 3. Playback may resume at this point if it was previously suspended by a transition to HAVE_CURRENT_DATA.
-        m_private->setReadyState(MediaPlayer::HaveEnoughData);
+        m_private->setReadyState(MediaPlayer::ReadyState::HaveEnoughData);
 
         if (m_pendingSeekTime.isValid())
             completeSeek();
@@ -471,7 +471,7 @@ void MediaSource::monitorSourceBuffers()
         // 1. Set the HTMLMediaElement.readyState attribute to HAVE_FUTURE_DATA.
         // 2. If the previous value of HTMLMediaElement.readyState was less than HAVE_FUTURE_DATA, then queue a task to fire a simple event named canplay at the media element.
         // 3. Playback may resume at this point if it was previously suspended by a transition to HAVE_CURRENT_DATA.
-        m_private->setReadyState(MediaPlayer::HaveFutureData);
+        m_private->setReadyState(MediaPlayer::ReadyState::HaveFutureData);
 
         if (m_pendingSeekTime.isValid())
             completeSeek();
@@ -488,7 +488,7 @@ void MediaSource::monitorSourceBuffers()
     // event named loadeddata at the media element.
     // 3. Playback is suspended at this point since the media element doesn't have enough data to
     // advance the media timeline.
-    m_private->setReadyState(MediaPlayer::HaveCurrentData);
+    m_private->setReadyState(MediaPlayer::ReadyState::HaveCurrentData);
 
     if (m_pendingSeekTime.isValid())
         completeSeek();
@@ -637,13 +637,13 @@ void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
             //    Run the "If the media data cannot be fetched at all, due to network errors, causing
             //    the user agent to give up trying to fetch the resource" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailed().
-            m_mediaElement->mediaLoadingFailed(MediaPlayer::NetworkError);
+            m_mediaElement->mediaLoadingFailed(MediaPlayer::NetworkState::NetworkError);
         } else {
             //  ↳ If the HTMLMediaElement.readyState attribute is greater than HAVE_NOTHING
             //    Run the "If the connection is interrupted after some media data has been received, causing the
             //    user agent to give up trying to fetch the resource" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailedFatally().
-            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkError);
+            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::NetworkError);
         }
     } else {
         // ↳ If error is set to "decode"
@@ -654,12 +654,12 @@ void MediaSource::streamEndedWithError(Optional<EndOfStreamError> error)
             //    Run the "If the media data can be fetched but is found by inspection to be in an unsupported
             //    format, or can otherwise not be rendered at all" steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailed().
-            m_mediaElement->mediaLoadingFailed(MediaPlayer::FormatError);
+            m_mediaElement->mediaLoadingFailed(MediaPlayer::NetworkState::FormatError);
         } else {
             //  ↳ If the HTMLMediaElement.readyState attribute is greater than HAVE_NOTHING
             //    Run the media data is corrupted steps of the resource fetch algorithm.
             //    NOTE: This step is handled by HTMLMediaElement::mediaLoadingFailedFatally().
-            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::DecodeError);
+            m_mediaElement->mediaLoadingFailedFatally(MediaPlayer::NetworkState::DecodeError);
         }
     }
 }
@@ -736,18 +736,18 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
     ASSERT(scriptExecutionContext());
     if (!scriptExecutionContext()->activeDOMObjectsAreStopped()) {
         // 4. Let SourceBuffer audioTracks list equal the AudioTrackList object returned by sourceBuffer.audioTracks.
-        auto& audioTracks = buffer.audioTracks();
+        auto* audioTracks = buffer.audioTracksIfExists();
 
         // 5. If the SourceBuffer audioTracks list is not empty, then run the following steps:
-        if (audioTracks.length()) {
+        if (audioTracks && audioTracks->length()) {
             // 5.1 Let HTMLMediaElement audioTracks list equal the AudioTrackList object returned by the audioTracks
             // attribute on the HTMLMediaElement.
             // 5.2 Let the removed enabled audio track flag equal false.
             bool removedEnabledAudioTrack = false;
 
             // 5.3 For each AudioTrack object in the SourceBuffer audioTracks list, run the following steps:
-            while (audioTracks.length()) {
-                auto& track = *audioTracks.lastItem();
+            while (audioTracks->length()) {
+                auto& track = *audioTracks->lastItem();
 
                 // 5.3.1 Set the sourceBuffer attribute on the AudioTrack object to null.
                 track.setSourceBuffer(nullptr);
@@ -766,7 +766,7 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 5.3.5 Remove the AudioTrack object from the SourceBuffer audioTracks list.
                 // 5.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the SourceBuffer audioTracks list.
-                audioTracks.remove(track);
+                audioTracks->remove(track);
             }
 
             // 5.4 If the removed enabled audio track flag equals true, then queue a task to fire a simple event
@@ -776,18 +776,18 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
         }
 
         // 6. Let SourceBuffer videoTracks list equal the VideoTrackList object returned by sourceBuffer.videoTracks.
-        auto& videoTracks = buffer.videoTracks();
+        auto* videoTracks = buffer.videoTracksIfExists();
 
         // 7. If the SourceBuffer videoTracks list is not empty, then run the following steps:
-        if (videoTracks.length()) {
+        if (videoTracks && videoTracks->length()) {
             // 7.1 Let HTMLMediaElement videoTracks list equal the VideoTrackList object returned by the videoTracks
             // attribute on the HTMLMediaElement.
             // 7.2 Let the removed selected video track flag equal false.
             bool removedSelectedVideoTrack = false;
 
             // 7.3 For each VideoTrack object in the SourceBuffer videoTracks list, run the following steps:
-            while (videoTracks.length()) {
-                auto& track = *videoTracks.lastItem();
+            while (videoTracks->length()) {
+                auto& track = *videoTracks->lastItem();
 
                 // 7.3.1 Set the sourceBuffer attribute on the VideoTrack object to null.
                 track.setSourceBuffer(nullptr);
@@ -806,7 +806,7 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 7.3.5 Remove the VideoTrack object from the SourceBuffer videoTracks list.
                 // 7.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the SourceBuffer videoTracks list.
-                videoTracks.remove(track);
+                videoTracks->remove(track);
             }
 
             // 7.4 If the removed selected video track flag equals true, then queue a task to fire a simple event
@@ -816,18 +816,18 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
         }
 
         // 8. Let SourceBuffer textTracks list equal the TextTrackList object returned by sourceBuffer.textTracks.
-        auto& textTracks = buffer.textTracks();
+        auto* textTracks = buffer.textTracksIfExists();
 
         // 9. If the SourceBuffer textTracks list is not empty, then run the following steps:
-        if (textTracks.length()) {
+        if (textTracks && textTracks->length()) {
             // 9.1 Let HTMLMediaElement textTracks list equal the TextTrackList object returned by the textTracks
             // attribute on the HTMLMediaElement.
             // 9.2 Let the removed enabled text track flag equal false.
             bool removedEnabledTextTrack = false;
 
             // 9.3 For each TextTrack object in the SourceBuffer textTracks list, run the following steps:
-            while (textTracks.length()) {
-                auto& track = *textTracks.lastItem();
+            while (textTracks->length()) {
+                auto& track = *textTracks->lastItem();
 
                 // 9.3.1 Set the sourceBuffer attribute on the TextTrack object to null.
                 track.setSourceBuffer(nullptr);
@@ -846,7 +846,7 @@ ExceptionOr<void> MediaSource::removeSourceBuffer(SourceBuffer& buffer)
                 // 9.3.5 Remove the TextTrack object from the SourceBuffer textTracks list.
                 // 9.3.6 Queue a task to fire a trusted event named removetrack, that does not bubble and is not
                 // cancelable, and that uses the TrackEvent interface, at the SourceBuffer textTracks list.
-                textTracks.remove(track);
+                textTracks->remove(track);
             }
 
             // 9.4 If the removed enabled text track flag equals true, then queue a task to fire a simple event
@@ -894,9 +894,9 @@ bool MediaSource::isTypeSupported(const String& type)
     MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
     if (codecs.isEmpty())
-        return supported != MediaPlayer::IsNotSupported;
+        return supported != MediaPlayer::SupportsType::IsNotSupported;
 
-    return supported == MediaPlayer::IsSupported;
+    return supported == MediaPlayer::SupportsType::IsSupported;
 }
 
 bool MediaSource::isOpen() const
@@ -956,7 +956,7 @@ bool MediaSource::attachToElement(HTMLMediaElement& element)
 
     ASSERT(isClosed());
 
-    m_mediaElement = &element;
+    m_mediaElement = makeWeakPtr(&element);
     return true;
 }
 
@@ -973,47 +973,18 @@ void MediaSource::openIfInEndedState()
 
 bool MediaSource::hasPendingActivity() const
 {
-    return m_private || m_asyncEventQueue.hasPendingEvents()
+    return m_private || m_asyncEventQueue->hasPendingEvents()
         || ActiveDOMObject::hasPendingActivity();
-}
-
-void MediaSource::suspend(ReasonForSuspension reason)
-{
-    ALWAYS_LOG(LOGIDENTIFIER, static_cast<int>(reason));
-
-    switch (reason) {
-    case ReasonForSuspension::PageCache:
-    case ReasonForSuspension::PageWillBeSuspended:
-        m_asyncEventQueue.suspend();
-        break;
-    case ReasonForSuspension::JavaScriptDebuggerPaused:
-    case ReasonForSuspension::WillDeferLoading:
-        // Do nothing, we don't pause media playback in these cases.
-        break;
-    }
-}
-
-void MediaSource::resume()
-{
-    ALWAYS_LOG(LOGIDENTIFIER);
-
-    m_asyncEventQueue.resume();
 }
 
 void MediaSource::stop()
 {
     ALWAYS_LOG(LOGIDENTIFIER);
 
-    m_asyncEventQueue.close();
     if (m_mediaElement)
         m_mediaElement->detachMediaSource();
     m_readyState = ReadyState::Closed;
     m_private = nullptr;
-}
-
-bool MediaSource::canSuspendForDocumentSuspension() const
-{
-    return isClosed() && !m_asyncEventQueue.hasPendingEvents();
 }
 
 const char* MediaSource::activeDOMObjectName() const
@@ -1080,7 +1051,7 @@ void MediaSource::scheduleEvent(const AtomString& eventName)
     auto event = Event::create(eventName, Event::CanBubble::No, Event::IsCancelable::No);
     event->setTarget(this);
 
-    m_asyncEventQueue.enqueueEvent(WTFMove(event));
+    m_asyncEventQueue->enqueueEvent(WTFMove(event));
 }
 
 ScriptExecutionContext* MediaSource::scriptExecutionContext() const

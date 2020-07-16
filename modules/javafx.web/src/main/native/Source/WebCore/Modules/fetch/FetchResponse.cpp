@@ -54,6 +54,7 @@ Ref<FetchResponse> FetchResponse::create(ScriptExecutionContext& context, Option
     auto headers = isOpaque ? FetchHeaders::create(guard) : FetchHeaders::create(guard, HTTPHeaderMap { response.httpHeaderFields() });
 
     auto fetchResponse = adoptRef(*new FetchResponse(context, WTFMove(body), WTFMove(headers), WTFMove(response)));
+    fetchResponse->updateContentType();
     if (!isSynthetic)
         fetchResponse->m_filteredResponse = ResourceResponseBase::filter(fetchResponse->m_internalResponse);
     if (isOpaque)
@@ -306,6 +307,8 @@ void FetchResponse::BodyLoader::didFail(const ResourceError& error)
         m_response.m_readableStreamSource = nullptr;
     }
 #endif
+    if (m_response.m_body)
+        m_response.m_body->loadingFailed(*m_response.loadingException());
 
     // Check whether didFail is called as part of FetchLoader::start.
     if (m_loader && m_loader->isStarted()) {
@@ -531,12 +534,6 @@ void FetchResponse::stop()
 const char* FetchResponse::activeDOMObjectName() const
 {
     return "Response";
-}
-
-bool FetchResponse::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We can probably do the same strategy as XHR.
-    return !isActive();
 }
 
 ResourceResponse FetchResponse::resourceResponse() const

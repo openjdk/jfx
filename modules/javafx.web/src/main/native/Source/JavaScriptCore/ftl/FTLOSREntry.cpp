@@ -40,10 +40,9 @@ namespace JSC { namespace FTL {
 
 SUPPRESS_ASAN
 void* prepareOSREntry(
-    ExecState* exec, CodeBlock* dfgCodeBlock, CodeBlock* entryCodeBlock,
-    unsigned bytecodeIndex, unsigned streamIndex)
+    VM& vm, CallFrame* callFrame, CodeBlock* dfgCodeBlock, CodeBlock* entryCodeBlock,
+    BytecodeIndex bytecodeIndex, unsigned streamIndex)
 {
-    VM& vm = exec->vm();
     CodeBlock* baseline = dfgCodeBlock->baselineVersion();
     ExecutableBase* executable = dfgCodeBlock->ownerExecutable();
     DFG::JITCode* dfgCode = dfgCodeBlock->jitCode()->dfg();
@@ -54,34 +53,29 @@ void* prepareOSREntry(
         return 0;
     }
 
-    if (Options::verboseOSR()) {
-        dataLog(
-            "FTL OSR from ", *dfgCodeBlock, " to ", *entryCodeBlock, " at bc#",
-            bytecodeIndex, ".\n");
-    }
+    dataLogLnIf(Options::verboseOSR(),
+        "FTL OSR from ", *dfgCodeBlock, " to ", *entryCodeBlock, " at ",
+        bytecodeIndex);
 
     if (bytecodeIndex)
         jsCast<ScriptExecutable*>(executable)->setDidTryToEnterInLoop(true);
 
     if (bytecodeIndex != entryCode->bytecodeIndex()) {
-        if (Options::verboseOSR())
-            dataLog("    OSR failed because we don't have an entrypoint for bc#", bytecodeIndex, "; ours is for bc#", entryCode->bytecodeIndex(), "\n");
+        dataLogLnIf(Options::verboseOSR(), "    OSR failed because we don't have an entrypoint for ", bytecodeIndex, "; ours is for ", entryCode->bytecodeIndex());
         return 0;
     }
 
     Operands<Optional<JSValue>> values;
-    dfgCode->reconstruct(
-        exec, dfgCodeBlock, CodeOrigin(bytecodeIndex), streamIndex, values);
+    dfgCode->reconstruct(callFrame, dfgCodeBlock, CodeOrigin(bytecodeIndex), streamIndex, values);
 
-    if (Options::verboseOSR())
-        dataLog("    Values at entry: ", values, "\n");
+    dataLogLnIf(Options::verboseOSR(), "    Values at entry: ", values);
 
     for (int argument = values.numberOfArguments(); argument--;) {
-        JSValue valueOnStack = exec->r(virtualRegisterForArgument(argument).offset()).asanUnsafeJSValue();
+        JSValue valueOnStack = callFrame->r(virtualRegisterForArgumentIncludingThis(argument)).asanUnsafeJSValue();
         Optional<JSValue> reconstructedValue = values.argument(argument);
         if ((reconstructedValue && valueOnStack == reconstructedValue.value()) || !argument)
             continue;
-        dataLog("Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at bc#", bytecodeIndex, ":\n");
+        dataLog("Mismatch between reconstructed values and the value on the stack for argument arg", argument, " for ", *entryCodeBlock, " at ", bytecodeIndex, ":\n");
         dataLog("    Value on stack: ", valueOnStack, "\n");
         dataLog("    Reconstructed value: ", reconstructedValue, "\n");
         RELEASE_ASSERT_NOT_REACHED();
@@ -102,17 +96,15 @@ void* prepareOSREntry(
     }
 
     int stackFrameSize = entryCode->common.requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&exec->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()]))) {
-        if (Options::verboseOSR())
-            dataLog("    OSR failed because stack growth failed.\n");
+    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(stackFrameSize - 1).offset()]))) {
+        dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
         return 0;
     }
 
-    exec->setCodeBlock(entryCodeBlock);
+    callFrame->setCodeBlock(entryCodeBlock);
 
     void* result = entryCode->addressForCall(ArityCheckNotRequired).executableAddress();
-    if (Options::verboseOSR())
-        dataLog("    Entry will succeed, going to address ", RawPointer(result), "\n");
+    dataLogLnIf(Options::verboseOSR(), "    Entry will succeed, going to address ", RawPointer(result));
 
     return result;
 }

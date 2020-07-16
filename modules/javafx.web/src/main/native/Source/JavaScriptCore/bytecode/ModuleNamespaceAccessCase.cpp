@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,17 +38,17 @@
 
 namespace JSC {
 
-ModuleNamespaceAccessCase::ModuleNamespaceAccessCase(VM& vm, JSCell* owner, JSModuleNamespaceObject* moduleNamespaceObject, JSModuleEnvironment* moduleEnvironment, ScopeOffset scopeOffset)
-    : Base(vm, owner, ModuleNamespaceLoad, invalidOffset, nullptr, ObjectPropertyConditionSet(), nullptr)
+ModuleNamespaceAccessCase::ModuleNamespaceAccessCase(VM& vm, JSCell* owner, CacheableIdentifier identifier, JSModuleNamespaceObject* moduleNamespaceObject, JSModuleEnvironment* moduleEnvironment, ScopeOffset scopeOffset)
+    : Base(vm, owner, ModuleNamespaceLoad, identifier, invalidOffset, nullptr, ObjectPropertyConditionSet(), nullptr)
     , m_scopeOffset(scopeOffset)
 {
     m_moduleNamespaceObject.set(vm, owner, moduleNamespaceObject);
     m_moduleEnvironment.set(vm, owner, moduleEnvironment);
 }
 
-std::unique_ptr<AccessCase> ModuleNamespaceAccessCase::create(VM& vm, JSCell* owner, JSModuleNamespaceObject* moduleNamespaceObject, JSModuleEnvironment* moduleEnvironment, ScopeOffset scopeOffset)
+std::unique_ptr<AccessCase> ModuleNamespaceAccessCase::create(VM& vm, JSCell* owner, CacheableIdentifier identifier, JSModuleNamespaceObject* moduleNamespaceObject, JSModuleEnvironment* moduleEnvironment, ScopeOffset scopeOffset)
 {
-    return std::unique_ptr<AccessCase>(new ModuleNamespaceAccessCase(vm, owner, moduleNamespaceObject, moduleEnvironment, scopeOffset));
+    return std::unique_ptr<AccessCase>(new ModuleNamespaceAccessCase(vm, owner, identifier, moduleNamespaceObject, moduleEnvironment, scopeOffset));
 }
 
 ModuleNamespaceAccessCase::~ModuleNamespaceAccessCase()

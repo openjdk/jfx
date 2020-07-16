@@ -31,6 +31,7 @@
 #include "DOMWrapperWorld.h"
 #include "Frame.h"
 #include "JSDOMBinding.h"
+#include "JSDOMPromiseDeferred.h"
 #include "ModuleFetchParameters.h"
 #include "ResourceLoaderOptions.h"
 #include "ScriptController.h"
@@ -67,6 +68,7 @@ bool CachedModuleScriptLoader::load(Document& document, const URL& sourceURL)
     m_cachedScript = m_scriptFetcher->requestModuleScript(document, sourceURL, WTFMove(integrity));
     if (!m_cachedScript)
         return false;
+    m_sourceURL = sourceURL;
 
     // If the content is already cached, this immediately calls notifyFinished.
     m_cachedScript->addClient(*this);

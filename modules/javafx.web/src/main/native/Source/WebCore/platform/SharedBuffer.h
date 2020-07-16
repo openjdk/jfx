@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,12 @@ typedef struct _GBytes GBytes;
 OBJC_CLASS NSArray;
 OBJC_CLASS NSData;
 #endif
+
+namespace WTF {
+namespace Persistence {
+class Decoder;
+}
+}
 
 namespace WebCore {
 
@@ -123,7 +129,12 @@ public:
         WEBCORE_EXPORT const char* data() const;
         WEBCORE_EXPORT size_t size() const;
 
-        static Ref<DataSegment> create(Vector<char>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
+        static Ref<DataSegment> create(Vector<char>&& data)
+        {
+            data.shrinkToFit();
+            return adoptRef(*new DataSegment(WTFMove(data)));
+        }
+
 #if USE(CF)
         static Ref<DataSegment> create(RetainPtr<CFDataRef>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
@@ -137,6 +148,10 @@ public:
         static Ref<DataSegment> create(RefPtr<GstMappedBuffer>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
         static Ref<DataSegment> create(FileSystem::MappedFileData&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
+
+#if USE(FOUNDATION)
+        RetainPtr<NSData> createNSData() const;
+#endif
 
     private:
         DataSegment(Vector<char>&& data)
@@ -188,7 +203,11 @@ public:
     // begin and end take O(1) time, this takes O(log(N)) time.
     SharedBufferDataView getSomeData(size_t position) const;
 
+    String toHexString() const;
+
     void hintMemoryNotNeededSoon() const;
+
+    WTF::Persistence::Decoder decoder() const;
 
     bool operator==(const SharedBuffer&) const;
     bool operator!=(const SharedBuffer& other) const { return !operator==(other); }
@@ -219,7 +238,7 @@ private:
     size_t m_size { 0 };
     mutable DataSegmentVector m_segments;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     mutable bool m_hasBeenCombinedIntoOneSegment { false };
     bool internallyConsistent() const;
 #endif
@@ -240,6 +259,9 @@ public:
     SharedBufferDataView(Ref<SharedBuffer::DataSegment>&&, size_t);
     size_t size() const;
     const char* data() const;
+#if USE(FOUNDATION)
+    RetainPtr<NSData> createNSData() const;
+#endif
 private:
     size_t m_positionWithinSegment;
     Ref<SharedBuffer::DataSegment> m_segment;

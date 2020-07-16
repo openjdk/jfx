@@ -28,13 +28,15 @@
 #pragma once
 
 #include "AffineTransform.h"
+#include "AlphaPremultiplication.h"
 #include "ColorSpace.h"
 #include "GraphicsTypes.h"
-#include "GraphicsTypes3D.h"
+#include "GraphicsTypesGL.h"
 #include "ImageBufferData.h"
 #include "ImagePaintingOptions.h"
 #include "IntSize.h"
 #include "PlatformLayer.h"
+#include "RenderingMode.h"
 #include <JavaScriptCore/Uint8ClampedArray.h>
 #include <memory>
 #include <wtf/Forward.h>
@@ -46,7 +48,7 @@ namespace WebCore {
 
 class FloatRect;
 class GraphicsContext;
-class GraphicsContext3D;
+class GraphicsContextGLOpenGL;
 class Image;
 class ImageData;
 class IntPoint;
@@ -69,9 +71,9 @@ class ImageBuffer {
     friend class IOSurface;
 public:
     // Will return a null pointer on allocation failure.
-    WEBCORE_EXPORT static std::unique_ptr<ImageBuffer> create(const FloatSize&, RenderingMode, float resolutionScale = 1, ColorSpace = ColorSpaceSRGB, const HostWindow* = nullptr);
+    WEBCORE_EXPORT static std::unique_ptr<ImageBuffer> create(const FloatSize&, RenderingMode, float resolutionScale = 1, ColorSpace = ColorSpace::SRGB, const HostWindow* = nullptr);
 #if USE(DIRECT2D)
-    WEBCORE_EXPORT static std::unique_ptr<ImageBuffer> create(const FloatSize&, RenderingMode, const GraphicsContext*, float resolutionScale = 1, ColorSpace = ColorSpaceSRGB, const HostWindow* = nullptr);
+    WEBCORE_EXPORT static std::unique_ptr<ImageBuffer> create(const FloatSize&, RenderingMode, const GraphicsContext*, float resolutionScale = 1, ColorSpace = ColorSpace::SRGB, const HostWindow* = nullptr);
 #endif
 
     // Create an image buffer compatible with the context and copy rect from this buffer into this new one.
@@ -83,25 +85,18 @@ public:
     static std::unique_ptr<ImageBuffer> createCompatibleBuffer(const FloatSize&, float resolutionScale, ColorSpace, const GraphicsContext&);
 
     static IntSize compatibleBufferSize(const FloatSize&, const GraphicsContext&);
-    bool isCompatibleWithContext(const GraphicsContext&) const;
 
     WEBCORE_EXPORT ~ImageBuffer();
 
     // The actual resolution of the backing store
     const IntSize& internalSize() const { return m_size; }
     const IntSize& logicalSize() const { return m_logicalSize; }
-
-    FloatSize sizeForDestinationSize(FloatSize) const;
-
     float resolutionScale() const { return m_resolutionScale; }
 
     WEBCORE_EXPORT GraphicsContext& context() const;
 
     WEBCORE_EXPORT RefPtr<Image> copyImage(BackingStoreCopy = CopyBackingStore, PreserveResolution = PreserveResolution::No) const;
     WEBCORE_EXPORT static RefPtr<Image> sinkIntoImage(std::unique_ptr<ImageBuffer>, PreserveResolution = PreserveResolution::No);
-    // Give hints on the faster copyImage Mode, return DontCopyBackingStore if it supports the DontCopyBackingStore behavior
-    // or return CopyBackingStore if it doesn't.
-    static BackingStoreCopy fastCopyImageMode();
 
     enum CoordinateSystem { LogicalCoordinateSystem, BackingStoreCoordinateSystem };
 
@@ -115,6 +110,10 @@ public:
     String toDataURL(const String& mimeType, Optional<double> quality = WTF::nullopt, PreserveResolution = PreserveResolution::No) const;
     Vector<uint8_t> toData(const String& mimeType, Optional<double> quality = WTF::nullopt) const;
     Vector<uint8_t> toBGRAData() const;
+
+#if USE(CAIRO)
+    NativeImagePtr nativeImage() const;
+#endif
 
 #if !USE(CG)
     AffineTransform baseTransform() const { return AffineTransform(); }
@@ -130,7 +129,7 @@ public:
 
     // FIXME: current implementations of this method have the restriction that they only work
     // with textures that are RGB or RGBA format, and UNSIGNED_BYTE type.
-    bool copyToPlatformTexture(GraphicsContext3D&, GC3Denum, Platform3DObject, GC3Denum, bool, bool);
+    bool copyToPlatformTexture(GraphicsContextGLOpenGL&, GCGLenum, PlatformGLObject, GCGLenum, bool, bool);
 
     // These functions are used when clamping the ImageBuffer which is created for filter, masker or clipper.
     static bool sizeNeedsClamping(const FloatSize&);
@@ -165,6 +164,7 @@ private:
     friend class NamedImageGeneratedImage;
     friend class GradientImage;
     friend class CustomPaintImage;
+    friend class BitmapImage;
 
 private:
     ImageBufferData m_data;
@@ -183,10 +183,4 @@ private:
 #endif
 };
 
-#if USE(CG)
-String dataURL(const ImageData&, const String& mimeType, Optional<double> quality);
-Vector<uint8_t> data(const ImageData&, const String& mimeType, Optional<double> quality);
-#endif
-
 } // namespace WebCore
-

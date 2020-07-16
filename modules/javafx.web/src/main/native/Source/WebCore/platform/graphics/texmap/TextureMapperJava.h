@@ -48,7 +48,7 @@ public:
     IntRect clipBounds() final { return currentContext()->clipBounds(); }
     IntSize maxTextureSize() const final;
     Ref<BitmapTexture> createTexture() final { return BitmapTextureJava::create(); }
-    Ref<BitmapTexture> createTexture(GC3Dint) final { return createTexture(); }
+    Ref<BitmapTexture> createTexture(GCGLint) final { return createTexture(); }
     void clearColor(const Color&) final;
 
     inline GraphicsContext* currentContext()

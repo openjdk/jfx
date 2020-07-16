@@ -38,12 +38,12 @@
 
 namespace WebCore {
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 static bool constraintsAreAllRelative(const ViewportConfiguration::Parameters& configuration)
 {
     return !configuration.widthIsSet && !configuration.heightIsSet && !configuration.initialScaleIsSet;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 static float platformDeviceWidthOverride()
 {
@@ -266,8 +266,13 @@ double ViewportConfiguration::initialScaleFromSize(double width, double height, 
     // If not, it is up to us to determine the initial scale.
     // We want a scale small enough to fit the document width-wise.
     double initialScale = 0;
-    if (width > 0 && !shouldIgnoreVerticalScalingConstraints())
-        initialScale = m_viewLayoutSize.width() / width;
+    if (!shouldIgnoreVerticalScalingConstraints()) {
+        static const double maximumContentWidthBeforePreferringExplicitWidthToAvoidExcessiveScaling = 1920;
+        if (width > maximumContentWidthBeforePreferringExplicitWidthToAvoidExcessiveScaling && m_configuration.widthIsSet && 0 < m_configuration.width && m_configuration.width < width)
+            initialScale = m_viewLayoutSize.width() / m_configuration.width;
+        else if (width > 0)
+            initialScale = m_viewLayoutSize.width() / width;
+    }
 
     // Prevent the initial scale from shrinking to a height smaller than our view's minimum height.
     if (height > 0 && height * initialScale < m_viewLayoutSize.height() && !shouldIgnoreHorizontalScalingConstraints())
@@ -628,7 +633,7 @@ bool ViewportConfiguration::setIsKnownToLayOutWiderThanViewport(bool value)
     return true;
 }
 
-#ifndef NDEBUG
+#if !LOG_DISABLED
 
 TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& parameters)
 {

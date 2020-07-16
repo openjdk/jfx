@@ -27,6 +27,7 @@
 
 #include "SVGLength.h"
 #include "SVGValuePropertyList.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class SVGLengthList : public SVGValuePropertyList<SVGLength> {
     using Base::Base;
 
 public:
-    static Ref<SVGLengthList> create(SVGLengthMode lengthMode = LengthModeOther)
+    static Ref<SVGLengthList> create(SVGLengthMode lengthMode = SVGLengthMode::Other)
     {
         return adoptRef(*new SVGLengthList(lengthMode));
     }
@@ -110,7 +111,7 @@ private:
     {
     }
 
-    SVGLengthMode m_lengthMode { LengthModeOther };
+    SVGLengthMode m_lengthMode { SVGLengthMode::Other };
 };
 
 } // namespace WebCore

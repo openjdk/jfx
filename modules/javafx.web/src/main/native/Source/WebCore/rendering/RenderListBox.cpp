@@ -34,7 +34,6 @@
 #include "CSSFontSelector.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
-#include "DocumentEventQueue.h"
 #include "EventHandler.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -62,7 +61,7 @@
 #include "SpatialNavigation.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
-#include "WheelEventTestTrigger.h"
+#include "WheelEventTestMonitor.h"
 #include <math.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
@@ -713,7 +712,7 @@ void RenderListBox::scrollTo(int newOffset)
     computeFirstIndexesVisibleInPaddingTopBottomAreas();
 
     repaint();
-    document().eventQueue().enqueueOrDispatchScrollEvent(selectElement());
+    document().addPendingScrollEventTarget(selectElement());
 }
 
 LayoutUnit RenderListBox::itemHeight() const
@@ -753,12 +752,12 @@ int RenderListBox::scrollTop() const
     return m_indexOffset * itemHeight();
 }
 
-static void setupWheelEventTestTrigger(RenderListBox& renderer)
+static void setupWheelEventTestMonitor(RenderListBox& renderer)
 {
-    if (!renderer.page().expectsWheelEventTriggers())
+    if (!renderer.page().isMonitoringWheelEvents())
         return;
 
-    renderer.scrollAnimator().setWheelEventTestTrigger(renderer.page().testTrigger());
+    renderer.scrollAnimator().setWheelEventTestMonitor(renderer.page().wheelEventTestMonitor());
 }
 
 void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping)
@@ -767,7 +766,8 @@ void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping)
     int index = newTop / itemHeight();
     if (index < 0 || index >= numItems() || index == m_indexOffset)
         return;
-    setupWheelEventTestTrigger(*this);
+
+    setupWheelEventTestMonitor(*this);
     scrollToOffsetWithoutAnimation(VerticalScrollbar, index);
 }
 
@@ -916,8 +916,8 @@ Ref<Scrollbar> RenderListBox::createScrollbar()
     else {
         widget = Scrollbar::createNativeScrollbar(*this, VerticalScrollbar, theme().scrollbarControlSizeForPart(ListboxPart));
         didAddScrollbar(widget.get(), VerticalScrollbar);
-        if (page().expectsWheelEventTriggers())
-            scrollAnimator().setWheelEventTestTrigger(page().testTrigger());
+        if (page().isMonitoringWheelEvents())
+            scrollAnimator().setWheelEventTestMonitor(page().wheelEventTestMonitor());
     }
     view().frameView().addChild(*widget);
     return widget.releaseNonNull();

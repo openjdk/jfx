@@ -37,6 +37,7 @@
 #include "HTMLParserIdioms.h"
 #include "Hyphenation.h"
 #include "InlineTextBox.h"
+#include "LineLayoutTraversal.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
@@ -306,11 +307,6 @@ void RenderText::willBeDestroyed()
     RenderObject::willBeDestroyed();
 }
 
-void RenderText::deleteLineBoxesBeforeSimpleLineLayout()
-{
-    m_lineBoxes.deleteAll();
-}
-
 String RenderText::originalText() const
 {
     return m_originalTextDiffersFromRendered ? originalTextMap().get(this) : m_text;
@@ -318,11 +314,10 @@ String RenderText::originalText() const
 
 void RenderText::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
 {
-    if (auto* layout = simpleLineLayout()) {
-        rects.appendVector(SimpleLineLayout::collectAbsoluteRects(*this, *layout, accumulatedOffset));
-        return;
+    for (auto& box : LineLayoutTraversal::textBoxesFor(*this)) {
+        auto rect = box.rect();
+        rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
     }
-    rects.appendVector(m_lineBoxes.absoluteRects(accumulatedOffset));
 }
 
 Vector<IntRect> RenderText::absoluteRectsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed) const
@@ -360,11 +355,10 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
 
     for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
         LayoutRect rect;
-        // Note, box->end() returns the index of the last character, not the index past it.
-        if (start <= box->start() && box->end() < end)
+        if (start <= box->start() && box->end() <= end)
             rect = box->localSelectionRect(start, end);
         else {
-            unsigned realEnd = std::min(box->end() + 1, end);
+            unsigned realEnd = std::min(box->end(), end);
             rect = box->localSelectionRect(start, realEnd);
             if (rect.isEmpty())
                 continue;
@@ -398,8 +392,8 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
         if (containingBlock->isRubyBase() || containingBlock->isRubyText())
             isLastOnLine = !containingBlock->containingBlock()->inlineBoxWrapper()->nextOnLineExists();
 
-        bool containsStart = box->start() <= start && box->end() + 1 >= start;
-        bool containsEnd = box->start() <= end && box->end() + 1 >= end;
+        bool containsStart = box->start() <= start && box->end() >= start;
+        bool containsEnd = box->start() <= end && box->end() >= end;
 
         bool isFixed = false;
         IntRect absRect = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed).enclosingBoundingBox();
@@ -419,25 +413,36 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
 }
 #endif
 
+static Vector<FloatQuad> collectAbsoluteQuadsForNonComplexPaths(const RenderText& textRenderer, bool* wasFixed)
+{
+    // FIXME: This generic function doesn't currently cover everything that is needed for the complex line layout path.
+    ASSERT(!textRenderer.usesComplexLineLayoutPath());
+
+    Vector<FloatQuad> quads;
+    for (auto& box : LineLayoutTraversal::textBoxesFor(textRenderer))
+        quads.append(textRenderer.localToAbsoluteQuad(FloatQuad(box.rect()), UseTransforms, wasFixed));
+    return quads;
+}
+
 Vector<FloatQuad> RenderText::absoluteQuadsClippedToEllipsis() const
 {
-    if (auto* layout = simpleLineLayout()) {
+    if (!usesComplexLineLayoutPath()) {
         ASSERT(style().textOverflow() != TextOverflow::Ellipsis);
-        return SimpleLineLayout::collectAbsoluteQuads(*this, *layout, nullptr);
+        return collectAbsoluteQuadsForNonComplexPaths(*this, nullptr);
     }
     return m_lineBoxes.absoluteQuads(*this, nullptr, RenderTextLineBoxes::ClipToEllipsis);
 }
 
 void RenderText::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    if (auto* layout = simpleLineLayout()) {
-        quads.appendVector(SimpleLineLayout::collectAbsoluteQuads(*this, *layout, wasFixed));
+    if (!usesComplexLineLayoutPath()) {
+        quads.appendVector(collectAbsoluteQuadsForNonComplexPaths(*this, wasFixed));
         return;
     }
     quads.appendVector(m_lineBoxes.absoluteQuads(*this, wasFixed, RenderTextLineBoxes::NoClipping));
 }
 
-Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool* wasFixed) const
+Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end, bool useSelectionHeight, bool ignoreEmptyTextSelections, bool* wasFixed) const
 {
     // Work around signed/unsigned issues. This function takes unsigneds, and is often passed UINT_MAX
     // to mean "all the way to the end". InlineTextBox coordinates are unsigneds, so changing this
@@ -449,9 +454,9 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
     start = std::min(start, static_cast<unsigned>(INT_MAX));
     end = std::min(end, static_cast<unsigned>(INT_MAX));
     if (simpleLineLayout() && !useSelectionHeight)
-        return collectAbsoluteQuadsForRange(*this, start, end, *simpleLineLayout(), wasFixed);
+        return collectAbsoluteQuadsForRange(*this, start, end, *simpleLineLayout(), ignoreEmptyTextSelections, wasFixed);
     const_cast<RenderText&>(*this).ensureLineBoxes();
-    return m_lineBoxes.absoluteQuadsForRange(*this, start, end, useSelectionHeight, wasFixed);
+    return m_lineBoxes.absoluteQuadsForRange(*this, start, end, useSelectionHeight, ignoreEmptyTextSelections, wasFixed);
 }
 
 Position RenderText::positionForPoint(const LayoutPoint& point)
@@ -1081,10 +1086,10 @@ Vector<std::pair<unsigned, unsigned>> RenderText::draggedContentRangesBetweenOff
 
 IntPoint RenderText::firstRunLocation() const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::computeFirstRunLocation(*this, *layout);
-
-    return m_lineBoxes.firstRunLocation();
+    auto first = LineLayoutTraversal::firstTextBoxFor(*this);
+    if (!first)
+        return { };
+    return IntPoint(first->rect().location());
 }
 
 void RenderText::setSelectionState(SelectionState state)
@@ -1109,7 +1114,7 @@ void RenderText::setTextWithOffset(const String& newText, unsigned offset, unsig
         return;
 
     int delta = newText.length() - text().length();
-    unsigned end = length ? offset + length - 1 : offset;
+    unsigned end = offset + length;
 
     m_linesDirty = simpleLineLayout() || m_lineBoxes.dirtyRange(*this, offset, end, delta);
 
@@ -1335,6 +1340,26 @@ const SimpleLineLayout::Layout* RenderText::simpleLineLayout() const
     return downcast<RenderBlockFlow>(*parent()).simpleLineLayout();
 }
 
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+const LayoutIntegration::LineLayout* RenderText::layoutFormattingContextLineLayout() const
+{
+    if (!is<RenderBlockFlow>(*parent()))
+        return nullptr;
+    return downcast<RenderBlockFlow>(*parent()).layoutFormattingContextLineLayout();
+}
+#endif
+
+bool RenderText::usesComplexLineLayoutPath() const
+{
+    if (simpleLineLayout())
+        return false;
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (layoutFormattingContextLineLayout())
+        return false;
+#endif
+    return true;
+}
+
 float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine, HashSet<const Font*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
 {
     if (from >= text().length())
@@ -1383,10 +1408,15 @@ float RenderText::width(unsigned from, unsigned len, const FontCascade& f, float
 
 IntRect RenderText::linesBoundingBox() const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::computeBoundingBox(*this, *layout);
+    auto first = LineLayoutTraversal::firstTextBoxFor(*this);
+    if (!first)
+        return { };
 
-    return m_lineBoxes.boundingBox(*this);
+    auto boundingBox = first->rect();
+    for (auto box = first; ++box;)
+        boundingBox.uniteEvenIfEmpty(box->rect());
+
+    return enclosingIntRect(boundingBox);
 }
 
 LayoutRect RenderText::linesVisualOverflowBoundingBox() const
@@ -1423,29 +1453,29 @@ LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelO
 
     // Now calculate startPos and endPos for painting selection.
     // We include a selection while endPos > 0
-    unsigned startPos;
-    unsigned endPos;
+    unsigned startOffset;
+    unsigned endOffset;
     if (selectionState() == SelectionInside) {
         // We are fully selected.
-        startPos = 0;
-        endPos = text().length();
+        startOffset = 0;
+        endOffset = text().length();
     } else {
-        startPos = view().selection().startPosition();
-        endPos = view().selection().endPosition();
+        startOffset = view().selection().startOffset();
+        endOffset = view().selection().endOffset();
         if (selectionState() == SelectionStart)
-            endPos = text().length();
+            endOffset = text().length();
         else if (selectionState() == SelectionEnd)
-            startPos = 0;
+            startOffset = 0;
     }
 
-    if (startPos == endPos)
+    if (startOffset == endOffset)
         return IntRect();
 
     LayoutRect resultRect;
     if (!rects)
-        resultRect = m_lineBoxes.selectionRectForRange(startPos, endPos);
+        resultRect = m_lineBoxes.selectionRectForRange(startOffset, endOffset);
     else {
-        m_lineBoxes.collectSelectionRectsForRange(startPos, endPos, *rects);
+        m_lineBoxes.collectSelectionRectsForRange(startOffset, endOffset, *rects);
         for (auto& rect : *rects) {
             resultRect.unite(rect);
             rect = localToContainerQuad(FloatRect(rect), repaintContainer).enclosingBoundingBox();
@@ -1469,43 +1499,84 @@ LayoutRect RenderText::selectionRectForRepaint(const RenderLayerModelObject* rep
 
 int RenderText::caretMinOffset() const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::findCaretMinimumOffset(*this, *layout);
-    return m_lineBoxes.caretMinOffset();
+    auto first = LineLayoutTraversal::firstTextBoxFor(*this);
+    if (!first)
+        return 0;
+
+    int minOffset = first->localStartOffset();
+    for (auto box = first; ++box;)
+        minOffset = std::min<int>(minOffset, box->localStartOffset());
+
+    return minOffset;
 }
 
 int RenderText::caretMaxOffset() const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::findCaretMaximumOffset(*this, *layout);
-    return m_lineBoxes.caretMaxOffset(*this);
+    auto first = LineLayoutTraversal::firstTextBoxFor(*this);
+    if (!first)
+        return text().length();
+
+    int maxOffset = first->localEndOffset();
+    for (auto box = first; ++box;)
+        maxOffset = std::max<int>(maxOffset, box->localEndOffset());
+
+    return maxOffset;
 }
 
 unsigned RenderText::countRenderedCharacterOffsetsUntil(unsigned offset) const
 {
-    ASSERT(!simpleLineLayout());
-    return m_lineBoxes.countCharacterOffsetsUntil(offset);
+    unsigned result = 0;
+    for (auto& box : LineLayoutTraversal::textBoxesFor(*this)) {
+        auto start = box.localStartOffset();
+        auto length = box.length();
+        if (offset < start)
+            return result;
+        if (offset <= start + length) {
+            result += offset - start;
+            return result;
+        }
+        result += length;
+    }
+    return result;
+}
+
+enum class OffsetType { Character, Caret };
+static bool containsOffset(const RenderText& text, unsigned offset, OffsetType type)
+{
+    for (auto box = LineLayoutTraversal::firstTextBoxInTextOrderFor(text); box; box.traverseNextInTextOrder()) {
+        auto start = box->localStartOffset();
+        if (offset < start)
+            return false;
+        unsigned end = box->localEndOffset();
+        if (offset >= start && offset <= end) {
+            if (offset == end && (type == OffsetType::Character || box->isLineBreak()))
+                continue;
+            if (type == OffsetType::Character)
+                return true;
+            // Return false for offsets inside composed characters.
+            return !offset || offset == static_cast<unsigned>(text.nextOffset(text.previousOffset(offset)));
+        }
+    }
+    return false;
 }
 
 bool RenderText::containsRenderedCharacterOffset(unsigned offset) const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::containsOffset(*this, *layout, offset, SimpleLineLayout::OffsetType::CharacterOffset);
-    return m_lineBoxes.containsOffset(*this, offset, RenderTextLineBoxes::CharacterOffset);
+    return containsOffset(*this, offset, OffsetType::Character);
 }
 
 bool RenderText::containsCaretOffset(unsigned offset) const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::containsOffset(*this, *layout, offset, SimpleLineLayout::OffsetType::CaretOffset);
-    return m_lineBoxes.containsOffset(*this, offset, RenderTextLineBoxes::CaretOffset);
+    return containsOffset(*this, offset, OffsetType::Caret);
 }
 
 bool RenderText::hasRenderedText() const
 {
-    if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::isTextRendered(*this, *layout);
-    return m_lineBoxes.hasRenderedText();
+    for (auto& box : LineLayoutTraversal::textBoxesFor(*this)) {
+        if (box.length())
+            return true;
+    }
+    return false;
 }
 
 int RenderText::previousOffset(int current) const

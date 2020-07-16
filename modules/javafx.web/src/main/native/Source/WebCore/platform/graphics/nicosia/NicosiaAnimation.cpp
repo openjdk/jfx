@@ -202,10 +202,29 @@ Animation::Animation(const Animation& other)
 {
 }
 
+Animation& Animation::operator=(const Animation& other)
+{
+    m_name = other.m_name.isSafeToSendToAnotherThread() ? other.m_name : other.m_name.isolatedCopy();
+    m_keyframes = other.m_keyframes;
+    m_boxSize = other.m_boxSize;
+    m_timingFunction = other.m_timingFunction->clone();
+    m_iterationCount = other.m_iterationCount;
+    m_duration = other.m_duration;
+    m_direction = other.m_direction;
+    m_fillsForwards = other.m_fillsForwards;
+    m_listsMatch = other.m_listsMatch;
+    m_startTime = other.m_startTime;
+    m_pauseTime = other.m_pauseTime;
+    m_totalRunningTime = other.m_totalRunningTime;
+    m_lastRefreshedTime = other.m_lastRefreshedTime;
+    m_state = other.m_state;
+    return *this;
+}
+
 void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
 {
-    if (!isActive())
-        return;
+    // Even when m_state == AnimationState::Stopped && !m_fillsForwards, we should calculate the last value to avoid a flash.
+    // CoordinatedGraphicsScene will soon remove the stopped animation and update the value instead of this function.
 
     Seconds totalRunningTime = computeTotalRunningTime(time);
     double normalizedValue = normalizedAnimationValue(totalRunningTime.seconds(), m_duration, m_direction, m_iterationCount);
@@ -213,8 +232,7 @@ void Animation::apply(ApplicationResult& applicationResults, MonotonicTime time)
     if (m_iterationCount != WebCore::Animation::IterationCountInfinite && totalRunningTime.seconds() >= m_duration * m_iterationCount) {
         m_state = AnimationState::Stopped;
         m_pauseTime = 0_s;
-        if (m_fillsForwards)
-            normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
+        normalizedValue = normalizedAnimationValueForFillsForwards(m_iterationCount, m_direction);
     }
 
     applicationResults.hasRunningAnimations |= (m_state == AnimationState::Playing);
@@ -287,11 +305,6 @@ Seconds Animation::computeTotalRunningTime(MonotonicTime time)
     m_lastRefreshedTime = time;
     m_totalRunningTime += m_lastRefreshedTime - oldLastRefreshedTime;
     return m_totalRunningTime;
-}
-
-bool Animation::isActive() const
-{
-    return m_state != AnimationState::Stopped || m_fillsForwards;
 }
 
 void Animation::applyInternal(ApplicationResult& applicationResults, const AnimationValue& from, const AnimationValue& to, float progress)
@@ -371,7 +384,7 @@ bool Animations::hasActiveAnimationsOfType(AnimatedPropertyID type) const
 {
     return std::any_of(m_animations.begin(), m_animations.end(),
         [&type](const Animation& animation) {
-            return animation.isActive() && animation.keyframes().property() == type;
+            return animation.keyframes().property() == type;
         });
 }
 
@@ -381,16 +394,6 @@ bool Animations::hasRunningAnimations() const
         [](const Animation& animation) {
             return animation.state() == Animation::AnimationState::Playing;
         });
-}
-
-Animations Animations::getActiveAnimations() const
-{
-    Animations active;
-    for (auto& animation : m_animations) {
-        if (animation.isActive())
-            active.add(animation);
-    }
-    return active;
 }
 
 } // namespace Nicosia

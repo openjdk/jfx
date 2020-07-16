@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -283,7 +283,7 @@ struct AbstractValue {
         if (other.isClear())
             return false;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         AbstractValue oldMe = *this;
 #endif
         bool result = false;
@@ -336,7 +336,7 @@ struct AbstractValue {
     // with SpecCell.
     FiltrationResult filter(Graph&, const RegisteredStructureSet&, SpeculatedType admittedTypes = SpecNone);
 
-    FiltrationResult filterArrayModes(ArrayModes);
+    FiltrationResult filterArrayModes(ArrayModes, SpeculatedType admittedTypes = SpecNone);
 
     ALWAYS_INLINE FiltrationResult filter(SpeculatedType type)
     {
@@ -431,12 +431,12 @@ struct AbstractValue {
             || !arrayModesAreClearOrTop(m_arrayModes);
     }
 
-#if ASSERT_DISABLED
-    void checkConsistency() const { }
-    void assertIsRegistered(Graph&) const { }
-#else
+#if ASSERT_ENABLED
     JS_EXPORT_PRIVATE void checkConsistency() const;
     void assertIsRegistered(Graph&) const;
+#else
+    void checkConsistency() const { }
+    void assertIsRegistered(Graph&) const { }
 #endif
 
     ResultType resultType() const;
@@ -567,12 +567,12 @@ private:
 namespace WTF {
 template <>
 struct VectorTraits<JSC::DFG::AbstractValue> : VectorTraitsBase<false, JSC::DFG::AbstractValue> {
-    static const bool canInitializeWithMemset = true;
+    static constexpr bool canInitializeWithMemset = true;
 };
 
 template <>
 struct HashTraits<JSC::DFG::AbstractValue> : GenericHashTraits<JSC::DFG::AbstractValue> {
-    static const bool emptyValueIsZero = true;
+    static constexpr bool emptyValueIsZero = true;
 };
 };
 #endif // USE(JSVALUE64)

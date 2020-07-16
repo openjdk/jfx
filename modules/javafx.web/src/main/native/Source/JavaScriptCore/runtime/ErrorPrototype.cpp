@@ -30,9 +30,10 @@
 
 namespace JSC {
 
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ErrorPrototypeBase);
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ErrorPrototype);
 
-static EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState*);
+static EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(JSGlobalObject*, CallFrame*);
 
 }
 
@@ -48,19 +49,12 @@ const ClassInfo ErrorPrototype::s_info = { "Object", &Base::s_info, &errorProtot
 @end
 */
 
-ErrorPrototype::ErrorPrototype(VM& vm, Structure* structure)
-    : JSNonFinalObject(vm, structure)
+ErrorPrototypeBase::ErrorPrototypeBase(VM& vm, Structure* structure)
+    : Base(vm, structure)
 {
 }
 
-ErrorPrototype* ErrorPrototype::create(VM& vm, JSGlobalObject*, Structure* structure)
-{
-    ErrorPrototype* prototype = new (NotNull, allocateCell<ErrorPrototype>(vm.heap)) ErrorPrototype(vm, structure);
-    prototype->finishCreation(vm, "Error"_s);
-    return prototype;
-}
-
-void ErrorPrototype::finishCreation(VM& vm, const String& name)
+void ErrorPrototypeBase::finishCreation(VM& vm, const String& name)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
@@ -68,30 +62,35 @@ void ErrorPrototype::finishCreation(VM& vm, const String& name)
     putDirectWithoutTransition(vm, vm.propertyNames->message, jsEmptyString(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
+ErrorPrototype::ErrorPrototype(VM& vm, Structure* structure)
+    : Base(vm, structure)
+{
+}
+
 // ------------------------------ Functions ---------------------------
 
 // ECMA-262 5.1, 15.11.4.4
-EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 1. Let O be the this value.
-    JSValue thisValue = exec->thisValue();
+    JSValue thisValue = callFrame->thisValue();
 
     // 2. If Type(O) is not Object, throw a TypeError exception.
     if (!thisValue.isObject())
-        return throwVMTypeError(exec, scope);
+        return throwVMTypeError(globalObject, scope);
     JSObject* thisObj = asObject(thisValue);
 
     // Guard against recursion!
-    StringRecursionChecker checker(exec, thisObj);
+    StringRecursionChecker checker(globalObject, thisObj);
     EXCEPTION_ASSERT(!scope.exception() || checker.earlyReturnValue());
     if (JSValue earlyReturnValue = checker.earlyReturnValue())
         return JSValue::encode(earlyReturnValue);
 
     // 3. Let name be the result of calling the [[Get]] internal method of O with argument "name".
-    JSValue name = thisObj->get(exec, vm.propertyNames->name);
+    JSValue name = thisObj->get(globalObject, vm.propertyNames->name);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     // 4. If name is undefined, then let name be "Error"; else let name be ToString(name).
@@ -99,12 +98,12 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
     if (name.isUndefined())
         nameString = "Error"_s;
     else {
-        nameString = name.toWTFString(exec);
+        nameString = name.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
     // 5. Let msg be the result of calling the [[Get]] internal method of O with argument "message".
-    JSValue message = thisObj->get(exec, vm.propertyNames->message);
+    JSValue message = thisObj->get(globalObject, vm.propertyNames->message);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     // (sic)
@@ -114,7 +113,7 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
     if (message.isUndefined())
         messageString = String();
     else {
-        messageString = message.toWTFString(exec);
+        messageString = message.toWTFString(globalObject);
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
@@ -127,7 +126,7 @@ EncodedJSValue JSC_HOST_CALL errorProtoFuncToString(ExecState* exec)
         return JSValue::encode(name.isString() ? name : jsString(vm, nameString));
 
     // 10. Return the result of concatenating name, ":", a single space character, and msg.
-    RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, nameString, ": ", messageString)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, nameString, ": ", messageString)));
 }
 
 } // namespace JSC

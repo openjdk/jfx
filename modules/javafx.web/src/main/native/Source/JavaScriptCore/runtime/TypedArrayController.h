@@ -30,7 +30,7 @@
 namespace JSC {
 
 class ArrayBuffer;
-class ExecState;
+class CallFrame;
 class JSArrayBuffer;
 class JSGlobalObject;
 
@@ -39,7 +39,7 @@ public:
     JS_EXPORT_PRIVATE TypedArrayController();
     JS_EXPORT_PRIVATE virtual ~TypedArrayController();
 
-    virtual JSArrayBuffer* toJS(ExecState*, JSGlobalObject*, ArrayBuffer*) = 0;
+    virtual JSArrayBuffer* toJS(JSGlobalObject*, JSGlobalObject*, ArrayBuffer*) = 0;
     virtual void registerWrapper(JSGlobalObject*, ArrayBuffer*, JSArrayBuffer*) = 0;
     virtual bool isAtomicsWaitAllowedOnCurrentThread() = 0;
 };

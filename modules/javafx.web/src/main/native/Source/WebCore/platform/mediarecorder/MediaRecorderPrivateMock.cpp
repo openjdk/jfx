@@ -33,17 +33,17 @@
 
 namespace WebCore {
 
-void MediaRecorderPrivateMock::sampleBufferUpdated(MediaStreamTrackPrivate& track, MediaSample&)
+void MediaRecorderPrivateMock::sampleBufferUpdated(const MediaStreamTrackPrivate& track, MediaSample&)
 {
     generateMockString(track);
 }
 
-void MediaRecorderPrivateMock::audioSamplesAvailable(MediaStreamTrackPrivate& track, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)
+void MediaRecorderPrivateMock::audioSamplesAvailable(const MediaStreamTrackPrivate& track, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t)
 {
     generateMockString(track);
 }
 
-void MediaRecorderPrivateMock::generateMockString(MediaStreamTrackPrivate& track)
+void MediaRecorderPrivateMock::generateMockString(const MediaStreamTrackPrivate& track)
 {
     auto locker = holdLock(m_bufferLock);
     if (track.type() == RealtimeMediaSource::Type::Audio)
@@ -56,13 +56,13 @@ void MediaRecorderPrivateMock::generateMockString(MediaStreamTrackPrivate& track
     m_buffer.append("\r\n---------\r\n");
 }
 
-RefPtr<SharedBuffer> MediaRecorderPrivateMock::fetchData()
+void MediaRecorderPrivateMock::fetchData(CompletionHandler<void(RefPtr<SharedBuffer>&&, const String&)>&& completionHandler)
 {
     auto locker = holdLock(m_bufferLock);
     Vector<uint8_t> value(m_buffer.length());
     memcpy(value.data(), m_buffer.characters8(), m_buffer.length());
     m_buffer.clear();
-    return SharedBuffer::create(WTFMove(value));
+    completionHandler(SharedBuffer::create(WTFMove(value)), mimeType());
 }
 
 const String& MediaRecorderPrivateMock::mimeType()

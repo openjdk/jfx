@@ -102,8 +102,6 @@ namespace WebCore {
         bool isAllowedRedirect(const URL&);
         bool isAllowedByContentSecurityPolicy(const URL&, ContentSecurityPolicy::RedirectResponseReceived);
 
-        bool isXMLHttpRequest() const final;
-
         SecurityOrigin& securityOrigin() const;
         const ContentSecurityPolicy& contentSecurityPolicy() const;
 
@@ -115,7 +113,7 @@ namespace WebCore {
         void reportRedirectionWithBadScheme(const URL&);
         void reportContentSecurityPolicyError(const URL&);
         void reportCrossOriginResourceSharingError(const URL&);
-        void reportIntegrityMetadataError(const URL&);
+        void reportIntegrityMetadataError(const CachedResource&, const String& expectedMetadata);
         void logErrorAndFail(const ResourceError&);
 
         bool shouldSetHTTPHeadersToKeep() const;

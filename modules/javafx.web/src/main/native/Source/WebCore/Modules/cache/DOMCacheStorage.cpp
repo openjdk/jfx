@@ -28,10 +28,10 @@
 
 #include "CacheQueryOptions.h"
 #include "ClientOrigin.h"
+#include "EventLoop.h"
 #include "JSDOMCache.h"
 #include "JSFetchResponse.h"
 #include "ScriptExecutionContext.h"
-
 
 namespace WebCore {
 using namespace WebCore::DOMCacheEngine;
@@ -42,6 +42,8 @@ DOMCacheStorage::DOMCacheStorage(ScriptExecutionContext& context, Ref<CacheStora
 {
     suspendIfNeeded();
 }
+
+DOMCacheStorage::~DOMCacheStorage() = default;
 
 Optional<ClientOrigin> DOMCacheStorage::origin() const
 {
@@ -60,13 +62,13 @@ static void doSequentialMatch(size_t index, Vector<Ref<DOMCache>>&& caches, DOMC
     }
 
     auto& cache = caches[index].get();
-    cache.doMatch(WTFMove(info), WTFMove(options), [caches = WTFMove(caches), info, options, completionHandler = WTFMove(completionHandler), index](ExceptionOr<FetchResponse*>&& result) mutable {
+    cache.doMatch(WTFMove(info), WTFMove(options), [caches = WTFMove(caches), info, options, completionHandler = WTFMove(completionHandler), index](auto&& result) mutable {
         if (result.hasException()) {
             completionHandler(result.releaseException());
             return;
         }
         if (result.returnValue()) {
-            completionHandler(result.returnValue());
+            completionHandler(result.releaseReturnValue());
             return;
         }
         doSequentialMatch(++index, WTFMove(caches), WTFMove(info), WTFMove(options), WTFMove(completionHandler));
@@ -85,9 +87,7 @@ static inline Ref<DOMCache> copyCache(const Ref<DOMCache>& cache)
 
 void DOMCacheStorage::doSequentialMatch(DOMCache::RequestInfo&& info, CacheQueryOptions&& options, Ref<DeferredPromise>&& promise)
 {
-    startSequentialMatch(WTF::map(m_caches, copyCache), WTFMove(info), WTFMove(options), [this, pendingActivity = makePendingActivity(*this), promise = WTFMove(promise)](ExceptionOr<FetchResponse*>&& result) mutable {
-        if (m_isStopped)
-            return;
+    startSequentialMatch(WTF::map(m_caches, copyCache), WTFMove(info), WTFMove(options), [pendingActivity = makePendingActivity(*this), promise = WTFMove(promise)](auto&& result) mutable {
         if (result.hasException()) {
             promise->reject(result.releaseException());
             return;
@@ -104,7 +104,7 @@ void DOMCacheStorage::match(DOMCache::RequestInfo&& info, CacheQueryOptions&& op
 {
     retrieveCaches([this, info = WTFMove(info), options = WTFMove(options), promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
         if (exception) {
-            promise->reject(WTFMove(exception.value()));
+            promise->reject(WTFMove(*exception));
             return;
         }
 
@@ -141,30 +141,34 @@ Ref<DOMCache> DOMCacheStorage::findCacheOrCreate(CacheInfo&& info)
    return DOMCache::create(*scriptExecutionContext(), WTFMove(info.name), info.identifier, m_connection.copyRef());
 }
 
-void DOMCacheStorage::retrieveCaches(WTF::Function<void(Optional<Exception>&&)>&& callback)
+void DOMCacheStorage::retrieveCaches(CompletionHandler<void(Optional<Exception>&&)>&& callback)
 {
     auto origin = this->origin();
-    if (!origin)
+    if (!origin) {
+        callback(convertToExceptionAndLog(scriptExecutionContext(), DOMCacheEngine::Error::Stopped));
         return;
+    }
 
     m_connection->retrieveCaches(*origin, m_updateCounter, [this, callback = WTFMove(callback), pendingActivity = makePendingActivity(*this)](CacheInfosOrError&& result) mutable {
-        if (!m_isStopped) {
-            if (!result.has_value()) {
-                callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-                return;
-            }
-
-            auto& cachesInfo = result.value();
-
-            if (m_updateCounter != cachesInfo.updateCounter) {
-                m_updateCounter = cachesInfo.updateCounter;
-
-                m_caches = WTF::map(WTFMove(cachesInfo.infos), [this] (CacheInfo&& info) {
-                    return findCacheOrCreate(WTFMove(info));
-                });
-            }
-            callback(WTF::nullopt);
+        if (m_isStopped) {
+            callback(DOMCacheEngine::convertToException(DOMCacheEngine::Error::Stopped));
+            return;
         }
+        if (!result.has_value()) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            return;
+        }
+
+        auto& cachesInfo = result.value();
+
+        if (m_updateCounter != cachesInfo.updateCounter) {
+            m_updateCounter = cachesInfo.updateCounter;
+
+            m_caches = WTF::map(WTFMove(cachesInfo.infos), [this] (CacheInfo&& info) {
+                return findCacheOrCreate(WTFMove(info));
+            });
+        }
+        callback(WTF::nullopt);
     });
 }
 
@@ -180,7 +184,7 @@ void DOMCacheStorage::open(const String& name, DOMPromiseDeferred<IDLInterface<D
 {
     retrieveCaches([this, name, promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
         if (exception) {
-            promise.reject(WTFMove(exception.value()));
+            promise.reject(WTFMove(*exception));
             return;
         }
         doOpen(name, WTFMove(promise));
@@ -191,23 +195,20 @@ void DOMCacheStorage::doOpen(const String& name, DOMPromiseDeferred<IDLInterface
 {
     auto position = m_caches.findMatching([&](auto& item) { return item->name() == name; });
     if (position != notFound) {
-        auto& cache = m_caches[position];
-        promise.resolve(DOMCache::create(*scriptExecutionContext(), String { cache->name() }, cache->identifier(), m_connection.copyRef()));
+        promise.resolve(DOMCache::create(*scriptExecutionContext(), String { m_caches[position]->name() }, m_caches[position]->identifier(), m_connection.copyRef()));
         return;
     }
 
     m_connection->open(*origin(), name, [this, name, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](const CacheIdentifierOrError& result) mutable {
-        if (!m_isStopped) {
-            if (!result.has_value())
-                promise.reject(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-            else {
-                if (result.value().hadStorageError)
-                    logConsolePersistencyError(scriptExecutionContext(), name);
+        if (!result.has_value())
+            promise.reject(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+        else {
+            if (result.value().hadStorageError)
+                logConsolePersistencyError(scriptExecutionContext(), name);
 
-                auto cache = DOMCache::create(*scriptExecutionContext(), String { name }, result.value().identifier, m_connection.copyRef());
-                promise.resolve(cache);
-                m_caches.append(WTFMove(cache));
-            }
+            auto cache = DOMCache::create(*scriptExecutionContext(), String { name }, result.value().identifier, m_connection.copyRef());
+            promise.resolve(cache);
+            m_caches.append(WTFMove(cache));
         }
     });
 }
@@ -216,7 +217,7 @@ void DOMCacheStorage::remove(const String& name, DOMPromiseDeferred<IDLBoolean>&
 {
     retrieveCaches([this, name, promise = WTFMove(promise)](Optional<Exception>&& exception) mutable {
         if (exception) {
-            promise.reject(WTFMove(exception.value()));
+            promise.reject(WTFMove(*exception));
             return;
         }
         doRemove(name, WTFMove(promise));
@@ -232,14 +233,12 @@ void DOMCacheStorage::doRemove(const String& name, DOMPromiseDeferred<IDLBoolean
     }
 
     m_connection->remove(m_caches[position]->identifier(), [this, name, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](const CacheIdentifierOrError& result) mutable {
-        if (!m_isStopped) {
-            if (!result.has_value())
-                promise.reject(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-            else {
-                if (result.value().hadStorageError)
-                    logConsolePersistencyError(scriptExecutionContext(), name);
-                promise.resolve(!!result.value().identifier);
-            }
+        if (!result.has_value())
+            promise.reject(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+        else {
+            if (result.value().hadStorageError)
+                logConsolePersistencyError(scriptExecutionContext(), name);
+            promise.resolve(!!result.value().identifier);
         }
     });
 }
@@ -266,11 +265,6 @@ void DOMCacheStorage::stop()
 const char* DOMCacheStorage::activeDOMObjectName() const
 {
     return "CacheStorage";
-}
-
-bool DOMCacheStorage::canSuspendForDocumentSuspension() const
-{
-    return !hasPendingActivity();
 }
 
 } // namespace WebCore

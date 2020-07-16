@@ -28,6 +28,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmFormat.h"
+#include "WasmGlobal.h"
 #include "WasmMemory.h"
 #include "WasmModule.h"
 #include "WasmTable.h"
@@ -36,18 +37,19 @@
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
+
+class LLIntOffsetsExtractor;
+class JSWebAssemblyInstance;
+
+namespace Wasm {
 
 struct Context;
 class Instance;
 
-EncodedJSValue getWasmTableElement(Instance*, unsigned, int32_t);
-bool setWasmTableElement(Instance*, unsigned, int32_t, EncodedJSValue encValue);
-EncodedJSValue doWasmRefFunc(Instance*, uint32_t);
-int32_t doWasmTableGrow(Instance*, unsigned, EncodedJSValue fill, int32_t delta);
-bool doWasmTableFill(Instance*, unsigned, int32_t offset, EncodedJSValue fill, int32_t count);
-
 class Instance : public ThreadSafeRefCounted<Instance>, public CanMakeWeakPtr<Instance> {
+    friend LLIntOffsetsExtractor;
+
 public:
     using StoreTopCallFrameCallback = WTF::Function<void(void*)>;
     using FunctionWrapperMap = HashMap<uint32_t, WriteBarrier<Unknown>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
@@ -92,16 +94,54 @@ public:
         }
     }
 
-    int32_t loadI32Global(unsigned i) const { return m_globals.get()[i].primitive; }
-    int64_t loadI64Global(unsigned i) const { return m_globals.get()[i].primitive; }
+    int32_t loadI32Global(unsigned i) const
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return 0;
+        }
+        return slot->m_primitive;
+    }
+    int64_t loadI64Global(unsigned i) const
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return 0;
+        }
+        return slot->m_primitive;
+    }
     float loadF32Global(unsigned i) const { return bitwise_cast<float>(loadI32Global(i)); }
     double loadF64Global(unsigned i) const { return bitwise_cast<double>(loadI64Global(i)); }
-    void setGlobal(unsigned i, int64_t bits) { m_globals.get()[i].primitive = bits; }
+    void setGlobal(unsigned i, int64_t bits)
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return;
+        }
+        slot->m_primitive = bits;
+    }
     void setGlobal(unsigned, JSValue);
+    void linkGlobal(unsigned, Ref<Global>&&);
     const BitVector& globalsToMark() { return m_globalsToMark; }
+    const BitVector& globalsToBinding() { return m_globalsToBinding; }
     JSValue getFunctionWrapper(unsigned) const;
     typename FunctionWrapperMap::ValuesConstIteratorRange functionWrappers() const { return m_functionWrappers.values(); }
     void setFunctionWrapper(unsigned, JSValue);
+
+    Wasm::Global* getGlobalBinding(unsigned i)
+    {
+        ASSERT(m_globalsToBinding.get(i));
+        Wasm::Global::Value* pointer = m_globals.get()[i].m_pointer;
+        if (!pointer)
+            return nullptr;
+        return &Wasm::Global::fromBinding(*pointer);
+    }
 
     static ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(Instance, m_memory); }
     static ptrdiff_t offsetOfGlobals() { return OBJECT_OFFSETOF(Instance, m_globals); }
@@ -166,18 +206,16 @@ private:
     RefPtr<CodeBlock> m_codeBlock;
     RefPtr<Memory> m_memory;
 
-    union GlobalValue {
-        WriteBarrier<Unknown> anyref;
-        uint64_t primitive;
-    };
-    MallocPtr<GlobalValue> m_globals;
+    MallocPtr<Global::Value, VMMalloc> m_globals;
     FunctionWrapperMap m_functionWrappers;
     BitVector m_globalsToMark;
+    BitVector m_globalsToBinding;
     EntryFrame** m_pointerToTopEntryFrame { nullptr };
     void** m_pointerToActualStackLimit { nullptr };
     void* m_cachedStackLimit { bitwise_cast<void*>(std::numeric_limits<uintptr_t>::max()) };
     StoreTopCallFrameCallback m_storeTopCallFrame;
     unsigned m_numImportFunctions { 0 };
+    HashMap<uint32_t, Ref<Global>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_linkedGlobals;
 };
 
 } } // namespace JSC::Wasm

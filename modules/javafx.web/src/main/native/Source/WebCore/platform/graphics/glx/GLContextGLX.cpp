@@ -20,7 +20,6 @@
 #include "GLContextGLX.h"
 
 #if USE(GLX)
-#include "GraphicsContext3D.h"
 #include "OpenGLShims.h"
 #include "PlatformDisplayX11.h"
 #include "XErrorTrapper.h"
@@ -414,8 +413,8 @@ cairo_device_t* GLContextGLX::cairoDevice()
     return m_cairoDevice;
 }
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
-PlatformGraphicsContext3D GLContextGLX::platformContext()
+#if ENABLE(GRAPHICS_CONTEXT_GL)
+PlatformGraphicsContextGL GLContextGLX::platformContext()
 {
     return m_context.get();
 }

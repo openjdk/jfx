@@ -78,6 +78,7 @@ public:
     WEBCORE_EXPORT FloatSize imageSizeForRenderer(const RenderElement* renderer, SizeType = UsedSize) const;
     // This method takes a zoom multiplier that can be used to increase the natural size of the image by the zoom.
     LayoutSize imageSizeForRenderer(const RenderElement*, float multiplier, SizeType = UsedSize) const; // returns the size of the complete image.
+    LayoutSize unclampedImageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType = UsedSize) const;
     void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
     bool isManuallyCached() const { return m_isManuallyCached; }
@@ -183,10 +184,11 @@ private:
 
     MonotonicTime m_lastUpdateImageDataTime;
 
-    unsigned m_updateImageDataCount { 0 };
-    bool m_isManuallyCached { false };
-    bool m_shouldPaintBrokenImage { true };
-    bool m_forceUpdateImageDataEnabledForTesting { false };
+    static constexpr unsigned maxUpdateImageDataCount = 4;
+    unsigned m_updateImageDataCount : 3;
+    bool m_isManuallyCached : 1;
+    bool m_shouldPaintBrokenImage : 1;
+    bool m_forceUpdateImageDataEnabledForTesting : 1;
 };
 
 } // namespace WebCore

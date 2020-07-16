@@ -25,22 +25,26 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "GenericTaskQueue.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class Event;
 class EventTarget;
 class Timer;
+class ScriptExecutionContext;
 
-class GenericEventQueue {
+// All instances of MainThreadGenericEventQueue use a shared Timer for dispatching events.
+// FIXME: We should port call sites to the HTML event loop and remove this class.
+class MainThreadGenericEventQueue : public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit GenericEventQueue(EventTarget&);
-    ~GenericEventQueue();
+    static UniqueRef<MainThreadGenericEventQueue> create(EventTarget&);
 
     void enqueueEvent(RefPtr<Event>&&);
     void close();
@@ -49,16 +53,29 @@ public:
     bool hasPendingEvents() const;
     bool hasPendingEventsOfType(const AtomString&) const;
 
-    void suspend();
-    void resume();
+    void setPaused(bool);
+
+    bool isSuspended() const { return m_isSuspended; }
 
 private:
+    friend UniqueRef<MainThreadGenericEventQueue> WTF::makeUniqueRefWithoutFastMallocCheck<MainThreadGenericEventQueue, WebCore::EventTarget&>(WebCore::EventTarget&);
+    explicit MainThreadGenericEventQueue(EventTarget&);
+
     void dispatchOneEvent();
 
+    const char* activeDOMObjectName() const final;
+    void stop() final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
+
+    void rescheduleAllEventsIfNeeded();
+    bool isSuspendedOrPausedByClient() const { return m_isSuspended || m_isPausedByClient; }
+
     EventTarget& m_owner;
-    GenericTaskQueue<Timer> m_taskQueue;
+    UniqueRef<GenericTaskQueue<Timer>> m_taskQueue;
     Deque<RefPtr<Event>> m_pendingEvents;
-    bool m_isClosed;
+    bool m_isClosed { false };
+    bool m_isPausedByClient { false };
     bool m_isSuspended { false };
 };
 

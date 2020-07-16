@@ -40,12 +40,12 @@ public:
     ScrollView* scrollView() const { return m_scrollView; }
 
     virtual ~AccessibilityScrollView();
-    void detach(AccessibilityDetachmentType, AXObjectCache*) override;
 
     AccessibilityObject* webAreaObject() const;
 
 private:
     explicit AccessibilityScrollView(ScrollView*);
+    void detachRemoteParts(AccessibilityDetachmentType) override;
 
     ScrollableArea* getScrollableAreaIfScrollable() const override;
     void scrollTo(const IntPoint&) const override;
@@ -59,7 +59,7 @@ private:
     AccessibilityObject* scrollBar(AccessibilityOrientation) override;
     void addChildren() override;
     void clearChildren() override;
-    AccessibilityObjectInterface* accessibilityHitTest(const IntPoint&) const override;
+    AXCoreObject* accessibilityHitTest(const IntPoint&) const override;
     void updateChildrenIfNecessary() override;
     void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     void updateScrollbars();

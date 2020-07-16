@@ -25,6 +25,10 @@
 
 #include "FloatPoint.h"
 
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaMath.h>
+#endif
+
 namespace WebCore {
 
 class FloatPoint3D {
@@ -119,7 +123,14 @@ public:
     }
 
     float lengthSquared() const { return this->dot(*this); }
-    float length() const { return sqrtf(lengthSquared()); }
+    float length() const
+    {
+#if PLATFORM(JAVA)
+        return javamath::hypot(m_x, m_y, m_z);
+#else
+        return std::hypot(m_x, m_y, m_z);
+#endif
+    }
 
     float distanceTo(const FloatPoint3D& a) const;
 

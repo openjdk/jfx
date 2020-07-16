@@ -24,6 +24,7 @@
 #include "config.h"
 #include "FloatingObjects.h"
 
+#include "PODIntervalTree.h"
 #include "RenderBlockFlow.h"
 #include "RenderBox.h"
 #include "RenderView.h"
@@ -47,7 +48,7 @@ FloatingObject::FloatingObject(RenderBox& renderer)
     , m_shouldPaint(true)
     , m_isDescendant(false)
     , m_isPlaced(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
@@ -67,7 +68,7 @@ FloatingObject::FloatingObject(RenderBox& renderer, Type type, const LayoutRect&
     , m_shouldPaint(shouldPaint)
     , m_isDescendant(isDescendant)
     , m_isPlaced(true)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_isInPlacedTree(false)
 #endif
 {
@@ -101,9 +102,9 @@ LayoutSize FloatingObject::translationOffsetToAncestor() const
 
 #ifndef NDEBUG
 
-String FloatingObject::debugString() const
+TextStream& operator<<(TextStream& stream, const FloatingObject& object)
 {
-    return makeString("0x", hex(reinterpret_cast<uintptr_t>(this)), " (", frameRect().x().toInt(), 'x', frameRect().y().toInt(), ' ', frameRect().maxX().toInt(), 'x', frameRect().maxY().toInt(), ')');
+    return stream << &object << " (" << object.frameRect().x().toInt() << 'x' << object.frameRect().y().toInt() << ' ' << object.frameRect().maxX().toInt() << 'x' << object.frameRect().maxY().toInt() << ')';
 }
 
 #endif
@@ -327,7 +328,7 @@ void FloatingObjects::addPlacedObject(FloatingObject* floatingObject)
     if (m_placedFloatsTree)
         m_placedFloatsTree->add(intervalForFloatingObject(floatingObject));
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(true);
 #endif
 }
@@ -342,7 +343,7 @@ void FloatingObjects::removePlacedObject(FloatingObject* floatingObject)
     }
 
     floatingObject->setIsPlaced(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     floatingObject->setIsInPlacedTree(false);
 #endif
 }

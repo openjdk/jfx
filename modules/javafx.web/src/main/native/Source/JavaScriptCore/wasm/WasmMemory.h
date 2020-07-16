@@ -87,6 +87,7 @@ public:
     Expected<PageCount, GrowFailReason> grow(PageCount);
     void registerInstance(Instance*);
 
+    #undef check
     void check() {  ASSERT(!deletionHasBegun()); }
 
     static ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(Memory, m_memory); }

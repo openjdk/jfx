@@ -27,6 +27,10 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
 
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaMath.h>
+#endif
+
 namespace WebCore {
 
 bool RotateTransformOperation::operator==(const TransformOperation& other) const
@@ -84,7 +88,11 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
     double x = -decomp.quaternionX;
     double y = -decomp.quaternionY;
     double z = -decomp.quaternionZ;
-    double length = sqrt(x * x + y * y + z * z);
+#if PLATFORM(JAVA)
+    double length = javamath::hypot(x, y, z);
+#else
+    double length = std::hypot(x, y, z);
+#endif
     double angle = 0;
 
     if (length > 0.00001) {

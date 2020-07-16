@@ -36,6 +36,7 @@ RealtimeVideoSource::RealtimeVideoSource(Ref<RealtimeVideoCaptureSource>&& sourc
 {
     m_source->addObserver(*this);
     m_currentSettings = m_source->settings();
+    setSize(m_source->size());
 }
 
 RealtimeVideoSource::~RealtimeVideoSource()
@@ -97,6 +98,7 @@ void RealtimeVideoSource::sourceSettingsChanged()
         size = m_source->size();
     if (rotation == MediaSample::VideoRotation::Left || rotation == MediaSample::VideoRotation::Right)
         size = size.transposedSize();
+
     m_currentSettings.setWidth(size.width());
     m_currentSettings.setHeight(size.height());
 
@@ -153,7 +155,7 @@ Ref<RealtimeMediaSource> RealtimeVideoSource::clone()
 {
     auto source = create(m_source.copyRef());
     source->m_currentSettings = m_currentSettings;
-
+    source->setSize(size());
     return source;
 }
 

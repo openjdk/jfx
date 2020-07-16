@@ -57,22 +57,22 @@ protected:
     bool paintRadio(const RenderObject& o, const PaintInfo& i, const IntRect& r) override;
     void setRadioSize(RenderStyle& style) const override;
 
-    void adjustButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustButtonStyle(RenderStyle&, const Element*) const override;
     bool paintButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    void adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustTextFieldStyle(RenderStyle&, const Element*) const override;
     bool paintTextField(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
-    void adjustSearchFieldStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSearchFieldStyle(RenderStyle&, const Element*) const override;
     bool paintSearchField(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    void adjustMenuListStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustMenuListStyle(RenderStyle&, const Element*) const override;
     bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
-    void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustMenuListButtonStyle(RenderStyle&, const Element*) const override;
     bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
-    void adjustTextAreaStyle(StyleResolver&, RenderStyle&, const Element* e) const override;
+    void adjustTextAreaStyle(RenderStyle&, const Element* e) const override;
     bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     bool supportsFocusRing(const RenderStyle&) const override;
 
@@ -124,7 +124,7 @@ protected:
     void adjustSliderThumbSize(RenderStyle&, const Element*) const override;
     bool paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
-    void adjustSliderTrackStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+    void adjustSliderTrackStyle(RenderStyle&, const Element*) const override;
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
 

@@ -27,7 +27,8 @@
 
 namespace JSC {
 
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSObject;
 
 namespace Yarr {
@@ -38,17 +39,21 @@ enum class ErrorCode : uint8_t {
     QuantifierOutOfOrder,
     QuantifierWithoutAtom,
     QuantifierTooLarge,
+    QuantifierIncomplete,
     MissingParentheses,
+    BracketUnmatched,
     ParenthesesUnmatched,
     ParenthesesTypeInvalid,
     InvalidGroupName,
     DuplicateGroupName,
     CharacterClassUnmatched,
-    CharacterClassOutOfOrder,
+    CharacterClassRangeOutOfOrder,
+    CharacterClassRangeInvalid,
     EscapeUnterminated,
     InvalidUnicodeEscape,
     InvalidBackreference,
     InvalidIdentityEscape,
+    InvalidControlLetterEscape,
     InvalidUnicodePropertyExpression,
     TooManyDisjunctions,
     OffsetTooLarge,
@@ -67,6 +72,6 @@ inline bool hasHardError(ErrorCode errorCode)
     // All other errors are due to problems in the expression.
     return hasError(errorCode) && errorCode != ErrorCode::TooManyDisjunctions;
 }
-JS_EXPORT_PRIVATE JSObject* errorToThrow(ExecState*, ErrorCode);
+JS_EXPORT_PRIVATE JSObject* errorToThrow(JSGlobalObject*, ErrorCode);
 
 } } // namespace JSC::Yarr

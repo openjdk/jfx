@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "CallFrame.h"
 #include "DOMAnnotation.h"
+#include "GetVM.h"
 #include "JSCJSValue.h"
 #include "PropertyName.h"
 #include "PropertyOffset.h"
@@ -117,7 +117,7 @@ public:
         , m_thisValue(thisValue)
         , m_slotBase(nullptr)
         , m_watchpointSet(nullptr)
-        , m_cacheability(CachingAllowed)
+        , m_cacheability(CachingDisallowed)
         , m_propertyType(TypeUnset)
         , m_internalMethodType(internalMethodType)
         , m_additionalDataType(AdditionalDataType::None)
@@ -127,13 +127,13 @@ public:
 
     // FIXME: Remove this slotBase / receiver behavior difference in custom values and custom accessors.
     // https://bugs.webkit.org/show_bug.cgi?id=158014
-    typedef EncodedJSValue (*GetValueFunc)(ExecState*, EncodedJSValue thisValue, PropertyName);
+    typedef EncodedJSValue (*GetValueFunc)(JSGlobalObject*, EncodedJSValue thisValue, PropertyName);
 
-    JSValue getValue(ExecState*, PropertyName) const;
-    JSValue getValue(ExecState*, unsigned propertyName) const;
+    JSValue getValue(JSGlobalObject*, PropertyName) const;
+    JSValue getValue(JSGlobalObject*, unsigned propertyName) const;
     JSValue getPureResult() const;
 
-    bool isCacheable() const { return m_cacheability == CachingAllowed && m_offset != invalidOffset; }
+    bool isCacheable() const { return isUnset() || m_cacheability == CachingAllowed; }
     bool isUnset() const { return m_propertyType == TypeUnset; }
     bool isValue() const { return m_propertyType == TypeValue; }
     bool isAccessor() const { return m_propertyType == TypeGetter; }
@@ -217,7 +217,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value, PropertyOffset offset)
@@ -232,6 +233,8 @@ public:
         m_slotBase = slotBase;
         m_propertyType = TypeValue;
         m_offset = offset;
+
+        m_cacheability = CachingAllowed;
     }
 
     void setValue(JSString*, unsigned attributes, JSValue value)
@@ -244,7 +247,8 @@ public:
 
         m_slotBase = 0;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setValueModuleNamespace(JSObject* slotBase, unsigned attributes, JSValue value, JSModuleEnvironment* environment, ScopeOffset scopeOffset)
@@ -267,7 +271,7 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeCustom;
-        m_offset = invalidOffset;
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, DOMAttributeAnnotation domAttribute)
@@ -289,7 +293,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeCustom;
-        m_offset = !invalidOffset;
+
+        m_cacheability = CachingAllowed;
     }
 
     void setCacheableCustom(JSObject* slotBase, unsigned attributes, GetValueFunc getValue, DOMAttributeAnnotation domAttribute)
@@ -313,7 +318,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeCustomAccessor;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setGetterSlot(JSObject* slotBase, unsigned attributes, GetterSetter* getterSetter)
@@ -327,7 +333,8 @@ public:
         ASSERT(slotBase);
         m_slotBase = slotBase;
         m_propertyType = TypeGetter;
-        m_offset = invalidOffset;
+
+        ASSERT(m_cacheability == CachingDisallowed);
     }
 
     void setCacheableGetterSlot(JSObject* slotBase, unsigned attributes, GetterSetter* getterSetter, PropertyOffset offset)
@@ -342,6 +349,8 @@ public:
         m_slotBase = slotBase;
         m_propertyType = TypeGetter;
         m_offset = offset;
+
+        m_cacheability = CachingAllowed;
     }
 
     JSValue thisValue() const
@@ -361,7 +370,6 @@ public:
 
         m_slotBase = 0;
         m_propertyType = TypeValue;
-        m_offset = invalidOffset;
     }
 
     void setWatchpointSet(WatchpointSet& set)
@@ -370,9 +378,9 @@ public:
     }
 
 private:
-    JS_EXPORT_PRIVATE JSValue functionGetter(ExecState*) const;
-    JS_EXPORT_PRIVATE JSValue customGetter(ExecState*, PropertyName) const;
-    JS_EXPORT_PRIVATE JSValue customAccessorGetter(ExecState*, PropertyName) const;
+    JS_EXPORT_PRIVATE JSValue functionGetter(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE JSValue customGetter(JSGlobalObject*, PropertyName) const;
+    JS_EXPORT_PRIVATE JSValue customAccessorGetter(JSGlobalObject*, PropertyName) const;
 
     union {
         EncodedJSValue value;
@@ -403,27 +411,27 @@ private:
     } m_additionalData;
 };
 
-ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, PropertyName propertyName) const
+ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, PropertyName propertyName) const
 {
     if (m_propertyType == TypeValue)
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
-        return functionGetter(exec);
+        return functionGetter(globalObject);
     if (m_propertyType == TypeCustomAccessor)
-        return customAccessorGetter(exec, propertyName);
-    return customGetter(exec, propertyName);
+        return customAccessorGetter(globalObject, propertyName);
+    return customGetter(globalObject, propertyName);
 }
 
-ALWAYS_INLINE JSValue PropertySlot::getValue(ExecState* exec, unsigned propertyName) const
+ALWAYS_INLINE JSValue PropertySlot::getValue(JSGlobalObject* globalObject, unsigned propertyName) const
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     if (m_propertyType == TypeValue)
         return JSValue::decode(m_data.value);
     if (m_propertyType == TypeGetter)
-        return functionGetter(exec);
+        return functionGetter(globalObject);
     if (m_propertyType == TypeCustomAccessor)
-        return customAccessorGetter(exec, Identifier::from(vm, propertyName));
-    return customGetter(exec, Identifier::from(vm, propertyName));
+        return customAccessorGetter(globalObject, Identifier::from(vm, propertyName));
+    return customGetter(globalObject, Identifier::from(vm, propertyName));
 }
 
 } // namespace JSC

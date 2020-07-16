@@ -28,6 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "BytecodeStructs.h"
 #include "CallFrame.h"
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
@@ -42,7 +43,7 @@ namespace JSC { namespace DFG {
 
 void OSREntryData::dumpInContext(PrintStream& out, DumpContext* context) const
 {
-    out.print("bc#", m_bytecodeIndex, ", machine code = ", RawPointer(m_machineCode.executableAddress()));
+    out.print(m_bytecodeIndex, ", machine code = ", RawPointer(m_machineCode.executableAddress()));
     out.print(", stack rules = [");
 
     auto printOperand = [&] (VirtualRegister reg) {
@@ -76,7 +77,7 @@ void OSREntryData::dumpInContext(PrintStream& out, DumpContext* context) const
     CommaPrinter comma;
     for (size_t argumentIndex = m_expectedValues.numberOfArguments(); argumentIndex--;) {
         out.print(comma, "arg", argumentIndex, ":");
-        printOperand(virtualRegisterForArgument(argumentIndex));
+        printOperand(virtualRegisterForArgumentIncludingThis(argumentIndex));
     }
     for (size_t localIndex = 0; localIndex < m_expectedValues.numberOfLocals(); ++localIndex) {
         out.print(comma, "loc", localIndex, ":");
@@ -92,7 +93,7 @@ void OSREntryData::dump(PrintStream& out) const
 }
 
 SUPPRESS_ASAN
-void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIndex)
+void* prepareOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* codeBlock, BytecodeIndex bytecodeIndex)
 {
     ASSERT(JITCode::isOptimizingJIT(codeBlock->jitType()));
     ASSERT(codeBlock->alternative());
@@ -103,13 +104,9 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     if (!Options::useOSREntryToDFG())
         return nullptr;
 
-    if (Options::verboseOSR()) {
-        dataLog(
-            "DFG OSR in ", *codeBlock->alternative(), " -> ", *codeBlock,
-            " from bc#", bytecodeIndex, "\n");
-    }
-
-    VM& vm = exec->vm();
+    dataLogLnIf(Options::verboseOSR(),
+        "DFG OSR in ", *codeBlock->alternative(), " -> ", *codeBlock,
+        " from ", bytecodeIndex);
 
     sanitizeStackForVM(vm);
 
@@ -136,8 +133,7 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
         //   be super rare. For now, if it does happen, it'll cause some compilation
         //   thrashing.
 
-        if (Options::verboseOSR())
-            dataLog("    OSR failed because the target code block is not DFG.\n");
+        dataLogLnIf(Options::verboseOSR(), "    OSR failed because the target code block is not DFG.");
         return nullptr;
     }
 
@@ -145,8 +141,7 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     OSREntryData* entry = jitCode->osrEntryDataForBytecodeIndex(bytecodeIndex);
 
     if (!entry) {
-        if (Options::verboseOSR())
-            dataLogF("    OSR failed because the entrypoint was optimized out.\n");
+        dataLogLnIf(Options::verboseOSR(), "    OSR failed because the entrypoint was optimized out.");
         return nullptr;
     }
 
@@ -179,23 +174,21 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     for (size_t argument = 0; argument < entry->m_expectedValues.numberOfArguments(); ++argument) {
         JSValue value;
         if (!argument)
-            value = exec->thisValue();
+            value = callFrame->thisValue();
         else
-            value = exec->argument(argument - 1);
+            value = callFrame->argument(argument - 1);
 
         if (!entry->m_expectedValues.argument(argument).validateOSREntryValue(value, FlushedJSValue)) {
-            if (Options::verboseOSR()) {
-                dataLog(
-                    "    OSR failed because argument ", argument, " is ", value,
-                    ", expected ", entry->m_expectedValues.argument(argument), ".\n");
-            }
+            dataLogLnIf(Options::verboseOSR(),
+                "    OSR failed because argument ", argument, " is ", value,
+                ", expected ", entry->m_expectedValues.argument(argument));
             return nullptr;
         }
     }
 
     for (size_t local = 0; local < entry->m_expectedValues.numberOfLocals(); ++local) {
         int localOffset = virtualRegisterForLocal(local).offset();
-        JSValue value = exec->registers()[localOffset].asanUnsafeJSValue();
+        JSValue value = callFrame->registers()[localOffset].asanUnsafeJSValue();
         FlushFormat format = FlushedJSValue;
 
         if (entry->m_localsForcedAnyInt.get(local)) {
@@ -238,14 +231,12 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     //    would have otherwise just kept running albeit less quickly.
 
     unsigned frameSizeForCheck = jitCode->common.requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&exec->registers()[virtualRegisterForLocal(frameSizeForCheck - 1).offset()]))) {
-        if (Options::verboseOSR())
-            dataLogF("    OSR failed because stack growth failed.\n");
+    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck - 1).offset()]))) {
+        dataLogLnIf(Options::verboseOSR(), "    OSR failed because stack growth failed.");
         return nullptr;
     }
 
-    if (Options::verboseOSR())
-        dataLogF("    OSR should succeed.\n");
+    dataLogLnIf(Options::verboseOSR(), "    OSR should succeed.");
 
     // At this point we're committed to entering. We will do some work to set things up,
     // but we also rely on our caller recognizing that when we return a non-null pointer,
@@ -264,10 +255,9 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
 
     void* targetPC = entry->m_machineCode.executableAddress();
     RELEASE_ASSERT(codeBlock->jitCode()->contains(entry->m_machineCode.untaggedExecutableAddress()));
-    if (Options::verboseOSR())
-        dataLogF("    OSR using target PC %p.\n", targetPC);
+    dataLogLnIf(Options::verboseOSR(), "    OSR using target PC ", RawPointer(targetPC));
     RELEASE_ASSERT(targetPC);
-    *bitwise_cast<void**>(scratch + 1) = retagCodePtr(targetPC, OSREntryPtrTag, bitwise_cast<PtrTag>(exec));
+    *bitwise_cast<void**>(scratch + 1) = retagCodePtr(targetPC, OSREntryPtrTag, bitwise_cast<PtrTag>(callFrame));
 
     Register* pivot = scratch + 2 + CallFrame::headerSizeInRegisters;
 
@@ -276,17 +266,17 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
 
         if (reg.isLocal()) {
             if (entry->m_localsForcedDouble.get(reg.toLocal())) {
-                *bitwise_cast<double*>(pivot + index) = exec->registers()[reg.offset()].asanUnsafeJSValue().asNumber();
+                *bitwise_cast<double*>(pivot + index) = callFrame->registers()[reg.offset()].asanUnsafeJSValue().asNumber();
                 continue;
             }
 
             if (entry->m_localsForcedAnyInt.get(reg.toLocal())) {
-                *bitwise_cast<int64_t*>(pivot + index) = exec->registers()[reg.offset()].asanUnsafeJSValue().asAnyInt() << JSValue::int52ShiftAmount;
+                *bitwise_cast<int64_t*>(pivot + index) = callFrame->registers()[reg.offset()].asanUnsafeJSValue().asAnyInt() << JSValue::int52ShiftAmount;
                 continue;
             }
         }
 
-        pivot[index] = exec->registers()[reg.offset()].asanUnsafeJSValue();
+        pivot[index] = callFrame->registers()[reg.offset()].asanUnsafeJSValue();
     }
 
     // 4) Reshuffle those registers that need reshuffling.
@@ -318,32 +308,53 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
             continue;
         RegisterAtOffset* calleeSavesEntry = allCalleeSaves->find(currentEntry.reg());
 
-        *(bitwise_cast<intptr_t*>(pivot - 1) - currentEntry.offsetAsIndex()) = record->calleeSaveRegistersBuffer[calleeSavesEntry->offsetAsIndex()];
+        if constexpr (CallerFrameAndPC::sizeInRegisters == 2)
+            *(bitwise_cast<intptr_t*>(pivot - 1) - currentEntry.offsetAsIndex()) = record->calleeSaveRegistersBuffer[calleeSavesEntry->offsetAsIndex()];
+        else {
+            // We need to adjust 4-bytes on 32-bits, otherwise we will clobber some parts of
+            // pivot[-1] when currentEntry.offsetAsIndex() returns -1. This region contains
+            // CallerFrameAndPC and if it is cloberred, we will have a corrupted stack.
+            // Also, we need to store callee-save registers swapped in pairs on scratch buffer,
+            // otherwise they will be swapped when copied to call frame during OSR Entry code.
+            // Here is how we would like to have the buffer configured:
+            //
+            // pivot[-4] = ArgumentCountIncludingThis
+            // pivot[-3] = Callee
+            // pivot[-2] = CodeBlock
+            // pivot[-1] = CallerFrameAndReturnPC
+            // pivot[0]  = csr1/csr0
+            // pivot[1]  = csr3/csr2
+            // ...
+            ASSERT(sizeof(intptr_t) == 4);
+            ASSERT(CallerFrameAndPC::sizeInRegisters == 1);
+            ASSERT(currentEntry.offsetAsIndex() < 0);
+
+            int offsetAsIndex = currentEntry.offsetAsIndex();
+            int properIndex = offsetAsIndex % 2 ? offsetAsIndex - 1 : offsetAsIndex + 1;
+            *(bitwise_cast<intptr_t*>(pivot - 1) + 1 - properIndex) = record->calleeSaveRegistersBuffer[calleeSavesEntry->offsetAsIndex()];
+        }
     }
 #endif
 
     // 7) Fix the call frame to have the right code block.
 
-    *bitwise_cast<CodeBlock**>(pivot - 1 - CallFrameSlot::codeBlock) = codeBlock;
+    *bitwise_cast<CodeBlock**>(pivot - (CallFrameSlot::codeBlock + 1)) = codeBlock;
 
-    if (Options::verboseOSR())
-        dataLogF("    OSR returning data buffer %p.\n", scratch);
+    dataLogLnIf(Options::verboseOSR(), "    OSR returning data buffer ", RawPointer(scratch));
     return scratch;
 }
 
-MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIndex)
+MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(VM& vm, CallFrame* callFrame, CodeBlock* baselineCodeBlock, CodeBlock* optimizedCodeBlock, BytecodeIndex bytecodeIndex)
 {
-    ASSERT(codeBlock->jitType() == JITType::DFGJIT || codeBlock->jitType() == JITType::FTLJIT);
-    ASSERT(codeBlock->jitCode()->dfgCommon()->isStillValid);
+    ASSERT(optimizedCodeBlock->jitType() == JITType::DFGJIT || optimizedCodeBlock->jitType() == JITType::FTLJIT);
+    ASSERT(optimizedCodeBlock->jitCode()->dfgCommon()->isStillValid);
 
-    if (!Options::useOSREntryToDFG() && codeBlock->jitCode()->jitType() == JITType::DFGJIT)
+    if (!Options::useOSREntryToDFG() && optimizedCodeBlock->jitCode()->jitType() == JITType::DFGJIT)
         return nullptr;
-    if (!Options::useOSREntryToFTL() && codeBlock->jitCode()->jitType() == JITType::FTLJIT)
+    if (!Options::useOSREntryToFTL() && optimizedCodeBlock->jitCode()->jitType() == JITType::FTLJIT)
         return nullptr;
 
-    VM& vm = exec->vm();
-
-    CommonData* dfgCommon = codeBlock->jitCode()->dfgCommon();
+    CommonData* dfgCommon = optimizedCodeBlock->jitCode()->dfgCommon();
     RELEASE_ASSERT(dfgCommon);
     DFG::CatchEntrypointData* catchEntrypoint = dfgCommon->catchOSREntryDataForBytecodeIndex(bytecodeIndex);
     if (!catchEntrypoint) {
@@ -355,7 +366,7 @@ MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(ExecState* ex
 
     // We're only allowed to OSR enter if we've proven we have compatible argument types.
     for (unsigned argument = 0; argument < catchEntrypoint->argumentFormats.size(); ++argument) {
-        JSValue value = exec->uncheckedR(virtualRegisterForArgument(argument)).jsValue();
+        JSValue value = callFrame->uncheckedR(virtualRegisterForArgumentIncludingThis(argument)).jsValue();
         switch (catchEntrypoint->argumentFormats[argument]) {
         case DFG::FlushedInt32:
             if (!value.isInt32())
@@ -381,18 +392,18 @@ MacroAssemblerCodePtr<ExceptionHandlerPtrTag> prepareCatchOSREntry(ExecState* ex
     }
 
     unsigned frameSizeForCheck = dfgCommon->requiredRegisterCountForExecutionAndExit();
-    if (UNLIKELY(!vm.ensureStackCapacityFor(&exec->registers()[virtualRegisterForLocal(frameSizeForCheck).offset()])))
+    if (UNLIKELY(!vm.ensureStackCapacityFor(&callFrame->registers()[virtualRegisterForLocal(frameSizeForCheck).offset()])))
         return nullptr;
 
-    auto instruction = exec->codeBlock()->instructions().at(exec->bytecodeOffset());
+    auto instruction = baselineCodeBlock->instructions().at(callFrame->bytecodeIndex());
     ASSERT(instruction->is<OpCatch>());
-    ValueProfileAndOperandBuffer* buffer = instruction->as<OpCatch>().metadata(exec).m_buffer;
+    ValueProfileAndVirtualRegisterBuffer* buffer = instruction->as<OpCatch>().metadata(baselineCodeBlock).m_buffer;
     JSValue* dataBuffer = reinterpret_cast<JSValue*>(dfgCommon->catchOSREntryBuffer->dataBuffer());
     unsigned index = 0;
-    buffer->forEach([&] (ValueProfileAndOperand& profile) {
+    buffer->forEach([&] (ValueProfileAndVirtualRegister& profile) {
         if (!VirtualRegister(profile.m_operand).isLocal())
             return;
-        dataBuffer[index] = exec->uncheckedR(profile.m_operand).jsValue();
+        dataBuffer[index] = callFrame->uncheckedR(profile.m_operand).jsValue();
         ++index;
     });
 

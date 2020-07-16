@@ -33,14 +33,13 @@
 
 namespace JSC {
 
-class ExecState;
 class JSObject;
 
 namespace Bindings {
 
 class RootObject;
 
-jvalue convertValueToJValue(ExecState*, RootObject*, JSValue, JavaType, const char* javaClassName);
+jvalue convertValueToJValue(JSGlobalObject*, RootObject*, JSValue, JavaType, const char* javaClassName);
 jobject convertUndefinedToJObject();
 jthrowable dispatchJNICall(int, RootObject *rootObject, jobject, bool isStatic, JavaType returnType, jmethodID, jobject* args, jvalue& result, jobject accessControlContext);
 jobject jvalueToJObject(jvalue value, JavaType);

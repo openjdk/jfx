@@ -181,11 +181,6 @@ RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, PreserveResolution) const
         m_size.width(), m_size.height());
 }
 
-BackingStoreCopy ImageBuffer::fastCopyImageMode()
-{
-    return CopyBackingStore; // todo tav revise
-}
-
 void ImageBuffer::platformTransformColorSpace(const std::array<uint8_t, 256>&)
 {
     notImplemented();

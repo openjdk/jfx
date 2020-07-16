@@ -30,7 +30,6 @@
 #include "DisplayRefreshMonitor.h"
 #include "DocumentStorageAccess.h"
 #include "FocusDirection.h"
-#include "FrameIdentifier.h"
 #include "FrameLoader.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -111,6 +110,7 @@ class MediaPlayerRequestInstallMissingPluginsCallback;
 struct ContentRuleListResults;
 struct DateTimeChooserParameters;
 struct GraphicsDeviceAdapter;
+struct MockWebAuthenticationConfiguration;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
 struct WindowFeatures;
@@ -189,10 +189,11 @@ public:
 
     virtual PlatformPageClient platformPageClient() const = 0;
 
-#if ENABLE(CURSOR_SUPPORT)
     virtual void setCursor(const Cursor&) = 0;
     virtual void setCursorHiddenUntilMouseMoves(bool) = 0;
-#endif
+    virtual bool supportsSettingCursor() { return true; }
+
+    virtual bool shouldUseMouseEventForSelection(const PlatformMouseEvent&) { return true; }
 
     virtual FloatSize screenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
     virtual FloatSize availableScreenSize() const { return const_cast<ChromeClient&>(*this).windowRect().size(); }
@@ -207,9 +208,7 @@ public:
 
     virtual bool shouldUnavailablePluginMessageBeButton(RenderEmbeddedObject::PluginUnavailabilityReason) const { return false; }
     virtual void unavailablePluginButtonClicked(Element&, RenderEmbeddedObject::PluginUnavailabilityReason) const { }
-    virtual void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) = 0;
-
-    virtual void setToolTip(const String&, TextDirection) = 0;
+    virtual void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) = 0;
 
     virtual void print(Frame&) = 0;
 
@@ -473,6 +472,7 @@ public:
     virtual void playbackTargetPickerClientStateDidChange(uint64_t /*contextId*/, MediaProducer::MediaStateFlags) { }
     virtual void setMockMediaPlaybackTargetPickerEnabled(bool)  { }
     virtual void setMockMediaPlaybackTargetPickerState(const String&, MediaPlaybackTargetContext::State) { }
+    virtual void mockMediaPlaybackTargetPickerDismissPopup() { }
 #endif
 
     virtual void imageOrMediaDocumentSizeChanged(const IntSize&) { }
@@ -487,8 +487,8 @@ public:
     virtual RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) = 0;
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
-    virtual void hasStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, FrameIdentifier, PageIdentifier, WTF::CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
-    virtual void requestStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, FrameIdentifier, PageIdentifier, WTF::CompletionHandler<void(StorageAccessWasGranted, StorageAccessPromptWasShown)>&& completionHandler) { completionHandler(StorageAccessWasGranted::No, StorageAccessPromptWasShown::No); }
+    virtual void hasStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, Frame&, WTF::CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
+    virtual void requestStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, Frame&, WTF::CompletionHandler<void(StorageAccessWasGranted, StorageAccessPromptWasShown)>&& completionHandler) { completionHandler(StorageAccessWasGranted::No, StorageAccessPromptWasShown::No); }
 #endif
 
 #if ENABLE(DEVICE_ORIENTATION)
@@ -510,6 +510,10 @@ public:
 
     virtual bool userIsInteracting() const { return false; }
     virtual void setUserIsInteracting(bool) { }
+
+#if ENABLE(WEB_AUTHN)
+    virtual void setMockWebAuthenticationConfiguration(const MockWebAuthenticationConfiguration&) { }
+#endif
 
 protected:
     virtual ~ChromeClient() = default;

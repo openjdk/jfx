@@ -37,7 +37,7 @@
 #include "EventTarget.h"
 #include "NotificationDirection.h"
 #include "NotificationPermission.h"
-#include "Timer.h"
+#include "SuspendableTimer.h"
 #include <wtf/URL.h>
 #include "WritingMode.h"
 
@@ -47,7 +47,7 @@ class Document;
 class NotificationPermissionCallback;
 
 class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTargetWithInlineData {
-    WTF_MAKE_ISO_ALLOCATED(Notification);
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
@@ -61,7 +61,7 @@ public:
     };
     static Ref<Notification> create(Document&, const String& title, const Options&);
 
-    virtual ~Notification();
+    WEBCORE_EXPORT virtual ~Notification();
 
     void show();
     void close();
@@ -93,11 +93,14 @@ public:
 private:
     Notification(Document&, const String& title, const Options&);
 
+    Document* document() const;
     EventTargetInterface eventTargetInterface() const final { return NotificationEventTargetInterfaceType; }
+
+    void queueTask(Function<void()>&&);
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
+    void suspend(ReasonForSuspension);
     void stop() final;
 
     void refEventTarget() final { ref(); }
@@ -113,7 +116,7 @@ private:
     enum State { Idle, Showing, Closed };
     State m_state { Idle };
 
-    std::unique_ptr<Timer> m_taskTimer;
+    SuspendableTimer m_showNotificationTimer;
 };
 
 } // namespace WebCore

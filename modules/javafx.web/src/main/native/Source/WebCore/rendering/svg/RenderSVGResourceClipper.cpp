@@ -76,7 +76,7 @@ bool RenderSVGResourceClipper::applyResource(RenderElement& renderer, const Rend
 bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const AffineTransform& animatedLocalTransform, const FloatRect& objectBoundingBox)
 {
     // If the current clip-path gets clipped itself, we have to fallback to masking.
-    if (!style().svgStyle().clipperResource().isEmpty())
+    if (style().clipPath())
         return false;
     WindRule clipRule = WindRule::NonZero;
     Path clipPath = Path();
@@ -101,7 +101,7 @@ bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const 
              continue;
         const SVGRenderStyle& svgStyle = style.svgStyle();
         // Current shape in clip-path gets clipped too. Fallback to masking.
-        if (!svgStyle.clipperResource().isEmpty())
+        if (style.clipPath())
             return false;
         // Fallback to masking, if there is more than one clipping path.
         if (clipPath.isEmpty()) {
@@ -142,7 +142,7 @@ bool RenderSVGResourceClipper::applyClippingToContext(RenderElement& renderer, c
 
     if (shouldCreateClipperMaskImage && !repaintRect.isEmpty()) {
         // FIXME (149469): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks nested clipping, though.
-        clipperMaskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, ColorSpaceSRGB, Unaccelerated, &context);
+        clipperMaskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, ColorSpace::SRGB, RenderingMode::Unaccelerated, &context);
         if (!clipperMaskImage)
             return false;
 
@@ -279,6 +279,16 @@ bool RenderSVGResourceClipper::hitTestClipContent(const FloatRect& objectBoundin
             continue;
         if (!renderer->isSVGShape() && !renderer->isSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;
+
+        const RenderStyle& style = renderer->style();
+        if (is<ReferenceClipPathOperation>(style.clipPath())) {
+            auto& clipPath = downcast<ReferenceClipPathOperation>(*style.clipPath());
+            AtomString id(clipPath.fragment());
+            RenderSVGResourceClipper* clipper = getRenderSVGResourceById<RenderSVGResourceClipper>(document(), id);
+            if (clipper == this)
+                continue;
+        }
+
         IntPoint hitPoint;
         HitTestResult result(hitPoint);
         if (renderer->nodeAtFloatPoint(HitTestRequest(HitTestRequest::SVGClipContent | HitTestRequest::DisallowUserAgentShadowContent), result, point, HitTestForeground))

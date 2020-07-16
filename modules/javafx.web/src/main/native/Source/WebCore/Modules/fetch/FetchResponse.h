@@ -36,7 +36,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 };
 
@@ -53,7 +53,7 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText { "OK"_s };
+        String statusText;
         Optional<FetchHeaders::Init> headers;
     };
 
@@ -117,7 +117,6 @@ private:
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     const ResourceResponse& filteredResponse() const;
 

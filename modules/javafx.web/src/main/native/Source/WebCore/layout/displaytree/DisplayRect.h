@@ -27,18 +27,17 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutRect.h"
 #include "LayoutUnits.h"
 
 namespace WebCore {
-
-class RenderStyle;
-
 namespace Display {
 
 class Rect {
 public:
     Rect() = default;
     Rect(LayoutUnit top, LayoutUnit left, LayoutUnit width, LayoutUnit height);
+    Rect(LayoutPoint topLeft, LayoutUnit width, LayoutUnit height);
 
     LayoutUnit top() const;
     LayoutUnit left() const;
@@ -67,16 +66,16 @@ public:
     void moveHorizontally(LayoutUnit);
     void moveVertically(LayoutUnit);
 
-    void expand(LayoutUnit, LayoutUnit);
-    void expandHorizontally(LayoutUnit delta) { expand(delta, 0); }
-    void expandVertically(LayoutUnit delta) { expand(0, delta); }
+    void expand(Optional<LayoutUnit>, Optional<LayoutUnit>);
+    void expandHorizontally(LayoutUnit delta) { expand(delta, { }); }
+    void expandVertically(LayoutUnit delta) { expand({ }, delta); }
     bool intersects(const Rect& rect) const { return m_rect.intersects(rect); }
 
     Rect clone() const;
     operator LayoutRect() const;
 
 private:
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     void invalidateTop() { m_hasValidTop = false; }
     void invalidateLeft() { m_hasValidLeft = false; }
     void invalidateWidth() { m_hasValidWidth = false; }
@@ -94,14 +93,14 @@ private:
     bool m_hasValidLeft { false };
     bool m_hasValidWidth { false };
     bool m_hasValidHeight { false };
-#endif
+#endif // ASSERT_ENABLED
     LayoutRect m_rect;
 };
 
 inline Rect::Rect(LayoutUnit top, LayoutUnit left, LayoutUnit width, LayoutUnit height)
     : m_rect(left, top, width, height)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_hasValidTop = true;
     m_hasValidLeft = true;
     m_hasValidWidth = true;
@@ -109,7 +108,12 @@ inline Rect::Rect(LayoutUnit top, LayoutUnit left, LayoutUnit width, LayoutUnit 
 #endif
 }
 
-#if !ASSERT_DISABLED
+inline Rect::Rect(LayoutPoint topLeft, LayoutUnit width, LayoutUnit height)
+    : Rect(topLeft.y(), topLeft.x(), width, height)
+{
+}
+
+#if ASSERT_ENABLED
 inline void Rect::invalidatePosition()
 {
     invalidateTop();
@@ -185,7 +189,7 @@ inline LayoutUnit Rect::height() const
 
 inline void Rect::setTopLeft(const LayoutPoint& topLeft)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidPosition();
 #endif
     m_rect.setLocation(topLeft);
@@ -193,7 +197,7 @@ inline void Rect::setTopLeft(const LayoutPoint& topLeft)
 
 inline void Rect::setTop(LayoutUnit top)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_hasValidTop = true;
 #endif
     m_rect.setY(top);
@@ -201,7 +205,7 @@ inline void Rect::setTop(LayoutUnit top)
 
 inline void Rect::setLeft(LayoutUnit left)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_hasValidLeft = true;
 #endif
     m_rect.setX(left);
@@ -209,7 +213,7 @@ inline void Rect::setLeft(LayoutUnit left)
 
 inline void Rect::setWidth(LayoutUnit width)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_hasValidWidth = true;
 #endif
     m_rect.setWidth(width);
@@ -217,7 +221,7 @@ inline void Rect::setWidth(LayoutUnit width)
 
 inline void Rect::setHeight(LayoutUnit height)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     m_hasValidHeight = true;
 #endif
     m_rect.setHeight(height);
@@ -225,7 +229,7 @@ inline void Rect::setHeight(LayoutUnit height)
 
 inline void Rect::setSize(const LayoutSize& size)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidSize();
 #endif
     m_rect.setSize(size);
@@ -267,16 +271,17 @@ inline void Rect::moveVertically(LayoutUnit offset)
     m_rect.move(LayoutSize { 0, offset });
 }
 
-inline void Rect::expand(LayoutUnit width, LayoutUnit height)
+inline void Rect::expand(Optional<LayoutUnit> width, Optional<LayoutUnit> height)
 {
-    ASSERT(hasValidGeometry());
-    m_rect.expand(width, height);
+    ASSERT(!width || m_hasValidWidth);
+    ASSERT(!height || m_hasValidHeight);
+    m_rect.expand(width.valueOr(0), height.valueOr(0));
 }
 
 inline Rect Rect::clone() const
 {
     Rect rect;
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     rect.m_hasValidTop = m_hasValidTop;
     rect.m_hasValidLeft = m_hasValidLeft;
     rect.m_hasValidWidth = m_hasValidWidth;

@@ -37,21 +37,31 @@
 #include "TextureMapperPlatformLayerProxy.h"
 #endif
 
+#if USE(ANGLE)
+#include "ImageBuffer.h"
+#endif
+
 #include "GLContext.h"
 
 namespace Nicosia {
 
 using namespace WebCore;
 
-GC3DLayer::GC3DLayer(GraphicsContext3D& context, GraphicsContext3D::RenderStyle renderStyle)
+GC3DLayer::GC3DLayer(GraphicsContextGLOpenGL& context)
     : m_context(context)
     , m_contentLayer(Nicosia::ContentLayer::create(Nicosia::ContentLayerTextureMapperImpl::createFactory(*this)))
 {
-    switch (renderStyle) {
-    case GraphicsContext3D::RenderOffscreen:
+}
+
+GC3DLayer::GC3DLayer(GraphicsContextGLOpenGL& context, GraphicsContextGLOpenGL::Destination destination)
+    : m_context(context)
+    , m_contentLayer(Nicosia::ContentLayer::create(Nicosia::ContentLayerTextureMapperImpl::createFactory(*this)))
+{
+    switch (destination) {
+    case GraphicsContextGLOpenGL::Destination::Offscreen:
         m_glContext = GLContext::createOffscreenContext(&PlatformDisplay::sharedDisplayForCompositing());
         break;
-    case GraphicsContext3D::RenderDirectlyToHostWindow:
+    case GraphicsContextGLOpenGL::Destination::DirectlyToHostWindow:
         ASSERT_NOT_REACHED();
         break;
     }
@@ -68,7 +78,7 @@ bool GC3DLayer::makeContextCurrent()
     return m_glContext->makeContextCurrent();
 }
 
-PlatformGraphicsContext3D GC3DLayer::platformContext()
+PlatformGraphicsContextGL GC3DLayer::platformContext() const
 {
     ASSERT(m_glContext);
     return m_glContext->platformContext();
@@ -82,13 +92,38 @@ void GC3DLayer::swapBuffersIfNeeded()
 
     m_context.prepareTexture();
     IntSize textureSize(m_context.m_currentWidth, m_context.m_currentHeight);
-    TextureMapperGL::Flags flags = TextureMapperGL::ShouldFlipTexture | (m_context.m_attrs.alpha ? TextureMapperGL::ShouldBlend : 0);
+    TextureMapperGL::Flags flags = m_context.contextAttributes().alpha ? TextureMapperGL::ShouldBlend : 0;
+#if USE(ANGLE)
+    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(textureSize, Unaccelerated);
+    if (!imageBuffer)
+        return;
+
+    m_context.paintRenderingResultsToCanvas(imageBuffer.get());
+    RefPtr<Image> image = imageBuffer->copyImage(DontCopyBackingStore);
+    if (!image)
+        return;
+#else
+    flags |= TextureMapperGL::ShouldFlipTexture;
+#endif
 
     {
         auto& proxy = downcast<Nicosia::ContentLayerTextureMapperImpl>(m_contentLayer->impl()).proxy();
+#if USE(ANGLE)
+        std::unique_ptr<TextureMapperPlatformLayerBuffer> layerBuffer;
+        layerBuffer = proxy.getAvailableBuffer(textureSize, m_context.m_internalColorFormat);
+        if (!layerBuffer) {
+            auto texture = BitmapTextureGL::create(TextureMapperContextAttributes::get(), flags, m_context.m_internalColorFormat);
+            static_cast<BitmapTextureGL&>(texture.get()).setPendingContents(WTFMove(image));
+            layerBuffer = makeUnique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), flags);
+        } else
+            layerBuffer->textureGL().setPendingContents(WTFMove(image));
 
         LockHolder holder(proxy.lock());
+        proxy.pushNextBuffer(WTFMove(layerBuffer));
+#else
+        LockHolder holder(proxy.lock());
         proxy.pushNextBuffer(makeUnique<TextureMapperPlatformLayerBuffer>(m_context.m_compositorTexture, textureSize, flags, m_context.m_internalColorFormat));
+#endif
     }
 
     m_context.markLayerComposited();

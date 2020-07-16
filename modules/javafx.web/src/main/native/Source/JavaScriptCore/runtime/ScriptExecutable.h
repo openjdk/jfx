@@ -36,7 +36,7 @@ class IsoCellSet;
 class ScriptExecutable : public ExecutableBase {
 public:
     typedef ExecutableBase Base;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     static void destroy(JSCell*);
 
@@ -117,7 +117,7 @@ public:
     Exception* prepareForExecution(VM&, JSFunction*, JSScope*, CodeSpecializationKind, CodeBlock*& resultCodeBlock);
 
     ScriptExecutable* topLevelExecutable();
-    JSArray* createTemplateObject(ExecState*, JSTemplateObjectDescriptor*);
+    JSArray* createTemplateObject(JSGlobalObject*, JSTemplateObjectDescriptor*);
 
 private:
     friend class ExecutableBase;

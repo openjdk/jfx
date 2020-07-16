@@ -1,7 +1,8 @@
 {
     "domain": "Page",
     "description": "Actions and events related to the inspected page belong to the page domain.",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "types": [
         {
             "id": "Setting",
@@ -15,6 +16,8 @@
                 "MockCaptureDevicesEnabled",
                 "NeedsSiteSpecificQuirks",
                 "ScriptEnabled",
+                "ShowDebugBorders",
+                "ShowRepaintCounter",
                 "WebRTCEncryptionEnabled",
                 "WebSecurityEnabled"
             ]
@@ -183,6 +186,12 @@
             ]
         },
         {
+            "name": "setBootstrapScript",
+            "parameters": [
+                { "name": "source", "type": "string", "optional": true, "description": "If `source` is provided (and not empty), it will be injected into all future global objects as soon as they're created. Omitting `source` will stop this from happening." }
+            ]
+        },
+        {
             "name": "searchInResource",
             "description": "Searches for given string in resource content.",
             "parameters": [
@@ -235,20 +244,6 @@
             "description": "Forces the given appearance for the page.",
             "parameters": [
                 { "name": "appearance", "$ref": "Appearance", "description": "Appearance name to force. Empty string disables the override." }
-            ]
-        },
-        {
-            "name": "getCompositingBordersVisible",
-            "description": "Indicates the visibility of compositing borders.",
-            "returns": [
-                { "name": "result", "type": "boolean", "description": "If true, compositing borders are visible." }
-            ]
-        },
-        {
-            "name": "setCompositingBordersVisible",
-            "description": "Controls the visibility of compositing borders.",
-            "parameters": [
-                { "name": "visible", "type": "boolean", "description": "True for showing compositing borders." }
             ]
         },
         {

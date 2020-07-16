@@ -46,14 +46,12 @@ WebGLTransformFeedback::~WebGLTransformFeedback()
 WebGLTransformFeedback::WebGLTransformFeedback(WebGLRenderingContextBase& ctx)
     : WebGLSharedObject(ctx)
 {
-    // FIXME: Call createTransformFeedback from GraphicsContext3D.
+    setObject(ctx.graphicsContextGL()->createTransformFeedback());
 }
 
-void WebGLTransformFeedback::deleteObjectImpl(GraphicsContext3D* context3d, Platform3DObject object)
+void WebGLTransformFeedback::deleteObjectImpl(GraphicsContextGLOpenGL* context3d, PlatformGLObject object)
 {
-    UNUSED_PARAM(context3d);
-    UNUSED_PARAM(object);
-    // FIXME: Call deleteTransformFeedback from GraphicsContext3D.
+    context3d->deleteTransformFeedback(object);
 }
 
 }
