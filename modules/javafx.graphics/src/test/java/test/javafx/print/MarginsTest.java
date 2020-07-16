@@ -44,15 +44,15 @@ import javax.print.attribute.standard.MediaSizeName;
 
 import org.junit.Test;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNotNull;
 
 public class MarginsTest {
 
     @Test public void test() {
 
         Printer printer = Printer.getDefaultPrinter();
-        if (printer == null) {
-            return;
-        }
+        assumeNotNull(printer);
+
         PageLayout layout =
              printer.createPageLayout(Paper.NA_LETTER,
                                       PageOrientation.PORTRAIT,
