@@ -39,12 +39,6 @@ public class ShapeUtil {
     private static final ShapeRasterizer shapeRasterizer;
     static {
         switch (PrismSettings.rasterizerSpec) {
-            case JavaPisces:
-                shapeRasterizer = new OpenPiscesRasterizer();
-                break;
-            case NativePisces:
-                shapeRasterizer = new NativePiscesRasterizer();
-                break;
             case FloatMarlin:
                 shapeRasterizer = new MarlinRasterizer();
                 break;
@@ -64,38 +58,13 @@ public class ShapeUtil {
         return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close, antialiasedShape);
     }
 
-    public static Shape createCenteredStrokedShape(Shape s, BasicStroke stroke)
-    {
-        if (PrismSettings.rasterizerSpec == RasterizerType.DoubleMarlin) {
-            return DMarlinRasterizer.createCenteredStrokedShape(s, stroke);
-        }
+    public static Shape createCenteredStrokedShape(Shape s, BasicStroke stroke) {
         if (PrismSettings.rasterizerSpec == RasterizerType.FloatMarlin) {
             return MarlinRasterizer.createCenteredStrokedShape(s, stroke);
         }
-        // JavaPisces fallback:
-        return createCenteredStrokedShapeOpenPisces(s, stroke);
-    }
 
-    private static Shape createCenteredStrokedShapeOpenPisces(Shape s, BasicStroke stroke)
-    {
-        final float lw = (stroke.getType() == BasicStroke.TYPE_CENTERED) ?
-                             stroke.getLineWidth() : stroke.getLineWidth() * 2.0f;
-
-        final Path2D p2d = new Path2D(Path2D.WIND_NON_ZERO);
-
-        PathConsumer2D pc2d =
-            new com.sun.openpisces.Stroker(p2d, lw, stroke.getEndCap(),
-                                                    stroke.getLineJoin(),
-                                                    stroke.getMiterLimit());
-
-        if (stroke.isDashed()) {
-            pc2d = new com.sun.openpisces.Dasher(pc2d, stroke.getDashArray(),
-                                                       stroke.getDashPhase());
-        }
-        com.sun.prism.impl.shape.OpenPiscesPrismUtils.feedConsumer(
-                s.getPathIterator(null), pc2d);
-
-        return p2d;
+        // Default to DoubleMarlin
+        return DMarlinRasterizer.createCenteredStrokedShape(s, stroke);
     }
 
     /**
