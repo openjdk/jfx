@@ -53,7 +53,7 @@ public class FXCanvasScaledTest {
     static Display display;
 
     /* Base size, so that with a scaling of 125% there are different results for Math.round and Math.ceil */
-    final static int TAGET_BASE_SIZE = 101;
+    final static int TARGET_BASE_SIZE = 101;
 
     @Test(timeout = 10000)
     public void testScale() throws Throwable {
@@ -80,7 +80,7 @@ public class FXCanvasScaledTest {
                         display.asyncExec(() -> canvas.setBounds(0, 0, 201, 201));
                         break;
                     case 1:
-                        display.asyncExec(() -> canvas.setBounds(0, 0, TAGET_BASE_SIZE, TAGET_BASE_SIZE));
+                        display.asyncExec(() -> canvas.setBounds(0, 0, TARGET_BASE_SIZE, TARGET_BASE_SIZE));
                         break;
                     case 2:
                         t.cancel();

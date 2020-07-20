@@ -60,9 +60,9 @@ public class JFXPanelScaledTest {
     static int cnt;
 
     /* Base size, so that with a scaling of 125% there are different results for Math.round and Math.ceil */
-    final static int TAGET_BASE_SIZE = 101;
+    final static int TARGET_BASE_SIZE = 101;
 
-    final static int TARGET_SCALED_SIZE = (int) Math.ceil(TAGET_BASE_SIZE *1.25);
+    final static int TARGET_SCALED_SIZE = (int) Math.ceil(TARGET_BASE_SIZE *1.25);
 
     @BeforeClass
     public static void setupOnce() throws Exception {
@@ -133,7 +133,7 @@ public class JFXPanelScaledTest {
                     jfxPanel.setSize(new Dimension(201, 201));
                     break;
                 case 1:
-                    jfxPanel.setSize(new Dimension(TAGET_BASE_SIZE, TAGET_BASE_SIZE));
+                    jfxPanel.setSize(new Dimension(TARGET_BASE_SIZE, TARGET_BASE_SIZE));
                     break;
                 case 2:
                     t.stop();
