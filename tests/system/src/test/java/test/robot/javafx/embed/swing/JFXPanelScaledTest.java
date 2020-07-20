@@ -28,6 +28,7 @@ package test.robot.javafx.embed.swing;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 import static test.util.Util.TIMEOUT;
 
 import java.awt.Color;
@@ -40,6 +41,7 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
+import com.sun.javafx.PlatformUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -66,6 +68,8 @@ public class JFXPanelScaledTest {
 
     @BeforeClass
     public static void setupOnce() throws Exception {
+        assumeTrue(PlatformUtil.isWindows());
+
         System.setProperty("sun.java2d.uiScale.enabled", "true");
         System.setProperty("sun.java2d.uiScale", "125%");
         System.setProperty("glass.win.uiScale", "1.25");
