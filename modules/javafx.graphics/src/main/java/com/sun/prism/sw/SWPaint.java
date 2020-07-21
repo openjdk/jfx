@@ -286,6 +286,7 @@ final class SWPaint {
         }
 
         paintTx.setTransform(tx);
+        paintTx.deriveWithConcatenation(ip.getPatternTransformNoClone());
         if (ip.isProportional()) {
             paintTx.deriveWithConcatenation(width / image.getWidth() * ip.getWidth(), 0,
                     0, height / image.getHeight() * ip.getHeight(),
