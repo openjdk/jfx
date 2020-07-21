@@ -89,6 +89,8 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
 bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, ColorSpace colorSpace, RenderObject* object)
 {
     GraphicsContext& maskImageContext = maskerData->maskImage->context();
+    auto deviceScaleFactor = document().deviceScaleFactor();
+    maskImageContext.applyDeviceScaleFactor(deviceScaleFactor);
 
     // Eventually adjust the mask image context according to the target objectBoundingBox.
     AffineTransform maskContentTransformation;

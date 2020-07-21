@@ -528,44 +528,38 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, 0, 0);
                     render(g, shadow, paint, null, node);
-                } else if(state.getClipMaskImageNoClone() != null) {
-                    Rectangle rect = new Rectangle((int) x, (int) y, (int) w, (int) h);
-                    Rectangle transformedRect = new Rectangle();
-                    state.getTransformNoClone().transform(rect, transformedRect);
+                } else if (state.getClipMaskImageNoClone() != null) {
+                    Rectangle clipRectangle = getClipRectNoClone();
                     RTTexture paintRtTexture = g.getResourceFactory().createRTTexture(
-                            transformedRect.width, transformedRect.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                            clipRectangle.width, clipRectangle.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                     Graphics g1 = paintRtTexture.createGraphics();
                     g1.setPaint(paint);
-                    g1.setTransform(PrismGraphicsManager.getPixelScaleTransform());
-                    g1.fillRect(0, 0, paintRtTexture.getContentWidth(), paintRtTexture.getContentHeight());
+                    g1.fillRect(0, 0, clipRectangle.width, clipRectangle.height);
 
                     RTImage maskImage = (RTImage) (state.getClipMaskImageNoClone());
                     Image nativeMaskImage = Image.fromByteBgraPreData(maskImage.getPixelBuffer(), maskImage.getWidth(),
                             maskImage.getHeight(), 0, maskImage.getPixelScale());
-                    Texture maskTexture = g.getResourceFactory().createTexture(nativeMaskImage, Texture.Usage.STATIC,
-                            Texture.WrapMode.CLAMP_NOT_NEEDED);
-                    RTTexture maskRtTexture = g.getResourceFactory().createRTTexture(nativeMaskImage.getWidth(),
-                            nativeMaskImage.getHeight(), Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    Texture maskTexture = g.getResourceFactory().createTexture(PixelFormat.BYTE_BGRA_PRE,
+                            Texture.Usage.STATIC, Texture.WrapMode.CLAMP_NOT_NEEDED,
+                            nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+                    maskTexture.update(nativeMaskImage, 0, 0, nativeMaskImage.getWidth(),
+                            nativeMaskImage.getHeight());
+                    RTTexture maskRtTexture = g.getResourceFactory().createRTTexture(clipRectangle.width,
+                            clipRectangle.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                     Graphics g2 = maskRtTexture.createGraphics();
-                    g2.setTransform(PrismGraphicsManager.getPixelScaleTransform());
-                    g2.drawTexture(maskTexture, 0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+                    g2.drawTexture(maskTexture, 0, 0, clipRectangle.width, clipRectangle.height,
+                            0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
                     maskTexture.dispose();
-                    if(g instanceof MaskTextureGraphics && !(g instanceof PrinterGraphics)) {
-                        MaskTextureGraphics mg = (MaskTextureGraphics) (g);
-                        mg.drawPixelsMasked(paintRtTexture, maskRtTexture, transformedRect.x, transformedRect.y,
-                                transformedRect.width, transformedRect.height, 0, 0, 0, 0);
-                    } else {
-                        FilterContext filterContext = getFilterContext(g);
-                        PrDrawable imagePrDrawable = PrDrawable.create(filterContext, paintRtTexture);
-                        PrDrawable maskPrDrawable = PrDrawable.create(filterContext, maskRtTexture);
-                        Blend blend = new Blend(Blend.Mode.SRC_IN,
-                                new PassThrough(maskPrDrawable, transformedRect.width, transformedRect.height),
-                                new PassThrough(imagePrDrawable, transformedRect.width, transformedRect.height));
-                        Affine3D tx = new Affine3D(g.getTransformNoClone());
-                        g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-                        PrEffectHelper.render(blend, g, transformedRect.x, transformedRect.y, null);
-                        g.setTransform(tx);
-                    }
+                    FilterContext filterContext = getFilterContext(g);
+                    PrDrawable imagePrDrawable = PrDrawable.create(filterContext, paintRtTexture);
+                    PrDrawable maskPrDrawable = PrDrawable.create(filterContext, maskRtTexture);
+                    Blend blend = new Blend(Blend.Mode.SRC_IN,
+                            new PassThrough(maskPrDrawable, nativeMaskImage.getWidth(), nativeMaskImage.getHeight()),
+                            new PassThrough(imagePrDrawable, clipRectangle.width, clipRectangle.height));
+                    Affine3D tx = new Affine3D(g.getTransformNoClone());
+                    g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+                    PrEffectHelper.render(blend, g, clipRectangle.x, clipRectangle.y, null);
+                    g.setTransform(tx);
                     paintRtTexture.dispose();
                     maskRtTexture.dispose();
                 } else {
