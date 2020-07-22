@@ -231,8 +231,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
             {
                 return false;
             }
-            scaledWidth = Math.round(scaledWidth * texScaleFactorX);
-            scaledHeight = Math.round(scaledHeight * texScaleFactorY);
+            scaledWidth = (int) Math.ceil(scaledWidth * texScaleFactorX);
+            scaledHeight = (int) Math.ceil(scaledHeight * texScaleFactorY);
 
             dest.rewind();
             texBits.rewind();

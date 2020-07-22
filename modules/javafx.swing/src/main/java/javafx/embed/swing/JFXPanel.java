@@ -687,8 +687,8 @@ public class JFXPanel extends JComponent {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;
                 // Transform old size to the new coordinate space.
-                int oldW = (int)Math.round(oldIm.getWidth() * ratioX);
-                int oldH = (int)Math.round(oldIm.getHeight() * ratioY);
+                int oldW = (int)Math.ceil(oldIm.getWidth() * ratioX);
+                int oldH = (int)Math.ceil(oldIm.getHeight() * ratioY);
 
                 Graphics g = pixelsIm.getGraphics();
                 try {
@@ -930,6 +930,11 @@ public class JFXPanel extends JComponent {
 
     private void invokeOnClientEDT(Runnable r) {
         jfxPanelIOP.postEvent(this, new InvocationEvent(this, r));
+    }
+
+    // Package scope method for testing
+    final BufferedImage test_getPixelsIm() {
+        return pixelsIm;
     }
 
     private class HostContainer implements HostInterface {
