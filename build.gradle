@@ -453,6 +453,10 @@ defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 
+// Specifies whether to enable the Maven publishing tasks
+defineProperty("MAVEN_PUBLISH", "false")
+ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
+
 // Defines the compiler warning levels to use. If empty, then no warnings are generated. If
 // not empty, then the expected syntax is as a space or comma separated list of names, such
 // as defined in the javac documentation.
@@ -553,7 +557,7 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}")
+defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}") : "")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -1337,6 +1341,7 @@ logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
+logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
 logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
 
@@ -1541,6 +1546,10 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 }
 
 void addMavenPublication(Project project, List<String> projectDependencies) {
+    if (!IS_MAVEN_PUBLISH) {
+        return
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -2051,7 +2060,7 @@ project(":graphics") {
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
-    project.ext.mavenPublish = true
+    project.ext.mavenPublish = IS_MAVEN_PUBLISH
 
     getConfigurations().create("antlr");
 
