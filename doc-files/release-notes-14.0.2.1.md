@@ -12,12 +12,12 @@ the [JavaFX 14.0.1 Release Notes](https://github.com/openjdk/jfx/blob/jfx14/doc-
 
 Issue key|Summary|Subcomponent
 ---------|-------|------------
-[JDK-8249657](https://bugs.openjdk.java.net/browse/JDK-8249657) | Windows "User Objects" leakage with WebView | web
-[JDK-8249706](https://bugs.openjdk.java.net/browse/JDK-8249706) | Update libxml2 to version 2.9.10 | web
-[JDK-8249707](https://bugs.openjdk.java.net/browse/JDK-8249707) | Update libjpeg to version 9d | graphics
-[JDK-8249708](https://bugs.openjdk.java.net/browse/JDK-8249708) | [macos 10.15] JavaFX Application hangs on video play on Catalina | media
-[JDK-8249709](https://bugs.openjdk.java.net/browse/JDK-8249709) | [macos 10.15] JavaFX Media hangs on some video files on Catalina | media
-[JDK-8249710](https://bugs.openjdk.java.net/browse/JDK-8249710) | [macos10.15] Long startup delay playing media over https on Catalina | media
+[JDK-8244579](https://bugs.openjdk.java.net/browse/JDK-8249657) | Windows "User Objects" leakage with WebView | web
+[JDK-8237889](https://bugs.openjdk.java.net/browse/JDK-8249706) | Update libxml2 to version 2.9.10 | web
+[JDK-8239107](https://bugs.openjdk.java.net/browse/JDK-8249707) | Update libjpeg to version 9d | graphics
+[JDK-8236832](https://bugs.openjdk.java.net/browse/JDK-8249708) | [macos 10.15] JavaFX Application hangs on video play on Catalina | media
+[JDK-8240694](https://bugs.openjdk.java.net/browse/JDK-8249709) | [macos 10.15] JavaFX Media hangs on some video files on Catalina | media
+[JDK-8241629](https://bugs.openjdk.java.net/browse/JDK-8249710) | [macos10.15] Long startup delay playing media over https on Catalina | media
 
 
 ## List of Security fixes
