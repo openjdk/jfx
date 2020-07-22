@@ -634,8 +634,8 @@ public class FXCanvas extends Canvas {
             height = lastHeight;
             buffer = lastPixelsBuf;
         }
-        width = (int)Math.round(width * scaleFactor);
-        height = (int)Math.round(height * scaleFactor);
+        width = (int)Math.ceil(width * scaleFactor);
+        height = (int)Math.ceil(height * scaleFactor);
 
         // Consider optimizing this
         ImageData imageData = null;
@@ -1053,8 +1053,8 @@ public class FXCanvas extends Canvas {
         if ((pWidth <= 0) || (pHeight <= 0)) {
             pixelsBuf = null;
         } else {
-            pixelsBuf = IntBuffer.allocate((int)Math.round(pWidth * newScaleFactor) *
-                                           (int)Math.round(pHeight * newScaleFactor));
+            pixelsBuf = IntBuffer.allocate((int)Math.ceil(pWidth * newScaleFactor) *
+                                           (int)Math.ceil(pHeight * newScaleFactor));
             // The bg color may show through on resize. See RT-34380.
             RGB rgb = getBackground().getRGB();
             Arrays.fill(pixelsBuf.array(), rgb.red << 16 | rgb.green << 8 | rgb.blue);
