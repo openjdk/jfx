@@ -2060,7 +2060,6 @@ project(":graphics") {
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
-    project.ext.mavenPublish = IS_MAVEN_PUBLISH
 
     getConfigurations().create("antlr");
 
