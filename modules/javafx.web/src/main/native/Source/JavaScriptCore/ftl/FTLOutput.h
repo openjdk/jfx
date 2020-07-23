@@ -39,6 +39,7 @@
 #include "FTLAbbreviatedTypes.h"
 #include "FTLAbstractHeapRepository.h"
 #include "FTLCommonValues.h"
+#include "FTLSelectPredictability.h"
 #include "FTLState.h"
 #include "FTLSwitchCase.h"
 #include "FTLTypedPointer.h"
@@ -104,14 +105,14 @@ public:
     LValue constBool(bool value);
     LValue constInt32(int32_t value);
 
-    LValue weakPointer(DFG::Graph& graph, JSCell* cell)
+    LValue alreadyRegisteredWeakPointer(DFG::Graph& graph, JSCell* cell)
     {
         ASSERT(graph.m_plan.weakReferences().contains(cell));
 
         return constIntPtr(bitwise_cast<intptr_t>(cell));
     }
 
-    LValue weakPointer(DFG::FrozenValue* value)
+    LValue alreadyRegisteredFrozenPointer(DFG::FrozenValue* value)
     {
         RELEASE_ASSERT(value->value().isCell());
 
@@ -188,6 +189,7 @@ public:
     LValue doubleLog(LValue);
 
     LValue doubleToInt(LValue);
+    LValue doubleToInt64(LValue);
     LValue doubleToUInt(LValue);
 
     LValue signExt32To64(LValue);
@@ -364,7 +366,7 @@ public:
     LValue testIsZeroPtr(LValue value, LValue mask) { return isNull(bitAnd(value, mask)); }
     LValue testNonZeroPtr(LValue value, LValue mask) { return notNull(bitAnd(value, mask)); }
 
-    LValue select(LValue value, LValue taken, LValue notTaken);
+    LValue select(LValue value, LValue taken, LValue notTaken, SelectPredictability = SelectPredictability::NotPredictable);
 
     // These are relaxed atomics by default. Use AbstractHeapRepository::decorateFencedAccess() with a
     // non-null heap to make them seq_cst fenced.
@@ -391,6 +393,7 @@ public:
     template<typename Function, typename... Args>
     LValue callWithoutSideEffects(B3::Type type, Function function, LValue arg1, Args... args)
     {
+        static_assert(!std::is_same<Function, LValue>::value);
         return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), B3::Effects::none(),
             constIntPtr(tagCFunctionPtr<void*>(function, B3CCallPtrTag)), arg1, args...);
     }

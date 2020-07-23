@@ -27,8 +27,8 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "FormattingContext.h"
 #include "IntPointHash.h"
-#include "LayoutBox.h"
 #include <wtf/HashMap.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
@@ -36,6 +36,7 @@
 
 namespace WebCore {
 namespace Layout {
+class Box;
 
 class TableGrid {
     WTF_MAKE_ISO_ALLOCATED(TableGrid);
@@ -45,6 +46,13 @@ public:
     void appendCell(const Box&);
     void insertCell(const Box&, const Box& before);
     void removeCell(const Box&);
+
+    void setHorizontalSpacing(LayoutUnit horizontalSpacing) { m_horizontalSpacing = horizontalSpacing; }
+    LayoutUnit horizontalSpacing() const { return m_horizontalSpacing; }
+    LayoutUnit totalHorizontalSpacing() const { return (columnsContext().columns().size() + 1) * horizontalSpacing(); }
+
+    void setVerticalSpacing(LayoutUnit verticalSpacing) { m_verticalSpacing = verticalSpacing; }
+    LayoutUnit verticalSpacing() const { return m_verticalSpacing; }
 
     using SlotPosition = IntPoint;
 
@@ -68,22 +76,26 @@ public:
         void setWidthConstraints(FormattingContext::IntrinsicWidthConstraints);
         FormattingContext::IntrinsicWidthConstraints widthConstraints() const;
 
+        void setLogicalLeft(LayoutUnit);
+        LayoutUnit logicalLeft() const;
+        LayoutUnit logicalRight() const { return logicalLeft() + logicalWidth(); }
         void setLogicalWidth(LayoutUnit);
         LayoutUnit logicalWidth() const;
 
-        void setLogicalLeft(LayoutUnit);
-        LayoutUnit logicalLeft() const;
+        bool hasFixedWidth() const;
 
-        LayoutUnit logicalRight() const { return logicalLeft() + logicalWidth(); }
+        const Box* columnBox() const { return m_columnBox.get(); }
 
     private:
         friend class ColumnsContext;
-        Column() = default;
+        Column(const Box* columnBox);
 
         FormattingContext::IntrinsicWidthConstraints m_widthConstraints;
         LayoutUnit m_computedLogicalWidth;
         LayoutUnit m_computedLogicalLeft;
-#ifndef NDEBUG
+        WeakPtr<const Box> m_columnBox;
+
+#if ASSERT_ENABLED
         bool m_hasWidthConstraints { false };
         bool m_hasComputedWidth { false };
         bool m_hasComputedLeft { false };
@@ -95,20 +107,24 @@ public:
         using ColumnList = Vector<Column>;
         ColumnList& columns() { return m_columns; }
         const ColumnList& columns() const { return m_columns; }
+        void addColumn(const Box* columnBox = nullptr);
 
-        enum class WidthConstraintsType { Minimum, Maximum };
-        void useAsLogicalWidth(WidthConstraintsType);
+        LayoutUnit logicalWidth() const { return columns().last().logicalRight() - columns().first().logicalLeft(); }
 
     private:
         friend class TableGrid;
-        void addColumn();
 
         ColumnList m_columns;
     };
+    const ColumnsContext& columnsContext() const { return m_columnsContext; }
     ColumnsContext& columnsContext() { return m_columnsContext; }
 
     struct Row {
     public:
+        Row(const Box&);
+
+        const Box& box() const { return m_layoutBox; }
+
         void setLogicalTop(LayoutUnit logicalTop) { m_logicalTop = logicalTop; }
         LayoutUnit logicalTop() const { return m_logicalTop; }
 
@@ -120,6 +136,7 @@ public:
     private:
         LayoutUnit m_logicalTop;
         LayoutUnit m_logicalHeight;
+        const Box& m_layoutBox;
     };
     using RowList = WTF::Vector<Row>;
     RowList& rows() { return m_rows; }
@@ -134,7 +151,8 @@ public:
     };
     SlotInfo* slot(SlotPosition);
 
-    FormattingContext::IntrinsicWidthConstraints widthConstraints() const;
+    bool hasComputedWidthConstraints() const { return m_intrinsicWidthConstraints.hasValue(); }
+    FormattingContext::IntrinsicWidthConstraints widthConstraints();
 
 private:
     using SlotMap = WTF::HashMap<SlotPosition, std::unique_ptr<SlotInfo>>;
@@ -143,6 +161,9 @@ private:
     CellList m_cellList;
     ColumnsContext m_columnsContext;
     RowList m_rows;
+    LayoutUnit m_horizontalSpacing;
+    LayoutUnit m_verticalSpacing;
+    Optional<FormattingContext::IntrinsicWidthConstraints> m_intrinsicWidthConstraints;
 };
 
 }

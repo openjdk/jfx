@@ -45,7 +45,7 @@ namespace WTF {
 typedef Vector<char, 512> CharBuffer;
 typedef Vector<UChar, 512> UCharBuffer;
 
-static const unsigned invalidPortNumber = 0xFFFF;
+static constexpr unsigned invalidPortNumber = 0xFFFF;
 
 // Copies the source to the destination, assuming all the source characters are
 // ASCII. The destination buffer must be large enough. Null characters are allowed
@@ -378,6 +378,12 @@ bool URL::setProtocol(const String& s)
         return true;
     }
 
+    if ((m_passwordEnd != m_userStart || port()) && *canonicalized == "file")
+        return true;
+
+    if (isLocalFile() && host().isEmpty())
+        return true;
+
     URLParser parser(makeString(*canonicalized, m_string.substring(m_schemeEnd)));
     *this = parser.result();
     return true;
@@ -466,6 +472,15 @@ void URL::setPort(unsigned short i)
 
     URLParser parser(makeString(StringView(m_string).left(portStart), (colonNeeded ? ":" : ""), static_cast<unsigned>(i), StringView(m_string).substring(m_hostEnd + m_portLength)));
     *this = parser.result();
+}
+
+void URL::removeHostAndPort()
+{
+    if (!m_isValid)
+        return;
+    if (!host().isEmpty())
+        setHost({ });
+    removePort();
 }
 
 void URL::setHostAndPort(const String& hostAndPort)

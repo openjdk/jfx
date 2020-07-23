@@ -39,7 +39,7 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackList);
 
-TextTrackList::TextTrackList(HTMLMediaElement* element, ScriptExecutionContext* context)
+TextTrackList::TextTrackList(WeakPtr<HTMLMediaElement> element, ScriptExecutionContext* context)
     : TrackListBase(element, context)
 {
 }
@@ -266,11 +266,6 @@ bool TextTrackList::contains(TrackBase& track) const
 EventTargetInterface TextTrackList::eventTargetInterface() const
 {
     return TextTrackListEventTargetInterfaceType;
-}
-
-const char* TextTrackList::activeDOMObjectName() const
-{
-    return "TextTrackList";
 }
 
 } // namespace WebCore

@@ -77,13 +77,14 @@ RoundedRect computeRoundedRectForBoxShape(CSSBoxType box, const RenderBox& rende
     }
     case CSSBoxType::PaddingBox:
         return style.getRoundedInnerBorderFor(renderer.borderBoxRect());
+    // fill-box compute to content-box for HTML elements.
+    case CSSBoxType::FillBox:
     case CSSBoxType::ContentBox:
         return style.getRoundedInnerBorderFor(renderer.borderBoxRect(),
             renderer.paddingTop() + renderer.borderTop(), renderer.paddingBottom() + renderer.borderBottom(),
             renderer.paddingLeft() + renderer.borderLeft(), renderer.paddingRight() + renderer.borderRight());
-    // fill, stroke, view-box compute to border-box for HTML elements.
+    // stroke-box, view-box compute to border-box for HTML elements.
     case CSSBoxType::BorderBox:
-    case CSSBoxType::FillBox:
     case CSSBoxType::StrokeBox:
     case CSSBoxType::ViewBox:
     case CSSBoxType::BoxMissing:
@@ -158,9 +159,9 @@ LineSegment BoxShape::getExcludedInterval(LayoutUnit logicalTop, LayoutUnit logi
 
 void BoxShape::buildDisplayPaths(DisplayPaths& paths) const
 {
-    paths.shape.addRoundedRect(m_bounds, Path::PreferBezierRoundedRect);
+    paths.shape.addRoundedRect(m_bounds, Path::RoundedRectStrategy::PreferBezier);
     if (shapeMargin())
-        paths.marginShape.addRoundedRect(shapeMarginBounds(), Path::PreferBezierRoundedRect);
+        paths.marginShape.addRoundedRect(shapeMarginBounds(), Path::RoundedRectStrategy::PreferBezier);
 }
 
 } // namespace WebCore

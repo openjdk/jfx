@@ -73,6 +73,8 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
 
 COMPILE_ASSERT(sizeof(StyleRareInheritedData) <= sizeof(GreaterThanOrSameSizeAsStyleRareInheritedData), StyleRareInheritedData_should_bit_pack);
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
+
 StyleRareInheritedData::StyleRareInheritedData()
     : listStyleImage(RenderStyle::initialListStyleImage())
     , textStrokeWidth(RenderStyle::initialTextStrokeWidth())
@@ -102,10 +104,8 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textIndentLine(RenderStyle::initialTextIndentLine())
     , textIndentType(RenderStyle::initialTextIndentType())
 #endif
-    , lineBoxContain(RenderStyle::initialLineBoxContain())
-#if ENABLE(CSS_IMAGE_ORIENTATION)
+    , lineBoxContain(static_cast<unsigned>(RenderStyle::initialLineBoxContain().toRaw()))
     , imageOrientation(RenderStyle::initialImageOrientation())
-#endif
     , imageRendering(static_cast<unsigned>(RenderStyle::initialImageRendering()))
     , lineSnap(static_cast<unsigned>(RenderStyle::initialLineSnap()))
     , lineAlign(static_cast<unsigned>(RenderStyle::initialLineAlign()))
@@ -201,9 +201,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , textIndentType(o.textIndentType)
 #endif
     , lineBoxContain(o.lineBoxContain)
-#if ENABLE(CSS_IMAGE_ORIENTATION)
     , imageOrientation(o.imageOrientation)
-#endif
     , imageRendering(o.imageRendering)
     , lineSnap(o.lineSnap)
     , lineAlign(o.lineAlign)
@@ -331,9 +329,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && appleColorFilter == o.appleColorFilter
         && tabSize == o.tabSize
         && lineGrid == o.lineGrid
-#if ENABLE(CSS_IMAGE_ORIENTATION)
         && imageOrientation == o.imageOrientation
-#endif
         && imageRendering == o.imageRendering
 #if ENABLE(CSS_IMAGE_RESOLUTION)
         && imageResolutionSource == o.imageResolutionSource

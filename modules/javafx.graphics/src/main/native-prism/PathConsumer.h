@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,21 +32,26 @@ extern "C" {
 
 #include <jni.h>
 
+// Pisces error codes
+#define ERROR_NONE   0
+#define ERROR_OOM    1
+#define ERROR_AIOOBE 2
+
 typedef struct _PathConsumer PathConsumer;
 
-typedef void MoveToFunc(PathConsumer *pConsumer,
+typedef jint MoveToFunc(PathConsumer *pConsumer,
                         jfloat x0, jfloat y0);
-typedef void LineToFunc(PathConsumer *pConsumer,
+typedef jint LineToFunc(PathConsumer *pConsumer,
                         jfloat x1, jfloat y1);
-typedef void QuadToFunc(PathConsumer *pConsumer,
+typedef jint QuadToFunc(PathConsumer *pConsumer,
                         jfloat xc, jfloat yc,
                         jfloat x1, jfloat y1);
-typedef void CurveToFunc(PathConsumer *pConsumer,
+typedef jint CurveToFunc(PathConsumer *pConsumer,
                          jfloat xc0, jfloat yc0,
                          jfloat xc1, jfloat yc1,
                          jfloat x1, jfloat y1);
-typedef void ClosePathFunc(PathConsumer *pConsumer);
-typedef void PathDoneFunc(PathConsumer *pConsumer);
+typedef jint ClosePathFunc(PathConsumer *pConsumer);
+typedef jint PathDoneFunc(PathConsumer *pConsumer);
 
 struct _PathConsumer {
     MoveToFunc       *moveTo;

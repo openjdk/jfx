@@ -26,7 +26,7 @@
 
 #include "BitmapTextureGL.h"
 #include "BitmapTexturePool.h"
-#include "Extensions3D.h"
+#include "ExtensionsGL.h"
 #include "FilterOperations.h"
 #include "FloatQuad.h"
 #include "GLContext.h"
@@ -319,21 +319,21 @@ static TextureMapperShaderProgram::Options optionsForFilterType(FilterOperation:
 {
     switch (type) {
     case FilterOperation::GRAYSCALE:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::GrayscaleFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::GrayscaleFilter;
     case FilterOperation::SEPIA:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::SepiaFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::SepiaFilter;
     case FilterOperation::SATURATE:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::SaturateFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::SaturateFilter;
     case FilterOperation::HUE_ROTATE:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::HueRotateFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::HueRotateFilter;
     case FilterOperation::INVERT:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::InvertFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::InvertFilter;
     case FilterOperation::BRIGHTNESS:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::BrightnessFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::BrightnessFilter;
     case FilterOperation::CONTRAST:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::ContrastFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::ContrastFilter;
     case FilterOperation::OPACITY:
-        return TextureMapperShaderProgram::Texture | TextureMapperShaderProgram::OpacityFilter;
+        return TextureMapperShaderProgram::TextureRGB | TextureMapperShaderProgram::OpacityFilter;
     case FilterOperation::BLUR:
         return TextureMapperShaderProgram::BlurFilter;
     case FilterOperation::DROP_SHADOW:
@@ -470,7 +470,7 @@ void TextureMapperGL::drawTexture(GLuint texture, Flags flags, const IntSize& te
         && exposedEdges == AllEdges
         && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
 
-    TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::Texture;
+    TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TextureRGB;
     if (useRect)
         options |= TextureMapperShaderProgram::Rect;
     if (opacity < 1)
@@ -502,6 +502,173 @@ void TextureMapperGL::drawTexture(GLuint texture, Flags flags, const IntSize& te
         prepareFilterProgram(program.get(), *filter.get(), data().filterInfo->pass, textureSize, filterContentTextureID);
 
     drawTexturedQuadWithProgram(program.get(), texture, flags, textureSize, targetRect, modelViewMatrix, opacity);
+}
+
+static void prepareTransformationMatrixWithFlags(TransformationMatrix& patternTransform, TextureMapperGL::Flags flags, const IntSize& size)
+{
+    if (flags & TextureMapperGL::ShouldRotateTexture90) {
+        patternTransform.rotate(-90);
+        patternTransform.translate(-1, 0);
+    }
+    if (flags & TextureMapperGL::ShouldRotateTexture180) {
+        patternTransform.rotate(180);
+        patternTransform.translate(-1, -1);
+    }
+    if (flags & TextureMapperGL::ShouldRotateTexture270) {
+        patternTransform.rotate(-270);
+        patternTransform.translate(0, -1);
+    }
+    if (flags & TextureMapperGL::ShouldFlipTexture)
+        patternTransform.flipY();
+    if (flags & TextureMapperGL::ShouldUseARBTextureRect)
+        patternTransform.scaleNonUniform(size.width(), size.height());
+    if (flags & TextureMapperGL::ShouldFlipTexture)
+        patternTransform.translate(0, -1);
+}
+
+void TextureMapperGL::drawTexturePlanarYUV(const std::array<GLuint, 3>& textures, const std::array<GLfloat, 9>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
+{
+    bool useRect = flags & ShouldUseARBTextureRect;
+    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
+        && exposedEdges == AllEdges
+        && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
+
+    TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TextureYUV;
+    if (useRect)
+        options |= TextureMapperShaderProgram::Rect;
+    if (opacity < 1)
+        options |= TextureMapperShaderProgram::Opacity;
+    if (useAntialiasing) {
+        options |= TextureMapperShaderProgram::Antialiasing;
+        flags |= ShouldAntialias;
+    }
+    if (wrapMode() == RepeatWrap && !m_contextAttributes.supportsNPOTTextures)
+        options |= TextureMapperShaderProgram::ManualRepeat;
+
+    RefPtr<FilterOperation> filter = data().filterInfo ? data().filterInfo->filter: 0;
+    GLuint filterContentTextureID = 0;
+
+    if (filter) {
+        if (data().filterInfo->contentTexture)
+            filterContentTextureID = toBitmapTextureGL(data().filterInfo->contentTexture.get())->id();
+        options |= optionsForFilterType(filter->type(), data().filterInfo->pass);
+        if (filter->affectsOpacity())
+            flags |= ShouldBlend;
+    }
+
+    if (useAntialiasing || opacity < 1)
+        flags |= ShouldBlend;
+
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
+
+    if (filter)
+        prepareFilterProgram(program.get(), *filter.get(), data().filterInfo->pass, textureSize, filterContentTextureID);
+
+    Vector<std::pair<GLuint, GLuint> > texturesAndSamplers = {
+        { textures[0], program->samplerYLocation() },
+        { textures[1], program->samplerULocation() },
+        { textures[2], program->samplerVLocation() }
+    };
+
+    glUseProgram(program->programID());
+    glUniformMatrix3fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
+    drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, textureSize, targetRect, modelViewMatrix, opacity);
+}
+
+void TextureMapperGL::drawTextureSemiPlanarYUV(const std::array<GLuint, 2>& textures, bool uvReversed, const std::array<GLfloat, 9>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
+{
+    bool useRect = flags & ShouldUseARBTextureRect;
+    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
+        && exposedEdges == AllEdges
+        && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
+
+    TextureMapperShaderProgram::Options options = uvReversed ?
+        TextureMapperShaderProgram::TextureNV21 : TextureMapperShaderProgram::TextureNV12;
+    if (useRect)
+        options |= TextureMapperShaderProgram::Rect;
+    if (opacity < 1)
+        options |= TextureMapperShaderProgram::Opacity;
+    if (useAntialiasing) {
+        options |= TextureMapperShaderProgram::Antialiasing;
+        flags |= ShouldAntialias;
+    }
+    if (wrapMode() == RepeatWrap && !m_contextAttributes.supportsNPOTTextures)
+        options |= TextureMapperShaderProgram::ManualRepeat;
+
+    RefPtr<FilterOperation> filter = data().filterInfo ? data().filterInfo->filter: 0;
+    GLuint filterContentTextureID = 0;
+
+    if (filter) {
+        if (data().filterInfo->contentTexture)
+            filterContentTextureID = toBitmapTextureGL(data().filterInfo->contentTexture.get())->id();
+        options |= optionsForFilterType(filter->type(), data().filterInfo->pass);
+        if (filter->affectsOpacity())
+            flags |= ShouldBlend;
+    }
+
+    if (useAntialiasing || opacity < 1)
+        flags |= ShouldBlend;
+
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
+
+    if (filter)
+        prepareFilterProgram(program.get(), *filter.get(), data().filterInfo->pass, textureSize, filterContentTextureID);
+
+    Vector<std::pair<GLuint, GLuint> > texturesAndSamplers = {
+        { textures[0], program->samplerYLocation() },
+        { textures[1], program->samplerULocation() }
+    };
+
+    glUseProgram(program->programID());
+    glUniformMatrix3fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
+    drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, textureSize, targetRect, modelViewMatrix, opacity);
+}
+
+void TextureMapperGL::drawTexturePackedYUV(GLuint texture, const std::array<GLfloat, 9>& yuvToRgbMatrix, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)
+{
+    bool useRect = flags & ShouldUseARBTextureRect;
+    bool useAntialiasing = m_enableEdgeDistanceAntialiasing
+        && exposedEdges == AllEdges
+        && !modelViewMatrix.mapQuad(targetRect).isRectilinear();
+
+    TextureMapperShaderProgram::Options options = TextureMapperShaderProgram::TexturePackedYUV;
+    if (useRect)
+        options |= TextureMapperShaderProgram::Rect;
+    if (opacity < 1)
+        options |= TextureMapperShaderProgram::Opacity;
+    if (useAntialiasing) {
+        options |= TextureMapperShaderProgram::Antialiasing;
+        flags |= ShouldAntialias;
+    }
+    if (wrapMode() == RepeatWrap && !m_contextAttributes.supportsNPOTTextures)
+        options |= TextureMapperShaderProgram::ManualRepeat;
+
+    RefPtr<FilterOperation> filter = data().filterInfo ? data().filterInfo->filter: 0;
+    GLuint filterContentTextureID = 0;
+
+    if (filter) {
+        if (data().filterInfo->contentTexture)
+            filterContentTextureID = toBitmapTextureGL(data().filterInfo->contentTexture.get())->id();
+        options |= optionsForFilterType(filter->type(), data().filterInfo->pass);
+        if (filter->affectsOpacity())
+            flags |= ShouldBlend;
+    }
+
+    if (useAntialiasing || opacity < 1)
+        flags |= ShouldBlend;
+
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(options);
+
+    if (filter)
+        prepareFilterProgram(program.get(), *filter.get(), data().filterInfo->pass, textureSize, filterContentTextureID);
+
+    Vector<std::pair<GLuint, GLuint> > texturesAndSamplers = {
+        { texture, program->samplerLocation() }
+    };
+
+    glUseProgram(program->programID());
+    glUniformMatrix3fv(program->yuvToRgbLocation(), 1, GL_FALSE, static_cast<const GLfloat *>(&yuvToRgbMatrix[0]));
+    drawTexturedQuadWithProgram(program.get(), texturesAndSamplers, flags, textureSize, targetRect, modelViewMatrix, opacity);
 }
 
 void TextureMapperGL::drawSolidColor(const FloatRect& rect, const TransformationMatrix& matrix, const Color& color, bool isBlendingAllowed)
@@ -554,7 +721,7 @@ void TextureMapperGL::drawEdgeTriangles(TextureMapperShaderProgram& program)
     };
 #undef SIDE_TRIANGLE_DATA
 
-    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GC3Dfloat) * 48, unitRectSideTriangles);
+    GLuint vbo = data().getStaticVBO(GL_ARRAY_BUFFER, sizeof(GCGLfloat) * 48, unitRectSideTriangles);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(program.vertexLocation(), 4, GL_FLOAT, false, 0, 0);
     glDrawArrays(GL_TRIANGLES, 0, 12);
@@ -601,37 +768,32 @@ void TextureMapperGL::draw(const FloatRect& rect, const TransformationMatrix& mo
     glEnable(GL_BLEND);
 }
 
-void TextureMapperGL::drawTexturedQuadWithProgram(TextureMapperShaderProgram& program, uint32_t texture, Flags flags, const IntSize& size, const FloatRect& rect, const TransformationMatrix& modelViewMatrix, float opacity)
+void TextureMapperGL::drawTexturedQuadWithProgram(TextureMapperShaderProgram& program, const Vector<std::pair<GLuint, GLuint> >& texturesAndSamplers, Flags flags, const IntSize& size, const FloatRect& rect, const TransformationMatrix& modelViewMatrix, float opacity)
 {
     glUseProgram(program.programID());
-    glActiveTexture(GL_TEXTURE0);
-    GLenum target = flags & ShouldUseARBTextureRect ? GLenum(GL_TEXTURE_RECTANGLE_ARB) : GLenum(GL_TEXTURE_2D);
-    glBindTexture(target, texture);
-    glUniform1i(program.samplerLocation(), 0);
-    if (wrapMode() == RepeatWrap && m_contextAttributes.supportsNPOTTextures) {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    bool repeatWrap = wrapMode() == RepeatWrap && m_contextAttributes.supportsNPOTTextures;
+    GLenum target;
+    if (flags & ShouldUseExternalOESTextureRect)
+        target = GLenum(GL_TEXTURE_EXTERNAL_OES);
+    else
+        target = flags & ShouldUseARBTextureRect ? GLenum(GL_TEXTURE_RECTANGLE_ARB) : GLenum(GL_TEXTURE_2D);
+
+    for (unsigned i = 0; i < texturesAndSamplers.size(); ++i) {
+        auto& textureAndSampler = texturesAndSamplers[i];
+
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(target, textureAndSampler.first);
+        glUniform1i(textureAndSampler.second, i);
+
+        if (repeatWrap) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        }
     }
 
     TransformationMatrix patternTransform = this->patternTransform();
-    if (flags & ShouldRotateTexture90) {
-        patternTransform.rotate(-90);
-        patternTransform.translate(-1, 0);
-    }
-    if (flags & ShouldRotateTexture180) {
-        patternTransform.rotate(180);
-        patternTransform.translate(-1, -1);
-    }
-    if (flags & ShouldRotateTexture270) {
-        patternTransform.rotate(-270);
-        patternTransform.translate(0, -1);
-    }
-    if (flags & ShouldFlipTexture)
-        patternTransform.flipY();
-    if (flags & ShouldUseARBTextureRect)
-        patternTransform.scaleNonUniform(size.width(), size.height());
-    if (flags & ShouldFlipTexture)
-        patternTransform.translate(0, -1);
+    prepareTransformationMatrixWithFlags(patternTransform, flags, size);
 
     program.setMatrix(program.textureSpaceMatrixLocation(), patternTransform);
     program.setMatrix(program.textureColorSpaceMatrixLocation(), colorSpaceMatrixForFlags(flags));
@@ -641,8 +803,19 @@ void TextureMapperGL::drawTexturedQuadWithProgram(TextureMapperShaderProgram& pr
         flags |= ShouldBlend;
 
     draw(rect, modelViewMatrix, program, GL_TRIANGLE_FAN, flags);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    if (repeatWrap) {
+        for (auto& textureAndSampler : texturesAndSamplers) {
+            glBindTexture(target, textureAndSampler.first);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+    }
+}
+
+void TextureMapperGL::drawTexturedQuadWithProgram(TextureMapperShaderProgram& program, uint32_t texture, Flags flags, const IntSize& size, const FloatRect& rect, const TransformationMatrix& modelViewMatrix, float opacity)
+{
+    drawTexturedQuadWithProgram(program, { { texture, program.samplerLocation() } }, flags, size, rect, modelViewMatrix, opacity);
 }
 
 void TextureMapperGL::drawFiltered(const BitmapTexture& sampler, const BitmapTexture* contentTexture, const FilterOperation& filter, int pass)
@@ -791,6 +964,13 @@ Ref<BitmapTexture> TextureMapperGL::createTexture(GLint internalFormat)
 std::unique_ptr<TextureMapper> TextureMapper::platformCreateAccelerated()
 {
     return makeUnique<TextureMapperGL>();
+}
+
+void TextureMapperGL::drawTextureExternalOES(GLuint texture, Flags flags, const IntSize& size, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
+{
+    Ref<TextureMapperShaderProgram> program = data().getShaderProgram(TextureMapperShaderProgram::Option::TextureExternalOES);
+    drawTexturedQuadWithProgram(program.get(), { { texture, program->externalOESTextureLocation() } },
+        flags | TextureMapperGL::ShouldUseExternalOESTextureRect, size, targetRect, modelViewMatrix, opacity);
 }
 
 };

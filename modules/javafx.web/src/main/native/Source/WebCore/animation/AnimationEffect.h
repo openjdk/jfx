@@ -47,7 +47,7 @@
 
 namespace WebCore {
 
-class AnimationEffect : public RefCounted<AnimationEffect> {
+class AnimationEffect : public RefCounted<AnimationEffect>, public CanMakeWeakPtr<AnimationEffect> {
 public:
     virtual ~AnimationEffect();
 
@@ -60,11 +60,15 @@ public:
 
     virtual void apply(RenderStyle&) = 0;
     virtual void invalidate() = 0;
+    virtual void animationDidTick() = 0;
+    virtual void animationDidPlay() = 0;
     virtual void animationDidSeek() = 0;
+    virtual void animationWasCanceled() = 0;
     virtual void animationSuspensionStateDidChange(bool) = 0;
+    virtual void animationTimelineDidChange(AnimationTimeline*) = 0;
 
     WebAnimation* animation() const { return m_animation.get(); }
-    void setAnimation(WebAnimation* animation) { m_animation = makeWeakPtr(animation); }
+    virtual void setAnimation(WebAnimation* animation) { m_animation = makeWeakPtr(animation); }
 
     Seconds delay() const { return m_delay; }
     void setDelay(const Seconds&);
@@ -90,6 +94,11 @@ public:
     TimingFunction* timingFunction() const { return m_timingFunction.get(); }
     void setTimingFunction(const RefPtr<TimingFunction>&);
 
+    Seconds activeDuration() const { return m_activeDuration; }
+    Seconds endTime() const { return m_endTime; }
+
+    void updateStaticTimingProperties();
+
 protected:
     explicit AnimationEffect();
 
@@ -108,6 +117,8 @@ private:
     Seconds m_delay { 0_s };
     Seconds m_endDelay { 0_s };
     Seconds m_iterationDuration { 0_s };
+    Seconds m_activeDuration { 0_s };
+    Seconds m_endTime { 0_s };
 };
 
 } // namespace WebCore

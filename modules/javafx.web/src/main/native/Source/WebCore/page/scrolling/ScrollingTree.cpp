@@ -71,7 +71,7 @@ bool ScrollingTree::shouldHandleWheelEventSynchronously(const PlatformWheelEvent
         // Event regions are affected by page scale, so no need to map through scale.
         bool isSynchronousDispatchRegion = m_treeState.eventTrackingRegions.trackingTypeForPoint(names.wheelEvent, roundedPosition) == TrackingType::Synchronous
             || m_treeState.eventTrackingRegions.trackingTypeForPoint(names.mousewheelEvent, roundedPosition) == TrackingType::Synchronous;
-        LOG_WITH_STREAM(Scrolling, stream << "ScrollingTree::shouldHandleWheelEventSynchronously: wheelEvent at " << wheelEvent.position() << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
+        LOG_WITH_STREAM(Scrolling, stream << "\n\nScrollingTree::shouldHandleWheelEventSynchronously: wheelEvent " << wheelEvent << " mapped to content point " << position << ", in non-fast region " << isSynchronousDispatchRegion);
 
         if (isSynchronousDispatchRegion)
             return true;
@@ -140,6 +140,7 @@ void ScrollingTree::mainFrameViewportChangedViaDelegatedScrolling(const FloatPoi
 
 void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree> scrollingStateTree)
 {
+    SetForScope<bool> inCommitTreeState(m_inCommitTreeState, true);
     LockHolder locker(m_treeMutex);
 
     bool rootStateNodeChanged = scrollingStateTree->hasNewRootStateNode();
@@ -151,7 +152,8 @@ void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree> scrollin
         && (rootStateNodeChanged
             || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::EventTrackingRegion)
             || rootNode->hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer)
-            || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::AsyncFrameOrOverflowScrollingEnabled))) {
+            || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::AsyncFrameOrOverflowScrollingEnabled)
+            || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::IsMonitoringWheelEvents))) {
         LockHolder lock(m_treeStateMutex);
 
         if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer))
@@ -162,6 +164,9 @@ void ScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree> scrollin
 
         if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::AsyncFrameOrOverflowScrollingEnabled))
             m_asyncFrameOrOverflowScrollingEnabled = scrollingStateTree->rootStateNode()->asyncFrameOrOverflowScrollingEnabled();
+
+        if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateFrameScrollingNode::IsMonitoringWheelEvents))
+            m_isMonitoringWheelEvents = scrollingStateTree->rootStateNode()->isMonitoringWheelEvents();
     }
 
     // unvisitedNodes starts with all nodes in the map; we remove nodes as we visit them. At the end, it's the unvisited nodes.
@@ -240,13 +245,11 @@ void ScrollingTree::updateTreeFromStateNode(const ScrollingStateNode* stateNode,
     node->commitStateBeforeChildren(*stateNode);
 
     // Move all children into the orphanNodes map. Live ones will get added back as we recurse over children.
-    if (auto nodeChildren = node->children()) {
-        for (auto& childScrollingNode : *nodeChildren) {
-            childScrollingNode->setParent(nullptr);
-            orphanNodes.add(childScrollingNode->scrollingNodeID(), childScrollingNode.get());
-        }
-        nodeChildren->clear();
+    for (auto& childScrollingNode : node->children()) {
+        childScrollingNode->setParent(nullptr);
+        orphanNodes.add(childScrollingNode->scrollingNodeID(), childScrollingNode.ptr());
     }
+    node->removeAllChildren();
 
     // Now update the children if we have any.
     if (auto children = stateNode->children()) {
@@ -282,14 +285,12 @@ void ScrollingTree::applyLayerPositions()
     LOG(Scrolling, "ScrollingTree %p applyLayerPositions - done\n", this);
 }
 
-void ScrollingTree::applyLayerPositionsRecursive(ScrollingTreeNode& currNode)
+void ScrollingTree::applyLayerPositionsRecursive(ScrollingTreeNode& node)
 {
-    currNode.applyLayerPositions();
+    node.applyLayerPositions();
 
-    if (auto children = currNode.children()) {
-        for (auto& child : *children)
-            applyLayerPositionsRecursive(*child);
-    }
+    for (auto& child : node.children())
+        applyLayerPositionsRecursive(child.get());
 }
 
 ScrollingTreeNode* ScrollingTree::nodeForID(ScrollingNodeID nodeID) const
@@ -320,15 +321,12 @@ void ScrollingTree::notifyRelatedNodesRecursive(ScrollingTreeNode& node)
 {
     node.applyLayerPositions();
 
-    if (!node.children())
-        return;
-
-    for (auto& child : *node.children()) {
+    for (auto& child : node.children()) {
         // Never need to cross frame boundaries, since scroll layer adjustments are isolated to each document.
         if (is<ScrollingTreeFrameScrollingNode>(child))
             continue;
 
-        notifyRelatedNodesRecursive(*child);
+        notifyRelatedNodesRecursive(child.get());
     }
 }
 

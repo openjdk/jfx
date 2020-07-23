@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2004, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "Color.h"
 
 #include "AnimationUtilities.h"
+#include "ColorUtilities.h"
 #include "HashTools.h"
 #include <wtf/Assertions.h>
 #include <wtf/HexNumber.h>
@@ -36,17 +37,8 @@
 
 namespace WebCore {
 
-#if !COMPILER(MSVC)
-const RGBA32 Color::black;
-const RGBA32 Color::white;
-const RGBA32 Color::darkGray;
-const RGBA32 Color::gray;
-const RGBA32 Color::lightGray;
-const RGBA32 Color::transparent;
-#endif
-
-static const RGBA32 lightenedBlack = 0xFF545454;
-static const RGBA32 darkenedWhite = 0xFFABABAB;
+static constexpr SimpleColor lightenedBlack { 0xFF545454 };
+static constexpr SimpleColor darkenedWhite { 0xFFABABAB };
 
 static inline unsigned premultipliedChannel(unsigned c, unsigned a, bool ceiling = true)
 {
@@ -60,12 +52,12 @@ static inline unsigned unpremultipliedChannel(unsigned c, unsigned a)
 
 RGBA32 makeRGB(int r, int g, int b)
 {
-    return 0xFF000000 | std::max(0, std::min(r, 255)) << 16 | std::max(0, std::min(g, 255)) << 8 | std::max(0, std::min(b, 255));
+    return makeRGBA(r, g, b, 0xFF);
 }
 
 RGBA32 makeRGBA(int r, int g, int b, int a)
 {
-    return std::max(0, std::min(a, 255)) << 24 | std::max(0, std::min(r, 255)) << 16 | std::max(0, std::min(g, 255)) << 8 | std::max(0, std::min(b, 255));
+    return { static_cast<unsigned>(std::max(0, std::min(a, 0xFF)) << 24 | std::max(0, std::min(r, 0xFF)) << 16 | std::max(0, std::min(g, 0xFF)) << 8 | std::max(0, std::min(b, 0xFF))) };
 }
 
 RGBA32 makePremultipliedRGBA(int r, int g, int b, int a, bool ceiling)
@@ -86,53 +78,23 @@ static int colorFloatToRGBAByte(float f)
 
 RGBA32 makeRGBA32FromFloats(float r, float g, float b, float a)
 {
-    return colorFloatToRGBAByte(a) << 24 | colorFloatToRGBAByte(r) << 16 | colorFloatToRGBAByte(g) << 8 | colorFloatToRGBAByte(b);
+    return makeRGBA(colorFloatToRGBAByte(r), colorFloatToRGBAByte(g), colorFloatToRGBAByte(b), colorFloatToRGBAByte(a));
 }
 
 RGBA32 colorWithOverrideAlpha(RGBA32 color, float overrideAlpha)
 {
-    RGBA32 rgbOnly = color & 0x00FFFFFF;
-    RGBA32 rgba = rgbOnly | colorFloatToRGBAByte(overrideAlpha) << 24;
-    return rgba;
+    return { (color.value() & 0x00FFFFFF) | colorFloatToRGBAByte(overrideAlpha) << 24 };
 }
 
-static double calcHue(double temp1, double temp2, double hueVal)
+RGBA32 makeRGBAFromHSLA(float hue, float saturation, float lightness, float alpha)
 {
-    if (hueVal < 0.0)
-        hueVal += 6.0;
-    else if (hueVal >= 6.0)
-        hueVal -= 6.0;
-    if (hueVal < 1.0)
-        return temp1 + (temp2 - temp1) * hueVal;
-    if (hueVal < 3.0)
-        return temp2;
-    if (hueVal < 4.0)
-        return temp1 + (temp2 - temp1) * (4.0 - hueVal);
-    return temp1;
-}
-
-// Explanation of this algorithm can be found in the CSS Color 4 Module
-// specification at https://drafts.csswg.org/css-color-4/#hsl-to-rgb with
-// further explanation available at http://en.wikipedia.org/wiki/HSL_color_space
-
-// Hue is in the range of 0 to 6.0, the remainder are in the range 0 to 1.0
-// FIXME: Use HSLToSRGB().
-RGBA32 makeRGBAFromHSLA(double hue, double saturation, double lightness, double alpha)
-{
-    const double scaleFactor = nextafter(256.0, 0.0);
-
-    if (!saturation) {
-        int greyValue = static_cast<int>(lightness * scaleFactor);
-        return makeRGBA(greyValue, greyValue, greyValue, static_cast<int>(alpha * scaleFactor));
-    }
-
-    double temp2 = lightness <= 0.5 ? lightness * (1.0 + saturation) : lightness + saturation - lightness * saturation;
-    double temp1 = 2.0 * lightness - temp2;
-
-    return makeRGBA(static_cast<int>(calcHue(temp1, temp2, hue + 2.0) * scaleFactor),
-                    static_cast<int>(calcHue(temp1, temp2, hue) * scaleFactor),
-                    static_cast<int>(calcHue(temp1, temp2, hue - 2.0) * scaleFactor),
-                    static_cast<int>(alpha * scaleFactor));
+    const float scaleFactor = 255.0;
+    FloatComponents floatResult = HSLToSRGB({ hue, saturation, lightness, alpha });
+    return makeRGBA(
+        round(floatResult.components[0] * scaleFactor),
+        round(floatResult.components[1] * scaleFactor),
+        round(floatResult.components[2] * scaleFactor),
+        round(floatResult.components[3] * scaleFactor));
 }
 
 RGBA32 makeRGBAFromCMYKA(float c, float m, float y, float k, float a)
@@ -158,28 +120,28 @@ static inline bool parseHexColorInternal(const CharacterType* name, unsigned len
         value |= toASCIIHexValue(name[i]);
     }
     if (length == 6) {
-        rgb = 0xFF000000 | value;
+        rgb = { 0xFF000000 | value };
         return true;
     }
     if (length == 8) {
         // We parsed the values into RGBA order, but the RGBA32 type
         // expects them to be in ARGB order, so we right rotate eight bits.
-        rgb = value << 24 | value >> 8;
+        rgb = { value << 24 | value >> 8 };
         return true;
     }
     if (length == 4) {
         // #abcd converts to ddaabbcc in RGBA32.
-        rgb = (value & 0xF) << 28 | (value & 0xF) << 24
+        rgb = { (value & 0xF) << 28 | (value & 0xF) << 24
             | (value & 0xF000) << 8 | (value & 0xF000) << 4
             | (value & 0xF00) << 4 | (value & 0xF00)
-            | (value & 0xF0) | (value & 0xF0) >> 4;
+            | (value & 0xF0) | (value & 0xF0) >> 4 };
         return true;
     }
     // #abc converts to #aabbcc
-    rgb = 0xFF000000
+    rgb = { 0xFF000000
         | (value & 0xF00) << 12 | (value & 0xF00) << 8
         | (value & 0xF0) << 8 | (value & 0xF0) << 4
-        | (value & 0xF) << 4 | (value & 0xF);
+        | (value & 0xF) << 4 | (value & 0xF) };
     return true;
 }
 
@@ -196,7 +158,6 @@ bool Color::parseHexColor(const UChar* name, unsigned length, RGBA32& rgb)
 bool Color::parseHexColor(const String& name, RGBA32& rgb)
 {
     unsigned length = name.length();
-
     if (!length)
         return false;
     if (name.is8Bit())
@@ -263,26 +224,18 @@ Color::Color(const String& name)
             setRGB(color);
     } else {
         if (auto* foundColor = findNamedColor(name))
-            setRGB(foundColor->ARGBValue);
-        else
-            m_colorData.rgbaAndFlags = invalidRGBAColor;
+            setRGB({ foundColor->ARGBValue });
     }
 }
 
 Color::Color(const char* name)
 {
-    RGBA32 color;
-    bool valid;
-    if (name[0] == '#')
-        valid = parseHexColor((String)&name[1], color);
-    else {
-        const NamedColor* foundColor = findColor(name, strlen(name));
-        color = foundColor ? foundColor->ARGBValue : 0;
-        valid = foundColor;
-    }
-
-    if (valid)
-        setRGB(color);
+    if (name[0] == '#') {
+        SimpleColor color;
+        if (parseHexColor(reinterpret_cast<const LChar*>(&name[1]), std::strlen(&name[1]), color))
+            setRGB(color);
+    } else if (auto* foundColor = findColor(name, strlen(name)))
+        setRGB({ foundColor->ARGBValue });
 }
 
 Color::Color(const Color& other)
@@ -336,60 +289,67 @@ Color& Color::operator=(Color&& other)
     return *this;
 }
 
+String SimpleColor::serializationForHTML() const
+{
+    if (isOpaque())
+        return makeString('#', hex(redComponent(), 2, Lowercase), hex(greenComponent(), 2, Lowercase), hex(blueComponent(), 2, Lowercase));
+    return serializationForCSS();
+}
+
 String Color::serialized() const
 {
     if (isExtended())
         return asExtended().cssText();
+    return rgb().serializationForHTML();
+}
 
-    if (isOpaque()) {
-        StringBuilder builder;
-        builder.reserveCapacity(7);
-        builder.append('#');
-        appendByteAsHex(red(), builder, Lowercase);
-        appendByteAsHex(green(), builder, Lowercase);
-        appendByteAsHex(blue(), builder, Lowercase);
-        return builder.toString();
+static char decimalDigit(unsigned number)
+{
+    ASSERT(number < 10);
+    return '0' + number;
+}
+
+static std::array<char, 4> fractionDigitsForFractionalAlphaValue(uint8_t alpha)
+{
+    ASSERT(alpha > 0);
+    ASSERT(alpha < 0xFF);
+    if (((alpha * 100 + 0x7F) / 0xFF * 0xFF + 50) / 100 != alpha)
+        return { { decimalDigit(alpha * 10 / 0xFF % 10), decimalDigit(alpha * 100 / 0xFF % 10), decimalDigit((alpha * 1000 + 0x7F) / 0xFF % 10), '\0' } };
+    if (int thirdDigit = (alpha * 100 + 0x7F) / 0xFF % 10)
+        return { { decimalDigit(alpha * 10 / 0xFF), decimalDigit(thirdDigit), '\0', '\0' } };
+    return { { decimalDigit((alpha * 10 + 0x7F) / 0xFF), '\0', '\0', '\0' } };
+}
+
+String SimpleColor::serializationForCSS() const
+{
+    switch (alphaComponent()) {
+    case 0:
+        return makeString("rgba(", redComponent(), ", ", greenComponent(), ", ", blueComponent(), ", 0)");
+    case 0xFF:
+        return makeString("rgb(", redComponent(), ", ", greenComponent(), ", ", blueComponent(), ')');
+    default:
+        return makeString("rgba(", redComponent(), ", ", greenComponent(), ", ", blueComponent(), ", 0.", fractionDigitsForFractionalAlphaValue(alphaComponent()).data(), ')');
     }
-
-    return cssText();
 }
 
 String Color::cssText() const
 {
     if (isExtended())
         return asExtended().cssText();
+    return rgb().serializationForCSS();
+}
 
-    StringBuilder builder;
-    builder.reserveCapacity(28);
-    bool colorHasAlpha = !isOpaque();
-    if (colorHasAlpha)
-        builder.appendLiteral("rgba(");
-    else
-        builder.appendLiteral("rgb(");
-
-    builder.appendNumber(static_cast<unsigned char>(red()));
-    builder.appendLiteral(", ");
-
-    builder.appendNumber(static_cast<unsigned char>(green()));
-    builder.appendLiteral(", ");
-
-
-    builder.appendNumber(static_cast<unsigned char>(blue()));
-    if (colorHasAlpha) {
-        builder.appendLiteral(", ");
-        builder.appendFixedPrecisionNumber(alpha() / 255.0f);
-    }
-
-    builder.append(')');
-    return builder.toString();
+String RGBA32::serializationForRenderTreeAsText() const
+{
+    if (alphaComponent() < 0xFF)
+        return makeString('#', hex(redComponent(), 2), hex(greenComponent(), 2), hex(blueComponent(), 2), hex(alphaComponent(), 2));
+    return makeString('#', hex(redComponent(), 2), hex(greenComponent(), 2), hex(blueComponent(), 2));
 }
 
 String Color::nameForRenderTreeAsText() const
 {
-    // FIXME: Handle ExtendedColors.
-    if (alpha() < 0xFF)
-        return makeString('#', hex(red(), 2), hex(green(), 2), hex(blue(), 2), hex(alpha(), 2));
-    return makeString('#', hex(red(), 2), hex(green(), 2), hex(blue(), 2));
+    // FIXME: Handle extended colors.
+    return rgb().serializationForRenderTreeAsText();
 }
 
 Color Color::light() const
@@ -607,10 +567,9 @@ void Color::getHSV(double& hue, double& saturation, double& value) const
 
 Color colorFromPremultipliedARGB(RGBA32 pixelColor)
 {
-    int alpha = alphaChannel(pixelColor);
-    if (alpha && alpha < 255)
-        pixelColor = makeUnPremultipliedRGBA(redChannel(pixelColor), greenChannel(pixelColor), blueChannel(pixelColor), alpha);
-    return Color(pixelColor);
+    if (pixelColor.isVisible() && !pixelColor.isOpaque())
+        return makeUnPremultipliedRGBA(pixelColor.redComponent(), pixelColor.greenComponent(), pixelColor.blueComponent(), pixelColor.alphaComponent());
+    return pixelColor;
 }
 
 RGBA32 premultipliedARGBFromColor(const Color& color)
@@ -635,10 +594,9 @@ Color blend(const Color& from, const Color& to, double progress, bool blendPremu
         return Color();
 
     if (blendPremultiplied) {
-        // Contrary to the name, RGBA32 actually stores ARGB, so we can initialize Color directly from premultipliedARGBFromColor().
-        // Also, premultipliedARGBFromColor() bails on zero alpha, so special-case that.
-        Color premultFrom = from.alpha() ? premultipliedARGBFromColor(from) : 0;
-        Color premultTo = to.alpha() ? premultipliedARGBFromColor(to) : 0;
+        // Since premultipliedARGBFromColor() bails on zero alpha, special-case that.
+        Color premultFrom = from.alpha() ? premultipliedARGBFromColor(from) : Color::transparent;
+        Color premultTo = to.alpha() ? premultipliedARGBFromColor(to) : Color::transparent;
 
         Color premultBlended(blend(premultFrom.red(), premultTo.red(), progress),
             blend(premultFrom.green(), premultTo.green(), progress),
@@ -673,13 +631,13 @@ TextStream& operator<<(TextStream& ts, const Color& color)
 TextStream& operator<<(TextStream& ts, ColorSpace colorSpace)
 {
     switch (colorSpace) {
-    case ColorSpaceSRGB:
+    case ColorSpace::SRGB:
         ts << "sRGB";
         break;
-    case ColorSpaceLinearRGB:
+    case ColorSpace::LinearRGB:
         ts << "LinearRGB";
         break;
-    case ColorSpaceDisplayP3:
+    case ColorSpace::DisplayP3:
         ts << "DisplayP3";
         break;
     }

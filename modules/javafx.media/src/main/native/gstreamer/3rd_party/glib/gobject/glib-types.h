@@ -315,10 +315,12 @@ GLIB_AVAILABLE_IN_ALL
 GType   g_bytes_get_type           (void) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL
 GType   g_variant_type_get_gtype   (void) G_GNUC_CONST;
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 GType   g_regex_get_type           (void) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_2_30
 GType   g_match_info_get_type      (void) G_GNUC_CONST;
+#endif // GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 GType   g_error_get_type           (void) G_GNUC_CONST;
 GLIB_AVAILABLE_IN_ALL

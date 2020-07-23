@@ -30,41 +30,58 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
-CSSValuePool& CSSValuePool::singleton()
+LazyNeverDestroyed<StaticCSSValuePool> staticCSSValuePool;
+
+StaticCSSValuePool::StaticCSSValuePool()
 {
-    static NeverDestroyed<CSSValuePool> pool;
-    return pool;
+    m_inheritedValue.construct(CSSValue::StaticCSSValue);
+    m_implicitInitialValue.construct(CSSValue::StaticCSSValue, true);
+    m_explicitInitialValue.construct(CSSValue::StaticCSSValue, false);
+    m_unsetValue.construct(CSSValue::StaticCSSValue);
+    m_revertValue.construct(CSSValue::StaticCSSValue);
+
+    m_transparentColor.construct(CSSValue::StaticCSSValue, Color(Color::transparent));
+    m_whiteColor.construct(CSSValue::StaticCSSValue, Color(Color::white));
+    m_blackColor.construct(CSSValue::StaticCSSValue, Color(Color::black));
+
+    for (unsigned i = firstCSSValueKeyword; i <= lastCSSValueKeyword; ++i)
+        m_identifierValues[i].construct(CSSValue::StaticCSSValue, static_cast<CSSValueID>(i));
+
+    for (unsigned i = 0; i < (maximumCacheableIntegerValue + 1); ++i) {
+        m_pixelValues[i].construct(CSSValue::StaticCSSValue, i, CSSUnitType::CSS_PX);
+        m_percentValues[i].construct(CSSValue::StaticCSSValue, i, CSSUnitType::CSS_PERCENTAGE);
+        m_numberValues[i].construct(CSSValue::StaticCSSValue, i, CSSUnitType::CSS_NUMBER);
+    }
+}
+
+void StaticCSSValuePool::init()
+{
+    static std::once_flag onceKey;
+    std::call_once(onceKey, []() {
+        staticCSSValuePool.construct();
+    });
 }
 
 CSSValuePool::CSSValuePool()
 {
-    m_inheritedValue.construct();
-    m_implicitInitialValue.construct(true);
-    m_explicitInitialValue.construct(false);
-    m_unsetValue.construct();
-    m_revertValue.construct();
+    StaticCSSValuePool::init();
+}
 
-    m_transparentColor.construct(Color(Color::transparent));
-    m_whiteColor.construct(Color(Color::white));
-    m_blackColor.construct(Color(Color::black));
-
-    for (unsigned i = firstCSSValueKeyword; i <= lastCSSValueKeyword; ++i)
-        m_identifierValues[i].construct(static_cast<CSSValueID>(i));
-
-    for (unsigned i = 0; i < (maximumCacheableIntegerValue + 1); ++i) {
-        m_pixelValues[i].construct(i, CSSPrimitiveValue::CSS_PX);
-        m_percentValues[i].construct(i, CSSPrimitiveValue::CSS_PERCENTAGE);
-        m_numberValues[i].construct(i, CSSPrimitiveValue::CSS_NUMBER);
-    }
+CSSValuePool& CSSValuePool::singleton()
+{
+    ASSERT(isMainThread());
+    static NeverDestroyed<CSSValuePool> pool;
+    return pool;
 }
 
 Ref<CSSPrimitiveValue> CSSValuePool::createIdentifierValue(CSSValueID ident)
 {
     RELEASE_ASSERT(ident >= firstCSSValueKeyword && ident <= lastCSSValueKeyword);
-    return m_identifierValues[ident].get();
+    return staticCSSValuePool->m_identifierValues[ident].get();
 }
 
 Ref<CSSPrimitiveValue> CSSValuePool::createIdentifierValue(CSSPropertyID ident)
@@ -76,12 +93,12 @@ Ref<CSSPrimitiveValue> CSSValuePool::createColorValue(const Color& color)
 {
     // These are the empty and deleted values of the hash table.
     if (color == Color::transparent)
-        return m_transparentColor.get();
+        return staticCSSValuePool->m_transparentColor.get();
     if (color == Color::white)
-        return m_whiteColor.get();
+        return staticCSSValuePool->m_whiteColor.get();
     // Just because it is common.
     if (color == Color::black)
-        return m_blackColor.get();
+        return staticCSSValuePool->m_blackColor.get();
 
     // Remove one entry at random if the cache grows too large.
     // FIXME: Use TinyLRUCache instead?
@@ -94,11 +111,11 @@ Ref<CSSPrimitiveValue> CSSValuePool::createColorValue(const Color& color)
     }).iterator->value;
 }
 
-Ref<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimitiveValue::UnitType type)
+Ref<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSUnitType type)
 {
     ASSERT(std::isfinite(value));
 
-    if (value < 0 || value > maximumCacheableIntegerValue)
+    if (value < 0 || value > StaticCSSValuePool::maximumCacheableIntegerValue)
         return CSSPrimitiveValue::create(value, type);
 
     int intValue = static_cast<int>(value);
@@ -106,12 +123,12 @@ Ref<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimitiveValue
         return CSSPrimitiveValue::create(value, type);
 
     switch (type) {
-    case CSSPrimitiveValue::CSS_PX:
-        return m_pixelValues[intValue].get();
-    case CSSPrimitiveValue::CSS_PERCENTAGE:
-        return m_percentValues[intValue].get();
-    case CSSPrimitiveValue::CSS_NUMBER:
-        return m_numberValues[intValue].get();
+    case CSSUnitType::CSS_PX:
+        return staticCSSValuePool->m_pixelValues[intValue].get();
+    case CSSUnitType::CSS_PERCENTAGE:
+        return staticCSSValuePool->m_percentValues[intValue].get();
+    case CSSUnitType::CSS_NUMBER:
+        return staticCSSValuePool->m_numberValues[intValue].get();
     default:
         return CSSPrimitiveValue::create(value, type);
     }

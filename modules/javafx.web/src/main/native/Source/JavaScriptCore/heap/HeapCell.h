@@ -31,11 +31,20 @@ namespace JSC {
 
 class CellContainer;
 class Heap;
-class LargeAllocation;
+class PreciseAllocation;
 class MarkedBlock;
 class Subspace;
 class VM;
 struct CellAttributes;
+
+#if COMPILER(GCC_COMPATIBLE)
+ALWAYS_INLINE void keepAlive(const void* pointer)
+{
+    asm volatile ("" : : "r"(pointer) : "memory");
+}
+#else
+JS_EXPORT_PRIVATE void keepAlive(const void*);
+#endif
 
 class HeapCell {
 public:
@@ -61,15 +70,15 @@ public:
 
     bool isLive();
 
-    bool isLargeAllocation() const;
+    bool isPreciseAllocation() const;
     CellContainer cellContainer() const;
     MarkedBlock& markedBlock() const;
-    LargeAllocation& largeAllocation() const;
+    PreciseAllocation& preciseAllocation() const;
 
     // If you want performance and you know that your cell is small, you can do this instead:
-    // ASSERT(!cell->isLargeAllocation());
+    // ASSERT(!cell->isPreciseAllocation());
     // cell->markedBlock().vm()
-    // We currently only use this hack for callees to make ExecState::vm() fast. It's not
+    // We currently only use this hack for callees to make CallFrame::vm() fast. It's not
     // recommended to use it for too many other things, since the large allocation cutoff is
     // a runtime option and its default value is small (400 bytes).
     Heap* heap() const;
@@ -84,14 +93,10 @@ public:
     // Call use() after the last point where you need `this` pointer to be kept alive. You usually don't
     // need to use this, but it might be necessary if you're otherwise referring to an object's innards
     // but not the object itself.
-#if COMPILER(GCC_COMPATIBLE)
-    void use() const
+    ALWAYS_INLINE void use() const
     {
-        asm volatile ("" : : "r"(this) : "memory");
+        keepAlive(this);
     }
-#else
-    void use() const;
-#endif
 };
 
 inline bool isJSCellKind(HeapCell::Kind kind)

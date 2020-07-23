@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.util.Logging;
 import com.sun.openpisces.AlphaConsumer;
 import com.sun.openpisces.Renderer;
 import com.sun.prism.BasicStroke;
@@ -76,35 +77,44 @@ public class OpenPiscesRasterizer implements ShapeRasterizer {
             return emptyData;
         }
         Renderer renderer = null;
-        if (shape instanceof Path2D) {
-            renderer = OpenPiscesPrismUtils.setupRenderer((Path2D) shape, stroke, xform, rclip,
-                    antialiasedShape);
-        }
-        if (renderer == null) {
-            renderer = OpenPiscesPrismUtils.setupRenderer(shape, stroke, xform, rclip,
-                    antialiasedShape);
-        }
-        int outpix_xmin = renderer.getOutpixMinX();
-        int outpix_ymin = renderer.getOutpixMinY();
-        int outpix_xmax = renderer.getOutpixMaxX();
-        int outpix_ymax = renderer.getOutpixMaxY();
-        int w = outpix_xmax - outpix_xmin;
-        int h = outpix_ymax - outpix_ymin;
-        if (w <= 0 || h <= 0) {
+        try {
+            if (shape instanceof Path2D) {
+                renderer = OpenPiscesPrismUtils.setupRenderer((Path2D) shape,
+                        stroke, xform, rclip, antialiasedShape);
+            }
+            if (renderer == null) {
+                renderer = OpenPiscesPrismUtils.setupRenderer(shape,
+                        stroke, xform, rclip, antialiasedShape);
+            }
+            int outpix_xmin = renderer.getOutpixMinX();
+            int outpix_ymin = renderer.getOutpixMinY();
+            int outpix_xmax = renderer.getOutpixMaxX();
+            int outpix_ymax = renderer.getOutpixMaxY();
+            int w = outpix_xmax - outpix_xmin;
+            int h = outpix_ymax - outpix_ymin;
+            if (w <= 0 || h <= 0) {
+                return emptyData;
+            }
+
+            Consumer consumer = savedConsumer;
+            if (consumer == null || w * h > consumer.getAlphaLength()) {
+                int csize = (w * h + 0xfff) & (~0xfff);
+                savedConsumer = consumer = new Consumer(csize);
+                if (PrismSettings.verbose) {
+                System.out.println("new alphas");
+                }
+            }
+            consumer.setBoundsNoClone(outpix_xmin, outpix_ymin, w, h);
+            renderer.produceAlphas(consumer);
+            return consumer.getMaskData();
+        } catch (Throwable ex) {
+            if (PrismSettings.verbose) {
+                ex.printStackTrace();
+            }
+            Logging.getJavaFXLogger().warning("Cannot rasterize Shape: "
+                    + ex.toString());
             return emptyData;
         }
-
-        Consumer consumer = savedConsumer;
-        if (consumer == null || w * h > consumer.getAlphaLength()) {
-            int csize = (w * h + 0xfff) & (~0xfff);
-            savedConsumer = consumer = new Consumer(csize);
-            if (PrismSettings.verbose) {
-                System.out.println("new alphas");
-            }
-        }
-        consumer.setBoundsNoClone(outpix_xmin, outpix_ymin, w, h);
-        renderer.produceAlphas(consumer);
-        return consumer.getMaskData();
     }
 
     private static class Consumer implements AlphaConsumer {

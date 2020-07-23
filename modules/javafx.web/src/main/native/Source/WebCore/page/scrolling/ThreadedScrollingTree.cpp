@@ -110,8 +110,20 @@ void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNod
     if (is<ScrollingTreeFrameScrollingNode>(node))
         layoutViewportOrigin = downcast<ScrollingTreeFrameScrollingNode>(node).layoutViewport().location();
 
-    RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, nodeID = node.scrollingNodeID(), scrollPosition, layoutViewportOrigin, scrollingLayerPositionAction] {
+    bool monitoringWheelEvents = false;
+#if PLATFORM(MAC)
+    monitoringWheelEvents = isMonitoringWheelEvents();
+    if (monitoringWheelEvents)
+        deferWheelEventTestCompletionForReason(reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(node.scrollingNodeID()), WheelEventTestMonitor::ScrollingThreadSyncNeeded);
+#endif
+    RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, nodeID = node.scrollingNodeID(), scrollPosition, layoutViewportOrigin, scrollingLayerPositionAction, monitoringWheelEvents] {
         scrollingCoordinator->scheduleUpdateScrollPositionAfterAsyncScroll(nodeID, scrollPosition, layoutViewportOrigin, scrollingLayerPositionAction);
+#if PLATFORM(MAC)
+        if (monitoringWheelEvents)
+            scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(nodeID), WheelEventTestMonitor::ScrollingThreadSyncNeeded);
+#else
+        UNUSED_PARAM(monitoringWheelEvents);
+#endif
     });
 }
 
@@ -191,23 +203,23 @@ void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, u
     });
 }
 
-void ThreadedScrollingTree::deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason)
+void ThreadedScrollingTree::deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
 {
     if (!m_scrollingCoordinator)
         return;
 
     RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, identifier, reason] {
-        scrollingCoordinator->deferTestsForReason(identifier, reason);
+        scrollingCoordinator->deferWheelEventTestCompletionForReason(identifier, reason);
     });
 }
 
-void ThreadedScrollingTree::removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason)
+void ThreadedScrollingTree::removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
 {
     if (!m_scrollingCoordinator)
         return;
 
     RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, identifier, reason] {
-        scrollingCoordinator->removeTestDeferralForReason(identifier, reason);
+        scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(identifier, reason);
     });
 }
 

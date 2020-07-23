@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,8 @@ static void ScanlineIterator_reset(ScanlineIterator *pIterator,
     this.edgeCount = 0;
 }
 
+// Iterate to the next scanline and return the number of crossings.
+// A count of -1 is returned to indicate OOM.
 static jint ScanlineIterator_next(ScanlineIterator *pIterator, Renderer *pRenderer) {
     jint i, ecur;
     jint *xings;
@@ -95,6 +97,9 @@ static jint ScanlineIterator_next(ScanlineIterator *pIterator, Renderer *pRender
     if (this.edgePtrsSIZE < count + (bucketcount >> 1)) {
         jint newSize = (count + (bucketcount >> 1)) * 2;
         jint *newPtrs = new_int(newSize);
+        if (!newPtrs) {
+            return -1;
+        }
         System_arraycopy(this.edgePtrs, 0, newPtrs, 0, count);
         free(this.edgePtrs);
         this.edgePtrs = newPtrs;
@@ -117,6 +122,9 @@ static jint ScanlineIterator_next(ScanlineIterator *pIterator, Renderer *pRender
     if (this.crossingsSIZE < count) {
         free(this.crossings);
         this.crossings = xings = new_int(this.edgePtrsSIZE);
+        if (!xings) {
+            return -1;
+        }
         this.crossingsSIZE = this.edgePtrsSIZE;
     }
     for (i = 0; i < count; i++) {
@@ -163,26 +171,31 @@ static jint ScanlineIterator_curY(ScanlineIterator *pIterator) {
 
 // each bucket is a linked list. this method adds eptr to the
 // start "bucket"th linked list.
-static void addEdgeToBucket(PathConsumer *pRenderer, const jint eptr, const jint bucket) {
+static jint addEdgeToBucket(PathConsumer *pRenderer, const jint eptr, const jint bucket) {
     // we could implement this in terms of insertEdge, but this is a special
     // case, so we optimize a bit.
+    if (this.edgeBuckets[bucket*2] >= MAX_EDGE_IDX) {
+        return ERROR_AIOOBE;
+    }
     this.edges[eptr+NEXT] = (jfloat) this.edgeBuckets[bucket*2];
     this.edgeBuckets[bucket*2] = eptr + 1;
     this.edgeBuckets[bucket*2 + 1] += 2;
+    return ERROR_NONE;
 }
 
-static void addLine(PathConsumer *pRenderer,
+static jint addLine(PathConsumer *pRenderer,
                     jfloat x1, jfloat y1,
                     jfloat x2, jfloat y2);
 
 // Flattens using adaptive forward differencing. This only carries out
 // one iteration of the AFD loop. All it does is update AFD variables (i.e.
 // X0, Y0, D*[X|Y], COUNT; not variables used for computing scanline crossings).
-static void quadBreakIntoLinesAndAdd(PathConsumer *pRenderer,
+static jint quadBreakIntoLinesAndAdd(PathConsumer *pRenderer,
                                      jfloat x0, jfloat y0,
                                      const Curve c,
                                      const jfloat x2, const jfloat y2)
 {
+    jint status = ERROR_NONE;
     jfloat ddx, ddy, dx, dy;
     const jfloat QUAD_DEC_BND = 32;
     const jint countlg = 4;
@@ -205,11 +218,14 @@ static void quadBreakIntoLinesAndAdd(PathConsumer *pRenderer,
         jfloat y1 = y0 + dy;
         dx += ddx;
         dy += ddy;
-        addLine(pRenderer, x0, y0, x1, y1);
+        status = addLine(pRenderer, x0, y0, x1, y1);
+        if (status != ERROR_NONE) {
+            return status;
+        }
         x0 = x1;
         y0 = y1;
     }
-    addLine(pRenderer, x0, y0, x2, y2);
+    return addLine(pRenderer, x0, y0, x2, y2);
 }
 
 // x0, y0 and x3,y3 are the endpoints of the curve. We could compute these
@@ -217,11 +233,12 @@ static void quadBreakIntoLinesAndAdd(PathConsumer *pRenderer,
 // numerical errors, and our callers already have the exact values.
 // Another alternative would be to pass all the control points, and call c.set
 // here, but then too many numbers are passed around.
-static void curveBreakIntoLinesAndAdd(PathConsumer *pRenderer,
+static jint curveBreakIntoLinesAndAdd(PathConsumer *pRenderer,
                                       jfloat x0, jfloat y0,
                                       const Curve c,
                                       const jfloat x3, const jfloat y3)
 {
+    jint status = ERROR_NONE;
     const jint countlg = 3;
     jint count = 1 << countlg;
     jfloat x1, y1;
@@ -272,16 +289,21 @@ static void curveBreakIntoLinesAndAdd(PathConsumer *pRenderer,
             x1 = x3;
             y1 = y3;
         }
-        addLine(pRenderer, x0, y0, x1, y1);
+        status = addLine(pRenderer, x0, y0, x1, y1);
+        if (status != ERROR_NONE) {
+            return status;
+        }
         x0 = x1;
         y0 = y1;
     }
+    return status;
 }
 
-static void addLine(PathConsumer *pRenderer,
+static jint addLine(PathConsumer *pRenderer,
                     jfloat x1, jfloat y1,
                     jfloat x2, jfloat y2)
 {
+    jint status = ERROR_NONE;
     jfloat or = 1; // orientation of the line. 1 if y increases, 0 otherwise.
     jint firstCrossing, lastCrossing;
     jfloat slope;
@@ -299,7 +321,7 @@ static void addLine(PathConsumer *pRenderer,
     firstCrossing = Math_max((jint) ceil(y1 - 0.5f), this.boundsMinY);
     lastCrossing = Math_min((jint) ceil(y2 - 0.5f), this.boundsMaxY);
     if (firstCrossing >= lastCrossing) {
-        return;
+        return status;
     }
     if (firstCrossing < this.sampleRowMin) { this.sampleRowMin = firstCrossing; }
     if (lastCrossing > this.sampleRowMax) { this.sampleRowMax = lastCrossing; }
@@ -314,10 +336,18 @@ static void addLine(PathConsumer *pRenderer,
         if (x1 > this.edgeMaxX) { this.edgeMaxX = x1; }
     }
 
+    bucketIdx = firstCrossing - this.boundsMinY;
+    if (this.edgeBuckets[bucketIdx*2] >= MAX_EDGE_IDX) {
+        return ERROR_AIOOBE;
+    }
+
     ptr = this.numEdges * SIZEOF_EDGE;
     if (this.edgesSIZE < ptr + SIZEOF_EDGE) {
         jint newSize = (ptr + SIZEOF_EDGE) * 2;
         jfloat *newEdges = new_float(newSize);
+        if (!newEdges) {
+            return ERROR_OOM;
+        }
         System_arraycopy(this.edges, 0, newEdges, 0, ptr);
         free(this.edges);
         this.edges = newEdges;
@@ -328,9 +358,12 @@ static void addLine(PathConsumer *pRenderer,
     this.edges[ptr+CURX] = x1 + (firstCrossing + 0.5f - y1) * slope;
     this.edges[ptr+SLOPE] = slope;
     this.edges[ptr+YMAX] = (jfloat) lastCrossing;
-    bucketIdx = firstCrossing - this.boundsMinY;
-    addEdgeToBucket(pRenderer, ptr, bucketIdx);
+    status = addEdgeToBucket(pRenderer, ptr, bucketIdx);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.edgeBuckets[(lastCrossing - this.boundsMinY)*2 + 1] |= 1;
+    return status;
 }
 
 // END EDGE LIST
@@ -439,31 +472,40 @@ static jfloat tosubpixy(jfloat pix_y) {
     return pix_y * SUBPIXEL_POSITIONS_Y;
 }
 
-static void Renderer_moveTo(PathConsumer *pRenderer,
+static jint Renderer_moveTo(PathConsumer *pRenderer,
                             jfloat pix_x0, jfloat pix_y0)
 {
-    Renderer_closePath(pRenderer);
+    jint status = Renderer_closePath(pRenderer);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.pix_sx0 = pix_x0;
     this.pix_sy0 = pix_y0;
     this.y0 = tosubpixy(pix_y0);
     this.x0 = tosubpixx(pix_x0);
+    return status;
 }
 
-static void Renderer_lineTo(PathConsumer *pRenderer,
+static jint Renderer_lineTo(PathConsumer *pRenderer,
                             jfloat pix_x1, jfloat pix_y1)
 {
     jfloat x1 = tosubpixx(pix_x1);
     jfloat y1 = tosubpixy(pix_y1);
-    addLine(pRenderer, this.x0, this.y0, x1, y1);
+    jint status = addLine(pRenderer, this.x0, this.y0, x1, y1);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.x0 = x1;
     this.y0 = y1;
+    return status;
 }
 
-static void Renderer_curveTo(PathConsumer *pRenderer,
+static jint Renderer_curveTo(PathConsumer *pRenderer,
                              jfloat x1, jfloat y1,
                              jfloat x2, jfloat y2,
                              jfloat x3, jfloat y3)
 {
+    jint status = ERROR_NONE;
     const jfloat xe = tosubpixx(x3);
     const jfloat ye = tosubpixy(y3);
     Curve_setcubic(&this.c,
@@ -471,40 +513,49 @@ static void Renderer_curveTo(PathConsumer *pRenderer,
                    tosubpixx(x1), tosubpixy(y1),
                    tosubpixx(x2), tosubpixy(y2),
                    xe, ye);
-    curveBreakIntoLinesAndAdd(pRenderer, this.x0, this.y0, this.c, xe, ye);
+    status = curveBreakIntoLinesAndAdd(pRenderer, this.x0, this.y0, this.c, xe, ye);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.x0 = xe;
     this.y0 = ye;
+    return status;
 }
 
-void Renderer_quadTo(PathConsumer *pRenderer,
+jint Renderer_quadTo(PathConsumer *pRenderer,
                      jfloat x1, jfloat y1,
                      jfloat x2, jfloat y2)
 {
+    jint status = ERROR_NONE;
     const jfloat xe = tosubpixx(x2);
     const jfloat ye = tosubpixy(y2);
     Curve_setquad(&this.c,
                   this.x0, this.y0,
                   tosubpixx(x1), tosubpixy(y1),
                   xe, ye);
-    quadBreakIntoLinesAndAdd(pRenderer, this.x0, this.y0, this.c, xe, ye);
+    status = quadBreakIntoLinesAndAdd(pRenderer, this.x0, this.y0, this.c, xe, ye);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.x0 = xe;
     this.y0 = ye;
+    return status;
 }
 
-static void Renderer_closePath(PathConsumer *pRenderer) {
+static jint Renderer_closePath(PathConsumer *pRenderer) {
     // lineTo expects its input in pixel coordinates.
-    Renderer_lineTo(pRenderer, this.pix_sx0, this.pix_sy0);
+    return Renderer_lineTo(pRenderer, this.pix_sx0, this.pix_sy0);
 }
 
-static void Renderer_pathDone(PathConsumer *pRenderer) {
-    Renderer_closePath(pRenderer);
+static jint Renderer_pathDone(PathConsumer *pRenderer) {
+    return Renderer_closePath(pRenderer);
 }
 
 static void setAndClearRelativeAlphas(AlphaConsumer *pAC,
                                       jint alphaRow[], jint pix_y,
                                       jint pix_from, jint pix_to);
 
-void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
+jint Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
 //    ac.setMaxAlpha(MAX_AA_ALPHA);
 
     // Mask to determine the relevant bit of the crossing sum
@@ -521,6 +572,9 @@ void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
     jint *alpha;
     if (1024 < width+2) {
         alpha = new_int(width+2);
+        if (!alpha) {
+            return ERROR_OOM;
+        }
     } else {
         alpha = savedAlpha;
     }
@@ -545,6 +599,12 @@ void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
         jint *crossings = it.crossings;
         jint sum, prev;
         jint i;
+
+        if (numCrossings < 0) {
+            ScanlineIterator_destroy(&it);
+            if (alpha != savedAlpha) free (alpha);
+            return ERROR_OOM;
+        }
 
         y = ScanlineIterator_curY(&it);
 
@@ -612,6 +672,8 @@ void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC) {
     }
     ScanlineIterator_destroy(&it);
     if (alpha != savedAlpha) free (alpha);
+
+    return ERROR_NONE;
 }
 
 //@Override

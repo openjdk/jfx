@@ -31,8 +31,6 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "ExceptionOr.h"
-#include "GenericTaskQueue.h"
-#include "JSDOMPromiseDeferred.h"
 #include "MediaKeySessionType.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -44,7 +42,9 @@ class CDM;
 class CDMClient;
 class CDMInstance;
 class BufferSource;
+class DeferredPromise;
 class MediaKeySession;
+class ScriptExecutionContext;
 
 class MediaKeys : public RefCounted<MediaKeys>, public CanMakeWeakPtr<MediaKeys> {
 public:
@@ -58,7 +58,7 @@ public:
     ~MediaKeys();
 
     ExceptionOr<Ref<MediaKeySession>> createSession(ScriptExecutionContext&, MediaKeySessionType);
-    void setServerCertificate(const BufferSource&, Ref<DeferredPromise>&&);
+    void setServerCertificate(ScriptExecutionContext&, const BufferSource&, Ref<DeferredPromise>&&);
 
     void attachCDMClient(CDMClient&);
     void detachCDMClient(CDMClient&);
@@ -79,7 +79,6 @@ protected:
 
     Vector<Ref<MediaKeySession>> m_sessions;
     Vector<CDMClient*> m_cdmClients;
-    GenericTaskQueue<Timer> m_taskQueue;
 };
 
 } // namespace WebCore

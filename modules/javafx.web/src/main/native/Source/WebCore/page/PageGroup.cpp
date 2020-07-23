@@ -26,11 +26,11 @@
 #include "config.h"
 #include "PageGroup.h"
 
+#include "BackForwardCache.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "Frame.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "StorageNamespace.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/StructureInlines.h>
@@ -93,9 +93,6 @@ void PageGroup::addPage(Page& page)
 {
     ASSERT(!m_pages.contains(&page));
     m_pages.add(&page);
-
-    if (m_isLegacyPrivateBrowsingEnabledForTesting)
-        page.enableLegacyPrivateBrowsing(true);
 }
 
 void PageGroup::removePage(Page& page)
@@ -109,7 +106,7 @@ void PageGroup::captionPreferencesChanged()
 {
     for (auto& page : m_pages)
         page->captionPreferencesChanged();
-    PageCache::singleton().markPagesForCaptionPreferencesChanged();
+    BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
 CaptionUserPreferences& PageGroup::captionPreferences()
@@ -125,16 +122,5 @@ CaptionUserPreferences& PageGroup::captionPreferences()
     return *m_captionPreferences.get();
 }
 #endif
-
-void PageGroup::enableLegacyPrivateBrowsingForTesting(bool enabled)
-{
-    if (m_isLegacyPrivateBrowsingEnabledForTesting == enabled)
-        return;
-
-    m_isLegacyPrivateBrowsingEnabledForTesting = enabled;
-
-    for (auto* page : m_pages)
-        page->enableLegacyPrivateBrowsing(enabled);
-}
 
 } // namespace WebCore

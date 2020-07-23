@@ -134,9 +134,11 @@ my (
     $mouseCursorScaleSupport,
     $netscapePluginAPISupport,
     $notificationsSupport,
+    $offscreenCanvasSupport,
     $orientationEventsSupport,
     $paymentRequestSupport,
     $pdfkitPluginSupport,
+    $pictureInPictureAPISupport,
     $pointerLockSupport,
     $publicSuffixListSupport,
     $quotaSupport,
@@ -161,6 +163,7 @@ my (
     $threeDTransformsSupport,
     $touchEventsSupport,
     $touchSliderSupport,
+    $unifiedBuildSupport,
     $userMessageHandlersSupport,
     $userselectAllSupport,
     $variationFontsSupport,
@@ -180,6 +183,9 @@ my (
     $webgpuSupport,
     $wirelessPlaybackTargetSupport,
     $xsltSupport,
+    $imageio,
+    $skia,
+    $rgba,
 );
 
 prohibitUnknownPort();
@@ -371,12 +377,6 @@ my @features = (
     { option => "jit", desc => "Enable JustInTime JavaScript support",
       define => "ENABLE_JIT", value => \$jitSupport },
 
-    { option => "keyboard-code-attribute", desc => "Toggle keyboard code attribute support",
-      define => "ENABLE_KEYBOARD_CODE_ATTRIBUTE", value => \$keyboardCodeAttributeSupport },
-
-    { option => "keyboard-key-attribute", desc => "Toggle keyboard key attribute support",
-      define => "ENABLE_KEYBOARD_KEY_ATTRIBUTE", value => \$keyboardKeyAttributeSupport },
-
     { option => "layout-formatting-context", desc => "Toggle Layout Formatting Context support",
       define => "ENABLE_LAYOUT_FORMATTING_CONTEXT", value => \$layoutFormattingContextSupport },
 
@@ -434,6 +434,9 @@ my @features = (
     { option => "notifications", desc => "Toggle Notifications support",
       define => "ENABLE_NOTIFICATIONS", value => \$notificationsSupport },
 
+    { option => "offscreen-canvas", desc => "Toggle OffscreenCanvas support",
+      define => "ENABLE_OFFSCREEN_CANVAS", value => \$offscreenCanvasSupport },
+
     { option => "orientation-events", desc => "Toggle Orientation Events support",
       define => "ENABLE_ORIENTATION_EVENTS", value => \$orientationEventsSupport },
 
@@ -442,6 +445,9 @@ my @features = (
 
     { option => "pdfkit-plugin", desc => "Toggle PDFKit plugin support",
       define => "ENABLE_PDFKIT_PLUGIN", value => \$pdfkitPluginSupport },
+
+    { option => "picture-in-picture-api", desc => "Toggle Picture-in-Picture API support",
+      define => "ENABLE_PICTURE_IN_PICTURE_API", value => \$pictureInPictureAPISupport },
 
     { option => "pointer-lock", desc => "Toggle pointer lock support",
       define => "ENABLE_POINTER_LOCK", value => \$pointerLockSupport },
@@ -568,6 +574,9 @@ my @features = (
 
     { option => "system-malloc", desc => "Toggle system allocator instead of bmalloc",
       define => "USE_SYSTEM_MALLOC", value => \$systemMallocSupport },
+
+    { option => "unified-builds", desc => "Toggle unified builds",
+      define => "ENABLE_UNIFIED_BUILDS", value => \$unifiedBuildSupport },
 );
 
 sub getFeatureOptionList()

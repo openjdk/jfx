@@ -144,8 +144,10 @@ G_DEFINE_BOXED_TYPE (GPtrArray, g_ptr_array,g_ptr_array_ref, g_ptr_array_unref)
 G_DEFINE_BOXED_TYPE (GByteArray, g_byte_array, g_byte_array_ref, g_byte_array_unref)
 G_DEFINE_BOXED_TYPE (GBytes, g_bytes, g_bytes_ref, g_bytes_unref)
 
+#ifndef GSTREAMER_LITE
 G_DEFINE_BOXED_TYPE (GRegex, g_regex, g_regex_ref, g_regex_unref)
 G_DEFINE_BOXED_TYPE (GMatchInfo, g_match_info, g_match_info_ref, g_match_info_unref)
+#endif // GSTREAMER_LITE
 
 #define g_variant_type_get_type g_variant_type_get_gtype
 G_DEFINE_BOXED_TYPE (GVariantType, g_variant_type, g_variant_type_copy, g_variant_type_free)

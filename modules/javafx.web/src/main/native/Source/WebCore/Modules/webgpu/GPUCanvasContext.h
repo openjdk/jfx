@@ -43,6 +43,7 @@ public:
 
     HTMLCanvasElement& canvas() const { return downcast<HTMLCanvasElement>(canvasBase()); }
 
+    WebGPUSwapChain* swapChain() const { return m_swapChain.get(); }
     Ref<WebGPUSwapChain> configureSwapChain(const WebGPUSwapChainDescriptor&);
 
 private:
@@ -53,11 +54,11 @@ private:
     PlatformLayer* platformLayer() const final;
     void reshape(int width, int height) final;
     void markLayerComposited() final;
+
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final { return "GPUCanvasContext"; }
     // FIXME: Stubs.
-    bool hasPendingActivity() const final { return false; }
     void stop() final { }
-    bool canSuspendForDocumentSuspension() const final { return false; }
 
     RefPtr<WebGPUSwapChain> m_swapChain;
 };

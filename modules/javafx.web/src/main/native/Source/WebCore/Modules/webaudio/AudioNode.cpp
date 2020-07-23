@@ -561,6 +561,7 @@ void AudioNode::finishDeref(RefType refType)
                 // Mark for deletion at end of each render quantum or when context shuts down.
                 context().markForDeletion(*this);
                 m_isMarkedForDeletion = true;
+                didBecomeMarkedForDeletion();
             }
         } else if (refType == RefTypeConnection)
             disableOutputsIfNecessary();

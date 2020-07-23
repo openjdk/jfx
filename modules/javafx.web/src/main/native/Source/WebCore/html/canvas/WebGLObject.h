@@ -27,10 +27,12 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContext3D.h"
+#include "GraphicsTypesGL.h"
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
+class GraphicsContextGLOpenGL;
 class WebGLContextGroup;
 class WebGLRenderingContextBase;
 
@@ -38,15 +40,15 @@ class WebGLObject : public RefCounted<WebGLObject> {
 public:
     virtual ~WebGLObject() = default;
 
-    Platform3DObject object() const { return m_object; }
+    PlatformGLObject object() const { return m_object; }
 
     // deleteObject may not always delete the OpenGL resource.  For programs and
     // shaders, deletion is delayed until they are no longer attached.
     // FIXME: revisit this when resource sharing between contexts are implemented.
-    void deleteObject(GraphicsContext3D*);
+    void deleteObject(GraphicsContextGLOpenGL*);
 
     void onAttached() { ++m_attachmentCount; }
-    void onDetached(GraphicsContext3D*);
+    void onDetached(GraphicsContextGLOpenGL*);
 
     // This indicates whether the client side issue a delete call already, not
     // whether the OpenGL resource is deleted.
@@ -60,24 +62,24 @@ protected:
     WebGLObject() = default;
 
     // setObject should be only called once right after creating a WebGLObject.
-    void setObject(Platform3DObject);
+    void setObject(PlatformGLObject);
 
     // deleteObjectImpl should be only called once to delete the OpenGL resource.
-    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) = 0;
+    virtual void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) = 0;
 
     virtual bool hasGroupOrContext() const = 0;
 
     virtual void detach();
 
-    virtual GraphicsContext3D* getAGraphicsContext3D() const = 0;
+    virtual GraphicsContextGLOpenGL* getAGraphicsContextGL() const = 0;
 
 private:
-    Platform3DObject m_object { 0 };
+    PlatformGLObject m_object { 0 };
     unsigned m_attachmentCount { 0 };
     bool m_deleted { false };
 };
 
-inline Platform3DObject objectOrZero(WebGLObject* object)
+inline PlatformGLObject objectOrZero(WebGLObject* object)
 {
     return object ? object->object() : 0;
 }

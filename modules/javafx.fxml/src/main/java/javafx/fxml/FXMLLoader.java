@@ -63,6 +63,8 @@ import javafx.util.BuilderFactory;
 import javafx.util.Callback;
 
 import javax.script.Bindings;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -1558,21 +1560,55 @@ public class FXMLLoader {
                         location = new URL(FXMLLoader.this.location, source);
                     }
                     Bindings engineBindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
-                    engineBindings.put(engine.FILENAME, location.getPath());
+                    String filename = location.getPath();
+                    engineBindings.put(engine.FILENAME, filename);
 
                     InputStreamReader scriptReader = null;
+                    String script = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
-                        engine.eval(scriptReader);
-                    } catch(ScriptException exception) {
-                        exception.printStackTrace();
+                        StringBuilder sb = new StringBuilder();
+                        final int bufSize = 4096;
+                        char[] charBuffer = new char[bufSize];
+                        int n;
+                        do {
+                            n = scriptReader.read(charBuffer,0,bufSize);
+                            if (n > 0) {
+                                sb.append(new String(charBuffer,0,n));
+                          }
+                        } while (n > -1);
+                        script = sb.toString();
+                    } catch (IOException exception) {
+                        throw constructLoadException(exception);
                     } finally {
                         if (scriptReader != null) {
                             scriptReader.close();
                         }
                     }
-                } catch (IOException exception) {
-                    throw constructLoadException(exception);
+                    try {
+                        if (engine instanceof Compilable && compileScript) {
+                            CompiledScript compiledScript = null;
+                            try {
+                                compiledScript = ((Compilable) engine).compile(script);
+                            } catch (ScriptException compileExc) {
+                                Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                    "\", falling back to evaluating script in uncompiled mode");
+                            }
+                            if (compiledScript != null) {
+                                compiledScript.eval();
+                            } else { // fallback to uncompiled mode
+                                engine.eval(script);
+                            }
+                        } else {
+                            engine.eval(script);
+                        }
+                    } catch (ScriptException exception) {
+                        System.err.println(filename + ": caused ScriptException");
+                        exception.printStackTrace();
+                    }
+                }
+                catch (IOException exception) {
+                  throw constructLoadException(exception);
                 }
             }
         }
@@ -1583,13 +1619,31 @@ public class FXMLLoader {
 
             if (value != null && !staticLoad) {
                 // Evaluate the script
+                String filename = null;
                 try {
                     Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
-                    engineBindings.put(scriptEngine.FILENAME, location.getPath() + "-script_starting_at_line_"
-                                       + (getLineNumber() - (int) ((String) value).codePoints().filter(c -> c == '\n').count()));
-                    scriptEngine.eval((String)value);
+                    String script = (String) value;
+                    filename = location.getPath() + "-script_starting_at_line_"
+                                       + (getLineNumber() - (int) script.codePoints().filter(c -> c == '\n').count());
+                    engineBindings.put(scriptEngine.FILENAME, filename);
+                    if (scriptEngine instanceof Compilable && compileScript) {
+                        CompiledScript compiledScript = null;
+                        try {
+                            compiledScript = ((Compilable) scriptEngine).compile(script);
+                        } catch (ScriptException compileExc) {
+                            Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                                "\", falling back to evaluating script in uncompiled mode");
+                        }
+                        if (compiledScript != null) {
+                            compiledScript.eval();
+                        } else { // fallback to uncompiled mode
+                            scriptEngine.eval(script);
+                        }
+                    } else {
+                        scriptEngine.eval(script);
+                    }
                 } catch (ScriptException exception) {
-                    System.err.println(exception.getMessage());
+                    System.err.println(filename + ": caused ScriptException\n" + exception.getMessage());
                 }
             }
         }
@@ -1681,11 +1735,24 @@ public class FXMLLoader {
         public final String script;
         public final ScriptEngine scriptEngine;
         public final String filename;
+        public CompiledScript compiledScript;
+        public boolean isCompiled = false;
 
         public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;
             this.scriptEngine = scriptEngine;
             this.filename = filename;
+            if (scriptEngine instanceof Compilable  && compileScript) {
+                try {
+                    // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
+                    scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
+                    this.compiledScript = ((Compilable) scriptEngine).compile(script);
+                    this.isCompiled = true;
+                } catch (ScriptException compileExc) {
+                    Logging.getJavaFXLogger().warning(filename + ": compiling caused \"" + compileExc +
+                        "\", falling back to evaluating script in uncompiled mode");
+                }
+            }
         }
 
         @Override
@@ -1699,9 +1766,13 @@ public class FXMLLoader {
             localBindings.put(scriptEngine.FILENAME, filename);
             // Execute the script
             try {
-                scriptEngine.eval(script, localBindings);
-            } catch (ScriptException exception){
-                throw new RuntimeException(exception);
+                if (isCompiled) {
+                   compiledScript.eval(localBindings);
+                } else {
+                   scriptEngine.eval(script, localBindings);
+                }
+            } catch (ScriptException exception) {
+                throw new RuntimeException(filename + ": caused ScriptException", exception);
             }
         }
     }
@@ -1819,6 +1890,7 @@ public class FXMLLoader {
     private Element current = null;
 
     private ScriptEngine scriptEngine = null;
+    private static boolean compileScript = true;
 
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
@@ -1844,6 +1916,12 @@ public class FXMLLoader {
      * The tag name of import processing instruction.
      */
     public static final String IMPORT_PROCESSING_INSTRUCTION = "import";
+
+    /**
+     * The tag name of the compile processing instruction.
+     * @since 15
+     */
+    public static final String COMPILE_PROCESSING_INSTRUCTION = "compile";
 
     /**
      * Prefix of 'fx' namespace.
@@ -2678,6 +2756,10 @@ public class FXMLLoader {
             processLanguage();
         } else if (piTarget.equals(IMPORT_PROCESSING_INSTRUCTION)) {
             processImport();
+        } else if (piTarget.equals(COMPILE_PROCESSING_INSTRUCTION)) {
+            String strCompile = xmlStreamReader.getPIData().trim();
+            // if PIData() is empty string then default to true, otherwise use Boolean.parseBoolean(string) to determine the boolean value
+            compileScript = (strCompile.length() == 0 ? true : Boolean.parseBoolean(strCompile));
         }
     }
 

@@ -60,30 +60,43 @@ public:
     template <typename Functor>
     void iterate(const Locker&, const Functor& functor) { iterate(functor); }
 
+    JS_EXPORT_PRIVATE static void forEachVM(Function<FunctorStatus(VM&)>&&);
+
     Expected<Locker, Error> lock(Seconds timeout = Seconds::infinity());
 
     Expected<bool, Error> isValidExecutableMemory(const Locker&, void*);
     Expected<CodeBlock*, Error> codeBlockForMachinePC(const Locker&, void*);
 
-    JS_EXPORT_PRIVATE static bool currentThreadOwnsJSLock(ExecState*);
-    JS_EXPORT_PRIVATE static void gc(ExecState*);
-    JS_EXPORT_PRIVATE static void edenGC(ExecState*);
+    JS_EXPORT_PRIVATE static bool currentThreadOwnsJSLock(JSGlobalObject*);
+    JS_EXPORT_PRIVATE static void gc(JSGlobalObject*);
+    JS_EXPORT_PRIVATE static void edenGC(JSGlobalObject*);
     JS_EXPORT_PRIVATE static bool isInHeap(Heap*, void*);
     JS_EXPORT_PRIVATE static bool isValidCell(Heap*, JSCell*);
-    JS_EXPORT_PRIVATE static bool isValidCodeBlock(ExecState*, CodeBlock*);
-    JS_EXPORT_PRIVATE static CodeBlock* codeBlockForFrame(CallFrame* topCallFrame, unsigned frameNumber);
-    JS_EXPORT_PRIVATE static void dumpCallFrame(CallFrame*, unsigned framesToSkip = 0);
+    JS_EXPORT_PRIVATE static bool isValidCodeBlock(JSGlobalObject*, CodeBlock*);
+    JS_EXPORT_PRIVATE static CodeBlock* codeBlockForFrame(JSGlobalObject*, CallFrame* topCallFrame, unsigned frameNumber);
+    JS_EXPORT_PRIVATE static void dumpCallFrame(JSGlobalObject*, CallFrame*, unsigned framesToSkip = 0);
     JS_EXPORT_PRIVATE static void dumpRegisters(CallFrame*);
-    JS_EXPORT_PRIVATE static void dumpStack(CallFrame* topCallFrame, unsigned framesToSkip = 0);
+    JS_EXPORT_PRIVATE static void dumpStack(JSGlobalObject*, CallFrame* topCallFrame, unsigned framesToSkip = 0);
     JS_EXPORT_PRIVATE static void dumpValue(JSValue);
     JS_EXPORT_PRIVATE static void dumpCellMemory(JSCell*);
     JS_EXPORT_PRIVATE static void dumpCellMemoryToStream(JSCell*, PrintStream&);
     JS_EXPORT_PRIVATE static void dumpSubspaceHashes(VM*);
 
+    enum VerifierAction { ReleaseAssert, Custom };
+
+    using VerifyFunctor = bool(bool condition, const char* description, ...);
+    static bool unusedVerifier(bool, const char*, ...) { return false; }
+
+    template<VerifierAction, VerifyFunctor = unusedVerifier>
+    static bool verifyCellSize(VM&, JSCell*, size_t allocatorCellSize);
+
+    template<VerifierAction, VerifyFunctor = unusedVerifier>
+    static bool verifyCell(VM&, JSCell*);
+
 private:
     template <typename Functor> void iterate(const Functor& functor)
     {
-        for (VM* vm = m_list.head(); vm; vm = vm->next()) {
+        for (VM* vm = m_vmList.head(); vm; vm = vm->next()) {
             FunctorStatus status = functor(*vm);
             if (status == FunctorStatus::Done)
                 return;
@@ -91,7 +104,7 @@ private:
     }
 
     Lock m_lock;
-    DoublyLinkedList<VM> m_list;
+    DoublyLinkedList<VM> m_vmList;
 };
 
 } // namespace JSC

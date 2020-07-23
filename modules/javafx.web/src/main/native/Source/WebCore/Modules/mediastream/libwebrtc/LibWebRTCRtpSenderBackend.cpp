@@ -27,24 +27,48 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "LibWebRTCDTMFSenderBackend.h"
 #include "LibWebRTCPeerConnectionBackend.h"
 #include "LibWebRTCUtils.h"
 #include "RTCPeerConnection.h"
 #include "RTCRtpSender.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
 
 namespace WebCore {
 
-template<typename Source>
-static inline bool updateTrackSource(Source& source, MediaStreamTrack* track)
+LibWebRTCRtpSenderBackend::LibWebRTCRtpSenderBackend(LibWebRTCPeerConnectionBackend& backend, rtc::scoped_refptr<webrtc::RtpSenderInterface>&& rtcSender, Source&& source)
+    : m_peerConnectionBackend(makeWeakPtr(&backend))
+    , m_rtcSender(WTFMove(rtcSender))
+    , m_source(WTFMove(source))
 {
-    if (!track) {
-        source.stop();
-        return true;
-    }
-    return source.setSource(track->privateTrack());
+    startSource();
+}
+
+LibWebRTCRtpSenderBackend::~LibWebRTCRtpSenderBackend()
+{
+    stopSource();
+}
+
+void LibWebRTCRtpSenderBackend::startSource()
+{
+    switchOn(m_source, [](Ref<RealtimeOutgoingAudioSource>& source) {
+        source->start();
+    }, [](Ref<RealtimeOutgoingVideoSource>& source) {
+        source->start();
+    }, [](std::nullptr_t&) {
+    });
+}
+
+void LibWebRTCRtpSenderBackend::stopSource()
+{
+    switchOn(m_source, [](Ref<RealtimeOutgoingAudioSource>& source) {
+        source->stop();
+    }, [](Ref<RealtimeOutgoingVideoSource>& source) {
+        source->stop();
+    }, [](std::nullptr_t&) {
+    });
+    m_source = nullptr;
 }
 
 void LibWebRTCRtpSenderBackend::replaceTrack(ScriptExecutionContext& context, RTCRtpSender& sender, RefPtr<MediaStreamTrack>&& track, DOMPromiseDeferred<void>&& promise)
@@ -54,28 +78,22 @@ void LibWebRTCRtpSenderBackend::replaceTrack(ScriptExecutionContext& context, RT
         return;
     }
 
-    auto* currentTrack = sender.track();
-
-    ASSERT(!track || !currentTrack || currentTrack->source().type() == track->source().type());
-    if (currentTrack) {
-    switch (currentTrack->source().type()) {
-    case RealtimeMediaSource::Type::None:
-        ASSERT_NOT_REACHED();
-        promise.reject(InvalidModificationError);
-        break;
-    case RealtimeMediaSource::Type::Audio:
-        if (!updateTrackSource(*audioSource(), track.get())) {
-            promise.reject(InvalidModificationError);
-            return;
-        }
-        break;
-    case RealtimeMediaSource::Type::Video:
-        if (!updateTrackSource(*videoSource(), track.get())) {
-            promise.reject(InvalidModificationError);
-            return;
-        }
-        break;
-    }
+    if (!track)
+        stopSource();
+    else if (sender.track()) {
+        switchOn(m_source, [&](Ref<RealtimeOutgoingAudioSource>& source) {
+            ASSERT(track->source().type() == RealtimeMediaSource::Type::Audio);
+            source->stop();
+            source->setSource(track->privateTrack());
+            source->start();
+        }, [&](Ref<RealtimeOutgoingVideoSource>& source) {
+            ASSERT(track->source().type() == RealtimeMediaSource::Type::Video);
+            source->stop();
+            source->setSource(track->privateTrack());
+            source->start();
+        }, [](std::nullptr_t&) {
+            ASSERT_NOT_REACHED();
+        });
     }
 
     // FIXME: Remove this postTask once this whole function is executed as part of the RTCPeerConnection operation queue.
@@ -97,18 +115,7 @@ void LibWebRTCRtpSenderBackend::replaceTrack(ScriptExecutionContext& context, RT
             return;
         }
 
-        if (RuntimeEnabledFeatures::sharedFeatures().webRTCUnifiedPlanEnabled()) {
-            m_source = nullptr;
-            m_peerConnectionBackend->setSenderSourceFromTrack(*this, *protectedSender->track());
-            promise.resolve();
-            return;
-        }
-
-        auto result = m_peerConnectionBackend->addTrack(*protectedSender->track(), { });
-        if (result.hasException()) {
-            promise.reject(result.releaseException());
-            return;
-        }
+        m_peerConnectionBackend->setSenderSourceFromTrack(*this, *protectedSender->track());
         promise.resolve();
     });
 }
@@ -149,6 +156,37 @@ void LibWebRTCRtpSenderBackend::setParameters(const RTCRtpSendParameters& parame
 std::unique_ptr<RTCDTMFSenderBackend> LibWebRTCRtpSenderBackend::createDTMFBackend()
 {
     return makeUnique<LibWebRTCDTMFSenderBackend>(m_rtcSender->GetDtmfSender());
+}
+
+RealtimeOutgoingVideoSource* LibWebRTCRtpSenderBackend::videoSource()
+{
+    return switchOn(m_source,
+        [](Ref<RealtimeOutgoingVideoSource>& source) { return source.ptr(); },
+        [](const auto&) -> RealtimeOutgoingVideoSource* { return nullptr; }
+    );
+}
+
+bool LibWebRTCRtpSenderBackend::hasSource() const
+{
+    return switchOn(m_source,
+        [](const std::nullptr_t&) { return false; },
+        [](const auto&) { return true; }
+    );
+}
+
+void LibWebRTCRtpSenderBackend::setSource(Source&& source)
+{
+    stopSource();
+    m_source = WTFMove(source);
+    startSource();
+}
+
+void LibWebRTCRtpSenderBackend::takeSource(LibWebRTCRtpSenderBackend& backend)
+{
+    ASSERT(backend.hasSource());
+    stopSource();
+    m_source = WTFMove(backend.m_source);
+    backend.m_source = nullptr;
 }
 
 } // namespace WebCore

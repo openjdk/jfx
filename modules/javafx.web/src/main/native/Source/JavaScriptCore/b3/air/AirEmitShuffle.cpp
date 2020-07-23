@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ namespace JSC { namespace B3 { namespace Air {
 namespace {
 
 namespace AirEmitShuffleInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 template<typename Functor>
@@ -139,13 +139,13 @@ Vector<Inst> emitShuffle(
         });
 
     // First validate that this is the kind of shuffle that we know how to deal with.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     for (const ShufflePair& pair : pairs) {
         ASSERT(pair.src().isBank(bank));
         ASSERT(pair.dst().isBank(bank));
         ASSERT(pair.dst().isTmp() || pair.dst().isMemory());
     }
-#endif // !ASSERT_DISABLED
+#endif // ASSERT_ENABLED
 
     // There are two possible kinds of operations that we will do:
     //

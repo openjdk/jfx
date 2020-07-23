@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,11 +54,13 @@ typedef struct {
 
 // NEXT and OR are meant to be indices into "int" fields, but arrays must
 // be homogenous, so every field is a float. However floats can represent
-// exactly up to 26 bit ints, so we're ok.
+// exactly up to 24 bit ints, so we're ok as long as we check for overflow.
 #define OR           2
 #define SLOPE        3
 #define NEXT         4
 #define SIZEOF_EDGE  5
+
+#define MAX_EDGE_IDX (1 << 24)
 
 #define WIND_EVEN_ODD   0
 #define WIND_NON_ZERO   1
@@ -110,7 +112,7 @@ extern void Renderer_destroy(Renderer *pRenderer);
 
 extern void Renderer_getOutputBounds(Renderer *pRenderer, jint bounds[]);
 
-extern void Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC);
+extern jint Renderer_produceAlphas(Renderer *pRenderer, AlphaConsumer *pAC);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,7 +89,11 @@ void DesiredIdentifiers::reallyAdd(VM& vm, CommonData* commonData)
 {
     for (auto rep : m_addedIdentifiers) {
         ASSERT(rep->hasAtLeastOneRef());
-        commonData->dfgIdentifiers.append(Identifier::fromUid(vm, rep));
+        Identifier uid = Identifier::fromUid(vm, rep);
+        {
+            ConcurrentJSLocker locker(m_codeBlock->m_lock);
+            commonData->dfgIdentifiers.append(WTFMove(uid));
+        }
     }
 }
 

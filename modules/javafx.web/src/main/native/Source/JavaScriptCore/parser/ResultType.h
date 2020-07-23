@@ -27,6 +27,8 @@
 
 namespace JSC {
 
+    // FIXME: Consider whether this is actually necessary. Is LLInt and Baseline's profiling information enough?
+    // https://bugs.webkit.org/show_bug.cgi?id=201659
     struct ResultType {
     private:
         friend struct OperandTypes;
@@ -46,6 +48,10 @@ namespace JSC {
         static constexpr int numBitsNeeded = 7;
         static_assert((TypeBits & ((1 << numBitsNeeded) - 1)) == TypeBits, "This is necessary for correctness.");
 
+        constexpr explicit ResultType()
+            : ResultType(unknownType())
+        {
+        }
         constexpr explicit ResultType(Type type)
             : m_bits(type)
         {
@@ -148,7 +154,12 @@ namespace JSC {
 
         static constexpr ResultType bigIntOrInt32Type()
         {
-            return ResultType(TypeMaybeBigInt | TypeInt32);
+            return ResultType(TypeMaybeBigInt | TypeInt32 | TypeMaybeNumber);
+        }
+
+        static constexpr ResultType bigIntOrNumberType()
+        {
+            return ResultType(TypeMaybeBigInt | TypeMaybeNumber);
         }
 
         static constexpr ResultType unknownType()
@@ -165,6 +176,24 @@ namespace JSC {
             if (op1.definitelyIsBigInt() && op2.definitelyIsBigInt())
                 return bigIntType();
             return addResultType();
+        }
+
+        static constexpr ResultType forNonAddArith(ResultType op1, ResultType op2)
+        {
+            if (op1.definitelyIsNumber() && op2.definitelyIsNumber())
+                return numberType();
+            if (op1.definitelyIsBigInt() && op2.definitelyIsBigInt())
+                return bigIntType();
+            return bigIntOrNumberType();
+        }
+
+        static constexpr ResultType forUnaryArith(ResultType op)
+        {
+            if (op.definitelyIsNumber())
+                return numberType();
+            if (op.definitelyIsBigInt())
+                return bigIntType();
+            return bigIntOrNumberType();
         }
 
         // Unlike in C, a logical op produces the value of the

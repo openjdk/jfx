@@ -93,9 +93,7 @@ public:
             if (builder.length())
                 builder.append(' ');
 
-            builder.appendFixedPrecisionNumber(point->x());
-            builder.append(' ');
-            builder.appendFixedPrecisionNumber(point->y());
+            builder.append(point->x(), ' ', point->y());
         }
 
         return builder.toString();

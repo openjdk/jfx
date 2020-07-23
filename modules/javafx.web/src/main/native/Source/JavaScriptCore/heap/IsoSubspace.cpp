@@ -29,24 +29,29 @@
 #include "AllocatorInlines.h"
 #include "BlockDirectoryInlines.h"
 #include "IsoAlignedMemoryAllocator.h"
+#include "IsoCellSetInlines.h"
 #include "IsoSubspaceInlines.h"
 #include "LocalAllocatorInlines.h"
+#include "MarkedSpaceInlines.h"
 
 namespace JSC {
 
-IsoSubspace::IsoSubspace(CString name, Heap& heap, HeapCellType* heapCellType, size_t size)
+IsoSubspace::IsoSubspace(CString name, Heap& heap, HeapCellType* heapCellType, size_t size, uint8_t numberOfLowerTierCells)
     : Subspace(name, heap)
-    , m_size(size)
-    , m_directory(&heap, WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
+    , m_directory(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
     , m_localAllocator(&m_directory)
-    , m_isoAlignedMemoryAllocator(makeUnique<IsoAlignedMemoryAllocator>())
+    , m_isoAlignedMemoryAllocator(makeUnique<IsoAlignedMemoryAllocator>(name))
 {
+    m_remainingLowerTierCellCount = numberOfLowerTierCells;
+    ASSERT(WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size) == cellSize());
+    ASSERT(numberOfLowerTierCells <= MarkedBlock::maxNumberOfLowerTierCells);
+    m_isIsoSubspace = true;
     initialize(heapCellType, m_isoAlignedMemoryAllocator.get());
 
     auto locker = holdLock(m_space.directoryLock());
     m_directory.setSubspace(this);
     m_space.addBlockDirectory(locker, &m_directory);
-    m_alignedMemoryAllocator->registerDirectory(&m_directory);
+    m_alignedMemoryAllocator->registerDirectory(heap, &m_directory);
     m_firstDirectory = &m_directory;
 }
 
@@ -64,7 +69,7 @@ void* IsoSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralCont
     return allocateNonVirtual(vm, size, deferralContext, failureMode);
 }
 
-void IsoSubspace::didResizeBits(size_t blockIndex)
+void IsoSubspace::didResizeBits(unsigned blockIndex)
 {
     m_cellSets.forEach(
         [&] (IsoCellSet* set) {
@@ -72,7 +77,7 @@ void IsoSubspace::didResizeBits(size_t blockIndex)
         });
 }
 
-void IsoSubspace::didRemoveBlock(size_t blockIndex)
+void IsoSubspace::didRemoveBlock(unsigned blockIndex)
 {
     m_cellSets.forEach(
         [&] (IsoCellSet* set) {
@@ -86,6 +91,44 @@ void IsoSubspace::didBeginSweepingToFreeList(MarkedBlock::Handle* block)
         [&] (IsoCellSet* set) {
             set->sweepToFreeList(block);
         });
+}
+
+void* IsoSubspace::tryAllocateFromLowerTier()
+{
+    auto revive = [&] (PreciseAllocation* allocation) {
+        allocation->setIndexInSpace(m_space.m_preciseAllocations.size());
+        allocation->m_hasValidCell = true;
+        m_space.m_preciseAllocations.append(allocation);
+        if (auto* set = m_space.preciseAllocationSet())
+            set->add(allocation->cell());
+        ASSERT(allocation->indexInSpace() == m_space.m_preciseAllocations.size() - 1);
+        m_preciseAllocations.append(allocation);
+        return allocation->cell();
+    };
+
+    if (!m_lowerTierFreeList.isEmpty()) {
+        PreciseAllocation* allocation = m_lowerTierFreeList.begin();
+        allocation->remove();
+        return revive(allocation);
+    }
+    if (m_remainingLowerTierCellCount) {
+        PreciseAllocation* allocation = PreciseAllocation::createForLowerTier(m_space.heap(), cellSize(), this, --m_remainingLowerTierCellCount);
+        return revive(allocation);
+    }
+    return nullptr;
+}
+
+void IsoSubspace::sweepLowerTierCell(PreciseAllocation* preciseAllocation)
+{
+    preciseAllocation = preciseAllocation->reuseForLowerTier();
+    m_lowerTierFreeList.append(preciseAllocation);
+}
+
+void IsoSubspace::destroyLowerTierFreeList()
+{
+    m_lowerTierFreeList.forEach([&](PreciseAllocation* allocation) {
+        allocation->destroy();
+    });
 }
 
 } // namespace JSC

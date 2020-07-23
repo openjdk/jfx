@@ -45,10 +45,19 @@
 #include "RenderMultiColumnFlow.h"
 #include "RenderMultiColumnSet.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
+#include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
+#include "TextManipulationController.h"
 #include <wtf/SystemTracing.h>
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+#include "FrameView.h"
+#include "FrameViewLayoutContext.h"
+#include "LayoutState.h"
+#include "LayoutTreeBuilder.h"
+#endif
 
 #if PLATFORM(IOS_FAMILY)
 #include "ContentChangeObserver.h"
@@ -273,7 +282,7 @@ static bool pseudoStyleCacheIsInvalid(RenderElement* renderer, RenderStyle* newS
 
     for (auto& cache : *pseudoStyleCache) {
         PseudoId pseudoId = cache->styleType();
-        std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(pseudoId), newStyle, newStyle);
+        std::unique_ptr<RenderStyle> newPseudoStyle = renderer->getUncachedPseudoStyle({ pseudoId }, newStyle, newStyle);
         if (!newPseudoStyle)
             return true;
         if (*newPseudoStyle != *cache) {
@@ -289,6 +298,14 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
     auto oldStyle = RenderStyle::clone(renderer.style());
     renderer.setStyle(WTFMove(newStyle), minimalStyleDifference);
     m_builder.normalizeTreeAfterStyleChange(renderer, oldStyle);
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled()) {
+        if (!m_document.view() || !m_document.view()->layoutContext().layoutTreeContent())
+            return;
+        if (auto* layoutBox = m_document.view()->layoutContext().layoutTreeContent()->layoutBoxForRenderer(renderer))
+            layoutBox->updateStyle(renderer.style());
+    }
+#endif
 }
 
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdate& update)
@@ -381,6 +398,10 @@ void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
 #endif
 
     m_builder.attach(insertionPosition, WTFMove(newRenderer));
+
+    auto* textManipulationController = m_document.textManipulationControllerIfExists();
+    if (UNLIKELY(textManipulationController))
+        textManipulationController->didCreateRendererForElement(element);
 
     if (AXObjectCache* cache = m_document.axObjectCache())
         cache->updateCacheAfterNodeIsAttached(&element);
@@ -540,14 +561,25 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
         while (teardownStack.size() > depth) {
             auto& element = *teardownStack.takeLast();
 
-            if (teardownType == TeardownType::Full || teardownType == TeardownType::RendererUpdateCancelingAnimations) {
+            // Make sure we don't leave any renderers behind in nodes outside the composed tree.
+            if (element.shadowRoot())
+                tearDownLeftoverShadowHostChildren(element, builder);
+
+            switch (teardownType) {
+            case TeardownType::Full:
+            case TeardownType::RendererUpdateCancelingAnimations:
                 if (timeline) {
                     if (document.renderTreeBeingDestroyed())
-                        timeline->elementWasRemoved(element);
+                        timeline->willDestroyRendererForElement(element);
                     else if (teardownType == TeardownType::RendererUpdateCancelingAnimations)
                         timeline->cancelDeclarativeAnimationsForElement(element);
                 }
                 animationController.cancelAnimations(element);
+                break;
+            case TeardownType::RendererUpdate:
+                if (timeline)
+                    timeline->willChangeRendererForElement(element);
+                break;
             }
 
             if (teardownType == TeardownType::Full)
@@ -560,10 +592,6 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
                 builder.destroyAndCleanUpAnonymousWrappers(*renderer);
                 element.setRenderer(nullptr);
             }
-
-            // Make sure we don't leave any renderers behind in nodes outside the composed tree.
-            if (element.shadowRoot())
-                tearDownLeftoverShadowHostChildren(element, builder);
 
             if (element.hasCustomStyleResolveCallbacks())
                 element.didDetachRenderers();

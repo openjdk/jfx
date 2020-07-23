@@ -71,13 +71,16 @@ public:
 
     ExceptionOr<void> startRecording(Optional<int>);
     ExceptionOr<void> stopRecording();
+    ExceptionOr<void> requestData();
+
+    MediaStream& stream() { return m_stream.get(); }
 
 private:
     MediaRecorder(Document&, Ref<MediaStream>&&, std::unique_ptr<MediaRecorderPrivate>&&, Options&& = { });
 
-    static std::unique_ptr<MediaRecorderPrivate> getPrivateImpl(const MediaStreamPrivate&);
+    static std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(Document&, const MediaStreamPrivate&);
 
-    Ref<Blob> createRecordingDataBlob();
+    Document* document() const;
 
     // EventTarget
     void refEventTarget() final { ref(); }
@@ -86,11 +89,13 @@ private:
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     // ActiveDOMObject API.
+    void suspend(ReasonForSuspension) final;
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     void stopRecordingInternal();
+
+    void dispatchError(Exception&&);
 
     // MediaStream::Observer
     void didAddOrRemoveTrack() final;

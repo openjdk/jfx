@@ -28,7 +28,9 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "Logging.h"
 #include "SWServer.h"
+#include "SWServerToContextConnection.h"
 #include "SWServerWorker.h"
 #include "ServiceWorkerTypes.h"
 #include "ServiceWorkerUpdateViaCache.h"
@@ -48,6 +50,7 @@ SWServerRegistration::SWServerRegistration(SWServer& server, const ServiceWorker
     , m_scriptURL(scriptURL)
     , m_server(server)
     , m_creationTime(MonotonicTime::now())
+    , m_softUpdateTimer { *this, &SWServerRegistration::softUpdate }
 {
     m_scopeURL.removeFragmentIdentifier();
 }
@@ -259,7 +262,7 @@ void SWServerRegistration::clear()
         updateWorkerState(*activeWorker, ServiceWorkerState::Redundant);
 
     // Remove scope to registration map[scopeString].
-    m_server.removeRegistration(key());
+    m_server.removeRegistration(identifier());
 }
 
 // https://w3c.github.io/ServiceWorker/#try-activate-algorithm
@@ -333,9 +336,14 @@ void SWServerRegistration::handleClientUnload()
 {
     if (hasClientsUsingRegistration())
         return;
-    if (isUninstalling() && tryClear())
+    if (isUnregistered() && tryClear())
         return;
     tryActivate();
+}
+
+bool SWServerRegistration::isUnregistered() const
+{
+    return m_server.getRegistration(key()) != this;
 }
 
 void SWServerRegistration::controlClient(ServiceWorkerClientIdentifier identifier)
@@ -349,17 +357,28 @@ void SWServerRegistration::controlClient(ServiceWorkerClientIdentifier identifie
     m_server.connection(identifier.serverConnectionIdentifier)->notifyClientsOfControllerChange(identifiers, activeWorker()->data());
 }
 
-void SWServerRegistration::setIsUninstalling(bool value)
+bool SWServerRegistration::shouldSoftUpdate(const FetchOptions& options) const
 {
-    if (m_uninstalling == value)
+    if (options.mode == FetchOptions::Mode::Navigate)
+        return true;
+
+    return WebCore::isNonSubresourceRequest(options.destination) && isStale();
+}
+
+void SWServerRegistration::softUpdate()
+{
+    m_server.softUpdate(*this);
+}
+
+void SWServerRegistration::scheduleSoftUpdate()
+{
+    // To avoid scheduling many updates during a single page load, we do soft updates on a 1 second delay and keep delaying
+    // as long as soft update requests keep coming. This seems to match Chrome's behavior.
+    if (m_softUpdateTimer.isActive())
         return;
 
-    m_uninstalling = value;
-
-    if (!m_uninstalling && activeWorker()) {
-        // Registration with active worker has been resurrected, we need to check if any ready promises were waiting for this.
-        m_server.resolveRegistrationReadyRequests(*this);
-    }
+    RELEASE_LOG(ServiceWorker, "SWServerRegistration::softUpdateIfNeeded");
+    m_softUpdateTimer.startOneShot(softUpdateDelay);
 }
 
 } // namespace WebCore

@@ -68,7 +68,7 @@ JavaField::JavaField(JNIEnv* env, jobject aField)
     m_field = JobjectWrapper::create(aField);
 }
 
-JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
+JSValue JavaField::valueFromInstance(JSGlobalObject* globalObject, const Instance* i) const
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
 
@@ -104,10 +104,10 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
 
             const char* arrayType = typeClassName();
             if (arrayType[0] == '[')
-                jsresult = JavaArray::convertJObjectToArray(exec, anObject, arrayType, instance->rootObject(), instance->accessControlContext());
+                jsresult = JavaArray::convertJObjectToArray(globalObject, anObject, arrayType, instance->rootObject(), instance->accessControlContext());
             else if (anObject)
 
-            jsresult = toJS(exec, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(exec), instance->rootObject(), anObject, instance->accessControlContext()));
+            jsresult = toJS(globalObject, WebCore::Java_Object_to_JSValue(getJNIEnv(), toRef(globalObject), instance->rootObject(), anObject, instance->accessControlContext()));
         }
         break;
 
@@ -142,16 +142,16 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
         break;
     }
 
-    LOG(LiveConnect, "JavaField::valueFromInstance getting %s = %s", String(name().impl()).utf8().data(), jsresult.toString(exec)->value(exec).ascii().data());
+    LOG(LiveConnect, "JavaField::valueFromInstance getting %s = %s", String(name().impl()).utf8().data(), jsresult.toString(globalObject)->value(globalObject).ascii().data());
 
     return jsresult;
 }
 
-bool JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue aValue) const
+bool JavaField::setValueToInstance(JSGlobalObject* globalObject, const Instance* i, JSValue aValue) const
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
-    jvalue javaValue = convertValueToJValue(exec, i->rootObject(), aValue, m_type, typeClassName());
-    LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(exec)->value(exec).ascii().data());
+    jvalue javaValue = convertValueToJValue(globalObject, i->rootObject(), aValue, m_type, typeClassName());
+    LOG(LiveConnect, "JavaField::setValueToInstance setting value %s to %s", String(name().impl()).utf8().data(), aValue.toString(globalObject)->value(globalObject).ascii().data());
 
     jobject jfield = m_field->instance();
     // Since jfield is WeakGlobalRef, creating a localref to safeguard instance() from GC

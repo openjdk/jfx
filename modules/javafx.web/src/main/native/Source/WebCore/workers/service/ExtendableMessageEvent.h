@@ -35,7 +35,7 @@
 #include <wtf/Variant.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 }
 
@@ -48,6 +48,7 @@ class ServiceWorkerClient;
 using ExtendableMessageEventSource = Variant<RefPtr<ServiceWorkerClient>, RefPtr<ServiceWorker>, RefPtr<MessagePort>>;
 
 class ExtendableMessageEvent final : public ExtendableEvent {
+    WTF_MAKE_ISO_ALLOCATED(ExtendableMessageEvent);
 public:
     struct Init : ExtendableEventInit {
         JSC::JSValue data;
@@ -57,7 +58,7 @@ public:
         Vector<RefPtr<MessagePort>> ports;
     };
 
-    static Ref<ExtendableMessageEvent> create(JSC::ExecState& state, const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<ExtendableMessageEvent> create(JSC::JSGlobalObject& state, const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new ExtendableMessageEvent(state, type, initializer, isTrusted));
     }
@@ -75,7 +76,7 @@ public:
     EventInterface eventInterface() const final { return ExtendableMessageEventInterfaceType; }
 
 private:
-    ExtendableMessageEvent(JSC::ExecState&, const AtomString&, const Init&, IsTrusted);
+    ExtendableMessageEvent(JSC::JSGlobalObject&, const AtomString&, const Init&, IsTrusted);
     ExtendableMessageEvent(RefPtr<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, Optional<ExtendableMessageEventSource>&&, Vector<RefPtr<MessagePort>>&&);
 
     RefPtr<SerializedScriptValue> m_data;

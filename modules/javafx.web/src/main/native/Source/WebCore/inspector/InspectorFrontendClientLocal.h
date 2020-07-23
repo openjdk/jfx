@@ -60,7 +60,7 @@ public:
     };
 
     WEBCORE_EXPORT InspectorFrontendClientLocal(InspectorController* inspectedPageController, Page* frontendPage, std::unique_ptr<Settings>);
-    WEBCORE_EXPORT virtual ~InspectorFrontendClientLocal();
+    WEBCORE_EXPORT ~InspectorFrontendClientLocal() override;
 
     WEBCORE_EXPORT void resetState() override;
 
@@ -89,6 +89,7 @@ public:
     WEBCORE_EXPORT bool isUnderTest() final;
     bool isRemote() const final { return false; }
     WEBCORE_EXPORT unsigned inspectionLevel() const final;
+    String backendCommandsURL() const final { return String(); };
 
     WEBCORE_EXPORT bool canAttachWindow();
     WEBCORE_EXPORT void setDockingUnavailable(bool);

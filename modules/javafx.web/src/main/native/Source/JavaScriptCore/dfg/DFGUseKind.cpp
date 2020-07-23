@@ -97,11 +97,17 @@ void printInternal(PrintStream& out, UseKind useKind)
     case RegExpObjectUse:
         out.print("RegExpObject");
         return;
+    case PromiseObjectUse:
+        out.print("PromiseObject");
+        return;
     case ProxyObjectUse:
         out.print("ProxyObject");
         return;
     case DerivedArrayUse:
         out.print("DerivedArray");
+        return;
+    case DateObjectUse:
+        out.print("DateObject");
         return;
     case MapObjectUse:
         out.print("MapObject");

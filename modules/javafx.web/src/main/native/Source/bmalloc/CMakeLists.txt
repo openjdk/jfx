@@ -16,6 +16,7 @@ set(bmalloc_SOURCES
     bmalloc/FreeList.cpp
     bmalloc/Gigacage.cpp
     bmalloc/Heap.cpp
+    bmalloc/HeapConstants.cpp
     bmalloc/HeapKind.cpp
     bmalloc/IsoHeapImpl.cpp
     bmalloc/IsoPage.cpp
@@ -30,7 +31,6 @@ set(bmalloc_SOURCES
     bmalloc/ObjectType.cpp
     bmalloc/PerProcess.cpp
     bmalloc/Scavenger.cpp
-    bmalloc/VMHeap.cpp
     bmalloc/bmalloc.cpp
     bmalloc/mbmalloc.cpp
 )
@@ -64,11 +64,13 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/EligibilityResult.h
     bmalloc/EligibilityResultInlines.h
     bmalloc/Environment.h
+    bmalloc/FailureAction.h
     bmalloc/FixedVector.h
     bmalloc/FreeList.h
     bmalloc/FreeListInlines.h
     bmalloc/Gigacage.h
     bmalloc/Heap.h
+    bmalloc/HeapConstants.h
     bmalloc/HeapKind.h
     bmalloc/IsoAllocator.h
     bmalloc/IsoAllocatorInlines.h
@@ -109,6 +111,7 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/Mutex.h
     bmalloc/Object.h
     bmalloc/ObjectType.h
+    bmalloc/Packed.h
     bmalloc/PerHeapKind.h
     bmalloc/PerProcess.h
     bmalloc/PerThread.h
@@ -124,7 +127,6 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/StdLibExtras.h
     bmalloc/Syscall.h
     bmalloc/VMAllocate.h
-    bmalloc/VMHeap.h
     bmalloc/Vector.h
     bmalloc/Zone.h
     bmalloc/bmalloc.h

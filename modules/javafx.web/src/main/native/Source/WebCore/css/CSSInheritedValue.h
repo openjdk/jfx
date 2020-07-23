@@ -32,9 +32,10 @@ public:
 
 private:
     friend LazyNeverDestroyed<CSSInheritedValue>;
-    CSSInheritedValue()
+    CSSInheritedValue(StaticCSSValueTag)
         : CSSValue(InheritedClass)
     {
+        makeStatic();
     }
 };
 

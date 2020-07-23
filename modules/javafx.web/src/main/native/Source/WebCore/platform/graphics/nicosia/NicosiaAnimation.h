@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "Animation.h"
 #include "GraphicsLayer.h"
 
 namespace WebCore {
@@ -42,13 +43,16 @@ public:
         : m_keyframes(WebCore::AnimatedPropertyInvalid)
     { }
     Animation(const String&, const WebCore::KeyframeValueList&, const WebCore::FloatSize&, const WebCore::Animation&, bool, MonotonicTime, Seconds, AnimationState);
+
     WEBCORE_EXPORT Animation(const Animation&);
+    Animation& operator=(const Animation&);
+    Animation(Animation&&) = default;
+    Animation& operator=(Animation&&) = default;
 
     void apply(ApplicationResult&, MonotonicTime);
     void applyKeepingInternalState(ApplicationResult&, MonotonicTime);
     void pause(Seconds);
     void resume();
-    bool isActive() const;
 
     const String& name() const { return m_name; }
     const WebCore::KeyframeValueList& keyframes() const { return m_keyframes; }
@@ -96,7 +100,6 @@ public:
 
     bool hasRunningAnimations() const;
     bool hasActiveAnimationsOfType(WebCore::AnimatedPropertyID type) const;
-    Animations getActiveAnimations() const;
 
 private:
     Vector<Animation> m_animations;

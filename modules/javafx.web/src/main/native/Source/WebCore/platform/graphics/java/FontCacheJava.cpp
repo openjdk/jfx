@@ -45,7 +45,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, cons
 }
 
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontFeatureSettings*, const FontVariantSettings*, FontSelectionSpecifiedCapabilities) {
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontFeatureSettings*, FontSelectionSpecifiedCapabilities) {
 
     return FontPlatformData::create(fontDescription, family);
 }

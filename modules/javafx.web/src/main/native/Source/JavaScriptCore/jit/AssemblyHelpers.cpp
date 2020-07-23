@@ -100,7 +100,7 @@ void AssemblyHelpers::clearSamplingFlag(int32_t flag)
 }
 #endif
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 #if USE(JSVALUE64)
 void AssemblyHelpers::jitAssertIsInt32(GPRReg gpr)
 {
@@ -115,22 +115,22 @@ void AssemblyHelpers::jitAssertIsInt32(GPRReg gpr)
 
 void AssemblyHelpers::jitAssertIsJSInt32(GPRReg gpr)
 {
-    Jump checkJSInt32 = branch64(AboveOrEqual, gpr, GPRInfo::tagTypeNumberRegister);
+    Jump checkJSInt32 = branch64(AboveOrEqual, gpr, GPRInfo::numberTagRegister);
     abortWithReason(AHIsNotJSInt32);
     checkJSInt32.link(this);
 }
 
 void AssemblyHelpers::jitAssertIsJSNumber(GPRReg gpr)
 {
-    Jump checkJSNumber = branchTest64(MacroAssembler::NonZero, gpr, GPRInfo::tagTypeNumberRegister);
+    Jump checkJSNumber = branchTest64(MacroAssembler::NonZero, gpr, GPRInfo::numberTagRegister);
     abortWithReason(AHIsNotJSNumber);
     checkJSNumber.link(this);
 }
 
 void AssemblyHelpers::jitAssertIsJSDouble(GPRReg gpr)
 {
-    Jump checkJSInt32 = branch64(AboveOrEqual, gpr, GPRInfo::tagTypeNumberRegister);
-    Jump checkJSNumber = branchTest64(MacroAssembler::NonZero, gpr, GPRInfo::tagTypeNumberRegister);
+    Jump checkJSInt32 = branch64(AboveOrEqual, gpr, GPRInfo::numberTagRegister);
+    Jump checkJSNumber = branchTest64(MacroAssembler::NonZero, gpr, GPRInfo::numberTagRegister);
     checkJSInt32.link(this);
     abortWithReason(AHIsNotJSDouble);
     checkJSNumber.link(this);
@@ -138,20 +138,20 @@ void AssemblyHelpers::jitAssertIsJSDouble(GPRReg gpr)
 
 void AssemblyHelpers::jitAssertIsCell(GPRReg gpr)
 {
-    Jump checkCell = branchTest64(MacroAssembler::Zero, gpr, GPRInfo::tagMaskRegister);
+    Jump checkCell = branchTest64(MacroAssembler::Zero, gpr, GPRInfo::notCellMaskRegister);
     abortWithReason(AHIsNotCell);
     checkCell.link(this);
 }
 
 void AssemblyHelpers::jitAssertTagsInPlace()
 {
-    Jump ok = branch64(Equal, GPRInfo::tagTypeNumberRegister, TrustedImm64(TagTypeNumber));
-    abortWithReason(AHTagTypeNumberNotInPlace);
+    Jump ok = branch64(Equal, GPRInfo::numberTagRegister, TrustedImm64(JSValue::NumberTag));
+    abortWithReason(AHNumberTagNotInPlace);
     breakpoint();
     ok.link(this);
 
-    ok = branch64(Equal, GPRInfo::tagMaskRegister, TrustedImm64(TagMask));
-    abortWithReason(AHTagMaskNotInPlace);
+    ok = branch64(Equal, GPRInfo::notCellMaskRegister, TrustedImm64(JSValue::NotCellMask));
+    abortWithReason(AHNotCellMaskNotInPlace);
     ok.link(this);
 }
 #elif USE(JSVALUE32_64)
@@ -211,12 +211,12 @@ void AssemblyHelpers::jitAssertIsNull(GPRReg gpr)
 
 void AssemblyHelpers::jitAssertArgumentCountSane()
 {
-    Jump ok = branch32(Below, payloadFor(CallFrameSlot::argumentCount), TrustedImm32(10000000));
+    Jump ok = branch32(Below, payloadFor(CallFrameSlot::argumentCountIncludingThis), TrustedImm32(10000000));
     abortWithReason(AHInsaneArgumentCount);
     ok.link(this);
 }
 
-#endif // !ASSERT_DISABLED
+#endif // ASSERT_ENABLED
 
 void AssemblyHelpers::jitReleaseAssertNoException(VM& vm)
 {
@@ -250,12 +250,9 @@ void AssemblyHelpers::callExceptionFuzz(VM& vm)
     }
 
     // Set up one argument.
-#if CPU(X86)
-    poke(GPRInfo::callFrameRegister, 0);
-#else
     move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
-#endif
     move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationExceptionFuzz)), GPRInfo::nonPreservedNonReturnGPR);
+    prepareCallOperation(vm);
     call(GPRInfo::nonPreservedNonReturnGPR, OperationPtrTag);
 
     for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
@@ -318,7 +315,7 @@ void AssemblyHelpers::emitStoreStructureWithTypeInfo(AssemblyHelpers& jit, Trust
     const Structure* structurePtr = reinterpret_cast<const Structure*>(structure.m_value);
 #if USE(JSVALUE64)
     jit.store64(TrustedImm64(structurePtr->idBlob()), MacroAssembler::Address(dest, JSCell::structureIDOffset()));
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         Jump correctStructure = jit.branch32(Equal, MacroAssembler::Address(dest, JSCell::structureIDOffset()), TrustedImm32(structurePtr->id()));
         jit.abortWithReason(AHStructureIDIsValid);
         correctStructure.link(&jit);
@@ -450,7 +447,7 @@ void emitRandomThunkImpl(AssemblyHelpers& jit, GPRReg scratch0, GPRReg scratch1,
 
     // Convert `(53bit double integer value) / (1 << 53)` to `(53bit double integer value) * (1.0 / (1 << 53))`.
     // In latter case, `1.0 / (1 << 53)` will become a double value represented as (mantissa = 0 & exp = 970, it means 1e-(2**54)).
-    static const double scale = 1.0 / (1ULL << 53);
+    static constexpr double scale = 1.0 / (1ULL << 53);
 
     // Multiplying 1e-(2**54) with the double integer does not change anything of the mantissa part of the double integer.
     // It just reduces the exp part of the given 53bit double integer.
@@ -628,14 +625,15 @@ void AssemblyHelpers::restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(EntryFra
 #endif
 }
 
-void AssemblyHelpers::emitDumbVirtualCall(VM& vm, CallLinkInfo* info)
+void AssemblyHelpers::emitDumbVirtualCall(VM& vm, JSGlobalObject* globalObject, CallLinkInfo* info)
 {
     move(TrustedImmPtr(info), GPRInfo::regT2);
+    move(TrustedImmPtr(globalObject), GPRInfo::regT3);
     Call call = nearCall();
     addLinkTask(
         [=, &vm] (LinkBuffer& linkBuffer) {
             MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = virtualThunkFor(vm, *info);
-            info->setSlowStub(createJITStubRoutine(virtualThunk, vm, nullptr, true));
+            info->setSlowStub(GCAwareJITStubRoutine::create(virtualThunk, vm));
             linkBuffer.link(call, CodeLocationLabel<JITStubRoutinePtrTag>(virtualThunk.code()));
         });
 }
@@ -755,8 +753,7 @@ void AssemblyHelpers::emitConvertValueToBoolean(VM& vm, JSValueRegs value, GPRRe
 
     notDouble.link(this);
 #if USE(JSVALUE64)
-    static_assert(static_cast<int32_t>(ValueTrue) == ValueTrue, "");
-    compare64(invert ? NotEqual : Equal, value.gpr(), TrustedImm32(ValueTrue), result);
+    compare64(invert ? NotEqual : Equal, value.gpr(), TrustedImm32(JSValue::ValueTrue), result);
 #else
     move(invert ? TrustedImm32(1) : TrustedImm32(0), result);
     done.append(branchIfNotBoolean(value, InvalidGPRReg));
@@ -932,14 +929,10 @@ void AssemblyHelpers::debugCall(VM& vm, V_DebugOperation_EPP function, void* arg
     move(TrustedImmPtr(argument), GPRInfo::argumentGPR1);
     move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
     GPRReg scratch = selectScratchGPR(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, GPRInfo::argumentGPR2);
-#elif CPU(X86)
-    poke(GPRInfo::callFrameRegister, 0);
-    poke(TrustedImmPtr(argument), 1);
-    poke(TrustedImmPtr(buffer), 2);
-    GPRReg scratch = GPRInfo::regT0;
 #else
 #error "JIT not supported on this platform."
 #endif
+    prepareCallOperation(vm);
     move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(function)), scratch);
     call(scratch, OperationPtrTag);
 
@@ -993,18 +986,6 @@ void AssemblyHelpers::sanitizeStackInline(VM& vm, GPRReg scratch)
     done.link(this);
     move(stackPointerRegister, scratch);
     storePtr(scratch, vm.addressOfLastStackTop());
-}
-
-void AssemblyHelpers::emitPreparePreciseIndexMask32(GPRReg index, GPRReg length, GPRReg result)
-{
-    if (length == result) {
-        negPtr(length);
-        addPtr(index, length);
-    } else {
-        move(index, result);
-        subPtr(length, result);
-    }
-    rshiftPtr(TrustedImm32(preciseIndexMaskShift<void*>()), result);
 }
 
 } // namespace JSC

@@ -29,8 +29,8 @@ import javafx.util.Duration;
 
 public class TickCalculation {
     public static final int TICKS_PER_SECOND = 6000;
-    private static final double TICKS_PER_MILI = TICKS_PER_SECOND / 1000.0;
-    private static final double TICKS_PER_NANO =  TICKS_PER_MILI * 1e-6;
+    private static final double TICKS_PER_MILLI = TICKS_PER_SECOND / 1000.0;
+    private static final double TICKS_PER_NANO =  TICKS_PER_MILLI * 1e-6;
 
     private TickCalculation() {}
 
@@ -71,7 +71,7 @@ public class TickCalculation {
     }
 
     public static long fromMillis(double millis) {
-        return Math.round(TICKS_PER_MILI * millis);
+        return Math.round(TICKS_PER_MILLI * millis);
     }
 
     public static long fromNano(long nano) {
@@ -83,7 +83,7 @@ public class TickCalculation {
     }
 
     public static long fromDuration(Duration duration, double rate) {
-        return Math.round(TICKS_PER_MILI * duration.toMillis() / Math.abs(rate));
+        return Math.round(TICKS_PER_MILLI * duration.toMillis() / Math.abs(rate));
     }
 
     public static Duration toDuration(long ticks) {
@@ -91,7 +91,7 @@ public class TickCalculation {
     }
 
     public static double toMillis(long ticks) {
-        return ticks / TICKS_PER_MILI;
+        return ticks / TICKS_PER_MILLI;
     }
 
 

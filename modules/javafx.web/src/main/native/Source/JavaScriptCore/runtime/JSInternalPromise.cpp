@@ -42,7 +42,7 @@ JSInternalPromise* JSInternalPromise::create(VM& vm, Structure* structure)
 
 Structure* JSInternalPromise::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSPromiseType, StructureFlags), info());
 }
 
 JSInternalPromise::JSInternalPromise(VM& vm, Structure* structure)
@@ -50,12 +50,12 @@ JSInternalPromise::JSInternalPromise(VM& vm, Structure* structure)
 {
 }
 
-JSInternalPromise* JSInternalPromise::then(ExecState* exec, JSFunction* onFulfilled, JSFunction* onRejected)
+JSInternalPromise* JSInternalPromise::then(JSGlobalObject* globalObject, JSFunction* onFulfilled, JSFunction* onRejected)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* function = jsCast<JSObject*>(get(exec, vm.propertyNames->builtinNames().thenPublicName()));
+    JSObject* function = jsCast<JSObject*>(get(globalObject, vm.propertyNames->builtinNames().thenPublicName()));
     RETURN_IF_EXCEPTION(scope, nullptr);
     CallData callData;
     CallType callType = JSC::getCallData(vm, function, callData);
@@ -66,7 +66,7 @@ JSInternalPromise* JSInternalPromise::then(ExecState* exec, JSFunction* onFulfil
     arguments.append(onRejected ? onRejected : jsUndefined());
     ASSERT(!arguments.hasOverflowed());
 
-    RELEASE_AND_RETURN(scope, jsCast<JSInternalPromise*>(call(exec, function, callType, callData, this, arguments)));
+    RELEASE_AND_RETURN(scope, jsCast<JSInternalPromise*>(call(globalObject, function, callType, callData, this, arguments)));
 }
 
 } // namespace JSC

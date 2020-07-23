@@ -433,7 +433,7 @@ void RenderTable::layout()
 
         LayoutUnit oldLogicalWidth = logicalWidth();
         LayoutUnit oldLogicalHeight = logicalHeight();
-        setLogicalHeight(0);
+        resetLogicalHeightBeforeLayoutIfNeeded();
         updateLogicalWidth();
 
         if (logicalWidth() != oldLogicalWidth) {
@@ -559,7 +559,7 @@ void RenderTable::layout()
     }
 
     auto* layoutState = view().frameView().layoutContext().layoutState();
-    if (layoutState->pageLogicalHeight())
+    if (layoutState && layoutState->pageLogicalHeight())
         setPageLogicalOffset(layoutState->pageLogicalOffset(this, logicalTop()));
 
     bool didFullRepaint = repainter.repaintAfterLayout();
@@ -770,9 +770,9 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
 
     BackgroundBleedAvoidance bleedAvoidance = determineBackgroundBleedAvoidance(paintInfo.context());
     if (!boxShadowShouldBeAppliedToBackground(rect.location(), bleedAvoidance))
-        paintBoxShadow(paintInfo, rect, style(), Normal);
+        paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Normal);
     paintBackground(paintInfo, rect, bleedAvoidance);
-    paintBoxShadow(paintInfo, rect, style(), Inset);
+    paintBoxShadow(paintInfo, rect, style(), ShadowStyle::Inset);
 
     if (style().hasVisibleBorderDecoration() && !collapseBorders())
         paintBorder(paintInfo, rect, style());
@@ -1584,7 +1584,7 @@ const BorderValue& RenderTable::tableEndBorderAdjoiningCell(const RenderTableCel
 void RenderTable::markForPaginationRelayoutIfNeeded()
 {
     auto* layoutState = view().frameView().layoutContext().layoutState();
-    if (!layoutState->isPaginated() || (!layoutState->pageLogicalHeightChanged() && (!layoutState->pageLogicalHeight() || layoutState->pageLogicalOffset(this, logicalTop()) == pageLogicalOffset())))
+    if (!layoutState || !layoutState->isPaginated() || (!layoutState->pageLogicalHeightChanged() && (!layoutState->pageLogicalHeight() || layoutState->pageLogicalOffset(this, logicalTop()) == pageLogicalOffset())))
         return;
 
     // When a table moves, we have to dirty all of the sections too.

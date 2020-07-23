@@ -28,34 +28,15 @@
 
 #include "ExceptionCode.h"
 #include "LibWebRTCMacros.h"
+#include "LibWebRTCUtils.h"
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/peerconnectioninterface.h>
+#include <webrtc/api/peer_connection_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
-
-static inline ExceptionCode toExceptionCode(webrtc::RTCErrorType type)
-{
-    switch (type) {
-    case webrtc::RTCErrorType::INVALID_PARAMETER:
-        return InvalidAccessError;
-    case webrtc::RTCErrorType::INVALID_RANGE:
-        return RangeError;
-    case webrtc::RTCErrorType::SYNTAX_ERROR:
-        return SyntaxError;
-    case webrtc::RTCErrorType::INVALID_STATE:
-        return InvalidStateError;
-    case webrtc::RTCErrorType::INVALID_MODIFICATION:
-        return InvalidModificationError;
-    case webrtc::RTCErrorType::NETWORK_ERROR:
-        return NetworkError;
-    default:
-        return OperationError;
-    }
-}
 
 template<typename Endpoint>
 class CreateSessionDescriptionObserver final : public webrtc::CreateSessionDescriptionObserver {

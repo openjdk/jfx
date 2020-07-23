@@ -38,7 +38,7 @@
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSGlobalObject;
 class VM;
 }
@@ -62,7 +62,7 @@ public:
 
 protected:
     ScriptDebugServer(JSC::VM&);
-    ~ScriptDebugServer();
+    ~ScriptDebugServer() override;
 
     virtual void attachDebugger() = 0;
     virtual void detachDebugger(bool isBeingDestroyed) = 0;
@@ -70,8 +70,8 @@ protected:
     virtual void didPause(JSC::JSGlobalObject*) = 0;
     virtual void didContinue(JSC::JSGlobalObject*) = 0;
     virtual void runEventLoopWhilePaused() = 0;
-    virtual bool isContentScript(JSC::ExecState*) const = 0;
-    virtual void reportException(JSC::ExecState*, JSC::Exception*) const = 0;
+    virtual bool isContentScript(JSC::JSGlobalObject*) const = 0;
+    virtual void reportException(JSC::JSGlobalObject*, JSC::Exception*) const = 0;
 
     bool evaluateBreakpointAction(const ScriptBreakpointAction&);
 
@@ -83,15 +83,15 @@ protected:
 private:
     typedef HashMap<JSC::BreakpointID, BreakpointActions> BreakpointIDToActionsMap;
 
-    void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg) final;
+    void sourceParsed(JSC::JSGlobalObject*, JSC::SourceProvider*, int errorLine, const String& errorMsg) final;
     void willRunMicrotask() final;
     void didRunMicrotask() final;
     void handleBreakpointHit(JSC::JSGlobalObject*, const JSC::Breakpoint&) final;
-    void handleExceptionInBreakpointCondition(JSC::ExecState*, JSC::Exception*) const final;
+    void handleExceptionInBreakpointCondition(JSC::JSGlobalObject*, JSC::Exception*) const final;
     void handlePause(JSC::JSGlobalObject*, JSC::Debugger::ReasonForPause) final;
     void notifyDoneProcessingDebuggerEvents() final;
 
-    JSC::JSValue exceptionOrCaughtValue(JSC::ExecState*);
+    JSC::JSValue exceptionOrCaughtValue(JSC::JSGlobalObject*);
 
     BreakpointIDToActionsMap m_breakpointIDToActions;
     HashSet<ScriptDebugListener*> m_listeners;

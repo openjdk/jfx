@@ -7,11 +7,10 @@ list(APPEND WebCore_SOURCES
     platform/graphics/nicosia/NicosiaAnimation.cpp
     platform/graphics/texmap/BitmapTexture.cpp
     platform/graphics/texmap/BitmapTexturePool.cpp
-    platform/graphics/texmap/GraphicsContext3DTextureMapper.cpp
+    platform/graphics/texmap/GraphicsContextGLTextureMapper.cpp
     platform/graphics/texmap/TextureMapper.cpp
     platform/graphics/texmap/TextureMapperBackingStore.cpp
     platform/graphics/texmap/TextureMapperFPSCounter.cpp
-    platform/graphics/texmap/TextureMapperGC3DPlatformLayer.cpp
     platform/graphics/texmap/TextureMapperLayer.cpp
     platform/graphics/texmap/TextureMapperTile.cpp
 )
@@ -113,5 +112,11 @@ else ()
     list(APPEND WebCore_SOURCES
         platform/graphics/texmap/GraphicsLayerTextureMapper.cpp
         platform/graphics/texmap/TextureMapperTiledBackingStore.cpp
+    )
+endif ()
+
+if (USE_ANGLE_WEBGL)
+    list(APPEND WebCore_SOURCES
+        platform/graphics/nicosia/texmap/NicosiaGC3DANGLELayer.cpp
     )
 endif ()

@@ -33,6 +33,7 @@
 #include "JSDOMConvertInterface.h"
 #include "JSDOMConvertStrings.h"
 #include "JSShadowRoot.h"
+#include "LegacySchemeRegistry.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MouseEvent.h"
@@ -43,7 +44,6 @@
 #include "RenderImage.h"
 #include "RenderSnapshottedPlugIn.h"
 #include "RenderTreeUpdater.h"
-#include "SchemeRegistry.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -53,6 +53,7 @@
 #include "TypedElementDescendantIterator.h"
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -184,13 +185,13 @@ bool HTMLPlugInImageElement::wouldLoadAsPlugIn(const String& relativeURL, const 
 
 RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    ASSERT(document().pageCacheState() == Document::NotInPageCache);
+    ASSERT(document().backForwardCacheState() == Document::NotInBackForwardCache);
 
     if (displayState() >= PreparingPluginReplacement)
         return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 
     // Once a plug-in element creates its renderer, it needs to be told when the document goes
-    // inactive or reactivates so it can clear the renderer before going into the page cache.
+    // inactive or reactivates so it can clear the renderer before going into the back/forward cache.
     if (!m_needsDocumentActivationCallbacks) {
         m_needsDocumentActivationCallbacks = true;
         document().registerForDocumentSuspensionCallbacks(*this);
@@ -362,7 +363,7 @@ void HTMLPlugInImageElement::updateSnapshot(Image* image)
 
 static DOMWrapperWorld& plugInImageElementIsolatedWorld()
 {
-    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM()).leakRef();
+    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM(), DOMWrapperWorld::Type::Internal, "Plugin"_s).leakRef();
     return isolatedWorld;
 }
 
@@ -392,12 +393,12 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     auto& vm = globalObject.vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
 
     JSC::MarkedArgumentBuffer argList;
-    argList.append(toJS<IDLInterface<ShadowRoot>>(state, globalObject, root));
-    argList.append(toJS<IDLDOMString>(state, titleText(*page, mimeType)));
-    argList.append(toJS<IDLDOMString>(state, subtitleText(*page, mimeType)));
+    argList.append(toJS<IDLInterface<ShadowRoot>>(lexicalGlobalObject, globalObject, root));
+    argList.append(toJS<IDLDOMString>(lexicalGlobalObject, titleText(*page, mimeType)));
+    argList.append(toJS<IDLDOMString>(lexicalGlobalObject, subtitleText(*page, mimeType)));
 
     // This parameter determines whether or not the snapshot overlay should always be visible over the plugin snapshot.
     // If no snapshot was found then we want the overlay to be visible.
@@ -405,7 +406,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     ASSERT(!argList.hasOverflowed());
 
     // It is expected the JS file provides a createOverlay(shadowRoot, title, subtitle) function.
-    auto* overlay = globalObject.get(&state, JSC::Identifier::fromString(vm, "createOverlay")).toObject(&state);
+    auto* overlay = globalObject.get(&lexicalGlobalObject, JSC::Identifier::fromString(vm, "createOverlay")).toObject(&lexicalGlobalObject);
     ASSERT(!overlay == !!scope.exception());
     if (!overlay) {
         scope.clearException();
@@ -416,7 +417,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     if (callType == JSC::CallType::None)
         return;
 
-    call(&state, overlay, callType, callData, &globalObject, argList);
+    call(&lexicalGlobalObject, overlay, callType, callData, &globalObject, argList);
     scope.clearException();
 }
 
@@ -484,8 +485,8 @@ void HTMLPlugInImageElement::userDidClickSnapshot(MouseEvent& event, bool forwar
         m_pendingClickEventFromSnapshot = &event;
 
     auto plugInOrigin = m_loadedUrl.host();
-    if (document().page() && !SchemeRegistry::shouldTreatURLSchemeAsLocal(document().page()->mainFrame().document()->baseURL().protocol().toStringWithoutCopying()) && document().page()->settings().autostartOriginPlugInSnapshottingEnabled())
-        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), plugInOrigin.toString(), serviceType(), document().page()->sessionID());
+    if (document().page() && !LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(document().page()->mainFrame().document()->baseURL().protocol().toStringWithoutCopying()) && document().page()->settings().autostartOriginPlugInSnapshottingEnabled())
+        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), plugInOrigin.toString(), serviceType());
 
     LOG(Plugins, "%p User clicked on snapshotted plug-in. Restart.", this);
     restartSnapshottedPlugIn();
@@ -701,7 +702,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const URL& url)
         return;
     }
 
-    if (!SchemeRegistry::shouldTreatURLSchemeAsLocal(m_loadedUrl.protocol().toStringWithoutCopying()) && !m_loadedUrl.host().isEmpty() && m_loadedUrl.host() == document().page()->mainFrame().document()->baseURL().host()) {
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(m_loadedUrl.protocol().toStringWithoutCopying()) && !m_loadedUrl.host().isEmpty() && m_loadedUrl.host() == document().page()->mainFrame().document()->baseURL().host()) {
         LOG(Plugins, "%p Plug-in is served from page's domain, set to play", this);
         m_snapshotDecision = NeverSnapshot;
         return;

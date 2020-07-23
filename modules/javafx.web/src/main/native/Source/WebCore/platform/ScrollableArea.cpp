@@ -47,7 +47,7 @@ namespace WebCore {
 
 struct SameSizeAsScrollableArea {
     virtual ~SameSizeAsScrollableArea();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool weakPtrFactorWasConstructedOnMainThread;
 #endif
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -227,7 +227,7 @@ void ScrollableArea::setScrollOffsetFromInternals(const ScrollOffset& offset)
 void ScrollableArea::setScrollOffsetFromAnimation(const ScrollOffset& offset)
 {
     ScrollPosition position = scrollPositionFromOffset(offset);
-    if (requestScrollPositionUpdate(position))
+    if (requestScrollPositionUpdate(position, currentScrollType()))
         return;
 
     scrollPositionChanged(position);

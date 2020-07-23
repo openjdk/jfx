@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.util.Logging;
 import com.sun.marlin.DMarlinRenderer;
 import com.sun.marlin.DMarlinRenderingEngine;
 import com.sun.marlin.DRendererContext;
@@ -69,11 +70,19 @@ final class SWContext {
         private SoftReference<SWMaskTexture> maskTextureRef;
 
         public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
-            final MaskData mask = ShapeUtil.rasterizeShape(shape, stroke, clip.toRectBounds(), tr, true, antialiasedShape);
-            final SWMaskTexture tex = this.validateMaskTexture(mask.getWidth(), mask.getHeight());
-            mask.uploadToTexture(tex, 0, 0, false);
-            pr.fillAlphaMask(tex.getDataNoClone(), mask.getOriginX(), mask.getOriginY(),
-                             mask.getWidth(), mask.getHeight(), 0, tex.getPhysicalWidth());
+            try {
+                final MaskData mask = ShapeUtil.rasterizeShape(shape, stroke, clip.toRectBounds(), tr, true, antialiasedShape);
+                final SWMaskTexture tex = this.validateMaskTexture(mask.getWidth(), mask.getHeight());
+                mask.uploadToTexture(tex, 0, 0, false);
+                pr.fillAlphaMask(tex.getDataNoClone(), mask.getOriginX(), mask.getOriginY(),
+                                 mask.getWidth(), mask.getHeight(), 0, tex.getPhysicalWidth());
+            } catch (Throwable ex) {
+                if (PrismSettings.verbose) {
+                    ex.printStackTrace();
+                }
+                Logging.getJavaFXLogger().warning("Cannot rasterize Shape: "
+                        + ex.toString());
+            }
         }
 
         private SWMaskTexture initMaskTexture(int width, int height) {
@@ -125,9 +134,17 @@ final class SWContext {
                 shape = stroke.createStrokedShape(shape);
                 stroke = null;
             }
-            final Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, stroke, tr, clip, antialiasedShape);
-            alphaConsumer.initConsumer(r, pr);
-            r.produceAlphas(alphaConsumer);
+            try {
+                final Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, stroke, tr, clip, antialiasedShape);
+                alphaConsumer.initConsumer(r, pr);
+                r.produceAlphas(alphaConsumer);
+            } catch (Throwable ex) {
+                if (PrismSettings.verbose) {
+                    ex.printStackTrace();
+                }
+                Logging.getJavaFXLogger().warning("Cannot rasterize Shape: "
+                        + ex.toString());
+            }
         }
 
         public void dispose() { }

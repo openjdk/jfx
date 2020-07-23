@@ -262,12 +262,11 @@ void IntersectionObserver::notify()
     if (!context)
         return;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
-
     auto takenRecords = takeRecords();
-    m_callback->handleEvent(WTFMove(takenRecords.records), *this);
 
-    InspectorInstrumentation::didFireObserverCallback(cookie);
+    InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
+    m_callback->handleEvent(WTFMove(takenRecords.records), *this);
+    InspectorInstrumentation::didFireObserverCallback(*context);
 }
 
 bool IntersectionObserver::hasPendingActivity() const
@@ -278,11 +277,6 @@ bool IntersectionObserver::hasPendingActivity() const
 const char* IntersectionObserver::activeDOMObjectName() const
 {
     return "IntersectionObserver";
-}
-
-bool IntersectionObserver::canSuspendForDocumentSuspension() const
-{
-    return true;
 }
 
 void IntersectionObserver::stop()

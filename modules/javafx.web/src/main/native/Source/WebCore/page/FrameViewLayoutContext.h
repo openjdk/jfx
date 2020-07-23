@@ -42,6 +42,12 @@ class RenderObject;
 class RenderElement;
 class RenderLayoutState;
 class RenderView;
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+namespace Layout {
+class LayoutState;
+class LayoutTreeContent;
+}
+#endif
 
 class FrameViewLayoutContext {
 public:
@@ -105,10 +111,16 @@ public:
     // If we're doing a full repaint m_layoutState will be 0, but in that case layoutDelta doesn't matter.
     LayoutSize layoutDelta() const;
     void addLayoutDelta(const LayoutSize& delta);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool layoutDeltaMatches(const LayoutSize& delta);
 #endif
     using LayoutStateStack = Vector<std::unique_ptr<RenderLayoutState>>;
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    const Layout::LayoutState* layoutFormattingState() const { return m_layoutState.get(); }
+    Layout::LayoutTreeContent* layoutTreeContent() const { return m_layoutTreeContent.get(); }
+    void invalidateLayoutTreeContent();
+#endif
 
 private:
     friend class LayoutScope;
@@ -150,6 +162,9 @@ private:
     // These functions may only be accessed by LayoutStateMaintainer or LayoutStateDisabler.
     void disablePaintOffsetCache() { m_paintOffsetCacheDisableCount++; }
     void enablePaintOffsetCache() { ASSERT(m_paintOffsetCacheDisableCount > 0); m_paintOffsetCacheDisableCount--; }
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    void layoutUsingFormattingContext();
+#endif
 
     Frame& frame() const;
     FrameView& view() const;
@@ -175,6 +190,10 @@ private:
     int m_layoutDisallowedCount { 0 };
     unsigned m_paintOffsetCacheDisableCount { 0 };
     LayoutStateStack m_layoutStateStack;
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    std::unique_ptr<Layout::LayoutState> m_layoutState;
+    std::unique_ptr<Layout::LayoutTreeContent> m_layoutTreeContent;
+#endif
 };
 
 } // namespace WebCore

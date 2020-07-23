@@ -52,7 +52,7 @@ namespace WebCore {
 unsigned StyleSheetContents::estimatedSizeInBytes() const
 {
     // Note that this does not take into account size of the strings hanging from various objects.
-    // The assumption is that nearly all of of them are atomic and would exist anyway.
+    // The assumption is that nearly all of of them are atoms that would exist anyway.
     unsigned size = sizeof(*this);
 
     // FIXME: This ignores the children of media and region rules.
@@ -156,8 +156,8 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount) {
-        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(RuleData::maximumSelectorComponentCount));
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount) {
+        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
         return;
     }
 
@@ -264,7 +264,7 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     childVectorIndex -= m_namespaceRules.size();
 
     // If the number of selectors would overflow RuleData, we drop the operation.
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount)
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return false;
 
     m_childRules.insert(childVectorIndex, WTFMove(rule));
@@ -316,7 +316,7 @@ const AtomString& StyleSheetContents::namespaceURIFromPrefix(const AtomString& p
     return it->value;
 }
 
-void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
+bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
 {
     bool isSameOriginRequest = securityOrigin && securityOrigin->canRequest(baseURL());
     CachedCSSStyleSheet::MIMETypeCheckHint mimeTypeCheckHint = isStrictParserMode(m_parserContext.mode) || !isSameOriginRequest ? CachedCSSStyleSheet::MIMETypeCheckHint::Strict : CachedCSSStyleSheet::MIMETypeCheckHint::Lax;
@@ -335,10 +335,11 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."));
             }
         }
-        return;
+        return false;
     }
 
     CSSParser(parserContext()).parseSheet(this, sheetText, CSSParser::RuleParsing::Deferred);
+    return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
@@ -426,26 +427,26 @@ static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, co
         if (handler(*rule))
             return true;
         switch (rule->type()) {
-        case StyleRuleBase::Media: {
+        case StyleRuleType::Media: {
             auto* childRules = downcast<StyleRuleMedia>(*rule).childRulesWithoutDeferredParsing();
             if (childRules && traverseRulesInVector(*childRules, handler))
                 return true;
             break;
         }
-        case StyleRuleBase::Import:
+        case StyleRuleType::Import:
             ASSERT_NOT_REACHED();
             break;
-        case StyleRuleBase::Style:
-        case StyleRuleBase::FontFace:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
+        case StyleRuleType::Style:
+        case StyleRuleType::FontFace:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
+        case StyleRuleType::Viewport:
 #endif
             break;
         }
@@ -469,26 +470,26 @@ bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const Ca
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
-        case StyleRuleBase::Style: {
+        case StyleRuleType::Style: {
             auto* properties = downcast<StyleRule>(rule).propertiesWithoutDeferredParsing();
             return properties && properties->traverseSubresources(handler);
         }
-        case StyleRuleBase::FontFace:
+        case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
-        case StyleRuleBase::Import:
+        case StyleRuleType::Import:
             if (auto* cachedResource = downcast<StyleRuleImport>(rule).cachedCSSStyleSheet())
                 return handler(*cachedResource);
             return false;
-        case StyleRuleBase::Media:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
+        case StyleRuleType::Media:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
+        case StyleRuleType::Viewport:
 #endif
             return false;
         };

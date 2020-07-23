@@ -150,6 +150,8 @@ void HeapSnapshotBuilder::setOpaqueRootReachabilityReasonForCell(JSCell* cell, c
     if (!reason || !*reason || m_snapshotType != SnapshotType::GCDebuggingSnapshot)
         return;
 
+    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+
     m_rootData.ensure(cell, [] () -> RootData {
         return { };
     }).iterator->value.reachabilityFromOpaqueRootReasons = reason;
@@ -400,9 +402,8 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             // "Object" in snapshots and not get the name of the prototype's parent.
             JSObject* object = asObject(node.cell);
             if (JSGlobalObject* globalObject = object->globalObject(vm)) {
-                ExecState* exec = globalObject->globalExec();
                 PropertySlot slot(object, PropertySlot::InternalMethodType::VMInquiry);
-                if (!object->getOwnPropertySlot(object, exec, vm.propertyNames->constructor, slot))
+                if (!object->getOwnPropertySlot(object, globalObject, vm.propertyNames->constructor, slot))
                     className = JSObject::calculatedClassName(object);
             }
         }
@@ -463,9 +464,9 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             json.append(',');
             json.appendNumber(labelIndex);
             json.appendLiteral(",\"0x");
-            appendUnsignedAsHex(reinterpret_cast<uintptr_t>(node.cell), json, Lowercase);
+            json.append(hex(reinterpret_cast<uintptr_t>(node.cell), Lowercase));
             json.appendLiteral("\",\"0x");
-            appendUnsignedAsHex(reinterpret_cast<uintptr_t>(wrappedAddress), json, Lowercase);
+            json.append(hex(reinterpret_cast<uintptr_t>(wrappedAddress), Lowercase));
             json.append('"');
         }
     };

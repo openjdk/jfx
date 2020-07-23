@@ -29,18 +29,24 @@
 
 namespace JSC {
 
-IsoAlignedMemoryAllocator::IsoAlignedMemoryAllocator()
+IsoAlignedMemoryAllocator::IsoAlignedMemoryAllocator(CString name)
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    : m_debugHeap(name.data())
+#endif
 {
+    UNUSED_PARAM(name);
 }
 
 IsoAlignedMemoryAllocator::~IsoAlignedMemoryAllocator()
 {
+#if !ENABLE(MALLOC_HEAP_BREAKDOWN)
     for (unsigned i = 0; i < m_blocks.size(); ++i) {
         void* block = m_blocks[i];
         if (!m_committed[i])
             WTF::fastCommitAlignedMemory(block, MarkedBlock::blockSize);
         fastAlignedFree(block);
     }
+#endif
 }
 
 void* IsoAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size_t size)
@@ -50,6 +56,9 @@ void* IsoAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size
     RELEASE_ASSERT(alignment == MarkedBlock::blockSize);
     RELEASE_ASSERT(size == MarkedBlock::blockSize);
 
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_debugHeap.memalign(MarkedBlock::blockSize, MarkedBlock::blockSize, true);
+#else
     auto locker = holdLock(m_lock);
 
     m_firstUncommitted = m_committed.findBit(m_firstUncommitted, false);
@@ -70,10 +79,14 @@ void* IsoAlignedMemoryAllocator::tryAllocateAlignedMemory(size_t alignment, size
         m_committed.resize(m_blocks.capacity());
     m_committed[index] = true;
     return result;
+#endif
 }
 
 void IsoAlignedMemoryAllocator::freeAlignedMemory(void* basePtr)
 {
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    m_debugHeap.free(basePtr);
+#else
     auto locker = holdLock(m_lock);
 
     auto iter = m_blockIndices.find(basePtr);
@@ -82,6 +95,7 @@ void IsoAlignedMemoryAllocator::freeAlignedMemory(void* basePtr)
     m_committed[index] = false;
     m_firstUncommitted = std::min(index, m_firstUncommitted);
     WTF::fastDecommitAlignedMemory(basePtr, MarkedBlock::blockSize);
+#endif
 }
 
 void IsoAlignedMemoryAllocator::dump(PrintStream& out) const
@@ -89,18 +103,27 @@ void IsoAlignedMemoryAllocator::dump(PrintStream& out) const
     out.print("Iso(", RawPointer(this), ")");
 }
 
-void* IsoAlignedMemoryAllocator::tryAllocateMemory(size_t)
+void* IsoAlignedMemoryAllocator::tryAllocateMemory(size_t size)
 {
-    RELEASE_ASSERT_NOT_REACHED();
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    return m_debugHeap.malloc(size);
+#else
+    return FastMalloc::tryMalloc(size);
+#endif
 }
 
-void IsoAlignedMemoryAllocator::freeMemory(void*)
+void IsoAlignedMemoryAllocator::freeMemory(void* pointer)
 {
-    RELEASE_ASSERT_NOT_REACHED();
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    m_debugHeap.free(pointer);
+#else
+    FastMalloc::free(pointer);
+#endif
 }
 
 void* IsoAlignedMemoryAllocator::tryReallocateMemory(void*, size_t)
 {
+    // In IsoSubspace-managed PreciseAllocation, we must not perform realloc.
     RELEASE_ASSERT_NOT_REACHED();
 }
 

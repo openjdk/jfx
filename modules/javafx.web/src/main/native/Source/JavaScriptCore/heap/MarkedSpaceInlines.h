@@ -30,6 +30,11 @@
 
 namespace JSC {
 
+ALWAYS_INLINE Heap& MarkedSpace::heap() const
+{
+    return *bitwise_cast<Heap*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(Heap, m_objectSpace));
+}
+
 template<typename Functor> inline void MarkedSpace::forEachLiveCell(HeapIterationScope&, const Functor& functor)
 {
     ASSERT(isIterating());
@@ -47,7 +52,7 @@ template<typename Functor> inline void MarkedSpace::forEachLiveCell(const Functo
         if (result == IterationStatus::Done)
             return;
     }
-    for (LargeAllocation* allocation : m_largeAllocations) {
+    for (PreciseAllocation* allocation : m_preciseAllocations) {
         if (allocation->isLive()) {
             if (functor(allocation->cell(), allocation->attributes().cellKind) == IterationStatus::Done)
                 return;
@@ -63,7 +68,7 @@ template<typename Functor> inline void MarkedSpace::forEachDeadCell(HeapIteratio
         if ((*it)->handle().forEachDeadCell(functor) == IterationStatus::Done)
             return;
     }
-    for (LargeAllocation* allocation : m_largeAllocations) {
+    for (PreciseAllocation* allocation : m_preciseAllocations) {
         if (!allocation->isLive()) {
             if (functor(allocation->cell(), allocation->attributes().cellKind) == IterationStatus::Done)
                 return;

@@ -37,7 +37,7 @@ namespace Layout {
 WTF_MAKE_ISO_ALLOCATED_IMPL(Container);
 
 Container::Container(Optional<ElementAttributes> attributes, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
-    : Box(attributes, WTFMove(style), baseTypeFlags | ContainerFlag)
+    : Box(attributes, { }, WTFMove(style), baseTypeFlags | ContainerFlag)
 {
 }
 
@@ -88,6 +88,19 @@ void Container::setFirstChild(Box& childBox)
 
 void Container::setLastChild(Box& childBox)
 {
+    m_lastChild = &childBox;
+}
+
+void Container::appendChild(Box& childBox)
+{
+    childBox.setParent(*this);
+
+    if (m_lastChild) {
+        m_lastChild->setNextSibling(childBox);
+        childBox.setPreviousSibling(*m_lastChild);
+    } else
+        m_firstChild = &childBox;
+
     m_lastChild = &childBox;
 }
 

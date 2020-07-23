@@ -27,6 +27,7 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "IDBResourceIdentifier.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -37,7 +38,6 @@ class IDBIndexInfo;
 class IDBKeyData;
 class IDBObjectStoreInfo;
 class IDBRequestData;
-class IDBResourceIdentifier;
 class IDBTransactionInfo;
 class IDBValue;
 
@@ -48,6 +48,7 @@ struct SecurityOriginData;
 
 namespace IndexedDB {
 enum class ObjectStoreOverwriteMode;
+enum class ConnectionClosedOnBehalfOfServer : bool;
 }
 
 struct IDBKeyRangeData;
@@ -58,7 +59,7 @@ class IDBConnectionToServerDelegate : public CanMakeWeakPtr<IDBConnectionToServe
 public:
     virtual ~IDBConnectionToServerDelegate() = default;
 
-    virtual uint64_t identifier() const = 0;
+    virtual IDBConnectionIdentifier identifier() const = 0;
     virtual void deleteDatabase(const IDBRequestData&) = 0;
     virtual void openDatabase(const IDBRequestData&) = 0;
     virtual void abortTransaction(const IDBResourceIdentifier&) = 0;
@@ -83,14 +84,10 @@ public:
     virtual void databaseConnectionPendingClose(uint64_t databaseConnectionIdentifier) = 0;
     virtual void databaseConnectionClosed(uint64_t databaseConnectionIdentifier) = 0;
     virtual void abortOpenAndUpgradeNeeded(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& transactionIdentifier) = 0;
-    virtual void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier) = 0;
+    virtual void didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer) = 0;
     virtual void openDBRequestCancelled(const IDBRequestData&) = 0;
-    virtual void confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier) = 0;
 
     virtual void getAllDatabaseNames(const SecurityOriginData& mainFrameOrigin, const SecurityOriginData& openingOrigin, uint64_t callbackID) = 0;
-
-    virtual void ref() = 0;
-    virtual void deref() = 0;
 };
 
 } // namespace IDBClient

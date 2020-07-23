@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,31 +27,31 @@
 
 #if ENABLE(JIT)
 
+#include "CacheableIdentifier.h"
 #include "CallVariant.h"
 #include "PutKind.h"
 
 namespace JSC {
 
-enum class GetByIDKind {
+enum class GetByKind {
     Normal,
+    NormalByVal,
     Try,
     WithThis,
     Direct
 };
 
-void repatchGetByID(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&, GetByIDKind);
-void buildGetByIDList(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&);
-void buildGetByIDProtoList(ExecState*, JSValue, const Identifier&, const PropertySlot&, StructureStubInfo&);
-void repatchPutByID(ExecState*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
-void buildPutByIdList(ExecState*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
-void repatchInByID(ExecState*, JSObject*, const Identifier&, bool wasFound, const PropertySlot&, StructureStubInfo&);
-void repatchInstanceOf(ExecState*, JSValue value, JSValue prototype, StructureStubInfo&, bool wasFound);
-void linkFor(ExecState*, CallLinkInfo&, CodeBlock*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
-void linkDirectFor(ExecState*, CallLinkInfo&, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
-void linkSlowFor(ExecState*, CallLinkInfo&);
+void repatchArrayGetByVal(JSGlobalObject*, CodeBlock*, JSValue base, JSValue index, StructureStubInfo&);
+void repatchGetBy(JSGlobalObject*, CodeBlock*, JSValue, CacheableIdentifier, const PropertySlot&, StructureStubInfo&, GetByKind);
+void repatchPutByID(JSGlobalObject*, CodeBlock*, JSValue, Structure*, const Identifier&, const PutPropertySlot&, StructureStubInfo&, PutKind);
+void repatchInByID(JSGlobalObject*, CodeBlock*, JSObject*, const Identifier&, bool wasFound, const PropertySlot&, StructureStubInfo&);
+void repatchInstanceOf(JSGlobalObject*, CodeBlock*, JSValue value, JSValue prototype, StructureStubInfo&, bool wasFound);
+void linkFor(VM&, CallFrame*, CallLinkInfo&, CodeBlock*, JSObject* callee, MacroAssemblerCodePtr<JSEntryPtrTag>);
+void linkDirectFor(CallFrame*, CallLinkInfo&, CodeBlock*, MacroAssemblerCodePtr<JSEntryPtrTag>);
+void linkSlowFor(CallFrame*, CallLinkInfo&);
 void unlinkFor(VM&, CallLinkInfo&);
-void linkPolymorphicCall(ExecState*, CallLinkInfo&, CallVariant);
-void resetGetByID(CodeBlock*, StructureStubInfo&, GetByIDKind);
+void linkPolymorphicCall(JSGlobalObject*, CallFrame*, CallLinkInfo&, CallVariant);
+void resetGetBy(CodeBlock*, StructureStubInfo&, GetByKind);
 void resetPutByID(CodeBlock*, StructureStubInfo&);
 void resetInByID(CodeBlock*, StructureStubInfo&);
 void resetInstanceOf(StructureStubInfo&);

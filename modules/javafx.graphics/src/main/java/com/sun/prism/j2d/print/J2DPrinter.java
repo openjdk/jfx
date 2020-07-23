@@ -698,7 +698,10 @@ public class J2DPrinter implements PrinterImpl {
             for (int i=0; i<media.length; i++) {
                 Media m = media[i];
                 if (m instanceof MediaSizeName) {
-                    pSet.add(addPaper(((MediaSizeName)m)));
+                    Paper p = addPaper(((MediaSizeName)m));
+                    if (p != null) {
+                        pSet.add(p);
+                     }
                 } else if (m instanceof MediaTray) {
                     tSet.add(addPaperSource((MediaTray)m));
                 }
@@ -782,22 +785,34 @@ public class J2DPrinter implements PrinterImpl {
     private final Map<Paper, MediaSizeName> paperToMediaMap
          = new HashMap<Paper, MediaSizeName>();
 
+    private Paper createPaper(MediaSizeName media) {
+        Paper paper = null;
+        MediaSize sz = MediaSize.getMediaSizeForName(media);
+        if (sz != null) {
+            double pw = sz.getX(1) / 1000.0;
+            double ph = sz.getY(1) / 1000.0;
+            paper = PrintHelper.createPaper(media.toString(),
+                                            pw, ph, Units.MM);
+        }
+        return paper;
+   }
+
     private synchronized final Paper addPaper(MediaSizeName media) {
         Paper paper = predefinedPaperMap.get(media);
-        if (paper == null ) {
-            MediaSize sz = MediaSize.getMediaSizeForName(media);
-            if (sz != null) {
-                double pw = sz.getX(1) / 1000.0;
-                double ph = sz.getY(1) / 1000.0;
-                paper = PrintHelper.createPaper(media.toString(),
-                                                pw, ph, Units.MM);
+        if (paper == null) {
+           paper = createPaper(media);
+        }
+        /* If that failed create a Paper from the default MediaSizeName */
+        if (paper == null) {
+            Media m = (Media)service.getDefaultAttributeValue(Media.class);
+            if (m instanceof MediaSizeName) {
+                paper = createPaper((MediaSizeName)m);
             }
         }
-        if (paper == null) {
-            paper = Paper.NA_LETTER;
+        if (paper != null) {
+            paperToMediaMap.put(paper, media);
+            mediaToPaperMap.put(media, paper);
         }
-        paperToMediaMap.put(paper, media);
-        mediaToPaperMap.put(media, paper);
         return paper;
     }
 

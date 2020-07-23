@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +38,10 @@ namespace JSC {
 
 template<unsigned numberOfBucketsArgument>
 struct ValueProfileBase {
-    static const unsigned numberOfBuckets = numberOfBucketsArgument;
-    static const unsigned numberOfSpecFailBuckets = 1;
-    static const unsigned bucketIndexMask = numberOfBuckets - 1;
-    static const unsigned totalNumberOfBuckets = numberOfBuckets + numberOfSpecFailBuckets;
+    static constexpr unsigned numberOfBuckets = numberOfBucketsArgument;
+    static constexpr unsigned numberOfSpecFailBuckets = 1;
+    static constexpr unsigned bucketIndexMask = numberOfBuckets - 1;
+    static constexpr unsigned totalNumberOfBuckets = numberOfBuckets + numberOfSpecFailBuckets;
 
     ValueProfileBase()
     {
@@ -146,7 +146,7 @@ struct MinimalValueProfile : public ValueProfileBase<0> {
 
 template<unsigned logNumberOfBucketsArgument>
 struct ValueProfileWithLogNumberOfBuckets : public ValueProfileBase<1 << logNumberOfBucketsArgument> {
-    static const unsigned logNumberOfBuckets = logNumberOfBucketsArgument;
+    static constexpr unsigned logNumberOfBuckets = logNumberOfBucketsArgument;
 
     ValueProfileWithLogNumberOfBuckets()
         : ValueProfileBase<1 << logNumberOfBucketsArgument>()
@@ -161,43 +161,43 @@ struct ValueProfile : public ValueProfileWithLogNumberOfBuckets<0> {
 // This is a mini value profile to catch pathologies. It is a counter that gets
 // incremented when we take the slow path on any instruction.
 struct RareCaseProfile {
-    RareCaseProfile(int bytecodeOffset)
-        : m_bytecodeOffset(bytecodeOffset)
-        , m_counter(0)
+    RareCaseProfile(BytecodeIndex bytecodeIndex)
+        : m_bytecodeIndex(bytecodeIndex)
     {
     }
+    RareCaseProfile() = default;
 
-    int m_bytecodeOffset;
-    uint32_t m_counter;
+    BytecodeIndex m_bytecodeIndex { };
+    uint32_t m_counter { 0 };
 };
 
-inline int getRareCaseProfileBytecodeOffset(RareCaseProfile* rareCaseProfile)
+inline BytecodeIndex getRareCaseProfileBytecodeIndex(RareCaseProfile* rareCaseProfile)
 {
-    return rareCaseProfile->m_bytecodeOffset;
+    return rareCaseProfile->m_bytecodeIndex;
 }
 
-struct ValueProfileAndOperand : public ValueProfile {
-    int m_operand;
+struct ValueProfileAndVirtualRegister : public ValueProfile {
+    VirtualRegister m_operand;
 };
 
-struct ValueProfileAndOperandBuffer {
+struct ValueProfileAndVirtualRegisterBuffer {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    ValueProfileAndOperandBuffer(unsigned size)
+    ValueProfileAndVirtualRegisterBuffer(unsigned size)
         : m_size(size)
     {
         // FIXME: ValueProfile has more stuff than we need. We could optimize these value profiles
         // to be more space efficient.
         // https://bugs.webkit.org/show_bug.cgi?id=175413
-        m_buffer = MallocPtr<ValueProfileAndOperand>::malloc(m_size * sizeof(ValueProfileAndOperand));
+        m_buffer = MallocPtr<ValueProfileAndVirtualRegister, VMMalloc>::malloc(m_size * sizeof(ValueProfileAndVirtualRegister));
         for (unsigned i = 0; i < m_size; ++i)
-            new (&m_buffer.get()[i]) ValueProfileAndOperand();
+            new (&m_buffer.get()[i]) ValueProfileAndVirtualRegister();
     }
 
-    ~ValueProfileAndOperandBuffer()
+    ~ValueProfileAndVirtualRegisterBuffer()
     {
         for (unsigned i = 0; i < m_size; ++i)
-            m_buffer.get()[i].~ValueProfileAndOperand();
+            m_buffer.get()[i].~ValueProfileAndVirtualRegister();
     }
 
     template <typename Function>
@@ -208,7 +208,7 @@ struct ValueProfileAndOperandBuffer {
     }
 
     unsigned m_size;
-    MallocPtr<ValueProfileAndOperand> m_buffer;
+    MallocPtr<ValueProfileAndVirtualRegister, VMMalloc> m_buffer;
 };
 
 } // namespace JSC

@@ -56,13 +56,13 @@ VMInspector& VMInspector::instance()
 void VMInspector::add(VM* vm)
 {
     auto locker = holdLock(m_lock);
-    m_list.append(vm);
+    m_vmList.append(vm);
 }
 
 void VMInspector::remove(VM* vm)
 {
     auto locker = holdLock(m_lock);
-    m_list.remove(vm);
+    m_vmList.remove(vm);
 }
 
 auto VMInspector::lock(Seconds timeout) -> Expected<Locker, Error>
@@ -105,6 +105,13 @@ static bool ensureIsSafeToLock(Lock& lock)
     return false;
 };
 #endif // ENABLE(JIT)
+
+void VMInspector::forEachVM(Function<FunctorStatus(VM&)>&& func)
+{
+    VMInspector& inspector = instance();
+    Locker lock(inspector.getLock());
+    inspector.iterate(func);
+}
 
 auto VMInspector::isValidExecutableMemory(const VMInspector::Locker&, void* machinePC) -> Expected<bool, Error>
 {
@@ -197,31 +204,31 @@ auto VMInspector::codeBlockForMachinePC(const VMInspector::Locker&, void* machin
 #endif
 }
 
-bool VMInspector::currentThreadOwnsJSLock(ExecState* exec)
+bool VMInspector::currentThreadOwnsJSLock(JSGlobalObject* globalObject)
 {
-    return exec->vm().currentThreadIsHoldingAPILock();
+    return globalObject->vm().currentThreadIsHoldingAPILock();
 }
 
-static bool ensureCurrentThreadOwnsJSLock(ExecState* exec)
+static bool ensureCurrentThreadOwnsJSLock(JSGlobalObject* globalObject)
 {
-    if (VMInspector::currentThreadOwnsJSLock(exec))
+    if (VMInspector::currentThreadOwnsJSLock(globalObject))
         return true;
     dataLog("ERROR: current thread does not own the JSLock\n");
     return false;
 }
 
-void VMInspector::gc(ExecState* exec)
+void VMInspector::gc(JSGlobalObject* globalObject)
 {
-    VM& vm = exec->vm();
-    if (!ensureCurrentThreadOwnsJSLock(exec))
+    VM& vm = globalObject->vm();
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return;
     vm.heap.collectNow(Sync, CollectionScope::Full);
 }
 
-void VMInspector::edenGC(ExecState* exec)
+void VMInspector::edenGC(JSGlobalObject* globalObject)
 {
-    VM& vm = exec->vm();
-    if (!ensureCurrentThreadOwnsJSLock(exec))
+    VM& vm = globalObject->vm();
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return;
     vm.heap.collectSync(CollectionScope::Eden);
 }
@@ -231,7 +238,7 @@ bool VMInspector::isInHeap(Heap* heap, void* ptr)
     MarkedBlock* candidate = MarkedBlock::blockFor(ptr);
     if (heap->objectSpace().blocks().set().contains(candidate))
         return true;
-    for (LargeAllocation* allocation : heap->objectSpace().largeAllocations()) {
+    for (PreciseAllocation* allocation : heap->objectSpace().preciseAllocations()) {
         if (allocation->contains(ptr))
             return true;
     }
@@ -265,9 +272,9 @@ bool VMInspector::isValidCell(Heap* heap, JSCell* candidate)
     return functor.found;
 }
 
-bool VMInspector::isValidCodeBlock(ExecState* exec, CodeBlock* candidate)
+bool VMInspector::isValidCodeBlock(JSGlobalObject* globalObject, CodeBlock* candidate)
 {
-    if (!ensureCurrentThreadOwnsJSLock(exec))
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return false;
 
     struct CodeBlockValidationFunctor {
@@ -286,15 +293,16 @@ bool VMInspector::isValidCodeBlock(ExecState* exec, CodeBlock* candidate)
         mutable bool found { false };
     };
 
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     CodeBlockValidationFunctor functor(candidate);
     vm.heap.forEachCodeBlock(functor);
     return functor.found;
 }
 
-CodeBlock* VMInspector::codeBlockForFrame(CallFrame* topCallFrame, unsigned frameNumber)
+CodeBlock* VMInspector::codeBlockForFrame(JSGlobalObject* globalObject, CallFrame* topCallFrame, unsigned frameNumber)
 {
-    if (!ensureCurrentThreadOwnsJSLock(topCallFrame))
+    VM& vm = globalObject->vm();
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return nullptr;
 
     if (!topCallFrame)
@@ -323,7 +331,7 @@ CodeBlock* VMInspector::codeBlockForFrame(CallFrame* topCallFrame, unsigned fram
     };
 
     FetchCodeBlockFunctor functor(frameNumber);
-    topCallFrame->iterate(functor);
+    topCallFrame->iterate(vm, functor);
     return functor.codeBlock;
 }
 
@@ -359,12 +367,12 @@ private:
     mutable unsigned m_currentFrame { 0 };
 };
 
-void VMInspector::dumpCallFrame(CallFrame* callFrame, unsigned framesToSkip)
+void VMInspector::dumpCallFrame(JSGlobalObject* globalObject, CallFrame* callFrame, unsigned framesToSkip)
 {
-    if (!ensureCurrentThreadOwnsJSLock(callFrame))
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return;
     DumpFrameFunctor functor(DumpFrameFunctor::DumpOne, framesToSkip);
-    callFrame->iterate(functor);
+    callFrame->iterate(globalObject->vm(), functor);
 }
 
 void VMInspector::dumpRegisters(CallFrame* callFrame)
@@ -389,8 +397,8 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
     const Register* it;
     const Register* end;
 
-    it = callFrame->registers() + CallFrameSlot::thisArgument + callFrame->argumentCount();
-    end = callFrame->registers() + CallFrameSlot::thisArgument - 1;
+    it = callFrame->registers() + (CallFrameSlot::thisArgument + callFrame->argumentCount());
+    end = callFrame->registers() + (CallFrameSlot::thisArgument - 1);
     while (it > end) {
         JSValue v = it->jsValue();
         int registerNumber = it - callFrame->registers();
@@ -402,12 +410,12 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
     dataLogF("-----------------------------------------------------------------------------\n");
     dataLogF("[ArgumentCount]            | %10p | %lu \n", it, (unsigned long) callFrame->argumentCount());
 
-    callFrame->iterate([&] (StackVisitor& visitor) {
+    callFrame->iterate(vm, [&] (StackVisitor& visitor) {
         if (visitor->callFrame() == callFrame) {
             unsigned line = 0;
             unsigned unusedColumn = 0;
             visitor->computeLineAndColumn(line, unusedColumn);
-            dataLogF("[ReturnVPC]                | %10p | %d (line %d)\n", it, visitor->bytecodeOffset(), line);
+            dataLogF("[ReturnVPC]                | %10p | %d (line %d)\n", it, visitor->bytecodeIndex().offset(), line);
             return StackVisitor::Done;
         }
         return StackVisitor::Continue;
@@ -420,7 +428,7 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
     dataLogLn(codeBlock);
     --it;
 #if ENABLE(JIT)
-    AbstractPC pc = callFrame->abstractReturnPC(callFrame->vm());
+    AbstractPC pc = callFrame->abstractReturnPC(vm);
     if (pc.hasJITReturnAddress())
         dataLogF("[ReturnPC]                 | %10p | %p \n", it, pc.jitReturnAddress().value());
     --it;
@@ -458,19 +466,19 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
     dataLogF("-----------------------------------------------------------------------------\n");
 }
 
-void VMInspector::dumpStack(CallFrame* topCallFrame, unsigned framesToSkip)
+void VMInspector::dumpStack(JSGlobalObject* globalObject, CallFrame* topCallFrame, unsigned framesToSkip)
 {
-    if (!ensureCurrentThreadOwnsJSLock(topCallFrame))
+    if (!ensureCurrentThreadOwnsJSLock(globalObject))
         return;
     if (!topCallFrame)
         return;
     DumpFrameFunctor functor(DumpFrameFunctor::DumpAll, framesToSkip);
-    topCallFrame->iterate(functor);
+    topCallFrame->iterate(globalObject->vm(), functor);
 }
 
 void VMInspector::dumpValue(JSValue value)
 {
-    dataLog(value);
+    dataLogLn(value);
 }
 
 void VMInspector::dumpCellMemory(JSCell* cell)

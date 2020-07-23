@@ -53,7 +53,6 @@ public:
 
     Optional<PageIdentifier> pageID() const final;
     Optional<FrameIdentifier> frameID() const final;
-    PAL::SessionID sessionID() const final;
 
     void setCopiesOnScroll() override;
 
@@ -180,11 +179,10 @@ public:
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
     void transitionToCommittedForNewPage() override;
-    void didSaveToPageCache() override;
-    void didRestoreFromPageCache() override;
 
+    void didRestoreFromBackForwardCache() override;
     bool canCachePage() const override;
-    void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) override;
+    void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) override;
 
     void dispatchDidBecomeFrameset(bool) override; // Can change due to navigation or DOM modification override.
 

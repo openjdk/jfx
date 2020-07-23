@@ -89,8 +89,6 @@ static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, R
         return;
     }
 
-    resourceResponse.setSource(ResourceResponse::Source::ServiceWorker);
-
     // In case of main resource and mime type is the default one, we set it to text/html to pass more service worker WPT tests.
     // FIXME: We should refine our MIME type sniffing strategy for synthetic responses.
     if (mode == FetchOptions::Mode::Navigate) {
@@ -140,7 +138,6 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     FetchOptions::Redirect redirect = options.redirect;
 
     bool isNavigation = options.mode == FetchOptions::Mode::Navigate;
-    bool isNonSubresourceRequest = WebCore::isNonSubresourceRequest(options.destination);
 
     ASSERT(globalScope.registration().active());
     ASSERT(globalScope.registration().active()->identifier() == globalScope.thread().identifier());
@@ -149,7 +146,7 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     auto* formData = request.httpBody();
     Optional<FetchBody> body;
     if (formData && !formData->isEmpty()) {
-        body = FetchBody::fromFormData(globalScope.sessionID(), *formData);
+        body = FetchBody::fromFormData(*formData);
         if (!body) {
             client->didNotHandle();
             return;
@@ -188,10 +185,6 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     }
 
     globalScope.updateExtendedEventsSet(event.ptr());
-
-    auto& registration = globalScope.registration();
-    if (isNonSubresourceRequest || registration.needsUpdate())
-        registration.scheduleSoftUpdate();
 }
 
 } // namespace ServiceWorkerFetch

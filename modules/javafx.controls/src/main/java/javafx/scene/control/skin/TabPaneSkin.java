@@ -579,7 +579,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         getSkinnable().getTabs().addListener((ListChangeListener<Tab>) c -> {
             List<Tab> tabsToRemove = new ArrayList<>();
             List<Tab> tabsToAdd = new ArrayList<>();
-            int insertPos = -1;
 
             while (c.next()) {
                 if (c.wasPermutated()) {
@@ -619,7 +618,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
                 if (c.wasAdded()) {
                     tabsToAdd.addAll(c.getAddedSubList());
-                    insertPos = c.getFrom();
                 }
             }
 
@@ -647,7 +645,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                 }
 
-                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+                if (!tabsToAdd.isEmpty()) {
+                    addTabs(tabsToAdd, getSkinnable().getTabs().indexOf(tabsToAdd.get(0)));
+                }
                 for (Pair<Integer, TabHeaderSkin> move : headersToMove) {
                     tabHeaderArea.moveTab(move.getKey(), move.getValue());
                 }
@@ -991,8 +991,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
-            headersRegion.getChildren().remove(tabHeaderSkin);
-            headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            if (moveToIndex != headersRegion.getChildren().indexOf(tabHeaderSkin)) {
+                headersRegion.getChildren().remove(tabHeaderSkin);
+                headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            }
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {
@@ -2286,5 +2288,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     // For testing purpose.
     ContextMenu test_getTabsMenu() {
         return tabHeaderArea.controlButtons.popup;
+    }
+
+    void test_disableAnimations() {
+        closeTabAnimation.set(TabAnimation.NONE);
+        openTabAnimation.set(TabAnimation.NONE);
     }
 }

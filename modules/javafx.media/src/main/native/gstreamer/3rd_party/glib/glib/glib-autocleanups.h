@@ -65,8 +65,10 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GPatternSpec, g_pattern_spec_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GQueue, g_queue_free)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GQueue, g_queue_clear)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRand, g_rand_free)
+#ifndef GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRegex, g_regex_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMatchInfo, g_match_info_unref)
+#endif // GSTREAMER_LITE
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GScanner, g_scanner_destroy)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GSequence, g_sequence_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GSList, g_slist_free)

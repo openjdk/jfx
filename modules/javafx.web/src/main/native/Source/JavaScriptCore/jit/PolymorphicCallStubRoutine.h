@@ -84,7 +84,7 @@ class PolymorphicCallStubRoutine : public GCAwareJITStubRoutine {
 public:
     PolymorphicCallStubRoutine(
         const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner,
-        ExecState* callerFrame, CallLinkInfo&, const Vector<PolymorphicCallCase>&,
+        CallFrame* callerFrame, CallLinkInfo&, const Vector<PolymorphicCallCase>&,
         UniqueArray<uint32_t>&& fastCounts);
 
     virtual ~PolymorphicCallStubRoutine();
@@ -94,6 +94,13 @@ public:
     CallEdgeList edges() const;
 
     void clearCallNodesFor(CallLinkInfo*);
+
+    template<typename Functor>
+    void forEachDependentCell(const Functor& functor)
+    {
+        for (auto& variant : m_variants)
+            functor(variant.get());
+    }
 
     bool visitWeak(VM&) override;
 

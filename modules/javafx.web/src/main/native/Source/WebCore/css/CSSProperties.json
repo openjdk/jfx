@@ -93,7 +93,7 @@
         "setting the inherited value, it will not fallback to using the parent's",
         "\"color\" property if the inherited color is invalid.",
         "",
-        "* fone-property:",
+        "* font-property:",
         "Indicates that this CSS property is font-related. It must have corresponding",
         "methods on the FontDescription class.",
         "",
@@ -2123,20 +2123,12 @@
                 "url": "https://www.w3.org/TR/CSS22/visufx.html#propdef-clip"
             }
         },
-        "-webkit-clip-path": {
-            "codegen-properties": {
-                "converter": "ClipPath"
-            }
-        },
         "clip-path": {
             "codegen-properties": {
-                "name-for-methods": "ClipperResource",
-                "converter": "SVGURIReference",
-                "svg": true
-            },
-            "specification": {
-                "category": "css-masking",
-                "url": "https://www.w3.org/TR/css-masking-1/#the-clip-path"
+                "aliases": [
+                    "-webkit-clip-path"
+                ],
+                "converter": "ClipPath"
             }
         },
         "clip-rule": {
@@ -2503,11 +2495,8 @@
         "image-orientation": {
             "inherited": true,
             "codegen-properties": {
-                "enable-if": "ENABLE_CSS_IMAGE_ORIENTATION"
-            },
-            "status": {
-                "status": "under consideration",
-                "enabled-by-default": false
+                "initial": "initialImageOrientation",
+                "converter": "ImageOrientation"
             },
             "specification": {
                 "category": "css-images",
@@ -3144,6 +3133,7 @@
         },
         "opacity": {
             "codegen-properties": {
+                "converter": "Opacity",
                 "aliases": [
                     "-webkit-opacity"
                 ]
@@ -3236,8 +3226,8 @@
                 ]
             },
             "specification": {
-                "category": "css-22",
-                "url": "https://www.w3.org/TR/CSS22/visufx.html#propdef-overflow"
+                "category": "css-overflow",
+                "url": "https://www.w3.org/TR/css-overflow-3/#propdef-overflow"
             }
         },
         "overflow-wrap": {
@@ -3469,7 +3459,8 @@
                 "visiblestroke",
                 "painted",
                 "fill",
-                "stroke"
+                "stroke",
+                "bounding-box"
             ],
             "specification": {
                 "category": "svg",
@@ -3545,8 +3536,8 @@
         },
         "rx": {
             "codegen-properties": {
-                "initial": "initialZeroLength",
-                "converter": "Length"
+                "initial": "initialRadius",
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "svg",
@@ -3555,12 +3546,22 @@
         },
         "ry": {
             "codegen-properties": {
-                "initial": "initialZeroLength",
-                "converter": "Length"
+                "initial": "initialRadius",
+                "converter": "LengthOrAuto"
             },
             "specification": {
                 "category": "svg",
                 "url": "https://www.w3.org/TR/SVG/shapes.html"
+            }
+        },
+        "scroll-behavior": {
+            "values": [
+                "auto",
+                "smooth"
+            ],
+            "specification": {
+                "category": "cssom-view",
+                "url": "https://drafts.csswg.org/cssom-view/#propdef-scroll-behavior"
             }
         },
         "shape-rendering": {
@@ -4362,7 +4363,8 @@
         },
         "z-index": {
             "codegen-properties": {
-                "auto-functions": true
+                "auto-functions": true,
+                "name-for-methods": "SpecifiedZIndex"
             },
             "specification": {
                 "category": "css-22",
@@ -5635,19 +5637,10 @@
                 "status": "experimental"
             }
         },
-        "-webkit-marquee": {
-            "codegen-properties": {
-                "longhands": [
-                    "-webkit-marquee-direction",
-                    "-webkit-marquee-increment",
-                    "-webkit-marquee-repetition",
-                    "-webkit-marquee-style",
-                    "-webkit-marquee-speed"
-                ]
-            },
-            "status": "non-standard"
-        },
         "-webkit-marquee-direction": {
+            "codegen-properties": {
+                "internal-only": true
+            },
             "values": [
                 "forwards",
                 "backwards",
@@ -5663,20 +5656,23 @@
         },
         "-webkit-marquee-increment": {
             "codegen-properties": {
-                "conditional-converter": "MarqueeIncrement"
+                "conditional-converter": "MarqueeIncrement",
+                "internal-only": true
             },
             "status": "non-standard"
         },
         "-webkit-marquee-repetition": {
             "codegen-properties": {
                 "name-for-methods": "MarqueeLoopCount",
-                "converter": "MarqueeRepetition"
+                "converter": "MarqueeRepetition",
+                "internal-only": true
             },
             "status": "non-standard"
         },
         "-webkit-marquee-speed": {
             "codegen-properties": {
-                "converter": "MarqueeSpeed"
+                "converter": "MarqueeSpeed",
+                "internal-only": true
             },
             "status": "non-standard"
         },
@@ -5688,7 +5684,8 @@
                 "alternate"
             ],
             "codegen-properties": {
-                "name-for-methods": "MarqueeBehavior"
+                "name-for-methods": "MarqueeBehavior",
+                "internal-only": true
             },
             "status": "non-standard"
         },
@@ -6378,7 +6375,9 @@
             "values" : [
                 "border-box",
                 "fill-box",
-                "view-box"
+                "view-box",
+                "stroke-box",
+                "content-box"
             ],
             "codegen-properties": {
             },
@@ -6490,6 +6489,22 @@
             "specification": {
                 "category": "css-ui",
                 "url": "https://www.w3.org/TR/css-ui-4/#propdef-user-select"
+            }
+        },
+        "scroll-behavior": {
+            "values": [
+                "auto",
+                "smooth"
+            ],
+            "codegen-properties": {
+                "converter": "SmoothScrolling",
+                "name-for-methods": "UseSmoothScrolling"
+            },
+            "status": {
+                "status": "experimental"
+            },
+            "specification": {
+                "url": "https://drafts.csswg.org/cssom-view/#propdef-scroll-behavior"
             }
         },
         "scroll-padding": {

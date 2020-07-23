@@ -37,23 +37,75 @@ class InlineTextItem : public InlineItem {
 public:
     static void createAndAppendTextItems(InlineItems&, const Box&);
 
-    InlineTextItem(const Box&, unsigned start, unsigned length, bool isWhitespace, bool isCollapsed);
-
-    unsigned start() const { return m_start; }
+    unsigned start() const { return m_startOrPosition; }
     unsigned end() const { return start() + length(); }
     unsigned length() const { return m_length; }
 
-    bool isWhitespace() const { return m_isWhitespace; }
-    bool isCollapsed() const { return m_isCollapsed; }
+    bool isWhitespace() const { return m_textItemType == TextItemType::Whitespace; }
+    bool isCollapsible() const { return m_isCollapsible; }
+    Optional<InlineLayoutUnit> width() const { return m_hasWidth ? makeOptional(m_width) : Optional<InlineLayoutUnit> { }; }
+    bool isEmptyContent() const;
 
-    std::unique_ptr<InlineTextItem> split(unsigned splitPosition, unsigned length) const;
+    InlineTextItem left(unsigned length) const;
+    InlineTextItem right(unsigned length) const;
 
 private:
-    unsigned m_start { 0 };
-    unsigned m_length { 0 };
-    bool m_isWhitespace { false };
-    bool m_isCollapsed { false };
+    using InlineItem::TextItemType;
+
+    InlineTextItem(const Box&, unsigned start, unsigned length, Optional<InlineLayoutUnit> width, TextItemType);
+    InlineTextItem(const Box&);
+
+    static InlineTextItem createWhitespaceItem(const Box&, unsigned start, unsigned length, Optional<InlineLayoutUnit> width);
+    static InlineTextItem createNonWhitespaceItem(const Box&, unsigned start, unsigned length, Optional<InlineLayoutUnit> width);
+    static InlineTextItem createEmptyItem(const Box&);
 };
+
+inline InlineTextItem InlineTextItem::createWhitespaceItem(const Box& inlineBox, unsigned start, unsigned length, Optional<InlineLayoutUnit> width)
+{
+    return { inlineBox, start, length, width, TextItemType::Whitespace };
+}
+
+inline InlineTextItem InlineTextItem::createNonWhitespaceItem(const Box& inlineBox, unsigned start, unsigned length, Optional<InlineLayoutUnit> width)
+{
+    return { inlineBox, start, length, width, TextItemType::NonWhitespace };
+}
+
+inline InlineTextItem InlineTextItem::createEmptyItem(const Box& inlineBox)
+{
+    return { inlineBox };
+}
+
+inline InlineTextItem::InlineTextItem(const Box& inlineBox, unsigned start, unsigned length, Optional<InlineLayoutUnit> width, TextItemType textItemType)
+    : InlineItem(inlineBox, Type::Text)
+{
+    m_startOrPosition = start;
+    m_length = length;
+    m_hasWidth = !!width;
+    m_isCollapsible = textItemType == TextItemType::Whitespace && inlineBox.style().collapseWhiteSpace();
+    m_width = width.valueOr(0);
+    m_textItemType = textItemType;
+}
+
+inline InlineTextItem::InlineTextItem(const Box& inlineBox)
+    : InlineItem(inlineBox, Type::Text)
+{
+}
+
+inline InlineTextItem InlineTextItem::left(unsigned length) const
+{
+    RELEASE_ASSERT(length <= this->length());
+    ASSERT(m_textItemType != TextItemType::Undefined);
+    ASSERT(length);
+    return { layoutBox(), start(), length, WTF::nullopt, m_textItemType };
+}
+
+inline InlineTextItem InlineTextItem::right(unsigned length) const
+{
+    RELEASE_ASSERT(length <= this->length());
+    ASSERT(m_textItemType != TextItemType::Undefined);
+    ASSERT(length);
+    return { layoutBox(), end() - length, length, WTF::nullopt, m_textItemType };
+}
 
 }
 }

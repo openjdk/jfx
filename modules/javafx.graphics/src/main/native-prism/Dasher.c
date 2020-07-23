@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -162,36 +162,43 @@ void Dasher_destroy(Dasher *pDasher) {
     pDasher->firstSegmentsBufferSIZE = 0;
 }
 
-static void emitSeg(PathConsumer *pDasher, jfloat buf[], jint off, jint type) {
+static jint emitSeg(PathConsumer *pDasher, jfloat buf[], jint off, jint type) {
     switch (type) {
     case 8:
-        this.out->curveTo(this.out,
+        return this.out->curveTo(this.out,
                           buf[off+0], buf[off+1],
                           buf[off+2], buf[off+3],
                           buf[off+4], buf[off+5]);
         break;
     case 6:
-        this.out->quadTo(this.out,
+        return this.out->quadTo(this.out,
                          buf[off+0], buf[off+1],
                          buf[off+2], buf[off+3]);
         break;
     case 4:
-        this.out->lineTo(this.out, buf[off], buf[off+1]);
+        return this.out->lineTo(this.out, buf[off], buf[off+1]);
     }
+    return ERROR_NONE;
 }
 
-static void emitFirstSegments(PathConsumer *pDasher) {
+static jint emitFirstSegments(PathConsumer *pDasher) {
     jint i;
     for (i = 0; i < this.firstSegidx; ) {
-        emitSeg(pDasher, this.firstSegmentsBuffer, i+1, (jint) this.firstSegmentsBuffer[i]);
+        jint status;
+        status = emitSeg(pDasher, this.firstSegmentsBuffer, i+1, (jint) this.firstSegmentsBuffer[i]);
+        if (status != ERROR_NONE) {
+            return status;
+        }
         i += (((jint) this.firstSegmentsBuffer[i]) - 1);
     }
     this.firstSegidx = 0;
+    return ERROR_NONE;
 }
 
 // precondition: pts must be in relative coordinates (relative to x0,y0)
 // fullCurve is true iff the curve in pts has not been split.
-static void goTo(PathConsumer *pDasher, jfloat pts[], jint off, jint type) {
+static jint goTo(PathConsumer *pDasher, jfloat pts[], jint off, jint type) {
+    jint status = ERROR_NONE;
     jfloat x = pts[off + type - 4];
     jfloat y = pts[off + type - 3];
     if (this.dashOn) {
@@ -199,6 +206,9 @@ static void goTo(PathConsumer *pDasher, jfloat pts[], jint off, jint type) {
             if (this.firstSegmentsBufferSIZE < this.firstSegidx + (type-1)) {
                 jint newSize = (this.firstSegidx + (type-1)) * 2;
                 jfloat *newSegs = new_float(newSize);
+                if (!newSegs) {
+                    return ERROR_OOM;
+                }
                 System_arraycopy(this.firstSegmentsBuffer, 0, newSegs, 0, this.firstSegidx);
                 free(this.firstSegmentsBuffer);
                 this.firstSegmentsBuffer = newSegs;
@@ -209,10 +219,16 @@ static void goTo(PathConsumer *pDasher, jfloat pts[], jint off, jint type) {
             this.firstSegidx += type - 2;
         } else {
             if (this.needsMoveTo) {
-                this.out->moveTo(this.out, this.x0, this.y0);
+                status = this.out->moveTo(this.out, this.x0, this.y0);
+                if (status != ERROR_NONE) {
+                    return status;
+                }
                 this.needsMoveTo = JNI_FALSE;
             }
-            emitSeg(pDasher, pts, off, type);
+            status = emitSeg(pDasher, pts, off, type);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         }
     } else {
         this.starting = JNI_FALSE;
@@ -220,12 +236,20 @@ static void goTo(PathConsumer *pDasher, jfloat pts[], jint off, jint type) {
     }
     this.x0 = x;
     this.y0 = y;
+    return status;
 }
 
-static void Dasher_MoveTo(PathConsumer *pDasher, jfloat newx0, jfloat newy0) {
+static jint Dasher_MoveTo(PathConsumer *pDasher, jfloat newx0, jfloat newy0) {
+    jint status = ERROR_NONE;
     if (this.firstSegidx > 0) {
-        this.out->moveTo(this.out, this.sx, this.sy);
-        emitFirstSegments(pDasher);
+        status = this.out->moveTo(this.out, this.sx, this.sy);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+        status = emitFirstSegments(pDasher);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
     this.needsMoveTo = JNI_TRUE;
     this.idx = this.startIdx;
@@ -234,9 +258,11 @@ static void Dasher_MoveTo(PathConsumer *pDasher, jfloat newx0, jfloat newy0) {
     this.sx = this.x0 = newx0;
     this.sy = this.y0 = newy0;
     this.starting = JNI_TRUE;
+    return status;
 }
 
-static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
+static jint Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
+    jint status = ERROR_NONE;
     jfloat cx, cy;
     jfloat dx = x1 - this.x0;
     jfloat dy = y1 - this.y0;
@@ -244,7 +270,7 @@ static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
     jfloat len = (jfloat) sqrt(dx*dx + dy*dy);
 
     if (len == 0) {
-        return;
+        return status;
     }
 
     // The scaling factors needed to get the dx and dy of the
@@ -258,7 +284,10 @@ static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
         if (len <= leftInThisDashSegment) {
             this.curCurvepts[0] = x1;
             this.curCurvepts[1] = y1;
-            goTo(pDasher, this.curCurvepts, 0, 4);
+            status = goTo(pDasher, this.curCurvepts, 0, 4);
+            if (status != ERROR_NONE) {
+                return status;
+            }
             // Advance phase within current dash segment
             this.phase += len;
             if (len == leftInThisDashSegment) {
@@ -266,7 +295,7 @@ static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
                 this.idx = (this.idx + 1) % this.numdashes;
                 this.dashOn = !this.dashOn;
             }
-            return;
+            return status;
         }
 
         dashdx = this.dash[this.idx] * cx;
@@ -280,7 +309,10 @@ static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
             this.curCurvepts[1] = this.y0 + p * dashdy;
         }
 
-        goTo(pDasher, this.curCurvepts, 0, 4);
+        status = goTo(pDasher, this.curCurvepts, 0, 4);
+        if (status != ERROR_NONE) {
+            return status;
+        }
 
         len -= leftInThisDashSegment;
         // Advance to next dash segment
@@ -288,6 +320,7 @@ static void Dasher_LineTo(PathConsumer *pDasher, jfloat x1, jfloat y1) {
         this.dashOn = !this.dashOn;
         this.phase = 0;
     }
+    return status;
 }
 
 static jboolean pointCurve(jfloat curve[], jint type) {
@@ -304,14 +337,15 @@ static jboolean pointCurve(jfloat curve[], jint type) {
 
 // preconditions: curCurvepts must be an array of length at least 2 * type,
 // that contains the curve we want to dash in the first type elements
-static void somethingTo(PathConsumer *pDasher, jint type) {
+static jint somethingTo(PathConsumer *pDasher, jint type) {
+    jint status = ERROR_NONE;
     jint curCurveoff;
     jfloat lastSplitT;
     jfloat t;
     jfloat leftInThisDashSegment;
 
     if (pointCurve(this.curCurvepts, type)) {
-        return;
+        return status;
     }
     LIinitializeIterationOnCurve(&this.li, this.curCurvepts, type);
 
@@ -326,7 +360,10 @@ static void somethingTo(PathConsumer *pDasher, jint type) {
                                 this.curCurvepts, 0,
                                 this.curCurvepts, type, type);
             lastSplitT = t;
-            goTo(pDasher, this.curCurvepts, 2, type);
+            status = goTo(pDasher, this.curCurvepts, 2, type);
+            if (status != ERROR_NONE) {
+                return status;
+            }
             curCurveoff = type;
         }
         // Advance to next dash segment
@@ -335,16 +372,20 @@ static void somethingTo(PathConsumer *pDasher, jint type) {
         this.phase = 0;
         leftInThisDashSegment = this.dash[this.idx];
     }
-    goTo(pDasher, this.curCurvepts, curCurveoff+2, type);
+    status = goTo(pDasher, this.curCurvepts, curCurveoff+2, type);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     this.phase += LIlastSegLen(&this.li);
     if (this.phase >= this.dash[this.idx]) {
         this.phase = 0.0f;
         this.idx = (this.idx + 1) % this.numdashes;
         this.dashOn = !this.dashOn;
     }
+    return status;
 }
 
-static void Dasher_CurveTo(PathConsumer *pDasher,
+static jint Dasher_CurveTo(PathConsumer *pDasher,
                            jfloat x1, jfloat y1,
                            jfloat x2, jfloat y2,
                            jfloat x3, jfloat y3)
@@ -353,36 +394,53 @@ static void Dasher_CurveTo(PathConsumer *pDasher,
     this.curCurvepts[2] = x1;        this.curCurvepts[3] = y1;
     this.curCurvepts[4] = x2;        this.curCurvepts[5] = y2;
     this.curCurvepts[6] = x3;        this.curCurvepts[7] = y3;
-    somethingTo(pDasher, 8);
+    return somethingTo(pDasher, 8);
 }
 
-static void Dasher_QuadTo(PathConsumer *pDasher,
+static jint Dasher_QuadTo(PathConsumer *pDasher,
                           jfloat x1, jfloat y1,
                           jfloat x2, jfloat y2)
 {
     this.curCurvepts[0] = this.x0;   this.curCurvepts[1] = this.y0;
     this.curCurvepts[2] = x1;        this.curCurvepts[3] = y1;
     this.curCurvepts[4] = x2;        this.curCurvepts[5] = y2;
-    somethingTo(pDasher, 6);
+    return somethingTo(pDasher, 6);
 }
 
-static void Dasher_ClosePath(PathConsumer *pDasher) {
-    Dasher_LineTo(pDasher, this.sx, this.sy);
+static jint Dasher_ClosePath(PathConsumer *pDasher) {
+    jint status = ERROR_NONE;
+    status = Dasher_LineTo(pDasher, this.sx, this.sy);
+    if (status != ERROR_NONE) {
+        return status;
+    }
     if (this.firstSegidx > 0) {
         if (!this.dashOn || this.needsMoveTo) {
-            this.out->moveTo(this.out, this.sx, this.sy);
+            status = this.out->moveTo(this.out, this.sx, this.sy);
+            if (status != ERROR_NONE) {
+                return status;
+            }
         }
-        emitFirstSegments(pDasher);
+        status = emitFirstSegments(pDasher);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
-    Dasher_MoveTo(pDasher, this.sx, this.sy);
+    return Dasher_MoveTo(pDasher, this.sx, this.sy);
 }
 
-static void Dasher_PathDone(PathConsumer *pDasher) {
+static jint Dasher_PathDone(PathConsumer *pDasher) {
+    jint status = ERROR_NONE;
     if (this.firstSegidx > 0) {
-        this.out->moveTo(this.out, this.sx, this.sy);
-        emitFirstSegments(pDasher);
+        status = this.out->moveTo(this.out, this.sx, this.sy);
+        if (status != ERROR_NONE) {
+            return status;
+        }
+        status = emitFirstSegments(pDasher);
+        if (status != ERROR_NONE) {
+            return status;
+        }
     }
-    this.out->pathDone(this.out);
+    return this.out->pathDone(this.out);
 }
 
 

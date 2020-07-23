@@ -37,6 +37,7 @@
 #include "Cookie.h"
 #include "CookieJar.h"
 #include "CustomHeaderFields.h"
+#include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
@@ -58,6 +59,7 @@
 #include "RenderObject.h"
 #include "RenderTheme.h"
 #include "ScriptController.h"
+#include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleScope.h"
@@ -93,6 +95,8 @@ using namespace Inspector;
     macro(MockCaptureDevicesEnabled) \
     macro(NeedsSiteSpecificQuirks) \
     macro(ScriptEnabled) \
+    macro(ShowDebugBorders) \
+    macro(ShowRepaintCounter) \
     macro(WebRTCEncryptionEnabled) \
     macro(WebSecurityEnabled)
 
@@ -581,6 +585,11 @@ void InspectorPageAgent::getResourceContent(ErrorString& errorString, const Stri
     resourceContent(errorString, frame, URL({ }, url), content, base64Encoded);
 }
 
+void InspectorPageAgent::setBootstrapScript(ErrorString&, const String* optionalSource)
+{
+    m_bootstrapScript = optionalSource ? *optionalSource : nullString();
+}
+
 void InspectorPageAgent::searchInResource(ErrorString& errorString, const String& frameId, const String& url, const String& query, const bool* optionalCaseSensitive, const bool* optionalIsRegex, const String* optionalRequestId, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>& results)
 {
     results = JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>::create();
@@ -638,9 +647,11 @@ void InspectorPageAgent::searchInResources(ErrorString&, const String& text, con
 {
     result = JSON::ArrayOf<Inspector::Protocol::Page::SearchResult>::create();
 
-    bool isRegex = optionalIsRegex ? *optionalIsRegex : false;
     bool caseSensitive = optionalCaseSensitive ? *optionalCaseSensitive : false;
-    JSC::Yarr::RegularExpression regex = ContentSearchUtilities::createSearchRegex(text, caseSensitive, isRegex);
+    bool isRegex = optionalIsRegex ? *optionalIsRegex : false;
+
+    auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ContainsString;
+    auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(text, caseSensitive, searchStringType);
 
     for (Frame* frame = &m_inspectedPage.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         for (auto* cachedResource : cachedResourcesForFrame(frame)) {
@@ -760,6 +771,17 @@ void InspectorPageAgent::defaultAppearanceDidChange(bool useDarkAppearance)
     m_frontendDispatcher->defaultAppearanceDidChange(useDarkAppearance ? Inspector::Protocol::Page::Appearance::Dark : Inspector::Protocol::Page::Appearance::Light);
 }
 
+void InspectorPageAgent::didClearWindowObjectInWorld(Frame& frame, DOMWrapperWorld& world)
+{
+    if (&world != &mainThreadNormalWorld())
+        return;
+
+    if (m_bootstrapScript.isEmpty())
+        return;
+
+    frame.script().evaluateIgnoringException(ScriptSourceCode(m_bootstrapScript, URL { URL(), "web-inspector://bootstrap.js"_s }));
+}
+
 void InspectorPageAgent::didPaint(RenderObject& renderer, const LayoutRect& rect)
 {
     if (!m_showPaintRects)
@@ -872,10 +894,15 @@ void InspectorPageAgent::setEmulatedMedia(ErrorString&, const String& media)
 
     m_emulatedMedia = media;
 
+    // FIXME: Schedule a rendering update instead of synchronously updating the layout.
     m_inspectedPage.updateStyleAfterChangeInEnvironment();
 
-    if (auto* document = m_inspectedPage.mainFrame().document())
-        document->updateLayout();
+    auto document = makeRefPtr(m_inspectedPage.mainFrame().document());
+    if (!document)
+        return;
+
+    document->updateLayout();
+    document->evaluateMediaQueriesAndReportChanges();
 }
 
 void InspectorPageAgent::setForcedAppearance(ErrorString&, const String& appearance)
@@ -903,17 +930,6 @@ void InspectorPageAgent::applyEmulatedMedia(String& media)
 {
     if (!m_emulatedMedia.isEmpty())
         media = m_emulatedMedia;
-}
-
-void InspectorPageAgent::getCompositingBordersVisible(ErrorString&, bool* outParam)
-{
-    *outParam = m_inspectedPage.settings().showDebugBorders() || m_inspectedPage.settings().showRepaintCounter();
-}
-
-void InspectorPageAgent::setCompositingBordersVisible(ErrorString&, bool visible)
-{
-    m_inspectedPage.settings().setShowDebugBorders(visible);
-    m_inspectedPage.settings().setShowRepaintCounter(visible);
 }
 
 void InspectorPageAgent::snapshotNode(ErrorString& errorString, int nodeId, String* outDataURL)

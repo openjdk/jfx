@@ -30,11 +30,6 @@
 
 namespace WebCore {
 
-ServiceWorkerJobData::ServiceWorkerJobData(const Identifier& identifier)
-    : m_identifier(identifier)
-{
-}
-
 ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const DocumentOrWorkerIdentifier& localSourceContext)
     : m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generateThreadSafe() }
 {
@@ -54,7 +49,8 @@ ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
 
 ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
 {
-    ServiceWorkerJobData result { identifier() };
+    ServiceWorkerJobData result;
+    result.m_identifier = identifier();
     result.sourceContext = sourceContext;
     result.type = type;
 
@@ -65,6 +61,25 @@ ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
     result.registrationOptions = registrationOptions.isolatedCopy();
 
     return result;
+}
+
+// https://w3c.github.io/ServiceWorker/#dfn-job-equivalent
+bool ServiceWorkerJobData::isEquivalent(const ServiceWorkerJobData& job) const
+{
+    if (type != job.type)
+        return false;
+
+    switch (type) {
+    case ServiceWorkerJobType::Register:
+    case ServiceWorkerJobType::Update:
+        return scopeURL == job.scopeURL
+            && scriptURL == job.scriptURL
+            && registrationOptions.type == job.registrationOptions.type
+            && registrationOptions.updateViaCache == job.registrationOptions.updateViaCache;
+    case ServiceWorkerJobType::Unregister:
+        return scopeURL == job.scopeURL;
+    }
+    return false;
 }
 
 } // namespace WebCore

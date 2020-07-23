@@ -66,7 +66,7 @@ public:
     // FIXME: These accessors should ASSERT(!isDirty()). See https://bugs.webkit.org/show_bug.cgi?id=97264
     // Note len() == 1 for combined text regardless of whether the composition is empty. Use hasTextContent() to
     unsigned start() const { return m_start; }
-    unsigned end() const { return m_len ? m_start + m_len - 1 : m_start; }
+    unsigned end() const { return m_start + m_len; }
     unsigned len() const { return m_len; }
 
     void setStart(unsigned start) { m_start = start; }
@@ -121,6 +121,7 @@ public:
     virtual LayoutRect localSelectionRect(unsigned startPos, unsigned endPos) const;
     bool isSelected(unsigned startPosition, unsigned endPosition) const;
     std::pair<unsigned, unsigned> selectionStartEnd() const;
+    std::pair<unsigned, unsigned> highlightStartEnd(SelectionRangeData&) const;
 
 protected:
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
@@ -132,6 +133,9 @@ private:
     void deleteLine() final;
     void extractLine() final;
     void attachLine() final;
+
+    RenderObject::SelectionState verifySelectionState(RenderObject::SelectionState, SelectionRangeData&) const;
+    std::pair<unsigned, unsigned> clampedStartEndForState(unsigned, unsigned, RenderObject::SelectionState) const;
 
 public:
     RenderObject::SelectionState selectionState() final;
@@ -169,6 +173,7 @@ private:
 
     Vector<MarkedText> collectMarkedTextsForDraggedContent();
     Vector<MarkedText> collectMarkedTextsForDocumentMarkers(TextPaintPhase) const;
+    Vector<MarkedText> collectMarkedTextsForHighlights(TextPaintPhase) const;
 
     MarkedTextStyle computeStyleForUnmarkedMarkedText(const PaintInfo&) const;
     StyledMarkedText resolveStyleForMarkedText(const MarkedText&, const MarkedTextStyle& baseStyle, const PaintInfo&);
@@ -212,6 +217,8 @@ private:
     // denote no truncation (the whole run paints) and full truncation (nothing paints at all).
     unsigned short m_truncation { cNoTruncation };
 };
+
+LayoutRect snappedSelectionRect(const LayoutRect&, float logicalRight, float selectionTop, float selectionHeight, bool isHorizontal);
 
 } // namespace WebCore
 
