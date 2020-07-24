@@ -123,6 +123,7 @@ public class NativeMediaManager {
                     dependencies.add("avplugin-57");
                     dependencies.add("avplugin-ffmpeg-56");
                     dependencies.add("avplugin-ffmpeg-57");
+                    dependencies.add("avplugin-ffmpeg-58");
                 }
                 if (HostUtils.isMacOSX()) {
                     dependencies.add("fxplugins");
