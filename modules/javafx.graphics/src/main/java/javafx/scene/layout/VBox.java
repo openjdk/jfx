@@ -231,7 +231,7 @@ public class VBox extends Pane {
     }
 
     /**
-     * Creates an {@code VBox} layout with {@code spacing = 0}.
+     * Creates n {@code VBox} layout with {@code spacing = 0}.
      * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
