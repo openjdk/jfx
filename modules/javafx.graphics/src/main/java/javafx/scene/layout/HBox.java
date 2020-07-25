@@ -168,13 +168,14 @@ public class HBox extends Pane {
 
     /**
      * Sets the horizontal grow priority for the child when contained by an hbox.
-     * If set, the hbox will use the priority to allocate additional space if the
-     * hbox is resized larger than it's preferred width.
+     * If set, the hbox will use the priority value to allocate additional space if the
+     * hbox is resized larger than its preferred width.
      * If multiple hbox children have the same horizontal grow priority, then the
      * extra space will be split evenly between them.
      * If no horizontal grow priority is set on a child, the hbox will never
      * allocate it additional horizontal space if available.
-     * Setting the value to null will remove the constraint.
+     * <p>
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child of an hbox
      * @param value the horizontal grow priority for the child
      */

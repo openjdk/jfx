@@ -596,6 +596,7 @@ public class Cell<T> extends Labeled {
     }
 
     /**
+     * Commits an edit to the value of the cell.
      * Call this function when appropriate (based on the user interaction requirements
      * of your cell editing user interface) to do two things:
      *
@@ -611,12 +612,12 @@ public class Cell<T> extends Labeled {
      *
      * <p>In general there is no need to override this method in custom cell
      * implementations - it should be sufficient to simply call this method
-     * when appropriate (e.g. when the user pressed the Enter key, you may do something
+     * when appropriate (e.g., when the user pressed the Enter key, you may do something
      * like {@code cell.commitEdit(converter.fromString(textField.getText()));}</p>
      *
-     * @param newValue The value as input by the end user, which should be
+     * @param newValue the value as input by the end user, which should be
      *      persisted in the relevant way given the data source underpinning the
-     *      user interface and the install edit commit handler of the UI control.
+     *      user interface and the install edit commit handler of the UI control
      */
     public void commitEdit(T newValue) {
         if (isEditing()) {
