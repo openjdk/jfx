@@ -154,7 +154,7 @@ public class VBox extends Pane {
     private static final String VGROW_CONSTRAINT = "vbox-vgrow";
 
     /**
-     * Sets the vertical grow priority for the child when contained by an vbox.
+     * Sets the vertical grow priority for the child when contained by a vbox.
      * If set, the vbox will use the priority value to allocate additional space if the
      * vbox is resized larger than its preferred height.
      * If multiple vbox children have the same vertical grow priority, then the
@@ -231,7 +231,7 @@ public class VBox extends Pane {
     }
 
     /**
-     * Creates n {@code VBox} layout with {@code spacing = 0}.
+     * Creates a {@code VBox} layout with {@code spacing = 0}.
      * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
@@ -241,7 +241,7 @@ public class VBox extends Pane {
     }
 
     /**
-     * Creates an {@code VBox} layout with the specified spacing between children.
+     * Creates a {@code VBox} layout with the specified spacing between children.
      * @param spacing the amount of vertical space between each child
      * @param children the initial set of children for this pane
      * @since JavaFX 8.0

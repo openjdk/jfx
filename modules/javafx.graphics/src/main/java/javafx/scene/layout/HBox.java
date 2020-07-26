@@ -48,8 +48,6 @@ import javafx.css.Styleable;
 import javafx.geometry.HPos;
 import javafx.util.Callback;
 
-
-
 /**
  * HBox lays out its children in a single horizontal row.
  * If the hbox has a border and/or padding set, then the contents will be laid
@@ -228,14 +226,14 @@ public class HBox extends Pane {
      ********************************************************************/
 
     /**
-     * Creates an HBox layout with spacing = 0.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
      */
     public HBox() {
         super();
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
      */
     public HBox(double spacing) {
@@ -244,8 +242,8 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with spacing = 0.
-     * @param children The initial set of children for this pane.
+     * Creates an {@code HBox} layout with{@code spacing = 0}.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(Node... children) {
@@ -254,9 +252,9 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
-     * @param children The initial set of children for this pane.
+     * @param children The initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(double spacing, Node... children) {
