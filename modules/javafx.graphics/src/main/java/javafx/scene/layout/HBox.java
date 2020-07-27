@@ -171,7 +171,7 @@ public class HBox extends Pane {
      * If multiple hbox children have the same horizontal grow priority, then the
      * extra space will be split evenly between them.
      * If no horizontal grow priority is set on a child, the hbox will never
-     * allocate it additional horizontal space if available.
+     * allocate any additional horizontal space for that child.
      * <p>
      * Setting the value to {@code null} will remove the constraint.
      * @param child the child of an hbox
@@ -242,7 +242,7 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an {@code HBox} layout with{@code spacing = 0}.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
      * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */

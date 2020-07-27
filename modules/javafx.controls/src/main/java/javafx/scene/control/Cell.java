@@ -575,6 +575,7 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     /**
+     * Starts an edit to the value of the cell.
      * Call this function to transition from a non-editing state into an editing
      * state, if the cell is editable. If this cell is already in an editing
      * state, it will stay in it.
@@ -586,6 +587,7 @@ public class Cell<T> extends Labeled {
     }
 
     /**
+     * Cancels an edit to the value of the cell.
      * Call this function to transition from an editing state into a non-editing
      * state, without saving any user input.
      */
@@ -601,7 +603,7 @@ public class Cell<T> extends Labeled {
      * of your cell editing user interface) to do two things:
      *
      * <ol>
-     *     <li>Fire the appropriate events back to the backing UI control (e.g.
+     *     <li>Fire the appropriate events back to the backing UI control (e.g.,
      *     {@link ListView}). This will begin the process of pushing this edit
      *     back to the relevant data source / property (although it does not
      *     guarantee that this will be successful - that is dependent upon the

@@ -160,7 +160,7 @@ public class VBox extends Pane {
      * If multiple vbox children have the same vertical grow priority, then the
      * extra space will be split evenly between them.
      * If no vertical grow priority is set on a child, the vbox will never
-     * allocate it additional vertical space, if available.
+     * allocate any additional vertical space for that child.
      * <p>
      * Setting the value to {@code null} will remove the constraint.
      * @param child the child of a vbox
