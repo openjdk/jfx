@@ -65,6 +65,12 @@ import javafx.collections.SetChangeListener;
  */
 public abstract class SetBinding<E> extends SetExpression<E> implements Binding<ObservableSet<E>> {
 
+    /**
+     * Creates a default SetBinding
+     */
+    public SetBinding() {
+    }
+
     private final SetChangeListener<E> setChangeListener = new SetChangeListener<E>() {
         @Override
         public void onChanged(Change<? extends E> change) {
