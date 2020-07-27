@@ -310,7 +310,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * of the node such that each unit of distance along the axis in local
  * coordinates is multiplied by the scale factor. As with rotation
  * transformations, scaling transformations are applied about a "pivot" point.
- * You can think of this as the point in the Node around which you "zoom".  For
+ * You can think of this as the point in the {@code Node} around which you "zoom".  For
  * example, if you create a {@link javafx.scene.shape.Rectangle} with a
  * {@code strokeWidth} of 5, and a width and height of 50, and you apply a
  * {@link javafx.scene.transform.Scale} with scale factors (x=2.0, y=2.0) and
@@ -321,9 +321,11 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * A <b>shearing</b> transformation, sometimes called a skew, effectively
  * rotates one axis so that the x and y axes are no longer perpendicular.
  * <p>
- * Multiple transformations may be applied to a node by specifying an ordered
- * chain of transforms.  The order in which the transforms are applied is
- * defined by the ObservableList specified in the {@link #getTransforms transforms} variable.
+ * Multiple transformations may be applied to a node. Custom transforms are applied first using the {@link #getTransforms transforms}
+ * list. Predefined transforms are applied afterwards in this order: scale, rotation and translation. These are applied using the
+ * {@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ}, {@link #rotateProperty rotate},
+ * {@link #translateXProperty translateX}, {@link #translateYProperty translateY} and {@link #translateZProperty translateZ}
+ * properties.
  *
  * <h2>Bounding Rectangles</h2>
  * <p>
@@ -340,9 +342,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p>
  * Each {@code Node} also has a read-only {@link #boundsInParentProperty boundsInParent} variable which
  * specifies the bounding rectangle of the {@code Node} after all transformations
- * have been applied, including those set in {@link #getTransforms transforms},
- * {@link #scaleXProperty scaleX}/{@link #scaleYProperty scaleY}, {@link #rotateProperty rotate},
- * {@link #translateXProperty translateX}/{@link #translateYProperty translateY}, and {@link #layoutXProperty layoutX}/{@link #layoutYProperty layoutY}.
+ * have been applied as described in the <i>Transformations</i> section.
  * It is called "boundsInParent" because the rectangle will be relative to the
  * parent's coordinate system.  This is the 'visual' bounds of the node.
  * <p>
@@ -862,12 +862,14 @@ public abstract class Node implements EventTarget, Styleable {
     private ObservableMap<Object, Object> properties;
 
     /**
-      * Returns an observable map of properties on this node for use primarily
-      * by application developers.
-      *
-      * @return an observable map of properties on this node for use primarily
-      * by application developers
-      */
+     * Returns an observable map of properties on this node for use primarily by application developers. Layout managers use this map
+     * as well to specify layout constraints on the node, such as {@code HBox#setHgrow}, so the developer should be mindful of
+     * clearing the map or overriding its values. These entries are not removed automatically if the node is removed from the layout
+     * manager, so unused entries can exist throughout the life of the node.
+     *
+     * @return an observable map of properties on this node for use primarily
+     * by application developers
+     */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());
@@ -3390,14 +3392,13 @@ public abstract class Node implements EventTarget, Styleable {
      * The rectangular bounds of this {@code Node} which include its transforms.
      * {@code boundsInParent} is calculated by
      * taking the local bounds (defined by {@link #boundsInLocalProperty boundsInLocal}) and applying
-     * the transform created by setting the following additional variables
+     * the transform created by setting the following additional variables:
      * <ol>
      * <li>{@link #getTransforms transforms} ObservableList</li>
      * <li>{@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ}</li>
      * <li>{@link #rotateProperty rotate}</li>
-     * <li>{@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}</li>
-     * <li>{@link #translateXProperty translateX}, {@link #translateYProperty translateY},
-     * {@link #translateZProperty translateZ}</li>
+     * <li>{@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY} and
+     * {@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ}</li>
      * </ol>
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
@@ -5518,10 +5519,12 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines the ObservableList of {@link javafx.scene.transform.Transform} objects
-     * to be applied to this {@code Node}. This ObservableList of transforms is applied
-     * before {@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #scaleXProperty scaleX}, and
-     * {@link #scaleYProperty scaleY}, {@link #rotateProperty rotate} transforms.
+     * Defines the {@code ObservableList} of {@link Transform} objects to be applied to this {@code Node}. The transforms in this list
+     * are applied in the <i>reverse</i> order of which they are specified as per matrix multiplication rules. This list of transforms
+     * is applied before scaling ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY} and {@link #scaleZProperty scaleZ}),
+     * rotation ({@link #rotateProperty rotate}), and layout and translation ({@link #layoutXProperty layoutX},
+     * {@link #layoutYProperty layoutY}, {@link #translateXProperty translateX}, {@link #translateYProperty translateY} and
+     * {@link #translateYProperty translateZ}), in that order.
      *
      * @return the transforms for this {@code Node}
      * @defaultValue empty

@@ -102,20 +102,20 @@ public class FXCollections {
     }
 
     /**
-     * Constructs an ObservableList that is backed by the specified list.
-     * Mutation operations on the ObservableList instance will be reported
+     * Constructs an {@code ObservableList} that is backed by the specified list.
+     * Mutation operations on the {@code ObservableList} instance will be reported
      * to observers that have registered on that instance.<br>
      * Note that mutation operations made directly to the underlying list are
-     * <em>not</em> reported to observers of any ObservableList that
+     * <em>not</em> reported to observers of any {@code ObservableList} that
      * wraps it.
-     * <br>
-     * This list also reports mutations of the elements in it by using <code>extractor</code>.
-     * Observable objects returned by extractor (applied to each list element) are listened for changes
-     * and transformed into "update" change of ListChangeListener.
+     * <p>
+     * This list also reports mutations of the elements in it by using an {@code extractor}.
+     * Observable objects returned by the extractor (applied to each list element) are listened for changes
+     * and transformed into {@link ListChangeListener.Change#wasUpdated() "update"} changes of a {@code ListChangeListener}.
      *
      * @param <E> The type of List to be wrapped
      * @param list a concrete List that backs this ObservableList
-     * @param extractor element to Observable[] convertor
+     * @param extractor element to Observable[] converter
      * @since JavaFX 2.1
      * @return a newly created ObservableList
      */
@@ -307,7 +307,7 @@ public class FXCollections {
     }
 
     /**
-     * Creates a new empty observable list that is backed by an arraylist.
+     * Creates a new empty observable list that is backed by an array list.
      * @see #observableList(java.util.List)
      * @param <E> The type of List to be wrapped
      * @return a newly created ObservableList
@@ -318,11 +318,16 @@ public class FXCollections {
     }
 
     /**
-     * Creates a new empty observable list backed by an arraylist.
+     * Creates a new empty observable list backed by an array list that listens to changes in observables of its items.
+     * The {@code extractor} parameter specifies observables (usually properties) of the objects in the created list. When there is
+     * a change in one of those observables, the user is notified of it through an
+     * {@link ListChangeListener.Change#wasUpdated() update} change of an attached {@code ListChangeListener}. These changes
+     * are unrelated to the changes made to the observable list itself using methods such as {@code add} and {@code remove}.
+     * <p>
+     * For example, a list of {@code Shape}s can listen to changes in the shapes' {@code fill} property.
      *
-     * This list reports element updates.
      * @param <E> The type of List to be wrapped
-     * @param extractor element to Observable[] convertor. Observable objects are listened for changes on the element.
+     * @param extractor element to Observable[] converter. Observable objects are listened for changes on the element.
      * @see #observableList(java.util.List, javafx.util.Callback)
      * @since JavaFX 2.1
      * @return a newly created ObservableList
