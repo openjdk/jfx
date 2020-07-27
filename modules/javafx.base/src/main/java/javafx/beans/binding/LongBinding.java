@@ -67,7 +67,7 @@ public abstract class LongBinding extends LongExpression implements
     private ExpressionHelper<Number> helper = null;
 
     /**
-     * Creates a default LongBinding
+     * Creates a default LongBinding.
      */
     public LongBinding() {
     }

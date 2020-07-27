@@ -45,7 +45,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
         ObservableDoubleValue {
 
     /**
-     * Creates a default DoubleExpression
+     * Creates a default DoubleExpression.
      */
     public DoubleExpression() {
     }

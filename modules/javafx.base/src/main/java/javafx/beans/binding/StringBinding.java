@@ -66,7 +66,7 @@ public abstract class StringBinding extends StringExpression implements
     private ExpressionHelper<String> helper = null;
 
     /**
-     * Creates a default StringBinding
+     * Creates a default StringBinding.
      */
     public StringBinding() {
     }

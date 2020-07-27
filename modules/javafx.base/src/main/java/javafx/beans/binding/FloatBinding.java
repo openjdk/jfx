@@ -67,7 +67,7 @@ public abstract class FloatBinding extends FloatExpression implements
     private ExpressionHelper<Number> helper = null;
 
     /**
-     * Creates a default FloatBinding
+     * Creates a default FloatBinding.
      */
     public FloatBinding() {
     }

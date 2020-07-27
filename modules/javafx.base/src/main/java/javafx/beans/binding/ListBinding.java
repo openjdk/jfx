@@ -65,7 +65,7 @@ import javafx.collections.ObservableList;
 public abstract class ListBinding<E> extends ListExpression<E> implements Binding<ObservableList<E>> {
 
     /**
-     * Creates a default ListBinding
+     * Creates a default ListBinding.
      */
     public ListBinding() {
     }

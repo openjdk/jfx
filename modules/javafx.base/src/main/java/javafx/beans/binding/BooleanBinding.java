@@ -60,7 +60,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
         Binding<Boolean> {
 
     /**
-     * Creates a default BooleanBinding
+     * Creates a default BooleanBinding.
      */
     public BooleanBinding() {
     }

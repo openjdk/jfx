@@ -85,7 +85,7 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
     private EmptyProperty empty0;
 
     /**
-     * Creates a default MapBinding
+     * Creates a default MapBinding.
      */
     public MapBinding() {
     }

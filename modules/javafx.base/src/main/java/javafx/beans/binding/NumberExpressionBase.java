@@ -50,7 +50,7 @@ import com.sun.javafx.binding.StringFormatter;
 public abstract class NumberExpressionBase implements NumberExpression {
 
     /**
-     * Creates a default NumberExpressionBase
+     * Creates a default NumberExpressionBase.
      */
     public NumberExpressionBase() {
     }

@@ -43,7 +43,7 @@ public abstract class LongExpression extends NumberExpressionBase implements
         ObservableLongValue {
 
     /**
-     * Creates a default LongExpression
+     * Creates a default LongExpression.
      */
     public LongExpression() {
     }

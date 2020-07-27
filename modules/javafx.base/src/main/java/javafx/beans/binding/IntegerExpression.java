@@ -44,7 +44,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
         ObservableIntegerValue {
 
     /**
-     * Creates a default IntegerExpression
+     * Creates a default IntegerExpression.
      */
     public IntegerExpression() {
     }

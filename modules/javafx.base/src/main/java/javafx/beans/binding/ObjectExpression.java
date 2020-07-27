@@ -50,7 +50,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
     }
 
     /**
-     * Creates a default ObjectExpression
+     * Creates a default ObjectExpression.
      */
     public ObjectExpression() {
     }
