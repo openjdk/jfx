@@ -44,7 +44,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
         ObservableFloatValue {
 
     /**
-     * Creates a default FloatExpression.
+     * Creates a default {@code FloatExpression}.
      */
     public FloatExpression() {
     }

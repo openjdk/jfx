@@ -117,7 +117,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
     private ExpressionHelper<Number> helper = null;
 
     /**
-     * Creates a default DoubleBinding.
+     * Creates a default {@code DoubleBinding}.
      */
     public DoubleBinding() {
     }

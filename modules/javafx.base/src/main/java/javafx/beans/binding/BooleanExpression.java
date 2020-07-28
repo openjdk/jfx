@@ -45,7 +45,7 @@ import javafx.beans.value.ObservableValue;
 public abstract class BooleanExpression implements ObservableBooleanValue {
 
     /**
-     * Creates a default BooleanExpression.
+     * Creates a default {@code BooleanExpression}.
      */
     public BooleanExpression() {
     }

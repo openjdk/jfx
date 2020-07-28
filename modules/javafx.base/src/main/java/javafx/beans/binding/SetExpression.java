@@ -58,7 +58,7 @@ import java.util.NoSuchElementException;
 public abstract class SetExpression<E> implements ObservableSetValue<E> {
 
     /**
-     * Creates a default SetExpression.
+     * Creates a default {@code SetExpression}.
      */
     public SetExpression() {
     }

@@ -67,7 +67,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     private ExpressionHelper<T> helper = null;
 
     /**
-     * Creates a default ObjectBinding.
+     * Creates a default {@code ObjectBinding}.
      */
     public ObjectBinding() {
     }

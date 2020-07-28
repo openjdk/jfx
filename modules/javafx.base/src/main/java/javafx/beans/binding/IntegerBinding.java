@@ -67,7 +67,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
     private ExpressionHelper<Number> helper = null;
 
     /**
-     * Creates a default IntegerBinding.
+     * Creates a default {@code IntegerBinding}.
      */
     public IntegerBinding() {
     }

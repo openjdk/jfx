@@ -92,7 +92,7 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
     }
 
     /**
-     * Creates a default MapExpression.
+     * Creates a default {@code MapExpression}.
      */
     public MapExpression() {
     }
