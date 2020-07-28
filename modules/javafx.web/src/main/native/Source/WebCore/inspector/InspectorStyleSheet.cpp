@@ -46,6 +46,7 @@
 #include "HTMLParserIdioms.h"
 #include "HTMLStyleElement.h"
 #include "InspectorCSSAgent.h"
+#include "InspectorDOMAgent.h"
 #include "InspectorPageAgent.h"
 #include "MediaList.h"
 #include "Node.h"
@@ -116,7 +117,7 @@ void ParsedStyleSheet::setSourceData(std::unique_ptr<RuleSourceDataList> sourceD
         return;
     }
 
-    m_sourceData = std::make_unique<RuleSourceDataList>();
+    m_sourceData = makeUnique<RuleSourceDataList>();
 
     // FIXME: This is a temporary solution to retain the original flat sourceData structure
     // containing only style rules, even though CSSParser now provides the full rule source data tree.
@@ -378,13 +379,6 @@ void StyleSheetHandler::observeComment(unsigned startOffset, unsigned endOffset)
     m_currentRuleDataStack.last()->styleSourceData->propertyData.append(CSSPropertySourceData(propertyData.name, propertyData.value, false, true, true, SourceRange(startOffset - topRuleBodyRange.start, endOffset - topRuleBodyRange.start)));
 }
 
-enum MediaListSource {
-    MediaListSourceLinkedSheet,
-    MediaListSourceInlineSheet,
-    MediaListSourceMediaRule,
-    MediaListSourceImportRule
-};
-
 static RefPtr<Inspector::Protocol::CSS::SourceRange> buildSourceRangeObject(const SourceRange& range, const Vector<size_t>& lineEndings, int* endingLine = nullptr)
 {
     if (lineEndings.isEmpty())
@@ -404,37 +398,6 @@ static RefPtr<Inspector::Protocol::CSS::SourceRange> buildSourceRangeObject(cons
         .release();
 }
 
-static Ref<Inspector::Protocol::CSS::CSSMedia> buildMediaObject(const MediaList* media, MediaListSource mediaListSource, const String& sourceURL)
-{
-    // Make certain compilers happy by initializing |source| up-front.
-    Inspector::Protocol::CSS::CSSMedia::Source source = Inspector::Protocol::CSS::CSSMedia::Source::InlineSheet;
-    switch (mediaListSource) {
-    case MediaListSourceMediaRule:
-        source = Inspector::Protocol::CSS::CSSMedia::Source::MediaRule;
-        break;
-    case MediaListSourceImportRule:
-        source = Inspector::Protocol::CSS::CSSMedia::Source::ImportRule;
-        break;
-    case MediaListSourceLinkedSheet:
-        source = Inspector::Protocol::CSS::CSSMedia::Source::LinkedSheet;
-        break;
-    case MediaListSourceInlineSheet:
-        source = Inspector::Protocol::CSS::CSSMedia::Source::InlineSheet;
-        break;
-    }
-
-    auto mediaObject = Inspector::Protocol::CSS::CSSMedia::create()
-        .setText(media->mediaText())
-        .setSource(source)
-        .release();
-
-    if (!sourceURL.isEmpty()) {
-        mediaObject->setSourceURL(sourceURL);
-        mediaObject->setSourceLine(media->queries()->lastLine());
-    }
-    return mediaObject;
-}
-
 static RefPtr<CSSRuleList> asCSSRuleList(CSSStyleSheet* styleSheet)
 {
     if (!styleSheet)
@@ -444,7 +407,7 @@ static RefPtr<CSSRuleList> asCSSRuleList(CSSStyleSheet* styleSheet)
     Vector<RefPtr<CSSRule>>& listRules = list->rules();
     for (unsigned i = 0, size = styleSheet->length(); i < size; ++i)
         listRules.append(styleSheet->item(i));
-    return WTFMove(list);
+    return list;
 }
 
 static RefPtr<CSSRuleList> asCSSRuleList(CSSRule* rule)
@@ -464,59 +427,85 @@ static RefPtr<CSSRuleList> asCSSRuleList(CSSRule* rule)
     return nullptr;
 }
 
-static void fillMediaListChain(CSSRule* rule, JSON::ArrayOf<Inspector::Protocol::CSS::CSSMedia>& mediaArray)
+static Ref<JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>> buildArrayForGroupings(CSSRule& rule)
 {
-    MediaList* mediaList;
-    CSSRule* parentRule = rule;
-    String sourceURL;
+    auto groupingsPayload = JSON::ArrayOf<Inspector::Protocol::CSS::Grouping>::create();
+
+    auto* parentRule = &rule;
     while (parentRule) {
-        CSSStyleSheet* parentStyleSheet = nullptr;
-        bool isMediaRule = true;
-        if (is<CSSMediaRule>(*parentRule)) {
-            CSSMediaRule& mediaRule = downcast<CSSMediaRule>(*parentRule);
-            mediaList = mediaRule.media();
-            parentStyleSheet = mediaRule.parentStyleSheet();
-        } else if (is<CSSImportRule>(*parentRule)) {
-            CSSImportRule& importRule = downcast<CSSImportRule>(*parentRule);
-            mediaList = &importRule.media();
-            parentStyleSheet = importRule.parentStyleSheet();
-            isMediaRule = false;
-        } else
-            mediaList = nullptr;
+        RefPtr<Inspector::Protocol::CSS::Grouping> ruleGroupingPayload;
 
-        if (parentStyleSheet) {
-            sourceURL = parentStyleSheet->contents().baseURL();
-            if (sourceURL.isEmpty())
-                sourceURL = InspectorDOMAgent::documentURLString(parentStyleSheet->ownerDocument());
-        } else
-            sourceURL = emptyString();
-
-        if (mediaList && mediaList->length())
-            mediaArray.addItem(buildMediaObject(mediaList, isMediaRule ? MediaListSourceMediaRule : MediaListSourceImportRule, sourceURL));
-
-        if (parentRule->parentRule())
-            parentRule = parentRule->parentRule();
-        else {
-            CSSStyleSheet* styleSheet = parentRule->parentStyleSheet();
-            while (styleSheet) {
-                mediaList = styleSheet->media();
-                if (mediaList && mediaList->length()) {
-                    Document* doc = styleSheet->ownerDocument();
-                    if (doc)
-                        sourceURL = doc->url();
-                    else if (!styleSheet->contents().baseURL().isEmpty())
-                        sourceURL = styleSheet->contents().baseURL();
-                    else
-                        sourceURL = emptyString();
-                    mediaArray.addItem(buildMediaObject(mediaList, styleSheet->ownerNode() ? MediaListSourceLinkedSheet : MediaListSourceInlineSheet, sourceURL));
-                }
-                parentRule = styleSheet->ownerRule();
-                if (parentRule)
-                    break;
-                styleSheet = styleSheet->parentStyleSheet();
+        if (is<CSSMediaRule>(parentRule)) {
+            auto* media = downcast<CSSMediaRule>(parentRule)->media();
+            if (media && media->length() && media->mediaText() != "all") {
+                ruleGroupingPayload = Inspector::Protocol::CSS::Grouping::create()
+                    .setText(media->mediaText())
+                    .setType(Inspector::Protocol::CSS::Grouping::Type::MediaRule)
+                    .release();
             }
+        } else if (is<CSSImportRule>(parentRule)) {
+            auto& media = downcast<CSSImportRule>(parentRule)->media();
+            if (media.length() && media.mediaText() != "all") {
+                ruleGroupingPayload = Inspector::Protocol::CSS::Grouping::create()
+                    .setText(media.mediaText())
+                    .setType(Inspector::Protocol::CSS::Grouping::Type::MediaImportRule)
+                    .release();
+            }
+        } else if (is<CSSSupportsRule>(parentRule)) {
+            ruleGroupingPayload = Inspector::Protocol::CSS::Grouping::create()
+                .setText(downcast<CSSSupportsRule>(parentRule)->conditionText())
+                .setType(Inspector::Protocol::CSS::Grouping::Type::SupportsRule)
+                .release();
+        }
+
+        if (ruleGroupingPayload) {
+            if (auto* parentStyleSheet = parentRule->parentStyleSheet()) {
+                String sourceURL = parentStyleSheet->contents().baseURL();
+                if (sourceURL.isEmpty()) {
+                    if (auto* ownerDocument = parentStyleSheet->ownerDocument())
+                        sourceURL = InspectorDOMAgent::documentURLString(ownerDocument);
+                }
+                if (!sourceURL.isEmpty())
+                    ruleGroupingPayload->setSourceURL(sourceURL);
+            }
+
+            groupingsPayload->addItem(WTFMove(ruleGroupingPayload));
+        }
+
+        if (parentRule->parentRule()) {
+            parentRule = parentRule->parentRule();
+            continue;
+        }
+
+        auto* styleSheet = parentRule->parentStyleSheet();
+        while (styleSheet) {
+            auto* media = styleSheet->media();
+            if (media && media->length() && media->mediaText() != "all") {
+                auto sheetGroupingPayload = Inspector::Protocol::CSS::Grouping::create()
+                    .setText(media->mediaText())
+                    .setType(is<HTMLStyleElement>(styleSheet->ownerNode()) ? Inspector::Protocol::CSS::Grouping::Type::MediaStyleNode: Inspector::Protocol::CSS::Grouping::Type::MediaLinkNode)
+                    .release();
+
+                String sourceURL;
+                if (auto* ownerDocument = styleSheet->ownerDocument())
+                    sourceURL = ownerDocument->url();
+                else if (!styleSheet->contents().baseURL().isEmpty())
+                    sourceURL = styleSheet->contents().baseURL();
+                if (!sourceURL.isEmpty())
+                    sheetGroupingPayload->setSourceURL(sourceURL);
+
+                groupingsPayload->addItem(WTFMove(sheetGroupingPayload));
+            }
+
+            parentRule = styleSheet->ownerRule();
+            if (parentRule)
+                break;
+
+            styleSheet = styleSheet->parentStyleSheet();
         }
     }
+
+    return groupingsPayload;
 }
 
 Ref<InspectorStyle> InspectorStyle::create(const InspectorCSSId& styleId, Ref<CSSStyleDeclaration>&& style, InspectorStyleSheet* parentStyleSheet)
@@ -546,7 +535,7 @@ RefPtr<Inspector::Protocol::CSS::CSSStyle> InspectorStyle::buildObjectForStyle()
     if (sourceData)
         result->setRange(buildSourceRangeObject(sourceData->ruleBodyRange, m_parentStyleSheet->lineEndings()));
 
-    return WTFMove(result);
+    return result;
 }
 
 Ref<JSON::ArrayOf<Inspector::Protocol::CSS::CSSComputedStyleProperty>> InspectorStyle::buildArrayForComputedStyle() const
@@ -1017,7 +1006,7 @@ RefPtr<Inspector::Protocol::CSS::CSSStyleSheetBody> InspectorStyleSheet::buildOb
     if (!styleSheetText.hasException())
         result->setText(styleSheetText.releaseReturnValue());
 
-    return WTFMove(result);
+    return result;
 }
 
 RefPtr<Inspector::Protocol::CSS::CSSStyleSheetHeader> InspectorStyleSheet::buildObjectForStyleSheetInfo()
@@ -1172,13 +1161,11 @@ RefPtr<Inspector::Protocol::CSS::CSSRule> InspectorStyleSheet::buildObjectForRul
             result->setRuleId(id.asProtocolValue<Inspector::Protocol::CSS::CSSRuleId>());
     }
 
-    auto mediaArray = ArrayOf<Inspector::Protocol::CSS::CSSMedia>::create();
+    auto groupingsPayload = buildArrayForGroupings(*rule);
+    if (groupingsPayload->length())
+        result->setGroupings(WTFMove(groupingsPayload));
 
-    fillMediaListChain(rule, mediaArray.get());
-    if (mediaArray->length())
-        result->setMedia(WTFMove(mediaArray));
-
-    return WTFMove(result);
+    return result;
 }
 
 RefPtr<Inspector::Protocol::CSS::CSSStyle> InspectorStyleSheet::buildObjectForStyle(CSSStyleDeclaration* style)
@@ -1333,7 +1320,7 @@ bool InspectorStyleSheet::ensureSourceData()
         return false;
 
     auto newStyleSheet = StyleSheetContents::create();
-    auto ruleSourceDataResult = std::make_unique<RuleSourceDataList>();
+    auto ruleSourceDataResult = makeUnique<RuleSourceDataList>();
 
     CSSParserContext context(parserContextForDocument(m_pageStyleSheet->ownerDocument()));
     StyleSheetHandler handler(m_parsedStyleSheet->text(), m_pageStyleSheet->ownerDocument(), ruleSourceDataResult.get());

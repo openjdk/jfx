@@ -37,7 +37,7 @@
  * New file descriptors are added to the set using gst_poll_add_fd(), and
  * removed using gst_poll_remove_fd(). Controlling which file descriptors
  * should be waited for to become readable and/or writable are done using
- * gst_poll_fd_ctl_read() and gst_poll_fd_ctl_write().
+ * gst_poll_fd_ctl_read(), gst_poll_fd_ctl_write() and gst_poll_fd_ctl_pri().
  *
  * Use gst_poll_wait() to wait for the file descriptors to actually become
  * readable and/or writable, or to timeout if no file descriptor is available
@@ -311,11 +311,11 @@ release_wakeup (GstPoll * set)
   if (set->control_pending > 0) {
     /* release, only if this was the last pending. */
     if (set->control_pending == 1) {
-    GST_LOG ("%p: release", set);
+      GST_LOG ("%p: release", set);
       result = release_event (set);
     } else {
       result = TRUE;
-  }
+    }
 
     if (result) {
       set->control_pending--;
@@ -1021,9 +1021,9 @@ gst_poll_fd_ctl_read_unlocked (GstPoll * set, GstPollFD * fd, gboolean active)
     struct pollfd *pfd = &g_array_index (set->fds, struct pollfd, idx);
 
     if (active)
-      pfd->events |= (POLLIN | POLLPRI);
+      pfd->events |= POLLIN;
     else
-      pfd->events &= ~(POLLIN | POLLPRI);
+      pfd->events &= ~POLLIN;
 #else
     gst_poll_update_winsock_event_mask (set, idx, FD_READ | FD_ACCEPT, active);
 #endif
@@ -1062,6 +1062,59 @@ gst_poll_fd_ctl_read (GstPoll * set, GstPollFD * fd, gboolean active)
   g_mutex_unlock (&set->lock);
 
   return ret;
+}
+
+/**
+ * gst_poll_fd_ctl_pri:
+ * @set: a file descriptor set.
+ * @fd: a file descriptor.
+ * @active: a new status.
+ *
+ * Control whether the descriptor @fd in @set will be monitored for
+ * exceptional conditions (POLLPRI).
+ *
+ * Not implemented on Windows (will just return %FALSE there).
+ *
+ * Returns: %TRUE if the descriptor was successfully updated.
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_poll_fd_ctl_pri (GstPoll * set, GstPollFD * fd, gboolean active)
+{
+#ifdef G_OS_WIN32
+  return FALSE;
+#else
+  gint idx;
+
+  g_return_val_if_fail (set != NULL, FALSE);
+  g_return_val_if_fail (fd != NULL, FALSE);
+  g_return_val_if_fail (fd->fd >= 0, FALSE);
+
+  GST_DEBUG ("%p: fd (fd:%d, idx:%d), active : %d", set,
+      fd->fd, fd->idx, active);
+
+  g_mutex_lock (&set->lock);
+
+  idx = find_index (set->fds, fd);
+  if (idx >= 0) {
+    struct pollfd *pfd = &g_array_index (set->fds, struct pollfd, idx);
+
+    if (active)
+      pfd->events |= POLLPRI;
+    else
+      pfd->events &= ~POLLPRI;
+
+    GST_LOG ("%p: pfd->events now %d (POLLPRI:%d)", set, pfd->events, POLLOUT);
+    MARK_REBUILD (set);
+  } else {
+    GST_WARNING ("%p: couldn't find fd !", set);
+  }
+
+  g_mutex_unlock (&set->lock);
+
+  return idx >= 0;
+#endif
 }
 
 /**
@@ -1201,7 +1254,7 @@ gst_poll_fd_can_read_unlocked (const GstPoll * set, GstPollFD * fd)
 #ifndef G_OS_WIN32
     struct pollfd *pfd = &g_array_index (set->active_fds, struct pollfd, idx);
 
-    res = (pfd->revents & (POLLIN | POLLPRI)) != 0;
+    res = (pfd->revents & POLLIN) != 0;
 #else
     WinsockFd *wfd = &g_array_index (set->active_fds, WinsockFd, idx);
 
@@ -1282,6 +1335,50 @@ gst_poll_fd_can_write (const GstPoll * set, GstPollFD * fd)
   GST_DEBUG ("%p: fd (fd:%d, idx:%d) %d", set, fd->fd, fd->idx, res);
 
   return res;
+}
+
+/**
+ * gst_poll_fd_has_pri:
+ * @set: a file descriptor set.
+ * @fd: a file descriptor.
+ *
+ * Check if @fd in @set has an exceptional condition (POLLPRI).
+ *
+ * Not implemented on Windows (will just return %FALSE there).
+ *
+ * Returns: %TRUE if the descriptor has an exceptional condition.
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_poll_fd_has_pri (const GstPoll * set, GstPollFD * fd)
+{
+#ifdef G_OS_WIN32
+  return FALSE;
+#else
+  gboolean res = FALSE;
+  gint idx;
+
+  g_return_val_if_fail (set != NULL, FALSE);
+  g_return_val_if_fail (fd != NULL, FALSE);
+  g_return_val_if_fail (fd->fd >= 0, FALSE);
+
+  g_mutex_lock (&((GstPoll *) set)->lock);
+
+  idx = find_index (set->active_fds, fd);
+  if (idx >= 0) {
+    struct pollfd *pfd = &g_array_index (set->active_fds, struct pollfd, idx);
+
+    res = (pfd->revents & POLLPRI) != 0;
+  } else {
+    GST_WARNING ("%p: couldn't find fd !", set);
+  }
+  g_mutex_unlock (&((GstPoll *) set)->lock);
+
+  GST_DEBUG ("%p: fd (fd:%d, idx:%d) %d", set, fd->fd, fd->idx, res);
+
+  return res;
+#endif
 }
 
 /**

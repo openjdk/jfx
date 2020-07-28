@@ -34,7 +34,7 @@ namespace WebCore {
 static inline bool compositingLogEnabled()
 {
 #if !LOG_DISABLED
-    return LogCompositing.state == WTFLogChannelOn;
+    return LogCompositing.state == WTFLogChannelState::On;
 #else
     return false;
 #endif
@@ -525,7 +525,7 @@ void TextureMapperShaderProgram::setMatrix(GLuint location, const Transformation
     glUniformMatrix4fv(location, 1, false, floatMatrix.data());
 }
 
-GLuint TextureMapperShaderProgram::getLocation(const AtomicString& name, VariableType type)
+GLuint TextureMapperShaderProgram::getLocation(const AtomString& name, VariableType type)
 {
     auto addResult = m_variables.ensure(name,
         [this, &name, type] {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,36 +75,55 @@ public:
     }
 
 private:
-    void fixupArithDiv(Node* node, Edge& leftChild, Edge& rightChild)
+
+    void fixupArithDivInt32(Node* node, Edge& leftChild, Edge& rightChild)
     {
-        if (m_graph.binaryArithShouldSpeculateInt32(node, FixupPass)) {
-            if (optimizeForX86() || optimizeForARM64() || optimizeForARMv7IDIVSupported()) {
-                fixIntOrBooleanEdge(leftChild);
-                fixIntOrBooleanEdge(rightChild);
-                if (bytecodeCanTruncateInteger(node->arithNodeFlags()))
-                    node->setArithMode(Arith::Unchecked);
-                else if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
-                    node->setArithMode(Arith::CheckOverflow);
-                else
-                    node->setArithMode(Arith::CheckOverflowAndNegativeZero);
-                return;
-            }
-
-            // This will cause conversion nodes to be inserted later.
-            fixDoubleOrBooleanEdge(leftChild);
-            fixDoubleOrBooleanEdge(rightChild);
-
-            // We don't need to do ref'ing on the children because we're stealing them from
-            // the original division.
-            Node* newDivision = m_insertionSet.insertNode(m_indexInBlock, SpecBytecodeDouble, *node);
-            newDivision->setResult(NodeResultDouble);
-
-            node->setOp(DoubleAsInt32);
-            node->children.initialize(Edge(newDivision, DoubleRepUse), Edge(), Edge());
-            if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+        if (optimizeForX86() || optimizeForARM64() || optimizeForARMv7IDIVSupported()) {
+            fixIntOrBooleanEdge(leftChild);
+            fixIntOrBooleanEdge(rightChild);
+            if (bytecodeCanTruncateInteger(node->arithNodeFlags()))
+                node->setArithMode(Arith::Unchecked);
+            else if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
                 node->setArithMode(Arith::CheckOverflow);
             else
                 node->setArithMode(Arith::CheckOverflowAndNegativeZero);
+            return;
+        }
+
+        // This will cause conversion nodes to be inserted later.
+        fixDoubleOrBooleanEdge(leftChild);
+        fixDoubleOrBooleanEdge(rightChild);
+
+        // We don't need to do ref'ing on the children because we're stealing them from
+        // the original division.
+        Node* newDivision = m_insertionSet.insertNode(m_indexInBlock, SpecBytecodeDouble, *node);
+        newDivision->setResult(NodeResultDouble);
+
+        node->setOp(DoubleAsInt32);
+        node->children.initialize(Edge(newDivision, DoubleRepUse), Edge(), Edge());
+        if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+            node->setArithMode(Arith::CheckOverflow);
+        else
+            node->setArithMode(Arith::CheckOverflowAndNegativeZero);
+
+    }
+
+    void fixupArithPow(Node* node)
+    {
+        if (node->child2()->shouldSpeculateInt32OrBooleanForArithmetic()) {
+            fixDoubleOrBooleanEdge(node->child1());
+            fixIntOrBooleanEdge(node->child2());
+            return;
+        }
+
+        fixDoubleOrBooleanEdge(node->child1());
+        fixDoubleOrBooleanEdge(node->child2());
+    }
+
+    void fixupArithDiv(Node* node, Edge& leftChild, Edge& rightChild)
+    {
+        if (m_graph.binaryArithShouldSpeculateInt32(node, FixupPass)) {
+            fixupArithDivInt32(node, leftChild, rightChild);
             return;
         }
 
@@ -126,7 +145,7 @@ private:
                 node->setArithMode(Arith::CheckOverflowAndNegativeZero);
             return;
         }
-        if (m_graph.binaryArithShouldSpeculateAnyInt(node, FixupPass)) {
+        if (m_graph.binaryArithShouldSpeculateInt52(node, FixupPass)) {
             fixEdge<Int52RepUse>(leftChild);
             fixEdge<Int52RepUse>(rightChild);
             if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()) || leftChild.node() == rightChild.node())
@@ -196,12 +215,14 @@ private:
             break;
         }
 
+        case ValueBitLShift:
         case ValueBitXor:
         case ValueBitOr:
         case ValueBitAnd: {
             if (Node::shouldSpeculateBigInt(node->child1().node(), node->child2().node())) {
                 fixEdge<BigIntUse>(node->child1());
                 fixEdge<BigIntUse>(node->child2());
+                node->clearFlags(NodeMustGenerate);
                 break;
             }
 
@@ -211,7 +232,6 @@ private:
                 break;
             }
 
-            // In such case, we need to fallback to ArithBitOp
             switch (op) {
             case ValueBitXor:
                 node->setOp(ArithBitXor);
@@ -221,6 +241,9 @@ private:
                 break;
             case ValueBitAnd:
                 node->setOp(ArithBitAnd);
+                break;
+            case ValueBitLShift:
+                node->setOp(ArithBitLShift);
                 break;
             default:
                 DFG_CRASH(m_graph, node, "Unexpected node during ValueBit operation fixup");
@@ -234,17 +257,31 @@ private:
             break;
         }
 
-        case ArithBitNot: {
-            if (node->child1().node()->shouldSpeculateUntypedForBitOps()) {
-                fixEdge<UntypedUse>(node->child1());
-                break;
-            }
+        case ValueBitNot: {
+            Edge& operandEdge = node->child1();
 
-            fixIntConvertingEdge(node->child1());
-            node->clearFlags(NodeMustGenerate);
+            if (operandEdge.node()->shouldSpeculateBigInt()) {
+                node->clearFlags(NodeMustGenerate);
+                fixEdge<BigIntUse>(operandEdge);
+            } else if (operandEdge.node()->shouldSpeculateUntypedForBitOps())
+                fixEdge<UntypedUse>(operandEdge);
+            else {
+                node->setOp(ArithBitNot);
+                node->setResult(NodeResultInt32);
+                node->clearFlags(NodeMustGenerate);
+                fixIntConvertingEdge(operandEdge);
+            }
             break;
         }
 
+        case ArithBitNot: {
+            Edge& operandEdge = node->child1();
+
+            fixIntConvertingEdge(operandEdge);
+            break;
+        }
+
+        case ArithBitLShift:
         case ArithBitXor:
         case ArithBitOr:
         case ArithBitAnd: {
@@ -254,7 +291,6 @@ private:
         }
 
         case BitRShift:
-        case BitLShift:
         case BitURShift: {
             if (Node::shouldSpeculateUntypedForBitOps(node->child1().node(), node->child2().node())) {
                 fixEdge<UntypedUse>(node->child1());
@@ -313,7 +349,7 @@ private:
                 break;
             }
 
-            if (m_graph.unaryArithShouldSpeculateAnyInt(node, FixupPass)) {
+            if (m_graph.unaryArithShouldSpeculateInt52(node, FixupPass)) {
                 node->setOp(ArithNegate);
                 fixEdge<Int52RepUse>(node->child1());
                 if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
@@ -437,7 +473,7 @@ private:
                 node->clearFlags(NodeMustGenerate);
                 break;
             }
-            if (m_graph.unaryArithShouldSpeculateAnyInt(node, FixupPass)) {
+            if (m_graph.unaryArithShouldSpeculateInt52(node, FixupPass)) {
                 fixEdge<Int52RepUse>(node->child1());
                 if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
                     node->setArithMode(Arith::CheckOverflow);
@@ -461,6 +497,7 @@ private:
             if (Node::shouldSpeculateBigInt(leftChild.node(), rightChild.node())) {
                 fixEdge<BigIntUse>(node->child1());
                 fixEdge<BigIntUse>(node->child2());
+                node->clearFlags(NodeMustGenerate);
                 break;
             }
 
@@ -495,6 +532,7 @@ private:
             break;
         }
 
+        case ValueMod:
         case ValueDiv: {
             Edge& leftChild = node->child1();
             Edge& rightChild = node->child2();
@@ -502,6 +540,7 @@ private:
             if (Node::shouldSpeculateBigInt(leftChild.node(), rightChild.node())) {
                 fixEdge<BigIntUse>(leftChild);
                 fixEdge<BigIntUse>(rightChild);
+                node->clearFlags(NodeMustGenerate);
                 break;
             }
 
@@ -510,7 +549,12 @@ private:
                 fixEdge<UntypedUse>(rightChild);
                 break;
             }
-            node->setOp(ArithDiv);
+
+            if (op == ValueDiv)
+                node->setOp(ArithDiv);
+            else
+                node->setOp(ArithMod);
+
             node->setResult(NodeResultNumber);
             fixupArithDiv(node, leftChild, rightChild);
             break;
@@ -561,15 +605,30 @@ private:
             break;
         }
 
-        case ArithPow: {
-            if (node->child2()->shouldSpeculateInt32OrBooleanForArithmetic()) {
-                fixDoubleOrBooleanEdge(node->child1());
-                fixIntOrBooleanEdge(node->child2());
+        case ValuePow: {
+            if (Node::shouldSpeculateBigInt(node->child1().node(), node->child2().node())) {
+                fixEdge<BigIntUse>(node->child1());
+                fixEdge<BigIntUse>(node->child2());
+                node->clearFlags(NodeMustGenerate);
                 break;
             }
 
-            fixDoubleOrBooleanEdge(node->child1());
-            fixDoubleOrBooleanEdge(node->child2());
+            if (Node::shouldSpeculateUntypedForArithmetic(node->child1().node(), node->child2().node())) {
+                fixEdge<UntypedUse>(node->child1());
+                fixEdge<UntypedUse>(node->child2());
+                break;
+            }
+
+            node->setOp(ArithPow);
+            node->clearFlags(NodeMustGenerate);
+            node->setResult(NodeResultDouble);
+
+            fixupArithPow(node);
+            break;
+        }
+
+        case ArithPow: {
+            fixupArithPow(node);
             break;
         }
 
@@ -668,8 +727,7 @@ private:
                 node->clearFlags(NodeMustGenerate);
                 break;
             }
-            if (enableInt52()
-                && Node::shouldSpeculateAnyInt(node->child1().node(), node->child2().node())) {
+            if (Node::shouldSpeculateInt52(node->child1().node(), node->child2().node())) {
                 fixEdge<Int52RepUse>(node->child1());
                 fixEdge<Int52RepUse>(node->child2());
                 node->clearFlags(NodeMustGenerate);
@@ -923,7 +981,7 @@ private:
             case Array::Uint32Array:
                 if (node->shouldSpeculateInt32())
                     break;
-                if (node->shouldSpeculateAnyInt() && enableInt52())
+                if (node->shouldSpeculateInt52())
                     node->setResult(NodeResultInt52);
                 else
                     node->setResult(NodeResultDouble);
@@ -1002,7 +1060,7 @@ private:
                 fixEdge<Int32Use>(child2);
                 if (child3->shouldSpeculateInt32())
                     fixIntOrBooleanEdge(child3);
-                else if (child3->shouldSpeculateAnyInt())
+                else if (child3->shouldSpeculateInt52())
                     fixEdge<Int52RepUse>(child3);
                 else
                     fixDoubleOrBooleanEdge(child3);
@@ -1047,7 +1105,7 @@ private:
                 // just call the function when that happens. But the FTL is totally cool with those
                 // conversions.
                 if (!child->shouldSpeculateInt32()
-                    && !child->shouldSpeculateAnyInt()
+                    && !child->shouldSpeculateInt52()
                     && !(child->shouldSpeculateNumberOrBoolean() && m_graph.m_plan.isFTL()))
                     badNews = true;
             }
@@ -1068,7 +1126,7 @@ private:
                 Edge& child = m_graph.child(node, 2 + i);
                 if (child->shouldSpeculateInt32())
                     fixIntOrBooleanEdge(child);
-                else if (child->shouldSpeculateAnyInt())
+                else if (child->shouldSpeculateInt52())
                     fixEdge<Int52RepUse>(child);
                 else {
                     RELEASE_ASSERT(child->shouldSpeculateNumberOrBoolean() && m_graph.m_plan.isFTL());
@@ -1082,7 +1140,7 @@ private:
 
             if (node->arrayMode().type() == Array::Uint32Array) {
                 // NOTE: This means basically always doing Int52.
-                if (node->shouldSpeculateAnyInt() && enableInt52())
+                if (node->shouldSpeculateInt52())
                     node->setResult(NodeResultInt52);
                 else
                     node->setResult(NodeResultDouble);
@@ -1136,12 +1194,10 @@ private:
                 Edge& element = m_graph.varArgChild(node, i + elementOffset);
                 switch (node->arrayMode().type()) {
                 case Array::Int32:
-                    insertCheck<Int32Use>(element.node());
-                    fixEdge<KnownInt32Use>(element);
+                    fixEdge<Int32Use>(element);
                     break;
                 case Array::Double:
-                    insertCheck<DoubleRepRealUse>(element.node());
-                    fixEdge<DoubleRepUse>(element);
+                    fixEdge<DoubleRepRealUse>(element);
                     break;
                 case Array::Contiguous:
                 case Array::ArrayStorage:
@@ -1150,7 +1206,6 @@ private:
                 default:
                     break;
                 }
-                ASSERT(shouldNotHaveTypeCheck(element.useKind()));
             }
             break;
         }
@@ -1509,7 +1564,7 @@ private:
                             break;
                         }
 
-                        if (enableInt52() && node->child1()->shouldSpeculateAnyInt()) {
+                        if (node->child1()->shouldSpeculateInt52()) {
                             insertCheck<Int52RepUse>(node->child1().node());
                             m_graph.convertToConstant(node, m_graph.freeze(globalObject->numberProtoToStringFunction()));
                             break;
@@ -1855,7 +1910,7 @@ private:
 
             blessArrayOperation(m_graph.varArgChild(node, 0), m_graph.varArgChild(node, 1), m_graph.varArgChild(node, 2));
             fixEdge<CellUse>(m_graph.varArgChild(node, 0));
-            fixEdge<KnownInt32Use>(m_graph.varArgChild(node, 1));
+            fixEdge<Int32Use>(m_graph.varArgChild(node, 1));
             break;
         }
         case GetDirectPname: {
@@ -1865,7 +1920,7 @@ private:
             Edge& enumerator = m_graph.varArgChild(node, 3);
             fixEdge<CellUse>(base);
             fixEdge<KnownCellUse>(property);
-            fixEdge<KnownInt32Use>(index);
+            fixEdge<Int32Use>(index);
             fixEdge<KnownCellUse>(enumerator);
             break;
         }
@@ -1876,16 +1931,16 @@ private:
         }
         case GetEnumeratorStructurePname: {
             fixEdge<KnownCellUse>(node->child1());
-            fixEdge<KnownInt32Use>(node->child2());
+            fixEdge<Int32Use>(node->child2());
             break;
         }
         case GetEnumeratorGenericPname: {
             fixEdge<KnownCellUse>(node->child1());
-            fixEdge<KnownInt32Use>(node->child2());
+            fixEdge<Int32Use>(node->child2());
             break;
         }
         case ToIndexString: {
-            fixEdge<KnownInt32Use>(node->child1());
+            fixEdge<Int32Use>(node->child1());
             break;
         }
         case ProfileType: {
@@ -1977,7 +2032,7 @@ private:
 
         case CreateRest: {
             watchHavingABadTime(node);
-            fixEdge<KnownInt32Use>(node->child1());
+            fixEdge<Int32Use>(node->child1());
             break;
         }
 
@@ -2141,7 +2196,7 @@ private:
             else
                 fixEdge<UntypedUse>(propertyEdge);
             fixEdge<UntypedUse>(m_graph.varArgChild(node, 2));
-            fixEdge<KnownInt32Use>(m_graph.varArgChild(node, 3));
+            fixEdge<Int32Use>(m_graph.varArgChild(node, 3));
             break;
         }
 
@@ -2170,7 +2225,7 @@ private:
         case NumberToStringWithRadix: {
             if (node->child1()->shouldSpeculateInt32())
                 fixEdge<Int32Use>(node->child1());
-            else if (enableInt52() && node->child1()->shouldSpeculateAnyInt())
+            else if (node->child1()->shouldSpeculateInt52())
                 fixEdge<Int52RepUse>(node->child1());
             else
                 fixEdge<DoubleRepUse>(node->child1());
@@ -2191,7 +2246,7 @@ private:
                 fixEdge<UntypedUse>(propertyEdge);
             fixEdge<CellUse>(m_graph.varArgChild(node, 2));
             fixEdge<CellUse>(m_graph.varArgChild(node, 3));
-            fixEdge<KnownInt32Use>(m_graph.varArgChild(node, 4));
+            fixEdge<Int32Use>(m_graph.varArgChild(node, 4));
             break;
         }
 
@@ -2315,7 +2370,8 @@ private:
 
 #if !ASSERT_DISABLED
         // Have these no-op cases here to ensure that nobody forgets to add handlers for new opcodes.
-        case SetArgument:
+        case SetArgumentDefinitely:
+        case SetArgumentMaybe:
         case JSConstant:
         case LazyJSConstant:
         case DoubleConstant:
@@ -2604,7 +2660,7 @@ private:
                 m_graph.convertToConstant(node, m_graph.freeze(m_graph.globalObjectFor(node->origin.semantic)->numberPrototype()));
                 return;
             }
-            if (enableInt52() && node->child1()->shouldSpeculateAnyInt()) {
+            if (node->child1()->shouldSpeculateInt52()) {
                 insertCheck<Int52RepUse>(node->child1().node());
                 m_graph.convertToConstant(node, m_graph.freeze(m_graph.globalObjectFor(node->origin.semantic)->numberPrototype()));
                 return;
@@ -2645,9 +2701,9 @@ private:
 
     void fixupToThis(Node* node)
     {
-        ECMAMode ecmaMode = m_graph.executableFor(node->origin.semantic)->isStrictMode() ? StrictMode : NotStrictMode;
+        bool isStrictMode = m_graph.isStrictModeFor(node->origin.semantic);
 
-        if (ecmaMode == StrictMode) {
+        if (isStrictMode) {
             if (node->child1()->shouldSpeculateBoolean()) {
                 fixEdge<BooleanUse>(node->child1());
                 node->convertToIdentity();
@@ -2660,7 +2716,7 @@ private:
                 return;
             }
 
-            if (enableInt52() && node->child1()->shouldSpeculateAnyInt()) {
+            if (node->child1()->shouldSpeculateInt52()) {
                 fixEdge<Int52RepUse>(node->child1());
                 node->convertToIdentity();
                 node->setResult(NodeResultInt52);
@@ -2700,7 +2756,7 @@ private:
         }
 
         if (node->child1()->shouldSpeculateOther()) {
-            if (ecmaMode == StrictMode) {
+            if (isStrictMode) {
                 fixEdge<OtherUse>(node->child1());
                 node->convertToIdentity();
                 return;
@@ -2764,6 +2820,15 @@ private:
 
     void fixupToNumber(Node* node)
     {
+        // At first, attempt to fold Boolean or Int32 to Int32.
+        if (node->child1()->shouldSpeculateInt32OrBoolean()) {
+            if (isInt32Speculation(node->getHeapPrediction())) {
+                fixIntOrBooleanEdge(node->child1());
+                node->convertToIdentity();
+                return;
+            }
+        }
+
         // If the prediction of the child is Number, we attempt to convert ToNumber to Identity.
         if (node->child1()->shouldSpeculateNumber()) {
             if (isInt32Speculation(node->getHeapPrediction())) {
@@ -2894,7 +2959,7 @@ private:
             return;
         }
 
-        if (enableInt52() && node->child1()->shouldSpeculateAnyInt()) {
+        if (node->child1()->shouldSpeculateInt52()) {
             fixEdge<Int52RepUse>(node->child1());
             node->clearFlags(NodeMustGenerate);
             return;
@@ -3215,7 +3280,7 @@ private:
                 m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
             break;
         case Int52RepUse:
-            if (isAnyIntSpeculation(variable->prediction()))
+            if (!isInt32Speculation(variable->prediction()) && isInt32OrInt52Speculation(variable->prediction()))
                 m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
             break;
         case CellUse:
@@ -3306,7 +3371,7 @@ private:
         }
 
         UseKind useKind;
-        if (node->shouldSpeculateAnyInt())
+        if (node->shouldSpeculateInt52())
             useKind = Int52RepUse;
         else if (node->shouldSpeculateNumber())
             useKind = DoubleRepUse;
@@ -3403,7 +3468,7 @@ private:
             return true;
         }
 
-        if (m_graph.addShouldSpeculateAnyInt(node)) {
+        if (m_graph.addShouldSpeculateInt52(node)) {
             fixEdge<Int52RepUse>(node->child1());
             fixEdge<Int52RepUse>(node->child2());
             node->setArithMode(Arith::CheckOverflow);
@@ -3420,7 +3485,7 @@ private:
             return false;
         CodeBlock* profiledBlock = m_graph.baselineCodeBlockFor(node->origin.semantic);
         ArrayProfile* arrayProfile =
-            profiledBlock->getArrayProfile(node->origin.semantic.bytecodeIndex);
+            profiledBlock->getArrayProfile(node->origin.semantic.bytecodeIndex());
         ArrayMode arrayMode = ArrayMode(Array::SelectUsingPredictions, Array::Read);
         if (arrayProfile) {
             ConcurrentJSLocker locker(profiledBlock->m_lock);
@@ -3722,8 +3787,7 @@ private:
             node->setOpAndDefaultFlags(CompareStrictEq);
             return;
         }
-        if (enableInt52()
-            && Node::shouldSpeculateAnyInt(node->child1().node(), node->child2().node())) {
+        if (Node::shouldSpeculateInt52(node->child1().node(), node->child2().node())) {
             fixEdge<Int52RepUse>(node->child1());
             fixEdge<Int52RepUse>(node->child2());
             node->setOpAndDefaultFlags(CompareStrictEq);
@@ -3963,11 +4027,11 @@ private:
                         ASSERT(indexForChecks != UINT_MAX);
                         if (edge->isAnyIntConstant()) {
                             result = m_insertionSet.insertNode(
-                                indexForChecks, SpecAnyInt, Int52Constant, originForChecks,
+                                indexForChecks, SpecInt52Any, Int52Constant, originForChecks,
                                 OpInfo(edge->constant()));
                         } else if (edge->hasDoubleResult()) {
                             result = m_insertionSet.insertNode(
-                                indexForChecks, SpecAnyInt, Int52Rep, originForChecks,
+                                indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
                                 Edge(edge.node(), DoubleRepAnyIntUse));
                         } else if (edge->shouldSpeculateInt32ForArithmetic()) {
                             result = m_insertionSet.insertNode(
@@ -3975,7 +4039,7 @@ private:
                                 Edge(edge.node(), Int32Use));
                         } else {
                             result = m_insertionSet.insertNode(
-                                indexForChecks, SpecAnyInt, Int52Rep, originForChecks,
+                                indexForChecks, SpecInt52Any, Int52Rep, originForChecks,
                                 Edge(edge.node(), AnyIntUse));
                         }
 

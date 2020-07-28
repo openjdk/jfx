@@ -205,9 +205,7 @@
 #elif !defined(FALLTHROUGH) && !defined(__cplusplus)
 
 #if COMPILER(GCC)
-#if GCC_VERSION_AT_LEAST(7, 0, 0)
 #define FALLTHROUGH __attribute__ ((fallthrough))
-#endif
 #endif
 
 #endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
@@ -254,9 +252,6 @@
 #define NO_RETURN
 #endif
 
-#if !defined(__has_attribute)
-#define __has_attribute(feature) 0
-#endif
 /* NOT_TAIL_CALLED */
 
 #if !defined(NOT_TAIL_CALLED) && defined(__has_attribute)
@@ -384,7 +379,7 @@
 #define WARN_UNUSED_RETURN
 #endif
 
-#if !defined(__has_include) && (COMPILER(MSVC) || COMPILER(GCC))
+#if !defined(__has_include) && COMPILER(MSVC)
 #define __has_include(path) 0
 #endif
 
@@ -451,6 +446,9 @@
 
 #define ALLOW_DEPRECATED_DECLARATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-declarations")
 #define ALLOW_DEPRECATED_DECLARATIONS_END IGNORE_WARNINGS_END
+
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-implementations")
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_END IGNORE_WARNINGS_END
 
 #define ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN IGNORE_CLANG_WARNINGS_BEGIN("unguarded-availability-new")
 #define ALLOW_NEW_API_WITHOUT_GUARDS_END IGNORE_CLANG_WARNINGS_END

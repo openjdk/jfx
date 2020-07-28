@@ -27,7 +27,9 @@
 
 #if ENABLE(POINTER_EVENTS)
 
+#include "EventNames.h"
 #include "MouseEvent.h"
+#include "Node.h"
 #include "PointerID.h"
 #include <wtf/text/WTFString.h>
 
@@ -40,7 +42,7 @@ namespace WebCore {
 class PointerEvent final : public MouseEvent {
 public:
     struct Init : MouseEventInit {
-        PointerID pointerId { 0 };
+        PointerID pointerId { mousePointerID };
         double width { 1 };
         double height { 1 };
         float pressure { 0 };
@@ -52,27 +54,20 @@ public:
         bool isPrimary { false };
     };
 
-    static Ref<PointerEvent> create(const AtomicString& type, Init&& initializer)
+    enum class IsPrimary : uint8_t { No, Yes };
+
+    static Ref<PointerEvent> create(const AtomString& type, Init&& initializer)
     {
         return adoptRef(*new PointerEvent(type, WTFMove(initializer)));
     }
 
-    static Ref<PointerEvent> create(const AtomicString& type, PointerID pointerId, String pointerType)
+    static Ref<PointerEvent> createForPointerCapture(const AtomString& type, PointerID pointerId, bool isPrimary, String pointerType)
     {
         Init initializer;
         initializer.bubbles = true;
         initializer.pointerId = pointerId;
+        initializer.isPrimary = isPrimary;
         initializer.pointerType = pointerType;
-        return adoptRef(*new PointerEvent(type, WTFMove(initializer)));
-    }
-
-    static Ref<PointerEvent> createForPointerCapture(const AtomicString& type, const PointerEvent& pointerEvent)
-    {
-        Init initializer;
-        initializer.bubbles = true;
-        initializer.pointerId = pointerEvent.pointerId();
-        initializer.isPrimary = pointerEvent.isPrimary();
-        initializer.pointerType = pointerEvent.pointerType();
         return adoptRef(*new PointerEvent(type, WTFMove(initializer)));
     }
 
@@ -81,8 +76,13 @@ public:
         return adoptRef(*new PointerEvent);
     }
 
+    static RefPtr<PointerEvent> create(short button, const MouseEvent&);
+    static Ref<PointerEvent> create(const String& type, short button, const MouseEvent&);
+    static Ref<PointerEvent> create(const String& type, PointerID, const String& pointerType, IsPrimary = IsPrimary::No);
+
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     static Ref<PointerEvent> create(const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
+    static Ref<PointerEvent> create(const String& type, const PlatformTouchEvent&, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
 #endif
 
     static const String& mousePointerType();
@@ -104,16 +104,31 @@ public:
 
     bool isPointerEvent() const final { return true; }
 
+    // https://w3c.github.io/pointerevents/#attributes-and-default-actions
+    // Many user agents expose non-standard attributes fromElement and toElement in MouseEvents to
+    // support legacy content. In those user agents, the values of those (inherited) attributes in
+    // PointerEvents must be null to encourage the use of the standardized alternates (i.e. target
+    // and relatedTarget).
+    RefPtr<Node> toElement() const final { return nullptr; }
+    RefPtr<Node> fromElement() const final { return nullptr; }
+
     EventInterface eventInterface() const override;
 
 private:
+    static bool typeIsEnterOrLeave(const AtomString& type) { return type == eventNames().pointerenterEvent || type == eventNames().pointerleaveEvent; }
+    static CanBubble typeCanBubble(const AtomString& type) { return typeIsEnterOrLeave(type) ? CanBubble::No : CanBubble::Yes; }
+    static IsCancelable typeIsCancelable(const AtomString& type) { return typeIsEnterOrLeave(type) ? IsCancelable::No : IsCancelable::Yes; }
+    static IsComposed typeIsComposed(const AtomString& type) { return typeIsEnterOrLeave(type) ? IsComposed::No : IsComposed::Yes; }
+
     PointerEvent();
-    PointerEvent(const AtomicString&, Init&&);
+    PointerEvent(const AtomString&, Init&&);
+    PointerEvent(const AtomString& type, short button, const MouseEvent&);
+    PointerEvent(const AtomString& type, PointerID, const String& pointerType, IsPrimary);
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
-    PointerEvent(const AtomicString& type, const PlatformTouchEvent&, IsCancelable isCancelable, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
+    PointerEvent(const AtomString& type, const PlatformTouchEvent&, IsCancelable isCancelable, unsigned touchIndex, bool isPrimary, Ref<WindowProxy>&&);
 #endif
 
-    PointerID m_pointerId { 0 };
+    PointerID m_pointerId { mousePointerID };
     double m_width { 1 };
     double m_height { 1 };
     float m_pressure { 0 };

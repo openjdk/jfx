@@ -31,7 +31,6 @@
 #include "FloatQuad.h"
 #include "LayoutSize.h"
 #include "TransformationMatrix.h"
-#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -85,7 +84,7 @@ public:
         // We must be in a flattened state (no accumulated offset) when setting this secondary quad.
         ASSERT(m_accumulatedOffset == LayoutSize());
         if (quad)
-            m_lastPlanarSecondaryQuad = std::make_unique<FloatQuad>(*quad);
+            m_lastPlanarSecondaryQuad = makeUnique<FloatQuad>(*quad);
         else
             m_lastPlanarSecondaryQuad = nullptr;
     }

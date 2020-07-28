@@ -112,7 +112,7 @@ static gboolean gst_directsound_sink_is_spdif_format (GstAudioRingBufferSpec *
 static gchar *gst_hres_to_string (HRESULT hRes);
 
 static GstStaticPadTemplate directsoundsink_sink_factory =
-    GST_STATIC_PAD_TEMPLATE ("sink",
+GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
     GST_STATIC_CAPS (GST_DIRECTSOUND_SINK_CAPS));
@@ -354,14 +354,14 @@ gst_directsound_sink_getcaps (GstBaseSink * bsink, GstCaps * filter)
   if (dsoundsink->cached_caps) {
     caps = gst_caps_ref (dsoundsink->cached_caps);
   } else {
-  element_class = GST_ELEMENT_GET_CLASS (dsoundsink);
-  pad_template = gst_element_class_get_pad_template (element_class, "sink");
-  g_return_val_if_fail (pad_template != NULL, NULL);
+    element_class = GST_ELEMENT_GET_CLASS (dsoundsink);
+    pad_template = gst_element_class_get_pad_template (element_class, "sink");
+    g_return_val_if_fail (pad_template != NULL, NULL);
 
-  caps = gst_directsound_probe_supported_formats (dsoundsink,
-      gst_pad_template_get_caps (pad_template));
+    caps = gst_directsound_probe_supported_formats (dsoundsink,
+        gst_pad_template_get_caps (pad_template));
     if (caps)
-    dsoundsink->cached_caps = gst_caps_ref (caps);
+      dsoundsink->cached_caps = gst_caps_ref (caps);
   }
 
   if (caps && filter) {
@@ -933,14 +933,14 @@ gst_directsound_sink_reset (GstAudioSink * asink)
   GST_DSOUND_LOCK (dsoundsink);
 
   if (dsoundsink->pDSBSecondary) {
-    /*stop playing */
+    /* stop playing */
     HRESULT hRes = IDirectSoundBuffer_Stop (dsoundsink->pDSBSecondary);
 
-    /*reset position */
+    /* reset position */
     hRes = IDirectSoundBuffer_SetCurrentPosition (dsoundsink->pDSBSecondary, 0);
     dsoundsink->current_circular_offset = 0;
 
-    /*reset the buffer */
+    /* reset the buffer */
     hRes = IDirectSoundBuffer_Lock (dsoundsink->pDSBSecondary,
         0, dsoundsink->buffer_size,
         &pLockedBuffer, &dwSizeBuffer, NULL, NULL, 0L);
@@ -1233,7 +1233,7 @@ gst_directsound_sink_set_mute (GstDirectSoundSink * dsoundsink, gboolean mute)
     gst_directsound_sink_set_volume (dsoundsink,
         gst_directsound_sink_get_volume (dsoundsink), FALSE);
     dsoundsink->mute = FALSE;
-}
+  }
 
 }
 

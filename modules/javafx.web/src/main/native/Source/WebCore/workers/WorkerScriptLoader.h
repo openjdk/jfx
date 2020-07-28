@@ -41,6 +41,7 @@
 
 namespace WebCore {
 
+class Exception;
 class ResourceResponse;
 class ScriptExecutionContext;
 class TextResourceDecoder;
@@ -78,6 +79,7 @@ public:
 
 private:
     friend class WTF::RefCounted<WorkerScriptLoader>;
+    friend struct std::default_delete<WorkerScriptLoader>;
 
     WorkerScriptLoader();
     ~WorkerScriptLoader();

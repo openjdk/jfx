@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *  Copyright (C) 2008 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -28,6 +28,7 @@
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/TextPosition.h>
 
 #if PLATFORM(COCOA)
@@ -69,7 +70,7 @@ enum ReasonForCallingCanExecuteScripts {
     NotAboutToExecuteScript
 };
 
-class ScriptController {
+class ScriptController : public CanMakeWeakPtr<ScriptController> {
     WTF_MAKE_FAST_ALLOCATED;
 
     using RootObjectMap = HashMap<void*, Ref<JSC::Bindings::RootObject>>;
@@ -89,7 +90,10 @@ public:
 
     JSC::JSValue executeScript(const ScriptSourceCode&, ExceptionDetails* = nullptr);
     WEBCORE_EXPORT JSC::JSValue executeScript(const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
-    WEBCORE_EXPORT JSC::JSValue executeScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
+    JSC::JSValue executeScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
+    WEBCORE_EXPORT JSC::JSValue executeUserAgentScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture, ExceptionDetails* = nullptr);
+
+    bool shouldAllowUserAgentScripts(Document&) const;
 
     // Returns true if argument is a JavaScript URL.
     bool executeIfJavaScriptURL(const URL&, ShouldReplaceDocumentIfJavaScriptURL shouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL);
@@ -119,7 +123,7 @@ public:
     void disableEval(const String& errorMessage);
     void disableWebAssembly(const String& errorMessage);
 
-    static bool canAccessFromCurrentOrigin(Frame*);
+    static bool canAccessFromCurrentOrigin(Frame*, Document& accessingDocument);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);
 
     void setPaused(bool b) { m_paused = b; }
@@ -129,8 +133,8 @@ public:
 
     void updateDocument();
 
-    void namedItemAdded(HTMLDocument*, const AtomicString&) { }
-    void namedItemRemoved(HTMLDocument*, const AtomicString&) { }
+    void namedItemAdded(HTMLDocument*, const AtomString&) { }
+    void namedItemRemoved(HTMLDocument*, const AtomString&) { }
 
     void clearScriptObjects();
     WEBCORE_EXPORT void cleanupScriptObjectsForPlugin(void*);
@@ -159,6 +163,8 @@ public:
 
     void initScriptForWindowProxy(JSWindowProxy&);
 
+    bool willReplaceWithResultOfExecutingJavascriptURL() const { return m_willReplaceWithResultOfExecutingJavascriptURL; }
+
 private:
     void setupModuleScriptHandlers(LoadableModuleScript&, JSC::JSInternalPromise&, DOMWrapperWorld&);
 
@@ -171,6 +177,7 @@ private:
     const String* m_sourceURL;
 
     bool m_paused;
+    bool m_willReplaceWithResultOfExecutingJavascriptURL { false };
 
     // The root object used for objects bound outside the context of a plugin, such
     // as NPAPI plugins. The plugins using these objects prevent a page from being cached so they

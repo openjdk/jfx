@@ -1,8 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define to 1 if you have the <ansidecl.h> header file. */
-#undef HAVE_ANSIDECL_H
-
 /* Define to 1 if you have the `clock_gettime' function. */
 #undef HAVE_CLOCK_GETTIME
 
@@ -203,6 +200,9 @@
 /* Define if debugging support is enabled */
 #undef WITH_DEBUGGER
 
+/* Define if profiling support is enabled */
+#undef WITH_PROFILER
+
 /* Define to 1 if on MINIX. */
 #undef _MINIX
 
@@ -212,12 +212,3 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 #undef _POSIX_SOURCE
-
-/* Using the Win32 Socket implementation */
-#undef _WINSOCKAPI_
-
-/* Win32 Std C name mangling work-around */
-#undef snprintf
-
-/* Win32 Std C name mangling work-around */
-#undef vsnprintf

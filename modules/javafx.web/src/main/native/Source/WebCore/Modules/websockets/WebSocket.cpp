@@ -56,6 +56,7 @@
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/HashSet.h>
 #include <wtf/HexNumber.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
@@ -67,6 +68,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebSocket);
 
 const size_t maxReasonSizeInBytes = 123;
 
@@ -172,7 +175,7 @@ ExceptionOr<Ref<WebSocket>> WebSocket::create(ScriptExecutionContext& context, c
     if (result.hasException())
         return result.releaseException();
 
-    return WTFMove(socket);
+    return socket;
 }
 
 ExceptionOr<Ref<WebSocket>> WebSocket::create(ScriptExecutionContext& context, const String& url, const String& protocol)
@@ -200,6 +203,21 @@ ExceptionOr<void> WebSocket::connect(const String& url)
 ExceptionOr<void> WebSocket::connect(const String& url, const String& protocol)
 {
     return connect(url, Vector<String> { 1, protocol });
+}
+
+void WebSocket::failAsynchronously()
+{
+    m_pendingActivity = makePendingActivity(*this);
+
+    // We must block this connection. Instead of throwing an exception, we indicate this
+    // using the error event. But since this code executes as part of the WebSocket's
+    // constructor, we have to wait until the constructor has completed before firing the
+    // event; otherwise, users can't connect to the event.
+
+    scriptExecutionContext()->postTask([this, protectedThis = makeRef(*this)](auto&) {
+        this->dispatchOrQueueErrorEvent();
+        this->stop();
+    });
 }
 
 ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& protocols)
@@ -288,18 +306,7 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
         Document& document = downcast<Document>(context);
         RefPtr<Frame> frame = document.frame();
         if (!frame || !frame->loader().mixedContentChecker().canRunInsecureContent(document.securityOrigin(), m_url)) {
-            m_pendingActivity = makePendingActivity(*this);
-
-            // We must block this connection. Instead of throwing an exception, we indicate this
-            // using the error event. But since this code executes as part of the WebSocket's
-            // constructor, we have to wait until the constructor has completed before firing the
-            // event; otherwise, users can't connect to the event.
-
-            document.postTask([this, protectedThis = makeRef(*this)](auto&) {
-                this->dispatchOrQueueErrorEvent();
-                this->stop();
-            });
-
+            failAsynchronously();
             return { };
         }
     }
@@ -308,7 +315,11 @@ ExceptionOr<void> WebSocket::connect(const String& url, const Vector<String>& pr
     if (!protocols.isEmpty())
         protocolString = joinStrings(protocols, subprotocolSeparator());
 
-    m_channel->connect(m_url, protocolString);
+    if (m_channel->connect(m_url, protocolString) == ThreadableWebSocketChannel::ConnectStatus::KO) {
+        failAsynchronously();
+        return { };
+    }
+
     m_pendingActivity = makePendingActivity(*this);
 
     return { };
@@ -573,7 +584,7 @@ void WebSocket::didReceiveBinaryData(Vector<uint8_t>&& binaryData)
     switch (m_binaryType) {
     case BinaryType::Blob:
         // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
-        dispatchEvent(MessageEvent::create(Blob::create(WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
+        dispatchEvent(MessageEvent::create(Blob::create(scriptExecutionContext()->sessionID(), WTFMove(binaryData), emptyString()), SecurityOrigin::create(m_url)->toString()));
         break;
     case BinaryType::ArrayBuffer:
         dispatchEvent(MessageEvent::create(ArrayBuffer::create(binaryData.data(), binaryData.size()), SecurityOrigin::create(m_url)->toString()));

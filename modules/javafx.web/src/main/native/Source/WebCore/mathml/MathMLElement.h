@@ -93,13 +93,11 @@ public:
 protected:
     MathMLElement(const QualifiedName& tagName, Document&);
 
-    static StringView stripLeadingAndTrailingWhitespace(const StringView&);
-
-    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool childShouldCreateRenderer(const Node&) const override;
 
     bool isPresentationAttribute(const QualifiedName&) const override;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
 
     bool willRespondToMouseClickEvents() override;
     void defaultEventHandler(Event&) override;
@@ -110,7 +108,6 @@ private:
     bool isMouseFocusable() const final;
     bool isURLAttribute(const Attribute&) const final;
     bool supportsFocus() const final;
-    int tabIndex() const final;
 };
 
 inline bool Node::hasTagName(const MathMLQualifiedName& name) const

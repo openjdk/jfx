@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,7 @@ import java.lang.ref.WeakReference;
  * an UnsupportedOperationException being thrown.
  * </p>
  *
- * <h3>Interaction with coordinate systems</h3>
+ * <h2>Interaction with coordinate systems</h2>
  * Most nodes tend to have only integer translations applied to them and
  * quite often they are defined using integer coordinates as well.  For
  * this common case, fills of shapes with straight line edges tend to be

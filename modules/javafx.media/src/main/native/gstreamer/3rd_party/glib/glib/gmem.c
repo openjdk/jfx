@@ -99,7 +99,7 @@ g_malloc (gsize n_bytes)
       mem = malloc (n_bytes);
       TRACE (GLIB_MEM_ALLOC((void*) mem, (unsigned int) n_bytes, 0, 0));
       if (mem)
-    return mem;
+  return mem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
@@ -129,7 +129,7 @@ g_malloc0 (gsize n_bytes)
       mem = calloc (1, n_bytes);
       TRACE (GLIB_MEM_ALLOC((void*) mem, (unsigned int) n_bytes, 1, 0));
       if (mem)
-    return mem;
+  return mem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
@@ -155,7 +155,7 @@ g_malloc0 (gsize n_bytes)
  */
 gpointer
 g_realloc (gpointer mem,
-       gsize    n_bytes)
+     gsize    n_bytes)
 {
   gpointer newmem;
 
@@ -164,14 +164,13 @@ g_realloc (gpointer mem,
       newmem = realloc (mem, n_bytes);
       TRACE (GLIB_MEM_REALLOC((void*) newmem, (void*)mem, (unsigned int) n_bytes, 0));
       if (newmem)
-    return newmem;
+  return newmem;
 
       g_error ("%s: failed to allocate %"G_GSIZE_FORMAT" bytes",
                G_STRLOC, n_bytes);
     }
 
-  if (mem)
-    free (mem);
+  free (mem);
 
   TRACE (GLIB_MEM_REALLOC((void*) NULL, (void*)mem, 0, 0));
 
@@ -190,8 +189,7 @@ g_realloc (gpointer mem,
 void
 g_free (gpointer mem)
 {
-  if (G_LIKELY (mem))
-    free (mem);
+  free (mem);
   TRACE(GLIB_MEM_FREE((void*) mem));
 }
 
@@ -295,7 +293,7 @@ g_try_malloc0 (gsize n_bytes)
  */
 gpointer
 g_try_realloc (gpointer mem,
-           gsize    n_bytes)
+         gsize    n_bytes)
 {
   gpointer newmem;
 
@@ -304,8 +302,7 @@ g_try_realloc (gpointer mem,
   else
     {
       newmem = NULL;
-      if (mem)
-    free (mem);
+      free (mem);
     }
 
   TRACE (GLIB_MEM_REALLOC((void*) newmem, (void*)mem, (unsigned int) n_bytes, 1));
@@ -329,7 +326,7 @@ g_try_realloc (gpointer mem,
  */
 gpointer
 g_malloc_n (gsize n_blocks,
-        gsize n_block_bytes)
+      gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -353,7 +350,7 @@ g_malloc_n (gsize n_blocks,
  */
 gpointer
 g_malloc0_n (gsize n_blocks,
-         gsize n_block_bytes)
+       gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -378,8 +375,8 @@ g_malloc0_n (gsize n_blocks,
  */
 gpointer
 g_realloc_n (gpointer mem,
-         gsize    n_blocks,
-         gsize    n_block_bytes)
+       gsize    n_blocks,
+       gsize    n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     {
@@ -403,7 +400,7 @@ g_realloc_n (gpointer mem,
  */
 gpointer
 g_try_malloc_n (gsize n_blocks,
-        gsize n_block_bytes)
+    gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -424,7 +421,7 @@ g_try_malloc_n (gsize n_blocks,
  */
 gpointer
 g_try_malloc0_n (gsize n_blocks,
-         gsize n_block_bytes)
+     gsize n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -446,8 +443,8 @@ g_try_malloc0_n (gsize n_blocks,
  */
 gpointer
 g_try_realloc_n (gpointer mem,
-         gsize    n_blocks,
-         gsize    n_block_bytes)
+     gsize    n_blocks,
+     gsize    n_block_bytes)
 {
   if (SIZE_OVERFLOWS (n_blocks, n_block_bytes))
     return NULL;
@@ -491,7 +488,7 @@ void
 g_mem_set_vtable (GMemVTable *vtable)
 {
   g_warning (G_STRLOC ": custom memory allocation vtable not supported");
-    }
+}
 
 
 /**
@@ -517,4 +514,4 @@ void
 g_mem_profile (void)
 {
   g_warning (G_STRLOC ": memory profiling not supported");
-    }
+}

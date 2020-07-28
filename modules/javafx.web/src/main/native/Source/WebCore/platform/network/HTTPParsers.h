@@ -30,12 +30,9 @@
 
 #pragma once
 
-#include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/Optional.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -75,6 +72,7 @@ bool isValidReasonPhrase(const String&);
 bool isValidHTTPHeaderValue(const String&);
 bool isValidAcceptHeaderValue(const String&);
 bool isValidLanguageHeaderValue(const String&);
+WEBCORE_EXPORT bool isValidUserAgentHeaderValue(const String&);
 bool isValidHTTPToken(const String&);
 bool parseHTTPRefresh(const String& refresh, double& delay, String& url);
 Optional<WallTime> parseHTTPDate(const String&);
@@ -83,7 +81,7 @@ String extractMIMETypeFromMediaType(const String&);
 String extractCharsetFromMediaType(const String&);
 void findCharsetInMediaType(const String& mediaType, unsigned int& charsetPos, unsigned int& charsetLen, unsigned int start = 0);
 XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& failureReason, unsigned& failurePosition, String& reportURL);
-AtomicString extractReasonPhraseFromHTTPStatusLine(const String&);
+AtomString extractReasonPhraseFromHTTPStatusLine(const String&);
 WEBCORE_EXPORT XFrameOptionsDisposition parseXFrameOptionsHeader(const String&);
 
 // -1 could be set to one of the return parameters to indicate the value is not specified.

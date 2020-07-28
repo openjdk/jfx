@@ -74,9 +74,9 @@ static TextStream& operator<<(TextStream& ts, MediaFeaturePrefix op)
 #endif
 
 typedef bool (*MediaQueryFunction)(CSSValue*, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix);
-typedef HashMap<AtomicStringImpl*, MediaQueryFunction> MediaQueryFunctionMap;
+typedef HashMap<AtomStringImpl*, MediaQueryFunction> MediaQueryFunctionMap;
 
-static bool isAccessibilitySettingsDependent(const AtomicString& mediaFeature)
+static bool isAccessibilitySettingsDependent(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::invertedColors
         || mediaFeature == MediaFeatureNames::maxMonochrome
@@ -85,7 +85,7 @@ static bool isAccessibilitySettingsDependent(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::prefersReducedMotion;
 }
 
-static bool isViewportDependent(const AtomicString& mediaFeature)
+static bool isViewportDependent(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::width
         || mediaFeature == MediaFeatureNames::height
@@ -99,7 +99,7 @@ static bool isViewportDependent(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::maxAspectRatio;
 }
 
-static bool isAppearanceDependent(const AtomicString& mediaFeature)
+static bool isAppearanceDependent(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::prefersDarkInterface
 #if ENABLE(DARK_MODE_CSS)
@@ -693,7 +693,7 @@ static bool hoverEvaluate(CSSValue* value, const CSSToLengthConversionData&, Fra
 {
     if (!is<CSSPrimitiveValue>(value)) {
 #if ENABLE(TOUCH_EVENTS)
-        return false;
+        return !screenIsTouchPrimaryInputDevice();
 #else
         return true;
 #endif
@@ -701,15 +701,28 @@ static bool hoverEvaluate(CSSValue* value, const CSSToLengthConversionData&, Fra
 
     auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
 #if ENABLE(TOUCH_EVENTS)
-    return keyword == CSSValueNone;
-#else
-    return keyword == CSSValueHover;
+    if (screenIsTouchPrimaryInputDevice())
+        return keyword == CSSValueNone;
 #endif
+    return keyword == CSSValueHover;
 }
 
-static bool anyHoverEvaluate(CSSValue* value, const CSSToLengthConversionData& cssToLengthConversionData, Frame& frame, MediaFeaturePrefix prefix)
+static bool anyHoverEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix)
 {
-    return hoverEvaluate(value, cssToLengthConversionData, frame, prefix);
+    if (!is<CSSPrimitiveValue>(value)) {
+#if ENABLE(TOUCH_EVENTS)
+        return !screenHasTouchDevice();
+#else
+        return true;
+#endif
+    }
+
+    auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
+#if ENABLE(TOUCH_EVENTS)
+    if (screenHasTouchDevice())
+        return keyword == CSSValueNone;
+#endif
+    return keyword == CSSValueHover;
 }
 
 static bool pointerEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix)
@@ -719,15 +732,23 @@ static bool pointerEvaluate(CSSValue* value, const CSSToLengthConversionData&, F
 
     auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
 #if ENABLE(TOUCH_EVENTS)
-    return keyword == CSSValueCoarse;
-#else
-    return keyword == CSSValueFine;
+    if (screenIsTouchPrimaryInputDevice())
+        return keyword == CSSValueCoarse;
 #endif
+    return keyword == CSSValueFine;
 }
 
-static bool anyPointerEvaluate(CSSValue* value, const CSSToLengthConversionData& cssToLengthConversionData, Frame& frame, MediaFeaturePrefix prefix)
+static bool anyPointerEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame&, MediaFeaturePrefix)
 {
-    return pointerEvaluate(value, cssToLengthConversionData, frame, prefix);
+    if (!is<CSSPrimitiveValue>(value))
+        return true;
+
+    auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
+#if ENABLE(TOUCH_EVENTS)
+    if (screenHasTouchDevice())
+        return keyword == CSSValueCoarse;
+#endif
+    return keyword == CSSValueFine;
 }
 
 static bool prefersDarkInterfaceEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
@@ -746,8 +767,6 @@ static bool prefersDarkInterfaceEvaluate(CSSValue* value, const CSSToLengthConve
 #if ENABLE(DARK_MODE_CSS)
 static bool prefersColorSchemeEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
 {
-    ASSERT(RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled());
-
     if (!value)
         return true;
 
@@ -821,7 +840,7 @@ static bool displayModeEvaluate(CSSValue* value, const CSSToLengthConversionData
 #endif // ENABLE(APPLICATION_MANIFEST)
 
 // Use this function instead of calling add directly to avoid inlining.
-static void add(MediaQueryFunctionMap& map, AtomicStringImpl* key, MediaQueryFunction value)
+static void add(MediaQueryFunctionMap& map, AtomStringImpl* key, MediaQueryFunction value)
 {
     map.add(key, value);
 }

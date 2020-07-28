@@ -425,13 +425,6 @@ void RenderSVGText::layout()
     clearNeedsLayout();
 }
 
-std::unique_ptr<RootInlineBox> RenderSVGText::createRootInlineBox()
-{
-    auto box = std::make_unique<SVGRootInlineBox>(*this);
-    box->setHasVirtualLogicalHeight();
-    return WTFMove(box);
-}
-
 bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
 {
     PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_TEXT_HITTESTING, request, style().pointerEvents());
@@ -471,7 +464,7 @@ VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInConten
     if (!closestBox)
         return createVisiblePosition(0, DOWNSTREAM);
 
-    return closestBox->renderer().positionForPoint(LayoutPoint(pointInContents.x(), closestBox->y()), fragment);
+    return closestBox->renderer().positionForPoint({ pointInContents.x(), LayoutUnit(closestBox->y()) }, fragment);
 }
 
 void RenderSVGText::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const

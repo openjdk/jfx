@@ -452,6 +452,7 @@ cant_copy:
         (GST_IS_OBJECT (object) ? GST_OBJECT_NAME (object) : ""), error);
     g_value_unset (&value);
     g_object_unref (target);
+    g_free (error);
     return;
   }
 }

@@ -1,6 +1,6 @@
 /*
- * Copyright © 2008 Ryan Lortie
- * Copyright © 2010 Codethink Limited
+ * Copyright (C) 2008 Ryan Lortie
+ * Copyright (C) 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -130,7 +130,7 @@ GLIB_AVAILABLE_IN_ALL
 void                            g_variant_type_info_query               (GVariantTypeInfo   *typeinfo,
                                                                          guint              *alignment,
                                                                          gsize              *size);
-GLIB_AVAILABLE_IN_2_58
+GLIB_AVAILABLE_IN_2_60
 gsize                           g_variant_type_info_query_depth         (GVariantTypeInfo   *typeinfo);
 
 /* array */

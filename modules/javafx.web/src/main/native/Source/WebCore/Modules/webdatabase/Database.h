@@ -39,7 +39,7 @@ class DatabaseCallback;
 class DatabaseContext;
 class DatabaseDetails;
 class DatabaseThread;
-class ScriptExecutionContext;
+class Document;
 class SecurityOrigin;
 class SQLTransaction;
 class SQLTransactionBackend;
@@ -86,10 +86,11 @@ public:
     void readTransaction(RefPtr<SQLTransactionCallback>&&, RefPtr<SQLTransactionErrorCallback>&&, RefPtr<VoidCallback>&& successCallback);
 
     // Internal engine support
-    String stringIdentifier() const;
-    String displayName() const;
+    String stringIdentifierIsolatedCopy() const;
+    String displayNameIsolatedCopy() const;
+    String expectedVersionIsolatedCopy() const;
     unsigned long long estimatedSize() const;
-    String fileName() const;
+    String fileNameIsolatedCopy() const;
     DatabaseDetails details() const;
     SQLiteDatabase& sqliteDatabase() { return m_sqliteDatabase; }
 
@@ -104,7 +105,7 @@ public:
 
     DatabaseContext& databaseContext() { return m_databaseContext; }
     DatabaseThread& databaseThread();
-    ScriptExecutionContext& scriptExecutionContext() { return m_scriptExecutionContext; }
+    Document& document() { return m_document; }
     void logErrorMessage(const String& message);
 
     Vector<String> tableNames();
@@ -133,7 +134,6 @@ private:
     bool getVersionFromDatabase(String& version, bool shouldCacheVersion = true);
     bool setVersionInDatabase(const String& version, bool shouldCacheVersion = true);
     void setExpectedVersion(const String&);
-    const String& expectedVersion() const { return m_expectedVersion; }
     String getCachedVersion() const;
     void setCachedVersion(const String&);
     bool getActualVersionForTransaction(String& version);
@@ -147,7 +147,7 @@ private:
     String databaseDebugName() const;
 #endif
 
-    Ref<ScriptExecutionContext> m_scriptExecutionContext;
+    Ref<Document> m_document;
     Ref<SecurityOrigin> m_contextThreadSecurityOrigin;
     Ref<SecurityOrigin> m_databaseThreadSecurityOrigin;
     Ref<DatabaseContext> m_databaseContext;

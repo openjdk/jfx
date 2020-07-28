@@ -123,7 +123,7 @@ import java.lang.ref.WeakReference;
  * a different type is specified and the ComboBox is to be editable, it is
  * necessary to specify a custom {@link StringConverter}.
  *
- * <h3>A warning about inserting Nodes into the ComboBox items list</h3>
+ * <h2>A warning about inserting Nodes into the ComboBox items list</h2>
  * ComboBox allows for the items list to contain elements of any type, including
  * {@link Node} instances. Putting nodes into
  * the items list is <strong>strongly not recommended</strong>. This is because

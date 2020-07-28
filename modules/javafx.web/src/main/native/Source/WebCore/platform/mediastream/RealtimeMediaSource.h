@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include "RealtimeMediaSourceFactory.h"
+#include <wtf/LoggerHelper.h>
 #include <wtf/RecursiveLockAdapter.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
@@ -65,7 +66,13 @@ class RemoteVideoSample;
 
 struct CaptureSourceOrError;
 
-class WEBCORE_EXPORT RealtimeMediaSource : public ThreadSafeRefCounted<RealtimeMediaSource>, public CanMakeWeakPtr<RealtimeMediaSource> {
+class WEBCORE_EXPORT RealtimeMediaSource
+    : public ThreadSafeRefCounted<RealtimeMediaSource, WTF::DestructionThread::MainRunLoop>
+    , public CanMakeWeakPtr<RealtimeMediaSource>
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
 public:
     class Observer {
     public:
@@ -89,6 +96,8 @@ public:
 
     virtual ~RealtimeMediaSource() = default;
 
+    virtual Ref<RealtimeMediaSource> clone() { return *this; }
+
     const String& hashedId() const;
     String deviceIDHashSalt() const;
 
@@ -100,7 +109,7 @@ public:
     bool isProducingData() const { return m_isProducingData; }
     void start();
     void stop();
-    void requestToEnd(Observer& callingObserver);
+    virtual void requestToEnd(Observer& callingObserver);
 
     bool muted() const { return m_muted; }
     void setMuted(bool);
@@ -163,6 +172,7 @@ public:
 
     virtual bool isIsolated() const { return false; }
 
+    virtual bool isMockSource() const { return false; }
     virtual bool isCaptureSource() const { return false; }
     virtual CaptureDevice::DeviceType deviceType() const { return CaptureDevice::DeviceType::Unknown; }
 
@@ -176,6 +186,15 @@ public:
     void setIsRemote(bool isRemote) { m_isRemote = isRemote; }
     bool isRemote() const { return m_isRemote; }
 
+#if !RELEASE_LOG_DISABLED
+    void setLogger(const Logger&, const void*);
+    const Logger* loggerPtr() const { return m_logger.get(); }
+    const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const override { return "RealtimeMediaSource"; }
+    WTFLogChannel& logChannel() const final;
+#endif
+
     // Testing only
     virtual void delaySamples(Seconds) { };
     void setInterruptedForTesting(bool);
@@ -188,8 +207,7 @@ protected:
     virtual void beginConfiguration() { }
     virtual void commitConfiguration() { }
 
-    enum class SelectType { ForApplyConstraints, ForSupportsConstraints };
-    bool selectSettings(const MediaConstraints&, FlattenedConstraint&, String&, SelectType);
+    bool selectSettings(const MediaConstraints&, FlattenedConstraint&, String&);
     double fitnessDistance(const MediaConstraint&);
     void applyConstraint(const MediaConstraint&);
     void applyConstraints(const FlattenedConstraint&);
@@ -209,16 +227,23 @@ protected:
     void videoSampleAvailable(MediaSample&);
     void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
+    void forEachObserver(const WTF::Function<void(Observer&)>&) const;
+
 private:
     virtual void startProducingData() { }
     virtual void stopProducingData() { }
     virtual void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) { }
 
+    virtual void stopBeingObserved() { stop(); }
+
     virtual void hasEnded() { }
 
-    void forEachObserver(const WTF::Function<void(Observer&)>&) const;
-
-    bool m_muted { false };
+#if !RELEASE_LOG_DISABLED
+    RefPtr<const Logger> m_logger;
+    const void* m_logIdentifier;
+    MonotonicTime m_lastFrameLogTime;
+    unsigned m_frameCount { 0 };
+#endif
 
     String m_idHashSalt;
     String m_hashedID;
@@ -234,9 +259,10 @@ private:
     double m_volume { 1 };
     double m_sampleRate { 0 };
     double m_sampleSize { 0 };
-    double m_fitnessScore { std::numeric_limits<double>::infinity() };
+    double m_fitnessScore { 0 };
     RealtimeMediaSourceSettings::VideoFacingMode m_facingMode { RealtimeMediaSourceSettings::User};
 
+    bool m_muted { false };
     bool m_pendingSettingsDidChangeNotification { false };
     bool m_echoCancellation { false };
     bool m_isProducingData { false };
@@ -258,6 +284,23 @@ struct CaptureSourceOrError {
     String errorMessage;
 };
 
+String convertEnumerationToString(RealtimeMediaSource::Type);
+
 } // namespace WebCore
+
+namespace WTF {
+
+template<typename Type>
+struct LogArgument;
+
+template <>
+struct LogArgument<WebCore::RealtimeMediaSource::Type> {
+    static String toString(const WebCore::RealtimeMediaSource::Type type)
+    {
+        return convertEnumerationToString(type);
+    }
+};
+
+}; // namespace WTF
 
 #endif // ENABLE(MEDIA_STREAM)

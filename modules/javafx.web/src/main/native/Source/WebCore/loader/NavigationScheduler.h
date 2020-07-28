@@ -32,6 +32,7 @@
 
 #include "FrameLoaderTypes.h"
 #include "Timer.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -45,6 +46,7 @@ class SecurityOrigin;
 enum class NewLoadInProgress : bool { No, Yes };
 
 class NavigationScheduler {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit NavigationScheduler(Frame&);
     ~NavigationScheduler();

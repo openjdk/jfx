@@ -42,7 +42,7 @@ private:
     ScrollingTreeFrameHostingNode(ScrollingTree&, ScrollingNodeID);
 
     void commitStateBeforeChildren(const ScrollingStateNode&) final;
-    void updateLayersAfterAncestorChange(const ScrollingTreeNode& changedNode, const FloatRect& fixedPositionRect, const FloatSize& cumulativeDelta) final;
+    void applyLayerPositions() final;
 
     const LayoutRect& parentRelativeScrollableRect() const { return m_parentRelativeScrollableRect; }
 

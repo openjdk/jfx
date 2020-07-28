@@ -36,6 +36,9 @@
  *
  * All functions are MT-safe.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <glib-object.h>
 #include <gst/gst.h>
@@ -176,7 +179,8 @@ enum
     "timeline value trigger control source")
 
 G_DEFINE_TYPE_WITH_CODE (GstTriggerControlSource, gst_trigger_control_source,
-    GST_TYPE_TIMED_VALUE_CONTROL_SOURCE, _do_init);
+    GST_TYPE_TIMED_VALUE_CONTROL_SOURCE, G_ADD_PRIVATE (GstTriggerControlSource)
+    _do_init);
 
 /**
  * gst_trigger_control_source_new:
@@ -202,9 +206,7 @@ gst_trigger_control_source_init (GstTriggerControlSource * self)
 {
   GstControlSource *csource = (GstControlSource *) self;
 
-  self->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (self, GST_TYPE_TRIGGER_CONTROL_SOURCE,
-      GstTriggerControlSourcePrivate);
+  self->priv = gst_trigger_control_source_get_instance_private (self);
 
   csource->get_value = (GstControlSourceGetValue) interpolate_trigger_get;
   csource->get_value_array = (GstControlSourceGetValueArray)
@@ -249,8 +251,6 @@ static void
 gst_trigger_control_source_class_init (GstTriggerControlSourceClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (GstTriggerControlSourcePrivate));
 
   gobject_class->set_property = gst_trigger_control_source_set_property;
   gobject_class->get_property = gst_trigger_control_source_get_property;

@@ -28,9 +28,9 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLStatement.h"
 #include "WHLSLSwitchCase.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -39,21 +39,20 @@ namespace WHLSL {
 
 namespace AST {
 
-class SwitchStatement : public Statement {
+class SwitchStatement final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    SwitchStatement(Lexer::Token&& origin, UniqueRef<Expression>&& value, Vector<SwitchCase>&& switchCases)
-        : Statement(WTFMove(origin))
+    SwitchStatement(CodeLocation location, UniqueRef<Expression>&& value, Vector<SwitchCase>&& switchCases)
+        : Statement(location, Kind::Switch)
         , m_value(WTFMove(value))
         , m_switchCases(WTFMove(switchCases))
     {
     }
 
-    virtual ~SwitchStatement() = default;
+    ~SwitchStatement() = default;
 
     SwitchStatement(const SwitchStatement&) = delete;
     SwitchStatement(SwitchStatement&&) = default;
-
-    bool isSwitchStatement() const override { return true; }
 
     Expression& value() { return m_value; }
     Vector<SwitchCase>& switchCases() { return m_switchCases; }
@@ -68,6 +67,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(SwitchStatement)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(SwitchStatement, isSwitchStatement())
 

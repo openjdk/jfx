@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Ryan Lortie
+ * Copyright (C) 2011 Ryan Lortie
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -90,7 +90,7 @@
 
 #ifdef G_ATOMIC_LOCK_FREE
 
-/* if G_ATOMIC_LOCK_FREE was defined by ./configure then we MUST
+/* if G_ATOMIC_LOCK_FREE was defined by `meson configure` then we MUST
  * implement the atomic operations in a lock-free manner.
  */
 
@@ -669,7 +669,7 @@ gsize
 }
 #else
 
-/* This error occurs when ./configure decided that we should be capable
+/* This error occurs when `meson configure` decided that we should be capable
  * of lock-free atomics but we find at compile-time that we are not.
  */
 #error G_ATOMIC_LOCK_FREE defined, but incapable of lock-free atomics.

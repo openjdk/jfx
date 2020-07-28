@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -255,6 +255,23 @@ public class AnimationTest {
     }
 
     @Test
+    public void testJumpTo_IndefiniteCycles() {
+        animation.shim_setCycleDuration(TWO_SECS);
+        animation.setCycleCount(Animation.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+    }
+
+    @Test
+    public void testJumpTo_IndefiniteCycleDuration() {
+        animation.shim_setCycleDuration(Duration.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
+    }
+
+    @Test
     public void testJumpToCuePoint_Default() {
         animation.getCuePoints().put("ONE_SEC", ONE_SEC);
         animation.getCuePoints().put("THREE_SECS", THREE_SECS);
@@ -322,10 +339,19 @@ public class AnimationTest {
         assertFalse(listener.wasCalled);
         assertFalse(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
         animation.stop();
-        animation.setRate(1.0);
+
+        // stopped timeline, rate = -1
+        listener.wasCalled = false;
+        animation.setRate(-1.0);
+        animation.play();
+        assertEquals(ONE_SEC.toMillis(), animation.getCurrentTime().toMillis(), EPSILON);
+        assertFalse(listener.wasCalled);
+        assertTrue(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
+        animation.stop();
 
         // stopped timeline, cycleDuration = 0
         listener.wasCalled = false;
+        animation.setRate(1.0);
         animation.shim_setCycleDuration(Duration.ZERO);
         animation.play();
         assertEquals(Status.STOPPED, animation.getStatus());

@@ -28,8 +28,8 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLStatement.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -38,21 +38,20 @@ namespace WHLSL {
 
 namespace AST {
 
-class DoWhileLoop : public Statement {
+class DoWhileLoop final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    DoWhileLoop(Lexer::Token&& origin, UniqueRef<Statement>&& body, UniqueRef<Expression>&& conditional)
-        : Statement(WTFMove(origin))
+    DoWhileLoop(CodeLocation location, UniqueRef<Statement>&& body, UniqueRef<Expression>&& conditional)
+        : Statement(location, Kind::DoWhileLoop)
         , m_body(WTFMove(body))
         , m_conditional(WTFMove(conditional))
     {
     }
 
-    virtual ~DoWhileLoop() = default;
+    ~DoWhileLoop() = default;
 
     DoWhileLoop(const DoWhileLoop&) = delete;
     DoWhileLoop(DoWhileLoop&&) = default;
-
-    bool isDoWhileLoop() const override { return true; }
 
     Statement& body() { return m_body; }
     Expression& conditional() { return m_conditional; }
@@ -67,6 +66,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(DoWhileLoop)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(DoWhileLoop, isDoWhileLoop())
 

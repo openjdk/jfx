@@ -24,6 +24,19 @@
  */
 
 @globalPrivate
+@constructor
+function RegExpStringIterator(regExp, string, global, fullUnicode)
+{
+    "use strict";
+
+    @putByIdDirectPrivate(this, "regExpStringIteratorRegExp", regExp);
+    @putByIdDirectPrivate(this, "regExpStringIteratorString", string);
+    @putByIdDirectPrivate(this, "regExpStringIteratorGlobal", global);
+    @putByIdDirectPrivate(this, "regExpStringIteratorUnicode", fullUnicode);
+    @putByIdDirectPrivate(this, "regExpStringIteratorDone", false);
+}
+
+@globalPrivate
 function advanceStringIndex(string, index, unicode)
 {
     // This function implements AdvanceStringIndex described in ES6 21.2.5.2.3.
@@ -114,9 +127,6 @@ function matchSlow(regexp, str)
         if (resultList.length > maximumReasonableMatchSize)
             @throwOutOfMemoryError();
 
-        if (!@isObject(result))
-            @throwTypeError("RegExp.prototype.@@match call to RegExp.exec didn't return null or an object");
-
         let resultString = @toString(result[0]);
 
         if (!resultString.length)
@@ -140,6 +150,28 @@ function match(strArg)
     if (!@hasObservableSideEffectsForRegExpMatch(this))
         return @regExpMatchFast.@call(this, str);
     return @matchSlow(this, str);
+}
+
+@overriddenName="[Symbol.matchAll]"
+function matchAll(strArg)
+{
+    "use strict";
+
+    let regExp = this;
+    if (!@isObject(regExp))
+        @throwTypeError("RegExp.prototype.@@matchAll requires |this| to be an Object");
+
+    let string = @toString(strArg);
+    let Matcher = @speciesConstructor(regExp, @RegExp);
+
+    let flags = @toString(regExp.flags);
+    let matcher = new Matcher(regExp, flags);
+    matcher.lastIndex = @toLength(regExp.lastIndex);
+
+    let global = @stringIncludesInternal.@call(flags, "g");
+    let fullUnicode = @stringIncludesInternal.@call(flags, "u");
+
+    return new @RegExpStringIterator(matcher, string, global, fullUnicode);
 }
 
 @overriddenName="[Symbol.replace]"

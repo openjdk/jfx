@@ -42,7 +42,7 @@ private:
     ScrollingTreeFixedNode(ScrollingTree&, ScrollingNodeID);
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
-    void updateLayersAfterAncestorChange(const ScrollingTreeNode&, const FloatRect&, const FloatSize&) override;
+    void applyLayerPositions() override;
 };
 
 } // namespace WebCore

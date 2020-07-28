@@ -269,7 +269,7 @@ static GstPlugin *gst_registry_lookup_bn_locked (GstRegistry * registry,
     const char *basename);
 
 #define gst_registry_parent_class parent_class
-G_DEFINE_TYPE (GstRegistry, gst_registry, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstRegistry, gst_registry, GST_TYPE_OBJECT);
 
 static void
 gst_registry_class_init (GstRegistryClass * klass)
@@ -277,8 +277,6 @@ gst_registry_class_init (GstRegistryClass * klass)
   GObjectClass *gobject_class;
 
   gobject_class = (GObjectClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstRegistryPrivate));
 
   /**
    * GstRegistry::plugin-added:
@@ -312,9 +310,7 @@ gst_registry_class_init (GstRegistryClass * klass)
 static void
 gst_registry_init (GstRegistry * registry)
 {
-  registry->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (registry, GST_TYPE_REGISTRY,
-      GstRegistryPrivate);
+  registry->priv = gst_registry_get_instance_private (registry);
   registry->priv->feature_hash = g_hash_table_new (g_str_hash, g_str_equal);
   registry->priv->basename_hash = g_hash_table_new (g_str_hash, g_str_equal);
 }
@@ -742,10 +738,10 @@ gst_registry_plugin_filter (GstRegistry * registry,
     if (filter == NULL || filter (plugins[i], user_data)) {
       list = g_list_prepend (list, gst_object_ref (plugins[i]));
 
-        if (first)
-          break;
-  }
+      if (first)
+        break;
     }
+  }
 
   for (i = 0; i < n_plugins; ++i)
     gst_object_unref (plugins[i]);
@@ -920,10 +916,10 @@ gst_registry_feature_filter (GstRegistry * registry,
     if (filter == NULL || filter (features[i], user_data)) {
       list = g_list_prepend (list, gst_object_ref (features[i]));
 
-        if (first)
-          break;
-  }
+      if (first)
+        break;
     }
+  }
 
   for (i = 0; i < n_features; ++i)
     gst_object_unref (features[i]);
@@ -1919,7 +1915,7 @@ scan_and_update_registry (GstRegistry * default_registry,
    * additional plugins.  These take precedence over the system plugins */
   plugin_path = g_getenv ("GST_PLUGIN_PATH_1_0");
   if (plugin_path == NULL)
-  plugin_path = g_getenv ("GST_PLUGIN_PATH");
+    plugin_path = g_getenv ("GST_PLUGIN_PATH");
   if (plugin_path) {
     char **list;
     int i;
@@ -1939,7 +1935,7 @@ scan_and_update_registry (GstRegistry * default_registry,
    * path, and the plugins installed in the user's home directory */
   plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH_1_0");
   if (plugin_path == NULL)
-  plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH");
+    plugin_path = g_getenv ("GST_PLUGIN_SYSTEM_PATH");
   if (plugin_path == NULL) {
     char *home_plugins;
 
@@ -1965,11 +1961,8 @@ scan_and_update_registry (GstRegistry * default_registry,
           g_win32_get_package_installation_directory_of_module
           (_priv_gst_dll_handle);
 
-      dir = g_build_filename (base_dir,
-#ifdef _DEBUG
-          "debug"
-#endif
-          "lib", "gstreamer-" GST_API_VERSION, NULL);
+      dir = g_build_filename (base_dir, GST_PLUGIN_SUBDIR,
+          "gstreamer-" GST_API_VERSION, NULL);
       GST_DEBUG ("scanning DLL dir %s", dir);
 
       changed |= gst_registry_scan_path_internal (&context, dir);
@@ -2040,7 +2033,7 @@ ensure_current_registry (GError ** error)
 
   registry_file = g_strdup (g_getenv ("GST_REGISTRY_1_0"));
   if (registry_file == NULL)
-  registry_file = g_strdup (g_getenv ("GST_REGISTRY"));
+    registry_file = g_strdup (g_getenv ("GST_REGISTRY"));
   if (registry_file == NULL) {
     registry_file = g_build_filename (g_get_user_cache_dir (),
         "gstreamer-" GST_API_VERSION, "registry." TARGET_CPU ".bin", NULL);
@@ -2155,15 +2148,15 @@ gst_update_registry (void)
 
 #ifndef GST_DISABLE_REGISTRY
   if (!_priv_gst_disable_registry) {
-  GError *err = NULL;
+    GError *err = NULL;
 
-  res = ensure_current_registry (&err);
-  if (err) {
-    GST_WARNING ("registry update failed: %s", err->message);
-    g_error_free (err);
-  } else {
-    GST_LOG ("registry update succeeded");
-  }
+    res = ensure_current_registry (&err);
+    if (err) {
+      GST_WARNING ("registry update failed: %s", err->message);
+      g_error_free (err);
+    } else {
+      GST_LOG ("registry update succeeded");
+    }
   } else {
     GST_INFO ("registry update disabled by environment");
     res = TRUE;

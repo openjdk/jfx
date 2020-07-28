@@ -1,5 +1,5 @@
 /* Formatted output to strings.
-   Copyright (C) 1999-2000, 2002-2003, 2006-2016 Free Software Foundation, Inc.
+   Copyright (C) 1999-2000, 2002-2003, 2006-2019 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published by
@@ -12,7 +12,7 @@
    GNU Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public License along
-   with this program; if not, see <http://www.gnu.org/licenses/>.  */
+   with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
 /* This file can be parametrized with the following macros:
      CHAR_T             The element type of the format string.
@@ -27,7 +27,9 @@
      STATIC             Set to 'static' to declare the function static.
      ENABLE_UNISTDIO    Set to 1 to enable the unistdio extensions.  */
 
-#include <config.h>
+#ifndef PRINTF_PARSE
+# include <config.h>
+#endif
 
 #include "g-gnulib.h"
 
@@ -35,8 +37,6 @@
 #ifndef PRINTF_PARSE
 # include "printf-parse.h"
 #endif
-
-#include "xsize.h"
 
 /* Default parameters.  */
 #ifndef PRINTF_PARSE
@@ -58,11 +58,7 @@
 #  include <inttypes.h>
 # endif
 #else
-# if !defined (_MSC_VER) || (_MSC_VER >= 1600)
-#  include <stdint.h>
-# else
-typedef signed __int64 intmax_t;
-# endif
+# include <stdint.h>
 #endif
 
 /* malloc(), realloc(), free().  */
@@ -73,6 +69,9 @@ typedef signed __int64 intmax_t;
 
 /* errno.  */
 #include <errno.h>
+
+/* Checked size_t computations.  */
+#include "xsize.h"
 
 #if CHAR_T_ONLY_ASCII
 /* c_isascii().  */
@@ -422,7 +421,7 @@ PRINTF_PARSE (const CHAR_T *format, DIRECTIVES *d, arguments *a)
                       cp++;
                     }
 #endif
-#if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#if defined _WIN32 && ! defined __CYGWIN__
                   /* On native Windows, PRIdMAX is defined as "I64d".
                      We cannot change it to "lld" because PRIdMAX must also
                      be understood by the system's printf routines.  */

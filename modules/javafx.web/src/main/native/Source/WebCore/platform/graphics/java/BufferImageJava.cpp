@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,20 +69,21 @@ void BufferImage::flushImageRQ(GraphicsContext& gc)
 }
 
 ImageDrawResult BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, CompositeOperator co, BlendMode bm, DecodingMode, ImageOrientationDescription)
+                       const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
     flushImageRQ(gc);
-    Image::drawImage(gc, dstRect, srcRect, co, bm);
+    Image::drawImage(gc, dstRect, srcRect, options.compositeOperator(), options.blendMode());
     return ImageDrawResult::DidDraw;
 }
 
-void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator co, BlendMode bm)
+void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
     flushImageRQ(gc);
-    Image::drawPattern(gc, dstRect, srcRect, patternTransform,
-                        phase, spacing, co, bm);
+    Image::drawPattern(gc, destRect, srcRect, patternTransform,
+                        phase, spacing, options);
 }
+
 
 
 } // namespace WebCore

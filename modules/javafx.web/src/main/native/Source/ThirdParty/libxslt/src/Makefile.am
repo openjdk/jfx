@@ -38,6 +38,7 @@ xsltConf.sh: xsltConf.sh.in Makefile
 	    -e 's?\@XSLT_INCLUDEDIR\@?$(XSLT_INCLUDEDIR)?g' \
 	    -e 's?\@VERSION\@?$(VERSION)?g' \
 	    -e 's?\@XSLT_LIBS\@?$(XSLT_LIBS) $(EXTRA_LIBS)?g' \
+	    -e 's?\@XSLT_PRIVATE_LIBS\@?$(XSLT_PRIVATE_LIBS)?g' \
 	       < $(srcdir)/xsltConf.sh.in > xsltConf.tmp \
 	&& mv xsltConf.tmp xsltConf.sh
 

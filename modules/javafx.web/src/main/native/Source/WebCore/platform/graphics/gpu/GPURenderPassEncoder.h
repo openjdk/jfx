@@ -42,6 +42,7 @@ namespace WebCore {
 class GPUBuffer;
 class GPUCommandBuffer;
 
+struct GPUColor;
 struct GPURenderPassDescriptor;
 
 using PlatformRenderPassEncoder = MTLRenderCommandEncoder;
@@ -49,28 +50,35 @@ using PlatformRenderPassEncoderSmartPtr = RetainPtr<MTLRenderCommandEncoder>;
 
 class GPURenderPassEncoder : public GPUProgrammablePassEncoder {
 public:
-    static RefPtr<GPURenderPassEncoder> create(const GPUCommandBuffer&, GPURenderPassDescriptor&&);
+    static RefPtr<GPURenderPassEncoder> tryCreate(Ref<GPUCommandBuffer>&&, GPURenderPassDescriptor&&);
 
-    void setPipeline(Ref<GPURenderPipeline>&&) final;
-
-    void setVertexBuffers(unsigned long, Vector<Ref<const GPUBuffer>>&&, Vector<unsigned long long>&&);
-    void draw(unsigned long vertexCount, unsigned long instanceCount, unsigned long firstVertex, unsigned long firstInstance);
+    void setPipeline(Ref<const GPURenderPipeline>&&);
+    void setBlendColor(const GPUColor&);
+    void setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
+    void setScissorRect(unsigned x, unsigned y, unsigned width, unsigned height);
+    void setIndexBuffer(GPUBuffer&, uint64_t offset);
+    void setVertexBuffers(unsigned index, const Vector<Ref<GPUBuffer>>&, const Vector<uint64_t>& offsets);
+    void draw(unsigned vertexCount, unsigned instanceCount, unsigned firstVertex, unsigned firstInstance);
+    void drawIndexed(unsigned indexCount, unsigned instanceCount, unsigned firstIndex, int baseVertex, unsigned firstInstance);
 
 private:
-    GPURenderPassEncoder(PlatformRenderPassEncoderSmartPtr&&);
-    ~GPURenderPassEncoder() { endPass(); } // Ensure that encoding has ended before release.
+    GPURenderPassEncoder(Ref<GPUCommandBuffer>&&, PlatformRenderPassEncoderSmartPtr&&);
+    ~GPURenderPassEncoder() { endPass(); }
 
-    PlatformProgrammablePassEncoder* platformPassEncoder() const final;
-
-#if USE(METAL)
     // GPUProgrammablePassEncoder
-    void useResource(MTLResource *, unsigned long usage) final;
-    void setVertexBuffer(MTLBuffer *, unsigned long offset, unsigned long index) final;
-    void setFragmentBuffer(MTLBuffer *, unsigned long offset, unsigned long index) final;
+    const PlatformProgrammablePassEncoder* platformPassEncoder() const final;
+    void invalidateEncoder() final { m_platformRenderPassEncoder = nullptr; }
+#if USE(METAL)
+    void useResource(const MTLResource *, unsigned usage) final;
+    void setVertexBuffer(const MTLBuffer *, NSUInteger offset, unsigned index) final;
+    void setFragmentBuffer(const MTLBuffer *, NSUInteger offset, unsigned index) final;
+
+    RefPtr<GPUBuffer> m_indexBuffer;
+    uint64_t m_indexBufferOffset;
 #endif // USE(METAL)
 
     PlatformRenderPassEncoderSmartPtr m_platformRenderPassEncoder;
-    RefPtr<GPURenderPipeline> m_pipeline;
+    RefPtr<const GPURenderPipeline> m_pipeline;
 };
 
 } // namespace WebCore

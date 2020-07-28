@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,15 +38,127 @@ import java.util.HashMap;
  */
 class EPDSettings {
 
+    /**
+     * Sets the frame buffer color depth and pixel format: 8 for 8-bit grayscale
+     * in the Y8 pixel format, 16 for 16-bit color in the RGB565 pixel format,
+     * or 32 for 32-bit color in the ARGB32 pixel format. The default is 32.
+     * <p>
+     * Using the 32-bit format allows JavaFX to render directly into the Linux
+     * frame buffer and avoid the step of copying and converting each pixel from
+     * an off-screen composition buffer.</p>
+     *
+     * @implNote Corresponds to the {@code bits_per_pixel} field of
+     * {@code fb_var_screeninfo} in <i>linux/fb.h</i>.
+     */
     private static final String BITS_PER_PIXEL = "monocle.epd.bitsPerPixel";
+
+    /**
+     * Sets the frame buffer rotation: 0 for unrotated (UR), 1 for 90 degrees
+     * clockwise (CW), 2 for 180 degrees upside-down (UD), and 3 for 90 degrees
+     * counter-clockwise (CCW). The default is 0.
+     * <p>
+     * The unrotated and upside-down settings are in landscape mode, while the
+     * clockwise and counter-clockwise settings are in portrait.</p>
+     *
+     * @implNote Corresponds to the {@code rotate} field of
+     * {@code fb_var_screeninfo} in <i>linux/fb.h</i>.
+     */
     private static final String ROTATE = "monocle.epd.rotate";
-    private static final String Y8_INVERTED = "monocle.epd.y8inverted";
+
+    /**
+     * Sets an indicator for the frame buffer grayscale value: {@code true} to
+     * invert the pixels of all updates when using 8-bit grayscale in the Y8
+     * pixel format; otherwise {@code false}. The default is {@code false}.
+     * <p>
+     * The value is ignored when the frame buffer is not set to 8-bit grayscale
+     * in the Y8 pixel format.</p>
+     *
+     * @implNote Corresponds to the {@code GRAYSCALE_8BIT_INVERTED} constant in
+     * <i>linux/mxcfb.h</i>.
+     */
+    private static final String Y8_INVERTED = "monocle.epd.Y8Inverted";
+
+    /**
+     * Indicates whether to wait for the previous update to complete before
+     * sending the next update: {@code true} to avoid waiting and send updates
+     * as quickly as possible; otherwise {@code false}. The default is
+     * {@code false}.
+     * <p>
+     * The number of outstanding updates is limited by the device controller to
+     * either 16 or 64 concurrent non-colliding updates, depending on the model.
+     * A value of {@code true} may result in errors if the maximum number of
+     * concurrent non-colliding updates is exceeded.</p>
+     *
+     * @implNote Corresponds to the IOCTL call constant
+     * {@code MXCFB_WAIT_FOR_UPDATE_COMPLETE} in <i>linux/mxcfb.h</i>.
+     */
     private static final String NO_WAIT = "monocle.epd.noWait";
+
+    /**
+     * Sets the waveform mode used for updates: 1 for black-and-white direct
+     * update (DU), 2 for 16 levels of gray (GC16), 3 for 4 levels of gray
+     * (GC4), 4 for pure black-and-white animation (A2), and 257 for the
+     * automatic selection of waveform mode based on the number of gray levels
+     * in the update (AUTO). The default is 257.
+     * <p>
+     * Automatic selection chooses one of 1 (DU), 2 (GC16), or 3 (GC4). If the
+     * waveform mode is set to 2 (GC16), it may be upgraded to a compatible but
+     * optimized mode internal to the driver, if available.</p>
+     *
+     * @implNote Corresponds to the {@code waveform_mode} field of
+     * {@code mxcfb_update_data} in <i>linux/mxcfb.h</i>.
+     */
     private static final String WAVEFORM_MODE = "monocle.epd.waveformMode";
+
+    /**
+     * Sets the update flag for pixel inversion: {@code true} to invert the
+     * pixels of each update; otherwise {@code false}. The default is
+     * {@code false}.
+     *
+     * @implNote Corresponds to the {@code EPDC_FLAG_ENABLE_INVERSION} constant
+     * in <i>linux/mxcfb.h</i>.
+     */
     private static final String FLAG_ENABLE_INVERSION = "monocle.epd.enableInversion";
+
+    /**
+     * Sets the update flag for monochrome conversion: {@code true} to convert
+     * the pixels of each update to pure black and white using a 50-percent
+     * threshold; otherwise {@code false}. The default is {@code false}.
+     *
+     * @implNote Corresponds to the {@code EPDC_FLAG_FORCE_MONOCHROME} constant
+     * in <i>linux/mxcfb.h</i>.
+     */
     private static final String FLAG_FORCE_MONOCHROME = "monocle.epd.forceMonochrome";
+
+    /**
+     * Sets the update flag for 1-bit dithering: {@code true} to dither each
+     * update in an 8-bit Y8 frame buffer to 1-bit black and white, if
+     * available; otherwise {@code false}. The default is {@code false}.
+     *
+     * @implNote Corresponds to the {@code EPDC_FLAG_USE_DITHERING_Y1} constant
+     * in <i>linux/mxcfb.h</i>.
+     */
     private static final String FLAG_USE_DITHERING_Y1 = "monocle.epd.useDitheringY1";
+
+    /**
+     * Sets the update flag for 4-bit dithering: {@code true} to dither each
+     * update in an 8-bit Y8 frame buffer to 4-bit grayscale, if available;
+     * otherwise {@code false}. The default is {@code false}.
+     *
+     * @implNote Corresponds to the {@code EPDC_FLAG_USE_DITHERING_Y4} constant
+     * in <i>linux/mxcfb.h</i>.
+     */
     private static final String FLAG_USE_DITHERING_Y4 = "monocle.epd.useDitheringY4";
+
+    /**
+     * Indicates whether to work around the bug found on devices, such as the
+     * Kobo Clara HD Model N249, which require a screen width equal to the
+     * visible x-resolution, instead of the normal virtual x-resolution, when
+     * using an 8-bit, unrotated, and uninverted frame buffer in the Y8 pixel
+     * format: {@code true} to work around the bug; otherwise {@code false}. The
+     * default is {@code false}.
+     */
+    private static final String FIX_WIDTH_Y8UR = "monocle.epd.fixWidthY8UR";
 
     private static final String[] EPD_PROPERTIES = {
         BITS_PER_PIXEL,
@@ -57,7 +169,8 @@ class EPDSettings {
         FLAG_ENABLE_INVERSION,
         FLAG_FORCE_MONOCHROME,
         FLAG_USE_DITHERING_Y1,
-        FLAG_USE_DITHERING_Y4
+        FLAG_USE_DITHERING_Y4,
+        FIX_WIDTH_Y8UR
     };
 
     private static final int BITS_PER_PIXEL_DEFAULT = Integer.SIZE;
@@ -103,6 +216,7 @@ class EPDSettings {
     private final boolean flagForceMonochrome;
     private final boolean flagUseDitheringY1;
     private final boolean flagUseDitheringY4;
+    private final boolean fixWidthY8UR;
 
     final int bitsPerPixel;
     final int rotate;
@@ -110,6 +224,7 @@ class EPDSettings {
     final int waveformMode;
     final int grayscale;
     final int flags;
+    final boolean getWidthVisible;
 
     /**
      * Creates a new EPDSettings, capturing the current values of the EPD system
@@ -117,7 +232,7 @@ class EPDSettings {
      */
     private EPDSettings() {
         if (logger.isLoggable(Level.FINE)) {
-            var map = new HashMap();
+            HashMap<String, String> map = new HashMap<>();
             for (String key : EPD_PROPERTIES) {
                 String value = System.getProperty(key);
                 if (value != null) {
@@ -151,6 +266,10 @@ class EPDSettings {
                 | (flagForceMonochrome ? EPDSystem.EPDC_FLAG_FORCE_MONOCHROME : 0)
                 | (flagUseDitheringY1 ? EPDSystem.EPDC_FLAG_USE_DITHERING_Y1 : 0)
                 | (flagUseDitheringY4 ? EPDSystem.EPDC_FLAG_USE_DITHERING_Y4 : 0);
+
+        fixWidthY8UR = Boolean.getBoolean(FIX_WIDTH_Y8UR);
+        getWidthVisible = fixWidthY8UR && grayscale == EPDSystem.GRAYSCALE_8BIT
+                && rotate == EPDSystem.FB_ROTATE_UR;
     }
 
     /**
@@ -179,8 +298,10 @@ class EPDSettings {
     @Override
     public String toString() {
         return MessageFormat.format("{0}[bitsPerPixel={1} rotate={2} "
-                + "noWait={3} waveformMode={4} grayscale={5} flags=0x{6}]",
+                + "noWait={3} waveformMode={4} grayscale={5} flags=0x{6} "
+                + "getWidthVisible={7}]",
                 getClass().getName(), bitsPerPixel, rotate,
-                noWait, waveformMode, grayscale, Integer.toHexString(flags));
+                noWait, waveformMode, grayscale, Integer.toHexString(flags),
+                getWidthVisible);
     }
 }

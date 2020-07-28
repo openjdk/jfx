@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.pisces;
+
+import com.sun.prism.impl.Disposer;
 
 /**
  * PiscesRenderer class is basic public API accessing Pisces library capabilities.
@@ -86,6 +88,7 @@ public final class PiscesRenderer {
     public PiscesRenderer(AbstractSurface surface) {
         this.surface = surface;
         initialize();
+        Disposer.addRecord(this, new PiscesRendererDisposerRecord(nativePtr));
     }
 
     private native void initialize();
@@ -436,12 +439,21 @@ public final class PiscesRenderer {
         }
     }
 
-    protected void finalize() {
-        this.nativeFinalize();
-    }
+    private static native void disposeNative(long nativeHandle);
 
-    /**
-     * Native finalizer. Releases native memory used by PiscesRenderer at lifetime.
-     */
-    private native void nativeFinalize();
+    private static class PiscesRendererDisposerRecord implements Disposer.Record {
+        private long nativeHandle;
+
+        PiscesRendererDisposerRecord(long nh) {
+            nativeHandle = nh;
+        }
+
+        @Override
+        public void dispose() {
+            if (nativeHandle != 0L) {
+                disposeNative(nativeHandle);
+                nativeHandle = 0L;
+            }
+        }
+    }
 }

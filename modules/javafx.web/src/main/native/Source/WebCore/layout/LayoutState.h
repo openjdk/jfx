@@ -27,16 +27,16 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutContainer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/OptionSet.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 class RenderView;
-#endif
 
 namespace Display {
 class Box;
@@ -46,7 +46,6 @@ namespace Layout {
 
 enum class StyleDiff;
 class Box;
-class Container;
 class FormattingContext;
 class FormattingState;
 
@@ -61,9 +60,13 @@ class LayoutState {
 public:
     LayoutState(const Container& initialContainingBlock);
 
+    // FIXME: This is a temporary entry point for LFC layout.
+    static void run(const RenderView&);
+
     void updateLayout();
     void styleChanged(const Box&, StyleDiff);
-    void setInQuirksMode(bool inQuirksMode) { m_inQuirksMode = inQuirksMode; }
+    enum class QuirksMode { No, Limited, Yes };
+    void setQuirksMode(QuirksMode quirksMode) { m_quirksMode = quirksMode; }
 
     enum class UpdateType {
         Overflow = 1 << 0,
@@ -88,7 +91,9 @@ public:
     Display::Box& displayBoxForLayoutBox(const Box& layoutBox) const;
     bool hasDisplayBox(const Box& layoutBox) const { return m_layoutToDisplayBox.contains(&layoutBox); }
 
-    bool inQuirksMode() const { return m_inQuirksMode; }
+    bool inQuirksMode() const { return m_quirksMode == QuirksMode::Yes; }
+    bool inLimitedQuirksMode() const { return m_quirksMode == QuirksMode::Limited; }
+    bool inNoQuirksMode() const { return m_quirksMode == QuirksMode::No; }
     // For testing purposes only
     void verifyAndOutputMismatchingLayoutTree(const RenderView&) const;
 
@@ -103,7 +108,7 @@ private:
     HashSet<const FormattingContext*> m_formattingContextList;
 #endif
     mutable HashMap<const Box*, std::unique_ptr<Display::Box>> m_layoutToDisplayBox;
-    bool m_inQuirksMode { false };
+    QuirksMode m_quirksMode { QuirksMode::No };
 };
 
 #ifndef NDEBUG

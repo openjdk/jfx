@@ -62,7 +62,7 @@ struct ServiceWorkerFetchResult;
 struct ServiceWorkerRegistrationData;
 class Timer;
 
-class SWServer {
+class SWServer : public CanMakeWeakPtr<SWServer> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     class Connection : public CanMakeWeakPtr<Connection> {
@@ -87,7 +87,10 @@ public:
         virtual void notifyClientsOfControllerChange(const HashSet<DocumentIdentifier>& contextIdentifiers, const ServiceWorkerData& newController) = 0;
         virtual void registrationReady(uint64_t registrationReadyRequestIdentifier, ServiceWorkerRegistrationData&&) = 0;
 
+        virtual void serverToContextConnectionCreated(SWServerToContextConnection&) = 0;
+
         SWServer& server() { return m_server; }
+        const SWServer& server() const { return m_server; }
 
     protected:
         WEBCORE_EXPORT explicit Connection(SWServer&);
@@ -97,6 +100,8 @@ public:
         WEBCORE_EXPORT void removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier);
         WEBCORE_EXPORT void syncTerminateWorker(ServiceWorkerIdentifier);
         WEBCORE_EXPORT void whenRegistrationReady(uint64_t registrationReadyRequestIdentifier, const SecurityOriginData& topOrigin, const URL& clientURL);
+
+        WEBCORE_EXPORT void storeRegistrationsOnDisk(CompletionHandler<void()>&&);
 
     private:
         // Messages to the client WebProcess
@@ -122,6 +127,9 @@ public:
     WEBCORE_EXPORT void clearAll(WTF::CompletionHandler<void()>&&);
     WEBCORE_EXPORT void clear(const SecurityOriginData&, WTF::CompletionHandler<void()>&&);
 
+    WEBCORE_EXPORT void startSuspension(CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void endSuspension();
+
     SWServerRegistration* getRegistration(const ServiceWorkerRegistrationKey&);
     void addRegistration(std::unique_ptr<SWServerRegistration>&&);
     void removeRegistration(const ServiceWorkerRegistrationKey&);
@@ -144,11 +152,13 @@ public:
     String serviceWorkerClientUserAgent(const ClientOrigin&) const;
     WEBCORE_EXPORT SWServerWorker* activeWorkerFromRegistrationID(ServiceWorkerRegistrationIdentifier);
 
-    WEBCORE_EXPORT void markAllWorkersForOriginAsTerminated(const SecurityOriginData&);
+    WEBCORE_EXPORT void markAllWorkersForRegistrableDomainAsTerminated(const RegistrableDomain&);
 
     WEBCORE_EXPORT void addConnection(std::unique_ptr<Connection>&&);
     WEBCORE_EXPORT void removeConnection(SWServerConnectionIdentifier);
     Connection* connection(SWServerConnectionIdentifier identifier) const { return m_connections.get(identifier); }
+
+    const HashMap<SWServerConnectionIdentifier, std::unique_ptr<Connection>>& connections() const { return m_connections; }
 
     SWOriginStore& originStore() { return m_originStore; }
 
@@ -179,7 +189,7 @@ public:
     WEBCORE_EXPORT void getOriginsWithRegistrations(Function<void(const HashSet<SecurityOriginData>&)>&&);
 
     PAL::SessionID sessionID() const { return m_sessionID; }
-    WEBCORE_EXPORT bool needsServerToContextConnectionForOrigin(const SecurityOriginData&) const;
+    WEBCORE_EXPORT bool needsServerToContextConnectionForRegistrableDomain(const RegistrableDomain&) const;
 
     void disableServiceWorkerProcessTerminationDelay() { m_shouldDisableServiceWorkerProcessTerminationDelay = true; }
 
@@ -217,7 +227,7 @@ private:
 
     HashMap<ServiceWorkerIdentifier, Ref<SWServerWorker>> m_runningOrTerminatingWorkers;
 
-    HashMap<SecurityOriginData, HashSet<ServiceWorkerClientIdentifier>> m_clientsBySecurityOrigin;
+    HashMap<RegistrableDomain, HashSet<ServiceWorkerClientIdentifier>> m_clientsByRegistrableDomain;
     struct Clients {
         Vector<ServiceWorkerClientIdentifier> identifiers;
         std::unique_ptr<Timer> terminateServiceWorkersTimer;
@@ -229,8 +239,8 @@ private:
 
     UniqueRef<SWOriginStore> m_originStore;
     std::unique_ptr<RegistrationStore> m_registrationStore;
-    HashMap<SecurityOriginData, Vector<ServiceWorkerContextData>> m_pendingContextDatas;
-    HashMap<SecurityOriginData, HashMap<ServiceWorkerIdentifier, Vector<RunServiceWorkerCallback>>> m_serviceWorkerRunRequests;
+    HashMap<RegistrableDomain, Vector<ServiceWorkerContextData>> m_pendingContextDatas;
+    HashMap<RegistrableDomain, HashMap<ServiceWorkerIdentifier, Vector<RunServiceWorkerCallback>>> m_serviceWorkerRunRequests;
     PAL::SessionID m_sessionID;
     bool m_importCompleted { false };
     bool m_shouldDisableServiceWorkerProcessTerminationDelay { false };

@@ -31,6 +31,7 @@
 #include "CodeBlockWithJITType.h"
 #include "DFGClobberize.h"
 #include "DFGClobbersExitState.h"
+#include "DFGDominators.h"
 #include "DFGMayExit.h"
 #include "JSCInlines.h"
 #include <wtf/Assertions.h>
@@ -257,6 +258,8 @@ public:
                 case ValueSub:
                 case ValueMul:
                 case ValueDiv:
+                case ValueMod:
+                case ValuePow:
                 case ArithAdd:
                 case ArithSub:
                 case ArithMul:
@@ -493,8 +496,8 @@ private:
                     VALIDATE(
                         (node, edge),
                         edge->op() == SetLocal
-                        || edge->op() == SetArgument
-                        || edge->op() == Flush
+                        || edge->op() == SetArgumentDefinitely
+                        || edge->op() == SetArgumentMaybe
                         || edge->op() == Phi);
 
                     if (phisInThisBlock.contains(edge.node()))
@@ -504,8 +507,8 @@ private:
                         VALIDATE(
                             (node, edge),
                             edge->op() == SetLocal
-                            || edge->op() == SetArgument
-                            || edge->op() == Flush);
+                            || edge->op() == SetArgumentDefinitely
+                            || edge->op() == SetArgumentMaybe);
 
                         continue;
                     }
@@ -536,7 +539,8 @@ private:
                         VALIDATE(
                             (local, block->predecessors[k], prevNode),
                             prevNode->op() == SetLocal
-                            || prevNode->op() == SetArgument
+                            || prevNode->op() == SetArgumentDefinitely
+                            || prevNode->op() == SetArgumentMaybe
                             || prevNode->op() == Phi);
                         if (prevNode == edge.node()) {
                             found = true;
@@ -666,6 +670,7 @@ private:
                     if (m_graph.m_form == ThreadedCPS) {
                         VALIDATE((node, block), getLocalPositions.operand(node->local()) == notSet);
                         VALIDATE((node, block), !!node->child1());
+                        VALIDATE((node, block), node->child1()->op() == SetArgumentDefinitely || node->child1()->op() == Phi);
                     }
                     getLocalPositions.operand(node->local()) = i;
                     break;
@@ -676,11 +681,25 @@ private:
                         break;
                     setLocalPositions.operand(node->local()) = i;
                     break;
-                case SetArgument:
+                case SetArgumentDefinitely:
                     // This acts like a reset. It's ok to have a second GetLocal for a local in the same
-                    // block if we had a SetArgument for that local.
+                    // block if we had a SetArgumentDefinitely for that local.
                     getLocalPositions.operand(node->local()) = notSet;
                     setLocalPositions.operand(node->local()) = notSet;
+                    break;
+                case SetArgumentMaybe:
+                    break;
+                case Flush:
+                case PhantomLocal:
+                    if (m_graph.m_form == ThreadedCPS) {
+                        VALIDATE((node, block),
+                            node->child1()->op() == Phi
+                            || node->child1()->op() == SetLocal
+                            || node->child1()->op() == SetArgumentDefinitely
+                            || node->child1()->op() == SetArgumentMaybe);
+                        if (node->op() == PhantomLocal)
+                            VALIDATE((node, block), node->child1()->op() != SetArgumentMaybe);
+                    }
                     break;
                 default:
                     break;
@@ -699,6 +718,52 @@ private:
                     block, getLocalPositions, setLocalPositions, virtualRegisterForLocal(i));
             }
         }
+
+        if (m_graph.m_form == ThreadedCPS) {
+            Vector<Node*> worklist;
+            HashSet<Node*> seen;
+            for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+                for (Node* node : *block) {
+                    if (node->op() == GetLocal || node->op() == PhantomLocal) {
+                        worklist.append(node);
+                        auto addResult = seen.add(node);
+                        VALIDATE((node, block), addResult.isNewEntry);
+                    }
+                }
+            }
+
+            while (worklist.size()) {
+                Node* node = worklist.takeLast();
+                switch (node->op()) {
+                case PhantomLocal:
+                case GetLocal: {
+                    Node* child = node->child1().node();
+                    if (seen.add(child).isNewEntry)
+                        worklist.append(child);
+                    break;
+                }
+                case Phi: {
+                    for (unsigned i = 0; i < m_graph.numChildren(node); ++i) {
+                        Edge edge = m_graph.child(node, i);
+                        if (!edge)
+                            continue;
+                        if (seen.add(edge.node()).isNewEntry)
+                            worklist.append(edge.node());
+                    }
+                    break;
+                }
+                case SetLocal:
+                case SetArgumentDefinitely:
+                    break;
+                case SetArgumentMaybe:
+                    VALIDATE((node), !"Should not reach SetArgumentMaybe. GetLocal that has data flow that reaches a SetArgumentMaybe is invalid IR.");
+                    break;
+                default:
+                    VALIDATE((node), !"Unexecpted node type.");
+                    break;
+                }
+            }
+        }
     }
 
     void validateSSA()
@@ -710,6 +775,10 @@ private:
         VALIDATE((), m_graph.m_roots[0] == m_graph.block(0));
         VALIDATE((), !m_graph.m_argumentFormats.isEmpty()); // We always have at least one entrypoint.
         VALIDATE((), m_graph.m_rootToArguments.isEmpty()); // This is only used in CPS.
+
+        m_graph.initializeNodeOwners();
+
+        auto& dominators = m_graph.ensureSSADominators();
 
         for (unsigned entrypointIndex : m_graph.m_entrypointIndexToCatchBytecodeOffset.keys())
             VALIDATE((), entrypointIndex > 0); // By convention, 0 is the entrypoint index for the op_enter entrypoint, which can not be in a catch.
@@ -723,6 +792,8 @@ private:
 
             bool didSeeExitOK = false;
             bool isOSRExited = false;
+
+            HashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
                 didSeeExitOK |= node->origin.exitOK;
@@ -739,7 +810,8 @@ private:
 
                 case GetLocal:
                 case SetLocal:
-                case SetArgument:
+                case SetArgumentDefinitely:
+                case SetArgumentMaybe:
                 case Phantom:
                     VALIDATE((node), !"bad node type for SSA");
                     break;
@@ -841,7 +913,13 @@ private:
                         });
                     break;
                 }
+
                 isOSRExited |= node->isPseudoTerminal();
+
+                m_graph.doToChildren(node, [&] (Edge child) {
+                    VALIDATE((node), dominators.strictlyDominates(child->owner, block) || nodesInThisBlock.contains(child.node()));
+                });
+                nodesInThisBlock.add(node);
             }
         }
     }

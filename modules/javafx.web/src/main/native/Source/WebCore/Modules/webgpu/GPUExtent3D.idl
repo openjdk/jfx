@@ -22,7 +22,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
 typedef unsigned long u32;
 
@@ -30,7 +30,7 @@ typedef unsigned long u32;
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU
 ] dictionary GPUExtent3D {
-    u32 width;
-    u32 height;
-    u32 depth;
+    required u32 width;
+    required u32 height;
+    required u32 depth;
 };

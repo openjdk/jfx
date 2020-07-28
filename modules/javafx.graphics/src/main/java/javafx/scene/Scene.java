@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1285,27 +1285,71 @@ public class Scene implements EventTarget {
             Node root, BaseTransform transform, boolean depthBuffer,
             Paint fill, Camera camera, WritableImage wimg) {
 
-        Toolkit tk = Toolkit.getToolkit();
-        Toolkit.ImageRenderingContext context = new Toolkit.ImageRenderingContext();
-
         int xMin = (int)Math.floor(x);
         int yMin = (int)Math.floor(y);
-        int xMax = (int)Math.ceil(x + w);
-        int yMax = (int)Math.ceil(y + h);
-        int width = Math.max(xMax - xMin, 1);
-        int height = Math.max(yMax - yMin, 1);
+        int width;
+        int height;
         if (wimg == null) {
+            int xMax = (int)Math.ceil(x + w);
+            int yMax = (int)Math.ceil(y + h);
+            width = Math.max(xMax - xMin, 1);
+            height = Math.max(yMax - yMin, 1);
             wimg = new WritableImage(width, height);
         } else {
             width = (int)wimg.getWidth();
             height = (int)wimg.getHeight();
         }
 
+        // Attempt to capture snapshot
+        try {
+            wimg = doSnapshotTile(scene, xMin, yMin, width, height, root, transform, depthBuffer, fill, camera, wimg);
+        } catch (Exception e) {
+            // A first attempt to capture a snapshot failed, most likely because it is larger than
+            // maxTextureSize: retry by taking several snapshot tiles and merge them into single image
+            // (Addresses JDK-8088198)
+            int maxTextureSize = PrismSettings.maxTextureSize;
+            int numVerticalTiles = (int) Math.ceil(height / (double) maxTextureSize);
+            int numHorizontalTiles = (int) Math.ceil(width / (double) maxTextureSize);
+            for (int i = 0; i < numHorizontalTiles; i++) {
+                int xOffset = i * maxTextureSize;
+                int tileWidth = Math.min(maxTextureSize, width - xOffset);
+                for (int j = 0; j < numVerticalTiles; j++) {
+                    int yOffset = j * maxTextureSize;
+                    int tileHeight = Math.min(maxTextureSize, height - yOffset);
+                    WritableImage tile = doSnapshotTile(scene, xMin + xOffset, yMin + yOffset, tileWidth,
+                            tileHeight, root, transform, depthBuffer, fill, camera, null);
+                    wimg.getPixelWriter().setPixels(xOffset, yOffset, tileWidth, tileHeight, tile.getPixelReader(), 0, 0);
+                }
+            }
+        }
+
+        // if this scene belongs to some stage
+        // we need to mark the entire scene as dirty
+        // because dirty logic is buggy
+        if (scene != null && scene.peer != null) {
+            scene.setNeedsRepaint();
+        }
+
+        return wimg;
+    }
+
+    /**
+     * Capture a single snapshot tile
+     */
+    private static WritableImage doSnapshotTile(Scene scene,
+                    int x, int y, int w, int h,
+                    Node root, BaseTransform transform, boolean depthBuffer,
+                    Paint fill, Camera camera, WritableImage tileImg) {
+        Toolkit tk = Toolkit.getToolkit();
+        Toolkit.ImageRenderingContext context = new Toolkit.ImageRenderingContext();
+        if (tileImg == null) {
+            tileImg = new WritableImage(w, h);
+        }
         setAllowPGAccess(true);
-        context.x = xMin;
-        context.y = yMin;
-        context.width = width;
-        context.height = height;
+        context.x = x;
+        context.y = y;
+        context.width = w;
+        context.height = h;
         context.transform = transform;
         context.depthBuffer = depthBuffer;
         context.root = root.getPeer();
@@ -1316,8 +1360,8 @@ public class Scene implements EventTarget {
             // temporarily adjust camera viewport to the snapshot size
             cameraViewWidth = camera.getViewWidth();
             cameraViewHeight = camera.getViewHeight();
-            camera.setViewWidth(width);
-            camera.setViewHeight(height);
+            camera.setViewWidth(w);
+            camera.setViewHeight(h);
             NodeHelper.updatePeer(camera);
             context.camera = camera.getPeer();
         } else {
@@ -1334,10 +1378,10 @@ public class Scene implements EventTarget {
         }
 
         Toolkit.WritableImageAccessor accessor = Toolkit.getWritableImageAccessor();
-        context.platformImage = accessor.getTkImageLoader(wimg);
+        context.platformImage = accessor.getTkImageLoader(tileImg);
         setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
-        accessor.loadTkImage(wimg, tkImage);
+        accessor.loadTkImage(tileImg, tkImage);
 
         if (camera != null) {
             setAllowPGAccess(true);
@@ -1346,15 +1390,7 @@ public class Scene implements EventTarget {
             NodeHelper.updatePeer(camera);
             setAllowPGAccess(false);
         }
-
-        // if this scene belongs to some stage
-        // we need to mark the entire scene as dirty
-        // because dirty logic is buggy
-        if (scene != null && scene.peer != null) {
-            scene.setNeedsRepaint();
-        }
-
-        return wimg;
+        return tileImg;
     }
 
     /**

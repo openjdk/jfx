@@ -96,6 +96,31 @@ RenderTable::RenderTable(Document& document, RenderStyle&& style)
 
 RenderTable::~RenderTable() = default;
 
+RenderTableSection* RenderTable::header() const
+{
+    return m_head.get();
+}
+
+RenderTableSection* RenderTable::footer() const
+{
+    return m_foot.get();
+}
+
+RenderTableSection* RenderTable::firstBody() const
+{
+    return m_firstBody.get();
+}
+
+RenderTableSection* RenderTable::topSection() const
+{
+    ASSERT(!needsSectionRecalc());
+    if (m_head)
+        return m_head.get();
+    if (m_firstBody)
+        return m_firstBody.get();
+    return m_foot.get();
+}
+
 void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
@@ -112,9 +137,9 @@ void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         // According to the CSS2 spec, you only use fixed table layout if an
         // explicit width is specified on the table.  Auto width implies auto table layout.
         if (style().tableLayout() == TableLayoutType::Fixed && !style().logicalWidth().isAuto())
-            m_tableLayout = std::make_unique<FixedTableLayout>(this);
+            m_tableLayout = makeUnique<FixedTableLayout>(this);
         else
-            m_tableLayout = std::make_unique<AutoTableLayout>(this);
+            m_tableLayout = makeUnique<AutoTableLayout>(this);
     }
 
     // If border was changed, invalidate collapsed borders cache.
@@ -320,7 +345,7 @@ LayoutUnit RenderTable::convertStyleLogicalHeightToComputedHeight(const Length& 
         if (is<HTMLTableElement>(element()) || style().boxSizing() == BoxSizing::BorderBox) {
             borders = borderAndPadding;
         }
-        return styleLogicalHeight.value() - borders;
+        return LayoutUnit(styleLogicalHeight.value() - borders);
     } else if (styleLogicalHeight.isPercentOrCalculated())
         return computePercentageLogicalHeight(styleLogicalHeight).valueOr(0);
     else if (styleLogicalHeight.isIntrinsic())
@@ -1218,7 +1243,7 @@ LayoutUnit RenderTable::outerBorderBefore() const
     if (tb.style() == BorderStyle::Hidden)
         return 0;
     if (tb.style() > BorderStyle::Hidden) {
-        LayoutUnit collapsedBorderWidth = std::max<LayoutUnit>(borderWidth, tb.width() / 2);
+        LayoutUnit collapsedBorderWidth = std::max(borderWidth, LayoutUnit(tb.width() / 2));
         borderWidth = floorToDevicePixel(collapsedBorderWidth, document().deviceScaleFactor());
     }
     return borderWidth;
@@ -1240,7 +1265,7 @@ LayoutUnit RenderTable::outerBorderAfter() const
         return 0;
     if (tb.style() > BorderStyle::Hidden) {
         float deviceScaleFactor = document().deviceScaleFactor();
-        LayoutUnit collapsedBorderWidth = std::max<LayoutUnit>(borderWidth, (tb.width() + (1 / deviceScaleFactor)) / 2);
+        LayoutUnit collapsedBorderWidth = std::max(borderWidth, LayoutUnit((tb.width() + (1 / deviceScaleFactor)) / 2));
         borderWidth = floorToDevicePixel(collapsedBorderWidth, deviceScaleFactor);
     }
     return borderWidth;

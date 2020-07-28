@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,7 +196,6 @@ public final class DumpRenderTree {
     private void resetToConsistentStateBeforeTesting(final TestOptions options) {
         // Assign default values for all supported TestOptions
         webPage.overridePreference("experimental:CSSCustomPropertiesAndValuesEnabled", "false");
-        webPage.overridePreference("experimental:WebAnimationsCSSIntegrationEnabled", "true");
         webPage.overridePreference("enableColorFilter", "false");
         webPage.overridePreference("enableIntersectionObserver", "false");
         // Enable features based on TestOption

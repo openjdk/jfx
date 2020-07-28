@@ -46,8 +46,8 @@ public:
     FloatAvoider(const Box&, const FloatingState&, const LayoutState&);
     virtual ~FloatAvoider() = default;
 
-    virtual Display::Box::Rect rect() const { return m_absoluteDisplayBox.rect(); }
-    Display::Box::Rect rectInContainingBlock() const;
+    virtual Display::Rect rect() const { return m_absoluteDisplayBox.rect(); }
+    Display::Rect rectInContainingBlock() const;
 
     struct HorizontalConstraints {
         Optional<PositionInContextRoot> left;
@@ -58,12 +58,9 @@ public:
 
     bool overflowsContainingBlock() const;
 
-    void resetPosition();
-
 protected:
     virtual bool isLeftAligned() const { return layoutBox().style().isLeftToRightDirection(); }
-    virtual PositionInContextRoot initialHorizontalPosition() const;
-    virtual PositionInContextRoot initialVerticalPosition() const { return m_initialVerticalPosition; }
+    PositionInContextRoot initialHorizontalPosition() const;
 
     void resetHorizontalConstraints();
 
@@ -81,13 +78,13 @@ protected:
     const FloatingState& floatingState() const { return m_floatingState; }
     const Box& layoutBox() const { return *m_layoutBox; }
     const Display::Box& displayBox() const { return m_absoluteDisplayBox; }
+    Display::Box& displayBox() { return m_absoluteDisplayBox; }
 
 private:
     WeakPtr<const Box> m_layoutBox;
     const FloatingState& m_floatingState;
     Display::Box m_absoluteDisplayBox;
     Display::Box m_containingBlockAbsoluteDisplayBox;
-    PositionInContextRoot m_initialVerticalPosition;
 };
 
 }

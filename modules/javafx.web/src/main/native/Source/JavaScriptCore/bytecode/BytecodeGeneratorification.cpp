@@ -55,12 +55,20 @@ class BytecodeGeneratorification {
 public:
     typedef Vector<YieldData> Yields;
 
+    struct GeneratorFrameData {
+        InstructionStream::Offset m_point;
+        VirtualRegister m_dst;
+        VirtualRegister m_scope;
+        VirtualRegister m_symbolTable;
+        VirtualRegister m_initialValue;
+    };
+
     BytecodeGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCodeBlock* codeBlock, InstructionStreamWriter& instructions, SymbolTable* generatorFrameSymbolTable, int generatorFrameSymbolTableIndex)
         : m_bytecodeGenerator(bytecodeGenerator)
         , m_codeBlock(codeBlock)
         , m_instructions(instructions)
         , m_graph(m_codeBlock, m_instructions)
-        , m_generatorFrameSymbolTable(*codeBlock->vm(), generatorFrameSymbolTable)
+        , m_generatorFrameSymbolTable(codeBlock->vm(), generatorFrameSymbolTable)
         , m_generatorFrameSymbolTableIndex(generatorFrameSymbolTableIndex)
     {
         for (BytecodeBasicBlock* block : m_graph) {
@@ -80,6 +88,18 @@ public:
                     YieldData& data = m_yields[liveCalleeLocalsIndex];
                     data.point = instruction.offset();
                     data.argument = bytecode.m_argument;
+                    break;
+                }
+
+                case op_create_generator_frame_environment: {
+                    auto bytecode = instruction->as<OpCreateGeneratorFrameEnvironment>();
+                    GeneratorFrameData data;
+                    data.m_point = instruction.offset();
+                    data.m_dst = bytecode.m_dst;
+                    data.m_scope = bytecode.m_scope;
+                    data.m_symbolTable = bytecode.m_symbolTable;
+                    data.m_initialValue = bytecode.m_initialValue;
+                    m_generatorFrameData = WTFMove(data);
                     break;
                 }
 
@@ -115,13 +135,18 @@ public:
         return m_instructions.at(m_enterPoint);
     }
 
+    Optional<GeneratorFrameData> generatorFrameData() const
+    {
+        return m_generatorFrameData;
+    }
+
     const InstructionStream& instructions() const
     {
         return m_instructions;
     }
 
 private:
-    Storage storageForGeneratorLocal(unsigned index)
+    Storage storageForGeneratorLocal(VM& vm, unsigned index)
     {
         // We assign a symbol to a register. There is one-on-one corresponding between a register and a symbol.
         // By doing so, we allocate the specific storage to save the given register.
@@ -133,7 +158,7 @@ private:
         if (Optional<Storage> storage = m_storages[index])
             return *storage;
 
-        Identifier identifier = Identifier::fromUid(PrivateName());
+        Identifier identifier = Identifier::from(vm, index);
         unsigned identifierIndex = m_codeBlock->numberOfIdentifiers();
         m_codeBlock->addIdentifier(identifier);
         ScopeOffset scopeOffset = m_generatorFrameSymbolTable->takeNextScopeOffset(NoLockingNecessary);
@@ -150,6 +175,7 @@ private:
 
     BytecodeGenerator& m_bytecodeGenerator;
     InstructionStream::Offset m_enterPoint;
+    Optional<GeneratorFrameData> m_generatorFrameData;
     UnlinkedCodeBlock* m_codeBlock;
     InstructionStreamWriter& m_instructions;
     BytecodeGraph m_graph;
@@ -185,6 +211,7 @@ void BytecodeGeneratorification::run()
 {
     // We calculate the liveness at each merge point. This gives us the information which registers should be saved and resumed conservatively.
 
+    VM& vm = m_bytecodeGenerator.vm();
     {
         GeneratorLivenessAnalysis pass(*this);
         pass.run(m_codeBlock, m_instructions);
@@ -205,7 +232,7 @@ void BytecodeGeneratorification::run()
         for (unsigned i = 0; i < m_yields.size(); ++i)
             jumpTable.add(i + 1, m_yields[i].point);
 
-        rewriter.insertFragmentBefore(nextToEnterPoint, [&](BytecodeRewriter::Fragment& fragment) {
+        rewriter.insertFragmentBefore(nextToEnterPoint, [&] (BytecodeRewriter::Fragment& fragment) {
             fragment.appendInstruction<OpSwitchImm>(switchTableIndex, BoundLabel(nextToEnterPoint.offset()), state);
         });
     }
@@ -215,17 +242,17 @@ void BytecodeGeneratorification::run()
 
         auto instruction = m_instructions.at(data.point);
         // Emit save sequence.
-        rewriter.insertFragmentBefore(instruction, [&](BytecodeRewriter::Fragment& fragment) {
+        rewriter.insertFragmentBefore(instruction, [&] (BytecodeRewriter::Fragment& fragment) {
             data.liveness.forEachSetBit([&](size_t index) {
                 VirtualRegister operand = virtualRegisterForLocal(index);
-                Storage storage = storageForGeneratorLocal(index);
+                Storage storage = storageForGeneratorLocal(vm, index);
 
                 fragment.appendInstruction<OpPutToScope>(
                     scope, // scope
                     storage.identifierIndex, // identifier
                     operand, // value
                     GetPutInfo(DoNotThrowIfNotFound, LocalClosureVar, InitializationMode::NotInitialization), // info
-                    m_generatorFrameSymbolTableIndex, // symbol table constant index
+                    SymbolTableOrScopeDepth::symbolTable(VirtualRegister { m_generatorFrameSymbolTableIndex }), // symbol table constant index
                     storage.scopeOffset.offset() // scope offset
                 );
             });
@@ -235,10 +262,10 @@ void BytecodeGeneratorification::run()
         });
 
         // Emit resume sequence.
-        rewriter.insertFragmentAfter(instruction, [&](BytecodeRewriter::Fragment& fragment) {
+        rewriter.insertFragmentAfter(instruction, [&] (BytecodeRewriter::Fragment& fragment) {
             data.liveness.forEachSetBit([&](size_t index) {
                 VirtualRegister operand = virtualRegisterForLocal(index);
-                Storage storage = storageForGeneratorLocal(index);
+                Storage storage = storageForGeneratorLocal(vm, index);
 
                 fragment.appendInstruction<OpGetFromScope>(
                     operand, // dst
@@ -252,6 +279,18 @@ void BytecodeGeneratorification::run()
         });
 
         // Clip the unnecessary bytecodes.
+        rewriter.removeBytecode(instruction);
+    }
+
+    if (m_generatorFrameData) {
+        auto instruction = m_instructions.at(m_generatorFrameData->m_point);
+        rewriter.insertFragmentAfter(instruction, [&] (BytecodeRewriter::Fragment& fragment) {
+            if (!m_generatorFrameSymbolTable->scopeSize()) {
+                // This will cause us to put jsUndefined() into the generator frame's scope value.
+                fragment.appendInstruction<OpMov>(m_generatorFrameData->m_dst, m_generatorFrameData->m_initialValue);
+            } else
+                fragment.appendInstruction<OpCreateLexicalEnvironment>(m_generatorFrameData->m_dst, m_generatorFrameData->m_scope, m_generatorFrameData->m_symbolTable, m_generatorFrameData->m_initialValue);
+        });
         rewriter.removeBytecode(instruction);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,9 @@
 
 #if ENABLE(DFG_JIT)
 
-#include "ArrayBufferNeuteringWatchpoint.h"
+#include "ArrayBufferNeuteringWatchpointSet.h"
 #include "CodeBlock.h"
+#include "DFGGraph.h"
 #include "JSCInlines.h"
 
 namespace JSC { namespace DFG {
@@ -37,10 +38,10 @@ namespace JSC { namespace DFG {
 void ArrayBufferViewWatchpointAdaptor::add(
     CodeBlock* codeBlock, JSArrayBufferView* view, CommonData& common)
 {
-    VM& vm = *codeBlock->vm();
+    VM& vm = codeBlock->vm();
     Watchpoint* watchpoint = common.watchpoints.add(codeBlock);
-    ArrayBufferNeuteringWatchpoint* neuteringWatchpoint =
-        ArrayBufferNeuteringWatchpoint::create(vm);
+    ArrayBufferNeuteringWatchpointSet* neuteringWatchpoint =
+        ArrayBufferNeuteringWatchpointSet::create(vm);
     neuteringWatchpoint->set().add(watchpoint);
     codeBlock->addConstant(neuteringWatchpoint);
     // FIXME: We don't need to set this watchpoint at all for shared buffers.
@@ -48,17 +49,24 @@ void ArrayBufferViewWatchpointAdaptor::add(
     vm.heap.addReference(neuteringWatchpoint, view->possiblySharedBuffer());
 }
 
-void InferredValueAdaptor::add(
-    CodeBlock* codeBlock, InferredValue* inferredValue, CommonData& common)
+void SymbolTableAdaptor::add(
+    CodeBlock* codeBlock, SymbolTable* symbolTable, CommonData& common)
 {
-    codeBlock->addConstant(inferredValue); // For common users, it doesn't really matter if it's weak or not. If references to it go away, we go away, too.
-    inferredValue->add(common.watchpoints.add(codeBlock));
+    codeBlock->addConstant(symbolTable); // For common users, it doesn't really matter if it's weak or not. If references to it go away, we go away, too.
+    symbolTable->singleton().add(common.watchpoints.add(codeBlock));
+}
+
+void FunctionExecutableAdaptor::add(
+    CodeBlock* codeBlock, FunctionExecutable* executable, CommonData& common)
+{
+    codeBlock->addConstant(executable); // For common users, it doesn't really matter if it's weak or not. If references to it go away, we go away, too.
+    executable->singleton().add(common.watchpoints.add(codeBlock));
 }
 
 void AdaptiveStructureWatchpointAdaptor::add(
     CodeBlock* codeBlock, const ObjectPropertyCondition& key, CommonData& common)
 {
-    VM& vm = *codeBlock->vm();
+    VM& vm = codeBlock->vm();
     switch (key.kind()) {
     case PropertyCondition::Equivalence:
         common.adaptiveInferredPropertyValueWatchpoints.add(key, codeBlock)->install(vm);
@@ -82,9 +90,14 @@ void DesiredWatchpoints::addLazily(InlineWatchpointSet& set)
     m_inlineSets.addLazily(&set);
 }
 
-void DesiredWatchpoints::addLazily(InferredValue* inferredValue)
+void DesiredWatchpoints::addLazily(SymbolTable* symbolTable)
 {
-    m_inferredValues.addLazily(inferredValue);
+    m_symbolTables.addLazily(symbolTable);
+}
+
+void DesiredWatchpoints::addLazily(FunctionExecutable* executable)
+{
+    m_functionExecutables.addLazily(executable);
 }
 
 void DesiredWatchpoints::addLazily(JSArrayBufferView* view)
@@ -109,7 +122,8 @@ void DesiredWatchpoints::reallyAdd(CodeBlock* codeBlock, CommonData& commonData)
 {
     m_sets.reallyAdd(codeBlock, commonData);
     m_inlineSets.reallyAdd(codeBlock, commonData);
-    m_inferredValues.reallyAdd(codeBlock, commonData);
+    m_symbolTables.reallyAdd(codeBlock, commonData);
+    m_functionExecutables.reallyAdd(codeBlock, commonData);
     m_bufferViews.reallyAdd(codeBlock, commonData);
     m_adaptiveStructureSets.reallyAdd(codeBlock, commonData);
 }
@@ -118,19 +132,23 @@ bool DesiredWatchpoints::areStillValid() const
 {
     return m_sets.areStillValid()
         && m_inlineSets.areStillValid()
-        && m_inferredValues.areStillValid()
+        && m_symbolTables.areStillValid()
+        && m_functionExecutables.areStillValid()
         && m_bufferViews.areStillValid()
         && m_adaptiveStructureSets.areStillValid();
 }
 
 void DesiredWatchpoints::dumpInContext(PrintStream& out, DumpContext* context) const
 {
-    out.print("Desired watchpoints:\n");
-    out.print("    Watchpoint sets: ", inContext(m_sets, context), "\n");
-    out.print("    Inline watchpoint sets: ", inContext(m_inlineSets, context), "\n");
-    out.print("    Inferred values: ", inContext(m_inferredValues, context), "\n");
-    out.print("    Buffer views: ", inContext(m_bufferViews, context), "\n");
-    out.print("    Object property conditions: ", inContext(m_adaptiveStructureSets, context), "\n");
+    Prefix noPrefix(Prefix::NoHeader);
+    Prefix& prefix = context && context->graph ? context->graph->prefix() : noPrefix;
+    out.print(prefix, "Desired watchpoints:\n");
+    out.print(prefix, "    Watchpoint sets: ", inContext(m_sets, context), "\n");
+    out.print(prefix, "    Inline watchpoint sets: ", inContext(m_inlineSets, context), "\n");
+    out.print(prefix, "    SymbolTables: ", inContext(m_symbolTables, context), "\n");
+    out.print(prefix, "    FunctionExecutables: ", inContext(m_functionExecutables, context), "\n");
+    out.print(prefix, "    Buffer views: ", inContext(m_bufferViews, context), "\n");
+    out.print(prefix, "    Object property conditions: ", inContext(m_adaptiveStructureSets, context), "\n");
 }
 
 } } // namespace JSC::DFG

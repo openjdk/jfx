@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,9 +42,9 @@ inline String propertyNameToString(JSC::PropertyName propertyName)
     return propertyName.uid() ? propertyName.uid() : propertyName.publicName();
 }
 
-inline AtomicString propertyNameToAtomicString(JSC::PropertyName propertyName)
+inline AtomString propertyNameToAtomString(JSC::PropertyName propertyName)
 {
-    return AtomicString(propertyName.uid() ? propertyName.uid() : propertyName.publicName());
+    return AtomString(propertyName.uid() ? propertyName.uid() : propertyName.publicName());
 }
 
 // MARK: -
@@ -68,12 +68,12 @@ template<> struct JSConverter<IDLDOMString> {
 
     static JSC::JSValue convert(JSC::ExecState& state, const UncachedString& value)
     {
-        return JSC::jsString(&state, value.string);
+        return JSC::jsString(state.vm(), value.string);
     }
 
     static JSC::JSValue convert(JSC::ExecState& state, const OwnedString& value)
     {
-        return JSC::jsOwnedString(&state, value.string);
+        return JSC::jsOwnedString(state.vm(), value.string);
     }
 };
 
@@ -95,12 +95,12 @@ template<> struct JSConverter<IDLByteString> {
 
     static JSC::JSValue convert(JSC::ExecState& state, const UncachedString& value)
     {
-        return JSC::jsString(&state, value.string);
+        return JSC::jsString(state.vm(), value.string);
     }
 
     static JSC::JSValue convert(JSC::ExecState& state, const OwnedString& value)
     {
-        return JSC::jsOwnedString(&state, value.string);
+        return JSC::jsOwnedString(state.vm(), value.string);
     }
 };
 
@@ -122,12 +122,12 @@ template<> struct JSConverter<IDLUSVString> {
 
     static JSC::JSValue convert(JSC::ExecState& state, const UncachedString& value)
     {
-        return JSC::jsString(&state, value.string);
+        return JSC::jsString(state.vm(), value.string);
     }
 
     static JSC::JSValue convert(JSC::ExecState& state, const OwnedString& value)
     {
-        return JSC::jsOwnedString(&state, value.string);
+        return JSC::jsOwnedString(state.vm(), value.string);
     }
 };
 
@@ -153,20 +153,20 @@ template<typename T>  struct JSConverter<IDLTreatNullAsEmptyAdaptor<T>> {
     }
 };
 
-template<typename T> struct Converter<IDLAtomicStringAdaptor<T>> : DefaultConverter<IDLAtomicStringAdaptor<T>> {
-    static AtomicString convert(JSC::ExecState& state, JSC::JSValue value)
+template<typename T> struct Converter<IDLAtomStringAdaptor<T>> : DefaultConverter<IDLAtomStringAdaptor<T>> {
+    static AtomString convert(JSC::ExecState& state, JSC::JSValue value)
     {
         static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
-        return value.toString(&state)->toAtomicString(&state);
+        return value.toString(&state)->toAtomString(&state);
     }
 };
 
-template<typename T>  struct JSConverter<IDLAtomicStringAdaptor<T>> {
+template<typename T>  struct JSConverter<IDLAtomStringAdaptor<T>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
-    static JSC::JSValue convert(JSC::ExecState& state, const AtomicString& value)
+    static JSC::JSValue convert(JSC::ExecState& state, const AtomString& value)
     {
         static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
@@ -174,20 +174,20 @@ template<typename T>  struct JSConverter<IDLAtomicStringAdaptor<T>> {
     }
 };
 
-template<typename T> struct Converter<IDLRequiresExistingAtomicStringAdaptor<T>> : DefaultConverter<IDLRequiresExistingAtomicStringAdaptor<T>> {
-    static AtomicString convert(JSC::ExecState& state, JSC::JSValue value)
+template<typename T> struct Converter<IDLRequiresExistingAtomStringAdaptor<T>> : DefaultConverter<IDLRequiresExistingAtomStringAdaptor<T>> {
+    static AtomString convert(JSC::ExecState& state, JSC::JSValue value)
     {
         static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 
-        return AtomicString(value.toString(&state)->toExistingAtomicString(&state));
+        return AtomString(value.toString(&state)->toExistingAtomString(&state));
     }
 };
 
-template<typename T>  struct JSConverter<IDLRequiresExistingAtomicStringAdaptor<T>> {
+template<typename T>  struct JSConverter<IDLRequiresExistingAtomStringAdaptor<T>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
-    static JSC::JSValue convert(JSC::ExecState& state, const AtomicString& value)
+    static JSC::JSValue convert(JSC::ExecState& state, const AtomString& value)
     {
         static_assert(std::is_same<T, IDLDOMString>::value, "This adaptor is only supported for IDLDOMString at the moment.");
 

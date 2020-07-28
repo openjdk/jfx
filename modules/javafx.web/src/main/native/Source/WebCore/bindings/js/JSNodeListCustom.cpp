@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,7 @@
 #include "LiveNodeList.h"
 #include "Node.h"
 #include "NodeList.h"
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 
 namespace WebCore {
@@ -40,7 +40,7 @@ using namespace JSC;
 bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor, const char** reason)
 {
     JSNodeList* jsNodeList = jsCast<JSNodeList*>(handle.slot()->asCell());
-    if (!jsNodeList->hasCustomProperties(*jsNodeList->vm()))
+    if (!jsNodeList->hasCustomProperties(jsNodeList->vm()))
         return false;
 
     if (jsNodeList->wrapped().isLiveNodeList()) {

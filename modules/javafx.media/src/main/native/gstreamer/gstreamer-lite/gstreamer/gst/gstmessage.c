@@ -107,6 +107,7 @@ static GstMessageQuarks message_quarks[] = {
   {GST_MESSAGE_HAVE_CONTEXT, "have-context", 0},
   {GST_MESSAGE_DEVICE_ADDED, "device-added", 0},
   {GST_MESSAGE_DEVICE_REMOVED, "device-removed", 0},
+  {GST_MESSAGE_DEVICE_CHANGED, "device-changed", 0},
   {GST_MESSAGE_PROPERTY_NOTIFY, "property-notify", 0},
   {GST_MESSAGE_STREAM_COLLECTION, "stream-collection", 0},
   {GST_MESSAGE_STREAMS_SELECTED, "streams-selected", 0},
@@ -217,6 +218,9 @@ _gst_message_free (GstMessage * message)
     gst_structure_set_parent_refcount (structure, NULL);
     gst_structure_free (structure);
   }
+#ifdef USE_POISONING
+  memset (message, 0xff, sizeof (GstMessageImpl));
+#endif
 
   g_slice_free1 (sizeof (GstMessageImpl), message);
 }
@@ -367,6 +371,7 @@ void
 gst_message_set_seqnum (GstMessage * message, guint32 seqnum)
 {
   g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (seqnum != GST_SEQNUM_INVALID);
 
   GST_MESSAGE_SEQNUM (message) = seqnum;
 }
@@ -398,7 +403,7 @@ gst_message_new_eos (GstObject * src)
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new error message. The message will copy @error and
  * @debug. This message is posted by element when a fatal event
@@ -492,7 +497,7 @@ gst_message_parse_error_details (GstMessage * message,
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new warning message. The message will make copies of @error and
  * @debug.
@@ -582,7 +587,7 @@ gst_message_parse_warning_details (GstMessage * message,
  * @src: (transfer none) (allow-none): The object originating the message.
  * @error: (transfer none): The GError for this message.
  * @debug: A debugging string.
- * @details: (transfer full): (allow-none): A GstStructure with details
+ * @details: (transfer full) (allow-none): A GstStructure with details
  *
  * Create a new info message. The message will make copies of @error and
  * @debug.
@@ -2685,6 +2690,69 @@ gst_message_parse_device_removed (GstMessage * message, GstDevice ** device)
   if (device)
     gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
         GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+}
+
+/**
+ * gst_message_new_device_changed:
+ * @src: The #GstObject that created the message
+ * @device: (transfer none): The newly created device representing @replaced_device
+ *         with its new configuration.
+ *
+ * Creates a new device-changed message. The device-changed message is produced
+ * by #GstDeviceProvider or a #GstDeviceMonitor. They announce that a device
+ * properties has changed and @device represent the new modified version of @changed_device.
+ *
+ * Returns: a newly allocated #GstMessage
+ *
+ * Since: 1.16
+ */
+GstMessage *
+gst_message_new_device_changed (GstObject * src, GstDevice * device,
+    GstDevice * changed_device)
+{
+  GstMessage *message;
+  GstStructure *structure;
+
+  g_return_val_if_fail (device != NULL, NULL);
+  g_return_val_if_fail (GST_IS_DEVICE (device), NULL);
+
+  structure = gst_structure_new_id (GST_QUARK (MESSAGE_DEVICE_CHANGED),
+      GST_QUARK (DEVICE), GST_TYPE_DEVICE, device,
+      GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
+  message = gst_message_new_custom (GST_MESSAGE_DEVICE_CHANGED, src, structure);
+
+  return message;
+}
+
+/**
+ * gst_message_parse_device_changed:
+ * @message: a #GstMessage of type %GST_MESSAGE_DEVICE_CHANGED
+ * @device: (out) (allow-none) (transfer full): A location where to store a
+ *  pointer to the updated version of the #GstDevice, or %NULL
+ * @changed_device: (out) (allow-none) (transfer full): A location where to store a
+ *  pointer to the old version of the #GstDevice, or %NULL
+ *
+ * Parses a device-changed message. The device-changed message is produced by
+ * #GstDeviceProvider or a #GstDeviceMonitor. It announces the
+ * disappearance of monitored devices. * It announce that a device properties has
+ * changed and @device represents the new modified version of @changed_device.
+ *
+ * Since: 1.16
+ */
+void
+gst_message_parse_device_changed (GstMessage * message, GstDevice ** device,
+    GstDevice ** changed_device)
+{
+  g_return_if_fail (GST_IS_MESSAGE (message));
+  g_return_if_fail (GST_MESSAGE_TYPE (message) == GST_MESSAGE_DEVICE_CHANGED);
+
+  if (device)
+    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
+        GST_QUARK (DEVICE), GST_TYPE_DEVICE, device, NULL);
+
+  if (changed_device)
+    gst_structure_id_get (GST_MESSAGE_STRUCTURE (message),
+        GST_QUARK (DEVICE_CHANGED), GST_TYPE_DEVICE, changed_device, NULL);
 }
 #endif // GSTREAMER_LITE
 

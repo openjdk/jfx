@@ -36,8 +36,11 @@
 #include "FloatConversion.h"
 #include "PannerNode.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
 
 const double DefaultGrainDuration = 0.020; // 20ms
 
@@ -70,7 +73,7 @@ AudioBufferSourceNode::AudioBufferSourceNode(AudioContext& context, float sample
     m_playbackRate = AudioParam::create(context, "playbackRate", 1.0, -MaxRate, MaxRate);
 
     // Default to mono.  A call to setBuffer() will set the number of output channels to that of the buffer.
-    addOutput(std::make_unique<AudioNodeOutput>(this, 1));
+    addOutput(makeUnique<AudioNodeOutput>(this, 1));
 
     initialize();
 }
@@ -407,6 +410,7 @@ void AudioBufferSourceNode::reset()
 void AudioBufferSourceNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
 {
     ASSERT(isMainThread());
+    DEBUG_LOG(LOGIDENTIFIER);
 
     // The context must be locked since changing the buffer can re-configure the number of channels that are output.
     AudioContext::AutoLocker contextLocker(context());
@@ -451,6 +455,7 @@ ExceptionOr<void> AudioBufferSourceNode::start(double when, double grainOffset, 
 ExceptionOr<void> AudioBufferSourceNode::startPlaying(BufferPlaybackMode playbackMode, double when, double grainOffset, double grainDuration)
 {
     ASSERT(isMainThread());
+    ALWAYS_LOG(LOGIDENTIFIER, "when = ", when, ", offset = ", grainOffset, ", duration = ", grainDuration);
 
     context().nodeWillBeginPlayback();
 
@@ -528,8 +533,8 @@ double AudioBufferSourceNode::totalPitchRate()
 bool AudioBufferSourceNode::looping()
 {
     static bool firstTime = true;
-    if (firstTime && context().scriptExecutionContext()) {
-        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
+    if (firstTime) {
+        context().addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
         firstTime = false;
     }
 
@@ -539,8 +544,8 @@ bool AudioBufferSourceNode::looping()
 void AudioBufferSourceNode::setLooping(bool looping)
 {
     static bool firstTime = true;
-    if (firstTime && context().scriptExecutionContext()) {
-        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
+    if (firstTime) {
+        context().addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
         firstTime = false;
     }
 

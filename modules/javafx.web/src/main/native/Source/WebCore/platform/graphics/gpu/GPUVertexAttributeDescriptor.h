@@ -31,23 +31,17 @@
 
 namespace WebCore {
 
-using GPUVertexFormatEnum = unsigned long;
-
-class GPUVertexFormat : public RefCounted<GPUVertexFormat> {
-public:
-    enum Enum : GPUVertexFormatEnum {
-        FloatR32G32B32A32 = 0,
-        FloatR32G32B32 = 1,
-        FloatR32G32 = 2,
-        FloatR32 = 3
-    };
+enum class GPUVertexFormat {
+    Float,
+    Float2,
+    Float3,
+    Float4,
 };
 
 struct GPUVertexAttributeDescriptor {
-    unsigned long shaderLocation;
-    unsigned long inputSlot;
-    unsigned long offset;
-    GPUVertexFormatEnum format;
+    uint64_t offset;
+    GPUVertexFormat format;
+    unsigned shaderLocation;
 };
 
 } // namespace WebCore

@@ -35,7 +35,8 @@
 #include "FloatRect.h"
 #include "FloatSize.h"
 #include "NicosiaAnimatedBackingStoreClient.h"
-#include "TextureMapperAnimation.h"
+#include "NicosiaAnimation.h"
+#include "NicosiaSceneIntegration.h"
 #include "TransformationMatrix.h"
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
@@ -54,6 +55,20 @@ public:
     using LayerID = uint64_t;
     LayerID id() const { return m_id; }
 
+    void setSceneIntegration(RefPtr<SceneIntegration>&& sceneIntegration)
+    {
+        LockHolder locker(m_state.lock);
+        m_state.sceneIntegration = WTFMove(sceneIntegration);
+    }
+
+    std::unique_ptr<SceneIntegration::UpdateScope> createUpdateScope()
+    {
+        LockHolder locker(m_state.lock);
+        if (m_state.sceneIntegration)
+            return m_state.sceneIntegration->createUpdateScope();
+        return nullptr;
+    }
+
 protected:
     explicit PlatformLayer(uint64_t);
 
@@ -61,6 +76,7 @@ protected:
 
     struct {
         Lock lock;
+        RefPtr<SceneIntegration> sceneIntegration;
     } m_state;
 };
 
@@ -155,7 +171,7 @@ public:
         WebCore::FilterOperations filters;
         // FIXME: Despite the name, this implementation is not
         // TextureMapper-specific. Should be renamed when necessary.
-        WebCore::TextureMapperAnimations animations;
+        Animations animations;
 
         Vector<RefPtr<CompositionLayer>> children;
         RefPtr<CompositionLayer> replica;

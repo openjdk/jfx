@@ -28,6 +28,7 @@
 #include "Document.h"
 #include "Editor.h"
 #include "Element.h"
+#include "EventRegion.h"
 #include "FloatQuad.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -103,7 +104,7 @@ static void insertIntoTrackedRendererMaps(const RenderBlock& container, RenderBo
     }
 
     auto& descendantSet = percentHeightDescendantsMap->ensure(&container, [] {
-        return std::make_unique<TrackedRendererListHashSet>();
+        return makeUnique<TrackedRendererListHashSet>();
     }).iterator->value;
 
     bool added = descendantSet->add(&descendant).isNewEntry;
@@ -114,7 +115,7 @@ static void insertIntoTrackedRendererMaps(const RenderBlock& container, RenderBo
     }
 
     auto& containerSet = percentHeightContainerMap->ensure(&descendant, [] {
-        return std::make_unique<HashSet<const RenderBlock*>>();
+        return makeUnique<HashSet<const RenderBlock*>>();
     }).iterator->value;
 
     ASSERT(!containerSet->contains(&container));
@@ -160,7 +161,7 @@ public:
         }
 
         auto& descendants = m_descendantsMap.ensure(&containingBlock, [] {
-            return std::make_unique<TrackedRendererListHashSet>();
+            return makeUnique<TrackedRendererListHashSet>();
         }).iterator->value;
 
         bool isNewEntry = moveDescendantToEnd == MoveDescendantToEnd::Yes ? descendants->appendOrMoveToLast(&positionedDescendant).isNewEntry
@@ -527,7 +528,7 @@ static inline UpdateScrollInfoAfterLayoutTransaction* currentUpdateScrollInfoAft
 void RenderBlock::beginUpdateScrollInfoAfterLayoutTransaction()
 {
     if (!updateScrollInfoAfterLayoutTransactionStack())
-        updateScrollInfoAfterLayoutTransactionStack() = std::make_unique<DelayedUpdateScrollInfoStack>();
+        updateScrollInfoAfterLayoutTransactionStack() = makeUnique<DelayedUpdateScrollInfoStack>();
     if (updateScrollInfoAfterLayoutTransactionStack()->isEmpty() || currentUpdateScrollInfoAfterLayoutTransaction()->view != &view())
         updateScrollInfoAfterLayoutTransactionStack()->append(UpdateScrollInfoAfterLayoutTransaction(view()));
     ++currentUpdateScrollInfoAfterLayoutTransaction()->nestedCount;
@@ -619,7 +620,7 @@ static RenderBlockRareData& ensureBlockRareData(const RenderBlock& block)
 
     auto& rareData = gRareDataMap->add(&block, nullptr).iterator->value;
     if (!rareData)
-        rareData = std::make_unique<RenderBlockRareData>();
+        rareData = makeUnique<RenderBlockRareData>();
     return *rareData.get();
 }
 
@@ -1239,6 +1240,23 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     // If just painting the root background, then return.
     if (paintInfo.paintRootBackgroundOnly())
         return;
+
+    if (paintPhase == PaintPhase::EventRegion) {
+        auto borderRect = LayoutRect(paintOffset, size());
+
+        if (visibleToHitTesting()) {
+            auto borderRegion = approximateAsRegion(style().getRoundedBorderFor(borderRect));
+            paintInfo.eventRegionContext->unite(borderRegion, style());
+        }
+
+        // No need to check descendants if we don't have overflow and the area is already covered.
+        bool needsTraverseDescendants = hasVisualOverflow() || !paintInfo.eventRegionContext->contains(enclosingIntRect(borderRect));
+#if PLATFORM(IOS_FAMILY) && ENABLE(POINTER_EVENTS)
+        needsTraverseDescendants = needsTraverseDescendants || document().mayHaveElementsWithNonAutoTouchAction();
+#endif
+        if (!needsTraverseDescendants)
+            return;
+    }
 
     // Adjust our painting position if we're inside a scrolled layer (e.g., an overflow:auto div).
     LayoutPoint scrolledOffset = paintOffset;
@@ -2245,14 +2263,14 @@ void RenderBlock::computePreferredLogicalWidths()
     else
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
-    if (styleToUse.logicalMinWidth().isFixed() && styleToUse.logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
-    }
-
     if (styleToUse.logicalMaxWidth().isFixed()) {
         m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
         m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMaxWidth().value()));
+    }
+
+    if (styleToUse.logicalMinWidth().isFixed() && styleToUse.logicalMinWidth().value() > 0) {
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse.logicalMinWidth().value()));
     }
 
     LayoutUnit borderAndPadding = borderAndPaddingLogicalWidth();
@@ -2838,8 +2856,8 @@ void RenderBlock::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint
         // FIXME: This is wrong for block-flows that are horizontal.
         // https://bugs.webkit.org/show_bug.cgi?id=46781
         bool prevInlineHasLineBox = downcast<RenderInline>(*inlineContinuation->element()->renderer()).firstLineBox();
-        float topMargin = prevInlineHasLineBox ? collapsedMarginBefore() : 0_lu;
-        float bottomMargin = nextInlineHasLineBox ? collapsedMarginAfter() : 0_lu;
+        auto topMargin = prevInlineHasLineBox ? collapsedMarginBefore() : 0_lu;
+        auto bottomMargin = nextInlineHasLineBox ? collapsedMarginAfter() : 0_lu;
         LayoutRect rect(additionalOffset.x(), additionalOffset.y() - topMargin, width(), height() + topMargin + bottomMargin);
         if (!rect.isEmpty())
             rects.append(rect);
@@ -3111,9 +3129,9 @@ TextRun RenderBlock::constructTextRun(const String& string, const RenderStyle& s
     return constructTextRun(StringView(string), style, expansion, flags);
 }
 
-TextRun RenderBlock::constructTextRun(const AtomicString& atomicString, const RenderStyle& style, ExpansionBehavior expansion, TextRunFlags flags)
+TextRun RenderBlock::constructTextRun(const AtomString& atomString, const RenderStyle& style, ExpansionBehavior expansion, TextRunFlags flags)
 {
-    return constructTextRun(StringView(atomicString), style, expansion, flags);
+    return constructTextRun(StringView(atomString), style, expansion, flags);
 }
 
 TextRun RenderBlock::constructTextRun(const RenderText& text, const RenderStyle& style, ExpansionBehavior expansion)

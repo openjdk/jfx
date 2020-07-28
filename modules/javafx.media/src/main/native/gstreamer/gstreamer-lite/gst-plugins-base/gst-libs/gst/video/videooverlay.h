@@ -43,7 +43,6 @@ G_BEGIN_DECLS
  */
 typedef struct _GstVideoOverlay GstVideoOverlay;
 typedef struct _GstVideoOverlayInterface GstVideoOverlayInterface;
-typedef struct _GstVideoOverlayProperties GstVideoOverlayProperties;
 
 /**
  * GstVideoOverlayInterface:
@@ -52,8 +51,6 @@ typedef struct _GstVideoOverlayProperties GstVideoOverlayProperties;
  * @handle_events: virtual method to handle events
  * @set_render_rectangle: virtual method to set the render rectangle
  * @set_window_handle: virtual method to configure the window handle
- * @properties_offset: Offset to the #GstVideoOverlayProperties in the
- *                     instance allocation. Since 1.14
  *
  * #GstVideoOverlay interface
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,13 +30,18 @@
 #include <videodecoder.h>
 #include <mpegtsdemuxer.h>
 
+#ifdef STATIC_BUILD
+gboolean fxavplugins_init (GstPlugin * plugin)
+#else
 static gboolean fxplugins_init (GstPlugin * plugin)
+#endif
 {
     return audiodecoder_plugin_init(plugin) &&
            videodecoder_plugin_init(plugin) &&
            mpegts_demuxer_plugin_init(plugin);
 }
 
+#ifndef STATIC_BUILD
 GstPluginDesc gst_plugin_desc =
 {
     GST_VERSION_MAJOR,
@@ -51,3 +56,4 @@ GstPluginDesc gst_plugin_desc =
     "http://javafx.com/",
     NULL
 };
+#endif

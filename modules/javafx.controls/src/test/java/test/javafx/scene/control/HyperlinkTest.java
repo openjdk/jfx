@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,6 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class HyperlinkTest {
@@ -174,29 +173,6 @@ public class HyperlinkTest {
         } catch (Exception e) {
             org.junit.Assert.fail(e.toString());
         }
-    }
-
-    @Ignore ("replaced by visitedPropertyIsNotStyleable")
-    @Test public void whenVisitedIsBound_impl_cssSettable_ReturnsFalse() {
-        // will return null!
-        CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
-        assertFalse(styleable.isSettable(link));
-        BooleanProperty other = new SimpleBooleanProperty(true);
-        link.visitedProperty().bind(other);
-    }
-
-    @Ignore ("replaced by visitedPropertyIsNotStyleable")
-    @Test public void whenVisitedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsFalse() {
-        // will return null!
-        CssMetaData styleable = ((StyleableProperty)link.visitedProperty()).getCssMetaData();
-        assertFalse(styleable.isSettable(link));
-    }
-
-    @Ignore ("replaced by visitedPropertyIsNotStyleable")
-    @Test public void cannotSpecifyVisitedViaCSS() {
-        // will return null!
-        ((StyleableProperty)link.visitedProperty()).applyStyle(null, Boolean.TRUE);
-        assertFalse(link.isVisited());
     }
 
     @Test public void settingVisitedSetsPseudoClass() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,6 +74,8 @@ public interface TextLayout {
     public static final int TYPE_BASELINE       = 1 << 3;
     public static final int TYPE_TOP            = 1 << 4;
     public static final int TYPE_BEARINGS       = 1 << 5;
+
+    public static final int DEFAULT_TAB_SIZE = 8;
 
     public static class Hit {
         int charIndex;
@@ -187,6 +189,15 @@ public interface TextLayout {
      * @return the shape
      */
     public Shape getShape(int type, TextSpan filter);
+
+    /**
+     * Sets the tab size for the TextLayout.
+     *
+     * @param spaces the number of spaces represented by a tab. Default is 8.
+     * Minimum is 1, lower values will be clamped to 1.
+     * @return returns true if the call modifies the layout internal state.
+     */
+    public boolean setTabSize(int spaces);
 
     public Hit getHitInfo(float x, float y);
 

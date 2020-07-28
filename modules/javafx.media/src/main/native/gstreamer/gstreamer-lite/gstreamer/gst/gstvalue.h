@@ -62,7 +62,7 @@ G_BEGIN_DECLS
 #define GST_STR_FOURCC(f)               ((guint32)(((f)[0])|((f)[1]<<8)|((f)[2]<<16)|((f)[3]<<24)))
 
 /**
- * GST_FOURCC_FORMAT:
+ * GST_FOURCC_FORMAT: (skip):
  *
  * Can be used together with #GST_FOURCC_ARGS to properly output a
  * #guint32 fourcc value in a printf()-style text message.
@@ -75,7 +75,7 @@ G_BEGIN_DECLS
 #define GST_FOURCC_FORMAT "c%c%c%c"
 
 /**
- * GST_FOURCC_ARGS:
+ * GST_FOURCC_ARGS: (skip):
  * @fourcc: a #guint32 fourcc value to output
  *
  * Can be used together with #GST_FOURCC_FORMAT to properly output a
@@ -755,7 +755,7 @@ gboolean        gst_value_fixate                (GValue         *dest,
 /* Flagset registration wrapper */
 
 GST_API
-GType       gst_flagset_register (GType flags_type);
+GType   gst_flagset_register (GType flags_type);
 
 G_END_DECLS
 

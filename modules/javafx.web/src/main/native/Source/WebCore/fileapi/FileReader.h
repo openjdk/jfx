@@ -46,6 +46,7 @@ namespace WebCore {
 class Blob;
 
 class FileReader final : public RefCounted<FileReader>, public ActiveDOMObject, public EventTargetWithInlineData, private FileReaderLoaderClient {
+    WTF_MAKE_ISO_ALLOCATED(FileReader);
 public:
     static Ref<FileReader> create(ScriptExecutionContext&);
 
@@ -92,7 +93,7 @@ private:
 
     ExceptionOr<void> readInternal(Blob&, FileReaderLoader::ReadType);
     void fireErrorEvent(int httpStatusCode);
-    void fireEvent(const AtomicString& type);
+    void fireEvent(const AtomString& type);
 
     ReadyState m_state { EMPTY };
     bool m_aborting { false };
@@ -102,6 +103,7 @@ private:
     std::unique_ptr<FileReaderLoader> m_loader;
     RefPtr<FileError> m_error;
     MonotonicTime m_lastProgressNotificationTime { MonotonicTime::nan() };
+    RefPtr<PendingActivity<FileReader>> m_loadingActivity;
 };
 
 } // namespace WebCore

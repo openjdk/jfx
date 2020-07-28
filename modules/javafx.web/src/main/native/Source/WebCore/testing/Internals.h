@@ -35,6 +35,7 @@
 #include "OrientationNotifier.h"
 #include "PageConsoleClient.h"
 #include "RealtimeMediaSource.h"
+#include "TextIndicator.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <wtf/Optional.h>
 
@@ -53,10 +54,12 @@ class AudioContext;
 class CacheStorageConnection;
 class DOMRect;
 class DOMRectList;
+class DOMRectReadOnly;
 class DOMURL;
 class DOMWindow;
 class Document;
 class Element;
+class EventListener;
 class ExtendableEvent;
 class FetchResponse;
 class File;
@@ -96,6 +99,10 @@ class TypeConversions;
 class VoidCallback;
 class WebGLRenderingContext;
 class XMLHttpRequest;
+
+#if ENABLE(VIDEO_TRACK)
+class TextTrackCueGeneric;
+#endif
 
 #if ENABLE(SERVICE_WORKER)
 class ServiceWorker;
@@ -142,9 +149,12 @@ public:
     unsigned memoryCacheSize() const;
 
     unsigned imageFrameIndex(HTMLImageElement&);
+    unsigned imageFrameCount(HTMLImageElement&);
+    float imageFrameDurationAtIndex(HTMLImageElement&, unsigned index);
     void setImageFrameDecodingDuration(HTMLImageElement&, float duration);
     void resetImageAnimation(HTMLImageElement&);
     bool isImageAnimating(HTMLImageElement&);
+    unsigned imagePendingDecodePromisesCountForTesting(HTMLImageElement&);
     void setClearDecoderAfterAsyncFrameRequestForTesting(HTMLImageElement&, bool enabled);
     unsigned imageDecodeCount(HTMLImageElement&);
     unsigned pdfDocumentCachingCount(HTMLImageElement&);
@@ -225,7 +235,6 @@ public:
     Ref<DOMRect> boundingBox(Element&);
 
     ExceptionOr<Ref<DOMRectList>> inspectorHighlightRects();
-    ExceptionOr<String> inspectorHighlightObject();
 
     ExceptionOr<unsigned> markerCountForNode(Node&, const String&);
     ExceptionOr<RefPtr<Range>> markerRangeForNode(Node&, const String& markerType, unsigned index);
@@ -257,6 +266,7 @@ public:
     ExceptionOr<bool> wasLastChangeUserEdit(Element& textField);
     bool elementShouldAutoComplete(HTMLInputElement&);
     void setAutofilled(HTMLInputElement&, bool enabled);
+    void setAutoFilledAndViewable(HTMLInputElement&, bool enabled);
     enum class AutoFillButtonType { None, Contacts, Credentials, StrongPassword, CreditCard };
     void setShowAutoFillButton(HTMLInputElement&, AutoFillButtonType);
     AutoFillButtonType autoFillButtonType(const HTMLInputElement&);
@@ -271,6 +281,7 @@ public:
     unsigned locationFromRange(Element& scope, const Range&);
     unsigned lengthFromRange(Element& scope, const Range&);
     String rangeAsText(const Range&);
+    String rangeAsTextUsingBackwardsTextIterator(const Range&);
     Ref<Range> subrange(Range&, int rangeLocation, int rangeLength);
     ExceptionOr<RefPtr<Range>> rangeForDictionaryLookupAtLocation(int x, int y);
     RefPtr<Range> rangeOfStringNearLocation(const Range&, const String&, unsigned);
@@ -322,6 +333,8 @@ public:
     bool isOverwriteModeEnabled();
     void toggleOverwriteModeEnabled();
 
+    bool testProcessIncomingSyncMessagesWhenWaitingForSyncReply();
+
     ExceptionOr<RefPtr<Range>> rangeOfString(const String&, RefPtr<Range>&&, const Vector<String>& findOptions);
     ExceptionOr<unsigned> countMatchesForText(const String&, const Vector<String>& findOptions, const String& markMatches);
     ExceptionOr<unsigned> countFindMatches(const String&, const Vector<String>& findOptions);
@@ -345,8 +358,10 @@ public:
         LAYER_TREE_INCLUDES_PAINTING_PHASES = 8,
         LAYER_TREE_INCLUDES_CONTENT_LAYERS = 16,
         LAYER_TREE_INCLUDES_ACCELERATES_DRAWING = 32,
-        LAYER_TREE_INCLUDES_BACKING_STORE_ATTACHED = 64,
-        LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 128,
+        LAYER_TREE_INCLUDES_CLIPPING = 64,
+        LAYER_TREE_INCLUDES_BACKING_STORE_ATTACHED = 128,
+        LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 256,
+        LAYER_TREE_INCLUDES_EVENT_REGION = 512,
     };
     ExceptionOr<String> layerTreeAsText(Document&, unsigned short flags) const;
     ExceptionOr<uint64_t> layerIDForElement(Element&);
@@ -378,7 +393,9 @@ public:
     ExceptionOr<void> insertAuthorCSS(const String&) const;
     ExceptionOr<void> insertUserCSS(const String&) const;
 
+#if ENABLE(INDEXED_DATABASE)
     unsigned numberOfIDBTransactions() const;
+#endif
 
     unsigned numberOfLiveNodes() const;
     unsigned numberOfLiveDocuments() const;
@@ -492,7 +509,7 @@ public:
     void forceReload(bool endToEnd);
     void reloadExpiredOnly();
 
-    void enableAutoSizeMode(bool enabled, int minimumWidth, int minimumHeight, int maximumWidth, int maximumHeight);
+    void enableAutoSizeMode(bool enabled, int width, int height);
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     void initializeMockCDM();
@@ -509,6 +526,7 @@ public:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
+    void setShouldInterruptAudioOnPageVisibilityChange(bool);
     void setMockMediaCaptureDevicesEnabled(bool);
     void setMediaCaptureRequiresSecureConnection(bool);
     void setCustomPrivateRecorderCreator();
@@ -522,6 +540,7 @@ public:
     void stopPeerConnection(RTCPeerConnection&);
     void clearPeerConnectionFactory();
     void applyRotationForOutgoingVideoSources(RTCPeerConnection&);
+    void setEnableWebRTCEncryption(bool);
 #endif
 
     String getImageSourceURL(Element&);
@@ -535,6 +554,8 @@ public:
     void endSimulatedHDCPError(HTMLMediaElement&);
 
     bool elementShouldBufferData(HTMLMediaElement&);
+    String elementBufferingPolicy(HTMLMediaElement&);
+    double privatePlayerVolume(const HTMLMediaElement&);
 #endif
 
     bool isSelectPopupVisible(HTMLSelectElement&);
@@ -543,6 +564,9 @@ public:
     ExceptionOr<void> setCaptionsStyleSheetOverride(const String&);
     ExceptionOr<void> setPrimaryAudioTrackLanguageOverride(const String&);
     ExceptionOr<void> setCaptionDisplayMode(const String&);
+#if ENABLE(VIDEO_TRACK)
+    RefPtr<TextTrackCueGeneric> createGenericCue(double startTime, double endTime, String text);
+#endif
 
 #if ENABLE(VIDEO)
     Ref<TimeRanges> createTimeRanges(Float32Array& startTimes, Float32Array& endTimes);
@@ -555,12 +579,15 @@ public:
     ExceptionOr<bool> isPluginUnavailabilityIndicatorObscured(Element&);
     ExceptionOr<String> unavailablePluginReplacementText(Element&);
     bool isPluginSnapshotted(Element&);
+    bool pluginIsBelowSizeThreshold(Element&);
 
 #if ENABLE(MEDIA_SOURCE)
     WEBCORE_TESTSUPPORT_EXPORT void initializeMockMediaSource();
-    Vector<String> bufferedSamplesForTrackID(SourceBuffer&, const AtomicString&);
-    Vector<String> enqueuedSamplesForTrackID(SourceBuffer&, const AtomicString&);
+    Vector<String> bufferedSamplesForTrackID(SourceBuffer&, const AtomString&);
+    Vector<String> enqueuedSamplesForTrackID(SourceBuffer&, const AtomString&);
+    double minimumUpcomingPresentationTimeForTrackID(SourceBuffer&, const AtomString&);
     void setShouldGenerateTimestamps(SourceBuffer&, bool);
+    void setMaximumQueueDepthForTrackID(SourceBuffer&, const AtomString&, size_t);
 #endif
 
 #if ENABLE(VIDEO)
@@ -628,9 +655,8 @@ public:
     String userVisibleString(const DOMURL&);
     void setShowAllPlugins(bool);
 
-    String resourceLoadStatisticsForOrigin(const String& origin);
+    String resourceLoadStatisticsForURL(const DOMURL&);
     void setResourceLoadStatisticsEnabled(bool);
-    void setUserGrantsStorageAccess(bool);
 
 #if ENABLE(STREAMS_API)
     bool isReadableStreamDisturbed(JSC::ExecState&, JSC::JSValue);
@@ -643,6 +669,8 @@ public:
     double lastHandledUserGestureTimestamp();
 
     void withUserGesture(RefPtr<VoidCallback>&&);
+
+    bool userIsInteracting();
 
     RefPtr<GCObservation> observeGC(JSC::JSValue);
 
@@ -666,6 +694,9 @@ public:
     void setQuickLookPassword(const String&);
 
     void setAsRunningUserScripts(Document&);
+#if ENABLE(APPLE_PAY)
+    void setApplePayIsActive(Document&);
+#endif
 
 #if ENABLE(WEBGL)
     void simulateWebGLContextChanged(WebGLRenderingContext&);
@@ -682,6 +713,7 @@ public:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
+    void setMockAudioTrackChannelNumber(MediaStreamTrack&, unsigned short);
     void setCameraMediaStreamTrackOrientation(MediaStreamTrack&, int orientation);
     unsigned long trackAudioSampleCount() const { return m_trackAudioSampleCount; }
     unsigned long trackVideoSampleCount() const { return m_trackVideoSampleCount; }
@@ -694,16 +726,21 @@ public:
     void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack&);
     void setMediaStreamTrackIdentifier(MediaStreamTrack&, String&& id);
     void setMediaStreamSourceInterrupted(MediaStreamTrack&, bool);
+    void setDisableGetDisplayMediaUserGestureConstraint(bool);
 #endif
 
     String audioSessionCategory() const;
     double preferredAudioBufferSize() const;
     bool audioSessionActive() const;
 
+    void storeRegistrationsOnDisk(DOMPromiseDeferred<void>&&);
+
     void clearCacheStorageMemoryRepresentation(DOMPromiseDeferred<void>&&);
     void cacheStorageEngineRepresentation(DOMPromiseDeferred<IDLDOMString>&&);
     void setResponseSizeWithPadding(FetchResponse&, uint64_t size);
     uint64_t responseSizeWithPadding(FetchResponse&) const;
+
+    void updateQuotaBasedOnSpaceUsage();
 
     void setConsoleMessageListener(RefPtr<StringCallback>&&);
 
@@ -797,6 +834,45 @@ public:
     Vector<CookieData> getCookies() const;
 
     void setAlwaysAllowLocalWebarchive(bool);
+    void processWillSuspend();
+    void processDidResume();
+
+    void testDictionaryLogging();
+
+    void setXHRMaximumIntervalForUserGestureForwarding(XMLHttpRequest&, double);
+
+    void setIsPlayingToAutomotiveHeadUnit(bool);
+
+    struct TextIndicatorInfo {
+        RefPtr<DOMRectReadOnly> textBoundingRectInRootViewCoordinates;
+        RefPtr<DOMRectList> textRectsInBoundingRectCoordinates;
+
+        TextIndicatorInfo();
+        TextIndicatorInfo(const WebCore::TextIndicatorData&);
+        ~TextIndicatorInfo();
+    };
+
+    struct TextIndicatorOptions {
+        bool useBoundingRectAndPaintAllContentForComplexRanges { false };
+        bool computeEstimatedBackgroundColor { false };
+        bool respectTextColor { false };
+
+        WebCore::TextIndicatorOptions core()
+        {
+            WebCore::TextIndicatorOptions options = 0;
+            if (useBoundingRectAndPaintAllContentForComplexRanges)
+                options = options | TextIndicatorOptionUseBoundingRectAndPaintAllContentForComplexRanges;
+            if (computeEstimatedBackgroundColor)
+                options = options | TextIndicatorOptionComputeEstimatedBackgroundColor;
+            if (respectTextColor)
+                options = options | TextIndicatorOptionRespectTextColor;
+            return options;
+        }
+    };
+
+    TextIndicatorInfo textIndicatorForRange(const Range&, TextIndicatorOptions);
+
+    void addPrefetchLoadEventListener(HTMLLinkElement&, RefPtr<EventListener>&&);
 
 private:
     explicit Internals(Document&);

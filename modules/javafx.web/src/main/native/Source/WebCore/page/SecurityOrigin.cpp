@@ -30,6 +30,8 @@
 #include "SecurityOrigin.h"
 
 #include "BlobURL.h"
+#include "OriginAccessEntry.h"
+#include "PublicSuffix.h"
 #include "SchemeRegistry.h"
 #include "SecurityPolicy.h"
 #include "TextEncoding.h"
@@ -205,6 +207,14 @@ Ref<SecurityOrigin> SecurityOrigin::createUnique()
     return origin;
 }
 
+Ref<SecurityOrigin> SecurityOrigin::createNonLocalWithAllowedFilePath(const URL& url, const String& filePath)
+{
+    ASSERT(!url.isLocalFile());
+    auto securityOrigin = SecurityOrigin::create(url);
+    securityOrigin->m_filePath = filePath;
+    return securityOrigin;
+}
+
 Ref<SecurityOrigin> SecurityOrigin::isolatedCopy() const
 {
     return adoptRef(*new SecurityOrigin(this));
@@ -362,7 +372,13 @@ bool SecurityOrigin::canDisplay(const URL& url) const
     if (SchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(protocol))
         return equalIgnoringASCIICase(m_data.protocol, protocol) || SecurityPolicy::isAccessToURLWhiteListed(this, url);
 
-    if (SecurityPolicy::restrictAccessToLocal() && SchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
+    if (!SecurityPolicy::restrictAccessToLocal())
+        return true;
+
+    if (url.isLocalFile() && url.fileSystemPath() == m_filePath)
+        return true;
+
+    if (SchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
         return canLoadLocalResources() || SecurityPolicy::isAccessToURLWhiteListed(this, url);
 
     return true;
@@ -416,6 +432,27 @@ bool SecurityOrigin::isSameOriginAs(const SecurityOrigin& other) const
         return false;
 
     return isSameSchemeHostPort(other);
+}
+
+bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffix, bool treatIPAddressAsDomain) const
+{
+    if (domainSuffix.isEmpty())
+        return false;
+
+    auto ipAddressSetting = treatIPAddressAsDomain ? OriginAccessEntry::TreatIPAddressAsDomain : OriginAccessEntry::TreatIPAddressAsIPAddress;
+    OriginAccessEntry accessEntry { protocol(), domainSuffix, OriginAccessEntry::AllowSubdomains, ipAddressSetting };
+    if (!accessEntry.matchesOrigin(*this))
+        return false;
+
+    // Always return true if it is an exact match.
+    if (domainSuffix.length() == host().length())
+        return true;
+
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+    return !isPublicSuffix(domainSuffix);
+#else
+    return true;
+#endif
 }
 
 void SecurityOrigin::grantLoadLocalResources()
@@ -473,6 +510,8 @@ String SecurityOrigin::toRawString() const
 
 static inline bool areOriginsMatching(const SecurityOrigin& origin1, const SecurityOrigin& origin2)
 {
+    ASSERT(&origin1 != &origin2);
+
     if (origin1.isUnique() || origin2.isUnique())
         return origin1.isUnique() == origin2.isUnique();
 
@@ -480,7 +519,7 @@ static inline bool areOriginsMatching(const SecurityOrigin& origin1, const Secur
         return false;
 
     if (origin1.protocol() == "file")
-        return true;
+        return origin1.enforcesFilePathSeparation() == origin2.enforcesFilePathSeparation();
 
     if (origin1.host() != origin2.host())
         return false;
@@ -488,23 +527,22 @@ static inline bool areOriginsMatching(const SecurityOrigin& origin1, const Secur
     return origin1.port() == origin2.port();
 }
 
-// This function mimics the result of string comparison of serialized origins
-bool originsMatch(const SecurityOrigin& origin1, const SecurityOrigin& origin2)
+// This function mimics the result of string comparison of serialized origins.
+bool serializedOriginsMatch(const SecurityOrigin& origin1, const SecurityOrigin& origin2)
 {
     if (&origin1 == &origin2)
         return true;
 
-    bool result = areOriginsMatching(origin1, origin2);
-    ASSERT(result == (origin1.toString() == origin2.toString()));
-    return result;
+    ASSERT(!areOriginsMatching(origin1, origin2) || (origin1.toString() == origin2.toString()));
+    return areOriginsMatching(origin1, origin2);
 }
 
-bool originsMatch(const SecurityOrigin* origin1, const SecurityOrigin* origin2)
+bool serializedOriginsMatch(const SecurityOrigin* origin1, const SecurityOrigin* origin2)
 {
     if (!origin1 || !origin2)
         return origin1 == origin2;
 
-    return originsMatch(*origin1, *origin2);
+    return serializedOriginsMatch(*origin1, *origin2);
 }
 
 Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.scene.Node;
  * AnchorPanes may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h3>Anchor Constraints</h3>
+ * <h2>Anchor Constraints</h2>
  * <p>
  * The application sets anchor constraints on each child to configure the anchors
  * on one or more sides.  If a child is anchored on opposite sides (and is resizable), the
@@ -75,7 +75,7 @@ import javafx.scene.Node;
  *     anchorPane.getChildren().addAll(list, button);
  * </code></pre>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  * <p>
  * An anchor pane's parent will resize the anchor pane within the anchor pane's resizable range
  * during layout.   By default the anchor pane computes this range based on its content

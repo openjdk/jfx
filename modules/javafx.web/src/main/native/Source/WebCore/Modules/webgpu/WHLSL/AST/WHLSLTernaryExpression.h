@@ -28,7 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,22 +37,21 @@ namespace WHLSL {
 
 namespace AST {
 
-class TernaryExpression : public Expression {
+class TernaryExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    TernaryExpression(Lexer::Token&& origin, UniqueRef<Expression>&& predicate, UniqueRef<Expression>&& bodyExpression, UniqueRef<Expression>&& elseExpression)
-        : Expression(WTFMove(origin))
+    TernaryExpression(CodeLocation location, UniqueRef<Expression>&& predicate, UniqueRef<Expression>&& bodyExpression, UniqueRef<Expression>&& elseExpression)
+        : Expression(location, Kind::Ternary)
         , m_predicate(WTFMove(predicate))
         , m_bodyExpression(WTFMove(bodyExpression))
         , m_elseExpression(WTFMove(elseExpression))
     {
     }
 
-    virtual ~TernaryExpression() = default;
+    ~TernaryExpression() = default;
 
     TernaryExpression(const TernaryExpression&) = delete;
     TernaryExpression(TernaryExpression&&) = default;
-
-    bool isTernaryExpression() const override { return true; }
 
     Expression& predicate() { return m_predicate; }
     Expression& bodyExpression() { return m_bodyExpression; }
@@ -69,6 +68,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(TernaryExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(TernaryExpression, isTernaryExpression())
 

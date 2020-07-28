@@ -237,23 +237,23 @@ static inline void __gst_fast_write_swap64 (guint8 *p, guint64 v) {
 #  define GST_READ_UINT64_LE(data)      _GST_FAST_READ (64, data)
 # endif
 #else
-#define _GST_READ_UINT64_BE(data)   (_GST_GET (data, 0, 64, 56) | \
-                     _GST_GET (data, 1, 64, 48) | \
-                     _GST_GET (data, 2, 64, 40) | \
-                     _GST_GET (data, 3, 64, 32) | \
-                     _GST_GET (data, 4, 64, 24) | \
-                     _GST_GET (data, 5, 64, 16) | \
-                     _GST_GET (data, 6, 64,  8) | \
-                     _GST_GET (data, 7, 64,  0))
+#define _GST_READ_UINT64_BE(data) (_GST_GET (data, 0, 64, 56) | \
+           _GST_GET (data, 1, 64, 48) | \
+           _GST_GET (data, 2, 64, 40) | \
+           _GST_GET (data, 3, 64, 32) | \
+           _GST_GET (data, 4, 64, 24) | \
+           _GST_GET (data, 5, 64, 16) | \
+           _GST_GET (data, 6, 64,  8) | \
+           _GST_GET (data, 7, 64,  0))
 
-#define _GST_READ_UINT64_LE(data)   (_GST_GET (data, 7, 64, 56) | \
-                     _GST_GET (data, 6, 64, 48) | \
-                     _GST_GET (data, 5, 64, 40) | \
-                     _GST_GET (data, 4, 64, 32) | \
-                     _GST_GET (data, 3, 64, 24) | \
-                     _GST_GET (data, 2, 64, 16) | \
-                     _GST_GET (data, 1, 64,  8) | \
-                     _GST_GET (data, 0, 64,  0))
+#define _GST_READ_UINT64_LE(data) (_GST_GET (data, 7, 64, 56) | \
+           _GST_GET (data, 6, 64, 48) | \
+           _GST_GET (data, 5, 64, 40) | \
+           _GST_GET (data, 4, 64, 32) | \
+           _GST_GET (data, 3, 64, 24) | \
+           _GST_GET (data, 2, 64, 16) | \
+           _GST_GET (data, 1, 64,  8) | \
+           _GST_GET (data, 0, 64,  0))
 
 #define GST_READ_UINT64_BE(data) __gst_slow_read64_be((const guint8 *)(data))
 static inline guint64 __gst_slow_read64_be (const guint8 * data) {
@@ -287,15 +287,15 @@ static inline guint64 __gst_slow_read64_le (const guint8 * data) {
 #  define GST_READ_UINT32_LE(data)      _GST_FAST_READ (32, data)
 # endif
 #else
-#define _GST_READ_UINT32_BE(data)   (_GST_GET (data, 0, 32, 24) | \
-                     _GST_GET (data, 1, 32, 16) | \
-                     _GST_GET (data, 2, 32,  8) | \
-                     _GST_GET (data, 3, 32,  0))
+#define _GST_READ_UINT32_BE(data) (_GST_GET (data, 0, 32, 24) | \
+           _GST_GET (data, 1, 32, 16) | \
+           _GST_GET (data, 2, 32,  8) | \
+           _GST_GET (data, 3, 32,  0))
 
-#define _GST_READ_UINT32_LE(data)   (_GST_GET (data, 3, 32, 24) | \
-                     _GST_GET (data, 2, 32, 16) | \
-                     _GST_GET (data, 1, 32,  8) | \
-                     _GST_GET (data, 0, 32,  0))
+#define _GST_READ_UINT32_LE(data) (_GST_GET (data, 3, 32, 24) | \
+           _GST_GET (data, 2, 32, 16) | \
+           _GST_GET (data, 1, 32,  8) | \
+           _GST_GET (data, 0, 32,  0))
 
 #define GST_READ_UINT32_BE(data) __gst_slow_read32_be((const guint8 *)(data))
 static inline guint32 __gst_slow_read32_be (const guint8 * data) {
@@ -358,11 +358,11 @@ static inline guint32 __gst_slow_read24_le (const guint8 * data) {
 #  define GST_READ_UINT16_LE(data)      _GST_FAST_READ (16, data)
 # endif
 #else
-#define _GST_READ_UINT16_BE(data)   (_GST_GET (data, 0, 16,  8) | \
-                     _GST_GET (data, 1, 16,  0))
+#define _GST_READ_UINT16_BE(data) (_GST_GET (data, 0, 16,  8) | \
+           _GST_GET (data, 1, 16,  0))
 
-#define _GST_READ_UINT16_LE(data)   (_GST_GET (data, 1, 16,  8) | \
-                     _GST_GET (data, 0, 16,  0))
+#define _GST_READ_UINT16_LE(data) (_GST_GET (data, 1, 16,  8) | \
+           _GST_GET (data, 0, 16,  0))
 
 #define GST_READ_UINT16_BE(data) __gst_slow_read16_be((const guint8 *)(data))
 static inline guint16 __gst_slow_read16_be (const guint8 * data) {

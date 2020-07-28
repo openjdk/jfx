@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,7 +105,7 @@ import javafx.util.Callback;
  * resizable or its size limits prevented it) then it will be aligned within the
  * tile using tileAlignment.
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * A tilepane's parent will resize the tilepane within the tilepane's resizable range
@@ -156,7 +156,7 @@ import javafx.util.Callback;
  * is resized smaller than its preferred size, it may not be able to fit all the
  * tiles within its bounds and the content will extend outside.
  *
- * <h3>Optional Layout Constraints</h3>
+ * <h2>Optional Layout Constraints</h2>
  *
  * <p>
  * An application may set constraints on individual children to customize TilePane's layout.

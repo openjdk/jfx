@@ -3414,17 +3414,10 @@
             }
         },
         "page-break-after": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakAfter",
-                "converter": "PageBreakBetween"
+                "longhands": [
+                    "break-after"
+                ]
             },
             "specification": {
                 "category": "css-22",
@@ -3432,17 +3425,10 @@
             }
         },
         "page-break-before": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakBefore",
-                "converter": "PageBreakBetween"
+                "longhands": [
+                    "break-before"
+                ]
             },
             "specification": {
                 "category": "css-22",
@@ -3450,14 +3436,10 @@
             }
         },
         "page-break-inside": {
-            "values": [
-                "auto",
-                "avoid"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakInside",
-                "name-for-methods": "BreakInside",
-                "converter": "PageBreakInside"
+                "longhands": [
+                    "break-inside"
+                ]
             },
             "specification": {
                 "category": "css-22",
@@ -3501,9 +3483,12 @@
                 "absolute",
                 "fixed",
                 {
-                    "value": "-webkit-sticky",
-                    "status": "experimental",
+                    "value": "sticky",
                     "url": "https://www.w3.org/TR/css-position-3/#valdef-position-sticky"
+                },
+                {
+                    "value": "-webkit-sticky",
+                    "status": "deprecated"
                 }
             ],
             "specification": {
@@ -3778,9 +3763,12 @@
         },
         "tab-size": {
             "inherited": true,
+            "codegen-properties": {
+                "converter": "TabSize"
+            },
             "specification": {
                 "category": "css-text",
-                "url": "https://www.w3.org/TR/css-text-3/#tab-size"
+                "url": "https://drafts.csswg.org/css-text-3/#tab-size-property"
             }
         },
         "text-align": {
@@ -4269,7 +4257,8 @@
                 "pre",
                 "pre-wrap",
                 "pre-line",
-                "nowrap"
+                "nowrap",
+                "break-spaces"
             ],
             "specification": {
                 "category": "css-22",
@@ -4686,17 +4675,10 @@
             }
         },
         "-webkit-column-break-after": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakAfter",
-                "converter": "ColumnBreakBetween"
+                "longhands": [
+                    "break-after"
+                ]
             },
             "status": {
                 "status": "experimental"
@@ -4707,17 +4689,10 @@
             }
         },
         "-webkit-column-break-before": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakBefore",
-                "converter": "ColumnBreakBetween"
+                "longhands": [
+                    "break-before"
+                ]
             },
             "status": {
                 "status": "experimental"
@@ -4728,14 +4703,10 @@
             }
         },
         "-webkit-column-break-inside": {
-            "values": [
-                "auto",
-                "avoid"
-            ],
             "codegen-properties": {
-                "initial": "initialBreakInside",
-                "name-for-methods": "BreakInside",
-                "converter": "ColumnBreakInside"
+                "longhands": [
+                    "break-inside"
+                ]
             },
             "status": {
                 "status": "experimental"
@@ -5543,7 +5514,8 @@
                     "value": "after-white-space",
                     "status": "non-standard",
                     "comment": "Added in https://trac.webkit.org/changeset/7763"
-                }
+                },
+                "anywhere"
             ],
             "specification": {
                 "category": "css-text",
@@ -5961,7 +5933,7 @@
             },
             "status": "non-standard"
         },
-        "supported-color-schemes": {
+        "color-scheme": {
             "inherited": true,
             "values": [
                 "auto",
@@ -5970,14 +5942,18 @@
                 "only"
             ],
             "codegen-properties": {
-                "converter": "SupportedColorSchemes",
+                "aliases": [
+                    "supported-color-schemes"
+                ],
+                "converter": "ColorScheme",
                 "comment": "This is the second highest priority property, to ensure that its value can be checked when resolving colors.",
                 "custom": "Value",
                 "enable-if": "ENABLE_DARK_MODE_CSS",
                 "high-priority": true
             },
             "status": {
-                "status": "non-standard"
+                "status": "in development",
+                "enabled-by-default": true
             }
         },
         "order": {
@@ -6252,6 +6228,14 @@
             "inherited": true,
             "codegen-properties": {
                 "skip-builder": true
+            },
+            "status": "non-standard"
+        },
+        "-internal-text-autosizing-status": {
+            "inherited": true,
+            "codegen-properties": {
+                "skip-builder": true,
+                "enable-if": "ENABLE_TEXT_AUTOSIZING"
             },
             "status": "non-standard"
         },
@@ -6902,14 +6886,6 @@
             },
             "status": "non-standard"
         },
-        "-webkit-dashboard-region": {
-            "codegen-properties": {
-                "name-for-methods": "DashboardRegions",
-                "custom": "Value",
-                "enable-if": "ENABLE_DASHBOARD_SUPPORT"
-            },
-            "status": "non-standard"
-        },
         "-webkit-overflow-scrolling": {
             "inherited": true,
             "values": [
@@ -6919,7 +6895,7 @@
             "codegen-properties": {
                 "name-for-methods": "UseTouchOverflowScrolling",
                 "converter": "OverflowScrolling",
-                "enable-if": "ENABLE_ACCELERATED_OVERFLOW_SCROLLING"
+                "enable-if": "ENABLE_OVERFLOW_SCROLLING_TOUCH"
             },
             "status": "non-standard"
         },

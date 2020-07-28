@@ -141,7 +141,6 @@ private:
     void addSignalSender(SignalSender*);
     void removeSignalSender(SignalSender*);
 #else
-    friend class SignalSender;
     void invalidateCodeBlocksOnStack() { }
     void invalidateCodeBlocksOnStack(ExecState*) { }
 #endif
@@ -160,6 +159,7 @@ private:
 #endif
 
     friend class LLIntOffsetsExtractor;
+    friend class SignalSender;
 };
 
 } // namespace JSC

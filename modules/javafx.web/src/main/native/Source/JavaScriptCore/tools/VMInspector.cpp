@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -374,7 +374,7 @@ void VMInspector::dumpRegisters(CallFrame* callFrame)
         dataLog("Dumping host frame registers not supported.\n");
         return;
     }
-    VM& vm = *codeBlock->vm();
+    VM& vm = codeBlock->vm();
     auto valueAsString = [&] (JSValue v) -> CString {
         if (!v.isCell() || VMInspector::isValidCell(&vm.heap, reinterpret_cast<JSCell*>(JSValue::encode(v))))
             return toCString(v);
@@ -497,7 +497,7 @@ private:
 
 void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
 {
-    VM& vm = *cell->vm();
+    VM& vm = cell->vm();
     StructureID structureID = cell->structureID();
     Structure* structure = cell->structure(vm);
     IndexingType indexingTypeAndMisc = cell->indexingTypeAndMisc();
@@ -624,6 +624,19 @@ void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
         INDENT dumpSlot(slots, slotIndex);
 
 #undef INDENT
+}
+
+void VMInspector::dumpSubspaceHashes(VM* vm)
+{
+    unsigned count = 0;
+    vm->heap.objectSpace().forEachSubspace([&] (const Subspace& subspace) -> IterationStatus {
+        const char* name = subspace.name();
+        unsigned hash = StringHasher::computeHash(name);
+        void* hashAsPtr = reinterpret_cast<void*>(static_cast<uintptr_t>(hash));
+        dataLogLn("    [", count++, "] ", name, " Hash:", RawPointer(hashAsPtr));
+        return IterationStatus::Continue;
+    });
+    dataLogLn();
 }
 
 } // namespace JSC

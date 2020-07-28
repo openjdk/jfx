@@ -41,7 +41,7 @@ struct SameSizeAsFontCascadeDescription {
 #else
     char c;
 #endif
-    AtomicString string;
+    AtomString string;
     int16_t fontSelectionRequest[3];
     float size;
     unsigned bitfields1;
@@ -62,7 +62,8 @@ FontCascadeDescription::FontCascadeDescription()
 {
 }
 
-#if !USE_PLATFORM_SYSTEM_FALLBACK_LIST
+#if !USE(PLATFORM_SYSTEM_FALLBACK_LIST)
+
 unsigned FontCascadeDescription::effectiveFamilyCount() const
 {
     return familyCount();
@@ -72,6 +73,7 @@ FontFamilySpecification FontCascadeDescription::effectiveFamilyAt(unsigned i) co
 {
     return familyAt(i);
 }
+
 #endif
 
 FontSelectionValue FontCascadeDescription::lighterWeight(FontSelectionValue weight)
@@ -107,7 +109,7 @@ bool FontCascadeDescription::familiesEqualForTextAutoSizing(const FontCascadeDes
         return false;
 
     for (unsigned i = 0; i < thisFamilyCount; ++i) {
-        if (!equalIgnoringASCIICase(familyAt(i), other.familyAt(i)))
+        if (!familyNamesAreEqual(familyAt(i), other.familyAt(i)))
             return false;
     }
 
@@ -116,31 +118,31 @@ bool FontCascadeDescription::familiesEqualForTextAutoSizing(const FontCascadeDes
 
 #endif // ENABLE(TEXT_AUTOSIZING)
 
-bool FontCascadeDescription::familyNamesAreEqual(const AtomicString& family1, const AtomicString& family2)
+bool FontCascadeDescription::familyNamesAreEqual(const AtomString& family1, const AtomString& family2)
 {
-    // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
-    // always take the case insensitive patch once this radar is fixed.
+#if PLATFORM(COCOA)
     if (family1.startsWith('.'))
-        return StringHash::equal(family1.string(), family2.string());
+        return family1 == family2;
+#endif
     return ASCIICaseInsensitiveHash::equal(family1, family2);
 }
 
-unsigned FontCascadeDescription::familyNameHash(const AtomicString& family)
+unsigned FontCascadeDescription::familyNameHash(const AtomString& family)
 {
-    // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
-    // always take the case insensitive patch once this radar is fixed.
+#if PLATFORM(COCOA)
     if (family.startsWith('.'))
-        return StringHash::hash(family.string());
+        return family.existingHash();
+#endif
     return ASCIICaseInsensitiveHash::hash(family);
 }
 
-String FontCascadeDescription::foldedFamilyName(const AtomicString& family)
+String FontCascadeDescription::foldedFamilyName(const String& family)
 {
-    // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
-    // always take the case insensitive patch once this radar is fixed.
+#if PLATFORM(COCOA)
     if (family.startsWith('.'))
-        return family.string();
-    return family.string().foldCase();
+        return family;
+#endif
+    return family.convertToASCIILowercase();
 }
 
 } // namespace WebCore

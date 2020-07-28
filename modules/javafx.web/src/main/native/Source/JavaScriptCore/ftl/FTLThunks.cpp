@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,13 +47,13 @@ enum class FrameAndStackAdjustmentRequirement {
 };
 
 static MacroAssemblerCodeRef<JITThunkPtrTag> genericGenerationThunkGenerator(
-    VM* vm, FunctionPtr<CFunctionPtrTag> generationFunction, PtrTag resultTag, const char* name, unsigned extraPopsToRestore, FrameAndStackAdjustmentRequirement frameAndStackAdjustmentRequirement)
+    VM& vm, FunctionPtr<CFunctionPtrTag> generationFunction, PtrTag resultTag, const char* name, unsigned extraPopsToRestore, FrameAndStackAdjustmentRequirement frameAndStackAdjustmentRequirement)
 {
     AssemblyHelpers jit(nullptr);
 
     if (frameAndStackAdjustmentRequirement == FrameAndStackAdjustmentRequirement::Needed) {
         // This needs to happen before we use the scratch buffer because this function also uses the scratch buffer.
-        adjustFrameAndStackInOSRExitCompilerThunk<FTL::JITCode>(jit, vm, JITCode::FTLJIT);
+        adjustFrameAndStackInOSRExitCompilerThunk<FTL::JITCode>(jit, vm, JITType::FTLJIT);
     }
 
     // Note that the "return address" will be the ID that we pass to the generation function.
@@ -73,7 +73,7 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> genericGenerationThunkGenerator(
         numberOfRequiredPops++;
     } while (stackMisalignment % stackAlignmentBytes());
 
-    ScratchBuffer* scratchBuffer = vm->scratchBufferForSize(requiredScratchMemorySizeInBytes());
+    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(requiredScratchMemorySizeInBytes());
     char* buffer = static_cast<char*>(scratchBuffer->dataBuffer());
 
     saveAllRegisters(jit, buffer);
@@ -115,8 +115,8 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> genericGenerationThunkGenerator(
 
     restoreAllRegisters(jit, buffer);
 
-#if CPU(ARM64) && USE(POINTER_PROFILING)
-    jit.untagPtr(AssemblyHelpers::linkRegister, resultTag);
+#if CPU(ARM64E)
+    jit.untagPtr(resultTag, AssemblyHelpers::linkRegister);
     jit.tagReturnAddress();
 #else
     UNUSED_PARAM(resultTag);
@@ -128,14 +128,14 @@ static MacroAssemblerCodeRef<JITThunkPtrTag> genericGenerationThunkGenerator(
     return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "%s", name);
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM* vm)
+MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM& vm)
 {
     unsigned extraPopsToRestore = 0;
     return genericGenerationThunkGenerator(
         vm, compileFTLOSRExit, OSRExitPtrTag, "FTL OSR exit generation thunk", extraPopsToRestore, FrameAndStackAdjustmentRequirement::Needed);
 }
 
-MacroAssemblerCodeRef<JITThunkPtrTag> lazySlowPathGenerationThunkGenerator(VM* vm)
+MacroAssemblerCodeRef<JITThunkPtrTag> lazySlowPathGenerationThunkGenerator(VM& vm)
 {
     unsigned extraPopsToRestore = 1;
     return genericGenerationThunkGenerator(

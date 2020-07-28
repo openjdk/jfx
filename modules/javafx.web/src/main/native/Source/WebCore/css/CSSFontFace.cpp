@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,10 +77,10 @@ void CSSFontFace::appendSources(CSSFontFace& fontFace, CSSValueList& srcList, Do
             bool allowDownloading = foundSVGFont || (settings && settings->downloadableBinaryFontsEnabled());
             if (allowDownloading && item.isSupportedFormat() && document) {
                 if (CachedFont* cachedFont = item.cachedFont(document, foundSVGFont, isInitiatingElementInUserAgentShadowTree))
-                    source = std::make_unique<CSSFontFaceSource>(fontFace, item.resource(), cachedFont);
+                    source = makeUnique<CSSFontFaceSource>(fontFace, item.resource(), cachedFont);
             }
         } else
-            source = std::make_unique<CSSFontFaceSource>(fontFace, item.resource(), nullptr, fontFaceElement);
+            source = makeUnique<CSSFontFaceSource>(fontFace, item.resource(), nullptr, fontFaceElement);
 
         if (source)
             fontFace.adoptSource(WTFMove(source));
@@ -120,6 +120,11 @@ bool CSSFontFace::setFamilies(CSSValue& family)
     });
 
     return true;
+}
+
+FontFace* CSSFontFace::existingWrapper()
+{
+    return m_wrapper.get();
 }
 
 static FontSelectionRange calculateWeightRange(CSSValue& value)
@@ -473,8 +478,6 @@ bool CSSFontFace::rangesMatchCodePoint(UChar32 character) const
 
 void CSSFontFace::fontLoadEventOccurred()
 {
-    Ref<CSSFontFace> protectedThis(*this);
-
     // If the font is already in the cache, CSSFontFaceSource may report it's loaded before it is added here as a source.
     // Let's not pump the state machine until we've got all our sources. font() and load() are smart enough to act correctly
     // when a source is failed or succeeded before we have asked it to load.
@@ -491,6 +494,8 @@ void CSSFontFace::fontLoadEventOccurred()
 
 void CSSFontFace::timeoutFired()
 {
+    Ref<CSSFontFace> protectedThis(*this);
+
     switch (status()) {
     case Status::Loading:
         setStatus(Status::TimedOut);
@@ -589,6 +594,13 @@ AllowUserInstalledFonts CSSFontFace::allowUserInstalledFonts() const
     return AllowUserInstalledFonts::Yes;
 }
 
+bool CSSFontFace::shouldAllowDesignSystemUIFonts() const
+{
+    if (m_fontSelector && m_fontSelector->document())
+        return m_fontSelector->document()->settings().shouldAllowDesignSystemUIFonts();
+    return false;
+}
+
 static Settings::FontLoadTimingOverride fontLoadTimingOverride(CSSFontSelector* fontSelector)
 {
     auto overrideValue = Settings::FontLoadTimingOverride::None;
@@ -684,6 +696,8 @@ void CSSFontFace::setStatus(Status newStatus)
 
 void CSSFontFace::fontLoaded(CSSFontFaceSource&)
 {
+    Ref<CSSFontFace> protectedThis(*this);
+
     fontLoadEventOccurred();
 }
 
@@ -782,6 +796,8 @@ RefPtr<Font> CSSFontFace::font(const FontDescription& fontDescription, bool synt
 {
     if (computeFailureState())
         return nullptr;
+
+    Ref<CSSFontFace> protectedThis(*this);
 
     // Our status is derived from the first non-failed source. However, this source may
     // return null from font(), which means we need to continue looping through the remainder

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,6 +82,7 @@ import javafx.css.FontCssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
@@ -307,6 +308,7 @@ public class Text extends Shape {
             } else {
                 layout.setDirection(TextLayout.DIRECTION_LTR);
             }
+            layout.setTabSize(getTabSize());
         }
         return layout;
     }
@@ -1267,6 +1269,32 @@ public class Text extends Shape {
         return TransformedShape.translatedShape(shape, x, y);
     }
 
+    /**
+     * The size of a tab stop in spaces.
+     * Values less than 1 are treated as 1.
+     *
+     * @return the {@code tabSize} property
+     *
+     * @defaultValue 8
+     *
+     * @since 14
+     */
+    public final IntegerProperty tabSizeProperty() {
+        return getTextAttribute().tabSizeProperty();
+    }
+
+    public final int getTabSize() {
+        if (attributes == null || attributes.tabSize == null) {
+            return TextLayout.DEFAULT_TAB_SIZE;
+        }
+        return getTextAttribute().getTabSize();
+    }
+
+    public final void setTabSize(int spaces) {
+        tabSizeProperty().set(spaces);
+    }
+
+
    /***************************************************************************
     *                                                                         *
     *                            Stylesheet Handling                          *
@@ -1276,9 +1304,9 @@ public class Text extends Shape {
     /*
      * Super-lazy instantiation pattern from Bill Pugh.
      */
-     private static class StyleableProperties {
+    private static class StyleableProperties {
 
-         private static final CssMetaData<Text,Font> FONT =
+        private static final CssMetaData<Text,Font> FONT =
             new FontCssMetaData<Text>("-fx-font", Font.getDefault()) {
 
             @Override
@@ -1290,11 +1318,11 @@ public class Text extends Shape {
             public StyleableProperty<Font> getStyleableProperty(Text node) {
                 return (StyleableProperty<Font>)node.fontProperty();
             }
-         };
+        };
 
-         private static final CssMetaData<Text,Boolean> UNDERLINE =
+        private static final CssMetaData<Text,Boolean> UNDERLINE =
             new CssMetaData<Text,Boolean>("-fx-underline",
-                 BooleanConverter.getInstance(), Boolean.FALSE) {
+                BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1307,11 +1335,11 @@ public class Text extends Shape {
             public StyleableProperty<Boolean> getStyleableProperty(Text node) {
                 return (StyleableProperty<Boolean>)node.underlineProperty();
             }
-         };
+        };
 
-         private static final CssMetaData<Text,Boolean> STRIKETHROUGH =
+        private static final CssMetaData<Text,Boolean> STRIKETHROUGH =
             new CssMetaData<Text,Boolean>("-fx-strikethrough",
-                 BooleanConverter.getInstance(), Boolean.FALSE) {
+                BooleanConverter.getInstance(), Boolean.FALSE) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1324,13 +1352,13 @@ public class Text extends Shape {
             public StyleableProperty<Boolean> getStyleableProperty(Text node) {
                 return (StyleableProperty<Boolean>)node.strikethroughProperty();
             }
-         };
+        };
 
-         private static final
-             CssMetaData<Text,TextAlignment> TEXT_ALIGNMENT =
-                 new CssMetaData<Text,TextAlignment>("-fx-text-alignment",
-                 new EnumConverter<TextAlignment>(TextAlignment.class),
-                 TextAlignment.LEFT) {
+        private static final
+            CssMetaData<Text,TextAlignment> TEXT_ALIGNMENT =
+                new CssMetaData<Text,TextAlignment>("-fx-text-alignment",
+                new EnumConverter<TextAlignment>(TextAlignment.class),
+                TextAlignment.LEFT) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1343,12 +1371,12 @@ public class Text extends Shape {
             public StyleableProperty<TextAlignment> getStyleableProperty(Text node) {
                 return (StyleableProperty<TextAlignment>)node.textAlignmentProperty();
             }
-         };
+        };
 
-         private static final CssMetaData<Text,VPos> TEXT_ORIGIN =
-                 new CssMetaData<Text,VPos>("-fx-text-origin",
-                 new EnumConverter<VPos>(VPos.class),
-                 VPos.BASELINE) {
+        private static final CssMetaData<Text,VPos> TEXT_ORIGIN =
+                new CssMetaData<Text,VPos>("-fx-text-origin",
+                new EnumConverter<VPos>(VPos.class),
+                VPos.BASELINE) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1361,14 +1389,14 @@ public class Text extends Shape {
             public StyleableProperty<VPos> getStyleableProperty(Text node) {
                 return (StyleableProperty<VPos>)node.textOriginProperty();
             }
-         };
+        };
 
-         private static final CssMetaData<Text,FontSmoothingType>
-             FONT_SMOOTHING_TYPE =
-             new CssMetaData<Text,FontSmoothingType>(
-                 "-fx-font-smoothing-type",
-                 new EnumConverter<FontSmoothingType>(FontSmoothingType.class),
-                 FontSmoothingType.GRAY) {
+        private static final CssMetaData<Text,FontSmoothingType>
+            FONT_SMOOTHING_TYPE =
+            new CssMetaData<Text,FontSmoothingType>(
+                "-fx-font-smoothing-type",
+                new EnumConverter<FontSmoothingType>(FontSmoothingType.class),
+                FontSmoothingType.GRAY) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1382,12 +1410,12 @@ public class Text extends Shape {
 
                 return (StyleableProperty<FontSmoothingType>)node.fontSmoothingTypeProperty();
             }
-         };
+        };
 
-         private static final
-             CssMetaData<Text,Number> LINE_SPACING =
-                 new CssMetaData<Text,Number>("-fx-line-spacing",
-                 SizeConverter.getInstance(), 0) {
+        private static final
+            CssMetaData<Text,Number> LINE_SPACING =
+                new CssMetaData<Text,Number>("-fx-line-spacing",
+                SizeConverter.getInstance(), 0) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1400,14 +1428,14 @@ public class Text extends Shape {
             public StyleableProperty<Number> getStyleableProperty(Text node) {
                 return (StyleableProperty<Number>)node.lineSpacingProperty();
             }
-         };
+        };
 
-         private static final CssMetaData<Text, TextBoundsType>
-             BOUNDS_TYPE =
-             new CssMetaData<Text,TextBoundsType>(
-                 "-fx-bounds-type",
-                 new EnumConverter<TextBoundsType>(TextBoundsType.class),
-                 DEFAULT_BOUNDS_TYPE) {
+        private static final CssMetaData<Text, TextBoundsType>
+            BOUNDS_TYPE =
+            new CssMetaData<Text,TextBoundsType>(
+                "-fx-bounds-type",
+                new EnumConverter<TextBoundsType>(TextBoundsType.class),
+                DEFAULT_BOUNDS_TYPE) {
 
             @Override
             public boolean isSettable(Text node) {
@@ -1418,10 +1446,27 @@ public class Text extends Shape {
             public StyleableProperty<TextBoundsType> getStyleableProperty(Text node) {
                 return (StyleableProperty<TextBoundsType>)node.boundsTypeProperty();
             }
-         };
+        };
 
-     private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
+        private static final CssMetaData<Text, Number> TAB_SIZE =
+                new CssMetaData<Text,Number>("-fx-tab-size",
+                SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
+
+            @Override
+            public boolean isSettable(Text node) {
+                return node.attributes == null ||
+                       node.attributes.tabSize == null ||
+                      !node.attributes.tabSize.isBound();
+            }
+
+            @Override
+            public StyleableProperty<Number> getStyleableProperty(Text node) {
+                return (StyleableProperty<Number>)node.tabSizeProperty();
+            }
+        };
+
+    private final static List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(Shape.getClassCssMetaData());
             styleables.add(FONT);
@@ -1432,8 +1477,9 @@ public class Text extends Shape {
             styleables.add(FONT_SMOOTHING_TYPE);
             styleables.add(LINE_SPACING);
             styleables.add(BOUNDS_TYPE);
+            styleables.add(TAB_SIZE);
             STYLEABLES = Collections.unmodifiableList(styleables);
-         }
+        }
     }
 
     /**
@@ -1821,6 +1867,37 @@ public class Text extends Shape {
             }
             return caretBias;
         }
+
+        private IntegerProperty tabSize;
+
+        final int getTabSize() {
+            return tabSize == null ? TextLayout.DEFAULT_TAB_SIZE : tabSize.get();
+        }
+
+        final IntegerProperty tabSizeProperty() {
+            if (tabSize == null) {
+                tabSize = new StyleableIntegerProperty(TextLayout.DEFAULT_TAB_SIZE) {
+                    @Override public Object getBean() { return Text.this; }
+                    @Override public String getName() { return "tabSize"; }
+                    @Override public CssMetaData getCssMetaData() {
+                        return StyleableProperties.TAB_SIZE;
+                    }
+                    @Override protected void invalidated() {
+                        if (!isSpan()) {
+                            TextLayout layout = getTextLayout();
+                            if (layout.setTabSize(get())) {
+                                needsTextLayout();
+                            }
+                            NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
+                            if (getBoundsType() == TextBoundsType.VISUAL) {
+                                NodeHelper.geomChanged(Text.this);
+                            }
+                        }
+                    }
+                };
+            }
+            return tabSize;
+        }
     }
 
     /**
@@ -1851,6 +1928,11 @@ public class Text extends Shape {
         double wrap = getWrappingWidth();
         if (wrap != 0) {
             sb.append(", wrappingWidth=").append(wrap);
+        }
+
+        int tab = getTabSize();
+        if (tab != TextLayout.DEFAULT_TAB_SIZE) {
+            sb.append(", tabSize=").append(tab);
         }
 
         sb.append(", font=").append(getFont());

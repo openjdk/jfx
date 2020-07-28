@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -324,7 +324,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     void initialize() {
         boolean isIndeterminate = control.isIndeterminate();
         if (isIndeterminate) {
-            // clean up determinateIndicator
+            // clean up the old determinateIndicator
+            if (determinateIndicator != null) {
+                determinateIndicator.unregisterListener();
+            }
             determinateIndicator = null;
 
             // create spinner
@@ -539,6 +542,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
             getChildren().setAll(indicator, progress, text, tick);
             updateProgress(control.getProgress());
+        }
+
+        private void unregisterListener() {
+            unregisterChangeListeners(text.fontProperty());
         }
 
         private void setFillOverride(Paint fillOverride) {

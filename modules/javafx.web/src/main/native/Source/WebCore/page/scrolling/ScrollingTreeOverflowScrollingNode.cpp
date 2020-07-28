@@ -30,6 +30,7 @@
 
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -39,6 +40,12 @@ ScrollingTreeOverflowScrollingNode::ScrollingTreeOverflowScrollingNode(Scrolling
 }
 
 ScrollingTreeOverflowScrollingNode::~ScrollingTreeOverflowScrollingNode() = default;
+
+void ScrollingTreeOverflowScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
+{
+    ts << "overflow scrolling node";
+    ScrollingTreeScrollingNode::dumpProperties(ts, behavior);
+}
 
 } // namespace WebCore
 

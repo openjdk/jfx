@@ -43,7 +43,7 @@ G_BEGIN_DECLS
  * MAXINT/4.
  */
 GLIB_AVAILABLE_IN_ALL
-guint      g_spaced_primes_closest (guint num) G_GNUC_CONST;
+guint    g_spaced_primes_closest (guint num) G_GNUC_CONST;
 
 G_END_DECLS
 

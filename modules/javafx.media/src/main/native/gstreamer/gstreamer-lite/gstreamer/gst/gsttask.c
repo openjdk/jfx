@@ -89,9 +89,6 @@ GST_DEBUG_CATEGORY_STATIC (task_debug);
 #define SET_TASK_STATE(t,s) (g_atomic_int_set (&GST_TASK_STATE(t), (s)))
 #define GET_TASK_STATE(t)   ((GstTaskState) g_atomic_int_get (&GST_TASK_STATE(t)))
 
-#define GST_TASK_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_TASK, GstTaskPrivate))
-
 struct _GstTaskPrivate
 {
   /* callbacks for managing the thread of this task */
@@ -153,7 +150,8 @@ static GMutex pool_lock;
   GST_DEBUG_CATEGORY_INIT (task_debug, "task", 0, "Processing tasks"); \
 }
 
-G_DEFINE_TYPE_WITH_CODE (GstTask, gst_task, GST_TYPE_OBJECT, _do_init);
+G_DEFINE_TYPE_WITH_CODE (GstTask, gst_task, GST_TYPE_OBJECT,
+    G_ADD_PRIVATE (GstTask) _do_init);
 
 static void
 init_klass_pool (GstTaskClass * klass)
@@ -177,8 +175,6 @@ gst_task_class_init (GstTaskClass * klass)
 
   gobject_class = (GObjectClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstTaskPrivate));
-
   gobject_class->finalize = gst_task_finalize;
 
   init_klass_pool (klass);
@@ -191,7 +187,7 @@ gst_task_init (GstTask * task)
 
   klass = GST_TASK_GET_CLASS (task);
 
-  task->priv = GST_TASK_GET_PRIVATE (task);
+  task->priv = gst_task_get_instance_private (task);
   task->running = FALSE;
   task->thread = NULL;
   task->lock = NULL;
@@ -308,22 +304,22 @@ gst_task_func (GstTask * task)
   gst_task_configure_name (task);
 
   while (G_LIKELY (GET_TASK_STATE (task) != GST_TASK_STOPPED)) {
-      GST_OBJECT_LOCK (task);
-      while (G_UNLIKELY (GST_TASK_STATE (task) == GST_TASK_PAUSED)) {
-        g_rec_mutex_unlock (lock);
+    GST_OBJECT_LOCK (task);
+    while (G_UNLIKELY (GST_TASK_STATE (task) == GST_TASK_PAUSED)) {
+      g_rec_mutex_unlock (lock);
 
-        GST_TASK_SIGNAL (task);
-        GST_INFO_OBJECT (task, "Task going to paused");
-        GST_TASK_WAIT (task);
-        GST_INFO_OBJECT (task, "Task resume from paused");
-        GST_OBJECT_UNLOCK (task);
-        /* locking order.. */
-        g_rec_mutex_lock (lock);
+      GST_TASK_SIGNAL (task);
+      GST_INFO_OBJECT (task, "Task going to paused");
+      GST_TASK_WAIT (task);
+      GST_INFO_OBJECT (task, "Task resume from paused");
+      GST_OBJECT_UNLOCK (task);
+      /* locking order.. */
+      g_rec_mutex_lock (lock);
       GST_OBJECT_LOCK (task);
     }
 
-        if (G_UNLIKELY (GET_TASK_STATE (task) == GST_TASK_STOPPED)) {
-          GST_OBJECT_UNLOCK (task);
+    if (G_UNLIKELY (GET_TASK_STATE (task) == GST_TASK_STOPPED)) {
+      GST_OBJECT_UNLOCK (task);
       break;
     } else {
       GST_OBJECT_UNLOCK (task);

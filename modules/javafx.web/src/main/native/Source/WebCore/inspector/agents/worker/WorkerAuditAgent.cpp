@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WorkerAuditAgent.h"
 
+#include "ScriptState.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
@@ -45,10 +46,12 @@ WorkerAuditAgent::WorkerAuditAgent(WorkerAgentContext& context)
     ASSERT(context.workerGlobalScope.isContextThread());
 }
 
+WorkerAuditAgent::~WorkerAuditAgent() = default;
+
 InjectedScript WorkerAuditAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
 {
     if (executionContextId) {
-        errorString = "Execution context id is not supported for workers as there is only one execution context."_s;
+        errorString = "executionContextId is not supported for workers as there is only one execution context"_s;
         return InjectedScript();
     }
 

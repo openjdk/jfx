@@ -28,6 +28,7 @@
 #include "WorkerScriptLoader.h"
 
 #include "ContentSecurityPolicy.h"
+#include "Exception.h"
 #include "FetchIdioms.h"
 #include "MIMETypeRegistry.h"
 #include "ResourceResponse.h"
@@ -114,7 +115,7 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
 
     ASSERT(scriptRequest.httpMethod() == "GET");
 
-    auto request = std::make_unique<ResourceRequest>(WTFMove(scriptRequest));
+    auto request = makeUnique<ResourceRequest>(WTFMove(scriptRequest));
     if (!request)
         return;
 
@@ -146,7 +147,7 @@ const URL& WorkerScriptLoader::responseURL() const
 
 std::unique_ptr<ResourceRequest> WorkerScriptLoader::createResourceRequest(const String& initiatorIdentifier)
 {
-    auto request = std::make_unique<ResourceRequest>(m_url);
+    auto request = makeUnique<ResourceRequest>(m_url);
     request->setHTTPMethod("GET"_s);
     request->setInitiatorIdentifier(initiatorIdentifier);
     return request;

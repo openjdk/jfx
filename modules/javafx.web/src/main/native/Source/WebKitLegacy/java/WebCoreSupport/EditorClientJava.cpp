@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -358,10 +358,10 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     return frame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
 }
 
-void EditorClientJava::handleKeyboardEvent(KeyboardEvent* evt)
+void EditorClientJava::handleKeyboardEvent(KeyboardEvent& evt)
 {
-    if (handleEditingKeyboardEvent(evt)) {
-        evt->setDefaultHandled();
+    if (handleEditingKeyboardEvent(&evt)) {
+        evt.setDefaultHandled();
     }
 }
 
@@ -613,7 +613,7 @@ void EditorClientJava::setInputMethodState(bool enabled)
     WTF::CheckAndClearException(env);
 }
 
-void EditorClientJava::handleInputMethodKeydown(KeyboardEvent*)
+void EditorClientJava::handleInputMethodKeydown(KeyboardEvent&)
 {
     notImplemented();
 }
@@ -722,12 +722,6 @@ void EditorClientJava::getGuessesForWord(const String&, const String&, const Vis
 void EditorClientJava::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
 {
     notImplemented();
-}
-
-String EditorClientJava::replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&)
-{
-    notImplemented();
-    return { };
 }
 
 } // namespace WebCore

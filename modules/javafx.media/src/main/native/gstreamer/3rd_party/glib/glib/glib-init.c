@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Canonical Limited
+ * Copyright (C) 2011 Canonical Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -20,8 +20,7 @@
 #include "config.h"
 
 #include "glib-init.h"
-
-#include "glib-private.h"
+#include "gmacros.h"
 #include "gtypes.h"
 #include "gutils.h"     /* for GDebugKey */
 #include "gconstructor.h"
@@ -40,10 +39,10 @@ G_STATIC_ASSERT (CHAR_BIT == 8);
 
 /* We assume that data pointers are the same size as function pointers... */
 G_STATIC_ASSERT (sizeof (gpointer) == sizeof (GFunc));
-G_STATIC_ASSERT (_g_alignof (gpointer) == _g_alignof (GFunc));
+G_STATIC_ASSERT (G_ALIGNOF (gpointer) == G_ALIGNOF (GFunc));
 /* ... and that all function pointers are the same size. */
 G_STATIC_ASSERT (sizeof (GFunc) == sizeof (GCompareDataFunc));
-G_STATIC_ASSERT (_g_alignof (GFunc) == _g_alignof (GCompareDataFunc));
+G_STATIC_ASSERT (G_ALIGNOF (GFunc) == G_ALIGNOF (GCompareDataFunc));
 
 /* We assume that "small" enums (those where all values fit in INT32_MIN
  * to INT32_MAX) are exactly int-sized. In particular, we assume that if
@@ -64,9 +63,9 @@ typedef enum {
 G_STATIC_ASSERT (sizeof (TestChar) == sizeof (int));
 G_STATIC_ASSERT (sizeof (TestShort) == sizeof (int));
 G_STATIC_ASSERT (sizeof (TestInt) == sizeof (int));
-G_STATIC_ASSERT (_g_alignof (TestChar) == _g_alignof (int));
-G_STATIC_ASSERT (_g_alignof (TestShort) == _g_alignof (int));
-G_STATIC_ASSERT (_g_alignof (TestInt) == _g_alignof (int));
+G_STATIC_ASSERT (G_ALIGNOF (TestChar) == G_ALIGNOF (int));
+G_STATIC_ASSERT (G_ALIGNOF (TestShort) == G_ALIGNOF (int));
+G_STATIC_ASSERT (G_ALIGNOF (TestInt) == G_ALIGNOF (int));
 
 /**
  * g_mem_gc_friendly:
@@ -152,7 +151,7 @@ g_parse_debug_string  (const gchar     *string,
       /* using stdio directly for the reason stated above */
       fprintf (stderr, "Supported debug values:");
       for (i = 0; i < nkeys; i++)
-       fprintf (stderr, " %s", keys[i].key);
+        fprintf (stderr, " %s", keys[i].key);
       fprintf (stderr, " all help\n");
     }
   else
@@ -287,6 +286,9 @@ DllMain (HINSTANCE hinstDLL,
     {
     case DLL_PROCESS_ATTACH:
       glib_dll = hinstDLL;
+#ifndef GSTREAMER_LITE
+      g_crash_handler_win32_init ();
+#endif // GSTREAMER_LITE
       g_clock_win32_init ();
 #ifdef THREADS_WIN32
       g_thread_win32_init ();
@@ -307,6 +309,9 @@ DllMain (HINSTANCE hinstDLL,
       if (lpvReserved == NULL)
         g_thread_win32_process_detach ();
 #endif
+#ifndef GSTREAMER_LITE
+      g_crash_handler_win32_deinit ();
+#endif // GSTREAMER_LITE
       break;
 
     default:

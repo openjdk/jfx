@@ -31,6 +31,7 @@
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
 #include "TreeScope.h"
+#include <wtf/CompactPointerTuple.h>
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
@@ -63,20 +64,6 @@ class ShadowRoot;
 class TouchEvent;
 
 using NodeOrString = Variant<RefPtr<Node>, String>;
-
-class NodeRareDataBase {
-public:
-    RenderObject* renderer() const { return m_renderer; }
-    void setRenderer(RenderObject* renderer) { m_renderer = renderer; }
-
-protected:
-    NodeRareDataBase(RenderObject* renderer)
-        : m_renderer(renderer)
-    { }
-
-private:
-    RenderObject* m_renderer;
-};
 
 class Node : public EventTarget {
     WTF_MAKE_ISO_ALLOCATED(Node);
@@ -165,17 +152,17 @@ public:
     Ref<Node> cloneNode(bool deep) { return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf); }
     WEBCORE_EXPORT ExceptionOr<Ref<Node>> cloneNodeForBindings(bool deep);
 
-    virtual const AtomicString& localName() const;
-    virtual const AtomicString& namespaceURI() const;
-    virtual const AtomicString& prefix() const;
-    virtual ExceptionOr<void> setPrefix(const AtomicString&);
+    virtual const AtomString& localName() const;
+    virtual const AtomString& namespaceURI() const;
+    virtual const AtomString& prefix() const;
+    virtual ExceptionOr<void> setPrefix(const AtomString&);
     WEBCORE_EXPORT void normalize();
 
     bool isSameNode(Node* other) const { return this == other; }
     WEBCORE_EXPORT bool isEqualNode(Node*) const;
-    WEBCORE_EXPORT bool isDefaultNamespace(const AtomicString& namespaceURI) const;
-    WEBCORE_EXPORT const AtomicString& lookupPrefix(const AtomicString& namespaceURI) const;
-    WEBCORE_EXPORT const AtomicString& lookupNamespaceURI(const AtomicString& prefix) const;
+    WEBCORE_EXPORT bool isDefaultNamespace(const AtomString& namespaceURI) const;
+    WEBCORE_EXPORT const AtomString& lookupPrefix(const AtomString& namespaceURI) const;
+    WEBCORE_EXPORT const AtomString& lookupNamespaceURI(const AtomString& prefix) const;
 
     WEBCORE_EXPORT String textContent(bool convertBRsToNewlines = false) const;
     WEBCORE_EXPORT ExceptionOr<void> setTextContent(const String&);
@@ -283,7 +270,7 @@ public:
 
     virtual bool canContainRangeEndPoint() const { return false; }
 
-    bool isRootEditableElement() const;
+    WEBCORE_EXPORT bool isRootEditableElement() const;
     WEBCORE_EXPORT Element* rootEditableElement() const;
 
     // Called by the parser when this element's close tag is reached,
@@ -384,7 +371,7 @@ public:
     unsigned countChildNodes() const;
     Node* traverseToChildAt(unsigned) const;
 
-    ExceptionOr<void> checkSetPrefix(const AtomicString& prefix);
+    ExceptionOr<void> checkSetPrefix(const AtomString& prefix);
 
     WEBCORE_EXPORT bool isDescendantOf(const Node&) const;
     bool isDescendantOf(const Node* other) const { return other && isDescendantOf(*other); }
@@ -410,14 +397,8 @@ public:
     // Integration with rendering tree
 
     // As renderer() includes a branch you should avoid calling it repeatedly in hot code paths.
-    RenderObject* renderer() const { return hasRareData() ? m_data.m_rareData->renderer() : m_data.m_renderer; };
-    void setRenderer(RenderObject* renderer)
-    {
-        if (hasRareData())
-            m_data.m_rareData->setRenderer(renderer);
-        else
-            m_data.m_renderer = renderer;
-    }
+    RenderObject* renderer() const { return m_rendererWithStyleFlags.pointer(); }
+    void setRenderer(RenderObject*); // Defined in RenderObject.h
 
     // Use these two methods with caution.
     WEBCORE_EXPORT RenderBox* renderBox() const;
@@ -472,8 +453,8 @@ public:
     EventTargetInterface eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in Document.h
 
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) override;
+    WEBCORE_EXPORT bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) override;
 
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) override;
@@ -499,7 +480,7 @@ public:
     void ref();
     void deref();
     bool hasOneRef() const;
-    int refCount() const;
+    unsigned refCount() const;
 
 #ifndef NDEBUG
     bool m_deletionHasBegun { false };
@@ -512,7 +493,7 @@ public:
     EventTargetData& ensureEventTargetData() final;
 
     HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions> registeredMutationObservers(MutationObserver::MutationType, const QualifiedName* attributeName);
-    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const HashSet<AtomicString>& attributeFilter);
+    void registerMutationObserver(MutationObserver&, MutationObserverOptions, const HashSet<AtomString>& attributeFilter);
     void unregisterMutationObserver(MutationObserverRegistration&);
     void registerTransientMutationObserver(MutationObserverRegistration&);
     void unregisterTransientMutationObserver(MutationObserverRegistration&);
@@ -528,7 +509,7 @@ public:
 
 #if ENABLE(JIT)
     static ptrdiff_t nodeFlagsMemoryOffset() { return OBJECT_OFFSETOF(Node, m_nodeFlags); }
-    static ptrdiff_t rareDataMemoryOffset() { return OBJECT_OFFSETOF(Node, m_data.m_rareData); }
+    static ptrdiff_t rareDataMemoryOffset() { return OBJECT_OFFSETOF(Node, m_rareData); }
     static int32_t flagIsText() { return IsTextFlag; }
     static int32_t flagIsContainer() { return IsContainerFlag; }
     static int32_t flagIsElement() { return IsElementFlag; }
@@ -536,7 +517,6 @@ public:
     static int32_t flagIsHTML() { return IsHTMLFlag; }
     static int32_t flagIsLink() { return IsLinkFlag; }
     static int32_t flagHasFocusWithin() { return HasFocusWithin; }
-    static int32_t flagHasRareData() { return HasRareDataFlag; }
     static int32_t flagIsParsingChildrenFinished() { return IsParsingChildrenFinishedFlag; }
     static int32_t flagChildrenAffectedByFirstChildRulesFlag() { return ChildrenAffectedByFirstChildRulesFlag; }
     static int32_t flagChildrenAffectedByLastChildRulesFlag() { return ChildrenAffectedByLastChildRulesFlag; }
@@ -557,7 +537,7 @@ protected:
         IsShadowRootFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
         IsInShadowTreeFlag = 1 << 9,
-        HasRareDataFlag = 1 << 10,
+        StyleAffectedByFocusWithinFlag = 1 << 10,
         HasEventTargetDataFlag = 1 << 11,
 
         // These bits are used by derived classes, pulled up here so they can
@@ -617,11 +597,32 @@ protected:
     };
     Node(Document&, ConstructionType);
 
+    static constexpr uint32_t s_refCountIncrement = 2;
+    static constexpr uint32_t s_refCountMask = ~static_cast<uint32_t>(1);
+
+    enum class ElementStyleFlag : uint8_t {
+        StyleAffectedByActive = 1 << 0,
+        StyleAffectedByEmpty = 1 << 1,
+        ChildrenAffectedByDrag = 1 << 2,
+
+        // Bits for dynamic child matching.
+        // We optimize for :first-child and :last-child. The other positional child selectors like nth-child or
+        // *-child-of-type, we will just give up and re-evaluate whenever children change at all.
+        ChildrenAffectedByForwardPositionalRules = 1 << 3,
+        DescendantsAffectedByForwardPositionalRules = 1 << 4,
+        ChildrenAffectedByBackwardPositionalRules = 1 << 5,
+        DescendantsAffectedByBackwardPositionalRules = 1 << 6,
+        ChildrenAffectedByPropertyBasedBackwardPositionalRules = 1 << 7,
+    };
+
+    bool hasStyleFlag(ElementStyleFlag state) const { return m_rendererWithStyleFlags.type() & static_cast<uint8_t>(state); }
+    void setStyleFlag(ElementStyleFlag state) { m_rendererWithStyleFlags.setType(m_rendererWithStyleFlags.type() | static_cast<uint8_t>(state)); }
+    void clearStyleFlags() { m_rendererWithStyleFlags.setType(0); }
+
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const { }
 
-    bool hasRareData() const { return getFlag(HasRareDataFlag); }
-
-    NodeRareData* rareData() const;
+    bool hasRareData() const { return !!m_rareData; }
+    NodeRareData* rareData() const { return m_rareData.get(); }
     NodeRareData& ensureRareData();
     void clearRareData();
 
@@ -663,18 +664,19 @@ private:
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
     void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
 
-    int m_refCount;
+    struct NodeRareDataDeleter {
+        void operator()(NodeRareData*) const;
+    };
+
+    uint32_t m_refCountAndParentBit { s_refCountIncrement };
     mutable uint32_t m_nodeFlags;
 
     ContainerNode* m_parentNode { nullptr };
     TreeScope* m_treeScope { nullptr };
     Node* m_previous { nullptr };
     Node* m_next { nullptr };
-    // When a node has rare data we move the renderer into the rare data.
-    union DataUnion {
-        RenderObject* m_renderer;
-        NodeRareDataBase* m_rareData;
-    } m_data { nullptr };
+    CompactPointerTuple<RenderObject*, uint8_t> m_rendererWithStyleFlags;
+    std::unique_ptr<NodeRareData, NodeRareDataDeleter> m_rareData;
 };
 
 #ifndef NDEBUG
@@ -694,34 +696,39 @@ ALWAYS_INLINE void Node::ref()
     ASSERT(!m_deletionHasBegun);
     ASSERT(!m_inRemovedLastRefFunction);
     ASSERT(!m_adoptionIsRequired);
-    ++m_refCount;
+    m_refCountAndParentBit += s_refCountIncrement;
 }
 
 ALWAYS_INLINE void Node::deref()
 {
     ASSERT(isMainThread());
-    ASSERT(m_refCount >= 0);
+    ASSERT(refCount());
     ASSERT(!m_deletionHasBegun);
     ASSERT(!m_inRemovedLastRefFunction);
     ASSERT(!m_adoptionIsRequired);
-    if (--m_refCount <= 0 && !parentNode()) {
+    auto updatedRefCount = m_refCountAndParentBit - s_refCountIncrement;
+    if (!updatedRefCount) {
+        // Don't update m_refCountAndParentBit to avoid double destruction through use of Ref<T>/RefPtr<T>.
+        // (This is a security mitigation in case of programmer error. It will ASSERT in debug builds.)
 #ifndef NDEBUG
         m_inRemovedLastRefFunction = true;
 #endif
         removedLastRef();
+        return;
     }
+    m_refCountAndParentBit = updatedRefCount;
 }
 
 ALWAYS_INLINE bool Node::hasOneRef() const
 {
     ASSERT(!m_deletionHasBegun);
     ASSERT(!m_inRemovedLastRefFunction);
-    return m_refCount == 1;
+    return refCount() == 1;
 }
 
-ALWAYS_INLINE int Node::refCount() const
+ALWAYS_INLINE unsigned Node::refCount() const
 {
-    return m_refCount;
+    return m_refCountAndParentBit / s_refCountIncrement;
 }
 
 // Used in Node::addSubresourceAttributeURLs() and in addSubresourceStyleURLs()
@@ -735,6 +742,7 @@ inline void Node::setParentNode(ContainerNode* parent)
 {
     ASSERT(isMainThread());
     m_parentNode = parent;
+    m_refCountAndParentBit = (m_refCountAndParentBit & s_refCountMask) | !!parent;
 }
 
 inline ContainerNode* Node::parentNode() const

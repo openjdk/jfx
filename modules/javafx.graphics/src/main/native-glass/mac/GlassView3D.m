@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,8 +93,9 @@
         };
         GLint npix = 0;
         CGLError err = CGLChoosePixelFormat(attributes, &pix, &npix);
-        if ((err == kCGLNoError) && (npix == 0))
+        if (pix == NULL)
         {
+            NSLog(@"CGLChoosePixelFormat: No matching pixel format exists for the requested attributes, trying again with limited capabilities");
             const CGLPixelFormatAttribute attributes2[] =
             {
                 kCGLPFAAllowOfflineRenderers,
@@ -440,33 +441,23 @@
 
 - (void)rotateWithEvent:(NSEvent *)theEvent
 {
-    [self->_delegate sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_ROTATE];
+    [self->_delegate doRotateWithEvent:theEvent];
 }
 
 - (void)swipeWithEvent:(NSEvent *)theEvent
 {
-    [self->_delegate sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_SWIPE];
+    [self->_delegate doSwipeWithEvent:theEvent];
 }
 
 - (void)magnifyWithEvent:(NSEvent *)theEvent
 {
-    [self->_delegate sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_MAGNIFY];
-}
-
-- (void)endGestureWithEvent:(NSEvent *)theEvent
-{
-    [self->_delegate sendJavaGestureEndEvent:theEvent];
-}
-
-- (void)beginGestureWithEvent:(NSEvent *)theEvent
-{
-    [self->_delegate sendJavaGestureBeginEvent:theEvent];
+    [self->_delegate doMagnifyWithEvent:theEvent];
 }
 
 - (void)scrollWheel:(NSEvent *)theEvent
 {
     MOUSELOG("scrollWheel");
-    [self->_delegate sendJavaMouseEvent:theEvent];
+    [self->_delegate doScrollWheel:theEvent];
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent

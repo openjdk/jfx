@@ -40,7 +40,7 @@
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 
-#if PLATFORM(GTK)
+#if USE(ATK)
 #include <wtf/glib/GRefPtr.h>
 #endif
 
@@ -86,7 +86,7 @@ struct CharacterOffset {
 
     int remaining() const { return remainingOffset; }
     bool isNull() const { return !node; }
-    bool isEqual(CharacterOffset& other) const
+    bool isEqual(const CharacterOffset& other) const
     {
         if (isNull() || other.isNull())
             return false;
@@ -198,7 +198,7 @@ public:
     Ref<AXIsolatedTreeNode> createIsolatedAccessibilityTreeHierarchy(AccessibilityObject&, AXID, AXIsolatedTree&, Vector<Ref<AXIsolatedTreeNode>>&);
 #endif
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
     WEBCORE_EXPORT static void enableAccessibility();
     WEBCORE_EXPORT static void disableAccessibility();
 
@@ -391,7 +391,9 @@ protected:
     UChar32 characterAfter(const CharacterOffset&);
     UChar32 characterBefore(const CharacterOffset&);
     CharacterOffset characterOffsetForNodeAndOffset(Node&, int, TraverseOption = TraverseOptionDefault);
-    CharacterOffset previousBoundary(const CharacterOffset&, BoundarySearchFunction);
+
+    enum class NeedsContextAtParagraphStart { Yes, No };
+    CharacterOffset previousBoundary(const CharacterOffset&, BoundarySearchFunction, NeedsContextAtParagraphStart = NeedsContextAtParagraphStart::No);
     CharacterOffset nextBoundary(const CharacterOffset&, BoundarySearchFunction);
     CharacterOffset startCharacterOffsetOfWord(const CharacterOffset&, EWordSide = RightWordIfOnBoundary);
     CharacterOffset endCharacterOffsetOfWord(const CharacterOffset&, EWordSide = RightWordIfOnBoundary);
@@ -483,7 +485,7 @@ private:
     bool m_isSynchronizingSelection { false };
     bool m_performingDeferredCacheUpdate { false };
 
-#if PLATFORM(GTK)
+#if USE(ATK)
     ListHashSet<RefPtr<AccessibilityObject>> m_deferredAttachedWrapperObjectList;
     ListHashSet<GRefPtr<AccessibilityObjectWrapper>> m_deferredDetachedWrapperList;
 #endif
@@ -495,7 +497,7 @@ public:
     explicit AXAttributeCacheEnabler(AXObjectCache *cache);
     ~AXAttributeCacheEnabler();
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 private:
     AXObjectCache* m_cache;
 #endif
@@ -505,7 +507,7 @@ bool nodeHasRole(Node*, const String& role);
 // This will let you know if aria-hidden was explicitly set to false.
 bool isNodeAriaVisible(Node*);
 
-#if !HAVE(ACCESSIBILITY)
+#if !ENABLE(ACCESSIBILITY)
 inline AccessibilityObjectInclusion AXComputedObjectAttributeCache::getIgnored(AXID) const { return AccessibilityObjectInclusion::DefaultBehavior; }
 inline AccessibilityReplacedText::AccessibilityReplacedText(const VisibleSelection&) { }
 inline void AccessibilityReplacedText::postTextStateChangeNotification(AXObjectCache*, AXTextEditType, const String&, const VisibleSelection&) { }

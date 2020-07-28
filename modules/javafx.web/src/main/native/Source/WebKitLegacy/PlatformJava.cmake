@@ -131,12 +131,14 @@ list(APPEND WebKitLegacy_SOURCES
     java/WebCoreSupport/ChromeClientJava.cpp
     java/WebCoreSupport/BackForwardList.cpp
     java/WebCoreSupport/PageCacheJava.cpp
-    java/WebCoreSupport/WebKitLogging.cpp
 )
 
 # for DRT
 list(APPEND WebKitLegacy_LIBRARIES
     PRIVATE WebCoreTestSupport${DEBUG_SUFFIX}
+    ${ICU_I18N_LIBRARIES}
+    ${ICU_DATA_LIBRARIES}
+    ${ICU_LIBRARIES}
 )
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)

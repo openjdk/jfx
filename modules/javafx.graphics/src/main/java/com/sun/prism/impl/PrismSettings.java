@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.prism.impl;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -226,7 +224,7 @@ public final class PrismSettings {
             }
         }
 
-        tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
+        tryOrder = List.of(tryOrderArr);
 
         RasterizerType rSpec = null;
         String rOrder = systemProperties.getProperty("prism.rasterizerorder");

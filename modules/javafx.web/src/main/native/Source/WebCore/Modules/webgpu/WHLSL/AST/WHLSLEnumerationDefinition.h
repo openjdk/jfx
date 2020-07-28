@@ -27,11 +27,12 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLCodeLocation.h"
 #include "WHLSLEnumerationMember.h"
-#include "WHLSLLexer.h"
 #include "WHLSLNamedType.h"
 #include "WHLSLUnnamedType.h"
 #include <memory>
+#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
@@ -44,27 +45,26 @@ namespace WHLSL {
 
 namespace AST {
 
-class EnumerationDefinition : public NamedType {
+class EnumerationDefinition final : public NamedType {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    EnumerationDefinition(Lexer::Token&& origin, String&& name, UniqueRef<UnnamedType>&& type)
-        : NamedType(WTFMove(origin), WTFMove(name))
+    EnumerationDefinition(CodeLocation location, String&& name, Ref<UnnamedType> type)
+        : NamedType(Kind::EnumerationDefinition, location, WTFMove(name))
         , m_type(WTFMove(type))
     {
     }
 
-    virtual ~EnumerationDefinition() = default;
+    ~EnumerationDefinition() = default;
 
     EnumerationDefinition(const EnumerationDefinition&) = delete;
     EnumerationDefinition(EnumerationDefinition&&) = default;
-
-    bool isEnumerationDefinition() const override { return true; }
 
     UnnamedType& type() { return m_type; }
 
     bool add(EnumerationMember&& member)
     {
-        auto result = m_members.add(member.name(), std::make_unique<EnumerationMember>(WTFMove(member)));
-        return !result.isNewEntry;
+        auto result = m_members.add(member.name(), makeUnique<EnumerationMember>(WTFMove(member)));
+        return result.isNewEntry;
     }
 
     EnumerationMember* memberByName(const String& name)
@@ -84,7 +84,7 @@ public:
     }
 
 private:
-    UniqueRef<UnnamedType> m_type;
+    Ref<UnnamedType> m_type;
     HashMap<String, std::unique_ptr<EnumerationMember>> m_members;
 };
 
@@ -94,6 +94,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_NAMED_TYPE(EnumerationDefinition, isEnumerationDefinition())
+DEFINE_DEFAULT_DELETE(EnumerationDefinition)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(EnumerationDefinition, isEnumerationDefinition())
 
 #endif

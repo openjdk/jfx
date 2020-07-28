@@ -155,16 +155,13 @@ enum
   LAST_SIGNAL
 };
 
-#define DEFAULT_PROP_QOS    FALSE
+#define DEFAULT_PROP_QOS  FALSE
 
 enum
 {
   PROP_0,
   PROP_QOS
 };
-
-#define GST_BASE_TRANSFORM_GET_PRIVATE(obj)  \
-    (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_BASE_TRANSFORM, GstBaseTransformPrivate))
 
 struct _GstBaseTransformPrivate
 {
@@ -207,6 +204,7 @@ struct _GstBaseTransformPrivate
 
 
 static GstElementClass *parent_class = NULL;
+static gint private_offset = 0;
 
 static void gst_base_transform_class_init (GstBaseTransformClass * klass);
 static void gst_base_transform_init (GstBaseTransform * trans,
@@ -239,9 +237,19 @@ gst_base_transform_get_type (void)
 
     _type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstBaseTransform", &base_transform_info, G_TYPE_FLAG_ABSTRACT);
+
+    private_offset =
+        g_type_add_instance_private (_type, sizeof (GstBaseTransformPrivate));
+
     g_once_init_leave (&base_transform_type, _type);
   }
   return base_transform_type;
+}
+
+static inline GstBaseTransformPrivate *
+gst_base_transform_get_instance_private (GstBaseTransform * self)
+{
+  return (G_STRUCT_MEMBER_P (self, private_offset));
 }
 
 static void gst_base_transform_finalize (GObject * object);
@@ -316,12 +324,13 @@ gst_base_transform_class_init (GstBaseTransformClass * klass)
 
   gobject_class = G_OBJECT_CLASS (klass);
 
+  if (private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &private_offset);
+
   GST_DEBUG_CATEGORY_INIT (gst_base_transform_debug, "basetransform", 0,
       "basetransform element");
 
   GST_DEBUG ("gst_base_transform_class_init");
-
-  g_type_class_add_private (klass, sizeof (GstBaseTransformPrivate));
 
   parent_class = g_type_class_peek_parent (klass);
 
@@ -371,7 +380,7 @@ gst_base_transform_init (GstBaseTransform * trans,
 
   GST_DEBUG ("gst_base_transform_init");
 
-  priv = trans->priv = GST_BASE_TRANSFORM_GET_PRIVATE (trans);
+  priv = trans->priv = gst_base_transform_get_instance_private (trans);
 
   pad_template =
       gst_element_class_get_pad_template (GST_ELEMENT_CLASS (bclass), "sink");
@@ -861,7 +870,7 @@ gst_base_transform_default_decide_allocation (GstBaseTransform * trans,
       /* If change are not acceptable, fallback to generic pool */
       if (!gst_buffer_pool_config_validate_params (config, outcaps, size, min,
               max)) {
-        GST_DEBUG_OBJECT (trans, "unsuported pool, making new pool");
+        GST_DEBUG_OBJECT (trans, "unsupported pool, making new pool");
 
         gst_object_unref (pool);
         pool = gst_buffer_pool_new ();
@@ -1773,7 +1782,7 @@ not_writable:
   }
 }
 
-/* Given @caps calcultate the size of one unit.
+/* Given @caps calculate the size of one unit.
  *
  * For video caps, this is the size of one frame (and thus one buffer).
  * For audio caps, this is the size of one sample.
@@ -2839,8 +2848,8 @@ gst_base_transform_get_allocator (GstBaseTransform * trans,
  *
  * Updates the srcpad caps and send the caps downstream. This function
  * can be used by subclasses when they have already negotiated their caps
- * but found a change in them (or computed new informations). This way,
- * they can notify downstream about that change without loosing any
+ * but found a change in them (or computed new information). This way,
+ * they can notify downstream about that change without losing any
  * buffer.
  *
  * Returns: %TRUE if the caps could be send downstream %FALSE otherwise

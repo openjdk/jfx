@@ -46,7 +46,7 @@ G_BEGIN_DECLS
  * @G_SPAWN_ERROR_ACCES: execv() returned `EACCES`
  * @G_SPAWN_ERROR_PERM: execv() returned `EPERM`
  * @G_SPAWN_ERROR_TOO_BIG: execv() returned `E2BIG`
- * @G_SPAWN_ERROR_2BIG: deprecated alias for %G_SPAWN_ERROR_TOO_BIG
+ * @G_SPAWN_ERROR_2BIG: deprecated alias for %G_SPAWN_ERROR_TOO_BIG (deprecated since GLib 2.32)
  * @G_SPAWN_ERROR_NOEXEC: execv() returned `ENOEXEC`
  * @G_SPAWN_ERROR_NAMETOOLONG: execv() returned `ENAMETOOLONG`
  * @G_SPAWN_ERROR_NOENT: execv() returned `ENOENT`
@@ -73,9 +73,7 @@ typedef enum
   G_SPAWN_ERROR_ACCES,  /* execv() returned EACCES */
   G_SPAWN_ERROR_PERM,   /* execv() returned EPERM */
   G_SPAWN_ERROR_TOO_BIG,/* execv() returned E2BIG */
-#ifndef G_DISABLE_DEPRECATED
-  G_SPAWN_ERROR_2BIG = G_SPAWN_ERROR_TOO_BIG,
-#endif
+  G_SPAWN_ERROR_2BIG GLIB_DEPRECATED_ENUMERATOR_IN_2_32_FOR(G_SPAWN_ERROR_TOO_BIG) = G_SPAWN_ERROR_TOO_BIG,
   G_SPAWN_ERROR_NOEXEC, /* execv() returned ENOEXEC */
   G_SPAWN_ERROR_NAMETOOLONG, /* ""  "" ENAMETOOLONG */
   G_SPAWN_ERROR_NOENT,       /* ""  "" ENOENT */
@@ -257,7 +255,7 @@ gboolean g_spawn_command_line_async (const gchar          *command_line,
 
 GLIB_AVAILABLE_IN_2_34
 gboolean g_spawn_check_exit_status (gint      exit_status,
-                    GError  **error);
+            GError  **error);
 
 GLIB_AVAILABLE_IN_ALL
 void g_spawn_close_pid (GPid pid);

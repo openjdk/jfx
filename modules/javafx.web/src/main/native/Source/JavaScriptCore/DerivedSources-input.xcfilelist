@@ -49,6 +49,7 @@ $(PROJECT_DIR)/builtins/PromiseOperations.js
 $(PROJECT_DIR)/builtins/PromisePrototype.js
 $(PROJECT_DIR)/builtins/ReflectObject.js
 $(PROJECT_DIR)/builtins/RegExpPrototype.js
+$(PROJECT_DIR)/builtins/RegExpStringIteratorPrototype.js
 $(PROJECT_DIR)/builtins/SetIteratorPrototype.js
 $(PROJECT_DIR)/builtins/SetPrototype.js
 $(PROJECT_DIR)/builtins/StringConstructor.js
@@ -56,7 +57,7 @@ $(PROJECT_DIR)/builtins/StringIteratorPrototype.js
 $(PROJECT_DIR)/builtins/StringPrototype.js
 $(PROJECT_DIR)/builtins/TypedArrayConstructor.js
 $(PROJECT_DIR)/builtins/TypedArrayPrototype.js
-$(PROJECT_DIR)/builtins/WebAssemblyPrototype.js
+$(PROJECT_DIR)/builtins/WebAssembly.js
 $(PROJECT_DIR)/bytecode/BytecodeList.rb
 $(PROJECT_DIR)/create_hash_table
 $(PROJECT_DIR)/disassembler/udis86/optable.xml
@@ -93,7 +94,6 @@ $(PROJECT_DIR)/inspector/protocol/Inspector.json
 $(PROJECT_DIR)/inspector/protocol/LayerTree.json
 $(PROJECT_DIR)/inspector/protocol/Memory.json
 $(PROJECT_DIR)/inspector/protocol/Network.json
-$(PROJECT_DIR)/inspector/protocol/OverlayTypes.json
 $(PROJECT_DIR)/inspector/protocol/Page.json
 $(PROJECT_DIR)/inspector/protocol/Recording.json
 $(PROJECT_DIR)/inspector/protocol/Runtime.json
@@ -119,7 +119,6 @@ $(PROJECT_DIR)/inspector/scripts/codegen/models.py
 $(PROJECT_DIR)/inspector/scripts/generate-inspector-protocol-bindings.py
 $(PROJECT_DIR)/parser/Keywords.table
 $(PROJECT_DIR)/runtime/ArrayConstructor.cpp
-$(PROJECT_DIR)/runtime/ArrayIteratorPrototype.cpp
 $(PROJECT_DIR)/runtime/AsyncFromSyncIteratorPrototype.cpp
 $(PROJECT_DIR)/runtime/AsyncGeneratorPrototype.cpp
 $(PROJECT_DIR)/runtime/BigIntConstructor.cpp
@@ -154,7 +153,6 @@ $(PROJECT_DIR)/runtime/ReflectObject.cpp
 $(PROJECT_DIR)/runtime/RegExpConstructor.cpp
 $(PROJECT_DIR)/runtime/SetPrototype.cpp
 $(PROJECT_DIR)/runtime/StringConstructor.cpp
-$(PROJECT_DIR)/runtime/StringIteratorPrototype.cpp
 $(PROJECT_DIR)/runtime/StringPrototype.cpp
 $(PROJECT_DIR)/runtime/SymbolConstructor.cpp
 $(PROJECT_DIR)/runtime/SymbolPrototype.cpp
@@ -174,6 +172,7 @@ $(PROJECT_DIR)/wasm/generateWasm.py
 $(PROJECT_DIR)/wasm/generateWasmB3IRGeneratorInlinesHeader.py
 $(PROJECT_DIR)/wasm/generateWasmOpsHeader.py
 $(PROJECT_DIR)/wasm/generateWasmValidateInlinesHeader.py
+$(PROJECT_DIR)/wasm/js/JSWebAssembly.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyCompileErrorPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyInstanceConstructor.cpp
@@ -184,7 +183,6 @@ $(PROJECT_DIR)/wasm/js/WebAssemblyMemoryConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyMemoryPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyModuleConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyModulePrototype.cpp
-$(PROJECT_DIR)/wasm/js/WebAssemblyPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorConstructor.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyRuntimeErrorPrototype.cpp
 $(PROJECT_DIR)/wasm/js/WebAssemblyTableConstructor.cpp

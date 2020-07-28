@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel (eric@webkit.org)
  *
  *  This library is free software; you can redistribute it and/or
@@ -123,6 +123,15 @@ JSObject* createError(ExecState* exec, ErrorType errorType, const String& messag
     return nullptr;
 }
 
+JSObject* createGetterTypeError(ExecState* exec, const String& message)
+{
+    ASSERT(!message.isEmpty());
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    auto* error = ErrorInstance::create(exec, globalObject->vm(), globalObject->errorStructure(ErrorType::TypeError), message);
+    error->setNativeGetterTypeError();
+    return error;
+}
+
 class FindFirstCallerFrameWithCodeblockFunctor {
 public:
     FindFirstCallerFrameWithCodeblockFunctor(CallFrame* startCallFrame)
@@ -165,7 +174,7 @@ std::unique_ptr<Vector<StackFrame>> getStackTrace(ExecState* exec, VM& vm, JSObj
         return nullptr;
 
     size_t framesToSkip = useCurrentFrame ? 0 : 1;
-    std::unique_ptr<Vector<StackFrame>> stackTrace = std::make_unique<Vector<StackFrame>>();
+    std::unique_ptr<Vector<StackFrame>> stackTrace = makeUnique<Vector<StackFrame>>();
     vm.interpreter->getStackTrace(obj, *stackTrace, framesToSkip, globalObject->stackTraceLimit().value());
     if (!stackTrace->isEmpty())
         ASSERT_UNUSED(exec, exec == vm.topCallFrame || exec->isGlobalExec());
@@ -217,9 +226,9 @@ bool addErrorInfo(VM& vm, Vector<StackFrame>* stackTrace, JSObject* obj)
         obj->putDirect(vm, vm.propertyNames->line, jsNumber(line));
         obj->putDirect(vm, vm.propertyNames->column, jsNumber(column));
         if (!sourceURL.isEmpty())
-            obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, sourceURL));
+            obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(vm, sourceURL));
 
-        obj->putDirect(vm, vm.propertyNames->stack, jsString(&vm, Interpreter::stackTraceAsString(vm, *stackTrace)), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        obj->putDirect(vm, vm.propertyNames->stack, jsString(vm, Interpreter::stackTraceAsString(vm, *stackTrace)), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
         return true;
     }
@@ -256,43 +265,48 @@ JSObject* addErrorInfo(CallFrame* callFrame, JSObject* error, int line, const So
     if (line != -1)
         error->putDirect(vm, vm.propertyNames->line, jsNumber(line));
     if (!sourceURL.isNull())
-        error->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, sourceURL));
+        error->putDirect(vm, vm.propertyNames->sourceURL, jsString(vm, sourceURL));
     return error;
 }
 
-JSObject* throwConstructorCannotBeCalledAsFunctionTypeError(ExecState* exec, ThrowScope& scope, const char* constructorName)
+Exception* throwConstructorCannotBeCalledAsFunctionTypeError(ExecState* exec, ThrowScope& scope, const char* constructorName)
 {
     return throwTypeError(exec, scope, makeString("calling ", constructorName, " constructor without new is invalid"));
 }
 
-JSObject* throwTypeError(ExecState* exec, ThrowScope& scope)
+Exception* throwTypeError(ExecState* exec, ThrowScope& scope)
 {
     return throwException(exec, scope, createTypeError(exec));
 }
 
-JSObject* throwTypeError(ExecState* exec, ThrowScope& scope, ASCIILiteral errorMessage)
+Exception* throwTypeError(ExecState* exec, ThrowScope& scope, ASCIILiteral errorMessage)
 {
     return throwTypeError(exec, scope, String(errorMessage));
 }
 
-JSObject* throwTypeError(ExecState* exec, ThrowScope& scope, const String& message)
+Exception* throwTypeError(ExecState* exec, ThrowScope& scope, const String& message)
 {
     return throwException(exec, scope, createTypeError(exec, message));
 }
 
-JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope)
+Exception* throwSyntaxError(ExecState* exec, ThrowScope& scope)
 {
     return throwException(exec, scope, createSyntaxError(exec, "Syntax error"_s));
 }
 
-JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope, const String& message)
+Exception* throwSyntaxError(ExecState* exec, ThrowScope& scope, const String& message)
 {
     return throwException(exec, scope, createSyntaxError(exec, message));
 }
 
+Exception* throwGetterTypeError(ExecState* exec, ThrowScope& scope, const String& message)
+{
+    return throwException(exec, scope, createGetterTypeError(exec, message));
+}
+
 JSValue throwDOMAttributeGetterTypeError(ExecState* exec, ThrowScope& scope, const ClassInfo* classInfo, PropertyName propertyName)
 {
-    return throwTypeError(exec, scope, makeString("The ", classInfo->className, '.', String(propertyName.uid()), " getter can only be used on instances of ", classInfo->className));
+    return throwGetterTypeError(exec, scope, makeString("The ", classInfo->className, '.', String(propertyName.uid()), " getter can only be used on instances of ", classInfo->className));
 }
 
 JSObject* createError(ExecState* exec, const String& message)

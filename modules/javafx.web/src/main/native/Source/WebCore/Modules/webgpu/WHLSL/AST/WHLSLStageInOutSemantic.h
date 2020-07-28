@@ -28,7 +28,8 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLBaseSemantic.h"
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -37,9 +38,10 @@ namespace WHLSL {
 namespace AST {
 
 class StageInOutSemantic : public BaseSemantic {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    StageInOutSemantic(Lexer::Token&& origin, unsigned index)
-        : BaseSemantic(WTFMove(origin))
+    StageInOutSemantic(CodeLocation location, unsigned index)
+        : BaseSemantic(location)
         , m_index(index)
     {
     }

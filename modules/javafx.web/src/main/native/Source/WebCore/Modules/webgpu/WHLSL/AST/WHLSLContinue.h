@@ -27,8 +27,9 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLStatement.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -36,19 +37,18 @@ namespace WHLSL {
 
 namespace AST {
 
-class Continue : public Statement {
+class Continue final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    Continue(Lexer::Token&& origin)
-        : Statement(WTFMove(origin))
+    Continue(CodeLocation location)
+        : Statement(location, Kind::Continue)
     {
     }
 
-    virtual ~Continue() = default;
+    ~Continue() = default;
 
     Continue(const Continue&) = delete;
     Continue(Continue&&) = default;
-
-    bool isContinue() const override { return true; }
 
 private:
 };
@@ -58,6 +58,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(Continue)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(Continue, isContinue())
 

@@ -150,6 +150,28 @@ g_queue_clear (GQueue *queue)
 }
 
 /**
+ * g_queue_clear_full:
+ * @queue: a pointer to a #GQueue
+ * @free_func: (nullable): the function to be called to free memory allocated
+ *
+ * Convenience method, which frees all the memory used by a #GQueue,
+ * and calls the provided @free_func on each item in the #GQueue.
+ *
+ * Since: 2.60
+ */
+void
+g_queue_clear_full (GQueue          *queue,
+                    GDestroyNotify  free_func)
+{
+  g_return_if_fail (queue != NULL);
+
+  if (free_func != NULL)
+    g_queue_foreach (queue, (GFunc) free_func, NULL);
+
+  g_queue_clear (queue);
+}
+
+/**
  * g_queue_is_empty:
  * @queue: a #GQueue.
  *
@@ -507,8 +529,10 @@ g_queue_push_nth_link (GQueue *queue,
   if (queue->head->prev)
     queue->head = queue->head->prev;
 
-  if (queue->tail->next)
-    queue->tail = queue->tail->next;
+  /* The case where we're pushing @link_ at the end of @queue is handled above
+   * using g_queue_push_tail_link(), so we should never have to manually adjust
+   * queue->tail. */
+  g_assert (queue->tail->next == NULL);
 
   queue->length++;
 }
@@ -1035,9 +1059,47 @@ g_queue_insert_before (GQueue   *queue,
     }
   else
     {
-  queue->head = g_list_insert_before (queue->head, sibling, data);
-  queue->length++;
+      queue->head = g_list_insert_before (queue->head, sibling, data);
+      queue->length++;
+    }
 }
+
+/**
+ * g_queue_insert_before_link:
+ * @queue: a #GQueue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the tail of the queue.
+ * @link_: a #GList link to insert which must not be part of any other list.
+ *
+ * Inserts @link_ into @queue before @sibling.
+ *
+ * @sibling must be part of @queue.
+ *
+ * Since: 2.62
+ */
+void
+g_queue_insert_before_link (GQueue   *queue,
+                            GList    *sibling,
+                            GList    *link_)
+{
+  g_return_if_fail (queue != NULL);
+  g_return_if_fail (link_ != NULL);
+  g_return_if_fail (link_->prev == NULL);
+  g_return_if_fail (link_->next == NULL);
+
+  if G_UNLIKELY (sibling == NULL)
+    {
+      /* We don't use g_list_insert_before_link() with a NULL sibling because it
+       * would be a O(n) operation and we would need to update manually the tail
+       * pointer.
+       */
+      g_queue_push_tail_link (queue, link_);
+    }
+  else
+    {
+      queue->head = g_list_insert_before_link (queue->head, sibling, link_);
+      queue->length++;
+    }
 }
 
 /**
@@ -1065,6 +1127,35 @@ g_queue_insert_after (GQueue   *queue,
     g_queue_push_head (queue, data);
   else
     g_queue_insert_before (queue, sibling->next, data);
+}
+
+/**
+ * g_queue_insert_after_link:
+ * @queue: a #GQueue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the head of the queue.
+ * @link_: a #GList link to insert which must not be part of any other list.
+ *
+ * Inserts @link_ into @queue after @sibling.
+ *
+ * @sibling must be part of @queue.
+ *
+ * Since: 2.62
+ */
+void
+g_queue_insert_after_link (GQueue   *queue,
+                           GList    *sibling,
+                           GList    *link_)
+{
+  g_return_if_fail (queue != NULL);
+  g_return_if_fail (link_ != NULL);
+  g_return_if_fail (link_->prev == NULL);
+  g_return_if_fail (link_->next == NULL);
+
+  if G_UNLIKELY (sibling == NULL)
+    g_queue_push_head_link (queue, link_);
+  else
+    g_queue_insert_before_link (queue, sibling->next, link_);
 }
 
 /**
@@ -1096,5 +1187,5 @@ g_queue_insert_sorted (GQueue           *queue,
   while (list && func (list->data, data, user_data) < 0)
     list = list->next;
 
-    g_queue_insert_before (queue, list, data);
+  g_queue_insert_before (queue, list, data);
 }

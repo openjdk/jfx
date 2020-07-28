@@ -54,15 +54,21 @@ typedef enum  {
     CallbackTypeDidEndZooming,
     CallbackTypeDidShowKeyboard,
     CallbackTypeDidHideKeyboard,
+    CallbackTypeDidShowMenu,
+    CallbackTypeDidHideMenu,
+    CallbackTypeWillPresentPopover,
+    CallbackTypeDidDismissPopover,
     CallbackTypeDidEndScrolling,
     CallbackTypeDidStartFormControlInteraction,
     CallbackTypeDidEndFormControlInteraction,
     CallbackTypeDidShowForcePressPreview,
     CallbackTypeDidDismissForcePressPreview,
+    CallbackTypeWillCreateNewPage,
     CallbackTypeNonPersistent = firstNonPersistentCallbackID
 } CallbackType;
 
 class UIScriptContext {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(UIScriptContext);
 public:
     UIScriptContext(UIScriptContextDelegate&);

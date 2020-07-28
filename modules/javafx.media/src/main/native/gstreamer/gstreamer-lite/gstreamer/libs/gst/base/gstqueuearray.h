@@ -40,10 +40,20 @@ GST_BASE_API
 void            gst_queue_array_free      (GstQueueArray * array);
 
 GST_BASE_API
+void            gst_queue_array_set_clear_func (GstQueueArray *array,
+                                                GDestroyNotify clear_func);
+
+GST_BASE_API
+void            gst_queue_array_clear     (GstQueueArray * array);
+
+GST_BASE_API
 gpointer        gst_queue_array_pop_head  (GstQueueArray * array);
 
 GST_BASE_API
 gpointer        gst_queue_array_peek_head (GstQueueArray * array);
+
+GST_BASE_API
+gpointer        gst_queue_array_peek_nth  (GstQueueArray * array, guint idx);
 
 GST_BASE_API
 gpointer        gst_queue_array_pop_tail  (GstQueueArray * array);
@@ -82,11 +92,15 @@ GST_BASE_API
 gpointer        gst_queue_array_peek_head_struct (GstQueueArray * array);
 
 GST_BASE_API
+gpointer        gst_queue_array_peek_nth_struct  (GstQueueArray * array, guint idx);
+
+GST_BASE_API
 gboolean        gst_queue_array_drop_struct      (GstQueueArray * array,
                                                   guint           idx,
                                                   gpointer        p_struct);
 GST_BASE_API
 gpointer        gst_queue_array_pop_tail_struct  (GstQueueArray * array);
+
 GST_BASE_API
 gpointer        gst_queue_array_peek_tail_struct (GstQueueArray * array);
 

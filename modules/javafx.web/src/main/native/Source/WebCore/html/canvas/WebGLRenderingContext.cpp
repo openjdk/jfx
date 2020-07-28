@@ -64,8 +64,11 @@
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/JSCellInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLRenderingContext);
 
 std::unique_ptr<WebGLRenderingContext> WebGLRenderingContext::create(CanvasBase& canvas, GraphicsContext3DAttributes attributes)
 {
@@ -113,7 +116,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
 #define ENABLE_IF_REQUESTED(type, variable, nameLiteral, canEnable) \
     if (equalIgnoringASCIICase(name, nameLiteral)) { \
         if (!variable) { \
-            variable = (canEnable) ? std::make_unique<type>(*this) : nullptr; \
+            variable = (canEnable) ? makeUnique<type>(*this) : nullptr; \
             if (variable != nullptr) \
                 InspectorInstrumentation::didEnableExtension(*this, name); \
         } \
@@ -129,7 +132,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
                 m_extShaderTextureLOD = nullptr;
             else {
                 m_context->getExtensions().ensureEnabled("GL_EXT_shader_texture_lod"_s);
-                m_extShaderTextureLOD = std::make_unique<EXTShaderTextureLOD>(*this);
+                m_extShaderTextureLOD = makeUnique<EXTShaderTextureLOD>(*this);
                 InspectorInstrumentation::didEnableExtension(*this, name);
             }
         }
@@ -156,7 +159,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
                 m_webglDrawBuffers = nullptr;
             else {
                 m_context->getExtensions().ensureEnabled("GL_EXT_draw_buffers"_s);
-                m_webglDrawBuffers = std::make_unique<WebGLDrawBuffers>(*this);
+                m_webglDrawBuffers = makeUnique<WebGLDrawBuffers>(*this);
                 InspectorInstrumentation::didEnableExtension(*this, name);
             }
         }
@@ -168,7 +171,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
                 m_angleInstancedArrays = nullptr;
             else {
                 m_context->getExtensions().ensureEnabled("GL_ANGLE_instanced_arrays"_s);
-                m_angleInstancedArrays = std::make_unique<ANGLEInstancedArrays>(*this);
+                m_angleInstancedArrays = makeUnique<ANGLEInstancedArrays>(*this);
                 InspectorInstrumentation::didEnableExtension(*this, name);
             }
         }
@@ -418,6 +421,8 @@ WebGLAny WebGLRenderingContext::getParameter(GC3Denum pname)
     case GraphicsContext3D::ALIASED_POINT_SIZE_RANGE:
         return getWebGLFloatArrayParameter(pname);
     case GraphicsContext3D::ALPHA_BITS:
+        if (!m_framebufferBinding && !m_attributes.alpha)
+            return 0;
         return getIntParameter(pname);
     case GraphicsContext3D::ARRAY_BUFFER_BINDING:
         return m_boundArrayBuffer;

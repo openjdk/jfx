@@ -38,6 +38,7 @@
 #include "CaptureDeviceManager.h"
 #include "Logging.h"
 #include "MediaStreamPrivate.h"
+#include "RuntimeEnabledFeatures.h"
 #include <wtf/SHA1.h>
 
 namespace WebCore {
@@ -62,7 +63,7 @@ RealtimeMediaSourceCenter::RealtimeMediaSourceCenter()
 
 RealtimeMediaSourceCenter::~RealtimeMediaSourceCenter() = default;
 
-void RealtimeMediaSourceCenter::createMediaStream(NewMediaStreamHandler&& completionHandler, String&& hashSalt, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest& request)
+void RealtimeMediaSourceCenter::createMediaStream(Ref<const Logger>&& logger, NewMediaStreamHandler&& completionHandler, String&& hashSalt, CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, const MediaStreamRequest& request)
 {
     Vector<Ref<RealtimeMediaSource>> audioSources;
     Vector<Ref<RealtimeMediaSource>> videoSources;
@@ -101,7 +102,7 @@ void RealtimeMediaSourceCenter::createMediaStream(NewMediaStreamHandler&& comple
         }
     }
 
-    completionHandler(MediaStreamPrivate::create(audioSources, videoSources));
+    completionHandler(MediaStreamPrivate::create(WTFMove(logger), audioSources, videoSources));
 }
 
 Vector<CaptureDevice> RealtimeMediaSourceCenter::getMediaStreamDevices()
@@ -225,7 +226,7 @@ void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandl
     struct {
         bool operator()(const DeviceInfo& a, const DeviceInfo& b)
         {
-            return a.fitnessScore < b.fitnessScore;
+            return a.fitnessScore > b.fitnessScore;
         }
     } sortBasedOnFitnessScore;
 
@@ -262,8 +263,10 @@ void RealtimeMediaSourceCenter::validateRequestConstraints(ValidConstraintsHandl
     validHandler(WTFMove(audioDevices), WTFMove(videoDevices), WTFMove(deviceIdentifierHashSalt));
 }
 
-void RealtimeMediaSourceCenter::setVideoCapturePageState(bool interrupted, bool pageMuted)
+void RealtimeMediaSourceCenter::setCapturePageState(bool interrupted, bool pageMuted)
 {
+    if (RuntimeEnabledFeatures::sharedFeatures().interruptAudioOnPageVisibilityChangeEnabled())
+        audioCaptureFactory().setAudioCapturePageState(interrupted, pageMuted);
     videoCaptureFactory().setVideoCapturePageState(interrupted, pageMuted);
 }
 
@@ -316,6 +319,13 @@ DisplayCaptureFactory& RealtimeMediaSourceCenter::displayCaptureFactory()
 {
     return m_displayCaptureFactoryOverride ? *m_displayCaptureFactoryOverride : defaultDisplayCaptureFactory();
 }
+
+#if !PLATFORM(COCOA)
+bool RealtimeMediaSourceCenter::shouldInterruptAudioOnPageVisibilityChange()
+{
+    return false;
+}
+#endif
 
 } // namespace WebCore
 

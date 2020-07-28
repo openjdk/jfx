@@ -55,7 +55,7 @@ LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -Wl,-framework \
            -Wl,CoreServices \
            -liconv \
-           -lffi
+           -L$(BUILD_DIR) -lffi
 
 C_SOURCES = glib/garray.c \
             glib/gasyncqueue.c \

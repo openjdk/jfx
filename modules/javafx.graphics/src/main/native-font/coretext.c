@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -388,7 +388,15 @@ JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithName)
     CGAffineTransform _arg2, *lparg2=NULL;
     jlong rc = 0;
     if (arg2) if ((lparg2 = getCGAffineTransformFields(env, arg2, &_arg2)) == NULL) goto fail;
-    rc = (jlong)CTFontCreateWithName((CFStringRef)arg0, (CGFloat)arg1, (CGAffineTransform*)lparg2);
+    CFStringRef fontName = (CFStringRef)arg0;
+    if (CFStringGetCharacterAtIndex(fontName, 0) == '.') {
+        bool bold = CFStringFind(fontName, CFSTR("bold"), kCFCompareCaseInsensitive).location != kCFNotFound;
+        CTFontRef font = CTFontCreateUIFontForLanguage(bold ? kCTFontUIFontEmphasizedSystem : kCTFontUIFontSystem, 0.0, NULL);
+        rc = (jlong) CTFontCreateCopyWithAttributes(font, (CGFloat)arg1, (CGAffineTransform*)lparg2, NULL);
+        CFRelease(font);
+    } else {
+        rc = (jlong) CTFontCreateWithName(fontName, (CGFloat)arg1, (CGAffineTransform*)lparg2);
+    }
 fail:
     /* In only */
 //    if (arg2 && lparg2) setCGAffineTransformFields(env, arg2, lparg2);

@@ -31,10 +31,8 @@
 #include "DecodeEscapeSequences.h"
 #include "TextCodec.h"
 #include "TextEncodingRegistry.h"
-#include <unicode/unorm.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/CString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {

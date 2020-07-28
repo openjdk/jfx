@@ -16,6 +16,9 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gst/video/gstvideometa.h"
 #include "gst/video/gstvideopool.h"
@@ -94,7 +97,6 @@ gst_buffer_pool_config_get_video_alignment (GstStructure * config,
 /* bufferpool */
 struct _GstVideoBufferPoolPrivate
 {
-  GstCaps *caps;
   GstVideoInfo info;
   GstVideoAlignment video_align;
   gboolean add_videometa;
@@ -105,11 +107,9 @@ struct _GstVideoBufferPoolPrivate
 
 static void gst_video_buffer_pool_finalize (GObject * object);
 
-#define GST_VIDEO_BUFFER_POOL_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_VIDEO_BUFFER_POOL, GstVideoBufferPoolPrivate))
-
 #define gst_video_buffer_pool_parent_class parent_class
-G_DEFINE_TYPE (GstVideoBufferPool, gst_video_buffer_pool, GST_TYPE_BUFFER_POOL);
+G_DEFINE_TYPE_WITH_PRIVATE (GstVideoBufferPool, gst_video_buffer_pool,
+    GST_TYPE_BUFFER_POOL);
 
 static const gchar **
 video_buffer_pool_get_options (GstBufferPool * pool)
@@ -153,10 +153,6 @@ video_buffer_pool_set_config (GstBufferPool * pool, GstStructure * config)
   height = info.height;
 
   GST_LOG_OBJECT (pool, "%dx%d, caps %" GST_PTR_FORMAT, width, height, caps);
-
-  if (priv->caps)
-    gst_caps_unref (priv->caps);
-  priv->caps = gst_caps_ref (caps);
 
   priv->params = params;
   if (priv->allocator)
@@ -228,7 +224,8 @@ wrong_caps:
 wrong_size:
   {
     GST_WARNING_OBJECT (pool,
-        "Provided size is to small for the caps: %u", size);
+        "Provided size is to small for the caps: %u < %" G_GSIZE_FORMAT, size,
+        info.size);
     return FALSE;
   }
 failed_to_align:
@@ -301,8 +298,6 @@ gst_video_buffer_pool_class_init (GstVideoBufferPoolClass * klass)
   GObjectClass *gobject_class = (GObjectClass *) klass;
   GstBufferPoolClass *gstbufferpool_class = (GstBufferPoolClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstVideoBufferPoolPrivate));
-
   gobject_class->finalize = gst_video_buffer_pool_finalize;
 
   gstbufferpool_class->get_options = video_buffer_pool_get_options;
@@ -316,7 +311,7 @@ gst_video_buffer_pool_class_init (GstVideoBufferPoolClass * klass)
 static void
 gst_video_buffer_pool_init (GstVideoBufferPool * pool)
 {
-  pool->priv = GST_VIDEO_BUFFER_POOL_GET_PRIVATE (pool);
+  pool->priv = gst_video_buffer_pool_get_instance_private (pool);
 }
 
 static void
@@ -326,9 +321,6 @@ gst_video_buffer_pool_finalize (GObject * object)
   GstVideoBufferPoolPrivate *priv = pool->priv;
 
   GST_LOG_OBJECT (pool, "finalize video buffer pool %p", pool);
-
-  if (priv->caps)
-    gst_caps_unref (priv->caps);
 
   if (priv->allocator)
     gst_object_unref (priv->allocator);

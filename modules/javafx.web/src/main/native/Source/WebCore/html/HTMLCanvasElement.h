@@ -51,8 +51,7 @@ class ImageData;
 class MediaSample;
 class MediaStream;
 class WebGLRenderingContextBase;
-class WebGPURenderingContext;
-class WebMetalRenderingContext;
+class GPUCanvasContext;
 struct UncachedString;
 
 namespace DisplayList {
@@ -100,13 +99,8 @@ public:
 #endif
 #if ENABLE(WEBGPU)
     static bool isWebGPUType(const String&);
-    WebGPURenderingContext* createContextWebGPU(const String&);
-    WebGPURenderingContext* getContextWebGPU(const String&);
-#endif
-#if ENABLE(WEBMETAL)
-    static bool isWebMetalType(const String&);
-    WebMetalRenderingContext* createContextWebMetal(const String&);
-    WebMetalRenderingContext* getContextWebMetal(const String&);
+    GPUCanvasContext* createContextWebGPU(const String&);
+    GPUCanvasContext* getContextWebGPU(const String&);
 #endif
 
     static bool isBitmapRendererType(const String&);
@@ -127,7 +121,7 @@ public:
 
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaSample> toMediaSample();
-    ExceptionOr<Ref<MediaStream>> captureStream(ScriptExecutionContext&, Optional<double>&& frameRequestRate);
+    ExceptionOr<Ref<MediaStream>> captureStream(Document&, Optional<double>&& frameRequestRate);
 #endif
 
     ImageBuffer* buffer() const;
@@ -163,7 +157,7 @@ private:
 
     bool isHTMLCanvasElement() const final { return true; }
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
     bool canContainRangeEndPoint() const final;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -74,12 +74,12 @@ void ctiPatchCallByReturnAddress(ReturnAddressPtr returnAddress, FunctionPtr<CFu
         newCalleeFunction.retagged<OperationPtrTag>());
 }
 
-JIT::JIT(VM* vm, CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
-    : JSInterfaceJIT(vm, codeBlock)
-    , m_interpreter(vm->interpreter)
+JIT::JIT(VM& vm, CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
+    : JSInterfaceJIT(&vm, codeBlock)
+    , m_interpreter(vm.interpreter)
     , m_labels(codeBlock ? codeBlock->instructions().size() : 0)
     , m_bytecodeOffset(std::numeric_limits<unsigned>::max())
-    , m_pcToCodeOriginMapBuilder(*vm)
+    , m_pcToCodeOriginMapBuilder(vm)
     , m_canBeOptimized(false)
     , m_shouldEmitProfiling(false)
     , m_shouldUseIndexMasking(Options::enableSpectreMitigations())
@@ -90,26 +90,6 @@ JIT::JIT(VM* vm, CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
 JIT::~JIT()
 {
 }
-
-#if ENABLE(DFG_JIT)
-void JIT::emitEnterOptimizationCheck()
-{
-    if (!canBeOptimized())
-        return;
-
-    JumpList skipOptimize;
-
-    skipOptimize.append(branchAdd32(Signed, TrustedImm32(Options::executionCounterIncrementForEntry()), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter())));
-    ASSERT(!m_bytecodeOffset);
-
-    copyCalleeSavesFromFrameOrRegisterToEntryFrameCalleeSavesBuffer(vm()->topEntryFrame);
-
-    callOperation(operationOptimize, m_bytecodeOffset);
-    skipOptimize.append(branchTestPtr(Zero, returnValueGPR));
-    jump(returnValueGPR, GPRInfo::callFrameRegister);
-    skipOptimize.link(this);
-}
-#endif
 
 void JIT::emitNotifyWrite(WatchpointSet* set)
 {
@@ -191,7 +171,7 @@ void JIT::privateCompileMainPass()
 
     m_callLinkInfoIndex = 0;
 
-    VM& vm = *m_codeBlock->vm();
+    VM& vm = m_codeBlock->vm();
     unsigned startBytecodeOffset = 0;
     if (m_loopOSREntryBytecodeOffset && (m_codeBlock->inherits<ProgramCodeBlock>(vm) || m_codeBlock->inherits<ModuleProgramCodeBlock>(vm))) {
         // We can only do this optimization because we execute ProgramCodeBlock's exactly once.
@@ -364,6 +344,8 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_jfalse)
         DEFINE_OP(op_jmp)
         DEFINE_OP(op_jneq_null)
+        DEFINE_OP(op_jundefined_or_null)
+        DEFINE_OP(op_jnundefined_or_null)
         DEFINE_OP(op_jneq_ptr)
         DEFINE_OP(op_jless)
         DEFINE_OP(op_jlesseq)
@@ -381,7 +363,6 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_jbeloweq)
         DEFINE_OP(op_jtrue)
         DEFINE_OP(op_loop_hint)
-        DEFINE_OP(op_check_traps)
         DEFINE_OP(op_nop)
         DEFINE_OP(op_super_sampler_begin)
         DEFINE_OP(op_super_sampler_end)
@@ -546,7 +527,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_jstricteq)
         DEFINE_SLOWCASE_OP(op_jnstricteq)
         DEFINE_SLOWCASE_OP(op_loop_hint)
-        DEFINE_SLOWCASE_OP(op_check_traps)
+        DEFINE_SLOWCASE_OP(op_enter)
         DEFINE_SLOWCASE_OP(op_mod)
         DEFINE_SLOWCASE_OP(op_mul)
         DEFINE_SLOWCASE_OP(op_negate)
@@ -652,7 +633,7 @@ void JIT::compileWithoutLinking(JITCompilationEffort effort)
     }
 
     if (UNLIKELY(Options::dumpDisassembly() || (m_vm->m_perBytecodeProfiler && Options::disassembleBaselineForProfiler())))
-        m_disassembler = std::make_unique<JITDisassembler>(m_codeBlock);
+        m_disassembler = makeUnique<JITDisassembler>(m_codeBlock);
     if (UNLIKELY(m_vm->m_perBytecodeProfiler)) {
         m_compilation = adoptRef(
             new Profiler::Compilation(
@@ -899,19 +880,19 @@ CompilationResult JIT::link()
     }
 
     if (m_pcToCodeOriginMapBuilder.didBuildMapping())
-        m_codeBlock->setPCToCodeOriginMap(std::make_unique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), patchBuffer));
+        m_codeBlock->setPCToCodeOriginMap(makeUnique<PCToCodeOriginMap>(WTFMove(m_pcToCodeOriginMapBuilder), patchBuffer));
 
     CodeRef<JSEntryPtrTag> result = FINALIZE_CODE(
         patchBuffer, JSEntryPtrTag,
-        "Baseline JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITCode::BaselineJIT)).data());
+        "Baseline JIT code for %s", toCString(CodeBlockWithJITType(m_codeBlock, JITType::BaselineJIT)).data());
 
     m_vm->machineCodeBytesPerBytecodeWordForBaselineJIT->add(
         static_cast<double>(result.size()) /
-        static_cast<double>(m_codeBlock->instructionCount()));
+        static_cast<double>(m_codeBlock->instructionsSize()));
 
     m_codeBlock->shrinkToFit(CodeBlock::LateShrink);
     m_codeBlock->setJITCode(
-        adoptRef(*new DirectJITCode(result, withArityCheck, JITCode::BaselineJIT)));
+        adoptRef(*new DirectJITCode(result, withArityCheck, JITType::BaselineJIT)));
 
     if (JITInternal::verbose)
         dataLogF("JIT generated code for %p at [%p, %p).\n", m_codeBlock, result.executableMemory()->start().untaggedPtr(), result.executableMemory()->end().untaggedPtr());
@@ -931,11 +912,11 @@ void JIT::privateCompileExceptionHandlers()
     if (!m_exceptionChecksWithCallFrameRollback.empty()) {
         m_exceptionChecksWithCallFrameRollback.link(this);
 
-        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm()->topEntryFrame);
+        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
 
         // lookupExceptionHandlerFromCallerFrame is passed two arguments, the VM and the exec (the CallFrame*).
 
-        move(TrustedImmPtr(vm()), GPRInfo::argumentGPR0);
+        move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
         move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
 
 #if CPU(X86)
@@ -944,17 +925,17 @@ void JIT::privateCompileExceptionHandlers()
         poke(GPRInfo::argumentGPR1, 1);
 #endif
         m_calls.append(CallRecord(call(OperationPtrTag), std::numeric_limits<unsigned>::max(), FunctionPtr<OperationPtrTag>(lookupExceptionHandlerFromCallerFrame)));
-        jumpToExceptionHandler(*vm());
+        jumpToExceptionHandler(vm());
     }
 
     if (!m_exceptionChecks.empty() || m_byValCompilationInfo.size()) {
         m_exceptionHandler = label();
         m_exceptionChecks.link(this);
 
-        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm()->topEntryFrame);
+        copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
 
         // lookupExceptionHandler is passed two arguments, the VM and the exec (the CallFrame*).
-        move(TrustedImmPtr(vm()), GPRInfo::argumentGPR0);
+        move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
         move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
 
 #if CPU(X86)
@@ -963,7 +944,7 @@ void JIT::privateCompileExceptionHandlers()
         poke(GPRInfo::argumentGPR1, 1);
 #endif
         m_calls.append(CallRecord(call(OperationPtrTag), std::numeric_limits<unsigned>::max(), FunctionPtr<OperationPtrTag>(lookupExceptionHandler)));
-        jumpToExceptionHandler(*vm());
+        jumpToExceptionHandler(vm());
     }
 }
 

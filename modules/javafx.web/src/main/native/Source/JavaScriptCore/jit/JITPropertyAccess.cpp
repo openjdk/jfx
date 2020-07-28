@@ -44,6 +44,7 @@
 #include "ScopedArgumentsTable.h"
 #include "SlowPathCall.h"
 #include "StructureStubInfo.h"
+#include "ThunkGenerators.h"
 #include <wtf/ScopedLambda.h>
 #include <wtf/StringPrintStream.h>
 
@@ -582,7 +583,7 @@ void JIT::emit_op_get_by_id(const Instruction* currentInstruction)
     emitJumpSlowCaseIfNotJSCell(regT0, baseVReg);
 
     if (*ident == m_vm->propertyNames->length && shouldEmitProfiling()) {
-        Jump notArrayLengthMode = branch8(NotEqual, AbsoluteAddress(&metadata.m_mode), TrustedImm32(static_cast<uint8_t>(GetByIdMode::ArrayLength)));
+        Jump notArrayLengthMode = branch8(NotEqual, AbsoluteAddress(&metadata.m_modeMetadata.mode), TrustedImm32(static_cast<uint8_t>(GetByIdMode::ArrayLength)));
         emitArrayProfilingSiteWithCell(regT0, regT1, &metadata.m_modeMetadata.arrayLengthMode.arrayProfile);
         notArrayLengthMode.link(this);
     }
@@ -1211,7 +1212,7 @@ void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode
     if (mode == ShouldFilterBaseAndValue || mode == ShouldFilterBase)
         ownerNotCell = branchIfNotCell(regT0);
 
-    Jump ownerIsRememberedOrInEden = barrierBranch(*vm(), regT0, regT1);
+    Jump ownerIsRememberedOrInEden = barrierBranch(vm(), regT0, regT1);
     callOperation(operationWriteBarrierSlowPath, regT0);
     ownerIsRememberedOrInEden.link(this);
 
@@ -1249,7 +1250,7 @@ void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode
     if (mode == ShouldFilterBase || mode == ShouldFilterBaseAndValue)
         ownerNotCell = branchIfNotCell(regT0);
 
-    Jump ownerIsRememberedOrInEden = barrierBranch(*vm(), regT1, regT2);
+    Jump ownerIsRememberedOrInEden = barrierBranch(vm(), regT1, regT2);
     callOperation(operationWriteBarrierSlowPath, regT1);
     ownerIsRememberedOrInEden.link(this);
 
@@ -1277,7 +1278,7 @@ void JIT::emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode mode)
 
 void JIT::emitWriteBarrier(JSCell* owner)
 {
-    Jump ownerIsRememberedOrInEden = barrierBranch(*vm(), owner, regT0);
+    Jump ownerIsRememberedOrInEden = barrierBranch(vm(), owner, regT0);
     callOperation(operationWriteBarrierSlowPath, owner);
     ownerIsRememberedOrInEden.link(this);
 }
@@ -1439,6 +1440,10 @@ void JIT::privateCompilePutByVal(const ConcurrentJSLocker&, ByValInfo* byValInfo
     MacroAssembler::repatchJump(byValInfo->badTypeJump, CodeLocationLabel<JITStubRoutinePtrTag>(byValInfo->stubRoutine->code().code()));
     MacroAssembler::repatchCall(CodeLocationCall<NoPtrTag>(MacroAssemblerCodePtr<NoPtrTag>(returnAddress)), FunctionPtr<OperationPtrTag>(isDirect ? operationDirectPutByValGeneric : operationPutByValGeneric));
 }
+// This function is only consumed from another translation unit (JITOperations.cpp),
+// so we list off the two expected specializations in advance.
+template void JIT::privateCompilePutByVal<OpPutByVal>(const ConcurrentJSLocker&, ByValInfo*, ReturnAddressPtr, JITArrayMode);
+template void JIT::privateCompilePutByVal<OpPutByValDirect>(const ConcurrentJSLocker&, ByValInfo*, ReturnAddressPtr, JITArrayMode);
 
 template<typename Op>
 void JIT::privateCompilePutByValWithCachedId(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, PutKind putKind, const Identifier& propertyName)
@@ -1473,6 +1478,10 @@ void JIT::privateCompilePutByValWithCachedId(ByValInfo* byValInfo, ReturnAddress
     MacroAssembler::repatchJump(byValInfo->notIndexJump, CodeLocationLabel<JITStubRoutinePtrTag>(byValInfo->stubRoutine->code().code()));
     MacroAssembler::repatchCall(CodeLocationCall<NoPtrTag>(MacroAssemblerCodePtr<NoPtrTag>(returnAddress)), FunctionPtr<OperationPtrTag>(putKind == Direct ? operationDirectPutByValGeneric : operationPutByValGeneric));
 }
+// This function is only consumed from another translation unit (JITOperations.cpp),
+// so we list off the two expected specializations in advance.
+template void JIT::privateCompilePutByValWithCachedId<OpPutByVal>(ByValInfo*, ReturnAddressPtr, PutKind, const Identifier&);
+template void JIT::privateCompilePutByValWithCachedId<OpPutByValDirect>(ByValInfo*, ReturnAddressPtr, PutKind, const Identifier&);
 
 JIT::JumpList JIT::emitDoubleLoad(const Instruction*, PatchableJump& badType)
 {
@@ -1660,9 +1669,10 @@ JIT::JumpList JIT::emitIntTypedArrayGetByVal(const Instruction*, PatchableJump& 
 
     load8(Address(base, JSCell::typeInfoTypeOffset()), scratch);
     badType = patchableBranch32(NotEqual, scratch, TrustedImm32(typeForTypedArrayType(type)));
-    slowCases.append(branch32(AboveOrEqual, property, Address(base, JSArrayBufferView::offsetOfLength())));
+    load32(Address(base, JSArrayBufferView::offsetOfLength()), scratch2);
+    slowCases.append(branch32(AboveOrEqual, property, scratch2));
     loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), scratch);
-    cageConditionally(Gigacage::Primitive, scratch, scratch2);
+    cageConditionally(Gigacage::Primitive, scratch, scratch2, scratch2);
 
     switch (elementSize(type)) {
     case 1:
@@ -1723,9 +1733,10 @@ JIT::JumpList JIT::emitFloatTypedArrayGetByVal(const Instruction*, PatchableJump
 
     load8(Address(base, JSCell::typeInfoTypeOffset()), scratch);
     badType = patchableBranch32(NotEqual, scratch, TrustedImm32(typeForTypedArrayType(type)));
-    slowCases.append(branch32(AboveOrEqual, property, Address(base, JSArrayBufferView::offsetOfLength())));
+    load32(Address(base, JSArrayBufferView::offsetOfLength()), scratch2);
+    slowCases.append(branch32(AboveOrEqual, property, scratch2));
     loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), scratch);
-    cageConditionally(Gigacage::Primitive, scratch, scratch2);
+    cageConditionally(Gigacage::Primitive, scratch, scratch2, scratch2);
 
     switch (elementSize(type)) {
     case 4:
@@ -1773,7 +1784,8 @@ JIT::JumpList JIT::emitIntTypedArrayPutByVal(Op bytecode, PatchableJump& badType
 
     load8(Address(base, JSCell::typeInfoTypeOffset()), earlyScratch);
     badType = patchableBranch32(NotEqual, earlyScratch, TrustedImm32(typeForTypedArrayType(type)));
-    Jump inBounds = branch32(Below, property, Address(base, JSArrayBufferView::offsetOfLength()));
+    load32(Address(base, JSArrayBufferView::offsetOfLength()), lateScratch2);
+    Jump inBounds = branch32(Below, property, lateScratch2);
     emitArrayProfileOutOfBoundsSpecialCase(profile);
     slowCases.append(jump());
     inBounds.link(this);
@@ -1789,7 +1801,7 @@ JIT::JumpList JIT::emitIntTypedArrayPutByVal(Op bytecode, PatchableJump& badType
     // We would be loading this into base as in get_by_val, except that the slow
     // path expects the base to be unclobbered.
     loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), lateScratch);
-    cageConditionally(Gigacage::Primitive, lateScratch, lateScratch2);
+    cageConditionally(Gigacage::Primitive, lateScratch, lateScratch2, lateScratch2);
 
     if (isClamped(type)) {
         ASSERT(elementSize(type) == 1);
@@ -1848,7 +1860,8 @@ JIT::JumpList JIT::emitFloatTypedArrayPutByVal(Op bytecode, PatchableJump& badTy
 
     load8(Address(base, JSCell::typeInfoTypeOffset()), earlyScratch);
     badType = patchableBranch32(NotEqual, earlyScratch, TrustedImm32(typeForTypedArrayType(type)));
-    Jump inBounds = branch32(Below, property, Address(base, JSArrayBufferView::offsetOfLength()));
+    load32(Address(base, JSArrayBufferView::offsetOfLength()), lateScratch2);
+    Jump inBounds = branch32(Below, property, lateScratch2);
     emitArrayProfileOutOfBoundsSpecialCase(profile);
     slowCases.append(jump());
     inBounds.link(this);
@@ -1877,7 +1890,7 @@ JIT::JumpList JIT::emitFloatTypedArrayPutByVal(Op bytecode, PatchableJump& badTy
     // We would be loading this into base as in get_by_val, except that the slow
     // path expects the base to be unclobbered.
     loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), lateScratch);
-    cageConditionally(Gigacage::Primitive, lateScratch, lateScratch2);
+    cageConditionally(Gigacage::Primitive, lateScratch, lateScratch2, lateScratch2);
 
     switch (elementSize(type)) {
     case 4:

@@ -104,9 +104,9 @@ transdecode_master_selection (j_decompress_ptr cinfo)
   jpeg_core_output_dimensions(cinfo);
 
   /* Entropy decoding: either Huffman or arithmetic coding. */
-  if (cinfo->arith_code)
+  if (cinfo->arith_code) {
     ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
-  else {
+  } else {
     jinit_huff_decoder(cinfo);
   }
 

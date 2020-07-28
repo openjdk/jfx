@@ -29,9 +29,11 @@
 
 #pragma once
 
+#include "FrameIdentifier.h"
 #include "FrameLoaderTypes.h"
 #include "LayoutMilestone.h"
 #include "LinkIcon.h"
+#include "PageIdentifier.h"
 #include <functional>
 #include <wtf/Forward.h>
 #include <wtf/WallTime.h>
@@ -126,8 +128,8 @@ public:
 
     virtual void makeRepresentation(DocumentLoader*) = 0;
 
-    virtual Optional<uint64_t> pageID() const = 0;
-    virtual Optional<uint64_t> frameID() const = 0;
+    virtual Optional<PageIdentifier> pageID() const = 0;
+    virtual Optional<FrameIdentifier> frameID() const = 0;
     virtual PAL::SessionID sessionID() const = 0;
 
 #if PLATFORM(IOS_FAMILY)
@@ -177,10 +179,11 @@ public:
     virtual void dispatchDidStartProvisionalLoad() = 0;
     virtual void dispatchDidReceiveTitle(const StringWithDirection&) = 0;
     virtual void dispatchDidCommitLoad(Optional<HasInsecureContent>) = 0;
-    virtual void dispatchDidFailProvisionalLoad(const ResourceError&) = 0;
+    virtual void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) = 0;
     virtual void dispatchDidFailLoad(const ResourceError&) = 0;
     virtual void dispatchDidFinishDocumentLoad() = 0;
     virtual void dispatchDidFinishLoad() = 0;
+    virtual void dispatchDidExplicitOpen(const URL&) { }
 #if ENABLE(DATA_DETECTION)
     virtual void dispatchDidFinishDataDetection(NSArray *detectionResults) = 0;
 #endif
@@ -191,7 +194,7 @@ public:
     virtual Frame* dispatchCreatePage(const NavigationAction&) = 0;
     virtual void dispatchShow() = 0;
 
-    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void cancelPolicyCheck() = 0;
@@ -290,7 +293,6 @@ public:
 
     virtual RefPtr<Frame> createFrame(const URL&, const String& name, HTMLFrameOwnerElement&, const String& referrer) = 0;
     virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
-    virtual void recreatePlugin(Widget*) = 0;
     virtual void redirectDataToPlugin(Widget&) = 0;
 
     virtual RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;

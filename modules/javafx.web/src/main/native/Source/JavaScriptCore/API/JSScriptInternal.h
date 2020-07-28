@@ -27,6 +27,7 @@
 
 #import "JSScript.h"
 #import "SourceCode.h"
+#import <wtf/RefPtr.h>
 
 #if JSC_OBJC_API_ENABLED
 
@@ -44,10 +45,13 @@ class String;
 
 @interface JSScript(Internal)
 
+- (instancetype)init;
 - (unsigned)hash;
 - (const WTF::String&)source;
-- (const JSC::CachedBytecode*)cachedBytecode;
-- (JSC::JSSourceCode*)jsSourceCode:(const JSC::Identifier&)moduleKey;
+- (RefPtr<JSC::CachedBytecode>)cachedBytecode;
+- (JSC::JSSourceCode*)jsSourceCode;
+- (JSC::SourceCode)sourceCode;
+- (BOOL)writeCache:(String&)error;
 
 @end
 

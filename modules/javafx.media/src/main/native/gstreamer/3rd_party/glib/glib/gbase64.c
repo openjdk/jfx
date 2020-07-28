@@ -100,12 +100,12 @@ g_base64_encode_step (const guchar *in,
   char *outptr;
   const guchar *inptr;
 
-  g_return_val_if_fail (in != NULL, 0);
+  g_return_val_if_fail (in != NULL || len == 0, 0);
   g_return_val_if_fail (out != NULL, 0);
   g_return_val_if_fail (state != NULL, 0);
   g_return_val_if_fail (save != NULL, 0);
 
-  if (len <= 0)
+  if (len == 0)
     return 0;
 
   inptr = in;
@@ -160,7 +160,8 @@ g_base64_encode_step (const guchar *in,
       *state = already;
     }
 
-  if (len>0)
+  g_assert (len == 0 || len == 1 || len == 2);
+
     {
       char *saveout;
 
@@ -170,8 +171,11 @@ g_base64_encode_step (const guchar *in,
       /* len can only be 0 1 or 2 */
       switch(len)
         {
-        case 2: *saveout++ = *inptr++;
-        case 1: *saveout++ = *inptr++;
+        case 2:
+          *saveout++ = *inptr++;
+          G_GNUC_FALLTHROUGH;
+        case 1:
+          *saveout++ = *inptr++;
         }
       ((char *)save)[0] += len;
     }
@@ -241,7 +245,7 @@ g_base64_encode_close (gboolean  break_lines,
 
 /**
  * g_base64_encode:
- * @data: (array length=len) (element-type guint8): the binary data to encode
+ * @data: (array length=len) (element-type guint8) (nullable): the binary data to encode
  * @len: the length of @data
  *
  * Encode a sequence of binary data into its Base-64 stringified
@@ -266,9 +270,7 @@ g_base64_encode (const guchar *data,
   /* We can use a smaller limit here, since we know the saved state is 0,
      +1 is needed for trailing \0, also check for unlikely integer overflow */
 #ifndef GSTREAMER_LITE
-  if (len >= ((G_MAXSIZE - 1) / 4 - 1) * 3)
-    g_error("%s: input too large for Base64 encoding (%"G_GSIZE_FORMAT" chars)",
-        G_STRLOC, len);
+  g_return_val_if_fail (len < ((G_MAXSIZE - 1) / 4 - 1) * 3, NULL);
 #else // GSTREAMER_LITE
   if (len >= ((G_MAXSIZE - 1) / 4 - 1) * 3)
   {
@@ -345,12 +347,12 @@ g_base64_decode_step (const gchar  *in,
   unsigned int v;
   int i;
 
-  g_return_val_if_fail (in != NULL, 0);
+  g_return_val_if_fail (in != NULL || len == 0, 0);
   g_return_val_if_fail (out != NULL, 0);
   g_return_val_if_fail (state != NULL, 0);
   g_return_val_if_fail (save != NULL, 0);
 
-  if (len <= 0)
+  if (len == 0)
     return 0;
 
   inend = (const guchar *)in+len;
@@ -401,7 +403,7 @@ g_base64_decode_step (const gchar  *in,
 
 /**
  * g_base64_decode:
- * @text: zero-terminated string with base64 text to decode
+ * @text: (not nullable): zero-terminated string with base64 text to decode
  * @out_len: (out): The length of the decoded data is written here
  *
  * Decode a sequence of Base-64 encoded text into binary data.  Note

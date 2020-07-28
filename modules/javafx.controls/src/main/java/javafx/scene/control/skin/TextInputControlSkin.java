@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -686,12 +686,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     protected void handleInputMethodEvent(InputMethodEvent event) {
         final TextInputControl textInput = getSkinnable();
         if (textInput.isEditable() && !textInput.textProperty().isBound() && !textInput.isDisabled()) {
-
-            // just replace the text on iOS
-            if (PlatformUtil.isIOS()) {
-               textInput.setText(event.getCommitted());
-               return;
-            }
 
             // remove previous input method text (if any) or selected text
             if (imlength != 0) {

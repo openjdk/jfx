@@ -40,7 +40,6 @@
 #include <wtf/FileSystem.h>
 #include <wtf/SoftLinking.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/win/WCharStringExtras.h>
 #include <wtf/win/GDIObject.h>
 
 #if ENABLE(VIDEO)
@@ -163,8 +162,6 @@ namespace WebCore {
 
 // This is the fixed width IE and Firefox use for buttons on dropdown menus
 static const int dropDownButtonWidth = 17;
-
-static const int shell32MagnifierIconIndex = 22;
 
 // Default font size to match Firefox.
 static const float defaultControlFontPixelSize = 13;
@@ -318,7 +315,7 @@ Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleCo
 static void fillFontDescription(FontCascadeDescription& fontDescription, LOGFONT& logFont, float fontSize)
 {
     fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setOneFamily(nullTerminatedWCharToString(logFont.lfFaceName));
+    fontDescription.setOneFamily(logFont.lfFaceName);
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setWeight(logFont.lfWeight >= 700 ? boldWeightValue() : normalWeightValue()); // FIXME: Use real weight.
     fontDescription.setIsItalic(logFont.lfItalic);
@@ -612,6 +609,8 @@ ThemeData RenderThemeWin::getThemeData(const RenderObject& o, ControlSubPart sub
         case InnerSpinButtonPart:
             result.m_part = subPart == SpinButtonUp ? SPNP_UP : SPNP_DOWN;
             result.m_state = determineSpinButtonState(o, subPart);
+            break;
+        default:
             break;
     }
 
@@ -1022,8 +1021,6 @@ Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::O
 }
 
 #if ENABLE(VIDEO)
-static const size_t maximumReasonableBufferSize = 32768;
-
 static void fillBufferWithContentsOfFile(FileSystem::PlatformFileHandle file, long long filesize, Vector<char>& buffer)
 {
     // Load the file content into buffer
@@ -1048,9 +1045,10 @@ static void fillBufferWithContentsOfFile(FileSystem::PlatformFileHandle file, lo
     buffer[filesize] = 0;
 }
 
-String RenderThemeWin::stringWithContentsOfFile(CFStringRef name, CFStringRef type)
+String RenderThemeWin::stringWithContentsOfFile(const String& name, const String& type)
 {
-    RetainPtr<CFURLRef> requestedURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundle(), name, type, 0));
+#if USE(CF)
+    RetainPtr<CFURLRef> requestedURLRef = adoptCF(CFBundleCopyResourceURL(webKitBundle(), name.createCFString().get(), type.createCFString().get(), 0));
     if (!requestedURLRef)
         return String();
 
@@ -1073,13 +1071,16 @@ String RenderThemeWin::stringWithContentsOfFile(CFStringRef name, CFStringRef ty
     FileSystem::closeFile(requestedFileHandle);
 
     return String(fileContents.data(), static_cast<size_t>(filesize));
+#else
+    return emptyString();
+#endif
 }
 
 String RenderThemeWin::mediaControlsStyleSheet()
 {
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
     if (m_mediaControlsStyleSheet.isEmpty())
-        m_mediaControlsStyleSheet = stringWithContentsOfFile(CFSTR("mediaControlsApple"), CFSTR("css"));
+        m_mediaControlsStyleSheet = stringWithContentsOfFile("mediaControlsApple"_s, "css"_s);
     return m_mediaControlsStyleSheet;
 #else
     return emptyString();
@@ -1091,8 +1092,8 @@ String RenderThemeWin::mediaControlsScript()
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
     if (m_mediaControlsScript.isEmpty()) {
         StringBuilder scriptBuilder;
-        scriptBuilder.append(stringWithContentsOfFile(CFSTR("mediaControlsLocalizedStrings"), CFSTR("js")));
-        scriptBuilder.append(stringWithContentsOfFile(CFSTR("mediaControlsApple"), CFSTR("js")));
+        scriptBuilder.append(stringWithContentsOfFile("mediaControlsLocalizedStrings"_s, "js"_s));
+        scriptBuilder.append(stringWithContentsOfFile("mediaControlsApple"_s, "js"_s));
         m_mediaControlsScript = scriptBuilder.toString();
     }
     return m_mediaControlsScript;

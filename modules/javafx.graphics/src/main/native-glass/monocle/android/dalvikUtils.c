@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-#if (defined(ANDROID_NDK) && defined(DALVIK_VM))
+#if defined(ANDROID_NDK)
 
 #include <android/keycodes.h>
 #include "dalvikConst.h"
@@ -60,6 +60,7 @@ int to_jfx_key_action(int action) {
         case KEY_ACTION_MULTIPLE:
             return com_sun_glass_events_KeyEvent_TYPED;
     }
+    return -1;
 }
 
 int to_linux_keycode(int androidKeyCode) {
@@ -120,6 +121,7 @@ char *describe_key_action(int action) {
         case KEY_ACTION_MULTIPLE:
             return "KEY_ACTION_MULTIPLE";
     }
+    return "UNKNOWN";
 }
 
 #endif

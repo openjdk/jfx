@@ -309,6 +309,10 @@ gst_toc_free (GstToc * toc)
   if (toc->tags != NULL)
     gst_tag_list_unref (toc->tags);
 
+#ifdef USE_POISONING
+  memset (toc, 0xff, sizeof (GstToc));
+#endif
+
   g_slice_free (GstToc, toc);
 }
 
@@ -324,6 +328,10 @@ gst_toc_entry_free (GstTocEntry * entry)
 
   if (entry->tags != NULL)
     gst_tag_list_unref (entry->tags);
+
+#ifdef USE_POISONING
+  memset (entry, 0xff, sizeof (GstTocEntry));
+#endif
 
   g_slice_free (GstTocEntry, entry);
 }

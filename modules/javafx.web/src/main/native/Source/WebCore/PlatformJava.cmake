@@ -9,6 +9,11 @@ if (NOT EXISTS ${JAVA_JNI_GENSRC_PATH})
     set(JAVA_JNI_GENSRC_PATH "${CMAKE_BINARY_DIR}/../../generated-src/headers")
 endif ()
 
+list(REMOVE_ITEM  WebCore_PRIVATE_FRAMEWORK_HEADERS
+    bridge/objc/WebScriptObject.h
+    bridge/objc/WebScriptObjectPrivate.h
+)
+
 list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/java"
     "${WEBCORE_DIR}/platform/graphics/java"
@@ -90,7 +95,7 @@ if (WIN32)
     list(APPEND WebCore_SOURCES
         platform/win/SystemInfo.cpp
     )
-    list(APPEND WebCore_FORWARDING_HEADERS_FILES
+    list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
         platform/win/SystemInfo.h
     )
 elseif (APPLE)
@@ -133,7 +138,30 @@ list(APPEND WebCore_LIBRARIES
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
 
-WEBKIT_CREATE_FORWARDING_HEADERS(WebCore DIRECTORIES ${WebCore_FORWARDING_HEADERS_DIRECTORIES} FILES ${WebCore_FORWARDING_HEADERS_FILES})
+list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+    bindings/java/JavaDOMUtils.h
+    bindings/java/JavaEventListener.h
+    bindings/java/JavaNodeFilterCondition.h
+    bridge/jni/jsc/BridgeUtils.h
+    dom/DOMStringList.h
+    platform/graphics/java/ImageBufferDataJava.h
+    platform/graphics/java/PlatformContextJava.h
+    platform/graphics/java/RQRef.h
+    platform/graphics/java/RenderingQueue.h
+    platform/graphics/texmap/BitmapTextureJava.h
+    platform/graphics/texmap/TextureMapperJava.h
+    platform/java/DataObjectJava.h
+    platform/java/PageSupplementJava.h
+    platform/java/PlatformJavaClasses.h
+    platform/java/PluginWidgetJava.h
+    platform/mock/GeolocationClientMock.h
+    platform/network/java/AuthenticationChallenge.h
+    platform/network/java/CertificateInfo.h
+    platform/network/java/ResourceError.h
+    platform/network/java/ResourceRequest.h
+    platform/network/java/ResourceResponse.h
+    testing/js/WebCoreTestSupport.h
+)
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
     "SourcesPlatformJava.txt"

@@ -129,7 +129,7 @@ struct _GstBusPrivate
 };
 
 #define gst_bus_parent_class parent_class
-G_DEFINE_TYPE (GstBus, gst_bus, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstBus, gst_bus, GST_TYPE_OBJECT);
 
 static void
 gst_bus_set_property (GObject * object,
@@ -217,14 +217,12 @@ gst_bus_class_init (GstBusClass * klass)
       G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
       G_STRUCT_OFFSET (GstBusClass, message), NULL, NULL,
       g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_MESSAGE);
-
-  g_type_class_add_private (klass, sizeof (GstBusPrivate));
 }
 
 static void
 gst_bus_init (GstBus * bus)
 {
-  bus->priv = G_TYPE_INSTANCE_GET_PRIVATE (bus, GST_TYPE_BUS, GstBusPrivate);
+  bus->priv = gst_bus_get_instance_private (bus);
   bus->priv->enable_async = DEFAULT_ENABLE_ASYNC;
   g_mutex_init (&bus->priv->queue_lock);
   bus->priv->queue = gst_atomic_queue_new (32);
@@ -764,7 +762,7 @@ no_replace:
 /**
  * gst_bus_get_pollfd:
  * @bus: A #GstBus
- * @fd: A GPollFD to fill
+ * @fd: (out): A GPollFD to fill
  *
  * Gets the file descriptor from the bus which can be used to get notified about
  * messages being available with functions like g_poll(), and allows integration
@@ -1046,7 +1044,7 @@ gst_bus_add_watch (GstBus * bus, GstBusFunc func, gpointer user_data)
 gboolean
 gst_bus_remove_watch (GstBus * bus)
 {
-  GSource *watch_id;
+  GSource *source;
 
   g_return_val_if_fail (GST_IS_BUS (bus), FALSE);
 
@@ -1054,18 +1052,28 @@ gst_bus_remove_watch (GstBus * bus)
 
   if (bus->priv->signal_watch == NULL) {
     GST_ERROR_OBJECT (bus, "no bus watch was present");
-    goto no_watch;
+    goto error;
   }
 
-  watch_id = bus->priv->signal_watch;
+  if (bus->priv->num_signal_watchers > 0) {
+    GST_ERROR_OBJECT (bus,
+        "trying to remove signal watch with gst_bus_remove_watch()");
+    goto error;
+  }
+
+  source =
+      bus->priv->signal_watch ? g_source_ref (bus->priv->signal_watch) : NULL;
 
   GST_OBJECT_UNLOCK (bus);
 
-  g_source_destroy (watch_id);
+  if (source) {
+    g_source_destroy (source);
+    g_source_unref (source);
+  }
 
   return TRUE;
 
-no_watch:
+error:
   GST_OBJECT_UNLOCK (bus);
 
   return FALSE;
@@ -1379,7 +1387,7 @@ gst_bus_add_signal_watch_full (GstBus * bus, gint priority)
   /* this should not fail because the counter above takes care of it */
   g_assert (!bus->priv->signal_watch);
 
-      gst_bus_add_watch_full_unlocked (bus, priority, gst_bus_async_signal_func,
+  gst_bus_add_watch_full_unlocked (bus, priority, gst_bus_async_signal_func,
       NULL, NULL);
 
   if (G_UNLIKELY (!bus->priv->signal_watch))
@@ -1455,13 +1463,16 @@ gst_bus_remove_signal_watch (GstBus * bus)
   GST_DEBUG_OBJECT (bus, "removing signal watch %u",
       g_source_get_id (bus->priv->signal_watch));
 
-  source = bus->priv->signal_watch;
+  source =
+      bus->priv->signal_watch ? g_source_ref (bus->priv->signal_watch) : NULL;
 
 done:
   GST_OBJECT_UNLOCK (bus);
 
-  if (source)
+  if (source) {
     g_source_destroy (source);
+    g_source_unref (source);
+  }
 
   return;
 

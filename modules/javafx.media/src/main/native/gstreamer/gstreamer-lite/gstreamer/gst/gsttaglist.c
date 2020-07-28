@@ -471,13 +471,13 @@ gst_tag_lookup (const gchar * tag_name)
 }
 
 /**
- * gst_tag_register:
+ * gst_tag_register: (skip)
  * @name: the name or identifier string
  * @flag: a flag describing the type of tag info
  * @type: the type this data is in
  * @nick: human-readable name
  * @blurb: a human-readable description about this tag
- * @func: (allow-none) (scope call): function for merging multiple values of this tag, or %NULL
+ * @func: (allow-none): function for merging multiple values of this tag, or %NULL
  *
  * Registers a new tag type for the use with GStreamer's type system. If a type
  * with that name is already registered, that one is used.
@@ -515,13 +515,13 @@ gst_tag_register (const gchar * name, GstTagFlag flag, GType type,
 }
 
 /**
- * gst_tag_register_static:
+ * gst_tag_register_static: (skip)
  * @name: the name or identifier string (string constant)
  * @flag: a flag describing the type of tag info
  * @type: the type this data is in
  * @nick: human-readable name or short description (string constant)
  * @blurb: a human-readable description for this tag (string constant)
- * @func: (allow-none) (scope call): function for merging multiple values of this tag, or %NULL
+ * @func: (allow-none): function for merging multiple values of this tag, or %NULL
  *
  * Registers a new tag type for the use with GStreamer's type system.
  *
@@ -614,7 +614,7 @@ gst_tag_get_nick (const gchar * tag)
   g_return_val_if_fail (tag != NULL, NULL);
   info = gst_tag_lookup (tag);
   if (!info) {
-    GST_WARNING ("Uknown tag: %s", tag);
+    GST_WARNING ("Unknown tag: %s", tag);
 
     return tag;
   }
@@ -718,6 +718,10 @@ __gst_tag_list_free (GstTagList * list)
 #endif
 
   gst_structure_free (GST_TAG_LIST_STRUCTURE (list));
+
+#ifdef USE_POISONING
+  memset (list, 0xff, sizeof (GstTagListImpl));
+#endif
 
   g_slice_free1 (sizeof (GstTagListImpl), list);
 }
@@ -1299,7 +1303,7 @@ gst_tag_list_add_valist (GstTagList * list, GstTagMergeMode mode,
       g_warning ("%s: %s", G_STRLOC, error);
       g_free (error);
       /* we purposely leak the value here, it might not be
-       * in a sane state if an error condition occoured
+       * in a sane state if an error condition occurred
        */
       return;
     }

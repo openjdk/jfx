@@ -36,6 +36,7 @@ namespace WebCore {
 class HTMLTrackElement;
 
 class LoadableTextTrack final : public TextTrack, private TextTrackLoaderClient {
+    WTF_MAKE_ISO_ALLOCATED(LoadableTextTrack);
 public:
     static Ref<LoadableTextTrack> create(HTMLTrackElement& track, const String& kind, const String& label, const String& language)
     {
@@ -58,7 +59,7 @@ private:
     void newRegionsAvailable(TextTrackLoader&) final;
     void newStyleSheetsAvailable(TextTrackLoader&) final;
 
-    AtomicString id() const final;
+    AtomString id() const final;
     bool isDefault() const final { return m_isDefault; }
     Element* element() final;
 

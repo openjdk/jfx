@@ -113,8 +113,6 @@ public:
     bool hasMarginBeforeQuirk(const RenderBox& child) const;
     bool hasMarginAfterQuirk(const RenderBox& child) const;
 
-    bool generatesLineBoxesForInlineChild(RenderObject*);
-
     void markPositionedObjectsForLayout();
     void markForPaginationRelayoutIfNeeded() override;
 
@@ -201,7 +199,7 @@ public:
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const String&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
-    static TextRun constructTextRun(const AtomicString&, const RenderStyle&,
+    static TextRun constructTextRun(const AtomString&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const RenderText&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion);
@@ -394,6 +392,9 @@ public:
     LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
     bool isInlineBlockOrInlineTable() const final { return isInline() && isReplaced(); }
 
+    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
+
 protected:
     virtual void addOverflowFromChildren();
     // FIXME-BLOCKFLOW: Remove virtualization when all callers have moved to RenderBlockFlow
@@ -476,9 +477,6 @@ private:
     // FIXME-BLOCKFLOW: Remove virtualizaion when all callers have moved to RenderBlockFlow
     virtual void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
     friend class LogicalSelectionOffsetCaches;
-
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
-    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 

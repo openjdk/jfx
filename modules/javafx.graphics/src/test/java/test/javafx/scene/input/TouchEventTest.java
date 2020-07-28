@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1532,27 +1532,6 @@ public class TouchEventTest {
         ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
     }
 
-    // Reenable once indirect events are used
-    @Ignore("For now we've decided to ingore indirect events completely.")
-    @Test(expected=RuntimeException.class)
-    public void shouldThrowREOnLostIndirectRelease() {
-        Scene scene = createScene();
-        Rectangle rect =
-                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
-                System.currentTimeMillis(), 1, false, false, false, false, false);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
-                TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
-
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
-                System.currentTimeMillis(), 1, false, false, false, false, false);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
-                TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
-    }
-
     private Scene createScene() {
         final Group root = new Group();
 
@@ -1571,7 +1550,7 @@ public class TouchEventTest {
     }
 
     @Test
-    @Ignore("This is a benchmark, not any functional test. Run it individually if you wish.")
+    @Ignore("JDK-8234084") // This is a benchmark, not any functional test.
     public void saneOrderingBenchmark() {
         long[] ids = new long[] { 2, 3, 4, 5, 6 };
         boolean[] active = new boolean[] { false, false, false, false, false };
@@ -1659,7 +1638,7 @@ public class TouchEventTest {
     }
 
     @Test
-    @Ignore("This is a benchmark, not any functional test. Run it individually if you wish.")
+    @Ignore("JDK-8234084") // This is a benchmark, not any functional test.
     public void crazyOrderingBenchmark() {
         long[] ids = new long[] { 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000 };
         boolean[] active = new boolean[] { false, false, false, false, false,

@@ -54,22 +54,22 @@ Heap::Heap(HeapKind kind, std::lock_guard<Mutex>&)
     initializeLineMetadata();
     initializePageMetadata();
 
-    BASSERT(!PerProcess<Environment>::get()->isDebugHeapEnabled());
+    BASSERT(!Environment::get()->isDebugHeapEnabled());
 
-        Gigacage::ensureGigacage();
+    Gigacage::ensureGigacage();
 #if GIGACAGE_ENABLED
-        if (usingGigacage()) {
-            RELEASE_BASSERT(gigacageBasePtr());
-            uint64_t random[2];
-            cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
-            size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize() - (random[0] % Gigacage::maximumCageSizeReductionForSlide));
-            ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize() - size));
-            void* base = reinterpret_cast<unsigned char*>(gigacageBasePtr()) + offset;
-            m_largeFree.add(LargeRange(base, size, 0, 0));
-        }
+    if (usingGigacage()) {
+        RELEASE_BASSERT(gigacageBasePtr());
+        uint64_t random[2];
+        cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
+        size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize() - (random[0] % Gigacage::maximumCageSizeReductionForSlide));
+        ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize() - size));
+        void* base = reinterpret_cast<unsigned char*>(gigacageBasePtr()) + offset;
+        m_largeFree.add(LargeRange(base, size, 0, 0));
+    }
 #endif
 
-    m_scavenger = PerProcess<Scavenger>::get();
+    m_scavenger = Scavenger::get();
 }
 
 bool Heap::usingGigacage()
@@ -175,13 +175,18 @@ void Heap::decommitLargeRange(std::lock_guard<Mutex>&, LargeRange& range, BulkDe
 #endif
 }
 
-void Heap::scavenge(std::lock_guard<Mutex>& lock, BulkDecommit& decommitter)
+void Heap::scavenge(std::lock_guard<Mutex>& lock, BulkDecommit& decommitter, size_t& deferredDecommits)
 {
     for (auto& list : m_freePages) {
         for (auto* chunk : list) {
             for (auto* page : chunk->freePages()) {
                 if (!page->hasPhysicalPages())
                     continue;
+                if (page->usedSinceLastScavenge()) {
+                    page->clearUsedSinceLastScavenge();
+                    deferredDecommits++;
+                    continue;
+                }
 
                 size_t pageSize = bmalloc::pageSize(&list - &m_freePages[0]);
                 size_t decommitSize = physicalPageSizeSloppy(page->begin()->begin(), pageSize);
@@ -202,23 +207,13 @@ void Heap::scavenge(std::lock_guard<Mutex>& lock, BulkDecommit& decommitter)
     }
 
     for (LargeRange& range : m_largeFree) {
-        m_highWatermark = std::min(m_highWatermark, static_cast<void*>(range.begin()));
+        if (range.usedSinceLastScavenge()) {
+            range.clearUsedSinceLastScavenge();
+            deferredDecommits++;
+            continue;
+        }
         decommitLargeRange(lock, range, decommitter);
     }
-
-    m_freeableMemory = 0;
-}
-
-void Heap::scavengeToHighWatermark(std::lock_guard<Mutex>& lock, BulkDecommit& decommitter)
-{
-    void* newHighWaterMark = nullptr;
-    for (LargeRange& range : m_largeFree) {
-        if (range.begin() <= m_highWatermark)
-            newHighWaterMark = std::min(newHighWaterMark, static_cast<void*>(range.begin()));
-        else
-            decommitLargeRange(lock, range, decommitter);
-    }
-    m_highWatermark = newHighWaterMark;
 }
 
 void Heap::deallocateLineCache(std::unique_lock<Mutex>&, LineCache& lineCache)
@@ -249,6 +244,7 @@ void Heap::allocateSmallChunk(std::unique_lock<Mutex>& lock, size_t pageClass)
 
         forEachPage(chunk, pageSize, [&](SmallPage* page) {
             page->setHasPhysicalPages(true);
+            page->setUsedSinceLastScavenge();
             page->setHasFreeLines(lock, true);
             chunk->freePages().push(page);
         });
@@ -328,6 +324,7 @@ SmallPage* Heap::allocateSmallPage(std::unique_lock<Mutex>& lock, size_t sizeCla
             m_physicalPageMap.commit(page->begin()->begin(), pageSize);
 #endif
         }
+        page->setUsedSinceLastScavenge();
 
         return page;
     }();
@@ -574,7 +571,7 @@ void* Heap::tryAllocateLarge(std::unique_lock<Mutex>& lock, size_t alignment, si
         if (usingGigacage())
             return nullptr;
 
-        range = PerProcess<VMHeap>::get()->tryAllocateLargeChunk(alignment, size);
+        range = VMHeap::get()->tryAllocateLargeChunk(alignment, size);
         if (!range)
             return nullptr;
 
@@ -585,7 +582,6 @@ void* Heap::tryAllocateLarge(std::unique_lock<Mutex>& lock, size_t alignment, si
     m_freeableMemory -= range.totalPhysicalSize();
 
     void* result = splitAndAllocate(lock, range, alignment, size).begin();
-    m_highWatermark = std::max(m_highWatermark, result);
     return result;
 }
 

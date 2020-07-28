@@ -4,7 +4,7 @@
              (C) 1998, 1999 Torben Weis (weis@kde.org)
              (C) 1999 Lars Knoll (knoll@kde.org)
              (C) 1999 Antti Koivisto (koivisto@kde.org)
-   Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+   Copyright (C) 2004-2019 Apple Inc. All rights reserved.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -95,11 +95,6 @@ public:
     int mapFromLayoutToCSSUnits(LayoutUnit) const;
     LayoutUnit mapFromCSSToLayoutUnits(int) const;
 
-    LayoutUnit marginWidth() const { return m_margins.width(); } // -1 means default
-    LayoutUnit marginHeight() const { return m_margins.height(); } // -1 means default
-    void setMarginWidth(LayoutUnit);
-    void setMarginHeight(LayoutUnit);
-
     WEBCORE_EXPORT void setCanHaveScrollbars(bool) final;
     WEBCORE_EXPORT void updateCanHaveScrollbars();
 
@@ -137,7 +132,7 @@ public:
     IntSize customSizeForResizeEvent() const { return m_customSizeForResizeEvent; }
     WEBCORE_EXPORT void setCustomSizeForResizeEvent(IntSize);
 
-    WEBCORE_EXPORT void setScrollVelocity(double horizontalVelocity, double verticalVelocity, double scaleChangeRate, MonotonicTime timestamp);
+    WEBCORE_EXPORT void setScrollVelocity(const VelocityData&);
 #else
     bool useCustomFixedPositionLayoutRect() const { return false; }
 #endif
@@ -153,7 +148,7 @@ public:
     WEBCORE_EXPORT GraphicsLayer* graphicsLayerForPlatformWidget(PlatformWidget);
     WEBCORE_EXPORT void scheduleLayerFlushAllowingThrottling();
 
-    WEBCORE_EXPORT TiledBacking* tiledBacking() const final;
+    WEBCORE_EXPORT TiledBacking* tiledBacking() const;
 
     ScrollingNodeID scrollingNodeID() const override;
     ScrollableArea* scrollableAreaForScrollLayerID(uint64_t) const;
@@ -260,8 +255,10 @@ public:
     // If set, overrides the default "m_layoutViewportOrigin, size of initial containing block" rect.
     // Used with delegated scrolling (i.e. iOS).
     WEBCORE_EXPORT void setLayoutViewportOverrideRect(Optional<LayoutRect>, TriggerLayoutOrNot = TriggerLayoutOrNot::Yes);
+    Optional<LayoutRect> layoutViewportOverrideRect() const { return m_layoutViewportOverrideRect; }
 
     WEBCORE_EXPORT void setVisualViewportOverrideRect(Optional<LayoutRect>);
+    Optional<LayoutRect> visualViewportOverrideRect() const { return m_visualViewportOverrideRect; }
 
     // These are in document coordinates, unaffected by page scale (but affected by zooming).
     WEBCORE_EXPORT LayoutRect layoutViewportRect() const;
@@ -272,6 +269,8 @@ public:
     // This is different than visibleContentRect() in that it ignores negative (or overly positive)
     // offsets from rubber-banding, and it takes zooming into account.
     LayoutRect viewportConstrainedVisibleContentRect() const;
+
+    WEBCORE_EXPORT void layoutOrVisualViewportChanged();
 
     LayoutRect rectForFixedPositionLayout() const;
 
@@ -305,7 +304,7 @@ public:
     LayoutPoint scrollPositionForFixedPosition() const;
 
     // Static function can be called from another thread.
-    static LayoutPoint scrollPositionForFixedPosition(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, const LayoutPoint& scrollPosition, const LayoutPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements, int headerHeight, int footerHeight);
+    WEBCORE_EXPORT static LayoutPoint scrollPositionForFixedPosition(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, const LayoutPoint& scrollPosition, const LayoutPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements, int headerHeight, int footerHeight);
 
     WEBCORE_EXPORT static LayoutSize expandedLayoutViewportSize(const LayoutSize& baseLayoutViewportSize, const LayoutSize& documentSize, double heightExpansionFactor);
 
@@ -329,7 +328,7 @@ public:
     WEBCORE_EXPORT static LayoutRect rectForViewportConstrainedObjects(const LayoutRect& visibleContentRect, const LayoutSize& totalContentsSize, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame, ScrollBehaviorForFixedElements);
 #endif
 
-    IntRect unobscuredContentRectExpandedByContentInsets() const;
+    IntRect viewRectExpandedByContentInsets() const;
 
     bool fixedElementsLayoutRelativeToFrame() const;
 
@@ -399,8 +398,11 @@ public:
     void updateIsVisuallyNonEmpty();
     void updateSignificantRenderedTextMilestoneIfNeeded();
     bool isVisuallyNonEmpty() const { return m_isVisuallyNonEmpty; }
-    WEBCORE_EXPORT void enableAutoSizeMode(bool enable, const IntSize& minSize, const IntSize& maxSize);
+    WEBCORE_EXPORT bool qualifiesAsVisuallyNonEmpty() const;
+
+    WEBCORE_EXPORT void enableAutoSizeMode(bool enable, const IntSize& minSize);
     WEBCORE_EXPORT void setAutoSizeFixedMinimumHeight(int);
+    bool isAutoSizeEnabled() const { return m_shouldAutoSize; }
     IntSize autoSizingIntrinsicContentSize() const { return m_autoSizeContentSize; }
 
     WEBCORE_EXPORT void forceLayout(bool allowSubtreeLayout = false);
@@ -474,18 +476,22 @@ public:
     float documentToAbsoluteScaleFactor(Optional<float> effectiveZoom = WTF::nullopt) const;
     float absoluteToDocumentScaleFactor(Optional<float> effectiveZoom = WTF::nullopt) const;
 
-    FloatRect absoluteToDocumentRect(FloatRect, Optional<float> effectiveZoom = WTF::nullopt) const;
-    FloatPoint absoluteToDocumentPoint(FloatPoint, Optional<float> effectiveZoom = WTF::nullopt) const;
+    WEBCORE_EXPORT FloatRect absoluteToDocumentRect(FloatRect, Optional<float> effectiveZoom = WTF::nullopt) const;
+    WEBCORE_EXPORT FloatPoint absoluteToDocumentPoint(FloatPoint, Optional<float> effectiveZoom = WTF::nullopt) const;
 
     FloatRect absoluteToClientRect(FloatRect, Optional<float> effectiveZoom = WTF::nullopt) const;
 
     FloatSize documentToClientOffset() const;
-    FloatRect documentToClientRect(FloatRect) const;
+    WEBCORE_EXPORT FloatRect documentToClientRect(FloatRect) const;
     FloatPoint documentToClientPoint(FloatPoint) const;
     WEBCORE_EXPORT FloatRect clientToDocumentRect(FloatRect) const;
     WEBCORE_EXPORT FloatPoint clientToDocumentPoint(FloatPoint) const;
 
+    WEBCORE_EXPORT FloatPoint absoluteToLayoutViewportPoint(FloatPoint) const;
     FloatPoint layoutViewportToAbsolutePoint(FloatPoint) const;
+
+    WEBCORE_EXPORT FloatRect absoluteToLayoutViewportRect(FloatRect) const;
+    FloatRect layoutViewportToAbsoluteRect(FloatRect) const;
 
     // Unlike client coordinates, layout viewport coordinates are affected by page zoom.
     WEBCORE_EXPORT FloatRect clientToLayoutViewportRect(FloatRect) const;
@@ -555,9 +561,6 @@ public:
     const Pagination& pagination() const;
     void setPagination(const Pagination&);
 
-    bool inProgrammaticScroll() const final { return m_inProgrammaticScroll; }
-    void setInProgrammaticScroll(bool programmaticScroll) { m_inProgrammaticScroll = programmaticScroll; }
-
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     IntSize initialViewportSize() const { return m_initialViewportSize; }
     void setInitialViewportSize(const IntSize& size) { m_initialViewportSize = size; }
@@ -592,10 +595,6 @@ public:
 
     void updateTiledBackingAdaptiveSizing();
     TiledBacking::Scrollability computeScrollability() const;
-
-#if PLATFORM(IOS_FAMILY)
-    WEBCORE_EXPORT void didUpdateViewportOverrideRects();
-#endif
 
     void addPaintPendingMilestones(OptionSet<LayoutMilestone>);
     void firePaintRelatedMilestonesIfNeeded();
@@ -741,7 +740,7 @@ private:
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-    RenderObject* rendererForSupportedColorSchemes() const;
+    RenderObject* rendererForColorScheme() const;
 #endif
 
     bool usesCompositedScrolling() const final;
@@ -790,7 +789,6 @@ private:
 
     void markRootOrBodyRendererDirty() const;
 
-    bool qualifiesAsVisuallyNonEmpty() const;
     bool qualifiesAsSignificantRenderedText() const;
     void updateHasReachedSignificantRenderedTextThreshold();
 
@@ -838,7 +836,6 @@ private:
     MonotonicTime m_lastPaintTime;
 
     LayoutSize m_size;
-    LayoutSize m_margins;
 
     Color m_baseBackgroundColor { Color::white };
     IntSize m_lastViewportSize;
@@ -876,10 +873,8 @@ private:
 
     Optional<OverrideViewportSize> m_overrideViewportSize;
 
-    // The lower bound on the size when autosizing.
-    IntSize m_minAutoSize;
-    // The upper bound on the size when autosizing.
-    IntSize m_maxAutoSize;
+    // The view size when autosizing.
+    IntSize m_autoSizeConstraint;
     // The fixed height to resize the view to after autosizing is complete.
     int m_autoSizeFixedMinimumHeight { 0 };
     // The intrinsic content size decided by autosizing.
@@ -923,7 +918,6 @@ private:
 
     bool m_isTrackingRepaints { false }; // Used for testing.
     bool m_wasScrolledByUser { false };
-    bool m_inProgrammaticScroll { false };
     bool m_shouldScrollToFocusedElement { false };
 
     bool m_isPainting { false };

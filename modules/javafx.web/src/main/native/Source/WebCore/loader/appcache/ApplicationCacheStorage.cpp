@@ -1061,7 +1061,7 @@ static inline void parseHeader(const CharacterType* header, unsigned headerLengt
 
     // Save memory by putting the header names into atomic strings so each is stored only once,
     // even though the setHTTPHeaderField function does not require an atomic string.
-    AtomicString headerName { header, colonPosition };
+    AtomString headerName { header, colonPosition };
     String headerValue { header + colonPosition + 1, headerLength - colonPosition - 1 };
 
     response.setHTTPHeaderField(headerName, headerValue);
@@ -1201,7 +1201,7 @@ RefPtr<ApplicationCache> ApplicationCacheStorage::loadCache(unsigned storageID)
 
     cache->setStorageID(storageID);
 
-    return WTFMove(cache);
+    return cache;
 }
 
 void ApplicationCacheStorage::remove(ApplicationCache* cache)
@@ -1325,7 +1325,7 @@ Optional<Vector<URL>> ApplicationCacheStorage::manifestURLs()
     while (selectURLs.step() == SQLITE_ROW)
         urls.append(URL({ }, selectURLs.getColumnText(0)));
 
-    return WTFMove(urls);
+    return urls;
 }
 
 bool ApplicationCacheStorage::deleteCacheGroupRecord(const String& manifestURL)

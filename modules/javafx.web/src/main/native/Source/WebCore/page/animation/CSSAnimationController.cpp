@@ -78,7 +78,12 @@ CSSAnimationControllerPrivate::CSSAnimationControllerPrivate(Frame& frame)
 {
 }
 
-CSSAnimationControllerPrivate::~CSSAnimationControllerPrivate() = default;
+CSSAnimationControllerPrivate::~CSSAnimationControllerPrivate()
+{
+    // We need to explicitly clear the composite animations here because the
+    // destructor of CompositeAnimation will call members of this class back.
+    m_compositeAnimations.clear();
+}
 
 CompositeAnimation& CSSAnimationControllerPrivate::ensureCompositeAnimation(Element& element)
 {
@@ -240,7 +245,7 @@ void CSSAnimationControllerPrivate::startUpdateStyleIfNeededDispatcher()
         m_updateStyleIfNeededDispatcher.startOneShot(0_s);
 }
 
-void CSSAnimationControllerPrivate::addEventToDispatch(Element& element, const AtomicString& eventType, const String& name, double elapsedTime)
+void CSSAnimationControllerPrivate::addEventToDispatch(Element& element, const AtomString& eventType, const String& name, double elapsedTime)
 {
     m_eventsToDispatch.append({ element, eventType, name, elapsedTime });
     startUpdateStyleIfNeededDispatcher();
@@ -409,7 +414,7 @@ void CSSAnimationControllerPrivate::setAllowsNewAnimationsWhileSuspended(bool al
     m_allowsNewAnimationsWhileSuspended = allowed;
 }
 
-bool CSSAnimationControllerPrivate::pauseAnimationAtTime(Element& element, const AtomicString& name, double t)
+bool CSSAnimationControllerPrivate::pauseAnimationAtTime(Element& element, const AtomString& name, double t)
 {
     CompositeAnimation& compositeAnimation = ensureCompositeAnimation(element);
     if (compositeAnimation.pauseAnimationAtTime(name, t)) {
@@ -591,7 +596,7 @@ void CSSAnimationControllerPrivate::animationWillBeRemoved(AnimationBase& animat
 }
 
 CSSAnimationController::CSSAnimationController(Frame& frame)
-    : m_data(std::make_unique<CSSAnimationControllerPrivate>(frame))
+    : m_data(makeUnique<CSSAnimationControllerPrivate>(frame))
 {
 }
 
@@ -673,7 +678,7 @@ void CSSAnimationController::notifyAnimationStarted(RenderElement& renderer, Mon
     m_data->receivedStartTimeResponse(startTime);
 }
 
-bool CSSAnimationController::pauseAnimationAtTime(Element& element, const AtomicString& name, double t)
+bool CSSAnimationController::pauseAnimationAtTime(Element& element, const AtomString& name, double t)
 {
     AnimationUpdateBlock animationUpdateBlock(this);
     return m_data->pauseAnimationAtTime(element, name, t);

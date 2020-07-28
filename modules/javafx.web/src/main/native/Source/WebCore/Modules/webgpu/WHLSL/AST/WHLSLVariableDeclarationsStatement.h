@@ -27,9 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLStatement.h"
 #include "WHLSLVariableDeclaration.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -38,25 +39,24 @@ namespace WHLSL {
 
 namespace AST {
 
-class VariableDeclarationsStatement : public Statement {
+class VariableDeclarationsStatement final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    VariableDeclarationsStatement(Lexer::Token&& origin, Vector<VariableDeclaration>&& variableDeclarations)
-        : Statement(WTFMove(origin))
+    VariableDeclarationsStatement(CodeLocation location, VariableDeclarations&& variableDeclarations)
+        : Statement(location, Kind::VariableDeclarations)
         , m_variableDeclarations(WTFMove(variableDeclarations))
     {
     }
 
-    virtual ~VariableDeclarationsStatement() = default;
+    ~VariableDeclarationsStatement() = default;
 
     VariableDeclarationsStatement(const VariableDeclarationsStatement&) = delete;
     VariableDeclarationsStatement(VariableDeclarationsStatement&&) = default;
 
-    bool isVariableDeclarationsStatement() const override { return true; }
-
-    Vector<VariableDeclaration>& variableDeclarations() { return m_variableDeclarations; }
+    Vector<UniqueRef<VariableDeclaration>>& variableDeclarations() { return m_variableDeclarations; }
 
 private:
-    Vector<VariableDeclaration> m_variableDeclarations;
+    VariableDeclarations m_variableDeclarations;
 };
 
 } // namespace AST
@@ -64,6 +64,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(VariableDeclarationsStatement)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(VariableDeclarationsStatement, isVariableDeclarationsStatement())
 

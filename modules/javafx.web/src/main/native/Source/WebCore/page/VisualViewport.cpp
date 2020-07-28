@@ -35,8 +35,11 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "Page.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(VisualViewport);
 
 VisualViewport::VisualViewport(DOMWindow& window)
     : DOMWindowProperty(&window)
@@ -50,12 +53,13 @@ EventTargetInterface VisualViewport::eventTargetInterface() const
 
 ScriptExecutionContext* VisualViewport::scriptExecutionContext() const
 {
-    if (!m_window)
+    auto window = this->window();
+    if (!window)
         return nullptr;
-    return static_cast<ContextDestructionObserver*>(m_window)->scriptExecutionContext();
+    return static_cast<ContextDestructionObserver*>(window)->scriptExecutionContext();
 }
 
-bool VisualViewport::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     if (!EventTarget::addEventListener(eventType, WTFMove(listener), options))
         return false;
