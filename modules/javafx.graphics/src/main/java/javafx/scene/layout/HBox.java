@@ -254,7 +254,7 @@ public class HBox extends Pane {
     /**
      * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
-     * @param children The initial set of children for this pane
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(double spacing, Node... children) {
