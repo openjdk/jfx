@@ -58,7 +58,13 @@ ComplexLineLayout::ComplexLineLayout(RenderBlockFlow& flow)
 {
 }
 
-ComplexLineLayout::~ComplexLineLayout() = default;
+ComplexLineLayout::~ComplexLineLayout()
+{
+    if (m_flow.containsFloats())
+        m_flow.floatingObjects()->clearLineBoxTreePointers();
+
+    lineBoxes().deleteLineBoxTree();
+};
 
 static void determineDirectionality(TextDirection& dir, InlineIterator iter)
 {
@@ -570,7 +576,7 @@ void ComplexLineLayout::updateRubyForJustifiedText(RenderRubyRun& rubyRun, BidiR
 
     float totalExpansion = 0;
     unsigned totalOpportunitiesInRun = 0;
-    for (auto* leafChild = rootBox.firstLeafChild(); leafChild; leafChild = leafChild->nextLeafChild()) {
+    for (auto* leafChild = rootBox.firstLeafDescendant(); leafChild; leafChild = leafChild->nextLeafOnLine()) {
         if (!leafChild->isInlineTextBox())
             continue;
 
@@ -735,7 +741,7 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
         if (nextRun && is<RenderRubyRun>(nextRun->renderer()) && downcast<RenderRubyRun>(nextRun->renderer()).rubyBase() && nextRun->renderer().style().collapseWhiteSpace()) {
             auto& rubyBase = *downcast<RenderRubyRun>(nextRun->renderer()).rubyBase();
             if (rubyBase.firstRootBox() && !rubyBase.firstRootBox()->nextRootBox()) {
-                if (auto* leafChild = rubyBase.firstRootBox()->firstLeafChild()) {
+                if (auto* leafChild = rubyBase.firstRootBox()->firstLeafDescendant()) {
                     if (is<InlineTextBox>(*leafChild)) {
                         // FIXME: This leadingExpansionOpportunity doesn't actually work because it doesn't perform the UBA
                         if (FontCascade::leadingExpansionOpportunity(downcast<RenderText>(leafChild->renderer()).stringView(), leafChild->direction())) {
@@ -750,7 +756,7 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
         if (previousRun && is<RenderRubyRun>(previousRun->renderer()) && downcast<RenderRubyRun>(previousRun->renderer()).rubyBase() && previousRun->renderer().style().collapseWhiteSpace()) {
             auto& rubyBase = *downcast<RenderRubyRun>(previousRun->renderer()).rubyBase();
             if (rubyBase.firstRootBox() && !rubyBase.firstRootBox()->nextRootBox()) {
-                if (auto* leafChild = rubyBase.firstRootBox()->lastLeafChild()) {
+                if (auto* leafChild = rubyBase.firstRootBox()->lastLeafDescendant()) {
                     if (is<InlineTextBox>(*leafChild)) {
                         // FIXME: This leadingExpansionOpportunity doesn't actually work because it doesn't perform the UBA
                         if (FontCascade::trailingExpansionOpportunity(downcast<RenderText>(leafChild->renderer()).stringView(), leafChild->direction())) {
@@ -764,10 +770,10 @@ static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlo
         // If we're the first box inside a ruby base, forbid a leading expansion, and vice-versa
         if (is<RenderRubyBase>(block)) {
             RenderRubyBase& rubyBase = downcast<RenderRubyBase>(block);
-            if (&textBox == rubyBase.firstRootBox()->firstLeafChild()) {
+            if (&textBox == rubyBase.firstRootBox()->firstLeafDescendant()) {
                 setLeadingExpansion = true;
                 result |= ForbidLeadingExpansion;
-            } if (&textBox == rubyBase.firstRootBox()->lastLeafChild()) {
+            } if (&textBox == rubyBase.firstRootBox()->lastLeafDescendant()) {
                 setTrailingExpansion = true;
                 result |= ForbidTrailingExpansion;
             }
@@ -920,7 +926,7 @@ BidiRun* ComplexLineLayout::computeInlineDirectionPositionsForSegment(RootInline
                 auto* rubyBase = downcast<RenderRubyRun>(run->renderer()).rubyBase();
                 if (rubyBase->firstRootBox() && !rubyBase->firstRootBox()->nextRootBox() && run->renderer().style().collapseWhiteSpace()) {
                     rubyBase->setIsAfterExpansion(isAfterExpansion);
-                    for (auto* leafChild = rubyBase->firstRootBox()->firstLeafChild(); leafChild; leafChild = leafChild->nextLeafChild()) {
+                    for (auto* leafChild = rubyBase->firstRootBox()->firstLeafDescendant(); leafChild; leafChild = leafChild->nextLeafOnLine()) {
                         if (!is<InlineTextBox>(*leafChild))
                             continue;
                         encounteredJustifiedRuby = true;
@@ -971,7 +977,7 @@ BidiRun* ComplexLineLayout::computeInlineDirectionPositionsForSegment(RootInline
 void ComplexLineLayout::removeInlineBox(BidiRun& run, const RootInlineBox& rootLineBox) const
 {
     auto* inlineBox = run.box();
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto* inlineParent = inlineBox->parent();
     while (inlineParent && inlineParent != &rootLineBox) {
         ASSERT(!inlineParent->isDirty());
@@ -1317,10 +1323,10 @@ void ComplexLineLayout::layoutRunsAndFloats(LineLayoutState& layoutState, bool h
         // If the last line before the start line ends with a line break that clear floats,
         // adjust the height accordingly.
         // A line break can be either the first or the last object on a line, depending on its direction.
-        if (InlineBox* lastLeafChild = lastRootBox()->lastLeafChild()) {
-            RenderObject* lastObject = &lastLeafChild->renderer();
+        if (InlineBox* lastLeafDescendant = lastRootBox()->lastLeafDescendant()) {
+            RenderObject* lastObject = &lastLeafDescendant->renderer();
             if (!lastObject->isBR())
-                lastObject = &lastRootBox()->firstLeafChild()->renderer();
+                lastObject = &lastRootBox()->firstLeafDescendant()->renderer();
             if (lastObject->isBR()) {
                 Clear clear = lastObject->style().clear();
                 if (clear != Clear::None)
@@ -1550,7 +1556,7 @@ void ComplexLineLayout::layoutRunsAndFloatsInRange(LineLayoutState& layoutState,
                 lineBox = lineBox->prevRootBox();
 
             // We now want to break at this line. Remember for next layout and trigger relayout.
-            m_flow.setBreakAtLineToAvoidWidow(m_flow.lineCount(lineBox));
+            m_flow.setBreakAtLineToAvoidWidow(lineCountUntil(lineBox));
             m_flow.markLinesDirtyInBlockRange(lastRootBox()->lineBottomWithLeading(), lineBox->lineBottomWithLeading(), lineBox);
         }
     }
@@ -2100,6 +2106,27 @@ void ComplexLineLayout::addOverflowFromInlineChildren()
                 fragment->addVisualOverflowForBox(&m_flow, childVisualOverflowRect);
         }
     }
+}
+
+size_t ComplexLineLayout::lineCount() const
+{
+    size_t count = 0;
+    for (auto* box = firstRootBox(); box; box = box->nextRootBox())
+        ++count;
+
+    return count;
+}
+
+size_t ComplexLineLayout::lineCountUntil(const RootInlineBox* stopRootInlineBox) const
+{
+    size_t count = 0;
+    for (auto* box = firstRootBox(); box; box = box->nextRootBox()) {
+        ++count;
+        if (box == stopRootInlineBox)
+            break;
+    }
+
+    return count;
 }
 
 void ComplexLineLayout::deleteEllipsisLineBoxes()

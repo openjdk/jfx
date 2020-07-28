@@ -26,50 +26,34 @@
 #include "config.h"
 #include "ExtendedColor.h"
 
-#include "ColorSpace.h"
 #include <wtf/MathExtras.h>
-#include <wtf/dtoa.h>
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
-Ref<ExtendedColor> ExtendedColor::create(float r, float g, float b, float a, ColorSpace colorSpace)
+Ref<ExtendedColor> ExtendedColor::create(float red, float green, float blue, float alpha, ColorSpace colorSpace)
 {
-    return adoptRef(*new ExtendedColor(r, g, b, a, colorSpace));
+    return adoptRef(*new ExtendedColor(red, green, blue, alpha, colorSpace));
 }
 
 String ExtendedColor::cssText() const
 {
-    StringBuilder builder;
-    builder.reserveCapacity(40);
-    builder.appendLiteral("color(");
-
+    const char* colorSpace;
     switch (m_colorSpace) {
-    case ColorSpaceSRGB:
-        builder.appendLiteral("srgb ");
+    case ColorSpace::SRGB:
+        colorSpace = "srgb";
         break;
-    case ColorSpaceDisplayP3:
-        builder.appendLiteral("display-p3 ");
+    case ColorSpace::DisplayP3:
+        colorSpace = "display-p3";
         break;
     default:
         ASSERT_NOT_REACHED();
         return WTF::emptyString();
     }
 
-    builder.appendFixedPrecisionNumber(red());
-    builder.append(' ');
-
-    builder.appendFixedPrecisionNumber(green());
-    builder.append(' ');
-
-    builder.appendFixedPrecisionNumber(blue());
-    if (!WTF::areEssentiallyEqual(alpha(), 1.0f)) {
-        builder.appendLiteral(" / ");
-        builder.appendFixedPrecisionNumber(alpha());
-    }
-    builder.append(')');
-
-    return builder.toString();
+    if (WTF::areEssentiallyEqual(alpha(), 1.0f))
+        return makeString("color(", colorSpace, ' ', red(), ' ', green(), ' ', blue(), ')');
+    return makeString("color(", colorSpace, ' ', red(), ' ', green(), ' ', blue(), " / ", alpha(), ')');
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ std::unique_ptr<FontPlatformData> FontPlatformData::create(
             family,
             fontDescription.computedSize(),
             isItalic(fontDescription.italic()),
-            isFontWeightBold(fontDescription.weight()));
+            fontDescription.weight() >= boldWeightValue());
     return !wcFont ? nullptr : std::make_unique<FontPlatformData>(wcFont, fontDescription.computedSize());
 }
 

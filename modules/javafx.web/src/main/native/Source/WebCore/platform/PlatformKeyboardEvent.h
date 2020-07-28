@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "CompositionUnderline.h"
 #include "KeypressCommand.h"
 #include "PlatformEvent.h"
 #include <wtf/WindowsExtras.h>
@@ -38,11 +39,6 @@ OBJC_CLASS NSEvent;
 
 #if PLATFORM(IOS_FAMILY)
 OBJC_CLASS WebEvent;
-#endif
-
-#if PLATFORM(GTK)
-typedef struct _GdkEventKey GdkEventKey;
-#include "CompositionResults.h"
 #endif
 
 #if PLATFORM(JAVA)
@@ -60,29 +56,16 @@ namespace WebCore {
             , m_autoRepeat(false)
             , m_isKeypad(false)
             , m_isSystemKey(false)
-#if PLATFORM(GTK)
-            , m_gdkEventKey(0)
-#endif
         {
         }
 
-        PlatformKeyboardEvent(Type type, const String& text, const String& unmodifiedText,
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
-        const String& key,
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
-        const String& code,
-#endif
+        PlatformKeyboardEvent(Type type, const String& text, const String& unmodifiedText, const String& key, const String& code,
         const String& keyIdentifier, int windowsVirtualKeyCode, bool isAutoRepeat, bool isKeypad, bool isSystemKey, OptionSet<Modifier> modifiers, WallTime timestamp)
             : PlatformEvent(type, modifiers, timestamp)
             , m_text(text)
             , m_unmodifiedText(unmodifiedText)
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
             , m_key(key)
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
             , m_code(code)
-#endif
             , m_keyIdentifier(keyIdentifier)
             , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
             , m_autoRepeat(isAutoRepeat)
@@ -107,21 +90,21 @@ namespace WebCore {
         String unmodifiedText() const { return m_unmodifiedText; }
 
         String keyIdentifier() const { return m_keyIdentifier; }
-
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
         const String& key() const { return m_key; }
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
         const String& code() const { return m_code; }
-#endif
 
         // Most compatible Windows virtual key code associated with the event.
         // Zero for Char events.
         int windowsVirtualKeyCode() const { return m_windowsVirtualKeyCode; }
         void setWindowsVirtualKeyCode(int code) { m_windowsVirtualKeyCode = code; }
 
-#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK)
+#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK) || USE(LIBWPE)
         bool handledByInputMethod() const { return m_handledByInputMethod; }
+#endif
+#if PLATFORM(GTK) || USE(LIBWPE)
+        const Optional<Vector<WebCore::CompositionUnderline>>& preeditUnderlines() const { return m_preeditUnderlines; }
+        const Optional<uint64_t>& preeditSelectionRangeStart() const { return m_preeditSelectionRangeStart; }
+        const Optional<uint64_t>& preeditSelectionRangeLength() const { return m_preeditSelectionRangeLength; }
 #endif
 #if USE(APPKIT)
         const Vector<KeypressCommand>& commands() const { return m_commands; }
@@ -154,10 +137,6 @@ namespace WebCore {
 #endif
 
 #if PLATFORM(GTK)
-        PlatformKeyboardEvent(GdkEventKey*, const CompositionResults&);
-        GdkEventKey* gdkEventKey() const { return m_gdkEventKey; }
-        const CompositionResults& compositionResults() const { return m_compositionResults; }
-
         // Used by WebKit2
         static String keyValueForGdkKeyCode(unsigned);
         static String keyCodeForHardwareKeyCode(unsigned);
@@ -184,16 +163,17 @@ namespace WebCore {
     protected:
         String m_text;
         String m_unmodifiedText;
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
         String m_key;
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
         String m_code;
-#endif
         String m_keyIdentifier;
         int m_windowsVirtualKeyCode;
-#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK)
+#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS) || PLATFORM(GTK) || USE(LIBWPE)
         bool m_handledByInputMethod { false };
+#endif
+#if PLATFORM(GTK) || USE(LIBWPE)
+        Optional<Vector<WebCore::CompositionUnderline>> m_preeditUnderlines;
+        Optional<uint64_t> m_preeditSelectionRangeStart;
+        Optional<uint64_t> m_preeditSelectionRangeLength;
 #endif
 #if USE(APPKIT)
         Vector<KeypressCommand> m_commands;
@@ -213,11 +193,6 @@ namespace WebCore {
         RetainPtr<::WebEvent> m_Event;
 #endif
 #endif
-#if PLATFORM(GTK)
-        GdkEventKey* m_gdkEventKey;
-        CompositionResults m_compositionResults;
-#endif
-
         // The modifier state is optional, since it is not needed in the UI process or in legacy WebKit.
         static Optional<OptionSet<Modifier>> s_currentModifiers;
     };

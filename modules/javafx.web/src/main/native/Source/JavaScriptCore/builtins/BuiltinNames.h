@@ -45,34 +45,31 @@ namespace JSC {
     JSC_COMMON_BYTECODE_INTRINSIC_FUNCTIONS_EACH_NAME(macro) \
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
     macro(add) \
-    macro(arrayIteratorNextIndex) \
-    macro(arrayIterationKind) \
-    macro(arrayIteratorNext) \
-    macro(arrayIteratorIsDone) \
-    macro(arrayIteratorKind) \
+    macro(applyFunction) \
     macro(arraySpeciesCreate) \
     macro(assert) \
+    macro(callFunction) \
     macro(charCodeAt) \
     macro(executor) \
     macro(isView) \
     macro(iteratedObject) \
     macro(iteratedString) \
-    macro(stringIteratorNextIndex) \
     macro(promise) \
+    macro(promiseOrCapability) \
     macro(Object) \
     macro(Number) \
     macro(Array) \
     macro(ArrayBuffer) \
     macro(RegExp) \
-    macro(Promise) \
-    macro(InternalPromise) \
     macro(trunc) \
     macro(create) \
     macro(defineProperty) \
+    macro(defaultPromiseThen) \
     macro(getPrototypeOf) \
     macro(getOwnPropertyNames) \
     macro(ownKeys) \
     macro(Set) \
+    macro(throwTypeErrorFunction) \
     macro(typedArrayLength) \
     macro(typedArraySort) \
     macro(typedArrayGetOriginalConstructor) \
@@ -82,15 +79,10 @@ namespace JSC {
     macro(homeObject) \
     macro(enqueueJob) \
     macro(hostPromiseRejectionTracker) \
-    macro(promiseIsHandled) \
-    macro(promiseState) \
-    macro(promiseReactions) \
-    macro(promiseResult) \
     macro(onFulfilled) \
     macro(onRejected) \
     macro(push) \
     macro(repeatCharacter) \
-    macro(capabilities) \
     macro(starDefault) \
     macro(InspectorInstrumentation) \
     macro(get) \
@@ -113,16 +105,10 @@ namespace JSC {
     macro(generatorFrame) \
     macro(generatorValue) \
     macro(generatorThis) \
+    macro(generatorResumeMode) \
     macro(syncIterator) \
     macro(nextMethod) \
-    macro(asyncGeneratorState) \
-    macro(asyncGeneratorSuspendReason) \
-    macro(asyncGeneratorQueue) \
-    macro(asyncGeneratorQueueFirst) \
-    macro(asyncGeneratorQueueLast) \
     macro(asyncGeneratorQueueItemNext) \
-    macro(asyncGeneratorQueueItemPrevious) \
-    macro(generatorResumeMode) \
     macro(dateTimeFormat) \
     macro(intlSubstituteValue) \
     macro(thisTimeValue) \
@@ -137,8 +123,10 @@ namespace JSC {
     macro(concatMemcpy) \
     macro(appendMemcpy) \
     macro(regExpCreate) \
+    macro(isRegExp) \
     macro(replaceUsingRegExp) \
     macro(replaceUsingStringSearch) \
+    macro(replaceAllUsingStringSearch) \
     macro(makeTypeError) \
     macro(mapBucket) \
     macro(mapBucketHead) \
@@ -179,6 +167,7 @@ namespace JSC {
     macro(meta) \
     macro(webAssemblyCompileStreamingInternal) \
     macro(webAssemblyInstantiateStreamingInternal) \
+    macro(instanceFieldInitializer)
 
 namespace Symbols {
 #define DECLARE_BUILTIN_STATIC_SYMBOLS(name) extern JS_EXPORT_PRIVATE SymbolImpl::StaticSymbolImpl name##Symbol;

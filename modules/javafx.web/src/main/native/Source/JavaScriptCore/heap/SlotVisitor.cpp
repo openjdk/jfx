@@ -33,6 +33,7 @@
 #include "HeapAnalyzer.h"
 #include "HeapCellInlines.h"
 #include "HeapProfiler.h"
+#include "IntegrityInlines.h"
 #include "JSArray.h"
 #include "JSDestructibleObject.h"
 #include "JSObject.h"
@@ -88,7 +89,7 @@ SlotVisitor::SlotVisitor(Heap& heap, CString codeName)
     , m_markingVersion(MarkedSpace::initialVersion)
     , m_heap(heap)
     , m_codeName(codeName)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_isCheckingForDefaultMarkViolation(false)
     , m_isDraining(false)
 #endif
@@ -208,7 +209,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
     // In debug mode, we validate before marking since this makes it clearer what the problem
     // was. It's also slower, so we don't do it normally.
-    if (!ASSERT_DISABLED && isJSCellKind(heapCell->cellKind()))
+    if (ASSERT_ENABLED && isJSCellKind(heapCell->cellKind()))
         validateCell(static_cast<JSCell*>(heapCell));
 
     if (Heap::testAndSetMarked(m_markingVersion, heapCell))
@@ -221,6 +222,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
         JSCell* jsCell = static_cast<JSCell*>(heapCell);
         validateCell(jsCell);
+        Integrity::auditCell(vm(), jsCell);
 
         jsCell->setCellState(CellState::PossiblyGrey);
 
@@ -255,8 +257,8 @@ ALWAYS_INLINE void SlotVisitor::appendHiddenSlowImpl(JSCell* cell, Dependency de
     validate(cell);
 #endif
 
-    if (cell->isLargeAllocation())
-        setMarkedAndAppendToMarkStack(cell->largeAllocation(), cell, dependency);
+    if (cell->isPreciseAllocation())
+        setMarkedAndAppendToMarkStack(cell->preciseAllocation(), cell, dependency);
     else
         setMarkedAndAppendToMarkStack(cell->markedBlock(), cell, dependency);
 }
@@ -279,8 +281,8 @@ ALWAYS_INLINE void SlotVisitor::setMarkedAndAppendToMarkStack(ContainerType& con
 
 void SlotVisitor::appendToMarkStack(JSCell* cell)
 {
-    if (cell->isLargeAllocation())
-        appendToMarkStack(cell->largeAllocation(), cell);
+    if (cell->isPreciseAllocation())
+        appendToMarkStack(cell->preciseAllocation(), cell);
     else
         appendToMarkStack(cell->markedBlock(), cell);
 }
@@ -290,7 +292,7 @@ ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCe
 {
     ASSERT(m_heap.isMarked(cell));
 #if CPU(X86_64)
-    if (Options::dumpZappedCellCrashData()) {
+    if (UNLIKELY(Options::dumpZappedCellCrashData())) {
         if (UNLIKELY(cell->isZapped()))
             reportZappedCellAndCrash(cell);
     }
@@ -395,7 +397,7 @@ ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
         // FIXME: This could be so much better.
         // https://bugs.webkit.org/show_bug.cgi?id=162462
 #if CPU(X86_64)
-        if (Options::dumpZappedCellCrashData()) {
+        if (UNLIKELY(Options::dumpZappedCellCrashData())) {
             Structure* structure = cell->structure(vm());
             if (LIKELY(structure)) {
                 const MethodTable* methodTable = &structure->classInfo()->methodTable;
@@ -793,8 +795,7 @@ void SlotVisitor::donateAndDrain(MonotonicTime timeout)
 
 void SlotVisitor::didRace(const VisitRaceKey& race)
 {
-    if (Options::verboseVisitRace())
-        dataLog(toCString("GC visit race: ", race, "\n"));
+    dataLogLnIf(Options::verboseVisitRace(), toCString("GC visit race: ", race));
 
     auto locker = holdLock(heap()->m_raceMarkStackLock);
     JSCell* cell = race.cell();

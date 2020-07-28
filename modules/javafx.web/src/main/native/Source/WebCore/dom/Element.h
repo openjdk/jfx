@@ -28,12 +28,11 @@
 #include "Document.h"
 #include "ElementData.h"
 #include "HTMLNames.h"
-#include "KeyframeAnimationOptions.h"
-#include "ScrollToOptions.h"
 #include "ScrollTypes.h"
 #include "ShadowRootMode.h"
 #include "SimulatedClickOptions.h"
 #include "StyleChange.h"
+#include <JavaScriptCore/Strong.h>
 
 namespace WebCore {
 
@@ -47,6 +46,7 @@ class Frame;
 class HTMLDocument;
 class IntSize;
 class JSCustomElementInterface;
+class KeyframeEffectStack;
 class KeyboardEvent;
 class Locale;
 class PlatformKeyboardEvent;
@@ -56,8 +56,11 @@ class PseudoElement;
 class RenderTreePosition;
 class StylePropertyMap;
 class WebAnimation;
-struct ElementStyle;
+
+struct GetAnimationsOptions;
+struct KeyframeAnimationOptions;
 struct ScrollIntoViewOptions;
+struct ScrollToOptions;
 
 #if ENABLE(INTERSECTION_OBSERVER)
 struct IntersectionObserverData;
@@ -67,11 +70,11 @@ struct IntersectionObserverData;
 struct ResizeObserverData;
 #endif
 
-enum SpellcheckAttributeState {
-    SpellcheckAttributeTrue,
-    SpellcheckAttributeFalse,
-    SpellcheckAttributeDefault
-};
+namespace Style {
+struct ElementStyle;
+}
+
+enum class AnimationImpact;
 
 class Element : public ContainerNode {
     WTF_MAKE_ISO_ALLOCATED(Element);
@@ -99,14 +102,13 @@ public:
     // attribute or one of the SVG animatable attributes.
     bool hasAttributeWithoutSynchronization(const QualifiedName&) const;
     const AtomString& attributeWithoutSynchronization(const QualifiedName&) const;
-#ifndef NDEBUG
-    WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
-#endif
 
 #if DUMP_NODE_STATISTICS
     bool hasNamedNodeMap() const;
 #endif
+
     WEBCORE_EXPORT bool hasAttributes() const;
+
     // This variant will not update the potentially invalid attributes. To be used when not interested
     // in style attribute or one of the SVG animation attributes.
     bool hasAttributesWithoutUpdate() const;
@@ -194,6 +196,7 @@ public:
 
     // Returns the absolute bounding box translated into client coordinates.
     WEBCORE_EXPORT IntRect clientRect() const;
+
     // Returns the absolute bounding box translated into screen coordinates.
     WEBCORE_EXPORT IntRect screenRect() const;
 
@@ -217,14 +220,13 @@ public:
     const QualifiedName& tagQName() const { return m_tagName; }
 #if ENABLE(JIT)
     static ptrdiff_t tagQNameMemoryOffset() { return OBJECT_OFFSETOF(Element, m_tagName); }
-#endif // ENABLE(JIT)
+#endif
     String tagName() const { return nodeName(); }
     bool hasTagName(const QualifiedName& tagName) const { return m_tagName.matches(tagName); }
     bool hasTagName(const HTMLQualifiedName& tagName) const { return ContainerNode::hasTagName(tagName); }
     bool hasTagName(const MathMLQualifiedName& tagName) const { return ContainerNode::hasTagName(tagName); }
     bool hasTagName(const SVGQualifiedName& tagName) const { return ContainerNode::hasTagName(tagName); }
 
-    // A fast function for checking the local name against another atomic string.
     bool hasLocalName(const AtomString& other) const { return m_tagName.localName() == other; }
 
     const AtomString& localName() const final { return m_tagName.localName(); }
@@ -251,7 +253,7 @@ public:
         ModifiedByCloning
     };
 
-    // This method is called whenever an attribute is added, changed or removed.
+    // These functions are called whenever an attribute is added, changed or removed.
     virtual void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason = ModifiedDirectly);
     virtual void parseAttribute(const QualifiedName&, const AtomString&) { }
 
@@ -284,12 +286,14 @@ public:
 
     virtual RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&);
     virtual bool rendererIsNeeded(const RenderStyle&);
+    virtual bool rendererIsEverNeeded() { return true; }
 
     WEBCORE_EXPORT ShadowRoot* shadowRoot() const;
-    ShadowRoot* shadowRootForBindings(JSC::ExecState&) const;
+    ShadowRoot* shadowRootForBindings(JSC::JSGlobalObject&) const;
 
     struct ShadowRootInit {
         ShadowRootMode mode;
+        bool delegatesFocus { false };
     };
     ExceptionOr<ShadowRoot&> attachShadow(const ShadowRootInit&);
 
@@ -302,7 +306,7 @@ public:
     void enqueueToUpgrade(JSCustomElementInterface&);
     CustomElementReactionQueue* reactionQueue() const;
 
-    // FIXME: this should not be virtual, do not override this.
+    // FIXME: This should not be virtual. Please do not add additional overrides of this function.
     virtual const AtomString& shadowPseudoId() const;
 
     bool isInActiveChain() const { return isUserActionElement() && isUserActionElementInActiveChain(); }
@@ -416,20 +420,10 @@ public:
     virtual void prepareForDocumentSuspension() { }
     virtual void resumeFromDocumentSuspension() { }
 
-    // Use Document::registerForMediaVolumeCallbacks() to subscribe to this
-    virtual void mediaVolumeDidChange() { }
-
-    // Use Document::registerForPrivateBrowsingStateChangedCallbacks() to subscribe to this.
-    virtual void privateBrowsingStateDidChange(PAL::SessionID) { }
-
     virtual void willBecomeFullscreenElement();
     virtual void ancestorWillEnterFullscreen() { }
     virtual void didBecomeFullscreenElement() { }
     virtual void willStopBeingFullscreenElement() { }
-
-#if ENABLE(VIDEO_TRACK)
-    virtual void captionPreferencesChanged() { }
-#endif
 
     bool isFinishedParsingChildren() const { return isParsingChildrenFinished(); }
     void finishParsingChildren() override;
@@ -450,6 +444,9 @@ public:
     virtual bool shouldAppearIndeterminate() const;
 
     WEBCORE_EXPORT DOMTokenList& classList();
+
+    SpaceSplitString partNames() const;
+    DOMTokenList& part();
 
     DatasetDOMStringMap& dataset();
 
@@ -484,6 +481,11 @@ public:
     bool hasCSSAnimation() const;
     void setHasCSSAnimation();
     void clearHasCSSAnimation();
+
+    KeyframeEffectStack* keyframeEffectStack() const;
+    KeyframeEffectStack& ensureKeyframeEffectStack();
+    bool hasKeyframeEffects() const;
+    OptionSet<AnimationImpact> applyKeyframeEffects(RenderStyle&);
 
 #if ENABLE(FULLSCREEN_API)
     WEBCORE_EXPORT bool containsFullScreenElement() const;
@@ -531,7 +533,7 @@ public:
     virtual void didAttachRenderers();
     virtual void willDetachRenderers();
     virtual void didDetachRenderers();
-    virtual Optional<ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle);
+    virtual Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle);
 
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
@@ -552,8 +554,8 @@ public:
     bool allowsDoubleTapGesture() const override;
 #endif
 
-    StyleResolver& styleResolver();
-    ElementStyle resolveStyle(const RenderStyle* parentStyle);
+    Style::Resolver& styleResolver();
+    Style::ElementStyle resolveStyle(const RenderStyle* parentStyle);
 
     // Invalidates the style of a single element. Style is resolved lazily.
     // Descendant elements are resolved as needed, for example if an inherited property changes.
@@ -596,8 +598,8 @@ public:
 
     Element* findAnchorElementForLink(String& outAnchorName);
 
-    ExceptionOr<Ref<WebAnimation>> animate(JSC::ExecState&, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeAnimationOptions>>&&);
-    Vector<RefPtr<WebAnimation>> getAnimations();
+    ExceptionOr<Ref<WebAnimation>> animate(JSC::JSGlobalObject&, JSC::Strong<JSC::JSObject>&&, Optional<Variant<double, KeyframeAnimationOptions>>&&);
+    Vector<RefPtr<WebAnimation>> getAnimations(Optional<GetAnimationsOptions>);
 
     ElementIdentifier createElementIdentifier();
 
@@ -613,10 +615,8 @@ protected:
     void clearTabIndexExplicitlyIfNeeded();
     void setTabIndexExplicitly(int);
 
-    // classAttributeChanged() exists to share code between
-    // parseAttribute (called via setAttribute()) and
-    // svgAttributeChanged (called when element.className.baseValue is set)
     void classAttributeChanged(const AtomString& newClassString);
+    void partAttributeChanged(const AtomString& newValue);
 
     void addShadowRoot(Ref<ShadowRoot>&&);
 
@@ -697,8 +697,6 @@ private:
 
     unsigned rareDataChildIndex() const;
 
-    SpellcheckAttributeState spellcheckAttributeState() const;
-
     void createUniqueElementData();
 
     ElementRareData* elementRareData() const;
@@ -713,6 +711,10 @@ private:
     void ownerDocument() const = delete;
 
     void attachAttributeNodeIfNeeded(Attr&);
+
+#if ASSERT_ENABLED
+    WEBCORE_EXPORT bool fastAttributeLookupAllowed(const QualifiedName&) const;
+#endif
 
     QualifiedName m_tagName;
     RefPtr<ElementData> m_elementData;

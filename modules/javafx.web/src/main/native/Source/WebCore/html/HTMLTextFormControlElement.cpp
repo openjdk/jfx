@@ -65,6 +65,7 @@ HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagN
     , m_cachedSelectionDirection(SelectionHasNoDirection)
     , m_lastChangeWasUserEdit(false)
     , m_isPlaceholderVisible(false)
+    , m_canShowPlaceholder(true)
     , m_cachedSelectionStart(-1)
     , m_cachedSelectionEnd(-1)
 {
@@ -158,7 +159,7 @@ bool HTMLTextFormControlElement::placeholderShouldBeVisible() const
 {
     // This function is used by the style resolver to match the :placeholder-shown pseudo class.
     // Since it is used for styling, it must not use any value depending on the style.
-    return supportsPlaceholder() && isEmptyValue() && !isPlaceholderEmpty();
+    return supportsPlaceholder() && isEmptyValue() && !isPlaceholderEmpty() && m_canShowPlaceholder;
 }
 
 void HTMLTextFormControlElement::updatePlaceholderVisibility()
@@ -170,6 +171,12 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility()
         return;
 
     invalidateStyleForSubtree();
+}
+
+void HTMLTextFormControlElement::setCanShowPlaceholder(bool canShowPlaceholder)
+{
+    m_canShowPlaceholder = canShowPlaceholder;
+    updatePlaceholderVisibility();
 }
 
 void HTMLTextFormControlElement::setSelectionStart(int start)
@@ -289,8 +296,16 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     auto innerText = innerTextElement();
     bool hasFocus = document().focusedElement() == this;
     if (!hasFocus && innerText) {
+        if (!isConnected()) {
+            cacheSelection(start, end, direction);
+            return;
+        }
+
         // FIXME: Removing this synchronous layout requires fixing setSelectionWithoutUpdatingAppearance not needing up-to-date style.
         document().updateLayoutIgnorePendingStylesheets();
+
+        if (!isTextField())
+            return;
 
         // Double-check the state of innerTextElement after the layout.
         innerText = innerTextElement();
@@ -643,12 +658,16 @@ unsigned HTMLTextFormControlElement::indexForPosition(const Position& passedPosi
 
     unsigned length = innerTextValue().length();
     index = std::min(index, length); // FIXME: We shouldn't have to call innerTextValue() just to ignore the last LF. See finishText.
-#ifndef ASSERT_DISABLED
+#if 0
+    // FIXME: This assertion code was never built, has bit rotted, and needs to be fixed before it can be enabled:
+    // https://bugs.webkit.org/show_bug.cgi?id=205706.
+#if ASSERT_ENABLED
     VisiblePosition visiblePosition = passedPosition;
     unsigned indexComputedByVisiblePosition = 0;
     if (visiblePosition.isNotNull())
         indexComputedByVisiblePosition = WebCore::indexForVisiblePosition(innerText, visiblePosition, false /* forSelectionPreservation */);
     ASSERT(index == indexComputedByVisiblePosition);
+#endif
 #endif
     return index;
 }

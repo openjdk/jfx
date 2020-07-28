@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,6 +98,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
+    void subFrameScrollPositionChanged() final { }
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -132,7 +133,7 @@ public:
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
     void willSetInputMethodState() override;
-    void setInputMethodState(bool enabled) override;
+    void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions
     bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const override;

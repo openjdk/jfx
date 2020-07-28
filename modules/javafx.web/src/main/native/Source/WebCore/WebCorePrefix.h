@@ -41,14 +41,9 @@
 #endif
 #endif
 
-#if PLATFORM(WIN) && !PLATFORM(JAVA)
-#undef WEBCORE_EXPORT
-#define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
-#undef WEBCORE_TESTSUPPORT_EXPORT
-#define WEBCORE_TESTSUPPORT_EXPORT WTF_EXPORT_DECLARATION
-#elif !PLATFORM(JAVA)
+#if !OS(WINDOWS) && !PLATFORM(JAVA)
 #include <pthread.h>
-#endif // PLATFORM(WIN)
+#endif // !OS(WINDOWS)
 
 #if PLATFORM(JAVA)
 #undef WEBCORE_EXPORT
@@ -174,7 +169,6 @@
 #else
 #if USE(APPKIT)
 #import <Cocoa/Cocoa.h>
-#import <wtf/mac/AppKitCompatibilityDeclarations.h>
 #endif
 #endif // PLATFORM(IOS_FAMILY)
 #endif
@@ -184,6 +178,7 @@
 #ifdef __OBJC__
 #if !PLATFORM(WIN) && (!PLATFORM(MAC) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300)
 #import <wtf/FastMalloc.h>
+#import <wtf/HashMap.h>
 #import <wtf/Optional.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/text/AtomString.h>

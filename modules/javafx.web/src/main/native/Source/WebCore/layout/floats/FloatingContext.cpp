@@ -34,7 +34,6 @@
 #include "FormattingContext.h"
 #include "LayoutBox.h"
 #include "LayoutContainer.h"
-#include "LayoutState.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -118,7 +117,7 @@ static Iterator end(const FloatingState::FloatList& floats)
     return Iterator(floats, { });
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 static bool areFloatsHorizontallySorted(const FloatingState& floatingState)
 {
     auto& floats = floatingState.floats();
@@ -150,8 +149,16 @@ static bool areFloatsHorizontallySorted(const FloatingState& floatingState)
 }
 #endif
 
-FloatingContext::FloatingContext(FloatingState& floatingState)
-    : m_floatingState(floatingState)
+struct FloatingContext::AbsoluteCoordinateValuesForFloatAvoider {
+    Display::Box displayBox;
+    LayoutPoint containingBlockTopLeft;
+    HorizontalEdges containingBlockContentBox;
+};
+
+FloatingContext::FloatingContext(const Container& floatingContextRoot, const FormattingContext& formattingContext, FloatingState& floatingState)
+    : m_root(makeWeakPtr(floatingContextRoot))
+    , m_formattingContext(formattingContext)
+    , m_floatingState(floatingState)
 {
 }
 
@@ -160,25 +167,30 @@ Point FloatingContext::positionForFloat(const Box& layoutBox) const
     ASSERT(layoutBox.isFloatingPositioned());
     ASSERT(areFloatsHorizontallySorted(m_floatingState));
 
-    if (m_floatingState.isEmpty()) {
-        auto& displayBox = layoutState().displayBoxForLayoutBox(layoutBox);
+    if (isEmpty()) {
+        auto& boxGeometry = formattingContext().geometryForBox(layoutBox);
 
         auto alignWithContainingBlock = [&]() -> Position {
             // If there is no floating to align with, push the box to the left/right edge of its containing block's content box.
-            auto& containingBlockDisplayBox = layoutState().displayBoxForLayoutBox(*layoutBox.containingBlock());
+            auto& containingBlockGeometry = formattingContext().geometryForBox(*layoutBox.containingBlock());
 
             if (layoutBox.isLeftFloatingPositioned())
-                return Position { containingBlockDisplayBox.contentBoxLeft() + displayBox.marginStart() };
+                return Position { containingBlockGeometry.contentBoxLeft() + boxGeometry.marginStart() };
 
-            return Position { containingBlockDisplayBox.contentBoxRight() - displayBox.marginEnd() - displayBox.width() };
+            return Position { containingBlockGeometry.contentBoxRight() - boxGeometry.marginEnd() - boxGeometry.width() };
         };
 
         // No float box on the context yet -> align it with the containing block's left/right edge.
-        return { alignWithContainingBlock(), displayBox.top() };
+        return { alignWithContainingBlock(), boxGeometry.top() };
     }
 
     // Find the top most position where the float box fits.
-    FloatBox floatBox = { layoutBox, m_floatingState, layoutState() };
+    auto absoluteDisplayBoxCoordinates = this->absoluteDisplayBoxCoordinates(layoutBox);
+
+    Optional<LayoutUnit> previousFloatAbsoluteTop;
+    if (!isEmpty())
+        previousFloatAbsoluteTop = floatingState().floats().last().rectWithMargin().top();
+    auto floatBox = FloatBox { layoutBox, absoluteDisplayBoxCoordinates.displayBox, absoluteDisplayBoxCoordinates.containingBlockTopLeft, absoluteDisplayBoxCoordinates.containingBlockContentBox, previousFloatAbsoluteTop };
     findPositionForFloatBox(floatBox);
     return floatBox.rectInContainingBlock().topLeft();
 }
@@ -190,10 +202,11 @@ Optional<Point> FloatingContext::positionForFormattingContextRoot(const Box& lay
     ASSERT(!layoutBox.hasFloatClear());
     ASSERT(areFloatsHorizontallySorted(m_floatingState));
 
-    if (m_floatingState.isEmpty())
+    if (isEmpty())
         return { };
 
-    FloatAvoider floatAvoider = { layoutBox, m_floatingState, layoutState() };
+    auto absoluteDisplayBoxCoordinates = this->absoluteDisplayBoxCoordinates(layoutBox);
+    auto floatAvoider = FloatAvoider { layoutBox, absoluteDisplayBoxCoordinates.displayBox, absoluteDisplayBoxCoordinates.containingBlockTopLeft, absoluteDisplayBoxCoordinates.containingBlockContentBox };
     findPositionForFormattingContextRoot(floatAvoider);
     return { floatAvoider.rectInContainingBlock().topLeft() };
 }
@@ -204,7 +217,7 @@ FloatingContext::ClearancePosition FloatingContext::verticalPositionWithClearanc
     ASSERT(layoutBox.isBlockLevelBox());
     ASSERT(areFloatsHorizontallySorted(m_floatingState));
 
-    if (m_floatingState.isEmpty())
+    if (isEmpty())
         return { };
 
     auto bottom = [&](Optional<PositionInContextRoot> floatBottom) -> ClearancePosition {
@@ -217,8 +230,7 @@ FloatingContext::ClearancePosition FloatingContext::verticalPositionWithClearanc
         //
         // 1. The amount necessary to place the border edge of the block even with the bottom outer edge of the lowest float that is to be cleared.
         // 2. The amount necessary to place the top border edge of the block at its hypothetical position.
-        auto& layoutState = this->layoutState();
-        auto rootRelativeTop = FormattingContext::mapTopToAncestor(layoutState, layoutBox, downcast<Container>(m_floatingState.root()));
+        auto rootRelativeTop = mapTopToFloatingStateRoot(layoutBox);
         auto clearance = *floatBottom - rootRelativeTop;
         if (clearance <= 0)
             return { };
@@ -226,9 +238,9 @@ FloatingContext::ClearancePosition FloatingContext::verticalPositionWithClearanc
         // Clearance inhibits margin collapsing.
         if (auto* previousInFlowSibling = layoutBox.previousInFlowSibling()) {
             // Does this box with clearance actually collapse its margin before with the previous inflow box's margin after?
-            auto verticalMargin = layoutState.displayBoxForLayoutBox(layoutBox).verticalMargin();
+            auto verticalMargin = formattingContext().geometryForBox(layoutBox).verticalMargin();
             if (verticalMargin.hasCollapsedValues() && verticalMargin.collapsedValues().before) {
-                auto previousVerticalMargin = layoutState.displayBoxForLayoutBox(*previousInFlowSibling).verticalMargin();
+                auto previousVerticalMargin = formattingContext().geometryForBox(*previousInFlowSibling).verticalMargin();
                 auto collapsedMargin = *verticalMargin.collapsedValues().before;
                 auto nonCollapsedMargin = previousVerticalMargin.after() + verticalMargin.before();
                 auto marginDifference = nonCollapsedMargin - collapsedMargin;
@@ -246,24 +258,79 @@ FloatingContext::ClearancePosition FloatingContext::verticalPositionWithClearanc
         if (layoutBox.containingBlock() == &m_floatingState.root())
             return { Position { rootRelativeTop }, clearance };
 
-        auto containingBlockRootRelativeTop = FormattingContext::mapTopToAncestor(layoutState, *layoutBox.containingBlock(), downcast<Container>(m_floatingState.root()));
+        auto containingBlockRootRelativeTop = mapTopToFloatingStateRoot(*layoutBox.containingBlock());
         return { Position { rootRelativeTop - containingBlockRootRelativeTop }, clearance };
     };
 
     auto clear = layoutBox.style().clear();
-    auto& formattingContextRoot = layoutBox.formattingContextRoot();
-
     if (clear == Clear::Left)
-        return bottom(m_floatingState.leftBottom(formattingContextRoot));
+        return bottom(m_floatingState.leftBottom(root()));
 
     if (clear == Clear::Right)
-        return bottom(m_floatingState.rightBottom(formattingContextRoot));
+        return bottom(m_floatingState.rightBottom(root()));
 
     if (clear == Clear::Both)
-        return bottom(m_floatingState.bottom(formattingContextRoot));
+        return bottom(m_floatingState.bottom(root()));
 
     ASSERT_NOT_REACHED();
     return { };
+}
+
+FloatingContext::Constraints FloatingContext::constraints(LayoutUnit logicalTop, LayoutUnit logicalBottom) const
+{
+    if (isEmpty())
+        return { };
+
+    // 1. Convert vertical position if this floating context is inherited.
+    // 2. Find the inner left/right floats at logicalTop/logicalBottom.
+    // 3. Convert left/right positions back to formattingContextRoot's cooridnate system.
+    auto coordinateMappingIsRequired = &floatingState().root() != &root();
+    auto adjustedLogicalTop = logicalTop;
+    LayoutSize adjustingDelta;
+    if (coordinateMappingIsRequired) {
+        auto adjustedPosition = mapPointFromFormattingContextRootToFloatingStateRoot({ 0, logicalTop });
+        adjustedLogicalTop = adjustedPosition.y;
+        adjustingDelta = { adjustedPosition.x, adjustedLogicalTop - logicalTop };
+    }
+    auto adjustedLogicalBottom = adjustedLogicalTop + (logicalBottom - logicalTop);
+
+    Constraints constraints;
+    auto& floats = floatingState().floats();
+    for (auto index = floats.size(); index--;) {
+        auto& floatItem = floats[index];
+
+        if (constraints.left && floatItem.isLeftPositioned())
+            continue;
+
+        if (constraints.right && !floatItem.isLeftPositioned())
+            continue;
+
+        auto rect = floatItem.rectWithMargin();
+        if (rect.top() >= adjustedLogicalBottom || rect.bottom() <= adjustedLogicalTop)
+            continue;
+
+        if (floatItem.isLeftPositioned())
+            constraints.left = PointInContextRoot { rect.right(), rect.bottom() };
+        else
+            constraints.right = PointInContextRoot { rect.left(), rect.bottom() };
+
+        if (constraints.left && constraints.right)
+            break;
+    }
+
+    if (coordinateMappingIsRequired) {
+        if (constraints.left)
+            constraints.left->move(-adjustingDelta);
+
+        if (constraints.right)
+            constraints.right->move(-adjustingDelta);
+    }
+    return constraints;
+}
+
+void FloatingContext::append(const Box& floatBox)
+{
+    floatingState().append(FloatingState::FloatItem { floatBox, mapToFloatingStateRoot(floatBox) });
 }
 
 static FloatPair::LeftRightIndex findAvailablePosition(FloatAvoider& floatAvoider, const FloatingState::FloatList& floats)
@@ -346,6 +413,54 @@ void FloatingContext::findPositionForFormattingContextRoot(FloatAvoider& floatAv
             return;
         floatAvoider.setVerticalConstraint({ intersectedFloatBox->rectWithMargin().top() });
     }
+}
+
+FloatingContext::AbsoluteCoordinateValuesForFloatAvoider FloatingContext::absoluteDisplayBoxCoordinates(const Box& floatAvoider) const
+{
+    auto& containingBlock = *floatAvoider.containingBlock();
+    auto displayBox = mapToFloatingStateRoot(floatAvoider);
+
+    if (&containingBlock == &floatingState().root()) {
+        auto containingBlockGeometry = formattingContext().geometryForBox(containingBlock, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates);
+        return { displayBox, { }, {  containingBlockGeometry.contentBoxLeft(), containingBlockGeometry.contentBoxRight() } };
+    }
+    auto containingBlockAbsoluteDisplayBox = mapToFloatingStateRoot(containingBlock);
+    auto containingBlockLeft = containingBlockAbsoluteDisplayBox.left();
+    return { displayBox, containingBlockAbsoluteDisplayBox.topLeft(), { containingBlockLeft + containingBlockAbsoluteDisplayBox.contentBoxLeft(), containingBlockLeft + containingBlockAbsoluteDisplayBox.contentBoxRight() } };
+}
+
+Display::Box FloatingContext::mapToFloatingStateRoot(const Box& floatBox) const
+{
+    auto& floatingStateRoot = floatingState().root();
+    auto& boxGeometry = formattingContext().geometryForBox(floatBox, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates);
+    auto topLeft = boxGeometry.topLeft();
+    for (auto* containingBlock = floatBox.containingBlock(); containingBlock && containingBlock != &floatingStateRoot; containingBlock = containingBlock->containingBlock())
+        topLeft.moveBy(formattingContext().geometryForBox(*containingBlock, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates).topLeft());
+
+    auto mappedDisplayBox = Display::Box(boxGeometry);
+    mappedDisplayBox.setTopLeft(topLeft);
+    return mappedDisplayBox;
+}
+
+LayoutUnit FloatingContext::mapTopToFloatingStateRoot(const Box& floatBox) const
+{
+    auto& floatingStateRoot = floatingState().root();
+    auto top = formattingContext().geometryForBox(floatBox, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates).top();
+    for (auto* container = floatBox.containingBlock(); container && container != &floatingStateRoot; container = container->containingBlock())
+        top += formattingContext().geometryForBox(*container, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates).top();
+    return top;
+}
+
+Point FloatingContext::mapPointFromFormattingContextRootToFloatingStateRoot(Point position) const
+{
+    auto& from = root();
+    auto& to = floatingState().root();
+    if (&from == &to)
+        return position;
+    auto mappedPosition = position;
+    for (auto* container = &from; container && container != &to; container = container->containingBlock())
+        mappedPosition.moveBy(formattingContext().geometryForBox(*container, FormattingContext::EscapeReason::FloatBoxNeedsToBeInAbsoluteCoordinates).topLeft());
+    return mappedPosition;
 }
 
 FloatPair::FloatPair(const FloatingState::FloatList& floats)

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,139 +24,140 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PODInterval_h
-#define PODInterval_h
+#pragma once
 
 #ifndef NDEBUG
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/ValueToString.h>
+#include <wtf/text/TextStream.h>
 #endif
 
 namespace WebCore {
 
-// Class representing a closed interval which can hold an arbitrary
-// Plain Old Datatype (POD) as its endpoints and a piece of user
-// data. An important characteristic for the algorithms we use is that
-// if two intervals have identical endpoints but different user data,
-// they are not considered to be equal. This situation can arise when
-// representing the vertical extents of bounding boxes of overlapping
-// triangles, where the pointer to the triangle is the user data of
-// the interval.
+// Class template representing a closed interval which can hold arbitrary
+// endpoints and a piece of user data. Ordering and equality are defined
+// including the UserData, except in the special case of WeakPtr.
 //
-// *Note* that the destructors of type T and UserData will *not* be
-// called by this class. They must not allocate any memory that is
-// required to be cleaned up in their destructors.
-//
-// The following constructors and operators must be implemented on
-// type T:
-//
-//   - Copy constructor (if user data is desired)
-//   - operator<
-//   - operator==
-//   - operator=
-//
-// If the UserData type is specified, it must support a copy
-// constructor and assignment operator.
+// Both the T and UserData types must support a copy constructor, operator<,
+// operator==, and operator=, except that this does not depend on operator<
+// or operator== for WeakPtr.
 //
 // In debug mode, printing of intervals and the data they contain is
-// enabled. This requires the following template specializations to be
-// available:
+// enabled. This uses WTF::TextStream.
 //
-//   template<> struct WebCore::ValueToString<T> {
-//       static String string(const T& t);
-//   };
-//   template<> struct WebCore::ValueToString<UserData> {
-//       static String string(const UserData& t);
-//   };
-//
-// Note that this class requires a copy constructor and assignment
-// operator in order to be stored in the red-black tree.
+// Note that this class supplies a copy constructor and assignment
+// operator in order so it can be stored in the red-black tree.
 
-template<class T, class UserData = void*>
-class PODInterval {
+// FIXME: The prefix "POD" here isn't correct; this works with non-POD types.
+
+template<class T, class UserData> class PODIntervalBase {
 public:
-    // Constructor from endpoints. This constructor only works when the
-    // UserData type is a pointer or other type which can be initialized
-    // with 0.
-    PODInterval(const T& low, const T& high)
-        : m_low(low)
-        , m_high(high)
-        , m_data(0)
-        , m_maxHigh(high)
-    {
-    }
-
-    // Constructor from two endpoints plus explicit user data.
-    PODInterval(const T& low, const T& high, const UserData data)
-        : m_low(low)
-        , m_high(high)
-        , m_data(data)
-        , m_maxHigh(high)
-    {
-    }
-
     const T& low() const { return m_low; }
     const T& high() const { return m_high; }
     const UserData& data() const { return m_data; }
 
     bool overlaps(const T& low, const T& high) const
     {
-        if (this->high() < low)
-            return false;
-        if (high < this->low())
-            return false;
-        return true;
+        return !(m_high < low || high < m_low);
     }
 
-    bool overlaps(const PODInterval& other) const
+    bool overlaps(const PODIntervalBase& other) const
     {
-        return overlaps(other.low(), other.high());
-    }
-
-    // Returns true if this interval is "less" than the other. The
-    // comparison is performed on the low endpoints of the intervals.
-    bool operator<(const PODInterval& other) const
-    {
-        return low() < other.low();
-    }
-
-    // Returns true if this interval is strictly equal to the other,
-    // including comparison of the user data.
-    bool operator==(const PODInterval& other) const
-    {
-        return (low() == other.low()
-                && high() == other.high()
-                && data() == other.data());
+        return overlaps(other.m_low, other.m_high);
     }
 
     const T& maxHigh() const { return m_maxHigh; }
     void setMaxHigh(const T& maxHigh) { m_maxHigh = maxHigh; }
 
-#ifndef NDEBUG
-    // Support for printing PODIntervals.
-    String toString() const
+protected:
+    PODIntervalBase(const T& low, const T& high, UserData&& data)
+        : m_low(low)
+        , m_high(high)
+        , m_data(WTFMove(data))
+        , m_maxHigh(high)
     {
-        StringBuilder builder;
-        builder.appendLiteral("[PODInterval (");
-        builder.append(ValueToString<T>::string(low()));
-        builder.appendLiteral(", ");
-        builder.append(ValueToString<T>::string(high()));
-        builder.appendLiteral("), data=");
-        builder.append(ValueToString<UserData>::string(data()));
-        builder.appendLiteral(", maxHigh=");
-        builder.append(ValueToString<T>::string(maxHigh()));
-        builder.append(']');
-        return builder.toString();
+    }
+
+#if COMPILER(MSVC)
+    // Work around an MSVC bug.
+    PODIntervalBase(const T& low, const T& high, const UserData& data)
+        : m_low(low)
+        , m_high(high)
+        , m_data(data)
+        , m_maxHigh(high)
+    {
     }
 #endif
 
 private:
     T m_low;
     T m_high;
-    UserData m_data;
+    UserData m_data { };
     T m_maxHigh;
 };
 
-} // namespace WebCore
+template<class T, class UserData> class PODInterval : public PODIntervalBase<T, UserData> {
+public:
+    PODInterval(const T& low, const T& high, UserData&& data = { })
+        : PODIntervalBase<T, UserData>(low, high, WTFMove(data))
+    {
+    }
 
-#endif // PODInterval_h
+    PODInterval(const T& low, const T& high, const UserData& data)
+        : PODIntervalBase<T, UserData>(low, high, UserData { data })
+    {
+    }
+
+    bool operator<(const PODInterval& other) const
+    {
+        if (Base::low() < other.Base::low())
+            return true;
+        if (other.Base::low() < Base::low())
+            return false;
+        if (Base::high() < other.Base::high())
+            return true;
+        if (other.Base::high() < Base::high())
+            return false;
+        return Base::data() < other.Base::data();
+    }
+
+    bool operator==(const PODInterval& other) const
+    {
+        return Base::low() == other.Base::low()
+            && Base::high() == other.Base::high()
+            && Base::data() == other.Base::data();
+    }
+
+private:
+    using Base = PODIntervalBase<T, UserData>;
+};
+
+template<class T, class U> class PODInterval<T, WTF::WeakPtr<U>> : public PODIntervalBase<T, WTF::WeakPtr<U>> {
+public:
+    PODInterval(const T& low, const T& high, WTF::WeakPtr<U>&& data)
+        : PODIntervalBase<T, WTF::WeakPtr<U>>(low, high, WTFMove(data))
+    {
+    }
+
+    bool operator<(const PODInterval& other) const
+    {
+        if (Base::low() < other.Base::low())
+            return true;
+        if (other.Base::low() < Base::low())
+            return false;
+        return Base::high() < other.Base::high();
+    }
+
+private:
+    using Base = PODIntervalBase<T, WTF::WeakPtr<U>>;
+};
+
+#ifndef NDEBUG
+
+template<class T, class UserData>
+TextStream& operator<<(TextStream& stream, const PODInterval<T, UserData>& interval)
+{
+    return stream << "[PODInterval (" << interval.low() << ", " << interval.high() << "), data=" << *interval.data() << ", maxHigh=" << interval.maxHigh() << ']';
+}
+
+#endif
+
+} // namespace WebCore

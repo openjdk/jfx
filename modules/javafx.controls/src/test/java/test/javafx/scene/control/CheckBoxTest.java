@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import org.junit.Test;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
-import org.junit.Ignore;
 
 /**
  */
@@ -185,10 +184,17 @@ public class CheckBoxTest {
         assertPseudoClassDoesNotExist(btn, "indeterminate");
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyIndeterminateViaCSS() {
-//        btn.impl_cssSet("-fx-indeterminate", true);
+        btn.setStyle("-fx-indeterminate: true;");
+        btn.applyCss();
         assertFalse(btn.isIndeterminate());
+
+        btn.setIndeterminate(true);
+        assertTrue(btn.isIndeterminate());
+
+        btn.setStyle("-fx-indeterminate: false;");
+        btn.applyCss();
+        assertTrue(btn.isIndeterminate());
     }
 
     /*********************************************************************
@@ -254,10 +260,17 @@ public class CheckBoxTest {
         assertPseudoClassDoesNotExist(btn, "selected");
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifySelectedViaCSS() {
-//        btn.impl_cssSet("-fx-selected", true);
+        btn.setStyle("-fx-selected: true;");
+        btn.applyCss();
         assertFalse(btn.isSelected());
+
+        btn.setSelected(true);
+        assertTrue(btn.isSelected());
+
+        btn.setStyle("-fx-selected: false;");
+        btn.applyCss();
+        assertTrue(btn.isSelected());
     }
 
     /*********************************************************************
@@ -299,10 +312,17 @@ public class CheckBoxTest {
         assertEquals("allowIndeterminate", btn.allowIndeterminateProperty().getName());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyAllowIndeterminateViaCSS() {
-//        btn.impl_cssSet("-fx-allow-indeterminate", true);
+        btn.setStyle("-fx-allow-indeterminate: true;");
+        btn.applyCss();
         assertFalse(btn.isAllowIndeterminate());
+
+        btn.setAllowIndeterminate(true);
+        assertTrue(btn.isAllowIndeterminate());
+
+        btn.setStyle("-fx-allow-indeterminate: false;");
+        btn.applyCss();
+        assertTrue(btn.isAllowIndeterminate());
     }
 
     /*********************************************************************

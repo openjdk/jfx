@@ -31,9 +31,9 @@
 #include "CrossOriginPreflightResultCache.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "LegacySchemeRegistry.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <mutex>
@@ -118,50 +118,83 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
     return preflightRequest;
 }
 
-CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& request, Document& document, const String& crossOriginAttribute, ResourceLoaderOptions&& options)
+// https://html.spec.whatwg.org/multipage/urls-and-fetching.html#create-a-potential-cors-request
+CachedResourceRequest createPotentialAccessControlRequest(ResourceRequest&& request, ResourceLoaderOptions&& options, Document& document, const String& crossOriginAttribute, SameOriginFlag sameOriginFlag)
 {
-    // FIXME: This does not match the algorithm "create a potential-CORS request":
-    // <https://html.spec.whatwg.org/multipage/urls-and-fetching.html#create-a-potential-cors-request> (31 August 2018).
-    auto cachedRequest = CachedResourceRequest { WTFMove(request), WTFMove(options) };
-    cachedRequest.deprecatedSetAsPotentiallyCrossOrigin(crossOriginAttribute, document);
+    ASSERT(options.mode == FetchOptions::Mode::NoCors);
+    if (!crossOriginAttribute.isNull())
+        options.mode = FetchOptions::Mode::Cors;
+    else if (sameOriginFlag == SameOriginFlag::Yes)
+        options.mode = FetchOptions::Mode::SameOrigin;
+
+    if (crossOriginAttribute.isNull()) {
+        CachedResourceRequest cachedRequest { WTFMove(request), WTFMove(options) };
+        cachedRequest.setOrigin(document.securityOrigin());
+        return cachedRequest;
+    }
+
+    FetchOptions::Credentials credentials = equalLettersIgnoringASCIICase(crossOriginAttribute, "omit")
+        ? FetchOptions::Credentials::Omit : equalLettersIgnoringASCIICase(crossOriginAttribute, "use-credentials")
+        ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
+    options.credentials = credentials;
+    switch (credentials) {
+    case FetchOptions::Credentials::Include:
+        options.storedCredentialsPolicy = StoredCredentialsPolicy::Use;
+        break;
+    case FetchOptions::Credentials::SameOrigin:
+        options.storedCredentialsPolicy = document.securityOrigin().canRequest(request.url()) ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
+        break;
+    case FetchOptions::Credentials::Omit:
+        options.storedCredentialsPolicy = StoredCredentialsPolicy::DoNotUse;
+    }
+
+    CachedResourceRequest cachedRequest { WTFMove(request), WTFMove(options) };
+    updateRequestForAccessControl(cachedRequest.resourceRequest(), document.securityOrigin(), options.storedCredentialsPolicy);
     return cachedRequest;
 }
 
-bool isValidCrossOriginRedirectionURL(const URL& redirectURL)
+String validateCrossOriginRedirectionURL(const URL& redirectURL)
 {
-    return SchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol().toStringWithoutCopying())
-        && redirectURL.user().isEmpty()
-        && redirectURL.pass().isEmpty();
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsCORSEnabled(redirectURL.protocol().toStringWithoutCopying()))
+        return makeString("not allowed to follow a cross-origin CORS redirection with non CORS scheme");
+
+    if (redirectURL.hasUsername() || redirectURL.hasPassword())
+        return makeString("redirection URL ", redirectURL.string(), " has credentials");
+
+    return { };
 }
 
-HTTPHeaderNameSet httpHeadersToKeepFromCleaning(const HTTPHeaderMap& headers)
+OptionSet<HTTPHeadersToKeepFromCleaning> httpHeadersToKeepFromCleaning(const HTTPHeaderMap& headers)
 {
-    HTTPHeaderNameSet headersToKeep;
+    OptionSet<HTTPHeadersToKeepFromCleaning> headersToKeep;
     if (headers.contains(HTTPHeaderName::ContentType))
-        headersToKeep.add(HTTPHeaderName::ContentType);
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::ContentType);
     if (headers.contains(HTTPHeaderName::Referer))
-        headersToKeep.add(HTTPHeaderName::Referer);
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Referer);
     if (headers.contains(HTTPHeaderName::Origin))
-        headersToKeep.add(HTTPHeaderName::Origin);
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::Origin);
     if (headers.contains(HTTPHeaderName::UserAgent))
-        headersToKeep.add(HTTPHeaderName::UserAgent);
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::UserAgent);
     if (headers.contains(HTTPHeaderName::AcceptEncoding))
-        headersToKeep.add(HTTPHeaderName::AcceptEncoding);
+        headersToKeep.add(HTTPHeadersToKeepFromCleaning::AcceptEncoding);
     return headersToKeep;
 }
 
-void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, const HashSet<HTTPHeaderName, WTF::IntHash<HTTPHeaderName>, WTF::StrongEnumHashTraits<HTTPHeaderName>>& headersToKeep)
+void cleanHTTPRequestHeadersForAccessControl(ResourceRequest& request, OptionSet<HTTPHeadersToKeepFromCleaning> headersToKeep)
 {
     // Remove headers that may have been added by the network layer that cause access control to fail.
-    if (!headersToKeep.contains(HTTPHeaderName::ContentType) && !isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, request.httpContentType()))
-        request.clearHTTPContentType();
-    if (!headersToKeep.contains(HTTPHeaderName::Referer))
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::ContentType)) {
+        auto contentType = request.httpContentType();
+        if (!contentType.isNull() && !isCrossOriginSafeRequestHeader(HTTPHeaderName::ContentType, contentType))
+            request.clearHTTPContentType();
+    }
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Referer))
         request.clearHTTPReferrer();
-    if (!headersToKeep.contains(HTTPHeaderName::Origin))
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::Origin))
         request.clearHTTPOrigin();
-    if (!headersToKeep.contains(HTTPHeaderName::UserAgent))
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::UserAgent))
         request.clearHTTPUserAgent();
-    if (!headersToKeep.contains(HTTPHeaderName::AcceptEncoding))
+    if (!headersToKeep.contains(HTTPHeadersToKeepFromCleaning::AcceptEncoding))
         request.clearHTTPAcceptEncoding();
 }
 
@@ -244,6 +277,13 @@ Optional<ResourceError> validateCrossOriginResourcePolicy(const SecurityOrigin& 
 {
     if (shouldCrossOriginResourcePolicyCancelLoad(origin, response))
         return ResourceError { errorDomainWebKitInternal, 0, requestURL, makeString("Cancelled load to ", response.url().stringCenterEllipsizedToLength(), " because it violates the resource's Cross-Origin-Resource-Policy response header."), ResourceError::Type::AccessControl };
+    return WTF::nullopt;
+}
+
+Optional<ResourceError> validateRangeRequestedFlag(const ResourceRequest& request, const ResourceResponse& response)
+{
+    if (response.isRangeRequested() && response.httpStatusCode() == 206 && response.type() == ResourceResponse::Type::Opaque && !request.hasHTTPHeaderField(HTTPHeaderName::Range))
+        return ResourceError({ }, 0, response.url(), { }, ResourceError::Type::General);
     return WTF::nullopt;
 }
 

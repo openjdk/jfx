@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -105,7 +105,7 @@ public:
         data.callee = getNew(VirtualRegister { CallFrameSlot::callee })->recovery();
         data.args.resize(argCount());
         for (size_t i = 0; i < argCount(); ++i)
-            data.args[i] = getNew(virtualRegisterForArgument(i))->recovery();
+            data.args[i] = getNew(virtualRegisterForArgumentIncludingThis(i))->recovery();
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             CachedRecovery* cachedRecovery { m_newRegisters[reg] };
             if (!cachedRecovery)
@@ -128,7 +128,7 @@ public:
     {
         ASSERT(isUndecided());
         ASSERT(!getNew(jsValueRegs));
-        CachedRecovery* cachedRecovery { getNew(VirtualRegister(CallFrameSlot::callee)) };
+        CachedRecovery* cachedRecovery { getNew(CallFrameSlot::callee) };
         ASSERT(cachedRecovery);
         addNew(jsValueRegs, cachedRecovery->recovery());
     }
@@ -141,7 +141,7 @@ public:
     void assumeCalleeIsCell()
     {
 #if USE(JSVALUE32_64)
-        CachedRecovery& calleeCachedRecovery = *getNew(VirtualRegister(CallFrameSlot::callee));
+        CachedRecovery& calleeCachedRecovery = *getNew(CallFrameSlot::callee);
         switch (calleeCachedRecovery.recovery().technique()) {
         case InPair:
             updateRecovery(
@@ -185,7 +185,7 @@ public:
     void prepareForSlowPath();
 
 private:
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
     CCallHelpers& m_jit;
 
@@ -412,9 +412,9 @@ private:
     RegisterMap<CachedRecovery*> m_registers;
 
 #if USE(JSVALUE64)
-    mutable GPRReg m_tagTypeNumber;
+    mutable GPRReg m_numberTagRegister;
 
-    bool tryAcquireTagTypeNumber();
+    bool tryAcquireNumberTagRegister();
 #endif
 
     // This stores, for each register, information about the recovery
@@ -448,11 +448,11 @@ private:
         }
 
 #if USE(JSVALUE64)
-        if (!nonTemp && m_tagTypeNumber != InvalidGPRReg && check(Reg { m_tagTypeNumber })) {
-            ASSERT(m_lockedRegisters.get(m_tagTypeNumber));
-            m_lockedRegisters.clear(m_tagTypeNumber);
-            nonTemp = Reg { m_tagTypeNumber };
-            m_tagTypeNumber = InvalidGPRReg;
+        if (!nonTemp && m_numberTagRegister != InvalidGPRReg && check(Reg { m_numberTagRegister })) {
+            ASSERT(m_lockedRegisters.get(m_numberTagRegister));
+            m_lockedRegisters.clear(m_numberTagRegister);
+            nonTemp = Reg { m_numberTagRegister };
+            m_numberTagRegister = InvalidGPRReg;
         }
 #endif
         return nonTemp;

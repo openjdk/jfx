@@ -55,7 +55,7 @@ public:
     {
         return adoptRef(*new ServiceWorkerThreadProxy(std::forward<Args>(args)...));
     }
-    ~ServiceWorkerThreadProxy();
+    WEBCORE_EXPORT ~ServiceWorkerThreadProxy();
 
     ServiceWorkerIdentifier identifier() const { return m_serviceWorkerThread->identifier(); }
     ServiceWorkerThread& thread() { return m_serviceWorkerThread.get(); }
@@ -68,16 +68,19 @@ public:
 
     const URL& scriptURL() const { return m_document->url(); }
 
-    // Public only for testing purposes.
-    WEBCORE_TESTSUPPORT_EXPORT void notifyNetworkStateChange(bool isOnline);
+    WEBCORE_EXPORT void notifyNetworkStateChange(bool isOnline);
 
     WEBCORE_EXPORT void startFetch(SWServerConnectionIdentifier, FetchIdentifier, Ref<ServiceWorkerFetch::Client>&&, Optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
     WEBCORE_EXPORT void cancelFetch(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void continueDidReceiveFetchResponse(SWServerConnectionIdentifier, FetchIdentifier);
     WEBCORE_EXPORT void removeFetch(SWServerConnectionIdentifier, FetchIdentifier);
 
+    void postMessageToServiceWorker(MessageWithMessagePorts&&, ServiceWorkerOrClientData&&);
+    void fireInstallEvent();
+    void fireActivateEvent();
+
 private:
-    WEBCORE_EXPORT ServiceWorkerThreadProxy(PageConfiguration&&, const ServiceWorkerContextData&, PAL::SessionID, String&& userAgent, CacheStorageProvider&, SecurityOrigin::StorageBlockingPolicy);
+    WEBCORE_EXPORT ServiceWorkerThreadProxy(PageConfiguration&&, const ServiceWorkerContextData&, String&& userAgent, CacheStorageProvider&, SecurityOrigin::StorageBlockingPolicy);
 
     WEBCORE_EXPORT static void networkStateChanged(bool isOnLine);
 
@@ -88,14 +91,13 @@ private:
 
     // WorkerDebuggerProxy
     void postMessageToDebugger(const String&) final;
-    void setResourceCachingDisabled(bool) final;
+    void setResourceCachingDisabledByWebInspector(bool) final;
 
     UniqueRef<Page> m_page;
     Ref<Document> m_document;
     Ref<ServiceWorkerThread> m_serviceWorkerThread;
     CacheStorageProvider& m_cacheStorageProvider;
     RefPtr<CacheStorageConnection> m_cacheStorageConnection;
-    PAL::SessionID m_sessionID;
     bool m_isTerminatingOrTerminated { false };
 
     ServiceWorkerInspectorProxy m_inspectorProxy;

@@ -43,12 +43,12 @@ using namespace JSC;
 using namespace JSC::Bindings;
 using namespace WebCore;
 
-JSValue JavaArray::convertJObjectToArray(ExecState* exec, jobject anObject, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+JSValue JavaArray::convertJObjectToArray(JSGlobalObject* globalObject, jobject anObject, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
 {
     if (type[0] != '[')
         return jsUndefined();
 
-    return RuntimeArray::create(exec, new JavaArray(anObject, type, WTFMove(rootObject), accessControlContext));
+    return RuntimeArray::create(globalObject, new JavaArray(anObject, type, WTFMove(rootObject), accessControlContext));
 }
 
 JavaArray::JavaArray(jobject array, const char* type, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
@@ -83,7 +83,7 @@ RootObject* JavaArray::rootObject() const
     return m_rootObject && m_rootObject->isValid() ? m_rootObject.get() : 0;
 }
 
-bool JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) const
+bool JavaArray::setValueAt(JSGlobalObject* globalObject, unsigned index, JSValue aValue) const
 {
     // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlinstance(javaArray(), true);
@@ -104,7 +104,7 @@ bool JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
         javaClassName = strdup(&m_type[2]);
         javaClassName[strchr(javaClassName, ';')-javaClassName] = 0;
     }
-    jvalue aJValue = convertValueToJValue(exec, m_rootObject.get(), aValue, arrayType, javaClassName);
+    jvalue aJValue = convertValueToJValue(globalObject, m_rootObject.get(), aValue, arrayType, javaClassName);
 
     switch (arrayType) {
     case JavaTypeObject:
@@ -169,7 +169,7 @@ bool JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
     return true;
 }
 
-JSValue JavaArray::valueAt(ExecState* exec, unsigned index) const
+JSValue JavaArray::valueAt(JSGlobalObject* globalObject, unsigned index) const
 {
     // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlinstance(javaArray(), true);
@@ -194,11 +194,11 @@ JSValue JavaArray::valueAt(ExecState* exec, unsigned index) const
 
             // Nested array?
             if (m_type[1] == '[')
-                return JavaArray::convertJObjectToArray(exec, anObject,
+                return JavaArray::convertJObjectToArray(globalObject, anObject,
                         m_type + 1, rootObject(), accessControlContext());
             // or array of other object type?
             return JavaInstance::create(anObject, rootObject(),
-                    accessControlContext())->createRuntimeObject(exec);
+                    accessControlContext())->createRuntimeObject(globalObject);
         }
 
     case JavaTypeBoolean:

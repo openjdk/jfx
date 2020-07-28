@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package test.javafx.scene.control;
 
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -33,10 +36,14 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Menu;
+import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyCombination.Modifier;
@@ -580,5 +587,38 @@ public class MenuItemTest {
     @Test public void addableGetProperties() {
         menuItem.getProperties().put(null, null);
         assertTrue(menuItem.getProperties().size() > 0);
+    }
+
+    private int eventCounter = 0;
+    @Test public void testAcceleratorIsNotFiredWhenMenuItemRemovedFromScene() {
+        MenuItem item = new MenuItem("Item 1");
+        item.setOnAction(e -> eventCounter++);
+        item.setAccelerator(KeyCombination.valueOf("alt+1"));
+
+        MenuButton menuButton = new MenuButton();
+        menuButton.getItems().add(item);
+
+        StageLoader s = new StageLoader(menuButton);
+        Scene scene = s.getStage().getScene();
+        KeyEventFirer keyboard = new KeyEventFirer(item, scene);
+
+        // Invoke MenuItem's action listener twice by using accelerator KeyCombination
+        keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(1, eventCounter);
+
+        keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(2, eventCounter);
+
+        // Remove all children from the scene
+        Group root = (Group)scene.getRoot();
+        root.getChildren().clear();
+
+        // Assert that the MenuItem's action listener is not invoked
+        // after MenuItem has been removed from the scene
+        keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
+        assertEquals(2, eventCounter);
+
+        // Assert that key combination does not remain in the scene's list of accelerators
+        assertFalse(scene.getAccelerators().containsKey(KeyCombination.keyCombination("alt+1")));
     }
 }

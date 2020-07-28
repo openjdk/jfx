@@ -23,7 +23,6 @@
 
 #pragma once
 
-#include "PODIntervalTree.h"
 #include "RootInlineBox.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/WeakPtr.h>
@@ -32,6 +31,9 @@ namespace WebCore {
 
 class RenderBlockFlow;
 class RenderBox;
+
+template<typename, typename> class PODInterval;
+template<typename, typename> class PODIntervalTree;
 
 class FloatingObject {
     WTF_MAKE_NONCOPYABLE(FloatingObject); WTF_MAKE_FAST_ALLOCATED;
@@ -72,7 +74,7 @@ public:
     LayoutUnit paginationStrut() const { return m_paginationStrut; }
     void setPaginationStrut(LayoutUnit strut) { m_paginationStrut = strut; }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool isInPlacedTree() const { return m_isInPlacedTree; }
     void setIsInPlacedTree(bool value) { m_isInPlacedTree = value; }
 #endif
@@ -95,8 +97,6 @@ public:
     LayoutSize marginOffset() const { ASSERT(isPlaced()); return m_marginOffset; }
     LayoutSize translationOffsetToAncestor() const;
 
-    String debugString() const;
-
 private:
     WeakPtr<RenderBox> m_renderer;
     WeakPtr<RootInlineBox> m_originatingLine;
@@ -108,7 +108,7 @@ private:
     unsigned m_shouldPaint : 1;
     unsigned m_isDescendant : 1;
     unsigned m_isPlaced : 1;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     unsigned m_isInPlacedTree : 1;
 #endif
 };
@@ -187,17 +187,8 @@ private:
     WeakPtr<const RenderBlockFlow> m_renderer;
 };
 
-} // namespace WebCore
-
 #ifndef NDEBUG
-
-namespace WTF {
-
-// This helper is used by PODIntervalTree for debugging purposes.
-template<> struct ValueToString<WebCore::FloatingObject*> {
-    static String string(const WebCore::FloatingObject* floatingObject) { return floatingObject->debugString(); }
-};
-
-} // namespace WTF
-
+TextStream& operator<<(TextStream&, const FloatingObject&);
 #endif
+
+} // namespace WebCore

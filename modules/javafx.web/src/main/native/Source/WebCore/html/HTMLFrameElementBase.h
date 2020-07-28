@@ -27,7 +27,7 @@
 #include "HTMLFrameOwnerElement.h"
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace WebCore {
@@ -37,7 +37,7 @@ class HTMLFrameElementBase : public HTMLFrameOwnerElement {
 public:
     WEBCORE_EXPORT URL location() const;
     WEBCORE_EXPORT void setLocation(const String&);
-    void setLocation(JSC::ExecState&, const String&);
+    void setLocation(JSC::JSGlobalObject&, const String&);
 
     ScrollbarMode scrollingMode() const final;
 

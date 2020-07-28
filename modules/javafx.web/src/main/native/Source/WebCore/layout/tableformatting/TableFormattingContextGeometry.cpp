@@ -28,23 +28,31 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "FormattingContext.h"
 #include "LayoutBox.h"
-#include "LayoutState.h"
+#include "TableFormattingState.h"
 
 namespace WebCore {
 namespace Layout {
 
-HeightAndMargin TableFormattingContext::Geometry::tableCellHeightAndMargin(const LayoutState& layoutState, const Box& layoutBox)
+ContentHeightAndMargin TableFormattingContext::Geometry::tableCellHeightAndMargin(const Box& layoutBox) const
 {
     ASSERT(layoutBox.isInFlow());
 
-    auto height = computedHeightValue(layoutState, layoutBox, HeightType::Normal);
+    auto height = computedContentHeight(layoutBox);
     if (!height)
-        height = Geometry::contentHeightForFormattingContextRoot(layoutState, layoutBox);
+        height = contentHeightForFormattingContextRoot(layoutBox);
 
-    // FIXME: Compute vertical margin values.
-    return HeightAndMargin { *height, { } };
+    // Margins don't apply to internal table elements.
+    return ContentHeightAndMargin { *height, { } };
+}
+
+Optional<LayoutUnit> TableFormattingContext::Geometry::computedColumnWidth(const Box& columnBox) const
+{
+    // Check both style and <col>'s width attribute.
+    // FIXME: Figure out what to do with calculated values, like <col style="width: 10%">.
+    if (auto computedWidthValue = computedContentWidth(columnBox, { }))
+        return computedWidthValue;
+    return columnBox.columnWidth();
 }
 
 }

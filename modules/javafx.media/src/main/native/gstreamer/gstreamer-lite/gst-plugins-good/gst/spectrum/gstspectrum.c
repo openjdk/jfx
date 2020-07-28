@@ -270,6 +270,7 @@ gst_spectrum_init (GstSpectrum * spectrum)
   spectrum->bps_user = 0;
   spectrum->bpf_user = 0;
   spectrum->user_data = NULL;
+  spectrum->post_message_callback = NULL;
 #endif // GSTREAMER_LITE and OSX
 
   g_mutex_init (&spectrum->lock);
@@ -1060,7 +1061,15 @@ gst_spectrum_transform_ip (GstBaseTransform * trans, GstBuffer * buffer)
         m = gst_spectrum_message_new (spectrum, spectrum->message_ts,
             spectrum->interval);
 
+#if defined (GSTREAMER_LITE) && defined (OSX)
+        if (spectrum->post_message_callback != NULL) {
+          spectrum->post_message_callback(GST_ELEMENT (spectrum), m);
+        } else {
+          gst_element_post_message (GST_ELEMENT (spectrum), m);
+        }
+#else // GSTREAMER_LITE && OSX
         gst_element_post_message (GST_ELEMENT (spectrum), m);
+#endif // GSTREAMER_LITE && OSX
 #ifndef GSTREAMER_LITE
       }
 #endif // GSTREAMER_LITE

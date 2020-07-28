@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ public:
     //utatodo: callback to Java
     bool currentFrameKnownToBeOpaque() const override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
 
-    FloatSize size() const override { return FloatSize(m_width, m_height); }
+    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const override { return FloatSize(m_width, m_height); }
 
     // ImageDrawResult draw(GraphicsContext& gc, const FloatRect& dstRect,
     //           const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;

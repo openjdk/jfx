@@ -179,6 +179,7 @@ private:
             break;
         }
 
+        case ValueBitRShift:
         case ValueBitLShift: {
             SpeculatedType left = node->child1()->prediction();
             SpeculatedType right = node->child2()->prediction();
@@ -290,6 +291,31 @@ private:
                 }
             }
 
+            break;
+        }
+
+        case Inc:
+        case Dec: {
+            SpeculatedType prediction = node->child1()->prediction();
+
+            if (prediction) {
+                if (isFullNumberOrBooleanSpeculationExpectingDefined(prediction)) {
+                    if (m_graph.unaryArithShouldSpeculateInt32(node, m_pass))
+                        changed |= mergePrediction(SpecInt32Only);
+                    else if (m_graph.unaryArithShouldSpeculateInt52(node, m_pass))
+                        changed |= mergePrediction(SpecInt52Any);
+                    else
+                        changed |= mergePrediction(speculatedDoubleTypeForPrediction(prediction));
+                } else if (isBigIntSpeculation(prediction))
+                    changed |= mergePrediction(SpecBigInt);
+                else {
+                    changed |= mergePrediction(SpecInt32Only);
+                    if (node->mayHaveDoubleResult())
+                        changed |= mergePrediction(SpecBytecodeDouble);
+                    if (node->mayHaveBigIntResult())
+                        changed |= mergePrediction(SpecBigInt);
+                }
+            }
             break;
         }
 
@@ -549,6 +575,13 @@ private:
             break;
         }
 
+        case ToPropertyKey: {
+            SpeculatedType child = node->child1()->prediction();
+            if (child)
+                changed |= mergePrediction(resultOfToPropertyKey(child));
+            break;
+        }
+
         case NormalizeMapKey: {
             SpeculatedType prediction = node->child1()->prediction();
             if (prediction)
@@ -783,7 +816,7 @@ private:
         case ArithBitAnd:
         case ArithBitOr:
         case ArithBitXor:
-        case BitRShift:
+        case ArithBitRShift:
         case ArithBitLShift:
         case BitURShift:
         case ArithIMul:
@@ -827,10 +860,12 @@ private:
         case GetGlobalVar:
         case GetGlobalLexicalVariable:
         case GetClosureVar:
+        case GetInternalField:
         case GetFromArguments:
         case LoadKeyFromMapBucket:
         case LoadValueFromMapBucket:
         case ToNumber:
+        case ToNumeric:
         case ToObject:
         case ValueBitAnd:
         case ValueBitXor:
@@ -843,8 +878,14 @@ private:
         case GetPrototypeOf:
         case ExtractValueFromWeakMapGet:
         case DataViewGetInt:
-        case DataViewGetFloat: {
+        case DataViewGetFloat:
+        case DateGetInt32OrNaN: {
             setPrediction(m_currentNode->getHeapPrediction());
+            break;
+        }
+
+        case DateGetTime: {
+            setPrediction(SpecFullNumber);
             break;
         }
 
@@ -905,7 +946,8 @@ private:
             break;
         }
 
-        case StringCharCodeAt: {
+        case StringCharCodeAt:
+        case StringCodePointAt: {
             setPrediction(SpecInt32Only);
             break;
         }
@@ -1009,6 +1051,19 @@ private:
             break;
         }
 
+        case CreatePromise:
+        case NewPromise:
+            setPrediction(SpecPromiseObject);
+            break;
+
+        case CreateGenerator:
+        case NewGenerator:
+        case CreateAsyncGenerator:
+        case NewAsyncGenerator:
+        case NewArrayIterator:
+            setPrediction(SpecObjectOther);
+            break;
+
         case ArraySlice:
         case NewArrayWithSpread:
         case NewArray:
@@ -1076,6 +1131,11 @@ private:
 
         case CreateClonedArguments: {
             setPrediction(SpecObjectOther);
+            break;
+        }
+
+        case CreateArgumentsButterfly: {
+            setPrediction(SpecCellOther);
             break;
         }
 
@@ -1154,6 +1214,9 @@ private:
         case ValueMod:
         case ValuePow:
         case ValueBitLShift:
+        case ValueBitRShift:
+        case Inc:
+        case Dec:
         case ArithAdd:
         case ArithSub:
         case ArithNegate:
@@ -1166,6 +1229,7 @@ private:
         case GetByVal:
         case ToThis:
         case ToPrimitive:
+        case ToPropertyKey:
         case NormalizeMapKey:
         case AtomicsAdd:
         case AtomicsAnd:
@@ -1195,7 +1259,6 @@ private:
 
         case PutByValAlias:
         case DoubleAsInt32:
-        case CheckArray:
         case CheckTypeInfoFlags:
         case Arrayify:
         case ArrayifyToStructure:
@@ -1221,6 +1284,7 @@ private:
         case PhantomSpread:
         case PhantomNewArrayWithSpread:
         case PhantomNewArrayBuffer:
+        case PhantomNewArrayIterator:
         case PhantomClonedArguments:
         case PhantomNewRegexp:
         case GetMyArgumentByVal:
@@ -1228,8 +1292,10 @@ private:
         case PutHint:
         case CheckStructureImmediate:
         case CheckStructureOrEmpty:
+        case CheckArrayOrEmpty:
         case MaterializeNewObject:
         case MaterializeCreateActivation:
+        case MaterializeNewInternalFieldObject:
         case PutStack:
         case KillStack:
         case StoreBarrier:
@@ -1264,6 +1330,7 @@ private:
         case PutByIdWithThis:
         case PutByVal:
         case PutClosureVar:
+        case PutInternalField:
         case PutToArguments:
         case Return:
         case Throw:
@@ -1297,11 +1364,13 @@ private:
         case CheckCell:
         case CheckNotEmpty:
         case AssertNotEmpty:
-        case CheckStringIdent:
+        case CheckIdent:
         case CheckBadCell:
         case PutStructure:
         case Phantom:
         case Check:
+        case CheckArray:
+        case CheckNeutered:
         case CheckVarargs:
         case PutGlobalVariable:
         case CheckTraps:
@@ -1314,6 +1383,7 @@ private:
         case MovHint:
         case ZombieHint:
         case ExitOK:
+        case VarargsLength:
         case LoadVarargs:
         case ForwardVarargs:
         case PutDynamicVar:
@@ -1322,7 +1392,7 @@ private:
         case WeakSetAdd:
         case WeakMapSet:
         case FilterCallLinkStatus:
-        case FilterGetByIdStatus:
+        case FilterGetByStatus:
         case FilterPutByIdStatus:
         case FilterInByIdStatus:
         case ClearCatchLocals:
@@ -1368,6 +1438,18 @@ private:
         }
 
         return type;
+    }
+
+    SpeculatedType resultOfToPropertyKey(SpeculatedType type)
+    {
+        // Propagate the prediction of the source directly if already proven to be a property key.
+        if (type && !(type & ~(SpecString | SpecSymbol)))
+            return type;
+
+        if (type & SpecStringObject && m_graph.canOptimizeStringObjectAccess(m_currentNode->origin.semantic))
+            return mergeSpeculations(type & SpecSymbol, SpecString);
+
+        return SpecString | SpecSymbol;
     }
 
     Vector<Node*> m_dependentNodes;

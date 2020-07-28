@@ -63,21 +63,21 @@ private:
     mutable bool m_callerIsStrict;
 };
 
-static bool callerIsStrict(ExecState* exec)
+static bool callerIsStrict(VM& vm, CallFrame* callFrame)
 {
     GetCallerStrictnessFunctor iter;
-    exec->iterate(iter);
+    callFrame->iterate(vm, iter);
     return iter.callerIsStrict();
 }
 
 namespace NullSetterFunctionInternal {
-static EncodedJSValue JSC_HOST_CALL callReturnUndefined(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL callReturnUndefined(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (callerIsStrict(exec))
-        return JSValue::encode(throwTypeError(exec, scope, "Setting a property that has only a getter"_s));
+    if (callerIsStrict(vm, callFrame))
+        return JSValue::encode(throwTypeError(globalObject, scope, "Setting a property that has only a getter"_s));
     return JSValue::encode(jsUndefined());
 }
 }

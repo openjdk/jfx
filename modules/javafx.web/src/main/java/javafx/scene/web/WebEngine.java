@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,9 @@ import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
+import javafx.print.JobSettings;
 import javafx.print.PageLayout;
+import javafx.print.PageRange;
 import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.util.Callback;
@@ -324,6 +326,12 @@ window.setMember("app", javaApp);
  * Alternatively, a class is reflectively accessible if the module
  * {@link Module#isExported(String) exports} the containing package
  * unconditionally.
+ * </p>
+ *
+ * <p>
+ * Starting with JavaFX 14, <a href="https://tools.ietf.org/html/rfc7540">HTTP/2</a> support has been added to WebEngine.
+ * This is achieved by using {@link java.net.http.HttpClient} instead of {@link URLConnection}. HTTP/2 is activated
+ * by default when JavaFX 14 (or later) is used with JDK 12 (or later).
  * </p>
  *
  * <p><b>Threading</b></p>
@@ -1603,10 +1611,23 @@ final public class WebEngine {
         float height = (float) pl.getPrintableHeight();
         int pageCount = page.beginPrinting(width, height);
 
-        for (int i = 0; i < pageCount; i++) {
-            if (printStatusOK(job)) {
-                Node printable = new Printable(page, i, width);
-                job.printPage(printable);
+        JobSettings jobSettings = job.getJobSettings();
+        if (jobSettings.getPageRanges() != null) {
+            PageRange[] pageRanges = jobSettings.getPageRanges();
+            for (PageRange p : pageRanges) {
+                for (int i = p.getStartPage(); i <= p.getEndPage() && i <= pageCount; ++i) {
+                    if (printStatusOK(job)) {
+                        Node printable = new Printable(page, i - 1, width);
+                        job.printPage(printable);
+                    }
+                }
+            }
+        } else {
+            for (int i = 0; i < pageCount; i++) {
+                if (printStatusOK(job)) {
+                    Node printable = new Printable(page, i, width);
+                    job.printPage(printable);
+                }
             }
         }
         page.endPrinting();

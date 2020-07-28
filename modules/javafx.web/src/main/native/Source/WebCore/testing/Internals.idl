@@ -139,6 +139,15 @@ enum CompositingPolicy {
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     JSGenerateToJSObject,
+] dictionary DoViParameterSet {
+    DOMString codecName;
+    unsigned short bitstreamProfileID;
+    unsigned short bitstreamLevelID;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
 ] dictionary AcceleratedAnimation {
     DOMString property;
     double speed;
@@ -207,8 +216,9 @@ enum CompositingPolicy {
     void setOverrideResourceLoadPriority(ResourceLoadPriority priority);
     void setStrictRawResourceValidationPolicyDisabled(boolean disabled);
 
-    void clearPageCache();
-    unsigned long pageCacheSize();
+    void clearBackForwardCache();
+    unsigned long backForwardCacheSize();
+    void preventDocumentFromEnteringBackForwardCache();
 
     CSSStyleDeclaration computedStyleIncludingVisitedInfo(Element element);
 
@@ -296,6 +306,8 @@ enum CompositingPolicy {
     void setShowAutoFillButton(HTMLInputElement inputElement, AutoFillButtonType autoFillButtonType);
     AutoFillButtonType autoFillButtonType(HTMLInputElement inputElement);
     AutoFillButtonType lastAutoFillButtonType(HTMLInputElement inputElement);
+
+    void setCanShowPlaceholder(Element element, boolean canShowPlaceholder);
 
     [MayThrowException] Range? rangeOfString(DOMString text, Range? referenceRange, sequence<DOMString> findOptions);
     [MayThrowException] unsigned long countMatchesForText(DOMString text, sequence<DOMString> findOptions, DOMString markMatches);
@@ -397,6 +409,7 @@ enum CompositingPolicy {
     const unsigned short LAYER_TREE_INCLUDES_BACKING_STORE_ATTACHED = 128;
     const unsigned short LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 256;
     const unsigned short LAYER_TREE_INCLUDES_EVENT_REGION = 512;
+    const unsigned short LAYER_TREE_INCLUDES_DEEP_COLOR = 1024;
     [MayThrowException] DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     [MayThrowException] unsigned long long layerIDForElement(Element element);
@@ -535,6 +548,7 @@ enum CompositingPolicy {
     ArrayBuffer serializeObject(SerializedScriptValue object);
 
     boolean isFromCurrentWorld(any obj);
+    any evaluateInWorldIgnoringException(DOMString name, DOMString source);
 
     void setUsesOverlayScrollbars(boolean enabled);
     void setUsesMockScrollAnimator(boolean enabled);
@@ -608,8 +622,10 @@ enum CompositingPolicy {
     [Conditional=VIDEO, MayThrowException] void postRemoteControlCommand(DOMString command, optional unrestricted float argument = 0);
     [Conditional=WIRELESS_PLAYBACK_TARGET] void setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
     [Conditional=WIRELESS_PLAYBACK_TARGET, MayThrowException] void setMockMediaPlaybackTargetPickerState(DOMString deviceName, DOMString deviceState);
-    [Conditional=MEDIA_STREAM] void setMockMediaCaptureDevicesEnabled(boolean enabled);
+    [Conditional=WIRELESS_PLAYBACK_TARGET] void mockMediaPlaybackTargetPickerDismissPopup();
     [Conditional=MEDIA_STREAM] void setCustomPrivateRecorderCreator();
+
+    [Conditional=WEB_AUDIO] void useMockAudioDestinationCocoa();
 
     [Conditional=WEB_RTC] void emulateRTCPeerConnectionPlatformEvent(RTCPeerConnection connection, DOMString action);
     [Conditional=WEB_RTC] void useMockRTCPeerConnectionFactory(DOMString testCase);
@@ -618,6 +634,8 @@ enum CompositingPolicy {
     [Conditional=WEB_RTC] void stopPeerConnection(RTCPeerConnection connection);
     [Conditional=WEB_RTC] void clearPeerConnectionFactory();
     [Conditional=WEB_RTC] void setEnableWebRTCEncryption(boolean enabled);
+    [Conditional=WEB_RTC] void setUseDTLS10(boolean use);
+    [Conditional=WEB_RTC] void setUseGPUProcessForWebRTC(boolean use);
 
     [Conditional=VIDEO] void simulateSystemSleep();
     [Conditional=VIDEO] void simulateSystemWake();
@@ -649,8 +667,8 @@ enum CompositingPolicy {
 
     void setShowAllPlugins(boolean showAll);
 
-    [Conditional=STREAMS_API, CallWith=ExecState] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
-    [Conditional=STREAMS_API, CallWith=ExecState] boolean isReadableStreamDisturbed(any stream);
+    [Conditional=STREAMS_API, CallWith=GlobalObject] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
+    [Conditional=STREAMS_API, CallWith=GlobalObject] boolean isReadableStreamDisturbed(any stream);
 
     DOMString resourceLoadStatisticsForURL(DOMURL url);
     void setResourceLoadStatisticsEnabled(boolean enable);
@@ -711,13 +729,20 @@ enum CompositingPolicy {
     [Conditional=MEDIA_STREAM] void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void setMediaStreamTrackIdentifier(MediaStreamTrack track, DOMString identifier);
     [Conditional=MEDIA_STREAM] void setMediaStreamSourceInterrupted(MediaStreamTrack track, boolean interrupted);
-    [Conditional=MEDIA_STREAM] void setDisableGetDisplayMediaUserGestureConstraint(boolean value);
+    [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
 
     unsigned long long documentIdentifier(Document document);
     boolean isDocumentAlive(unsigned long long documentIdentifier);
 
+    readonly attribute unsigned long long storageAreaMapCount;
+
+    unsigned long long elementIdentifier(Element element);
+    unsigned long long frameIdentifier(Document document);
+    unsigned long long pageIdentifier(Document document);
+
     boolean isAnyWorkletGlobalScopeAlive();
 
+    readonly attribute long processIdentifier;
     DOMString serviceWorkerClientIdentifier(Document document);
     Promise<void> storeRegistrationsOnDisk();
 
@@ -730,13 +755,14 @@ enum CompositingPolicy {
 
     void setConsoleMessageListener(StringCallback callback);
 
+    readonly attribute boolean supportsAudioSession;
     DOMString audioSessionCategory();
     double preferredAudioBufferSize();
     boolean audioSessionActive();
 
     [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
     [Conditional=SERVICE_WORKER] void terminateServiceWorker(ServiceWorker worker);
-    [Conditional=SERVICE_WORKER] boolean hasServiceWorkerConnection();
+    [Conditional=SERVICE_WORKER] Promise<boolean> isServiceWorkerRunning(ServiceWorker worker);
 
     [CallWith=Document, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
 
@@ -746,7 +772,15 @@ enum CompositingPolicy {
     boolean usingAppleInternalSDK();
 
     void postTask(VoidCallback callback);
+    [CallWith=ScriptExecutionContext, MayThrowException] void queueTask(DOMString source, VoidCallback callback);
+    [CallWith=Document] void queueTaskToQueueMicrotask(DOMString source, VoidCallback callback);
+    [MayThrowException] boolean hasSameEventLoopAs(WindowProxy windowProxy);
+
+    DOMString windowLocationHost(DOMWindow window);
+
     void markContextAsInsecure();
+
+    void setMaxCanvasPixelMemory(unsigned long size);
 
     [Conditional=VIDEO, MayThrowException] readonly attribute NowPlayingState nowPlayingState;
 
@@ -771,6 +805,7 @@ enum CompositingPolicy {
     boolean supportsVCPEncoder();
 
     HEVCParameterSet? parseHEVCCodecParameters(DOMString codecParameters);
+    DoViParameterSet? parseDoViCodecParameters(DOMString codecParameters);
 
     sequence<CookieData> getCookies();
 
@@ -782,10 +817,30 @@ enum CompositingPolicy {
     void testDictionaryLogging();
 
     void setXHRMaximumIntervalForUserGestureForwarding(XMLHttpRequest xhr, double interval);
+    void setTransientActivationDuration(double seconds);
 
     void setIsPlayingToAutomotiveHeadUnit(boolean value);
 
     TextIndicatorInfo textIndicatorForRange(Range range, TextIndicatorOptions options);
 
     void addPrefetchLoadEventListener(HTMLLinkElement link, EventListener? callback);
+
+    [Conditional=WEB_AUTHN] void setMockWebAuthenticationConfiguration(MockWebAuthenticationConfiguration configuration);
+
+    [Conditional=PICTURE_IN_PICTURE_API] void setPictureInPictureAPITestEnabled(HTMLVideoElement videoElement, boolean enabled);
+
+    InternalsMapLike createInternalsMapLike();
+    InternalsSetLike createInternalsSetLike();
+
+    DOMString highlightPseudoElementColor(DOMString highlightName, Element element);
+
+    boolean hasSandboxMachLookupAccessToGlobalName(DOMString process, DOMString service);
+    boolean hasSandboxMachLookupAccessToXPCServiceName(DOMString process, DOMString service);
+
+    DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
+    DOMString focusRingColor();
+
+    boolean systemHasBattery();
+
+    DOMString mediaMIMETypeForExtension(DOMString extension);
 };

@@ -62,8 +62,11 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ReachableContentsSize))
         m_reachableContentsSize = state.reachableContentsSize();
 
-    if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollPosition))
+    if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollPosition)) {
         m_lastCommittedScrollPosition = state.scrollPosition();
+        if (m_isFirstCommit && !state.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition))
+            m_currentScrollPosition = m_lastCommittedScrollPosition;
+    }
 
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ParentRelativeScrollableRect))
         m_parentRelativeScrollableRect = state.parentRelativeScrollableRect();
@@ -94,23 +97,22 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollableAreaParams))
         m_scrollableAreaParameters = state.scrollableAreaParameters();
 
-    if (state.hasChangedProperty(ScrollingStateScrollingNode::ExpectsWheelEventTestTrigger))
-        m_expectsWheelEventTestTrigger = state.expectsWheelEventTestTrigger();
-
-#if PLATFORM(COCOA)
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollContainerLayer))
         m_scrollContainerLayer = state.scrollContainerLayer();
 
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer))
         m_scrolledContentsLayer = state.scrolledContentsLayer();
-#endif
 }
 
 void ScrollingTreeScrollingNode::commitStateAfterChildren(const ScrollingStateNode& stateNode)
 {
     const ScrollingStateScrollingNode& scrollingStateNode = downcast<ScrollingStateScrollingNode>(stateNode);
-    if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition))
-        scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), scrollingStateNode.requestedScrollPosition(), scrollingStateNode.requestedScrollPositionRepresentsProgrammaticScroll());
+    if (scrollingStateNode.hasChangedProperty(ScrollingStateScrollingNode::RequestedScrollPosition)) {
+        const auto& requestedScrollData = scrollingStateNode.requestedScrollData();
+        scrollingTree().scrollingTreeNodeRequestsScroll(scrollingNodeID(), requestedScrollData.scrollPosition, requestedScrollData.scrollType, requestedScrollData.clamping);
+    }
+
+    m_isFirstCommit = false;
 }
 
 ScrollingEventResult ScrollingTreeScrollingNode::handleWheelEvent(const PlatformWheelEvent&)
@@ -144,23 +146,26 @@ bool ScrollingTreeScrollingNode::scrollLimitReached(const PlatformWheelEvent& wh
     return newScrollPosition == oldScrollPosition;
 }
 
-FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollPositionClamp clamp) const
+FloatPoint ScrollingTreeScrollingNode::adjustedScrollPosition(const FloatPoint& scrollPosition, ScrollClamping clamping) const
 {
-    if (clamp == ScrollPositionClamp::ToContentEdges)
+    if (clamping == ScrollClamping::Clamped)
         return clampScrollPosition(scrollPosition);
 
     return scrollPosition;
 }
 
-void ScrollingTreeScrollingNode::scrollBy(const FloatSize& delta, ScrollPositionClamp clamp)
+void ScrollingTreeScrollingNode::scrollBy(const FloatSize& delta, ScrollClamping clamp)
 {
     scrollTo(currentScrollPosition() + delta, ScrollType::User, clamp);
 }
 
-void ScrollingTreeScrollingNode::scrollTo(const FloatPoint& position, ScrollType scrollType, ScrollPositionClamp clamp)
+void ScrollingTreeScrollingNode::scrollTo(const FloatPoint& position, ScrollType scrollType, ScrollClamping clamp)
 {
     if (position == m_currentScrollPosition)
         return;
+
+    if (scrollType == ScrollType::Programmatic)
+        stopScrollAnimations();
 
     scrollingTree().setIsHandlingProgrammaticScroll(scrollType == ScrollType::Programmatic);
 
@@ -200,7 +205,7 @@ void ScrollingTreeScrollingNode::wasScrolledByDelegatedScrolling(const FloatPoin
     if (!scrollPositionChanged && scrollingLayerPositionAction != ScrollingLayerPositionAction::Set)
         return;
 
-    m_currentScrollPosition = adjustedScrollPosition(position, ScrollPositionClamp::None);
+    m_currentScrollPosition = adjustedScrollPosition(position, ScrollClamping::Unclamped);
     updateViewportForCurrentScrollPosition(overrideLayoutViewport);
 
     repositionRelatedLayers();

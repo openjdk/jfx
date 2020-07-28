@@ -33,64 +33,6 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${JAVA_INCLUDE_PATH2}
 )
 
-set(WebCore_FORWARDING_HEADERS_DIRECTORIES
-    bindings/js
-    bridge
-    bridge/jni
-    bridge/jni/jsc
-    css
-    dom
-    editing
-    history
-    html
-    inspector
-    loader
-    page
-    platform
-    platform/animation
-    platform/graphics
-    platform/mediastream/libwebrtc
-    platform/network
-    platform/network/java
-    platform/sql
-    platform/text
-    rendering
-    storage
-    xml
-)
-
-set(WebCore_FORWARDING_HEADERS_FILES
-    Modules/notifications/NotificationClient.h
-    Modules/notifications/NotificationController.h
-    bindings/java/JavaDOMUtils.h
-    bindings/java/JavaEventListener.h
-    bindings/java/JavaNodeFilterCondition.h
-    bridge/jni/jsc/BridgeUtils.h
-    dom/DOMStringList.h
-    html/forms/FileIconLoader.h
-    platform/graphics/java/ImageBufferDataJava.h
-    platform/graphics/java/PlatformContextJava.h
-    platform/graphics/java/RQRef.h
-    platform/graphics/java/RenderingQueue.h
-    platform/graphics/texmap/BitmapTextureJava.h
-    platform/graphics/texmap/GraphicsLayerTextureMapper.h
-    platform/graphics/texmap/TextureMapperJava.h
-    platform/graphics/texmap/TextureMapperLayer.h
-    platform/java/DataObjectJava.h
-    platform/java/PageSupplementJava.h
-    platform/java/PlatformJavaClasses.h
-    platform/java/PluginWidgetJava.h
-    platform/mock/GeolocationClientMock.h
-    platform/network/java/AuthenticationChallenge.h
-    platform/network/java/CertificateInfo.h
-    platform/network/java/ResourceError.h
-    platform/network/java/ResourceRequest.h
-    platform/network/java/ResourceResponse.h
-    svg/SVGTests.h
-    testing/js/WebCoreTestSupport.h
-    workers/WorkerThread.h
-)
-
 if (WIN32)
     list(APPEND WebCore_SOURCES
         platform/win/SystemInfo.cpp

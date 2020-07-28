@@ -105,7 +105,7 @@ public:
 
             bool hasBytecodeIndex() const
             {
-                return bytecodeIndex != std::numeric_limits<unsigned>::max();
+                return !!bytecodeIndex;
             }
 
             bool hasExpressionInfo() const
@@ -117,7 +117,7 @@ public:
             // These attempt to be expression-level line and column number.
             unsigned lineNumber { std::numeric_limits<unsigned>::max() };
             unsigned columnNumber { std::numeric_limits<unsigned>::max() };
-            unsigned bytecodeIndex { std::numeric_limits<unsigned>::max() };
+            BytecodeIndex bytecodeIndex;
             CodeBlockHash codeBlockHash;
             JITType jitType { JITType::None };
         };
@@ -180,7 +180,7 @@ public:
     JS_EXPORT_PRIVATE String stackTracesAsJSON();
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
     void noticeCurrentThreadAsJSCExecutionThread(const AbstractLocker&);
-    void processUnverifiedStackTraces(); // You should call this only after acquiring the lock.
+    void processUnverifiedStackTraces(const AbstractLocker&);
     void setStopWatch(const AbstractLocker&, Ref<Stopwatch>&& stopwatch) { m_stopwatch = WTFMove(stopwatch); }
     void pause(const AbstractLocker&);
     void clearData(const AbstractLocker&);

@@ -33,17 +33,18 @@
 #include "ExceptionOr.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
-#include "WorkerEventQueue.h"
+#include "WorkerEventLoop.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/RuntimeFlags.h>
-#include <pal/SessionID.h>
 #include <wtf/URL.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+
+class EventLoopTaskGroup;
+class WorkerEventLoop;
 class WorkletScriptController;
-class ScriptSourceCode;
 
 enum WorkletGlobalScopeIdentifierType { };
 using WorkletGlobalScopeIdentifier = ObjectIdentifier<WorkletGlobalScopeIdentifierType>;
@@ -58,10 +59,13 @@ public:
 
     virtual bool isPaintWorkletGlobalScope() const { return false; }
 
+    EventLoopTaskGroup& eventLoop() final;
+
     const URL& url() const final { return m_code.url(); }
-    String origin() const final;
 
     void evaluate();
+
+    ReferrerPolicy referrerPolicy() const final;
 
     using RefCounted::ref;
     using RefCounted::deref;
@@ -109,32 +113,28 @@ private:
     bool isWorkletGlobalScope() const final { return true; }
 
     void logExceptionToConsole(const String& errorMessage, const String&, int, int, RefPtr<Inspector::ScriptCallStack>&&) final;
-    void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::ExecState*, unsigned long) final;
+    void addMessage(MessageSource, MessageLevel, const String&, const String&, unsigned, unsigned, RefPtr<Inspector::ScriptCallStack>&&, JSC::JSGlobalObject*, unsigned long) final;
     void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final;
 
     EventTarget* errorEventTarget() final { return this; }
-    EventQueue& eventQueue() const final { ASSERT_NOT_REACHED(); return m_eventQueue; }
 
 #if ENABLE(WEB_CRYPTO)
     bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
     bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
 #endif
-    URL completeURL(const String&) const final;
-    PAL::SessionID sessionID() const final { return m_sessionID; }
+    URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
     void disableEval(const String&) final;
     void disableWebAssembly(const String&) final;
 
     WeakPtr<Document> m_document;
 
-    PAL::SessionID m_sessionID;
     std::unique_ptr<WorkletScriptController> m_script;
 
     Ref<SecurityOrigin> m_topOrigin;
 
-    // FIXME: This is not implemented properly, it just satisfies the compiler.
-    // https://bugs.webkit.org/show_bug.cgi?id=191136
-    mutable WorkerEventQueue m_eventQueue;
+    RefPtr<WorkerEventLoop> m_eventLoop;
+    std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
 
     JSC::RuntimeFlags m_jsRuntimeFlags;
     ScriptSourceCode m_code;

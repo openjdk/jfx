@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,8 +38,8 @@ using Assembler = TARGET_ASSEMBLER;
 class MacroAssemblerMIPS : public AbstractMacroAssembler<Assembler> {
 public:
     typedef MIPSRegisters::FPRegisterID FPRegisterID;
-    static const unsigned numGPRs = 32;
-    static const unsigned numFPRs = 32;
+    static constexpr unsigned numGPRs = 32;
+    static constexpr unsigned numFPRs = 32;
 
     MacroAssemblerMIPS()
         : m_fixedWidth(false)
@@ -61,21 +61,21 @@ public:
         return getLSBSet(v);
     }
 
-    static const Scale ScalePtr = TimesFour;
+    static constexpr Scale ScalePtr = TimesFour;
 
     // For storing immediate number
-    static const RegisterID immTempRegister = MIPSRegisters::t0;
+    static constexpr RegisterID immTempRegister = MIPSRegisters::t0;
     // For storing data loaded from the memory
-    static const RegisterID dataTempRegister = MIPSRegisters::t1;
+    static constexpr RegisterID dataTempRegister = MIPSRegisters::t1;
     // For storing address base
-    static const RegisterID addrTempRegister = MIPSRegisters::t7;
+    static constexpr RegisterID addrTempRegister = MIPSRegisters::t7;
     // For storing compare result
-    static const RegisterID cmpTempRegister = MIPSRegisters::t8;
+    static constexpr RegisterID cmpTempRegister = MIPSRegisters::t8;
 
     // FP temp register
-    static const FPRegisterID fpTempRegister = MIPSRegisters::f16;
+    static constexpr FPRegisterID fpTempRegister = MIPSRegisters::f16;
 
-    static const int MaximumCompactPtrAlignedAddressOffset = 0x7FFFFFFF;
+    static constexpr int MaximumCompactPtrAlignedAddressOffset = 0x7FFFFFFF;
 
     enum RelationalCondition {
         Equal,
@@ -118,9 +118,9 @@ public:
         Scale
     };
 
-    static const RegisterID stackPointerRegister = MIPSRegisters::sp;
-    static const RegisterID framePointerRegister = MIPSRegisters::fp;
-    static const RegisterID returnAddressRegister = MIPSRegisters::ra;
+    static constexpr RegisterID stackPointerRegister = MIPSRegisters::sp;
+    static constexpr RegisterID framePointerRegister = MIPSRegisters::fp;
+    static constexpr RegisterID returnAddressRegister = MIPSRegisters::ra;
 
     // Integer arithmetic operations:
     //
@@ -473,6 +473,25 @@ public:
     void neg32(RegisterID src, RegisterID dest)
     {
         m_assembler.subu(dest, MIPSRegisters::zero, src);
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        if (!imm.m_value && !m_fixedWidth)
+            return;
+
+        if (m_fixedWidth) {
+            // TODO: Swap dataTempRegister and immTempRegister usage
+            load16(dest.m_ptr, immTempRegister);
+            or32(imm, immTempRegister);
+            store16(immTempRegister, dest.m_ptr);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(dest.m_ptr);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lhu(immTempRegister, addrTempRegister, adr & 0xffff);
+            or32(imm, immTempRegister);
+            m_assembler.sh(immTempRegister, addrTempRegister, adr & 0xffff);
+        }
     }
 
     void or32(RegisterID src, RegisterID dest)
@@ -1172,6 +1191,22 @@ public:
         return dataLabel;
     }
 
+    void load16(const void* address, RegisterID dest)
+    {
+        if (m_fixedWidth) {
+            /*
+                li  addrTemp, address
+                lhu  dest, 0(addrTemp)
+            */
+            move(TrustedImmPtr(address), addrTempRegister);
+            m_assembler.lhu(dest, addrTempRegister, 0);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(address);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lhu(dest, addrTempRegister, adr & 0xffff);
+        }
+    }
+
     /* Need to use zero-extened load half-word for load16.  */
     void load16(ImplicitAddress address, RegisterID dest)
     {
@@ -1337,6 +1372,22 @@ public:
                 move(imm8, immTempRegister);
                 m_assembler.sb(immTempRegister, addrTempRegister, address.offset);
             }
+        }
+    }
+
+    void store16(RegisterID src, const void* address)
+    {
+        if (m_fixedWidth) {
+            /*
+                li  addrTemp, address
+                sh  src, 0(addrTemp)
+            */
+            move(TrustedImmPtr(address), addrTempRegister);
+            m_assembler.sh(src, addrTempRegister, 0);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(address);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.sh(src, addrTempRegister, adr & 0xffff);
         }
     }
 

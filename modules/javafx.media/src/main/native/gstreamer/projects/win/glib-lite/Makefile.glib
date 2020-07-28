@@ -9,7 +9,6 @@ SRCBASE_DIR = ../../../$(GLIB_BASE_DIR)
 
 DIRLIST = gnulib \
           libcharset \
-          pcre \
           .
 
 DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
@@ -65,7 +64,6 @@ C_SOURCES = \
 	gquark.c \
 	gqueue.c \
 	grand.c \
-	gregex.c \
         grcbox.c \
         grefcount.c \
 	gscanner.c \
@@ -104,20 +102,7 @@ C_SOURCES = \
 	gversion.c \
 	gwakeup.c \
 	gwin32.c \
-	libcharset/localcharset.c \
-	pcre/pcre_chartables.c \
-	pcre/pcre_compile.c \
-	pcre/pcre_config.c \
-	pcre/pcre_dfa_exec.c \
-	pcre/pcre_exec.c \
-	pcre/pcre_fullinfo.c \
-	pcre/pcre_get.c \
-	pcre/pcre_globals.c \
-	pcre/pcre_newline.c \
-	pcre/pcre_ord2utf8.c \
-	pcre/pcre_study.c \
-	pcre/pcre_tables.c \
-	pcre/pcre_xclass.c
+	libcharset/localcharset.c
 
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
@@ -137,7 +122,6 @@ CFLAGS =   -DWIN32 \
            -DGSTREAMER_LITE \
            -DHAVE_CONFIG_H \
            -DG_LOG_DOMAIN=\"Glib\" \
-           -DPCRE_STATIC \
            -DLINK_SIZE=2 \
            -DMAX_NAME_SIZE=32 \
            -DMAX_NAME_COUNT=10000 \

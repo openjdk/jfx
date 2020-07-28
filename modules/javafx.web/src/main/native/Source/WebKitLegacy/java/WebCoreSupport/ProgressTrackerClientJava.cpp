@@ -98,9 +98,4 @@ void ProgressTrackerClientJava::progressFinished(Frame&)
     // shouldn't post PROGRESS_CHANGED after PAGE_FINISHED
 }
 
-void ProgressTrackerClientJava::progressTrackerDestroyed()
-{
-    delete this;
-}
-
 } // namespace WebCore

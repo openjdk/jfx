@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,8 @@
 namespace JSC {
 
 class SymbolTable;
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
 
 static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>::max(); }
 
@@ -332,7 +334,7 @@ private:
     static const intptr_t FlagBits = 6;
 
     class FatEntry {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
     public:
         FatEntry(intptr_t bits)
             : m_bits(bits & ~SlimFlag)
@@ -433,7 +435,7 @@ private:
 };
 
 struct SymbolTableIndexHashTraits : HashTraits<SymbolTableEntry> {
-    static const bool needsDestruction = true;
+    static constexpr bool needsDestruction = true;
 };
 
 class SymbolTable final : public JSCell {
@@ -441,7 +443,7 @@ class SymbolTable final : public JSCell {
 
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     typedef HashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
     typedef HashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
@@ -462,7 +464,7 @@ public:
         return symbolTable;
     }
 
-    static const bool needsDestruction = true;
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)

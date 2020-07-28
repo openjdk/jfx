@@ -56,7 +56,7 @@ static RenderStyle styleForFirstLetter(const RenderBlock& firstLetterBlock, cons
         // For an N-line first-letter and for alphabetic baselines, the cap-height of the first letter needs to equal (N-1)*line-height of paragraph lines + cap-height of the paragraph
         // Mathematically we can't rely on font-size, since font().height() doesn't necessarily match. For reliability, the best approach is simply to
         // compare the final measured cap-heights of the two fonts in order to get to the closest possible value.
-        firstLetterStyle.setLineBoxContain(LineBoxContainInitialLetter);
+        firstLetterStyle.setLineBoxContain({ LineBoxContain::InitialLetter });
         int lineHeight = paragraph->style().computedLineHeight();
 
         // Set the font to be one line too big and then ratchet back to get to a precise fit. We can't just set the desired font size based off font height metrics
@@ -81,10 +81,12 @@ static RenderStyle styleForFirstLetter(const RenderBlock& firstLetterBlock, cons
         }
     }
 
+    firstLetterStyle.setStyleType(PseudoId::FirstLetter);
     // Force inline display (except for floating first-letters).
     firstLetterStyle.setDisplay(firstLetterStyle.isFloating() ? DisplayType::Block : DisplayType::Inline);
     // CSS2 says first-letter can't be positioned.
     firstLetterStyle.setPosition(PositionType::Static);
+
     return firstLetterStyle;
 }
 
@@ -249,7 +251,7 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderBlock& firstLetterBlo
         }
 
         auto* textNode = currentTextChild.textNode();
-        auto* beforeChild = currentTextChild.nextSibling();
+        auto beforeChild = makeWeakPtr(currentTextChild.nextSibling());
         auto inlineWrapperForDisplayContents = makeWeakPtr(currentTextChild.inlineWrapperForDisplayContents());
         auto hasInlineWrapperForDisplayContents = inlineWrapperForDisplayContents.get();
         m_builder.destroy(currentTextChild);
@@ -266,7 +268,7 @@ void RenderTreeBuilder::FirstLetter::createRenderers(RenderBlock& firstLetterBlo
         RenderTextFragment& remainingText = *newRemainingText;
         ASSERT_UNUSED(hasInlineWrapperForDisplayContents, hasInlineWrapperForDisplayContents == inlineWrapperForDisplayContents.get());
         remainingText.setInlineWrapperForDisplayContents(inlineWrapperForDisplayContents.get());
-        m_builder.attach(*textContentParent, WTFMove(newRemainingText), beforeChild);
+        m_builder.attach(*textContentParent, WTFMove(newRemainingText), beforeChild.get());
 
         // FIXME: Make attach the final step so that we don't need to keep firstLetter around.
         auto& firstLetter = *newFirstLetter;

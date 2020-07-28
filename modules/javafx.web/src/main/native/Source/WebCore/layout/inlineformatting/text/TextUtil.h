@@ -28,25 +28,39 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "InlineItem.h"
+#include "LayoutUnits.h"
+#include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
+
+class RenderStyle;
+
 namespace Layout {
+
+class InlineTextItem;
 
 class TextUtil {
 public:
-    static LayoutUnit width(const Box&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
-    static Optional<unsigned> hyphenPositionBefore(const InlineItem&, unsigned from, unsigned length);
-    static bool isTrimmableContent(const InlineItem&);
+    static InlineLayoutUnit width(const InlineTextItem&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft = 0);
+    static InlineLayoutUnit width(const Box&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft = 0);
     struct SplitData {
         unsigned start { 0 };
         unsigned length { 0 };
-        LayoutUnit logicalWidth;
+        InlineLayoutUnit logicalWidth { 0 };
     };
-    static SplitData split(const Box&, unsigned startPosition, unsigned length, LayoutUnit textWidth, LayoutUnit availableWidth, LayoutUnit contentLogicalLeft);
+    static SplitData split(const Box&, unsigned startPosition, unsigned length, InlineLayoutUnit textWidth, InlineLayoutUnit availableWidth, InlineLayoutUnit contentLogicalLeft);
+    static bool shouldPreserveTrailingWhitespace(const RenderStyle&);
+    static unsigned findNextBreakablePosition(LazyLineBreakIterator&, unsigned startPosition, const RenderStyle&);
 
 private:
-    static LayoutUnit fixedPitchWidth(String, const RenderStyle&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
+    static InlineLayoutUnit fixedPitchWidth(const StringView&, const RenderStyle&, unsigned from, unsigned to, InlineLayoutUnit contentLogicalLeft);
 };
+
+inline bool TextUtil::shouldPreserveTrailingWhitespace(const RenderStyle& style)
+{
+    auto whitespace = style.whiteSpace();
+    return whitespace == WhiteSpace::Pre || whitespace == WhiteSpace::PreWrap || whitespace == WhiteSpace::BreakSpaces;
+}
 
 }
 }

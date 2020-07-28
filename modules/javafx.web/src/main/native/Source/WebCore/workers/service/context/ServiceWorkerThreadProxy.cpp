@@ -29,16 +29,18 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "CacheStorageProvider.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "FetchLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "LoaderStrategy.h"
+#include "MessageWithMessagePorts.h"
 #include "PlatformStrategies.h"
+#include "ServiceWorkerClientData.h"
 #include "ServiceWorkerClientIdentifier.h"
 #include "Settings.h"
 #include "WorkerGlobalScope.h"
-#include <pal/SessionID.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 
@@ -54,10 +56,9 @@ URL static inline topOriginURL(const SecurityOrigin& origin)
     return url;
 }
 
-static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& configuration, const ServiceWorkerContextData& data, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy, PAL::SessionID sessionID)
+static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& configuration, const ServiceWorkerContextData& data, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy)
 {
     auto page = makeUniqueRef<Page>(WTFMove(configuration));
-    page->setSessionID(sessionID);
 
     auto& mainFrame = page->mainFrame();
     mainFrame.loader().initForSynthesizedDocument({ });
@@ -71,7 +72,7 @@ static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& con
     origin->setStorageBlockingPolicy(storageBlockingPolicy);
 
     document->setSiteForCookies(topOriginURL(origin));
-    document->setFirstPartyForCookies(data.scriptURL);
+    document->setFirstPartyForCookies(topOriginURL(origin));
     document->setDomainForCachePartition(origin->domainForCachePartition());
 
     if (auto policy = parseReferrerPolicy(data.referrerPolicy, ReferrerPolicySource::HTTPHeader))
@@ -96,12 +97,11 @@ static HashSet<ServiceWorkerThreadProxy*>& allServiceWorkerThreadProxies()
     return set;
 }
 
-ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfiguration, const ServiceWorkerContextData& data, PAL::SessionID sessionID, String&& userAgent, CacheStorageProvider& cacheStorageProvider, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy)
-    : m_page(createPageForServiceWorker(WTFMove(pageConfiguration), data, storageBlockingPolicy, data.sessionID))
+ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfiguration, const ServiceWorkerContextData& data, String&& userAgent, CacheStorageProvider& cacheStorageProvider, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy)
+    : m_page(createPageForServiceWorker(WTFMove(pageConfiguration), data, storageBlockingPolicy))
     , m_document(*m_page->mainFrame().document())
-    , m_serviceWorkerThread(ServiceWorkerThread::create(data, sessionID, WTFMove(userAgent), *this, *this, idbConnectionProxy(m_document), m_document->socketProvider()))
+    , m_serviceWorkerThread(ServiceWorkerThread::create(data, WTFMove(userAgent), *this, *this, idbConnectionProxy(m_document), m_document->socketProvider()))
     , m_cacheStorageProvider(cacheStorageProvider)
-    , m_sessionID(sessionID)
     , m_inspectorProxy(*this)
 {
     static bool addedListener;
@@ -150,11 +150,11 @@ void ServiceWorkerThreadProxy::postMessageToDebugger(const String& message)
     });
 }
 
-void ServiceWorkerThreadProxy::setResourceCachingDisabled(bool disabled)
+void ServiceWorkerThreadProxy::setResourceCachingDisabledByWebInspector(bool disabled)
 {
     postTaskToLoader([this, protectedThis = makeRef(*this), disabled] (ScriptExecutionContext&) {
         ASSERT(isMainThread());
-        m_page->setResourceCachingDisabled(disabled);
+        m_page->setResourceCachingDisabledByWebInspector(disabled);
     });
 }
 
@@ -162,7 +162,7 @@ Ref<CacheStorageConnection> ServiceWorkerThreadProxy::createCacheStorageConnecti
 {
     ASSERT(isMainThread());
     if (!m_cacheStorageConnection)
-        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection(m_sessionID);
+        m_cacheStorageConnection = m_cacheStorageProvider.createCacheStorageConnection();
     return *m_cacheStorageConnection;
 }
 
@@ -189,7 +189,9 @@ void ServiceWorkerThreadProxy::notifyNetworkStateChange(bool isOnline)
     postTaskForModeToWorkerGlobalScope([isOnline] (ScriptExecutionContext& context) {
         auto& globalScope = downcast<WorkerGlobalScope>(context);
         globalScope.setIsOnline(isOnline);
-        globalScope.dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        globalScope.eventLoop().queueTask(TaskSource::DOMManipulation, [globalScope = makeRef(globalScope), isOnline] {
+            globalScope->dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        });
     }, WorkerRunLoop::defaultMode());
 }
 
@@ -197,9 +199,14 @@ void ServiceWorkerThreadProxy::startFetch(SWServerConnectionIdentifier connectio
 {
     auto key = std::make_pair(connectionIdentifier, fetchIdentifier);
 
+    if (m_ongoingFetchTasks.isEmpty())
+        thread().startFetchEventMonitoring();
+
     ASSERT(!m_ongoingFetchTasks.contains(key));
     m_ongoingFetchTasks.add(key, client.copyRef());
-    thread().postFetchTask(WTFMove(client), WTFMove(clientId), WTFMove(request), WTFMove(referrer), WTFMove(options));
+    postTaskForModeToWorkerGlobalScope([this, protectedThis = makeRef(*this), client = WTFMove(client), clientId, request = request.isolatedCopy(), referrer = referrer.isolatedCopy(), options = options.isolatedCopy()](auto&) mutable {
+        thread().queueTaskToFireFetchEvent(WTFMove(client), WTFMove(clientId), WTFMove(request), WTFMove(referrer), WTFMove(options));
+    }, WorkerRunLoop::defaultMode());
 }
 
 void ServiceWorkerThreadProxy::cancelFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier)
@@ -207,6 +214,9 @@ void ServiceWorkerThreadProxy::cancelFetch(SWServerConnectionIdentifier connecti
     auto client = m_ongoingFetchTasks.take(std::make_pair(connectionIdentifier, fetchIdentifier));
     if (!client)
         return;
+
+    if (m_ongoingFetchTasks.isEmpty())
+        thread().stopFetchEventMonitoring();
 
     postTaskForModeToWorkerGlobalScope([client = WTFMove(client.value())] (ScriptExecutionContext&) {
         client->cancel();
@@ -227,6 +237,33 @@ void ServiceWorkerThreadProxy::continueDidReceiveFetchResponse(SWServerConnectio
 void ServiceWorkerThreadProxy::removeFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier)
 {
     m_ongoingFetchTasks.remove(std::make_pair(connectionIdentifier, fetchIdentifier));
+
+    if (m_ongoingFetchTasks.isEmpty())
+        thread().stopFetchEventMonitoring();
+}
+
+void ServiceWorkerThreadProxy::postMessageToServiceWorker(MessageWithMessagePorts&& message, ServiceWorkerOrClientData&& sourceData)
+{
+    thread().willPostTaskToFireMessageEvent();
+    thread().runLoop().postTask([this, protectedThis = makeRef(*this), message = WTFMove(message), sourceData = WTFMove(sourceData)](auto&) mutable {
+        thread().queueTaskToPostMessage(WTFMove(message), WTFMove(sourceData));
+    });
+}
+
+void ServiceWorkerThreadProxy::fireInstallEvent()
+{
+    thread().willPostTaskToFireInstallEvent();
+    thread().runLoop().postTask([this, protectedThis = makeRef(*this)](auto&) mutable {
+        thread().queueTaskToFireInstallEvent();
+    });
+}
+
+void ServiceWorkerThreadProxy::fireActivateEvent()
+{
+    thread().willPostTaskToFireActivateEvent();
+    thread().runLoop().postTask([this, protectedThis = makeRef(*this)](auto&) mutable {
+        thread().queueTaskToFireActivateEvent();
+    });
 }
 
 } // namespace WebCore

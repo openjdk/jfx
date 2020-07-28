@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,6 +124,29 @@ static EAGLContext * ctx = nil;
 
 @implementation GlassViewGL : GLView
 
+-(void) doInsertText:(NSString*)myText {
+    int unicode = [myText characterAtIndex:0];
+    int code = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    if (unicode == com_sun_glass_events_KeyEvent_VK_ENTER) {
+         code = unicode;
+    }
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
+        keyCode:code unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_TYPED
+        keyCode:code unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_RELEASE
+        keyCode:code unicode:unicode modifiers:0];
+}
+
+-(void) doDeleteBackward {
+    int unicode = com_sun_glass_events_KeyEvent_VK_BACKSPACE;
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
+        keyCode:unicode unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_TYPED
+        keyCode:unicode unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_RELEASE
+        keyCode:unicode unicode:unicode modifiers:0];
+}
 
 -(BOOL) touchesShouldBegin:(NSSet *)touches withEvent:(UIEvent *)event inContentView:(UIView *)view
 {
@@ -217,8 +240,6 @@ static EAGLContext * ctx = nil;
             if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending) {
                 displayLink = [[UIScreen mainScreen] displayLinkWithTarget:[GlassTimer getDelegate]
                                                                   selector:@selector(displayLinkUpdate:)];
-                // 1 is 60hz, 2 is 30 Hz, 3 is 20 Hz ...
-                [displayLink setFrameInterval:2];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:UITrackingRunLoopMode];
                 GLASS_LOG("GlassViewGL: displayLink SET");

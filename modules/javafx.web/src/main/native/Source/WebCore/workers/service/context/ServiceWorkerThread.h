@@ -30,6 +30,7 @@
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerFetch.h"
 #include "ServiceWorkerIdentifier.h"
+#include "Timer.h"
 #include "WorkerThread.h"
 
 namespace WebCore {
@@ -41,9 +42,7 @@ class MessagePortChannel;
 class SerializedScriptValue;
 class WorkerObjectProxy;
 struct MessageWithMessagePorts;
-struct ServiceWorkerClientData;
 struct ServiceWorkerClientIdentifier;
-struct ServiceWorkerContextData;
 
 class ServiceWorkerThread : public WorkerThread {
 public:
@@ -55,27 +54,58 @@ public:
 
     WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
 
-    WEBCORE_EXPORT void postFetchTask(Ref<ServiceWorkerFetch::Client>&&, Optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
-    WEBCORE_EXPORT void postMessageToServiceWorker(MessageWithMessagePorts&&, ServiceWorkerOrClientData&& sourceData);
+    void start(Function<void(const String&, bool)>&&);
 
-    void fireInstallEvent();
-    void fireActivateEvent();
+    void willPostTaskToFireInstallEvent();
+    void willPostTaskToFireActivateEvent();
+    void willPostTaskToFireMessageEvent();
+
+    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, Optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
+    void queueTaskToPostMessage(MessageWithMessagePorts&&, ServiceWorkerOrClientData&& sourceData);
+    void queueTaskToFireInstallEvent();
+    void queueTaskToFireActivateEvent();
 
     const ServiceWorkerContextData& contextData() const { return m_data; }
 
     ServiceWorkerIdentifier identifier() const { return m_data.serviceWorkerIdentifier; }
+    bool doesHandleFetch() const { return m_doesHandleFetch; }
+
+    void startFetchEventMonitoring();
+    void stopFetchEventMonitoring() { m_isHandlingFetchEvent = false; }
 
 protected:
-    Ref<WorkerGlobalScope> createWorkerGlobalScope(const URL&, Ref<SecurityOrigin>&&, const String& name, const String& identifier, const String& userAgent, bool isOnline, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, PAL::SessionID) final;
+    Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) final;
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(const ServiceWorkerContextData&, PAL::SessionID, String&& userAgent, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
+    WEBCORE_EXPORT ServiceWorkerThread(const ServiceWorkerContextData&, String&& userAgent, WorkerLoaderProxy&, WorkerDebuggerProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*);
 
     bool isServiceWorkerThread() const final { return true; }
+    void finishedEvaluatingScript() final;
+
+    void finishedFiringInstallEvent(bool hasRejectedAnyPromise);
+    void finishedFiringActivateEvent();
+    void finishedFiringMessageEvent();
+    void finishedStarting();
+
+    void startHeartBeatTimer();
+    void heartBeatTimerFired();
+    void installEventTimerFired();
 
     ServiceWorkerContextData m_data;
     WorkerObjectProxy& m_workerObjectProxy;
+    bool m_doesHandleFetch { false };
+
+    bool m_isHandlingFetchEvent { false };
+    uint64_t m_messageEventCount { 0 };
+    enum class State { Idle, Starting, Installing, Activating };
+    State m_state { State::Idle };
+    bool m_ongoingHeartBeatCheck { false };
+
+    static constexpr Seconds heartBeatTimeout { 60_s };
+    static constexpr Seconds heartBeatTimeoutForTest { 1_s };
+    Seconds m_heartBeatTimeout { heartBeatTimeout };
+    Timer m_heartBeatTimer;
 };
 
 } // namespace WebCore

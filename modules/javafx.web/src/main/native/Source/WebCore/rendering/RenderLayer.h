@@ -119,6 +119,7 @@ enum class RequestState {
 
 enum class IndirectCompositingReason {
     None,
+    Clipping,
     Stacking,
     OverflowScrollPositioning,
     Overlap,
@@ -135,8 +136,9 @@ struct ScrollRectToVisibleOptions {
     ShouldAllowCrossOriginScrolling shouldAllowCrossOriginScrolling { ShouldAllowCrossOriginScrolling::No };
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderLayer);
 class RenderLayer final : public ScrollableArea {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RenderLayer);
 public:
     friend class RenderReplica;
     friend class RenderLayerFilters;
@@ -162,6 +164,7 @@ public:
     RenderLayer* firstChild() const { return m_first; }
     RenderLayer* lastChild() const { return m_last; }
     bool isDescendantOf(const RenderLayer&) const;
+    RenderLayer* commonAncestorWithLayer(const RenderLayer&) const;
 
     // This does an ancestor tree walk. Avoid it!
     const RenderLayer* root() const
@@ -175,8 +178,12 @@ public:
     void addChild(RenderLayer& newChild, RenderLayer* beforeChild = nullptr);
     void removeChild(RenderLayer&);
 
-    void insertOnlyThisLayer();
-    void removeOnlyThisLayer();
+    enum class LayerChangeTiming {
+        StyleChange,
+        RenderTreeConstruction,
+    };
+    void insertOnlyThisLayer(LayerChangeTiming);
+    void removeOnlyThisLayer(LayerChangeTiming);
 
     bool isNormalFlowOnly() const { return m_isNormalFlowOnly; }
 
@@ -205,7 +212,7 @@ public:
     bool normalFlowListDirty() const { return m_normalFlowListDirty; }
     bool zOrderListsDirty() const { return m_zOrderListsDirty; }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool layerListMutationAllowed() const { return m_layerListMutationAllowed; }
     void setLayerListMutationAllowed(bool flag) { m_layerListMutationAllowed = flag; }
 #endif
@@ -432,6 +439,8 @@ public:
     // Scrolling methods for layers that can scroll their overflow.
     void scrollByRecursively(const IntSize& delta, ScrollableArea** scrolledArea = nullptr);
 
+    bool requestScrollPositionUpdate(const ScrollPosition&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped) override;
+
     WEBCORE_EXPORT void scrollToOffset(const ScrollOffset&, ScrollType = ScrollType::Programmatic, ScrollClamping = ScrollClamping::Clamped);
 
     void scrollToXPosition(int x, ScrollType, ScrollClamping = ScrollClamping::Clamped);
@@ -647,7 +656,7 @@ public:
     LayoutPoint convertToLayerCoords(const RenderLayer* ancestorLayer, const LayoutPoint&, ColumnOffsetAdjustment adjustForColumns = DontAdjustForColumns) const;
     LayoutSize offsetFromAncestor(const RenderLayer*, ColumnOffsetAdjustment = DontAdjustForColumns) const;
 
-    int zIndex() const { return renderer().style().zIndex(); }
+    int zIndex() const { return renderer().style().usedZIndex(); }
 
     enum PaintLayerFlag {
         PaintLayerHaveTransparency                      = 1 << 0,
@@ -787,8 +796,9 @@ public:
     bool has3DTransform() const { return m_transform && !m_transform->isAffine(); }
     bool hasTransformedAncestor() const { return m_hasTransformedAncestor; }
 
-    void filterNeedsRepaint();
     bool hasFilter() const { return renderer().hasFilter(); }
+    bool hasFilterOutsets() const { return !filterOutsets().isZero(); }
+    IntOutsets filterOutsets() const;
     bool hasBackdropFilter() const
     {
 #if ENABLE(FILTERS_LEVEL_2)
@@ -897,7 +907,7 @@ public:
     void simulateFrequentPaint() { SinglePaintFrequencyTracking { m_paintFrequencyTracker }; }
     bool paintingFrequently() const { return m_paintFrequencyTracker.paintingFrequently(); }
 
-    WEBCORE_EXPORT bool isTransparentOrFullyClippedRespectingParentFrames() const;
+    WEBCORE_EXPORT bool isTransparentRespectingParentFrames() const;
 
     void invalidateEventRegion();
 
@@ -926,8 +936,8 @@ private:
 
     void updateZOrderLists();
     void rebuildZOrderLists();
-    void rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&);
-    void collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&);
+    void rebuildZOrderLists(std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
+    void collectLayers(bool includeHiddenLayers, std::unique_ptr<Vector<RenderLayer*>>&, std::unique_ptr<Vector<RenderLayer*>>&, OptionSet<Compositing>&);
     void clearZOrderLists();
 
     void updateNormalFlowList();
@@ -1238,8 +1248,8 @@ private:
     bool m_hasTransformedAncestor : 1;
     bool m_has3DTransformedAncestor : 1;
 
-    unsigned m_indirectCompositingReason : 3;
-    unsigned m_viewportConstrainedNotCompositedReason : 2;
+    unsigned m_indirectCompositingReason : 4; // IndirectCompositingReason
+    unsigned m_viewportConstrainedNotCompositedReason : 2; // ViewportConstrainedNotCompositedReason
 
 #if PLATFORM(IOS_FAMILY)
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -1252,12 +1262,12 @@ private:
     bool m_containsDirtyOverlayScrollbars : 1;
     bool m_updatingMarqueePosition : 1;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_layerListMutationAllowed : 1;
 #endif
 
 #if ENABLE(CSS_COMPOSITING)
-    unsigned m_blendMode : 5;
+    unsigned m_blendMode : 5; // BlendMode
     bool m_hasNotIsolatedCompositedBlendingDescendants : 1;
     bool m_hasNotIsolatedBlendingDescendants : 1;
     bool m_hasNotIsolatedBlendingDescendantsStatusDirty : 1;
@@ -1360,7 +1370,7 @@ inline RenderLayer* RenderLayer::paintOrderParent() const
     return m_isNormalFlowOnly ? m_parent : stackingContext();
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 class LayerListMutationDetector {
 public:
     LayerListMutationDetector(RenderLayer& layer)
@@ -1379,7 +1389,7 @@ private:
     RenderLayer& m_layer;
     bool m_previousMutationAllowedState;
 };
-#endif
+#endif // ASSERT_ENABLED
 
 void makeMatrixRenderable(TransformationMatrix&, bool has3DRendering);
 

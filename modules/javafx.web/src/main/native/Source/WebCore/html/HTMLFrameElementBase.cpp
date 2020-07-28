@@ -93,6 +93,8 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
     if (!parentFrame)
         return;
 
+    document().willLoadFrameElement(parentFrame->document()->completeURL(m_URL));
+
     String frameName = getNameAttribute();
     if (frameName.isNull() && UNLIKELY(document().settings().needsFrameNameFallbackToIdQuirk()))
         frameName = getIdAttribute();
@@ -102,9 +104,14 @@ void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList 
 
 void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    if (name == srcdocAttr)
-        setLocation("about:srcdoc");
-    else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
+    if (name == srcdocAttr) {
+        if (value.isNull()) {
+            const AtomString& srcValue = attributeWithoutSynchronization(srcAttr);
+            if (!srcValue.isNull())
+                setLocation(stripLeadingAndTrailingHTMLSpaces(srcValue));
+        } else
+            setLocation("about:srcdoc");
+    } else if (name == srcAttr && !hasAttributeWithoutSynchronization(srcdocAttr))
         setLocation(stripLeadingAndTrailingHTMLSpaces(value));
     else
         HTMLFrameOwnerElement::parseAttribute(name, value);
@@ -161,7 +168,7 @@ void HTMLFrameElementBase::setLocation(const String& str)
         openURL(LockHistory::No, LockBackForwardList::No);
 }
 
-void HTMLFrameElementBase::setLocation(JSC::ExecState& state, const String& newLocation)
+void HTMLFrameElementBase::setLocation(JSC::JSGlobalObject& state, const String& newLocation)
 {
     if (WTF::protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(newLocation))) {
         if (!BindingSecurity::shouldAllowAccessToNode(state, contentDocument()))

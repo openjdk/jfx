@@ -182,7 +182,7 @@ public class ChoiceBox<T> extends Control {
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
-                if (sm.getSelectedItem() != null && ! valueProperty().isBound()) {
+                if (!valueProperty().isBound()) {
                     ChoiceBox.this.setValue(sm.getSelectedItem());
                 }
             }
@@ -587,6 +587,20 @@ public class ChoiceBox<T> extends Control {
 
             if (choiceBox.isShowing()) {
                 choiceBox.hide();
+            }
+        }
+
+        /**
+         * {@inheritDoc} <p>
+         *
+         * Overridden to clear <code>selectedIndex</code> if <code>selectedItem</code> is not contained
+         * in the <code>items</code>.
+         */
+        @Override
+        public void select(T obj) {
+            super.select(obj);
+            if (obj != null && !choiceBox.getItems().contains(obj)) {
+                setSelectedIndex(-1);
             }
         }
 

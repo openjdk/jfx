@@ -32,8 +32,8 @@
 
 #include "AXObjectCache.h"
 
+#include "AXIsolatedObject.h"
 #include "AXIsolatedTree.h"
-#include "AXIsolatedTreeNode.h"
 #include "AccessibilityARIAGrid.h"
 #include "AccessibilityARIAGridCell.h"
 #include "AccessibilityARIAGridRow.h"
@@ -95,12 +95,18 @@
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderView.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SVGElement.h"
 #include "ScriptDisallowedScope.h"
 #include "ScrollView.h"
 #include "TextBoundaries.h"
 #include "TextControlInnerElements.h"
 #include "TextIterator.h"
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE) && PLATFORM(MAC)
+#include <pal/spi/mac/HIServicesSPI.h>
+#endif
+
 #include <wtf/DataLog.h>
 #include <wtf/SetForScope.h>
 
@@ -209,6 +215,7 @@ void AXObjectCache::setEnhancedUserInterfaceAccessibility(bool flag)
 
 AXObjectCache::AXObjectCache(Document& document)
     : m_document(document)
+    , m_pageID(document.pageID())
     , m_notificationPostTimer(*this, &AXObjectCache::notificationPostTimerFired)
     , m_passwordNotificationPostTimer(*this, &AXObjectCache::passwordNotificationPostTimerFired)
     , m_liveRegionChangedPostTimer(*this, &AXObjectCache::liveRegionChangedNotificationPostTimerFired)
@@ -226,11 +233,14 @@ AXObjectCache::~AXObjectCache()
     m_focusModalNodeTimer.stop();
     m_performCacheUpdateTimer.stop();
 
-    for (const auto& object : m_objects.values()) {
-        detachWrapper(object.get(), AccessibilityDetachmentType::CacheDestroyed);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    // Destroy the IsolatedTree before destroying the live tree.
+    if (m_pageID)
+        AXIsolatedTree::removeTreeForPageID(*m_pageID);
+#endif
+
+    for (const auto& object : m_objects.values())
         object->detach(AccessibilityDetachmentType::CacheDestroyed);
-        object->setAXObjectID(0);
-    }
 }
 
 void AXObjectCache::findModalNodes()
@@ -338,37 +348,91 @@ AccessibilityObject* AXObjectCache::focusedImageMapUIElement(HTMLAreaElement* ar
             continue;
 
         if (downcast<AccessibilityImageMapLink>(*child).areaElement() == areaElement)
-            return child.get();
+            return downcast<AccessibilityImageMapLink>(child.get());
     }
 
     return nullptr;
 }
 
-AccessibilityObject* AXObjectCache::focusedUIElementForPage(const Page* page)
+AXCoreObject* AXObjectCache::focusedObject(Document& document)
 {
+    Element* focusedElement = document.focusedElement();
+    if (is<HTMLAreaElement>(focusedElement))
+        return focusedImageMapUIElement(downcast<HTMLAreaElement>(focusedElement));
+
+    auto* axObjectCache = document.axObjectCache();
+    if (!axObjectCache)
+        return nullptr;
+
+    AXCoreObject* focus = axObjectCache->getOrCreate(focusedElement ? focusedElement : static_cast<Node*>(&document));
+    if (!focus)
+        return nullptr;
+
+    if (focus->shouldFocusActiveDescendant()) {
+        if (auto* descendant = focus->activeDescendant())
+            focus = descendant;
+    }
+
+    // the HTML element, for example, is focusable but has an AX object that is ignored
+    if (focus->accessibilityIsIgnored())
+        focus = focus->parentObjectUnignored();
+
+    return focus;
+}
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+AXCoreObject* AXObjectCache::isolatedTreeFocusedObject(Document& document)
+{
+    auto pageID = document.pageID();
+    if (!pageID)
+        return nullptr;
+
+    auto tree = AXIsolatedTree::treeForPageID(*pageID);
+    if (!tree) {
+        tree = generateIsolatedTree(*pageID, document);
+        // Now that we have created our tree, initialize the secondary thread,
+        // so future requests come in on the other thread.
+        _AXUIElementUseSecondaryAXThread(true);
+    }
+
+    if (tree)
+        return tree->focusedUIElement().get();
+
+    // Should not get here, couldn't create the IsolatedTree.
+    ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+void AXObjectCache::setIsolatedTreeFocusedObject(Node* focusedNode)
+{
+    ASSERT(isMainThread());
+    if (!m_pageID)
+        return;
+
+    auto* focus = getOrCreate(focusedNode);
+
+    if (auto tree = AXIsolatedTree::treeForPageID(*m_pageID))
+        tree->setFocusedNodeID(focus ? focus->objectID() : InvalidAXID);
+}
+#endif
+
+AXCoreObject* AXObjectCache::focusedUIElementForPage(const Page* page)
+{
+    ASSERT(isMainThread());
     if (!gAccessibilityEnabled)
         return nullptr;
 
     // get the focused node in the page
     Document* focusedDocument = page->focusController().focusedOrMainFrame().document();
-    Element* focusedElement = focusedDocument->focusedElement();
-    if (is<HTMLAreaElement>(focusedElement))
-        return focusedImageMapUIElement(downcast<HTMLAreaElement>(focusedElement));
-
-    AccessibilityObject* obj = focusedDocument->axObjectCache()->getOrCreate(focusedElement ? static_cast<Node*>(focusedElement) : focusedDocument);
-    if (!obj)
+    if (!focusedDocument)
         return nullptr;
 
-    if (obj->shouldFocusActiveDescendant()) {
-        if (AccessibilityObject* descendant = obj->activeDescendant())
-            obj = descendant;
-    }
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (clientSupportsIsolatedTree())
+        return isolatedTreeFocusedObject(*focusedDocument);
+#endif
 
-    // the HTML element, for example, is focusable but has an AX object that is ignored
-    if (obj->accessibilityIsIgnored())
-        obj = obj->parentObjectUnignored();
-
-    return obj;
+    return focusedObject(*focusedDocument);
 }
 
 AccessibilityObject* AXObjectCache::get(Widget* widget)
@@ -536,6 +600,21 @@ static Ref<AccessibilityObject> createFromNode(Node* node)
     return AccessibilityNodeObject::create(node);
 }
 
+void AXObjectCache::cacheAndInitializeWrapper(AccessibilityObject* newObject, DOMObjectVariant domObject)
+{
+    ASSERT(newObject);
+    AXID axID = getAXID(newObject);
+    WTF::switchOn(domObject,
+        [&axID, this] (RenderObject* typedValue) { m_renderObjectMapping.set(typedValue, axID); },
+        [&axID, this] (Node* typedValue) { m_nodeObjectMapping.set(typedValue, axID); },
+        [&axID, this] (Widget* typedValue) { m_widgetObjectMapping.set(typedValue, axID); },
+        [] (auto&) { }
+    );
+    m_objects.set(axID, newObject);
+    newObject->init();
+    attachWrapper(newObject);
+}
+
 AccessibilityObject* AXObjectCache::getOrCreate(Widget* widget)
 {
     if (!widget)
@@ -558,12 +637,7 @@ AccessibilityObject* AXObjectCache::getOrCreate(Widget* widget)
     if (!newObj)
         return nullptr;
 
-    getAXID(newObj.get());
-
-    m_widgetObjectMapping.set(widget, newObj->axObjectID());
-    m_objects.set(newObj->axObjectID(), newObj);
-    newObj->init();
-    attachWrapper(newObj.get());
+    cacheAndInitializeWrapper(newObj.get(), widget);
     return newObj.get();
 }
 
@@ -606,12 +680,7 @@ AccessibilityObject* AXObjectCache::getOrCreate(Node* node)
     // Will crash later if we have two objects for the same node.
     ASSERT(!get(node));
 
-    getAXID(newObj.get());
-
-    m_nodeObjectMapping.set(node, newObj->axObjectID());
-    m_objects.set(newObj->axObjectID(), newObj);
-    newObj->init();
-    attachWrapper(newObj.get());
+    cacheAndInitializeWrapper(newObj.get(), node);
     newObj->setLastKnownIsIgnoredValue(newObj->accessibilityIsIgnored());
     // Sometimes asking accessibilityIsIgnored() will cause the newObject to be deallocated, and then
     // it will disappear when this function is finished, leading to a use-after-free.
@@ -634,12 +703,7 @@ AccessibilityObject* AXObjectCache::getOrCreate(RenderObject* renderer)
     // Will crash later if we have two objects for the same renderer.
     ASSERT(!get(renderer));
 
-    getAXID(newObj.get());
-
-    m_renderObjectMapping.set(renderer, newObj->axObjectID());
-    m_objects.set(newObj->axObjectID(), newObj);
-    newObj->init();
-    attachWrapper(newObj.get());
+    cacheAndInitializeWrapper(newObj.get(), renderer);
     newObj->setLastKnownIsIgnoredValue(newObj->accessibilityIsIgnored());
     // Sometimes asking accessibilityIsIgnored() will cause the newObject to be deallocated, and then
     // it will disappear when this function is finished, leading to a use-after-free.
@@ -649,12 +713,71 @@ AccessibilityObject* AXObjectCache::getOrCreate(RenderObject* renderer)
     return newObj.get();
 }
 
-AccessibilityObject* AXObjectCache::rootObject()
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+bool AXObjectCache::clientSupportsIsolatedTree()
+{
+    if (!RuntimeEnabledFeatures::sharedFeatures().isAccessibilityIsolatedTreeEnabled())
+        return false;
+
+    AXClientType type = _AXGetClientForCurrentRequestUntrusted();
+    // FIXME: Remove unknown client before setting isAccessibilityIsolatedTreeEnabled initial value = true.
+    return type == kAXClientTypeVoiceOver
+        || type == kAXClientTypeUnknown;
+}
+#endif
+
+AXCoreObject* AXObjectCache::rootObject()
 {
     if (!gAccessibilityEnabled)
         return nullptr;
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (clientSupportsIsolatedTree())
+        return isolatedTreeRootObject();
+#endif
+
     return getOrCreate(m_document.view());
+}
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+AXCoreObject* AXObjectCache::isolatedTreeRootObject()
+{
+    if (!m_pageID)
+        return nullptr;
+
+    auto tree = AXIsolatedTree::treeForPageID(*m_pageID);
+    if (!tree) {
+        tree = Accessibility::retrieveValueFromMainThread<RefPtr<AXIsolatedTree>>([this] () -> RefPtr<AXIsolatedTree> {
+            return generateIsolatedTree(*m_pageID, m_document);
+        });
+
+        // Now that we have created our tree, initialize the secondary thread,
+        // so future requests come in on the other thread.
+        _AXUIElementUseSecondaryAXThread(true);
+    }
+
+    if (tree)
+        return tree->rootNode().get();
+
+    // Should not get here, couldn't create the IsolatedTree.
+    ASSERT_NOT_REACHED();
+    return nullptr;
+}
+#endif
+
+bool AXObjectCache::canUseSecondaryAXThread()
+{
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE) && PLATFORM(MAC)
+    if (_AXUIElementRequestServicedBySecondaryAXThread())
+        return true;
+
+    // _AXUIElementRequestServicedBySecondaryAXThread returns false for
+    // LayoutTests, but we still want to run LayoutTests using isolated tree on
+    // a secondary thread to simulate the actual execution.
+    return clientSupportsIsolatedTree();
+#else
+    return false;
+#endif
 }
 
 AccessibilityObject* AXObjectCache::rootObjectForFrame(Frame* frame)
@@ -669,7 +792,7 @@ AccessibilityObject* AXObjectCache::rootObjectForFrame(Frame* frame)
 
 AccessibilityObject* AXObjectCache::getOrCreate(AccessibilityRole role)
 {
-    RefPtr<AccessibilityObject> obj = nullptr;
+    RefPtr<AccessibilityObject> obj;
 
     // will be filled in...
     switch (role) {
@@ -704,14 +827,10 @@ AccessibilityObject* AXObjectCache::getOrCreate(AccessibilityRole role)
         obj = nullptr;
     }
 
-    if (obj)
-        getAXID(obj.get());
-    else
+    if (!obj)
         return nullptr;
 
-    m_objects.set(obj->axObjectID(), obj);
-    obj->init();
-    attachWrapper(obj.get());
+    cacheAndInitializeWrapper(obj.get());
     return obj.get();
 }
 
@@ -720,20 +839,20 @@ void AXObjectCache::remove(AXID axID)
     if (!axID)
         return;
 
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (m_pageID) {
+        if (auto tree = AXIsolatedTree::treeForPageID(*m_pageID))
+            tree->removeNode(axID);
+    }
+#endif
+
     auto object = m_objects.take(axID);
     if (!object)
         return;
 
-    detachWrapper(object.get(), AccessibilityDetachmentType::ElementDestroyed);
-    object->detach(AccessibilityDetachmentType::ElementDestroyed, this);
-    object->setAXObjectID(0);
+    object->detach(AccessibilityDetachmentType::ElementDestroyed);
 
     m_idsInUse.remove(axID);
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-    if (auto pageID = m_document.pageID())
-        AXIsolatedTree::treeForPageID(*pageID)->removeNode(axID);
-#endif
-
     ASSERT(m_objects.size() >= m_idsInUse.size());
 }
 
@@ -758,6 +877,12 @@ void AXObjectCache::remove(Node& node)
     m_deferredFocusedNodeChange.removeAllMatching([&node](auto& entry) -> bool {
         return entry.second == &node;
     });
+    // Set nullptr to the old focused node if it is being removed.
+    std::for_each(m_deferredFocusedNodeChange.begin(), m_deferredFocusedNodeChange.end(), [&node](auto& entry) {
+        if (entry.first == &node)
+            entry.first = nullptr;
+    });
+
     removeNodeForUse(node);
 
     remove(m_nodeObjectMapping.take(&node));
@@ -797,7 +922,7 @@ AXID AXObjectCache::platformGenerateAXID() const
 AXID AXObjectCache::getAXID(AccessibilityObject* obj)
 {
     // check for already-assigned ID
-    AXID objID = obj->axObjectID();
+    AXID objID = obj->objectID();
     if (objID) {
         ASSERT(m_idsInUse.contains(objID));
         return objID;
@@ -806,7 +931,7 @@ AXID AXObjectCache::getAXID(AccessibilityObject* obj)
     objID = platformGenerateAXID();
 
     m_idsInUse.add(objID);
-    obj->setAXObjectID(objID);
+    obj->setObjectID(objID);
 
     return objID;
 }
@@ -879,12 +1004,12 @@ void AXObjectCache::childrenChanged(RenderObject* renderer, RenderObject* newChi
     childrenChanged(get(renderer));
 }
 
-void AXObjectCache::childrenChanged(AccessibilityObject* obj)
+void AXObjectCache::childrenChanged(AXCoreObject* obj)
 {
     if (!obj)
         return;
 
-    m_deferredChildredChangedList.add(obj);
+    m_deferredChildrenChangedList.add(obj);
 }
 
 void AXObjectCache::notificationPostTimerFired()
@@ -897,8 +1022,8 @@ void AXObjectCache::notificationPostTimerFired()
     auto notifications = WTFMove(m_notificationsToPost);
 
     for (const auto& note : notifications) {
-        AccessibilityObject* obj = note.first.get();
-        if (!obj->axObjectID())
+        AXCoreObject* obj = note.first.get();
+        if (!obj->objectID())
             continue;
 
         if (!obj->axObjectCache())
@@ -986,7 +1111,7 @@ void AXObjectCache::postNotification(Node* node, AXNotification notification, Po
     postNotification(object.get(), &node->document(), notification, postTarget, postType);
 }
 
-void AXObjectCache::postNotification(AccessibilityObject* object, Document* document, AXNotification notification, PostTarget postTarget, PostType postType)
+void AXObjectCache::postNotification(AXCoreObject* object, Document* document, AXNotification notification, PostTarget postTarget, PostType postType)
 {
     stopCachingComputedObjectAttributes();
 
@@ -1038,6 +1163,10 @@ void AXObjectCache::deferFocusedUIElementChangeIfNeeded(Node* oldNode, Node* new
 
 void AXObjectCache::handleFocusedUIElementChanged(Node* oldNode, Node* newNode)
 {
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    setIsolatedTreeFocusedObject(newNode);
+#endif
+
     handleMenuItemSelected(newNode);
     platformHandleFocusedUIElementChanged(oldNode, newNode);
 }
@@ -1496,6 +1625,8 @@ void AXObjectCache::handleAttributeChange(const QualifiedName& attrName, Element
         textChanged(element);
     else if (attrName == forAttr && is<HTMLLabelElement>(*element))
         labelChanged(element);
+    else if (attrName == tabindexAttr)
+        childrenChanged(element->parentNode(), element);
 
     if (!attrName.localName().string().startsWith("aria-"))
         return;
@@ -1932,7 +2063,7 @@ void AXObjectCache::setTextMarkerDataWithCharacterOffset(TextMarkerData& textMar
         vpOffset = deepPos.deprecatedEditingOffset();
     }
 
-    textMarkerData.axID = obj.get()->axObjectID();
+    textMarkerData.axID = obj.get()->objectID();
     textMarkerData.node = domNode;
     textMarkerData.characterOffset = characterOffset.offset;
     textMarkerData.characterStartIndex = characterOffset.startIndex;
@@ -2226,7 +2357,7 @@ Optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const V
     TextMarkerData textMarkerData;
     memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
 
-    textMarkerData.axID = obj.get()->axObjectID();
+    textMarkerData.axID = obj.get()->objectID();
     textMarkerData.node = domNode;
     textMarkerData.offset = deepPos.deprecatedEditingOffset();
     textMarkerData.affinity = visiblePos.affinity();
@@ -2258,7 +2389,7 @@ Optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextCont
     TextMarkerData textMarkerData;
     memset(static_cast<void*>(&textMarkerData), 0, sizeof(TextMarkerData));
 
-    textMarkerData.axID = obj.get()->axObjectID();
+    textMarkerData.axID = obj.get()->objectID();
     textMarkerData.node = &textControl;
 
     cache->setNodeInUse(&textControl);
@@ -2389,8 +2520,12 @@ static UChar32 characterForCharacterOffset(const CharacterOffset& characterOffse
 
     UChar32 ch = 0;
     unsigned offset = characterOffset.startIndex + characterOffset.offset;
-    if (offset < characterOffset.node->textContent().length())
+    if (offset < characterOffset.node->textContent().length()) {
+// FIXME: Remove IGNORE_CLANG_WARNINGS macros once one of <rdar://problem/58615489&58615391> is fixed.
+IGNORE_CLANG_WARNINGS_BEGIN("conditional-uninitialized")
         U16_NEXT(characterOffset.node->textContent(), offset, characterOffset.node->textContent().length(), ch);
+IGNORE_CLANG_WARNINGS_END
+    }
     return ch;
 }
 
@@ -2703,7 +2838,7 @@ IntRect AXObjectCache::absoluteCaretBoundsForCharacterOffset(const CharacterOffs
     return absoluteBoundsForLocalCaretRect(caretPainter, localRect);
 }
 
-CharacterOffset AXObjectCache::characterOffsetForPoint(const IntPoint &point, AccessibilityObject* obj)
+CharacterOffset AXObjectCache::characterOffsetForPoint(const IntPoint &point, AXCoreObject* obj)
 {
     if (!obj)
         return CharacterOffset();
@@ -2769,7 +2904,7 @@ CharacterOffset AXObjectCache::startCharacterOffsetOfLine(const CharacterOffset&
     return characterOffsetFromVisiblePosition(startLine);
 }
 
-CharacterOffset AXObjectCache::characterOffsetForIndex(int index, const AccessibilityObject* obj)
+CharacterOffset AXObjectCache::characterOffsetForIndex(int index, const AXCoreObject* obj)
 {
     if (!obj)
         return CharacterOffset();
@@ -2903,9 +3038,9 @@ void AXObjectCache::performDeferredCacheUpdate()
     }
     m_deferredChildrenChangedNodeList.clear();
 
-    for (auto& child : m_deferredChildredChangedList)
+    for (auto& child : m_deferredChildrenChangedList)
         child->childrenChanged();
-    m_deferredChildredChangedList.clear();
+    m_deferredChildrenChangedList.clear();
 
     for (auto* node : m_deferredTextChangedList)
         textChanged(node);
@@ -2939,34 +3074,47 @@ void AXObjectCache::performDeferredCacheUpdate()
 }
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-Ref<AXIsolatedTreeNode> AXObjectCache::createIsolatedAccessibilityTreeHierarchy(AccessibilityObject& object, AXID parentID, AXIsolatedTree& tree, Vector<Ref<AXIsolatedTreeNode>>& nodeChanges)
+Ref<AXIsolatedObject> AXObjectCache::createIsolatedTreeHierarchy(AXCoreObject& object, AXID parentID, AXObjectCache* axObjectCache, AXIsolatedTree& tree, Vector<Ref<AXIsolatedObject>>& nodeChanges, bool isRoot)
 {
-    auto isolatedTreeNode = AXIsolatedTreeNode::create(object);
+    auto isolatedTreeNode = AXIsolatedObject::create(object, isRoot);
     nodeChanges.append(isolatedTreeNode.copyRef());
 
+    isolatedTreeNode->setTreeIdentifier(tree.treeIdentifier());
     isolatedTreeNode->setParent(parentID);
-    associateIsolatedTreeNode(object, isolatedTreeNode, tree.treeIdentifier());
+    axObjectCache->attachWrapper(&isolatedTreeNode.get(), object.wrapper());
 
-    for (auto child : object.children()) {
-        auto staticChild = createIsolatedAccessibilityTreeHierarchy(*child, isolatedTreeNode->identifier(), tree, nodeChanges);
-        isolatedTreeNode->appendChild(staticChild->identifier());
+    for (const auto& child : object.children()) {
+        auto staticChild = createIsolatedTreeHierarchy(*child, isolatedTreeNode->objectID(), axObjectCache, tree, nodeChanges, false);
+        isolatedTreeNode->appendChild(staticChild->objectID());
     }
 
     return isolatedTreeNode;
 }
 
-Ref<AXIsolatedTree> AXObjectCache::generateIsolatedAccessibilityTree()
+Ref<AXIsolatedTree> AXObjectCache::generateIsolatedTree(PageIdentifier pageID, Document& document)
 {
     RELEASE_ASSERT(isMainThread());
 
-    auto tree = AXIsolatedTree::treeForPageID(*m_document.pageID());
-    if (!tree)
-        tree = AXIsolatedTree::createTreeForPageID(*m_document.pageID());
+    RefPtr<AXIsolatedTree> tree(AXIsolatedTree::createTreeForPageID(pageID));
 
-    Vector<Ref<AXIsolatedTreeNode>> nodeChanges;
-    auto root = createIsolatedAccessibilityTreeHierarchy(*rootObject(), InvalidAXID, *tree, nodeChanges);
-    tree->setRootNodeID(root->identifier());
-    tree->appendNodeChanges(nodeChanges);
+    // Set the root and focused objects in the isolated tree. For that, we need
+    // the root and the focused object in the AXObject tree.
+    auto* axObjectCache = document.axObjectCache();
+    if (!axObjectCache)
+        return makeRef(*tree);
+    tree->setAXObjectCache(axObjectCache);
+
+    auto* axRoot = axObjectCache->getOrCreate(document.view());
+    if (axRoot) {
+        Vector<Ref<AXIsolatedObject>> nodeChanges;
+        auto isolatedRoot = createIsolatedTreeHierarchy(*axRoot, InvalidAXID, axObjectCache, *tree, nodeChanges, true);
+        tree->setRootNode(isolatedRoot);
+        tree->appendNodeChanges(nodeChanges);
+    }
+
+    auto* axFocus = axObjectCache->focusedObject(document);
+    if (axFocus)
+        tree->setFocusedNodeID(axFocus->objectID());
 
     return makeRef(*tree);
 }
@@ -3059,7 +3207,7 @@ bool isNodeAriaVisible(Node* node)
 
 AccessibilityObject* AXObjectCache::rootWebArea()
 {
-    AccessibilityObject* rootObject = this->rootObject();
+    AXCoreObject* rootObject = this->rootObject();
     if (!rootObject || !rootObject->isAccessibilityScrollView())
         return nullptr;
     return downcast<AccessibilityScrollView>(*rootObject).webAreaObject();

@@ -52,7 +52,7 @@ template <typename T> class SingleRootGraph;
 namespace JSC {
 
 class CodeBlock;
-class ExecState;
+class CallFrame;
 
 namespace DFG {
 
@@ -441,7 +441,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object->globalExec(), NotStrictMode));
+        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object, NotStrictMode));
     }
 
     ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
@@ -840,13 +840,13 @@ public:
     // Quickly query if a single local is live at the given point. This is faster than calling
     // forAllLiveInBytecode() if you will only query one local. But, if you want to know all of the
     // locals live, then calling this for each local is much slower than forAllLiveInBytecode().
-    bool isLiveInBytecode(VirtualRegister, CodeOrigin);
+    bool isLiveInBytecode(Operand, CodeOrigin);
 
-    // Quickly get all of the non-argument locals live at the given point. This doesn't give you
+    // Quickly get all of the non-argument locals and tmps live at the given point. This doesn't give you
     // any arguments because those are all presumed live. You can call forAllLiveInBytecode() to
     // also get the arguments. This is much faster than calling isLiveInBytecode() for each local.
     template<typename Functor>
-    void forAllLocalsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
+    void forAllLocalsAndTmpsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
         // Support for not redundantly reporting arguments. Necessary because in case of a varargs
         // call, only the callee knows that arguments are live while in the case of a non-varargs
@@ -856,6 +856,7 @@ public:
 
         CodeOrigin* codeOriginPtr = &codeOrigin;
 
+        bool isCallerOrigin = false;
         for (;;) {
             InlineCallFrame* inlineCallFrame = codeOriginPtr->inlineCallFrame();
             VirtualRegister stackOffset(inlineCallFrame ? inlineCallFrame->stackOffset : 0);
@@ -864,12 +865,12 @@ public:
                 if (inlineCallFrame->isClosureCall)
                     functor(stackOffset + CallFrameSlot::callee);
                 if (inlineCallFrame->isVarargs())
-                    functor(stackOffset + CallFrameSlot::argumentCount);
+                    functor(stackOffset + CallFrameSlot::argumentCountIncludingThis);
             }
 
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
-            const FastBitVector& liveness = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex());
+            const auto& livenessAtBytecode = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex(), appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
             for (unsigned relativeLocal = codeBlock->numCalleeLocals(); relativeLocal--;) {
                 VirtualRegister reg = stackOffset + virtualRegisterForLocal(relativeLocal);
 
@@ -877,8 +878,16 @@ public:
                 if (reg >= exclusionStart && reg < exclusionEnd)
                     continue;
 
-                if (liveness[relativeLocal])
+                if (livenessAtBytecode[relativeLocal])
                     functor(reg);
+            }
+
+            if (codeOriginPtr->bytecodeIndex().checkpoint()) {
+                ASSERT(codeBlock->numTmps());
+                auto liveTmps = tmpLivenessForCheckpoint(*codeBlock, codeOriginPtr->bytecodeIndex());
+                liveTmps.forEachSetBit([&] (size_t tmp) {
+                    functor(remapOperand(inlineCallFrame, Operand::tmp(tmp)));
+                });
             }
 
             if (!inlineCallFrame)
@@ -899,23 +908,54 @@ public:
             // We need to handle tail callers because we may decide to exit to the
             // the return bytecode following the tail call.
             codeOriginPtr = &inlineCallFrame->directCaller;
+            isCallerOrigin = true;
         }
     }
 
-    // Get a BitVector of all of the non-argument locals live right now. This is mostly useful if
+    // Get a BitVector of all of the locals and tmps live right now. This is mostly useful if
     // you want to compare two sets of live locals from two different CodeOrigins.
-    BitVector localsLiveInBytecode(CodeOrigin);
+    BitVector localsAndTmpsLiveInBytecode(CodeOrigin);
 
-    // Tells you all of the arguments and locals live at the given CodeOrigin. This is a small
-    // extension to forAllLocalsLiveInBytecode(), since all arguments are always presumed live.
+    LivenessCalculationPoint appropriateLivenessCalculationPoint(CodeOrigin origin, bool isCallerOrigin)
+    {
+        if (isCallerOrigin) {
+            // We do not need to keep used registers of call bytecodes live when terminating in inlined function,
+            // except for inlining invoked by non call bytecodes including getter/setter calls.
+            BytecodeIndex bytecodeIndex = origin.bytecodeIndex();
+            InlineCallFrame* inlineCallFrame = origin.inlineCallFrame();
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            auto instruction = codeBlock->instructions().at(bytecodeIndex.offset());
+            switch (instruction->opcodeID()) {
+            case op_call_varargs:
+            case op_tail_call_varargs:
+            case op_construct_varargs:
+                // When inlining varargs call, uses include array used for varargs. But when we are in inlined function,
+                // the content of this is already read and flushed to the stack. So, at this point, we no longer need to
+                // keep these use registers. We can use the liveness at LivenessCalculationPoint::AfterUse point.
+                // This is important to kill arguments allocations in DFG (not in FTL) when calling a function in a
+                // `func.apply(undefined, arguments)` manner.
+                return LivenessCalculationPoint::AfterUse;
+            default:
+                // We could list up the other bytecodes here, like, `op_call`, `op_get_by_id` (getter inlining). But we don't do that.
+                // To list up bytecodes here, we must ensure that these bytecodes never use `uses` registers after inlining. So we cannot
+                // return LivenessCalculationPoint::AfterUse blindly if isCallerOrigin = true. And since excluding liveness in the other
+                // bytecodes does not offer practical benefit, we do not try it.
+                break;
+            }
+        }
+        return LivenessCalculationPoint::BeforeUse;
+    }
+
+    // Tells you all of the operands live at the given CodeOrigin. This is a small
+    // extension to forAllLocalsOrTmpsLiveInBytecode(), since all arguments are always presumed live.
     template<typename Functor>
     void forAllLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
-        forAllLocalsLiveInBytecode(codeOrigin, functor);
+        forAllLocalsAndTmpsLiveInBytecode(codeOrigin, functor);
 
         // Report all arguments as being live.
         for (unsigned argument = block(0)->variablesAtHead.numberOfArguments(); argument--;)
-            functor(virtualRegisterForArgument(argument));
+            functor(virtualRegisterForArgumentIncludingThis(argument));
     }
 
     BytecodeKills& killsFor(CodeBlock*);
@@ -1082,6 +1122,7 @@ public:
     std::unique_ptr<BackwardsCFG> m_backwardsCFG;
     std::unique_ptr<BackwardsDominators> m_backwardsDominators;
     std::unique_ptr<ControlEquivalenceAnalysis> m_controlEquivalenceAnalysis;
+    unsigned m_tmps;
     unsigned m_localVars;
     unsigned m_nextMachineLocal;
     unsigned m_parameterSlots;
@@ -1094,7 +1135,7 @@ public:
 
     // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
     // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
-    HashMap<unsigned, unsigned> m_entrypointIndexToCatchBytecodeOffset;
+    HashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
 
     HashSet<String> m_localStrings;
     HashMap<const StringImpl*, String> m_copiedStrings;
@@ -1120,6 +1161,8 @@ public:
 
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
+
+    HashSet<Node*> m_slowGetByVal;
 
 private:
     bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);

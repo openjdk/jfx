@@ -398,6 +398,13 @@ JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1pointer_1to_1offset)
     return (jlong)g_utf8_pointer_to_offset((const gchar *)str, (const gchar *)pos);
 }
 
+JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1strlen)
+    (JNIEnv *env, jclass that, jlong str, jlong pos)
+{
+    if (!str) return 0;
+    return (jlong)g_utf8_strlen((const gchar *)str, (const gchar *)pos);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)
     (JNIEnv *env, jclass that, jcharArray str)
 {

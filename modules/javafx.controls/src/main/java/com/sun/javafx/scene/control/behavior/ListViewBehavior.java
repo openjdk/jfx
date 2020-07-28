@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -219,15 +219,19 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         ListView<T> control = getNode();
 
         ListCellBehavior.removeAnchor(control);
+        control.selectionModelProperty().removeListener(weakSelectionModelListener);
+        if (control.getSelectionModel() != null) {
+            control.getSelectionModel().getSelectedIndices().removeListener(weakSelectedIndicesListener);
+        }
+        control.itemsProperty().removeListener(weakItemsListener);
+        if (control.getItems() != null) {
+            control.getItems().removeListener(weakItemsListListener);
+        }
+
         if (tlFocus != null) tlFocus.dispose();
+        control.removeEventFilter(KeyEvent.ANY, keyEventListener);
         super.dispose();
-
-        control.removeEventHandler(KeyEvent.ANY, keyEventListener);
     }
-
-
-
-
 
     /**************************************************************************
      *                         State and Functions                            *

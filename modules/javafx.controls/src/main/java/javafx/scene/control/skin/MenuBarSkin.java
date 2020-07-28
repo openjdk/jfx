@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -300,17 +300,15 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             }
         };
         menuBarFocusedPropertyListener = (ov, t, t1) -> {
-            if (t1) {
+            unSelectMenus();
+            if (t1 && !container.getChildren().isEmpty()) {
                 // RT-23147 when MenuBar's focusTraversable is true the first
                 // menu will visually indicate focus
-                unSelectMenus();
                 menuModeStart(0);
                 openMenuButton = ((MenuBarButton)container.getChildren().get(0));
                 setFocusedMenuIndex(0);
                 openMenuButton.setHover();
-            } else {
-                unSelectMenus();
-             }
+            }
          };
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
         Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
@@ -473,11 +471,14 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         }
     }
 
-    private void setFocusedMenuIndex(int index) {
-        this.focusedMenuIndex = index;
-        focusedMenu = index == -1 ? null : getSkinnable().getMenus().get(index);
+    /**
+     * This method is package scoped as it is used in this class as well as for testing
+     */
+    void setFocusedMenuIndex(int index) {
+        focusedMenuIndex = (index >= -1 && index < getSkinnable().getMenus().size()) ? index : -1;
+        focusedMenu = (focusedMenuIndex != -1) ? getSkinnable().getMenus().get(index) : null;
 
-        if (focusedMenu != null && focusedMenuIndex != -1) {
+        if (focusedMenuIndex != -1) {
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
             openMenuButton.setHover();
         }

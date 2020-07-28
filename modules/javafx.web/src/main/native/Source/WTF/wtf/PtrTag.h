@@ -103,10 +103,10 @@ constexpr PtrTag AnyPtrTag = static_cast<PtrTag>(-1); // Only used for assertion
 WTF_EXPORT_PRIVATE void registerPtrTagLookup(PtrTagLookup*);
 WTF_EXPORT_PRIVATE void reportBadTag(const void*, PtrTag expectedTag);
 
-#if ASSERT_DISABLED
-constexpr bool enablePtrTagDebugAssert = false;
-#else
+#if ASSERT_ENABLED
 constexpr bool enablePtrTagDebugAssert = true;
+#else
+constexpr bool enablePtrTagDebugAssert = false;
 #endif
 
 #define WTF_PTRTAG_ASSERT(action, ptr, expectedTag, assertion) \
@@ -263,7 +263,7 @@ inline PtrType retagCodePtrImpl(PtrType ptr, PtrTag oldTag, PtrTag newTag)
     if (!ptr)
         return nullptr;
     PtrTagAction untagAction = (tagAction == PtrTagAction::NoAssert) ? PtrTagAction::NoAssert : PtrTagAction::ReleaseAssert;
-    WTF_PTRTAG_ASSERT(untagAction, ptr, oldTag, removeCodePtrTag(ptr) == untagCodePtrImpl<PtrTagAction::NoAssert>(ptr, oldTag));
+    WTF_PTRTAG_ASSERT(untagAction, ptr, oldTag, ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), oldTag));
     PtrType result = retagCodePtrImplHelper<tagAction>(ptr, oldTag, newTag);
     WTF_PTRTAG_ASSERT(tagAction, ptr, newTag, result == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), newTag));
     return result;
@@ -295,7 +295,7 @@ inline PtrType tagCFunctionPtrImpl(PtrType ptr, PtrTag tag)
 {
     if (!ptr)
         return nullptr;
-    WTF_PTRTAG_ASSERT(tagAction, ptr, CFunctionPtrTag, removeCodePtrTag(ptr) == untagCodePtrImpl<PtrTagAction::NoAssert>(ptr, CFunctionPtrTag));
+    WTF_PTRTAG_ASSERT(tagAction, ptr, CFunctionPtrTag, ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), CFunctionPtrTag));
     return retagCodePtrImpl<tagAction>(ptr, CFunctionPtrTag, tag);
 }
 
@@ -325,7 +325,7 @@ inline PtrType untagCFunctionPtrImpl(PtrType ptr, PtrTag tag)
 {
     if (!ptr)
         return nullptr;
-    WTF_PTRTAG_ASSERT(tagAction, ptr, tag, removeCodePtrTag(ptr) == untagCodePtrImpl<PtrTagAction::NoAssert>(ptr, tag));
+    WTF_PTRTAG_ASSERT(tagAction, ptr, tag, ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), tag));
     return retagCodePtrImpl<tagAction>(ptr, tag, CFunctionPtrTag);
 }
 
@@ -367,7 +367,7 @@ template<typename PtrType>
 void assertIsCFunctionPtr(PtrType value)
 {
     void* ptr = bitwise_cast<void*>(value);
-    WTF_PTRTAG_ASSERT(PtrTagAction::ReleaseAssert, ptr, CFunctionPtrTag, untagCodePtrImpl<PtrTagAction::NoAssert>(ptr, CFunctionPtrTag) == removeCodePtrTag(ptr));
+    WTF_PTRTAG_ASSERT(PtrTagAction::ReleaseAssert, ptr, CFunctionPtrTag, ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), CFunctionPtrTag));
 }
 
 template<typename PtrType>
@@ -404,7 +404,7 @@ bool isTaggedWith(PtrType value, PtrTag tag)
     void* ptr = bitwise_cast<void*>(value);
     if (tag == NoPtrTag)
         return ptr == removeCodePtrTag(ptr);
-    return untagCodePtrImpl<PtrTagAction::NoAssert>(ptr, tag) == removeCodePtrTag(ptr);
+    return ptr == tagCodePtrImpl<PtrTagAction::NoAssert>(removeCodePtrTag(ptr), tag);
 }
 
 template<typename PtrType>

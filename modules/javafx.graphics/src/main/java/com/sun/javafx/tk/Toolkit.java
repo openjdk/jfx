@@ -110,6 +110,7 @@ public abstract class Toolkit {
 
     private static final String[] msLibNames = {
         "api-ms-win-core-console-l1-1-0",
+        "api-ms-win-core-console-l1-2-0",
         "api-ms-win-core-datetime-l1-1-0",
         "api-ms-win-core-debug-l1-1-0",
         "api-ms-win-core-errorhandling-l1-1-0",
@@ -153,8 +154,8 @@ public abstract class Toolkit {
 
         // Finally load VS 2017 DLLs in the following order
         "vcruntime140",
-        "msvcp140",
-        "concrt140"
+        "vcruntime140_1",
+        "msvcp140"
 };
 
     private static String lookupToolkitClass(String name) {
@@ -207,7 +208,7 @@ public abstract class Toolkit {
             return null;
         });
 
-        // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+        // Load required Microsoft runtime DLLs on Windows platforms
         if (PlatformUtil.isWindows()) {
             loadMSWindowsLibraries();
         }

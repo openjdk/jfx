@@ -135,8 +135,6 @@ bool RangeInputType::isSteppable() const
     return true;
 }
 
-#if !PLATFORM(IOS_FAMILY)
-
 void RangeInputType::handleMouseDownEvent(MouseEvent& event)
 {
     ASSERT(element());
@@ -154,8 +152,6 @@ void RangeInputType::handleMouseDownEvent(MouseEvent& event)
         return;
     thumb.dragFrom(event.absoluteLocation());
 }
-
-#endif
 
 #if ENABLE(TOUCH_EVENTS)
 void RangeInputType::handleTouchEvent(TouchEvent& event)
@@ -329,7 +325,7 @@ void RangeInputType::accessKeyAction(bool sendMouseEvents)
 void RangeInputType::attributeChanged(const QualifiedName& name)
 {
     // FIXME: Don't we need to do this work for precisionAttr too?
-    if (name == maxAttr || name == minAttr) {
+    if (name == maxAttr || name == minAttr || name == valueAttr) {
         // Sanitize the value.
         if (auto* element = this->element()) {
             if (element->hasDirtyValue())

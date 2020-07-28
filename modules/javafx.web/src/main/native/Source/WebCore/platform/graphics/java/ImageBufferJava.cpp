@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,11 +179,6 @@ RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, PreserveResolution) const
         m_data.m_image,
         m_data.m_context->platformContext()->rq_ref(),
         m_size.width(), m_size.height());
-}
-
-BackingStoreCopy ImageBuffer::fastCopyImageMode()
-{
-    return CopyBackingStore; // todo tav revise
 }
 
 void ImageBuffer::platformTransformColorSpace(const std::array<uint8_t, 256>&)

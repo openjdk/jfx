@@ -38,13 +38,13 @@
 #include "DOMWrapperWorld.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
+#include "InspectorAnimationAgent.h"
 #include "InspectorApplicationCacheAgent.h"
 #include "InspectorCPUProfilerAgent.h"
 #include "InspectorCSSAgent.h"
 #include "InspectorCanvasAgent.h"
 #include "InspectorClient.h"
 #include "InspectorDOMAgent.h"
-#include "InspectorDOMDebuggerAgent.h"
 #include "InspectorDOMStorageAgent.h"
 #include "InspectorDatabaseAgent.h"
 #include "InspectorDatabaseResource.h"
@@ -64,12 +64,14 @@
 #include "Page.h"
 #include "PageAuditAgent.h"
 #include "PageConsoleAgent.h"
+#include "PageDOMDebuggerAgent.h"
 #include "PageDebuggerAgent.h"
 #include "PageHeapAgent.h"
 #include "PageNetworkAgent.h"
 #include "PageRuntimeAgent.h"
 #include "PageScriptDebugServer.h"
 #include "Settings.h"
+#include "SharedBuffer.h"
 #include "WebInjectedScriptHost.h"
 #include "WebInjectedScriptManager.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
@@ -162,7 +164,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<PageNetworkAgent>(pageContext));
     m_agents.append(makeUnique<InspectorCSSAgent>(pageContext));
     ensureDOMAgent();
-    m_agents.append(makeUnique<InspectorDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
+    m_agents.append(makeUnique<PageDOMDebuggerAgent>(pageContext, debuggerAgentPtr));
     m_agents.append(makeUnique<InspectorApplicationCacheAgent>(pageContext));
     m_agents.append(makeUnique<InspectorLayerTreeAgent>(pageContext));
     m_agents.append(makeUnique<InspectorWorkerAgent>(pageContext));
@@ -184,6 +186,7 @@ void InspectorController::createLazyAgents()
     m_agents.append(makeUnique<PageAuditAgent>(pageContext));
     m_agents.append(makeUnique<InspectorCanvasAgent>(pageContext));
     m_agents.append(makeUnique<InspectorTimelineAgent>(pageContext));
+    m_agents.append(makeUnique<InspectorAnimationAgent>(pageContext));
 
     if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
         commandLineAPIHost->init(m_instrumentingAgents.copyRef());
@@ -343,17 +346,6 @@ void InspectorController::show()
         connectFrontend(*frontendChannel);
 }
 
-void InspectorController::setIsUnderTest(bool value)
-{
-    if (value == m_isUnderTest)
-        return;
-
-    m_isUnderTest = value;
-
-    // <rdar://problem/26768628> Try to catch suspicious scenarios where we may have a dangling frontend while running tests.
-    RELEASE_ASSERT(!m_isUnderTest || !m_frontendRouter->hasFrontends());
-}
-
 void InspectorController::evaluateForTestInFrontend(const String& script)
 {
     ensureInspectorAgent().evaluateForTestInFrontend(script);
@@ -456,15 +448,15 @@ bool InspectorController::developerExtrasEnabled() const
     return m_page.settings().developerExtrasEnabled();
 }
 
-bool InspectorController::canAccessInspectedScriptState(JSC::ExecState* scriptState) const
+bool InspectorController::canAccessInspectedScriptState(JSC::JSGlobalObject* lexicalGlobalObject) const
 {
-    JSLockHolder lock(scriptState);
+    JSLockHolder lock(lexicalGlobalObject);
 
-    JSDOMWindow* inspectedWindow = toJSDOMWindow(scriptState->vm(), scriptState->lexicalGlobalObject());
+    JSDOMWindow* inspectedWindow = toJSDOMWindow(lexicalGlobalObject->vm(), lexicalGlobalObject);
     if (!inspectedWindow)
         return false;
 
-    return BindingSecurity::shouldAllowAccessToDOMWindow(scriptState, inspectedWindow->wrapped(), DoNotReportSecurityError);
+    return BindingSecurity::shouldAllowAccessToDOMWindow(lexicalGlobalObject, inspectedWindow->wrapped(), DoNotReportSecurityError);
 }
 
 InspectorFunctionCallHandler InspectorController::functionCallHandler() const

@@ -37,20 +37,19 @@
 #include "WasmMemory.h"
 #include "WasmModule.h"
 #include "WasmPlan.h"
-#include "WebAssemblyToJSCallee.h"
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
 const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyModule) };
 
-JSWebAssemblyModule* JSWebAssemblyModule::createStub(VM& vm, ExecState* exec, Structure* structure, Wasm::Module::ValidationResult&& result)
+JSWebAssemblyModule* JSWebAssemblyModule::createStub(VM& vm, JSGlobalObject* globalObject, Structure* structure, Wasm::Module::ValidationResult&& result)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (!result.has_value()) {
-        auto* error = JSWebAssemblyCompileError::create(exec, vm, structure->globalObject()->webAssemblyCompileErrorStructure(), result.error());
+        auto* error = JSWebAssemblyCompileError::create(globalObject, vm, structure->globalObject()->webAssemblyCompileErrorStructure(), result.error());
         RETURN_IF_EXCEPTION(scope, nullptr);
-        throwException(exec, scope, error);
+        throwException(globalObject, scope, error);
         return nullptr;
     }
 
@@ -61,7 +60,7 @@ JSWebAssemblyModule* JSWebAssemblyModule::createStub(VM& vm, ExecState* exec, St
 
 Structure* JSWebAssemblyModule::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(WebAssemblyModuleType, StructureFlags), info());
 }
 
 
@@ -86,7 +85,6 @@ void JSWebAssemblyModule::finishCreation(VM& vm)
     }
 
     m_exportSymbolTable.set(vm, this, exportSymbolTable);
-    m_callee.set(vm, this, WebAssemblyToJSCallee::create(vm, globalObject(vm)->webAssemblyToJSCalleeStructure(), this));
 }
 
 void JSWebAssemblyModule::destroy(JSCell* cell)
@@ -108,11 +106,6 @@ SymbolTable* JSWebAssemblyModule::exportSymbolTable() const
 Wasm::SignatureIndex JSWebAssemblyModule::signatureIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const
 {
     return m_module->signatureIndexFromFunctionIndexSpace(functionIndexSpace);
-}
-
-WebAssemblyToJSCallee* JSWebAssemblyModule::callee() const
-{
-    return m_callee.get();
 }
 
 JSWebAssemblyCodeBlock* JSWebAssemblyModule::codeBlock(Wasm::MemoryMode mode)
@@ -137,7 +130,6 @@ void JSWebAssemblyModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_exportSymbolTable);
-    visitor.append(thisObject->m_callee);
     for (unsigned i = 0; i < Wasm::NumberOfMemoryModes; ++i)
         visitor.append(thisObject->m_codeBlocks[i]);
 }

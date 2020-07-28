@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,13 +38,13 @@ namespace JSC {
 
 class JSSymbolTableObject : public JSScope {
 public:
-    typedef JSScope Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetPropertyNames;
+    using Base = JSScope;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetPropertyNames;
 
     SymbolTable* symbolTable() const { return m_symbolTable.get(); }
 
-    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
+    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
 
     static ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
 
@@ -163,9 +163,9 @@ enum class SymbolTablePutMode {
 };
 
 template<SymbolTablePutMode symbolTablePutMode, typename SymbolTableObjectType>
-inline bool symbolTablePut(SymbolTableObjectType* object, ExecState* exec, PropertyName propertyName, JSValue value, bool shouldThrowReadOnlyError, bool ignoreReadOnlyErrors, bool& putResult)
+inline bool symbolTablePut(SymbolTableObjectType* object, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, bool shouldThrowReadOnlyError, bool ignoreReadOnlyErrors, bool& putResult)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     WatchpointSet* set = nullptr;
@@ -183,7 +183,7 @@ inline bool symbolTablePut(SymbolTableObjectType* object, ExecState* exec, Prope
         ASSERT(!fastEntry.isNull());
         if (fastEntry.isReadOnly() && !ignoreReadOnlyErrors) {
             if (shouldThrowReadOnlyError)
-                throwTypeError(exec, scope, ReadonlyPropertyWriteError);
+                throwTypeError(globalObject, scope, ReadonlyPropertyWriteError);
             putResult = false;
             return true;
         }
@@ -210,20 +210,20 @@ inline bool symbolTablePut(SymbolTableObjectType* object, ExecState* exec, Prope
 
 template<typename SymbolTableObjectType>
 inline bool symbolTablePutTouchWatchpointSet(
-    SymbolTableObjectType* object, ExecState* exec, PropertyName propertyName, JSValue value,
+    SymbolTableObjectType* object, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value,
     bool shouldThrowReadOnlyError, bool ignoreReadOnlyErrors, bool& putResult)
 {
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(object));
-    return symbolTablePut<SymbolTablePutMode::Touch>(object, exec, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+    return symbolTablePut<SymbolTablePutMode::Touch>(object, globalObject, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
 }
 
 template<typename SymbolTableObjectType>
 inline bool symbolTablePutInvalidateWatchpointSet(
-    SymbolTableObjectType* object, ExecState* exec, PropertyName propertyName, JSValue value,
+    SymbolTableObjectType* object, JSGlobalObject* globalObject, PropertyName propertyName, JSValue value,
     bool shouldThrowReadOnlyError, bool ignoreReadOnlyErrors, bool& putResult)
 {
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(object));
-    return symbolTablePut<SymbolTablePutMode::Invalidate>(object, exec, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
+    return symbolTablePut<SymbolTablePutMode::Invalidate>(object, globalObject, propertyName, value, shouldThrowReadOnlyError, ignoreReadOnlyErrors, putResult);
 }
 
 } // namespace JSC

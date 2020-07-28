@@ -39,11 +39,16 @@
 #include "HTMLEntityParser.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLTemplateElement.h"
+#include "HTTPParsers.h"
 #include "InlineClassicScript.h"
+#include "MIMETypeRegistry.h"
+#include "Page.h"
+#include "PageConsoleClient.h"
 #include "PendingScript.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
+#include "SVGElement.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
 #include "Settings.h"
@@ -374,6 +379,19 @@ private:
     unsigned m_currentOffset;
 };
 
+static bool externalEntityMimeTypeAllowedByNosniff(const ResourceResponse& response)
+{
+    ContentTypeOptionsDisposition contentTypeOption = parseContentTypeOptionsHeader(response.httpHeaderField(HTTPHeaderName::XContentTypeOptions));
+    if (contentTypeOption != ContentTypeOptionsNosniff) {
+        // Allow any MIME type without 'X-Content-Type-Options: nosniff' HTTP header.
+        return true;
+    }
+    String mimeType = extractMIMETypeFromMediaType(response.httpHeaderField(HTTPHeaderName::ContentType));
+    if (MIMETypeRegistry::isXMLMIMEType(mimeType) || MIMETypeRegistry::isXMLEntityMIMEType(mimeType))
+        return true;
+    return false;
+}
+
 static inline void setAttributes(Element* element, Vector<Attribute>& attributeVector, ParserContentPolicy parserContentPolicy)
 {
     if (!scriptingContentIsAllowed(parserContentPolicy))
@@ -454,6 +472,11 @@ static void* openFunc(const char* uri)
             options.mode = FetchOptions::Mode::SameOrigin;
             options.credentials = FetchOptions::Credentials::Include;
             cachedResourceLoader->frame()->loader().loadResourceSynchronously(url, ClientCredentialPolicy::MayAskClientForCredentials, options, { }, error, response, data);
+            if (!externalEntityMimeTypeAllowedByNosniff(response)) {
+                data = nullptr;
+                if (Page* page = cachedResourceLoader->document()->page())
+                    page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse external entity resource at '", url.stringCenterEllipsizedToLength(), "' because non XML External Entity MIME types are not allowed when 'X-Content-Type-Options: nosniff' is given."));
+            }
         }
     }
 
@@ -571,44 +594,16 @@ XMLDocumentParser::XMLDocumentParser(Document& document, FrameView* frameView)
 {
 }
 
-XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, Element* parentElement, ParserContentPolicy parserContentPolicy)
+XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, HashMap<AtomString, AtomString>&& prefixToNamespaceMap, const AtomString& defaultNamespaceURI, ParserContentPolicy parserContentPolicy)
     : ScriptableDocumentParser(fragment.document(), parserContentPolicy)
     , m_pendingCallbacks(makeUnique<PendingCallbacks>())
     , m_currentNode(&fragment)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
     , m_parsingFragment(true)
+    , m_prefixToNamespaceMap(WTFMove(prefixToNamespaceMap))
+    , m_defaultNamespaceURI(defaultNamespaceURI)
 {
     fragment.ref();
-
-    // Add namespaces based on the parent node
-    Vector<Element*> elemStack;
-    while (parentElement) {
-        elemStack.append(parentElement);
-
-        ContainerNode* node = parentElement->parentNode();
-        if (!is<Element>(node))
-            break;
-        parentElement = downcast<Element>(node);
-    }
-
-    if (elemStack.isEmpty())
-        return;
-
-    // FIXME: Share code with isDefaultNamespace() per http://www.whatwg.org/specs/web-apps/current-work/multipage/the-xhtml-syntax.html#parsing-xhtml-fragments
-    for (; !elemStack.isEmpty(); elemStack.removeLast()) {
-        Element* element = elemStack.last();
-        if (element->hasAttributes()) {
-            for (const Attribute& attribute : element->attributesIterator()) {
-                if (attribute.localName() == xmlnsAtom())
-                    m_defaultNamespaceURI = attribute.value();
-                else if (attribute.prefix() == xmlnsAtom())
-                    m_prefixToNamespaceMap.set(attribute.localName(), attribute.value());
-            }
-        }
-    }
-
-    if (m_defaultNamespaceURI.isNull())
-        m_defaultNamespaceURI = parentElement->namespaceURI();
 }
 
 XMLParserContext::~XMLParserContext()
@@ -769,6 +764,8 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (m_parsingFragment && uri.isNull()) {
         if (!prefix.isNull())
             uri = m_prefixToNamespaceMap.get(prefix);
+        else if (is<SVGElement>(m_currentNode) || localName == SVGNames::svgTag->localName())
+            uri = SVGNames::svgNamespaceURI;
         else
             uri = m_defaultNamespaceURI;
     }

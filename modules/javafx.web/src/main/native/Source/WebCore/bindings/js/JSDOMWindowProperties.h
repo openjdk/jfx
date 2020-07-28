@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,16 @@
 
 namespace WebCore {
 
-class JSDOMWindowProperties : public JSDOMObject {
+class JSDOMWindowProperties final : public JSDOMObject {
 public:
+    static constexpr bool needsDestruction = false;
+    template<typename CellType, JSC::SubspaceAccess>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        static_assert(CellType::destroy == JSC::JSCell::destroy, "JSDOMWindowProperties is not destructible actually");
+        return subspaceForImpl(vm);
+    }
+
     static JSDOMWindowProperties* create(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
     {
         JSDOMWindowProperties* ptr = new (NotNull, JSC::allocateCell<JSDOMWindowProperties>(globalObject.vm().heap)) JSDOMWindowProperties(structure, globalObject);
@@ -43,19 +51,21 @@ public:
 
     static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
+        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info(), JSC::MayHaveIndexedAccessors);
     }
 
-    static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
-    static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::ExecState*, unsigned propertyName, JSC::PropertySlot&);
+    static bool getOwnPropertySlot(JSC::JSObject*, JSC::JSGlobalObject*, JSC::PropertyName, JSC::PropertySlot&);
+    static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::JSGlobalObject*, unsigned propertyName, JSC::PropertySlot&);
 
-    static const unsigned StructureFlags = Base::StructureFlags | JSC::GetOwnPropertySlotIsImpureForPropertyAbsence | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::IsImmutablePrototypeExoticObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | JSC::GetOwnPropertySlotIsImpureForPropertyAbsence | JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::IsImmutablePrototypeExoticObject;
 
-protected:
+private:
     JSDOMWindowProperties(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
         : JSDOMObject(structure, globalObject)
     {
     }
+
+    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
 };
 
 } // namespace WebCore

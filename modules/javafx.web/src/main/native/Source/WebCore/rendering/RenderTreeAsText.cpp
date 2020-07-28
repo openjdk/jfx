@@ -35,7 +35,7 @@
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
 #include "InlineTextBox.h"
-#include "LineLayoutInterfaceTextBoxes.h"
+#include "LineLayoutTraversal.h"
 #include "Logging.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
@@ -160,7 +160,7 @@ String quoteAndEscapeNonPrintables(StringView s)
                 result.append(c);
             else {
                 result.appendLiteral("\\x{");
-                appendUnsignedAsHex(c, result);
+                result.append(hex(c));
                 result.append('}');
             }
         }
@@ -176,8 +176,8 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
     if (behavior.contains(RenderAsTextFlag::ShowAddresses))
         ts << " " << static_cast<const void*>(&o);
 
-    if (o.style().zIndex())
-        ts << " zI: " << o.style().zIndex();
+    if (o.style().usedZIndex()) // FIXME: This should use !hasAutoUsedZIndex().
+        ts << " zI: " << o.style().usedZIndex();
 
     if (o.node()) {
         String tagName = getTagName(o.node());
@@ -202,12 +202,11 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         // many test results.
         const RenderText& text = downcast<RenderText>(o);
         r = IntRect(text.firstRunLocation(), text.linesBoundingBox().size());
-        auto textBoxes = LineLayoutInterface::textBoxes(text);
-        if (textBoxes.begin() == textBoxes.end())
+        if (!LineLayoutTraversal::firstTextBoxFor(text))
             adjustForTableCells = false;
     } else if (o.isBR()) {
         const RenderLineBreak& br = downcast<RenderLineBreak>(o);
-        IntRect linesBox = br.linesBoundingBox();
+        IntRect linesBox = br.boundingBoxForRenderTreeDump();
         r = IntRect(linesBox.x(), linesBox.y(), linesBox.width(), linesBox.height());
         if (!br.inlineBoxWrapper())
             adjustForTableCells = false;
@@ -245,17 +244,17 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             // Do not dump invalid or transparent backgrounds, since that is the default.
             Color backgroundColor = o.style().visitedDependentColor(CSSPropertyBackgroundColor);
             if (o.parent()->style().visitedDependentColor(CSSPropertyBackgroundColor).rgb() != backgroundColor.rgb()
-                && backgroundColor.isValid() && backgroundColor.rgb())
+                && backgroundColor.rgb() != Color::transparent)
                 ts << " [bgcolor=" << backgroundColor.nameForRenderTreeAsText() << "]";
 
             Color textFillColor = o.style().visitedDependentColor(CSSPropertyWebkitTextFillColor);
             if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor).rgb() != textFillColor.rgb()
-                && textFillColor.isValid() && textFillColor.rgb() != color.rgb() && textFillColor.rgb())
+                && textFillColor.rgb() != color.rgb() && textFillColor.rgb() != Color::transparent)
                 ts << " [textFillColor=" << textFillColor.nameForRenderTreeAsText() << "]";
 
             Color textStrokeColor = o.style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
             if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor).rgb() != textStrokeColor.rgb()
-                && textStrokeColor.isValid() && textStrokeColor.rgb() != color.rgb() && textStrokeColor.rgb())
+                && textStrokeColor.rgb() != color.rgb() && textStrokeColor.rgb() != Color::transparent)
                 ts << " [textStrokeColor=" << textStrokeColor.nameForRenderTreeAsText() << "]";
 
             if (o.parent()->style().textStrokeWidth() != o.style().textStrokeWidth() && o.style().textStrokeWidth() > 0)
@@ -478,17 +477,13 @@ void writeDebugInfo(TextStream& ts, const RenderObject& object, OptionSet<Render
     }
 }
 
-static void writeTextBox(TextStream& ts, const RenderText& o, const LineLayoutInterface::TextBox& textBox)
+static void writeTextBox(TextStream& ts, const RenderText& o, const LineLayoutTraversal::TextBox& textBox)
 {
     auto rect = textBox.rect();
-    auto logicalRect = textBox.logicalRect();
-
     int x = rect.x();
     int y = rect.y();
-
-    // FIXME: Mixing logical and physical here doesn't make sense.
-    int logicalWidth = ceilf(rect.x() + logicalRect.width()) - x;
-
+    // FIXME: Use non-logical width. webkit.org/b/206809.
+    int logicalWidth = ceilf(rect.x() + (textBox.isHorizontal() ? rect.width() : rect.height())) - x;
     // FIXME: Table cell adjustment is temporary until results can be updated.
     if (is<RenderTableCell>(*o.containingBlock()))
         y -= floorToInt(downcast<RenderTableCell>(*o.containingBlock()).intrinsicPaddingBefore());
@@ -550,7 +545,7 @@ void write(TextStream& ts, const RenderObject& o, OptionSet<RenderAsTextFlag> be
 
     if (is<RenderText>(o)) {
         auto& text = downcast<RenderText>(o);
-        for (auto textBox : LineLayoutInterface::textBoxes(text)) {
+        for (auto& textBox : LineLayoutTraversal::textBoxesFor(text)) {
             ts << indent;
             writeTextBox(ts, text, textBox);
         }
@@ -639,7 +634,7 @@ static void writeLayer(TextStream& ts, const RenderLayer& layer, const LayoutRec
     if (layer.isolatesBlending())
         ts << " isolatesBlending";
     if (layer.hasBlendMode())
-        ts << " blendMode: " << compositeOperatorName(CompositeSourceOver, layer.blendMode());
+        ts << " blendMode: " << compositeOperatorName(CompositeOperator::SourceOver, layer.blendMode());
 #endif
 
     ts << "\n";

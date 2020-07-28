@@ -39,6 +39,10 @@
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
+#if USE(CG)
+#include <pal/spi/cg/CoreGraphicsSPI.h>
+#endif
+
 namespace WebCore {
 
 BitmapImage::BitmapImage(ImageObserver* observer)
@@ -147,6 +151,32 @@ NativeImagePtr BitmapImage::nativeImageForCurrentFrame(const GraphicsContext* ta
     return frameImageAtIndexCacheIfNeeded(m_currentFrame, SubsamplingLevel::Default, targetContext);
 }
 
+NativeImagePtr BitmapImage::nativeImageForCurrentFrameRespectingOrientation(const GraphicsContext* targetContext)
+{
+    auto image = nativeImageForCurrentFrame(targetContext);
+
+    ImageOrientation orientation = orientationForCurrentFrame();
+    if (orientation == ImageOrientation::None)
+        return image;
+
+    FloatRect rect = { FloatPoint(), size() };
+    auto buffer = ImageBuffer::create(rect.size(), RenderingMode::Unaccelerated);
+    if (!buffer)
+        return image;
+
+#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
+    buffer->context().drawNativeImage(image, rect.size(), rect, rect, { orientation });
+#endif
+
+#if USE(CG) || USE(DIRECT2D)
+    return ImageBuffer::sinkIntoNativeImage(WTFMove(buffer));
+#elif USE(CAIRO)
+    return buffer->nativeImage();
+#endif
+
+    return nullptr;
+}
+
 #if USE(CG)
 NativeImagePtr BitmapImage::nativeImageOfSize(const IntSize& size, const GraphicsContext* targetContext)
 {
@@ -176,12 +206,12 @@ Vector<NativeImagePtr> BitmapImage::framesNativeImages()
 }
 #endif
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 bool BitmapImage::notSolidColor()
 {
     return size().width() != 1 || size().height() != 1 || frameCount() > 1;
 }
-#endif
+#endif // ASSERT_ENABLED
 
 ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
@@ -291,13 +321,13 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         if (m_currentFrameDecodingStatus == DecodingStatus::Invalid)
             m_source->destroyIncompleteDecodedData();
 
-        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, options);
+        Image::drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
         m_currentFrameDecodingStatus = frameDecodingStatusAtIndex(m_currentFrame);
         return;
     }
 
     if (!m_cachedImage) {
-        auto buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(tileRect.size()), ColorSpaceSRGB, ctxt);
+        auto buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(tileRect.size()), ColorSpace::SRGB, ctxt);
         if (!buffer)
             return;
 
@@ -306,7 +336,7 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
         // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
         setImageObserver(nullptr);
 
-        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::None });
+        draw(buffer->context(), tileRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::FromImage });
 
         setImageObserver(observer);
         buffer->convertToLuminanceMask();
@@ -317,7 +347,7 @@ void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, 
     }
 
     ctxt.setDrawLuminanceMask(false);
-    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, options);
+    m_cachedImage->drawPattern(ctxt, destRect, tileRect, transform, phase, spacing, { options, ImageOrientation::FromImage });
 }
 
 bool BitmapImage::shouldAnimate() const

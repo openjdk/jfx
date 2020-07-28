@@ -61,11 +61,11 @@ CallFrameShuffler::CallFrameShuffler(CCallHelpers& jit, const CallFrameShuffleDa
 #endif
 
     ASSERT(!data.callee.isInJSStack() || data.callee.virtualRegister().isLocal());
-    addNew(VirtualRegister(CallFrameSlot::callee), data.callee);
+    addNew(CallFrameSlot::callee, data.callee);
 
     for (size_t i = 0; i < data.args.size(); ++i) {
         ASSERT(!data.args[i].isInJSStack() || data.args[i].virtualRegister().isLocal());
-        addNew(virtualRegisterForArgument(i), data.args[i]);
+        addNew(virtualRegisterForArgumentIncludingThis(i), data.args[i]);
     }
 
 #if USE(JSVALUE64)
@@ -79,9 +79,9 @@ CallFrameShuffler::CallFrameShuffler(CCallHelpers& jit, const CallFrameShuffleDa
             addNew(reg.fpr(), data.registers[reg]);
     }
 
-    m_tagTypeNumber = data.tagTypeNumber;
-    if (m_tagTypeNumber != InvalidGPRReg)
-        lockGPR(m_tagTypeNumber);
+    m_numberTagRegister = data.numberTagRegister;
+    if (m_numberTagRegister != InvalidGPRReg)
+        lockGPR(m_numberTagRegister);
 #endif
 }
 
@@ -152,7 +152,7 @@ void CallFrameShuffler::dump(PrintStream& out) const
                     out.printf(" %c%8s <- %18s %c ", d, str.data(),
                         recoveryStr.data(), d);
                 }
-            } else if (newReg == VirtualRegister { CallFrameSlot::argumentCount })
+            } else if (newReg == VirtualRegister { CallFrameSlot::argumentCountIncludingThis })
                 out.printf(" %c%8s <- %18zu %c ", d, str.data(), argCount(), d);
             else
                 out.printf(" %c%30s %c ", d, "", d);
@@ -216,8 +216,8 @@ void CallFrameShuffler::dump(PrintStream& out) const
     if (m_newFrameOffset)
         out.print("   New frame offset is ", m_newFrameOffset, "\n");
 #if USE(JSVALUE64)
-    if (m_tagTypeNumber != InvalidGPRReg)
-        out.print("   TagTypeNumber is currently in ", m_tagTypeNumber, "\n");
+    if (m_numberTagRegister != InvalidGPRReg)
+        out.print("   NumberTag is currently in ", m_numberTagRegister, "\n");
 #endif
 }
 
@@ -292,7 +292,7 @@ void CallFrameShuffler::spill(CachedRecovery& cachedRecovery)
 
 void CallFrameShuffler::emitDeltaCheck()
 {
-    if (ASSERT_DISABLED)
+    if (!ASSERT_ENABLED)
         return;
 
     GPRReg scratchGPR { getFreeGPR() };
@@ -377,19 +377,7 @@ void CallFrameShuffler::prepareForTailCall()
     m_oldFrameBase = MacroAssembler::stackPointerRegister;
     m_oldFrameOffset = numLocals();
     m_newFrameBase = acquireGPR();
-#if CPU(X86)
-    // We load the frame pointer manually, but we need to ask the
-    // algorithm to move the return PC for us (it'd probably
-    // require a write to the danger zone). Since it'd be awkward
-    // to ask for half a value move, we ask that the whole thing
-    // be moved for us.
-    addNew(VirtualRegister { 0 },
-        ValueRecovery::displacedInJSStack(VirtualRegister(0), DataFormatJS));
-
-    // sp will point to head0 and we will move it up half a slot
-    // manually
-    m_newFrameOffset = 0;
-#elif CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2) || CPU(MIPS)
     // We load the frame pointer and link register
     // manually. We could ask the algorithm to load them for us,
     // and it would allow us to use the link register as an extra
@@ -430,7 +418,7 @@ void CallFrameShuffler::prepareForTailCall()
     // old frame (taking into account an argument count higher than
     // the number of parameters), then substracting to it the aligned
     // new frame size (adjusted).
-    m_jit.load32(MacroAssembler::Address(GPRInfo::callFrameRegister, CallFrameSlot::argumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset), m_newFrameBase);
+    m_jit.load32(MacroAssembler::Address(GPRInfo::callFrameRegister, CallFrameSlot::argumentCountIncludingThis * static_cast<int>(sizeof(Register)) + PayloadOffset), m_newFrameBase);
     MacroAssembler::Jump argumentCountOK =
         m_jit.branch32(MacroAssembler::BelowOrEqual, m_newFrameBase,
             MacroAssembler::TrustedImm32(m_jit.codeBlock()->numParameters()));
@@ -475,12 +463,6 @@ void CallFrameShuffler::prepareForTailCall()
         dataLog("Preparing frame for tail call:\n", *this);
 
     prepareAny();
-
-#if CPU(X86)
-    if (verbose)
-        dataLog("  Simulating pop of the call frame register\n");
-    m_jit.addPtr(MacroAssembler::TrustedImm32(sizeof(void*)), MacroAssembler::stackPointerRegister);
-#endif
 
     if (verbose)
         dataLog("Ready for tail call!\n");
@@ -716,8 +698,8 @@ void CallFrameShuffler::prepareAny()
     }
 
 #if USE(JSVALUE64)
-    if (m_tagTypeNumber != InvalidGPRReg && m_newRegisters[m_tagTypeNumber])
-        releaseGPR(m_tagTypeNumber);
+    if (m_numberTagRegister != InvalidGPRReg && m_newRegisters[m_numberTagRegister])
+        releaseGPR(m_numberTagRegister);
 #endif
 
     // Handle 2) by loading all registers. We don't have to do any
@@ -735,15 +717,15 @@ void CallFrameShuffler::prepareAny()
     }
 
 #if USE(JSVALUE64)
-    if (m_tagTypeNumber != InvalidGPRReg)
-        releaseGPR(m_tagTypeNumber);
+    if (m_numberTagRegister != InvalidGPRReg)
+        releaseGPR(m_numberTagRegister);
 #endif
 
     // At this point, we have read everything we cared about from the
     // stack, and written everything we had to to the stack.
     if (verbose)
         dataLog("  Callee frame is fully set up\n");
-    if (!ASSERT_DISABLED) {
+    if (ASSERT_ENABLED) {
         for (VirtualRegister reg = firstNew(); reg <= lastNew(); reg += 1)
             ASSERT_UNUSED(reg, !getNew(reg));
 
@@ -756,12 +738,12 @@ void CallFrameShuffler::prepareAny()
     // We need to handle 4) first because it implies releasing
     // m_newFrameBase, which could be a wanted register.
     if (verbose)
-        dataLog("   * Storing the argument count into ", VirtualRegister { CallFrameSlot::argumentCount }, "\n");
+        dataLog("   * Storing the argument count into ", VirtualRegister { CallFrameSlot::argumentCountIncludingThis }, "\n");
     m_jit.store32(MacroAssembler::TrustedImm32(0),
-        addressForNew(VirtualRegister { CallFrameSlot::argumentCount }).withOffset(TagOffset));
+        addressForNew(VirtualRegister { CallFrameSlot::argumentCountIncludingThis }).withOffset(TagOffset));
     RELEASE_ASSERT(m_numPassedArgs != UINT_MAX);
     m_jit.store32(MacroAssembler::TrustedImm32(m_numPassedArgs),
-        addressForNew(VirtualRegister { CallFrameSlot::argumentCount }).withOffset(PayloadOffset));
+        addressForNew(VirtualRegister { CallFrameSlot::argumentCountIncludingThis }).withOffset(PayloadOffset));
 
     if (!isSlowPath()) {
         ASSERT(m_newFrameBase != MacroAssembler::stackPointerRegister);

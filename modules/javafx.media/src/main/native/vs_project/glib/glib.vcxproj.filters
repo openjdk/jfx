@@ -1,374 +1,98 @@
-<?xml version='1.0' encoding='UTF-8' ?>
-<!-- was: no XML declaration present -->
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="glib">
-      <UniqueIdentifier>{06bae6d9-eb8c-4716-a500-08989f418309}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="glib\libcharset">
-      <UniqueIdentifier>{d711e909-6df3-4535-afe5-282b5f1cb4f4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="glib\gnulib">
-      <UniqueIdentifier>{588bbac6-4842-40c7-8aeb-7a5eeeb90193}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="glib\pcre">
-      <UniqueIdentifier>{d6bada8a-9387-45dd-b20b-ef852c17cdf7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="gobject">
-      <UniqueIdentifier>{a0851e62-5602-466e-9886-ff6559789936}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="gmodule">
-      <UniqueIdentifier>{08393a23-c2aa-46d3-9e1c-1b668cfff80a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="gthread">
-      <UniqueIdentifier>{b13536b4-aea8-4efc-9cbc-81fb65c17cd1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="build">
-      <UniqueIdentifier>{1480ee97-1e3a-44bb-b947-d4b57f4bac89}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="build\vs100">
-      <UniqueIdentifier>{7ebde042-b07f-4807-953f-aa81e694217a}</UniqueIdentifier>
-    </Filter>
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\garray.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gasyncqueue.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gatomic.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbacktrace.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbase64.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbitlock.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbookmarkfile.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gchecksum.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gconvert.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdataset.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdate.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdatetime.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdir.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gerror.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gfileutils.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghash.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghook.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghostutils.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giochannel.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giowin32.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gkeyfile.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\glist.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmain.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmappedfile.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmarkup.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmem.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmessages.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnode.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\asnprintf.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-args.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-parse.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\vasnprintf.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\goption.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpattern.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpoll.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprimes.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprintf.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqsort.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqueue.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\grand.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gscanner.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gsequence.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gshell.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslice.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslist.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gspawn-win32.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstdio.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstrfuncs.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstring.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtestutils.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthread.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthreadpool.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimer.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimezone.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtree.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunibreak.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunicollate.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunidecomp.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\guniprop.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gurifuncs.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutf8.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutils.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-core.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-parser.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-serialiser.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttype.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttypeinfo.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gwin32.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\libcharset\localcharset.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gmodule\gmodule.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gatomicarray.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gboxed.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gclosure.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\genums.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gobject.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparam.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparamspecs.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsignal.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsourceclosure.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtype.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypemodule.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypeplugin.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvalue.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluearray.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetransform.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetypes.c" />
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gthread\gthread-impl.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\garray.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gshell.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gasyncqueue.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gatomic.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbacktrace.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbase64.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbitlock.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbookmarkfile.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbuffer.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gcache.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gchecksum.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gcompletion.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gconvert.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdataset.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdate.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdatetime.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdir.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gerror.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gfileutils.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghash.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghook.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghostutils.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giochannel.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giowin32.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gkeyfile.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\glist.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmain.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmappedfile.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmarkup.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmem.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmessages.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnode.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\goption.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpattern.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpoll.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprimes.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprintf.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqsort.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqueue.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\grand.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gregex.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\grel.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gscanner.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gsequence.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslice.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslist.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gspawn-win32.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstdio.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstrfuncs.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstring.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtester.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtestutils.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthread.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthreadpool.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimer.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimezone.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtree.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunibreak.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunicollate.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunidecomp.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\guniprop.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gurifuncs.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutf8.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutils.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-core.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-parser.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-serialiser.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttype.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttypeinfo.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gwin32.c">
-      <Filter>glib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_chartables.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_compile.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_config.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_dfa_exec.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_exec.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_fullinfo.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_get.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_globals.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_newline.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_ord2utf8.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_study.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_tables.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_try_flipped.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_ucp_searchfuncs.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_xclass.c">
-      <Filter>glib\pcre</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\asnprintf.c">
-      <Filter>glib\gnulib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-args.c">
-      <Filter>glib\gnulib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-parse.c">
-      <Filter>glib\gnulib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf.c">
-      <Filter>glib\gnulib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\vasnprintf.c">
-      <Filter>glib\gnulib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gatomicarray.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gboxed.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gclosure.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\genums.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gobject.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparam.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparamspecs.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsignal.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsourceclosure.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtype.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypemodule.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypeplugin.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvalue.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluearray.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetransform.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetypes.c">
-      <Filter>gobject</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gthread\gthread-impl.c">
-      <Filter>gthread</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\libcharset\localcharset.c">
-      <Filter>glib\libcharset</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gmodule\gmodule.c">
-      <Filter>gmodule</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\config.h">
-      <Filter>build\vs100</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\glibconfig.h">
-      <Filter>build\vs100</Filter>
-    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\config.h" />
+    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\glibconfig.h" />
   </ItemGroup>
 </Project>

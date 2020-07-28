@@ -50,11 +50,28 @@ public:
     template <class Encoder> void encode(Encoder&) const;
     template <class Decoder> static bool decode(Decoder&, ContentSecurityPolicyResponseHeaders&);
 
+    enum EmptyTag { Empty };
+    struct MarkableTraits {
+        static bool isEmptyValue(const ContentSecurityPolicyResponseHeaders& identifier)
+        {
+            return identifier.m_emptyForMarkable;
+        }
+
+        static ContentSecurityPolicyResponseHeaders emptyValue()
+        {
+            return ContentSecurityPolicyResponseHeaders(Empty);
+        }
+    };
+
 private:
     friend class ContentSecurityPolicy;
+    ContentSecurityPolicyResponseHeaders(EmptyTag)
+        : m_emptyForMarkable(true)
+    { }
 
     Vector<std::pair<String, ContentSecurityPolicyHeaderType>> m_headers;
     int m_httpStatusCode { 0 };
+    bool m_emptyForMarkable { false };
 };
 
 template <class Encoder>
@@ -74,7 +91,6 @@ bool ContentSecurityPolicyResponseHeaders::decode(Decoder& decoder, ContentSecur
     uint64_t headersSize;
     if (!decoder.decode(headersSize))
         return false;
-    headers.m_headers.reserveCapacity(static_cast<size_t>(headersSize));
     for (size_t i = 0; i < headersSize; ++i) {
         String header;
         if (!decoder.decode(header))
@@ -84,6 +100,7 @@ bool ContentSecurityPolicyResponseHeaders::decode(Decoder& decoder, ContentSecur
             return false;
         headers.m_headers.append(std::make_pair(header, headerType));
     }
+    headers.m_headers.shrinkToFit();
 
     if (!decoder.decode(headers.m_httpStatusCode))
         return false;

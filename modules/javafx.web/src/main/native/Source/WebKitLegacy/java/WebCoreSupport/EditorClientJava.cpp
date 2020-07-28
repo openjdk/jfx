@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -459,7 +459,7 @@ void EditorClientJava::respondToChangedSelection(Frame *frame)
         // committed text which will be ignored in
         // JWebPane.processInputMethodEvent().
         frame->editor().cancelComposition();
-        setInputMethodState(false);
+        setInputMethodState(nullptr);
     }
 }
 
@@ -596,7 +596,7 @@ bool EditorClientJava::shouldMoveRangeAfterDelete(Range*, Range*)
     return true;
 }
 
-void EditorClientJava::setInputMethodState(bool enabled)
+void EditorClientJava::setInputMethodState(Element* element)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -609,7 +609,7 @@ void EditorClientJava::setInputMethodState(bool enabled)
     env->CallVoidMethod(
         m_webPage,
         midSetInputMethodState,
-        bool_to_jbool(enabled));
+        bool_to_jbool(element && element->shouldUseInputMethod()));
     WTF::CheckAndClearException(env);
 }
 

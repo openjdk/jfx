@@ -37,6 +37,7 @@
 #include "HTMLAttachmentElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFormElement.h"
+#include "HTMLImageLoader.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLPictureElement.h"
 #include "HTMLMapElement.h"
@@ -68,14 +69,15 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLImageElement);
 
 using namespace HTMLNames;
 
-HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
+HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form, bool createdByParser)
     : HTMLElement(tagName, document)
-    , m_imageLoader(*this)
+    , m_imageLoader(WTF::makeUnique<HTMLImageLoader>(*this))
     , m_form(nullptr)
     , m_formSetByParser(makeWeakPtr(form))
-    , m_compositeOperator(CompositeSourceOver)
+    , m_compositeOperator(CompositeOperator::SourceOver)
     , m_imageDevicePixelRatio(1.0f)
     , m_experimentalImageMenuEnabled(false)
+    , m_createdByParser(createdByParser)
 {
     ASSERT(hasTagName(imgTag));
     setHasCustomStyleResolveCallbacks();
@@ -86,13 +88,15 @@ Ref<HTMLImageElement> HTMLImageElement::create(Document& document)
     return adoptRef(*new HTMLImageElement(imgTag, document));
 }
 
-Ref<HTMLImageElement> HTMLImageElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
+Ref<HTMLImageElement> HTMLImageElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form, bool createdByParser)
 {
-    return adoptRef(*new HTMLImageElement(tagName, document, form));
+    return adoptRef(*new HTMLImageElement(tagName, document, form, createdByParser));
 }
 
 HTMLImageElement::~HTMLImageElement()
 {
+    document().removeDynamicMediaQueryDependentImage(*this);
+
     if (m_form)
         m_form->removeImgElement(this);
     setPictureElement(nullptr);
@@ -158,11 +162,7 @@ ImageCandidate HTMLImageElement::bestFitSourceFromPictureElement()
     if (!picture)
         return { };
 
-    picture->clearViewportDependentResults();
-    document().removeViewportDependentPicture(*picture);
-
-    picture->clearAppearanceDependentResults();
-    document().removeAppearanceDependentPicture(*picture);
+    ImageCandidate candidate;
 
     for (RefPtr<Node> child = picture->firstChild(); child && child != this; child = child->nextSibling()) {
         if (!is<HTMLSourceElement>(*child))
@@ -186,33 +186,51 @@ ImageCandidate HTMLImageElement::bestFitSourceFromPictureElement()
         MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
         auto* queries = source.parsedMediaAttribute(document());
         LOG(MediaQueries, "HTMLImageElement %p bestFitSourceFromPictureElement evaluating media queries", this);
-        auto evaluation = !queries || evaluator.evaluate(*queries, picture->viewportDependentResults(), picture->appearanceDependentResults());
-        if (picture->hasViewportDependentResults())
-            document().addViewportDependentPicture(*picture);
-        if (picture->hasAppearanceDependentResults())
-            document().addAppearanceDependentPicture(*picture);
+
+        auto evaluation = !queries || evaluator.evaluate(*queries, &m_mediaQueryDynamicResults);
         if (!evaluation)
             continue;
 
-        auto sourceSize = SizesAttributeParser(source.attributeWithoutSynchronization(sizesAttr).string(), document()).length();
-        auto candidate = bestFitSourceForImageAttributes(document().deviceScaleFactor(), nullAtom(), srcset, sourceSize);
+        SizesAttributeParser sizesParser(source.attributeWithoutSynchronization(sizesAttr).string(), document(), &m_mediaQueryDynamicResults);
+        auto sourceSize = sizesParser.length();
+
+        candidate = bestFitSourceForImageAttributes(document().deviceScaleFactor(), nullAtom(), srcset, sourceSize);
         if (!candidate.isEmpty())
-            return candidate;
+            break;
     }
-    return { };
+
+    return candidate;
+}
+
+void HTMLImageElement::evaluateDynamicMediaQueryDependencies()
+{
+    auto documentElement = makeRefPtr(document().documentElement());
+    MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
+
+    if (!evaluator.evaluateForChanges(m_mediaQueryDynamicResults))
+        return;
+
+    selectImageSource();
 }
 
 void HTMLImageElement::selectImageSource()
 {
+    m_mediaQueryDynamicResults = { };
+    document().removeDynamicMediaQueryDependentImage(*this);
+
     // First look for the best fit source from our <picture> parent if we have one.
     ImageCandidate candidate = bestFitSourceFromPictureElement();
     if (candidate.isEmpty()) {
         // If we don't have a <picture> or didn't find a source, then we use our own attributes.
-        auto sourceSize = SizesAttributeParser(attributeWithoutSynchronization(sizesAttr).string(), document()).length();
+        SizesAttributeParser sizesParser(attributeWithoutSynchronization(sizesAttr).string(), document(), &m_mediaQueryDynamicResults);
+        auto sourceSize = sizesParser.length();
         candidate = bestFitSourceForImageAttributes(document().deviceScaleFactor(), attributeWithoutSynchronization(srcAttr), attributeWithoutSynchronization(srcsetAttr), sourceSize);
     }
     setBestFitURLAndDPRFromImageCandidate(candidate);
-    m_imageLoader.updateFromElementIgnoringPreviousError();
+    m_imageLoader->updateFromElementIgnoringPreviousError();
+
+    if (!m_mediaQueryDynamicResults.isEmpty())
+        document().addDynamicMediaQueryDependentImage(*this);
 }
 
 void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
@@ -234,7 +252,7 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomStrin
         // FIXME: images don't support blend modes in their compositing attribute.
         BlendMode blendOp = BlendMode::Normal;
         if (!parseCompositeAndBlendOperator(value, m_compositeOperator, blendOp))
-            m_compositeOperator = CompositeSourceOver;
+            m_compositeOperator = CompositeOperator::SourceOver;
 #if ENABLE(SERVICE_CONTROLS)
     } else if (name == webkitimagemenuAttr) {
         m_experimentalImageMenuEnabled = !value.isNull();
@@ -312,7 +330,7 @@ void HTMLImageElement::didAttachRenderers()
 {
     if (!is<RenderImage>(renderer()))
         return;
-    if (m_imageLoader.hasPendingBeforeLoadEvent())
+    if (m_imageLoader->hasPendingBeforeLoadEvent())
         return;
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -323,11 +341,11 @@ void HTMLImageElement::didAttachRenderers()
     RenderImageResource& renderImageResource = renderImage.imageResource();
     if (renderImageResource.cachedImage())
         return;
-    renderImageResource.setCachedImage(m_imageLoader.image());
+    renderImageResource.setCachedImage(m_imageLoader->image());
 
     // If we have no image at all because we have no src attribute, set
     // image height and width for the alt text instead.
-    if (!m_imageLoader.image() && !renderImageResource.cachedImage())
+    if (!m_imageLoader->image() && !renderImageResource.cachedImage())
         renderImage.setImageSizeForAltText();
 }
 
@@ -367,8 +385,8 @@ Node::InsertedIntoAncestorResult HTMLImageElement::insertedIntoAncestor(Insertio
 
     // If we have been inserted from a renderer-less document,
     // our loader may have not fetched the image, so do it now.
-    if (insertionType.connectedToDocument && !m_imageLoader.image())
-        m_imageLoader.updateFromElement();
+    if (insertionType.connectedToDocument && !m_imageLoader->image())
+        m_imageLoader->updateFromElement();
 
     return insertNotificationRequest;
 }
@@ -472,8 +490,8 @@ unsigned HTMLImageElement::width(bool ignorePendingStylesheets)
             return optionalWidth.value();
 
         // if the image is available, use its width
-        if (m_imageLoader.image())
-            return m_imageLoader.image()->imageSizeForRenderer(renderer(), 1.0f).width().toUnsigned();
+        if (m_imageLoader->image())
+            return m_imageLoader->image()->imageSizeForRenderer(renderer(), 1.0f).width().toUnsigned();
     }
 
     if (ignorePendingStylesheets)
@@ -497,8 +515,8 @@ unsigned HTMLImageElement::height(bool ignorePendingStylesheets)
             return optionalHeight.value();
 
         // if the image is available, use its height
-        if (m_imageLoader.image())
-            return m_imageLoader.image()->imageSizeForRenderer(renderer(), 1.0f).height().toUnsigned();
+        if (m_imageLoader->image())
+            return m_imageLoader->image()->imageSizeForRenderer(renderer(), 1.0f).height().toUnsigned();
     }
 
     if (ignorePendingStylesheets)
@@ -513,20 +531,33 @@ unsigned HTMLImageElement::height(bool ignorePendingStylesheets)
     return adjustForAbsoluteZoom(snappedIntRect(contentRect).height(), *box);
 }
 
+float HTMLImageElement::effectiveImageDevicePixelRatio() const
+{
+    if (!m_imageLoader->image())
+        return 1.0f;
+
+    auto* image = m_imageLoader->image()->image();
+
+    if (image && image->isSVGImage())
+        return 1.0f;
+
+    return m_imageDevicePixelRatio;
+}
+
 int HTMLImageElement::naturalWidth() const
 {
-    if (!m_imageLoader.image())
+    if (!m_imageLoader->image())
         return 0;
 
-    return m_imageLoader.image()->imageSizeForRenderer(renderer(), 1.0f).width();
+    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).width();
 }
 
 int HTMLImageElement::naturalHeight() const
 {
-    if (!m_imageLoader.image())
+    if (!m_imageLoader->image())
         return 0;
 
-    return m_imageLoader.image()->imageSizeForRenderer(renderer(), 1.0f).height();
+    return m_imageLoader->image()->unclampedImageSizeForRenderer(renderer(), effectiveImageDevicePixelRatio()).height();
 }
 
 bool HTMLImageElement::isURLAttribute(const Attribute& attribute) const
@@ -553,16 +584,10 @@ String HTMLImageElement::completeURLsInAttributeValue(const URL& base, const Att
             if (&candidate != &imageCandidates[0])
                 result.appendLiteral(", ");
             result.append(URL(base, candidate.string.toString()).string());
-            if (candidate.density != UninitializedDescriptor) {
-                result.append(' ');
-                result.appendFixedPrecisionNumber(candidate.density);
-                result.append('x');
-            }
-            if (candidate.resourceWidth != UninitializedDescriptor) {
-                result.append(' ');
-                result.appendNumber(candidate.resourceWidth);
-                result.append('w');
-            }
+            if (candidate.density != UninitializedDescriptor)
+                result.append(' ', candidate.density, 'x');
+            if (candidate.resourceWidth != UninitializedDescriptor)
+                result.append(' ', candidate.resourceWidth, 'w');
         }
         return result.toString();
     }
@@ -634,7 +659,7 @@ int HTMLImageElement::y() const
 
 bool HTMLImageElement::complete() const
 {
-    return m_imageLoader.imageComplete();
+    return m_imageLoader->imageComplete();
 }
 
 DecodingMode HTMLImageElement::decodingMode() const
@@ -649,7 +674,7 @@ DecodingMode HTMLImageElement::decodingMode() const
 
 void HTMLImageElement::decode(Ref<DeferredPromise>&& promise)
 {
-    return m_imageLoader.decode(WTFMove(promise));
+    return m_imageLoader->decode(WTFMove(promise));
 }
 
 void HTMLImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
@@ -663,7 +688,9 @@ void HTMLImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 
 void HTMLImageElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
-    m_imageLoader.elementDidMoveToNewDocument();
+    oldDocument.removeDynamicMediaQueryDependentImage(*this);
+
+    m_imageLoader->elementDidMoveToNewDocument();
     HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
 }
 
@@ -837,6 +864,26 @@ void HTMLImageElement::defaultEventHandler(Event& event)
         return;
     }
     HTMLElement::defaultEventHandler(event);
+}
+
+CachedImage* HTMLImageElement::cachedImage() const
+{
+    return m_imageLoader->image();
+}
+
+void HTMLImageElement::setLoadManually(bool loadManually)
+{
+    m_imageLoader->setLoadManually(loadManually);
+}
+
+bool HTMLImageElement::hasPendingActivity() const
+{
+    return m_imageLoader->hasPendingActivity();
+}
+
+size_t HTMLImageElement::pendingDecodePromisesCountForTesting() const
+{
+    return m_imageLoader->pendingDecodePromisesCountForTesting();
 }
 
 }

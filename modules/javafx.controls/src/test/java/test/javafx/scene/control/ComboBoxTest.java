@@ -654,23 +654,18 @@ public class ComboBoxTest {
         assertTrue(pseudoClassStates.size() >= 0);
 
         comboBox.setEditable(true);
-        pseudoClassStates = comboBox.getPseudoClassStates();
         assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("editable")));
 
         comboBox.setEditable(false);
-        pseudoClassStates = comboBox.getPseudoClassStates();
-        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("editable")) == false);
+        assertFalse(pseudoClassStates.contains(PseudoClass.getPseudoClass("editable")));
 
         comboBox.show();
-        pseudoClassStates = comboBox.getPseudoClassStates();
         assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("showing")));
 
         comboBox.hide();
-        pseudoClassStates = comboBox.getPseudoClassStates();
-        assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("showing")) == false);
+        assertFalse(pseudoClassStates.contains(PseudoClass.getPseudoClass("showing")));
 
         comboBox.arm();
-        pseudoClassStates = comboBox.getPseudoClassStates();
         assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("armed")));
 
     }

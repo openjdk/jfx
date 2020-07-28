@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2008 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2019 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,36 +32,41 @@
 
 namespace JSC {
 
-class RuntimeArray : public JSArray {
+class RuntimeArray final : public JSArray {
 public:
-    typedef JSArray Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames;
+    using Base = JSArray;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames;
+    static constexpr bool needsDestruction = true;
 
-    static RuntimeArray* create(ExecState* exec, Bindings::Array* array)
+    template<typename CellType, JSC::SubspaceAccess>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
     {
-        VM& vm = exec->vm();
+        return subspaceForImpl(vm);
+    }
+
+    static RuntimeArray* create(JSGlobalObject* lexicalGlobalObject, Bindings::Array* array)
+    {
+        VM& vm = lexicalGlobalObject->vm();
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "array".
-        Structure* domStructure = WebCore::deprecatedGetDOMStructure<RuntimeArray>(exec);
-        RuntimeArray* runtimeArray = new (NotNull, allocateCell<RuntimeArray>(vm.heap)) RuntimeArray(exec, domStructure);
+        Structure* domStructure = WebCore::deprecatedGetDOMStructure<RuntimeArray>(lexicalGlobalObject);
+        RuntimeArray* runtimeArray = new (NotNull, allocateCell<RuntimeArray>(vm.heap)) RuntimeArray(vm, domStructure);
         runtimeArray->finishCreation(vm, array);
-        exec->vm().heap.addFinalizer(runtimeArray, destroy);
         return runtimeArray;
     }
 
     typedef Bindings::Array BindingsArray;
     ~RuntimeArray();
     static void destroy(JSCell*);
-    static const bool needsDestruction = false;
 
-    static void getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool getOwnPropertySlotByIndex(JSObject*, ExecState*, unsigned, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool putByIndex(JSCell*, ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
 
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    static bool deletePropertyByIndex(JSCell*, ExecState*, unsigned propertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
     unsigned getLength() const { return m_array->getLength(); }
 
@@ -83,8 +88,9 @@ protected:
     void finishCreation(VM&, Bindings::Array*);
 
 private:
-    RuntimeArray(ExecState*, Structure*);
-    static EncodedJSValue lengthGetter(ExecState*, EncodedJSValue, PropertyName);
+    RuntimeArray(VM&, Structure*);
+    static EncodedJSValue lengthGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
 
     BindingsArray* m_array;
 };

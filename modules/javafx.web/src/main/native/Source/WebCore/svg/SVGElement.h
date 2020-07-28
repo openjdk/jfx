@@ -23,7 +23,6 @@
 #pragma once
 
 #include "SVGAnimatedPropertyImpl.h"
-#include "SVGLangSpace.h"
 #include "SVGLocatable.h"
 #include "SVGNames.h"
 #include "SVGParsingError.h"
@@ -47,7 +46,7 @@ class SVGUseElement;
 
 void mapAttributeToCSSProperty(HashMap<AtomStringImpl*, CSSPropertyID>* propertyNameToIdMap, const QualifiedName& attrName);
 
-class SVGElement : public StyledElement, public SVGLangSpace, public SVGPropertyOwner {
+class SVGElement : public StyledElement, public SVGPropertyOwner {
     WTF_MAKE_ISO_ALLOCATED(SVGElement);
 public:
     bool isOutermostSVGSVGElement() const;
@@ -56,7 +55,6 @@ public:
     SVGElement* viewportElement() const;
 
     String title() const override;
-    RefPtr<DeprecatedCSSOMValue> getPresentationAttribute(const String& name);
     virtual bool supportsMarkers() const { return false; }
     bool hasRelativeLengths() const { return !m_elementsWithRelativeLengths.isEmpty(); }
     virtual bool needsPendingResourceHandling() const { return true; }
@@ -76,10 +74,9 @@ public:
 
     virtual void svgAttributeChanged(const QualifiedName&);
 
-    void sendSVGLoadEventIfPossible(bool sendParentLoadEvents = false);
-    void sendSVGLoadEventIfPossibleAsynchronously();
-    void svgLoadEventTimerFired();
-    virtual Timer* svgLoadEventTimer();
+    void sendLoadEventIfPossible();
+    void loadEventTimerFired();
+    virtual Timer* loadEventTimer();
 
     virtual AffineTransform* supplementalTransform() { return nullptr; }
 
@@ -101,7 +98,7 @@ public:
 
     void setCorrespondingElement(SVGElement*);
 
-    Optional<ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
+    Optional<Style::ElementStyle> resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle) override;
 
     static QualifiedName animatableAttributeForName(const AtomString&);
 #ifndef NDEBUG

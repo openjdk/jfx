@@ -27,7 +27,6 @@
 
 #if ENABLE(SERVICE_WORKER)
 
-#include "JSDOMPromiseDeferred.h"
 #include "ResourceResponse.h"
 #include "ServiceWorkerJobClient.h"
 #include "ServiceWorkerJobData.h"
@@ -63,13 +62,15 @@ public:
 
     const ServiceWorkerJobData& data() const { return m_jobData; }
     bool hasPromise() const { return !!m_promise; }
-    RefPtr<DeferredPromise> takePromise() { return WTFMove(m_promise); }
+    RefPtr<DeferredPromise> takePromise();
 
     void fetchScriptWithContext(ScriptExecutionContext&, FetchOptions::Cache);
 
     const DocumentOrWorkerIdentifier& contextIdentifier() { return m_contextIdentifier; }
 
     bool cancelPendingLoad();
+
+    WEBCORE_EXPORT static ResourceError validateServiceWorkerResponse(const ServiceWorkerJobData&, const ResourceResponse&);
 
 private:
     // WorkerScriptLoaderClient
@@ -85,7 +86,7 @@ private:
     DocumentOrWorkerIdentifier m_contextIdentifier;
     RefPtr<WorkerScriptLoader> m_scriptLoader;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Ref<Thread> m_creationThread { Thread::current() };
 #endif
 };

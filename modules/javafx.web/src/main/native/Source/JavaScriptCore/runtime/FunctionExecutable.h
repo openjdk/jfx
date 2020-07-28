@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@ class FunctionExecutable final : public ScriptExecutable {
     friend class LLIntOffsetsExtractor;
 public:
     typedef ScriptExecutable Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -55,7 +55,7 @@ public:
         return executable;
     }
     static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, ExecState&, const SourceCode&,
+        const Identifier& name, JSGlobalObject*, const SourceCode&,
         JSObject*& exception, int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition);
 
     static void destroy(JSCell*);
@@ -131,7 +131,6 @@ public:
 
     FunctionMode functionMode() { return m_unlinkedExecutable->functionMode(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
-    bool isAnonymousBuiltinFunction() const { return m_unlinkedExecutable->isAnonymousBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
     bool isArrowFunction() const { return parseMode() == SourceParseMode::ArrowFunctionMode; }

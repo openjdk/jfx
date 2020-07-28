@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 
 namespace WTF {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CStringBuffer);
+
 // CStringBuffer is the ref-counted storage class for the characters in a CString.
 // The data is implicitly allocated 1 character longer than length(), as it is zero-terminated.
 class CStringBuffer final : public RefCounted<CStringBuffer> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CStringBuffer);
 public:
     const char* data() { return mutableData(); }
     size_t length() const { return m_length; }
@@ -96,7 +99,7 @@ WTF_EXPORT_PRIVATE bool operator<(const CString& a, const CString& b);
 struct CStringHash {
     static unsigned hash(const CString& string) { return string.hash(); }
     WTF_EXPORT_PRIVATE static bool equal(const CString& a, const CString& b);
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 template<typename T> struct DefaultHash;

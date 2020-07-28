@@ -83,6 +83,7 @@
 #include "Text.h"
 #include "TextEvent.h"
 #include "VisiblePosition.h"
+#include "WebContentReader.h"
 #include "markup.h"
 
 #if ENABLE(DATA_INTERACTION)
@@ -132,16 +133,13 @@ static PlatformMouseEvent createMouseEvent(const DragData& dragData)
                               metaKey, WallTime::now(), ForceAtClick, NoTap);
 }
 
-DragController::DragController(Page& page, DragClient& client)
+DragController::DragController(Page& page, std::unique_ptr<DragClient>&& client)
     : m_page(page)
-    , m_client(client)
+    , m_client(WTFMove(client))
 {
 }
 
-DragController::~DragController()
-{
-    m_client.dragControllerDestroyed();
-}
+DragController::~DragController() = default;
 
 static RefPtr<DocumentFragment> documentFragmentFromDragData(const DragData& dragData, Frame& frame, Range& context, bool allowPlainText, bool& chosePlainText)
 {
@@ -206,8 +204,9 @@ void DragController::dragEnded()
     m_didInitiateDrag = false;
     m_documentUnderMouse = nullptr;
     clearDragCaret();
+    removeAllDroppedImagePlaceholders();
 
-    m_client.dragEnded();
+    client().dragEnded();
 }
 
 DragOperation DragController::dragEntered(const DragData& dragData)
@@ -238,6 +237,16 @@ inline static bool dragIsHandledByDocument(DragHandlingMethod dragHandlingMethod
 
 bool DragController::performDragOperation(const DragData& dragData)
 {
+    if (!m_droppedImagePlaceholders.isEmpty() && m_droppedImagePlaceholderRange && tryToUpdateDroppedImagePlaceholders(dragData)) {
+        m_droppedImagePlaceholders.clear();
+        m_droppedImagePlaceholderRange = nullptr;
+        m_documentUnderMouse = nullptr;
+        clearDragCaret();
+        return true;
+    }
+
+    removeAllDroppedImagePlaceholders();
+
     SetForScope<bool> isPerformingDrop(m_isPerformingDrop, true);
     TemporarySelectionChange ignoreSelectionChanges(m_page.focusController().focusedOrMainFrame(), WTF::nullopt, TemporarySelectionOption::IgnoreSelectionChanges);
 
@@ -248,7 +257,7 @@ bool DragController::performDragOperation(const DragData& dragData)
         shouldOpenExternalURLsPolicy = m_documentUnderMouse->shouldOpenExternalURLsPolicyToPropagate();
 
     if ((m_dragDestinationAction & DragDestinationActionDHTML) && dragIsHandledByDocument(m_dragHandlingMethod)) {
-        m_client.willPerformDragDestinationAction(DragDestinationActionDHTML, dragData);
+        client().willPerformDragDestinationAction(DragDestinationActionDHTML, dragData);
         Ref<Frame> mainFrame(m_page.mainFrame());
         bool preventedDefault = false;
         if (mainFrame->view())
@@ -261,7 +270,7 @@ bool DragController::performDragOperation(const DragData& dragData)
     }
 
     if ((m_dragDestinationAction & DragDestinationActionEdit) && concludeEditDrag(dragData)) {
-        m_client.didConcludeEditDrag();
+        client().didConcludeEditDrag();
         m_documentUnderMouse = nullptr;
         clearDragCaret();
         return true;
@@ -277,7 +286,7 @@ bool DragController::performDragOperation(const DragData& dragData)
     if (urlString.isEmpty())
         return false;
 
-    m_client.willPerformDragDestinationAction(DragDestinationActionLoad, dragData);
+    client().willPerformDragDestinationAction(DragDestinationActionLoad, dragData);
     FrameLoadRequest frameLoadRequest { m_page.mainFrame(), ResourceRequest { urlString }, shouldOpenExternalURLsPolicy };
     frameLoadRequest.setIsRequestFromClientOrUserInput();
     m_page.mainFrame().loader().load(WTFMove(frameLoadRequest));
@@ -476,7 +485,7 @@ DragHandlingMethod DragController::tryDocumentDrag(const DragData& dragData, Dra
 
 DragSourceAction DragController::delegateDragSourceAction(const IntPoint& rootViewPoint)
 {
-    m_dragSourceAction = m_client.dragSourceActionMaskForPoint(rootViewPoint);
+    m_dragSourceAction = client().dragSourceActionMaskForPoint(rootViewPoint);
     return m_dragSourceAction;
 }
 
@@ -561,7 +570,7 @@ bool DragController::concludeEditDrag(const DragData& dragData)
         style->setProperty(CSSPropertyColor, color.serialized(), false);
         if (!innerFrame->editor().shouldApplyStyle(style.ptr(), innerRange.get()))
             return false;
-        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        client().willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
         innerFrame->editor().applyStyle(style.ptr(), EditAction::SetColor);
         return true;
     }
@@ -597,7 +606,7 @@ bool DragController::concludeEditDrag(const DragData& dragData)
         if (!fragment || !editor.shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Dropped))
             return false;
 
-        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        client().willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
 
         if (editor.client() && editor.client()->performTwoStepDrop(*fragment, *range, isMove))
             return true;
@@ -623,7 +632,7 @@ bool DragController::concludeEditDrag(const DragData& dragData)
         if (text.isEmpty() || !editor.shouldInsertText(text, range.get(), EditorInsertAction::Dropped))
             return false;
 
-        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        client().willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
         RefPtr<DocumentFragment> fragment = createFragmentFromText(*range, text);
         if (!fragment)
             return false;
@@ -944,7 +953,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
     ASSERT(state.source);
     Element& element = *state.source;
 
-    bool mustUseLegacyDragClient = hasData == HasNonDefaultPasteboardData::Yes || m_client.useLegacyDragClient();
+    bool mustUseLegacyDragClient = hasData == HasNonDefaultPasteboardData::Yes || client().useLegacyDragClient();
 
     IntRect dragImageBounds;
     Image* image = getImage(element);
@@ -990,7 +999,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
 
             src.editor().didWriteSelectionToPasteboard();
         }
-        m_client.willPerformDragSourceAction(DragSourceActionSelection, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionSelection, dragOrigin, dataTransfer);
         if (!dragImage) {
             TextIndicatorData textIndicator;
             dragImage = DragImage { dissolveDragImageToFraction(createDragImageForSelection(src, textIndicator), DragImageAlpha) };
@@ -1042,7 +1051,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
                 declareAndWriteDragImage(dataTransfer, element, !linkURL.isEmpty() ? linkURL : imageURL, hitTestResult.altDisplayString());
         }
 
-        m_client.willPerformDragSourceAction(DragSourceActionImage, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionImage, dragOrigin, dataTransfer);
 
         if (!dragImage)
             doImageDrag(element, dragOrigin, hitTestResult.imageRect(), src, m_dragOffset, state, WTFMove(attachmentInfo));
@@ -1086,7 +1095,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
                 src.selection().setSelection(VisibleSelection::selectionFromContentsOfNode(node));
         }
 
-        m_client.willPerformDragSourceAction(DragSourceActionLink, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionLink, dragOrigin, dataTransfer);
         if (!dragImage) {
             TextIndicatorData textIndicator;
             dragImage = DragImage { createDragImageForLink(element, linkURL, textContentWithSimplifiedWhiteSpace, textIndicator, src.settings().fontRenderingMode(), m_page.deviceScaleFactor()) };
@@ -1137,7 +1146,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
             }
         }
 
-        m_client.willPerformDragSourceAction(DragSourceActionAttachment, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionAttachment, dragOrigin, dataTransfer);
 
         if (!dragImage) {
             TextIndicatorData textIndicator;
@@ -1172,7 +1181,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
         dragImageOffset = IntPoint { dragImageSize(dragImage.get()) };
         dragLoc = dragLocForDHTMLDrag(mouseDraggedPoint, dragOrigin, dragImageOffset, false);
 
-        m_client.willPerformDragSourceAction(DragSourceActionColor, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionColor, dragOrigin, dataTransfer);
         doSystemDrag(WTFMove(dragImage), dragLoc, dragOrigin, src, state, { });
         return true;
     }
@@ -1180,7 +1189,7 @@ bool DragController::startDrag(Frame& src, const DragState& state, DragOperation
 
     if (state.type == DragSourceActionDHTML && dragImage) {
         ASSERT(m_dragSourceAction & DragSourceActionDHTML);
-        m_client.willPerformDragSourceAction(DragSourceActionDHTML, dragOrigin, dataTransfer);
+        client().willPerformDragSourceAction(DragSourceActionDHTML, dragOrigin, dataTransfer);
         doSystemDrag(WTFMove(dragImage), dragLoc, dragOrigin, src, state, { });
         return true;
     }
@@ -1236,7 +1245,7 @@ void DragController::doImageDrag(Element& element, const IntPoint& dragOrigin, c
 
 void DragController::beginDrag(DragItem dragItem, Frame& frame, const IntPoint& mouseDownPoint, const IntPoint& mouseDraggedPoint, DataTransfer& dataTransfer, DragSourceAction dragSourceAction)
 {
-    ASSERT(!m_client.useLegacyDragClient());
+    ASSERT(!client().useLegacyDragClient());
 
     m_didInitiateDrag = true;
     m_dragInitiator = frame.document();
@@ -1248,7 +1257,7 @@ void DragController::beginDrag(DragItem dragItem, Frame& frame, const IntPoint& 
     auto mouseDownPointInRootViewCoordinates = viewProtector->rootViewToContents(frame.view()->contentsToRootView(mouseDownPoint));
     auto mouseDraggedPointInRootViewCoordinates = viewProtector->rootViewToContents(frame.view()->contentsToRootView(mouseDraggedPoint));
 
-    m_client.beginDrag(WTFMove(dragItem), frame, mouseDownPointInRootViewCoordinates, mouseDraggedPointInRootViewCoordinates, dataTransfer, dragSourceAction);
+    client().beginDrag(WTFMove(dragItem), frame, mouseDownPointInRootViewCoordinates, mouseDraggedPointInRootViewCoordinates, dataTransfer, dragSourceAction);
 }
 
 void DragController::doSystemDrag(DragImage image, const IntPoint& dragLoc, const IntPoint& eventPos, Frame& frame, const DragState& state, PromisedAttachmentInfo&& promisedAttachmentInfo)
@@ -1304,12 +1313,144 @@ void DragController::doSystemDrag(DragImage image, const IntPoint& dragLoc, cons
             item.url = frame.document()->completeURL(stripLeadingAndTrailingHTMLSpaces(link->getAttribute(HTMLNames::hrefAttr)));
         }
     }
-    m_client.startDrag(WTFMove(item), *state.dataTransfer, frameProtector.get());
+    client().startDrag(WTFMove(item), *state.dataTransfer, frameProtector.get());
     // DragClient::startDrag can cause our Page to dispear, deallocating |this|.
     if (!frameProtector->page())
         return;
 
     cleanupAfterSystemDrag();
+}
+
+void DragController::removeAllDroppedImagePlaceholders()
+{
+    m_droppedImagePlaceholderRange = nullptr;
+    for (auto& placeholder : std::exchange(m_droppedImagePlaceholders, { })) {
+        if (placeholder->isConnected())
+            placeholder->remove();
+    }
+}
+
+bool DragController::tryToUpdateDroppedImagePlaceholders(const DragData& dragData)
+{
+    ASSERT(!m_droppedImagePlaceholders.isEmpty());
+    ASSERT(m_droppedImagePlaceholderRange);
+
+    auto document = makeRef(m_droppedImagePlaceholders[0]->document());
+    auto frame = makeRefPtr(document->frame());
+    if (!frame)
+        return false;
+
+    WebContentReader reader(*frame, *m_droppedImagePlaceholderRange, true);
+    auto pasteboard = Pasteboard::createForDragAndDrop(dragData);
+    pasteboard->read(reader);
+
+    if (!reader.fragment)
+        return false;
+
+    Vector<Ref<HTMLImageElement>> imageElements;
+    for (auto& imageElement : descendantsOfType<HTMLImageElement>(*reader.fragment))
+        imageElements.append(imageElement);
+
+    if (imageElements.size() != m_droppedImagePlaceholders.size()) {
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    for (size_t i = 0; i < imageElements.size(); ++i) {
+        auto& imageElement = imageElements[i];
+        auto& placeholder = m_droppedImagePlaceholders[i];
+        placeholder->setAttributeWithoutSynchronization(HTMLNames::srcAttr, imageElement->attributeWithoutSynchronization(HTMLNames::srcAttr));
+#if ENABLE(ATTACHMENT_ELEMENT)
+        if (auto attachment = imageElement->attachmentElement())
+            placeholder->setAttachmentElement(attachment.releaseNonNull());
+#endif
+    }
+    return true;
+}
+
+void DragController::insertDroppedImagePlaceholdersAtCaret(const Vector<IntSize>& imageSizes)
+{
+    auto& caretController = m_page.dragCaretController();
+    if (!caretController.isContentRichlyEditable())
+        return;
+
+    auto dropCaret = caretController.caretPosition();
+    if (dropCaret.isNull())
+        return;
+
+    auto document = makeRefPtr(dropCaret.deepEquivalent().document());
+    if (!document)
+        return;
+
+    auto frame = makeRefPtr(document->frame());
+    if (!frame)
+        return;
+
+    TemporarySelectionChange selectionChange(*frame, WTF::nullopt, { TemporarySelectionOption::IgnoreSelectionChanges });
+
+    auto fragment = DocumentFragment::create(*document);
+    for (auto& size : imageSizes) {
+        ASSERT(!size.isEmpty());
+        auto image = HTMLImageElement::create(*document);
+        image->setAttributeWithoutSynchronization(HTMLNames::widthAttr, AtomString::number(size.width()));
+        image->setAttributeWithoutSynchronization(HTMLNames::heightAttr, AtomString::number(size.height()));
+        image->setInlineStyleProperty(CSSPropertyMaxWidth, 100, CSSUnitType::CSS_PERCENTAGE);
+        image->setInlineStyleProperty(CSSPropertyBackgroundColor, Color(Color::black).colorWithAlpha(0.05).cssText());
+        image->setIsDroppedImagePlaceholder();
+        fragment->appendChild(WTFMove(image));
+    }
+
+    frame->selection().setSelection(dropCaret);
+
+    auto command = ReplaceSelectionCommand::create(*document, WTFMove(fragment), { ReplaceSelectionCommand::PreventNesting, ReplaceSelectionCommand::SmartReplace }, EditAction::InsertFromDrop);
+    command->apply();
+
+    auto insertedContentRange = command->insertedContentRange();
+    if (!insertedContentRange) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    auto container = makeRefPtr(insertedContentRange->commonAncestorContainer());
+    if (!is<ContainerNode>(container)) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    Vector<Ref<HTMLImageElement>> placeholders;
+    for (auto& placeholder : descendantsOfType<HTMLImageElement>(downcast<ContainerNode>(*container))) {
+        auto intersectsNode = insertedContentRange->intersectsNode(placeholder);
+        if (!intersectsNode.hasException() && intersectsNode.returnValue())
+            placeholders.append(placeholder);
+    }
+
+    if (placeholders.size() != imageSizes.size()) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    for (size_t i = 0; i < placeholders.size(); ++i) {
+        auto& placeholder = placeholders[i];
+        auto imageSize = imageSizes[i];
+        double clientWidth = placeholder->clientWidth();
+        double heightRespectingAspectRatio = (imageSize.height() * clientWidth) / imageSize.width();
+        placeholder->setAttributeWithoutSynchronization(HTMLNames::heightAttr, AtomString::number(heightRespectingAspectRatio));
+    }
+
+    document->updateLayout();
+
+    m_droppedImagePlaceholders = WTFMove(placeholders);
+    m_droppedImagePlaceholderRange = WTFMove(insertedContentRange);
+
+    frame->selection().clear();
+    caretController.setCaretPosition(m_droppedImagePlaceholderRange->startPosition());
+}
+
+void DragController::finalizeDroppedImagePlaceholder(HTMLImageElement& placeholder)
+{
+    ASSERT(placeholder.isDroppedImagePlaceholder());
+    placeholder.removeAttribute(HTMLNames::heightAttr);
+    placeholder.removeInlineStyleProperty(CSSPropertyBackgroundColor);
 }
 
 // Manual drag caret manipulation

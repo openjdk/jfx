@@ -45,7 +45,12 @@ template<typename T>
 struct SetPointerAdaptor {
     static void add(CodeBlock* codeBlock, T set, CommonData& common)
     {
-        return set->add(common.watchpoints.add(codeBlock));
+        CodeBlockJettisoningWatchpoint* watchpoint = nullptr;
+        {
+            ConcurrentJSLocker locker(codeBlock->m_lock);
+            watchpoint = common.watchpoints.add(codeBlock);
+        }
+        return set->add(WTFMove(watchpoint));
     }
     static bool hasBeenInvalidated(T set)
     {
@@ -108,7 +113,7 @@ struct AdaptiveStructureWatchpointAdaptor {
 
 template<typename WatchpointSetType, typename Adaptor = SetPointerAdaptor<WatchpointSetType>>
 class GenericDesiredWatchpoints {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     typedef HashMap<WatchpointSetType, bool> StateMap;
 #endif
 public:

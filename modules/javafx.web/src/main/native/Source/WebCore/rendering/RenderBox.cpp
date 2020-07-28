@@ -567,19 +567,25 @@ int RenderBox::scrollTop() const
     return hasOverflowClip() && layer() ? layer()->scrollPosition().y() : 0;
 }
 
-static void setupWheelEventTestTrigger(RenderLayer& layer)
+void RenderBox::resetLogicalHeightBeforeLayoutIfNeeded()
+{
+    if (shouldResetLogicalHeightBeforeLayout() || (is<RenderBlock>(parent()) && downcast<RenderBlock>(*parent()).shouldResetChildLogicalHeightBeforeLayout(*this)))
+        setLogicalHeight(0_lu);
+}
+
+static void setupWheelEventMonitor(RenderLayer& layer)
 {
     Page& page = layer.renderer().page();
-    if (!page.expectsWheelEventTriggers())
+    if (!page.isMonitoringWheelEvents())
         return;
-    layer.scrollAnimator().setWheelEventTestTrigger(page.testTrigger());
+    layer.scrollAnimator().setWheelEventTestMonitor(page.wheelEventTestMonitor());
 }
 
 void RenderBox::setScrollLeft(int newLeft, ScrollType scrollType, ScrollClamping clamping)
 {
     if (!hasOverflowClip() || !layer())
         return;
-    setupWheelEventTestTrigger(*layer());
+    setupWheelEventMonitor(*layer());
     layer()->scrollToXPosition(newLeft, scrollType, clamping);
 }
 
@@ -587,7 +593,7 @@ void RenderBox::setScrollTop(int newTop, ScrollType scrollType, ScrollClamping c
 {
     if (!hasOverflowClip() || !layer())
         return;
-    setupWheelEventTestTrigger(*layer());
+    setupWheelEventMonitor(*layer());
     layer()->scrollToYPosition(newTop, scrollType, clamping);
 }
 
@@ -726,7 +732,7 @@ int RenderBox::reflectionOffset() const
 {
     if (!style().boxReflect())
         return 0;
-    if (style().boxReflect()->direction() == ReflectionLeft || style().boxReflect()->direction() == ReflectionRight)
+    if (style().boxReflect()->direction() == ReflectionDirection::Left || style().boxReflect()->direction() == ReflectionDirection::Right)
         return valueForLength(style().boxReflect()->offset(), borderBoxRect().width());
     return valueForLength(style().boxReflect()->offset(), borderBoxRect().height());
 }
@@ -739,18 +745,18 @@ LayoutRect RenderBox::reflectedRect(const LayoutRect& r) const
     LayoutRect box = borderBoxRect();
     LayoutRect result = r;
     switch (style().boxReflect()->direction()) {
-        case ReflectionBelow:
-            result.setY(box.maxY() + reflectionOffset() + (box.maxY() - r.maxY()));
-            break;
-        case ReflectionAbove:
-            result.setY(box.y() - reflectionOffset() - box.height() + (box.maxY() - r.maxY()));
-            break;
-        case ReflectionLeft:
-            result.setX(box.x() - reflectionOffset() - box.width() + (box.maxX() - r.maxX()));
-            break;
-        case ReflectionRight:
-            result.setX(box.maxX() + reflectionOffset() + (box.maxX() - r.maxX()));
-            break;
+    case ReflectionDirection::Below:
+        result.setY(box.maxY() + reflectionOffset() + (box.maxY() - r.maxY()));
+        break;
+    case ReflectionDirection::Above:
+        result.setY(box.y() - reflectionOffset() - box.height() + (box.maxY() - r.maxY()));
+        break;
+    case ReflectionDirection::Left:
+        result.setX(box.x() - reflectionOffset() - box.width() + (box.maxX() - r.maxX()));
+        break;
+    case ReflectionDirection::Right:
+        result.setX(box.maxX() + reflectionOffset() + (box.maxX() - r.maxX()));
+        break;
     }
     return result;
 }
@@ -1321,7 +1327,7 @@ void RenderBox::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& pai
     // FIXME: Should eventually give the theme control over whether the box shadow should paint, since controls could have
     // custom shadows of their own.
     if (!boxShadowShouldBeAppliedToBackground(paintRect.location(), bleedAvoidance))
-        paintBoxShadow(paintInfo, paintRect, style(), Normal);
+        paintBoxShadow(paintInfo, paintRect, style(), ShadowStyle::Normal);
 
     GraphicsContextStateSaver stateSaver(paintInfo.context(), false);
     if (bleedAvoidance == BackgroundBleedUseTransparencyLayer) {
@@ -1352,7 +1358,7 @@ void RenderBox::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& pai
         if (style().hasAppearance())
             theme().paintDecorations(*this, paintInfo, paintRect);
     }
-    paintBoxShadow(paintInfo, paintRect, style(), Inset);
+    paintBoxShadow(paintInfo, paintRect, style(), ShadowStyle::Inset);
 
     // The theme will tell us whether or not we should also paint the CSS border.
     if (bleedAvoidance != BackgroundBleedBackgroundOverBorder && (!style().hasAppearance() || (borderOrBackgroundPaintingIsNeeded && theme().paintBorderOnly(*this, paintInfo, paintRect))) && style().hasVisibleBorderDecoration())
@@ -1476,7 +1482,7 @@ static bool isCandidateForOpaquenessTest(const RenderBox& childBox)
         if (childLayer->isComposited())
             return false;
         // FIXME: Deal with z-index.
-        if (!childStyle.hasAutoZIndex())
+        if (!childStyle.hasAutoUsedZIndex())
             return false;
         if (childLayer->hasTransform() || childLayer->isTransparent() || childLayer->hasFilter())
             return false;
@@ -1583,7 +1589,7 @@ void RenderBox::paintMaskImages(const PaintInfo& paintInfo, const LayoutRect& pa
     bool pushTransparencyLayer = false;
     bool compositedMask = hasLayer() && layer()->hasCompositedMask();
     bool flattenCompositingLayers = paintInfo.paintBehavior.contains(PaintBehavior::FlattenCompositingLayers);
-    CompositeOperator compositeOp = CompositeSourceOver;
+    CompositeOperator compositeOp = CompositeOperator::SourceOver;
 
     bool allMaskImagesLoaded = true;
 
@@ -1596,9 +1602,9 @@ void RenderBox::paintMaskImages(const PaintInfo& paintInfo, const LayoutRect& pa
 
         allMaskImagesLoaded &= style().maskLayers().imagesAreLoaded();
 
-        paintInfo.context().setCompositeOperation(CompositeDestinationIn);
+        paintInfo.context().setCompositeOperation(CompositeOperator::DestinationIn);
         paintInfo.context().beginTransparencyLayer(1);
-        compositeOp = CompositeSourceOver;
+        compositeOp = CompositeOperator::SourceOver;
     }
 
     if (allMaskImagesLoaded) {
@@ -1702,9 +1708,12 @@ void RenderBox::imageChanged(WrappedImagePtr image, const IntRect*)
 
     ShapeValue* shapeOutsideValue = style().shapeOutside();
     if (!view().frameView().layoutContext().isInRenderTreeLayout() && isFloating() && shapeOutsideValue && shapeOutsideValue->image() && shapeOutsideValue->image()->data() == image) {
-        ShapeOutsideInfo::ensureInfo(*this).markShapeAsDirty();
-        markShapeOutsideDependentsForLayout();
-    }
+        ShapeOutsideInfo& info = ShapeOutsideInfo::ensureInfo(*this);
+        if (!info.isComputingShape()) {
+            info.markShapeAsDirty();
+            markShapeOutsideDependentsForLayout();
+        }
+     }
 
     bool didFullRepaint = repaintLayerRectsForImage(image, style().backgroundLayers(), true);
     if (!didFullRepaint)
@@ -4781,7 +4790,7 @@ LayoutRect RenderBox::layoutOverflowRectForPropagation(const RenderStyle* parent
         // to it, and then convert it back.
         flipForWritingMode(rect);
 
-        if (hasTransform)
+        if (hasTransform && hasLayer())
             rect = layer()->currentTransform().mapRect(rect);
 
         if (isInFlowPositioned())

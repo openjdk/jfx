@@ -31,17 +31,14 @@
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
-
 namespace Layout {
 
 class Box;
-class FloatingState;
-class LayoutState;
 
 class FloatBox : public FloatAvoider {
     WTF_MAKE_ISO_ALLOCATED(FloatBox);
 public:
-    FloatBox(const Box&, const FloatingState&, const LayoutState&);
+    FloatBox(const Box&, Display::Box absoluteDisplayBox, LayoutPoint containingBlockAbsoluteTopLeft, HorizontalEdges containingBlockAbsoluteContentBox, Optional<LayoutUnit> previousFloatAbsoluteTop);
 
     Display::Rect rect() const final;
 
@@ -51,7 +48,7 @@ private:
     PositionInContextRoot horizontalPositionCandidate(HorizontalConstraints) final;
     PositionInContextRoot verticalPositionCandidate(PositionInContextRoot) final;
 
-    PositionInContextRoot initialVerticalPosition() const;
+    PositionInContextRoot initialVerticalPosition(Optional<LayoutUnit> previousFloatAbsoluteTop) const;
 };
 
 }

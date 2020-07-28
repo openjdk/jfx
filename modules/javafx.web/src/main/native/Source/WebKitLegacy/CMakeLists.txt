@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 include(WebKitCommon)
+include(target/TargetWTF)
+include(target/TargetJavaScriptCore)
 set_property(DIRECTORY . PROPERTY FOLDER "WebKitLegacy")
 
 set(WebKitLegacy_SOURCES
+    Storage/InProcessIDBServer.cpp
     Storage/StorageAreaImpl.cpp
     Storage/StorageAreaSync.cpp
     Storage/StorageNamespaceImpl.cpp
@@ -25,10 +28,10 @@ set(WebKitLegacy_PRIVATE_INCLUDE_DIRECTORIES
     "${WebKitLegacy_DERIVED_SOURCES_DIR}"
 )
 
-set(WebKitLegacy_LIBRARIES
-    PRIVATE WebKit::JavaScriptCore
-    PRIVATE WebCore${DEBUG_SUFFIX}
-    PRIVATE PAL${DEBUG_SUFFIX}
+set(WebKitLegacy_PRIVATE_LIBRARIES
+    WebKit::JavaScriptCore
+    WebCore${DEBUG_SUFFIX}
+    PAL${DEBUG_SUFFIX}
 )
 
 WEBKIT_FRAMEWORK_DECLARE(WebKitLegacy)
@@ -60,7 +63,7 @@ if (MSVC AND NOT PORT STREQUAL Java)
         COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/version-stamp.pl ${WebKitLegacy_DERIVED_SOURCES_DIR} $<TARGET_FILE:WebKitLegacy>
         VERBATIM)
 
-     if (APPLE)
-         add_subdirectory(win/WebKitQuartzCoreAdditions)
-     endif ()
+    if (USE_CA)
+        add_subdirectory(win/WebKitQuartzCoreAdditions)
+    endif ()
 endif ()

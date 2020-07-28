@@ -55,6 +55,7 @@
 #include "TypeLocation.h"
 #include "ValueProfile.h"
 #include <type_traits>
+#include <wtf/FastMalloc.h>
 #include <wtf/ListDump.h>
 #include <wtf/LoggingHashSet.h>
 
@@ -250,13 +251,13 @@ struct StackAccessData {
     {
     }
 
-    StackAccessData(VirtualRegister local, FlushFormat format)
-        : local(local)
+    StackAccessData(Operand operand, FlushFormat format)
+        : operand(operand)
         , format(format)
     {
     }
 
-    VirtualRegister local;
+    Operand operand;
     VirtualRegister machineLocal;
     FlushFormat format;
 
@@ -278,8 +279,9 @@ enum class BucketOwnerType : uint32_t {
 // === Node ===
 //
 // Node represents a single operation in the data flow graph.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DFGNode);
 struct Node {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DFGNode);
 public:
     static const char HashSetTemplateInstantiationString[];
 
@@ -478,6 +480,12 @@ public:
         children.setChild1(Edge(structure, CellUse));
     }
 
+    void convertCheckArrayOrEmptyToCheckArray()
+    {
+        ASSERT(op() == CheckArrayOrEmpty);
+        setOpAndDefaultFlags(CheckArray);
+    }
+
     void replaceWith(Graph&, Node* other);
     void replaceWithWithoutChecks(Node* other);
 
@@ -612,7 +620,7 @@ public:
 
     void convertToPhantomNewObject()
     {
-        ASSERT(m_op == NewObject || m_op == MaterializeNewObject);
+        ASSERT(m_op == NewObject);
         m_op = PhantomNewObject;
         m_flags &= ~NodeHasVarArgs;
         m_flags |= NodeMustGenerate;
@@ -641,6 +649,17 @@ public:
         children = AdjacencyList();
     }
 
+    void convertToPhantomNewArrayIterator()
+    {
+        ASSERT(m_op == NewArrayIterator);
+        m_op = PhantomNewArrayIterator;
+        m_flags &= ~NodeHasVarArgs;
+        m_flags |= NodeMustGenerate;
+        m_opInfo = OpInfoWrapper();
+        m_opInfo2 = OpInfoWrapper();
+        children = AdjacencyList();
+    }
+
     void convertToPhantomNewAsyncFunction()
     {
         ASSERT(m_op == NewAsyncFunction);
@@ -663,7 +682,7 @@ public:
 
     void convertToPhantomCreateActivation()
     {
-        ASSERT(m_op == CreateActivation || m_op == MaterializeCreateActivation);
+        ASSERT(m_op == CreateActivation);
         m_op = PhantomCreateActivation;
         m_flags &= ~NodeHasVarArgs;
         m_flags |= NodeMustGenerate;
@@ -698,7 +717,7 @@ public:
 
     void convertToToString()
     {
-        ASSERT(m_op == ToPrimitive || m_op == StringValueOf);
+        ASSERT(m_op == ToPrimitive || m_op == StringValueOf || m_op == ToPropertyKey);
         m_op = ToString;
     }
 
@@ -752,6 +771,25 @@ public:
     {
         ASSERT(m_op == CallObjectConstructor || m_op == CreateThis || m_op == ObjectCreate);
         setOpAndDefaultFlags(NewObject);
+        children.reset();
+        m_opInfo = structure;
+        m_opInfo2 = OpInfoWrapper();
+    }
+
+    void convertToNewPromise(RegisteredStructure structure)
+    {
+        ASSERT(m_op == CreatePromise);
+        bool internal = isInternalPromise();
+        setOpAndDefaultFlags(NewPromise);
+        children.reset();
+        m_opInfo = structure;
+        m_opInfo2 = internal;
+    }
+
+    void convertToNewInternalFieldObject(NodeType newOp, RegisteredStructure structure)
+    {
+        ASSERT(m_op == CreateAsyncGenerator || m_op == CreateGenerator);
+        setOpAndDefaultFlags(newOp);
         children.reset();
         m_opInfo = structure;
         m_opInfo2 = OpInfoWrapper();
@@ -883,6 +921,7 @@ public:
         switch (op()) {
         case GetMyArgumentByVal:
         case GetMyArgumentByValOutOfBounds:
+        case VarargsLength:
         case LoadVarargs:
         case ForwardVarargs:
         case CallVarargs:
@@ -904,9 +943,11 @@ public:
         switch (op()) {
         case GetMyArgumentByVal:
         case GetMyArgumentByValOutOfBounds:
+        case VarargsLength:
+            return child1();
         case LoadVarargs:
         case ForwardVarargs:
-            return child1();
+            return child2();
         case CallVarargs:
         case CallForwardVarargs:
         case ConstructVarargs:
@@ -954,9 +995,9 @@ public:
         return m_opInfo.as<VariableAccessData*>()->find();
     }
 
-    VirtualRegister local()
+    Operand operand()
     {
-        return variableAccessData()->local();
+        return variableAccessData()->operand();
     }
 
     VirtualRegister machineLocal()
@@ -964,7 +1005,7 @@ public:
         return variableAccessData()->machineLocal();
     }
 
-    bool hasUnlinkedLocal()
+    bool hasUnlinkedOperand()
     {
         switch (op()) {
         case ExtractOSREntryLocal:
@@ -977,10 +1018,10 @@ public:
         }
     }
 
-    VirtualRegister unlinkedLocal()
+    Operand unlinkedOperand()
     {
-        ASSERT(hasUnlinkedLocal());
-        return VirtualRegister(m_opInfo.as<int32_t>());
+        ASSERT(hasUnlinkedOperand());
+        return Operand::fromBits(m_opInfo.as<uint64_t>());
     }
 
     bool hasStackAccessData()
@@ -1246,6 +1287,17 @@ public:
         return m_opInfo.as<unsigned>();
     }
 
+    bool hasIsInternalPromise()
+    {
+        return op() == CreatePromise || op() == NewPromise;
+    }
+
+    bool isInternalPromise()
+    {
+        ASSERT(hasIsInternalPromise());
+        return m_opInfo2.as<bool>();
+    }
+
     void setIndexingType(IndexingType indexingType)
     {
         ASSERT(hasIndexingType());
@@ -1261,6 +1313,17 @@ public:
     {
         ASSERT(hasScopeOffset());
         return ScopeOffset(m_opInfo.as<uint32_t>());
+    }
+
+    unsigned hasInternalFieldIndex()
+    {
+        return op() == GetInternalField || op() == PutInternalField;
+    }
+
+    unsigned internalFieldIndex()
+    {
+        ASSERT(hasInternalFieldIndex());
+        return m_opInfo.as<uint32_t>();
     }
 
     bool hasDirectArgumentsOffset()
@@ -1309,7 +1372,7 @@ public:
 
     bool hasLoadVarargsData()
     {
-        return op() == LoadVarargs || op() == ForwardVarargs;
+        return op() == LoadVarargs || op() == ForwardVarargs || op() == VarargsLength;
     }
 
     LoadVarargsData* loadVarargsData()
@@ -1340,7 +1403,7 @@ public:
         return op() == IsCellWithType;
     }
 
-    SpeculatedType speculatedTypeForQuery()
+    Optional<SpeculatedType> speculatedTypeForQuery()
     {
         return speculationFromJSType(queriedType());
     }
@@ -1378,6 +1441,9 @@ public:
         case ValueBitAnd:
         case ValueBitOr:
         case ValueBitXor:
+        case ValueBitNot:
+        case ValueBitLShift:
+        case ValueBitRShift:
         case ValueNegate:
             return true;
         default:
@@ -1510,9 +1576,21 @@ public:
         return m_opInfo.as<EntrySwitchData*>();
     }
 
+    bool hasIntrinsic()
+    {
+        switch (op()) {
+        case CPUIntrinsic:
+        case DateGetTime:
+        case DateGetInt32OrNaN:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     Intrinsic intrinsic()
     {
-        RELEASE_ASSERT(op() == CPUIntrinsic);
+        ASSERT(hasIntrinsic());
         return m_opInfo.as<Intrinsic>();
     }
 
@@ -1667,6 +1745,7 @@ public:
         case GetByOffset:
         case MultiGetByOffset:
         case GetClosureVar:
+        case GetInternalField:
         case GetFromArguments:
         case GetArgument:
         case ArrayPop:
@@ -1681,12 +1760,14 @@ public:
         case StringReplace:
         case StringReplaceRegExp:
         case ToNumber:
+        case ToNumeric:
         case ToObject:
         case ValueBitAnd:
         case ValueBitOr:
         case ValueBitXor:
         case ValueBitNot:
         case ValueBitLShift:
+        case ValueBitRShift:
         case CallObjectConstructor:
         case LoadKeyFromMapBucket:
         case LoadValueFromMapBucket:
@@ -1707,6 +1788,7 @@ public:
         case ToThis:
         case DataViewGetInt:
         case DataViewGetFloat:
+        case DateGetInt32OrNaN:
             return true;
         default:
             return false;
@@ -1813,7 +1895,7 @@ public:
 
     bool hasUidOperand()
     {
-        return op() == CheckStringIdent;
+        return op() == CheckIdent;
     }
 
     UniquedStringImpl* uidOperand()
@@ -1874,7 +1956,12 @@ public:
     {
         switch (op()) {
         case ArrayifyToStructure:
+        case MaterializeNewInternalFieldObject:
         case NewObject:
+        case NewPromise:
+        case NewGenerator:
+        case NewAsyncGenerator:
+        case NewArrayIterator:
         case NewStringObject:
             return true;
         default:
@@ -1943,6 +2030,7 @@ public:
     {
         switch (op()) {
         case MaterializeNewObject:
+        case MaterializeNewInternalFieldObject:
         case MaterializeCreateActivation:
             return true;
 
@@ -2039,6 +2127,7 @@ public:
         case PhantomNewGeneratorFunction:
         case PhantomNewAsyncFunction:
         case PhantomNewAsyncGeneratorFunction:
+        case PhantomNewArrayIterator:
         case PhantomCreateActivation:
         case PhantomNewRegexp:
             return true;
@@ -2060,7 +2149,9 @@ public:
         case GetByVal:
         case StringCharAt:
         case StringCharCodeAt:
+        case StringCodePointAt:
         case CheckArray:
+        case CheckArrayOrEmpty:
         case Arrayify:
         case ArrayifyToStructure:
         case ArrayPush:
@@ -2852,15 +2943,15 @@ public:
         return m_opInfo.as<CallLinkStatus*>();
     }
 
-    bool hasGetByIdStatus()
+    bool hasGetByStatus()
     {
-        return op() == FilterGetByIdStatus;
+        return op() == FilterGetByStatus;
     }
 
-    GetByIdStatus* getByIdStatus()
+    GetByStatus* getByStatus()
     {
-        ASSERT(hasGetByIdStatus());
-        return m_opInfo.as<GetByIdStatus*>();
+        ASSERT(hasGetByStatus());
+        return m_opInfo.as<GetByStatus*>();
     }
 
     bool hasInByIdStatus()

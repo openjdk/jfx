@@ -38,6 +38,19 @@ OBJC_CLASS NSScrollerImp;
 
 namespace WebCore {
 
+struct RequestedScrollData {
+    FloatPoint scrollPosition;
+    ScrollType scrollType { ScrollType::User };
+    ScrollClamping clamping { ScrollClamping::Clamped };
+
+    bool operator==(const RequestedScrollData& other) const
+    {
+        return scrollPosition == other.scrollPosition
+            && scrollType == other.scrollType
+            && clamping == other.clamping;
+    }
+};
+
 class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
     virtual ~ScrollingStateScrollingNode();
@@ -59,7 +72,7 @@ public:
         CurrentHorizontalSnapOffsetIndex,
         CurrentVerticalSnapOffsetIndex,
 #endif
-        ExpectsWheelEventTestTrigger,
+        IsMonitoringWheelEvents,
         ScrollContainerLayer,
         ScrolledContentsLayer,
         HorizontalScrollbarLayer,
@@ -109,12 +122,11 @@ public:
     const ScrollableAreaParameters& scrollableAreaParameters() const { return m_scrollableAreaParameters; }
     WEBCORE_EXPORT void setScrollableAreaParameters(const ScrollableAreaParameters& params);
 
-    const FloatPoint& requestedScrollPosition() const { return m_requestedScrollPosition; }
-    bool requestedScrollPositionRepresentsProgrammaticScroll() const { return m_requestedScrollPositionRepresentsProgrammaticScroll; }
-    WEBCORE_EXPORT void setRequestedScrollPosition(const FloatPoint&, bool representsProgrammaticScroll);
+    const RequestedScrollData& requestedScrollData() const { return m_requestedScrollData; }
+    WEBCORE_EXPORT void setRequestedScrollData(const RequestedScrollData&);
 
-    bool expectsWheelEventTestTrigger() const { return m_expectsWheelEventTestTrigger; }
-    WEBCORE_EXPORT void setExpectsWheelEventTestTrigger(bool);
+    bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
+    WEBCORE_EXPORT void setIsMonitoringWheelEvents(bool);
 
     const LayerRepresentation& scrollContainerLayer() const { return m_scrollContainerLayer; }
     WEBCORE_EXPORT void setScrollContainerLayer(const LayerRepresentation&);
@@ -149,7 +161,6 @@ private:
     FloatSize m_reachableContentsSize;
     LayoutRect m_parentRelativeScrollableRect;
     FloatPoint m_scrollPosition;
-    FloatPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -169,9 +180,9 @@ private:
 #endif
 
     ScrollableAreaParameters m_scrollableAreaParameters;
+    RequestedScrollData m_requestedScrollData;
 
-    bool m_requestedScrollPositionRepresentsProgrammaticScroll { false };
-    bool m_expectsWheelEventTestTrigger { false };
+    bool m_isMonitoringWheelEvents { false };
 };
 
 } // namespace WebCore

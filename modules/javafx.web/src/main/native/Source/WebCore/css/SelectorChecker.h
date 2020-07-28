@@ -38,6 +38,16 @@ class Element;
 class RenderScrollbar;
 class RenderStyle;
 
+struct StyleScrollbarState {
+    ScrollbarPart scrollbarPart { NoPart };
+    ScrollbarPart hoveredPart { NoPart };
+    ScrollbarPart pressedPart { NoPart };
+    ScrollbarOrientation orientation { VerticalScrollbar };
+    ScrollbarButtonsPlacement buttonsPlacement { ScrollbarButtonsNone };
+    bool enabled { false };
+    bool scrollCornerIsVisible { false };
+};
+
 class SelectorChecker {
     WTF_MAKE_NONCOPYABLE(SelectorChecker);
     enum class Match { SelectorMatches, SelectorFailsLocally, SelectorFailsAllSiblings, SelectorFailsCompletely };
@@ -80,10 +90,11 @@ public:
 
         const SelectorChecker::Mode resolvingMode;
         PseudoId pseudoId { PseudoId::None };
-        RenderScrollbar* scrollbar { nullptr };
-        ScrollbarPart scrollbarPart { NoPart };
+        Optional<StyleScrollbarState> scrollbarState;
+        AtomString nameForHightlightPseudoElement;
         const ContainerNode* scope { nullptr };
         bool isMatchingHostPseudoClass { false };
+        const Element* shadowHostInPartRuleScope { nullptr };
 
         // FIXME: It would be nicer to have a separate object for return values. This requires some more work in the selector compiler.
         Style::Relations styleRelations;
@@ -96,6 +107,7 @@ public:
 
     static bool isCommonPseudoClassSelector(const CSSSelector*);
     static bool matchesFocusPseudoClass(const Element&);
+    static bool matchesDirectFocusPseudoClass(const Element&);
     static bool attributeSelectorMatches(const Element&, const QualifiedName&, const AtomString& attributeValue, const CSSSelector&);
 
     enum LinkMatchMask { MatchDefault = 0, MatchLink = 1, MatchVisited = 2, MatchAll = MatchLink | MatchVisited };
@@ -105,7 +117,7 @@ public:
 
 private:
     MatchResult matchRecursively(CheckingContext&, const LocalContext&, PseudoIdSet&, unsigned& specificity) const;
-    bool checkOne(CheckingContext&, const LocalContext&, PseudoIdSet&, MatchType&, unsigned& specificity) const;
+    bool checkOne(CheckingContext&, const LocalContext&, MatchType&, unsigned& specificity) const;
     bool matchSelectorList(CheckingContext&, const LocalContext&, const Element&, const CSSSelectorList&, unsigned& specificity) const;
 
     bool checkScrollbarPseudoClass(const CheckingContext&, const Element&, const CSSSelector&) const;

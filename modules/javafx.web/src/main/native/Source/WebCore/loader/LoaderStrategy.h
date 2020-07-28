@@ -30,7 +30,6 @@
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
 #include "StoredCredentialsPolicy.h"
-#include <pal/SessionID.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -44,6 +43,7 @@ class NetscapePlugInStreamLoader;
 class NetscapePlugInStreamLoaderClient;
 struct NetworkTransactionInformation;
 class NetworkLoadMetrics;
+class Page;
 class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
@@ -58,7 +58,7 @@ class WEBCORE_EXPORT LoaderStrategy {
 public:
     virtual void loadResource(Frame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&) = 0;
     virtual void loadResourceSynchronously(FrameLoader&, unsigned long identifier, const ResourceRequest&, ClientCredentialPolicy, const FetchOptions&, const HTTPHeaderMap&, ResourceError&, ResourceResponse&, Vector<char>& data) = 0;
-    virtual void pageLoadCompleted(PageIdentifier) = 0;
+    virtual void pageLoadCompleted(Page&) = 0;
 
     virtual void remove(ResourceLoader*) = 0;
     virtual void setDefersLoading(ResourceLoader&, bool) = 0;

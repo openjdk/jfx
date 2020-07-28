@@ -30,6 +30,7 @@ types [
     :ErrorType,
     :GetByIdMode,
     :GetByIdModeMetadata,
+    :GetByValHistory,
     :GetPutInfo,
     :IndexingType,
     :JSCell,
@@ -41,6 +42,7 @@ types [
     :JSType,
     :JSValue,
     :LLIntCallLinkInfo,
+    :ResultType,
     :OperandTypes,
     :ProfileTypeBytecodeFlag,
     :PropertyOffset,
@@ -53,19 +55,17 @@ types [
     :SymbolTableOrScopeDepth,
     :ToThisStatus,
     :TypeLocation,
+    :WasmBoundLabel,
     :WatchpointSet,
 
     :ValueProfile,
-    :ValueProfileAndOperandBuffer,
-    :ArithProfile,
+    :ValueProfileAndVirtualRegisterBuffer,
+    :UnaryArithProfile,
+    :BinaryArithProfile,
     :ArrayProfile,
     :ArrayAllocationProfile,
     :ObjectAllocationProfile,
 ]
-
-namespace :Special do
-    types [ :Pointer ]
-end
 
 templates [
     :WriteBarrier,
@@ -73,7 +73,7 @@ templates [
 ]
 
 
-begin_section :Bytecodes,
+begin_section :Bytecode,
     emit_in_h_file: true,
     emit_in_structs_file: true,
     emit_in_asm_file: true,
@@ -108,11 +108,50 @@ op :create_cloned_arguments,
         dst: VirtualRegister,
     }
 
+op :create_arguments_butterfly,
+    args: {
+        dst: VirtualRegister,
+    }
+
 op :create_this,
     args: {
         dst: VirtualRegister,
         callee: VirtualRegister,
         inlineCapacity: unsigned,
+    },
+    metadata: {
+        cachedCallee: WriteBarrier[JSCell]
+    }
+
+op :create_promise,
+    args: {
+        dst: VirtualRegister,
+        callee: VirtualRegister,
+        isInternalPromise: bool,
+    },
+    metadata: {
+        cachedCallee: WriteBarrier[JSCell]
+    }
+
+op :new_promise,
+    args: {
+        dst: VirtualRegister,
+        isInternalPromise: bool,
+    }
+
+op :new_generator,
+    args: {
+        dst: VirtualRegister,
+    }
+
+op_group :CreateInternalFieldObjectOp,
+    [
+        :create_generator,
+        :create_async_generator,
+    ],
+    args: {
+        dst: VirtualRegister,
+        callee: VirtualRegister,
     },
     metadata: {
         cachedCallee: WriteBarrier[JSCell]
@@ -226,7 +265,6 @@ op_group :BinaryOp,
         :beloweq,
         :mod,
         :pow,
-        :rshift,
         :urshift,
     ],
     args: {
@@ -249,10 +287,7 @@ op_group :ProfiledBinaryOp,
         operandTypes: OperandTypes,
     },
     metadata: {
-        arithProfile: ArithProfile
-    },
-    metadata_initializers: {
-        arithProfile: :operandTypes
+        arithProfile: BinaryArithProfile
     }
 
 op_group :ValueProfiledBinaryOp,
@@ -261,6 +296,7 @@ op_group :ValueProfiledBinaryOp,
         :bitor,
         :bitxor,
         :lshift,
+        :rshift,
     ],
     args: {
         dst: VirtualRegister,
@@ -300,14 +336,16 @@ op_group :UnaryOp,
         operand: VirtualRegister,
     }
 
-op :inc,
+op_group :UnaryInPlaceProfiledOp,
+    [
+        :inc,
+        :dec,
+    ],
     args: {
         srcDst: VirtualRegister,
-    }
-
-op :dec,
-    args: {
-        srcDst: VirtualRegister,
+    },
+    metadata: {
+        arithProfile: UnaryArithProfile
     }
 
 op :to_object,
@@ -320,7 +358,11 @@ op :to_object,
         profile: ValueProfile,
     }
 
-op :to_number,
+op_group :ValueProfiledUnaryOp,
+    [
+        :to_number,
+        :to_numeric,
+    ],
     args: {
         dst: VirtualRegister,
         operand: VirtualRegister,
@@ -333,13 +375,10 @@ op :negate,
     args: {
         dst: VirtualRegister,
         operand: VirtualRegister,
-        operandTypes: OperandTypes,
+        resultType: ResultType,
     },
     metadata: {
-        arithProfile: ArithProfile,
-    },
-    metadata_initializers: {
-        arithProfile: :operandTypes
+        arithProfile: UnaryArithProfile,
     }
 
 op :not,
@@ -501,6 +540,7 @@ op :get_by_val,
     metadata: {
         profile: ValueProfile,
         arrayProfile: ArrayProfile,
+        seenIdentifiers: GetByValHistory,
     }
 
 op :put_by_val,
@@ -640,7 +680,7 @@ op :jnundefined_or_null,
 op :jneq_ptr,
     args: {
         value: VirtualRegister,
-        specialPointer: Special::Pointer,
+        specialPointer: VirtualRegister,
         targetLabel: BoundLabel,
     },
     metadata: {
@@ -756,6 +796,13 @@ op :call_varargs,
     metadata: {
         arrayProfile: ArrayProfile,
         profile: ValueProfile,
+    },
+    tmps: {
+        argCountIncludingThis: unsigned,
+    },
+    checkpoints: {
+        determiningArgCount: nil,
+        makeCall: nil,
     }
 
 op :tail_call_varargs,
@@ -770,6 +817,13 @@ op :tail_call_varargs,
     metadata: {
         arrayProfile: ArrayProfile,
         profile: ValueProfile,
+    },
+    tmps: {
+        argCountIncludingThis: unsigned
+    },
+    checkpoints: {
+        determiningArgCount: nil,
+        makeCall: nil,
     }
 
 op :tail_call_forward_arguments,
@@ -810,6 +864,13 @@ op :construct_varargs,
     metadata: {
         arrayProfile: ArrayProfile,
         profile: ValueProfile,
+    },
+    tmps: {
+        argCountIncludingThis: unsigned
+    },
+    checkpoints: {
+        determiningArgCount: nil,
+        makeCall: nil,
     }
 
 op :ret,
@@ -825,6 +886,12 @@ op :strcat,
     }
 
 op :to_primitive,
+    args: {
+        dst: VirtualRegister,
+        src: VirtualRegister,
+    }
+
+op :to_property_key,
     args: {
         dst: VirtualRegister,
         src: VirtualRegister,
@@ -957,7 +1024,7 @@ op :catch,
         thrownValue: VirtualRegister,
     },
     metadata: {
-        buffer: ValueProfileAndOperandBuffer.*,
+        buffer: ValueProfileAndVirtualRegisterBuffer.*,
     }
 
 op :throw,
@@ -1093,6 +1160,8 @@ op :yield,
         argument: VirtualRegister,
     }
 
+op :check_traps
+
 op :log_shadow_chicken_prologue,
     args: {
         scope: VirtualRegister,
@@ -1111,13 +1180,30 @@ op :resolve_scope_for_hoisting_func_decl_in_eval,
         property: unsigned,
     }
 
+op :get_internal_field,
+    args: {
+        dst: VirtualRegister,
+        base: VirtualRegister,
+        index: unsigned,
+    },
+    metadata: {
+        profile: ValueProfile,
+    }
+
+op :put_internal_field,
+    args: {
+        base: VirtualRegister,
+        index: unsigned,
+        value: VirtualRegister,
+    }
+
 op :nop
 
 op :super_sampler_begin
 
 op :super_sampler_end
 
-end_section :Bytecodes
+end_section :Bytecode
 
 begin_section :CLoopHelpers,
     emit_in_h_file: true,
@@ -1184,6 +1270,249 @@ op :llint_native_call_trampoline
 op :llint_native_construct_trampoline
 op :llint_internal_function_call_trampoline
 op :llint_internal_function_construct_trampoline
+op :checkpoint_osr_exit_from_inlined_call_trampoline
+op :checkpoint_osr_exit_trampoline
 op :handleUncaughtException
+op :op_call_return_location
+op :op_construct_return_location
+op :op_call_varargs_slow_return_location
+op :op_construct_varargs_slow_return_location
+op :op_get_by_id_return_location
+op :op_get_by_val_return_location
+op :op_put_by_id_return_location
+op :op_put_by_val_return_location
+op :wasm_function_prologue
+op :wasm_function_prologue_no_tls
 
 end_section :NativeHelpers
+
+begin_section :Wasm,
+    emit_in_h_file: true,
+    emit_in_structs_file: true,
+    macro_name_component: :WASM,
+    op_prefix: "wasm_"
+
+autogenerate_wasm_opcodes
+
+# Helpers
+
+op :throw_from_slow_path_trampoline
+
+# FIXME: Wasm and JS LLInt should share common opcodes
+# https://bugs.webkit.org/show_bug.cgi?id=203656
+
+op :wide16
+op :wide32
+
+op :enter
+op :nop
+op :loop_hint
+
+op :mov,
+    args: {
+        dst: VirtualRegister,
+        src: VirtualRegister,
+    }
+
+op_group :ConditionalJump,
+    [
+        :jtrue,
+        :jfalse,
+    ],
+    args: {
+        condition: VirtualRegister,
+        targetLabel: WasmBoundLabel,
+    }
+
+op :jmp,
+    args: {
+        targetLabel: WasmBoundLabel,
+    }
+
+op :ret
+
+op :switch,
+    args: {
+        scrutinee: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+# Wasm specific bytecodes
+
+op :unreachable
+op :ret_void
+
+op :drop_keep,
+    args: {
+        startOffset: unsigned,
+        dropCount: unsigned,
+        keepCount: unsigned,
+    }
+
+op :ref_is_null,
+    args: {
+        dst: VirtualRegister,
+        ref: VirtualRegister,
+    }
+
+op :ref_func,
+    args: {
+        dst: VirtualRegister,
+        functionIndex: unsigned,
+    }
+
+op :get_global,
+    args: {
+        dst: VirtualRegister,
+        globalIndex: unsigned,
+    }
+
+op :set_global,
+    args: {
+        globalIndex: unsigned,
+        value: VirtualRegister,
+    }
+
+op :set_global_ref,
+    args: {
+        globalIndex: unsigned,
+        value: VirtualRegister,
+    }
+
+op :get_global_portable_binding,
+    args: {
+        dst: VirtualRegister,
+        globalIndex: unsigned,
+    }
+
+op :set_global_portable_binding,
+    args: {
+        globalIndex: unsigned,
+        value: VirtualRegister,
+    }
+
+op :set_global_ref_portable_binding,
+    args: {
+        globalIndex: unsigned,
+        value: VirtualRegister,
+    }
+
+op :table_get,
+    args: {
+        dst: VirtualRegister,
+        index: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+op :table_set,
+    args: {
+        index: VirtualRegister,
+        value: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+op :table_size,
+    args: {
+        dst: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+op :table_grow,
+    args: {
+        dst: VirtualRegister,
+        fill: VirtualRegister,
+        size: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+op :table_fill,
+    args: {
+        offset: VirtualRegister,
+        fill: VirtualRegister,
+        size: VirtualRegister,
+        tableIndex: unsigned,
+    }
+
+op :call,
+    args: {
+        functionIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
+    }
+
+op :call_no_tls,
+    args: {
+        functionIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
+    }
+
+op :call_indirect,
+    args: {
+        functionIndex: VirtualRegister,
+        signatureIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
+        tableIndex: unsigned,
+    }
+
+op :call_indirect_no_tls,
+    args: {
+        functionIndex: VirtualRegister,
+        signatureIndex: unsigned,
+        stackOffset: unsigned,
+        numberOfStackArgs: unsigned,
+        tableIndex: unsigned,
+    }
+
+op :current_memory,
+    args: {
+        dst: VirtualRegister,
+    }
+
+op :grow_memory,
+    args: {
+        dst: VirtualRegister,
+        delta: VirtualRegister
+    }
+
+op :select,
+    args: {
+        dst: VirtualRegister,
+        condition: VirtualRegister,
+        nonZero: VirtualRegister,
+        zero: VirtualRegister,
+    }
+
+op_group :Load,
+    [
+        :load8_u,
+        :load16_u,
+        :load32_u,
+        :load64_u,
+        :i32_load8_s,
+        :i64_load8_s,
+        :i32_load16_s,
+        :i64_load16_s,
+        :i64_load32_s,
+    ],
+    args: {
+        dst: VirtualRegister,
+        pointer: VirtualRegister,
+        offset: unsigned,
+    }
+
+op_group :Store,
+    [
+        :store8,
+        :store16,
+        :store32,
+        :store64,
+    ],
+    args: {
+        pointer: VirtualRegister,
+        value: VirtualRegister,
+        offset: unsigned,
+    }
+
+end_section :Wasm

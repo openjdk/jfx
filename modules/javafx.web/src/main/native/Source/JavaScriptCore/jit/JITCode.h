@@ -192,6 +192,7 @@ public:
     virtual DFG::JITCode* dfg();
     virtual FTL::JITCode* ftl();
     virtual FTL::ForOSREntryJITCode* ftlForOSREntry();
+    virtual void shrinkToFit(const ConcurrentJSLocker&);
 
     virtual void validateReferences(const TrackedReferences&);
 
@@ -237,7 +238,9 @@ protected:
     CodeRef<JSEntryPtrTag> m_ref;
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
 class DirectJITCode : public JITCodeWithCodeRef {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DirectJITCode);
 public:
     DirectJITCode(JITType);
     DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType, JITCode::ShareAttribute = JITCode::ShareAttribute::NotShared);

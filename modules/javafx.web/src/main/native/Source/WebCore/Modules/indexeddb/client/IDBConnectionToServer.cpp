@@ -54,7 +54,7 @@ IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& dele
 {
 }
 
-uint64_t IDBConnectionToServer::identifier() const
+IDBConnectionIdentifier IDBConnectionToServer::identifier() const
 {
     return m_delegate->identifier();
 }
@@ -74,7 +74,7 @@ void IDBConnectionToServer::callResultFunctionWithErrorLater(ResultFunction func
 
 void IDBConnectionToServer::deleteDatabase(const IDBRequestData& request)
 {
-    LOG(IndexedDB, "IDBConnectionToServer::deleteDatabase - %s", request.databaseIdentifier().debugString().utf8().data());
+    LOG(IndexedDB, "IDBConnectionToServer::deleteDatabase - %s", request.databaseIdentifier().loggingString().utf8().data());
 
     if (m_serverConnectionIsValid)
         m_delegate->deleteDatabase(request);
@@ -90,7 +90,7 @@ void IDBConnectionToServer::didDeleteDatabase(const IDBResultData& resultData)
 
 void IDBConnectionToServer::openDatabase(const IDBRequestData& request)
 {
-    LOG(IndexedDB, "IDBConnectionToServer::openDatabase - %s (%s) (%" PRIu64 ")", request.databaseIdentifier().debugString().utf8().data(), request.requestIdentifier().loggingString().utf8().data(), request.requestedVersion());
+    LOG(IndexedDB, "IDBConnectionToServer::openDatabase - %s (%s) (%" PRIu64 ")", request.databaseIdentifier().loggingString().utf8().data(), request.requestIdentifier().loggingString().utf8().data(), request.requestedVersion());
 
     if (m_serverConnectionIsValid)
         m_delegate->openDatabase(request);
@@ -415,13 +415,13 @@ void IDBConnectionToServer::fireVersionChangeEvent(uint64_t databaseConnectionId
     m_proxy->fireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, requestedVersion);
 }
 
-void IDBConnectionToServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier)
+void IDBConnectionToServer::didFireVersionChangeEvent(uint64_t databaseConnectionIdentifier, const IDBResourceIdentifier& requestIdentifier, const IndexedDB::ConnectionClosedOnBehalfOfServer connectionClosed)
 {
     LOG(IndexedDB, "IDBConnectionToServer::didFireVersionChangeEvent");
     ASSERT(isMainThread());
 
     if (m_serverConnectionIsValid)
-        m_delegate->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier);
+        m_delegate->didFireVersionChangeEvent(databaseConnectionIdentifier, requestIdentifier, connectionClosed);
 }
 
 void IDBConnectionToServer::didStartTransaction(const IDBResourceIdentifier& transactionIdentifier, const IDBError& error)
@@ -438,15 +438,6 @@ void IDBConnectionToServer::didCloseFromServer(uint64_t databaseConnectionIdenti
     ASSERT(isMainThread());
 
     m_proxy->didCloseFromServer(databaseConnectionIdentifier, error);
-}
-
-void IDBConnectionToServer::confirmDidCloseFromServer(uint64_t databaseConnectionIdentifier)
-{
-    LOG(IndexedDB, "IDBConnectionToServer::confirmDidCloseFromServer");
-    ASSERT(isMainThread());
-
-    if (m_serverConnectionIsValid)
-        m_delegate->confirmDidCloseFromServer(databaseConnectionIdentifier);
 }
 
 void IDBConnectionToServer::connectionToServerLost(const IDBError& error)

@@ -42,6 +42,8 @@
 #include "MediaQueryParser.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
+#include "SecurityPolicy.h"
+#include "Settings.h"
 #include "SizesAttributeParser.h"
 #include <wtf/MainThread.h>
 
@@ -242,6 +244,9 @@ private:
             } else if (match(attributeName, referrerpolicyAttr)) {
                 m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
                 break;
+            } else if (match(attributeName, nomoduleAttr)) {
+                m_scriptIsNomodule = true;
+                break;
             }
             processImageAndScriptAttribute(attributeName, attributeValue);
             break;
@@ -352,6 +357,9 @@ private:
         if (m_tagId == TagId::Input && !m_inputIsImage)
             return false;
 
+        if (m_tagId == TagId::Script && m_moduleScript == PreloadRequest::ModuleScript::No && m_scriptIsNomodule)
+            return false;
+
         return true;
     }
 
@@ -373,6 +381,7 @@ private:
     bool m_metaIsViewport;
     bool m_metaIsDisabledAdaptations;
     bool m_inputIsImage;
+    bool m_scriptIsNomodule { false };
     float m_deviceScaleFactor;
     PreloadRequest::ModuleScript m_moduleScript { PreloadRequest::ModuleScript::No };
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
@@ -426,7 +435,7 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
             // The first <base> element is the one that wins.
             if (!m_predictedBaseElementURL.isEmpty())
                 return;
-            updatePredictedBaseURL(token);
+            updatePredictedBaseURL(token, document.settings().shouldRestrictBaseURLSchemes());
             return;
         }
         if (tagId == TagId::Picture) {
@@ -446,11 +455,15 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
     }
 }
 
-void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token)
+void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token, bool shouldRestrictBaseURLSchemes)
 {
     ASSERT(m_predictedBaseElementURL.isEmpty());
-    if (auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr->localName().string()))
-        m_predictedBaseElementURL = URL(m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value))).isolatedCopy();
+    auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr->localName().string());
+    if (!hrefAttribute)
+        return;
+    URL temp { m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value)) };
+    if (!shouldRestrictBaseURLSchemes || SecurityPolicy::isBaseURLSchemeAllowed(temp))
+        m_predictedBaseElementURL = temp.isolatedCopy();
 }
 
 HTMLPreloadScanner::HTMLPreloadScanner(const HTMLParserOptions& options, const URL& documentURL, float deviceScaleFactor)

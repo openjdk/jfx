@@ -53,6 +53,7 @@ extern jmethodID mat_jViewNotifyResize;
 extern jmethodID mat_jViewNotifyRepaint;
 extern jmethodID mat_jViewNotifyKey;
 extern jmethodID mat_jViewNotifyMouse;
+extern jmethodID mat_jViewNotifyMenu;
 extern jmethodID mat_jViewNotifyInputMethod;
 extern jmethodID mat_jViewNotifyView;
 

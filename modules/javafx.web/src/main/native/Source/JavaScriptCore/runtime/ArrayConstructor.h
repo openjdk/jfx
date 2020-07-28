@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2008, 2011, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,7 @@ class GetterSetter;
 class ArrayConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static ArrayConstructor* create(VM& vm, JSGlobalObject* globalObject, Structure* structure, ArrayPrototype* arrayPrototype, GetterSetter* speciesSymbol)
     {
@@ -55,15 +55,16 @@ protected:
 private:
     ArrayConstructor(VM&, Structure*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ArrayConstructor, InternalFunction);
 
-JSArray* constructArrayWithSizeQuirk(ExecState*, ArrayAllocationProfile*, JSGlobalObject*, JSValue length, JSValue prototype = JSValue());
+JSArray* constructArrayWithSizeQuirk(JSGlobalObject*, ArrayAllocationProfile*, JSValue length, JSValue prototype = JSValue());
 
-EncodedJSValue JSC_HOST_CALL arrayConstructorPrivateFuncIsArraySlow(ExecState*);
-bool isArraySlow(ExecState*, ProxyObject* argument);
+EncodedJSValue JSC_HOST_CALL arrayConstructorPrivateFuncIsArraySlow(JSGlobalObject*, CallFrame*);
+bool isArraySlow(JSGlobalObject*, ProxyObject* argument);
 
 // ES6 7.2.2
 // https://tc39.github.io/ecma262/#sec-isarray
-inline bool isArray(ExecState* exec, JSValue argumentValue)
+inline bool isArray(JSGlobalObject* globalObject, JSValue argumentValue)
 {
     if (!argumentValue.isObject())
         return false;
@@ -74,7 +75,7 @@ inline bool isArray(ExecState* exec, JSValue argumentValue)
 
     if (argument->type() != ProxyObjectType)
         return false;
-    return isArraySlow(exec, jsCast<ProxyObject*>(argument));
+    return isArraySlow(globalObject, jsCast<ProxyObject*>(argument));
 }
 
 } // namespace JSC

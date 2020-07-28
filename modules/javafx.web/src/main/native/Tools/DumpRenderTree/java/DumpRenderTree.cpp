@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 
 #include <wtf/RefPtr.h>
 #include <JavaScriptCore/JavaScript.h>
+#include <JavaScriptCore/JSCConfig.h>
 #include <JavaScriptCore/TestRunnerUtils.h>
 
 RefPtr<TestRunner> gTestRunner;
@@ -45,7 +46,13 @@ JSGlobalContextRef gContext;
 extern "C" {
 #endif
 
-JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_init
+JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_initDRT
+    (JNIEnv* env, jclass cls)
+{
+    JSC::Config::configureForTesting();
+}
+
+JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_initTest
     (JNIEnv* env, jclass cls, jstring testPath, jstring pixelsHash)
 {
     const char* testPathChars = env->GetStringUTFChars(testPath, NULL);
@@ -85,7 +92,6 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     makeEventSender(gContext, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
     WebCoreTestSupport::injectInternalsObject(gContext);
-
     gGCController->makeWindowObject(gContext, windowObject, &exception);
     ASSERT(!exception);
 }

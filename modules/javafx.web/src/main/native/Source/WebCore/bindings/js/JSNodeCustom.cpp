@@ -51,10 +51,12 @@
 #include "JSEventListener.h"
 #include "JSHTMLElement.h"
 #include "JSHTMLElementWrapperFactory.h"
+#include "JSMathMLElementWrapperFactory.h"
 #include "JSProcessingInstruction.h"
 #include "JSSVGElementWrapperFactory.h"
 #include "JSShadowRoot.h"
 #include "JSText.h"
+#include "MathMLElement.h"
 #include "Node.h"
 #include "ProcessingInstruction.h"
 #include "RegisteredEventListener.h"
@@ -127,10 +129,10 @@ bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, v
     return isReachableFromDOM(&jsNode->wrapped(), visitor, reason);
 }
 
-JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
+JSScope* JSNode::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSScope* node) const
 {
-    if (inherits<JSHTMLElement>(exec->vm()))
-        return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
+    if (inherits<JSHTMLElement>(lexicalGlobalObject->vm()))
+        return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(lexicalGlobalObject, node);
     return node;
 }
 
@@ -139,7 +141,7 @@ void JSNode::visitAdditionalChildren(SlotVisitor& visitor)
     visitor.addOpaqueRoot(root(wrapped()));
 }
 
-static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+static ALWAYS_INLINE JSValue createWrapperInline(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
     ASSERT(!getCachedWrapper(globalObject->world(), node));
 
@@ -150,6 +152,10 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
                 wrapper = createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(node)));
             else if (is<SVGElement>(node))
                 wrapper = createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(node)));
+#if ENABLE(MATHML)
+            else if (is<MathMLElement>(node))
+                wrapper = createJSMathMLWrapper(globalObject, static_reference_cast<MathMLElement>(WTFMove(node)));
+#endif
             else
                 wrapper = createWrapper<Element>(globalObject, WTFMove(node));
             break;
@@ -170,7 +176,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(exec, globalObject, downcast<Document>(node.get()));
+            return toJS(lexicalGlobalObject, globalObject, downcast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
             break;
@@ -187,14 +193,14 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
     return wrapper;
 }
 
-JSValue createWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+JSValue createWrapper(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(exec, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
 }
 
-JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
+JSValue toJSNewlyCreated(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(exec, globalObject, WTFMove(node));
+    return createWrapperInline(lexicalGlobalObject, globalObject, WTFMove(node));
 }
 
 JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& node)
@@ -205,12 +211,12 @@ JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& 
 
 void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
 {
-    JSC::ExecState* scriptState = mainWorldExecState(root->document().frame());
-    if (!scriptState)
+    JSC::JSGlobalObject* lexicalGlobalObject = mainWorldExecState(root->document().frame());
+    if (!lexicalGlobalObject)
         return;
 
-    JSLockHolder lock(scriptState);
-    toJS(scriptState, static_cast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject()), *root);
+    JSLockHolder lock(lexicalGlobalObject);
+    toJS(lexicalGlobalObject, static_cast<JSDOMGlobalObject*>(lexicalGlobalObject), *root);
 }
 
 } // namespace WebCore

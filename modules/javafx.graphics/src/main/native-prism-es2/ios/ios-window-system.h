@@ -50,3 +50,4 @@ void* getProcAddress(const char *procName);
 
 void setSwapInterval(void* nsContext, int interval);
 
+extern jboolean pulseLoggingRequested;

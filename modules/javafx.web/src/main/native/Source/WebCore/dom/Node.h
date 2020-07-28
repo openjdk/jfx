@@ -477,14 +477,14 @@ public:
     // Perform the default action for an event.
     virtual void defaultEventHandler(Event&);
 
-    void ref();
-    void deref();
+    void ref() const;
+    void deref() const;
     bool hasOneRef() const;
     unsigned refCount() const;
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool m_deletionHasBegun { false };
-    bool m_inRemovedLastRefFunction { false };
+    mutable bool m_inRemovedLastRefFunction { false };
     bool m_adoptionIsRequired { true };
 #endif
 
@@ -668,7 +668,7 @@ private:
         void operator()(NodeRareData*) const;
     };
 
-    uint32_t m_refCountAndParentBit { s_refCountIncrement };
+    mutable uint32_t m_refCountAndParentBit { s_refCountIncrement };
     mutable uint32_t m_nodeFlags;
 
     ContainerNode* m_parentNode { nullptr };
@@ -679,7 +679,7 @@ private:
     std::unique_ptr<NodeRareData, NodeRareDataDeleter> m_rareData;
 };
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 inline void adopted(Node* node)
 {
     if (!node)
@@ -688,9 +688,9 @@ inline void adopted(Node* node)
     ASSERT(!node->m_inRemovedLastRefFunction);
     node->m_adoptionIsRequired = false;
 }
-#endif
+#endif // ASSERT_ENABLED
 
-ALWAYS_INLINE void Node::ref()
+ALWAYS_INLINE void Node::ref() const
 {
     ASSERT(isMainThread());
     ASSERT(!m_deletionHasBegun);
@@ -699,7 +699,7 @@ ALWAYS_INLINE void Node::ref()
     m_refCountAndParentBit += s_refCountIncrement;
 }
 
-ALWAYS_INLINE void Node::deref()
+ALWAYS_INLINE void Node::deref() const
 {
     ASSERT(isMainThread());
     ASSERT(refCount());
@@ -710,10 +710,10 @@ ALWAYS_INLINE void Node::deref()
     if (!updatedRefCount) {
         // Don't update m_refCountAndParentBit to avoid double destruction through use of Ref<T>/RefPtr<T>.
         // (This is a security mitigation in case of programmer error. It will ASSERT in debug builds.)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         m_inRemovedLastRefFunction = true;
 #endif
-        removedLastRef();
+        const_cast<Node&>(*this).removedLastRef();
         return;
     }
     m_refCountAndParentBit = updatedRefCount;
@@ -789,6 +789,8 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
     if (m_treeScope != &newTreeScope)
         moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
+
+bool areNodesConnectedInSameTreeScope(const Node*, const Node*);
 
 } // namespace WebCore
 
