@@ -171,15 +171,15 @@ public class PointLight extends LightBase {
         linearAttenuationProperty().set(value);
     }
 
-    private static final double DEFAULT_LINEAR_CONSTANT = NGPointLight.getDefaultLa();
+    private static final double DEFAULT_LINEAR_ATTENUATION = NGPointLight.getDefaultLa();
 
     public final double getLinearAttenuation() {
-        return linearAttenuation == null ? DEFAULT_LINEAR_CONSTANT : linearAttenuation.get();
+        return linearAttenuation == null ? DEFAULT_LINEAR_ATTENUATION : linearAttenuation.get();
     }
 
     public final DoubleProperty linearAttenuationProperty() {
         if (linearAttenuation == null) {
-            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_CONSTANT);
+            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_ATTENUATION);
         }
         return linearAttenuation;
     }
@@ -200,15 +200,15 @@ public class PointLight extends LightBase {
         quadraticAttenuationProperty().set(value);
     }
 
-    private static final double DEFAULT_QUADRATIC_CONSTANT = NGPointLight.getDefaultQa();
+    private static final double DEFAULT_QUADRATIC_ATTENUATION = NGPointLight.getDefaultQa();
 
     public final double getQuadraticAttenuation() {
-        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_CONSTANT : quadraticAttenuation.get();
+        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_ATTENUATION : quadraticAttenuation.get();
     }
 
     public final DoubleProperty quadraticAttenuationProperty() {
         if (quadraticAttenuation == null) {
-            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_CONSTANT);
+            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_ATTENUATION);
         }
         return quadraticAttenuation;
     }
