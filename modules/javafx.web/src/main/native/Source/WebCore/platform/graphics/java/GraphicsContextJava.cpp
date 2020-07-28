@@ -232,6 +232,7 @@ void GraphicsContext::fillRect(const FloatRect& rect)
             CompositeCopy);
     } else {
         if (m_state.fillGradient) {
+            setCTM(m_state.transform);
             setGradient(
                 *m_state.fillGradient,
                 platformContext(),
