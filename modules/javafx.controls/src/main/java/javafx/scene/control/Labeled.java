@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.css.converter.BooleanConverter;
@@ -67,7 +66,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
-
 
 /**
  * A Labeled {@link Control} is one which has as part of its user interface
@@ -137,7 +135,7 @@ public abstract class Labeled extends Control {
      * The text to display in the label. The text may be null.
      *
      * @return the text to display in the label
-     * @default {@code ""} (empty string}
+     * @defaultValue {@code ""} (empty string}
      */
     public final StringProperty textProperty() {
         if (text == null) {
@@ -152,7 +150,9 @@ public abstract class Labeled extends Control {
     /**
      * Specifies how the text and graphic within the Labeled should be
      * aligned when there is empty space within the Labeled.
+     *
      * @return the alignment within this labeled
+     * @defaultValue {@code Pos.CENTER_LEFT}
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -186,7 +186,7 @@ public abstract class Labeled extends Control {
      * only affects multiple lines of text relative to the text bounds.
      *
      * @return the alignment of lines of text within this labeled
-     * @default {@code TextAlignment.LEFT}
+     * @defaultValue {@code TextAlignment.LEFT}
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         if (textAlignment == null) {
@@ -219,7 +219,7 @@ public abstract class Labeled extends Control {
      * exceeds the available space for rendering the text.
      *
      * @return the overrun behavior if the text exceeds the available space
-     * @default {@code OverrunStyle.ELLIPSIS}
+     * @defaultValue {@code OverrunStyle.ELLIPSIS}
      */
     public final ObjectProperty<OverrunStyle> textOverrunProperty() {
         if (textOverrun == null) {
@@ -266,7 +266,7 @@ public abstract class Labeled extends Control {
      * when text is truncated
      * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
      * @since JavaFX 2.2
-     * @default {@code "..."}
+     * @defaultValue {@code "..."}
      */
     public final StringProperty ellipsisStringProperty() {
         if (ellipsisString == null) {
@@ -296,7 +296,7 @@ public abstract class Labeled extends Control {
      * indicates whether the text should wrap onto another line.
      *
      * @return the wrap property if a run of text exceeds the width of the Labeled
-     * @default {@code false}
+     * @defaultValue {@code false}
      */
     public final BooleanProperty wrapTextProperty() {
         if (wrapText == null) {
@@ -339,7 +339,7 @@ public abstract class Labeled extends Control {
      * font is required, this font will be used.
      *
      * @return the default font to use for text in this labeled
-     * @default {@link Font#getDefault()}
+     * @defaultValue {@link Font#getDefault()}
      */
     public final ObjectProperty<Font> fontProperty() {
 
@@ -417,7 +417,7 @@ public abstract class Labeled extends Control {
      * description of {@link Node} for more detail.
      *
      * @return the optional icon for this labeled
-     * @default {@code null}
+     * @defaultValue {@code null}
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
@@ -577,7 +577,7 @@ public abstract class Labeled extends Control {
      * Whether all text should be underlined.
      *
      * @return the underline property of all text in this labeled
-     * @default {@code false}
+     * @defaultValue {@code false}
      */
     public final BooleanProperty underlineProperty() {
         if (underline == null) {
@@ -610,7 +610,7 @@ public abstract class Labeled extends Control {
      *
      * @return the line spacing property between lines in this labeled
      * @since JavaFX 8.0
-     * @default 0
+     * @defaultValue 0
      */
     public final DoubleProperty lineSpacingProperty() {
         if (lineSpacing == null) {
@@ -642,7 +642,7 @@ public abstract class Labeled extends Control {
      * Specifies the positioning of the graphic relative to the text.
      *
      * @return content display property of this labeled
-     * @default {@code ContentDisplay.LEFT}
+     * @defaultValue {@code ContentDisplay.LEFT}
      */
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
         if (contentDisplay == null) {
@@ -678,7 +678,7 @@ public abstract class Labeled extends Control {
      * This property can only be set from CSS.
      *
      * @return the label padding property of this labeled
-     * @default {@code Insets.EMPTY}
+     * @defaultValue {@code Insets.EMPTY}
      */
     public final ReadOnlyObjectProperty<Insets> labelPaddingProperty() {
         return labelPaddingPropertyImpl();
@@ -725,7 +725,7 @@ public abstract class Labeled extends Control {
      * The amount of space between the graphic and text
      *
      * @return the graphics text gap property of this labeled
-     * @default 4
+     * @defaultValue 4
      */
     public final DoubleProperty graphicTextGapProperty() {
         if (graphicTextGap == null) {
@@ -757,7 +757,7 @@ public abstract class Labeled extends Control {
     /**
      * The {@link Paint} used to fill the text.
      *
-     * @default {@code Color.BLACK}
+     * @defaultValue {@code Color.BLACK}
      */
     private ObjectProperty<Paint> textFill; // TODO for now change this
 
@@ -801,8 +801,7 @@ public abstract class Labeled extends Control {
      * be determined based on the succeeding character, and the mnemonic
      * added.
      *
-     * @default {@code false}; {@code true} for some Controls.
-     * </p>
+     * @defaultValue {@code false}; {@code true} for some Controls.
      */
     private BooleanProperty mnemonicParsing;
     public final void setMnemonicParsing(boolean value) {

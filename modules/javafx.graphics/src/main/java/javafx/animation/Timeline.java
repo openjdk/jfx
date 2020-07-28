@@ -116,7 +116,7 @@ public final class Timeline extends Animation {
     };
 
     /**
-     * Creates a {@code Timeline} with the provided key frames and a {@link Animation#targetFramerate() target framerate}.
+     * Creates a {@code Timeline} with the provided key frames and a {@link Animation#getTargetFramerate() target framerate}.
      * The key frames do not need to be ordered.
      *
      * @param targetFramerate
@@ -143,7 +143,7 @@ public final class Timeline extends Animation {
     }
 
     /**
-     * Creates a {@code Timeline} with no key frames and a {@link Animation#targetFramerate() target framerate}.
+     * Creates a {@code Timeline} with no key frames and a {@link Animation#getTargetFramerate() target framerate}.
      *
      * @param targetFramerate
      *            the custom target frame rate for this {@code Timeline}

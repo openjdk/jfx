@@ -95,7 +95,7 @@ import javafx.scene.control.skin.PaginationSkin;
  * });</code></pre>
  * or using lambdas
  * <pre><code> Pagination pagination = new Pagination(10, 0);
- * pagination.setPageFactory(pageIndex ->
+ * pagination.setPageFactory(pageIndex -&gt;
  *         new Label(pageIndex + 1 + ". Lorem ipsum dolor sit amet,\n"
  *                      + "consectetur adipiscing elit,\n"
  *                      + "sed do eiusmod tempor incididunt ut\n"
