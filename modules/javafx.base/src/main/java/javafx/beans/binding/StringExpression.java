@@ -46,6 +46,12 @@ import com.sun.javafx.binding.StringFormatter;
  */
 public abstract class StringExpression implements ObservableStringValue {
 
+    /**
+     * Creates a default {@code StringExpression}.
+     */
+    public StringExpression() {
+    }
+
     @Override
     public String getValue() {
         return get();

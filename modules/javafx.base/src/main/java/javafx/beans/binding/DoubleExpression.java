@@ -44,6 +44,12 @@ import javafx.beans.value.ObservableValue;
 public abstract class DoubleExpression extends NumberExpressionBase implements
         ObservableDoubleValue {
 
+    /**
+     * Creates a default {@code DoubleExpression}.
+     */
+    public DoubleExpression() {
+    }
+
     @Override
     public int intValue() {
         return (int) get();

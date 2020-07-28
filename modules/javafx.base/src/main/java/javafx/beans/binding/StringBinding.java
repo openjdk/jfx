@@ -65,6 +65,12 @@ public abstract class StringBinding extends StringExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<String> helper = null;
 
+    /**
+     * Creates a default {@code StringBinding}.
+     */
+    public StringBinding() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

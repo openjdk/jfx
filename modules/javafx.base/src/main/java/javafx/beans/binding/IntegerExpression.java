@@ -43,6 +43,12 @@ import javafx.beans.value.ObservableValue;
 public abstract class IntegerExpression extends NumberExpressionBase implements
         ObservableIntegerValue {
 
+    /**
+     * Creates a default {@code IntegerExpression}.
+     */
+    public IntegerExpression() {
+    }
+
     @Override
     public int intValue() {
         return get();

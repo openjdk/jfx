@@ -66,6 +66,12 @@ public abstract class LongBinding extends LongExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
+    /**
+     * Creates a default {@code LongBinding}.
+     */
+    public LongBinding() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
