@@ -69,11 +69,11 @@ void phong(
             float ca = gLightAttenuation[i].x;
             float la = gLightAttenuation[i].y;
             float qa = gLightAttenuation[i].z;
-            float attn = 1.0 / (ca + la * dist + qa * dist * dist);
+            float attenuatedColor = gLightColor[i].xyz / (ca + la * dist + qa * dist * dist);
 
             float3 l = normalize(L[i].xyz);
-            d += saturate(dot(n, l)) * gLightColor[i].xyz * attn;
-            s += pow(saturate(dot(-refl, l)), power) * gLightColor[i].xyz * attn;
+            d += saturate(dot(n, l)) * attenuatedColor;
+            s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
         }
     }
 }

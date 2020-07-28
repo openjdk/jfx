@@ -184,7 +184,8 @@ public abstract class NGShape3D extends NGNode {
                 meshView.setPointLight(pointLightIdx++,
                         0, 0, 0, // x y z
                         0, 0, 0, 0, // r g b w
-                        1, 0, 0, 0); // ca la qa maxRange
+                        NGPointLight.getDefaultCa(), NGPointLight.getDefaultLa(), NGPointLight.getDefaultQa(),
+                        NGPointLight.getDefaultMaxRange());
         }
 
         meshView.render(g);

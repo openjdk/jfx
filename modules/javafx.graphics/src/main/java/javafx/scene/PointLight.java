@@ -105,7 +105,7 @@ public class PointLight extends LightBase {
      * node is known to always be outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
-     * @since 14
+     * @since 16
      */
     private DoubleProperty maxRange;
 
@@ -134,7 +134,7 @@ public class PointLight extends LightBase {
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 1
-     * @since 14
+     * @since 16
      */
     private DoubleProperty constantAttenuation;
 
@@ -163,7 +163,7 @@ public class PointLight extends LightBase {
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 0
-     * @since 14
+     * @since 16
      */
     private DoubleProperty linearAttenuation;
 
@@ -192,7 +192,7 @@ public class PointLight extends LightBase {
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 0
-     * @since 14
+     * @since 16
      */
     private DoubleProperty quadraticAttenuation;
 

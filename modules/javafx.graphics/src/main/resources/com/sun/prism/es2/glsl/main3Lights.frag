@@ -84,27 +84,27 @@ void main()
     float dist = length(lightTangentSpacePositions[0].xyz);
     if (dist <= maxRange) {
         vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-        float att = 1.0 / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * (lights[0].color).rgb * att;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[0].color.rgb * att;
+        float attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
+        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
+        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
     }
 
     maxRange = lights[1].range;
     dist = length(lightTangentSpacePositions[1].xyz);
     if (dist <= maxRange) {
         vec3 l = normalize(lightTangentSpacePositions[1].xyz);
-        float att = 1.0 / (lights[1].attn.x + lights[1].attn.y * dist + lights[1].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * (lights[1].color).rgb * att;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[1].color.rgb * att;
+        float attenuatedColor = (lights[1].color).rgb / (lights[1].attn.x + lights[1].attn.y * dist + lights[1].attn.z * dist * dist);
+        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
+        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
     }
 
     maxRange = lights[2].range;
     dist = length(lightTangentSpacePositions[2].xyz);
     if (dist <= maxRange) {
         vec3 l = normalize(lightTangentSpacePositions[2].xyz);
-        float att = 1.0 / (lights[2].attn.x + lights[2].attn.y * dist + lights[2].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * (lights[2].color).rgb * att;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[2].color.rgb * att;
+        float attenuatedColor = (lights[2].color).rgb / (lights[2].attn.x + lights[2].attn.y * dist + lights[2].attn.z * dist * dist);
+        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
+        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
     }
 
     vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
