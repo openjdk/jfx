@@ -22,7 +22,7 @@ import javafx.util.converter.NumberStringConverter;
  * A sample application for measuring FPS for various 3D nodes with environmental lighting.
  * <p>
  * <b>Important</b>: make sure that no other application on your system is rendering heavy graphics, like videos, to a screen,
- * as this will corrupt the measurement. 
+ * as this will corrupt the measurement.
  */
 public class LightingSample extends Application {
 
