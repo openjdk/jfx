@@ -28,13 +28,13 @@ class Environment extends CameraScene3D {
         zoom.set(-350);
 
         for (var light : lights) {
-        	light.setTranslateZ(-50);
-        	var lightRep = new Sphere(2);
-        	lightRep.setMaterial(new PhongMaterial(light.getColor()));
-        	lightRep.translateXProperty().bind(light.translateXProperty());
-        	lightRep.translateYProperty().bind(light.translateYProperty());
-        	lightRep.translateZProperty().bind(light.translateZProperty());
-        	rootGroup.getChildren().addAll(light, lightRep);
+            light.setTranslateZ(-50);
+            var lightRep = new Sphere(2);
+            lightRep.setMaterial(new PhongMaterial(light.getColor()));
+            lightRep.translateXProperty().bind(light.translateXProperty());
+            lightRep.translateYProperty().bind(light.translateYProperty());
+            lightRep.translateZProperty().bind(light.translateZProperty());
+            rootGroup.getChildren().addAll(light, lightRep);
         }
         light1.setTranslateX(40);
         light2.setTranslateX(-40);

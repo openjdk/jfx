@@ -112,7 +112,7 @@ class CameraScene3D extends Pane {
             double deltaX = curX - startX;
             double deltaY = curY - startY;
             if (e.getButton() == MouseButton.PRIMARY) {
-            	pan(deltaX, deltaY);
+                pan(deltaX, deltaY);
             } else if (e.getButton() == MouseButton.SECONDARY) {
                 boolean positiveX = curX > getWidth() / 2;
                 boolean positiveY = curY > getHeight() / 2;

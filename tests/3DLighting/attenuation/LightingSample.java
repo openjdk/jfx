@@ -59,7 +59,7 @@ public class LightingSample extends Application {
 
         var controls = new VBox(sphereBox, meshBox);
         for (var light : environment.lights) {
-        	controls.getChildren().add(addLightControls(light));
+            controls.getChildren().add(addLightControls(light));
         }
 
         var hBox = new HBox(controls, environment);
@@ -78,9 +78,9 @@ public class LightingSample extends Application {
     }
 
     protected VBox addLightControls(PointLight light) {
-    	var lightOn = new CheckBox("On/Off");
-    	lightOn.setSelected(true);
-    	light.lightOnProperty().bind(lightOn.selectedProperty());
+        var lightOn = new CheckBox("On/Off");
+        lightOn.setSelected(true);
+        light.lightOnProperty().bind(lightOn.selectedProperty());
         return new VBox(new Separator(), new Label(light.getUserData() + " light"), lightOn);
     }
 
