@@ -1334,7 +1334,7 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
-    @Test public void test_ArrowKeysWhenPopupIsShowing() {
+    @Test public void test_EditorKeyInputsWhenPopupIsShowing() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
         StageLoader sl = new StageLoader(cb);
@@ -1342,30 +1342,112 @@ public class ComboBoxTest {
 
         new StageLoader(cb);
 
+        // Show the popup
         assertFalse(cb.isShowing());
         cb.requestFocus();
-        keyboard.doDownArrowPress(KeyModifier.ALT);  // show the popup
+        cb.getEditor().setText("ABC DEF");
+        assertEquals("ABC DEF", cb.getEditor().getText());
+        keyboard.doDownArrowPress(KeyModifier.ALT);
+        // Sanity
         assertTrue(cb.isShowing());
+        assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Enter some text
-        keyboard.doKeyTyped(KeyCode.A);
-        keyboard.doKeyTyped(KeyCode.C);
-        assertEquals("AC", cb.getEditor().getText());
+        // LEFT, RIGHT keys with CTRL, SHIFT modifiers
+        // Test RIGHT key
+        keyboard.doRightArrowPress();
+        assertEquals(1, cb.getEditor().getCaretPosition());
+
+        // Test KP_RIGHT key
+        keyboard.doKeyPress(KeyCode.KP_RIGHT);
+        assertEquals(2, cb.getEditor().getCaretPosition());
 
         // Test LEFT key
         keyboard.doLeftArrowPress();
-        keyboard.doKeyTyped(KeyCode.B);
-        assertEquals("ABC", cb.getEditor().getText());
+        assertEquals(1, cb.getEditor().getCaretPosition());
 
-        // Test RIGHT key
-        keyboard.doRightArrowPress();
-        keyboard.doKeyTyped(KeyCode.D);
-        assertEquals("ABCD", cb.getEditor().getText());
+        // Test KP_LEFT key
+        keyboard.doKeyPress(KeyCode.KP_LEFT);
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals("A", cb.getEditor().getSelectedText());
+        assertEquals(1, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(4, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("ABC ", cb.getEditor().getSelectedText());
+        assertEquals(4, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // HOME, END keys with CTRL, SHIFT modifiers
+        // Test END key
+        keyboard.doKeyPress(KeyCode.END);
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test HOME key
+        keyboard.doKeyPress(KeyCode.HOME);
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        /* @Ignore(JBS-8250807)
+        // Test CTRL + SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+         */
 
         // Test CTRL + A key
+        keyboard.doLeftArrowPress();
         assertEquals("", cb.getEditor().getSelectedText());
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
-        assertEquals("ABCD", cb.getEditor().getSelectedText());
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+
+        // Sanity
+        assertTrue(cb.isShowing());
 
         sl.dispose();
     }

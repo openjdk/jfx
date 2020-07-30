@@ -78,7 +78,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         listViewInputMap = createInputMap();
 
         // add focus traversal mappings
-        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getModifierArrowKeyMappings());
+        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
         addDefaultMapping(listViewInputMap,
             new KeyMapping(HOME, e -> selectFirstRow()),
             new KeyMapping(END, e -> selectLastRow()),
@@ -98,6 +98,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
+            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
             new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
             new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
@@ -196,12 +197,23 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     }
 
-    public void updateSelectionModeKeyMapping(SelectionMode selectionMode) {
-        if (selectionMode.equals(SelectionMode.SINGLE)) {
-            removeMapping(new KeyBinding(A).shortcut());
-        } else {
-            addDefaultMapping(listViewInputMap, new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()));
-        }
+    public void removeKeyMappingsForComboBoxEditor() {
+        removeMapping(new KeyBinding(LEFT));
+        removeMapping(new KeyBinding(KP_LEFT));
+        removeMapping(new KeyBinding(RIGHT));
+        removeMapping(new KeyBinding(KP_RIGHT));
+        removeMapping(new KeyBinding(HOME));
+        removeMapping(new KeyBinding(HOME).shift());
+        removeMapping(new KeyBinding(HOME).shortcut());
+        removeMapping(new KeyBinding(END));
+        removeMapping(new KeyBinding(END).shift());
+        removeMapping(new KeyBinding(END).shortcut());
+        removeMapping(new KeyBinding(A).shortcut());
+        /*
+        Should be uncommented after the removeMapping() issue JBS-8250807 is fixed.
+        removeMapping(new KeyBinding(HOME).shortcut().shift());
+        removeMapping(new KeyBinding(END).shortcut().shift());
+        */
     }
 
 
