@@ -33,34 +33,53 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation for {@link Number} values.</p>
+ * {@link StringConverter} implementation for {@link Number} values.
+ *
  * @since JavaFX 2.1
  */
 public class NumberStringConverter extends StringConverter<Number> {
-
-    // ------------------------------------------------------ Private properties
 
     final Locale locale;
     final String pattern;
     final NumberFormat numberFormat;
 
-    // ------------------------------------------------------------ Constructors
+    /**
+     * Constructs a {@code NumberStringConverter} with the default locale and format.
+     */
     public NumberStringConverter() {
         this(Locale.getDefault());
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the given locale and the default format.
+     */
     public NumberStringConverter(Locale locale) {
         this(locale, null);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @see java.text.DecimalFormat
+     */
     public NumberStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the given locale and decimal format pattern.
+     *
+     * @see java.text.DecimalFormat
+     */
     public NumberStringConverter(Locale locale, String pattern) {
         this(locale, pattern, null);
     }
 
+    /**
+     * Constructs a {@code NumberStringConverter} with the default locale and the given number format.
+     *
+     * @see java.text.DecimalFormat
+     */
     public NumberStringConverter(NumberFormat numberFormat) {
         this(null, null, numberFormat);
     }
@@ -70,8 +89,6 @@ public class NumberStringConverter extends StringConverter<Number> {
         this.pattern = pattern;
         this.numberFormat = numberFormat;
     }
-
-    // ------------------------------------------------------- Converter Methods
 
     /** {@inheritDoc} */
     @Override public Number fromString(String value) {
@@ -112,11 +129,11 @@ public class NumberStringConverter extends StringConverter<Number> {
     }
 
     /**
-     * <p>Return a <code>NumberFormat</code> instance to use for formatting
-     * and parsing in this {@link StringConverter}.</p>
+     * Returns a {@code NumberFormat} instance to use for formatting
+     * and parsing in this {@code StringConverter}.
      *
      * @return a {@code NumberFormat} instance for formatting and parsing in this
-     * {@link StringConverter}
+     * {@code StringConverter}
      */
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;

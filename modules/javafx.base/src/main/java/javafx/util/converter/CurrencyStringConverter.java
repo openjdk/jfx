@@ -32,8 +32,7 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * <p>{@link StringConverter} implementation for {@link Number} values
- * that represent currency.</p>
+ * {@link StringConverter} implementation for {@link Number} values that represent currency.
  *
  * @see PercentageStringConverter
  * @see NumberStringConverter
@@ -42,29 +41,44 @@ import javafx.util.StringConverter;
  */
 public class CurrencyStringConverter extends NumberStringConverter {
 
-    // ------------------------------------------------------------ Constructors
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the default locale and format.
+     */
     public CurrencyStringConverter() {
         this(Locale.getDefault());
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the given locale and the default format.
+     */
     public CurrencyStringConverter(Locale locale) {
         this(locale, null);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @see java.text.DecimalFormat
+     */
     public CurrencyStringConverter(String pattern) {
         this(Locale.getDefault(), pattern);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the given locale and decimal format pattern.
+     *
+     * @see java.text.DecimalFormat
+     */
     public CurrencyStringConverter(Locale locale, String pattern) {
         super(locale, pattern, null);
     }
 
+    /**
+     * Constructs a {@code CurrencyStringConverter} with the default locale and the given number format.
+     */
     public CurrencyStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);
     }
-
-
-    // ---------------------------------------------------------------0- Methods
 
     /** {@inheritDoc} */
     @Override protected NumberFormat getNumberFormat() {
