@@ -55,7 +55,7 @@ public class PercentageStringConverter extends NumberStringConverter {
     }
 
     /**
-     * Constructs a {@code PercentageStringConverter} with the default locale and the given number format.
+     * Constructs a {@code PercentageStringConverter} with the given number format.
      */
     public PercentageStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);

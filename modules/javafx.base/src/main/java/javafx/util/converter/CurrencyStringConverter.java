@@ -74,7 +74,7 @@ public class CurrencyStringConverter extends NumberStringConverter {
     }
 
     /**
-     * Constructs a {@code CurrencyStringConverter} with the default locale and the given number format.
+     * Constructs a {@code CurrencyStringConverter} with the given number format.
      */
     public CurrencyStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);

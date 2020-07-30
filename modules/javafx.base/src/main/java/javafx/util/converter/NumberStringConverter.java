@@ -76,9 +76,7 @@ public class NumberStringConverter extends StringConverter<Number> {
     }
 
     /**
-     * Constructs a {@code NumberStringConverter} with the default locale and the given number format.
-     *
-     * @see java.text.DecimalFormat
+     * Constructs a {@code NumberStringConverter} with the given number format.
      */
     public NumberStringConverter(NumberFormat numberFormat) {
         this(null, null, numberFormat);
