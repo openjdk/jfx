@@ -33,7 +33,7 @@ import java.util.Locale;
 import javafx.util.StringConverter;
 
 /**
- * {@link StringConverter} implementation for {@link Number} values.
+ * A {@link StringConverter} implementation for {@link Number} values. Instances of this class are immutable.
  *
  * @since JavaFX 2.1
  */
