@@ -50,6 +50,12 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
     }
 
     /**
+     * Creates a default {@code ObjectExpression}.
+     */
+    public ObjectExpression() {
+    }
+
+    /**
      * Returns an {@code ObjectExpression} that wraps an
      * {@link javafx.beans.value.ObservableObjectValue}. If the
      * {@code ObservableObjectValue} is already an {@code ObjectExpression}, it

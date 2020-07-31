@@ -92,6 +92,12 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
     }
 
     /**
+     * Creates a default {@code MapExpression}.
+     */
+    public MapExpression() {
+    }
+
+    /**
      * Returns a {@code MapExpression} that wraps a
      * {@link javafx.beans.value.ObservableMapValue}. If the
      * {@code ObservableMapValue} is already a {@code MapExpression}, it

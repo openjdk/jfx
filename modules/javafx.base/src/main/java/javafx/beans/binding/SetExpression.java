@@ -57,6 +57,12 @@ import java.util.NoSuchElementException;
  */
 public abstract class SetExpression<E> implements ObservableSetValue<E> {
 
+    /**
+     * Creates a default {@code SetExpression}.
+     */
+    public SetExpression() {
+    }
+
     private static final ObservableSet EMPTY_SET = new EmptyObservableSet();
 
     private static class EmptyObservableSet<E> extends AbstractSet<E> implements ObservableSet<E> {

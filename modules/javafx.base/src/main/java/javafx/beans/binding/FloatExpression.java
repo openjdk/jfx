@@ -43,6 +43,12 @@ import javafx.beans.value.ObservableValue;
 public abstract class FloatExpression extends NumberExpressionBase implements
         ObservableFloatValue {
 
+    /**
+     * Creates a default {@code FloatExpression}.
+     */
+    public FloatExpression() {
+    }
+
     @Override
     public int intValue() {
         return (int) get();

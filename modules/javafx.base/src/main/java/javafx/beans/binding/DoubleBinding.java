@@ -116,6 +116,12 @@ public abstract class DoubleBinding extends DoubleExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
+    /**
+     * Creates a default {@code DoubleBinding}.
+     */
+    public DoubleBinding() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

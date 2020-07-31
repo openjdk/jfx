@@ -42,6 +42,12 @@ import javafx.beans.value.ObservableValue;
 public abstract class LongExpression extends NumberExpressionBase implements
         ObservableLongValue {
 
+    /**
+     * Creates a default {@code LongExpression}.
+     */
+    public LongExpression() {
+    }
+
     @Override
     public int intValue() {
         return (int) get();

@@ -66,6 +66,12 @@ public abstract class IntegerBinding extends IntegerExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
+    /**
+     * Creates a default {@code IntegerBinding}.
+     */
+    public IntegerBinding() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);
