@@ -473,7 +473,7 @@ public class MiscellaneousTest extends TestBase {
             assertNull(getEngine().executeScript("window.xmlDoc.body"));
         });
     }
-    
+
     @Test public void loadJrtCssFileSuccessfully() {
         getEngine().setUserStyleSheetLocation("jrt:/javafx.web/html/imported-styles.css");
     }
