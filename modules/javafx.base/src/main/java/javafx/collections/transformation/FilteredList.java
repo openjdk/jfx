@@ -47,7 +47,7 @@ import javafx.collections.ObservableList;
  * @see TransformationList
  * @since JavaFX 8.0
  */
-public final class FilteredList<E> extends TransformationList<E, E>{
+public class FilteredList<E> extends TransformationList<E, E>{
 
     private int[] filtered;
     private int size;
