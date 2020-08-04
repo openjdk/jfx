@@ -205,10 +205,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         behavior.setOnSelectNextRow(() -> onSelectNextCell());
         behavior.setOnScrollPageDown(this::onScrollPageDown);
         behavior.setOnScrollPageUp(this::onScrollPageUp);
-        Boolean isRemoveKeyMappings = (Boolean) control.getProperties().get("removeKeyMappingsForComboBoxEditor");
-        if (isRemoveKeyMappings != null && isRemoveKeyMappings) {
-            behavior.removeKeyMappingsForComboBoxEditor();
-        }
 
         updateListViewItems();
 

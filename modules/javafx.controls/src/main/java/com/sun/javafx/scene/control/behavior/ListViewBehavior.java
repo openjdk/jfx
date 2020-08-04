@@ -195,9 +195,14 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
+        Boolean isRemoveKeyMappings = (Boolean) control.getProperties().get(
+                "removeKeyMappingsForComboBoxEditor");
+        if (isRemoveKeyMappings != null && isRemoveKeyMappings) {
+            removeKeyMappingsForComboBoxEditor();
+        }
     }
 
-    public void removeKeyMappingsForComboBoxEditor() {
+    private void removeKeyMappingsForComboBoxEditor() {
         removeMapping(new KeyBinding(LEFT));
         removeMapping(new KeyBinding(KP_LEFT));
         removeMapping(new KeyBinding(RIGHT));
