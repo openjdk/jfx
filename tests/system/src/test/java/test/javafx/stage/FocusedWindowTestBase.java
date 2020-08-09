@@ -38,15 +38,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
-import org.junit.Ignore;
 import test.util.Util;
 
-@Ignore
-abstract public class FocusedWindowTestBase {
+public abstract class FocusedWindowTestBase {
 
-    static CountDownLatch startupLatch;
-    static Stage stage = null;
-
+    CountDownLatch startupLatch;
+    Stage stage = null;
 
     public static void initFXBase() throws Exception {
         startupLatch = new CountDownLatch(1);
@@ -103,4 +100,5 @@ abstract public class FocusedWindowTestBase {
 
         Assert.assertNull(weakReference.get());
     }
+
 }

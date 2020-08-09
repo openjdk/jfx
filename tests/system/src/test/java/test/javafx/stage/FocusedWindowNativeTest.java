@@ -32,7 +32,6 @@ import org.junit.Test;
 
 public class FocusedWindowNativeTest extends FocusedWindowTestBase {
 
-
     @BeforeClass
     public static void initFX() throws Exception {
         initFXBase();
@@ -49,4 +48,5 @@ public class FocusedWindowNativeTest extends FocusedWindowTestBase {
             Platform.exit();
         });
     }
+
 }
