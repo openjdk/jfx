@@ -42,8 +42,8 @@ import test.util.Util;
 
 public abstract class FocusedWindowTestBase {
 
-    CountDownLatch startupLatch;
-    Stage stage = null;
+    static CountDownLatch startupLatch;
+    static Stage stage = null;
 
     public static void initFXBase() throws Exception {
         startupLatch = new CountDownLatch(1);
