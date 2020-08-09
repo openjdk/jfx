@@ -1322,7 +1322,7 @@ public abstract class Window {
 
         if (this.isFocused != focused) {
             this.isFocused = focused;
-            if (this.isFocused && this.isVisible) {
+            if (this.isFocused) {
                 setFocusedWindow(this);
             } else {
                 setFocusedWindow(null);
