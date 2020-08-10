@@ -878,15 +878,36 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(56)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
-    << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
-    << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
-    << (jfloat)rect.radii().topLeft().width() << (jfloat)rect.radii().topLeft().height()
-    << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
-    << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
-    << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
-    << (jint)color.rgb().value();
+    if (rect.radii().topLeft().width() == rect.radii().topRight().width() &&
+        rect.radii().topRight().width() == rect.radii().bottomRight().width() &&
+        rect.radii().bottomRight().width() == rect.radii().bottomLeft().width() &&
+        rect.radii().topLeft().height() == rect.radii().topRight().height() &&
+        rect.radii().topRight().height() == rect.radii().bottomRight().height() &&
+        rect.radii().bottomRight().height() == rect.radii().bottomLeft().height()) {
+        platformContext()->rq().freeSpace(56)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
+        << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
+        << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
+        << (jfloat)rect.radii().topLeft().width() << (jfloat)rect.radii().topLeft().height()
+        << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
+        << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
+        << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
+        << (jint)color.rgb().value();
+    }
+    else {
+        WindRule oldFillRule = fillRule();
+        Color oldFillColor = fillColor();
+
+        setFillRule(WindRule::EvenOdd);
+        setFillColor(color);
+
+        Path roundedRectPath;
+        roundedRectPath.addRoundedRect(rect);
+        fillPath(roundedRectPath);
+
+        setFillRule(oldFillRule);
+        setFillColor(oldFillColor);
+    }
 }
 
 void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color)
