@@ -88,7 +88,7 @@ void main()
 
         float power = specular.a;
 
-        float attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
+        vec3 attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
         d = clamp(dot(n, l), 0.0, 1.0) * attenuatedColor;
         s = pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
     }
