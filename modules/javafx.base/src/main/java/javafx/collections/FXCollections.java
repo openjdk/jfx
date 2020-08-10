@@ -111,13 +111,13 @@ public class FXCollections {
      * <p>
      * This list also reports mutations of the elements in it by using an {@code extractor}.
      * Observable objects returned by the extractor (applied to each list element) are listened for changes
-     * and transformed into {@link ListChangeListener.Change#wasUpdated() "update"} changes of a {@code ListChangeListener}.
+     * and transformed into {@linkplain ListChangeListener.Change#wasUpdated() "update"} changes of a {@code ListChangeListener}.
      *
      * @param <E> The type of List to be wrapped
      * @param list a concrete List that backs this ObservableList
      * @param extractor element to Observable[] converter
-     * @since JavaFX 2.1
      * @return a newly created ObservableList
+     * @since JavaFX 2.1
      */
     public static <E> ObservableList<E> observableList(List<E> list, Callback<E, Observable[]> extractor) {
         if (list == null || extractor == null) {
@@ -318,7 +318,7 @@ public class FXCollections {
     }
 
     /**
-     * Creates a new empty observable list backed by an array list that listens to changes in observables of its items.
+     * Creates a new empty {@code ObservableList} backed by an array list that listens to changes in observables of its items.
      * The {@code extractor} parameter specifies observables (usually properties) of the objects in the created list. When there is
      * a change in one of those observables, the user is notified of it through an
      * {@link ListChangeListener.Change#wasUpdated() update} change of an attached {@code ListChangeListener}. These changes
@@ -328,9 +328,9 @@ public class FXCollections {
      *
      * @param <E> The type of List to be wrapped
      * @param extractor element to Observable[] converter. Observable objects are listened for changes on the element.
+     * @return a newly created ObservableList
      * @see #observableList(java.util.List, javafx.util.Callback)
      * @since JavaFX 2.1
-     * @return a newly created ObservableList
      */
     public static <E> ObservableList<E> observableArrayList(Callback<E, Observable[]> extractor) {
         return observableList(new ArrayList(), extractor);
@@ -374,7 +374,7 @@ public class FXCollections {
 
     /**
      * Concatenates more observable lists into one. The resulting list
-     * would be backed by an arraylist.
+     * would be backed by an array list.
      * @param <E> The type of List to be wrapped
      * @param lists lists to concatenate
      * @return new observable array list concatenated from the arguments

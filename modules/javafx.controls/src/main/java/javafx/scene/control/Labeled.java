@@ -135,7 +135,7 @@ public abstract class Labeled extends Control {
      * The text to display in the label. The text may be null.
      *
      * @return the text to display in the label
-     * @defaultValue {@code ""} (empty string}
+     * @defaultValue empty string
      */
     public final StringProperty textProperty() {
         if (text == null) {
@@ -265,8 +265,8 @@ public abstract class Labeled extends Control {
      * @return the ellipsis property on the string to display for the ellipsis
      * when text is truncated
      * @see <a href="http://en.wikipedia.org/wiki/Ellipsis#Computer_representations">Wikipedia:ellipsis</a>
-     * @since JavaFX 2.2
      * @defaultValue {@code "..."}
+     * @since JavaFX 2.2
      */
     public final StringProperty ellipsisStringProperty() {
         if (ellipsisString == null) {
@@ -609,8 +609,8 @@ public abstract class Labeled extends Control {
      * Specifies the space in pixel between lines.
      *
      * @return the line spacing property between lines in this labeled
-     * @since JavaFX 8.0
      * @defaultValue 0
+     * @since JavaFX 8.0
      */
     public final DoubleProperty lineSpacingProperty() {
         if (lineSpacing == null) {
@@ -801,7 +801,7 @@ public abstract class Labeled extends Control {
      * be determined based on the succeeding character, and the mnemonic
      * added.
      *
-     * @defaultValue {@code false}; {@code true} for some Controls.
+     * @defaultValue {@code false}; {@code true} for some {@code Control}s.
      */
     private BooleanProperty mnemonicParsing;
     public final void setMnemonicParsing(boolean value) {

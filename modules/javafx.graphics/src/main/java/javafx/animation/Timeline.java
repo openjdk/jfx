@@ -46,20 +46,20 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * to {@code Timeline}'s initial position, depends on {@code Timeline}'s
  * direction.
  * <p>
- * {@code Timeline} processes individual {@code KeyFrame} at or after specified
- * time interval elapsed, it does not guarantee the timing when {@code KeyFrame}
+ * {@code Timeline} processes individual a {@code KeyFrame} at or after the specified
+ * time interval elapsed, it does not guarantee the exact time when a {@code KeyFrame}
  * is processed.
  * <p>
  * If a {@code KeyFrame} is not provided for the {@code time==0s} instant, one
  * will be synthesized using the target values that are current at the time
- * {@link #play()} or {@link #playFromStart()} is called.
- * <p>
- * The {@link #cycleDurationProperty()} will be set to the largest time value
- * of Timeline's keyFrames.
+ * {@link #play()} or {@link #playFromStart()} are called.
  * <p>
  * It is not possible to change the {@code keyFrames} of a running {@code Timeline}.
  * If the value of {@code keyFrames} is changed for a running {@code Timeline}, it
  * has to be stopped and started again to pick up the new value.
+ * <p>
+ * The {@link #cycleDurationProperty()} will be set to the largest time value
+ * of Timeline's keyFrames.
  * <p>
  * A simple Timeline can be created like this:
  * <pre> {@code final Timeline timeline = new Timeline();
@@ -116,7 +116,7 @@ public final class Timeline extends Animation {
     };
 
     /**
-     * Creates a {@code Timeline} with the provided key frames and a {@link Animation#getTargetFramerate() target framerate}.
+     * Creates a {@code Timeline} with the provided key frames and a {@linkplain Animation#getTargetFramerate() target framerate}.
      * The key frames do not need to be ordered.
      *
      * @param targetFramerate
@@ -143,7 +143,7 @@ public final class Timeline extends Animation {
     }
 
     /**
-     * Creates a {@code Timeline} with no key frames and a {@link Animation#getTargetFramerate() target framerate}.
+     * Creates a {@code Timeline} with no key frames and a {@linkplain Animation#getTargetFramerate() target framerate}.
      *
      * @param targetFramerate
      *            the custom target frame rate for this {@code Timeline}
