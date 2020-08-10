@@ -49,6 +49,8 @@ public class PercentageStringConverter extends NumberStringConverter {
 
     /**
      * Constructs a {@code PercentageStringConverter} with the given locale and the default format.
+     *
+     * @param locale the locale used in determining the number format used to format the string
      */
     public PercentageStringConverter(Locale locale) {
         super(locale, null, null);
@@ -56,6 +58,8 @@ public class PercentageStringConverter extends NumberStringConverter {
 
     /**
      * Constructs a {@code PercentageStringConverter} with the given number format.
+     *
+     * @param numberFormat the number format used to format the string
      */
     public PercentageStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);

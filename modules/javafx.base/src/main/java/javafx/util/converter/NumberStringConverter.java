@@ -52,6 +52,8 @@ public class NumberStringConverter extends StringConverter<Number> {
 
     /**
      * Constructs a {@code NumberStringConverter} with the given locale and the default format.
+     *
+     * @param locale the locale used in determining the number format used to format the string
      */
     public NumberStringConverter(Locale locale) {
         this(locale, null);
@@ -59,6 +61,8 @@ public class NumberStringConverter extends StringConverter<Number> {
 
     /**
      * Constructs a {@code NumberStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @param pattern the string pattern used in determining the number format used to format the string
      *
      * @see java.text.DecimalFormat
      */
@@ -69,6 +73,9 @@ public class NumberStringConverter extends StringConverter<Number> {
     /**
      * Constructs a {@code NumberStringConverter} with the given locale and decimal format pattern.
      *
+     * @param locale the locale used in determining the number format used to format the string
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
      * @see java.text.DecimalFormat
      */
     public NumberStringConverter(Locale locale, String pattern) {
@@ -77,6 +84,8 @@ public class NumberStringConverter extends StringConverter<Number> {
 
     /**
      * Constructs a {@code NumberStringConverter} with the given number format.
+     *
+     * @param numberFormat the number format used to format the string
      */
     public NumberStringConverter(NumberFormat numberFormat) {
         this(null, null, numberFormat);

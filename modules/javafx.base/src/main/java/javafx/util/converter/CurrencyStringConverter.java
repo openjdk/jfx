@@ -50,6 +50,8 @@ public class CurrencyStringConverter extends NumberStringConverter {
 
     /**
      * Constructs a {@code CurrencyStringConverter} with the given locale and the default format.
+     *
+     * @param locale the locale used in determining the number format used to format the string
      */
     public CurrencyStringConverter(Locale locale) {
         this(locale, null);
@@ -57,6 +59,8 @@ public class CurrencyStringConverter extends NumberStringConverter {
 
     /**
      * Constructs a {@code CurrencyStringConverter} with the default locale and the given decimal format pattern.
+     *
+     * @param pattern the string pattern used in determining the number format used to format the string
      *
      * @see java.text.DecimalFormat
      */
@@ -67,6 +71,9 @@ public class CurrencyStringConverter extends NumberStringConverter {
     /**
      * Constructs a {@code CurrencyStringConverter} with the given locale and decimal format pattern.
      *
+     * @param locale the locale used in determining the number format used to format the string
+     * @param pattern the string pattern used in determining the number format used to format the string
+     *
      * @see java.text.DecimalFormat
      */
     public CurrencyStringConverter(Locale locale, String pattern) {
@@ -75,6 +82,8 @@ public class CurrencyStringConverter extends NumberStringConverter {
 
     /**
      * Constructs a {@code CurrencyStringConverter} with the given number format.
+     *
+     * @param numberFormat the number format used to format the string
      */
     public CurrencyStringConverter(NumberFormat numberFormat) {
         super(null, null, numberFormat);
