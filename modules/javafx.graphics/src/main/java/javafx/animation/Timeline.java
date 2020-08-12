@@ -39,14 +39,14 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * {@link javafx.beans.property.Property JavaFX Properties}.
  * <p>
  * A {@code Timeline}, defined by one or more {@link KeyFrame}s, processes
- * individual {@code KeyFrame} sequentially, in the order specified by
+ * individual {@code KeyFrame}s sequentially, in the order specified by
  * {@code KeyFrame.time}. The animated properties, defined as key values in
  * {@code KeyFrame.values}, are interpolated
  * to/from the targeted key values at the specified time of the {@code KeyFrame}
  * to {@code Timeline}'s initial position, depends on {@code Timeline}'s
  * direction.
  * <p>
- * {@code Timeline} processes individual a {@code KeyFrame} at or after the specified
+ * {@code Timeline} processes an individual {@code KeyFrame} at or after the specified
  * time interval elapsed, it does not guarantee the exact time when a {@code KeyFrame}
  * is processed.
  * <p>
