@@ -95,9 +95,9 @@ extern NSSize maxScreenDimensions;
     {
         GET_MAIN_JENV;
 
-        if([self->nsWindow isMiniaturized]) {
+        if ([self->nsWindow isMiniaturized]) {
             type = com_sun_glass_events_WindowEvent_MINIMIZE;
-        } else if([self->nsWindow isZoomed]) {
+        } else if ([self->nsWindow isZoomed]) {
             type = com_sun_glass_events_WindowEvent_MAXIMIZE;
         }
 
