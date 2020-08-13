@@ -310,7 +310,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * of the node such that each unit of distance along the axis in local
  * coordinates is multiplied by the scale factor. As with rotation
  * transformations, scaling transformations are applied about a "pivot" point.
- * You can think of this as the point in the Node around which you "zoom".  For
+ * You can think of this as the point in the {@code Node} around which you "zoom".  For
  * example, if you create a {@link javafx.scene.shape.Rectangle} with a
  * {@code strokeWidth} of 5, and a width and height of 50, and you apply a
  * {@link javafx.scene.transform.Scale} with scale factors (x=2.0, y=2.0) and
@@ -862,12 +862,13 @@ public abstract class Node implements EventTarget, Styleable {
     private ObservableMap<Object, Object> properties;
 
     /**
-      * Returns an observable map of properties on this node for use primarily
-      * by application developers.
-      *
-      * @return an observable map of properties on this node for use primarily
-      * by application developers
-      */
+     * Returns an observable map of properties on this node for use primarily by application developers.
+     *
+     * @return an observable map of properties on this node for use primarily by application developers
+     * @apiNote Layout managers use this map as well to specify layout constraints on the node, such as {@code HBox#setHgrow}, so the
+     *          developer should be mindful of clearing the map or overriding its values. These entries are not removed automatically
+     *          if the node is removed from the layout manager, so unused entries can exist throughout the life of the node.
+     */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
             properties = FXCollections.observableMap(new HashMap<Object, Object>());

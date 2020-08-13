@@ -36,7 +36,9 @@ import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 
 /**
- * A list that allows listeners to track changes when they occur.
+ * A list that allows listeners to track changes when they occur. Implementations can be created using methods in {@link FXCollections}
+ * such as {@link FXCollections#observableArrayList() observableArrayList}, or with a
+ * {@link javafx.beans.property.SimpleListProperty SimpleListProperty}.
  *
  * @see ListChangeListener
  * @see ListChangeListener.Change
