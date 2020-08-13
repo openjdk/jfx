@@ -43,7 +43,9 @@ import javafx.beans.Observable;
  * this library support lazy evaluation.
  * <p>
  * An {@code ObservableValue} generates two types of events: change events and
- * invalidation events. A change event indicates that the value has changed. An
+ * invalidation events. A change event indicates that the value has changed.
+ * Current implementing classes in JavaFX check for a change using reference
+ * equality (and not object equality, {@code Object#equals(Object)}) of the value. An
  * invalidation event is generated if the current value is not valid anymore.
  * This distinction becomes important if the {@code ObservableValue} supports
  * lazy evaluation, because for a lazily evaluated value one does not know if an
