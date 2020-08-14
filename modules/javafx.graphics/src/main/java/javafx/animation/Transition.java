@@ -40,7 +40,7 @@ import javafx.scene.Node;
  * the implementation of a method {@link #interpolate(double)} which is the
  * called in each frame, while the {@code Transition} is running.
  * <p>
- * In addition an extending class needs to set the duration of a single cycle
+ * In addition, an extending class needs to set the duration of a single cycle
  * with {@link Animation#setCycleDuration(javafx.util.Duration)}. This duration
  * is usually set by the user via a duration property (as in
  * {@link FadeTransition#durationProperty() duration}) for example. But it can also be calculated

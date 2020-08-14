@@ -57,6 +57,12 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
 
     private static final ObservableList EMPTY_LIST = FXCollections.emptyObservableList();
 
+    /**
+     * Creates a default {@code ListExpression}.
+     */
+    public ListExpression() {
+    }
+
     @Override
     public ObservableList<E> getValue() {
         return get();

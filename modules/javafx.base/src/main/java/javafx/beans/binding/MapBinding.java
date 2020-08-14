@@ -84,6 +84,12 @@ public abstract class MapBinding<K, V> extends MapExpression<K, V> implements Bi
     private SizeProperty size0;
     private EmptyProperty empty0;
 
+    /**
+     * Creates a default {@code MapBinding}.
+     */
+    public MapBinding() {
+    }
+
     @Override
     public ReadOnlyIntegerProperty sizeProperty() {
         if (size0 == null) {

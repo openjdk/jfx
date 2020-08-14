@@ -66,6 +66,12 @@ public abstract class FloatBinding extends FloatExpression implements
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
+    /**
+     * Creates a default {@code FloatBinding}.
+     */
+    public FloatBinding() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

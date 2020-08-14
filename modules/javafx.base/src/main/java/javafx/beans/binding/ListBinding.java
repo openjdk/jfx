@@ -64,6 +64,12 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListBinding<E> extends ListExpression<E> implements Binding<ObservableList<E>> {
 
+    /**
+     * Creates a default {@code ListBinding}.
+     */
+    public ListBinding() {
+    }
+
     private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
         @Override
         public void onChanged(Change<? extends E> change) {

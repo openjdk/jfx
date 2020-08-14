@@ -50,6 +50,12 @@ import com.sun.javafx.binding.StringFormatter;
 public abstract class NumberExpressionBase implements NumberExpression {
 
     /**
+     * Creates a default {@code NumberExpressionBase}.
+     */
+    public NumberExpressionBase() {
+    }
+
+    /**
      * Returns an {@code NumberExpressionBase} that wraps a
      * {@link javafx.beans.value.ObservableNumberValue}. If the
      * {@code ObservableNumberValue} is already an instance of
