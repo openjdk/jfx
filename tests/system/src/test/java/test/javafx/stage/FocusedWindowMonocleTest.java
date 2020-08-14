@@ -53,5 +53,4 @@ public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
             Platform.exit();
         });
     }
-
 }

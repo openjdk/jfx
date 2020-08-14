@@ -48,5 +48,4 @@ public class FocusedWindowNativeTest extends FocusedWindowTestBase {
             Platform.exit();
         });
     }
-
 }

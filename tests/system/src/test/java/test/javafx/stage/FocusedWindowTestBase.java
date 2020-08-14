@@ -53,8 +53,8 @@ public abstract class FocusedWindowTestBase {
                 startupLatch.await(15, TimeUnit.MILLISECONDS));
     }
 
-    static WeakReference<Stage> closedFocusedStageWeak = null;
-    static Stage closedFocusedStage = null;
+    WeakReference<Stage> closedFocusedStageWeak = null;
+    Stage closedFocusedStage = null;
 
     public void testClosedFocusedStageLeakBase() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
@@ -100,5 +100,4 @@ public abstract class FocusedWindowTestBase {
 
         Assert.assertNull(weakReference.get());
     }
-
 }
