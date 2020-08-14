@@ -3793,7 +3793,7 @@ project(":systemTests") {
             exclude("test/robot/**");
         }
         if (!IS_UNSTABLE_TEST) {
-            // JDK-8196607 Don't run monocle test cases 
+            // JDK-8196607 Don't run monocle test cases
             exclude("test/robot/com/sun/glass/ui/monocle/**");
         }
         if (!IS_AWT_TEST) {
@@ -4711,8 +4711,8 @@ compileTargets { t ->
     def publicationDirName = "${platformPrefix}publications"
     def publicationDir = "${rootProject.buildDir}/${publicationDirName}"
 
-    moduleProjList.each { project -> 
-        // Create publications to be uploaded 
+    moduleProjList.each { project ->
+        // Create publications to be uploaded
 
         def moduleName = project.ext.moduleName
         def buildDir = project.buildDir

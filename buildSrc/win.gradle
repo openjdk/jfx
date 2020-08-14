@@ -214,9 +214,9 @@ if (file(vs2017DllPath).exists()) {
 }
 else {
     ext.WIN.VS2017DLLNames = [
-	];
+    ];
     ext.WIN.VS2017DLLs = [
-	];
+    ];
 }
 
 def WinSDKDLLsPath = cygpath("${winSdkDllDir}")

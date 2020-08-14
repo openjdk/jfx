@@ -22,16 +22,16 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 @namespace "http://www.w3.org/2000/svg";
 @namespace html "http://www.w3.org/1999/xhtml";
 
 /*
-    When an outermost SVG 'svg' element is stand-alone or embedded inline within a parent XML grammar 
-    which does not use CSS layout [CSS2-LAYOUT] or XSL formatting [XSL], the 'overflow' property on the 
-    outermost 'svg' element is ignored for the purposes of visual rendering and the initial clipping path is set 
+    When an outermost SVG 'svg' element is stand-alone or embedded inline within a parent XML grammar
+    which does not use CSS layout [CSS2-LAYOUT] or XSL formatting [XSL], the 'overflow' property on the
+    outermost 'svg' element is ignored for the purposes of visual rendering and the initial clipping path is set
     to the bounds of the initial viewport.
 
     When an outermost 'svg' element is embedded inline within a parent XML grammar which uses CSS layout

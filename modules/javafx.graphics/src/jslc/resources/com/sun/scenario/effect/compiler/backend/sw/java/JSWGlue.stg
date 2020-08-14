@@ -87,7 +87,7 @@ public class JSW$peerName$Peer extends JSWEffectPeer$genericsDecl$ $interfaceDec
         setDestNativeBounds(dst.getPhysicalWidth(), dst.getPhysicalHeight());
         int dstscan = dst.getScanlineStride();
         int[] dstPixels = dst.getPixelArray();
-        
+
         int dyi;
         float color_x, color_y, color_z, color_w;
 
