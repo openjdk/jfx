@@ -43,6 +43,12 @@ public class ShapeConverter extends StyleConverter<String, Shape> {
 
     public static StyleConverter<String, Shape> getInstance() { return INSTANCE; }
 
+    /**
+     * Creates a default {@code ShapeConverter}.
+     */
+    public ShapeConverter() {
+    }
+
     @Override public Shape convert(ParsedValue<String, Shape> value, Font font) {
 
         Shape shape = super.getCachedValue(value);

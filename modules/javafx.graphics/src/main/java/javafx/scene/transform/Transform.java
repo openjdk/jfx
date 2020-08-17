@@ -127,6 +127,12 @@ public abstract class Transform implements Cloneable, EventTarget {
         });
     }
 
+    /**
+     * Creates a default {@code Transform}.
+     */
+    public Transform() {
+    }
+
     /* *************************************************************************
      *                                                                         *
      *                            Factories                                    *

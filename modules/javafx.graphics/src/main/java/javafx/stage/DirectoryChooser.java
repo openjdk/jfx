@@ -49,6 +49,12 @@ public final class DirectoryChooser {
      */
     private StringProperty title;
 
+    /**
+     * Creates a default {@code DirectoryChooser}.
+     */
+    public DirectoryChooser() {
+    }
+
     public final void setTitle(final String value) {
         titleProperty().set(value);
     }

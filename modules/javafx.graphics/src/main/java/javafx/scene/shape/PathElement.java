@@ -71,6 +71,12 @@ public abstract class PathElement {
      */
     WeakReferenceQueue nodes = new WeakReferenceQueue();
 
+    /**
+     * Creates a default {@code PathElement}.
+     */
+    public PathElement() {
+    }
+
     void addNode(final Node n) {
         nodes.add(n);
     }

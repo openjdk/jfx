@@ -42,6 +42,12 @@ import java.util.Set;
  */
 abstract public class Selector {
 
+    /**
+     * Creates a default {@code Selector}.
+     */
+    public Selector() {
+    }
+
     private static class UniversalSelector {
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);

@@ -43,6 +43,12 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
      **********************************************************************/
 
     /**
+     * Creates a default {@code TableFocusModel}.
+     */
+    public TableFocusModel() {
+    }
+
+    /**
      * Causes the item at the given index to receive the focus.
      *
      * @param row The row index of the item to give focus to.

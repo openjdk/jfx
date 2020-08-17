@@ -144,6 +144,13 @@ import java.util.TimerTask;
  * @since JavaFX 8.0
  */
 public abstract class ScheduledService<V> extends Service<V> {
+
+    /**
+     * Creates a default {@code ScheduledService}.
+     */
+    public ScheduledService() {
+    }
+
     /**
      * A Callback implementation for the <code>backoffStrategy</code> property which
      * will exponentially backoff the period between re-executions in the case of
