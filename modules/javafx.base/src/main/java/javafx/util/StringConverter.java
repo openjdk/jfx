@@ -32,6 +32,13 @@ package javafx.util;
  * @since JavaFX 2.0
  */
 public abstract class StringConverter<T> {
+
+    /**
+     * Creates a default {@code StringConverter}.
+     */
+    public StringConverter() {
+    }
+
     /**
     * Converts the object provided into its string form.
     * Format of the returned string is defined by the specific converter.

@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class ByteStringConverter extends StringConverter<Byte> {
+
+    /**
+     * Creates a default {@code ByteStringConverter}.
+     */
+    public ByteStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Byte fromString(String value) {
         // If the specified value is null or zero-length, return null

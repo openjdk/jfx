@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class LongStringConverter extends StringConverter<Long> {
+
+    /**
+     * Creates a default {@code LongStringConverter}.
+     */
+    public LongStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Long fromString(String value) {
         // If the specified value is null or zero-length, return null

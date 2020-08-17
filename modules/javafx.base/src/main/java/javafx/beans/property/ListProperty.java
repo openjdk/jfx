@@ -55,6 +55,13 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListProperty<E> extends ReadOnlyListProperty<E> implements
         Property<ObservableList<E>>, WritableListValue<E> {
+
+    /**
+     * Creates a default {@code ListProperty}.
+     */
+    public ListProperty() {
+    }
+
     /**
      * {@inheritDoc}
      */
