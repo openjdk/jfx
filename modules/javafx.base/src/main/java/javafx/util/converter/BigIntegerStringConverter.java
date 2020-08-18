@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class BigIntegerStringConverter extends StringConverter<BigInteger> {
+
+    /**
+     * Creates a default {@code BigIntegerStringConverter}.
+     */
+    public BigIntegerStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public BigInteger fromString(String value) {
         // If the specified value is null or zero-length, return null

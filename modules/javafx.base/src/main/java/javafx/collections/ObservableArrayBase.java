@@ -42,6 +42,12 @@ public abstract class ObservableArrayBase<T extends ObservableArray<T>> implemen
 
     private ArrayListenerHelper<T> listenerHelper;
 
+    /**
+     * Creates a default {@code ObservableArrayBase}.
+     */
+    public ObservableArrayBase() {
+    }
+
     @Override public final void addListener(InvalidationListener listener) {
         listenerHelper = ArrayListenerHelper.<T>addListener(listenerHelper, (T) this, listener);
     }

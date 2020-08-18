@@ -61,6 +61,12 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         Property<Number>, WritableDoubleValue {
 
     /**
+     * Creates a default {@code DoubleProperty}.
+     */
+    public DoubleProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

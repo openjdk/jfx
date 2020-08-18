@@ -41,6 +41,12 @@ public abstract class ReadOnlyFloatPropertyBase extends ReadOnlyFloatProperty {
 
     ExpressionHelper<Number> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyFloatPropertyBase}.
+     */
+    public ReadOnlyFloatPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

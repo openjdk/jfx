@@ -48,6 +48,12 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
     private ExpressionHelper<T> helper;
 
     /**
+     * Creates a default {@code ObservableValueBase}.
+     */
+    public ObservableValueBase() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
