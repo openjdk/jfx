@@ -504,7 +504,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);
-                getProperties().put("removeKeyMappingsForComboBoxEditor", true);
+                getProperties().put("excludeKeyMappingsForComboBoxEditor", true);
             }
 
             @Override protected double computeMinHeight(double width) {

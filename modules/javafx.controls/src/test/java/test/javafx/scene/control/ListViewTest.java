@@ -26,7 +26,12 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -75,6 +80,8 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -2040,6 +2047,47 @@ public class ListViewTest {
         assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
         assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
         assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+    }
+
+    @Test public void testExcludeKeyMappingsForComboBoxEditor() {
+        ListView<String> listView = new ListView<>(FXCollections
+                .observableArrayList("Item1", "Item2"));
+        listView.setCellFactory(TextFieldListCell.forListView());
+        StageLoader sl = new StageLoader(listView);
+
+        ListViewBehavior lvBehavior = (ListViewBehavior) ControlSkinFactory.getBehavior(listView.getSkin());
+        InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
+        InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+
+        // Verify FocusTraversalInputMap
+        for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
+            assertTrue(lvInputMap.getMappings().contains(mapping));
+        }
+
+        // Verify default InputMap
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shift(), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shift(), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut(), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shortcut(), null)));
+        assertTrue(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.A).shortcut(), null)));
+
+        // Verify vertical child InputMap
+        assertTrue(verticalInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut().shift(), null)));
+        assertTrue(verticalInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shortcut().shift(), null)));
+
+        sl.dispose();
     }
 
     @Test

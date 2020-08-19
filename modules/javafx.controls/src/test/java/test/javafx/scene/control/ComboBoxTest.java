@@ -25,9 +25,16 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.tk.Toolkit;
+
+import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -1340,8 +1347,6 @@ public class ComboBoxTest {
         StageLoader sl = new StageLoader(cb);
         KeyEventFirer keyboard = new KeyEventFirer(cb);
 
-        new StageLoader(cb);
-
         // Show the popup
         assertFalse(cb.isShowing());
         cb.requestFocus();
@@ -1428,7 +1433,6 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        /* @Ignore(JBS-8250807)
         // Test CTRL + SHIFT + END key
         keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL, KeyModifier.SHIFT);
         assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
@@ -1438,7 +1442,6 @@ public class ComboBoxTest {
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL, KeyModifier.SHIFT);
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
-         */
 
         // Test CTRL + A key
         keyboard.doLeftArrowPress();
@@ -1448,6 +1451,46 @@ public class ComboBoxTest {
 
         // Sanity
         assertTrue(cb.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void testExcludeKeyMappingsForComboBoxEditor() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        StageLoader sl = new StageLoader(cb);
+
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
+        ListViewBehavior lvBehavior = (ListViewBehavior)ControlSkinFactory.getBehavior(listView.getSkin());
+        InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
+        InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+
+        // Verify FocusTraversalInputMap
+        for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
+            assertFalse(lvInputMap.getMappings().contains(mapping));
+        }
+
+        // Verify default InputMap
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shift(), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shift(), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut(), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shortcut(), null)));
+        assertFalse(lvInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.A).shortcut(), null)));
+
+        // Verify vertical child InputMap
+        assertFalse(verticalInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut().shift(), null)));
+        assertFalse(verticalInputMap.getMappings().contains(
+                new KeyMapping(new KeyBinding(KeyCode.END).shortcut().shift(), null)));
 
         sl.dispose();
     }

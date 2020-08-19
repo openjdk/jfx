@@ -76,14 +76,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         // create a map for listView-specific mappings
         listViewInputMap = createInputMap();
-
         // add focus traversal mappings
-        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
         addDefaultMapping(listViewInputMap,
-            new KeyMapping(HOME, e -> selectFirstRow()),
-            new KeyMapping(END, e -> selectLastRow()),
-            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
 
@@ -98,9 +92,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
-            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
-            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
@@ -144,10 +135,26 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(UP).shortcut().shift(), e -> discontinuousSelectPreviousRow()),
             new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
-            new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
-            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
+            new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown())
         );
+
+        if (!Boolean.TRUE.equals(control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor"))) {
+            addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+            addDefaultMapping(listViewInputMap,
+                    new KeyMapping(HOME, e -> selectFirstRow()),
+                    new KeyMapping(END, e -> selectLastRow()),
+                    new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
+                    new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
+                    new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
+                    new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
+                    new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll())
+            );
+
+            addDefaultMapping(verticalListInputMap,
+                    new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
+                    new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
+            );
+        }
 
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 
@@ -195,28 +202,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (Utils.isTwoLevelFocus()) {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
-        if (Boolean.TRUE.equals(control.getProperties().get("removeKeyMappingsForComboBoxEditor"))) {
-            removeKeyMappingsForComboBoxEditor();
-        }
-    }
-
-    private void removeKeyMappingsForComboBoxEditor() {
-        removeMapping(new KeyBinding(LEFT));
-        removeMapping(new KeyBinding(KP_LEFT));
-        removeMapping(new KeyBinding(RIGHT));
-        removeMapping(new KeyBinding(KP_RIGHT));
-        removeMapping(new KeyBinding(HOME));
-        removeMapping(new KeyBinding(HOME).shift());
-        removeMapping(new KeyBinding(HOME).shortcut());
-        removeMapping(new KeyBinding(END));
-        removeMapping(new KeyBinding(END).shift());
-        removeMapping(new KeyBinding(END).shortcut());
-        removeMapping(new KeyBinding(A).shortcut());
-        /*
-        Should be uncommented after the removeMapping() issue JBS-8250807 is fixed.
-        removeMapping(new KeyBinding(HOME).shortcut().shift());
-        removeMapping(new KeyBinding(END).shortcut().shift());
-        */
     }
 
 
