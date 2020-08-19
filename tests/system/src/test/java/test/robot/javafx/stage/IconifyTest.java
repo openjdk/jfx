@@ -37,6 +37,7 @@ import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static test.util.Util.TIMEOUT;
 
 /**
@@ -55,7 +56,7 @@ public class IconifyTest extends VisualTestBase {
     private Stage bottomStage;
     private Stage topStage;
 
-    public void canIconifyStage(StageStyle stageStyle) throws Exception {
+    public void canIconifyStage(StageStyle stageStyle, boolean resizable) throws Exception {
         final CountDownLatch shownLatch = new CountDownLatch(2);
 
         runAndWait(() -> {
@@ -72,6 +73,7 @@ public class IconifyTest extends VisualTestBase {
             // Top stage, will be inconified
             topStage = getStage(true);
             topStage.initStyle(stageStyle);
+            topStage.setResizable(resizable);
             Scene topScene = new Scene(new Pane(), WIDTH, HEIGHT);
             topScene.setFill(TOP_COLOR);
             topStage.setScene(topScene);
@@ -90,6 +92,7 @@ public class IconifyTest extends VisualTestBase {
 
         sleep(500);
         runAndWait(() -> {
+            assertFalse(topStage.isIconified());
             Color color = getColor(100, 100);
             assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
@@ -100,19 +103,41 @@ public class IconifyTest extends VisualTestBase {
 
         sleep(500);
         runAndWait(() -> {
+            assertTrue(topStage.isIconified());
             Color color = getColor(100, 100);
             assertColorEquals(BOTTOM_COLOR, color, TOLERANCE);
+        });
+
+        runAndWait(() -> {
+            topStage.setIconified(false);
+        });
+
+        sleep(500);
+        runAndWait(() -> {
+            assertFalse(topStage.isIconified());
+            Color color = getColor(100, 100);
+            assertColorEquals(TOP_COLOR, color, TOLERANCE);
         });
     }
 
     @Test(timeout = 15000)
+    public void canIconifyDecoratedStage() throws Exception {
+        canIconifyStage(StageStyle.DECORATED, true);
+    }
+
+    @Test(timeout = 15000)
     public void canIconifyUndecoratedStage() throws Exception {
-        canIconifyStage(StageStyle.UNDECORATED);
+        canIconifyStage(StageStyle.UNDECORATED, true);
     }
 
     @Test(timeout = 15000)
     public void canIconifyTransparentStage() throws Exception {
-        canIconifyStage(StageStyle.TRANSPARENT);
+        canIconifyStage(StageStyle.TRANSPARENT, true);
+    }
+
+    @Test(timeout = 15000)
+    public void canIconifyNonResizableStage() throws Exception {
+        canIconifyStage(StageStyle.DECORATED, false);
     }
 
 }

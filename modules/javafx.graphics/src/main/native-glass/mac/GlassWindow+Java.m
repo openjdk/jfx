@@ -94,10 +94,14 @@ extern NSSize maxScreenDimensions;
     if (self->suppressWindowResizeEvent == NO)
     {
         GET_MAIN_JENV;
-        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize,
-            [self->nsWindow isZoomed]
-                ? com_sun_glass_events_WindowEvent_MAXIMIZE
-                : type,
+
+        if ([self->nsWindow isMiniaturized]) {
+            type = com_sun_glass_events_WindowEvent_MINIMIZE;
+        } else if ([self->nsWindow isZoomed]) {
+            type = com_sun_glass_events_WindowEvent_MAXIMIZE;
+        }
+
+        (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, type,
              (int)frame.size.width, (int)frame.size.height);
         [self _sendJavaWindowMoveToAnotherScreenEventIfNeeded];
     }
