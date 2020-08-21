@@ -301,12 +301,6 @@ public class J2DPrismGraphics
                 h = by + h * bh;
                 w -= x;
                 h -= y;
-            } else {
-                BaseTransform pt = imgpat.getPatternTransformNoClone();
-                x = x * (float) pt.getMxx() + (float) pt.getMxt();
-                y = y * (float) pt.getMyy() + (float) pt.getMyt();
-                h = h * (float) pt.getMxx();
-                w = w * (float) pt.getMyy();
             }
             Texture tex =
                 getResourceFactory().getCachedTexture(imgpat.getImage(), WrapMode.REPEAT);
@@ -731,6 +725,23 @@ public class J2DPrismGraphics
             } else {
                 g2d.setPaint(toJ2DPaint(paint, shape.getBounds2D()));
             }
+        }
+        if (this.paint.getType() == Paint.Type.IMAGE_PATTERN) {
+            ImagePattern imgpat = (ImagePattern) this.paint;
+            java.awt.geom.AffineTransform at = toJ2DTransform(imgpat.getPatternTransformNoClone());
+
+            g2d.setClip(shape);
+            g2d.transform(at);
+            tmpAT.setTransform(at);
+            try {
+                tmpAT.invert();
+            } catch (NoninvertibleTransformException e) {
+            }
+
+            g2d.fill(tmpAT.createTransformedShape(shape).getBounds2D());
+            setTransform(transform);
+            setClipRect(clipRect);
+            return;
         }
         g2d.fill(shape);
     }
