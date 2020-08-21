@@ -301,6 +301,12 @@ public class J2DPrismGraphics
                 h = by + h * bh;
                 w -= x;
                 h -= y;
+            } else {
+                BaseTransform pt = imgpat.getPatternTransformNoClone();
+                x = x * (float) pt.getMxx() + (float) pt.getMxt();
+                y = y * (float) pt.getMyy() + (float) pt.getMyt();
+                h = h * (float) pt.getMxx();
+                w = w * (float) pt.getMyy();
             }
             Texture tex =
                 getResourceFactory().getCachedTexture(imgpat.getImage(), WrapMode.REPEAT);
