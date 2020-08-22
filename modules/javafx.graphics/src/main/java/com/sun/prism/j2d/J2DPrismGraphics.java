@@ -730,18 +730,20 @@ public class J2DPrismGraphics
             ImagePattern imgpat = (ImagePattern) this.paint;
             java.awt.geom.AffineTransform at = toJ2DTransform(imgpat.getPatternTransformNoClone());
 
-            g2d.setClip(shape);
-            g2d.transform(at);
-            tmpAT.setTransform(at);
-            try {
-                tmpAT.invert();
-            } catch (NoninvertibleTransformException e) {
-            }
+            if (at.getType() != java.awt.geom.AffineTransform.TYPE_IDENTITY) {
+                g2d.setClip(shape);
+                g2d.transform(at);
+                tmpAT.setTransform(at);
+                try {
+                    tmpAT.invert();
+                } catch (NoninvertibleTransformException e) {
+                }
 
-            g2d.fill(tmpAT.createTransformedShape(shape).getBounds2D());
-            setTransform(transform);
-            setClipRect(clipRect);
-            return;
+                g2d.fill(tmpAT.createTransformedShape(shape).getBounds2D());
+                setTransform(transform);
+                setClipRect(clipRect);
+                return;
+            }
         }
         g2d.fill(shape);
     }
