@@ -44,9 +44,10 @@ public class ShapeConverter extends StyleConverter<String, Shape> {
     public static StyleConverter<String, Shape> getInstance() { return INSTANCE; }
 
     /**
-     * Creates a default {@code ShapeConverter}.
+     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #getInstance()} instead.
      */
-    public ShapeConverter() {
+    @Deprecated(since="16", forRemoval=true)
+    ShapeConverter() {
     }
 
     @Override public Shape convert(ParsedValue<String, Shape> value, Font font) {

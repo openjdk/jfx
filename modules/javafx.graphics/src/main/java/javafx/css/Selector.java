@@ -43,9 +43,10 @@ import java.util.Set;
 abstract public class Selector {
 
     /**
-     * Creates a default {@code Selector}.
+     * @deprecated This constructor was exposed erroneously and will be removed in the next version.
      */
-    public Selector() {
+    @Deprecated(since="16", forRemoval=true)
+    Selector() {
     }
 
     private static class UniversalSelector {
