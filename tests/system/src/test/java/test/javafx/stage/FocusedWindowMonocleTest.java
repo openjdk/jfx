@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,46 +23,34 @@
  * questions.
  */
 
-package javafx.util.converter;
+package test.javafx.stage;
 
-import java.math.BigInteger;
-import javafx.util.StringConverter;
+import javafx.application.Platform;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-/**
- * <p>{@link StringConverter} implementation for {@link BigInteger} values.</p>
- * @since JavaFX 2.1
- */
-public class BigIntegerStringConverter extends StringConverter<BigInteger> {
+public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
 
-    /**
-     * Creates a default {@code BigIntegerStringConverter}.
-     */
-    public BigIntegerStringConverter() {
+    static {
+        System.setProperty("glass.platform","Monocle");
+        System.setProperty("monocle.platform","Headless");
     }
 
-    /** {@inheritDoc} */
-    @Override public BigInteger fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return new BigInteger(value);
+    @BeforeClass
+    public static void initFX() throws Exception {
+        initFXBase();
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(BigInteger value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
+    @Test
+    public void testClosedFocusedStageLeak() throws Exception {
+        testClosedFocusedStageLeakBase();
+    }
 
-        return ((BigInteger)value).toString();
+    @AfterClass
+    public static void teardownOnce() {
+        Platform.runLater(() -> {
+            Platform.exit();
+        });
     }
 }

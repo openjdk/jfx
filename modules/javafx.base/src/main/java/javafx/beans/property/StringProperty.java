@@ -58,6 +58,12 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
         Property<String>, WritableStringValue {
 
     /**
+     * Creates a default {@code StringProperty}.
+     */
+    public StringProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

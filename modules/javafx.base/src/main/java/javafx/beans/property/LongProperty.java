@@ -59,6 +59,12 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
         Property<Number>, WritableLongValue {
 
     /**
+     * Creates a default {@code LongProperty}.
+     */
+    public LongProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

@@ -60,6 +60,12 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
         Property<Number>, WritableIntegerValue {
 
     /**
+     * Creates a default {@code IntegerProperty}.
+     */
+    public IntegerProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
