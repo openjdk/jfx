@@ -539,7 +539,7 @@ public class StyleConverter<F, T> {
         public final List<String> strings = new ArrayList<String>();
 
         /**
-         * Creates a default {@code StringStore}.
+         * Creates a {@code StringStore}.
          */
         public StringStore() {
         }
