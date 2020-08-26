@@ -134,6 +134,10 @@ void printInternal(PrintStream& out, PromotedLocationKind kind)
     case RegExpObjectLastIndexPLoc:
         out.print("RegExpObjectLastIndexPLoc");
         return;
+
+    case InternalFieldObjectPLoc:
+        out.print("InternalFieldObjectPLoc");
+        return;
     }
 
     RELEASE_ASSERT_NOT_REACHED();

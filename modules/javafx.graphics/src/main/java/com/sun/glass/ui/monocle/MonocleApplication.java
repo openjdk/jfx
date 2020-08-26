@@ -225,7 +225,7 @@ public final class MonocleApplication extends Application {
                                    0, 0, ns.getWidth(), ns.getHeight(),
                                    0, 0, ns.getWidth(), ns.getHeight(),
                                    0, 0, ns.getWidth(), ns.getHeight(),
-                                   ns.getWidth(), ns.getHeight(),
+                                   ns.getDPI(), ns.getDPI(),
                                    1.f, 1.f, ns.getScale(), ns.getScale());
         // Move the cursor to the middle of the screen
         MouseState mouseState = new MouseState();

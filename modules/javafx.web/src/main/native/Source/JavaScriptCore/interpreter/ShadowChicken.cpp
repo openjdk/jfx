@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 namespace JSC {
 
 namespace ShadowChickenInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 void ShadowChicken::Packet::dump(PrintStream& out) const
@@ -45,9 +45,16 @@ void ShadowChicken::Packet::dump(PrintStream& out) const
     }
 
     if (isPrologue()) {
+        String name = "?"_s;
+        if (auto* function = jsDynamicCast<JSFunction*>(callee->vm(), callee)) {
+            name = function->name(callee->vm());
+            if (name.isEmpty())
+                name = "?"_s;
+        }
+
         out.print(
             "{callee = ", RawPointer(callee), ", frame = ", RawPointer(frame), ", callerFrame = ",
-            RawPointer(callerFrame), "}");
+            RawPointer(callerFrame), ", name = ", name, "}");
         return;
     }
 
@@ -62,15 +69,27 @@ void ShadowChicken::Packet::dump(PrintStream& out) const
 
 void ShadowChicken::Frame::dump(PrintStream& out) const
 {
+    String name = "?"_s;
+    if (auto* function = jsDynamicCast<JSFunction*>(callee->vm(), callee)) {
+        name = function->name(callee->vm());
+        if (name.isEmpty())
+            name = "?"_s;
+    }
+
     out.print(
-        "{callee = ", RawPointer(callee), ", frame = ", RawPointer(frame), ", isTailDeleted = ",
-        isTailDeleted, "}");
+        "{callee = ", *callee, ", frame = ", RawPointer(frame), ", isTailDeleted = ",
+        isTailDeleted, ", name = ", name, "}");
 }
 
 ShadowChicken::ShadowChicken()
     : m_logSize(Options::shadowChickenLogSize())
 {
-    m_log = static_cast<Packet*>(fastZeroedMalloc(sizeof(Packet) * m_logSize));
+    // Allow one additional packet beyond m_logEnd. This is useful for the moment we
+    // log a packet when the log is full and force an update. At that moment the packet
+    // that is being logged should be included in the update because it may be
+    // a critical prologue needed to rationalize the current machine stack with the
+    // shadow stack.
+    m_log = static_cast<Packet*>(fastZeroedMalloc(sizeof(Packet) * (m_logSize + 1)));
     m_logCursor = m_log;
     m_logEnd = m_log + m_logSize;
 }
@@ -80,13 +99,14 @@ ShadowChicken::~ShadowChicken()
     fastFree(m_log);
 }
 
-void ShadowChicken::log(VM& vm, ExecState* exec, const Packet& packet)
+void ShadowChicken::log(VM& vm, CallFrame* callFrame, const Packet& packet)
 {
-    update(vm, exec);
+    // This write is allowed because we construct the log with space for 1 additional packet.
     *m_logCursor++ = packet;
+    update(vm, callFrame);
 }
 
-void ShadowChicken::update(VM& vm, ExecState* exec)
+void ShadowChicken::update(VM& vm, CallFrame* callFrame)
 {
     if (ShadowChickenInternal::verbose) {
         dataLog("Running update on: ", *this, "\n");
@@ -101,7 +121,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     // where we bottomed out after making any call. If we bottomed out but made no calls then 'exec'
     // will tell us. That's why "highestPointSinceLastTime" will go no lower than exec. The third
     // rule, based on comparing to the current real stack, is executed in a later loop.
-    CallFrame* highestPointSinceLastTime = exec;
+    CallFrame* highestPointSinceLastTime = callFrame;
     for (unsigned i = logCursorIndex; i--;) {
         Packet packet = m_log[i];
         if (packet.isPrologue()) {
@@ -142,11 +162,10 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
         }
     }
 
-
     if (ShadowChickenInternal::verbose)
         dataLog("    Revised stack: ", listDump(m_stack), "\n");
 
-    // The log-based and exec-based rules require that ShadowChicken was enabled. The point of
+    // The log-based and callFrame-based rules require that ShadowChicken was enabled. The point of
     // ShadowChicken is to give sensible-looking results even if we had not logged. This means that
     // we need to reconcile the shadow stack and the real stack by actually looking at the real
     // stack. This reconciliation allows the shadow stack to have extra tail-deleted frames, but it
@@ -154,7 +173,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
     if (!m_stack.isEmpty()) {
         Vector<Frame> stackRightNow;
         StackVisitor::visit(
-            exec, &vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
+            callFrame, vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
                 if (visitor->isInlinedFrame())
                     return StackVisitor::Continue;
                 if (visitor->isWasmFrame()) {
@@ -275,7 +294,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
 
     Vector<Frame> toPush;
     StackVisitor::visit(
-        exec, &vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
+        callFrame, vm, [&] (StackVisitor& visitor) -> StackVisitor::Status {
             if (visitor->isInlinedFrame()) {
                 // FIXME: Handle inlining.
                 // https://bugs.webkit.org/show_bug.cgi?id=155686
@@ -288,11 +307,21 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
             }
 
             CallFrame* callFrame = visitor->callFrame();
-            if (ShadowChickenInternal::verbose)
-                dataLog("    Examining ", RawPointer(callFrame), "\n");
+            if (ShadowChickenInternal::verbose) {
+                dataLog("    Examining callFrame:", RawPointer(callFrame), ", callee:", RawPointer(callFrame->jsCallee()), ", callerFrame:", RawPointer(callFrame->callerFrame()), "\n");
+                JSObject* callee = callFrame->jsCallee();
+                if (auto* function = jsDynamicCast<JSFunction*>(callee->vm(), callee))
+                    dataLog("      Function = ", function->name(callee->vm()), "\n");
+            }
+
             if (callFrame == highestPointSinceLastTime) {
                 if (ShadowChickenInternal::verbose)
-                    dataLog("    Bailing at ", RawPointer(callFrame), " because it's the highest point since last time.\n");
+                    dataLog("    Bailing at ", RawPointer(callFrame), " because it's the highest point since last time\n");
+
+                // FIXME: At this point the shadow stack may still have tail deleted frames
+                // that do not run into the current call frame but are left in the shadow stack.
+                // Those tail deleted frames should be validated somehow.
+
                 return StackVisitor::Done;
             }
 
@@ -300,7 +329,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
             bool isTailDeleted = false;
             JSScope* scope = nullptr;
             CodeBlock* codeBlock = callFrame->codeBlock();
-            JSValue scopeValue = callFrame->bytecodeOffset() && codeBlock && codeBlock->scopeRegister().isValid()
+            JSValue scopeValue = callFrame->bytecodeIndex() && codeBlock && codeBlock->scopeRegister().isValid()
                 ? callFrame->registers()[codeBlock->scopeRegister().offset()].jsValue()
                 : jsUndefined();
             if (!scopeValue.isUndefined() && codeBlock->wasCompiledWithDebuggingOpcodes()) {
@@ -318,7 +347,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
                 // anything.
                 && m_log[indexInLog].frame == toPush.last().frame) {
                 if (ShadowChickenInternal::verbose)
-                    dataLog("    Going to loop through to find tail deleted frames with indexInLog = ", indexInLog, " and push-stack top = ", toPush.last(), "\n");
+                    dataLog("    Going to loop through to find tail deleted frames using ", RawPointer(callFrame), " with indexInLog = ", indexInLog, " and push-stack top = ", toPush.last(), "\n");
                 for (;;) {
                     ASSERT(m_log[indexInLog].frame == toPush.last().frame);
 
@@ -340,6 +369,10 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
                         break;
                     }
                     indexInLog--; // Skip over the tail packet.
+
+                    // FIXME: After a few iterations the tail packet referenced frame may not be the
+                    // same as the original callFrame for the real stack frame we started with.
+                    // It is unclear when we should break.
 
                     if (!advanceIndexInLogTo(tailPacket.frame, nullptr, nullptr)) {
                         if (ShadowChickenInternal::verbose)
@@ -379,7 +412,7 @@ void ShadowChicken::update(VM& vm, ExecState* exec)
         m_logCursor = m_log;
 
     if (ShadowChickenInternal::verbose)
-        dataLog("    After pushing: ", *this, "\n");
+        dataLog("    After pushing: ", listDump(m_stack), "\n");
 
     // Remove tail frames until the number of tail deleted frames is small enough.
     const unsigned maxTailDeletedFrames = Options::shadowChickenMaxTailDeletedFramesSize();
@@ -447,21 +480,21 @@ void ShadowChicken::dump(PrintStream& out) const
     unsigned limit = static_cast<unsigned>(m_logCursor - m_log);
     out.print("\n");
     for (unsigned i = 0; i < limit; ++i)
-        out.print("\t", comma, m_log[i], "\n");
+        out.print("\t", comma, "[", i, "] ", m_log[i], "\n");
     out.print("]}");
 }
 
-JSArray* ShadowChicken::functionsOnStack(ExecState* exec)
+JSArray* ShadowChicken::functionsOnStack(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* result = constructEmptyArray(exec, 0);
+    JSArray* result = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     iterate(
-        vm, exec,
+        vm, callFrame,
         [&] (const Frame& frame) -> bool {
-            result->push(exec, frame.callee);
+            result->push(globalObject, frame.callee);
             scope.releaseAssertNoException(); // This function is only called from tests.
             return true;
         });

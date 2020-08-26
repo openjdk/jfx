@@ -7110,6 +7110,7 @@ gst_value_serialize_flagset (const GValue * value)
   return result;
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 is_valid_flags_string (const gchar * s)
 {
@@ -7240,6 +7241,7 @@ gst_value_transform_string_flagset (const GValue * src_value,
     gst_value_set_flagset (dest_value, 0, 0);
   }
 }
+#endif // GSTREAMER_LITE
 
 static gint
 gst_value_compare_flagset (const GValue * value1, const GValue * value2)
@@ -7541,7 +7543,9 @@ _priv_gst_value_initialize (void)
   REGISTER_SERIALIZATION (gst_date_time_get_type (), date_time);
   REGISTER_SERIALIZATION (gst_bitmask_get_type (), bitmask);
   REGISTER_SERIALIZATION (gst_structure_get_type (), structure);
+#ifndef GSTREAMER_LITE
   REGISTER_SERIALIZATION (gst_flagset_get_type (), flagset);
+#endif // GSTREAMER_LITE
 
   REGISTER_SERIALIZATION_NO_COMPARE (gst_segment_get_type (), segment);
   REGISTER_SERIALIZATION_NO_COMPARE (gst_caps_features_get_type (),
@@ -7622,10 +7626,12 @@ _priv_gst_value_initialize (void)
   g_value_register_transform_func (G_TYPE_STRING, GST_TYPE_BITMASK,
       gst_value_transform_string_bitmask);
 
+#ifndef GSTREAMER_LITE
   g_value_register_transform_func (GST_TYPE_FLAG_SET, G_TYPE_STRING,
       gst_value_transform_flagset_string);
   g_value_register_transform_func (G_TYPE_STRING, GST_TYPE_FLAG_SET,
       gst_value_transform_string_flagset);
+#endif // GSTREAMER_LITE
 
   gst_value_register_intersect_func (G_TYPE_INT, GST_TYPE_INT_RANGE,
       gst_value_intersect_int_int_range);

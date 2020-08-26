@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ static int notifyTokens[3];
 // low memory events, greatly reducing CPU usage.
 static const Seconds s_minimumHoldOffTime { 5_s };
 #if !PLATFORM(IOS_FAMILY)
-static const unsigned s_holdOffMultiplier = 20;
+static constexpr unsigned s_holdOffMultiplier = 20;
 #endif
 
 void MemoryPressureHandler::install()
@@ -200,6 +200,7 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 
 Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
@@ -207,6 +208,9 @@ Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler
         return WTF::nullopt;
 
     return MemoryUsage {static_cast<size_t>(vmInfo.internal), static_cast<size_t>(vmInfo.phys_footprint)};
+#else
+    return std::nullopt;
+#endif
 }
 
 } // namespace WTF

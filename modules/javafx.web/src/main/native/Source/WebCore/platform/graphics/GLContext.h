@@ -20,10 +20,15 @@
 #ifndef GLContext_h
 #define GLContext_h
 
-#include "GraphicsContext3D.h"
 #include "IntSize.h"
 #include "PlatformDisplay.h"
 #include <wtf/Noncopyable.h>
+
+#if USE(LIBEPOXY)
+#include <epoxy/gl.h>
+#elif USE(OPENGL_ES)
+#include <GLES2/gl2.h>
+#endif
 
 #if USE(EGL) && !PLATFORM(GTK)
 #if PLATFORM(WPE)
@@ -40,6 +45,8 @@ typedef uint64_t GLNativeWindowType;
 #if USE(CAIRO)
 typedef struct _cairo_device cairo_device_t;
 #endif
+
+typedef void* PlatformGraphicsContextGL;
 
 namespace WebCore {
 
@@ -71,8 +78,8 @@ public:
     virtual cairo_device_t* cairoDevice() = 0;
 #endif
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
-    virtual PlatformGraphicsContext3D platformContext() = 0;
+#if ENABLE(GRAPHICS_CONTEXT_GL)
+    virtual PlatformGraphicsContextGL platformContext() = 0;
 #endif
 
 #if PLATFORM(X11)

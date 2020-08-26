@@ -39,8 +39,8 @@ namespace WebCore {
 
 class Document;
 class PaymentMerchantSession;
+class PaymentMethodUpdate;
 struct PaymentAuthorizationResult;
-struct PaymentMethodUpdate;
 struct ShippingContactUpdate;
 struct ShippingMethodUpdate;
 
@@ -63,6 +63,8 @@ public:
     virtual void cancelPaymentSession() = 0;
     virtual void paymentCoordinatorDestroyed() = 0;
     virtual bool supportsUnrestrictedApplePay() const = 0;
+
+    virtual String userAgentScriptsBlockedErrorMessage() const { return { }; }
 
     virtual bool isMockPaymentCoordinator() const { return false; }
     virtual bool isWebPaymentCoordinator() const { return false; }

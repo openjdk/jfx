@@ -19,6 +19,7 @@ $(JAVASCRIPTCORE_PRIVATE_HEADERS_DIR)/xxd.pl
 $(PROJECT_DIR)/Configurations/FeatureDefines.xcconfig
 $(PROJECT_DIR)/DerivedSources.make
 $(PROJECT_DIR)/Modules/airplay/WebKitPlaybackTargetAvailabilityEvent.idl
+$(PROJECT_DIR)/Modules/applepay/ApplePayCancelEvent.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayContactField.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayError.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayErrorCode.idl
@@ -37,6 +38,7 @@ $(PROJECT_DIR)/Modules/applepay/ApplePayPaymentPass.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayPaymentRequest.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayRequestBase.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePaySession.idl
+$(PROJECT_DIR)/Modules/applepay/ApplePaySessionError.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayShippingContactSelectedEvent.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayShippingContactUpdate.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayShippingMethod.idl
@@ -45,6 +47,9 @@ $(PROJECT_DIR)/Modules/applepay/ApplePayShippingMethodUpdate.idl
 $(PROJECT_DIR)/Modules/applepay/ApplePayValidateMerchantEvent.idl
 $(PROJECT_DIR)/Modules/applepay/paymentrequest/ApplePayModifier.idl
 $(PROJECT_DIR)/Modules/applepay/paymentrequest/ApplePayRequest.idl
+$(PROJECT_DIR)/Modules/async-clipboard/Clipboard.idl
+$(PROJECT_DIR)/Modules/async-clipboard/ClipboardItem.idl
+$(PROJECT_DIR)/Modules/async-clipboard/NavigatorClipboard.idl
 $(PROJECT_DIR)/Modules/beacon/NavigatorBeacon.idl
 $(PROJECT_DIR)/Modules/cache/CacheQueryOptions.idl
 $(PROJECT_DIR)/Modules/cache/DOMCache.idl
@@ -108,6 +113,8 @@ $(PROJECT_DIR)/Modules/geolocation/PositionCallback.idl
 $(PROJECT_DIR)/Modules/geolocation/PositionError.idl
 $(PROJECT_DIR)/Modules/geolocation/PositionErrorCallback.idl
 $(PROJECT_DIR)/Modules/geolocation/PositionOptions.idl
+$(PROJECT_DIR)/Modules/highlight/HighlightMap.idl
+$(PROJECT_DIR)/Modules/highlight/HighlightRangeGroup.idl
 $(PROJECT_DIR)/Modules/indexeddb/DOMWindowIndexedDatabase.idl
 $(PROJECT_DIR)/Modules/indexeddb/IDBCursor.idl
 $(PROJECT_DIR)/Modules/indexeddb/IDBCursorDirection.idl
@@ -124,6 +131,8 @@ $(PROJECT_DIR)/Modules/indexeddb/IDBTransactionMode.idl
 $(PROJECT_DIR)/Modules/indexeddb/IDBVersionChangeEvent.idl
 $(PROJECT_DIR)/Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/AudioConfiguration.idl
+$(PROJECT_DIR)/Modules/mediacapabilities/ColorGamut.idl
+$(PROJECT_DIR)/Modules/mediacapabilities/HdrMetadataType.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/MediaCapabilities.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/MediaCapabilitiesDecodingInfo.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/MediaCapabilitiesEncodingInfo.idl
@@ -134,8 +143,7 @@ $(PROJECT_DIR)/Modules/mediacapabilities/MediaDecodingType.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/MediaEncodingConfiguration.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/MediaEncodingType.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/NavigatorMediaCapabilities.idl
-$(PROJECT_DIR)/Modules/mediacapabilities/ScreenColorGamut.idl
-$(PROJECT_DIR)/Modules/mediacapabilities/ScreenLuminance.idl
+$(PROJECT_DIR)/Modules/mediacapabilities/TransferFunction.idl
 $(PROJECT_DIR)/Modules/mediacapabilities/VideoConfiguration.idl
 $(PROJECT_DIR)/Modules/mediacontrols/MediaControlsHost.idl
 $(PROJECT_DIR)/Modules/mediarecorder/BlobEvent.idl
@@ -189,6 +197,7 @@ $(PROJECT_DIR)/Modules/mediastream/RTCPeerConnectionInternals.js
 $(PROJECT_DIR)/Modules/mediastream/RTCPeerConnectionState.idl
 $(PROJECT_DIR)/Modules/mediastream/RTCPriorityType.idl
 $(PROJECT_DIR)/Modules/mediastream/RTCRtpCapabilities.idl
+$(PROJECT_DIR)/Modules/mediastream/RTCRtpCodecCapability.idl
 $(PROJECT_DIR)/Modules/mediastream/RTCRtpCodecParameters.idl
 $(PROJECT_DIR)/Modules/mediastream/RTCRtpContributingSource.idl
 $(PROJECT_DIR)/Modules/mediastream/RTCRtpEncodingParameters.idl
@@ -230,6 +239,10 @@ $(PROJECT_DIR)/Modules/paymentrequest/PaymentResponse.idl
 $(PROJECT_DIR)/Modules/paymentrequest/PaymentShippingOption.idl
 $(PROJECT_DIR)/Modules/paymentrequest/PaymentShippingType.idl
 $(PROJECT_DIR)/Modules/paymentrequest/PaymentValidationErrors.idl
+$(PROJECT_DIR)/Modules/pictureinpicture/DocumentPictureInPicture.idl
+$(PROJECT_DIR)/Modules/pictureinpicture/EnterPictureInPictureEvent.idl
+$(PROJECT_DIR)/Modules/pictureinpicture/HTMLVideoElementPictureInPicture.idl
+$(PROJECT_DIR)/Modules/pictureinpicture/PictureInPictureWindow.idl
 $(PROJECT_DIR)/Modules/plugins/QuickTimePluginReplacement.css
 $(PROJECT_DIR)/Modules/plugins/QuickTimePluginReplacement.idl
 $(PROJECT_DIR)/Modules/plugins/QuickTimePluginReplacement.js
@@ -241,6 +254,9 @@ $(PROJECT_DIR)/Modules/quota/StorageQuota.idl
 $(PROJECT_DIR)/Modules/quota/StorageQuotaCallback.idl
 $(PROJECT_DIR)/Modules/quota/StorageUsageCallback.idl
 $(PROJECT_DIR)/Modules/quota/WorkerNavigatorStorageQuota.idl
+$(PROJECT_DIR)/Modules/remoteplayback/HTMLMediaElementRemotePlayback.idl
+$(PROJECT_DIR)/Modules/remoteplayback/RemotePlayback.idl
+$(PROJECT_DIR)/Modules/remoteplayback/RemotePlaybackAvailabilityCallback.idl
 $(PROJECT_DIR)/Modules/speech/DOMWindowSpeechSynthesis.idl
 $(PROJECT_DIR)/Modules/speech/SpeechSynthesis.idl
 $(PROJECT_DIR)/Modules/speech/SpeechSynthesisEvent.idl
@@ -299,6 +315,7 @@ $(PROJECT_DIR)/Modules/webaudio/ScriptProcessorNode.idl
 $(PROJECT_DIR)/Modules/webaudio/WaveShaperNode.idl
 $(PROJECT_DIR)/Modules/webauthn/AttestationConveyancePreference.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticationExtensionsClientInputs.idl
+$(PROJECT_DIR)/Modules/webauthn/AuthenticationExtensionsClientOutputs.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorAssertionResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorAttestationResponse.idl
 $(PROJECT_DIR)/Modules/webauthn/AuthenticatorResponse.idl
@@ -330,6 +347,7 @@ $(PROJECT_DIR)/Modules/webgpu/GPUBufferUsage.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUCanvasContext.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUColor.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUColorStateDescriptor.idl
+$(PROJECT_DIR)/Modules/webgpu/GPUColorWrite.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUColorWriteBits.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUCompareFunction.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUDepthStencilStateDescriptor.idl
@@ -341,11 +359,13 @@ $(PROJECT_DIR)/Modules/webgpu/GPUOrigin3D.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUOutOfMemoryError.idl
 $(PROJECT_DIR)/Modules/webgpu/GPURequestAdapterOptions.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUSamplerDescriptor.idl
+$(PROJECT_DIR)/Modules/webgpu/GPUShaderStage.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUShaderStageBit.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUStoreOp.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUTextureDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUTextureFormat.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUTextureUsage.idl
+$(PROJECT_DIR)/Modules/webgpu/GPUUncapturedErrorEvent.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUValidationError.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUVertexAttributeDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/GPUVertexBufferDescriptor.idl
@@ -368,11 +388,13 @@ $(PROJECT_DIR)/Modules/webgpu/WebGPUComputePipeline.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUComputePipelineDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUDevice.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUDeviceErrorScopes.idl
+$(PROJECT_DIR)/Modules/webgpu/WebGPUDeviceEventHandler.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUPipelineDescriptorBase.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUPipelineLayout.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUPipelineLayoutDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUPipelineStageDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUProgrammablePassEncoder.idl
+$(PROJECT_DIR)/Modules/webgpu/WebGPUProgrammableStageDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPUQueue.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPURenderPassDescriptor.idl
 $(PROJECT_DIR)/Modules/webgpu/WebGPURenderPassEncoder.idl
@@ -387,20 +409,6 @@ $(PROJECT_DIR)/Modules/webgpu/WebGPUTextureView.idl
 $(PROJECT_DIR)/Modules/webgpu/WorkerNavigatorGPU.idl
 $(PROJECT_DIR)/Modules/websockets/CloseEvent.idl
 $(PROJECT_DIR)/Modules/websockets/WebSocket.idl
-$(PROJECT_DIR)/Modules/webvr/DOMWindowWebVR.idl
-$(PROJECT_DIR)/Modules/webvr/GamepadWebVR.idl
-$(PROJECT_DIR)/Modules/webvr/NavigatorWebVR.idl
-$(PROJECT_DIR)/Modules/webvr/VRDisplay.idl
-$(PROJECT_DIR)/Modules/webvr/VRDisplayCapabilities.idl
-$(PROJECT_DIR)/Modules/webvr/VRDisplayEvent.idl
-$(PROJECT_DIR)/Modules/webvr/VRDisplayEventReason.idl
-$(PROJECT_DIR)/Modules/webvr/VREye.idl
-$(PROJECT_DIR)/Modules/webvr/VREyeParameters.idl
-$(PROJECT_DIR)/Modules/webvr/VRFieldOfView.idl
-$(PROJECT_DIR)/Modules/webvr/VRFrameData.idl
-$(PROJECT_DIR)/Modules/webvr/VRLayerInit.idl
-$(PROJECT_DIR)/Modules/webvr/VRPose.idl
-$(PROJECT_DIR)/Modules/webvr/VRStageParameters.idl
 $(PROJECT_DIR)/Resources/plugIns.js
 $(PROJECT_DIR)/Scripts/GenerateSettings.rb
 $(PROJECT_DIR)/Scripts/SettingsTemplates/InternalSettingsGenerated.cpp.erb
@@ -424,6 +432,7 @@ $(PROJECT_DIR)/animation/DocumentTimeline.idl
 $(PROJECT_DIR)/animation/DocumentTimelineOptions.idl
 $(PROJECT_DIR)/animation/EffectTiming.idl
 $(PROJECT_DIR)/animation/FillMode.idl
+$(PROJECT_DIR)/animation/GetAnimationsOptions.idl
 $(PROJECT_DIR)/animation/IterationCompositeOperation.idl
 $(PROJECT_DIR)/animation/KeyframeAnimationOptions.idl
 $(PROJECT_DIR)/animation/KeyframeEffect.idl
@@ -516,6 +525,7 @@ $(PROJECT_DIR)/css/StyleSheetList.idl
 $(PROJECT_DIR)/css/WebKitCSSMatrix.idl
 $(PROJECT_DIR)/css/WebKitCSSViewportRule.idl
 $(PROJECT_DIR)/css/WebKitFontFamilyNames.in
+$(PROJECT_DIR)/css/dialog.css
 $(PROJECT_DIR)/css/fullscreen.css
 $(PROJECT_DIR)/css/html.css
 $(PROJECT_DIR)/css/make-css-file-arrays.pl
@@ -577,6 +587,7 @@ $(PROJECT_DIR)/dom/DocumentOrShadowRoot.idl
 $(PROJECT_DIR)/dom/DocumentStorageAccess.idl
 $(PROJECT_DIR)/dom/DocumentTouch.idl
 $(PROJECT_DIR)/dom/DocumentType.idl
+$(PROJECT_DIR)/dom/DragEvent.idl
 $(PROJECT_DIR)/dom/Element.idl
 $(PROJECT_DIR)/dom/ErrorEvent.idl
 $(PROJECT_DIR)/dom/Event.idl
@@ -589,6 +600,9 @@ $(PROJECT_DIR)/dom/EventTargetFactory.in
 $(PROJECT_DIR)/dom/FocusEvent.idl
 $(PROJECT_DIR)/dom/GlobalEventHandlers.idl
 $(PROJECT_DIR)/dom/HashChangeEvent.idl
+$(PROJECT_DIR)/dom/IdleDeadline.idl
+$(PROJECT_DIR)/dom/IdleRequestCallback.idl
+$(PROJECT_DIR)/dom/IdleRequestOptions.idl
 $(PROJECT_DIR)/dom/InputEvent.idl
 $(PROJECT_DIR)/dom/KeyboardEvent.idl
 $(PROJECT_DIR)/dom/MessageChannel.idl
@@ -622,7 +636,6 @@ $(PROJECT_DIR)/dom/SecurityPolicyViolationEvent.idl
 $(PROJECT_DIR)/dom/ShadowRoot.idl
 $(PROJECT_DIR)/dom/ShadowRootMode.idl
 $(PROJECT_DIR)/dom/Slotable.idl
-$(PROJECT_DIR)/dom/SpectreGadget.idl
 $(PROJECT_DIR)/dom/StaticRange.idl
 $(PROJECT_DIR)/dom/StringCallback.idl
 $(PROJECT_DIR)/dom/Text.idl
@@ -712,6 +725,7 @@ $(PROJECT_DIR)/html/HTMLObjectElement.idl
 $(PROJECT_DIR)/html/HTMLOptGroupElement.idl
 $(PROJECT_DIR)/html/HTMLOptionElement.idl
 $(PROJECT_DIR)/html/HTMLOptionsCollection.idl
+$(PROJECT_DIR)/html/HTMLOrForeignElement.idl
 $(PROJECT_DIR)/html/HTMLOutputElement.idl
 $(PROJECT_DIR)/html/HTMLParagraphElement.idl
 $(PROJECT_DIR)/html/HTMLParamElement.idl
@@ -803,6 +817,8 @@ $(PROJECT_DIR)/html/canvas/WebGLActiveInfo.idl
 $(PROJECT_DIR)/html/canvas/WebGLBuffer.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTextureASTC.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTextureATC.idl
+$(PROJECT_DIR)/html/canvas/WebGLCompressedTextureETC.idl
+$(PROJECT_DIR)/html/canvas/WebGLCompressedTextureETC1.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTexturePVRTC.idl
 $(PROJECT_DIR)/html/canvas/WebGLCompressedTextureS3TC.idl
 $(PROJECT_DIR)/html/canvas/WebGLContextAttributes.idl
@@ -853,6 +869,8 @@ $(PROJECT_DIR)/inspector/InspectorAuditResourcesObject.idl
 $(PROJECT_DIR)/inspector/InspectorFrontendHost.idl
 $(PROJECT_DIR)/loader/appcache/DOMApplicationCache.idl
 $(PROJECT_DIR)/make-hash-tools.pl
+$(PROJECT_DIR)/mathml/MathMLElement.idl
+$(PROJECT_DIR)/mathml/MathMLMathElement.idl
 $(PROJECT_DIR)/mathml/mathattrs.in
 $(PROJECT_DIR)/mathml/mathtags.in
 $(PROJECT_DIR)/page/BarProp.idl
@@ -869,6 +887,7 @@ $(PROJECT_DIR)/page/IntersectionObserverEntry.idl
 $(PROJECT_DIR)/page/Location.idl
 $(PROJECT_DIR)/page/Navigator.idl
 $(PROJECT_DIR)/page/NavigatorID.idl
+$(PROJECT_DIR)/page/NavigatorIsLoggedIn.idl
 $(PROJECT_DIR)/page/NavigatorLanguage.idl
 $(PROJECT_DIR)/page/NavigatorOnLine.idl
 $(PROJECT_DIR)/page/NavigatorServiceWorker.idl
@@ -884,13 +903,16 @@ $(PROJECT_DIR)/page/PerformanceObserverEntryList.idl
 $(PROJECT_DIR)/page/PerformanceResourceTiming.idl
 $(PROJECT_DIR)/page/PerformanceServerTiming.idl
 $(PROJECT_DIR)/page/PerformanceTiming.idl
+$(PROJECT_DIR)/page/PostMessageOptions.idl
 $(PROJECT_DIR)/page/RemoteDOMWindow.idl
 $(PROJECT_DIR)/page/ResizeObserver.idl
 $(PROJECT_DIR)/page/ResizeObserverCallback.idl
 $(PROJECT_DIR)/page/ResizeObserverEntry.idl
 $(PROJECT_DIR)/page/Screen.idl
+$(PROJECT_DIR)/page/ScrollBehavior.idl
 $(PROJECT_DIR)/page/ScrollIntoViewOptions.idl
 $(PROJECT_DIR)/page/ScrollLogicalPosition.idl
+$(PROJECT_DIR)/page/ScrollOptions.idl
 $(PROJECT_DIR)/page/ScrollToOptions.idl
 $(PROJECT_DIR)/page/Settings.yaml
 $(PROJECT_DIR)/page/ShareData.idl
@@ -944,7 +966,6 @@ $(PROJECT_DIR)/svg/SVGDescElement.idl
 $(PROJECT_DIR)/svg/SVGDocument.idl
 $(PROJECT_DIR)/svg/SVGElement.idl
 $(PROJECT_DIR)/svg/SVGEllipseElement.idl
-$(PROJECT_DIR)/svg/SVGExternalResourcesRequired.idl
 $(PROJECT_DIR)/svg/SVGFEBlendElement.idl
 $(PROJECT_DIR)/svg/SVGFEColorMatrixElement.idl
 $(PROJECT_DIR)/svg/SVGFEComponentTransferElement.idl
@@ -1064,6 +1085,8 @@ $(PROJECT_DIR)/svg/xlinkattrs.in
 $(PROJECT_DIR)/testing/GCObservation.idl
 $(PROJECT_DIR)/testing/InternalSettings.idl
 $(PROJECT_DIR)/testing/Internals.idl
+$(PROJECT_DIR)/testing/InternalsMapLike.idl
+$(PROJECT_DIR)/testing/InternalsSetLike.idl
 $(PROJECT_DIR)/testing/MallocStatistics.idl
 $(PROJECT_DIR)/testing/MemoryInfo.idl
 $(PROJECT_DIR)/testing/MockCDMFactory.idl
@@ -1073,6 +1096,7 @@ $(PROJECT_DIR)/testing/MockPaymentAddress.idl
 $(PROJECT_DIR)/testing/MockPaymentContactFields.idl
 $(PROJECT_DIR)/testing/MockPaymentCoordinator.idl
 $(PROJECT_DIR)/testing/MockPaymentError.idl
+$(PROJECT_DIR)/testing/MockWebAuthenticationConfiguration.idl
 $(PROJECT_DIR)/testing/ServiceWorkerInternals.idl
 $(PROJECT_DIR)/testing/TypeConversions.idl
 $(PROJECT_DIR)/workers/AbstractWorker.idl

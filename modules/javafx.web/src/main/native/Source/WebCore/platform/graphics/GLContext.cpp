@@ -18,7 +18,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(GRAPHICS_CONTEXT_GL)
 #include "GLContext.h"
 #include <wtf/ThreadSpecific.h>
 
@@ -26,14 +26,9 @@
 #include "GLContextEGL.h"
 #endif
 
-#if USE(LIBEPOXY)
-#include <epoxy/gl.h>
-#elif USE(OPENGL_ES)
-#include <GLES2/gl2.h>
-#endif
-
 #if USE(GLX)
 #include "GLContextGLX.h"
+#include "OpenGLShims.h"
 #endif
 
 using WTF::ThreadSpecific;

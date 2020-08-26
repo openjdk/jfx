@@ -116,6 +116,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_argument_count:
     case op_check_tdz:
     case op_create_this:
+    case op_create_promise:
+    case op_create_generator:
+    case op_create_async_generator:
     case op_bitnot:
     case op_bitand:
     case op_bitor:
@@ -205,10 +208,13 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_jbelow:
     case op_jbeloweq:
     case op_loop_hint:
+    case op_check_traps:
     case op_nop:
     case op_ret:
     case op_end:
     case op_new_object:
+    case op_new_promise:
+    case op_new_generator:
     case op_new_array:
     case op_new_array_with_size:
     case op_new_array_buffer:
@@ -228,12 +234,14 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_create_direct_arguments:
     case op_create_scoped_arguments:
     case op_create_cloned_arguments:
+    case op_create_arguments_butterfly:
     case op_get_from_arguments:
     case op_put_to_arguments:
     case op_get_argument:
     case op_jneq_ptr:
     case op_typeof:
     case op_to_number:
+    case op_to_numeric:
     case op_to_string:
     case op_to_object:
     case op_switch_imm:
@@ -272,6 +280,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_resolve_scope:
     case op_resolve_scope_for_hoisting_func_decl_in_eval:
     case op_new_regexp:
+    case op_get_internal_field:
+    case op_put_internal_field:
+    case op_to_property_key:
     case op_unreachable:
     case op_super_sampler_begin:
     case op_super_sampler_end:
@@ -297,7 +308,19 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case llint_native_construct_trampoline:
     case llint_internal_function_call_trampoline:
     case llint_internal_function_construct_trampoline:
+    case checkpoint_osr_exit_from_inlined_call_trampoline:
+    case checkpoint_osr_exit_trampoline:
     case handleUncaughtException:
+    case op_call_return_location:
+    case op_construct_return_location:
+    case op_call_varargs_slow_return_location:
+    case op_construct_varargs_slow_return_location:
+    case op_get_by_id_return_location:
+    case op_get_by_val_return_location:
+    case op_put_by_id_return_location:
+    case op_put_by_val_return_location:
+    case wasm_function_prologue:
+    case wasm_function_prologue_no_tls:
         return CannotCompile;
     }
     return CannotCompile;

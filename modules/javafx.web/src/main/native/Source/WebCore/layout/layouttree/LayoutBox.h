@@ -29,14 +29,20 @@
 
 #include "LayoutReplaced.h"
 #include "RenderStyle.h"
+#include "TextContext.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+namespace Display {
+class Box;
+}
+
 namespace Layout {
 
 class Container;
+class LayoutState;
 class TreeBuilder;
 
 class Box : public CanMakeWeakPtr<Box> {
@@ -47,12 +53,6 @@ public:
         Body,
         TableWrapperBox, // The table generates a principal block container box called the table wrapper box that contains the table box and any caption boxes.
         TableBox, // The table box is a block-level box that contains the table's internal table boxes.
-        TableColumn,
-        TableRow,
-        TableColumnGroup,
-        TableHeaderGroup,
-        TableBodyGroup,
-        TableFooterGroup,
         Image,
         IFrame,
         HardLineBreak,
@@ -70,15 +70,14 @@ public:
     typedef unsigned BaseTypeFlags;
 
     Box(Optional<ElementAttributes>, RenderStyle&&);
-    Box(String textContent, RenderStyle&&);
-    virtual ~Box();
+    Box(TextContext&&, RenderStyle&&);
+    ~Box();
 
     bool establishesFormattingContext() const;
     bool establishesBlockFormattingContext() const;
-    bool establishesTableFormattingContext() const;
-    bool establishesBlockFormattingContextOnly() const;
     bool establishesInlineFormattingContext() const;
-    bool establishesInlineFormattingContextOnly() const;
+    bool establishesTableFormattingContext() const;
+    bool establishesIndependentFormattingContext() const;
 
     bool isInFlow() const { return !isFloatingOrOutOfFlowPositioned(); }
     bool isPositioned() const { return isInFlowPositioned() || isOutOfFlowPositioned(); }
@@ -103,11 +102,14 @@ public:
     bool isDescendantOf(const Container&) const;
     bool isContainingBlockDescendantOf(const Container&) const;
 
-    bool isAnonymous() const { return !m_elementAttributes; }
+    bool isAnonymous() const { return m_isAnonymous; }
 
     bool isBlockLevelBox() const;
     bool isInlineLevelBox() const;
+    bool isInlineBox() const;
+    bool isAtomicInlineLevelBox() const;
     bool isInlineBlockBox() const;
+    bool isInlineTableBox() const;
     bool isBlockContainerBox() const;
     bool isInitialContainingBlock() const;
 
@@ -116,11 +118,13 @@ public:
     bool isTableWrapperBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableWrapperBox; }
     bool isTableBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableBox; }
     bool isTableCaption() const { return style().display() == DisplayType::TableCaption; }
-    bool isTableHeader() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableHeaderGroup; }
-    bool isTableBody() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableBodyGroup; }
-    bool isTableFooter() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableFooterGroup; }
-    bool isTableRow() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableRow; }
-    bool isTableCell() const { return style().display() == DisplayType::TableCell;; }
+    bool isTableHeader() const { return style().display() == DisplayType::TableHeaderGroup; }
+    bool isTableBody() const { return style().display() == DisplayType::TableRowGroup; }
+    bool isTableFooter() const { return style().display() == DisplayType::TableFooterGroup; }
+    bool isTableRow() const { return style().display() == DisplayType::TableRow; }
+    bool isTableColumnGroup() const { return style().display() == DisplayType::TableColumnGroup; }
+    bool isTableColumn() const { return style().display() == DisplayType::TableColumn; }
+    bool isTableCell() const { return style().display() == DisplayType::TableCell; }
     bool isReplaced() const { return isImage() || isIFrame(); }
     bool isIFrame() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::IFrame; }
     bool isImage() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Image; }
@@ -134,26 +138,32 @@ public:
     const Box* previousInFlowSibling() const;
     const Box* previousInFlowOrFloatingSibling() const;
 
+    // FIXME: This is currently needed for style updates.
+    Box* nextSibling() { return m_nextSibling; }
+
     bool isContainer() const { return m_baseTypeFlags & ContainerFlag; }
-    bool isBlockContainer() const { return isBlockLevelBox() && isContainer(); }
-    bool isInlineContainer() const { return isInlineLevelBox() && isContainer(); }
 
     bool isPaddingApplicable() const;
     bool isOverflowVisible() const;
 
+    void updateStyle(const RenderStyle& newStyle);
     const RenderStyle& style() const { return m_style; }
 
     const Replaced* replaced() const;
     // FIXME: Temporary until after intrinsic size change is tracked by Replaced.
     Replaced* replaced();
-    bool hasTextContent() const;
-    String textContent() const;
+    bool hasTextContent() const { return !!m_textContext; }
+    const Optional<TextContext>& textContext() const { return m_textContext; }
 
     // FIXME: Find a better place for random DOM things.
     void setRowSpan(unsigned);
-    void setColumnSpan(unsigned);
     unsigned rowSpan() const;
+
+    void setColumnSpan(unsigned);
     unsigned columnSpan() const;
+
+    void setColumnWidth(LayoutUnit);
+    Optional<LayoutUnit> columnWidth() const;
 
     void setParent(Container& parent) { m_parent = &parent; }
     void setNextSibling(Box& nextSibling) { m_nextSibling = &nextSibling; }
@@ -161,21 +171,23 @@ public:
 
     void setIsAnonymous() { m_isAnonymous = true; }
 
+    bool canCacheForLayoutState(const LayoutState&) const;
+    Display::Box* cachedDisplayBoxForLayoutState(const LayoutState&) const;
+    void setCachedDisplayBoxForLayoutState(LayoutState&, std::unique_ptr<Display::Box>) const;
+
 protected:
-    Box(Optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags);
+    Box(Optional<ElementAttributes>, Optional<TextContext>, RenderStyle&&, BaseTypeFlags);
 
 private:
-    void setTextContent(String);
-
     class BoxRareData {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         BoxRareData() = default;
 
-        String textContent;
         std::unique_ptr<Replaced> replaced;
         unsigned rowSpan { 1 };
         unsigned columnSpan { 1 };
+        Optional<LayoutUnit> columnWidth;
     };
 
     bool hasRareData() const { return m_hasRareData; }
@@ -194,6 +206,12 @@ private:
     Container* m_parent { nullptr };
     Box* m_previousSibling { nullptr };
     Box* m_nextSibling { nullptr };
+
+    const Optional<TextContext> m_textContext;
+
+    // First LayoutState gets a direct cache.
+    mutable WeakPtr<LayoutState> m_cachedLayoutState;
+    mutable std::unique_ptr<Display::Box> m_cachedDisplayBoxForLayoutState;
 
     unsigned m_baseTypeFlags : 6;
     bool m_hasRareData : 1;

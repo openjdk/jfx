@@ -253,7 +253,7 @@ bool KeyframeAnimation::computeExtentOfTransformAnimation(LayoutRect& bounds) co
     auto& box = downcast<RenderBox>(*renderer());
     auto rendererBox = snapRectToDevicePixels(box.borderBoxRect(), box.document().deviceScaleFactor());
 
-    auto cumulativeBounds = bounds;
+    LayoutRect cumulativeBounds;
 
     for (auto& keyframe : m_keyframes.keyframes()) {
         const RenderStyle* keyframeStyle = keyframe.style();
@@ -362,7 +362,7 @@ bool KeyframeAnimation::sendAnimationEvent(const AtomString& eventType, double e
         // Dispatch the event
         auto element = makeRefPtr(this->element());
 
-        ASSERT(!element || element->document().pageCacheState() == Document::NotInPageCache);
+        ASSERT(!element || element->document().backForwardCacheState() == Document::NotInBackForwardCache);
         if (!element)
             return false;
 
@@ -515,7 +515,11 @@ Optional<Seconds> KeyframeAnimation::timeToNextService()
 {
     Optional<Seconds> t = AnimationBase::timeToNextService();
     if (!t || t.value() != 0_s || preActive())
+#if COMPILER(MSVC) && _MSC_VER >= 1920
+        return WTFMove(t);
+#else
         return t;
+#endif
 
     // A return value of 0 means we need service. But if we only have accelerated animations we
     // only need service at the end of the transition.

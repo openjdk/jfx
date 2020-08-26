@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -575,6 +575,7 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     /**
+     * Starts an edit to the value of the cell.
      * Call this function to transition from a non-editing state into an editing
      * state, if the cell is editable. If this cell is already in an editing
      * state, it will stay in it.
@@ -586,6 +587,7 @@ public class Cell<T> extends Labeled {
     }
 
     /**
+     * Cancels an edit to the value of the cell.
      * Call this function to transition from an editing state into a non-editing
      * state, without saving any user input.
      */
@@ -596,11 +598,12 @@ public class Cell<T> extends Labeled {
     }
 
     /**
+     * Commits an edit to the value of the cell.
      * Call this function when appropriate (based on the user interaction requirements
      * of your cell editing user interface) to do two things:
      *
      * <ol>
-     *     <li>Fire the appropriate events back to the backing UI control (e.g.
+     *     <li>Fire the appropriate events back to the backing UI control (e.g.,
      *     {@link ListView}). This will begin the process of pushing this edit
      *     back to the relevant data source / property (although it does not
      *     guarantee that this will be successful - that is dependent upon the
@@ -611,12 +614,12 @@ public class Cell<T> extends Labeled {
      *
      * <p>In general there is no need to override this method in custom cell
      * implementations - it should be sufficient to simply call this method
-     * when appropriate (e.g. when the user pressed the Enter key, you may do something
+     * when appropriate (e.g., when the user pressed the Enter key, you may do something
      * like {@code cell.commitEdit(converter.fromString(textField.getText()));}</p>
      *
-     * @param newValue The value as input by the end user, which should be
+     * @param newValue the value as input by the end user, which should be
      *      persisted in the relevant way given the data source underpinning the
-     *      user interface and the install edit commit handler of the UI control.
+     *      user interface and the install edit commit handler of the UI control
      */
     public void commitEdit(T newValue) {
         if (isEditing()) {

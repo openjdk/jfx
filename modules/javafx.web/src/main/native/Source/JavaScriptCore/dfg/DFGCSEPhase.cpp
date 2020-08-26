@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ namespace JSC { namespace DFG {
 namespace {
 
 namespace DFGCSEPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 class ImpureDataSlot {
@@ -147,8 +147,7 @@ public:
             break;
         case Stack: {
             ASSERT(!heap.payload().isTop());
-            ASSERT(heap.payload().value() == heap.payload().value32());
-            m_abstractHeapStackMap.remove(heap.payload().value32());
+            m_abstractHeapStackMap.remove(heap.payload().value());
             if (clobberConservatively)
                 m_fallbackStackMap.clear();
             else
@@ -172,7 +171,7 @@ public:
                 if (!clobberConservatively)
                     break;
                 if (pair.key.heap().kind() == Stack) {
-                    auto iterator = m_abstractHeapStackMap.find(pair.key.heap().payload().value32());
+                    auto iterator = m_abstractHeapStackMap.find(pair.key.heap().payload().value());
                     if (iterator != m_abstractHeapStackMap.end() && iterator->value->key == pair.key)
                         return false;
                     return true;
@@ -226,8 +225,7 @@ private:
             AbstractHeap abstractHeap = location.heap();
             if (abstractHeap.payload().isTop())
                 return add(m_fallbackStackMap, location, node);
-            ASSERT(abstractHeap.payload().value() == abstractHeap.payload().value32());
-            auto addResult = m_abstractHeapStackMap.add(abstractHeap.payload().value32(), nullptr);
+            auto addResult = m_abstractHeapStackMap.add(abstractHeap.payload().value(), nullptr);
             if (addResult.isNewEntry) {
                 addResult.iterator->value.reset(new ImpureDataSlot {location, node, 0});
                 return nullptr;
@@ -249,8 +247,7 @@ private:
         case SideState:
             RELEASE_ASSERT_NOT_REACHED();
         case Stack: {
-            ASSERT(location.heap().payload().value() == location.heap().payload().value32());
-            auto iterator = m_abstractHeapStackMap.find(location.heap().payload().value32());
+            auto iterator = m_abstractHeapStackMap.find(location.heap().payload().value());
             if (iterator != m_abstractHeapStackMap.end()
                 && iterator->value->key == location)
                 return iterator->value->value;
@@ -298,7 +295,7 @@ private:
     // a duplicate in the past and now only live in m_fallbackStackMap.
     //
     // Obviously, TOP always goes into m_fallbackStackMap since it does not have a unique value.
-    HashMap<int32_t, std::unique_ptr<ImpureDataSlot>, DefaultHash<int32_t>::Hash, WTF::SignedWithZeroKeyHashTraits<int32_t>> m_abstractHeapStackMap;
+    HashMap<int64_t, std::unique_ptr<ImpureDataSlot>, DefaultHash<int64_t>::Hash, WTF::SignedWithZeroKeyHashTraits<int64_t>> m_abstractHeapStackMap;
     Map m_fallbackStackMap;
 
     Map m_heapMap;
@@ -353,7 +350,7 @@ private:
         // the overhead of HashMaps can be quite high currently: clearing them, or even removing
         // enough things from them, deletes (or resizes) their backing store eagerly. Hence
         // HashMaps induce a lot of malloc traffic.
-        static const unsigned capacity = 100;
+        static constexpr unsigned capacity = 100;
 
         SmallMaps()
             : m_pureLength(0)
@@ -385,7 +382,7 @@ private:
                     return m_pureMap[i].value;
             }
 
-            ASSERT(m_pureLength < capacity);
+            RELEASE_ASSERT(m_pureLength < capacity);
             m_pureMap[m_pureLength++] = WTF::KeyValuePair<PureValue, Node*>(value, node);
             return nullptr;
         }
@@ -407,7 +404,7 @@ private:
                 return nullptr;
             if (LazyNode result = findReplacement(location))
                 return result;
-            ASSERT(m_impureLength < capacity);
+            RELEASE_ASSERT(m_impureLength < capacity);
             m_impureMap[m_impureLength++] = WTF::KeyValuePair<HeapLocation, LazyNode>(location, node);
             return nullptr;
         }

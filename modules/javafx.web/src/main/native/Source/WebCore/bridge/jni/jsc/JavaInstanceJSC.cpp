@@ -65,9 +65,9 @@ JavaInstance::~JavaInstance()
     delete m_class;
 }
 
-RuntimeObject* JavaInstance::newRuntimeObject(ExecState* exec)
+RuntimeObject* JavaInstance::newRuntimeObject(JSGlobalObject* globalObject)
 {
-    return JavaRuntimeObject::create(exec, exec->lexicalGlobalObject(), this);
+    return JavaRuntimeObject::create(globalObject, this);
 }
 
 #define NUM_LOCAL_REFS 64
@@ -91,11 +91,11 @@ Class* JavaInstance::getClass() const
     return m_class;
 }
 
-JSValue JavaInstance::stringValue(ExecState* exec) const
+JSValue JavaInstance::stringValue(JSGlobalObject* globalObject) const
 {
-    JSLockHolder lock(exec);
+    JSLockHolder lock(globalObject);
 
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     jobject obj = m_instance->instance();
@@ -118,10 +118,10 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
         // FIXME duplicates code in JavaInstance::invokeMethod
         JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject(), accessControlContext())
-               ->createRuntimeObject(exec));
-        throwException(exec, scope, createError(exec,
-                                (exceptionDescription.toString(exec)
-                                    ->value(exec))));
+               ->createRuntimeObject(globalObject));
+        throwException(globalObject, scope, createError(globalObject,
+                                (exceptionDescription.toString(globalObject)
+                                    ->value(globalObject))));
         return jsUndefined();
     }
 
@@ -160,7 +160,7 @@ static JSValue numberValueForNumber(jobject obj) {
 }
 
 
-JSValue JavaInstance::numberValue(ExecState*) const
+JSValue JavaInstance::numberValue(JSGlobalObject*) const
 {
     jobject obj = m_instance->instance();
     // Since obj is WeakGlobalRef, creating a localref to safeguard instance() from GC
@@ -201,14 +201,14 @@ class JavaRuntimeMethod : public RuntimeMethod {
 public:
     typedef RuntimeMethod Base;
 
-    static JavaRuntimeMethod* create(ExecState* exec, JSGlobalObject* globalObject, const String& name, Bindings::Method *method)
+    static JavaRuntimeMethod* create(JSGlobalObject* globalObject, const String& name, Bindings::Method *method)
     {
         VM& vm = globalObject->vm();
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
-        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(exec);
-        JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(vm.heap)) JavaRuntimeMethod(globalObject, domStructure, method);
-        _method->finishCreation(exec->vm(), name);
+        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(globalObject);
+        JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(vm.heap)) JavaRuntimeMethod(vm, domStructure, method);
+        _method->finishCreation(globalObject->vm(), name);
         return _method;
     }
 
@@ -220,8 +220,8 @@ public:
     static const ClassInfo s_info;
 
 private:
-    JavaRuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Bindings::Method *method)
-        : RuntimeMethod(globalObject, structure, method)
+    JavaRuntimeMethod(VM& vm, Structure* structure, Bindings::Method *method)
+        : RuntimeMethod(vm, structure, method)
     {
     }
 
@@ -234,22 +234,22 @@ private:
 
 const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
 
-JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
+JSValue JavaInstance::getMethod(JSGlobalObject* globalObject, PropertyName propertyName)
 {
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     Method *method = aClass->methodNamed(propertyName, this);
-    return JavaRuntimeMethod::create(exec, exec->lexicalGlobalObject(), propertyName.publicName(), method);
+    return JavaRuntimeMethod::create(globalObject, propertyName.publicName(), method);
 }
 
-JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
+JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* callFrame, RuntimeMethod* runtimeMethod)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    ASSERT(exec->vm().apiLock().currentThreadIsHoldingLock());
+    ASSERT(globalObject->vm().apiLock().currentThreadIsHoldingLock());
 
     if (!asObject(runtimeMethod)->inherits(vm, &JavaRuntimeMethod::s_info))
-        throwException(exec, scope, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
+        throwException(globalObject, scope, createTypeError(globalObject, "Attempt to invoke non-Java method on Java object."));
 
 #if 0
     const MethodList& methodList = *runtimeMethod->methods();
@@ -295,7 +295,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
 
     LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
 
-    const int count = exec->argumentCount();
+    const int count = callFrame->argumentCount();
     if (jMethod->numParameters() != count) {
         LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropriate method with specified signature");
         return jsUndefined();
@@ -306,10 +306,10 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     for (int i = 0; i < count; i++) {
         CString javaClassName = jMethod->parameterAt(i).utf8();
         JavaType jtype = javaTypeFromClassName(javaClassName.data());
-        jvalue jarg = convertValueToJValue(exec, m_rootObject.get(),
-            exec->argument(i), jtype, javaClassName.data());
+        jvalue jarg = convertValueToJValue(globalObject, m_rootObject.get(),
+            callFrame->argument(i), jtype, javaClassName.data());
         jArgs[i] = jvalueToJObject(jarg, jtype);
-        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, exec->argument(i).toString(exec)->value(exec).ascii().data());
+        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, globalObject->argument(i).toString(globalObject)->value(globalObject).ascii().data());
     }
 
     jvalue result;
@@ -319,7 +319,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     // to dispatch the call on the appropriate internal VM thread.
     RootObject* rootObject = this->rootObject();
     if (jMethod->isStatic())
-        return throwException(exec, scope, createTypeError(exec, "invoking static method"));
+        return throwException(globalObject, scope, createTypeError(globalObject, "invoking static method"));
     if (!rootObject)
         return jsUndefined();
 
@@ -337,7 +337,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         // const char *callingURL = 0; // FIXME, need to propagate calling URL to Java
         jmethodID methodId = getMethodID(obj, jMethod->name().utf8().data(), jMethod->signature());
 
-        jthrowable ex = dispatchJNICall(exec->argumentCount(), rootObject,
+        jthrowable ex = dispatchJNICall(callFrame->argumentCount(), rootObject,
                                         obj, jMethod->isStatic(),
                                         jMethod->returnType(), methodId,
                                         jArgs.data(), result,
@@ -345,8 +345,8 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         if (ex != NULL) {
             JSValue exceptionDescription
               = (JavaInstance::create(ex, rootObject, accessControlContext())
-                 ->createRuntimeObject(exec));
-            throwException(exec, scope, exceptionDescription);
+                 ->createRuntimeObject(globalObject));
+            throwException(globalObject, scope, exceptionDescription);
             return jsUndefined();
         }
     }
@@ -367,7 +367,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     case JavaTypeChar:
         {
             JNIEnv* env = getJNIEnv();
-            resultValue = toJS(exec, WebCore::Java_Object_to_JSValue(env, toRef(exec), rootObject, result.l, accessControlContext()));
+            resultValue = toJS(globalObject, WebCore::Java_Object_to_JSValue(env, toRef(globalObject), rootObject, result.l, accessControlContext()));
         }
         break;
 
@@ -423,16 +423,16 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     return resultValue;
 }
 
-JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint) const
+JSValue JavaInstance::defaultValue(JSGlobalObject* globalObject, PreferredPrimitiveType hint) const
 {
     if (hint == PreferString)
-        return stringValue(exec);
+        return stringValue(globalObject);
     if (hint == PreferNumber)
-        return numberValue(exec);
+        return numberValue(globalObject);
 
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     if (aClass->isStringClass())
-        return stringValue(exec);
+        return stringValue(globalObject);
 
     jobject obj = m_instance->instance();
     // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
@@ -447,12 +447,12 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
         return numberValueForNumber(m_instance->instance());
     if (aClass->isBooleanClass())
         return booleanValue();
-    return valueOf(exec);
+    return valueOf(globalObject);
 }
 
-JSValue JavaInstance::valueOf(ExecState* exec) const
+JSValue JavaInstance::valueOf(JSGlobalObject* globalObject) const
 {
-    return stringValue(exec);
+    return stringValue(globalObject);
 }
 
 #endif // ENABLE(JAVA_BRIDGE)

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller ( mueller@kde.org )
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -102,6 +102,8 @@ void StringStats::printStats()
 }
 #endif
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringImpl);
+
 StringImpl::StaticStringImpl StringImpl::s_emptyAtomString("", StringImpl::StringAtom);
 
 StringImpl::~StringImpl()
@@ -130,7 +132,7 @@ StringImpl::~StringImpl()
     if (ownership == BufferOwned) {
         // We use m_data8, but since it is a union with m_data16 this works either way.
         ASSERT(m_data8);
-        fastFree(const_cast<LChar*>(m_data8));
+        StringImplMalloc::free(const_cast<LChar*>(m_data8));
         return;
     }
     if (ownership == BufferExternal) {
@@ -148,13 +150,13 @@ StringImpl::~StringImpl()
 void StringImpl::destroy(StringImpl* stringImpl)
 {
     stringImpl->~StringImpl();
-    fastFree(stringImpl);
+    StringImplMalloc::free(stringImpl);
 }
 
 Ref<StringImpl> StringImpl::createFromLiteral(const char* characters, unsigned length)
 {
     ASSERT_WITH_MESSAGE(length, "Use StringImpl::empty() to create an empty string");
-    ASSERT(charactersAreAllASCII<LChar>(reinterpret_cast<const LChar*>(characters), length));
+    ASSERT(charactersAreAllASCII(reinterpret_cast<const LChar*>(characters), length));
     return adoptRef(*new StringImpl(reinterpret_cast<const LChar*>(characters), length, ConstructWithoutCopying));
 }
 
@@ -195,8 +197,7 @@ template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninit
     // heap allocation from this call.
     if (length > maxInternalLength<CharacterType>())
         CRASH();
-    StringImpl* string = static_cast<StringImpl*>(fastMalloc(allocationSize<CharacterType>(length)));
-
+    StringImpl* string = static_cast<StringImpl*>(StringImplMalloc::malloc(allocationSize<CharacterType>(length)));
     data = string->tailPointer<CharacterType>();
     return constructInternal<CharacterType>(*string, length);
 }
@@ -226,8 +227,8 @@ template<typename CharacterType> inline Expected<Ref<StringImpl>, UTF8Conversion
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     originalString->~StringImpl();
-    StringImpl* string;
-    if (!tryFastRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)).getValue(string))
+    auto* string = static_cast<StringImpl*>(StringImplMalloc::tryRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)));
+    if (!string)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     data = string->tailPointer<CharacterType>();
@@ -278,6 +279,16 @@ Ref<StringImpl> StringImpl::create(const UChar* characters, unsigned length)
 Ref<StringImpl> StringImpl::create(const LChar* characters, unsigned length)
 {
     return createInternal(characters, length);
+}
+
+Ref<StringImpl> StringImpl::createStaticStringImpl(const char* characters, unsigned length)
+{
+    const LChar* lcharCharacters = reinterpret_cast<const LChar*>(characters);
+    ASSERT(charactersAreAllASCII(lcharCharacters, length));
+    Ref<StringImpl> result = createInternal(lcharCharacters, length);
+    result->setHash(StringHasher::computeHashAndMaskTop8Bits(lcharCharacters, length));
+    result->m_refCount |= s_refCountFlagIsStaticString;
+    return result;
 }
 
 Ref<StringImpl> StringImpl::create8BitIfPossible(const UChar* characters, unsigned length)
@@ -349,7 +360,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocale()
     if (is8Bit()) {
         for (unsigned i = 0; i < m_length; ++i) {
             LChar character = m_data8[i];
-            if (UNLIKELY((character & ~0x7F) || isASCIIUpper(character)))
+            if (UNLIKELY(!isASCII(character) || isASCIIUpper(character)))
                 return convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(i);
         }
 
@@ -405,13 +416,14 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocaleStartingAtFailingInde
     auto newImpl = createUninitializedInternalNonEmpty(m_length, data8);
 
     for (unsigned i = 0; i < failingIndex; ++i) {
-        ASSERT(!(m_data8[i] & ~0x7F) && !isASCIIUpper(m_data8[i]));
+        ASSERT(isASCII(m_data8[i]));
+        ASSERT(!isASCIIUpper(m_data8[i]));
         data8[i] = m_data8[i];
     }
 
     for (unsigned i = failingIndex; i < m_length; ++i) {
         LChar character = m_data8[i];
-        if (!(character & ~0x7F))
+        if (isASCII(character))
             data8[i] = toASCIILower(character);
         else {
             ASSERT(isLatin1(u_tolower(character)));

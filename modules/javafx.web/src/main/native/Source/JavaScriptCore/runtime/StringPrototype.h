@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007-2008, 2013, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -34,14 +34,14 @@ private:
     StringPrototype(VM&, Structure*);
 
 public:
-    typedef StringObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    using Base = StringObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static StringPrototype* create(VM&, JSGlobalObject*, Structure*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(StringObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(DerivedStringObjectType, StructureFlags), info());
     }
 
     DECLARE_INFO;
@@ -49,22 +49,18 @@ public:
 protected:
     void finishCreation(VM&, JSGlobalObject*, JSString*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(StringPrototype, StringObject);
 
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceGeneric(
-    ExecState*, EncodedJSValue thisValue, EncodedJSValue searchValue, EncodedJSValue replaceValue);
-
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpEmptyStr(
-    ExecState*, JSString* thisValue, RegExpObject* searchValue);
-
-JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpString(
-    ExecState*, JSString* thisValue, RegExpObject* searchValue, JSString* replaceValue);
+JSCell* JIT_OPERATION operationStringProtoFuncReplaceGeneric(JSGlobalObject*, EncodedJSValue thisValue, EncodedJSValue searchValue, EncodedJSValue replaceValue);
+JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpEmptyStr(JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue);
+JSCell* JIT_OPERATION operationStringProtoFuncReplaceRegExpString(JSGlobalObject*, JSString* thisValue, RegExpObject* searchValue, JSString* replaceValue);
 
 void substituteBackreferences(StringBuilder& result, const String& replacement, StringView source, const int* ovector, RegExp*);
 
-EncodedJSValue JSC_HOST_CALL stringProtoFuncRepeatCharacter(ExecState*);
-EncodedJSValue JSC_HOST_CALL stringProtoFuncSplitFast(ExecState*);
+EncodedJSValue JSC_HOST_CALL stringProtoFuncRepeatCharacter(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL stringProtoFuncSplitFast(JSGlobalObject*, CallFrame*);
 
-EncodedJSValue JSC_HOST_CALL builtinStringSubstrInternal(ExecState*);
-EncodedJSValue JSC_HOST_CALL builtinStringIncludesInternal(ExecState*);
+EncodedJSValue JSC_HOST_CALL builtinStringSubstrInternal(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL builtinStringIncludesInternal(JSGlobalObject*, CallFrame*);
 
 } // namespace JSC

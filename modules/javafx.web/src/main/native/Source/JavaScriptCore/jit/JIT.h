@@ -68,18 +68,22 @@ namespace JSC {
     struct SimpleJumpTable;
     struct StringJumpTable;
 
+    struct OpPutByVal;
+    struct OpPutByValDirect;
+    struct OpPutToScope;
+
     struct CallRecord {
         MacroAssembler::Call from;
-        unsigned bytecodeOffset;
+        BytecodeIndex bytecodeIndex;
         FunctionPtr<OperationPtrTag> callee;
 
         CallRecord()
         {
         }
 
-        CallRecord(MacroAssembler::Call from, unsigned bytecodeOffset, FunctionPtr<OperationPtrTag> callee)
+        CallRecord(MacroAssembler::Call from, BytecodeIndex bytecodeIndex, FunctionPtr<OperationPtrTag> callee)
             : from(from)
-            , bytecodeOffset(bytecodeOffset)
+            , bytecodeIndex(bytecodeIndex)
             , callee(callee)
         {
         }
@@ -98,9 +102,9 @@ namespace JSC {
 
     struct SlowCaseEntry {
         MacroAssembler::Jump from;
-        unsigned to;
+        BytecodeIndex to;
 
-        SlowCaseEntry(MacroAssembler::Jump f, unsigned t)
+        SlowCaseEntry(MacroAssembler::Jump f, BytecodeIndex t)
             : from(f)
             , to(t)
         {
@@ -121,20 +125,20 @@ namespace JSC {
             StringJumpTable* stringJumpTable;
         } jumpTable;
 
-        unsigned bytecodeOffset;
+        BytecodeIndex bytecodeIndex;
         unsigned defaultOffset;
 
-        SwitchRecord(SimpleJumpTable* jumpTable, unsigned bytecodeOffset, unsigned defaultOffset, Type type)
+        SwitchRecord(SimpleJumpTable* jumpTable, BytecodeIndex bytecodeIndex, unsigned defaultOffset, Type type)
             : type(type)
-            , bytecodeOffset(bytecodeOffset)
+            , bytecodeIndex(bytecodeIndex)
             , defaultOffset(defaultOffset)
         {
             this->jumpTable.simpleJumpTable = jumpTable;
         }
 
-        SwitchRecord(StringJumpTable* jumpTable, unsigned bytecodeOffset, unsigned defaultOffset)
+        SwitchRecord(StringJumpTable* jumpTable, BytecodeIndex bytecodeIndex, unsigned defaultOffset)
             : type(String)
-            , bytecodeOffset(bytecodeOffset)
+            , bytecodeIndex(bytecodeIndex)
             , defaultOffset(defaultOffset)
         {
             this->jumpTable.stringJumpTable = jumpTable;
@@ -144,7 +148,7 @@ namespace JSC {
     struct ByValCompilationInfo {
         ByValCompilationInfo() { }
 
-        ByValCompilationInfo(ByValInfo* byValInfo, unsigned bytecodeIndex, MacroAssembler::PatchableJump notIndexJump, MacroAssembler::PatchableJump badTypeJump, JITArrayMode arrayMode, ArrayProfile* arrayProfile, MacroAssembler::Label doneTarget, MacroAssembler::Label nextHotPathTarget)
+        ByValCompilationInfo(ByValInfo* byValInfo, BytecodeIndex bytecodeIndex, MacroAssembler::PatchableJump notIndexJump, MacroAssembler::PatchableJump badTypeJump, JITArrayMode arrayMode, ArrayProfile* arrayProfile, MacroAssembler::Label doneTarget, MacroAssembler::Label nextHotPathTarget)
             : byValInfo(byValInfo)
             , bytecodeIndex(bytecodeIndex)
             , notIndexJump(notIndexJump)
@@ -157,7 +161,7 @@ namespace JSC {
         }
 
         ByValInfo* byValInfo;
-        unsigned bytecodeIndex;
+        BytecodeIndex bytecodeIndex;
         MacroAssembler::PatchableJump notIndexJump;
         MacroAssembler::PatchableJump badTypeJump;
         JITArrayMode arrayMode;
@@ -185,14 +189,14 @@ namespace JSC {
         using MacroAssembler::JumpList;
         using MacroAssembler::Label;
 
-        static const uintptr_t patchGetByIdDefaultStructure = unusedPointer;
-        static const int patchGetByIdDefaultOffset = 0;
+        static constexpr uintptr_t patchGetByIdDefaultStructure = unusedPointer;
+        static constexpr int patchGetByIdDefaultOffset = 0;
         // Magic number - initial offset cannot be representable as a signed 8bit value, or the X86Assembler
         // will compress the displacement, and we may not be able to fit a patched offset.
-        static const int patchPutByIdDefaultOffset = 256;
+        static constexpr int patchPutByIdDefaultOffset = 256;
 
     public:
-        JIT(VM&, CodeBlock* = 0, unsigned loopOSREntryBytecodeOffset = 0);
+        JIT(VM&, CodeBlock* = nullptr, BytecodeIndex loopOSREntryBytecodeOffset = BytecodeIndex(0));
         ~JIT();
 
         VM& vm() { return *JSInterfaceJIT::vm(); }
@@ -202,36 +206,22 @@ namespace JSC {
 
         void doMainThreadPreparationBeforeCompile();
 
-        static CompilationResult compile(VM& vm, CodeBlock* codeBlock, JITCompilationEffort effort, unsigned bytecodeOffset = 0)
+        static CompilationResult compile(VM& vm, CodeBlock* codeBlock, JITCompilationEffort effort, BytecodeIndex bytecodeOffset = BytecodeIndex(0))
         {
             return JIT(vm, codeBlock, bytecodeOffset).privateCompile(effort);
-        }
-
-        static void compileGetByVal(const ConcurrentJSLocker& locker, VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
-        {
-            JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
-            jit.privateCompileGetByVal(locker, byValInfo, returnAddress, arrayMode);
-        }
-
-        static void compileGetByValWithCachedId(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, const Identifier& propertyName)
-        {
-            JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
-            jit.privateCompileGetByValWithCachedId(byValInfo, returnAddress, propertyName);
         }
 
         static void compilePutByVal(const ConcurrentJSLocker& locker, VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
         {
             JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
+            jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
             jit.privateCompilePutByVal<OpPutByVal>(locker, byValInfo, returnAddress, arrayMode);
         }
 
         static void compileDirectPutByVal(const ConcurrentJSLocker& locker, VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
         {
             JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
+            jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
             jit.privateCompilePutByVal<OpPutByValDirect>(locker, byValInfo, returnAddress, arrayMode);
         }
 
@@ -239,14 +229,14 @@ namespace JSC {
         static void compilePutByValWithCachedId(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, PutKind putKind, const Identifier& propertyName)
         {
             JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
+            jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
             jit.privateCompilePutByValWithCachedId<Op>(byValInfo, returnAddress, putKind, propertyName);
         }
 
         static void compileHasIndexedProperty(VM& vm, CodeBlock* codeBlock, ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
         {
             JIT jit(vm, codeBlock);
-            jit.m_bytecodeOffset = byValInfo->bytecodeIndex;
+            jit.m_bytecodeIndex = byValInfo->bytecodeIndex;
             jit.privateCompileHasIndexedProperty(byValInfo, returnAddress, arrayMode);
         }
 
@@ -277,7 +267,7 @@ namespace JSC {
         Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
         {
             Call functionCall = call(OperationPtrTag);
-            m_calls.append(CallRecord(functionCall, m_bytecodeOffset, function.retagged<OperationPtrTag>()));
+            m_calls.append(CallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
             return functionCall;
         }
 
@@ -285,7 +275,7 @@ namespace JSC {
         Call appendCallWithSlowPathReturnType(const FunctionPtr<CFunctionPtrTag> function)
         {
             Call functionCall = callWithSlowPathReturnType(OperationPtrTag);
-            m_calls.append(CallRecord(functionCall, m_bytecodeOffset, function.retagged<OperationPtrTag>()));
+            m_calls.append(CallRecord(functionCall, m_bytecodeIndex, function.retagged<OperationPtrTag>()));
             return functionCall;
         }
 #endif
@@ -345,16 +335,13 @@ namespace JSC {
         void compileOpStrictEqJump(const Instruction*, CompileOpStrictEqType);
         enum class CompileOpEqType { Eq, NEq };
         void compileOpEqJumpSlow(Vector<SlowCaseEntry>::iterator&, CompileOpEqType, int jumpTarget);
-        bool isOperandConstantDouble(int src);
-
-        void emitLoadDouble(int index, FPRegisterID value);
-        void emitLoadInt32ToDouble(int index, FPRegisterID value);
+        bool isOperandConstantDouble(VirtualRegister);
 
         enum WriteBarrierMode { UnconditionalWriteBarrier, ShouldFilterBase, ShouldFilterValue, ShouldFilterBaseAndValue };
         // value register in write barrier is used before any scratch registers
         // so may safely be the same as either of the scratch registers.
-        void emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode);
-        void emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode);
+        void emitWriteBarrier(VirtualRegister owner, VirtualRegister value, WriteBarrierMode);
+        void emitWriteBarrier(JSCell* owner, VirtualRegister value, WriteBarrierMode);
         void emitWriteBarrier(JSCell* owner);
 
         // This assumes that the value to profile is in regT0 and that regT3 is available for
@@ -381,15 +368,6 @@ namespace JSC {
         JumpList emitContiguousLoad(const Instruction*, PatchableJump& badType, IndexingType expectedShape = ContiguousShape);
         JumpList emitArrayStorageLoad(const Instruction*, PatchableJump& badType);
         JumpList emitLoadForArrayMode(const Instruction*, JITArrayMode, PatchableJump& badType);
-
-        JumpList emitInt32GetByVal(const Instruction* instruction, PatchableJump& badType) { return emitContiguousGetByVal(instruction, badType, Int32Shape); }
-        JumpList emitDoubleGetByVal(const Instruction*, PatchableJump& badType);
-        JumpList emitContiguousGetByVal(const Instruction*, PatchableJump& badType, IndexingType expectedShape = ContiguousShape);
-        JumpList emitArrayStorageGetByVal(const Instruction*, PatchableJump& badType);
-        JumpList emitDirectArgumentsGetByVal(const Instruction*, PatchableJump& badType);
-        JumpList emitScopedArgumentsGetByVal(const Instruction*, PatchableJump& badType);
-        JumpList emitIntTypedArrayGetByVal(const Instruction*, PatchableJump& badType, TypedArrayType);
-        JumpList emitFloatTypedArrayGetByVal(const Instruction*, PatchableJump& badType, TypedArrayType);
 
         // Property is in regT1, base is in regT0. regT2 contains indecing type.
         // The value to store is not yet loaded. Property is int-checked and
@@ -422,38 +400,38 @@ namespace JSC {
         // Identifier check helper for GetByVal and PutByVal.
         void emitByValIdentifierCheck(ByValInfo*, RegisterID cell, RegisterID scratch, const Identifier&, JumpList& slowCases);
 
-        JITGetByIdGenerator emitGetByValWithCachedId(ByValInfo*, OpGetByVal, const Identifier&, Jump& fastDoneCase, Jump& slowDoneCase, JumpList& slowCases);
         template<typename Op>
         JITPutByIdGenerator emitPutByValWithCachedId(ByValInfo*, Op, PutKind, const Identifier&, JumpList& doneCases, JumpList& slowCases);
 
         enum FinalObjectMode { MayBeFinal, KnownNotFinal };
 
-        void emitGetVirtualRegister(int src, JSValueRegs dst);
-        void emitPutVirtualRegister(int dst, JSValueRegs src);
+        void emitGetVirtualRegister(VirtualRegister src, JSValueRegs dst);
+        void emitPutVirtualRegister(VirtualRegister dst, JSValueRegs src);
 
-        int32_t getOperandConstantInt(int src);
-        double getOperandConstantDouble(int src);
+        int32_t getOperandConstantInt(VirtualRegister src);
+        double getOperandConstantDouble(VirtualRegister src);
 
 #if USE(JSVALUE32_64)
-        bool getOperandConstantInt(int op1, int op2, int& op, int32_t& constant);
+        bool getOperandConstantInt(VirtualRegister op1, VirtualRegister op2, VirtualRegister& op, int32_t& constant);
 
-        void emitLoadTag(int index, RegisterID tag);
-        void emitLoadPayload(int index, RegisterID payload);
+        void emitLoadDouble(VirtualRegister, FPRegisterID value);
+        void emitLoadTag(VirtualRegister, RegisterID tag);
+        void emitLoadPayload(VirtualRegister, RegisterID payload);
 
         void emitLoad(const JSValue& v, RegisterID tag, RegisterID payload);
-        void emitLoad(int index, RegisterID tag, RegisterID payload, RegisterID base = callFrameRegister);
-        void emitLoad2(int index1, RegisterID tag1, RegisterID payload1, int index2, RegisterID tag2, RegisterID payload2);
+        void emitLoad(VirtualRegister, RegisterID tag, RegisterID payload, RegisterID base = callFrameRegister);
+        void emitLoad2(VirtualRegister, RegisterID tag1, RegisterID payload1, VirtualRegister, RegisterID tag2, RegisterID payload2);
 
-        void emitStore(int index, RegisterID tag, RegisterID payload, RegisterID base = callFrameRegister);
-        void emitStore(int index, const JSValue constant, RegisterID base = callFrameRegister);
-        void emitStoreInt32(int index, RegisterID payload, bool indexIsInt32 = false);
-        void emitStoreInt32(int index, TrustedImm32 payload, bool indexIsInt32 = false);
-        void emitStoreCell(int index, RegisterID payload, bool indexIsCell = false);
-        void emitStoreBool(int index, RegisterID payload, bool indexIsBool = false);
-        void emitStoreDouble(int index, FPRegisterID value);
+        void emitStore(VirtualRegister, RegisterID tag, RegisterID payload, RegisterID base = callFrameRegister);
+        void emitStore(VirtualRegister, const JSValue constant, RegisterID base = callFrameRegister);
+        void emitStoreInt32(VirtualRegister, RegisterID payload, bool indexIsInt32 = false);
+        void emitStoreInt32(VirtualRegister, TrustedImm32 payload, bool indexIsInt32 = false);
+        void emitStoreCell(VirtualRegister, RegisterID payload, bool indexIsCell = false);
+        void emitStoreBool(VirtualRegister, RegisterID payload, bool indexIsBool = false);
+        void emitStoreDouble(VirtualRegister, FPRegisterID value);
 
-        void emitJumpSlowCaseIfNotJSCell(int virtualRegisterIndex);
-        void emitJumpSlowCaseIfNotJSCell(int virtualRegisterIndex, RegisterID tag);
+        void emitJumpSlowCaseIfNotJSCell(VirtualRegister);
+        void emitJumpSlowCaseIfNotJSCell(VirtualRegister, RegisterID tag);
 
         void compileGetByIdHotPath(const Identifier*);
 
@@ -462,17 +440,10 @@ namespace JSC {
         void emitBinaryDoubleOp(const Instruction *, OperandTypes, JumpList& notInt32Op1, JumpList& notInt32Op2, bool op1IsInRegisters = true, bool op2IsInRegisters = true);
 
 #else // USE(JSVALUE32_64)
-        void emitGetVirtualRegister(int src, RegisterID dst);
         void emitGetVirtualRegister(VirtualRegister src, RegisterID dst);
-        void emitGetVirtualRegisters(int src1, RegisterID dst1, int src2, RegisterID dst2);
         void emitGetVirtualRegisters(VirtualRegister src1, RegisterID dst1, VirtualRegister src2, RegisterID dst2);
-        void emitPutVirtualRegister(int dst, RegisterID from = regT0);
         void emitPutVirtualRegister(VirtualRegister dst, RegisterID from = regT0);
-        void emitStoreCell(int dst, RegisterID payload, bool /* only used in JSValue32_64 */ = false)
-        {
-            emitPutVirtualRegister(dst, payload);
-        }
-        void emitStoreCell(VirtualRegister dst, RegisterID payload)
+        void emitStoreCell(VirtualRegister dst, RegisterID payload, bool /* only used in JSValue32_64 */ = false)
         {
             emitPutVirtualRegister(dst, payload);
         }
@@ -480,25 +451,29 @@ namespace JSC {
         Jump emitJumpIfBothJSCells(RegisterID, RegisterID, RegisterID);
         void emitJumpSlowCaseIfJSCell(RegisterID);
         void emitJumpSlowCaseIfNotJSCell(RegisterID);
-        void emitJumpSlowCaseIfNotJSCell(RegisterID, int VReg);
+        void emitJumpSlowCaseIfNotJSCell(RegisterID, VirtualRegister);
         Jump emitJumpIfNotInt(RegisterID, RegisterID, RegisterID scratch);
         PatchableJump emitPatchableJumpIfNotInt(RegisterID);
         void emitJumpSlowCaseIfNotInt(RegisterID);
         void emitJumpSlowCaseIfNotNumber(RegisterID);
         void emitJumpSlowCaseIfNotInt(RegisterID, RegisterID, RegisterID scratch);
 
-        void compileGetByIdHotPath(int baseVReg, const Identifier*);
+        void compileGetByIdHotPath(VirtualRegister baseReg, const Identifier*);
 
 #endif // USE(JSVALUE32_64)
 
         template<typename Op>
         void emit_compareAndJump(const Instruction*, RelationalCondition);
+        void emit_compareAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition);
         template<typename Op>
         void emit_compareUnsigned(const Instruction*, RelationalCondition);
+        void emit_compareUnsignedImpl(VirtualRegister dst, VirtualRegister op1, VirtualRegister op2, RelationalCondition);
         template<typename Op>
         void emit_compareUnsignedAndJump(const Instruction*, RelationalCondition);
+        void emit_compareUnsignedAndJumpImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, RelationalCondition);
         template<typename Op>
-        void emit_compareAndJumpSlow(const Instruction*, DoubleCondition, size_t (JIT_OPERATION *operation)(ExecState*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
+        void emit_compareAndJumpSlow(const Instruction*, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
+        void emit_compareAndJumpSlowImpl(VirtualRegister op1, VirtualRegister op2, unsigned target, size_t instructionSize, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
 
         void assertStackPointerOffset();
 
@@ -575,6 +550,7 @@ namespace JSC {
         void emit_op_jbeloweq(const Instruction*);
         void emit_op_jtrue(const Instruction*);
         void emit_op_loop_hint(const Instruction*);
+        void emit_op_check_traps(const Instruction*);
         void emit_op_nop(const Instruction*);
         void emit_op_super_sampler_begin(const Instruction*);
         void emit_op_super_sampler_end(const Instruction*);
@@ -624,6 +600,7 @@ namespace JSC {
         void emit_op_tear_off_arguments(const Instruction*);
         void emit_op_throw(const Instruction*);
         void emit_op_to_number(const Instruction*);
+        void emit_op_to_numeric(const Instruction*);
         void emit_op_to_string(const Instruction*);
         void emit_op_to_object(const Instruction*);
         void emit_op_to_primitive(const Instruction*);
@@ -635,8 +612,11 @@ namespace JSC {
         void emit_op_get_direct_pname(const Instruction*);
         void emit_op_enumerator_structure_pname(const Instruction*);
         void emit_op_enumerator_generic_pname(const Instruction*);
+        void emit_op_get_internal_field(const Instruction*);
+        void emit_op_put_internal_field(const Instruction*);
         void emit_op_log_shadow_chicken_prologue(const Instruction*);
         void emit_op_log_shadow_chicken_tail(const Instruction*);
+        void emit_op_to_property_key(const Instruction*);
 
         void emitSlow_op_add(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_call(const Instruction*, Vector<SlowCaseEntry>::iterator&);
@@ -672,7 +652,7 @@ namespace JSC {
         void emitSlow_op_jnstricteq(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_jtrue(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_loop_hint(const Instruction*, Vector<SlowCaseEntry>::iterator&);
-        void emitSlow_op_enter(const Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_check_traps(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_mod(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_mul(const Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_negate(const Instruction*, Vector<SlowCaseEntry>::iterator&);
@@ -701,8 +681,8 @@ namespace JSC {
         template<typename Op>
         void emitNewFuncExprCommon(const Instruction*);
         void emitVarInjectionCheck(bool needsVarInjectionChecks);
-        void emitResolveClosure(int dst, int scope, bool needsVarInjectionChecks, unsigned depth);
-        void emitLoadWithStructureCheck(int scope, Structure** structureSlot);
+        void emitResolveClosure(VirtualRegister dst, VirtualRegister scope, bool needsVarInjectionChecks, unsigned depth);
+        void emitLoadWithStructureCheck(VirtualRegister scope, Structure** structureSlot);
 #if USE(JSVALUE64)
         void emitGetVarFromPointer(JSValue* operand, GPRReg);
         void emitGetVarFromIndirectPointer(JSValue** operand, GPRReg);
@@ -710,20 +690,20 @@ namespace JSC {
         void emitGetVarFromIndirectPointer(JSValue** operand, GPRReg tag, GPRReg payload);
         void emitGetVarFromPointer(JSValue* operand, GPRReg tag, GPRReg payload);
 #endif
-        void emitGetClosureVar(int scope, uintptr_t operand);
+        void emitGetClosureVar(VirtualRegister scope, uintptr_t operand);
         void emitNotifyWrite(WatchpointSet*);
         void emitNotifyWrite(GPRReg pointerToSet);
-        void emitPutGlobalVariable(JSValue* operand, int value, WatchpointSet*);
-        void emitPutGlobalVariableIndirect(JSValue** addressOfOperand, int value, WatchpointSet**);
-        void emitPutClosureVar(int scope, uintptr_t operand, int value, WatchpointSet*);
+        void emitPutGlobalVariable(JSValue* operand, VirtualRegister value, WatchpointSet*);
+        void emitPutGlobalVariableIndirect(JSValue** addressOfOperand, VirtualRegister value, WatchpointSet**);
+        void emitPutClosureVar(VirtualRegister scope, uintptr_t operand, VirtualRegister value, WatchpointSet*);
 
-        void emitInitRegister(int dst);
+        void emitInitRegister(VirtualRegister);
 
-        void emitPutIntToCallFrameHeader(RegisterID from, int entry);
+        void emitPutIntToCallFrameHeader(RegisterID from, VirtualRegister);
 
-        JSValue getConstantOperand(int src);
-        bool isOperandConstantInt(int src);
-        bool isOperandConstantChar(int src);
+        JSValue getConstantOperand(VirtualRegister);
+        bool isOperandConstantInt(VirtualRegister);
+        bool isOperandConstantChar(VirtualRegister);
 
         template <typename Op, typename Generator, typename ProfiledFunction, typename NonProfiledFunction>
         void emitMathICFast(JITUnaryMathIC<Generator>*, const Instruction*, ProfiledFunction, NonProfiledFunction);
@@ -750,13 +730,19 @@ namespace JSC {
             ASSERT(!iter->from.isSet());
             ++iter;
         }
-        void linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&, int virtualRegisterIndex);
-        void linkAllSlowCasesForBytecodeOffset(Vector<SlowCaseEntry>& slowCases,
-            Vector<SlowCaseEntry>::iterator&, unsigned bytecodeOffset);
+        void linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&, VirtualRegister);
+        void linkAllSlowCasesForBytecodeIndex(Vector<SlowCaseEntry>& slowCases,
+            Vector<SlowCaseEntry>::iterator&, BytecodeIndex bytecodeOffset);
 
         void linkAllSlowCases(Vector<SlowCaseEntry>::iterator& iter)
         {
-            linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+            linkAllSlowCasesForBytecodeIndex(m_slowCases, iter, m_bytecodeIndex);
+        }
+
+        bool hasAnySlowCases(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator&, BytecodeIndex bytecodeOffset);
+        bool hasAnySlowCases(Vector<SlowCaseEntry>::iterator& iter)
+        {
+            return hasAnySlowCases(m_slowCases, iter, m_bytecodeIndex);
         }
 
         MacroAssembler::Call appendCallWithExceptionCheck(const FunctionPtr<CFunctionPtrTag>);
@@ -764,13 +750,13 @@ namespace JSC {
         MacroAssembler::Call appendCallWithExceptionCheckAndSlowPathReturnType(const FunctionPtr<CFunctionPtrTag>);
 #endif
         MacroAssembler::Call appendCallWithCallFrameRollbackOnException(const FunctionPtr<CFunctionPtrTag>);
-        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr<CFunctionPtrTag>, int);
+        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr<CFunctionPtrTag>, VirtualRegister result);
         template<typename Metadata>
-        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(Metadata&, const FunctionPtr<CFunctionPtrTag>, int);
+        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResultWithProfile(Metadata&, const FunctionPtr<CFunctionPtrTag>, VirtualRegister result);
 
         template<typename OperationType, typename... Args>
         std::enable_if_t<FunctionTraits<OperationType>::hasResult, MacroAssembler::Call>
-        callOperation(OperationType operation, int result, Args... args)
+        callOperation(OperationType operation, VirtualRegister result, Args... args)
         {
             setupArguments<OperationType>(args...);
             return appendCallWithExceptionCheckSetJSValueResult(operation, result);
@@ -814,7 +800,7 @@ namespace JSC {
 
         template<typename Metadata, typename OperationType, typename... Args>
         std::enable_if_t<FunctionTraits<OperationType>::hasResult, MacroAssembler::Call>
-        callOperationWithProfile(Metadata& metadata, OperationType operation, int result, Args... args)
+        callOperationWithProfile(Metadata& metadata, OperationType operation, VirtualRegister result, Args... args)
         {
             setupArguments<OperationType>(args...);
             return appendCallWithExceptionCheckSetJSValueResultWithProfile(metadata, operation, result);
@@ -867,8 +853,14 @@ namespace JSC {
 
         int jumpTarget(const Instruction*, int target);
 
+#if ENABLE(DFG_JIT)
+        void emitEnterOptimizationCheck();
+#else
+        void emitEnterOptimizationCheck() { }
+#endif
+
 #ifndef NDEBUG
-        void printBytecodeOperandTypes(int src1, int src2);
+        void printBytecodeOperandTypes(VirtualRegister src1, VirtualRegister src2);
 #endif
 
 #if ENABLE(SAMPLING_FLAGS)
@@ -910,13 +902,14 @@ namespace JSC {
         // It will give the slow path the same value read by the fast path.
         GetPutInfo copiedGetPutInfo(OpPutToScope);
         template<typename BinaryOp>
-        ArithProfile copiedArithProfile(BinaryOp);
+        BinaryArithProfile copiedArithProfile(BinaryOp);
 
         Interpreter* m_interpreter;
 
         Vector<CallRecord> m_calls;
         Vector<Label> m_labels;
         Vector<JITGetByIdGenerator> m_getByIds;
+        Vector<JITGetByValGenerator> m_getByVals;
         Vector<JITGetByIdWithThisGenerator> m_getByIdsWithThis;
         Vector<JITPutByIdGenerator> m_putByIds;
         Vector<JITInByIdGenerator> m_inByIds;
@@ -925,24 +918,26 @@ namespace JSC {
         Vector<CallCompilationInfo> m_callCompilationInfo;
         Vector<JumpTable> m_jmpTable;
 
-        unsigned m_bytecodeOffset;
+        BytecodeIndex m_bytecodeIndex;
         Vector<SlowCaseEntry> m_slowCases;
         Vector<SwitchRecord> m_switches;
 
         HashMap<unsigned, unsigned> m_copiedGetPutInfos;
-        HashMap<uint64_t, ArithProfile> m_copiedArithProfiles;
+        HashMap<uint64_t, BinaryArithProfile> m_copiedArithProfiles;
 
         JumpList m_exceptionChecks;
         JumpList m_exceptionChecksWithCallFrameRollback;
         Label m_exceptionHandler;
 
         unsigned m_getByIdIndex { UINT_MAX };
+        unsigned m_getByValIndex { UINT_MAX };
         unsigned m_getByIdWithThisIndex { UINT_MAX };
         unsigned m_putByIdIndex { UINT_MAX };
         unsigned m_inByIdIndex { UINT_MAX };
         unsigned m_instanceOfIndex { UINT_MAX };
         unsigned m_byValInstructionIndex { UINT_MAX };
         unsigned m_callLinkInfoIndex { UINT_MAX };
+        unsigned m_bytecodeCountHavingSlowCase { 0 };
 
         Label m_arityCheck;
         std::unique_ptr<LinkBuffer> m_linkBuffer;
@@ -958,8 +953,7 @@ namespace JSC {
         bool m_canBeOptimized;
         bool m_canBeOptimizedOrInlined;
         bool m_shouldEmitProfiling;
-        bool m_shouldUseIndexMasking;
-        unsigned m_loopOSREntryBytecodeOffset { 0 };
+        BytecodeIndex m_loopOSREntryBytecodeIndex;
     };
 
 } // namespace JSC

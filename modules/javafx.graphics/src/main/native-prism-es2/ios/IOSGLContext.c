@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,26 @@
 #include "com_sun_prism_es2_IOSGLContext.h"
 
 extern void printAndReleaseResources(jlong pf, jlong ctx, const char *message);
+jboolean pulseLoggingRequested;
+
+jboolean isPulseLoggingRequested(JNIEnv *env) {
+    jclass loggerCls = (*env)->FindClass(env, "com/sun/javafx/logging/PulseLogger");
+    if ((*env)->ExceptionCheck(env) || loggerCls == NULL) {
+        (*env)->ExceptionClear(env);
+        return JNI_FALSE;
+    }
+    jmethodID loggerMID = (*env)->GetStaticMethodID(env, loggerCls, "isPulseLoggingRequested", "()Z");
+    if ((*env)->ExceptionCheck(env) || loggerMID == NULL) {
+        (*env)->ExceptionClear(env);
+        return JNI_FALSE;
+    }
+    jboolean result = (*env)->CallStaticBooleanMethod(env, loggerCls, loggerMID);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        return JNI_FALSE;
+    }
+    return result;
+}
 
 /*
  * Class:     com_sun_prism_es2_IOSGLContext
@@ -51,6 +71,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLContext_nInitialize
     int  versionNumbers[2];
     const char *glExtensions;
 
+    pulseLoggingRequested = isPulseLoggingRequested(env);
     jlong pixelFormat = 0;
     jlong win = 0;
     jlong context = 0;
@@ -289,5 +310,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLContext_nMakeCurrent
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
     setSwapInterval(ctxInfo->context, interval);
-    fprintf(stderr, "setSwapInterval(%d)\n", interval);
+    if (pulseLoggingRequested) {
+        fprintf(stderr, "setSwapInterval(%d)\n", interval);
+    }
 }

@@ -29,40 +29,16 @@
 
 #include "DisplayRect.h"
 #include "LayoutUnits.h"
-#include "RenderStyleConstants.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
-
-class RenderStyle;
-
-namespace Layout {
-class BlockFormattingContext;
-class FloatAvoider;
-class FloatBox;
-class FormattingContext;
-class FloatingContext;
-class InlineFormattingContext;
-class LayoutState;
-class TableFormattingContext;
-}
-
 namespace Display {
 
 class Box {
     WTF_MAKE_ISO_ALLOCATED(Box);
 public:
-    friend class Layout::BlockFormattingContext;
-    friend class Layout::FloatAvoider;
-    friend class Layout::FloatBox;
-    friend class Layout::FormattingContext;
-    friend class Layout::FloatingContext;
-    friend class Layout::InlineFormattingContext;
-    friend class Layout::LayoutState;
-    friend class Layout::TableFormattingContext;
-
-    Box(const RenderStyle&);
     Box(const Box&);
+    Box() = default;
     ~Box();
 
     LayoutUnit top() const;
@@ -76,6 +52,7 @@ public:
     LayoutSize size() const { return { width(), height() }; }
     LayoutUnit width() const { return borderLeft() + paddingBoxWidth() + borderRight(); }
     LayoutUnit height() const { return borderTop() + paddingBoxHeight() + borderBottom(); }
+    bool isEmpty() const { return size().isEmpty(); }
     Rect rect() const { return { top(), left(), width(), height() }; }
     Rect rectWithMargin() const;
 
@@ -135,22 +112,17 @@ public:
     Rect paddingBox() const;
     Rect contentBox() const;
 
-#if !ASSERT_DISABLED
-    void setHasEstimatedMarginBefore() { m_hasEstimatedMarginBefore = true; }
+#if ASSERT_ENABLED
+    void setHasPrecomputedMarginBefore() { m_hasPrecomputedMarginBefore = true; }
 #endif
-
-private:
-    struct Style {
-        Style(const RenderStyle&);
-
-        BoxSizing boxSizing { BoxSizing::ContentBox };
-    };
 
     void setTopLeft(const LayoutPoint&);
     void setTop(LayoutUnit);
     void setLeft(LayoutUnit);
     void moveHorizontally(LayoutUnit offset) { m_topLeft.move(offset, 0_lu); }
     void moveVertically(LayoutUnit offset) { m_topLeft.move(0_lu, offset); }
+    void move(const LayoutSize& size) { m_topLeft.move(size); }
+    void moveBy(LayoutPoint offset) { m_topLeft.moveBy(offset); }
 
     void setContentBoxHeight(LayoutUnit);
     void setContentBoxWidth(LayoutUnit);
@@ -163,11 +135,12 @@ private:
     void setBorder(Layout::Edges);
     void setPadding(Optional<Layout::Edges>);
 
-#if !ASSERT_DISABLED
+private:
+#if ASSERT_ENABLED
     void invalidateMargin();
     void invalidateBorder() { m_hasValidBorder = false; }
     void invalidatePadding() { m_hasValidPadding = false; }
-    void invalidateEstimatedMarginBefore() { m_hasEstimatedMarginBefore = false; }
+    void invalidatePrecomputedMarginBefore() { m_hasPrecomputedMarginBefore = false; }
 
     void setHasValidTop() { m_hasValidTop = true; }
     void setHasValidLeft() { m_hasValidLeft = true; }
@@ -181,9 +154,7 @@ private:
 
     void setHasValidContentHeight() { m_hasValidContentHeight = true; }
     void setHasValidContentWidth() { m_hasValidContentWidth = true; }
-#endif
-
-    const Style m_style;
+#endif // ASSERT_ENABLED
 
     LayoutPoint m_topLeft;
     LayoutUnit m_contentWidth;
@@ -197,7 +168,7 @@ private:
     Layout::Edges m_border;
     Optional<Layout::Edges> m_padding;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_hasValidTop { false };
     bool m_hasValidLeft { false };
     bool m_hasValidHorizontalMargin { false };
@@ -208,11 +179,11 @@ private:
     bool m_hasValidPadding { false };
     bool m_hasValidContentHeight { false };
     bool m_hasValidContentWidth { false };
-    bool m_hasEstimatedMarginBefore { false };
-#endif
+    bool m_hasPrecomputedMarginBefore { false };
+#endif // ASSERT_ENABLED
 };
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 inline void Box::invalidateMargin()
 {
     m_hasValidHorizontalMargin = false;
@@ -222,7 +193,7 @@ inline void Box::invalidateMargin()
 
 inline LayoutUnit Box::top() const
 {
-    ASSERT(m_hasValidTop && (m_hasEstimatedMarginBefore || m_hasValidVerticalMargin));
+    ASSERT(m_hasValidTop && (m_hasPrecomputedMarginBefore || m_hasValidVerticalMargin));
     return m_topLeft.y();
 }
 
@@ -234,14 +205,14 @@ inline LayoutUnit Box::left() const
 
 inline LayoutPoint Box::topLeft() const
 {
-    ASSERT(m_hasValidTop && (m_hasEstimatedMarginBefore || m_hasValidVerticalMargin));
+    ASSERT(m_hasValidTop && (m_hasPrecomputedMarginBefore || m_hasValidVerticalMargin));
     ASSERT(m_hasValidLeft && m_hasValidHorizontalMargin);
     return m_topLeft;
 }
 
 inline void Box::setTopLeft(const LayoutPoint& topLeft)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidTop();
     setHasValidLeft();
 #endif
@@ -250,7 +221,7 @@ inline void Box::setTopLeft(const LayoutPoint& topLeft)
 
 inline void Box::setTop(LayoutUnit top)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidTop();
 #endif
     m_topLeft.setY(top);
@@ -258,7 +229,7 @@ inline void Box::setTop(LayoutUnit top)
 
 inline void Box::setLeft(LayoutUnit left)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidLeft();
 #endif
     m_topLeft.setX(left);
@@ -266,7 +237,7 @@ inline void Box::setLeft(LayoutUnit left)
 
 inline void Box::setContentBoxHeight(LayoutUnit height)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidContentHeight();
 #endif
     m_contentHeight = height;
@@ -274,7 +245,7 @@ inline void Box::setContentBoxHeight(LayoutUnit height)
 
 inline void Box::setContentBoxWidth(LayoutUnit width)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidContentWidth();
 #endif
     m_contentWidth = width;
@@ -294,7 +265,7 @@ inline LayoutUnit Box::contentBoxWidth() const
 
 inline void Box::setHorizontalMargin(Layout::UsedHorizontalMargin margin)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidHorizontalMargin();
 #endif
     m_horizontalMargin = margin;
@@ -302,17 +273,17 @@ inline void Box::setHorizontalMargin(Layout::UsedHorizontalMargin margin)
 
 inline void Box::setVerticalMargin(Layout::UsedVerticalMargin margin)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidVerticalMargin();
     setHasValidVerticalNonCollapsedMargin();
-    invalidateEstimatedMarginBefore();
+    invalidatePrecomputedMarginBefore();
 #endif
     m_verticalMargin = margin;
 }
 
 inline void Box::setHorizontalComputedMargin(Layout::ComputedHorizontalMargin margin)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidHorizontalComputedMargin();
 #endif
     m_horizontalComputedMargin = margin;
@@ -320,7 +291,7 @@ inline void Box::setHorizontalComputedMargin(Layout::ComputedHorizontalMargin ma
 
 inline void Box::setBorder(Layout::Edges border)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidBorder();
 #endif
     m_border = border;
@@ -328,7 +299,7 @@ inline void Box::setBorder(Layout::Edges border)
 
 inline void Box::setPadding(Optional<Layout::Edges> padding)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     setHasValidPadding();
 #endif
     m_padding = padding;

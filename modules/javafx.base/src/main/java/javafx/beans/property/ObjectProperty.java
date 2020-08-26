@@ -65,6 +65,12 @@ public abstract class ObjectProperty<T> extends ReadOnlyObjectProperty<T>
         implements Property<T>, WritableObjectValue<T> {
 
     /**
+     * Creates a default {@code ObjectProperty}.
+     */
+    public ObjectProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

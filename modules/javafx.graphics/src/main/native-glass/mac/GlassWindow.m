@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1405,6 +1405,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
 
+        NSUInteger styleMask = [window->nsWindow styleMask];
+        BOOL isMiniaturizable = (styleMask & NSMiniaturizableWindowMask) != 0;
+
+        // if the window does not have NSMiniaturizableWindowMask set
+        // we need to temporarily set it to allow the window to
+        // be programmatically minimized or restored.
+        if (!isMiniaturizable) {
+            [window->nsWindow setStyleMask: styleMask | NSMiniaturizableWindowMask];
+        }
+
         if (jMiniaturize == JNI_TRUE)
         {
             [window->nsWindow miniaturize:nil];
@@ -1413,6 +1423,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
         {
             [window->nsWindow deminiaturize:nil];
         }
+
+        // Restore the state of NSMiniaturizableWindowMask
+        if (!isMiniaturizable) {
+            [window->nsWindow setStyleMask: styleMask];
+        }
+
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

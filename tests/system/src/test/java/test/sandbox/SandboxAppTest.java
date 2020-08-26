@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,24 +100,24 @@ public class SandboxAppTest {
 
     // TEST CASES
 
-    @Test (timeout = 15000)
+    @Test (timeout = 25000)
     public void testFXApp() throws Exception {
         runSandboxedApp("FXApp");
     }
 
-    @Test (timeout = 15000)
+    @Test (timeout = 25000)
     public void testFXNonApp() throws Exception {
         runSandboxedApp("FXNonApp");
     }
 
     @Ignore("JDK-8202451")
-    @Test (timeout = 15000)
+    @Test (timeout = 25000)
     public void testJFXPanelApp() throws Exception {
         runSandboxedApp("JFXPanelApp");
     }
 
     @Ignore("JDK-8202451")
-    @Test (timeout = 15000)
+    @Test (timeout = 25000)
     public void testJFXPanelImplicitExitApp() throws Exception {
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "CodeBlockHash.h"
 #include "JSCJSValue.h"
 #include <wtf/PrintStream.h>
@@ -40,29 +41,24 @@ class Database;
 
 class Origin {
 public:
-    Origin()
-        : m_bytecodeIndex(std::numeric_limits<unsigned>::max())
-    {
-    }
-
+    Origin() = default;
     Origin(WTF::HashTableDeletedValueType)
-        : m_bytecodeIndex(std::numeric_limits<unsigned>::max() - 1)
-    {
-    }
+        : m_bytecodeIndex(WTF::HashTableDeletedValue)
+    { }
 
-    Origin(Bytecodes* bytecodes, unsigned bytecodeIndex)
+    Origin(Bytecodes* bytecodes, BytecodeIndex bytecodeIndex)
         : m_bytecodes(bytecodes)
         , m_bytecodeIndex(bytecodeIndex)
     {
-        ASSERT(m_bytecodeIndex < std::numeric_limits<unsigned>::max() - 1);
+        ASSERT(m_bytecodeIndex.offset() < std::numeric_limits<unsigned>::max() - 1);
     }
 
-    Origin(Database&, CodeBlock*, unsigned bytecodeIndex);
+    Origin(Database&, CodeBlock*, BytecodeIndex);
 
-    bool operator!() const { return m_bytecodeIndex == std::numeric_limits<unsigned>::max(); }
+    bool operator!() const { return !m_bytecodeIndex; }
 
     Bytecodes* bytecodes() const { return m_bytecodes; }
-    unsigned bytecodeIndex() const { return m_bytecodeIndex; }
+    BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
 
     bool operator==(const Origin&) const;
     bool operator!=(const Origin& other) const { return !(*this == other); }
@@ -71,11 +67,11 @@ public:
     bool isHashTableDeletedValue() const;
 
     void dump(PrintStream&) const;
-    JSValue toJS(ExecState*) const;
+    JSValue toJS(JSGlobalObject*) const;
 
 private:
     Bytecodes* m_bytecodes;
-    unsigned m_bytecodeIndex;
+    BytecodeIndex m_bytecodeIndex;
 };
 
 inline bool Origin::operator==(const Origin& other) const
@@ -86,18 +82,18 @@ inline bool Origin::operator==(const Origin& other) const
 
 inline unsigned Origin::hash() const
 {
-    return WTF::PtrHash<Bytecodes*>::hash(m_bytecodes) + m_bytecodeIndex;
+    return WTF::PtrHash<Bytecodes*>::hash(m_bytecodes) + m_bytecodeIndex.hash();
 }
 
 inline bool Origin::isHashTableDeletedValue() const
 {
-    return m_bytecodeIndex == std::numeric_limits<unsigned>::max();
+    return m_bytecodeIndex.isHashTableDeletedValue();
 }
 
 struct OriginHash {
     static unsigned hash(const Origin& key) { return key.hash(); }
     static bool equal(const Origin& a, const Origin& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::Profiler

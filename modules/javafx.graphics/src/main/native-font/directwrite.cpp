@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ typedef HRESULT (WINAPI*D2D1CreateFactoryProc)(
   void **factory
 );
 
-jboolean checkAndClearException(JNIEnv* env)
+static jboolean checkAndClearException(JNIEnv* env)
 {
     jthrowable t = env->ExceptionOccurred();
     if (!t) {

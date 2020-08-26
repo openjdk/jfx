@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,7 +96,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 } else {
                     overrideUIScale = 1.0f;
                 }
-                // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+                // Load required Microsoft runtime DLLs on Windows platforms
                 Toolkit.loadMSWindowsLibraries();
                 Application.loadNativeLibrary();
                 return null;

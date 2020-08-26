@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,9 +71,32 @@ public class MenuBarTest {
     private Stage stage;
 
     @Before public void setup() {
+        setUncaughtExceptionHandler();
+
         tk = (StubToolkit)Toolkit.getToolkit();
         menuBar = new MenuBar();
         menuBar.setUseSystemMenuBar(false);
+    }
+
+    @After public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     protected void startApp(Parent root) {
@@ -90,8 +114,40 @@ public class MenuBarTest {
     }
 
     @Test public void defaultConstructorButSetTrueFocusTraversable() {
-            menuBar.setFocusTraversable(true);
+        menuBar.setFocusTraversable(true);
         assertTrue(menuBar.isFocusTraversable());
+    }
+
+    @Test public void testFocusOnEmptyMenubar() {
+        menuBar.setFocusTraversable(true);
+
+        AnchorPane root = new AnchorPane();
+        root.getChildren().add(menuBar);
+        startApp(root);
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        menuBar.getScene().getWindow().requestFocus();
+
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
+        assertEquals(-1, focusedIndex);
+    }
+
+    @Test public void testSimulateTraverseIntoEmptyMenubar() {
+        menuBar.setFocusTraversable(true);
+
+        AnchorPane root = new AnchorPane();
+        root.getChildren().add(menuBar);
+        startApp(root);
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        // simulate notification from traversalListener
+        MenuBarSkinShim.setFocusedMenuIndex(skin, 0);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
+        assertEquals(-1, focusedIndex);
     }
 
     @Test public void getMenusHasSizeZero() {
@@ -269,8 +325,8 @@ public class MenuBarTest {
         tk.firePulse();
 
         // check if focusedMenuIndex is reset to -1 so navigation happens.
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
-        assertEquals(focusedIndex, -1);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
+        assertEquals(-1, focusedIndex);
     }
 
     @Test public void testMenuOnShownEventFiringWithKeyNavigation() {
@@ -452,7 +508,6 @@ public class MenuBarTest {
     }
 
     @Test public void testKeyNavigationWithAllDisabledMenuItems() {
-
         // Test key navigation with a single disabled menu in menubar
         VBox root = new VBox();
         Menu menu1 = new Menu("Menu1");
@@ -655,7 +710,7 @@ public class MenuBarTest {
         assertFalse(menu1.isShowing());
 
         // check if focusedMenuIndex is 0 (menu1 is still in selected state).
-        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
-        assertEquals(focusedIndex, 0);
+        int focusedIndex = MenuBarSkinShim.getFocusedMenuIndex(skin);
+        assertEquals(0, focusedIndex);
     }
 }

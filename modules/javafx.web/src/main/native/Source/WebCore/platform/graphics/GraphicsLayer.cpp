@@ -199,6 +199,11 @@ void GraphicsLayer::clearClient()
     m_client = &EmptyGraphicsLayerClient::singleton();
 }
 
+String GraphicsLayer::debugName() const
+{
+    return name();
+}
+
 void GraphicsLayer::setClient(GraphicsLayerClient& client)
 {
     m_client = &client;
@@ -508,7 +513,7 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const F
     FloatRect clipRect(clip);
     clipRect.move(offset);
 
-    client().paintContents(this, context, m_paintingPhase, clipRect, layerPaintBehavior);
+    client().paintContents(this, context, clipRect, layerPaintBehavior);
 }
 
 FloatRect GraphicsLayer::adjustCoverageRectForMovement(const FloatRect& coverageRect, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect)
@@ -893,7 +898,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, LayerTreeAsTextBehavior behav
 
 #if ENABLE(CSS_COMPOSITING)
     if (m_blendMode != BlendMode::Normal)
-        ts << indent << "(blendMode " << compositeOperatorName(CompositeSourceOver, m_blendMode) << ")\n";
+        ts << indent << "(blendMode " << compositeOperatorName(CompositeOperator::SourceOver, m_blendMode) << ")\n";
 #endif
 
     if (type() == Type::Normal && tiledBacking())

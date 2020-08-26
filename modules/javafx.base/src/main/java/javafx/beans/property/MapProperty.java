@@ -56,6 +56,13 @@ import javafx.collections.ObservableMap;
  */
 public abstract class MapProperty<K, V> extends ReadOnlyMapProperty<K, V> implements
         Property<ObservableMap<K, V>>, WritableMapValue<K, V> {
+
+    /**
+     * Creates a default {@code MapProperty}.
+     */
+    public MapProperty() {
+    }
+
     /**
      * {@inheritDoc}
      */

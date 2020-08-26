@@ -72,19 +72,19 @@ namespace WebCore {
 
     const char* networkStateStr(MediaPlayer::NetworkState networkState) {
         switch (networkState) {
-        case MediaPlayer::Empty:
+        case MediaPlayer::NetworkState::Empty:
             return "Empty";
-        case MediaPlayer::Idle:
+        case MediaPlayer::NetworkState::Idle:
             return "Idle";
-        case MediaPlayer::Loading:
+        case MediaPlayer::NetworkState::Loading:
             return "Loading";
-        case MediaPlayer::Loaded:
+        case MediaPlayer::NetworkState::Loaded:
             return "Loaded";
-        case MediaPlayer::FormatError:
+        case MediaPlayer::NetworkState::FormatError:
             return "FormatError";
-        case MediaPlayer::NetworkError:
+        case MediaPlayer::NetworkState::NetworkError:
             return "NetworkError";
-        case MediaPlayer::DecodeError:
+        case MediaPlayer::NetworkState::DecodeError:
             return "DecodeError";
         }
         return "<unknown network state>";
@@ -92,15 +92,15 @@ namespace WebCore {
 
     const char* readyStateStr(MediaPlayer::ReadyState readyState) {
         switch (readyState) {
-        case MediaPlayer::HaveNothing:
+        case MediaPlayer::ReadyState::HaveNothing:
             return "HaveNothing";
-        case MediaPlayer::HaveMetadata:
+        case MediaPlayer::ReadyState::HaveMetadata:
             return "HaveMetadata";
-        case MediaPlayer::HaveCurrentData:
+        case MediaPlayer::ReadyState::HaveCurrentData:
             return "HaveCurrentData";
-        case MediaPlayer::HaveFutureData:
+        case MediaPlayer::ReadyState::HaveFutureData:
             return "HaveFutureData";
-        case MediaPlayer::HaveEnoughData:
+        case MediaPlayer::ReadyState::HaveEnoughData:
             return "HaveEnoughData";
         }
         return "<unknown ready state>";
@@ -163,8 +163,25 @@ namespace WebCore {
 
 ////////////////////////
 
+class MediaPlayerFactoryJava final : public MediaPlayerFactory {
+private:
+    MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MediaFoundation; };
 
+    std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    {
+        return makeUnique<MediaPlayerPrivate>(player);
+    }
 
+    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    {
+        return MediaPlayerPrivate::MediaEngineSupportedTypes(types);
+    }
+
+    MediaPlayer::SupportsType supportsTypeAndCodecs(const MediaEngineSupportParameters& parameters) const final
+    {
+        return MediaPlayerPrivate::MediaEngineSupportsType(parameters);
+    }
+};
 
 void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
 {
@@ -175,10 +192,8 @@ void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
         LOG_ERROR0("<<registerMediaEngine ERROR: MediaPlayer class is unavailable\n");
         return;
     }
-    //CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType,
-    //MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite
-    registrar([] (MediaPlayer* player) { return std::unique_ptr<MediaPlayerPrivate>(new MediaPlayerPrivate(player)); },
-        MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0, 0);
+
+    registrar(makeUnique<MediaPlayerFactoryJava>());
 }
 
 void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
@@ -200,16 +215,16 @@ MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const Medi
 
     if (parameters.type.isEmpty()) {
         LOG_TRACE0("<<MediaEngineSupportsType: NOT supported (type is empty)\n");
-        return MediaPlayer::IsNotSupported;
+        return MediaPlayer::SupportsType::IsNotSupported;
     }
 
     if (GetSupportedTypes().contains(parameters.type.containerType())) {
         LOG_TRACE0("<<MediaEngineSupportsType: MayBeSupported/IsSupported\n");
         auto codecs = parameters.type.parameter(ContentType::codecsParameter());
-        return codecs.isEmpty() ? MediaPlayer::MayBeSupported : MediaPlayer::IsSupported;
+        return codecs.isEmpty() ? MediaPlayer::SupportsType::MayBeSupported : MediaPlayer::SupportsType::IsSupported;
     }
     LOG_TRACE0("<<MediaEngineSupportsType: NOT supported\n");
-    return MediaPlayer::IsNotSupported;
+    return MediaPlayer::SupportsType::IsNotSupported;
 }
 
 HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes()
@@ -247,8 +262,8 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
 // *********************************************************
 MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     : m_player(player)
-    , m_networkState(MediaPlayer::Empty)
-    , m_readyState(MediaPlayer::HaveNothing)
+    , m_networkState(MediaPlayer::NetworkState::Empty)
+    , m_readyState(MediaPlayer::ReadyState::HaveNothing)
     , m_isVisible(false)
     , m_hasVideo(false)
     , m_hasAudio(false)
@@ -286,7 +301,7 @@ MediaPlayerPrivate::~MediaPlayerPrivate()
 
 void MediaPlayerPrivate::load(const String& url)
 {
-    if (m_networkState == MediaPlayer::Loading) {
+    if (m_networkState == MediaPlayer::NetworkState::Loading) {
         cancelLoad();
     }
 
@@ -586,9 +601,9 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
     // enum Preload { None, MetaData, Auto };
     PLOG_TRACE1("MediaPlayerPrivate setPreload, preload=%u\n", (int)preload);
     jint jPreload =
-        (preload == MediaPlayer::None) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_NONE
-        : (preload == MediaPlayer::MetaData) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_METADATA
-        : (preload == MediaPlayer::Auto) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_AUTO
+        (preload == MediaPlayer::Preload::None) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_NONE
+        : (preload == MediaPlayer::Preload::MetaData) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_METADATA
+        : (preload == MediaPlayer::Preload::Auto) ? com_sun_webkit_graphics_WCMediaPlayer_PRELOAD_AUTO
         : -1;
     if (jPreload < 0) {
         // unexpected preload value
@@ -603,7 +618,7 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
     WTF::CheckAndClearException(env);
 }
 
-//bool MediaPlayerPrivate::hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::HaveCurrentData; }
+//bool MediaPlayerPrivate::hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::ReadyState::HaveCurrentData; }
 
 //bool MediaPlayerPrivate::canLoadPoster() const { return false; }
 //void MediaPlayerPrivate::setPoster(const String&) { }
@@ -622,7 +637,7 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
 
 //bool MediaPlayerPrivate::hasSingleSecurityOrigin() const { return false; }
 
-//MediaPlayer::MovieLoadType MediaPlayerPrivate::movieLoadType() const { return MediaPlayer::Unknown; }
+//MediaPlayer::MovieLoadType MediaPlayerPrivate::movieLoadType() const { return MediaPlayer::MovieLoadType::Unknown; }
 
 void MediaPlayerPrivate::setNetworkState(MediaPlayer::NetworkState networkState)
 {
@@ -654,25 +669,25 @@ void MediaPlayerPrivate::notifyNetworkStateChanged(int networkState)
 {
     switch (networkState) {
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_EMPTY:
-        setNetworkState(MediaPlayer::Empty);
+        setNetworkState(MediaPlayer::NetworkState::Empty);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_IDLE:
-        setNetworkState(MediaPlayer::Idle);
+        setNetworkState(MediaPlayer::NetworkState::Idle);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_LOADING:
-        setNetworkState(MediaPlayer::Loading);
+        setNetworkState(MediaPlayer::NetworkState::Loading);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_LOADED:
-        setNetworkState(MediaPlayer::Loaded);
+        setNetworkState(MediaPlayer::NetworkState::Loaded);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_FORMAT_ERROR:
-        setNetworkState(MediaPlayer::FormatError);
+        setNetworkState(MediaPlayer::NetworkState::FormatError);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_NETWORK_ERROR:
-        setNetworkState(MediaPlayer::NetworkError);
+        setNetworkState(MediaPlayer::NetworkState::NetworkError);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_NETWORK_STATE_DECODE_ERROR:
-        setNetworkState(MediaPlayer::DecodeError);
+        setNetworkState(MediaPlayer::NetworkState::DecodeError);
         break;
     }
 }
@@ -681,19 +696,19 @@ void MediaPlayerPrivate::notifyReadyStateChanged(int readyState)
 {
     switch (readyState) {
     case com_sun_webkit_graphics_WCMediaPlayer_READY_STATE_HAVE_NOTHING:
-        setReadyState(MediaPlayer::HaveNothing);
+        setReadyState(MediaPlayer::ReadyState::HaveNothing);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_READY_STATE_HAVE_METADATA:
-        setReadyState(MediaPlayer::HaveMetadata);
+        setReadyState(MediaPlayer::ReadyState::HaveMetadata);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_READY_STATE_HAVE_CURRENT_DATA:
-        setReadyState(MediaPlayer::HaveCurrentData);
+        setReadyState(MediaPlayer::ReadyState::HaveCurrentData);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_READY_STATE_HAVE_FUTURE_DATA:
-        setReadyState(MediaPlayer::HaveFutureData);
+        setReadyState(MediaPlayer::ReadyState::HaveFutureData);
         break;
     case com_sun_webkit_graphics_WCMediaPlayer_READY_STATE_HAVE_ENOUGH_DATA:
-        setReadyState(MediaPlayer::HaveEnoughData);
+        setReadyState(MediaPlayer::ReadyState::HaveEnoughData);
         break;
     }
 }

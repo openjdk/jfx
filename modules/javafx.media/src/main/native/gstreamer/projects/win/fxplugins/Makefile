@@ -36,7 +36,7 @@ SRCBASE_DIR = ../../../plugins
 
 GLIB_DIR        = ../../../3rd_party/glib
 GSTREAMER_DIR   = ../../../gstreamer-lite
-BASECLASSES_DIR = $(shell cygpath -mas "$(BASECLASSES_SDK_DIR)"/Samples/multimedia/directshow/baseclasses)
+BASECLASSES_DIR = ../../../3rd_party/baseclasses
 
 DIRLIST = dshowwrapper \
           javasource \

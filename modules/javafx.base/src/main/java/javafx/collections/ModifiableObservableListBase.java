@@ -80,6 +80,12 @@ import java.util.ListIterator;
  */
 public abstract class ModifiableObservableListBase<E> extends ObservableListBase<E> {
 
+    /**
+     * Creates a default {@code ModifiableObservableListBase}.
+     */
+    public ModifiableObservableListBase() {
+    }
+
     @Override
     public boolean setAll(Collection<? extends E> col) {
         beginChange();

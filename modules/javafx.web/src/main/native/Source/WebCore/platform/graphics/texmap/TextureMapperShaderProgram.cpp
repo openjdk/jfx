@@ -160,6 +160,14 @@ static const char* vertexTemplateCommon =
     GLSL_DIRECTIVE(define GAUSSIAN_KERNEL_STEP 0.2)
 
 
+#define OES_EGL_IMAGE_EXTERNAL_DIRECTIVE \
+    GLSL_DIRECTIVE(ifdef ENABLE_TextureExternalOES) \
+        GLSL_DIRECTIVE(extension GL_OES_EGL_image_external : require) \
+        GLSL_DIRECTIVE(define SamplerExternalOESType samplerExternalOES) \
+    GLSL_DIRECTIVE(else) \
+        GLSL_DIRECTIVE(define SamplerExternalOESType sampler2D) \
+    GLSL_DIRECTIVE(endif)
+
 // Common header for all versions. We define the matrices variables here to keep the precision
 // directives scope: the first one applies to the matrices variables and the next one to the
 // rest of them. The precision is only used in GLES.
@@ -167,10 +175,9 @@ static const char* fragmentTemplateHeaderCommon =
     RECT_TEXTURE_DIRECTIVE
     ANTIALIASING_TEX_COORD_DIRECTIVE
     BLUR_CONSTANTS
+    OES_EGL_IMAGE_EXTERNAL_DIRECTIVE
 #if USE(OPENGL_ES)
     TEXTURE_SPACE_MATRIX_PRECISION_DIRECTIVE
-#endif
-#if USE(OPENGL_ES)
     STRINGIFY(
         precision TextureSpaceMatrixPrecision float;
     )
@@ -207,9 +214,14 @@ static const char* fragmentTemplateGE320Vars =
 static const char* fragmentTemplateCommon =
     STRINGIFY(
         uniform SamplerType s_sampler;
+        uniform SamplerType s_samplerY;
+        uniform SamplerType s_samplerU;
+        uniform SamplerType s_samplerV;
         uniform sampler2D s_contentTexture;
+        uniform SamplerExternalOESType s_externalOESTexture;
         uniform float u_opacity;
         uniform float u_filterAmount;
+        uniform mat3 u_yuvToRgb;
         uniform vec2 u_blurRadius;
         uniform vec2 u_shadowOffset;
         uniform vec4 u_color;
@@ -231,7 +243,41 @@ static const char* fragmentTemplateCommon =
 
         void applyManualRepeat(inout vec2 pos) { pos = fract(pos); }
 
-        void applyTexture(inout vec4 color, vec2 texCoord) { color = u_textureColorSpaceMatrix * SamplerFunction(s_sampler, texCoord); }
+        void applyTextureRGB(inout vec4 color, vec2 texCoord) { color = u_textureColorSpaceMatrix * SamplerFunction(s_sampler, texCoord); }
+
+        vec3 yuvToRgb(float y, float u, float v)
+        {
+            // yuv is either bt601 or bt709 so the offset is the same
+            vec3 yuv = vec3(y - 0.0625, u - 0.5, v - 0.5);
+            return yuv * u_yuvToRgb;
+        }
+        void applyTextureYUV(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            float u = SamplerFunction(s_samplerU, texCoord).r;
+            float v = SamplerFunction(s_samplerV, texCoord).r;
+            vec4 data = vec4(yuvToRgb(y, u, v), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTextureNV12(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            vec2 uv = SamplerFunction(s_samplerU, texCoord).rg;
+            vec4 data = vec4(yuvToRgb(y, uv.x, uv.y), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTextureNV21(inout vec4 color, vec2 texCoord)
+        {
+            float y = SamplerFunction(s_samplerY, texCoord).r;
+            vec2 uv = SamplerFunction(s_samplerU, texCoord).gr;
+            vec4 data = vec4(yuvToRgb(y, uv.x, uv.y), 1.0);
+            color = u_textureColorSpaceMatrix * data;
+        }
+        void applyTexturePackedYUV(inout vec4 color, vec2 texCoord)
+        {
+            vec4 data = SamplerFunction(s_sampler, texCoord);
+            color = u_textureColorSpaceMatrix * vec4(yuvToRgb(data.b, data.g, data.r), data.a);
+        }
         void applyOpacity(inout vec4 color) { color *= u_opacity; }
         void applyAntialiasing(inout vec4 color) { color *= antialias(); }
 
@@ -336,6 +382,12 @@ static const char* fragmentTemplateCommon =
             color = sourceOver(contentColor, color);
         }
 
+        void applyTextureExternalOES(inout vec4 color, vec2 texCoord)
+        {
+            vec4 contentColor = texture2D(s_externalOESTexture, texCoord);
+            color = sourceOver(contentColor, color);
+        }
+
         void applySolidColor(inout vec4 color) { color *= u_color; }
 
         void main(void)
@@ -343,7 +395,11 @@ static const char* fragmentTemplateCommon =
             vec4 color = vec4(1., 1., 1., 1.);
             vec2 texCoord = transformTexCoord();
             applyManualRepeatIfNeeded(texCoord);
-            applyTextureIfNeeded(color, texCoord);
+            applyTextureRGBIfNeeded(color, texCoord);
+            applyTextureYUVIfNeeded(color, texCoord);
+            applyTextureNV12IfNeeded(color, texCoord);
+            applyTextureNV21IfNeeded(color, texCoord);
+            applyTexturePackedYUVIfNeeded(color, texCoord);
             applySolidColorIfNeeded(color);
             applyAntialiasingIfNeeded(color);
             applyOpacityIfNeeded(color);
@@ -358,6 +414,7 @@ static const char* fragmentTemplateCommon =
             applyBlurFilterIfNeeded(color, texCoord);
             applyAlphaBlurIfNeeded(color, texCoord);
             applyContentTextureIfNeeded(color, texCoord);
+            applyTextureExternalOESIfNeeded(color, texCoord);
             gl_FragColor = color;
         }
     );
@@ -369,7 +426,11 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
         (options & TextureMapperShaderProgram::Applier) ? ENABLE_APPLIER(Applier) : DISABLE_APPLIER(Applier))
 
     StringBuilder optionsApplierBuilder;
-    SET_APPLIER_FROM_OPTIONS(Texture);
+    SET_APPLIER_FROM_OPTIONS(TextureRGB);
+    SET_APPLIER_FROM_OPTIONS(TextureYUV);
+    SET_APPLIER_FROM_OPTIONS(TextureNV12);
+    SET_APPLIER_FROM_OPTIONS(TextureNV21);
+    SET_APPLIER_FROM_OPTIONS(TexturePackedYUV);
     SET_APPLIER_FROM_OPTIONS(Rect);
     SET_APPLIER_FROM_OPTIONS(SolidColor);
     SET_APPLIER_FROM_OPTIONS(Opacity);
@@ -386,6 +447,7 @@ Ref<TextureMapperShaderProgram> TextureMapperShaderProgram::create(TextureMapper
     SET_APPLIER_FROM_OPTIONS(AlphaBlur);
     SET_APPLIER_FROM_OPTIONS(ContentTexture);
     SET_APPLIER_FROM_OPTIONS(ManualRepeat);
+    SET_APPLIER_FROM_OPTIONS(TextureExternalOES);
 
     StringBuilder vertexShaderBuilder;
 

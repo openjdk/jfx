@@ -27,13 +27,18 @@ package test.javafx.scene;
 
 import java.util.ArrayList;
 import java.util.Collection;
+
+import javafx.animation.Interpolator;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.SnapshotResult;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Transform;
 import javafx.util.Callback;
@@ -243,6 +248,44 @@ public class Snapshot2Test extends SnapshotCommon {
         });
     }
 
+    private void setupImageScene(int width, int height) {
+        Util.runAndWait(() -> {
+            WritableImage image = new WritableImage(width, height);
+            // Initialize image with a bilinear gradient
+            var pixWriter = image.getPixelWriter();
+            assertNotNull(pixWriter);
+            double stepX = 1.0 / (width - 1);
+            double stepY = 1.0 / (height - 1);
+            double tX = 0;
+            double tY = 0;
+            for (int x = 0; x < width; x++) {
+                for (int y = 0; y < height; y++) {
+                    pixWriter.setColor(x, y, (Color) Interpolator.LINEAR.interpolate(
+                            Interpolator.LINEAR.interpolate(Color.CYAN, Color.YELLOW, tX),
+                            Interpolator.LINEAR.interpolate(Color.MAGENTA, Color.WHITE, tX),
+                            tY));
+                    tX += stepX;
+                    tX = tX > 1 ? 1 : tX;
+                }
+                tY += stepY;
+                tY = tY > 1 ? 1 : tY;
+                tX = 0;
+            }
+            tmpNode = new ImageView(image);
+            Group root = new Group();
+            tmpScene = new Scene(root, width, height);
+            root.getChildren().add(tmpNode);
+            if (live) {
+                tmpStage = new TestStage(tmpScene);
+                assertNotNull(tmpScene.getWindow());
+                tmpStage.show();
+            }
+            else {
+                assertNull(tmpScene.getWindow());
+            }
+        });
+    }
+
     // Test snapshot of a simple scene
 
     @Test
@@ -317,6 +360,147 @@ public class Snapshot2Test extends SnapshotCommon {
 
             return null;
         }, snapshotParams, img);
+    }
+
+    // Test tiled snapshots
+
+    private void doTestTiledSnapshotImm(int w, int h) {
+        setupImageScene(w, h);
+        Image original = ((ImageView) tmpNode).getImage();
+        assertNotNull(original);
+        WritableImage buffer = useImage ? new WritableImage(w, h) : null;
+        Util.runAndWait(() -> {
+            WritableImage snapshot = tmpNode.snapshot(null, buffer);
+            assertNotNull(snapshot);
+            if (buffer != null) {
+                assertSame(buffer, snapshot);
+            }
+            assertTrue(comparePixels(original, snapshot));
+        });
+    }
+
+    private void doTestTiledSnapshotDefer(int w, int h) {
+        setupImageScene(w, h);
+        Image original = ((ImageView) tmpNode).getImage();
+        assertNotNull(original);
+        WritableImage buffer = useImage ? new WritableImage(w, h) : null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (buffer != null) {
+                assertSame(buffer, result.getImage());
+            }
+            assertTrue(comparePixels(original, result.getImage()));
+            return null;
+        }, null, buffer);
+    }
+
+    private boolean comparePixels(Image imageA, Image imageB) {
+        if (imageA == null) {
+            return false;
+        }
+        if (imageB == null) {
+            return false;
+        }
+        int width = (int)imageA.getWidth();
+        if (width != (int)imageB.getWidth()) {
+            return false;
+        }
+        int height = (int)imageA.getHeight();
+        if (height != (int)imageB.getHeight()) {
+            return false;
+        }
+        var pixRdrA = imageA.getPixelReader();
+        var pixRdrB = imageB.getPixelReader();
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (pixRdrA.getArgb(x, y) != pixRdrB.getArgb(x, y)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @Test
+    public void testSnapshot2x1TilesSameSizeImm() {
+        doTestTiledSnapshotImm(4100, 10);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(4099, 10);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesSameSizeImm() {
+        doTestTiledSnapshotImm(10, 4100);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(10, 4099);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameSizeImm() {
+        doTestTiledSnapshotImm(4100, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesDifferentSizeImm() {
+        doTestTiledSnapshotImm(4099, 4099);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameHeightImm() {
+        doTestTiledSnapshotImm(4099, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameWidthImm() {
+        doTestTiledSnapshotImm(4100, 4099);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(4100, 10);
+    }
+
+    @Test
+    public void testSnapshot2x1TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(4099, 10);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(10, 4100);
+    }
+
+    @Test
+    public void testSnapshot1x2TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(10, 4099);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameSizeDefer() {
+        doTestTiledSnapshotDefer(4100, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesDifferentSizeDefer() {
+        doTestTiledSnapshotDefer(4099, 4099);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameHeightDefer() {
+        doTestTiledSnapshotDefer(4099, 4100);
+    }
+
+    @Test
+    public void testSnapshot2x2TilesSameWidthDefer() {
+        doTestTiledSnapshotDefer(4100, 4099);
     }
 
     // Test node snapshot with a scale transform

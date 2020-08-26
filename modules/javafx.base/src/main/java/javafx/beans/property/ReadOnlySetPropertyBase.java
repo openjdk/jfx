@@ -44,6 +44,12 @@ public abstract class ReadOnlySetPropertyBase<E> extends ReadOnlySetProperty<E> 
 
     private SetExpressionHelper<E> helper;
 
+    /**
+     * Creates a default {@code ReadOnlySetPropertyBase}.
+     */
+    public ReadOnlySetPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = SetExpressionHelper.addListener(helper, this, listener);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,8 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
+import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.TextInputControlShim;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -70,6 +72,21 @@ public class TextFieldTest {
     @Before public void setup() {
         txtField = new TextField();
         dummyTxtField = new TextField("dummy");
+        setUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************
@@ -448,12 +465,28 @@ public class TextFieldTest {
         assertTrue("action must be consumed ", actions.get(0).isConsumed());
     }
 
+    @Test public void replaceSelectionWithFilteredCharacters() {
+        txtField.setText("x xxxyyy");
+        txtField.selectRange(2, 5);
+        txtField.setTextFormatter(new TextFormatter<>(this::noDigits));
+        txtField.replaceSelection("a1234a");
+        assertEquals("x aayyy", txtField.getText());
+        assertEquals(4, txtField.getSelection().getStart());
+        assertEquals(4, txtField.getSelection().getEnd());
+    }
+
+    private Change noDigits(Change change) {
+        Change filtered = change.clone();
+        filtered.setText(change.getText().replaceAll("[0-9]","\n"));
+        return filtered;
+    }
+
     /**
      * Helper method to init the stage only if really needed.
      */
     private void initStage() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
@@ -465,5 +498,6 @@ public class TextFieldTest {
         if (stage != null) {
             stage.hide();
         }
+        removeUncaughtExceptionHandler();
     }
 }

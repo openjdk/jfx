@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -185,8 +185,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
 
     // Example/explanation of dataflow dump output
     //
-    //   14:   <!2:7>  GetByVal(@3, @13)
-    //   ^1     ^2 ^3     ^4       ^5
+    //   D@14:   <!2:7>  GetByVal(@3, @13)
+    //     ^1     ^2 ^3     ^4       ^5
     //
     // (1) The nodeIndex of this operation.
     // (2) The reference count. The number printed is the 'real' count,
@@ -195,11 +195,13 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     // (3) The virtual register slot assigned to this node.
     // (4) The name of the operation.
     // (5) The arguments to the operation. The may be of the form:
-    //         @#   - a NodeIndex referencing a prior node in the graph.
+    //         D@#  - a NodeIndex referencing a prior node in the graph.
     //         arg# - an argument number.
     //         id#  - the index in the CodeBlock of an identifier { if codeBlock is passed to dump(), the string representation is displayed }.
     //         var# - the index of a var on the global object, used by GetGlobalVar/GetGlobalLexicalVariable/PutGlobalVariable operations.
-    out.printf("% 4d:<%c%u:", (int)node->index(), mustGenerate ? '!' : ' ', refCount);
+    int nodeIndex = node->index();
+    const char* prefixPadding = nodeIndex < 10 ? "   " : nodeIndex < 100 ? "  " : " ";
+    out.printf("%sD@%d:<%c%u:", prefixPadding, nodeIndex, mustGenerate ? '!' : ' ', refCount);
     if (node->hasResult() && node->hasVirtualRegister() && node->virtualRegister().isValid())
         out.print(node->virtualRegister());
     else
@@ -243,7 +245,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(comma, node->argumentIndex());
     if (node->hasRegisterPointer())
         out.print(comma, "global", "(", RawPointer(node->variablePointer()), ")");
-    if (node->hasIdentifier())
+    if (node->hasIdentifier() && node->identifierNumber() != UINT32_MAX)
         out.print(comma, "id", node->identifierNumber(), "{", identifiers()[node->identifierNumber()], "}");
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
@@ -281,8 +283,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
             }
         }
     }
-    if (node->hasSpeculatedTypeForQuery())
-        out.print(comma, SpeculationDump(node->speculatedTypeForQuery()));
+    if (node->hasQueriedType())
+        out.print(comma, node->queriedType());
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = node->storageAccessData();
         out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
@@ -308,8 +310,8 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (node->hasVariableAccessData(*this)) {
         VariableAccessData* variableAccessData = node->tryGetVariableAccessData();
         if (variableAccessData) {
-            VirtualRegister operand = variableAccessData->local();
-            out.print(comma, variableAccessData->local(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
+            Operand operand = variableAccessData->operand();
+            out.print(comma, variableAccessData->operand(), "(", VariableAccessDataDump(*this, variableAccessData), ")");
             operand = variableAccessData->machineLocal();
             if (operand.isValid())
                 out.print(comma, "machine:", operand);
@@ -317,13 +319,13 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasStackAccessData()) {
         StackAccessData* data = node->stackAccessData();
-        out.print(comma, data->local);
+        out.print(comma, data->operand);
         if (data->machineLocal.isValid())
             out.print(comma, "machine:", data->machineLocal);
         out.print(comma, data->format);
     }
-    if (node->hasUnlinkedLocal())
-        out.print(comma, node->unlinkedLocal());
+    if (node->hasUnlinkedOperand())
+        out.print(comma, node->unlinkedOperand());
     if (node->hasVectorLengthHint())
         out.print(comma, "vectorLengthHint = ", node->vectorLengthHint());
     if (node->hasLazyJSValue())
@@ -354,6 +356,10 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
         out.print(", offset = ", data->offset, ", mandatoryMinimum = ", data->mandatoryMinimum);
         out.print(", limit = ", data->limit);
     }
+    if (node->hasIsInternalPromise())
+        out.print(comma, "isInternalPromise = ", node->isInternalPromise());
+    if (node->hasInternalFieldIndex())
+        out.print(comma, "internalFieldIndex = ", node->internalFieldIndex());
     if (node->hasCallDOMGetterData()) {
         CallDOMGetterData* data = node->callDOMGetterData();
         out.print(comma, "id", data->identifierNumber, "{", identifiers()[data->identifierNumber], "}");
@@ -361,12 +367,14 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     }
     if (node->hasIgnoreLastIndexIsWritable())
         out.print(comma, "ignoreLastIndexIsWritable = ", node->ignoreLastIndexIsWritable());
+    if (node->hasIntrinsic())
+        out.print(comma, "intrinsic = ", node->intrinsic());
     if (node->isConstant())
         out.print(comma, pointerDumpInContext(node->constant(), context));
     if (node->hasCallLinkStatus())
         out.print(comma, *node->callLinkStatus());
-    if (node->hasGetByIdStatus())
-        out.print(comma, *node->getByIdStatus());
+    if (node->hasGetByStatus())
+        out.print(comma, *node->getByStatus());
     if (node->hasInByIdStatus())
         out.print(comma, *node->inByIdStatus());
     if (node->hasPutByIdStatus())
@@ -400,7 +408,7 @@ void Graph::dump(PrintStream& out, const char* prefixStr, Node* node, DumpContex
     if (clobbersExitState(*this, node))
         out.print(comma, "ClobbersExit");
     if (node->origin.isSet()) {
-        out.print(comma, "bc#", node->origin.semantic.bytecodeIndex());
+        out.print(comma, node->origin.semantic.bytecodeIndex());
         if (node->origin.semantic != node->origin.forExit && node->origin.forExit.isSet())
             out.print(comma, "exit: ", node->origin.forExit);
     }
@@ -509,15 +517,16 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefixStr, BasicBlock*
         out.print(prefix, "  Phi Nodes:");
         for (size_t i = 0; i < block->phis.size(); ++i) {
             Node* phiNode = block->phis[i];
+            ASSERT(phiNode->op() == Phi);
             if (!phiNode->shouldGenerate() && phiNodeDumpMode == DumpLivePhisOnly)
                 continue;
-            out.print(" @", phiNode->index(), "<", phiNode->local(), ",", phiNode->refCount(), ">->(");
+            out.print(" D@", phiNode->index(), "<", phiNode->operand(), ",", phiNode->refCount(), ">->(");
             if (phiNode->child1()) {
-                out.print("@", phiNode->child1()->index());
+                out.print("D@", phiNode->child1()->index());
                 if (phiNode->child2()) {
-                    out.print(", @", phiNode->child2()->index());
+                    out.print(", D@", phiNode->child2()->index());
                     if (phiNode->child3())
-                        out.print(", @", phiNode->child3()->index());
+                        out.print(", D@", phiNode->child3()->index());
                 }
             }
             out.print(")", i + 1 < block->phis.size() ? "," : "");
@@ -542,7 +551,7 @@ void Graph::dump(PrintStream& out, DumpContext* context)
             out.print(prefix, "  Argument formats for entrypoint index: ", entrypointIndex, " : ", listDump(m_argumentFormats[entrypointIndex]), "\n");
     }
     else {
-        for (auto pair : m_rootToArguments)
+        for (const auto& pair : m_rootToArguments)
             out.print(prefix, "  Arguments for block#", pair.key->index, ": ", listDump(pair.value), "\n");
     }
     out.print("\n");
@@ -878,7 +887,7 @@ void Graph::substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, Va
         bool shouldContinue = true;
         switch (node->op()) {
         case SetLocal: {
-            if (node->local() == variableAccessData->local())
+            if (node->operand() == variableAccessData->operand())
                 shouldContinue = false;
             break;
         }
@@ -887,9 +896,9 @@ void Graph::substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, Va
             if (node->variableAccessData() != variableAccessData)
                 continue;
             substitute(block, indexInBlock, node, newGetLocal);
-            Node* oldTailNode = block.variablesAtTail.operand(variableAccessData->local());
+            Node* oldTailNode = block.variablesAtTail.operand(variableAccessData->operand());
             if (oldTailNode == node)
-                block.variablesAtTail.operand(variableAccessData->local()) = newGetLocal;
+                block.variablesAtTail.operand(variableAccessData->operand()) = newGetLocal;
             shouldContinue = false;
             break;
         }
@@ -1127,35 +1136,56 @@ BytecodeKills& Graph::killsFor(InlineCallFrame* inlineCallFrame)
     return killsFor(baselineCodeBlockFor(inlineCallFrame));
 }
 
-bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
+bool Graph::isLiveInBytecode(Operand operand, CodeOrigin codeOrigin)
 {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
     if (verbose)
         dataLog("Checking of operand is live: ", operand, "\n");
+    bool isCallerOrigin = false;
+
     CodeOrigin* codeOriginPtr = &codeOrigin;
-    for (;;) {
-        VirtualRegister reg = VirtualRegister(
-            operand.offset() - codeOriginPtr->stackOffset());
+    auto* inlineCallFrame = codeOriginPtr->inlineCallFrame();
+    // We need to handle tail callers because we may decide to exit to the
+    // the return bytecode following the tail call.
+    for (; codeOriginPtr; codeOriginPtr = inlineCallFrame ? &inlineCallFrame->directCaller : nullptr) {
+        inlineCallFrame = codeOriginPtr->inlineCallFrame();
+        if (operand.isTmp()) {
+            unsigned tmpOffset = inlineCallFrame ? inlineCallFrame->tmpOffset : 0;
+            unsigned operandIndex = static_cast<unsigned>(operand.value());
+
+            ASSERT(operand.value() >= 0);
+            // This tmp should have belonged to someone we inlined.
+            if (operandIndex > tmpOffset + maxNumCheckpointTmps)
+                return false;
+
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            if (!codeBlock->numTmps() || operandIndex < tmpOffset)
+                continue;
+
+            auto bitMap = tmpLivenessForCheckpoint(*codeBlock, codeOriginPtr->bytecodeIndex());
+            return bitMap.get(operandIndex - tmpOffset);
+        }
+
+        VirtualRegister reg = operand.virtualRegister() - codeOriginPtr->stackOffset();
 
         if (verbose)
             dataLog("reg = ", reg, "\n");
 
-        auto* inlineCallFrame = codeOriginPtr->inlineCallFrame();
-        if (operand.offset() < codeOriginPtr->stackOffset() + CallFrame::headerSizeInRegisters) {
+        if (operand.virtualRegister().offset() < codeOriginPtr->stackOffset() + CallFrame::headerSizeInRegisters) {
             if (reg.isArgument()) {
                 RELEASE_ASSERT(reg.offset() < CallFrame::headerSizeInRegisters);
 
 
                 if (inlineCallFrame->isClosureCall
-                    && reg.offset() == CallFrameSlot::callee) {
+                    && reg == CallFrameSlot::callee) {
                     if (verbose)
                         dataLog("Looks like a callee.\n");
                     return true;
                 }
 
                 if (inlineCallFrame->isVarargs()
-                    && reg.offset() == CallFrameSlot::argumentCount) {
+                    && reg == CallFrameSlot::argumentCountIncludingThis) {
                     if (verbose)
                         dataLog("Looks like the argument count.\n");
                     return true;
@@ -1166,41 +1196,42 @@ bool Graph::isLiveInBytecode(VirtualRegister operand, CodeOrigin codeOrigin)
 
             if (verbose)
                 dataLog("Asking the bytecode liveness.\n");
-            return livenessFor(inlineCallFrame).operandIsLive(reg.offset(), codeOriginPtr->bytecodeIndex());
-        }
-
-        if (!inlineCallFrame) {
-            if (verbose)
-                dataLog("Ran out of stack, returning true.\n");
-            return true;
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
+            BytecodeIndex bytecodeIndex = codeOriginPtr->bytecodeIndex();
+            return fullLiveness.virtualRegisterIsLive(reg, bytecodeIndex, appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
         }
 
         // Arguments are always live. This would be redundant if it wasn't for our
         // op_call_varargs inlining.
-        if (reg.isArgument()
+        if (inlineCallFrame && reg.isArgument()
             && static_cast<size_t>(reg.toArgument()) < inlineCallFrame->argumentsWithFixup.size()) {
             if (verbose)
                 dataLog("Argument is live.\n");
             return true;
         }
 
-        // We need to handle tail callers because we may decide to exit to the
-        // the return bytecode following the tail call.
-        codeOriginPtr = &inlineCallFrame->directCaller;
+        isCallerOrigin = true;
     }
 
-    RELEASE_ASSERT_NOT_REACHED();
+    if (operand.isTmp())
+        return false;
+
+    if (verbose)
+        dataLog("Ran out of stack, returning true.\n");
+    return true;
 }
 
-BitVector Graph::localsLiveInBytecode(CodeOrigin codeOrigin)
+BitVector Graph::localsAndTmpsLiveInBytecode(CodeOrigin codeOrigin)
 {
     BitVector result;
-    result.ensureSize(block(0)->variablesAtHead.numberOfLocals());
-    forAllLocalsLiveInBytecode(
+    unsigned numLocals = block(0)->variablesAtHead.numberOfLocals();
+    result.ensureSize(numLocals + block(0)->variablesAtHead.numberOfTmps());
+    forAllLocalsAndTmpsLiveInBytecode(
         codeOrigin,
-        [&] (VirtualRegister reg) {
-            ASSERT(reg.isLocal());
-            result.quickSet(reg.toLocal());
+        [&] (Operand operand) {
+            unsigned offset = operand.isTmp() ? numLocals + operand.value() : operand.toLocal();
+            result.quickSet(offset);
         });
     return result;
 }
@@ -1388,6 +1419,7 @@ JSArrayBufferView* Graph::tryGetFoldableView(JSValue value)
     if (!view->length())
         return nullptr;
     WTF::loadLoadFence();
+    freeze(view);
     watchpoints().addLazily(view);
     return view;
 }
@@ -1401,6 +1433,7 @@ JSArrayBufferView* Graph::tryGetFoldableView(JSValue value, ArrayMode arrayMode)
 
 void Graph::registerFrozenValues()
 {
+    ConcurrentJSLocker locker(m_codeBlock->m_lock);
     m_codeBlock->constants().shrink(0);
     m_codeBlock->constantsSourceCodeRepresentation().resize(0);
     for (FrozenValue* value : m_frozenValues) {
@@ -1416,7 +1449,7 @@ void Graph::registerFrozenValues()
             break;
         }
         case StrongValue: {
-            unsigned constantIndex = m_codeBlock->addConstantLazily();
+            unsigned constantIndex = m_codeBlock->addConstantLazily(locker);
             // We already have a barrier on the code block.
             m_codeBlock->constants()[constantIndex].setWithoutWriteBarrier(value->value());
             break;
@@ -1621,33 +1654,39 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
     // This represents IR like `CurrentNode(@operandNode)`. For example: `GetByVal(..., Int32:@GetLocal)`.
 
     for (Node* node = operandNode; node;) {
+        if (node->accessesStack(*this)) {
+            if (m_form != SSA && node->operand().isArgument()) {
+                int argument = node->operand().toArgument();
+                Node* argumentNode = m_rootToArguments.find(block(0))->value[argument];
+                // FIXME: We should match SetArgumentDefinitely nodes at other entrypoints as well:
+                // https://bugs.webkit.org/show_bug.cgi?id=175841
+                if (argumentNode && node->variableAccessData() == argumentNode->variableAccessData()) {
+                    CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
+                    return &profiledBlock->valueProfileForArgument(argument);
+                }
+            }
+        }
+
         // currentNode is null when we're doing speculation checks for checkArgumentTypes().
         if (!currentNode || node->origin.semantic != currentNode->origin.semantic || !currentNode->hasResult()) {
             CodeBlock* profiledBlock = baselineCodeBlockFor(node->origin.semantic);
 
             if (node->accessesStack(*this)) {
-                if (m_form != SSA && node->local().isArgument()) {
-                    int argument = node->local().toArgument();
-                    Node* argumentNode = m_rootToArguments.find(block(0))->value[argument];
-                    // FIXME: We should match SetArgumentDefinitely nodes at other entrypoints as well:
-                    // https://bugs.webkit.org/show_bug.cgi?id=175841
-                    if (argumentNode && node->variableAccessData() == argumentNode->variableAccessData())
-                        return &profiledBlock->valueProfileForArgument(argument);
-                }
-
                 if (node->op() == GetLocal) {
                     return MethodOfGettingAValueProfile::fromLazyOperand(
                         profiledBlock,
                         LazyOperandValueProfileKey(
-                            node->origin.semantic.bytecodeIndex(), node->local()));
+                            node->origin.semantic.bytecodeIndex(), node->operand()));
                 }
             }
 
             if (node->hasHeapPrediction())
-                return &profiledBlock->valueProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex());
+                return &profiledBlock->valueProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex());
 
             if (profiledBlock->hasBaselineJITProfiling()) {
-                if (ArithProfile* result = profiledBlock->arithProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex()))
+                if (BinaryArithProfile* result = profiledBlock->binaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
+                    return result;
+                if (UnaryArithProfile* result = profiledBlock->unaryArithProfileForBytecodeIndex(node->origin.semantic.bytecodeIndex()))
                     return result;
             }
         }
@@ -1745,12 +1784,12 @@ bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& 
     if (!m_hasExceptionHandlers)
         return false;
 
-    unsigned bytecodeIndexToCheck = codeOrigin.bytecodeIndex();
+    BytecodeIndex bytecodeIndexToCheck = codeOrigin.bytecodeIndex();
     while (1) {
         InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame();
         CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
-        if (HandlerInfo* handler = codeBlock->handlerForBytecodeOffset(bytecodeIndexToCheck)) {
-            opCatchOriginOut = CodeOrigin(handler->target, inlineCallFrame);
+        if (HandlerInfo* handler = codeBlock->handlerForBytecodeIndex(bytecodeIndexToCheck)) {
+            opCatchOriginOut = CodeOrigin(BytecodeIndex(handler->target), inlineCallFrame);
             catchHandlerOut = handler;
             return true;
         }

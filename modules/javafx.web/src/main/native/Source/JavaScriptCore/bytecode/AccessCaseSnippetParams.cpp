@@ -55,11 +55,12 @@ public:
 
         jit.store32(
             CCallHelpers::TrustedImm32(state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-            CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+            CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
 
         jit.makeSpaceOnStackForCCall();
 
         jit.setupArguments<FunctionType>(std::get<ArgumentsIndex>(m_arguments)...);
+        jit.prepareCallOperation(state.m_vm);
 
         CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
         auto function = m_function;

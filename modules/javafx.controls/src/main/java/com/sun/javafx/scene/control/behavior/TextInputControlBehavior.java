@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,10 +77,9 @@ import static javafx.scene.input.KeyEvent.*;
 public abstract class TextInputControlBehavior<T extends TextInputControl> extends BehaviorBase<T> {
 
     /**
-     * Specifies whether we ought to show handles. We should do it on touch platforms, but not
-     * iOS (and maybe not Android either?)
+     * Specifies whether we ought to show handles. We should do it on touch platforms
      */
-    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    static final boolean SHOW_HANDLES = Properties.IS_TOUCH_SUPPORTED;
 
     public static final String DISABLE_FORWARD_TO_PARENT = "TextInputControlBehavior.disableForwardToParent";
 

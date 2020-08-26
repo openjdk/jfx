@@ -92,6 +92,8 @@ protected:
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
 
+    bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const override { return m_shouldResetChildLogicalHeightBeforeLayout; }
+
 private:
     enum FlexSign {
         PositiveFlexibility,
@@ -188,6 +190,8 @@ private:
     void appendChildFrameRects(ChildFrameRects&);
     void repaintChildrenDuringLayoutIfMoved(const ChildFrameRects&);
 
+    bool hasPercentHeightDescendants(const RenderBox&) const;
+
     // This is used to cache the preferred size for orthogonal flow children so we
     // don't have to relayout to get it
     HashMap<const RenderBox*, LayoutUnit> m_intrinsicSizeAlongMainAxis;
@@ -209,6 +213,7 @@ private:
     // This is SizeIsUnknown outside of layoutBlock()
     mutable SizeDefiniteness m_hasDefiniteHeight { SizeDefiniteness::Unknown };
     bool m_inLayout { false };
+    bool m_shouldResetChildLogicalHeightBeforeLayout { false };
 };
 
 } // namespace WebCore

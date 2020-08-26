@@ -32,7 +32,7 @@
 #include <pal/SessionID.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class VM;
 }
 
@@ -47,7 +47,7 @@ public:
     ~IDBSerializationContext();
 
     JSC::VM& vm();
-    JSC::ExecState& execState();
+    JSC::JSGlobalObject& execState();
 
 private:
     IDBSerializationContext(PAL::SessionID);

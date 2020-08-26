@@ -41,6 +41,12 @@ public abstract class ReadOnlyDoublePropertyBase extends ReadOnlyDoubleProperty 
 
     ExpressionHelper<Number> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyDoublePropertyBase}.
+     */
+    public ReadOnlyDoublePropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

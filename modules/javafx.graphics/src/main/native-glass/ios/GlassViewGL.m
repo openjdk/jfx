@@ -125,17 +125,27 @@ static EAGLContext * ctx = nil;
 @implementation GlassViewGL : GLView
 
 -(void) doInsertText:(NSString*)myText {
-    int asciiCode = [myText characterAtIndex:0];
-    [self->delegate sendJavaKeyEventWithType:111 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
-    [self->delegate sendJavaKeyEventWithType:113 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
-    [self->delegate sendJavaKeyEventWithType:112 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    int unicode = [myText characterAtIndex:0];
+    int code = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    if (unicode == com_sun_glass_events_KeyEvent_VK_ENTER) {
+         code = unicode;
+    }
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
+        keyCode:code unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_TYPED
+        keyCode:code unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_RELEASE
+        keyCode:code unicode:unicode modifiers:0];
 }
 
 -(void) doDeleteBackward {
-    int asciiCode = 8;
-    [self->delegate sendJavaKeyEventWithType:111 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
-    [self->delegate sendJavaKeyEventWithType:113 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
-    [self->delegate sendJavaKeyEventWithType:112 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    int unicode = com_sun_glass_events_KeyEvent_VK_BACKSPACE;
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_PRESS
+        keyCode:unicode unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_TYPED
+        keyCode:unicode unicode:unicode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:com_sun_glass_events_KeyEvent_RELEASE
+        keyCode:unicode unicode:unicode modifiers:0];
 }
 
 -(BOOL) touchesShouldBegin:(NSSet *)touches withEvent:(UIEvent *)event inContentView:(UIView *)view

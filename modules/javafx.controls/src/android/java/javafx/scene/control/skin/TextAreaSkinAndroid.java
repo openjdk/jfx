@@ -26,27 +26,56 @@
 package javafx.scene.control.skin;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.event.EventHandler;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.input.MouseEvent;
 
 public class TextAreaSkinAndroid extends TextAreaSkin {
 
+    /**************************************************************************
+     *
+     * Private fields
+     *
+     **************************************************************************/
+
+    private final EventHandler<MouseEvent> mouseEventListener = e -> {
+        if (getSkinnable().isEditable() && getSkinnable().isFocused()) {
+            showSoftwareKeyboard();
+        }
+    };
+
+    private final ChangeListener<Boolean> focusChangeListener = (observable, wasFocused, isFocused) -> {
+        if (wasFocused && !isFocused) {
+            hideSoftwareKeyboard();
+        }
+    };
+    private final WeakChangeListener<Boolean> weakFocusChangeListener = new WeakChangeListener<>(focusChangeListener);
+
+    /**************************************************************************
+     *
+     * Constructors
+     *
+     **************************************************************************/
+
     public TextAreaSkinAndroid(final TextArea textArea) {
         super(textArea);
+        textArea.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
+        textArea.focusedProperty().addListener(weakFocusChangeListener);
+    }
 
-        textArea.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> observable,
-                    Boolean wasFocused, Boolean isFocused) {
-                if (textArea.isEditable()) {
-                    if (isFocused) {
-                        showSoftwareKeyboard();
-                    } else {
-                        hideSoftwareKeyboard();
-                    }
-                }
-            }
-        });
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getSkinnable().removeEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
+        getSkinnable().focusedProperty().removeListener(weakFocusChangeListener);
+        super.dispose();
     }
 
     native void showSoftwareKeyboard();

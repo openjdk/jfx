@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,10 @@ import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.text.GlyphLayout;
 import com.sun.javafx.text.TextRun;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 class PangoGlyphLayout extends GlyphLayout {
     private static final long fontmap;
@@ -80,9 +84,8 @@ class PangoGlyphLayout extends GlyphLayout {
         return true;
     }
 
-    private long str = 0L;
+    private Map<TextRun, Long> runUtf8 = new LinkedHashMap<>();
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
-
         /* Create the pango font and attribute list */
         FontResource fr = font.getFontResource();
         boolean composite = fr instanceof CompositeFontResource;
@@ -126,17 +129,20 @@ class PangoGlyphLayout extends GlyphLayout {
             OSPango.pango_attr_list_insert(attrList, attr);
         }
 
-        if (str == 0L) {
-            str = OSPango.g_utf16_to_utf8(text);
+        Long str = runUtf8.get(run);
+        if (str == null) {
+            char[] rtext = Arrays.copyOfRange(text, run.getStart(), run.getEnd());
+            str = OSPango.g_utf16_to_utf8(rtext);
             if (check(str, "Failed allocating UTF-8 buffer.", context, desc, attrList)) {
                 return;
             }
+            runUtf8.put(run, str);
         }
 
         /* Itemize */
-        long start = OSPango.g_utf8_offset_to_pointer(str, run.getStart());
-        long end = OSPango.g_utf8_offset_to_pointer(str, run.getEnd());
-        long runs = OSPango.pango_itemize(context, str, (int)(start - str), (int)(end - start), attrList, 0);
+        long utflen = OSPango.g_utf8_strlen(str,-1);
+        long end = OSPango.g_utf8_offset_to_pointer(str, utflen);
+        long runs = OSPango.pango_itemize(context, str, 0, (int)(end - str), attrList, 0);
 
         if (runs != 0) {
             /* Shape all PangoItem into PangoGlyphString */
@@ -199,9 +205,9 @@ class PangoGlyphLayout extends GlyphLayout {
     @Override
     public void dispose() {
         super.dispose();
-        if (str != 0L) {
+        for (Long str: runUtf8.values()) {
             OSPango.g_free(str);
-            str = 0L;
         }
+        runUtf8.clear();
     }
 }

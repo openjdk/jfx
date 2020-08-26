@@ -64,6 +64,7 @@ function(GENERATE_BINDINGS target)
     set(binding_generator ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl)
     set(idl_attributes_file ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.json)
     set(idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/idl_files_${target}.tmp)
+    set(idl_include_list ${CMAKE_CURRENT_BINARY_DIR}/idl_include_${target}.tmp)
     set(_supplemental_dependency)
 
     set(content)
@@ -80,6 +81,7 @@ function(GENERATE_BINDINGS target)
         --generator ${arg_GENERATOR}
         --outputDir ${arg_DESTINATION}
         --idlFilesList ${idl_files_list}
+        --includeDirsList ${idl_include_list}
         --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
         --idlAttributesFile ${idl_attributes_file}
     )
@@ -90,30 +92,16 @@ function(GENERATE_BINDINGS target)
     if (PROCESSOR_COUNT)
         list(APPEND args --numOfJobs ${PROCESSOR_COUNT})
     endif ()
-
-    # https://support.microsoft.com/en-in/help/830473/command-prompt-cmd-exe-command-line-string-limitation
-    # pass --include dir list to tmp file instead of multiple argument
-    if (WIN32 AND PORT STREQUAL "Java")
-        set(include_dir_list ${CMAKE_CURRENT_BINARY_DIR}/include_dir_${target}.tmp)
-        set(includeDirectories)
-        foreach (i IN LISTS arg_IDL_INCLUDES)
-            if (IS_ABSOLUTE ${i})
-                set(includeDirectories "${includeDirectories}${i}\n")
-            else ()
-                set(includeDirectories "${includeDirectories}${CMAKE_CURRENT_SOURCE_DIR}/${i}\n")
-            endif ()
-        endforeach ()
-        file(WRITE ${include_dir_list} ${includeDirectories})
-        list(APPEND args --includeDirList ${include_dir_list})
-    else ()
-            foreach (i IN LISTS arg_IDL_INCLUDES)
-            if (IS_ABSOLUTE ${i})
-                list(APPEND args --include ${i})
-            else ()
-                list(APPEND args --include ${CMAKE_CURRENT_SOURCE_DIR}/${i})
-            endif ()
-        endforeach ()
-    endif ()
+    set(include_dir)
+    foreach (i IN LISTS arg_IDL_INCLUDES)
+        if (IS_ABSOLUTE ${i})
+            set(f ${i})
+        else ()
+            set(f ${CMAKE_CURRENT_SOURCE_DIR}/${i})
+        endif ()
+        set(include_dir "${include_dir}${f}\n")
+    endforeach ()
+    file(WRITE ${idl_include_list} ${include_dir})
 
     foreach (i IN LISTS arg_PP_EXTRA_OUTPUT)
         list(APPEND args --ppExtraOutput ${i})

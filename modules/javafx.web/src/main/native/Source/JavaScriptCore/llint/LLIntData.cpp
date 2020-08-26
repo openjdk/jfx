@@ -48,13 +48,19 @@ namespace LLInt {
 
 
 uint8_t Data::s_exceptionInstructions[maxOpcodeLength + 1] = { };
-Opcode g_opcodeMap[numOpcodeIDs] = { };
-Opcode g_opcodeMapWide16[numOpcodeIDs] = { };
-Opcode g_opcodeMapWide32[numOpcodeIDs] = { };
+uint8_t Data::s_wasmExceptionInstructions[maxOpcodeLength + 1] = { };
+Opcode g_opcodeMap[numOpcodeIDs + numWasmOpcodeIDs] = { };
+Opcode g_opcodeMapWide16[numOpcodeIDs + numWasmOpcodeIDs] = { };
+Opcode g_opcodeMapWide32[numOpcodeIDs + numWasmOpcodeIDs] = { };
 
 #if !ENABLE(C_LOOP)
 extern "C" void llint_entry(void*, void*, void*);
-#endif
+
+#if ENABLE(WEBASSEMBLY)
+extern "C" void wasm_entry(void*, void*, void*);
+#endif // ENABLE(WEBASSEMBLY)
+
+#endif // !ENABLE(C_LOOP)
 
 void initialize()
 {
@@ -64,15 +70,21 @@ void initialize()
 #else // !ENABLE(C_LOOP)
     llint_entry(&g_opcodeMap, &g_opcodeMapWide16, &g_opcodeMapWide32);
 
-    for (int i = 0; i < numOpcodeIDs; ++i) {
+#if ENABLE(WEBASSEMBLY)
+    wasm_entry(&g_opcodeMap[numOpcodeIDs], &g_opcodeMapWide16[numOpcodeIDs], &g_opcodeMapWide32[numOpcodeIDs]);
+#endif // ENABLE(WEBASSEMBLY)
+
+    for (int i = 0; i < numOpcodeIDs + numWasmOpcodeIDs; ++i) {
         g_opcodeMap[i] = tagCodePtr(g_opcodeMap[i], BytecodePtrTag);
         g_opcodeMapWide16[i] = tagCodePtr(g_opcodeMapWide16[i], BytecodePtrTag);
         g_opcodeMapWide32[i] = tagCodePtr(g_opcodeMapWide32[i], BytecodePtrTag);
     }
 
     ASSERT(llint_throw_from_slow_path_trampoline < UINT8_MAX);
-    for (int i = 0; i < maxOpcodeLength + 1; ++i)
+    for (unsigned i = 0; i < maxOpcodeLength + 1; ++i) {
         Data::s_exceptionInstructions[i] = llint_throw_from_slow_path_trampoline;
+        Data::s_wasmExceptionInstructions[i] = wasm_throw_from_slow_path_trampoline;
+    }
 #endif // ENABLE(C_LOOP)
 }
 
@@ -100,8 +112,8 @@ void Data::performAssertions(VM& vm)
     ASSERT(CallFrame::returnPCOffset() == CallFrame::callerFrameOffset() + MachineRegisterSize);
     ASSERT(CallFrameSlot::codeBlock * sizeof(Register) == CallFrame::returnPCOffset() + MachineRegisterSize);
     STATIC_ASSERT(CallFrameSlot::callee * sizeof(Register) == CallFrameSlot::codeBlock * sizeof(Register) + SlotSize);
-    STATIC_ASSERT(CallFrameSlot::argumentCount * sizeof(Register) == CallFrameSlot::callee * sizeof(Register) + SlotSize);
-    STATIC_ASSERT(CallFrameSlot::thisArgument * sizeof(Register) == CallFrameSlot::argumentCount * sizeof(Register) + SlotSize);
+    STATIC_ASSERT(CallFrameSlot::argumentCountIncludingThis * sizeof(Register) == CallFrameSlot::callee * sizeof(Register) + SlotSize);
+    STATIC_ASSERT(CallFrameSlot::thisArgument * sizeof(Register) == CallFrameSlot::argumentCountIncludingThis * sizeof(Register) + SlotSize);
     STATIC_ASSERT(CallFrame::headerSizeInRegisters == CallFrameSlot::thisArgument);
 
     ASSERT(CallFrame::argumentOffsetIncludingThis(0) == CallFrameSlot::thisArgument);
@@ -112,25 +124,6 @@ void Data::performAssertions(VM& vm)
 #else
     STATIC_ASSERT(TagOffset == 4);
     STATIC_ASSERT(PayloadOffset == 0);
-#endif
-#if USE(JSVALUE32_64)
-    STATIC_ASSERT(JSValue::Int32Tag == static_cast<unsigned>(-1));
-    STATIC_ASSERT(JSValue::BooleanTag == static_cast<unsigned>(-2));
-    STATIC_ASSERT(JSValue::NullTag == static_cast<unsigned>(-3));
-    STATIC_ASSERT(JSValue::UndefinedTag == static_cast<unsigned>(-4));
-    STATIC_ASSERT(JSValue::CellTag == static_cast<unsigned>(-5));
-    STATIC_ASSERT(JSValue::EmptyValueTag == static_cast<unsigned>(-6));
-    STATIC_ASSERT(JSValue::DeletedValueTag == static_cast<unsigned>(-7));
-    STATIC_ASSERT(JSValue::LowestTag == static_cast<unsigned>(-7));
-#else
-    STATIC_ASSERT(TagBitTypeOther == 0x2);
-    STATIC_ASSERT(TagBitBool == 0x4);
-    STATIC_ASSERT(TagBitUndefined == 0x8);
-    STATIC_ASSERT(ValueEmpty == 0x0);
-    STATIC_ASSERT(ValueFalse == (TagBitTypeOther | TagBitBool));
-    STATIC_ASSERT(ValueTrue == (TagBitTypeOther | TagBitBool | 1));
-    STATIC_ASSERT(ValueUndefined == (TagBitTypeOther | TagBitUndefined));
-    STATIC_ASSERT(ValueNull == TagBitTypeOther);
 #endif
 
 #if ENABLE(C_LOOP)
@@ -146,7 +139,7 @@ void Data::performAssertions(VM& vm)
     ASSERT(!(reinterpret_cast<ptrdiff_t>((reinterpret_cast<WriteBarrier<JSCell>*>(0x4000)->slot())) - 0x4000));
 
     // FIXME: make these assertions less horrible.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     Vector<int> testVector;
     testVector.resize(42);
     ASSERT(bitwise_cast<uint32_t*>(&testVector)[sizeof(void*)/sizeof(uint32_t) + 1] == 42);
@@ -154,36 +147,49 @@ void Data::performAssertions(VM& vm)
 #endif
 
     {
-        ArithProfile arithProfile;
+        UnaryArithProfile arithProfile;
+        arithProfile.argSawInt32();
+        ASSERT(arithProfile.bits() == UnaryArithProfile::observedIntBits());
+        ASSERT(arithProfile.argObservedType().isOnlyInt32());
+    }
+    {
+        UnaryArithProfile arithProfile;
+        arithProfile.argSawNumber();
+        ASSERT(arithProfile.bits() == UnaryArithProfile::observedNumberBits());
+        ASSERT(arithProfile.argObservedType().isOnlyNumber());
+    }
+
+    {
+        BinaryArithProfile arithProfile;
         arithProfile.lhsSawInt32();
         arithProfile.rhsSawInt32();
-        ASSERT(arithProfile.bits() == ArithProfile::observedBinaryIntInt().bits());
-        STATIC_ASSERT(ArithProfile::observedBinaryIntInt().lhsObservedType().isOnlyInt32());
-        STATIC_ASSERT(ArithProfile::observedBinaryIntInt().rhsObservedType().isOnlyInt32());
+        ASSERT(arithProfile.bits() == BinaryArithProfile::observedIntIntBits());
+        ASSERT(arithProfile.lhsObservedType().isOnlyInt32());
+        ASSERT(arithProfile.rhsObservedType().isOnlyInt32());
     }
     {
-        ArithProfile arithProfile;
+        BinaryArithProfile arithProfile;
         arithProfile.lhsSawNumber();
         arithProfile.rhsSawInt32();
-        ASSERT(arithProfile.bits() == ArithProfile::observedBinaryNumberInt().bits());
-        STATIC_ASSERT(ArithProfile::observedBinaryNumberInt().lhsObservedType().isOnlyNumber());
-        STATIC_ASSERT(ArithProfile::observedBinaryNumberInt().rhsObservedType().isOnlyInt32());
+        ASSERT(arithProfile.bits() == BinaryArithProfile::observedNumberIntBits());
+        ASSERT(arithProfile.lhsObservedType().isOnlyNumber());
+        ASSERT(arithProfile.rhsObservedType().isOnlyInt32());
     }
     {
-        ArithProfile arithProfile;
+        BinaryArithProfile arithProfile;
         arithProfile.lhsSawNumber();
         arithProfile.rhsSawNumber();
-        ASSERT(arithProfile.bits() == ArithProfile::observedBinaryNumberNumber().bits());
-        STATIC_ASSERT(ArithProfile::observedBinaryNumberNumber().lhsObservedType().isOnlyNumber());
-        STATIC_ASSERT(ArithProfile::observedBinaryNumberNumber().rhsObservedType().isOnlyNumber());
+        ASSERT(arithProfile.bits() == BinaryArithProfile::observedNumberNumberBits());
+        ASSERT(arithProfile.lhsObservedType().isOnlyNumber());
+        ASSERT(arithProfile.rhsObservedType().isOnlyNumber());
     }
     {
-        ArithProfile arithProfile;
+        BinaryArithProfile arithProfile;
         arithProfile.lhsSawInt32();
         arithProfile.rhsSawNumber();
-        ASSERT(arithProfile.bits() == ArithProfile::observedBinaryIntNumber().bits());
-        STATIC_ASSERT(ArithProfile::observedBinaryIntNumber().lhsObservedType().isOnlyInt32());
-        STATIC_ASSERT(ArithProfile::observedBinaryIntNumber().rhsObservedType().isOnlyNumber());
+        ASSERT(arithProfile.bits() == BinaryArithProfile::observedIntNumberBits());
+        ASSERT(arithProfile.lhsObservedType().isOnlyInt32());
+        ASSERT(arithProfile.rhsObservedType().isOnlyNumber());
     }
 }
 IGNORE_WARNINGS_END

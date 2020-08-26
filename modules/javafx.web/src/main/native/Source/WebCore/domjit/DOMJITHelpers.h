@@ -33,6 +33,8 @@
 
 #if ENABLE(JIT)
 
+IGNORE_WARNINGS_BEGIN("frame-address")
+
 namespace WebCore { namespace DOMJIT {
 
 using JSC::CCallHelpers;
@@ -53,13 +55,14 @@ inline CCallHelpers::Jump branchIfNotWeakIsLive(CCallHelpers& jit, GPRReg weakIm
 }
 
 template<typename WrappedNode>
-JSC::EncodedJSValue JIT_OPERATION toWrapperSlow(JSC::ExecState* exec, JSC::JSGlobalObject* globalObject, void* result)
+JSC::EncodedJSValue JIT_OPERATION toWrapperSlow(JSC::JSGlobalObject* globalObject, void* result)
 {
-    ASSERT(exec);
     ASSERT(result);
     ASSERT(globalObject);
-    JSC::NativeCallFrameTracer tracer(globalObject->vm(), exec);
-    return JSC::JSValue::encode(toJS(exec, static_cast<JSDOMGlobalObject*>(globalObject), *static_cast<WrappedNode*>(result)));
+    JSC::VM& vm = globalObject->vm();
+    JSC::CallFrame* callFrame = DECLARE_CALL_FRAME(vm);
+    JSC::JITOperationPrologueCallFrameTracer tracer(vm, callFrame);
+    return JSC::JSValue::encode(toJS(globalObject, static_cast<JSDOMGlobalObject*>(globalObject), *static_cast<WrappedNode*>(result)));
 }
 
 template<typename WrappedType>
@@ -138,7 +141,7 @@ inline CCallHelpers::Jump branchIfNotNode(CCallHelpers& jit, GPRReg target)
 inline CCallHelpers::Jump branchIfElement(CCallHelpers& jit, GPRReg target)
 {
     return jit.branch8(
-        CCallHelpers::AboveOrEqual,
+        CCallHelpers::Equal,
         CCallHelpers::Address(target, JSC::JSCell::typeInfoTypeOffset()),
         CCallHelpers::TrustedImm32(JSC::JSType(JSElementType)));
 }
@@ -146,7 +149,7 @@ inline CCallHelpers::Jump branchIfElement(CCallHelpers& jit, GPRReg target)
 inline CCallHelpers::Jump branchIfNotElement(CCallHelpers& jit, GPRReg target)
 {
     return jit.branch8(
-        CCallHelpers::Below,
+        CCallHelpers::NotEqual,
         CCallHelpers::Address(target, JSC::JSCell::typeInfoTypeOffset()),
         CCallHelpers::TrustedImm32(JSC::JSType(JSElementType)));
 }
@@ -196,5 +199,7 @@ inline CCallHelpers::Jump branchTestIsHTMLFlagOnNode(MacroAssembler& jit, CCallH
 }
 
 } }
+
+IGNORE_WARNINGS_END
 
 #endif

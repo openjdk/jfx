@@ -28,7 +28,6 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -36,14 +35,8 @@ namespace Display {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
 
-Box::Box(const RenderStyle& style)
-    : m_style(style)
-{
-}
-
 Box::Box(const Box& other)
-    : m_style(other.m_style)
-    , m_topLeft(other.m_topLeft)
+    : m_topLeft(other.m_topLeft)
     , m_contentWidth(other.m_contentWidth)
     , m_contentHeight(other.m_contentHeight)
     , m_horizontalMargin(other.m_horizontalMargin)
@@ -52,7 +45,7 @@ Box::Box(const Box& other)
     , m_hasClearance(other.m_hasClearance)
     , m_border(other.m_border)
     , m_padding(other.m_padding)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_hasValidTop(other.m_hasValidTop)
     , m_hasValidLeft(other.m_hasValidLeft)
     , m_hasValidHorizontalMargin(other.m_hasValidHorizontalMargin)
@@ -63,17 +56,12 @@ Box::Box(const Box& other)
     , m_hasValidPadding(other.m_hasValidPadding)
     , m_hasValidContentHeight(other.m_hasValidContentHeight)
     , m_hasValidContentWidth(other.m_hasValidContentWidth)
-    , m_hasEstimatedMarginBefore(other.m_hasEstimatedMarginBefore)
+    , m_hasPrecomputedMarginBefore(other.m_hasPrecomputedMarginBefore)
 #endif
 {
 }
 
 Box::~Box()
-{
-}
-
-Box::Style::Style(const RenderStyle& style)
-    : boxSizing(style.boxSizing())
 {
 }
 

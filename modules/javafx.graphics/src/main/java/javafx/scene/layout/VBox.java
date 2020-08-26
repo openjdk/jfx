@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,16 +154,17 @@ public class VBox extends Pane {
     private static final String VGROW_CONSTRAINT = "vbox-vgrow";
 
     /**
-     * Sets the vertical grow priority for the child when contained by an vbox.
-     * If set, the vbox will use the priority to allocate additional space if the
-     * vbox is resized larger than it's preferred height.
+     * Sets the vertical grow priority for the child when contained by a vbox.
+     * If set, the vbox will use the priority value to allocate additional space if the
+     * vbox is resized larger than its preferred height.
      * If multiple vbox children have the same vertical grow priority, then the
      * extra space will be split evenly between them.
      * If no vertical grow priority is set on a child, the vbox will never
-     * allocate it additional vertical space if available.
-     * Setting the value to null will remove the constraint.
+     * allocate any additional vertical space for that child.
+     * <p>
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child of a vbox
-     * @param value the horizontal grow priority for the child
+     * @param value the vertical grow priority for the child
      */
     public static void setVgrow(Node child, Priority value) {
         setConstraint(child, VGROW_CONSTRAINT, value);
@@ -214,14 +215,14 @@ public class VBox extends Pane {
      ********************************************************************/
 
     /**
-     * Creates a VBox layout with spacing = 0 and alignment at TOP_LEFT.
+     * Creates a {@code VBox} layout with {@code spacing = 0} and alignment at {@code TOP_LEFT}.
      */
     public VBox() {
         super();
     }
 
     /**
-     * Creates a VBox layout with the specified spacing between children.
+     * Creates a {@code VBox} layout with the specified spacing between children.
      * @param spacing the amount of vertical space between each child
      */
     public VBox(double spacing) {
@@ -230,8 +231,8 @@ public class VBox extends Pane {
     }
 
     /**
-     * Creates an VBox layout with spacing = 0.
-     * @param children The initial set of children for this pane.
+     * Creates a {@code VBox} layout with {@code spacing = 0}.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public VBox(Node... children) {
@@ -240,9 +241,9 @@ public class VBox extends Pane {
     }
 
     /**
-     * Creates an VBox layout with the specified spacing between children.
-     * @param spacing the amount of horizontal space between each child
-     * @param children The initial set of children for this pane.
+     * Creates a {@code VBox} layout with the specified spacing between children.
+     * @param spacing the amount of vertical space between each child
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public VBox(double spacing, Node... children) {

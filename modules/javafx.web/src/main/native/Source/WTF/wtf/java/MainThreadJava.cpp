@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@
 #include <wtf/java/JavaEnv.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
 
 namespace WTF {
 void scheduleDispatchFunctionsOnMainThread()
@@ -49,6 +50,9 @@ void scheduleDispatchFunctionsOnMainThread()
 
 void initializeMainThreadPlatform()
 {
+#if OS(WINDOWS)
+    RunLoop::registerRunLoopMessageWindowClass();
+#endif
 }
 
 bool isMainThreadIfInitialized()

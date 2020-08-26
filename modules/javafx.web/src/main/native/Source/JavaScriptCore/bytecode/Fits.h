@@ -32,7 +32,6 @@
 #include "ProfileTypeBytecodeFlag.h"
 #include "PutByIdFlags.h"
 #include "ResultType.h"
-#include "SpecialPointer.h"
 #include "SymbolTableOrScopeDepth.h"
 #include "VirtualRegister.h"
 #include <type_traits>
@@ -237,6 +236,18 @@ struct Fits<E, size, std::enable_if_t<sizeof(E) != size && std::is_enum<E>::valu
 };
 
 template<OpcodeSize size>
+struct Fits<ResultType, size, std::enable_if_t<sizeof(ResultType) != size, std::true_type>> : public Fits<uint8_t, size> {
+    static_assert(sizeof(ResultType) == sizeof(uint8_t));
+    using Base = Fits<uint8_t, size>;
+
+    static bool check(ResultType type) { return Base::check(type.bits()); }
+
+    static typename Base::TargetType convert(ResultType type) { return Base::convert(type.bits()); }
+
+    static ResultType convert(typename Base::TargetType type) { return ResultType(Base::convert(type)); }
+};
+
+template<OpcodeSize size>
 struct Fits<OperandTypes, size, std::enable_if_t<sizeof(OperandTypes) != size, std::true_type>> {
     static_assert(sizeof(OperandTypes) == sizeof(uint16_t));
     using TargetType = typename TypeBySize<size>::unsignedType;
@@ -290,8 +301,8 @@ struct Fits<OperandTypes, size, std::enable_if_t<sizeof(OperandTypes) != size, s
     }
 };
 
-template<OpcodeSize size>
-struct Fits<BoundLabel, size> : public Fits<int, size> {
+template<OpcodeSize size, typename GeneratorTraits>
+struct Fits<GenericBoundLabel<GeneratorTraits>, size> : public Fits<int, size> {
     // This is a bit hacky: we need to delay computing jump targets, since we
     // might have to emit `nop`s to align the instructions stream. Additionally,
     // we have to compute the target before we start writing to the instruction
@@ -300,19 +311,19 @@ struct Fits<BoundLabel, size> : public Fits<int, size> {
     // later we use the saved target when we call convert.
 
     using Base = Fits<int, size>;
-    static bool check(BoundLabel& label)
+    static bool check(GenericBoundLabel<GeneratorTraits>& label)
     {
         return Base::check(label.saveTarget());
     }
 
-    static typename Base::TargetType convert(BoundLabel& label)
+    static typename Base::TargetType convert(GenericBoundLabel<GeneratorTraits>& label)
     {
         return Base::convert(label.commitTarget());
     }
 
-    static BoundLabel convert(typename Base::TargetType target)
+    static GenericBoundLabel<GeneratorTraits> convert(typename Base::TargetType target)
     {
-        return BoundLabel(Base::convert(target));
+        return GenericBoundLabel<GeneratorTraits>(Base::convert(target));
     }
 };
 

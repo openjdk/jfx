@@ -41,6 +41,12 @@ public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerPropert
 
     ExpressionHelper<Number> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyIntegerPropertyBase}.
+     */
+    public ReadOnlyIntegerPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

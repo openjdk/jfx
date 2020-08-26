@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package test.robot.javafx.scene;
 
+import com.sun.javafx.PlatformUtil;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
@@ -47,6 +49,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import test.util.Util;
 
@@ -138,6 +141,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderTop() {
+        // Disable on Mac until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.TOP);
         tabPane.getTabs().addListener(reorderListener);
@@ -151,6 +156,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderBottom() {
+        // Disable on Mac until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.BOTTOM);
         tabPane.getTabs().addListener(reorderListener);
@@ -164,6 +171,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderLeft() {
+        // Disable on Mac until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.LEFT);
         tabPane.getTabs().addListener(reorderListener);
@@ -177,6 +186,8 @@ public class TabPaneDragPolicyTest {
 
     @Test
     public void testReorderRight() {
+        // Disable on Mac until JDK-8213136 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         expectedTab = tabs[1];
         setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.RIGHT);
         tabPane.getTabs().addListener(reorderListener);
@@ -290,7 +301,7 @@ public class TabPaneDragPolicyTest {
         waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
 
         if (isFixed) {
-            tabPane.getSelectionModel().select(tabs[2]);
+            Util.runAndWait(() -> tabPane.getSelectionModel().select(tabs[2]));
             waitForLatch(latches[2], 5, "Timeout waiting tabs[2] to get selected.");
             latches[0] = new CountDownLatch(1);
         }

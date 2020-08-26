@@ -32,17 +32,20 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/pc/rtcstatscollector.h>
+#include <webrtc/pc/rtc_stats_collector.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
 namespace WebCore {
 
+class DOMMapAdapter;
 class RTCStatsReport;
+
+void initializeRTCStatsReportBackingMap(RTCStatsReport&);
 
 class LibWebRTCStatsCollector : public webrtc::RTCStatsCollectorCallback {
 public:
-    using CollectorCallback = CompletionHandler<RefPtr<RTCStatsReport>()>;
+    using CollectorCallback = CompletionHandler<void(RefPtr<RTCStatsReport>&&)>;
     static rtc::scoped_refptr<LibWebRTCStatsCollector> create(CollectorCallback&& callback) { return new rtc::RefCountedObject<LibWebRTCStatsCollector>(WTFMove(callback)); }
 
     explicit LibWebRTCStatsCollector(CollectorCallback&&);

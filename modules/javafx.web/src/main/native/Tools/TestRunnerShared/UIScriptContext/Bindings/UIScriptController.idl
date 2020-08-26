@@ -59,8 +59,11 @@ interface UIScriptController {
     void liftUpAtPoint(long x, long y, long touchCount, object callback);
     void singleTapAtPoint(long x, long y, object callback);
     void singleTapAtPointWithModifiers(long x, long y, object modifierArray, object callback);
+    void twoFingerSingleTapAtPoint(long x, long y, object callback);
     void doubleTapAtPoint(long x, long y, float delay, object callback);
     void dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, object callback);
+
+    void activateAtPoint(long x, long y, object callback);
 
     void longPressAtPoint(long x, long y, object callback);
 
@@ -75,6 +78,7 @@ interface UIScriptController {
 
     void keyDown(DOMString character, object modifierArray);
     void toggleCapsLock(object callback);
+    void setContinuousSpellCheckingEnabled(boolean enabled);
 
     void rawKeyDown(DOMString key);
     void rawKeyUp(DOMString key);
@@ -200,9 +204,9 @@ interface UIScriptController {
     attribute object didStartFormControlInteractionCallback;
     attribute object didEndFormControlInteractionCallback;
 
-    // Force press preview handling
-    attribute object didShowForcePressPreviewCallback;
-    attribute object didDismissForcePressPreviewCallback;
+    // Pop Over preview handling
+    attribute object didShowContextMenuCallback;
+    attribute object didDismissContextMenuCallback;
 
     // <select> picker
     void selectFormAccessoryPickerRow(long rowIndex);
@@ -216,6 +220,7 @@ interface UIScriptController {
 
     // <datalist>
     readonly attribute boolean isShowingDataListSuggestions;
+    void activateDataListSuggestion(unsigned long index, object callback);
 
     void keyboardAccessoryBarNext();
     void keyboardAccessoryBarPrevious();
@@ -237,6 +242,8 @@ interface UIScriptController {
     readonly attribute boolean isShowingMenu;
     readonly attribute object menuRect;
     object rectForMenuAction(DOMString action);
+    void chooseMenuAction(DOMString action, object callback);
+    void dismissMenu();
 
     readonly attribute boolean isShowingPopover;
     attribute object willPresentPopoverCallback;
@@ -256,6 +263,8 @@ interface UIScriptController {
     void becomeFirstResponder();
     void resignFirstResponder();
     readonly attribute boolean isPresentingModally;
+
+    void copyText(DOMString text);
 
     readonly attribute double contentOffsetX;
     readonly attribute double contentOffsetY;

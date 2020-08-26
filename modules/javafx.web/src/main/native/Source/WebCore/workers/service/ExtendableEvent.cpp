@@ -31,8 +31,11 @@
 #include "JSDOMPromise.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/Microtask.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ExtendableEvent);
 
 ExtendableEvent::ExtendableEvent(const AtomString& type, const ExtendableEventInit& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
@@ -75,7 +78,7 @@ private:
     {
     }
 
-    void run(JSC::ExecState*) final
+    void run(JSC::JSGlobalObject*) final
     {
         m_function();
     }

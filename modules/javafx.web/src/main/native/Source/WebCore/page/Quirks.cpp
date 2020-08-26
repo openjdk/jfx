@@ -28,11 +28,16 @@
 
 #include "CustomHeaderFields.h"
 #include "DOMTokenList.h"
+#include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "EventNames.h"
 #include "FrameLoader.h"
+#include "HTMLBodyElement.h"
+#include "HTMLDivElement.h"
 #include "HTMLMetaElement.h"
 #include "HTMLObjectElement.h"
+#include "JSEventListener.h"
 #include "LayoutUnit.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -287,56 +292,65 @@ bool Quirks::shouldDispatchSimulatedMouseEvents() const
     if (!needsQuirks())
         return false;
 
-    auto* loader = m_document->loader();
-    if (!loader || loader->simulatedMouseEventsDispatchPolicy() != SimulatedMouseEventsDispatchPolicy::Allow)
+    auto doShouldDispatchChecks = [this] () -> bool {
+        auto* loader = m_document->loader();
+        if (!loader || loader->simulatedMouseEventsDispatchPolicy() != SimulatedMouseEventsDispatchPolicy::Allow)
+            return false;
+
+        if (isAmazon())
+            return true;
+        if (isGoogleMaps())
+            return true;
+
+        auto& url = m_document->topDocument().url();
+        auto host = url.host().convertToASCIILowercase();
+
+        if (host == "wix.com" || host.endsWith(".wix.com")) {
+            // Disable simulated mouse dispatching for template selection.
+            return !url.path().startsWithIgnoringASCIICase("/website/templates/");
+        }
+
+        if ((host == "desmos.com" || host.endsWith(".desmos.com")) && url.path().startsWithIgnoringASCIICase("/calculator/"))
+            return true;
+        if (host == "figma.com" || host.endsWith(".figma.com"))
+            return true;
+        if (host == "trello.com" || host.endsWith(".trello.com"))
+            return true;
+        if (host == "airtable.com" || host.endsWith(".airtable.com"))
+            return true;
+        if (host == "msn.com" || host.endsWith(".msn.com"))
+            return true;
+        if (host == "flipkart.com" || host.endsWith(".flipkart.com"))
+            return true;
+        if (host == "iqiyi.com" || host.endsWith(".iqiyi.com"))
+            return true;
+        if (host == "trailers.apple.com")
+            return true;
+        if (host == "soundcloud.com")
+            return true;
+        if (host == "naver.com")
+            return true;
+        if (host == "nhl.com" || host.endsWith(".nhl.com"))
+            return true;
+        if (host.endsWith(".naver.com")) {
+            // Disable the quirk for tv.naver.com subdomain to be able to simulate hover on videos.
+            if (host == "tv.naver.com")
+                return false;
+            // Disable the quirk for mail.naver.com subdomain to be able to tap on mail subjects.
+            if (host == "mail.naver.com")
+                return false;
+            // Disable the quirk on the mobile site.
+            // FIXME: Maybe this quirk should be disabled for "m." subdomains on all sites? These are generally mobile sites that don't need mouse events.
+            if (host == "m.naver.com")
+                return false;
+            return true;
+        }
         return false;
+    };
 
-    if (isAmazon())
-        return true;
-    if (isGoogleMaps())
-        return true;
-
-    auto& url = m_document->topDocument().url();
-    auto host = url.host();
-
-    if (equalLettersIgnoringASCIICase(host, "wix.com") || host.endsWithIgnoringASCIICase(".wix.com")) {
-        // Disable simulated mouse dispatching for template selection.
-        return !url.path().startsWithIgnoringASCIICase("/website/templates/");
-    }
-    if ((equalLettersIgnoringASCIICase(host, "desmos.com") || host.endsWithIgnoringASCIICase(".desmos.com")) && url.path().startsWithIgnoringASCIICase("/calculator/"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "figma.com") || host.endsWithIgnoringASCIICase(".figma.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "trello.com") || host.endsWithIgnoringASCIICase(".trello.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "airtable.com") || host.endsWithIgnoringASCIICase(".airtable.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "msn.com") || host.endsWithIgnoringASCIICase(".msn.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "flipkart.com") || host.endsWithIgnoringASCIICase(".flipkart.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "iqiyi.com") || host.endsWithIgnoringASCIICase(".iqiyi.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "trailers.apple.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "soundcloud.com"))
-        return true;
-    if (equalLettersIgnoringASCIICase(host, "naver.com"))
-        return true;
-    if (host.endsWithIgnoringASCIICase(".naver.com")) {
-        // Disable the quirk for tv.naver.com subdomain to be able to simulate hover on videos.
-        if (equalLettersIgnoringASCIICase(host, "tv.naver.com"))
-            return false;
-        // Disable the quirk for mail.naver.com subdomain to be able to tap on mail subjects.
-        if (equalLettersIgnoringASCIICase(host, "mail.naver.com"))
-            return false;
-        // Disable the quirk on the mobile site.
-        // FIXME: Maybe this quirk should be disabled for "m." subdomains on all sites? These are generally mobile sites that don't need mouse events.
-        if (equalLettersIgnoringASCIICase(host, "m.naver.com"))
-            return false;
-        return true;
-    }
-    return false;
+    if (!m_shouldDispatchSimulatedMouseEventsQuirk)
+        m_shouldDispatchSimulatedMouseEventsQuirk = doShouldDispatchChecks();
+    return *m_shouldDispatchSimulatedMouseEventsQuirk;
 }
 
 bool Quirks::shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget* target) const
@@ -376,6 +390,18 @@ Optional<Event::IsCancelable> Quirks::simulatedMouseEventTypeForTarget(EventTarg
     if (equalLettersIgnoringASCIICase(host, "desmos.com") || host.endsWithIgnoringASCIICase(".desmos.com"))
         return Event::IsCancelable::No;
 
+    if (equalLettersIgnoringASCIICase(host, "airtable.com") || host.endsWithIgnoringASCIICase(".airtable.com")) {
+        // We want to limit simulated mouse events to elements under <div id="paneContainer"> to allow for column re-ordering and multiple cell selection.
+        if (is<Node>(target)) {
+            auto* node = downcast<Node>(target);
+            if (auto* paneContainer = node->treeScope().getElementById(AtomString("paneContainer"))) {
+                if (paneContainer->contains(node))
+                    return Event::IsCancelable::Yes;
+            }
+        }
+        return { };
+    }
+
     return Event::IsCancelable::Yes;
 }
 
@@ -407,6 +433,9 @@ bool Quirks::shouldAvoidResizingWhenInputViewBoundsChange() const
 
     auto host = m_document->topDocument().url().host();
     if (equalLettersIgnoringASCIICase(host, "live.com") || host.endsWithIgnoringASCIICase(".live.com"))
+        return true;
+
+    if (equalLettersIgnoringASCIICase(host, "twitter.com") || host.endsWithIgnoringASCIICase(".twitter.com"))
         return true;
 
     if (host.endsWithIgnoringASCIICase(".sharepoint.com"))
@@ -441,46 +470,6 @@ bool Quirks::needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const
     auto& url = m_document->topDocument().url();
     return equalLettersIgnoringASCIICase(url.host(), "docs.google.com") && url.path().startsWithIgnoringASCIICase("/spreadsheets/");
 #else
-    return false;
-#endif
-}
-
-bool Quirks::shouldLightenJapaneseBoldSansSerif() const
-{
-#if USE(HIRAGINO_SANS_WORKAROUND)
-    if (!needsQuirks())
-        return false;
-
-    // lang="ja" style="font: bold sans-serif;" content would naturally get HiraginoSans-W8 here, but that's visually
-    // too bold. Instead, we should pick HiraginoSans-W6 instead.
-    // FIXME: webkit.org/b/200047 Remove this quirk.
-    auto host = m_document->topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "m.yahoo.co.jp");
-#else
-    return false;
-#endif
-}
-
-bool Quirks::shouldIgnoreContentChange(const Element& element) const
-{
-#if PLATFORM(IOS_FAMILY)
-    if (!needsQuirks())
-        return false;
-
-    auto* parentElement = element.parentElement();
-    if (!parentElement || !parentElement->hasClass())
-        return false;
-
-    DOMTokenList& classList = parentElement->classList();
-    if (!classList.contains("feedback") || !classList.contains("feedback-mid"))
-        return false;
-
-    if (!equalLettersIgnoringASCIICase(topPrivatelyControlledDomain(m_document->url().host().toString()), "united.com"))
-        return false;
-
-    return true;
-#else
-    UNUSED_PARAM(element);
     return false;
 #endif
 }
@@ -558,6 +547,27 @@ bool Quirks::shouldAvoidScrollingWhenFocusedContentIsVisible() const
     return equalLettersIgnoringASCIICase(m_document->url().host(), "www.zillow.com");
 }
 
+bool Quirks::shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto host = m_document->url().host();
+    return equalLettersIgnoringASCIICase(host, "att.com") || host.endsWithIgnoringASCIICase(".att.com");
+}
+
+bool Quirks::shouldIgnoreAriaForFastPathContentObservationCheck() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+
+    auto host = m_document->url().host();
+    return equalLettersIgnoringASCIICase(host, "www.ralphlauren.com");
+#endif
+    return false;
+}
+
 bool Quirks::shouldOpenAsAboutBlank(const String& stringToOpen) const
 {
 #if PLATFORM(IOS_FAMILY)
@@ -568,7 +578,7 @@ bool Quirks::shouldOpenAsAboutBlank(const String& stringToOpen) const
     if (!equalLettersIgnoringASCIICase(openerURL.host(), "docs.google.com"))
         return false;
 
-    if (!m_document->frame() || !m_document->frame()->loader().userAgentForJavaScript(openerURL).contains("Macintosh"))
+    if (!m_document->frame() || !m_document->frame()->loader().userAgent(openerURL).contains("Macintosh"))
         return false;
 
     URL urlToOpen { URL { }, stringToOpen };
@@ -578,6 +588,124 @@ bool Quirks::shouldOpenAsAboutBlank(const String& stringToOpen) const
     return !equalLettersIgnoringASCIICase(urlToOpen.host(), "blank") && !equalLettersIgnoringASCIICase(urlToOpen.host(), "srcdoc");
 #else
     UNUSED_PARAM(stringToOpen);
+    return false;
+#endif
+}
+
+bool Quirks::needsPreloadAutoQuirk() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+
+    if (m_needsPreloadAutoQuirk)
+        return m_needsPreloadAutoQuirk.value();
+
+    auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+
+    m_needsPreloadAutoQuirk = domain == "vimeo.com" || domain.endsWith("vimeo.com");
+
+    return m_needsPreloadAutoQuirk.value();
+#else
+    return false;
+#endif
+}
+
+bool Quirks::shouldBypassBackForwardCache() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto topURL = m_document->topDocument().url();
+    auto host = topURL.host();
+
+    // Vimeo.com used to bypass the back/forward cache by serving "Cache-Control: no-store" over HTTPS.
+    // We started caching such content in r250437 but the vimeo.com content unfortunately is not currently compatible
+    // because it changes the opacity of its body to 0 when navigating away and fails to restore the original opacity
+    // when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/56996057>.
+    if (topURL.protocolIs("https") && equalLettersIgnoringASCIICase(host, "vimeo.com")) {
+        if (auto* documentLoader = m_document->frame() ? m_document->frame()->loader().documentLoader() : nullptr)
+            return documentLoader->response().cacheControlContainsNoStore();
+    }
+
+    // Google Docs used to bypass the back/forward cache by serving "Cache-Control: no-store" over HTTPS.
+    // We started caching such content in r250437 but the Google Docs index page unfortunately is not currently compatible
+    // because it puts an overlay (with class "docs-homescreen-freeze-el-full") over the page when navigating away and fails
+    // to remove it when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/57670064>.
+    // Note that this does not check for docs.google.com host because of hosted G Suite apps.
+    static NeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full", AtomString::ConstructFromLiteral);
+    auto* firstChildInBody = m_document->body() ? m_document->body()->firstChild() : nullptr;
+    if (is<HTMLDivElement>(firstChildInBody)) {
+        auto& div = downcast<HTMLDivElement>(*firstChildInBody);
+        if (div.hasClass() && div.classNames().contains(googleDocsOverlayDivClass))
+            return true;
+    }
+
+    return false;
+}
+
+bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, const AtomString& eventType, const EventListener& eventListener)
+{
+    if (eventNames().isTouchScrollBlockingEventType(eventType)) {
+        if (is<DOMWindow>(eventTarget)) {
+            auto& window = downcast<DOMWindow>(eventTarget);
+            if (auto* document = window.document())
+                return document->settings().passiveTouchListenersAsDefaultOnDocument();
+        } else if (is<Node>(eventTarget)) {
+            auto& node = downcast<Node>(eventTarget);
+            if (is<Document>(node) || node.document().documentElement() == &node || node.document().body() == &node)
+                return node.document().settings().passiveTouchListenersAsDefaultOnDocument();
+        }
+        return false;
+    }
+
+    if (eventType == eventNames().mousewheelEvent) {
+        if (!is<JSEventListener>(eventListener))
+            return false;
+
+        // For SmoothScroll.js
+        // Matches Blink intervention in https://chromium.googlesource.com/chromium/src/+/b6b13c9cfe64d52a4168d9d8d1ad9bb8f0b46a2a%5E%21/
+        if (is<DOMWindow>(eventTarget)) {
+            auto* document = downcast<DOMWindow>(eventTarget).document();
+            if (!document || !document->quirks().needsQuirks())
+                return false;
+
+            auto& jsEventListener = downcast<JSEventListener>(eventListener);
+            if (jsEventListener.functionName() == "ssc_wheel")
+                return true;
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+#if ENABLE(MEDIA_STREAM)
+bool Quirks::shouldEnableLegacyGetUserMedia() const
+{
+    if (!needsQuirks())
+        return false;
+
+    return m_document->url().protocolIs("https") && equalLettersIgnoringASCIICase(m_document-> url().host(), "www.baidu.com");
+}
+#endif
+
+bool Quirks::shouldDisableElementFullscreenQuirk() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+
+    if (m_shouldDisableElementFullscreenQuirk)
+        return m_shouldDisableElementFullscreenQuirk.value();
+
+    auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+
+    m_shouldDisableElementFullscreenQuirk = domain == "nfl.com" || domain.endsWith(".nfl.com");
+
+    return m_shouldDisableElementFullscreenQuirk.value();
+#else
     return false;
 #endif
 }

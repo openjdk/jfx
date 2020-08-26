@@ -41,7 +41,8 @@
     JSLegacyParent=JSRemoteDOMWindowBase,
     LegacyUnenumerableNamedProperties,
     NoInterfaceObject,
-    PrimaryGlobal,
+    Global=Window,
+    Exposed=Window,
 ] interface RemoteDOMWindow {
     [Unforgeable, ImplementedAs=self] readonly attribute WindowProxy window;
     [Replaceable] readonly attribute WindowProxy self;
@@ -55,5 +56,5 @@
     [Unforgeable] readonly attribute WindowProxy? top;
     readonly attribute WindowProxy? opener;
     [Replaceable] readonly attribute WindowProxy? parent;
-    [CallWith=ExecState&IncumbentWindow, ForwardDeclareInHeader] void postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+    [CallWith=GlobalObject&IncumbentWindow, ForwardDeclareInHeader] void postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
 };

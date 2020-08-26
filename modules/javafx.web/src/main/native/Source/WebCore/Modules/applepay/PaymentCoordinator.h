@@ -28,6 +28,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "ApplePaySessionPaymentRequest.h"
+#include <wtf/Expected.h>
 #include <wtf/Function.h>
 #include <wtf/WeakPtr.h>
 
@@ -39,10 +40,12 @@ class PaymentCoordinatorClient;
 class PaymentContact;
 class PaymentMerchantSession;
 class PaymentMethod;
+class PaymentMethodUpdate;
 class PaymentSession;
+class PaymentSessionError;
 enum class PaymentAuthorizationStatus;
+struct ExceptionDetails;
 struct PaymentAuthorizationResult;
-struct PaymentMethodUpdate;
 struct ShippingContactUpdate;
 struct ShippingMethodUpdate;
 
@@ -75,12 +78,12 @@ public:
     WEBCORE_EXPORT void didSelectPaymentMethod(const PaymentMethod&);
     WEBCORE_EXPORT void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&);
     WEBCORE_EXPORT void didSelectShippingContact(const PaymentContact&);
-    WEBCORE_EXPORT void didCancelPaymentSession();
+    WEBCORE_EXPORT void didCancelPaymentSession(PaymentSessionError&&);
 
     Optional<String> validatedPaymentNetwork(Document&, unsigned version, const String&) const;
 
     bool shouldEnableApplePayAPIs(Document&) const;
-    WEBCORE_EXPORT bool shouldAllowUserAgentScripts(Document&) const;
+    WEBCORE_EXPORT Expected<void, ExceptionDetails> shouldAllowUserAgentScripts(Document&) const;
 
 private:
     bool setApplePayIsActiveIfAllowed(Document&) const;

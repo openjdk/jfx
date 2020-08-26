@@ -62,7 +62,7 @@
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
 #include "Settings.h"
-#include "StyleResolver.h"
+#include "StyleGeneratedImage.h"
 #include "TextControlInnerElements.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
@@ -173,7 +173,7 @@ HTMLInputElement::~HTMLInputElement()
     // actually adds the button to the document groups in the latter case.
     // That is inelegant, but harmless since we remove it here.
     if (isRadioButton())
-        document().formController().radioButtonGroups().removeButton(*this);
+        treeScope().radioButtonGroups().removeButton(*this);
 
 #if ENABLE(TOUCH_EVENTS)
     if (m_hasTouchEventHandler)
@@ -1550,12 +1550,14 @@ Node::InsertedIntoAncestorResult HTMLInputElement::insertedIntoAncestor(Insertio
 void HTMLInputElement::didFinishInsertingNode()
 {
     HTMLTextFormControlElement::didFinishInsertingNode();
-    if (isConnected() && !form())
+    if (isInTreeScope() && !form())
         addToRadioButtonGroup();
 }
 
 void HTMLInputElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
+    if (removalType.treeScopeChanged && isRadioButton())
+        oldParentOfRemovedTree.treeScope().radioButtonGroups().removeButton(*this);
     if (removalType.disconnectedFromDocument && !form())
         removeFromRadioButtonGroup();
     HTMLTextFormControlElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
@@ -1575,11 +1577,6 @@ void HTMLInputElement::didMoveToNewDocument(Document& oldDocument, Document& new
         oldDocument.unregisterForDocumentSuspensionCallbacks(*this);
         newDocument.registerForDocumentSuspensionCallbacks(*this);
     }
-
-    // We call this even for radio buttons in forms; it's harmless because the
-    // removeButton function is written to be safe for buttons not in any group.
-    if (isRadioButton())
-        oldDocument.formController().radioButtonGroups().removeButton(*this);
 
 #if ENABLE(TOUCH_EVENTS)
     if (m_hasTouchEventHandler) {
@@ -1901,7 +1898,7 @@ bool HTMLInputElement::isInRequiredRadioButtonGroup()
     return false;
 }
 
-Vector<HTMLInputElement*> HTMLInputElement::radioButtonGroup() const
+Vector<Ref<HTMLInputElement>> HTMLInputElement::radioButtonGroup() const
 {
     RadioButtonGroups* buttons = radioButtonGroups();
     if (!buttons)
@@ -1909,7 +1906,7 @@ Vector<HTMLInputElement*> HTMLInputElement::radioButtonGroup() const
     return buttons->groupMembers(*this);
 }
 
-HTMLInputElement* HTMLInputElement::checkedRadioButtonForGroup() const
+RefPtr<HTMLInputElement> HTMLInputElement::checkedRadioButtonForGroup() const
 {
     if (RadioButtonGroups* buttons = radioButtonGroups())
         return buttons->checkedButtonForGroup(name());
@@ -1922,8 +1919,8 @@ RadioButtonGroups* HTMLInputElement::radioButtonGroups() const
         return nullptr;
     if (auto* formElement = form())
         return &formElement->radioButtonGroups();
-    if (isConnected())
-        return &document().formController().radioButtonGroups();
+    if (isInTreeScope())
+        return &treeScope().radioButtonGroups();
     return nullptr;
 }
 
@@ -2059,16 +2056,18 @@ static Ref<CSSLinearGradientValue> autoFillStrongPasswordMaskImage()
 {
     CSSGradientColorStop firstStop;
     firstStop.m_color = CSSValuePool::singleton().createColorValue(Color::black);
-    firstStop.m_position = CSSValuePool::singleton().createValue(50, CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+    firstStop.m_position = CSSValuePool::singleton().createValue(50, CSSUnitType::CSS_PERCENTAGE);
 
     CSSGradientColorStop secondStop;
     secondStop.m_color = CSSValuePool::singleton().createColorValue(Color::transparent);
-    secondStop.m_position = CSSValuePool::singleton().createValue(100, CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+    secondStop.m_position = CSSValuePool::singleton().createValue(100, CSSUnitType::CSS_PERCENTAGE);
 
     auto gradient = CSSLinearGradientValue::create(CSSGradientRepeat::NonRepeating, CSSGradientType::CSSLinearGradient);
-    gradient->setAngle(CSSValuePool::singleton().createValue(90, CSSPrimitiveValue::UnitType::CSS_DEG));
+    gradient->setAngle(CSSValuePool::singleton().createValue(90, CSSUnitType::CSS_DEG));
     gradient->addStop(firstStop);
     gradient->addStop(secondStop);
+    gradient->resolveRGBColors();
+
     return gradient;
 }
 
@@ -2091,10 +2090,10 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
         textBlockStyle.setMaxWidth(Length { 100, Percent });
         textBlockStyle.setColor({ 0.0f, 0.0f, 0.0f, 0.6f });
         textBlockStyle.setTextOverflow(TextOverflow::Clip);
-        textBlockStyle.setMaskImage(styleResolver().styleImage(autoFillStrongPasswordMaskImage()));
+        textBlockStyle.setMaskImage(StyleGeneratedImage::create(autoFillStrongPasswordMaskImage()));
         // A stacking context is needed for the mask.
-        if (textBlockStyle.hasAutoZIndex())
-            textBlockStyle.setZIndex(0);
+        if (textBlockStyle.hasAutoUsedZIndex())
+            textBlockStyle.setUsedZIndex(0);
     }
 
     // Do not allow line-height to be smaller than our default.

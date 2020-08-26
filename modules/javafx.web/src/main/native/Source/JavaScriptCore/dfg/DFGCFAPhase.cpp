@@ -170,22 +170,22 @@ private:
         bool changed = false;
         const Operands<Optional<JSValue>>& mustHandleValues = m_graph.m_plan.mustHandleValues();
         for (size_t i = mustHandleValues.size(); i--;) {
-            int operand = mustHandleValues.operandForIndex(i);
+            Operand operand = mustHandleValues.operandForIndex(i);
             Optional<JSValue> value = mustHandleValues[i];
             if (!value) {
                 if (m_verbose)
-                    dataLog("   Not live in bytecode: ", VirtualRegister(operand), "\n");
+                    dataLog("   Not live in bytecode: ", operand, "\n");
                 continue;
             }
             Node* node = block->variablesAtHead.operand(operand);
             if (!node) {
                 if (m_verbose)
-                    dataLog("   Not live: ", VirtualRegister(operand), "\n");
+                    dataLog("   Not live: ", operand, "\n");
                 continue;
             }
 
             if (m_verbose)
-                dataLog("   Widening ", VirtualRegister(operand), " with ", value.value(), "\n");
+                dataLog("   Widening ", operand, " with ", value.value(), "\n");
 
             AbstractValue& target = block->valuesAtHead.operand(operand);
             changed |= target.mergeOSREntryValue(m_graph, value.value(), node->variableAccessData(), node);
@@ -235,7 +235,7 @@ private:
                 break;
             }
 
-            if (!ASSERT_DISABLED
+            if (ASSERT_ENABLED
                 && m_state.didClobberOrFolded() != writesOverlap(m_graph, node, JSCell_structureID))
                 DFG_CRASH(m_graph, node, toCString("AI-clobberize disagreement; AI says ", m_state.clobberState(), " while clobberize says ", writeSet(m_graph, node)).data());
         }
@@ -268,7 +268,7 @@ private:
     AbstractInterpreter<InPlaceAbstractState> m_interpreter;
     BlockSet m_blocksWithOSR;
 
-    bool m_verbose;
+    const bool m_verbose;
 
     bool m_changed;
     unsigned m_count;

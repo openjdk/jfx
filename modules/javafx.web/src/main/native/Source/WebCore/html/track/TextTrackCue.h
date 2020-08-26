@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,17 +34,44 @@
 #if ENABLE(VIDEO_TRACK)
 
 #include "Document.h"
+#include "DocumentFragment.h"
+#include "HTMLElement.h"
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
 
 namespace WebCore {
 
 class TextTrack;
+class TextTrackCue;
 
-class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData {
+class TextTrackCueBox : public HTMLElement {
+    WTF_MAKE_ISO_ALLOCATED(TextTrackCueBox);
+public:
+    static Ref<TextTrackCueBox> create(Document& document, TextTrackCue& cue)
+    {
+        return adoptRef(*new TextTrackCueBox(document, cue));
+    }
+
+    TextTrackCue* getCue() const;
+    virtual void applyCSSProperties(const IntSize&) { }
+
+protected:
+    TextTrackCueBox(Document&, TextTrackCue&);
+    ~TextTrackCueBox() { }
+
+private:
+
+    WeakPtr<TextTrackCue> m_cue;
+};
+
+class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData, public CanMakeWeakPtr<TextTrackCue> {
     WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
     static const AtomString& cueShadowPseudoId();
+    static const AtomString& cueBackdropShadowPseudoId();
+    static const AtomString& cueBoxShadowPseudoId();
+
+    static ExceptionOr<Ref<TextTrackCue>> create(ScriptExecutionContext&, double start, double end, DocumentFragment&);
 
     TextTrack* track() const;
     void setTrack(TextTrack*);
@@ -75,9 +102,9 @@ public:
 
     bool hasEquivalentStartTime(const TextTrackCue&) const;
 
-    enum CueType { Data, Generic, WebVTT };
-    virtual CueType cueType() const = 0;
-    virtual bool isRenderable() const { return false; }
+    enum CueType { Generic, Data, ConvertedToWebVTT, WebVTT };
+    virtual CueType cueType() const { return CueType::Generic; }
+    virtual bool isRenderable() const;
 
     enum CueMatchRules { MatchAllFields, IgnoreDuration };
     virtual bool isEqual(const TextTrackCue&, CueMatchRules) const;
@@ -86,13 +113,24 @@ public:
     void willChange();
     virtual void didChange();
 
+    virtual RefPtr<TextTrackCueBox> getDisplayTree(const IntSize&, int);
+    virtual void removeDisplayTree();
+
+    virtual RefPtr<DocumentFragment> getCueAsHTML();
+
     String toJSONString() const;
-    String debugString() const;
 
     using RefCounted::ref;
     using RefCounted::deref;
 
+    virtual void recalculateStyles() { m_displayTreeNeedsUpdate = true; }
+    virtual void setFontSize(int, const IntSize&, bool important);
+    virtual void updateDisplayTree(const MediaTime&) { };
+
+    unsigned cueIndex() const;
+
 protected:
+    TextTrackCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, DocumentFragment&&);
     TextTrackCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end);
 
     Document& ownerDocument() { return downcast<Document>(m_scriptExecutionContext); }
@@ -111,6 +149,8 @@ private:
 
     virtual bool cueContentsMatch(const TextTrackCue&) const;
 
+    void rebuildDisplayTree();
+
     String m_id;
     MediaTime m_startTime;
     MediaTime m_endTime;
@@ -120,9 +160,20 @@ private:
 
     ScriptExecutionContext& m_scriptExecutionContext;
 
-    bool m_isActive : 1;
-    bool m_pauseOnExit : 1;
+    RefPtr<DocumentFragment> m_cueNode;
+    RefPtr<TextTrackCueBox> m_displayTree;
+
+    int m_fontSize { 0 };
+    bool m_fontSizeIsImportant { false };
+
+    bool m_isActive { false };
+    bool m_pauseOnExit { false };
+    bool m_displayTreeNeedsUpdate { true };
 };
+
+#ifndef NDEBUG
+TextStream& operator<<(TextStream&, const TextTrackCue&);
+#endif
 
 } // namespace WebCore
 

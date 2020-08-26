@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if ENABLE(B3_JIT)
 
 #include "AirSpecial.h"
+#include "RegisterSet.h"
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -49,7 +50,7 @@ public:
     // You cannot use this register to pass arguments. It just so happens that this register is not
     // used for arguments in the C calling convention. By the way, this is the only thing that causes
     // this special to be specific to C calls.
-    static const GPRReg scratchRegister = GPRInfo::nonPreservedNonArgumentGPR0;
+    static constexpr GPRReg scratchRegister = GPRInfo::nonPreservedNonArgumentGPR0;
 
 protected:
     void forEachArg(Inst&, const ScopedLambda<Inst::EachArgCallback>&) final;
@@ -57,7 +58,7 @@ protected:
     bool admitsStack(Inst&, unsigned argIndex) final;
     bool admitsExtendedOffsetAddr(Inst&, unsigned) final;
     void reportUsedRegisters(Inst&, const RegisterSet&) final;
-    CCallHelpers::Jump generate(Inst&, CCallHelpers&, GenerationContext&) final;
+    MacroAssembler::Jump generate(Inst&, CCallHelpers&, GenerationContext&) final;
     RegisterSet extraEarlyClobberedRegs(Inst&) final;
     RegisterSet extraClobberedRegs(Inst&) final;
 
@@ -65,15 +66,15 @@ protected:
     void deepDumpImpl(PrintStream&) const final;
 
 private:
-    static const unsigned specialArgOffset = 0;
-    static const unsigned numSpecialArgs = 1;
-    static const unsigned calleeArgOffset = numSpecialArgs;
-    static const unsigned numCalleeArgs = 1;
-    static const unsigned returnGPArgOffset = numSpecialArgs + numCalleeArgs;
-    static const unsigned numReturnGPArgs = 2;
-    static const unsigned returnFPArgOffset = numSpecialArgs + numCalleeArgs + numReturnGPArgs;
-    static const unsigned numReturnFPArgs = 1;
-    static const unsigned argArgOffset =
+    static constexpr unsigned specialArgOffset = 0;
+    static constexpr unsigned numSpecialArgs = 1;
+    static constexpr unsigned calleeArgOffset = numSpecialArgs;
+    static constexpr unsigned numCalleeArgs = 1;
+    static constexpr unsigned returnGPArgOffset = numSpecialArgs + numCalleeArgs;
+    static constexpr unsigned numReturnGPArgs = 2;
+    static constexpr unsigned returnFPArgOffset = numSpecialArgs + numCalleeArgs + numReturnGPArgs;
+    static constexpr unsigned numReturnFPArgs = 1;
+    static constexpr unsigned argArgOffset =
         numSpecialArgs + numCalleeArgs + numReturnGPArgs + numReturnFPArgs;
 
     RegisterSet m_clobberedRegs;

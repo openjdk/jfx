@@ -252,7 +252,7 @@ ExceptionOr<void> PropertySetCSSStyleDeclaration::setProperty(const String& prop
 
         if (parentElement())
             document = &parentElement()->document();
-        else
+        else if (parentStyleSheet())
             document = parentStyleSheet()->ownerDocument();
 
         changed = m_propertySet->setCustomProperty(document, propertyName, value, important, cssParserContext());
@@ -412,7 +412,11 @@ CSSParserContext StyleRuleCSSStyleDeclaration::cssParserContext() const
     if (!styleSheet)
         return PropertySetCSSStyleDeclaration::cssParserContext();
 
-    return styleSheet->parserContext();
+    auto context = styleSheet->parserContext();
+    if (m_parentRule)
+        context.enclosingRuleType = static_cast<StyleRuleType>(m_parentRule->type());
+
+    return context;
 }
 
 void StyleRuleCSSStyleDeclaration::reattach(MutableStyleProperties& propertySet)

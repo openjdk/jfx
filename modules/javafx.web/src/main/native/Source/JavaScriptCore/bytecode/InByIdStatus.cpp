@@ -43,14 +43,14 @@ bool InByIdStatus::appendVariant(const InByIdVariant& variant)
 }
 
 #if ENABLE(JIT)
-InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, unsigned bytecodeIndex, UniquedStringImpl* uid, ExitFlag didExit)
+InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, UniquedStringImpl* uid, ExitFlag didExit)
 {
     ConcurrentJSLocker locker(profiledBlock->m_lock);
 
     InByIdStatus result;
 
 #if ENABLE(DFG_JIT)
-    result = computeForStubInfoWithoutExitSiteFeedback(locker, map.get(CodeOrigin(bytecodeIndex)).stubInfo, uid);
+    result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), map.get(CodeOrigin(bytecodeIndex)).stubInfo, uid);
 
     if (!result.takesSlowPath() && didExit)
         return InByIdStatus(TakesSlowPath);
@@ -64,7 +64,7 @@ InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map
     return result;
 }
 
-InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, unsigned bytecodeIndex, UniquedStringImpl* uid)
+InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, BytecodeIndex bytecodeIndex, UniquedStringImpl* uid)
 {
     return computeFor(profiledBlock, map, bytecodeIndex, uid, hasBadCacheExitSite(profiledBlock, bytecodeIndex));
 }
@@ -73,7 +73,7 @@ InByIdStatus InByIdStatus::computeFor(
     CodeBlock* profiledBlock, ICStatusMap& baselineMap,
     ICStatusContextStack& contextStack, CodeOrigin codeOrigin, UniquedStringImpl* uid)
 {
-    unsigned bytecodeIndex = codeOrigin.bytecodeIndex();
+    BytecodeIndex bytecodeIndex = codeOrigin.bytecodeIndex();
     ExitFlag didExit = hasBadCacheExitSite(profiledBlock, bytecodeIndex);
 
     for (ICStatusContext* context : contextStack) {
@@ -96,7 +96,7 @@ InByIdStatus InByIdStatus::computeFor(
             InByIdStatus result;
             {
                 ConcurrentJSLocker locker(context->optimizedCodeBlock->m_lock);
-                result = computeForStubInfoWithoutExitSiteFeedback(locker, status.stubInfo, uid);
+                result = computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), status.stubInfo, uid);
             }
             if (result.isSet())
                 return bless(result);
@@ -114,23 +114,23 @@ InByIdStatus InByIdStatus::computeFor(
 #if ENABLE(DFG_JIT)
 InByIdStatus InByIdStatus::computeForStubInfo(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, StructureStubInfo* stubInfo, CodeOrigin codeOrigin, UniquedStringImpl* uid)
 {
-    InByIdStatus result = InByIdStatus::computeForStubInfoWithoutExitSiteFeedback(locker, stubInfo, uid);
+    InByIdStatus result = InByIdStatus::computeForStubInfoWithoutExitSiteFeedback(locker, profiledBlock->vm(), stubInfo, uid);
 
     if (!result.takesSlowPath() && hasBadCacheExitSite(profiledBlock, codeOrigin.bytecodeIndex()))
         return InByIdStatus(TakesSlowPath);
     return result;
 }
 
-InByIdStatus InByIdStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, StructureStubInfo* stubInfo, UniquedStringImpl* uid)
+InByIdStatus InByIdStatus::computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, VM& vm, StructureStubInfo* stubInfo, UniquedStringImpl* uid)
 {
-    StubInfoSummary summary = StructureStubInfo::summary(stubInfo);
+    StubInfoSummary summary = StructureStubInfo::summary(vm, stubInfo);
     if (!isInlineable(summary))
         return InByIdStatus(summary);
 
     // Finally figure out if we can derive an access strategy.
     InByIdStatus result;
     result.m_state = Simple;
-    switch (stubInfo->cacheType) {
+    switch (stubInfo->cacheType()) {
     case CacheType::Unset:
         return InByIdStatus(NoInformation);
 

@@ -31,9 +31,11 @@
 #include "ServiceWorkerClientIdentifier.h"
 #include "ServiceWorkerRegistrationData.h"
 #include "ServiceWorkerTypes.h"
+#include "Timer.h"
 #include <wtf/HashCountedSet.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/WallTime.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -45,7 +47,7 @@ struct ExceptionData;
 struct ServiceWorkerContextData;
 struct ServiceWorkerFetchResult;
 
-class SWServerRegistration {
+class SWServerRegistration : public CanMakeWeakPtr<SWServerRegistration> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     SWServerRegistration(SWServer&, const ServiceWorkerRegistrationKey&, ServiceWorkerUpdateViaCache, const URL& scopeURL, const URL& scriptURL);
@@ -57,11 +59,9 @@ public:
     SWServerWorker* getNewestWorker();
     WEBCORE_EXPORT ServiceWorkerRegistrationData data() const;
 
-    bool isUninstalling() const { return m_uninstalling; }
-    void setIsUninstalling(bool);
-
     void setLastUpdateTime(WallTime);
     WallTime lastUpdateTime() const { return m_lastUpdateTime; }
+    bool isStale() const { return m_lastUpdateTime && (WallTime::now() - m_lastUpdateTime) > 86400_s; }
 
     void setUpdateViaCache(ServiceWorkerUpdateViaCache);
     ServiceWorkerUpdateViaCache updateViaCache() const { return m_updateViaCache; }
@@ -94,11 +94,21 @@ public:
     void tryActivate();
     void didFinishActivation(ServiceWorkerIdentifier);
 
+    bool isUnregistered() const;
+
     void forEachConnection(const WTF::Function<void(SWServer::Connection&)>&);
+
+    WEBCORE_EXPORT bool shouldSoftUpdate(const FetchOptions&) const;
+    WEBCORE_EXPORT void scheduleSoftUpdate();
+    static constexpr Seconds softUpdateDelay { 1_s };
+
+    URL scopeURLWithoutFragment() const { return m_scopeURL; }
+    URL scriptURL() const { return m_scriptURL; }
 
 private:
     void activate();
     void handleClientUnload();
+    void softUpdate();
 
     ServiceWorkerRegistrationIdentifier m_identifier;
     ServiceWorkerRegistrationKey m_registrationKey;
@@ -106,7 +116,6 @@ private:
     URL m_scopeURL;
     URL m_scriptURL;
 
-    bool m_uninstalling { false };
     RefPtr<SWServerWorker> m_preInstallationWorker; // Implementation detail, not part of the specification.
     RefPtr<SWServerWorker> m_installingWorker;
     RefPtr<SWServerWorker> m_waitingWorker;
@@ -119,6 +128,8 @@ private:
 
     MonotonicTime m_creationTime;
     HashMap<SWServerConnectionIdentifier, HashSet<DocumentIdentifier>> m_clientsUsingRegistration;
+
+    WebCore::Timer m_softUpdateTimer;
 };
 
 } // namespace WebCore

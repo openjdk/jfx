@@ -30,7 +30,7 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentMethodChangeEvent.h"
 #include "PaymentOptions.h"
@@ -49,6 +49,7 @@ enum class PaymentComplete;
 enum class PaymentShippingType;
 struct PaymentDetailsUpdate;
 struct PaymentMethodData;
+template<typename IDLType> class DOMPromiseDeferred;
 
 class PaymentRequest final : public ActiveDOMObject, public CanMakeWeakPtr<PaymentRequest>, public EventTargetWithInlineData, public RefCounted<PaymentRequest> {
     WTF_MAKE_ISO_ALLOCATED(PaymentRequest);
@@ -125,8 +126,8 @@ private:
 
     // ActiveDOMObject
     const char* activeDOMObjectName() const final { return "PaymentRequest"; }
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
+    void suspend(ReasonForSuspension) final;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return PaymentRequestEventTargetInterfaceType; }
@@ -142,7 +143,7 @@ private:
     String m_shippingOption;
     RefPtr<PaymentAddress> m_shippingAddress;
     State m_state { State::Created };
-    Optional<ShowPromise> m_showPromise;
+    std::unique_ptr<ShowPromise> m_showPromise;
     Optional<PaymentHandlerWithPendingActivity> m_activePaymentHandler;
     RefPtr<DOMPromise> m_detailsPromise;
     RefPtr<DOMPromise> m_merchantSessionPromise;

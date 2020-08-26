@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,7 @@ jmethodID mat_jViewNotifyResize = 0;
 jmethodID mat_jViewNotifyRepaint = 0;
 jmethodID mat_jViewNotifyKey = 0;
 jmethodID mat_jViewNotifyMouse = 0;
+jmethodID mat_jViewNotifyMenu = 0;
 jmethodID mat_jViewNotifyInputMethod = 0;
 jmethodID mat_jViewNotifyView = 0;
 
@@ -664,13 +665,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
 
     // view specific
     mat_jViewClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/ios/IosView"));
+    mat_jViewNotifyKey = (*env)->GetMethodID(env, mat_jViewClass, "notifyUnicode", "(IIII)V");
     jclass mat_jViewBaseClass = (*env)->FindClass(env, "com/sun/glass/ui/View");
     GLASS_CHECK_EXCEPTION(env);
 
     mat_jViewNotifyResize = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyResize", "(II)V");
     mat_jViewNotifyRepaint = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyRepaint", "(IIII)V");
-    mat_jViewNotifyKey = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyKey", "(II[CI)V");
     mat_jViewNotifyMouse = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyMouse", "(IIIIIIIZZ)V");
+    mat_jViewNotifyMenu = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyMenu", "(IIIIZ)V");
     mat_jViewNotifyInputMethod = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
     mat_jViewNotifyView = (*env)->GetMethodID(env, mat_jViewBaseClass, "notifyView", "(I)V");
     GLASS_CHECK_EXCEPTION(env);

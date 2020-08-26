@@ -23,7 +23,7 @@
 
 namespace WebCore {
 
-template<typename JSClass> class JSDOMConstructor : public JSDOMConstructorBase {
+template<typename JSClass> class JSDOMConstructor final : public JSDOMConstructorBase {
 public:
     using Base = JSDOMConstructorBase;
 
@@ -47,7 +47,7 @@ private:
     // Usually defined for each specialization class.
     void initializeProperties(JSC::VM&, JSDOMGlobalObject&) { }
     // Must be defined for each specialization class.
-    static JSC::EncodedJSValue JSC_HOST_CALL construct(JSC::ExecState*);
+    static JSC::EncodedJSValue JSC_HOST_CALL construct(JSC::JSGlobalObject*, JSC::CallFrame*);
 };
 
 template<typename JSClass> inline JSDOMConstructor<JSClass>* JSDOMConstructor<JSClass>::create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject& globalObject)

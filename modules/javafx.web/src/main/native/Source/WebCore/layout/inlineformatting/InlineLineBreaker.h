@@ -27,36 +27,104 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "LayoutUnit.h"
+#include "LayoutUnits.h"
 
 namespace WebCore {
+
+class RenderStyle;
+
 namespace Layout {
 
 class InlineItem;
 class InlineTextItem;
+struct ContinuousContent;
+struct WrappedTextContent;
 
 class LineBreaker {
 public:
-    enum class BreakingBehavior { Keep, Split, Wrap };
-    struct BreakingContext {
-        BreakingBehavior breakingBehavior;
-        bool isAtBreakingOpportunity { false };
+    struct PartialRun {
+        unsigned length { 0 };
+        InlineLayoutUnit logicalWidth { 0 };
+        bool needsHyphen { false };
     };
-    struct LineContext {
-        LayoutUnit availableWidth;
-        LayoutUnit logicalLeft;
-        LayoutUnit trimmableWidth;
-        bool isEmpty { false };
+    enum class IsEndOfLine { No, Yes };
+    struct Result {
+        enum class Action {
+            Keep, // Keep content on the current line.
+            Split, // Partial content is on the current line.
+            Push, // Content is pushed to the next line.
+            Revert // The current content overflows and can't get wrapped. The line needs to be reverted back to the last line wrapping opportunity.
+        };
+        struct PartialTrailingContent {
+            size_t trailingRunIndex { 0 };
+            Optional<PartialRun> partialRun; // nullopt partial run means the trailing run is a complete run.
+        };
+
+        Action action { Action::Keep };
+        IsEndOfLine isEndOfLine { IsEndOfLine::No };
+        Optional<PartialTrailingContent> partialTrailingContent { };
+        const InlineItem* revertTo { nullptr };
     };
-    BreakingContext breakingContext(const InlineItem&, LayoutUnit logicalWidth, const LineContext&);
+
+    struct Run {
+        Run(const InlineItem&, InlineLayoutUnit);
+        Run(const Run&);
+        Run& operator=(const Run&);
+
+        const InlineItem& inlineItem;
+        InlineLayoutUnit logicalWidth { 0 };
+    };
+    using RunList = Vector<Run, 3>;
+
+    struct LineStatus {
+        InlineLayoutUnit availableWidth { 0 };
+        InlineLayoutUnit collapsibleWidth { 0 };
+        bool lineHasFullyCollapsibleTrailingRun { false };
+        bool lineIsEmpty { true };
+    };
+    Result shouldWrapInlineContent(const RunList& candidateRuns, InlineLayoutUnit candidateContentLogicalWidth, const LineStatus&);
+    bool shouldWrapFloatBox(InlineLayoutUnit floatLogicalWidth, InlineLayoutUnit availableWidth, bool lineIsEmpty);
+
+    void setHyphenationDisabled() { n_hyphenationIsDisabled = true; }
 
 private:
+    // This struct represents the amount of content committed to line breaking at a time e.g.
+    // text content <span>span1</span>between<span>span2</span>
+    // [text][ ][content][ ][container start][span1][container end][between][container start][span2][container end]
+    // -> content chunks ->
+    // [text]
+    // [ ]
+    // [content]
+    // [container start][span1][container end][between][container start][span2][container end]
+    // see https://drafts.csswg.org/css-text-3/#line-break-details
+    Optional<WrappedTextContent> wrapTextContent(const RunList&, const LineStatus&) const;
+    Result tryWrappingInlineContent(const RunList&, InlineLayoutUnit candidateContentLogicalWidth, const LineStatus&) const;
+    Optional<PartialRun> tryBreakingTextRun(const Run& overflowRun, InlineLayoutUnit availableWidth) const;
 
-    BreakingBehavior wordBreakingBehavior(const InlineTextItem&, bool lineIsEmpty) const;
-    bool isAtBreakingOpportunity(const InlineItem&);
+    enum class WordBreakRule {
+        NoBreak,
+        AtArbitraryPosition,
+        OnlyHyphenationAllowed
+    };
+    WordBreakRule wordBreakBehavior(const RenderStyle&) const;
+    bool shouldKeepEndOfLineWhitespace(const ContinuousContent&) const;
+    bool isContentWrappingAllowed(const ContinuousContent&) const;
 
-    bool m_hyphenationIsDisabled { true };
+    bool n_hyphenationIsDisabled { false };
+    const InlineItem* m_lastWrapOpportunity { nullptr };
 };
+
+inline LineBreaker::Run::Run(const InlineItem& inlineItem, InlineLayoutUnit logicalWidth)
+    : inlineItem(inlineItem)
+    , logicalWidth(logicalWidth)
+{
+}
+
+inline LineBreaker::Run::Run(const Run& other)
+    : inlineItem(other.inlineItem)
+    , logicalWidth(other.logicalWidth)
+{
+}
 
 }
 }

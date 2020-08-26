@@ -204,8 +204,11 @@
 
 #elif !defined(FALLTHROUGH) && !defined(__cplusplus)
 
-#if COMPILER(GCC)
+#if COMPILER(GCC_COMPATIBLE) && defined(__has_attribute)
+// Break out this #if to satisy some versions Windows compilers.
+#if __has_attribute(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
+#endif
 #endif
 
 #endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
@@ -252,6 +255,9 @@
 #define NO_RETURN
 #endif
 
+#if !defined(__has_attribute)
+#define __has_attribute(feature) 0
+#endif
 /* NOT_TAIL_CALLED */
 
 #if !defined(NOT_TAIL_CALLED) && defined(__has_attribute)
@@ -379,7 +385,7 @@
 #define WARN_UNUSED_RETURN
 #endif
 
-#if !defined(__has_include) && COMPILER(MSVC)
+#if !defined(__has_include) && (COMPILER(MSVC) || COMPILER(GCC))
 #define __has_include(path) 0
 #endif
 

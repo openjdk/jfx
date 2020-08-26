@@ -131,8 +131,10 @@ void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& pai
         String textWithHyphen;
         if (run.hasHyphen())
             textWithHyphen = run.textWithHyphen();
-        // x position indicates the line offset from the rootbox. It's always 0 in case of simple line layout.
-        TextRun textRun { run.hasHyphen() ? textWithHyphen : run.text(), 0, run.expansion(), run.expansionBehavior() };
+        // xPos is relative to the line box's logical left.
+        // We don't have any line geometry here in SLL, so let's get the first run's logical left in the current line and use it as the line's logical left.
+        auto lineLogicalLeft = (*resolver.rangeForLine(run.lineIndex()).begin()).logicalLeft();
+        TextRun textRun { run.hasHyphen() ? textWithHyphen : run.text(), run.logicalLeft() - lineLogicalLeft, run.expansion(), run.expansionBehavior() };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         FloatPoint textOrigin { rect.x() + paintOffset.x(), roundToDevicePixel(run.baselinePosition() + paintOffset.y(), deviceScaleFactor) };
 
@@ -183,50 +185,6 @@ void collectFlowOverflow(RenderBlockFlow& flow, const Layout& layout)
     }
 }
 
-IntRect computeBoundingBox(const RenderObject& renderer, const Layout& layout)
-{
-    auto& resolver = layout.runResolver();
-    FloatRect boundingBoxRect;
-    for (auto run : resolver.rangeForRenderer(renderer)) {
-        FloatRect rect = run.rect();
-        if (boundingBoxRect == FloatRect())
-            boundingBoxRect = rect;
-        else
-            boundingBoxRect.uniteEvenIfEmpty(rect);
-    }
-    return enclosingIntRect(boundingBoxRect);
-}
-
-IntPoint computeFirstRunLocation(const RenderObject& renderer, const Layout& layout)
-{
-    auto& resolver = layout.runResolver();
-    auto range = resolver.rangeForRenderer(renderer);
-    auto begin = range.begin();
-    if (begin == range.end())
-        return IntPoint(0, 0);
-    return flooredIntPoint((*begin).rect().location());
-}
-
-Vector<IntRect> collectAbsoluteRects(const RenderObject& renderer, const Layout& layout, const LayoutPoint& accumulatedOffset)
-{
-    Vector<IntRect> rects;
-    auto& resolver = layout.runResolver();
-    for (auto run : resolver.rangeForRenderer(renderer)) {
-        FloatRect rect = run.rect();
-        rects.append(enclosingIntRect(FloatRect(accumulatedOffset + rect.location(), rect.size())));
-    }
-    return rects;
-}
-
-Vector<FloatQuad> collectAbsoluteQuads(const RenderObject& renderer, const Layout& layout, bool* wasFixed)
-{
-    Vector<FloatQuad> quads;
-    auto& resolver = layout.runResolver();
-    for (auto run : resolver.rangeForRenderer(renderer))
-        quads.append(renderer.localToAbsoluteQuad(FloatQuad(run.rect()), UseTransforms, wasFixed));
-    return quads;
-}
-
 unsigned textOffsetForPoint(const LayoutPoint& point, const RenderText& renderer, const Layout& layout)
 {
     auto& flow = downcast<RenderBlockFlow>(*renderer.parent());
@@ -242,12 +200,14 @@ unsigned textOffsetForPoint(const LayoutPoint& point, const RenderText& renderer
     return run.start() + style.fontCascade().offsetForPosition(textRun, point.x() - run.logicalLeft(), true);
 }
 
-Vector<FloatQuad> collectAbsoluteQuadsForRange(const RenderObject& renderer, unsigned start, unsigned end, const Layout& layout, bool* wasFixed)
+Vector<FloatQuad> collectAbsoluteQuadsForRange(const RenderObject& renderer, unsigned start, unsigned end, const Layout& layout, bool ignoreEmptyTextSelections, bool* wasFixed)
 {
     auto& style = downcast<RenderBlockFlow>(*renderer.parent()).style();
     Vector<FloatQuad> quads;
     auto& resolver = layout.runResolver();
     for (auto run : resolver.rangeForRendererWithOffsets(renderer, start, end)) {
+        if (ignoreEmptyTextSelections && run.start() == run.end())
+            continue;
         // This run is fully contained.
         if (start <= run.start() && end >= run.end()) {
             quads.append(renderer.localToAbsoluteQuad(FloatQuad(run.rect()), UseTransforms, wasFixed));
@@ -267,14 +227,10 @@ Vector<FloatQuad> collectAbsoluteQuadsForRange(const RenderObject& renderer, uns
         auto localEnd = std::min(run.end(), end) - run.start();
         ASSERT(localStart <= localEnd);
         style.fontCascade().adjustSelectionRectForText(textRun, runRect, localStart, localEnd);
+        runRect = snappedSelectionRect(runRect, run.logicalRight(), runRect.y(), runRect.height(), true /* isHorizontal */);
         quads.append(renderer.localToAbsoluteQuad(FloatQuad(runRect), UseTransforms, wasFixed));
     }
     return quads;
-}
-
-const RenderObject& rendererForPosition(const FlowContents& flowContents, unsigned position)
-{
-    return flowContents.segmentForPosition(position).renderer;
 }
 
 void simpleLineLayoutWillBeDeleted(const Layout& layout)
@@ -392,7 +348,7 @@ static void printPrefix(TextStream& stream, int& printedCharacters, int depth)
         stream << " ";
 }
 
-void outputLineLayoutForFlow(TextStream& stream, const RenderBlockFlow& flow, const Layout& layout, int depth)
+void outputLineLayoutForFlow(TextStream& stream, const RenderBlockFlow&, const Layout& layout, int depth)
 {
     int printedCharacters = 0;
     printPrefix(stream, printedCharacters, depth);
@@ -401,7 +357,7 @@ void outputLineLayoutForFlow(TextStream& stream, const RenderBlockFlow& flow, co
     stream.nextLine();
     ++depth;
 
-    for (auto run : runResolver(flow, layout)) {
+    for (auto run : layout.runResolver()) {
         FloatRect rect = run.rect();
         printPrefix(stream, printedCharacters, depth);
         if (run.start() < run.end()) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,12 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     private boolean valid = false;
     private BindingHelperObserver observer;
     private ExpressionHelper<T> helper = null;
+
+    /**
+     * Creates a default {@code ObjectBinding}.
+     */
+    public ObjectBinding() {
+    }
 
     @Override
     public void addListener(InvalidationListener listener) {

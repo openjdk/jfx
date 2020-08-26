@@ -32,6 +32,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class ShortStringConverter extends StringConverter<Short> {
+
+    /**
+     * Creates a default {@code ShortStringConverter}.
+     */
+    public ShortStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Short fromString(String text) {
         // If the specified value is null or zero-length, return null

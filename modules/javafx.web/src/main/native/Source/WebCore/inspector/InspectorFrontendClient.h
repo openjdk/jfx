@@ -31,6 +31,8 @@
 #pragma once
 
 #include "CertificateInfo.h"
+#include "DiagnosticLoggingClient.h"
+#include "InspectorDebuggableType.h"
 #include "UserInterfaceLayoutDirection.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
@@ -56,11 +58,16 @@ public:
     virtual void startWindowDrag() = 0;
     virtual void moveWindowBy(float x, float y) = 0;
 
+    // Information about the debuggable.
     virtual bool isRemote() const = 0;
-    virtual String localizedStringsURL() = 0;
+    virtual String localizedStringsURL() const = 0;
+    virtual String backendCommandsURL() const = 0;
+    virtual Inspector::DebuggableType debuggableType() const = 0;
+    virtual String targetPlatformName() const = 0;
+    virtual String targetBuildVersion() const = 0;
+    virtual String targetProductVersion() const = 0;
+    virtual bool targetIsSimulator() const = 0;
     virtual unsigned inspectionLevel() const = 0;
-    virtual String backendCommandsURL() { return String(); };
-    virtual String debuggableType() { return "web"_s; }
 
     virtual void bringToFront() = 0;
     virtual void closeWindow() = 0;
@@ -83,6 +90,12 @@ public:
 
     virtual void inspectedURLChanged(const String&) = 0;
     virtual void showCertificate(const CertificateInfo&) = 0;
+
+#if ENABLE(INSPECTOR_TELEMETRY)
+    virtual bool supportsDiagnosticLogging() { return false; }
+    virtual bool diagnosticLoggingAvailable() { return false; }
+    virtual void logDiagnosticEvent(const String& /* eventName */, const DiagnosticLoggingClient::ValueDictionary&) { }
+#endif
 
     virtual void pagePaused() { }
     virtual void pageUnpaused() { }

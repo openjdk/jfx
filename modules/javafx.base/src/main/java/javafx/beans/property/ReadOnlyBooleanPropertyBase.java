@@ -41,6 +41,12 @@ public abstract class ReadOnlyBooleanPropertyBase extends ReadOnlyBooleanPropert
 
     ExpressionHelper<Boolean> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyBooleanPropertyBase}.
+     */
+    public ReadOnlyBooleanPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

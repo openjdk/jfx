@@ -31,6 +31,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "JSDOMGlobalObjectTask.h"
+#include "JSDOMGuardedObject.h"
 #include "JSWorkletGlobalScope.h"
 #include "WorkletGlobalScope.h"
 #include "WorkletScriptController.h"
@@ -48,7 +49,7 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    nullptr, // queueTaskToEventLoop
+    nullptr, // queueMicrotaskToEventLoop
     &shouldInterruptScriptBeforeTimeout,
     nullptr, // moduleLoaderImportModule
     nullptr, // moduleLoaderResolve
@@ -121,12 +122,12 @@ RuntimeFlags JSWorkletGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObje
     return thisObject->m_wrapped->jsRuntimeFlags();
 }
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject*, WorkletGlobalScope& workletGlobalScope)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
-    return toJS(exec, workletGlobalScope);
+    return toJS(lexicalGlobalObject, workletGlobalScope);
 }
 
-JSValue toJS(ExecState*, WorkletGlobalScope& workletGlobalScope)
+JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
     if (!workletGlobalScope.script())
         return jsUndefined();

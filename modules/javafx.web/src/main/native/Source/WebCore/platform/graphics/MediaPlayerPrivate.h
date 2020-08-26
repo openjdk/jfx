@@ -38,7 +38,9 @@ public:
     MediaPlayerPrivateInterface() = default;
     virtual ~MediaPlayerPrivateInterface() = default;
 
-    virtual void load(const String& url) = 0;
+    virtual void load(const String&) { }
+    virtual void load(const URL& url, const ContentType&, const String&) { load(url.string()); }
+
 #if ENABLE(MEDIA_SOURCE)
     virtual void load(const String& url, MediaSourcePrivateClient*) = 0;
 #endif
@@ -47,8 +49,17 @@ public:
 #endif
     virtual void cancelLoad() = 0;
 
+    virtual void prepareForPlayback(bool privateMode, MediaPlayer::Preload preload, bool preservesPitch, bool prepare)
+    {
+        setPrivateBrowsingMode(privateMode);
+        setPreload(preload);
+        setPreservesPitch(preservesPitch);
+        if (prepare)
+            prepareForRendering();
+    }
+
     virtual void prepareToPlay() { }
-    virtual PlatformLayer* platformLayer() const { return 0; }
+    virtual PlatformLayer* platformLayer() const { return nullptr; }
 
 #if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     virtual void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler) { completionHandler(); }
@@ -60,7 +71,7 @@ public:
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    virtual NSArray *timedMetadata() const { return 0; }
+    virtual NSArray *timedMetadata() const { return nil; }
     virtual String accessLog() const { return emptyString(); }
     virtual String errorLog() const { return emptyString(); }
 #endif
@@ -141,20 +152,17 @@ public:
     virtual unsigned long long totalBytes() const { return 0; }
     virtual bool didLoadingProgress() const = 0;
 
-    virtual void setSize(const IntSize&) = 0;
+    virtual void setSize(const IntSize&) { }
 
     virtual void paint(GraphicsContext&, const FloatRect&) = 0;
 
     virtual void paintCurrentFrameInContext(GraphicsContext& c, const FloatRect& r) { paint(c, r); }
-    virtual bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject, GC3Denum, GC3Dint, GC3Denum, GC3Denum, GC3Denum, bool, bool) { return false; }
+    virtual bool copyVideoTextureToPlatformTexture(GraphicsContextGLOpenGL*, PlatformGLObject, GCGLenum, GCGLint, GCGLenum, GCGLenum, GCGLenum, bool, bool) { return false; }
     virtual NativeImagePtr nativeImageForCurrentTime() { return nullptr; }
 
     virtual void setPreload(MediaPlayer::Preload) { }
 
-    virtual bool hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::HaveCurrentData; }
-
-    virtual bool canLoadPoster() const { return false; }
-    virtual void setPoster(const String&) { }
+    virtual bool hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::ReadyState::HaveCurrentData; }
 
 #if USE(NATIVE_FULLSCREEN_VIDEO)
     virtual void enterFullscreen() { }
@@ -192,7 +200,7 @@ public:
     virtual bool didPassCORSAccessCheck() const { return false; }
     virtual Optional<bool> wouldTaintOrigin(const SecurityOrigin&) const { return WTF::nullopt; }
 
-    virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::Unknown; }
+    virtual MediaPlayer::MovieLoadType movieLoadType() const { return MediaPlayer::MovieLoadType::Unknown; }
 
     virtual void prepareForRendering() { }
 

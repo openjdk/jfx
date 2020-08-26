@@ -61,23 +61,24 @@ Optional<PresentationSize> PresentationSize::decode(Decoder& decoder)
     if (!decoder.decode(result.height))
         return WTF::nullopt;
 
-    return WTFMove(result);
+    return result;
 }
 
 struct PasteboardItemInfo {
     Vector<String> pathsForFileUpload;
-    Vector<String> contentTypesForFileUpload;
-    Vector<String> contentTypesByFidelity;
+    Vector<String> platformTypesForFileUpload;
+    Vector<String> platformTypesByFidelity;
     String suggestedFileName;
     PresentationSize preferredPresentationSize;
     bool isNonTextType { false };
     bool containsFileURLAndFileUploadContent { false };
+    Vector<String> webSafeTypesByFidelity;
     PasteboardItemPresentationStyle preferredPresentationStyle { PasteboardItemPresentationStyle::Unspecified };
 
     String pathForContentType(const String& type) const
     {
-        ASSERT(pathsForFileUpload.size() == contentTypesForFileUpload.size());
-        auto index = contentTypesForFileUpload.find(type);
+        ASSERT(pathsForFileUpload.size() == platformTypesForFileUpload.size());
+        auto index = platformTypesForFileUpload.find(type);
         if (index == notFound)
             return { };
 
@@ -104,10 +105,10 @@ struct PasteboardItemInfo {
 
     String contentTypeForHighestFidelityItem() const
     {
-        if (contentTypesForFileUpload.isEmpty())
+        if (platformTypesForFileUpload.isEmpty())
             return { };
 
-        return contentTypesForFileUpload.first();
+        return platformTypesForFileUpload.first();
     }
 
     String pathForHighestFidelityItem() const
@@ -125,7 +126,7 @@ struct PasteboardItemInfo {
 template<class Encoder>
 void PasteboardItemInfo::encode(Encoder& encoder) const
 {
-    encoder << pathsForFileUpload << contentTypesForFileUpload << contentTypesByFidelity << suggestedFileName << preferredPresentationSize << isNonTextType << containsFileURLAndFileUploadContent;
+    encoder << pathsForFileUpload << platformTypesForFileUpload << platformTypesByFidelity << suggestedFileName << preferredPresentationSize << isNonTextType << containsFileURLAndFileUploadContent << webSafeTypesByFidelity;
     encoder.encodeEnum(preferredPresentationStyle);
 }
 
@@ -136,10 +137,10 @@ Optional<PasteboardItemInfo> PasteboardItemInfo::decode(Decoder& decoder)
     if (!decoder.decode(result.pathsForFileUpload))
         return WTF::nullopt;
 
-    if (!decoder.decode(result.contentTypesForFileUpload))
+    if (!decoder.decode(result.platformTypesForFileUpload))
         return WTF::nullopt;
 
-    if (!decoder.decode(result.contentTypesByFidelity))
+    if (!decoder.decode(result.platformTypesByFidelity))
         return WTF::nullopt;
 
     if (!decoder.decode(result.suggestedFileName))
@@ -154,10 +155,13 @@ Optional<PasteboardItemInfo> PasteboardItemInfo::decode(Decoder& decoder)
     if (!decoder.decode(result.containsFileURLAndFileUploadContent))
         return WTF::nullopt;
 
+    if (!decoder.decode(result.webSafeTypesByFidelity))
+        return WTF::nullopt;
+
     if (!decoder.decodeEnum(result.preferredPresentationStyle))
         return WTF::nullopt;
 
-    return WTFMove(result);
+    return result;
 }
 
 }

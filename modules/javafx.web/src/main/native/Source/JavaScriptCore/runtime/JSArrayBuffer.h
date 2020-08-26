@@ -33,7 +33,13 @@ namespace JSC {
 class JSArrayBuffer final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static const unsigned StructureFlags = Base::StructureFlags;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.arrayBufferSpace<mode>();
+    }
 
 protected:
     JSArrayBuffer(VM&, Structure*, RefPtr<ArrayBuffer>&&);

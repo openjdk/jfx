@@ -27,7 +27,7 @@
 
 #if ENABLE(INTL)
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 
 struct UCollator;
 
@@ -36,18 +36,31 @@ namespace JSC {
 class IntlCollatorConstructor;
 class JSBoundFunction;
 
-class IntlCollator final : public JSDestructibleObject {
+class IntlCollator final : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+
+    static void destroy(JSCell* cell)
+    {
+        static_cast<IntlCollator*>(cell)->IntlCollator::~IntlCollator();
+    }
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.intlCollatorSpace<mode>();
+    }
 
     static IntlCollator* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-    void initializeCollator(ExecState&, JSValue locales, JSValue optionsValue);
-    JSValue compareStrings(ExecState&, StringView, StringView);
-    JSObject* resolvedOptions(ExecState&);
+    void initializeCollator(JSGlobalObject*, JSValue locales, JSValue optionsValue);
+    JSValue compareStrings(JSGlobalObject*, StringView, StringView);
+    JSObject* resolvedOptions(JSGlobalObject*);
 
     JSBoundFunction* boundCompare() const { return m_boundCompare.get(); }
     void setBoundCompare(VM&, JSBoundFunction*);
@@ -55,7 +68,6 @@ public:
 protected:
     IntlCollator(VM&, Structure*);
     void finishCreation(VM&);
-    static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
 private:
@@ -67,7 +79,7 @@ private:
         void operator()(UCollator*) const;
     };
 
-    void createCollator(ExecState&);
+    void createCollator(JSGlobalObject*);
     static ASCIILiteral usageString(Usage);
     static ASCIILiteral sensitivityString(Sensitivity);
     static ASCIILiteral caseFirstString(CaseFirst);

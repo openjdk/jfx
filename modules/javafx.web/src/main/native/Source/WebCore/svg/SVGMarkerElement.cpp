@@ -33,7 +33,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGMarkerElement);
 
 inline SVGMarkerElement::SVGMarkerElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGFitToViewBox(this)
 {
     // Spec: If the markerWidth/markerHeight attribute is not specified, the effect is as if a value of "3" were specified.
@@ -79,18 +78,17 @@ void SVGMarkerElement::parseAttribute(const QualifiedName& name, const AtomStrin
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::refXAttr)
-        m_refX->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_refX->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::refYAttr)
-        m_refY->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_refY->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::markerWidthAttr)
-        m_markerWidth->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_markerWidth->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::markerHeightAttr)
-        m_markerHeight->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_markerHeight->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
 
     reportAttributeParsingError(parseError, name, value);
 
     SVGElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
     SVGFitToViewBox::parseAttribute(name, value);
 }
 
@@ -112,7 +110,6 @@ void SVGMarkerElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 void SVGMarkerElement::childrenChanged(const ChildChange& change)
@@ -126,21 +123,24 @@ void SVGMarkerElement::childrenChanged(const ChildChange& change)
         object->setNeedsLayout();
 }
 
-void SVGMarkerElement::setOrient(SVGMarkerOrientType orientType, const SVGAngleValue& angle)
+String SVGMarkerElement::orient() const
 {
-    m_orientType->setBaseValInternal(orientType);
-    m_orientAngle->setBaseValInternal(angle);
-    m_orientAngle->baseVal()->commitChange();
+    return getAttribute(SVGNames::orientAttr);
+}
+
+void SVGMarkerElement::setOrient(const String& orient)
+{
+    setAttribute(SVGNames::orientAttr, orient);
 }
 
 void SVGMarkerElement::setOrientToAuto()
 {
-    setOrient(SVGMarkerOrientAuto, { });
+    m_orientType->setBaseVal(SVGMarkerOrientAuto);
 }
 
-void SVGMarkerElement::setOrientToAngle(SVGAngle& angle)
+void SVGMarkerElement::setOrientToAngle(const SVGAngle& angle)
 {
-    setOrient(SVGMarkerOrientAngle, angle.value());
+    m_orientAngle->baseVal()->newValueSpecifiedUnits(angle.unitType(), angle.valueInSpecifiedUnits());
 }
 
 RenderPtr<RenderElement> SVGMarkerElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
