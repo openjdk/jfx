@@ -1341,7 +1341,7 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
-    @Test public void test_EditorKeyInputsWhenPopupIsShowing() {
+    @Test public void testEditorKeyInputsWhenPopupIsShowing() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
         StageLoader sl = new StageLoader(cb);

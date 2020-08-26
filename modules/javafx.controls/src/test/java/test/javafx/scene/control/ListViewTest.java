@@ -178,7 +178,7 @@ public class ListViewTest {
         assertSame(sm, sm);
     }
 
-    @Test public void test_SwitchingSelectionModel() {
+    @Test public void testCtrlAWhenSwitchingSelectionModel() {
         ListView<String> listView = new ListView<>();
         listView.getItems().addAll("a", "b", "c", "d");
 
@@ -1506,7 +1506,7 @@ public class ListViewTest {
         sl.dispose();
     }
 
-    @Test public void test_switchingSelectionMode() {
+    @Test public void testCtrlAWhenSwitchingSelectionMode() {
         ListView<String> listView = new ListView<>();
         listView.getItems().addAll("a", "b", "c", "d");
 
@@ -1521,6 +1521,7 @@ public class ListViewTest {
         assertEquals(1, sm.getSelectedItems().size());
 
         sm.setSelectionMode(SelectionMode.MULTIPLE);
+        assertEquals(1, sm.getSelectedItems().size());
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
         assertEquals(4, sm.getSelectedItems().size());
 
@@ -1528,11 +1529,6 @@ public class ListViewTest {
         assertEquals(1, sm.getSelectedItems().size());
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
         assertEquals(1, sm.getSelectedItems().size());
-
-        sm.setSelectionMode(SelectionMode.MULTIPLE);
-        assertEquals(1, sm.getSelectedItems().size());
-        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
-        assertEquals(4, sm.getSelectedItems().size());
 
         sl.dispose();
     }
@@ -2052,7 +2048,6 @@ public class ListViewTest {
     @Test public void testExcludeKeyMappingsForComboBoxEditor() {
         ListView<String> listView = new ListView<>(FXCollections
                 .observableArrayList("Item1", "Item2"));
-        listView.setCellFactory(TextFieldListCell.forListView());
         StageLoader sl = new StageLoader(listView);
 
         ListViewBehavior lvBehavior = (ListViewBehavior) ControlSkinFactory.getBehavior(listView.getSkin());
