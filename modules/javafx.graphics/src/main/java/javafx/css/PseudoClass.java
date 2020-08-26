@@ -75,7 +75,7 @@ import com.sun.javafx.css.PseudoClassState;
 public abstract class PseudoClass {
 
     /**
-     * Creates a default {@code PseudoClass}.
+     * Constructor for subclasses to call.
      */
     public PseudoClass() {
     }

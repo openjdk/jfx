@@ -50,7 +50,7 @@ public final class DirectoryChooser {
     private StringProperty title;
 
     /**
-     * Creates a default {@code DirectoryChooser}.
+     * Creates a {@code DirectoryChooser}.
      */
     public DirectoryChooser() {
     }

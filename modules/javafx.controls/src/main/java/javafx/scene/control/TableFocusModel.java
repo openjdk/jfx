@@ -43,7 +43,7 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
      **********************************************************************/
 
     /**
-     * Creates a default {@code TableFocusModel}.
+     * Constructor for subclasses to call.
      */
     public TableFocusModel() {
     }

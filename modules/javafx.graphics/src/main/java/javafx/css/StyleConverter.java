@@ -87,7 +87,7 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
-     * Creates a default {@code StyleConverter}.
+     * Creates a {@code StyleConverter}.
      */
     public StyleConverter() {
     }

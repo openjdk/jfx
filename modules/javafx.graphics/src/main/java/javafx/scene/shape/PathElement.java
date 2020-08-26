@@ -72,7 +72,7 @@ public abstract class PathElement {
     WeakReferenceQueue nodes = new WeakReferenceQueue();
 
     /**
-     * Creates a default {@code PathElement}.
+     * Constructor for subclasses to call.
      */
     public PathElement() {
     }

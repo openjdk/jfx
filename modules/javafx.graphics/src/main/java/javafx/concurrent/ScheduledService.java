@@ -146,7 +146,7 @@ import java.util.TimerTask;
 public abstract class ScheduledService<V> extends Service<V> {
 
     /**
-     * Creates a default {@code ScheduledService}.
+     * Constructor for subclasses to call.
      */
     public ScheduledService() {
     }

@@ -38,7 +38,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<T> {
 
     /**
-     * Creates a default {@code TableSelectionModel}.
+     * Constructor for subclasses to call.
      */
     public TableSelectionModel() {
     }

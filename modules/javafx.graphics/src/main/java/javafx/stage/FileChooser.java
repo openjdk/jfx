@@ -205,7 +205,7 @@ public final class FileChooser {
     private StringProperty title;
 
     /**
-     * Creates a default {@code FileChooser}.
+     * Creates a {@code FileChooser}.
      */
     public FileChooser() {
     }

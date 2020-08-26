@@ -39,7 +39,7 @@ import javafx.scene.Node;
 public class Popup extends PopupWindow {
 
     /**
-     * Creates a default {@code Popup}.
+     * Creates a {@code Popup}.
      */
     public Popup() {
     }

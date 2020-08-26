@@ -40,7 +40,7 @@ import javafx.scene.image.Image;
 public class ClipboardContent extends HashMap<DataFormat, Object> {
 
     /**
-     * Creates a default {@code ClipboardContent}.
+     * Creates a {@code ClipboardContent}.
      */
     public ClipboardContent() {
     }

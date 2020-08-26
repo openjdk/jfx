@@ -115,7 +115,7 @@ public abstract class Preloader extends Application {
     }
 
     /**
-     * Creates a default {@code Preloader}.
+     * Constructor for subclasses to call.
      */
     public Preloader() {
     }
