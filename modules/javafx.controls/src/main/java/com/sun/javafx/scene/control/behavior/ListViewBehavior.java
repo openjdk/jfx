@@ -26,6 +26,8 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.Utils;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -138,7 +140,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown())
         );
 
-        if (!Boolean.TRUE.equals(control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor"))) {
+        if (Boolean.FALSE.equals(control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor"))) {
+            // This is not ComboBox's ListView
             addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
             addDefaultMapping(listViewInputMap,
                     new KeyMapping(HOME, e -> selectFirstRow()),
@@ -154,7 +157,17 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
                     new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
                     new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
             );
+        } else {
+            // This is ComboBox's ListView
+            if (Boolean.FALSE.equals(control.getProperties().get("editableComboBoxEditor"))) {
+                // ComboBox is not editable
+                addDefaultMapping(listViewInputMap,
+                        new KeyMapping(HOME, e -> selectFirstRow()),
+                        new KeyMapping(END, e -> selectLastRow())
+                );
+            }
         }
+        control.getProperties().addListener(weakPropertiesListener);
 
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 
@@ -219,6 +232,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         ListView<T> control = getNode();
 
         ListCellBehavior.removeAnchor(control);
+        control.getProperties().removeListener(weakPropertiesListener);
         control.selectionModelProperty().removeListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().removeListener(weakSelectedIndicesListener);
@@ -340,6 +354,26 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
+    private final InvalidationListener propertiesListener = inv -> {
+        Boolean isComboBoxEditable = (Boolean)getNode().getProperties().get("editableComboBoxEditor");
+        if (isComboBoxEditable != null) {
+            // This is ComboBox's ListView
+            if (isComboBoxEditable) {
+                // ComboBox is editable.
+                removeMapping(new KeyBinding(HOME));
+                removeMapping(new KeyBinding(END));
+            } else {
+                // ComboBox is not editable
+                addDefaultMapping(getInputMap(),
+                        new KeyMapping(HOME, e -> selectFirstRow()),
+                        new KeyMapping(END, e -> selectLastRow())
+                );
+            }
+        }
+    };
+
+    private final WeakInvalidationListener weakPropertiesListener =
+            new WeakInvalidationListener(propertiesListener);
     private final WeakChangeListener<ObservableList<T>> weakItemsListener =
             new WeakChangeListener<ObservableList<T>>(itemsListener);
     private final WeakListChangeListener<Integer> weakSelectedIndicesListener =

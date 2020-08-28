@@ -185,7 +185,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateValue();
             control.fireEvent(new ActionEvent());
         });
-        registerChangeListener(control.editableProperty(), e -> updateEditable());
+        registerChangeListener(control.editableProperty(), e -> {
+            updateEditable();
+            listView.getProperties().put("editableComboBoxEditor", getSkinnable().isEditable());
+        });
 
         // Refer to JDK-8095306
         if (comboBox.isShowing()) {
@@ -505,6 +508,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             {
                 getProperties().put("selectFirstRowByDefault", false);
                 getProperties().put("excludeKeyMappingsForComboBoxEditor", true);
+                getProperties().put("editableComboBoxEditor", getSkinnable().isEditable());
             }
 
             @Override protected double computeMinHeight(double width) {
