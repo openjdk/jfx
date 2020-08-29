@@ -2052,34 +2052,36 @@ public class ListViewTest {
 
         ListViewBehavior lvBehavior = (ListViewBehavior) ControlSkinFactory.getBehavior(listView.getSkin());
         InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        ObservableList<?> inputMappings = lvInputMap.getMappings();
         // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
         InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+        ObservableList<?> verticalInputMappings = verticalInputMap.getMappings();
 
         // Verify FocusTraversalInputMap
         for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
-            assertTrue(lvInputMap.getMappings().contains(mapping));
+            assertTrue(inputMappings.contains(mapping));
         }
 
         // Verify default InputMap
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shift(), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shift(), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut(), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shortcut(), null)));
-        assertTrue(lvInputMap.getMappings().contains(
+        assertTrue(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.A).shortcut(), null)));
 
         // Verify vertical child InputMap
-        assertTrue(verticalInputMap.getMappings().contains(
+        assertTrue(verticalInputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut().shift(), null)));
-        assertTrue(verticalInputMap.getMappings().contains(
+        assertTrue(verticalInputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shortcut().shift(), null)));
 
         sl.dispose();

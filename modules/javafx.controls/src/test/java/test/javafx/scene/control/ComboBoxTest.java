@@ -1462,37 +1462,60 @@ public class ComboBoxTest {
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         ListViewBehavior lvBehavior = (ListViewBehavior)ControlSkinFactory.getBehavior(listView.getSkin());
         InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        ObservableList<?> inputMappings = lvInputMap.getMappings();
         // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
         InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+        ObservableList<?> verticalInputMappings = verticalInputMap.getMappings();
 
+        cb.setEditable(true);
+        testKeyMappingsForEditableCB(inputMappings);
+        testCommonKeyMappings(inputMappings, verticalInputMappings);
+
+        cb.setEditable(false);
+        testKeyMappingsForNonEditableCB(inputMappings);
+        testCommonKeyMappings(inputMappings, verticalInputMappings);
+
+        sl.dispose();
+    }
+
+    private void testKeyMappingsForEditableCB(ObservableList<?> inputMappings) {
+        assertFalse(inputMappings.contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
+        assertFalse(inputMappings.contains(
+                new KeyMapping(new KeyBinding(KeyCode.END), null)));
+    }
+
+    private void testKeyMappingsForNonEditableCB(ObservableList<?> inputMappings) {
+        assertTrue(inputMappings.contains(
+                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
+        assertTrue(inputMappings.contains(
+                new KeyMapping(new KeyBinding(KeyCode.END), null)));
+    }
+
+    private void testCommonKeyMappings(ObservableList<?> inputMappings,
+                                       ObservableList<?> verticalInputMappings) {
         // Verify FocusTraversalInputMap
         for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
-            assertFalse(lvInputMap.getMappings().contains(mapping));
+            assertFalse(inputMappings.contains(mapping));
         }
 
         // Verify default InputMap
-        assertFalse(lvInputMap.getMappings().contains(
-                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
-        assertFalse(lvInputMap.getMappings().contains(
-                new KeyMapping(new KeyBinding(KeyCode.END), null)));
-        assertFalse(lvInputMap.getMappings().contains(
+        assertFalse(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shift(), null)));
-        assertFalse(lvInputMap.getMappings().contains(
+        assertFalse(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shift(), null)));
-        assertFalse(lvInputMap.getMappings().contains(
+        assertFalse(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut(), null)));
-        assertFalse(lvInputMap.getMappings().contains(
+        assertFalse(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shortcut(), null)));
-        assertFalse(lvInputMap.getMappings().contains(
+        assertFalse(inputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.A).shortcut(), null)));
 
         // Verify vertical child InputMap
-        assertFalse(verticalInputMap.getMappings().contains(
+        assertFalse(verticalInputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut().shift(), null)));
-        assertFalse(verticalInputMap.getMappings().contains(
+        assertFalse(verticalInputMappings.contains(
                 new KeyMapping(new KeyBinding(KeyCode.END).shortcut().shift(), null)));
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {

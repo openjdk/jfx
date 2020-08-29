@@ -140,7 +140,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown())
         );
 
-        if (Boolean.FALSE.equals(control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor"))) {
+        if (!control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor")) {
             // This is not ComboBox's ListView
             addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
             addDefaultMapping(listViewInputMap,
@@ -355,20 +355,16 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     };
 
     private final InvalidationListener propertiesListener = inv -> {
-        Boolean isComboBoxEditable = (Boolean)getNode().getProperties().get("editableComboBoxEditor");
-        if (isComboBoxEditable != null) {
-            // This is ComboBox's ListView
-            if (isComboBoxEditable) {
-                // ComboBox is editable.
-                removeMapping(new KeyBinding(HOME));
-                removeMapping(new KeyBinding(END));
-            } else {
-                // ComboBox is not editable
-                addDefaultMapping(getInputMap(),
-                        new KeyMapping(HOME, e -> selectFirstRow()),
-                        new KeyMapping(END, e -> selectLastRow())
-                );
-            }
+        if (Boolean.FALSE.equals(getNode().getProperties().get("editableComboBoxEditor"))) {
+            // ListView's ComboBox is non editable
+            addDefaultMapping(getInputMap(),
+                    new KeyMapping(HOME, e -> selectFirstRow()),
+                    new KeyMapping(END, e -> selectLastRow())
+            );
+        } else if (Boolean.TRUE.equals(getNode().getProperties().get("editableComboBoxEditor"))) {
+            // ListView's ComboBox is editable
+            removeMapping(new KeyBinding(HOME));
+            removeMapping(new KeyBinding(END));
         }
     };
 
