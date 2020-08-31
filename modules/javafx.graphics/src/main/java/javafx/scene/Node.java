@@ -321,9 +321,21 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * A <b>shearing</b> transformation, sometimes called a skew, effectively
  * rotates one axis so that the x and y axes are no longer perpendicular.
  * <p>
- * Multiple transformations may be applied to a node by specifying an ordered
- * chain of transforms.  The order in which the transforms are applied is
- * defined by the ObservableList specified in the {@link #getTransforms transforms} variable.
+ * 
+ * Multiple transformations may be applied to a node. Custom transforms are applied using the
+ * {@link #getTransforms transforms} list. Predefined transforms are applied using the properties specified below.
+ * The matrices that represent the transforms are multiplied in this order:
+ * <ol> 
+ * <li> Layout ({@link #layoutXProperty layoutX}), {@link #layoutYProperty layoutY} and translate
+ * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})
+ * <li> Rotate ({@link #rotateProperty rotate})
+ * <li> Scale ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ})
+ * <li> Transforms list ({@link #getTransforms transforms}) starting from element 0
+ * </ol>
+ * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
+ * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bound in the local
+ * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the <b>Bounding Rectangles</b>
+ * section).  
  *
  * <h2>Bounding Rectangles</h2>
  * <p>
@@ -340,9 +352,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p>
  * Each {@code Node} also has a read-only {@link #boundsInParentProperty boundsInParent} variable which
  * specifies the bounding rectangle of the {@code Node} after all transformations
- * have been applied, including those set in {@link #getTransforms transforms},
- * {@link #scaleXProperty scaleX}/{@link #scaleYProperty scaleY}, {@link #rotateProperty rotate},
- * {@link #translateXProperty translateX}/{@link #translateYProperty translateY}, and {@link #layoutXProperty layoutX}/{@link #layoutYProperty layoutY}.
+ * have been applied as specified in the <b>Transformations</b> section.
  * It is called "boundsInParent" because the rectangle will be relative to the
  * parent's coordinate system.  This is the 'visual' bounds of the node.
  * <p>
@@ -3388,21 +3398,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The rectangular bounds of this {@code Node} which include its transforms.
-     * {@code boundsInParent} is calculated by
-     * taking the local bounds (defined by {@link #boundsInLocalProperty boundsInLocal}) and applying
-     * the transform created by setting the following additional variables
-     * <ol>
-     * <li>{@link #getTransforms transforms} ObservableList</li>
-     * <li>{@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ}</li>
-     * <li>{@link #rotateProperty rotate}</li>
-     * <li>{@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}</li>
-     * <li>{@link #translateXProperty translateX}, {@link #translateYProperty translateY},
-     * {@link #translateZProperty translateZ}</li>
-     * </ol>
+     * The rectangular bounds of this {@code Node} in the parent coordinate system.
+     * {@code boundsInParent} is calculated by taking the {@linkplain #boundsInLocalProperty local bounds} and applying
+     * the node transforms as specified in the {@linkplain Node Transformations} section of the class doc. 
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
-     * {@code Node}'s parent, however the node need not have a parent to calculate
+     * {@code Node}'s parent, however, the node need not have a parent to calculate
      * these bounds.
      * <p>
      * Note that this method does not take the node's visibility into account;
@@ -3418,7 +3419,9 @@ public abstract class Node implements EventTarget, Styleable {
      * this variable. For example, the x or y variables of a shape, or
      * {@code translateX}, {@code translateY} should never be bound to
      * {@code boundsInParent} for the purpose of positioning the node.
-     * @return the boundsInParent for this {@code Node}
+     *
+     * @return the {@code boundsInParent} property for this {@code Node}
+     * @see {@linkplain Node Bounding Rectangles} section in the class docs
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInParentProperty() {
         return getMiscProperties().boundsInParentProperty();
@@ -5519,10 +5522,9 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
     /**
-     * Defines the ObservableList of {@link javafx.scene.transform.Transform} objects
-     * to be applied to this {@code Node}. This ObservableList of transforms is applied
-     * before {@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #scaleXProperty scaleX}, and
-     * {@link #scaleYProperty scaleY}, {@link #rotateProperty rotate} transforms.
+     * The {@code ObservableList} of custom {@link javafx.scene.transform.Transform}s
+     * to be applied to this {@code Node}. These transforms are applied before the predefined transforms. See the
+     * {@linkplain Node Transformations} section of the class docs for more information about transformation types and order.
      *
      * @return the transforms for this {@code Node}
      * @defaultValue empty
