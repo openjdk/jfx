@@ -324,7 +324,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * Multiple transformations may be applied to a node. Custom transforms are applied using the
  * {@link #getTransforms transforms} list. Predefined transforms are applied using the properties specified below.
  * The matrices that represent the transforms are multiplied in this order:
- * <ol> 
+ * <ol>
  * <li> Layout ({@link #layoutXProperty layoutX}), {@link #layoutYProperty layoutY} and translate
  * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})
  * <li> Rotate ({@link #rotateProperty rotate})
@@ -334,7 +334,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
  * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bound in the local
  * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the <b>Bounding Rectangles</b>
- * section).  
+ * section).
  *
  * <h2>Bounding Rectangles</h2>
  * <p>
@@ -3399,7 +3399,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The rectangular bounds of this {@code Node} in the parent coordinate system.
      * {@code boundsInParent} is calculated by taking the {@linkplain #boundsInLocalProperty local bounds} and applying
-     * the node transforms as specified in the {@linkplain Node Transformations} section of the class doc. 
+     * the node transforms as specified in the {@linkplain Node Transformations} section of the class doc.
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
      * {@code Node}'s parent, however, the node need not have a parent to calculate
