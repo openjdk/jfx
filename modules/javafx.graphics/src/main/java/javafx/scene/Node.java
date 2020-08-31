@@ -321,7 +321,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * A <b>shearing</b> transformation, sometimes called a skew, effectively
  * rotates one axis so that the x and y axes are no longer perpendicular.
  * <p>
- * 
  * Multiple transformations may be applied to a node. Custom transforms are applied using the
  * {@link #getTransforms transforms} list. Predefined transforms are applied using the properties specified below.
  * The matrices that represent the transforms are multiplied in this order:
