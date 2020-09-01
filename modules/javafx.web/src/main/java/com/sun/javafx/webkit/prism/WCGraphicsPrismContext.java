@@ -570,6 +570,44 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }.paint();
     }
 
+    private void fillShapeMasked(Graphics g, Shape shape, Paint paint) {
+        Rectangle clipRectangle = getClipRectNoClone();
+        RTTexture paintRtTexture = g.getResourceFactory().createRTTexture(
+                clipRectangle.width, clipRectangle.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+        Graphics g1 = paintRtTexture.createGraphics();
+        state.apply(g1);
+        g1.setPaint(paint);
+        g1.fill(shape);
+
+        RTImage maskImage = (RTImage) (state.getClipMaskImageNoClone());
+        Image nativeMaskImage = Image.fromByteBgraPreData(maskImage.getPixelBuffer(), maskImage.getWidth(),
+                maskImage.getHeight(), 0, maskImage.getPixelScale());
+        Texture maskTexture = g.getResourceFactory().createTexture(PixelFormat.BYTE_BGRA_PRE,
+                Texture.Usage.STATIC, Texture.WrapMode.CLAMP_NOT_NEEDED,
+                nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+        maskTexture.update(nativeMaskImage, 0, 0, nativeMaskImage.getWidth(),
+                nativeMaskImage.getHeight());
+        RTTexture maskRtTexture = g.getResourceFactory().createRTTexture(clipRectangle.width,
+                clipRectangle.height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+        Graphics g2 = maskRtTexture.createGraphics();
+        g2.drawTexture(maskTexture, 0, 0, clipRectangle.width, clipRectangle.height,
+                0, 0, nativeMaskImage.getWidth(), nativeMaskImage.getHeight());
+        maskTexture.dispose();
+        FilterContext filterContext = getFilterContext(g);
+        PrDrawable imagePrDrawable = PrDrawable.create(filterContext, paintRtTexture);
+        PrDrawable maskPrDrawable = PrDrawable.create(filterContext, maskRtTexture);
+        Blend blend = new Blend(Blend.Mode.SRC_IN,
+                new PassThrough(maskPrDrawable, clipRectangle.width, clipRectangle.height),
+                new PassThrough(imagePrDrawable, clipRectangle.width, clipRectangle.height));
+
+        Affine3D tx = new Affine3D(g.getTransformNoClone());
+        g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
+        PrEffectHelper.render(blend, g, clipRectangle.x, clipRectangle.y, null);
+        g.setTransform(tx);
+        paintRtTexture.dispose();
+        maskRtTexture.dispose();
+    }
+
     @Override
     public void fillRoundedRect(final float x, final float y, final float w, final float h,
         final float topLeftW, final float topLeftH, final float topRightW, final float topRightH,
@@ -599,6 +637,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, arcW, arcH);
                     render(g, shadow, paint, null, node);
+                } else if (state.getClipMaskImageNoClone() != null) {
+                    fillShapeMasked(g, new RoundRectangle2D(x, y, w, h, arcW, arcH), paint);
                 } else {
                     g.setPaint(paint);
                     g.fillRoundRect(x, y, w, h, arcW, arcH);
@@ -1844,6 +1884,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         final NGPath node = new NGPath();
                         node.updateWithPath2d(p2d);
                         render(g, shadow, paint, null, node);
+                    } else if (state.getClipMaskImageNoClone() != null) {
+                        fillShapeMasked(g, p2d, paint);
                     } else {
                         g.setPaint(paint);
                         g.fill(p2d);
