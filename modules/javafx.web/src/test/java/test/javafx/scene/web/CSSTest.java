@@ -358,30 +358,4 @@ public class CSSTest extends TestBase {
             assertFalse("Color should not be blue:" + pixelAt199x199, isColorsSimilar(Color.BLUE, pixelAt199x199, 1));
         });
     }
-
-    @Test public void testCSSFilterRendering() {
-        load(new File("src/test/resources/test/html/simpleImagewithfilter.html"));
-        submit(() -> {
-            final WebPage webPage = WebEngineShim.getPage(getEngine());
-            assertNotNull(webPage);
-            final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
-            assertNotNull(img);
-
-            final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
-            assertTrue("Color should be opaque white:" + pixelAt0x0, isColorsSimilar(Color.WHITE, pixelAt0x0, 10));
-            final Color pixelAt5x0 = new Color(img.getRGB(5, 0), true);
-            assertTrue("Color should be opaque white:" + pixelAt5x0, isColorsSimilar(Color.WHITE, pixelAt5x0, 10));
-            final Color pixelAt0x5 = new Color(img.getRGB(0, 5), true);
-            assertTrue("Color should be opaque white:" + pixelAt0x5, isColorsSimilar(Color.WHITE, pixelAt0x5, 10));
-
-            final Color pixelAt25x25 = new Color(img.getRGB(25, 25), true);
-            assertTrue("Color should be opaque blue:" + pixelAt25x25, isColorsSimilar(new Color(0, 11, 255), pixelAt25x25, 1));
-            final Color pixelAt190x200 = new Color(img.getRGB(190, 200), true);
-            assertTrue("Color should be opaque blue:" + pixelAt190x200, isColorsSimilar(new Color(0, 11, 255), pixelAt190x200, 1));
-            final Color pixelAt200x190 = new Color(img.getRGB(200, 190), true);
-            assertTrue("Color should be opaque blue:" + pixelAt200x190, isColorsSimilar(new Color(0, 11, 255), pixelAt200x190, 1));
-            final Color pixelAt200x200 = new Color(img.getRGB(200, 200), true);
-            assertTrue("Color should be opaque blue:" + pixelAt200x200, isColorsSimilar(new Color(0, 11, 255), pixelAt200x200, 1));
-        });
-    }
 }
