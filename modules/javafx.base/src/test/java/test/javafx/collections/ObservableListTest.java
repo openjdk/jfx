@@ -267,8 +267,8 @@ public class ObservableListTest  {
 
     @Test
     public void testSetAllNoUpdate() {
-        useListData("one", "two", "three");
-        boolean r = list.setAll("one", "two", "three");
+        useListData();
+        boolean r = list.setAll();
         assertFalse(r);
     }
 

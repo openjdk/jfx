@@ -89,27 +89,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
+        if (isEmpty() && col.isEmpty()) return false;
         beginChange();
         try {
-            Iterator<? extends E> itr = col.iterator();
-            boolean changed = false;
-            int i;
-
-            for (i = 0; i < size() && itr.hasNext(); i++) {
-                E e = itr.next();
-                E old = set(i, e);
-                changed |= !Objects.equals(e, old);
-            }
-
-            if (i < size()) {
-                remove(i, size());
-                return true;
-            } else if (itr.hasNext()) {
-                itr.forEachRemaining(this::add);
-                return true;
-            } else {
-                return changed;
-            }
+            clear();
+            addAll(col);
+            return true;
         } finally {
             endChange();
         }
