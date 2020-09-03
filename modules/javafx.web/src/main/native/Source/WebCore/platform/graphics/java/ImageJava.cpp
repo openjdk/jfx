@@ -45,7 +45,7 @@ class ImageBuffer;
 namespace WebCore {
 
 void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       CompositeOperator, BlendMode)
+                       CompositeOperator compositeOperator, BlendMode)
 {
     if (gc.paintingDisabled()) {
         return;
@@ -56,6 +56,9 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
         return;
     }
 
+    CompositeOperator oldCompositeOperator = gc.compositeOperation();
+    gc.setCompositeOperation(compositeOperator);
+
     gc.platformContext()->rq().freeSpace(72)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
     << currFrame
@@ -63,6 +66,8 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
     << dstRect.width() << dstRect.height()
     << srcRect.x() << srcRect.y()
     << srcRect.width() << srcRect.height();
+
+    gc.setCompositeOperation(oldCompositeOperator);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
