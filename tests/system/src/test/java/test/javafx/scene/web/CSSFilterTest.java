@@ -41,7 +41,6 @@ import org.junit.Test;
 import test.util.Util;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -86,11 +85,7 @@ public class CSSFilterTest {
     }
 
     private void assertColorNotEquals(String msg, Color notExpected, Color actual, double delta) {
-        double deltaRed = Math.abs(notExpected.getRed() - actual.getRed());
-        double deltaGreen = Math.abs(notExpected.getGreen() - actual.getGreen());
-        double deltaBlue = Math.abs(notExpected.getBlue() - actual.getBlue());
-        double deltaOpacity = Math.abs(notExpected.getOpacity() - actual.getOpacity());
-        if (deltaRed < delta && deltaGreen < delta && deltaBlue < delta && deltaOpacity < delta) {
+        if (testColorEquals(notExpected, actual, delta)) {
             fail(msg + " not expected:" + colorToString(notExpected)
                     + " but was:" + colorToString(actual));
         }
