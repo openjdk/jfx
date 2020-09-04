@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,9 +38,9 @@ class VM;
 
 namespace FTL {
 
-MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> lazySlowPathGenerationThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> slowPathCallThunkGenerator(const SlowPathCallKey&);
+MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> lazySlowPathGenerationThunkGenerator(VM&);
+MacroAssemblerCodeRef<JITThunkPtrTag> slowPathCallThunkGenerator(VM&, const SlowPathCallKey&);
 
 template<typename KeyTypeArgument>
 struct ThunkMap {
@@ -54,13 +54,13 @@ struct ThunkMap {
 
 template<typename MapType, typename GeneratorType>
 MacroAssemblerCodeRef<JITThunkPtrTag> generateIfNecessary(
-    MapType& map, const typename MapType::KeyType& key, GeneratorType generator)
+    VM& vm, MapType& map, const typename MapType::KeyType& key, GeneratorType generator)
 {
     typename MapType::ToThunkMap::iterator iter = map.m_toThunk.find(key);
     if (iter != map.m_toThunk.end())
         return iter->value;
 
-    MacroAssemblerCodeRef<JITThunkPtrTag> result = generator(key);
+    MacroAssemblerCodeRef<JITThunkPtrTag> result = generator(vm, key);
     map.m_toThunk.add(key, result);
     map.m_fromThunk.add(result.code(), key);
     return result;
@@ -79,10 +79,9 @@ class Thunks {
     WTF_MAKE_NONCOPYABLE(Thunks);
 public:
     Thunks() = default;
-    MacroAssemblerCodeRef<JITThunkPtrTag> getSlowPathCallThunk(const SlowPathCallKey& key)
+    MacroAssemblerCodeRef<JITThunkPtrTag> getSlowPathCallThunk(VM& vm, const SlowPathCallKey& key)
     {
-        return generateIfNecessary(
-            m_slowPathCallThunks, key, slowPathCallThunkGenerator);
+        return generateIfNecessary(vm, m_slowPathCallThunks, key, slowPathCallThunkGenerator);
     }
 
     SlowPathCallKey keyForSlowPathCallThunk(MacroAssemblerCodePtr<JITThunkPtrTag> ptr)

@@ -32,10 +32,7 @@ typedef (
     WebGL2RenderingContext or
 #endif
 #if defined(ENABLE_WEBGPU) && ENABLE_WEBGPU
-    WebGPURenderingContext or
-#endif
-#if defined(ENABLE_WEBMETAL) && ENABLE_WEBMETAL
-    WebMetalRenderingContext or
+    GPUCanvasContext or
 #endif
     ImageBitmapRenderingContext or 
     CanvasRenderingContext2D) RenderingContext;
@@ -48,10 +45,10 @@ typedef (
     [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long width;
     [CEReactions=NotNeeded, CallTracingCallback=recordCanvasAction] attribute unsigned long height;
 
-    [CallWith=ExecState, MayThrowException] RenderingContext? getContext(DOMString contextId, any... arguments);
+    [CallWith=GlobalObject, MayThrowException] RenderingContext? getContext(DOMString contextId, any... arguments);
 
     [MayThrowException] DOMString toDataURL(optional DOMString type, optional any quality);
     [CallWith=ScriptExecutionContext, MayThrowException] void toBlob(BlobCallback callback, optional DOMString type, optional any quality);
 
-    [Conditional=MEDIA_STREAM, CallWith=ScriptExecutionContext, MayThrowException, NewObject] MediaStream captureStream(optional double frameRequestRate);
+    [Conditional=MEDIA_STREAM, CallWith=Document, MayThrowException, NewObject] MediaStream captureStream(optional double frameRequestRate);
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc.  All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AnimationUtilities_h
-#define AnimationUtilities_h
+#pragma once
 
 #include "IntPoint.h"
-#include "LayoutUnit.h"
+#include "LayoutPoint.h"
 
 namespace WebCore {
 
@@ -53,15 +52,19 @@ inline float blend(float from, float to, double progress)
 
 inline LayoutUnit blend(LayoutUnit from, LayoutUnit to, double progress)
 {
-    return from + (to - from) * progress;
+    return LayoutUnit(from + (to - from) * progress);
 }
 
 inline IntPoint blend(const IntPoint& from, const IntPoint& to, double progress)
 {
     return IntPoint(blend(from.x(), to.x(), progress),
-                    blend(from.y(), to.y(), progress));
+        blend(from.y(), to.y(), progress));
+}
+
+inline LayoutPoint blend(const LayoutPoint& from, const LayoutPoint& to, double progress)
+{
+    return LayoutPoint(blend(from.x(), to.x(), progress),
+        blend(from.y(), to.y(), progress));
 }
 
 } // namespace WebCore
-
-#endif // AnimationUtilities_h

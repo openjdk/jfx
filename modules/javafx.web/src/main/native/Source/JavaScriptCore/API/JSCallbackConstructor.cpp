@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ namespace JSC {
 const ClassInfo JSCallbackConstructor::s_info = { "CallbackConstructor", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSCallbackConstructor) };
 
 JSCallbackConstructor::JSCallbackConstructor(JSGlobalObject* globalObject, Structure* structure, JSClassRef jsClass, JSObjectCallAsConstructorCallback callback)
-    : JSDestructibleObject(globalObject->vm(), structure)
+    : Base(globalObject->vm(), structure)
     , m_class(jsClass)
     , m_callback(callback)
 {
@@ -48,7 +48,7 @@ JSCallbackConstructor::JSCallbackConstructor(JSGlobalObject* globalObject, Struc
 void JSCallbackConstructor::finishCreation(JSGlobalObject* globalObject, JSClassRef jsClass)
 {
     Base::finishCreation(globalObject->vm());
-    ASSERT(inherits(*vm(), info()));
+    ASSERT(inherits(vm(), info()));
     if (m_class)
         JSClassRetain(jsClass);
 }

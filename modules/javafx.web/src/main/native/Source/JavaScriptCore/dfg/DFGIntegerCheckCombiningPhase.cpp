@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,7 +40,7 @@
 namespace JSC { namespace DFG {
 
 namespace DFGIntegerCheckCombiningPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 class IntegerCheckCombiningPhase : public Phase {
@@ -145,8 +145,8 @@ public:
         }
 
         int32_t m_minBound { 0 };
-        CodeOrigin m_minOrigin;
         int32_t m_maxBound { 0 };
+        CodeOrigin m_minOrigin;
         CodeOrigin m_maxOrigin;
         unsigned m_count { 0 }; // If this is zero then the bounds won't necessarily make sense.
         bool m_hoisted { false };

@@ -1,4 +1,4 @@
-list(APPEND WebCore_INCLUDE_DIRECTORIES
+list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/image-decoders"
     "${WEBCORE_DIR}/platform/image-decoders/bmp"
     "${WEBCORE_DIR}/platform/image-decoders/gif"
@@ -40,12 +40,7 @@ list(APPEND WebCore_LIBRARIES
 )
 
 if (OpenJPEG_FOUND)
-    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${OPENJPEG_INCLUDE_DIRS}
-    )
-    list(APPEND WebCore_LIBRARIES
-      ${OPENJPEG_LIBRARIES}
-    )
+    list(APPEND WebCore_LIBRARIES OpenJPEG::OpenJPEG)
 endif ()
 
 if (WEBP_FOUND)

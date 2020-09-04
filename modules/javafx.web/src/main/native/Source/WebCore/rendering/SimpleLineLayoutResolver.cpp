@@ -67,14 +67,7 @@ FloatRect RunResolver::Run::rect() const
     float baseline = computeBaselinePosition();
     FloatPoint position = linePosition(run.logicalLeft, baseline - resolver.m_ascent);
     FloatSize size = lineSize(run.logicalLeft, run.logicalRight, resolver.m_ascent + resolver.m_descent + resolver.m_visualOverflowOffset);
-    bool moveLineBreakToBaseline = false;
-    if (run.start == run.end && m_iterator != resolver.begin() && m_iterator.inQuirksMode()) {
-        auto previousRun = m_iterator;
-        --previousRun;
-        moveLineBreakToBaseline = !previousRun.simpleRun().isEndOfLine;
-    }
-    if (moveLineBreakToBaseline)
-        return FloatRect(FloatPoint(position.x(), baseline), FloatSize(size.width(), std::max<float>(0, resolver.m_ascent - resolver.m_baseline.toFloat())));
+
     return FloatRect(position, size);
 }
 
@@ -113,10 +106,12 @@ unsigned RunResolver::Run::localEnd() const
 }
 
 RunResolver::Iterator::Iterator(const RunResolver& resolver, unsigned runIndex, unsigned lineIndex)
-    : m_resolver(resolver)
+    : m_layout(&resolver.m_layout)
+    , m_resolver(&resolver)
     , m_runIndex(runIndex)
     , m_lineIndex(lineIndex)
 {
+    ASSERT(&resolver == &m_layout->runResolver());
 }
 
 RunResolver::Iterator& RunResolver::Iterator::advance()
@@ -129,8 +124,8 @@ RunResolver::Iterator& RunResolver::Iterator::advance()
 
 RunResolver::Iterator& RunResolver::Iterator::advanceLines(unsigned lineCount)
 {
-    unsigned runCount = m_resolver.m_layout.runCount();
-    if (runCount == m_resolver.m_layout.lineCount()) {
+    unsigned runCount = layout().runCount();
+    if (runCount == layout().lineCount()) {
         m_runIndex = std::min(runCount, m_runIndex + lineCount);
         m_lineIndex = m_runIndex;
         return *this;
@@ -152,7 +147,6 @@ RunResolver::RunResolver(const RenderBlockFlow& flow, const Layout& layout)
     , m_ascent(flow.style().fontCascade().fontMetrics().ascent())
     , m_descent(flow.style().fontCascade().fontMetrics().descent())
     , m_visualOverflowOffset(visualOverflowForDecorations(flow.style(), nullptr).bottom)
-    , m_inQuirksMode(flow.document().inQuirksMode())
 {
 }
 
@@ -206,7 +200,7 @@ unsigned RunResolver::lineIndexForHeight(LayoutUnit height, IndexType type) cons
     adjustedY = std::max<float>(adjustedY, 0);
     auto lineIndexCandidate =  std::min<unsigned>(adjustedY / m_lineHeight, m_layout.lineCount() - 1);
     if (m_layout.hasLineStruts())
-        return adjustLineIndexForStruts(y, type, lineIndexCandidate);
+        return adjustLineIndexForStruts(LayoutUnit(y), type, lineIndexCandidate);
     return lineIndexCandidate;
 }
 
@@ -299,18 +293,23 @@ WTF::IteratorRange<RunResolver::Iterator> RunResolver::rangeForRendererWithOffse
 {
     ASSERT(startOffset <= endOffset);
     auto range = rangeForRenderer(renderer);
+    if (range.begin() == range.end())
+        return { end(), end() };
     auto it = range.begin();
-    // Advance to the firt run with the start offset inside.
-    while (it != range.end() && (*it).end() <= startOffset)
+    auto localEnd = (*it).start() + endOffset;
+    // Advance to the first run before the start offset. Only the first node in a range can have a startOffset.
+    // Note that the start offset may coincide with the end of a run. The run is still considered so that we
+    // can return an empty rect, which conforms to the behavior of Element.getClientRects().
+    while (it != range.end() && (*it).end() < startOffset)
         ++it;
     if (it == range.end())
         return { end(), end() };
     auto rangeBegin = it;
     // Special case empty ranges that start at the edge of the run. Apparently normal line layout include those.
-    if (endOffset == startOffset && (*it).start() == endOffset)
+    if (localEnd == startOffset && (*it).start() == localEnd)
         return { rangeBegin, ++it };
     // Advance beyond the last run with the end offset.
-    while (it != range.end() && (*it).start() < endOffset)
+    while (it != range.end() && (*it).start() < localEnd)
         ++it;
     return { rangeBegin, it };
 }

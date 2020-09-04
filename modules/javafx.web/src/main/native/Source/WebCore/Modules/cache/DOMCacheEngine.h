@@ -30,10 +30,12 @@
 #include "FetchOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
+#include <wtf/CompletionHandler.h>
 
 namespace WebCore {
+
+class ScriptExecutionContext;
 
 struct CacheQueryOptions;
 
@@ -44,9 +46,11 @@ enum class Error {
     ReadDisk,
     WriteDisk,
     QuotaExceeded,
-    Internal
+    Internal,
+    Stopped
 };
 
+Exception convertToException(Error);
 Exception convertToExceptionAndLog(ScriptExecutionContext*, Error);
 
 WEBCORE_EXPORT bool queryCacheMatch(const ResourceRequest& request, const ResourceRequest& cachedRequest, const ResourceResponse&, const CacheQueryOptions&);
@@ -98,19 +102,19 @@ struct CacheIdentifierOperationResult {
 };
 
 using CacheIdentifierOrError = Expected<CacheIdentifierOperationResult, Error>;
-using CacheIdentifierCallback = WTF::Function<void(const CacheIdentifierOrError&)>;
+using CacheIdentifierCallback = CompletionHandler<void(const CacheIdentifierOrError&)>;
 
 using RecordIdentifiersOrError = Expected<Vector<uint64_t>, Error>;
-using RecordIdentifiersCallback = WTF::Function<void(RecordIdentifiersOrError&&)>;
+using RecordIdentifiersCallback = CompletionHandler<void(RecordIdentifiersOrError&&)>;
 
 
 using CacheInfosOrError = Expected<CacheInfos, Error>;
-using CacheInfosCallback = WTF::Function<void(CacheInfosOrError&&)>;
+using CacheInfosCallback = CompletionHandler<void(CacheInfosOrError&&)>;
 
 using RecordsOrError = Expected<Vector<Record>, Error>;
-using RecordsCallback = WTF::Function<void(RecordsOrError&&)>;
+using RecordsCallback = CompletionHandler<void(RecordsOrError&&)>;
 
-using CompletionCallback = WTF::Function<void(Optional<Error>&&)>;
+using CompletionCallback = CompletionHandler<void(Optional<Error>&&)>;
 
 template<class Encoder> inline void CacheInfos::encode(Encoder& encoder) const
 {

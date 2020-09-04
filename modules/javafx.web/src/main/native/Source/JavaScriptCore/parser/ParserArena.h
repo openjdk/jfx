@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,9 @@ namespace JSC {
 
     class ParserArenaDeletable;
 
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(IdentifierArena);
     class IdentifierArena {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(IdentifierArena);
     public:
         IdentifierArena()
         {
@@ -44,12 +45,13 @@ namespace JSC {
         }
 
         template <typename T>
-        ALWAYS_INLINE const Identifier& makeIdentifier(VM*, const T* characters, size_t length);
-        ALWAYS_INLINE const Identifier& makeEmptyIdentifier(VM*);
-        ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM*, const UChar* characters, size_t length);
-        ALWAYS_INLINE const Identifier& makeIdentifier(VM*, SymbolImpl*);
+        ALWAYS_INLINE const Identifier& makeIdentifier(VM&, const T* characters, size_t length);
+        ALWAYS_INLINE const Identifier& makeEmptyIdentifier(VM&);
+        ALWAYS_INLINE const Identifier& makeIdentifierLCharFromUChar(VM&, const UChar* characters, size_t length);
+        ALWAYS_INLINE const Identifier& makeIdentifier(VM&, SymbolImpl*);
 
-        const Identifier& makeNumericIdentifier(VM*, double number);
+        const Identifier& makeBigIntDecimalIdentifier(VM&, const Identifier&, uint8_t radix);
+        const Identifier& makeNumericIdentifier(VM&, double number);
 
     public:
         static const int MaximumCachableCharacter = 128;
@@ -70,10 +72,10 @@ namespace JSC {
     };
 
     template <typename T>
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifier(VM* vm, const T* characters, size_t length)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifier(VM& vm, const T* characters, size_t length)
     {
         if (!length)
-            return vm->propertyNames->emptyIdentifier;
+            return vm.propertyNames->emptyIdentifier;
         if (characters[0] >= MaximumCachableCharacter) {
             m_identifiers.append(Identifier::fromString(vm, characters, length));
             return m_identifiers.last();
@@ -93,22 +95,22 @@ namespace JSC {
         return m_identifiers.last();
     }
 
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifier(VM*, SymbolImpl* symbol)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifier(VM&, SymbolImpl* symbol)
     {
         ASSERT(symbol);
         m_identifiers.append(Identifier::fromUid(*symbol));
         return m_identifiers.last();
     }
 
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeEmptyIdentifier(VM* vm)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeEmptyIdentifier(VM& vm)
     {
-        return vm->propertyNames->emptyIdentifier;
+        return vm.propertyNames->emptyIdentifier;
     }
 
-    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM* vm, const UChar* characters, size_t length)
+    ALWAYS_INLINE const Identifier& IdentifierArena::makeIdentifierLCharFromUChar(VM& vm, const UChar* characters, size_t length)
     {
         if (!length)
-            return vm->propertyNames->emptyIdentifier;
+            return vm.propertyNames->emptyIdentifier;
         if (characters[0] >= MaximumCachableCharacter) {
             m_identifiers.append(Identifier::createLCharFromUChar(vm, characters, length));
             return m_identifiers.last();
@@ -128,11 +130,15 @@ namespace JSC {
         return m_identifiers.last();
     }
 
-    inline const Identifier& IdentifierArena::makeNumericIdentifier(VM* vm, double number)
+    inline const Identifier& IdentifierArena::makeNumericIdentifier(VM& vm, double number)
     {
-        m_identifiers.append(Identifier::fromString(vm, String::numberToStringECMAScript(number)));
+        // FIXME: Why doesn't this use the Identifier::from overload that takes a double?
+        // Seems we are missing out on multiple optimizations by not using it.
+        m_identifiers.append(Identifier::fromString(vm, String::number(number)));
         return m_identifiers.last();
     }
+
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ParserArena);
 
     class ParserArena {
         WTF_MAKE_NONCOPYABLE(ParserArena);
@@ -178,7 +184,7 @@ namespace JSC {
         IdentifierArena& identifierArena()
         {
             if (UNLIKELY (!m_identifierArena))
-                m_identifierArena = std::make_unique<IdentifierArena>();
+                m_identifierArena = makeUnique<IdentifierArena>();
             return *m_identifierArena;
         }
 

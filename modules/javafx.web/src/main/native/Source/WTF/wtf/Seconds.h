@@ -32,10 +32,12 @@ namespace WTF {
 
 class MonotonicTime;
 class PrintStream;
+class TextStream;
 class TimeWithDynamicClockType;
 class WallTime;
 
-class Seconds {
+class Seconds final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     constexpr Seconds() { }
 
@@ -329,6 +331,8 @@ constexpr Seconds operator"" _ns(unsigned long long nanoseconds)
 }
 
 } // inline seconds_literals
+
+WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, Seconds);
 
 } // namespace WTF
 

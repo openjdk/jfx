@@ -70,10 +70,10 @@ static FunctionWhitelist& ensureGlobalDFGWhitelist()
 
 static CompilationResult compileImpl(
     VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
-    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionCount())
+    if (!Options::bytecodeRangeToDFGCompile().isInRange(codeBlock->instructionsSize())
         || !ensureGlobalDFGWhitelist().contains(codeBlock))
         return CompilationFailed;
 
@@ -81,16 +81,15 @@ static CompilationResult compileImpl(
 
     ASSERT(codeBlock);
     ASSERT(codeBlock->alternative());
-    ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
-    ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITCode::DFGJIT);
+    ASSERT(JITCode::isBaselineCode(codeBlock->alternative()->jitType()));
+    ASSERT(!profiledDFGCodeBlock || profiledDFGCodeBlock->jitType() == JITType::DFGJIT);
 
     if (logCompilationChanges(mode))
-        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", number of instructions = ", codeBlock->instructionCount(), "\n");
+        dataLog("DFG(Driver) compiling ", *codeBlock, " with ", mode, ", instructions size = ", codeBlock->instructionsSize(), "\n");
 
     // Make sure that any stubs that the DFG is going to use are initialized. We want to
     // make sure that all JIT code generation does finalization on the main thread.
     vm.getCTIStub(arityFixupGenerator);
-    vm.getCTIStub(osrExitThunkGenerator);
     vm.getCTIStub(osrExitGenerationThunkGenerator);
     vm.getCTIStub(throwExceptionFromCallSlowPathGenerator);
     vm.getCTIStub(linkCallThunkGenerator);
@@ -116,7 +115,7 @@ static CompilationResult compileImpl(
 }
 #else // ENABLE(DFG_JIT)
 static CompilationResult compileImpl(
-    VM&, CodeBlock*, CodeBlock*, CompilationMode, unsigned, const Operands<Optional<JSValue>>&,
+    VM&, CodeBlock*, CodeBlock*, CompilationMode, BytecodeIndex, const Operands<Optional<JSValue>>&,
     Ref<DeferredCompilationCallback>&&)
 {
     return CompilationFailed;
@@ -125,7 +124,7 @@ static CompilationResult compileImpl(
 
 CompilationResult compile(
     VM& vm, CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationMode mode,
-    unsigned osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
+    BytecodeIndex osrEntryBytecodeIndex, const Operands<Optional<JSValue>>& mustHandleValues,
     Ref<DeferredCompilationCallback>&& callback)
 {
     CompilationResult result = compileImpl(

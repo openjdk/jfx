@@ -48,12 +48,12 @@ OriginStack::OriginStack(Database& database, CodeBlock* codeBlock, const CodeOri
 {
     Vector<CodeOrigin> stack = codeOrigin.inlineStack();
 
-    append(Origin(database, codeBlock, stack[0].bytecodeIndex));
+    append(Origin(database, codeBlock, stack[0].bytecodeIndex()));
 
     for (unsigned i = 1; i < stack.size(); ++i) {
         append(Origin(
-            database.ensureBytecodesFor(stack[i].inlineCallFrame->baselineCodeBlock.get()),
-            stack[i].bytecodeIndex));
+            database.ensureBytecodesFor(stack[i].inlineCallFrame()->baselineCodeBlock.get()),
+            stack[i].bytecodeIndex()));
     }
 }
 
@@ -98,15 +98,15 @@ void OriginStack::dump(PrintStream& out) const
     }
 }
 
-JSValue OriginStack::toJS(ExecState* exec) const
+JSValue OriginStack::toJS(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* result = constructEmptyArray(exec, 0);
+    JSArray* result = constructEmptyArray(globalObject, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
     for (unsigned i = 0; i < m_stack.size(); ++i) {
-        result->putDirectIndex(exec, i, m_stack[i].toJS(exec));
+        result->putDirectIndex(globalObject, i, m_stack[i].toJS(globalObject));
         RETURN_IF_EXCEPTION(scope, { });
     }
 

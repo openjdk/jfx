@@ -31,10 +31,11 @@
 #include "FloatQuad.h"
 #include "FloatRect.h"
 #include "IntRect.h"
+#include "Region.h"
 #include "TransformationMatrix.h"
-#include <wtf/text/TextStream.h>
-
 #include <wtf/MathExtras.h>
+#include <wtf/Optional.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -84,12 +85,12 @@ bool AffineTransform::isIdentity() const
 
 double AffineTransform::xScale() const
 {
-    return sqrt(m_transform[0] * m_transform[0] + m_transform[1] * m_transform[1]);
+    return std::hypot(m_transform[0], m_transform[1]);
 }
 
 double AffineTransform::yScale() const
 {
-    return sqrt(m_transform[2] * m_transform[2] + m_transform[3] * m_transform[3]);
+    return std::hypot(m_transform[2], m_transform[3]);
 }
 
 static double det(const std::array<double, 6>& transform)
@@ -332,6 +333,21 @@ FloatQuad AffineTransform::mapQuad(const FloatQuad& q) const
     result.setP3(mapPoint(q.p3()));
     result.setP4(mapPoint(q.p4()));
     return result;
+}
+
+Region AffineTransform::mapRegion(const Region& region) const
+{
+    if (isIdentityOrTranslation()) {
+        Region mappedRegion(region);
+        mappedRegion.translate(roundedIntSize(FloatSize(narrowPrecisionToFloat(m_transform[4]), narrowPrecisionToFloat(m_transform[5]))));
+        return mappedRegion;
+    }
+
+    Region mappedRegion;
+    for (auto& rect : region.rects())
+        mappedRegion.unite(mapRect(rect));
+
+    return mappedRegion;
 }
 
 void AffineTransform::blend(const AffineTransform& from, double progress)

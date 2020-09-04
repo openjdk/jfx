@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,7 @@ namespace WTF {
 
 template<typename CharacterType>
 class CodePointIterator {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ALWAYS_INLINE CodePointIterator() { }
     ALWAYS_INLINE CodePointIterator(const CharacterType* begin, const CharacterType* end)
@@ -67,13 +68,6 @@ public:
             && m_end == other.m_end;
     }
     ALWAYS_INLINE bool operator!=(const CodePointIterator& other) const { return !(*this == other); }
-
-    ALWAYS_INLINE CodePointIterator& operator=(const CodePointIterator& other)
-    {
-        m_begin = other.m_begin;
-        m_end = other.m_end;
-        return *this;
-    }
 
     ALWAYS_INLINE bool atEnd() const
     {
@@ -658,12 +652,11 @@ void URLParser::encodeNonUTF8Query(const Vector<UChar>& source, const URLTextEnc
 
 Optional<uint16_t> URLParser::defaultPortForProtocol(StringView scheme)
 {
-    static const uint16_t ftpPort = 21;
-    static const uint16_t gopherPort = 70;
-    static const uint16_t httpPort = 80;
-    static const uint16_t httpsPort = 443;
-    static const uint16_t wsPort = 80;
-    static const uint16_t wssPort = 443;
+    static constexpr uint16_t ftpPort = 21;
+    static constexpr uint16_t httpPort = 80;
+    static constexpr uint16_t httpsPort = 443;
+    static constexpr uint16_t wsPort = 80;
+    static constexpr uint16_t wssPort = 443;
 
     auto length = scheme.length();
     if (!length)
@@ -701,15 +694,6 @@ Optional<uint16_t> URLParser::defaultPortForProtocol(StringView scheme)
         default:
             return WTF::nullopt;
         }
-    case 'g':
-        if (length == 6
-            && scheme[1] == 'o'
-            && scheme[2] == 'p'
-            && scheme[3] == 'h'
-            && scheme[4] == 'e'
-            && scheme[5] == 'r')
-            return gopherPort;
-        return WTF::nullopt;
     case 'f':
         if (length == 3
             && scheme[1] == 't'
@@ -729,7 +713,6 @@ enum class Scheme {
     WSS,
     File,
     FTP,
-    Gopher,
     HTTP,
     HTTPS,
     NonSpecial
@@ -757,15 +740,6 @@ ALWAYS_INLINE static Scheme scheme(StringView scheme)
         default:
             return Scheme::NonSpecial;
         }
-    case 'g':
-        if (length == 6
-            && scheme[1] == 'o'
-            && scheme[2] == 'p'
-            && scheme[3] == 'h'
-            && scheme[4] == 'e'
-            && scheme[5] == 'r')
-            return Scheme::Gopher;
-        return Scheme::NonSpecial;
     case 'h':
         switch (length) {
         case 4:
@@ -938,7 +912,6 @@ void URLParser::copyURLPartsUntil(const URL& base, URLPart part, const CodePoint
         m_urlIsFile = true;
         FALLTHROUGH;
     case Scheme::FTP:
-    case Scheme::Gopher:
     case Scheme::HTTP:
     case Scheme::HTTPS:
         m_urlIsSpecial = true;
@@ -1188,7 +1161,7 @@ URLParser::URLParser(const String& input, const URL& base, const URLTextEncoding
         || (input.isAllSpecialCharacters<isC0ControlOrSpace>()
             && m_url.m_string == base.m_string.left(base.m_queryEnd)));
     ASSERT(internalValuesConsistent(m_url));
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (!m_didSeeSyntaxViolation) {
         // Force a syntax violation at the beginning to make sure we get the same result.
         URLParser parser(makeString(" ", input), base, nonUTF8QueryEncoding);
@@ -1196,7 +1169,7 @@ URLParser::URLParser(const String& input, const URL& base, const URLTextEncoding
         if (parsed.isValid())
             ASSERT(allValuesEqual(parser.result(), m_url));
     }
-#endif
+#endif // ASSERT_ENABLED
 }
 
 template<typename CharacterType>
@@ -1319,7 +1292,6 @@ void URLParser::parse(const CharacterType* input, const unsigned length, const U
                     m_url.m_protocolIsInHTTPFamily = true;
                     FALLTHROUGH;
                 case Scheme::FTP:
-                case Scheme::Gopher:
                     m_urlIsSpecial = true;
                     if (base.protocolIs(urlScheme))
                         state = State::SpecialRelativeOrAuthority;
@@ -2322,7 +2294,7 @@ Expected<URLParser::IPv4Address, URLParser::IPv4ParsingError> URLParser::parseIP
         if (!iterator.atEnd() && *iterator == '.') {
             ++iterator;
             if (iterator.atEnd())
-                syntaxViolation(iteratorForSyntaxViolationPosition);
+                didSeeSyntaxViolation = true;
             else if (*iterator == '.')
                 return makeUnexpected(IPv4ParsingError::NotIPv4);
         }
@@ -2429,6 +2401,8 @@ Optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator<Char
     IPv6Address address = {{0, 0, 0, 0, 0, 0, 0, 0}};
     size_t piecePointer = 0;
     Optional<size_t> compressPointer;
+    bool previousValueWasZero = false;
+    bool immediatelyAfterCompress = false;
 
     if (*c == ':') {
         advance(c, hostBegin);
@@ -2439,6 +2413,7 @@ Optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator<Char
         advance(c, hostBegin);
         ++piecePointer;
         compressPointer = piecePointer;
+        immediatelyAfterCompress = true;
     }
 
     while (!c.atEnd()) {
@@ -2450,6 +2425,9 @@ Optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator<Char
             advance(c, hostBegin);
             ++piecePointer;
             compressPointer = piecePointer;
+            immediatelyAfterCompress = true;
+            if (previousValueWasZero)
+                syntaxViolation(hostBegin);
             continue;
         }
         if (piecePointer == 6 || (compressPointer && piecePointer < 6)) {
@@ -2479,7 +2457,8 @@ Optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator<Char
             advance(c, hostBegin);
         }
 
-        if (UNLIKELY((value && leadingZeros) || (!value && length > 1)))
+        previousValueWasZero = !value;
+        if (UNLIKELY((value && leadingZeros) || (previousValueWasZero && (length > 1 || immediatelyAfterCompress))))
             syntaxViolation(hostBegin);
 
         address[piecePointer++] = value;
@@ -2488,6 +2467,10 @@ Optional<URLParser::IPv6Address> URLParser::parseIPv6Host(CodePointIterator<Char
         if (piecePointer == 8 || *c != ':')
             return WTF::nullopt;
         advance(c, hostBegin);
+        if (c.atEnd())
+            syntaxViolation(hostBegin);
+
+        immediatelyAfterCompress = false;
     }
 
     if (!c.atEnd())
@@ -2584,13 +2567,16 @@ template<typename CharacterType> Optional<URLParser::LCharBuffer> URLParser::dom
     UErrorCode error = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
     int32_t numCharactersConverted = uidna_nameToASCII(&internationalDomainNameTranscoder(), StringView(domain).upconvertedCharacters(), domain.length(), hostnameBuffer, maxDomainLength, &processingDetails, &error);
-    ASSERT(numCharactersConverted <= static_cast<int32_t>(maxDomainLength));
 
     if (U_SUCCESS(error) && !processingDetails.errors) {
+#if ASSERT_ENABLED
         for (int32_t i = 0; i < numCharactersConverted; ++i) {
             ASSERT(isASCII(hostnameBuffer[i]));
             ASSERT(!isASCIIUpper(hostnameBuffer[i]));
         }
+#else
+        UNUSED_PARAM(numCharactersConverted);
+#endif // ASSERT_ENABLED
         ascii.append(hostnameBuffer, numCharactersConverted);
         if (domain != StringView(ascii.data(), ascii.size()))
             syntaxViolation(iteratorForSyntaxViolationPosition);
@@ -2678,13 +2664,11 @@ bool URLParser::parseHostAndPort(CodePointIterator<CharacterType> iterator)
             serializeIPv6(address.value());
             if (!ipv6End.atEnd()) {
                 advance(ipv6End);
-                if (!ipv6End.atEnd() && *ipv6End == ':') {
-                    m_url.m_hostEnd = currentPosition(ipv6End);
-                    return parsePort(ipv6End);
-                }
                 m_url.m_hostEnd = currentPosition(ipv6End);
+                if (!ipv6End.atEnd() && *ipv6End == ':')
+                    return parsePort(ipv6End);
                 m_url.m_portLength = 0;
-                return true;
+                return ipv6End.atEnd();
             }
             m_url.m_hostEnd = currentPosition(ipv6End);
             return true;
@@ -2877,8 +2861,6 @@ const UIDNA& URLParser::internationalDomainNameTranscoder()
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         UErrorCode error = U_ZERO_ERROR;
-        // Warning: Please contact a WebKitGTK+ developer if changing these flags.
-        // They should be synced with ephy_uri_decode() in ephy-uri-helpers.c.
         encoder = uidna_openUTS46(UIDNA_CHECK_BIDI | UIDNA_CHECK_CONTEXTJ | UIDNA_NONTRANSITIONAL_TO_UNICODE | UIDNA_NONTRANSITIONAL_TO_ASCII, &error);
         RELEASE_ASSERT(U_SUCCESS(error));
         RELEASE_ASSERT(encoder);

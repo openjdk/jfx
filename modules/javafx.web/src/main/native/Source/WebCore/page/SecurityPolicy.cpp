@@ -145,6 +145,12 @@ bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
     return url.isEmpty() || equalIgnoringASCIICase(url.string(), WTF::blankURL()) || equalLettersIgnoringASCIICase(url.string(), "about:srcdoc");
 }
 
+bool SecurityPolicy::isBaseURLSchemeAllowed(const URL& url)
+{
+    // See <https://github.com/whatwg/html/issues/2249>.
+    return !url.protocolIsData() && !WTF::protocolIsJavaScript(url);
+}
+
 void SecurityPolicy::setLocalLoadPolicy(LocalLoadPolicy policy)
 {
     localLoadPolicy = policy;
@@ -189,7 +195,7 @@ void SecurityPolicy::addOriginAccessWhitelistEntry(const SecurityOrigin& sourceO
     Locker<Lock> locker(originAccessMapLock);
     OriginAccessMap::AddResult result = originAccessMap().add(sourceString, nullptr);
     if (result.isNewEntry)
-        result.iterator->value = std::make_unique<OriginAccessWhiteList>();
+        result.iterator->value = makeUnique<OriginAccessWhiteList>();
 
     OriginAccessWhiteList* list = result.iterator->value.get();
     list->append(OriginAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress));

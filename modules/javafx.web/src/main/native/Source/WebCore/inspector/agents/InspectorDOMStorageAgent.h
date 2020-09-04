@@ -41,7 +41,6 @@ class DOMStorageFrontendDispatcher;
 namespace WebCore {
 
 class Frame;
-class InspectorPageAgent;
 class Page;
 class SecurityOrigin;
 class Storage;
@@ -52,34 +51,34 @@ class InspectorDOMStorageAgent final : public InspectorAgentBase, public Inspect
     WTF_MAKE_NONCOPYABLE(InspectorDOMStorageAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorDOMStorageAgent(WebAgentContext&, InspectorPageAgent*);
-    virtual ~InspectorDOMStorageAgent();
+    InspectorDOMStorageAgent(PageAgentContext&);
+    ~InspectorDOMStorageAgent() override;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
-    // Called from the front-end.
+    // DOMStorageBackendDispatcherHandler
     void enable(ErrorString&) override;
     void disable(ErrorString&) override;
     void getDOMStorageItems(ErrorString&, const JSON::Object& storageId, RefPtr<JSON::ArrayOf<JSON::ArrayOf<String>>>& items) override;
     void setDOMStorageItem(ErrorString&, const JSON::Object& storageId, const String& key, const String& value) override;
     void removeDOMStorageItem(ErrorString&, const JSON::Object& storageId, const String& key) override;
 
-    // Called from the injected script.
-    String storageId(Storage&);
-    RefPtr<Inspector::Protocol::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
-
     // InspectorInstrumentation
     void didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType, SecurityOrigin*);
+
+    // CommandLineAPI
+    static String storageId(Storage&);
+    static RefPtr<Inspector::Protocol::DOMStorage::StorageId> storageId(SecurityOrigin*, bool isLocalStorage);
 
 private:
     RefPtr<StorageArea> findStorageArea(ErrorString&, const JSON::Object&, Frame*&);
 
     std::unique_ptr<Inspector::DOMStorageFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::DOMStorageBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent { nullptr };
 
-    bool m_enabled { false };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

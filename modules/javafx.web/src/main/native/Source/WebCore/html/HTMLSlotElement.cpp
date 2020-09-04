@@ -85,7 +85,7 @@ void HTMLSlotElement::childrenChanged(const ChildChange& childChange)
     }
 }
 
-void HTMLSlotElement::attributeChanged(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason reason)
+void HTMLSlotElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     HTMLElement::attributeChanged(name, oldValue, newValue, reason);
 
@@ -116,7 +116,7 @@ static void flattenAssignedNodes(Vector<Ref<Node>>& nodes, const HTMLSlotElement
         }
         return;
     }
-    for (RefPtr<Node> node : *assignedNodes) {
+    for (const RefPtr<Node>& node : *assignedNodes) {
         if (is<HTMLSlotElement>(*node))
             flattenAssignedNodes(nodes, downcast<HTMLSlotElement>(*node));
         else

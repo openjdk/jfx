@@ -38,6 +38,7 @@ namespace WebCore {
 class BlobDataFileReference;
 class BlobPart;
 class BlobRegistry;
+class BlobRegistryImpl;
 
 WEBCORE_EXPORT BlobRegistry& blobRegistry();
 
@@ -66,7 +67,7 @@ public:
 
     virtual void writeBlobsToTemporaryFiles(const Vector<String>& blobURLs, CompletionHandler<void(Vector<String>&& filePaths)>&&) = 0;
 
-    virtual bool isBlobRegistryImpl() const { return false; }
+    virtual BlobRegistryImpl* blobRegistryImpl() { return nullptr; }
 
 protected:
     virtual ~BlobRegistry();

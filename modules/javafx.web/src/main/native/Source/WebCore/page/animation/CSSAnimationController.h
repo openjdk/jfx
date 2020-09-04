@@ -30,6 +30,7 @@
 
 #include "AnimationBase.h"
 #include "CSSPropertyNames.h"
+#include "Element.h"
 #include "RenderStyle.h"
 #include <wtf/Forward.h>
 
@@ -37,14 +38,14 @@ namespace WebCore {
 
 class CSSAnimationControllerPrivate;
 class Document;
-class Element;
 class Frame;
 class LayoutRect;
 class RenderElement;
 
 struct AnimationUpdate {
     std::unique_ptr<RenderStyle> style;
-    bool animationChangeRequiresRecomposite { false };
+    OptionSet<AnimationImpact> impact;
+
 };
 
 class CSSAnimationController {
@@ -65,7 +66,7 @@ public:
     // This is called when an accelerated animation or transition has actually started to animate.
     void notifyAnimationStarted(RenderElement&, MonotonicTime startTime);
 
-    WEBCORE_EXPORT bool pauseAnimationAtTime(Element&, const AtomicString& name, double t); // To be used only for testing
+    WEBCORE_EXPORT bool pauseAnimationAtTime(Element&, const AtomString& name, double t); // To be used only for testing
     WEBCORE_EXPORT bool pauseTransitionAtTime(Element&, const String& property, double t); // To be used only for testing
     WEBCORE_EXPORT unsigned numberOfActiveAnimations(Document*) const; // To be used only for testing
 

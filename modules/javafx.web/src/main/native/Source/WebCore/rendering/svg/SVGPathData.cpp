@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-static Path pathFromCircleElement(SVGElement& element)
+static Path pathFromCircleElement(const SVGElement& element)
 {
     ASSERT(is<SVGCircleElement>(element));
 
@@ -52,14 +52,14 @@ static Path pathFromCircleElement(SVGElement& element)
     SVGLengthContext lengthContext(&element);
     float r = lengthContext.valueForLength(style.svgStyle().r());
     if (r > 0) {
-        float cx = lengthContext.valueForLength(style.svgStyle().cx(), LengthModeWidth);
-        float cy = lengthContext.valueForLength(style.svgStyle().cy(), LengthModeHeight);
+        float cx = lengthContext.valueForLength(style.svgStyle().cx(), SVGLengthMode::Width);
+        float cy = lengthContext.valueForLength(style.svgStyle().cy(), SVGLengthMode::Height);
         path.addEllipse(FloatRect(cx - r, cy - r, r * 2, r * 2));
     }
     return path;
 }
 
-static Path pathFromEllipseElement(SVGElement& element)
+static Path pathFromEllipseElement(const SVGElement& element)
 {
     RenderElement* renderer = element.renderer();
     if (!renderer)
@@ -67,22 +67,22 @@ static Path pathFromEllipseElement(SVGElement& element)
 
     auto& style = renderer->style();
     SVGLengthContext lengthContext(&element);
-    float rx = lengthContext.valueForLength(style.svgStyle().rx(), LengthModeWidth);
+    float rx = lengthContext.valueForLength(style.svgStyle().rx(), SVGLengthMode::Width);
     if (rx <= 0)
         return { };
 
-    float ry = lengthContext.valueForLength(style.svgStyle().ry(), LengthModeHeight);
+    float ry = lengthContext.valueForLength(style.svgStyle().ry(), SVGLengthMode::Height);
     if (ry <= 0)
         return { };
 
     Path path;
-    float cx = lengthContext.valueForLength(style.svgStyle().cx(), LengthModeWidth);
-    float cy = lengthContext.valueForLength(style.svgStyle().cy(), LengthModeHeight);
+    float cx = lengthContext.valueForLength(style.svgStyle().cx(), SVGLengthMode::Width);
+    float cy = lengthContext.valueForLength(style.svgStyle().cy(), SVGLengthMode::Height);
     path.addEllipse(FloatRect(cx - rx, cy - ry, rx * 2, ry * 2));
     return path;
 }
 
-static Path pathFromLineElement(SVGElement& element)
+static Path pathFromLineElement(const SVGElement& element)
 {
     Path path;
     const auto& line = downcast<SVGLineElement>(element);
@@ -93,44 +93,44 @@ static Path pathFromLineElement(SVGElement& element)
     return path;
 }
 
-static Path pathFromPathElement(SVGElement& element)
+static Path pathFromPathElement(const SVGElement& element)
 {
-    return downcast<SVGPathElement>(element).pathForByteStream();
+    return downcast<SVGPathElement>(element).path();
 }
 
-static Path pathFromPolygonElement(SVGElement& element)
+static Path pathFromPolygonElement(const SVGElement& element)
 {
-    auto& points = downcast<SVGPolygonElement>(element).animatedPoints()->values();
+    auto& points = downcast<SVGPolygonElement>(element).points().items();
     if (points.isEmpty())
         return { };
 
     Path path;
-    path.moveTo(points.first());
+    path.moveTo(points.first()->value());
 
     unsigned size = points.size();
     for (unsigned i = 1; i < size; ++i)
-        path.addLineTo(points.at(i));
+        path.addLineTo(points.at(i)->value());
 
     path.closeSubpath();
     return path;
 }
 
-static Path pathFromPolylineElement(SVGElement& element)
+static Path pathFromPolylineElement(const SVGElement& element)
 {
-    auto& points = downcast<SVGPolylineElement>(element).animatedPoints()->values();
+    auto& points = downcast<SVGPolylineElement>(element).points().items();
     if (points.isEmpty())
         return { };
 
     Path path;
-    path.moveTo(points.first());
+    path.moveTo(points.first()->value());
 
     unsigned size = points.size();
     for (unsigned i = 1; i < size; ++i)
-        path.addLineTo(points.at(i));
+        path.addLineTo(points.at(i)->value());
     return path;
 }
 
-static Path pathFromRectElement(SVGElement& element)
+static Path pathFromRectElement(const SVGElement& element)
 {
     RenderElement* renderer = element.renderer();
     if (!renderer)
@@ -138,19 +138,19 @@ static Path pathFromRectElement(SVGElement& element)
 
     auto& style = renderer->style();
     SVGLengthContext lengthContext(&element);
-    float width = lengthContext.valueForLength(style.width(), LengthModeWidth);
+    float width = lengthContext.valueForLength(style.width(), SVGLengthMode::Width);
     if (width <= 0)
         return { };
 
-    float height = lengthContext.valueForLength(style.height(), LengthModeHeight);
+    float height = lengthContext.valueForLength(style.height(), SVGLengthMode::Height);
     if (height <= 0)
         return { };
 
     Path path;
-    float x = lengthContext.valueForLength(style.svgStyle().x(), LengthModeWidth);
-    float y = lengthContext.valueForLength(style.svgStyle().y(), LengthModeHeight);
-    float rx = lengthContext.valueForLength(style.svgStyle().rx(), LengthModeWidth);
-    float ry = lengthContext.valueForLength(style.svgStyle().ry(), LengthModeHeight);
+    float x = lengthContext.valueForLength(style.svgStyle().x(), SVGLengthMode::Width);
+    float y = lengthContext.valueForLength(style.svgStyle().y(), SVGLengthMode::Height);
+    float rx = lengthContext.valueForLength(style.svgStyle().rx(), SVGLengthMode::Width);
+    float ry = lengthContext.valueForLength(style.svgStyle().ry(), SVGLengthMode::Height);
     bool hasRx = rx > 0;
     bool hasRy = ry > 0;
     if (hasRx || hasRy) {
@@ -161,7 +161,7 @@ static Path pathFromRectElement(SVGElement& element)
         // FIXME: We currently enforce using beziers here, as at least on CoreGraphics/Lion, as
         // the native method uses a different line dash origin, causing svg/custom/dashOrigin.svg to fail.
         // See bug https://bugs.webkit.org/show_bug.cgi?id=79932 which tracks this issue.
-        path.addRoundedRect(FloatRect(x, y, width, height), FloatSize(rx, ry), Path::PreferBezierRoundedRect);
+        path.addRoundedRect(FloatRect(x, y, width, height), FloatSize(rx, ry), Path::RoundedRectStrategy::PreferBezier);
         return path;
     }
 
@@ -169,14 +169,14 @@ static Path pathFromRectElement(SVGElement& element)
     return path;
 }
 
-Path pathFromGraphicsElement(SVGElement* element)
+Path pathFromGraphicsElement(const SVGElement* element)
 {
     ASSERT(element);
 
-    typedef Path (*PathFromFunction)(SVGElement&);
-    static HashMap<AtomicStringImpl*, PathFromFunction>* map = 0;
+    typedef Path (*PathFromFunction)(const SVGElement&);
+    static HashMap<AtomStringImpl*, PathFromFunction>* map = 0;
     if (!map) {
-        map = new HashMap<AtomicStringImpl*, PathFromFunction>;
+        map = new HashMap<AtomStringImpl*, PathFromFunction>;
         map->set(SVGNames::circleTag->localName().impl(), pathFromCircleElement);
         map->set(SVGNames::ellipseTag->localName().impl(), pathFromEllipseElement);
         map->set(SVGNames::lineTag->localName().impl(), pathFromLineElement);

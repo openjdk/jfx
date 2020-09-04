@@ -41,7 +41,7 @@
 #include <JavaScriptCore/ExceptionHelpers.h>
 #include <JavaScriptCore/GCActivityCallback.h>
 #include <JavaScriptCore/JSLock.h>
-#include <JavaScriptCore/PromiseDeferredTimer.h>
+#include <JavaScriptCore/PromiseTimer.h>
 #include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
@@ -126,7 +126,9 @@ void WorkletScriptController::initScriptWithSubclass()
     ASSERT(structure->globalObject() == m_workletGlobalScopeWrapper);
     ASSERT(m_workletGlobalScopeWrapper->structure(*m_vm)->globalObject() == m_workletGlobalScopeWrapper);
     contextPrototype->structure(*m_vm)->setGlobalObject(*m_vm, m_workletGlobalScopeWrapper.get());
-    contextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, JSGlobalScope::prototype(*m_vm, *m_workletGlobalScopeWrapper.get()));
+    auto* globalScopePrototype = JSGlobalScope::prototype(*m_vm, *m_workletGlobalScopeWrapper.get());
+    globalScopePrototype->didBecomePrototype();
+    contextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, globalScopePrototype);
 
     proxy->setTarget(*m_vm, m_workletGlobalScopeWrapper.get());
     proxy->structure(*m_vm)->setGlobalObject(*m_vm, m_workletGlobalScopeWrapper.get());
@@ -134,7 +136,7 @@ void WorkletScriptController::initScriptWithSubclass()
     ASSERT(m_workletGlobalScopeWrapper->globalObject() == m_workletGlobalScopeWrapper);
     ASSERT(asObject(m_workletGlobalScopeWrapper->getPrototypeDirect(*m_vm))->globalObject() == m_workletGlobalScopeWrapper);
 
-    m_consoleClient = std::make_unique<WorkletConsoleClient>(*m_workletGlobalScope);
+    m_consoleClient = makeUnique<WorkletConsoleClient>(*m_workletGlobalScope);
     m_workletGlobalScopeWrapper->setConsoleClient(m_consoleClient.get());
 }
 
@@ -160,7 +162,7 @@ void WorkletScriptController::evaluate(const ScriptSourceCode& sourceCode, Strin
     evaluate(sourceCode, exception, returnedExceptionMessage);
     if (exception) {
         JSLockHolder lock(vm());
-        reportException(m_workletGlobalScopeWrapper->globalExec(), exception);
+        reportException(m_workletGlobalScopeWrapper->globalObject(), exception);
     }
 }
 
@@ -172,26 +174,26 @@ void WorkletScriptController::evaluate(const ScriptSourceCode& sourceCode, Naked
 
     initScriptIfNeeded();
 
-    auto& state = *m_workletGlobalScopeWrapper->globalExec();
-    VM& vm = state.vm();
+    auto& globalObject = *m_workletGlobalScopeWrapper->globalObject();
+    VM& vm = globalObject.vm();
     JSLockHolder lock { vm };
 
-    JSExecState::profiledEvaluate(&state, JSC::ProfilingReason::Other, sourceCode.jsSourceCode(), m_workletGlobalScopeWrapper->globalThis(), returnedException);
+    JSExecState::profiledEvaluate(&globalObject, JSC::ProfilingReason::Other, sourceCode.jsSourceCode(), m_workletGlobalScopeWrapper->globalThis(), returnedException);
 
     if (returnedException && returnedExceptionMessage) {
         // This FIXME is from WorkerScriptController.
         // FIXME: It's not great that this can run arbitrary code to string-ify the value of the exception.
         // Do we need to do anything to handle that properly, if it, say, raises another exception?
-        *returnedExceptionMessage = returnedException->value().toWTFString(&state);
+        *returnedExceptionMessage = returnedException->value().toWTFString(&globalObject);
     }
 }
 
 void WorkletScriptController::setException(JSC::Exception* exception)
 {
-    auto* exec = m_workletGlobalScopeWrapper->globalExec();
-    VM& vm = exec->vm();
+    auto* lexicalGlobalObject = m_workletGlobalScopeWrapper->globalObject();
+    VM& vm = lexicalGlobalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    throwException(exec, scope, exception);
+    throwException(lexicalGlobalObject, scope, exception);
 }
 
 } // namespace WebCore

@@ -27,33 +27,44 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "DisplayInlineContent.h"
 #include "FormattingState.h"
 #include "InlineItem.h"
-#include "InlineRun.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/OptionSet.h>
 
 namespace WebCore {
 namespace Layout {
+
+using InlineItems = Vector<InlineItem>;
 
 // InlineFormattingState holds the state for a particular inline formatting context tree.
 class InlineFormattingState : public FormattingState {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingState);
 public:
     InlineFormattingState(Ref<FloatingState>&&, LayoutState&);
-    virtual ~InlineFormattingState();
+    ~InlineFormattingState();
 
-    InlineContent& inlineContent() { return m_inlineContent; }
-    InlineItem* lastInlineItem() const { return m_inlineContent.isEmpty() ? nullptr : m_inlineContent.last().get(); }
+    InlineItems& inlineItems() { return m_inlineItems; }
+    const InlineItems& inlineItems() const { return m_inlineItems; }
+    void addInlineItem(InlineItem&& inlineItem) { m_inlineItems.append(WTFMove(inlineItem)); }
 
-    // Temp
-    InlineRuns& inlineRuns() { return m_inlineRuns; }
-    void appendInlineRun(InlineRun inlineRun) { m_inlineRuns.append(inlineRun); }
+    const Display::InlineContent* displayInlineContent() const { return m_displayInlineContent.get(); }
+    Display::InlineContent& ensureDisplayInlineContent();
+    void clearDisplayInlineContent() { m_displayInlineContent = nullptr; }
 
 private:
-    InlineContent m_inlineContent;
-    InlineRuns m_inlineRuns;
+    // Cacheable input to line layout.
+    InlineItems m_inlineItems;
+
+    RefPtr<Display::InlineContent> m_displayInlineContent;
 };
+
+inline Display::InlineContent& InlineFormattingState::ensureDisplayInlineContent()
+{
+    if (!m_displayInlineContent)
+        m_displayInlineContent = adoptRef(*new Display::InlineContent);
+    return *m_displayInlineContent;
+}
 
 }
 }

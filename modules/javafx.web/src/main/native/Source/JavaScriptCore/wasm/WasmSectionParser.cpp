@@ -30,11 +30,13 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "IdentifierInlines.h"
+#include "JSCJSValueInlines.h"
 #include "WasmMemoryInformation.h"
 #include "WasmNameSectionParser.h"
 #include "WasmOps.h"
 #include "WasmSections.h"
 #include "WasmSignatureInlines.h"
+#include <wtf/Optional.h>
 
 namespace JSC { namespace Wasm {
 
@@ -55,28 +57,31 @@ auto SectionParser::parseType() -> PartialResult
         WASM_PARSER_FAIL_IF(type != Func, i, "th Type is non-Func ", type);
         WASM_PARSER_FAIL_IF(!parseVarUInt32(argumentCount), "can't get ", i, "th Type's argument count");
         WASM_PARSER_FAIL_IF(argumentCount > maxFunctionParams, i, "th argument count is too big ", argumentCount, " maximum ", maxFunctionParams);
-        RefPtr<Signature> maybeSignature = Signature::tryCreate(argumentCount);
-        WASM_PARSER_FAIL_IF(!maybeSignature, "can't allocate enough memory for Type section's ", i, "th signature");
-        Ref<Signature> signature = maybeSignature.releaseNonNull();
+        Vector<Type> arguments;
+        WASM_PARSER_FAIL_IF(!arguments.tryReserveCapacity(argumentCount), "can't allocate enough memory for Type section's ", i, "th signature");
 
         for (unsigned i = 0; i < argumentCount; ++i) {
             Type argumentType;
             WASM_PARSER_FAIL_IF(!parseValueType(argumentType), "can't get ", i, "th argument Type");
-            signature->argument(i) = argumentType;
+            arguments.append(argumentType);
         }
 
-        uint8_t returnCount;
-        WASM_PARSER_FAIL_IF(!parseVarUInt1(returnCount), "can't get ", i, "th Type's return count");
-        Type returnType;
-        if (returnCount) {
+        uint32_t returnCount;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(returnCount), "can't get ", i, "th Type's return count");
+        WASM_PARSER_FAIL_IF(returnCount > 1 && !Options::useWebAssemblyMultiValues(), "Signatures cannot have more than one result type yet.");
+
+        Vector<Type, 1> returnTypes;
+        WASM_PARSER_FAIL_IF(!returnTypes.tryReserveCapacity(argumentCount), "can't allocate enough memory for Type section's ", i, "th signature");
+        for (unsigned i = 0; i < returnCount; ++i) {
             Type value;
             WASM_PARSER_FAIL_IF(!parseValueType(value), "can't get ", i, "th Type's return value");
-            returnType = static_cast<Type>(value);
-        } else
-            returnType = Type::Void;
-        signature->returnType() = returnType;
+            returnTypes.append(value);
+        }
 
-        m_info->usedSignatures.uncheckedAppend(SignatureInformation::adopt(WTFMove(signature)));
+        RefPtr<Signature> signature = SignatureInformation::signatureFor(returnTypes, arguments);
+        WASM_PARSER_FAIL_IF(!signature, "can't allocate enough memory for Type section's ", i, "th signature");
+
+        m_info->usedSignatures.uncheckedAppend(signature.releaseNonNull());
     }
     return { };
 }
@@ -117,6 +122,7 @@ auto SectionParser::parseImport() -> PartialResult
         }
         case ExternalKind::Table: {
             bool isImport = true;
+            kindIndex = m_info->tables.size();
             PartialResult result = parseTableHelper(isImport);
             if (UNLIKELY(!result))
                 return makeUnexpected(WTFMove(result.error()));
@@ -130,10 +136,11 @@ auto SectionParser::parseImport() -> PartialResult
             break;
         }
         case ExternalKind::Global: {
-            Global global;
+            GlobalInformation global;
             WASM_FAIL_IF_HELPER_FAILS(parseGlobalType(global));
-            WASM_PARSER_FAIL_IF(global.mutability == Global::Mutable, "Mutable Globals aren't supported");
-
+            // Only mutable globals need floating bindings.
+            if (global.mutability == GlobalInformation::Mutability::Mutable)
+                global.bindingMode = GlobalInformation::BindingMode::Portable;
             kindIndex = m_info->globals.size();
             m_info->globals.uncheckedAppend(WTFMove(global));
             break;
@@ -182,7 +189,7 @@ auto SectionParser::parseResizableLimits(uint32_t& initial, Optional<uint32_t>& 
     if (flags) {
         uint32_t maximumInt;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(maximumInt), "can't parse resizable limits maximum page count");
-        WASM_PARSER_FAIL_IF(initial > maximumInt, "resizable limits has a initial page count of ", initial, " which is greater than its maximum ", maximumInt);
+        WASM_PARSER_FAIL_IF(initial > maximumInt, "resizable limits has an initial page count of ", initial, " which is greater than its maximum ", maximumInt);
         maximum = maximumInt;
     }
 
@@ -191,11 +198,11 @@ auto SectionParser::parseResizableLimits(uint32_t& initial, Optional<uint32_t>& 
 
 auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 {
-    WASM_PARSER_FAIL_IF(m_info->tableCount() > 0, "Cannot have more than one Table for now");
+    WASM_PARSER_FAIL_IF(m_info->tableCount() >= maxTables, "Table count of ", m_info->tableCount(), " is too big, maximum ", maxTables);
 
     int8_t type;
     WASM_PARSER_FAIL_IF(!parseInt7(type), "can't parse Table type");
-    WASM_PARSER_FAIL_IF(type != Wasm::Anyfunc, "Table type should be anyfunc, got ", type);
+    WASM_PARSER_FAIL_IF(type != Wasm::Funcref && type != Wasm::Anyref, "Table type should be funcref or anyref, got ", type);
 
     uint32_t initial;
     Optional<uint32_t> maximum;
@@ -206,7 +213,8 @@ auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 
     ASSERT(!maximum || *maximum >= initial);
 
-    m_info->tableInformation = TableInformation(initial, maximum, isImport);
+    TableElementType tableType = type == Wasm::Funcref ? TableElementType::Funcref : TableElementType::Anyref;
+    m_info->tables.append(TableInformation(initial, maximum, isImport, tableType));
 
     return { };
 }
@@ -215,15 +223,13 @@ auto SectionParser::parseTable() -> PartialResult
 {
     uint32_t count;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(count), "can't get Table's count");
-    WASM_PARSER_FAIL_IF(count > 1, "Table count of ", count, " is invalid, at most 1 is allowed for now");
 
-    if (!count)
-        return { };
-
-    bool isImport = false;
-    PartialResult result = parseTableHelper(isImport);
-    if (UNLIKELY(!result))
-        return makeUnexpected(WTFMove(result.error()));
+    for (unsigned i = 0; i < count; ++i) {
+        bool isImport = false;
+        PartialResult result = parseTableHelper(isImport);
+        if (UNLIKELY(!result))
+            return makeUnexpected(WTFMove(result.error()));
+    }
 
     return { };
 }
@@ -280,17 +286,19 @@ auto SectionParser::parseGlobal() -> PartialResult
     WASM_PARSER_FAIL_IF((static_cast<uint32_t>(totalBytes) < globalCount) || !m_info->globals.tryReserveCapacity(totalBytes), "can't allocate memory for ", totalBytes, " globals");
 
     for (uint32_t globalIndex = 0; globalIndex < globalCount; ++globalIndex) {
-        Global global;
+        GlobalInformation global;
         uint8_t initOpcode;
 
         WASM_FAIL_IF_HELPER_FAILS(parseGlobalType(global));
         Type typeForInitOpcode;
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, global.initialBitsOrImportNumber, typeForInitOpcode));
         if (initOpcode == GetGlobal)
-            global.initializationType = Global::FromGlobalImport;
+            global.initializationType = GlobalInformation::FromGlobalImport;
+        else if (initOpcode == RefFunc)
+            global.initializationType = GlobalInformation::FromRefFunc;
         else
-            global.initializationType = Global::FromExpression;
-        WASM_PARSER_FAIL_IF(typeForInitOpcode != global.type, "Global init_expr opcode of type ", typeForInitOpcode, " doesn't match global's type ", global.type);
+            global.initializationType = GlobalInformation::FromExpression;
+        WASM_PARSER_FAIL_IF(!isSubtype(typeForInitOpcode, global.type), "Global init_expr opcode of type ", typeForInitOpcode, " doesn't match global's type ", global.type);
 
         m_info->globals.uncheckedAppend(WTFMove(global));
     }
@@ -336,7 +344,10 @@ auto SectionParser::parseExport() -> PartialResult
         }
         case ExternalKind::Global: {
             WASM_PARSER_FAIL_IF(kindIndex >= m_info->globals.size(), exportNumber, "th Export has invalid global number ", kindIndex, " it exceeds the globals count ", m_info->globals.size(), ", named '", fieldString, "'");
-            WASM_PARSER_FAIL_IF(m_info->globals[kindIndex].mutability != Global::Immutable, exportNumber, "th Export isn't immutable, named '", fieldString, "'");
+            // Only mutable globals need floating bindings.
+            GlobalInformation& global = m_info->globals[kindIndex];
+            if (global.mutability == GlobalInformation::Mutability::Mutable)
+                global.bindingMode = GlobalInformation::BindingMode::Portable;
             break;
         }
         }
@@ -355,7 +366,7 @@ auto SectionParser::parseStart() -> PartialResult
     SignatureIndex signatureIndex = m_info->signatureIndexFromFunctionIndexSpace(startFunctionIndex);
     const Signature& signature = SignatureInformation::get(signatureIndex);
     WASM_PARSER_FAIL_IF(signature.argumentCount(), "Start function can't have arguments");
-    WASM_PARSER_FAIL_IF(signature.returnType() != Void, "Start function can't return a value");
+    WASM_PARSER_FAIL_IF(!signature.returnsVoid(), "Start function can't return a value");
     m_info->startFunctionIndexSpace = startFunctionIndex;
     return { };
 }
@@ -372,17 +383,25 @@ auto SectionParser::parseElement() -> PartialResult
         uint8_t initOpcode;
         uint32_t indexCount;
 
-        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
+        uint8_t magic;
+        WASM_PARSER_FAIL_IF(!parseUInt8(magic) || (magic && magic != 2), "can't get ", elementNum, "th Element reserved byte, which should be either 0x00 or 0x02 followed by a table index");
+
+        if (magic == 2)
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
+        else
+            tableIndex = 0;
+
         WASM_PARSER_FAIL_IF(tableIndex >= m_info->tableCount(), "Element section for Table ", tableIndex, " exceeds available Table ", m_info->tableCount());
+        WASM_PARSER_FAIL_IF(m_info->tables[tableIndex].type() != TableElementType::Funcref, "Table ", tableIndex, " must have type 'funcref' to have an element section");
         Type initExprType;
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, initExprBits, initExprType));
         WASM_PARSER_FAIL_IF(initExprType != I32, "Element init_expr must produce an i32");
         WASM_PARSER_FAIL_IF(!parseVarUInt32(indexCount), "can't get ", elementNum, "th index count for Element section");
         WASM_PARSER_FAIL_IF(indexCount == std::numeric_limits<uint32_t>::max(), "Element section's ", elementNum, "th index count is too big ", indexCount);
 
-        ASSERT(!!m_info->tableInformation);
+        ASSERT(!!m_info->tables[tableIndex]);
 
-        Element element(makeI32InitExpr(initOpcode, initExprBits));
+        Element element(tableIndex, makeI32InitExpr(initOpcode, initExprBits));
         WASM_PARSER_FAIL_IF(!element.functionIndices.tryReserveCapacity(indexCount), "can't allocate memory for ", indexCount, " Element indices");
 
         for (unsigned index = 0; index < indexCount; ++index) {
@@ -399,29 +418,10 @@ auto SectionParser::parseElement() -> PartialResult
     return { };
 }
 
-// This function will be changed to be RELEASE_ASSERT_NOT_REACHED once we switch our parsing infrastructure to the streaming parser.
 auto SectionParser::parseCode() -> PartialResult
 {
-    uint32_t count;
-    WASM_PARSER_FAIL_IF(!parseVarUInt32(count), "can't get Code section's count");
-    WASM_PARSER_FAIL_IF(count == std::numeric_limits<uint32_t>::max(), "Code section's count is too big ", count);
-    WASM_PARSER_FAIL_IF(count != m_info->functions.size(), "Code section count ", count, " exceeds the declared number of functions ", m_info->functions.size());
-
-    for (uint32_t i = 0; i < count; ++i) {
-        uint32_t functionSize;
-        WASM_PARSER_FAIL_IF(!parseVarUInt32(functionSize), "can't get ", i, "th Code function's size");
-        WASM_PARSER_FAIL_IF(functionSize > length(), "Code function's size ", functionSize, " exceeds the module's size ", length());
-        WASM_PARSER_FAIL_IF(functionSize > length() - m_offset, "Code function's size ", functionSize, " exceeds the module's remaining size", length() - m_offset);
-        WASM_PARSER_FAIL_IF(functionSize > maxFunctionSize, "Code function's size ", functionSize, " is too big");
-
-        Vector<uint8_t> data(functionSize);
-        std::memcpy(data.data(), source() + m_offset, functionSize);
-        m_info->functions[i].start = m_offsetInSource + m_offset;
-        m_info->functions[i].end = m_offsetInSource + m_offset + functionSize;
-        m_info->functions[i].data = WTFMove(data);
-        m_offset += functionSize;
-    }
-
+    // The Code section is handled specially in StreamingParser.
+    RELEASE_ASSERT_NOT_REACHED();
     return { };
 }
 
@@ -468,9 +468,25 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
 
         WASM_PARSER_FAIL_IF(index >= m_info->globals.size(), "get_global's index ", index, " exceeds the number of globals ", m_info->globals.size());
         WASM_PARSER_FAIL_IF(index >= m_info->firstInternalGlobal, "get_global import kind index ", index, " exceeds the first internal global ", m_info->firstInternalGlobal);
+        WASM_PARSER_FAIL_IF(m_info->globals[index].mutability != GlobalInformation::Immutable, "get_global import kind index ", index, " is mutable ");
 
-        ASSERT(m_info->globals[index].mutability == Global::Immutable);
         resultType = m_info->globals[index].type;
+        bitsOrImportNumber = index;
+        break;
+    }
+
+    case RefNull: {
+        resultType = Funcref;
+        bitsOrImportNumber = JSValue::encode(jsNull());
+        break;
+    }
+
+    case RefFunc: {
+        uint32_t index;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get ref.func index");
+        WASM_PARSER_FAIL_IF(index >= m_info->functions.size(), "ref.func index", index, " exceeds the number of functions ", m_info->functions.size());
+
+        resultType = Funcref;
         bitsOrImportNumber = index;
         break;
     }
@@ -486,12 +502,12 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
     return { };
 }
 
-auto SectionParser::parseGlobalType(Global& global) -> PartialResult
+auto SectionParser::parseGlobalType(GlobalInformation& global) -> PartialResult
 {
     uint8_t mutability;
     WASM_PARSER_FAIL_IF(!parseValueType(global.type), "can't get Global's value type");
     WASM_PARSER_FAIL_IF(!parseVarUInt1(mutability), "can't get Global type's mutability");
-    global.mutability = static_cast<Global::Mutability>(mutability);
+    global.mutability = static_cast<GlobalInformation::Mutability>(mutability);
     return { };
 }
 

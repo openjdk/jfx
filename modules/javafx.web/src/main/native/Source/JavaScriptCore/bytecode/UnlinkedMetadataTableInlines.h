@@ -31,11 +31,31 @@
 
 namespace JSC {
 
+
 ALWAYS_INLINE UnlinkedMetadataTable::UnlinkedMetadataTable()
     : m_hasMetadata(false)
     , m_isFinalized(false)
     , m_isLinked(false)
-    , m_rawBuffer(fastZeroedMalloc(sizeof(LinkingData) + s_offsetTableSize))
+    , m_is32Bit(false)
+    , m_rawBuffer(static_cast<uint8_t*>(MetadataTableMalloc::zeroedMalloc(sizeof(LinkingData) + s_offset32TableSize)))
+{
+}
+
+ALWAYS_INLINE UnlinkedMetadataTable::UnlinkedMetadataTable(bool is32Bit)
+    : m_hasMetadata(false)
+    , m_isFinalized(false)
+    , m_isLinked(false)
+    , m_is32Bit(is32Bit)
+    , m_rawBuffer(static_cast<uint8_t*>(MetadataTableMalloc::zeroedMalloc(sizeof(LinkingData) + (is32Bit ? s_offset16TableSize + s_offset32TableSize : s_offset16TableSize))))
+{
+}
+
+ALWAYS_INLINE UnlinkedMetadataTable::UnlinkedMetadataTable(EmptyTag)
+    : m_hasMetadata(false)
+    , m_isFinalized(true)
+    , m_isLinked(false)
+    , m_is32Bit(false)
+    , m_rawBuffer(nullptr)
 {
 }
 
@@ -43,14 +63,14 @@ ALWAYS_INLINE UnlinkedMetadataTable::~UnlinkedMetadataTable()
 {
     ASSERT(!m_isLinked);
     if (m_hasMetadata || !m_isFinalized)
-        fastFree(m_rawBuffer);
+        MetadataTableMalloc::free(m_rawBuffer);
 }
 
 ALWAYS_INLINE unsigned UnlinkedMetadataTable::addEntry(OpcodeID opcodeID)
 {
     ASSERT(!m_isFinalized && opcodeID < s_offsetTableEntries - 1);
     m_hasMetadata = true;
-    return buffer()[opcodeID]++;
+    return preprocessBuffer()[opcodeID]++;
 }
 
 ALWAYS_INLINE size_t UnlinkedMetadataTable::sizeInBytes()
@@ -58,7 +78,9 @@ ALWAYS_INLINE size_t UnlinkedMetadataTable::sizeInBytes()
     if (m_isFinalized && !m_hasMetadata)
         return 0;
 
-    return s_offsetTableSize;
+    if (m_is32Bit)
+        return s_offset16TableSize + s_offset32TableSize;
+    return s_offset16TableSize;
 }
 
 ALWAYS_INLINE size_t UnlinkedMetadataTable::sizeInBytes(MetadataTable& metadataTable)
@@ -67,36 +89,17 @@ ALWAYS_INLINE size_t UnlinkedMetadataTable::sizeInBytes(MetadataTable& metadataT
 
     // In this case, we return the size of the table minus the offset table,
     // which was already accounted for in the UnlinkedCodeBlock.
+
+    // Be careful not to touch m_rawBuffer if this metadataTable is not owning it.
+    // It is possible that, m_rawBuffer is realloced in the other thread while we are accessing here.
+    size_t result = metadataTable.totalSize();
     if (metadataTable.buffer() == buffer()) {
         ASSERT(m_isLinked);
-        return buffer()[s_offsetTableEntries - 1] - s_offsetTableSize;
+        if (m_is32Bit)
+            return result - (s_offset16TableSize + s_offset32TableSize);
+        return result - s_offset16TableSize;
     }
-
-    return metadataTable.buffer()[s_offsetTableEntries - 1];
-}
-
-ALWAYS_INLINE void UnlinkedMetadataTable::finalize()
-{
-    ASSERT(!m_isFinalized);
-    m_isFinalized = true;
-    if (!m_hasMetadata) {
-        fastFree(m_rawBuffer);
-        m_rawBuffer = nullptr;
-        return;
-    }
-
-    unsigned offset = s_offsetTableSize;
-    for (unsigned i = 0; i < s_offsetTableEntries - 1; i++) {
-        unsigned numberOfEntries = buffer()[i];
-
-        if (numberOfEntries > 0) {
-            offset = roundUpToMultipleOf(metadataAlignment(static_cast<OpcodeID>(i)), offset);
-            buffer()[i] = offset;
-            offset += numberOfEntries * metadataSize(static_cast<OpcodeID>(i));
-        } else
-            buffer()[i] = offset;
-    }
-    buffer()[s_offsetTableEntries - 1] = offset;
+    return result;
 }
 
 ALWAYS_INLINE RefPtr<MetadataTable> UnlinkedMetadataTable::link()
@@ -106,16 +109,17 @@ ALWAYS_INLINE RefPtr<MetadataTable> UnlinkedMetadataTable::link()
     if (!m_hasMetadata)
         return nullptr;
 
-    unsigned totalSize = buffer()[s_offsetTableEntries - 1];
+    unsigned totalSize = this->totalSize();
+    unsigned offsetTableSize = this->offsetTableSize();
     uint8_t* buffer;
     if (!m_isLinked) {
         m_isLinked = true;
-        m_rawBuffer = buffer = reinterpret_cast<uint8_t*>(fastRealloc(m_rawBuffer, sizeof(LinkingData) + totalSize));
+        m_rawBuffer = buffer = reinterpret_cast<uint8_t*>(MetadataTableMalloc::realloc(m_rawBuffer, sizeof(LinkingData) + totalSize));
     } else {
-        buffer = reinterpret_cast<uint8_t*>(fastMalloc(sizeof(LinkingData) + totalSize));
-        memcpy(buffer, m_rawBuffer, sizeof(LinkingData) + s_offsetTableSize);
+        buffer = reinterpret_cast<uint8_t*>(MetadataTableMalloc::malloc(sizeof(LinkingData) + totalSize));
+        memcpy(buffer, m_rawBuffer, sizeof(LinkingData) + offsetTableSize);
     }
-    memset(buffer + sizeof(LinkingData) + s_offsetTableSize, 0, totalSize - s_offsetTableSize);
+    memset(buffer + sizeof(LinkingData) + offsetTableSize, 0, totalSize - offsetTableSize);
     return adoptRef(*new (buffer + sizeof(LinkingData)) MetadataTable(*this));
 }
 
@@ -128,10 +132,10 @@ ALWAYS_INLINE void UnlinkedMetadataTable::unlink(MetadataTable& metadataTable)
     if (metadataTable.buffer() == buffer()) {
         ASSERT(m_isLinked);
         m_isLinked = false;
-        m_rawBuffer = fastRealloc(m_rawBuffer, sizeof(LinkingData) + s_offsetTableSize);
+        m_rawBuffer = static_cast<uint8_t*>(MetadataTableMalloc::realloc(m_rawBuffer, sizeof(LinkingData) + offsetTableSize()));
         return;
     }
-    fastFree(&metadataTable.linkingData());
+    MetadataTableMalloc::free(&metadataTable.linkingData());
 }
 
 } // namespace JSC

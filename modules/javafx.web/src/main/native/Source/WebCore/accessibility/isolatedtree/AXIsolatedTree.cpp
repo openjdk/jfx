@@ -23,12 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-
 #include "config.h"
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 #include "AXIsolatedTree.h"
 
-#include "AXIsolatedTreeNode.h"
+#include "AXIsolatedObject.h"
 #include "Page.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -42,9 +42,9 @@ static unsigned newTreeID()
     return ++s_currentTreeID;
 }
 
-HashMap<AXIsolatedTreeID, Ref<AXIsolatedTree>>& AXIsolatedTree::treePageCache()
+HashMap<PageIdentifier, Ref<AXIsolatedTree>>& AXIsolatedTree::treePageCache()
 {
-    static NeverDestroyed<HashMap<AXIsolatedTreeID, Ref<AXIsolatedTree>>> map;
+    static NeverDestroyed<HashMap<PageIdentifier, Ref<AXIsolatedTree>>> map;
     return map;
 }
 
@@ -67,14 +67,20 @@ Ref<AXIsolatedTree> AXIsolatedTree::create()
     return adoptRef(*new AXIsolatedTree());
 }
 
+RefPtr<AXIsolatedObject> AXIsolatedTree::nodeInTreeForID(AXIsolatedTreeID treeID, AXID axID)
+{
+    return treeForID(treeID)->nodeForID(axID);
+}
+
 RefPtr<AXIsolatedTree> AXIsolatedTree::treeForID(AXIsolatedTreeID treeID)
 {
     return treeIDCache().get(treeID);
 }
 
-Ref<AXIsolatedTree> AXIsolatedTree::createTreeForPageID(uint64_t pageID)
+Ref<AXIsolatedTree> AXIsolatedTree::createTreeForPageID(PageIdentifier pageID)
 {
     LockHolder locker(s_cacheLock);
+    ASSERT(!treePageCache().contains(pageID));
 
     auto newTree = AXIsolatedTree::create();
     treePageCache().set(pageID, newTree.copyRef());
@@ -82,7 +88,27 @@ Ref<AXIsolatedTree> AXIsolatedTree::createTreeForPageID(uint64_t pageID)
     return newTree;
 }
 
-RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(uint64_t pageID)
+void AXIsolatedTree::removeTreeForPageID(PageIdentifier pageID)
+{
+    LockHolder locker(s_cacheLock);
+
+    if (auto optionalTree = treePageCache().take(pageID)) {
+        auto& tree { *optionalTree };
+        LockHolder treeLocker { tree->m_changeLogLock };
+        for (const auto& axID : tree->m_readerThreadNodeMap.keys()) {
+            if (auto object = tree->nodeForID(axID))
+                object->detach(AccessibilityDetachmentType::CacheDestroyed);
+        }
+        tree->m_pendingAppends.clear();
+        tree->m_pendingRemovals.clear();
+        tree->m_readerThreadNodeMap.clear();
+        treeLocker.unlockEarly();
+
+        treeIDCache().remove(tree->treeIdentifier());
+    }
+}
+
+RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(PageIdentifier pageID)
 {
     LockHolder locker(s_cacheLock);
 
@@ -92,28 +118,46 @@ RefPtr<AXIsolatedTree> AXIsolatedTree::treeForPageID(uint64_t pageID)
     return nullptr;
 }
 
-RefPtr<AXIsolatedTreeNode> AXIsolatedTree::nodeForID(AXID axID) const
+RefPtr<AXIsolatedObject> AXIsolatedTree::nodeForID(AXID axID) const
 {
-    ASSERT(!isMainThread());
     if (!axID)
         return nullptr;
     return m_readerThreadNodeMap.get(axID);
 }
 
-RefPtr<AXIsolatedTreeNode> AXIsolatedTree::rootNode()
+RefPtr<AXIsolatedObject> AXIsolatedTree::focusedUIElement()
+{
+    m_focusedNodeID = m_pendingFocusedNodeID;
+    return nodeForID(m_focusedNodeID);
+}
+
+RefPtr<AXIsolatedObject> AXIsolatedTree::rootNode()
 {
     return nodeForID(m_rootNodeID);
 }
 
+void AXIsolatedTree::setRootNode(Ref<AXIsolatedObject>& root)
+{
+    LockHolder locker { m_changeLogLock };
+    m_rootNodeID = root->objectID();
+    m_readerThreadNodeMap.add(root->objectID(), WTFMove(root));
+}
+
+void AXIsolatedTree::setFocusedNodeID(AXID axID)
+{
+    LockHolder locker { m_changeLogLock };
+    m_pendingFocusedNodeID = axID;
+}
+
 void AXIsolatedTree::removeNode(AXID axID)
 {
-    LockHolder locker(m_changeLogLock);
+    LockHolder locker { m_changeLogLock };
     m_pendingRemovals.append(axID);
 }
 
-void AXIsolatedTree::appendNodeChanges(Vector<Ref<AXIsolatedTreeNode>>& log)
+void AXIsolatedTree::appendNodeChanges(Vector<Ref<AXIsolatedObject>>& log)
 {
-    LockHolder locker(m_changeLogLock);
+    LockHolder locker { m_changeLogLock };
     for (auto& node : log)
         m_pendingAppends.append(node.copyRef());
 }
@@ -121,21 +165,22 @@ void AXIsolatedTree::appendNodeChanges(Vector<Ref<AXIsolatedTreeNode>>& log)
 void AXIsolatedTree::applyPendingChanges()
 {
     RELEASE_ASSERT(!isMainThread());
+    LockHolder locker { m_changeLogLock };
 
-    LockHolder locker(m_changeLogLock);
-    Vector<Ref<AXIsolatedTreeNode>> appendCopy;
-    std::swap(appendCopy, m_pendingAppends);
-    Vector<AXID> removeCopy({ WTFMove(m_pendingRemovals) });
-    locker.unlockEarly();
+    // We don't clear the pending IDs beacause if the next round of updates does not modify them, then they stay the same
+    // value without extra bookkeeping.
+    m_focusedNodeID = m_pendingFocusedNodeID;
 
-    for (auto& item : appendCopy) {
-        m_readerThreadNodeMap.add(item->identifier(), item.copyRef());
-        if (item->isRootNode())
-            m_rootNodeID = item->identifier();
-    }
+    for (auto& item : m_pendingAppends)
+        m_readerThreadNodeMap.add(item->objectID(), WTFMove(item));
+    m_pendingAppends.clear();
 
-    for (auto item : removeCopy)
+    for (auto& item : m_pendingRemovals) {
+        if (auto object = nodeForID(item))
+            object->detach(AccessibilityDetachmentType::ElementDestroyed);
         m_readerThreadNodeMap.remove(item);
+    }
+    m_pendingRemovals.clear();
 }
 
 } // namespace WebCore

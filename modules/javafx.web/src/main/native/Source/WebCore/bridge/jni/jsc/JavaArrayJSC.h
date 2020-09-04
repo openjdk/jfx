@@ -44,14 +44,14 @@ public:
 
     RootObject* rootObject() const;
 
-    bool setValueAt(ExecState*, unsigned int index, JSValue) const final;
-    JSValue valueAt(ExecState*, unsigned int index) const final;
+    bool setValueAt(JSGlobalObject*, unsigned int index, JSValue) const final;
+    JSValue valueAt(JSGlobalObject*, unsigned int index) const final;
     unsigned int getLength() const final;
 
     jobject javaArray() const { return m_array->instance(); }
     jobject accessControlContext() const { return m_accessControlContext->instance(); }
 
-    static JSValue convertJObjectToArray(ExecState*, jobject, const char* type, RefPtr<RootObject>&&, jobject accessControlContext);
+    static JSValue convertJObjectToArray(JSGlobalObject*, jobject, const char* type, RefPtr<RootObject>&&, jobject accessControlContext);
 
 private:
     RefPtr<JobjectWrapper> m_array;

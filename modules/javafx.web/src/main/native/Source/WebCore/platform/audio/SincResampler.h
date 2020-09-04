@@ -31,12 +31,14 @@
 
 #include "AudioArray.h"
 #include "AudioSourceProvider.h"
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 // SincResampler is a high-quality sample-rate converter.
 
-class SincResampler {
+class SincResampler final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     // scaleFactor == sourceSampleRate / destinationSampleRate
     // kernelSize can be adjusted for quality (higher is better)
@@ -79,6 +81,8 @@ protected:
 
     // The buffer is primed once at the very beginning of processing.
     bool m_isBufferPrimed;
+
+    RefPtr<AudioBus> m_internalBus;
 };
 
 } // namespace WebCore

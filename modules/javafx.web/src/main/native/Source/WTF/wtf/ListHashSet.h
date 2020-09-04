@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2011, Benjamin Poulain <ikipou@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -45,7 +45,7 @@ template<typename ValueArg> struct ListHashSetNode;
 template<typename HashArg> struct ListHashSetNodeHashFunctions;
 template<typename HashArg> struct ListHashSetTranslator;
 
-template<typename ValueArg, typename HashArg = typename DefaultHash<ValueArg>::Hash> class ListHashSet {
+template<typename ValueArg, typename HashArg = typename DefaultHash<ValueArg>::Hash> class ListHashSet final {
     WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSetNode<ValueArg> Node;
@@ -181,10 +181,11 @@ public:
 template<typename HashArg> struct ListHashSetNodeHashFunctions {
     template<typename T> static unsigned hash(const T& key) { return HashArg::hash(key->m_value); }
     template<typename T> static bool equal(const T& a, const T& b) { return HashArg::equal(a->m_value, b->m_value); }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetIterator {
+    WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;
@@ -232,6 +233,7 @@ private:
 };
 
 template<typename ValueArg, typename HashArg> class ListHashSetConstIterator {
+    WTF_MAKE_FAST_ALLOCATED;
 private:
     typedef ListHashSet<ValueArg, HashArg> ListHashSetType;
     typedef ListHashSetIterator<ValueArg, HashArg> iterator;

@@ -28,17 +28,18 @@
 #include "DataRef.h"
 #include "Length.h"
 #include "StyleCustomPropertyData.h"
+#include "TabSize.h"
 #include "TextDecorationThickness.h"
 #include "TextUnderlineOffset.h"
 #include <wtf/RefCounted.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 #if ENABLE(TEXT_AUTOSIZING)
 #include "TextSizeAdjustment.h"
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-#include "StyleSupportedColorSchemes.h"
+#include "StyleColorScheme.h"
 #endif
 
 namespace WebCore {
@@ -52,7 +53,9 @@ class StyleImage;
 // This struct is for rarely used inherited CSS3, CSS2, and WebKit-specific properties.
 // By grouping them together, we save space, and only allocate this object when someone
 // actually uses one of these properties.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 class StyleRareInheritedData : public RefCounted<StyleRareInheritedData> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(StyleRareInheritedData);
 public:
     static Ref<StyleRareInheritedData> create() { return adoptRef(*new StyleRareInheritedData); }
     Ref<StyleRareInheritedData> copy() const;
@@ -117,15 +120,13 @@ public:
     unsigned textIndentLine : 1; // TextIndentLine
     unsigned textIndentType : 1; // TextIndentType
 #endif
-    unsigned lineBoxContain: 7; // LineBoxContain
+    unsigned lineBoxContain: 7; // OptionSet<LineBoxContain>
     // CSS Image Values Level 3
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    unsigned imageOrientation : 4; // ImageOrientationEnum
-#endif
+    unsigned imageOrientation : 1; // ImageOrientation
     unsigned imageRendering : 3; // ImageRendering
     unsigned lineSnap : 2; // LineSnap
     unsigned lineAlign : 1; // LineAlign
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     unsigned useTouchOverflowScrolling: 1;
 #endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -152,22 +153,27 @@ public:
     unsigned joinStyle : 2; // LineJoin
     unsigned hasSetStrokeWidth : 1;
     unsigned hasSetStrokeColor : 1;
+
+#if ENABLE(POINTER_EVENTS)
+    unsigned effectiveTouchActions : 6; // OptionSet<TouchAction>
+#endif
+
     Length strokeWidth;
     Color strokeColor;
     Color visitedLinkStrokeColor;
     float miterLimit;
 
-    AtomicString hyphenationString;
+    AtomString hyphenationString;
     short hyphenationLimitBefore;
     short hyphenationLimitAfter;
     short hyphenationLimitLines;
 
-    AtomicString textEmphasisCustomMark;
+    AtomString textEmphasisCustomMark;
     RefPtr<QuotesData> quotes;
     DataRef<StyleFilterData> appleColorFilter;
 
-    AtomicString lineGrid;
-    unsigned tabSize;
+    AtomString lineGrid;
+    TabSize tabSize;
 
 #if ENABLE(TEXT_AUTOSIZING)
     TextSizeAdjustment textSizeAdjust;
@@ -182,7 +188,7 @@ public:
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-    StyleSupportedColorSchemes supportedColorSchemes;
+    StyleColorScheme colorScheme;
 #endif
 
 private:

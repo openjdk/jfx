@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class OverflowEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(OverflowEvent);
 public:
     enum orientType {
         HORIZONTAL = 0,
@@ -53,7 +54,7 @@ public:
         bool verticalOverflow { false };
     };
 
-    static Ref<OverflowEvent> create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<OverflowEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new OverflowEvent(type, initializer, isTrusted));
     }
@@ -69,7 +70,7 @@ public:
 private:
     OverflowEvent();
     OverflowEvent(bool horizontalOverflowChanged, bool horizontalOverflow, bool verticalOverflowChanged, bool verticalOverflow);
-    OverflowEvent(const AtomicString&, const Init&, IsTrusted);
+    OverflowEvent(const AtomString&, const Init&, IsTrusted);
 
     unsigned short m_orient;
     bool m_horizontalOverflow;

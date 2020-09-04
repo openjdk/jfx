@@ -21,12 +21,13 @@
 
 #pragma once
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include <atk/atk.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+class AXCoreObject;
 class AccessibilityObject;
 class IntRect;
 class VisibleSelection;
@@ -39,21 +40,21 @@ class VisibleSelection;
         return; \
     auto& coreObject = webkitAccessibleGetAccessibilityObject(webkitAccessible); \
     if (!coreObject.document())                                         \
-            return; \
+        return;                                                         \
     coreObject.updateBackingStore();                                    \
-        if (webkitAccessibleIsDetached(webkitAccessible)) \
-            return; \
+    if (webkitAccessibleIsDetached(webkitAccessible))                   \
+        return;                                                         \
     ; } G_STMT_END
 
 #define returnValIfWebKitAccessibleIsInvalid(webkitAccessible, val) G_STMT_START { \
     if (!webkitAccessible || webkitAccessibleIsDetached(webkitAccessible)) \
-        return (val); \
+        return (val);                                                   \
     auto& coreObject = webkitAccessibleGetAccessibilityObject(webkitAccessible); \
     if (!coreObject.document())                                         \
-            return (val); \
+        return (val);                                                   \
     coreObject.updateBackingStore();                                    \
-        if (webkitAccessibleIsDetached(webkitAccessible)) \
-            return (val); \
+    if (webkitAccessibleIsDetached(webkitAccessible))                   \
+        return (val);                                                   \
     ; } G_STMT_END
 
 AtkAttributeSet* addToAtkAttributeSet(AtkAttributeSet*, const char* name, const char* value);
@@ -66,6 +67,6 @@ String accessibilityDescription(WebCore::AccessibilityObject*);
 
 bool selectionBelongsToObject(WebCore::AccessibilityObject*, WebCore::VisibleSelection&);
 
-WebCore::AccessibilityObject* objectFocusedAndCaretOffsetUnignored(WebCore::AccessibilityObject*, int& offset);
+WebCore::AXCoreObject* objectFocusedAndCaretOffsetUnignored(WebCore::AXCoreObject*, int& offset);
 
-#endif // HAVE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY)

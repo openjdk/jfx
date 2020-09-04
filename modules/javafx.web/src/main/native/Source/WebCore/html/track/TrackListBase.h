@@ -27,11 +27,12 @@
 
 #if ENABLE(VIDEO_TRACK)
 
-#include "ActiveDOMObject.h"
+#include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "GenericEventQueue.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -39,7 +40,8 @@ class HTMLMediaElement;
 class Element;
 class TrackBase;
 
-class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ActiveDOMObject {
+class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ContextDestructionObserver {
+    WTF_MAKE_ISO_ALLOCATED(TrackListBase);
 public:
     virtual ~TrackListBase();
 
@@ -55,7 +57,7 @@ public:
 
     virtual void clearElement();
     Element* element() const;
-    HTMLMediaElement* mediaElement() const { return m_element; }
+    WeakPtr<HTMLMediaElement> mediaElement() const { return m_element; }
 
     // Needs to be public so tracks can call it
     void scheduleChangeEvent();
@@ -64,7 +66,7 @@ public:
     bool isAnyTrackEnabled() const;
 
 protected:
-    TrackListBase(HTMLMediaElement*, ScriptExecutionContext*);
+    TrackListBase(WeakPtr<HTMLMediaElement>, ScriptExecutionContext*);
 
     void scheduleAddTrackEvent(Ref<TrackBase>&&);
     void scheduleRemoveTrackEvent(Ref<TrackBase>&&);
@@ -72,20 +74,15 @@ protected:
     Vector<RefPtr<TrackBase>> m_inbandTracks;
 
 private:
-    void scheduleTrackEvent(const AtomicString& eventName, Ref<TrackBase>&&);
-
-    bool canSuspendForDocumentSuspension() const final;
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
-    void stop() final;
+    void scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&&);
 
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    HTMLMediaElement* m_element;
+    WeakPtr<HTMLMediaElement> m_element;
 
-    GenericEventQueue m_asyncEventQueue;
+    UniqueRef<MainThreadGenericEventQueue> m_asyncEventQueue;
 };
 
 } // namespace WebCore

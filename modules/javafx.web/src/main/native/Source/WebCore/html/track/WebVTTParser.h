@@ -113,7 +113,7 @@ public:
 
     WebVTTParser(WebVTTParserClient*, ScriptExecutionContext*);
 
-    static inline bool isRecognizedTag(const AtomicString& tagName)
+    static inline bool isRecognizedTag(const AtomString& tagName)
     {
         return tagName == iTag
             || tagName == bTag
@@ -194,7 +194,7 @@ private:
     String m_previousLine;
     String m_currentSettings;
     RefPtr<VTTRegion> m_currentRegion;
-    String m_currentStyleSheet;
+    String m_currentSourceStyleSheet;
 
     WebVTTParserClient* m_client;
 

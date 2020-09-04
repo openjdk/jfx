@@ -20,6 +20,7 @@
 #pragma once
 
 #include "CallFrame.h"
+#include "GetVM.h"
 #include "VMInlines.h"
 #include <wtf/StackStats.h>
 
@@ -29,7 +30,7 @@ class StringRecursionChecker {
     WTF_MAKE_NONCOPYABLE(StringRecursionChecker);
 
 public:
-    StringRecursionChecker(ExecState*, JSObject* thisObject);
+    StringRecursionChecker(JSGlobalObject*, JSObject* thisObject);
     ~StringRecursionChecker();
 
     JSValue earlyReturnValue() const; // 0 if everything is OK, value to return for failure cases
@@ -39,7 +40,7 @@ private:
     JSValue emptyString();
     JSValue performCheck();
 
-    ExecState* m_exec;
+    JSGlobalObject* m_globalObject;
     JSObject* m_thisObject;
     JSValue m_earlyReturnValue;
 
@@ -48,7 +49,7 @@ private:
 
 inline JSValue StringRecursionChecker::performCheck()
 {
-    VM& vm = m_exec->vm();
+    VM& vm = getVM(m_globalObject);
     if (UNLIKELY(!vm.isSafeToRecurseSoft()))
         return throwStackOverflowError();
 
@@ -65,8 +66,8 @@ inline JSValue StringRecursionChecker::performCheck()
     return JSValue(); // Indicate success.
 }
 
-inline StringRecursionChecker::StringRecursionChecker(ExecState* exec, JSObject* thisObject)
-    : m_exec(exec)
+inline StringRecursionChecker::StringRecursionChecker(JSGlobalObject* globalObject, JSObject* thisObject)
+    : m_globalObject(globalObject)
     , m_thisObject(thisObject)
     , m_earlyReturnValue(performCheck())
 {
@@ -82,7 +83,7 @@ inline StringRecursionChecker::~StringRecursionChecker()
     if (m_earlyReturnValue)
         return;
 
-    VM& vm = m_exec->vm();
+    VM& vm = getVM(m_globalObject);
     if (vm.stringRecursionCheckFirstObject == m_thisObject)
         vm.stringRecursionCheckFirstObject = nullptr;
     else {

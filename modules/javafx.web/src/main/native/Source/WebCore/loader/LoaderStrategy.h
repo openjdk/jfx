@@ -26,17 +26,16 @@
 #pragma once
 
 #include "FetchOptions.h"
+#include "PageIdentifier.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
 #include "StoredCredentialsPolicy.h"
-#include <pal/SessionID.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class CachedResource;
 class ContentSecurityPolicy;
-class DocumentLoader;
 class Frame;
 class FrameLoader;
 class HTTPHeaderMap;
@@ -44,6 +43,7 @@ class NetscapePlugInStreamLoader;
 class NetscapePlugInStreamLoaderClient;
 struct NetworkTransactionInformation;
 class NetworkLoadMetrics;
+class Page;
 class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
@@ -56,9 +56,9 @@ struct FetchOptions;
 
 class WEBCORE_EXPORT LoaderStrategy {
 public:
-    virtual void loadResource(DocumentLoader&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&) = 0;
+    virtual void loadResource(Frame&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&) = 0;
     virtual void loadResourceSynchronously(FrameLoader&, unsigned long identifier, const ResourceRequest&, ClientCredentialPolicy, const FetchOptions&, const HTTPHeaderMap&, ResourceError&, ResourceResponse&, Vector<char>& data) = 0;
-    virtual void pageLoadCompleted(uint64_t webPageID) = 0;
+    virtual void pageLoadCompleted(Page&) = 0;
 
     virtual void remove(ResourceLoader*) = 0;
     virtual void setDefersLoading(ResourceLoader&, bool) = 0;
@@ -68,6 +68,7 @@ public:
     virtual void suspendPendingRequests() = 0;
     virtual void resumePendingRequests() = 0;
 
+    virtual bool usePingLoad() const { return true; }
     using PingLoadCompletionHandler = WTF::Function<void(const ResourceError&, const ResourceResponse&)>;
     virtual void startPingLoad(Frame&, ResourceRequest&, const HTTPHeaderMap& originalRequestHeaders, const FetchOptions&, ContentSecurityPolicyImposition, PingLoadCompletionHandler&& = { }) = 0;
 

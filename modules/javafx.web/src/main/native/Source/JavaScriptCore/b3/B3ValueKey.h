@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,6 +80,7 @@ public:
         : m_kind(kind)
         , m_type(type)
     {
+        // This means that upper 32bit of u.value is 0.
         u.floatValue = value;
     }
 
@@ -92,7 +93,7 @@ public:
     Value* child(Procedure&, unsigned index) const;
     int64_t value() const { return u.value; }
     double doubleValue() const { return u.doubleValue; }
-    double floatValue() const { return u.floatValue; }
+    float floatValue() const { return u.floatValue; }
 
     bool operator==(const ValueKey& other) const
     {
@@ -108,7 +109,7 @@ public:
 
     unsigned hash() const
     {
-        return m_kind.hash() + m_type + WTF::IntHash<int32_t>::hash(u.indices[0]) + u.indices[1] + u.indices[2];
+        return m_kind.hash() + m_type.hash() + WTF::IntHash<int32_t>::hash(u.indices[0]) + u.indices[1] + u.indices[2];
     }
 
     explicit operator bool() const { return *this != ValueKey(); }
@@ -177,7 +178,7 @@ private:
 struct ValueKeyHash {
     static unsigned hash(const ValueKey& key) { return key.hash(); }
     static bool equal(const ValueKey& a, const ValueKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::B3
@@ -191,7 +192,7 @@ template<> struct DefaultHash<JSC::B3::ValueKey> {
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::ValueKey> : public SimpleClassHashTraits<JSC::B3::ValueKey> {
-    static const bool emptyValueIsZero = false;
+    static constexpr bool emptyValueIsZero = false;
 };
 
 } // namespace WTF

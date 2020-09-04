@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(GRAPHICS_CONTEXT_GL) && (USE(OPENGL) || USE(OPENGL_ES))
 #include "TemporaryOpenGLSetting.h"
 
 #if USE(LIBEPOXY)
@@ -36,12 +36,11 @@
 
 #if USE(OPENGL_ES)
 #include <OpenGLES/ES2/gl.h>
-#else
+#elif USE(OPENGL)
 #include <OpenGL/gl.h>
 #endif
 
 #elif USE(OPENGL_ES)
-#define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 #include "OpenGLESShims.h"
 

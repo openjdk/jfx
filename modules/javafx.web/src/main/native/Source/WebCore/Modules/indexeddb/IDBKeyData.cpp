@@ -364,9 +364,9 @@ String IDBKeyData::loggingString() const
         result = "<string> - " + WTF::get<String>(m_value);
         break;
     case IndexedDB::KeyType::Date:
-        return makeString("<date> - ", FormattedNumber::fixedWidth(WTF::get<double>(m_value), 6));
+        return makeString("<date> - ", WTF::get<double>(m_value));
     case IndexedDB::KeyType::Number:
-        return makeString("<number> - ", FormattedNumber::fixedWidth(WTF::get<double>(m_value), 6));
+        return makeString("<number> - ", WTF::get<double>(m_value));
     case IndexedDB::KeyType::Max:
         return "<maximum>"_s;
     case IndexedDB::KeyType::Min:
@@ -470,6 +470,37 @@ bool IDBKeyData::operator==(const IDBKeyData& other) const
         return WTF::get<Vector<IDBKeyData>>(m_value) == WTF::get<Vector<IDBKeyData>>(other.m_value);
     }
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+size_t IDBKeyData::size() const
+{
+    if (m_isNull)
+        return 0;
+
+    switch (m_type) {
+    case IndexedDB::KeyType::Invalid:
+        return 0;
+    case IndexedDB::KeyType::Array: {
+        Vector<RefPtr<IDBKey>> array;
+        size_t totalSize = 0;
+        for (auto& keyData : WTF::get<Vector<IDBKeyData>>(m_value))
+            totalSize += keyData.size();
+        return totalSize;
+    }
+    case IndexedDB::KeyType::Binary:
+        return WTF::get<ThreadSafeDataBuffer>(m_value).size();
+    case IndexedDB::KeyType::String:
+        return WTF::get<String>(m_value).sizeInBytes();
+    case IndexedDB::KeyType::Date:
+    case IndexedDB::KeyType::Number:
+        return sizeof(double);
+    case IndexedDB::KeyType::Max:
+    case IndexedDB::KeyType::Min:
+        return 0;
+    }
+
+    ASSERT_NOT_REACHED();
+    return 0;
 }
 
 } // namespace WebCore

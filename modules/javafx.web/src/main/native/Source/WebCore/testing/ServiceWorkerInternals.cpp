@@ -31,6 +31,7 @@
 #include "FetchEvent.h"
 #include "JSFetchResponse.h"
 #include "SWContextManager.h"
+#include <wtf/ProcessID.h>
 
 namespace WebCore {
 
@@ -87,6 +88,24 @@ Vector<String> ServiceWorkerInternals::fetchResponseHeaderList(FetchResponse& re
     for (auto keyValue : response.internalResponseHeaders())
         headerNames.uncheckedAppend(keyValue.key);
     return headerNames;
+}
+
+#if !PLATFORM(MAC)
+String ServiceWorkerInternals::processName() const
+{
+    return "none"_s;
+}
+#endif
+
+bool ServiceWorkerInternals::isThrottleable() const
+{
+    auto* connection = SWContextManager::singleton().connection();
+    return connection ? connection->isThrottleable() : true;
+}
+
+int ServiceWorkerInternals::processIdentifier() const
+{
+    return getCurrentProcessID();
 }
 
 } // namespace WebCore

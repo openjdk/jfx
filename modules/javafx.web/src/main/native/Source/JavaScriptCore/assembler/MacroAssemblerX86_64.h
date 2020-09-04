@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,16 +37,17 @@ namespace JSC {
 
 class MacroAssemblerX86_64 : public MacroAssemblerX86Common {
 public:
-    static const unsigned numGPRs = 16;
-    static const unsigned numFPRs = 16;
+    static constexpr unsigned numGPRs = 16;
+    static constexpr unsigned numFPRs = 16;
 
-    static const Scale ScalePtr = TimesEight;
+    static constexpr Scale ScalePtr = TimesEight;
 
     using MacroAssemblerX86Common::add32;
     using MacroAssemblerX86Common::and32;
     using MacroAssemblerX86Common::branch32;
     using MacroAssemblerX86Common::branchAdd32;
     using MacroAssemblerX86Common::or32;
+    using MacroAssemblerX86Common::or16;
     using MacroAssemblerX86Common::sub32;
     using MacroAssemblerX86Common::load8;
     using MacroAssemblerX86Common::load32;
@@ -54,6 +55,7 @@ public:
     using MacroAssemblerX86Common::store8;
     using MacroAssemblerX86Common::call;
     using MacroAssemblerX86Common::jump;
+    using MacroAssemblerX86Common::farJump;
     using MacroAssemblerX86Common::addDouble;
     using MacroAssemblerX86Common::loadDouble;
     using MacroAssemblerX86Common::convertInt32ToDouble;
@@ -86,6 +88,12 @@ public:
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
         or32(reg, Address(scratchRegister()));
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        move(TrustedImmPtr(address.m_ptr), scratchRegister());
+        or16(imm, Address(scratchRegister()));
     }
 
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
@@ -240,33 +248,22 @@ public:
         return result;
     }
 
+    void callOperation(const FunctionPtr<OperationPtrTag> operation)
+    {
+        move(TrustedImmPtr(operation.executableAddress()), scratchRegister());
+        m_assembler.call(scratchRegister());
+    }
+
     ALWAYS_INLINE Call call(RegisterID callTag) { return UNUSED_PARAM(callTag), call(NoPtrTag); }
 
     // Address is a memory location containing the address to jump to
-    void jump(AbsoluteAddress address, PtrTag tag)
+    void farJump(AbsoluteAddress address, PtrTag tag)
     {
         move(TrustedImmPtr(address.m_ptr), scratchRegister());
-        jump(Address(scratchRegister()), tag);
+        farJump(Address(scratchRegister()), tag);
     }
 
-    ALWAYS_INLINE void jump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
-
-    Call tailRecursiveCall()
-    {
-        DataLabelPtr label = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
-        Jump newJump = Jump(m_assembler.jmp_r(scratchRegister()));
-        ASSERT_UNUSED(label, differenceBetween(label, newJump) == REPATCH_OFFSET_CALL_R11);
-        return Call::fromTailJump(newJump);
-    }
-
-    Call makeTailRecursiveCall(Jump oldJump)
-    {
-        oldJump.link(this);
-        DataLabelPtr label = moveWithPatch(TrustedImmPtr(nullptr), scratchRegister());
-        Jump newJump = Jump(m_assembler.jmp_r(scratchRegister()));
-        ASSERT_UNUSED(label, differenceBetween(label, newJump) == REPATCH_OFFSET_CALL_R11);
-        return Call::fromTailJump(newJump);
-    }
+    ALWAYS_INLINE void farJump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
 
     Call threadSafePatchableNearCall()
     {
@@ -1101,6 +1098,36 @@ public:
     {
         move(mask, scratchRegister());
         return branchTest64(cond, reg, scratchRegister());
+    }
+
+    Jump branchTestBit64(ResultCondition cond, RegisterID testValue, TrustedImm32 bit)
+    {
+        m_assembler.btw_ir(static_cast<unsigned>(bit.m_value) % 64, testValue);
+        if (cond == NonZero)
+            return Jump(m_assembler.jb());
+        if (cond == Zero)
+            return Jump(m_assembler.jae());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Jump branchTestBit64(ResultCondition cond, Address testValue, TrustedImm32 bit)
+    {
+        m_assembler.btw_im(static_cast<unsigned>(bit.m_value) % 64, testValue.offset, testValue.base);
+        if (cond == NonZero)
+            return Jump(m_assembler.jb());
+        if (cond == Zero)
+            return Jump(m_assembler.jae());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    Jump branchTestBit64(ResultCondition cond, RegisterID reg, RegisterID bit)
+    {
+        m_assembler.btw_ir(bit, reg);
+        if (cond == NonZero)
+            return Jump(m_assembler.jb());
+        if (cond == Zero)
+            return Jump(m_assembler.jae());
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
     void test64(ResultCondition cond, RegisterID reg, TrustedImm32 mask, RegisterID dest)

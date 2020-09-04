@@ -47,8 +47,6 @@ public:
         return IDBError { UnknownError, "Connection to Indexed Database server lost. Refresh the page to try again"_s };
     }
 
-    WEBCORE_EXPORT IDBError& operator=(const IDBError&);
-
     RefPtr<DOMException> toDOMException() const;
 
     Optional<ExceptionCode> code() const { return m_code; }
@@ -57,7 +55,7 @@ public:
 
     bool isNull() const { return !m_code; }
 
-    IDBError isolatedCopy() const;
+    WEBCORE_EXPORT IDBError isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static bool decode(Decoder&, IDBError&);

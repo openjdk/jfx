@@ -33,7 +33,6 @@
 #include "B3SparseCollection.h"
 #include "B3Type.h"
 #include "B3ValueKey.h"
-#include "CCallHelpers.h"
 #include "PureNaN.h"
 #include "RegisterAtOffsetList.h"
 #include <wtf/Bag.h>
@@ -46,7 +45,11 @@
 #include <wtf/TriState.h>
 #include <wtf/Vector.h>
 
-namespace JSC { namespace B3 {
+namespace JSC {
+
+class CCallHelpers;
+
+namespace B3 {
 
 class BackwardsCFG;
 class BackwardsDominators;
@@ -111,6 +114,15 @@ public:
 
     JS_EXPORT_PRIVATE StackSlot* addStackSlot(unsigned byteSize);
     JS_EXPORT_PRIVATE Variable* addVariable(Type);
+
+    JS_EXPORT_PRIVATE Type addTuple(Vector<Type>&& types);
+    const Vector<Vector<Type>>& tuples() const { return m_tuples; };
+    bool isValidTuple(Type tuple) const;
+    Type extractFromTuple(Type tuple, unsigned index) const;
+    const Vector<Type>& tupleForType(Type tuple) const;
+
+    unsigned resultCount(Type type) const { return type.isTuple() ? tupleForType(type).size() : type.isNumeric(); }
+    Type typeAtOffset(Type type, unsigned index) const { ASSERT(index < resultCount(type)); return type.isTuple() ? extractFromTuple(type, index) : type; }
 
     template<typename ValueType, typename... Arguments>
     ValueType* add(Arguments...);
@@ -187,11 +199,6 @@ public:
 
     unsigned numEntrypoints() const { return m_numEntrypoints; }
     JS_EXPORT_PRIVATE void setNumEntrypoints(unsigned);
-
-    // Only call this after code generation is complete. Note that the label for the 0th entrypoint
-    // should point to exactly where the code generation cursor was before you started generating
-    // code.
-    JS_EXPORT_PRIVATE CCallHelpers::Label entrypointLabel(unsigned entrypointIndex) const;
 
     // The name has to be a string literal, since we don't do any memory management for the string.
     void setLastPhaseName(const char* name)
@@ -273,6 +280,7 @@ private:
 
     SparseCollection<StackSlot> m_stackSlots;
     SparseCollection<Variable> m_variables;
+    Vector<Vector<Type>> m_tuples;
     Vector<std::unique_ptr<BasicBlock>> m_blocks;
     SparseCollection<Value> m_values;
     std::unique_ptr<CFG> m_cfg;

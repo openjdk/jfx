@@ -49,12 +49,14 @@ public:
     static IDBTransactionInfo clientTransaction(const IDBClient::IDBConnectionProxy&, const Vector<String>& objectStores, IDBTransactionMode);
     static IDBTransactionInfo versionChange(const IDBServer::IDBConnectionToClient&, const IDBDatabaseInfo& originalDatabaseInfo, uint64_t newVersion);
 
-    IDBTransactionInfo(const IDBTransactionInfo&);
+    WEBCORE_EXPORT IDBTransactionInfo(const IDBTransactionInfo&);
+    IDBTransactionInfo(IDBTransactionInfo&&) = default;
+    IDBTransactionInfo& operator=(IDBTransactionInfo&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBTransactionInfo(const IDBTransactionInfo&, IsolatedCopyTag);
 
-    IDBTransactionInfo isolatedCopy() const;
+    WEBCORE_EXPORT IDBTransactionInfo isolatedCopy() const;
 
     const IDBResourceIdentifier& identifier() const { return m_identifier; }
 
@@ -117,7 +119,7 @@ bool IDBTransactionInfo::decode(Decoder& decoder, IDBTransactionInfo& info)
         return false;
 
     if (hasObject) {
-        std::unique_ptr<IDBDatabaseInfo> object = std::make_unique<IDBDatabaseInfo>();
+        std::unique_ptr<IDBDatabaseInfo> object = makeUnique<IDBDatabaseInfo>();
         if (!decoder.decode(*object))
             return false;
         info.m_originalDatabaseInfo = WTFMove(object);

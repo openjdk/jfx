@@ -32,6 +32,7 @@
 #pragma once
 
 #include <JavaScriptCore/Weak.h>
+#include <wtf/IsoMalloc.h>
 
 namespace JSC {
 class WeakHandleOwner;
@@ -42,6 +43,7 @@ namespace WebCore {
 class JSDOMObject;
 
 class ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(ScriptWrappable);
 public:
     JSDOMObject* wrapper() const;
     void setWrapper(JSDOMObject*, JSC::WeakHandleOwner*, void*);

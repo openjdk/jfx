@@ -48,7 +48,7 @@ MediaSourceRegistry& MediaSourceRegistry::registry()
     return instance;
 }
 
-void MediaSourceRegistry::registerURL(SecurityOrigin*, const URL& url, URLRegistrable& registrable)
+void MediaSourceRegistry::registerURL(ScriptExecutionContext&, const URL& url, URLRegistrable& registrable)
 {
     ASSERT(&registrable.registry() == this);
     ASSERT(isMainThread());

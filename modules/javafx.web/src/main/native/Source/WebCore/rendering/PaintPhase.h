@@ -49,7 +49,8 @@ enum class PaintPhase : uint8_t {
     CollapsedTableBorders,
     TextClip,
     Mask,
-    ClippingMask
+    ClippingMask,
+    EventRegion,
 };
 
 enum class PaintBehavior : uint16_t {
@@ -66,6 +67,7 @@ enum class PaintBehavior : uint16_t {
     FlattenCompositingLayers    = 1 << 9, // Paint doesn't stop at compositing layer boundaries.
     Snapshotting                = 1 << 10,
     TileFirstPaint              = 1 << 11,
+    AnnotateLinks               = 1 << 12, // Collect all renderers with links to annotate their URLs (e.g. PDFs)
 };
 
 } // namespace WebCore

@@ -42,6 +42,8 @@
 #include "MediaQueryParser.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
+#include "SecurityPolicy.h"
+#include "Settings.h"
 #include "SizesAttributeParser.h"
 #include <wtf/MainThread.h>
 
@@ -51,7 +53,7 @@ using namespace HTMLNames;
 
 TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVector& data)
 {
-    AtomicString tagName(data);
+    AtomString tagName(data);
     if (tagName == imgTag)
         return TagId::Img;
     if (tagName == inputTag)
@@ -120,7 +122,7 @@ public:
             return;
 
         for (auto& attribute : attributes) {
-            AtomicString attributeName(attribute.name);
+            AtomString attributeName(attribute.name);
             String attributeValue = StringImpl::create8BitIfPossible(attribute.value);
             processAttribute(attributeName, attributeValue, document, pictureState);
         }
@@ -161,7 +163,7 @@ public:
         if (!LinkLoader::isSupportedType(type.value(), m_typeAttribute))
             return nullptr;
 
-        auto request = std::make_unique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, m_moduleScript);
+        auto request = makeUnique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, type.value(), m_mediaAttribute, m_moduleScript, m_referrerPolicy);
         request->setCrossOriginMode(m_crossOriginMode);
         request->setNonce(m_nonceAttribute);
 
@@ -172,14 +174,14 @@ public:
         return request;
     }
 
-    static bool match(const AtomicString& name, const QualifiedName& qName)
+    static bool match(const AtomString& name, const QualifiedName& qName)
     {
         ASSERT(isMainThread());
         return qName.localName() == name;
     }
 
 private:
-    void processImageAndScriptAttribute(const AtomicString& attributeName, const String& attributeValue)
+    void processImageAndScriptAttribute(const AtomString& attributeName, const String& attributeValue)
     {
         if (match(attributeName, srcAttr))
             setUrlToLoad(attributeValue);
@@ -189,7 +191,7 @@ private:
             m_charset = attributeValue;
     }
 
-    void processAttribute(const AtomicString& attributeName, const String& attributeValue, Document& document, const Vector<bool>& pictureState)
+    void processAttribute(const AtomString& attributeName, const String& attributeValue, Document& document, const Vector<bool>& pictureState)
     {
         bool inPicture = !pictureState.isEmpty();
         bool alreadyMatchedSource = inPicture && pictureState.last();
@@ -236,8 +238,16 @@ private:
             if (match(attributeName, typeAttr)) {
                 m_moduleScript = equalLettersIgnoringASCIICase(attributeValue, "module") ? PreloadRequest::ModuleScript::Yes : PreloadRequest::ModuleScript::No;
                 break;
-            } else if (match(attributeName, nonceAttr))
+            } else if (match(attributeName, nonceAttr)) {
                 m_nonceAttribute = attributeValue;
+                break;
+            } else if (match(attributeName, referrerpolicyAttr)) {
+                m_referrerPolicy = parseReferrerPolicy(attributeValue, ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+                break;
+            } else if (match(attributeName, nomoduleAttr)) {
+                m_scriptIsNomodule = true;
+                break;
+            }
             processImageAndScriptAttribute(attributeName, attributeValue);
             break;
         case TagId::Link:
@@ -347,6 +357,9 @@ private:
         if (m_tagId == TagId::Input && !m_inputIsImage)
             return false;
 
+        if (m_tagId == TagId::Script && m_moduleScript == PreloadRequest::ModuleScript::No && m_scriptIsNomodule)
+            return false;
+
         return true;
     }
 
@@ -368,8 +381,10 @@ private:
     bool m_metaIsViewport;
     bool m_metaIsDisabledAdaptations;
     bool m_inputIsImage;
+    bool m_scriptIsNomodule { false };
     float m_deviceScaleFactor;
     PreloadRequest::ModuleScript m_moduleScript { PreloadRequest::ModuleScript::No };
+    ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
 };
 
 TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor)
@@ -420,7 +435,7 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
             // The first <base> element is the one that wins.
             if (!m_predictedBaseElementURL.isEmpty())
                 return;
-            updatePredictedBaseURL(token);
+            updatePredictedBaseURL(token, document.settings().shouldRestrictBaseURLSchemes());
             return;
         }
         if (tagId == TagId::Picture) {
@@ -440,11 +455,15 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
     }
 }
 
-void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token)
+void TokenPreloadScanner::updatePredictedBaseURL(const HTMLToken& token, bool shouldRestrictBaseURLSchemes)
 {
     ASSERT(m_predictedBaseElementURL.isEmpty());
-    if (auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr->localName().string()))
-        m_predictedBaseElementURL = URL(m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value))).isolatedCopy();
+    auto* hrefAttribute = findAttribute(token.attributes(), hrefAttr->localName().string());
+    if (!hrefAttribute)
+        return;
+    URL temp { m_documentURL, stripLeadingAndTrailingHTMLSpaces(StringImpl::create8BitIfPossible(hrefAttribute->value)) };
+    if (!shouldRestrictBaseURLSchemes || SecurityPolicy::isBaseURLSchemeAllowed(temp))
+        m_predictedBaseElementURL = temp.isolatedCopy();
 }
 
 HTMLPreloadScanner::HTMLPreloadScanner(const HTMLParserOptions& options, const URL& documentURL, float deviceScaleFactor)
@@ -472,7 +491,7 @@ void HTMLPreloadScanner::scan(HTMLResourcePreloader& preloader, Document& docume
 
     while (auto token = m_tokenizer.nextToken(m_source)) {
         if (token->type() == HTMLToken::StartTag)
-            m_tokenizer.updateStateFor(AtomicString(token->name()));
+            m_tokenizer.updateStateFor(AtomString(token->name()));
         m_scanner.scan(*token, requests, document);
     }
 

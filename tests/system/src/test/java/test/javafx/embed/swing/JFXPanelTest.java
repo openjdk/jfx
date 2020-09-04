@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -136,6 +136,24 @@ public class JFXPanelTest {
         Thread.sleep(500); // there should be no pressed event after the initial one. Let's wait for 0.5s and check again.
 
         Assert.assertEquals(1, pressedEventCounter[0]);
+    }
+
+    @Test
+    public void testClickOnEmptyJFXPanel() throws Exception {
+        CountDownLatch firstPressedEventLatch = new CountDownLatch(1);
+
+        SwingUtilities.invokeLater(() -> {
+            TestFXPanel fxPnl = new TestFXPanel();
+
+            MouseEvent e = new MouseEvent(fxPnl, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
+                    5, 5, 1, false, MouseEvent.BUTTON1);
+
+            fxPnl.processMouseEventPublic(e);
+
+            firstPressedEventLatch.countDown();
+        });
+
+        Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
     }
 }
 

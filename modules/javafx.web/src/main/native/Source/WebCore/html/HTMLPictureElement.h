@@ -26,28 +26,16 @@
 #pragma once
 
 #include "HTMLElement.h"
-#include "MediaQueryEvaluator.h"
 
 namespace WebCore {
 
-class HTMLPictureElement final : public HTMLElement, public CanMakeWeakPtr<HTMLPictureElement> {
+class HTMLPictureElement final : public HTMLElement {
     WTF_MAKE_ISO_ALLOCATED(HTMLPictureElement);
 public:
     static Ref<HTMLPictureElement> create(const QualifiedName&, Document&);
     virtual ~HTMLPictureElement();
 
     void sourcesChanged();
-
-    void clearViewportDependentResults() { m_viewportDependentMediaQueryResults.clear(); }
-    bool hasViewportDependentResults() const { return m_viewportDependentMediaQueryResults.size(); }
-    Vector<MediaQueryResult>& viewportDependentResults() { return m_viewportDependentMediaQueryResults; }
-
-    void clearAppearanceDependentResults() { m_appearanceDependentMediaQueryResults.clear(); }
-    bool hasAppearanceDependentResults() const { return m_appearanceDependentMediaQueryResults.size(); }
-    Vector<MediaQueryResult>& appearanceDependentResults() { return m_appearanceDependentMediaQueryResults; }
-
-    bool viewportChangeAffectedPicture() const;
-    bool appearanceChangeAffectedPicture() const;
 
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreviewImage() const;
@@ -57,9 +45,6 @@ private:
     HTMLPictureElement(const QualifiedName&, Document&);
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
-
-    Vector<MediaQueryResult> m_viewportDependentMediaQueryResults;
-    Vector<MediaQueryResult> m_appearanceDependentMediaQueryResults;
 };
 
 } // namespace WebCore

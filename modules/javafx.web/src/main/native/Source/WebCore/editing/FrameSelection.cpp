@@ -133,7 +133,7 @@ IntRect DragCaretController::editableElementRectInRootViewCoordinates() const
         return { };
 
     if (auto* view = editableContainer->document().view())
-        return view->contentsToRootView(renderer->absoluteBoundingBoxRect());
+        return view->contentsToRootView(renderer->absoluteBoundingBoxRect()); // FIXME: Wrong for elements with visible layout overflow.
 
     return { };
 }
@@ -377,7 +377,9 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
     m_xPosForVerticalArrowNavigation = NoXPosForVerticalArrowNavigation();
     selectFrameElementInParentIfFullySelected();
     m_frame->editor().respondToChangedSelection(oldSelection, options);
-    m_frame->document()->enqueueDocumentEvent(Event::create(eventNames().selectionchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    // https://www.w3.org/TR/selection-api/#selectionchange-event
+    // FIXME: Spec doesn't specify which task source to use.
+    m_frame->document()->queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(eventNames().selectionchangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     return true;
 }
@@ -2064,7 +2066,7 @@ void FrameSelection::focusedOrActiveStateChanged()
         setSelectionFromNone();
     setCaretVisibility(activeAndFocused ? Visible : Hidden);
 
-    // Because StyleResolver::checkOneSelector() and
+    // Because Style::Resolver::checkOneSelector() and
     // RenderTheme::isFocused() check if the frame is active, we have to
     // update style and theme state that depended on those.
     if (Element* element = document->focusedElement()) {
@@ -2288,7 +2290,7 @@ bool FrameSelection::shouldDeleteSelection(const VisibleSelection& selection) co
     return m_frame->editor().client()->shouldDeleteRange(selection.toNormalizedRange().get());
 }
 
-FloatRect FrameSelection::selectionBounds(bool clipToVisibleContent) const
+FloatRect FrameSelection::selectionBounds(ClipToVisibleContent clipToVisibleContent) const
 {
     if (!m_frame->document())
         return LayoutRect();
@@ -2299,8 +2301,13 @@ FloatRect FrameSelection::selectionBounds(bool clipToVisibleContent) const
         return LayoutRect();
 
     auto& selection = renderView->selection();
-    auto selectionRect = clipToVisibleContent ? selection.boundsClippedToVisibleContent() : selection.bounds();
-    return clipToVisibleContent ? intersection(selectionRect, renderView->frameView().visibleContentRect(ScrollableArea::LegacyIOSDocumentVisibleRect)) : selectionRect;
+
+    if (clipToVisibleContent == ClipToVisibleContent::Yes) {
+        auto selectionRect = selection.boundsClippedToVisibleContent();
+        return intersection(selectionRect, renderView->frameView().visibleContentRect(ScrollableArea::LegacyIOSDocumentVisibleRect));
+    }
+
+    return selection.bounds();
 }
 
 void FrameSelection::getClippedVisibleTextRectangles(Vector<FloatRect>& rectangles, TextRectangleHeight textRectHeight) const
@@ -2391,7 +2398,7 @@ void FrameSelection::revealSelection(SelectionRevealMode revealMode, const Scrol
         rect = absoluteCaretBounds(&insideFixed);
         break;
     case VisibleSelection::RangeSelection:
-        rect = revealExtentOption == RevealExtent ? VisiblePosition(m_selection.extent()).absoluteCaretBounds() : enclosingIntRect(selectionBounds(false));
+        rect = revealExtentOption == RevealExtent ? VisiblePosition(m_selection.extent()).absoluteCaretBounds() : enclosingIntRect(selectionBounds(ClipToVisibleContent::No));
         break;
     }
 

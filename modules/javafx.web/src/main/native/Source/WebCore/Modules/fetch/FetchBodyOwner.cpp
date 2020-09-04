@@ -29,11 +29,13 @@
 #include "config.h"
 #include "FetchBodyOwner.h"
 
+#include "Document.h"
 #include "FetchLoader.h"
 #include "HTTPParsers.h"
 #include "JSBlob.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
+#include "WindowEventLoop.h"
 
 namespace WebCore {
 
@@ -124,7 +126,9 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
     }
 
     if (isBodyNullOrOpaque()) {
-        promise->resolve<IDLInterface<Blob>>(Blob::create(Vector<uint8_t> { }, Blob::normalizedContentType(extractMIMETypeFromMediaType(m_contentType))));
+        promise->resolveCallbackValueWithNewlyCreated<IDLInterface<Blob>>([this](auto&) {
+            return Blob::create(Vector<uint8_t> { }, Blob::normalizedContentType(extractMIMETypeFromMediaType(m_contentType)));
+        });
         return;
     }
     if (isDisturbedOrLocked()) {
@@ -145,9 +149,13 @@ void FetchBodyOwner::cloneBody(FetchBodyOwner& owner)
     m_body = owner.m_body->clone();
 }
 
-void FetchBodyOwner::extractBody(ScriptExecutionContext& context, FetchBody::Init&& value)
+ExceptionOr<void> FetchBodyOwner::extractBody(FetchBody::Init&& value)
 {
-    m_body = FetchBody::extract(context, WTFMove(value), m_contentType);
+    auto result = FetchBody::extract(WTFMove(value), m_contentType);
+    if (result.hasException())
+        return result.releaseException();
+    m_body = result.releaseReturnValue();
+    return { };
 }
 
 void FetchBodyOwner::updateContentType()
@@ -240,7 +248,7 @@ void FetchBodyOwner::loadBlob(const Blob& blob, FetchBodyConsumer* consumer)
     }
 
     m_blobLoader.emplace(*this);
-    m_blobLoader->loader = std::make_unique<FetchLoader>(*m_blobLoader, consumer);
+    m_blobLoader->loader = makeUnique<FetchLoader>(*m_blobLoader, consumer);
 
     m_blobLoader->loader->start(*scriptExecutionContext(), blob);
     if (!m_blobLoader->loader->isStarted()) {
@@ -283,7 +291,6 @@ void FetchBodyOwner::blobLoadingFailed()
     } else
 #endif
         m_body->loadingFailed(Exception { TypeError, "Blob loading failed"_s});
-
     finishBlobLoading();
 }
 
@@ -318,7 +325,7 @@ void FetchBodyOwner::BlobLoader::didFail(const ResourceError&)
         owner.blobLoadingFailed();
 }
 
-RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::ExecState& state)
+RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::JSGlobalObject& state)
 {
     if (isBodyNullOrOpaque())
         return nullptr;
@@ -329,7 +336,7 @@ RefPtr<ReadableStream> FetchBodyOwner::readableStream(JSC::ExecState& state)
     return m_body->readableStream();
 }
 
-void FetchBodyOwner::createReadableStream(JSC::ExecState& state)
+void FetchBodyOwner::createReadableStream(JSC::JSGlobalObject& state)
 {
     ASSERT(!m_readableStreamSource);
     if (isDisturbed()) {

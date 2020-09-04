@@ -31,6 +31,7 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSTokenizer.h"
+#include "DOMWindow.h"
 #include "Element.h"
 #include "InspectorInstrumentation.h"
 #include "IntersectionObserverCallback.h"
@@ -157,7 +158,7 @@ void IntersectionObserver::observe(Element& target)
     auto* document = trackingDocument();
     if (!hadObservationTargets)
         document->addIntersectionObserver(*this);
-    document->scheduleForcedIntersectionObservationUpdate();
+    document->scheduleInitialIntersectionObservationUpdate();
 }
 
 void IntersectionObserver::unobserve(Element& target)
@@ -261,12 +262,11 @@ void IntersectionObserver::notify()
     if (!context)
         return;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
-
     auto takenRecords = takeRecords();
-    m_callback->handleEvent(WTFMove(takenRecords.records), *this);
 
-    InspectorInstrumentation::didFireObserverCallback(cookie);
+    InspectorInstrumentation::willFireObserverCallback(*context, "IntersectionObserver"_s);
+    m_callback->handleEvent(WTFMove(takenRecords.records), *this);
+    InspectorInstrumentation::didFireObserverCallback(*context);
 }
 
 bool IntersectionObserver::hasPendingActivity() const
@@ -277,11 +277,6 @@ bool IntersectionObserver::hasPendingActivity() const
 const char* IntersectionObserver::activeDOMObjectName() const
 {
     return "IntersectionObserver";
-}
-
-bool IntersectionObserver::canSuspendForDocumentSuspension() const
-{
-    return true;
 }
 
 void IntersectionObserver::stop()

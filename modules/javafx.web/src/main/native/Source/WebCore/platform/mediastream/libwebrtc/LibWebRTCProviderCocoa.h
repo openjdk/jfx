@@ -37,14 +37,14 @@ class VideoEncoderFactory;
 namespace WebCore {
 
 class WEBCORE_EXPORT LibWebRTCProviderCocoa : public LibWebRTCProvider {
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     LibWebRTCProviderCocoa() = default;
     ~LibWebRTCProviderCocoa();
 
+    std::unique_ptr<webrtc::VideoDecoderFactory> createDecoderFactory() override;
+
 private:
     void setActive(bool) final;
-    std::unique_ptr<webrtc::VideoDecoderFactory> createDecoderFactory() final;
     std::unique_ptr<webrtc::VideoEncoderFactory> createEncoderFactory() final;
 
     void setH264HardwareEncoderAllowed(bool allowed) final;

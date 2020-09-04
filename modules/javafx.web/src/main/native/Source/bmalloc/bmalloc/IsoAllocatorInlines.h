@@ -28,14 +28,13 @@
 #include "BInline.h"
 #include "EligibilityResult.h"
 #include "IsoAllocator.h"
-#include "IsoHeapImpl.h"
+#include "IsoHeapImplInlines.h"
 #include "IsoPage.h"
 
 namespace bmalloc {
 
 template<typename Config>
-IsoAllocator<Config>::IsoAllocator(IsoHeapImpl<Config>& heap)
-    : m_heap(&heap)
+IsoAllocator<Config>::IsoAllocator(IsoHeapImpl<Config>&)
 {
 }
 
@@ -45,24 +44,36 @@ IsoAllocator<Config>::~IsoAllocator()
 }
 
 template<typename Config>
-void* IsoAllocator<Config>::allocate(bool abortOnFailure)
+void* IsoAllocator<Config>::allocate(IsoHeapImpl<Config>& heap, bool abortOnFailure)
 {
     static constexpr bool verbose = false;
     void* result = m_freeList.allocate<Config>(
         [&] () -> void* {
-            return allocateSlow(abortOnFailure);
+            return allocateSlow(heap, abortOnFailure);
         });
     if (verbose)
-        fprintf(stderr, "%p: allocated %p of size %u\n", m_heap, result, Config::objectSize);
+        fprintf(stderr, "%p: allocated %p of size %u\n", &heap, result, Config::objectSize);
     return result;
 }
 
 template<typename Config>
-BNO_INLINE void* IsoAllocator<Config>::allocateSlow(bool abortOnFailure)
+BNO_INLINE void* IsoAllocator<Config>::allocateSlow(IsoHeapImpl<Config>& heap, bool abortOnFailure)
 {
-    std::lock_guard<Mutex> locker(m_heap->lock);
+    LockHolder locker(heap.lock);
 
-    EligibilityResult<Config> result = m_heap->takeFirstEligible();
+    AllocationMode allocationMode = heap.updateAllocationMode();
+    if (allocationMode == AllocationMode::Shared) {
+        if (m_currentPage) {
+            m_currentPage->stopAllocating(locker, m_freeList);
+            m_currentPage = nullptr;
+            m_freeList.clear();
+        }
+        return heap.allocateFromShared(locker, abortOnFailure);
+    }
+
+    BASSERT(allocationMode == AllocationMode::Fast);
+
+    EligibilityResult<Config> result = heap.takeFirstEligible(locker);
     if (result.kind != EligibilityKind::Success) {
         RELEASE_BASSERT(result.kind == EligibilityKind::OutOfMemory);
         RELEASE_BASSERT(!abortOnFailure);
@@ -70,20 +81,20 @@ BNO_INLINE void* IsoAllocator<Config>::allocateSlow(bool abortOnFailure)
     }
 
     if (m_currentPage)
-        m_currentPage->stopAllocating(m_freeList);
+        m_currentPage->stopAllocating(locker, m_freeList);
 
     m_currentPage = result.page;
-    m_freeList = m_currentPage->startAllocating();
+    m_freeList = m_currentPage->startAllocating(locker);
 
     return m_freeList.allocate<Config>([] () { BCRASH(); return nullptr; });
 }
 
 template<typename Config>
-void IsoAllocator<Config>::scavenge()
+void IsoAllocator<Config>::scavenge(IsoHeapImpl<Config>& heap)
 {
     if (m_currentPage) {
-        std::lock_guard<Mutex> locker(m_heap->lock);
-        m_currentPage->stopAllocating(m_freeList);
+        LockHolder locker(heap.lock);
+        m_currentPage->stopAllocating(locker, m_freeList);
         m_currentPage = nullptr;
         m_freeList.clear();
     }

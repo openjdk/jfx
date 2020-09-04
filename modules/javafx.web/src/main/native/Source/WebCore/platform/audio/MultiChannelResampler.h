@@ -37,10 +37,11 @@ namespace WebCore {
 
 class AudioBus;
 
-class MultiChannelResampler {
+class MultiChannelResampler final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    MultiChannelResampler(double scaleFactor, unsigned numberOfChannels);
+    explicit MultiChannelResampler(double scaleFactor, unsigned numberOfChannels);
+    ~MultiChannelResampler();
 
     // Process given AudioSourceProvider for streaming applications.
     void process(AudioSourceProvider*, AudioBus* destination, size_t framesToProcess);
@@ -54,6 +55,9 @@ private:
     Vector<std::unique_ptr<SincResampler>> m_kernels;
 
     unsigned m_numberOfChannels;
+
+    class ChannelProvider;
+    std::unique_ptr<ChannelProvider> m_channelProvider;
 };
 
 } // namespace WebCore

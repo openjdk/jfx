@@ -27,7 +27,7 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "JSDOMPromiseDeferred.h"
+#include "IDLTypes.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
@@ -36,22 +36,25 @@ namespace WebCore {
 class AbortSignal;
 class AuthenticatorCoordinatorClient;
 class BasicCredential;
-class SecurityOrigin;
+class Document;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialRequestOptions;
 
+template<typename IDLType> class DOMPromiseDeferred;
+
 using CredentialPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<BasicCredential>>>;
 
-class AuthenticatorCoordinator {
+class AuthenticatorCoordinator final {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinator);
 public:
     WEBCORE_EXPORT explicit AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
 
     // The following methods implement static methods of PublicKeyCredential.
-    void create(const SecurityOrigin&, const PublicKeyCredentialCreationOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
-    void discoverFromExternalSource(const SecurityOrigin&, const PublicKeyCredentialRequestOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
+    void create(const Document&, const PublicKeyCredentialCreationOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
+    void discoverFromExternalSource(const Document&, const PublicKeyCredentialRequestOptions&, bool sameOriginWithAncestors, RefPtr<AbortSignal>&&, CredentialPromise&&) const;
     void isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&&) const;
 
 private:

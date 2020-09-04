@@ -39,7 +39,6 @@ class CompositeAnimation;
 class Element;
 class FloatRect;
 class LayoutRect;
-class RenderBoxModelObject;
 class RenderElement;
 class RenderStyle;
 class TimingFunction;
@@ -48,6 +47,11 @@ enum class AnimateChange {
     StyleBlended            = 1 << 0, // Style was changed.
     StateChange             = 1 << 1, // Animation state() changed.
     RunningStateChange      = 1 << 2, // Animation "running or paused" changed.
+};
+
+enum class AnimationImpact {
+    RequiresRecomposite     = 1 << 0,
+    ForcesStackingContext   = 1 << 1
 };
 
 class AnimationBase : public RefCounted<AnimationBase>
@@ -62,8 +66,7 @@ public:
     Element* element() const { return m_element.get(); }
     const RenderStyle& currentStyle() const override;
     RenderElement* renderer() const override;
-    RenderBoxModelObject* compositedRenderer() const;
-    void clear();
+    virtual void clear();
 
     double duration() const;
 
@@ -139,7 +142,7 @@ public:
     bool waitingForStartTime() const { return m_animationState == AnimationState::StartWaitResponse; }
     bool waitingForStyleAvailable() const { return m_animationState == AnimationState::StartWaitStyleAvailable; }
 
-    bool isAccelerated() const override { return m_isAccelerated; }
+    bool isAccelerated() const { return m_isAccelerated; }
 
     virtual Optional<Seconds> timeToNextService();
 

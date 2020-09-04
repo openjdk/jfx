@@ -156,43 +156,43 @@ void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
         // http://demo.icu-project.org/icu-bin/convexp
         if (!strcmp(name, "windows-874")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "windows-874-2000");
+                return makeUnique<TextCodecICU>(name, "windows-874-2000");
             });
             continue;
         }
         if (!strcmp(name, "windows-949")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "windows-949-2000");
+                return makeUnique<TextCodecICU>(name, "windows-949-2000");
             });
             continue;
         }
         if (!strcmp(name, "x-mac-cyrillic")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "macos-7_3-10.2");
+                return makeUnique<TextCodecICU>(name, "macos-7_3-10.2");
             });
             continue;
         }
         if (!strcmp(name, "x-mac-greek")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "macos-6_2-10.4");
+                return makeUnique<TextCodecICU>(name, "macos-6_2-10.4");
             });
             continue;
         }
         if (!strcmp(name, "x-mac-centraleurroman")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "macos-29-10.2");
+                return makeUnique<TextCodecICU>(name, "macos-29-10.2");
             });
             continue;
         }
         if (!strcmp(name, "x-mac-turkish")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "macos-35-10.2");
+                return makeUnique<TextCodecICU>(name, "macos-35-10.2");
             });
             continue;
         }
         if (!strcmp(name, "EUC-KR")) {
             registrar(name, [name] {
-                return std::make_unique<TextCodecICU>(name, "windows-949");
+                return makeUnique<TextCodecICU>(name, "windows-949");
             });
             continue;
         }
@@ -201,7 +201,7 @@ void TextCodecICU::registerCodecs(TextCodecRegistrar registrar)
         const char* canonicalConverterName = ucnv_getCanonicalName(name, "IANA", &error);
         ASSERT(U_SUCCESS(error));
         registrar(name, [name, canonicalConverterName] {
-            return std::make_unique<TextCodecICU>(name, canonicalConverterName);
+            return makeUnique<TextCodecICU>(name, canonicalConverterName);
         });
     }
 }
@@ -307,7 +307,7 @@ String TextCodecICU::decode(const char* bytes, size_t length, bool flush, bool s
 
     do {
         int ucharsDecoded = decodeToBuffer(buffer, bufferLimit, source, sourceLimit, offsets, flush, err);
-        result.append(buffer, ucharsDecoded);
+        result.appendCharacters(buffer, ucharsDecoded);
     } while (err == U_BUFFER_OVERFLOW_ERROR);
 
     if (U_FAILURE(err)) {

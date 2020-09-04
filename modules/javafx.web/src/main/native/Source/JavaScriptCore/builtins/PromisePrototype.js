@@ -35,11 +35,19 @@ function then(onFulfilled, onRejected)
     "use strict";
 
     if (!@isPromise(this))
-        @throwTypeError("|this| is not a object");
+        @throwTypeError("|this| is not a Promise");
 
     var constructor = @speciesConstructor(this, @Promise);
 
-    var resultCapability = @newPromiseCapability(constructor);
+    var promise;
+    var promiseOrCapability;
+    if (constructor === @Promise) {
+        promiseOrCapability = @newPromise();
+        promise = promiseOrCapability;
+    } else {
+        promiseOrCapability = @newPromiseCapabilitySlow(constructor);
+        promise = promiseOrCapability.@promise;
+    }
 
     if (typeof onFulfilled !== "function")
         onFulfilled = function (argument) { return argument; };
@@ -47,36 +55,36 @@ function then(onFulfilled, onRejected)
     if (typeof onRejected !== "function")
         onRejected = function (argument) { throw argument; };
 
-    var reaction = @newPromiseReaction(resultCapability, onFulfilled, onRejected);
+    var reaction = @newPromiseReaction(promiseOrCapability, onFulfilled, onRejected);
 
-    var state = @getByIdDirectPrivate(this, "promiseState");
+    var flags = @getPromiseInternalField(this, @promiseFieldFlags);
+    var state = flags & @promiseStateMask;
     if (state === @promiseStatePending) {
-        var reactions = @getByIdDirectPrivate(this, "promiseReactions");
-        @putByValDirect(reactions, reactions.length, reaction);
+        reaction.@next = @getPromiseInternalField(this, @promiseFieldReactionsOrResult);
+        @putPromiseInternalField(this, @promiseFieldReactionsOrResult, reaction);
     } else {
-        if (state === @promiseStateRejected && !@getByIdDirectPrivate(this, "promiseIsHandled"))
+        if (state === @promiseStateRejected && !(flags & @promiseFlagsIsHandled))
             @hostPromiseRejectionTracker(this, @promiseRejectionHandle);
-        @enqueueJob(@promiseReactionJob, [state, reaction, @getByIdDirectPrivate(this, "promiseResult")]);
+        @enqueueJob(@promiseReactionJob, state, reaction, @getPromiseInternalField(this, @promiseFieldReactionsOrResult));
     }
+    @putPromiseInternalField(this, @promiseFieldFlags, @getPromiseInternalField(this, @promiseFieldFlags) | @promiseFlagsIsHandled);
 
-    @putByIdDirectPrivate(this, "promiseIsHandled", true);
-
-    return resultCapability.@promise;
+    return promise;
 }
 
 function finally(onFinally)
 {
     "use strict";
 
-    if (!@isPromise(this))
-        @throwTypeError("|this| is not a Promise");
+    if (!@isObject(this))
+        @throwTypeError("|this| is not an object");
 
-    const constructor = @speciesConstructor(this, @Promise);
+    var constructor = @speciesConstructor(this, @Promise);
 
     @assert(@isConstructor(constructor));
 
-    let thenFinally;
-    let catchFinally;
+    var thenFinally;
+    var catchFinally;
 
     if (typeof onFinally !== "function") {
         thenFinally = onFinally;
@@ -97,15 +105,15 @@ function getThenFinally(onFinally, constructor)
     return function(value)
     {
         @assert(typeof onFinally === "function");
-        const result = onFinally();
+        var result = onFinally();
 
         @assert(@isConstructor(constructor));
-        const resultCapability = @newPromiseCapability(constructor);
+        var resultCapability = @newPromiseCapability(constructor);
 
         resultCapability.@resolve.@call(@undefined, result);
 
-        const promise = resultCapability.@promise;
-        const valueThunk = function () { return value; };
+        var promise = resultCapability.@promise;
+        var valueThunk = function () { return value; };
 
         return promise.then(valueThunk);
     }
@@ -119,15 +127,15 @@ function getCatchFinally(onFinally, constructor)
     return function(reason)
     {
         @assert(typeof onFinally === "function");
-        const result = onFinally();
+        var result = onFinally();
 
         @assert(@isConstructor(constructor));
-        const resultCapability = @newPromiseCapability(constructor);
+        var resultCapability = @newPromiseCapability(constructor);
 
         resultCapability.@resolve.@call(@undefined, result);
 
-        const promise = resultCapability.@promise;
-        const thrower = function () { throw reason; };
+        var promise = resultCapability.@promise;
+        var thrower = function () { throw reason; };
 
         return promise.then(thrower);
     }

@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include "FetchBodyConsumer.h"
 #include "ThreadableLoader.h"
 #include "ThreadableLoaderClient.h"
 #include <wtf/URL.h>
@@ -36,14 +35,16 @@
 namespace WebCore {
 
 class Blob;
+class FetchBodyConsumer;
 class FetchLoaderClient;
 class FetchRequest;
 class ScriptExecutionContext;
+class SharedBuffer;
 
 class FetchLoader final : public ThreadableLoaderClient {
 public:
     FetchLoader(FetchLoaderClient&, FetchBodyConsumer*);
-    ~FetchLoader();
+    WEBCORE_EXPORT ~FetchLoader();
 
     RefPtr<SharedBuffer> startStreaming();
 

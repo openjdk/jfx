@@ -34,6 +34,9 @@
 #include "MockPaymentMethod.h"
 #include "Page.h"
 #include "PaymentCoordinator.h"
+#include "PaymentMethodUpdate.h"
+#include "PaymentSessionError.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 
@@ -66,16 +69,16 @@ bool MockPaymentCoordinator::canMakePayments()
     return m_canMakePayments;
 }
 
-void MockPaymentCoordinator::canMakePaymentsWithActiveCard(const String&, const String&, Function<void(bool)>&& completionHandler)
+void MockPaymentCoordinator::canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler)
 {
-    RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), canMakePaymentsWithActiveCard = m_canMakePaymentsWithActiveCard] {
+    RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler), canMakePaymentsWithActiveCard = m_canMakePaymentsWithActiveCard]() mutable {
         completionHandler(canMakePaymentsWithActiveCard);
     });
 }
 
-void MockPaymentCoordinator::openPaymentSetup(const String&, const String&, Function<void(bool)>&& completionHandler)
+void MockPaymentCoordinator::openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler)
 {
-    RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler)] {
+    RunLoop::main().dispatch([completionHandler = WTFMove(completionHandler)]() mutable {
         completionHandler(true);
     });
 }
@@ -158,7 +161,7 @@ void MockPaymentCoordinator::completeShippingContactSelection(Optional<ShippingC
 void MockPaymentCoordinator::completePaymentMethodSelection(Optional<PaymentMethodUpdate>&& paymentMethodUpdate)
 {
     if (paymentMethodUpdate)
-        updateTotalAndLineItems(paymentMethodUpdate->newTotalAndLineItems);
+        updateTotalAndLineItems(paymentMethodUpdate->totalAndLineItems());
 }
 
 void MockPaymentCoordinator::changeShippingOption(String&& shippingOption)
@@ -189,7 +192,7 @@ void MockPaymentCoordinator::acceptPayment()
 void MockPaymentCoordinator::cancelPayment()
 {
     dispatchIfShowing([page = &m_page] {
-        page->paymentCoordinator().didCancelPaymentSession();
+        page->paymentCoordinator().didCancelPaymentSession({ });
         ++hideCount;
         ASSERT(showCount == hideCount);
     });

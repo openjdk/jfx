@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,10 @@
 #pragma once
 
 #include "CSSParserMode.h"
+#include "StyleRuleType.h"
 #include "TextEncoding.h"
 #include <wtf/HashFunctions.h>
+#include <wtf/Optional.h>
 #include <wtf/URL.h>
 #include <wtf/URLHash.h>
 #include <wtf/text/StringHash.h>
@@ -39,17 +41,21 @@ class Document;
 struct CSSParserContext {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+
     CSSParserContext(CSSParserMode, const URL& baseURL = URL());
     WEBCORE_EXPORT CSSParserContext(const Document&, const URL& baseURL = URL(), const String& charset = emptyString());
 
     URL baseURL;
     String charset;
     CSSParserMode mode { HTMLStandardMode };
+    Optional<StyleRuleType> enclosingRuleType;
     bool isHTMLDocument { false };
 #if ENABLE(TEXT_AUTOSIZING)
     bool textAutosizingEnabled { false };
 #endif
-    bool needsSiteSpecificQuirks { false };
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    bool legacyOverflowScrollingTouchEnabled { false };
+#endif
     bool enforcesCSSMIMETypeInNoQuirksMode { true };
     bool useLegacyBackgroundSizeShorthandBehavior { false };
     bool springTimingFunctionEnabled { false };
@@ -59,22 +65,14 @@ public:
     bool attachmentEnabled { false };
 #endif
     bool deferredCSSParserEnabled { false };
+    bool scrollBehaviorEnabled { false };
 
     // This is only needed to support getMatchedCSSRules.
     bool hasDocumentSecurityOrigin { false };
 
     bool useSystemAppearance { false };
 
-    URL completeURL(const String& url) const
-    {
-        if (url.isNull())
-            return URL();
-        if (charset.isEmpty())
-            return URL(baseURL, url);
-        TextEncoding encoding(charset);
-        auto& encodingForURLParsing = encoding.encodingForFormSubmissionOrURLParsing();
-        return URL(baseURL, url, encodingForURLParsing == UTF8Encoding() ? nullptr : &encodingForURLParsing);
-    }
+    URL completeURL(const String& url) const;
 
     bool isContentOpaque { false };
 };
@@ -87,14 +85,18 @@ WEBCORE_EXPORT const CSSParserContext& strictCSSParserContext();
 struct CSSParserContextHash {
     static unsigned hash(const CSSParserContext& key)
     {
-        auto hash = WTF::URLHash::hash(key.baseURL);
+        unsigned hash = 0;
+        if (!key.baseURL.isNull())
+            hash ^= WTF::URLHash::hash(key.baseURL);
         if (!key.charset.isEmpty())
             hash ^= StringHash::hash(key.charset);
         unsigned bits = key.isHTMLDocument                  << 0
 #if ENABLE(TEXT_AUTOSIZING)
             & key.textAutosizingEnabled                     << 1
 #endif
-            & key.needsSiteSpecificQuirks                   << 2
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+            & key.legacyOverflowScrollingTouchEnabled       << 2
+#endif
             & key.enforcesCSSMIMETypeInNoQuirksMode         << 3
             & key.useLegacyBackgroundSizeShorthandBehavior  << 4
             & key.springTimingFunctionEnabled               << 5
@@ -106,7 +108,8 @@ struct CSSParserContextHash {
 #if ENABLE(ATTACHMENT_ELEMENT)
             & key.attachmentEnabled                         << 11
 #endif
-            & key.mode                                      << 12; // Keep this last.
+            & key.scrollBehaviorEnabled                     << 12
+            & key.mode                                      << 13; // Keep this last.
         hash ^= WTF::intHash(bits);
         return hash;
     }

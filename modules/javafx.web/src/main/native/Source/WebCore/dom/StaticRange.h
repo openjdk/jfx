@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -40,11 +41,22 @@ public:
     static Ref<StaticRange> createFromRange(const Range&);
     static Ref<StaticRange> create(Ref<Node>&& startContainer, unsigned startOffset, Ref<Node>&& endContainer, unsigned endOffset);
 
+    struct Init {
+        RefPtr<Node> startContainer;
+        unsigned long startOffset { 0 };
+        RefPtr<Node> endContainer;
+        unsigned long endOffset { 0 };
+    };
+
+    static ExceptionOr<Ref<StaticRange>> create(Init&&);
+
     unsigned startOffset() const { return m_startOffset; }
     unsigned endOffset() const { return m_endOffset; }
     Node* startContainer() const;
     Node* endContainer() const;
     bool collapsed() const;
+
+    bool operator==(const StaticRange&) const;
 
 private:
     StaticRange(Ref<Node>&& startContainer, unsigned startOffset, Ref<Node>&& endContainer, unsigned endOffset);

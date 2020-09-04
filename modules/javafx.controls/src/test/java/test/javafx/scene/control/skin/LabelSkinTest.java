@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,6 +133,12 @@ public class LabelSkinTest {
     @Test public void vposChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
         skin.addWatchedProperty(label.alignmentProperty());
         label.setAlignment(Pos.TOP_CENTER);
+        assertTrue(skin.propertyChanged);
+    }
+
+    @Test public void lineSpacingChangesOnLabelShouldInvoke_handleControlPropertyChanged() {
+        skin.addWatchedProperty(label.lineSpacingProperty());
+        label.setLineSpacing(1.0);
         assertTrue(skin.propertyChanged);
     }
 
@@ -277,6 +283,15 @@ public class LabelSkinTest {
         label.setAlignment(Pos.TOP_CENTER);
         assertTrue(label.isNeedsLayout());
         assertFalse(skin.get_invalidText());
+    }
+
+    @Test public void lineSpacingChangesOnLabelShouldInvalidateLayoutAndDisplayText() {
+        label.layout();
+        skin.updateDisplayedText();
+
+        label.setLineSpacing(1.0);
+        assertTrue(label.isNeedsLayout());
+        assertTrue(skin.get_invalidText());
     }
 
     @Test public void textChangesOnLabelShouldInvalidateLayoutAndDisplayTextAndTextWidth() {
@@ -1143,6 +1158,26 @@ public class LabelSkinTest {
         final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
         final double height = label.prefHeight(-1);
         assertTrue(height >= singleLineHeight * 5);
+    }
+
+    @Test public void whenTextHasNewlinesAndPositiveLineSpacing_computePrefHeight_IncludesTheMultipleLinesAndLineSpacingInThePrefHeight() {
+        label.setLineSpacing(2);
+        label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
+        label.setPadding(new Insets(0, 0, 0, 0));
+        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
+        final double expectedHeight = singleLineHeight * 5 + label.getLineSpacing() * 5 - label.getLineSpacing();
+        final double height = label.prefHeight(-1);
+        assertEquals(expectedHeight, height, 0);
+    }
+
+    @Test public void whenTextHasNewlinesAndNegativeLineSpacing_computePrefHeight_IncludesTheMultipleLinesAndLineSpacingInThePrefHeight() {
+        label.setLineSpacing(-2);
+        label.setText("This\nis a test\nof the emergency\nbroadcast system.\nThis is only a test");
+        label.setPadding(new Insets(0, 0, 0, 0));
+        final double singleLineHeight = Utils.computeTextHeight(label.getFont(), " ", 0, text.getBoundsType());
+        final double expectedHeight = singleLineHeight * 5 + label.getLineSpacing() * 5 - label.getLineSpacing();
+        final double height = label.prefHeight(-1);
+        assertEquals(expectedHeight, height, 0);
     }
 
     @Test public void whenTextHasNewlinesAfterPreviousComputationOf_computePrefHeight_IncludesTheMultipleLinesInThePrefHeight() {

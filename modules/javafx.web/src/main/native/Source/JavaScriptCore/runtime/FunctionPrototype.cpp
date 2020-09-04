@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2009, 2015-2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -37,10 +37,10 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionPrototype);
 
 const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState*);
+static EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject*, CallFrame*);
 
 // ECMA 15.3.4
-static EncodedJSValue JSC_HOST_CALL callFunctionPrototype(ExecState*)
+static EncodedJSValue JSC_HOST_CALL callFunctionPrototype(JSGlobalObject*, CallFrame*)
 {
     return JSValue::encode(jsUndefined());
 }
@@ -52,14 +52,12 @@ FunctionPrototype::FunctionPrototype(VM& vm, Structure* structure)
 
 void FunctionPrototype::finishCreation(VM& vm, const String& name)
 {
-    Base::finishCreation(vm, name);
+    Base::finishCreation(vm, name, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction)
+void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction)
 {
-    VM& vm = exec->vm();
-
     JSFunction* toStringFunction = JSFunction::create(vm, globalObject, 0, vm.propertyNames->toString.string(), functionProtoFuncToString);
     putDirectWithoutTransition(vm, vm.propertyNames->toString, toStringFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
@@ -71,28 +69,27 @@ void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* g
     putDirectWithoutTransition(vm, vm.propertyNames->hasInstanceSymbol, *hasInstanceSymbolFunction, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
-void FunctionPrototype::initRestrictedProperties(ExecState* exec, JSGlobalObject* globalObject)
+void FunctionPrototype::initRestrictedProperties(VM& vm, JSGlobalObject* globalObject)
 {
-    VM& vm = exec->vm();
     GetterSetter* errorGetterSetter = globalObject->throwTypeErrorArgumentsCalleeAndCallerGetterSetter();
-    putDirectAccessor(exec, vm.propertyNames->caller, errorGetterSetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
-    putDirectAccessor(exec, vm.propertyNames->arguments, errorGetterSetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->caller, errorGetterSetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
+    putDirectNonIndexAccessorWithoutTransition(vm, vm.propertyNames->arguments, errorGetterSetter, PropertyAttribute::DontEnum | PropertyAttribute::Accessor);
 }
 
-EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
+EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSValue thisValue = exec->thisValue();
+    JSValue thisValue = callFrame->thisValue();
     if (thisValue.inherits<JSFunction>(vm)) {
         JSFunction* function = jsCast<JSFunction*>(thisValue);
         if (function->isHostOrBuiltinFunction())
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(vm), "() {\n    [native code]\n}")));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(vm), "() {\n    [native code]\n}")));
 
         FunctionExecutable* executable = function->jsExecutable();
         if (executable->isClass())
-            return JSValue::encode(jsString(exec, executable->classSource().view().toString()));
+            return JSValue::encode(jsString(vm, executable->classSource().view().toString()));
 
         String functionHeader;
         switch (executable->parseMode()) {
@@ -116,6 +113,7 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
             break;
 
         case SourceParseMode::ArrowFunctionMode:
+        case SourceParseMode::InstanceFieldInitializerMode:
             functionHeader = "";
             break;
 
@@ -137,21 +135,21 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
         StringView source = executable->source().provider()->getRange(
             executable->parametersStartOffset(),
             executable->parametersStartOffset() + executable->source().length());
-        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, functionHeader, function->name(vm), source)));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, functionHeader, function->name(vm), source)));
     }
 
     if (thisValue.inherits<InternalFunction>(vm)) {
         InternalFunction* function = jsCast<InternalFunction*>(thisValue);
-        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(), "() {\n    [native code]\n}")));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(), "() {\n    [native code]\n}")));
     }
 
     if (thisValue.isObject()) {
         JSObject* object = asObject(thisValue);
         if (object->isFunction(vm))
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, "function ", object->classInfo(vm)->className, "() {\n    [native code]\n}")));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", object->classInfo(vm)->className, "() {\n    [native code]\n}")));
     }
 
-    return throwVMTypeError(exec, scope);
+    return throwVMTypeError(globalObject, scope);
 }
 
 } // namespace JSC

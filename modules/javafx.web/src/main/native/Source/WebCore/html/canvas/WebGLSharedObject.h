@@ -25,11 +25,13 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLObject.h"
 
 namespace WebCore {
 
-class GraphicsContext3D;
+class GraphicsContextGLOpenGL;
 class WebGLContextGroup;
 class WebGLRenderingContextBase;
 
@@ -58,10 +60,12 @@ protected:
         return m_contextGroup;
     }
 
-    GraphicsContext3D* getAGraphicsContext3D() const override;
+    GraphicsContextGLOpenGL* getAGraphicsContextGL() const override;
 
 private:
     WebGLContextGroup* m_contextGroup;
 };
 
 } // namespace WebCore
+
+#endif

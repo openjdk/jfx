@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLVertexArrayObjectBase.h"
 
 namespace WebCore {
@@ -35,7 +37,9 @@ public:
     virtual ~WebGLVertexArrayObjectOES();
 private:
     WebGLVertexArrayObjectOES(WebGLRenderingContextBase&, Type);
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) final;
+    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) final;
 };
 
 } // namespace WebCore
+
+#endif

@@ -28,6 +28,7 @@
 
 #if ENABLE(CSS_PAINTING_API)
 
+#include "CanvasRenderingContext.h"
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
 
@@ -39,8 +40,8 @@ Ref<CustomPaintCanvas> CustomPaintCanvas::create(ScriptExecutionContext& context
 }
 
 CustomPaintCanvas::CustomPaintCanvas(ScriptExecutionContext& context, unsigned width, unsigned height)
-    : ContextDestructionObserver(&context)
-    , m_size(width, height)
+    : CanvasBase(IntSize(width, height))
+    , ContextDestructionObserver(&context)
 {
 }
 
@@ -49,36 +50,7 @@ CustomPaintCanvas::~CustomPaintCanvas()
     notifyObserversCanvasDestroyed();
 
     m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-}
-
-unsigned CustomPaintCanvas::width() const
-{
-    return m_size.width();
-}
-
-void CustomPaintCanvas::setWidth(unsigned newWidth)
-{
-    return m_size.setWidth(newWidth);
-}
-
-unsigned CustomPaintCanvas::height() const
-{
-    return m_size.height();
-}
-
-void CustomPaintCanvas::setHeight(unsigned newHeight)
-{
-    return m_size.setHeight(newHeight);
-}
-
-const IntSize& CustomPaintCanvas::size() const
-{
-    return m_size;
-}
-
-void CustomPaintCanvas::setSize(const IntSize& newSize)
-{
-    m_size = newSize;
+    setImageBuffer(nullptr);
 }
 
 ExceptionOr<RefPtr<PaintRenderingContext2D>> CustomPaintCanvas::getContext()
@@ -121,7 +93,7 @@ Image* CustomPaintCanvas::copiedImage() const
     if (!width() || !height())
         return nullptr;
 
-    m_copiedBuffer = ImageBuffer::create(size(), Unaccelerated, 1, ColorSpaceSRGB, nullptr);
+    m_copiedBuffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, 1, ColorSpace::SRGB, nullptr);
     if (!m_copiedBuffer)
         return nullptr;
 
@@ -130,7 +102,7 @@ Image* CustomPaintCanvas::copiedImage() const
         m_context->paintRenderingResultsToCanvas();
     m_destinationGraphicsContext = nullptr;
 
-    m_copiedImage = m_copiedBuffer->copyImage(m_copiedBuffer->fastCopyImageMode(), PreserveResolution::Yes);
+    m_copiedImage = m_copiedBuffer->copyImage(DontCopyBackingStore, PreserveResolution::Yes);
     return m_copiedImage.get();
 }
 
@@ -142,12 +114,6 @@ GraphicsContext* CustomPaintCanvas::drawingContext() const
 GraphicsContext* CustomPaintCanvas::existingDrawingContext() const
 {
     return drawingContext();
-}
-
-void CustomPaintCanvas::makeRenderingResultsAvailable()
-{
-    if (m_context)
-        m_context->paintRenderingResultsToCanvas();
 }
 
 }

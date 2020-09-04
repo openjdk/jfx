@@ -32,9 +32,12 @@
 #include <wtf/DateMath.h>
 #include <wtf/FileMetadata.h>
 #include <wtf/FileSystem.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(File);
 
 Ref<File> File::createWithRelativePath(const String& path, const String& relativePath)
 {
@@ -43,28 +46,27 @@ Ref<File> File::createWithRelativePath(const String& path, const String& relativ
     return file;
 }
 
-File::File(const String& path)
-    : Blob(uninitializedContructor)
-    , m_path(path)
+Ref<File> File::create(const String& path, const String& nameOverride)
 {
-    m_internalURL = BlobURL::createInternalURL();
-    m_size = -1;
-    computeNameAndContentType(m_path, String(), m_name, m_type);
-    ThreadableBlobRegistry::registerFileBlobURL(m_internalURL, path, m_type);
+    String name;
+    String type;
+    computeNameAndContentType(path, nameOverride, name, type);
+
+    auto internalURL = BlobURL::createInternalURL();
+    ThreadableBlobRegistry::registerFileBlobURL(internalURL, path, type);
+
+    return adoptRef(*new File(WTFMove(internalURL), WTFMove(type), String { path }, WTFMove(name)));
 }
 
-File::File(const String& path, const String& nameOverride)
-    : Blob(uninitializedContructor)
-    , m_path(path)
+File::File(URL&& url, String&& type, String&& path, String&& name)
+    : Blob(uninitializedContructor, WTFMove(url), WTFMove(type))
+    , m_path(WTFMove(path))
+    , m_name(WTFMove(name))
 {
-    m_internalURL = BlobURL::createInternalURL();
-    m_size = -1;
-    computeNameAndContentType(m_path, nameOverride, m_name, m_type);
-    ThreadableBlobRegistry::registerFileBlobURL(m_internalURL, path, m_type);
 }
 
 File::File(DeserializationContructor, const String& path, const URL& url, const String& type, const String& name, const Optional<int64_t>& lastModified)
-    : Blob(deserializationContructor, url, type, -1, path)
+    : Blob(deserializationContructor, url, type, { }, path)
     , m_path(path)
     , m_name(name)
     , m_lastModifiedDateOverride(lastModified)
@@ -129,10 +131,13 @@ void File::computeNameAndContentType(const String& path, const String& nameOverr
         return;
     }
 #endif
-    effectiveName = nameOverride.isNull() ? FileSystem::pathGetFileName(path) : nameOverride;
+    effectiveName = nameOverride.isEmpty() ? FileSystem::pathGetFileName(path) : nameOverride;
     size_t index = effectiveName.reverseFind('.');
-    if (index != notFound)
-        effectiveContentType = MIMETypeRegistry::getMIMETypeForExtension(effectiveName.substring(index + 1));
+    if (index != notFound) {
+        callOnMainThreadAndWait([&effectiveContentType, &effectiveName, index] {
+            effectiveContentType = MIMETypeRegistry::getMIMETypeForExtension(effectiveName.substring(index + 1)).isolatedCopy();
+        });
+    }
 }
 
 String File::contentTypeForFile(const String& path)

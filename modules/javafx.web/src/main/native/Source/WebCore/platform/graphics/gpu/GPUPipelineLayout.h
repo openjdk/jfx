@@ -28,7 +28,6 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUPipelineLayoutDescriptor.h"
-
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -38,10 +37,12 @@ class GPUPipelineLayout : public RefCounted<GPUPipelineLayout> {
 public:
     static Ref<GPUPipelineLayout> create(GPUPipelineLayoutDescriptor&&);
 
-private:
-    explicit GPUPipelineLayout(GPUPipelineLayoutDescriptor&&);
+    const Vector<Ref<const GPUBindGroupLayout>>& bindGroupLayouts() const { return m_bindGroupLayouts; }
 
-    Vector<RefPtr<const GPUBindGroupLayout>> m_bindGroupLayouts;
+private:
+    explicit GPUPipelineLayout(Vector<Ref<const GPUBindGroupLayout>>&&);
+
+    Vector<Ref<const GPUBindGroupLayout>> m_bindGroupLayouts;
 };
 
 } // namespace WebCore

@@ -26,12 +26,17 @@
 #pragma once
 
 #include "AlignedMemoryAllocator.h"
+#include <wtf/DebugHeap.h>
+#include <wtf/FastBitVector.h>
+#include <wtf/HashMap.h>
+#include <wtf/Vector.h>
+
 
 namespace JSC {
 
 class IsoAlignedMemoryAllocator : public AlignedMemoryAllocator {
 public:
-    IsoAlignedMemoryAllocator();
+    IsoAlignedMemoryAllocator(CString);
     ~IsoAlignedMemoryAllocator();
 
     void* tryAllocateAlignedMemory(size_t alignment, size_t size) override;
@@ -39,12 +44,21 @@ public:
 
     void dump(PrintStream&) const override;
 
+    void* tryAllocateMemory(size_t) override;
+    void freeMemory(void*) override;
+    void* tryReallocateMemory(void*, size_t) override;
+
 private:
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+    // If breakdown is enabled, we do not ensure Iso-feature. This is totally OK since breakdown is memory bloat debugging feature.
+    WTF::DebugHeap m_debugHeap;
+#else
     Vector<void*> m_blocks;
     HashMap<void*, unsigned> m_blockIndices;
     FastBitVector m_committed;
     unsigned m_firstUncommitted { 0 };
     Lock m_lock;
+#endif
 };
 
 } // namespace JSC

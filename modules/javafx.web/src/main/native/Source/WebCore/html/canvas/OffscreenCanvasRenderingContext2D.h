@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(OFFSCREEN_CANVAS)
+
 #include "CanvasRenderingContext2DBase.h"
 
 #include "OffscreenCanvas.h"
@@ -32,6 +34,7 @@
 namespace WebCore {
 
 class OffscreenCanvasRenderingContext2D final : public CanvasRenderingContext2DBase {
+    WTF_MAKE_ISO_ALLOCATED(OffscreenCanvasRenderingContext2D);
 public:
     OffscreenCanvasRenderingContext2D(CanvasBase&);
     virtual ~OffscreenCanvasRenderingContext2D();
@@ -45,3 +48,4 @@ public:
 
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::OffscreenCanvasRenderingContext2D, isOffscreen2d())
 
+#endif

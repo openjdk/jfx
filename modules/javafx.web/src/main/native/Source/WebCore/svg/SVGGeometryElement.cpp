@@ -24,6 +24,8 @@
 #include "SVGGeometryElement.h"
 
 #include "DOMPoint.h"
+#include "RenderSVGResource.h"
+#include "RenderSVGShape.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGPathUtilities.h"
 #include "SVGPoint.h"
@@ -36,7 +38,10 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGGeometryElement);
 SVGGeometryElement::SVGGeometryElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
 {
-    registerAttributes();
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::pathLengthAttr, &SVGGeometryElement::m_pathLength>();
+    });
 }
 
 float SVGGeometryElement::getTotalLength() const
@@ -50,17 +55,21 @@ float SVGGeometryElement::getTotalLength() const
     return renderer->getTotalLength();
 }
 
-Ref<SVGPoint> SVGGeometryElement::getPointAtLength(float distance) const
+ExceptionOr<Ref<SVGPoint>> SVGGeometryElement::getPointAtLength(float distance) const
 {
-    FloatPoint point { };
-
     document().updateLayoutIgnorePendingStylesheets();
 
     auto* renderer = downcast<RenderSVGShape>(this->renderer());
-    if (renderer)
-        renderer->getPointAtLength(point, distance);
 
-    return SVGPoint::create(point);
+    // Spec: If current element is a non-rendered element, throw an InvalidStateError.
+    if (!renderer)
+        return Exception { InvalidStateError };
+
+    // Spec: Clamp distance to [0, length].
+    distance = clampTo<float>(distance, 0, getTotalLength());
+
+    // Spec: Return a newly created, detached SVGPoint object.
+    return SVGPoint::create(renderer->getPointAtLength(distance));
 }
 
 bool SVGGeometryElement::isPointInFill(DOMPointInit&& pointInit)
@@ -87,19 +96,11 @@ bool SVGGeometryElement::isPointInStroke(DOMPointInit&& pointInit)
     return renderer->isPointInStroke(point);
 }
 
-void SVGGeometryElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::pathLengthAttr, &SVGGeometryElement::m_pathLength>();
-}
-
-void SVGGeometryElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGGeometryElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::pathLengthAttr) {
-        m_pathLength.setValue(value.toFloat());
-        if (m_pathLength.value() < 0)
+        m_pathLength->setBaseValInternal(value.toFloat());
+        if (m_pathLength->baseVal() < 0)
             document().accessSVGExtensions().reportError("A negative value for path attribute <pathLength> is not allowed");
         return;
     }

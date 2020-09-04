@@ -36,7 +36,7 @@
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 };
 
@@ -53,7 +53,7 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText { "OK"_s };
+        String statusText;
         Optional<FetchHeaders::Init> headers;
     };
 
@@ -102,6 +102,7 @@ public:
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
 
     WEBCORE_EXPORT ResourceResponse resourceResponse() const;
+    ResourceResponse::Tainting tainting() const { return m_internalResponse.tainting(); }
 
     uint64_t bodySizeWithPadding() const { return m_bodySizeWithPadding; }
     void setBodySizeWithPadding(uint64_t size) { m_bodySizeWithPadding = size; }
@@ -116,7 +117,6 @@ private:
 
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     const ResourceResponse& filteredResponse() const;
 
@@ -127,6 +127,7 @@ private:
     void addAbortSteps(Ref<AbortSignal>&&);
 
     class BodyLoader final : public FetchLoaderClient {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         BodyLoader(FetchResponse&, NotificationCallback&&);
         ~BodyLoader();
@@ -140,6 +141,7 @@ private:
         RefPtr<SharedBuffer> startStreaming();
 #endif
         NotificationCallback takeNotificationCallback() { return WTFMove(m_responseCallback); }
+        ConsumeDataByChunkCallback takeConsumeDataCallback() { return WTFMove(m_consumeDataCallback); }
 
     private:
         // FetchLoaderClient API
@@ -152,11 +154,12 @@ private:
         NotificationCallback m_responseCallback;
         ConsumeDataByChunkCallback m_consumeDataCallback;
         std::unique_ptr<FetchLoader> m_loader;
+        Ref<PendingActivity<FetchResponse>> m_pendingActivity;
     };
 
     mutable Optional<ResourceResponse> m_filteredResponse;
     ResourceResponse m_internalResponse;
-    Optional<BodyLoader> m_bodyLoader;
+    std::unique_ptr<BodyLoader> m_bodyLoader;
     mutable String m_responseURL;
     // Opaque responses will padd their body size when used with Cache API.
     uint64_t m_bodySizeWithPadding { 0 };

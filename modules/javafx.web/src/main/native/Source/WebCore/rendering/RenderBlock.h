@@ -113,8 +113,6 @@ public:
     bool hasMarginBeforeQuirk(const RenderBox& child) const;
     bool hasMarginAfterQuirk(const RenderBox& child) const;
 
-    bool generatesLineBoxesForInlineChild(RenderObject*);
-
     void markPositionedObjectsForLayout();
     void markForPaginationRelayoutIfNeeded() override;
 
@@ -201,7 +199,7 @@ public:
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const String&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
-    static TextRun constructTextRun(const AtomicString&, const RenderStyle&,
+    static TextRun constructTextRun(const AtomString&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion, TextRunFlags = DefaultTextRunFlags);
     static TextRun constructTextRun(const RenderText&, const RenderStyle&,
         ExpansionBehavior = DefaultExpansion);
@@ -301,7 +299,7 @@ public:
 
     LayoutUnit computeStartPositionDeltaForChildAvoidingFloats(const RenderBox& child, LayoutUnit childMarginStart, RenderFragmentContainer* = 0);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     void checkPositionedObjectsNeedLayout();
 #endif
 
@@ -317,6 +315,8 @@ public:
 
     Optional<LayoutUnit> availableLogicalHeightForPercentageComputation() const;
     bool hasDefiniteLogicalHeight() const;
+
+    virtual bool shouldResetChildLogicalHeightBeforeLayout(const RenderBox&) const { return false; }
 
 protected:
     RenderFragmentedFlow* locateEnclosingFragmentedFlow() const override;
@@ -393,6 +393,9 @@ public:
     void adjustBorderBoxRectForPainting(LayoutRect&) override;
     LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
     bool isInlineBlockOrInlineTable() const final { return isInline() && isReplaced(); }
+
+    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
+    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
 
 protected:
     virtual void addOverflowFromChildren();
@@ -477,9 +480,6 @@ private:
     virtual void clipOutFloatingObjects(RenderBlock&, const PaintInfo*, const LayoutPoint&, const LayoutSize&) { };
     friend class LogicalSelectionOffsetCaches;
 
-    void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
-    void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;
-
     void paintContinuationOutlines(PaintInfo&, const LayoutPoint&);
 
     LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = 0) final;
@@ -492,6 +492,8 @@ private:
     RenderFragmentedFlow* updateCachedEnclosingFragmentedFlow(RenderFragmentedFlow*) const;
 
     void removePositionedObjectsIfNeeded(const RenderStyle& oldStyle, const RenderStyle& newStyle);
+
+    void absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>&, bool* wasFixed) const override;
 
 private:
     bool hasRareData() const;

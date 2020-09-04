@@ -102,8 +102,11 @@ RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
 
 struct SameSizeAsRenderObject {
     virtual ~SameSizeAsRenderObject() = default; // Allocate vtable pointer.
+#if ASSERT_ENABLED
+    bool weakPtrFactorWasConstructedOnMainThread;
+#endif
     void* pointers[5];
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     unsigned m_debugBitfields : 2;
 #endif
     unsigned m_bitfields;
@@ -124,7 +127,7 @@ RenderObject::RenderObject(Node& node)
     , m_parent(nullptr)
     , m_previous(nullptr)
     , m_next(nullptr)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_hasAXObject(false)
     , m_setNeedsLayoutForbidden(false)
 #endif
@@ -140,8 +143,8 @@ RenderObject::RenderObject(Node& node)
 RenderObject::~RenderObject()
 {
     view().didDestroyRenderer();
-#ifndef NDEBUG
     ASSERT(!m_hasAXObject);
+#ifndef NDEBUG
     renderObjectCounter.decrement();
 #endif
     ASSERT(!hasRareData());
@@ -491,7 +494,7 @@ void RenderObject::clearNeedsLayout()
     setNeedsPositionedMovementLayoutBit(false);
     if (is<RenderElement>(*this))
         downcast<RenderElement>(*this).setAncestorLineBoxDirty(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     checkBlockPositionedObjectsNeedLayout();
 #endif
 }
@@ -564,7 +567,7 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
         scheduleRelayoutForSubtree(*ancestor);
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 void RenderObject::checkBlockPositionedObjectsNeedLayout()
 {
     ASSERT(!needsLayout());
@@ -572,7 +575,7 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
     if (is<RenderBlock>(*this))
         downcast<RenderBlock>(*this).checkPositionedObjectsNeedLayout();
 }
-#endif
+#endif // ASSERT_ENABLED
 
 void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
 {
@@ -657,7 +660,7 @@ void RenderObject::addPDFURLRect(PaintInfo& paintInfo, const LayoutPoint& paintO
     if (!is<Element>(node) || !node->isLink())
         return;
     Element& element = downcast<Element>(*node);
-    const AtomicString& href = element.getAttribute(hrefAttr);
+    const AtomString& href = element.getAttribute(hrefAttr);
     if (href.isNull())
         return;
 
@@ -973,23 +976,6 @@ LayoutRect RenderObject::clippedOverflowRectForRepaint(const RenderLayerModelObj
 {
     ASSERT_NOT_REACHED();
     return LayoutRect();
-}
-
-bool RenderObject::shouldApplyCompositedContainerScrollsForRepaint()
-{
-#if PLATFORM(IOS_FAMILY)
-    return false;
-#else
-    return true;
-#endif
-}
-
-RenderObject::VisibleRectContext RenderObject::visibleRectContextForRepaint()
-{
-    VisibleRectContext context;
-    if (shouldApplyCompositedContainerScrollsForRepaint())
-        context.m_options.add(VisibleRectContextOption::ApplyCompositedContainerScrolls);
-    return context;
 }
 
 LayoutRect RenderObject::computeRectForRepaint(const LayoutRect& rect, const RenderLayerModelObject* repaintContainer) const
@@ -1527,41 +1513,6 @@ void RenderObject::destroy()
     delete this;
 }
 
-bool RenderObject::isTransparentOrFullyClippedRespectingParentFrames() const
-{
-    static const double minimumVisibleOpacity = 0.01;
-
-    float currentOpacity = 1;
-    auto* layer = enclosingLayer();
-    while (layer) {
-        auto& layerRenderer = layer->renderer();
-        auto& style = layerRenderer.style();
-        if (auto* box = layer->renderBox()) {
-            bool isOverflowHidden = style.overflowX() == Overflow::Hidden || style.overflowY() == Overflow::Hidden;
-            if (isOverflowHidden && !box->isDocumentElementRenderer() && box->contentSize().isEmpty())
-                return true;
-        }
-        currentOpacity *= style.opacity();
-        if (currentOpacity < minimumVisibleOpacity)
-            return true;
-
-        auto* parentLayer = layer->parent();
-        if (!parentLayer) {
-            if (!is<RenderView>(layerRenderer))
-                return false;
-
-            auto& enclosingFrame = downcast<RenderView>(layerRenderer).view().frame();
-            if (enclosingFrame.isMainFrame())
-                return false;
-
-            if (auto *frameOwnerRenderer = enclosingFrame.ownerElement()->renderer())
-                parentLayer = frameOwnerRenderer->enclosingLayer();
-        }
-        layer = parentLayer;
-    }
-    return false;
-}
-
 Position RenderObject::positionForPoint(const LayoutPoint& point)
 {
     // FIXME: This should just create a Position object instead (webkit.org/b/168566).
@@ -1649,55 +1600,6 @@ int RenderObject::innerLineHeight() const
     return style().computedLineHeight();
 }
 
-#if ENABLE(DASHBOARD_SUPPORT)
-void RenderObject::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
-{
-    // Convert the style regions to absolute coordinates.
-    if (style().visibility() != Visibility::Visible || !is<RenderBox>(*this))
-        return;
-
-    auto& box = downcast<RenderBox>(*this);
-    FloatPoint absPos = localToAbsolute();
-
-    const Vector<StyleDashboardRegion>& styleRegions = style().dashboardRegions();
-    for (const auto& styleRegion : styleRegions) {
-        LayoutUnit w = box.width();
-        LayoutUnit h = box.height();
-
-        AnnotatedRegionValue region;
-        region.label = styleRegion.label;
-        region.bounds = LayoutRect(styleRegion.offset.left().value(),
-                                   styleRegion.offset.top().value(),
-                                   w - styleRegion.offset.left().value() - styleRegion.offset.right().value(),
-                                   h - styleRegion.offset.top().value() - styleRegion.offset.bottom().value());
-        region.type = styleRegion.type;
-
-        region.clip = computeAbsoluteRepaintRect(region.bounds);
-        if (region.clip.height() < 0) {
-            region.clip.setHeight(0);
-            region.clip.setWidth(0);
-        }
-
-        region.bounds.setX(absPos.x() + styleRegion.offset.left().value());
-        region.bounds.setY(absPos.y() + styleRegion.offset.top().value());
-
-        regions.append(region);
-    }
-}
-
-void RenderObject::collectAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
-{
-    // RenderTexts don't have their own style, they just use their parent's style,
-    // so we don't want to include them.
-    if (is<RenderText>(*this))
-        return;
-
-    addAnnotatedRegions(regions);
-    for (RenderObject* current = downcast<RenderElement>(*this).firstChild(); current; current = current->nextSibling())
-        current->collectAnnotatedRegions(regions);
-}
-#endif
-
 int RenderObject::caretMinOffset() const
 {
     return 0;
@@ -1729,7 +1631,7 @@ int RenderObject::nextOffset(int current) const
 
 void RenderObject::adjustRectForOutlineAndShadow(LayoutRect& rect) const
 {
-    LayoutUnit outlineSize = outlineStyleForRepaint().outlineSize();
+    LayoutUnit outlineSize { outlineStyleForRepaint().outlineSize() };
     if (const ShadowData* boxShadow = style().boxShadow()) {
         boxShadow->adjustRectForShadow(rect, outlineSize);
         return;
@@ -1935,9 +1837,11 @@ RenderFragmentedFlow* RenderObject::locateEnclosingFragmentedFlow() const
 void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const BoxSide& side, Color& color)
 {
     ASSERT(style == BorderStyle::Inset || style == BorderStyle::Outset);
+
     // This values were derived empirically.
-    const RGBA32 baseDarkColor = 0xFF202020;
-    const RGBA32 baseLightColor = 0xFFEBEBEB;
+    constexpr SimpleColor baseDarkColor { 0xFF202020 };
+    constexpr SimpleColor baseLightColor { 0xFFEBEBEB };
+
     enum Operation { Darken, Lighten };
 
     Operation operation = (side == BSTop || side == BSLeft) == (style == BorderStyle::Inset) ? Darken : Lighten;
@@ -1991,13 +1895,35 @@ const RenderObject::RenderObjectRareData& RenderObject::rareData() const
 RenderObject::RenderObjectRareData& RenderObject::ensureRareData()
 {
     setHasRareData(true);
-    return *rareDataMap().ensure(this, [] { return std::make_unique<RenderObjectRareData>(); }).iterator->value;
+    return *rareDataMap().ensure(this, [] { return makeUnique<RenderObjectRareData>(); }).iterator->value;
 }
 
 void RenderObject::removeRareData()
 {
     rareDataMap().remove(this);
     setHasRareData(false);
+}
+
+bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
+{
+    auto enclosingFrameRenderer = [] (const RenderObject& renderer) {
+        auto* ownerElement = renderer.document().ownerElement();
+        return ownerElement ? ownerElement->renderer() : nullptr;
+    };
+
+    auto hasEmptyVisibleRect = [] (const RenderObject& renderer) {
+        VisibleRectContext context { false, false, { VisibleRectContextOption::UseEdgeInclusiveIntersection, VisibleRectContextOption::ApplyCompositedClips }};
+        auto& box = renderer.enclosingBoxModelObject();
+        auto clippedBounds = box.computeVisibleRectInContainer(box.borderBoundingBox(), &box.view(), context);
+        return !clippedBounds || clippedBounds->isEmpty();
+    };
+
+    for (auto* renderer = this; renderer; renderer = enclosingFrameRenderer(*renderer)) {
+        if (hasEmptyVisibleRect(*renderer))
+            return true;
+    }
+
+    return false;
 }
 
 #if ENABLE(TREE_DEBUGGING)

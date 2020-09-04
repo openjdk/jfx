@@ -30,6 +30,7 @@
 
 #include "DocumentIdentifier.h"
 #include "ReferrerPolicy.h"
+#include <wtf/Markable.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -58,7 +59,7 @@ struct FetchOptions {
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
     bool keepAlive { false };
     String integrity;
-    Optional<DocumentIdentifier> clientIdentifier;
+    Markable<DocumentIdentifier, DocumentIdentifier::MarkableTraits> clientIdentifier;
 };
 
 inline FetchOptions::FetchOptions(Destination destination, Mode mode, Credentials credentials, Cache cache, Redirect redirect, ReferrerPolicy referrerPolicy, String&& integrity, bool keepAlive)
@@ -228,7 +229,7 @@ template<class Decoder> inline bool FetchOptions::decodePersistent(Decoder& deco
 template<class Encoder> inline void FetchOptions::encode(Encoder& encoder) const
 {
     encodePersistent(encoder);
-    encoder << clientIdentifier;
+    encoder << clientIdentifier.asOptional();
 }
 
 template<class Decoder> inline Optional<FetchOptions> FetchOptions::decode(Decoder& decoder)
@@ -243,7 +244,7 @@ template<class Decoder> inline Optional<FetchOptions> FetchOptions::decode(Decod
         return WTF::nullopt;
     options.clientIdentifier = WTFMove(clientIdentifier.value());
 
-    return WTFMove(options);
+    return options;
 }
 
 } // namespace WebCore

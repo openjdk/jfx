@@ -26,16 +26,18 @@
 #pragma once
 
 #include "ProcessIdentifier.h"
-#include <wtf/Function.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
+class ScriptExecutionContext;
 struct MessagePortIdentifier;
 struct MessageWithMessagePorts;
 
 class MessagePortChannelProvider {
 public:
+    static MessagePortChannelProvider& fromContext(ScriptExecutionContext&);
     static MessagePortChannelProvider& singleton();
     WEBCORE_EXPORT static void setSharedProvider(MessagePortChannelProvider&);
 
@@ -46,7 +48,9 @@ public:
     virtual void entangleLocalPortInThisProcessToRemote(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) = 0;
     virtual void messagePortDisentangled(const MessagePortIdentifier& local) = 0;
     virtual void messagePortClosed(const MessagePortIdentifier& local) = 0;
-    virtual void takeAllMessagesForPort(const MessagePortIdentifier&, Function<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&) = 0;
+
+    virtual void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>&&) = 0;
+
     virtual void postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget) = 0;
 
     enum class HasActivity {
@@ -55,11 +59,20 @@ public:
     };
     virtual void checkRemotePortForActivity(const MessagePortIdentifier& remoteTarget, CompletionHandler<void(HasActivity)>&& callback) = 0;
 
-    // Operations that the coordinating process performs (e.g. the UIProcess)
-    virtual void checkProcessLocalPortForActivity(const MessagePortIdentifier&, ProcessIdentifier, CompletionHandler<void(HasActivity)>&&) = 0;
-
 private:
 
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MessagePortChannelProvider::HasActivity> {
+    using values = EnumValues<
+        WebCore::MessagePortChannelProvider::HasActivity,
+        WebCore::MessagePortChannelProvider::HasActivity::No,
+        WebCore::MessagePortChannelProvider::HasActivity::Yes
+    >;
+};
+
+}

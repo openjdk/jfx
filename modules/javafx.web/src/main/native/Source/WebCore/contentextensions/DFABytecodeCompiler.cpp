@@ -248,7 +248,7 @@ DFABytecodeCompiler::Transitions DFABytecodeCompiler::transitions(const DFANode&
     }
 
     Vector<Range>& ranges = transitions.ranges;
-    uint8_t rangeMin;
+    uint8_t rangeMin = 0;
     bool hasRangeMin = false;
     for (uint8_t i = 0; i < 128; i++) {
         if (hasRangeMin) {
@@ -461,7 +461,7 @@ void DFABytecodeCompiler::compile()
     // Link.
     for (const auto& linkRecord : m_linkRecords) {
         uint32_t destination = m_nodeStartOffsets[linkRecord.destinationNodeIndex];
-        RELEASE_ASSERT(destination < std::numeric_limits<int32_t>::max());
+        RELEASE_ASSERT(destination < static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
         int32_t distance = destination - linkRecord.instructionLocation;
         ASSERT(abs(distance) <= abs(linkRecord.longestPossibleJump));
 

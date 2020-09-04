@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,11 @@ extern "C" {
     /*
      * Specify the require JNI version.
      */
+#ifdef STATIC_BUILD
+    JNIEXPORT jint JNICALL JNI_OnLoad_jfxmedia(JavaVM *vm, void *reserved)
+#else
     JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+#endif
     {
         g_pJVM = vm;
         return JNI_VERSION_1_2;

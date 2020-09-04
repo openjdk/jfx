@@ -32,13 +32,14 @@
 #pragma once
 
 #include "Performance.h"
-#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(PerformanceEntry);
 class PerformanceEntry : public RefCounted<PerformanceEntry> {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(PerformanceEntry);
 public:
     virtual ~PerformanceEntry();
 

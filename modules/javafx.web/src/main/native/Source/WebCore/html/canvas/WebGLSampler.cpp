@@ -46,14 +46,12 @@ WebGLSampler::~WebGLSampler()
 WebGLSampler::WebGLSampler(WebGLRenderingContextBase& ctx)
     : WebGLSharedObject(ctx)
 {
-    // FIXME: Call createSampler from GraphicsContext3D.
+    setObject(ctx.graphicsContextGL()->createSampler());
 }
 
-void WebGLSampler::deleteObjectImpl(GraphicsContext3D* context3d, Platform3DObject object)
+void WebGLSampler::deleteObjectImpl(GraphicsContextGLOpenGL* context3d, PlatformGLObject object)
 {
-    UNUSED_PARAM(context3d);
-    UNUSED_PARAM(object);
-    // FIXME: Call deleteSampler from GraphicsContext3D.
+    context3d->deleteSampler(object);
 }
 
 }

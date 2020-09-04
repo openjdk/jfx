@@ -42,6 +42,7 @@
 #include "NotImplemented.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceSettings.h"
+#include "RealtimeVideoSource.h"
 #include <math.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -55,19 +56,19 @@ CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&&
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(deviceID);
     ASSERT(device);
     if (!device)
-        return { };
+        return { "No mock camera device"_s };
 #endif
 
     auto source = adoptRef(*new MockRealtimeVideoSource(WTFMove(deviceID), WTFMove(name), WTFMove(hashSalt)));
     if (constraints && source->applyConstraints(*constraints))
         return { };
 
-    return CaptureSourceOrError(WTFMove(source));
+    return CaptureSourceOrError(RealtimeVideoSource::create(WTFMove(source)));
 }
 #endif
 
 MockRealtimeVideoSource::MockRealtimeVideoSource(String&& deviceID, String&& name, String&& hashSalt)
-    : RealtimeVideoSource(WTFMove(name), WTFMove(deviceID), WTFMove(hashSalt))
+    : RealtimeVideoCaptureSource(WTFMove(name), WTFMove(deviceID), WTFMove(hashSalt))
     , m_emitFrameTimer(RunLoop::current(), this, &MockRealtimeVideoSource::generateFrame)
 {
     auto device = MockRealtimeMediaSourceCenter::mockDeviceWithPersistentID(persistentID());
@@ -97,7 +98,7 @@ bool MockRealtimeVideoSource::supportsSizeAndFrameRate(Optional<int> width, Opti
     // FIXME: consider splitting mock display into another class so we don't don't have to do this silly dance
     // because of the RealtimeVideoSource inheritance.
     if (mockCamera())
-        return RealtimeVideoSource::supportsSizeAndFrameRate(width, height, rate);
+        return RealtimeVideoCaptureSource::supportsSizeAndFrameRate(width, height, rate);
 
     return RealtimeMediaSource::supportsSizeAndFrameRate(width, height, rate);
 }
@@ -107,7 +108,7 @@ void MockRealtimeVideoSource::setSizeAndFrameRate(Optional<int> width, Optional<
     // FIXME: consider splitting mock display into another class so we don't don't have to do this silly dance
     // because of the RealtimeVideoSource inheritance.
     if (mockCamera()) {
-        RealtimeVideoSource::setSizeAndFrameRate(width, height, rate);
+        RealtimeVideoCaptureSource::setSizeAndFrameRate(width, height, rate);
         return;
     }
 
@@ -156,7 +157,11 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
         settings.setLogicalSurface(false);
     }
     settings.setFrameRate(frameRate());
-    auto& size = this->size();
+    auto size = this->size();
+    if (mockCamera()) {
+        if (m_deviceOrientation == MediaSample::VideoRotation::Left || m_deviceOrientation == MediaSample::VideoRotation::Right)
+            size = size.transposedSize();
+    }
     settings.setWidth(size.width());
     settings.setHeight(size.height());
     if (aspectRatio())
@@ -181,11 +186,11 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
     return m_currentSettings.value();
 }
 
-void MockRealtimeVideoSource::setSizeAndFrameRateWithPreset(IntSize, double, RefPtr<VideoPreset> preset)
+void MockRealtimeVideoSource::setFrameRateWithPreset(double, RefPtr<VideoPreset> preset)
 {
-    m_preset = preset;
-    if (preset)
-        setIntrinsicSize(preset->size);
+    m_preset = WTFMove(preset);
+    if (m_preset)
+        setIntrinsicSize(m_preset->size);
 }
 
 IntSize MockRealtimeVideoSource::captureSize() const
@@ -257,12 +262,10 @@ void MockRealtimeVideoSource::drawAnimation(GraphicsContext& context)
 
 void MockRealtimeVideoSource::drawBoxes(GraphicsContext& context)
 {
-    static const RGBA32 magenta = 0xffff00ff;
-    static const RGBA32 yellow = 0xffffff00;
-    static const RGBA32 blue = 0xff0000ff;
-    static const RGBA32 red = 0xffff0000;
-    static const RGBA32 green = 0xff008000;
-    static const RGBA32 cyan = 0xFF00FFFF;
+    constexpr SimpleColor magenta { 0xffff00ff };
+    constexpr SimpleColor blue { 0xff0000ff };
+    constexpr SimpleColor red { 0xffff0000 };
+    constexpr SimpleColor darkGreen { 0xff008000 };
 
     IntSize size = captureSize();
     float boxSize = size.width() * .035;
@@ -312,9 +315,9 @@ void MockRealtimeVideoSource::drawBoxes(GraphicsContext& context)
 
     boxTop += boxSize + 2;
     boxLeft = boxSize;
-    Color boxColors[] = { Color::white, yellow, cyan, green, magenta, red, blue };
-    for (unsigned i = 0; i < sizeof(boxColors) / sizeof(boxColors[0]); i++) {
-        context.fillRect(FloatRect(boxLeft, boxTop, boxSize + 1, boxSize + 1), boxColors[i]);
+    constexpr SimpleColor boxColors[] = { Color::white, Color::yellow, Color::cyan, darkGreen, magenta, red, blue };
+    for (auto& boxColor : boxColors) {
+        context.fillRect(FloatRect(boxLeft, boxTop, boxSize + 1, boxSize + 1), boxColor);
         boxLeft += boxSize + 1;
     }
     context.strokePath(m_path);
@@ -453,11 +456,11 @@ ImageBuffer* MockRealtimeVideoSource::imageBuffer() const
     if (m_imageBuffer)
         return m_imageBuffer.get();
 
-    m_imageBuffer = ImageBuffer::create(captureSize(), Unaccelerated);
+    m_imageBuffer = ImageBuffer::create(captureSize(), RenderingMode::Unaccelerated);
     if (!m_imageBuffer)
         return nullptr;
 
-    m_imageBuffer->context().setImageInterpolationQuality(InterpolationDefault);
+    m_imageBuffer->context().setImageInterpolationQuality(InterpolationQuality::Default);
     m_imageBuffer->context().setStrokeThickness(1);
 
     return m_imageBuffer.get();
@@ -469,6 +472,41 @@ bool MockRealtimeVideoSource::mockDisplayType(CaptureDevice::DeviceType type) co
         return false;
 
     return WTF::get<MockDisplayProperties>(m_device.properties).type == type;
+}
+
+void MockRealtimeVideoSource::orientationChanged(int orientation)
+{
+    auto deviceOrientation = m_deviceOrientation;
+    switch (orientation) {
+    case 0:
+        m_deviceOrientation = MediaSample::VideoRotation::None;
+        break;
+    case 90:
+        m_deviceOrientation = MediaSample::VideoRotation::Right;
+        break;
+    case -90:
+        m_deviceOrientation = MediaSample::VideoRotation::Left;
+        break;
+    case 180:
+        m_deviceOrientation = MediaSample::VideoRotation::UpsideDown;
+        break;
+    default:
+        return;
+    }
+
+    if (deviceOrientation == m_deviceOrientation)
+        return;
+
+    notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+}
+
+void MockRealtimeVideoSource::monitorOrientation(OrientationNotifier& notifier)
+{
+    if (!mockCamera())
+        return;
+
+    notifier.addObserver(*this);
+    orientationChanged(notifier.orientation());
 }
 
 } // namespace WebCore

@@ -41,8 +41,9 @@ class InspectorCPUProfilerAgent final : public InspectorAgentBase, public Inspec
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorCPUProfilerAgent(PageAgentContext&);
-    virtual ~InspectorCPUProfilerAgent() = default;
+    ~InspectorCPUProfilerAgent() override;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 

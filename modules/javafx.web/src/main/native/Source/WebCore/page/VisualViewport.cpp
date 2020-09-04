@@ -29,14 +29,16 @@
 #include "ContextDestructionObserver.h"
 #include "DOMWindow.h"
 #include "Document.h"
-#include "DocumentEventQueue.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "Page.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(VisualViewport);
 
 VisualViewport::VisualViewport(DOMWindow& window)
     : DOMWindowProperty(&window)
@@ -50,12 +52,13 @@ EventTargetInterface VisualViewport::eventTargetInterface() const
 
 ScriptExecutionContext* VisualViewport::scriptExecutionContext() const
 {
-    if (!m_window)
+    auto window = this->window();
+    if (!window)
         return nullptr;
-    return static_cast<ContextDestructionObserver*>(m_window)->scriptExecutionContext();
+    return static_cast<ContextDestructionObserver*>(window)->scriptExecutionContext();
 }
 
-bool VisualViewport::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool VisualViewport::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     if (!EventTarget::addEventListener(eventType, WTFMove(listener), options))
         return false;
@@ -146,7 +149,8 @@ void VisualViewport::update()
     double height = 0;
     double scale = 1;
 
-    if (auto* frame = this->frame()) {
+    auto frame = makeRefPtr(this->frame());
+    if (frame) {
         if (auto* view = frame->view()) {
             auto visualViewportRect = view->visualViewportRect();
             auto layoutViewportRect = view->layoutViewportRect();
@@ -163,35 +167,20 @@ void VisualViewport::update()
             scale = page->pageScaleFactor();
     }
 
+    RefPtr<Document> document = frame ? frame->document() : nullptr;
     if (m_offsetLeft != offsetLeft || m_offsetTop != offsetTop) {
-        enqueueScrollEvent();
+        if (document)
+            document->setNeedsVisualViewportScrollEvent();
         m_offsetLeft = offsetLeft;
         m_offsetTop = offsetTop;
     }
     if (m_width != width || m_height != height || m_scale != scale) {
-        enqueueResizeEvent();
+        if (document)
+            document->setNeedsVisualViewportResize();
         m_width = width;
         m_height = height;
         m_scale = scale;
     }
-}
-
-void VisualViewport::enqueueResizeEvent()
-{
-    auto* frame = this->frame();
-    if (!frame)
-        return;
-
-    frame->document()->eventQueue().enqueueResizeEvent(*this, Event::CanBubble::No, Event::IsCancelable::No);
-}
-
-void VisualViewport::enqueueScrollEvent()
-{
-    auto* frame = this->frame();
-    if (!frame)
-        return;
-
-    frame->document()->eventQueue().enqueueScrollEvent(*this, Event::CanBubble::No, Event::IsCancelable::No);
 }
 
 } // namespace WebCore

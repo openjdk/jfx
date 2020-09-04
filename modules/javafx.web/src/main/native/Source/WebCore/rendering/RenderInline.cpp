@@ -51,10 +51,6 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 
-#if ENABLE(DASHBOARD_SUPPORT)
-#include "Frame.h"
-#endif
-
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderInline);
@@ -73,7 +69,7 @@ RenderInline::RenderInline(Document& document, RenderStyle&& style)
 
 void RenderInline::willBeDestroyed()
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     // Make sure we do not retain "this" in the continuation outline table map of our containing blocks.
     if (parent() && style().visibility() == Visibility::Visible && hasOutline()) {
         bool containingBlockPaintsContinuationOutline = continuation() || isContinuation();
@@ -84,7 +80,7 @@ void RenderInline::willBeDestroyed()
             }
         }
     }
-#endif
+#endif // ASSERT_ENABLED
 
     if (!renderTreeBeingDestroyed()) {
         if (firstLineBox()) {
@@ -416,11 +412,15 @@ private:
 
 void RenderInline::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
+    absoluteQuadsIgnoringContinuation({ }, quads, wasFixed);
+    if (continuation())
+        collectAbsoluteQuadsForContinuation(quads, wasFixed);
+}
+
+void RenderInline::absoluteQuadsIgnoringContinuation(const FloatRect&, Vector<FloatQuad>& quads, bool*) const
+{
     AbsoluteQuadsGeneratorContext context(this, quads);
     generateLineBoxRects(context);
-
-    if (RenderBoxModelObject* continuation = this->continuation())
-        continuation->absoluteQuads(quads, wasFixed);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -452,7 +452,7 @@ static LayoutUnit computeMargin(const RenderInline* renderer, const Length& marg
     if (margin.isAuto())
         return 0;
     if (margin.isFixed())
-        return margin.value();
+        return LayoutUnit(margin.value());
     if (margin.isPercentOrCalculated())
         return minimumValueForLength(margin, std::max<LayoutUnit>(0, renderer->containingBlock()->availableLogicalWidth()));
     return 0;
@@ -840,7 +840,7 @@ LayoutRect RenderInline::clippedOverflowRectForRepaint(const RenderLayerModelObj
             repaintRect.move(downcast<RenderInline>(*inlineFlow).layer()->offsetForInFlowPosition());
     }
 
-    LayoutUnit outlineSize = style().outlineSize();
+    LayoutUnit outlineSize { style().outlineSize() };
     repaintRect.inflate(outlineSize);
 
     if (hitRepaintContainer || !containingBlock)
@@ -1104,7 +1104,7 @@ void RenderInline::deleteLines()
 
 std::unique_ptr<InlineFlowBox> RenderInline::createInlineFlowBox()
 {
-    return std::make_unique<InlineFlowBox>(*this);
+    return makeUnique<InlineFlowBox>(*this);
 }
 
 InlineFlowBox* RenderInline::createAndAppendInlineFlowBox()
@@ -1235,9 +1235,9 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
     rects.append(LayoutRect());
     for (InlineFlowBox* curr = firstLineBox(); curr; curr = curr->nextLineBox()) {
         const RootInlineBox& rootBox = curr->root();
-        LayoutUnit top = std::max<LayoutUnit>(rootBox.lineTop(), curr->logicalTop());
-        LayoutUnit bottom = std::min<LayoutUnit>(rootBox.lineBottom(), curr->logicalBottom());
-        rects.append(LayoutRect(curr->x(), top, curr->logicalWidth(), bottom - top));
+        LayoutUnit top = std::max(rootBox.lineTop(), LayoutUnit(curr->logicalTop()));
+        LayoutUnit bottom = std::min(rootBox.lineBottom(), LayoutUnit(curr->logicalBottom()));
+        rects.append({ LayoutUnit(curr->x()), top, LayoutUnit(curr->logicalWidth()), bottom - top });
     }
     rects.append(LayoutRect());
 
@@ -1393,48 +1393,5 @@ void RenderInline::paintOutlineForLine(GraphicsContext& graphicsContext, const L
         drawLineForBoxSide(graphicsContext, FloatRect(topLeft, bottomRight), BSBottom, outlineColor, outlineStyle, adjacentWidth1, adjacentWidth2, antialias);
     }
 }
-
-#if ENABLE(DASHBOARD_SUPPORT)
-void RenderInline::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
-{
-    // Convert the style regions to absolute coordinates.
-    if (style().visibility() != Visibility::Visible)
-        return;
-
-    const Vector<StyleDashboardRegion>& styleRegions = style().dashboardRegions();
-    unsigned i, count = styleRegions.size();
-    for (i = 0; i < count; i++) {
-        StyleDashboardRegion styleRegion = styleRegions[i];
-
-        LayoutRect linesBoundingBox = this->linesBoundingBox();
-        LayoutUnit w = linesBoundingBox.width();
-        LayoutUnit h = linesBoundingBox.height();
-
-        AnnotatedRegionValue region;
-        region.label = styleRegion.label;
-        region.bounds = LayoutRect(linesBoundingBox.x() + styleRegion.offset.left().value(),
-                                linesBoundingBox.y() + styleRegion.offset.top().value(),
-                                w - styleRegion.offset.left().value() - styleRegion.offset.right().value(),
-                                h - styleRegion.offset.top().value() - styleRegion.offset.bottom().value());
-        region.type = styleRegion.type;
-
-        RenderObject* container = containingBlock();
-        if (!container)
-            container = this;
-
-        region.clip = container->computeAbsoluteRepaintRect(region.bounds);
-        if (region.clip.height() < 0) {
-            region.clip.setHeight(0);
-            region.clip.setWidth(0);
-        }
-
-        FloatPoint absPos = container->localToAbsolute();
-        region.bounds.setX(absPos.x() + region.bounds.x());
-        region.bounds.setY(absPos.y() + region.bounds.y());
-
-        regions.append(region);
-    }
-}
-#endif
 
 } // namespace WebCore

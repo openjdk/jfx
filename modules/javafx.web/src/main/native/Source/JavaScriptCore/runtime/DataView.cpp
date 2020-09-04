@@ -33,8 +33,7 @@
 namespace JSC {
 
 DataView::DataView(RefPtr<ArrayBuffer>&& buffer, unsigned byteOffset, unsigned byteLength)
-    : ArrayBufferView(WTFMove(buffer), byteOffset)
-    , m_byteLength(byteLength)
+    : ArrayBufferView(WTFMove(buffer), byteOffset, byteLength)
 {
 }
 
@@ -50,10 +49,10 @@ Ref<DataView> DataView::create(RefPtr<ArrayBuffer>&& buffer)
     return create(WTFMove(buffer), 0, byteLength);
 }
 
-JSArrayBufferView* DataView::wrap(ExecState* exec, JSGlobalObject* globalObject)
+JSArrayBufferView* DataView::wrap(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject)
 {
     return JSDataView::create(
-        exec, globalObject->typedArrayStructure(TypeDataView), possiblySharedBuffer(), byteOffset(),
+        lexicalGlobalObject, globalObject->typedArrayStructure(TypeDataView), possiblySharedBuffer(), byteOffset(),
         byteLength());
 }
 

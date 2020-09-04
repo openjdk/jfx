@@ -32,12 +32,15 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "NodeRareData.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomicString& name)
+WTF_MAKE_ISO_ALLOCATED_IMPL(RadioNodeList);
+
+RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomString& name)
     : CachedLiveNodeList(rootNode, InvalidateForFormControls)
     , m_name(name)
     , m_isRootedAtDocument(is<HTMLFormElement>(ownerNode()))
@@ -46,7 +49,7 @@ RadioNodeList::RadioNodeList(ContainerNode& rootNode, const AtomicString& name)
 
 RadioNodeList::~RadioNodeList()
 {
-    ownerNode().nodeLists()->removeCacheWithAtomicName(this, m_name);
+    ownerNode().nodeLists()->removeCacheWithAtomName(*this, m_name);
 }
 
 static inline RefPtr<HTMLInputElement> toRadioButtonInputElement(HTMLElement& element)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -181,10 +181,17 @@ public class DateCellTest {
         assertTrue(cell.isEditable());
     }
 
-    @Ignore("impl_cssSet API removed")
     @Test public void cannotSpecifyEditableViaCSS() {
-//        cell.impl_cssSet("-fx-editable", false);
+        cell.setStyle("-fx-editable: false;");
+        cell.applyCss();
         assertTrue(cell.isEditable());
+
+        cell.setEditable(false);
+        assertFalse(cell.isEditable());
+
+        cell.setStyle("-fx-editable: true;");
+        cell.applyCss();
+        assertFalse(cell.isEditable());
     }
 
     /*********************************************************************

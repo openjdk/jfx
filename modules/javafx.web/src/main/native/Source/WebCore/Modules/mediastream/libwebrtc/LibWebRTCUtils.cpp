@@ -34,8 +34,8 @@
 
 ALLOW_UNUSED_PARAMETERS_BEGIN
 
-#include <webrtc/api/rtpparameters.h>
-#include <webrtc/api/rtptransceiverinterface.h>
+#include <webrtc/api/rtp_parameters.h>
+#include <webrtc/api/rtp_transceiver_interface.h>
 
 ALLOW_UNUSED_PARAMETERS_END
 
@@ -104,9 +104,7 @@ static inline RTCRtpCodecParameters toRTCCodecParameters(const webrtc::RtpCodecP
         parameters.channels = *rtcParameters.num_channels;
 
     StringBuilder sdpFmtpLineBuilder;
-    sdpFmtpLineBuilder.appendLiteral("a=fmtp:");
-    sdpFmtpLineBuilder.appendNumber(parameters.payloadType);
-    sdpFmtpLineBuilder.append(' ');
+    sdpFmtpLineBuilder.append("a=fmtp:", parameters.payloadType, ' ');
 
     bool isFirst = true;
     for (auto& keyValue : rtcParameters.parameters) {
@@ -114,10 +112,7 @@ static inline RTCRtpCodecParameters toRTCCodecParameters(const webrtc::RtpCodecP
             sdpFmtpLineBuilder.append(';');
         else
             isFirst = false;
-
-        sdpFmtpLineBuilder.append(StringView { keyValue.first.c_str() });
-        sdpFmtpLineBuilder.append('=');
-        sdpFmtpLineBuilder.append(StringView { keyValue.second.c_str() });
+        sdpFmtpLineBuilder.append(keyValue.first.c_str(), '=', keyValue.second.c_str());
     }
     parameters.sdpFmtpLine = sdpFmtpLineBuilder.toString();
 
@@ -236,6 +231,33 @@ webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit& i
     for (auto& stream : init.streams)
         rtcInit.stream_ids.push_back(stream->id().utf8().data());
     return rtcInit;
+}
+
+ExceptionCode toExceptionCode(webrtc::RTCErrorType type)
+{
+    switch (type) {
+    case webrtc::RTCErrorType::INVALID_PARAMETER:
+        return InvalidAccessError;
+    case webrtc::RTCErrorType::INVALID_RANGE:
+        return RangeError;
+    case webrtc::RTCErrorType::SYNTAX_ERROR:
+        return SyntaxError;
+    case webrtc::RTCErrorType::INVALID_STATE:
+        return InvalidStateError;
+    case webrtc::RTCErrorType::INVALID_MODIFICATION:
+        return InvalidModificationError;
+    case webrtc::RTCErrorType::NETWORK_ERROR:
+        return NetworkError;
+    default:
+        return OperationError;
+    }
+}
+
+Exception toException(const webrtc::RTCError& error)
+{
+    ASSERT(!error.ok());
+
+    return Exception { toExceptionCode(error.type()), error.message() };
 }
 
 } // namespace WebCore

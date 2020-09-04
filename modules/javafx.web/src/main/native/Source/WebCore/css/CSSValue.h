@@ -38,7 +38,10 @@ class StyleSheetContents;
 
 enum CSSPropertyID : uint16_t;
 
-class CSSValue : public RefCounted<CSSValue> {
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSValue);
+class CSSValue {
+    WTF_MAKE_NONCOPYABLE(CSSValue);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSValue);
 public:
     enum Type {
         CSS_INHERIT = 0,
@@ -50,12 +53,26 @@ public:
         CSS_REVERT = 6
     };
 
-    // Override RefCounted's deref() to ensure operator delete is called on
-    // the appropriate subclass type.
+    static constexpr unsigned refCountFlagIsStatic = 0x1;
+    static constexpr unsigned refCountIncrement = 0x2; // This allows us to ref / deref without disturbing the static CSSValue flag.
+    void ref() const
+    {
+        m_refCount += refCountIncrement;
+    }
+    bool hasOneRef() const { return m_refCount == refCountIncrement; }
+    unsigned refCount() const { return m_refCount / refCountIncrement; }
+    bool hasAtLeastOneRef() const { return m_refCount; }
+
     void deref()
     {
-        if (derefBase())
+        // Customized deref() to ensure operator delete is called on
+        // the appropriate subclass type.
+        unsigned tempRefCount = m_refCount - refCountIncrement;
+        if (!tempRefCount) {
             destroy();
+            return;
+        }
+        m_refCount = tempRefCount;
     }
 
     Type cssValueType() const;
@@ -111,6 +128,7 @@ public:
 #endif
     bool isContentDistributionValue() const { return m_classType == CSSContentDistributionClass; }
     bool isGridAutoRepeatValue() const { return m_classType == GridAutoRepeatClass; }
+    bool isGridIntegerRepeatValue() const { return m_classType == GridIntegerRepeatClass; }
     bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
     bool isGridLineNamesValue() const { return m_classType == GridLineNamesClass; }
     bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
@@ -200,6 +218,7 @@ protected:
         ImageSetClass,
         GridLineNamesClass,
         GridAutoRepeatClass,
+        GridIntegerRepeatClass,
         // Do not append non-list class types here.
     };
 
@@ -210,6 +229,7 @@ public:
         CommaSeparator,
         SlashSeparator
     };
+    enum StaticCSSValueTag { StaticCSSValue };
 
 protected:
     ClassType classType() const { return static_cast<ClassType>(m_classType); }
@@ -223,6 +243,11 @@ protected:
     {
     }
 
+    void makeStatic()
+    {
+        m_refCount |= refCountFlagIsStatic;
+    }
+
     // NOTE: This class is non-virtual for memory and performance reasons.
     // Don't go making it virtual again unless you know exactly what you're doing!
 
@@ -231,12 +256,12 @@ protected:
 private:
     WEBCORE_EXPORT void destroy();
 
+    mutable unsigned m_refCount { refCountIncrement };
 protected:
     // The bits in this section are only used by specific subclasses but kept here
     // to maximize struct packing.
-
     // CSSPrimitiveValue bits:
-    unsigned m_primitiveUnitType : 7; // CSSPrimitiveValue::UnitType
+    unsigned m_primitiveUnitType : 7; // CSSUnitType
     mutable unsigned m_hasCachedCSSText : 1;
     unsigned m_isQuirkValue : 1;
 
@@ -277,7 +302,7 @@ inline bool compareCSSValue(const Ref<CSSValueType>& first, const Ref<CSSValueTy
     return first.get().equals(second);
 }
 
-typedef HashMap<AtomicString, RefPtr<CSSCustomPropertyValue>> CustomPropertyValueMap;
+typedef HashMap<AtomString, RefPtr<CSSCustomPropertyValue>> CustomPropertyValueMap;
 
 } // namespace WebCore
 

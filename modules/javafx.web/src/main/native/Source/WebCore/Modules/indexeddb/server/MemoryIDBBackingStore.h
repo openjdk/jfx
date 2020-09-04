@@ -31,6 +31,7 @@
 #include "IDBDatabaseIdentifier.h"
 #include "IDBResourceIdentifier.h"
 #include "MemoryBackingStoreTransaction.h"
+#include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -38,17 +39,19 @@ namespace IDBServer {
 
 class MemoryObjectStore;
 
-class MemoryIDBBackingStore : public IDBBackingStore {
+class MemoryIDBBackingStore final : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<MemoryIDBBackingStore> create(const IDBDatabaseIdentifier&);
-
-    MemoryIDBBackingStore(const IDBDatabaseIdentifier&);
-    ~MemoryIDBBackingStore() final;
+    MemoryIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&);
+    ~MemoryIDBBackingStore();
 
     IDBError getOrEstablishDatabaseInfo(IDBDatabaseInfo&) final;
     void setDatabaseInfo(const IDBDatabaseInfo&);
 
+    void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
+    void restoreObjectStoreForVersionChangeAbort(Ref<MemoryObjectStore>&&);
+
+private:
     IDBError beginTransaction(const IDBTransactionInfo&) final;
     IDBError abortTransaction(const IDBResourceIdentifier& transactionIdentifier) final;
     IDBError commitTransaction(const IDBResourceIdentifier& transactionIdentifier) final;
@@ -71,7 +74,6 @@ public:
     IDBError maybeUpdateKeyGeneratorNumber(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, double newKeyNumber) final;
     IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) final;
     IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) final;
-    bool prefetchCursor(const IDBResourceIdentifier&, const IDBResourceIdentifier&) final { return false; }
 
     IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) final;
     void deleteBackingStore() final;
@@ -79,21 +81,21 @@ public:
     bool supportsSimultaneousTransactions() final { return true; }
     bool isEphemeral() final { return true; }
 
-    void setQuota(uint64_t quota) final { UNUSED_PARAM(quota); };
+    bool hasTransaction(const IDBResourceIdentifier& identifier) const final { return m_transactions.contains(identifier); }
 
-    void removeObjectStoreForVersionChangeAbort(MemoryObjectStore&);
-    void restoreObjectStoreForVersionChangeAbort(Ref<MemoryObjectStore>&&);
-
-private:
     RefPtr<MemoryObjectStore> takeObjectStoreByIdentifier(uint64_t identifier);
 
+    void close() final;
+
+    void registerObjectStore(Ref<MemoryObjectStore>&&);
+    void unregisterObjectStore(MemoryObjectStore&);
+
     IDBDatabaseIdentifier m_identifier;
+    PAL::SessionID m_sessionID;
     std::unique_ptr<IDBDatabaseInfo> m_databaseInfo;
 
     HashMap<IDBResourceIdentifier, std::unique_ptr<MemoryBackingStoreTransaction>> m_transactions;
 
-    void registerObjectStore(Ref<MemoryObjectStore>&&);
-    void unregisterObjectStore(MemoryObjectStore&);
     HashMap<uint64_t, RefPtr<MemoryObjectStore>> m_objectStoresByIdentifier;
     HashMap<String, MemoryObjectStore*> m_objectStoresByName;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -453,6 +453,10 @@ defineProperty("CONF", "Debug")
 ext.IS_DEBUG_JAVA = CONF == "Debug" || CONF == "DebugNative"
 ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 
+// Specifies whether to enable the Maven publishing tasks
+defineProperty("MAVEN_PUBLISH", "false")
+ext.IS_MAVEN_PUBLISH = Boolean.parseBoolean(MAVEN_PUBLISH)
+
 // Defines the compiler warning levels to use. If empty, then no warnings are generated. If
 // not empty, then the expected syntax is as a space or comma separated list of names, such
 // as defined in the javac documentation.
@@ -553,7 +557,7 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}")
+defineProperty("MAVEN_VERSION", IS_MAVEN_PUBLISH ? (IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}") : "")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -1249,9 +1253,15 @@ if (gradle.gradleVersion != jfxGradleVersion) {
 
 // Look for stub runtime in bundled sdk, standalone sdk, or boot JDK
 
+// Allows automatic provisioning of webkit+media shared libraries
+// from official OpenJFX releases, downloaded from MavenCentral
+defineProperty("STUB_RUNTIME_OPENJFX", "")
+ext.IS_STUB_RUNTIME_OPENJFX = !STUB_RUNTIME_OPENJFX.isBlank()
+
 def String cachedBundledRuntime = cygpath("$projectDir") + "/../caches/modular-sdk"
 def String cachedStandaloneRuntime = cygpath("$projectDir") + "/../caches/sdk"
 def String jdkStubRuntime = cygpath("$JDK_HOME")
+def String openjfxStubRuntime = cygpath("$projectDir") + "/buildSrc/build/openjfxStub"
 
 def defaultStubRuntime = ""
 if (file(cachedBundledRuntime).exists()) {
@@ -1260,6 +1270,8 @@ if (file(cachedBundledRuntime).exists()) {
     defaultStubRuntime = cachedStandaloneRuntime
 } else if (BUILD_CLOSED) {
     defaultStubRuntime = cachedBundledRuntime
+} else if (IS_STUB_RUNTIME_OPENJFX) {
+    defaultStubRuntime = openjfxStubRuntime
 } else {
     defaultStubRuntime = jdkStubRuntime
 }
@@ -1329,6 +1341,7 @@ logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
 logger.quiet("RELEASE_VERSION_LONG: $RELEASE_VERSION_LONG")
 logger.quiet("RELEASE_VERSION_PADDED: $RELEASE_VERSION_PADDED")
+logger.quiet("MAVEN_PUBLISH: $MAVEN_PUBLISH")
 logger.quiet("MAVEN_VERSION: $MAVEN_VERSION")
 logger.quiet("UPDATE_STUB_CACHE: $UPDATE_STUB_CACHE")
 
@@ -1424,7 +1437,7 @@ void addNative(Project project, String name) {
                 cleanTask.delete "$libRootDir/${t.name}"
             }
             nativeTask.dependsOn(linkTask)
-            if (IS_WINDOWS && t.name == "win") {
+            if (IS_WINDOWS && t.name == "win" && (!IS_STATIC_BUILD || name == "glass")) {
                 def rcTask = project.task("rc$capitalName$capitalVariant", type: CompileResourceTask, group: "Build") {
                     description = "Compiles native sources for $name"
                     matches = ".*\\.rc"
@@ -1533,6 +1546,10 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
 }
 
 void addMavenPublication(Project project, List<String> projectDependencies) {
+    if (!IS_MAVEN_PUBLISH) {
+        return
+    }
+
     project.apply plugin: 'maven-publish'
 
     project.group = MAVEN_GROUP_ID
@@ -2043,7 +2060,6 @@ project(":graphics") {
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
-    project.ext.mavenPublish = true
 
     getConfigurations().create("antlr");
 
@@ -2566,8 +2582,18 @@ project(":swing") {
 
     sourceSets {
         main
-        //shims // no test shims needed
-        test
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath
@@ -2862,15 +2888,7 @@ project(":media") {
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
-                            Map winEnv = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-
-                            String sdkDir = System.getenv("BASECLASSES_SDK_DIR");
-                            if (sdkDir == null) {
-                                sdkDir = "C:/Program Files/Microsoft SDKs/Windows/v7.1" // Default value
-                                winEnv["BASECLASSES_SDK_DIR"] = sdkDir
-                            }
-                            environment(winEnv)
-
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             args("RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.fxpluginsRcFile}")
                         }
                     }
@@ -3381,16 +3399,21 @@ project(":web") {
 
     test {
         doFirst {
-            if (!IS_COMPILE_WEBKIT) {
-                println "*****************************************************"
+            if (IS_STUB_RUNTIME_OPENJFX) {
+                println "********************************************************"
+                println "WARNING: running web tests with officially built webkit."
+                println "The webkit native library may not be compatible with the"
+                println "source tree you are using."
+                println "If tests fail, try compiling webkit instead."
+                println "See WEBKIT-MEDIA-STUBS.md"
+                println "********************************************************"
+            } else if (!IS_COMPILE_WEBKIT) {
+                println "******************************************************"
                 println "WARNING: running web tests without building webkit."
                 println "The webkit native library will be copied from the JDK,"
                 println "which might lead to failures in some web tests."
-                println "To avoid these failures, you should either build"
-                println "webkit locally, copy the native webkit library from a"
-                println "recent build, or skip execution of web test cases with"
-                println "'-x :web:test'"
-                println "*****************************************************"
+                println "See WEBKIT-MEDIA-STUBS.md"
+                println "******************************************************"
             }
         }
         // Run web tests in headless mode
@@ -3430,6 +3453,9 @@ project(":web") {
                 exec {
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
+                    if (IS_STATIC_BUILD) {
+                        cmakeArgs = " $cmakeArgs -DSTATIC_BUILD=1 -DUSE_THIN_ARCHIVES=OFF";
+                    }
                     cmakeArgs = " $cmakeArgs -DCMAKE_C_COMPILER='${webkitProperties.compiler}'"
                     if (t.name == "win") {
                         // To enable ninja build on Windows
@@ -3446,6 +3472,9 @@ project(":web") {
                         // TODO: Use cflags and ldflags from all platforms
                         def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
                         def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        if (IS_STATIC_BUILD) {
+                            cFlags = " $cFlags -DSTATIC_BUILD=1";
+                        }
                         // -shared flag should be omitted while creating executable.
                         def exeFlags = webkitProperties.linkFlags?.join(' ')?.replace('-shared', '') ?: ''
                         cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
@@ -3571,6 +3600,8 @@ project(":systemTests") {
         testapp4
         testapp5
         testapp6
+        testscriptapp1
+        testscriptapp2
     }
 
     def nonModSrcSets = [
@@ -3583,7 +3614,9 @@ project(":systemTests") {
         sourceSets.testapp3,
         sourceSets.testapp4,
         sourceSets.testapp5,
-        sourceSets.testapp6
+        sourceSets.testapp6,
+        sourceSets.testscriptapp1,
+        sourceSets.testscriptapp2
     ]
 
     project.ext.buildModule = false
@@ -3683,7 +3716,7 @@ project(":systemTests") {
     }
     test.dependsOn(createTestApps);
 
-    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6"  ]
+    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6", "testscriptapp1", "testscriptapp2" ]
     modtestapps.each { testapp ->
         def testappCapital = testapp.capitalize()
         def copyTestAppTask = task("copy${testappCapital}", type: Copy) {
@@ -4148,7 +4181,7 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
-    def luceneVersion = "7.7.1"
+    def luceneVersion = "7.7.2"
     getConfigurations().create("lucene");
     dependencies {
         lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
@@ -4316,6 +4349,36 @@ compileTargets { t ->
         }
         zipsTask.dependsOn(zipJmodsTask)
     }
+}
+
+
+/******************************************************************************
+ *                                                                            *
+ *                             OpenJFX Stubs                                  *
+ *                                                                            *
+ *****************************************************************************/
+
+configurations {
+    openjfxStubs
+}
+
+if (IS_STUB_RUNTIME_OPENJFX) {
+    def String platform = IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LINUX ? "linux" : ""
+    dependencies {
+        openjfxStubs "org.openjfx:javafx-media:$STUB_RUNTIME_OPENJFX:$platform@jar"
+        openjfxStubs "org.openjfx:javafx-web:$STUB_RUNTIME_OPENJFX:$platform@jar"
+    }
+}
+
+// Extract binary libraries from OpenJFX artifacts for use as stubs
+task prepOpenJfxStubs(type: Copy) {
+    enabled = IS_STUB_RUNTIME_OPENJFX
+
+    from configurations.openjfxStubs.files.collect { zipTree(it) }
+    include("*.dll")
+    include("*.dylib")
+    include("*.so")
+    into IS_WINDOWS ? file("$openjfxStubRuntime/bin") : file("$openjfxStubRuntime/lib")
 }
 
 
@@ -4913,7 +4976,7 @@ compileTargets { t ->
             }
         }
 
-        def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: mediaProject.assemble) {
+        def buildModuleMediaTask = task("buildModuleMedia$t.capital", type: Copy, dependsOn: [mediaProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.media native libraries"
 
@@ -4950,7 +5013,7 @@ compileTargets { t ->
             }
         }
 
-        def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: webProject.assemble) {
+        def buildModuleWeb = task("buildModuleWeb$t.capital", type: Copy, dependsOn: [webProject.assemble, prepOpenJfxStubs]) {
             group = "Basic"
             description = "copies javafx.web native libraries"
 

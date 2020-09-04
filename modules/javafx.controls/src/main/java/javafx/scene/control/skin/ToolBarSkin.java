@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,7 +105,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     private final ParentTraversalEngine engine;
     private final BehaviorBase<ToolBar> behavior;
 
-
+    private ListChangeListener<Node> itemsListener;
 
     /***************************************************************************
      *                                                                         *
@@ -165,6 +165,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
+
+                dir = dir.getDirectionForNodeOrientation(control.getEffectiveNodeOrientation());
+
                 final ObservableList<Node> boxChildren = box.getChildren();
                 if (owner == overflowMenu) {
                     if (dir.isForward()) {
@@ -225,8 +228,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         });
         ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
-        control.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
+        registerChangeListener(control.focusedProperty(), ov -> {
+            if (getSkinnable().isFocused()) {
                 // TODO need to detect the focus direction
                 // to selected the first control in the toolbar when TAB is pressed
                 // or select the last control in the toolbar when SHIFT TAB is pressed.
@@ -238,7 +241,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
         });
 
-        control.getItems().addListener((ListChangeListener<Node>) c -> {
+        itemsListener = (ListChangeListener<Node>) c -> {
             while (c.next()) {
                 for (Node n: c.getRemoved()) {
                     box.getChildren().remove(n);
@@ -247,7 +250,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
             }
             needsUpdate = true;
             getSkinnable().requestLayout();
-        });
+        };
+        control.getItems().addListener(itemsListener);
     }
 
 
@@ -362,6 +366,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getSkinnable().getItems().removeListener(itemsListener);
         super.dispose();
 
         if (behavior != null) {

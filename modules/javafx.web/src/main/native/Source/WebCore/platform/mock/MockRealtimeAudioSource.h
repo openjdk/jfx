@@ -36,23 +36,21 @@
 #include "MockMediaDevice.h"
 #include "RealtimeMediaSourceFactory.h"
 #include <wtf/RunLoop.h>
+#include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
 class MockRealtimeAudioSource : public RealtimeMediaSource {
 public:
-
     static CaptureSourceOrError create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints*);
-
     virtual ~MockRealtimeAudioSource();
+
+    WEBCORE_EXPORT void setChannelCount(unsigned);
 
 protected:
     MockRealtimeAudioSource(String&& deviceID, String&& name, String&& hashSalt);
 
-    void startProducingData() final;
-    void stopProducingData() final;
-
-    virtual void render(Seconds) { }
+    virtual void render(Seconds) = 0;
     void settingsDidChange(OptionSet<RealtimeMediaSourceSettings::Flag>) override;
 
     static Seconds renderInterval() { return 60_ms; }
@@ -61,13 +59,22 @@ private:
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
 
-    void tick();
+    void startProducingData() final;
+    void stopProducingData() final;
 
     bool isCaptureSource() const final { return true; }
     CaptureDevice::DeviceType deviceType() const final { return CaptureDevice::DeviceType::Microphone; }
 
     void delaySamples(Seconds) final;
+    bool isMockSource() const final { return true; }
 
+    void tick();
+
+protected:
+    Ref<WorkQueue> m_workQueue;
+    unsigned m_channelCount { 2 };
+
+private:
     Optional<RealtimeMediaSourceCapabilities> m_capabilities;
     Optional<RealtimeMediaSourceSettings> m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
@@ -81,5 +88,10 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MockRealtimeAudioSource)
+    static bool isType(const WebCore::RealtimeMediaSource& source) { return source.isCaptureSource() && source.isMockSource() && source.deviceType() == WebCore::CaptureDevice::DeviceType::Microphone; }
+SPECIALIZE_TYPE_TRAITS_END()
+
 
 #endif // ENABLE(MEDIA_STREAM)

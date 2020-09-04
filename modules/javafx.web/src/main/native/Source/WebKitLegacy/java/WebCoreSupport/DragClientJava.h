@@ -37,6 +37,7 @@ class Image;
 class HTMLImageElement;
 
 class DragClientJava final : public DragClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DragClientJava(const JLObject &webPage);
     ~DragClientJava() override;
@@ -47,8 +48,6 @@ public:
     DragSourceAction dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
 
     void startDrag(DragItem, DataTransfer&, Frame&) override;
-
-    void dragControllerDestroyed() override;
 private:
     JGObject m_webPage;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ class EPDScreen implements NativeScreen {
 
     /**
      * The density of this screen in pixels per inch. For now, the value is
-     * hard-coded to the density of a 6-inch display panel with 800 × 600 px at
+     * hard-coded to the density of a 6-inch display panel with 800 x 600 px at
      * 167 ppi.
      */
     private static final int DPI = 167;
@@ -99,6 +99,8 @@ class EPDScreen implements NativeScreen {
             width = fbDevice.getWidth();
             height = fbDevice.getHeight();
             bitDepth = fbDevice.getBitDepth();
+            logger.fine("Native screen geometry: {0} px x {1} px x {2} bpp",
+                    width, height, bitDepth);
 
             /*
              * If the Linux frame buffer is configured for 32-bit color, compose
@@ -112,8 +114,12 @@ class EPDScreen implements NativeScreen {
              * display, though, allows us to reuse the same frame buffer region
              * immediately after sending an update.
              */
+            ByteBuffer mapping = null;
             if (bitDepth == Integer.SIZE) {
-                fbMapping = fbDevice.getMappedBuffer();
+                mapping = fbDevice.getMappedBuffer();
+            }
+            if (mapping != null) {
+                fbMapping = mapping;
                 fbChannel = null;
             } else {
                 Path path = FileSystems.getDefault().getPath(fbPath);

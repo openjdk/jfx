@@ -32,11 +32,12 @@
 
 namespace WebCore {
 
-class WebKitMediaKeyNeededEvent : public Event {
+class WebKitMediaKeyNeededEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(WebKitMediaKeyNeededEvent);
 public:
     virtual ~WebKitMediaKeyNeededEvent();
 
-    static Ref<WebKitMediaKeyNeededEvent> create(const AtomicString& type, Uint8Array* initData)
+    static Ref<WebKitMediaKeyNeededEvent> create(const AtomString& type, Uint8Array* initData)
     {
         return adoptRef(*new WebKitMediaKeyNeededEvent(type, initData));
     }
@@ -45,7 +46,7 @@ public:
         RefPtr<Uint8Array> initData;
     };
 
-    static Ref<WebKitMediaKeyNeededEvent> create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<WebKitMediaKeyNeededEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new WebKitMediaKeyNeededEvent(type, initializer, isTrusted));
     }
@@ -55,8 +56,8 @@ public:
     Uint8Array* initData() const { return m_initData.get(); }
 
 private:
-    WebKitMediaKeyNeededEvent(const AtomicString& type, Uint8Array* initData);
-    WebKitMediaKeyNeededEvent(const AtomicString& type, const Init&, IsTrusted);
+    WebKitMediaKeyNeededEvent(const AtomString& type, Uint8Array* initData);
+    WebKitMediaKeyNeededEvent(const AtomString& type, const Init&, IsTrusted);
 
     RefPtr<Uint8Array> m_initData;
 };

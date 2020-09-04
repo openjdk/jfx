@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,15 +36,15 @@ namespace JSC {
 using Assembler = TARGET_ASSEMBLER;
 
 class MacroAssemblerARMv7 : public AbstractMacroAssembler<Assembler> {
-    static const RegisterID dataTempRegister = ARMRegisters::ip;
-    static const RegisterID addressTempRegister = ARMRegisters::r6;
+    static constexpr RegisterID dataTempRegister = ARMRegisters::ip;
+    static constexpr RegisterID addressTempRegister = ARMRegisters::r6;
 
-    static const ARMRegisters::FPDoubleRegisterID fpTempRegister = ARMRegisters::d7;
+    static constexpr ARMRegisters::FPDoubleRegisterID fpTempRegister = ARMRegisters::d7;
     inline ARMRegisters::FPSingleRegisterID fpTempRegisterAsSingle() { return ARMRegisters::asSingle(fpTempRegister); }
 
 public:
-    static const unsigned numGPRs = 16;
-    static const unsigned numFPRs = 16;
+    static constexpr unsigned numGPRs = 16;
+    static constexpr unsigned numFPRs = 16;
 
     MacroAssemblerARMv7()
         : m_makeJumpPatchable(false)
@@ -56,8 +56,8 @@ public:
     typedef ARMv7Assembler::JumpLinkType JumpLinkType;
     typedef ARMv7Assembler::Condition Condition;
 
-    static const ARMv7Assembler::Condition DefaultCondition = ARMv7Assembler::ConditionInvalid;
-    static const ARMv7Assembler::JumpType DefaultJump = ARMv7Assembler::JumpNoConditionFixedSize;
+    static constexpr ARMv7Assembler::Condition DefaultCondition = ARMv7Assembler::ConditionInvalid;
+    static constexpr ARMv7Assembler::JumpType DefaultJump = ARMv7Assembler::JumpNoConditionFixedSize;
 
     static bool isCompactPtrAlignedAddressOffset(ptrdiff_t value)
     {
@@ -69,8 +69,8 @@ public:
     static JumpLinkType computeJumpType(JumpType jumpType, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(jumpType, from, to); }
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return ARMv7Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
-    template <typename CopyFunction>
-    static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to, CopyFunction copy) { return ARMv7Assembler::link(record, from, fromInstruction, to, copy); }
+    template <Assembler::CopyFunction copy>
+    static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
 
     struct ArmAddress {
         enum AddressType {
@@ -103,7 +103,7 @@ public:
     };
 
 public:
-    static const Scale ScalePtr = TimesFour;
+    static constexpr Scale ScalePtr = TimesFour;
 
     enum RelationalCondition {
         Equal = ARMv7Assembler::ConditionEQ,
@@ -143,9 +143,9 @@ public:
         DoubleLessThanOrEqualOrUnordered = ARMv7Assembler::ConditionLE,
     };
 
-    static const RegisterID stackPointerRegister = ARMRegisters::sp;
-    static const RegisterID framePointerRegister = ARMRegisters::fp;
-    static const RegisterID linkRegister = ARMRegisters::lr;
+    static constexpr RegisterID stackPointerRegister = ARMRegisters::sp;
+    static constexpr RegisterID framePointerRegister = ARMRegisters::fp;
+    static constexpr RegisterID linkRegister = ARMRegisters::lr;
 
     // Integer arithmetic operations:
     //
@@ -364,6 +364,24 @@ public:
     void or32(RegisterID src, RegisterID dest)
     {
         m_assembler.orr(dest, dest, src);
+    }
+
+    void or16(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        ARMThumbImmediate armImm = ARMThumbImmediate::makeEncodedImm(imm.m_value);
+        if (armImm.isValid()) {
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            load16(addressTempRegister, dataTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, armImm);
+            store16(dataTempRegister, addressTempRegister);
+        } else {
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            load16(addressTempRegister, dataTempRegister);
+            move(imm, addressTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, addressTempRegister);
+            move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
+            store16(dataTempRegister, addressTempRegister);
+        }
     }
 
     void or32(RegisterID src, AbsoluteAddress dest)
@@ -782,6 +800,12 @@ public:
         return label;
     }
 
+    void load16(const void* address, RegisterID dest)
+    {
+        move(TrustedImmPtr(address), addressTempRegister);
+        m_assembler.ldrh(dest, addressTempRegister, ARMThumbImmediate::makeUInt16(0));
+    }
+
     void load16(BaseIndex address, RegisterID dest)
     {
         m_assembler.ldrh(dest, makeBaseIndexBase(address), address.index, address.scale);
@@ -887,6 +911,18 @@ public:
     void store16(RegisterID src, BaseIndex address)
     {
         store16(src, setupArmAddress(address));
+    }
+
+    void store16(RegisterID src, const void* address)
+    {
+        move(TrustedImmPtr(address), addressTempRegister);
+        m_assembler.strh(src, addressTempRegister, ARMThumbImmediate::makeUInt12(0));
+    }
+
+    void store16(TrustedImm32 imm, const void* address)
+    {
+        move(imm, dataTempRegister);
+        store16(dataTempRegister, address);
     }
 
     // Possibly clobbers src, but not on this architecture.
@@ -1631,28 +1667,28 @@ public:
         return branchTest32(cond, addressTempRegister, mask8);
     }
 
-    void jump(RegisterID target, PtrTag)
+    void farJump(RegisterID target, PtrTag)
     {
         m_assembler.bx(target);
     }
 
     // Address is a memory location containing the address to jump to
-    void jump(Address address, PtrTag)
+    void farJump(Address address, PtrTag)
     {
         load32(address, dataTempRegister);
         m_assembler.bx(dataTempRegister);
     }
 
-    void jump(AbsoluteAddress address, PtrTag)
+    void farJump(AbsoluteAddress address, PtrTag)
     {
         move(TrustedImmPtr(address.m_ptr), dataTempRegister);
         load32(Address(dataTempRegister), dataTempRegister);
         m_assembler.bx(dataTempRegister);
     }
 
-    ALWAYS_INLINE void jump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(target, NoPtrTag); }
-    ALWAYS_INLINE void jump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
-    ALWAYS_INLINE void jump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), jump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(RegisterID target, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(target, NoPtrTag); }
+    ALWAYS_INLINE void farJump(Address address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
+    ALWAYS_INLINE void farJump(AbsoluteAddress address, RegisterID jumpTag) { UNUSED_PARAM(jumpTag), farJump(address, NoPtrTag); }
 
     // Arithmetic control flow operations:
     //
@@ -1798,7 +1834,7 @@ public:
 
         ShiftTypeAndAmount shift(SRType_LSL, scale);
         m_assembler.add(dataTempRegister, dataTempRegister, index, shift);
-        jump(dataTempRegister, NoPtrTag);
+        farJump(dataTempRegister, NoPtrTag);
     }
 
     // Miscellaneous operations:
@@ -2006,20 +2042,6 @@ public:
         return label;
     }
     ALWAYS_INLINE DataLabelPtr storePtrWithPatch(ImplicitAddress address) { return storePtrWithPatch(TrustedImmPtr(nullptr), address); }
-
-
-    ALWAYS_INLINE Call tailRecursiveCall()
-    {
-        // Like a normal call, but don't link.
-        moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
-        return Call(m_assembler.bx(dataTempRegister), Call::Linkable);
-    }
-
-    ALWAYS_INLINE Call makeTailRecursiveCall(Jump oldJump)
-    {
-        oldJump.link(this);
-        return tailRecursiveCall();
-    }
 
     template<PtrTag resultTag, PtrTag locationTag>
     static FunctionPtr<resultTag> readCallTarget(CodeLocationCall<locationTag> call)

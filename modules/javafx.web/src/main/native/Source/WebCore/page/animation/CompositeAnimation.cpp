@@ -37,6 +37,7 @@
 #include "Logging.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
+#include "StyleAdjuster.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 
@@ -220,14 +221,14 @@ void CompositeAnimation::updateKeyframeAnimations(Element& element, const Render
     // Toss the animation order map.
     m_keyframeAnimationOrderMap.clear();
 
-    static NeverDestroyed<const AtomicString> none("none", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> none("none", AtomString::ConstructFromLiteral);
 
     // Now mark any still active animations as active and add any new animations.
     if (targetStyle.animations()) {
         int numAnims = targetStyle.animations()->size();
         for (int i = 0; i < numAnims; ++i) {
             auto& animation = targetStyle.animations()->animation(i);
-            AtomicString animationName(animation.name());
+            AtomString animationName(animation.name());
 
             if (!animation.isValidAnimation())
                 continue;
@@ -286,8 +287,7 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
     updateKeyframeAnimations(element, currentStyle, targetStyle);
     m_keyframeAnimations.checkConsistency();
 
-    bool animationChangeRequiresRecomposite = false;
-    bool forceStackingContext = false;
+    OptionSet<AnimationImpact> imapct;
 
     std::unique_ptr<RenderStyle> animatedStyle;
 
@@ -300,11 +300,12 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
             if (changes.contains(AnimateChange::StyleBlended))
                 checkForStackingContext |= WillChangeData::propertyCreatesStackingContext(transition->animatingProperty());
 
-            animationChangeRequiresRecomposite = changes.contains(AnimateChange::RunningStateChange) && transition->affectsAcceleratedProperty();
+            if (changes.contains(AnimateChange::RunningStateChange) && transition->affectsAcceleratedProperty())
+                imapct.add(AnimationImpact::RequiresRecomposite);
         }
 
         if (animatedStyle && checkForStackingContext) {
-            // Note that this is similar to code in StyleResolver::adjustRenderStyle() but only needs to consult
+            // Note that this is similar to code in Style::Adjuster::adjust() but only needs to consult
             // animatable properties that can trigger stacking context.
             if (animatedStyle->opacity() < 1.0f
                 || animatedStyle->hasTransformRelatedProperty()
@@ -316,7 +317,7 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
                 || animatedStyle->hasBackdropFilter()
 #endif
                 )
-            forceStackingContext = true;
+            imapct.add(AnimationImpact::ForcesStackingContext);
         }
     }
 
@@ -326,22 +327,17 @@ AnimationUpdate CompositeAnimation::animate(Element& element, const RenderStyle*
         RefPtr<KeyframeAnimation> keyframeAnim = m_keyframeAnimations.get(name);
         if (keyframeAnim) {
             auto changes = keyframeAnim->animate(*this, targetStyle, animatedStyle);
-            animationChangeRequiresRecomposite = changes.contains(AnimateChange::RunningStateChange) && keyframeAnim->affectsAcceleratedProperty();
-            forceStackingContext |= changes.contains(AnimateChange::StyleBlended) && keyframeAnim->triggersStackingContext();
+            if (changes.contains(AnimateChange::RunningStateChange) && keyframeAnim->affectsAcceleratedProperty())
+                imapct.add(AnimationImpact::RequiresRecomposite);
+
+            if (changes.contains(AnimateChange::StyleBlended) && keyframeAnim->triggersStackingContext())
+                imapct.add(AnimationImpact::ForcesStackingContext);
+
             m_hasAnimationThatDependsOnLayout |= keyframeAnim->dependsOnLayout();
         }
     }
 
-    // https://drafts.csswg.org/css-animations-1/
-    // While an animation is applied but has not finished, or has finished but has an animation-fill-mode of forwards or both,
-    // the user agent must act as if the will-change property ([css-will-change-1]) on the element additionally
-    // includes all the properties animated by the animation.
-    if (forceStackingContext && animatedStyle) {
-        if (animatedStyle->hasAutoZIndex())
-            animatedStyle->setZIndex(0);
-    }
-
-    return { WTFMove(animatedStyle), animationChangeRequiresRecomposite };
+    return { WTFMove(animatedStyle), imapct };
 }
 
 std::unique_ptr<RenderStyle> CompositeAnimation::getAnimatedStyle() const
@@ -526,7 +522,7 @@ bool CompositeAnimation::isAnimatingProperty(CSSPropertyID property, bool accele
     return false;
 }
 
-bool CompositeAnimation::pauseAnimationAtTime(const AtomicString& name, double t)
+bool CompositeAnimation::pauseAnimationAtTime(const AtomString& name, double t)
 {
     m_keyframeAnimations.checkConsistency();
 

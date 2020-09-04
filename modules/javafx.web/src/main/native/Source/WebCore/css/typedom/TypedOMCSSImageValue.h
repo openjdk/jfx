@@ -28,16 +28,18 @@
 #if ENABLE(CSS_TYPED_OM)
 
 #include "CSSImageValue.h"
-#include "ImageBitmap.h"
-#include "RenderElement.h"
 #include "TypedOMCSSStyleValue.h"
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class Document;
+
 class TypedOMCSSImageValue final : public TypedOMCSSStyleValue {
+    WTF_MAKE_ISO_ALLOCATED(TypedOMCSSImageValue);
 public:
     static Ref<TypedOMCSSImageValue> create(CSSImageValue& cssValue, Document& document)
     {
@@ -47,14 +49,10 @@ public:
     String toString() final { return m_cssValue->cssText(); }
 
     CachedImage* image() { return m_cssValue->cachedImage(); }
-    Document* document() const { return m_document.get(); }
+    Document* document() const;
 
 private:
-    TypedOMCSSImageValue(CSSImageValue& cssValue, Document& document)
-        : m_cssValue(makeRef(cssValue))
-        , m_document(makeWeakPtr(document))
-    {
-    }
+    TypedOMCSSImageValue(CSSImageValue& cssValue, Document& document);
 
     bool isImageValue() final { return true; }
 

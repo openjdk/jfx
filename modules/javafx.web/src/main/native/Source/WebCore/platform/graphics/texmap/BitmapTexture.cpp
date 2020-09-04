@@ -27,6 +27,7 @@
 #include "config.h"
 #include "BitmapTexture.h"
 
+#include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "ImageBuffer.h"
 #include "TextureMapper.h"
@@ -37,13 +38,13 @@ void BitmapTexture::updateContents(TextureMapper&, GraphicsLayer* sourceLayer, c
 {
     // Making an unconditionally unaccelerated buffer here is OK because this code
     // isn't used by any platforms that respect the accelerated bit.
-    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(targetRect.size(), Unaccelerated);
+    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(targetRect.size(), RenderingMode::Unaccelerated);
 
     if (!imageBuffer)
         return;
 
     GraphicsContext& context = imageBuffer->context();
-    context.setImageInterpolationQuality(InterpolationDefault);
+    context.setImageInterpolationQuality(InterpolationQuality::Default);
     context.setTextDrawingMode(TextModeFill);
 
     IntRect sourceRect(targetRect);
@@ -53,6 +54,11 @@ void BitmapTexture::updateContents(TextureMapper&, GraphicsLayer* sourceLayer, c
     context.translate(-sourceRect.x(), -sourceRect.y());
 
     sourceLayer->paintGraphicsLayerContents(context, sourceRect);
+
+#if USE(DIRECT2D)
+    // We can't access the bits in the image buffer with an active beginDraw.
+    context.endDraw();
+#endif
 
     RefPtr<Image> image = imageBuffer->copyImage(DontCopyBackingStore);
     if (!image)

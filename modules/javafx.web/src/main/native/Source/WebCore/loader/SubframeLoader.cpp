@@ -73,7 +73,7 @@ void SubframeLoader::clear()
     m_containsPlugins = false;
 }
 
-bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomicString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     // Support for <frame src="javascript:string">
     URL scriptURL;
@@ -100,11 +100,11 @@ bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const Str
     if (!frame)
         return false;
 
-    if (!scriptURL.isEmpty() && ownerElement.isURLAllowed(scriptURL)) {
+    if (!scriptURL.isEmpty() && ownerElement.canLoadScriptURL(scriptURL)) {
         // FIXME: Some sites rely on the javascript:'' loading synchronously, which is why we have this special case.
         // Blink has the same workaround (https://bugs.chromium.org/p/chromium/issues/detail?id=923585).
         if (urlString == "javascript:''" || urlString == "javascript:\"\"")
-        frame->script().executeIfJavaScriptURL(scriptURL);
+            frame->script().executeIfJavaScriptURL(scriptURL);
         else
             frame->navigationScheduler().scheduleLocationChange(ownerElement.document(), ownerElement.document().securityOrigin(), scriptURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, stopDelayingLoadEvent.release());
     }
@@ -218,7 +218,7 @@ static void logPluginRequest(Page* page, const String& mimeType, const String& u
     page->sawPlugin(description);
 }
 
-bool SubframeLoader::requestObject(HTMLPlugInImageElement& ownerElement, const String& url, const AtomicString& frameName, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+bool SubframeLoader::requestObject(HTMLPlugInImageElement& ownerElement, const String& url, const AtomString& frameName, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
     if (url.isEmpty() && mimeType.isEmpty())
         return false;
@@ -296,14 +296,14 @@ RefPtr<Widget> SubframeLoader::createJavaAppletWidget(const IntSize& size, HTMLA
     return widget;
 }
 
-Frame* SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomicString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+Frame* SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElement, const URL& requestURL, const AtomString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
 {
     auto& initiatingDocument = ownerElement.document();
 
     URL upgradedRequestURL = requestURL;
     initiatingDocument.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(upgradedRequestURL, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    auto* frame = ownerElement.contentFrame();
+    RefPtr<Frame> frame = makeRefPtr(ownerElement.contentFrame());
     if (frame)
         frame->navigationScheduler().scheduleLocationChange(initiatingDocument, initiatingDocument.securityOrigin(), upgradedRequestURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList);
     else
@@ -316,7 +316,7 @@ Frame* SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement& ownerElemen
     return ownerElement.contentFrame();
 }
 
-Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const String& name, const String& referrer)
+RefPtr<Frame> SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const URL& url, const String& name, const String& referrer)
 {
     Ref<Frame> protect(m_frame);
     auto document = makeRef(ownerElement.document());
@@ -329,7 +329,13 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const U
     if (!SubframeLoadingDisabler::canLoadFrame(ownerElement))
         return nullptr;
 
-    String referrerToUse = SecurityPolicy::generateReferrerHeader(document->referrerPolicy(), url, referrer);
+    if (!m_frame.page() || m_frame.page()->subframeCount() >= Page::maxNumberOfFrames)
+        return nullptr;
+
+    ReferrerPolicy policy = ownerElement.referrerPolicy();
+    if (policy == ReferrerPolicy::EmptyString)
+        policy = document->referrerPolicy();
+    String referrerToUse = SecurityPolicy::generateReferrerHeader(policy, url, referrer);
 
     // Prevent initial empty document load from triggering load events.
     document->incrementLoadEventDelayCount();
@@ -370,7 +376,10 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement& ownerElement, const U
     if (frame->loader().state() == FrameStateComplete && !frame->loader().policyDocumentLoader())
         frame->loader().checkCompleted();
 
-    return frame.get();
+    if (!frame->tree().parent())
+        return nullptr;
+
+    return frame;
 }
 
 bool SubframeLoader::allowPlugins()

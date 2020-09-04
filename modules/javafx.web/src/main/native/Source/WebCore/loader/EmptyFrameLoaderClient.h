@@ -23,7 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "FrameLoaderClient.h"
+#include "ResourceError.h"
+
+#if USE(QUICK_LOOK)
+#include "LegacyPreviewLoaderClient.h"
+#endif
 
 namespace WebCore {
 
@@ -32,15 +39,14 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
 
     void frameLoaderDestroyed() override { }
 
-    Optional<uint64_t> frameID() const override { return WTF::nullopt; }
-    Optional<uint64_t> pageID() const override { return WTF::nullopt; }
-    PAL::SessionID sessionID() const override;
+    Optional<FrameIdentifier> frameID() const override { return WTF::nullopt; }
+    Optional<PageIdentifier> pageID() const override { return WTF::nullopt; }
 
     bool hasWebView() const final { return true; } // mainly for assertions
 
     void makeRepresentation(DocumentLoader*) final { }
 #if PLATFORM(IOS_FAMILY)
-    bool forceLayoutOnRestoreFromPageCache() final { return false; }
+    bool forceLayoutOnRestoreFromBackForwardCache() final { return false; }
 #endif
     void forceLayoutForNonHTML() final { }
 
@@ -49,7 +55,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void detachedFromParent2() final { }
     void detachedFromParent3() final { }
 
-    void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) final { }
+    void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) final { }
 
     void assignIdentifierToInitialRequest(unsigned long, DocumentLoader*, const ResourceRequest&) final { }
     bool shouldUseCredentialStorage(DocumentLoader*, unsigned long) override { return false; }
@@ -84,7 +90,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void dispatchDidStartProvisionalLoad() final { }
     void dispatchDidReceiveTitle(const StringWithDirection&) final { }
     void dispatchDidCommitLoad(Optional<HasInsecureContent>) final { }
-    void dispatchDidFailProvisionalLoad(const ResourceError&) final { }
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) final { }
     void dispatchDidFailLoad(const ResourceError&) final { }
     void dispatchDidFinishDocumentLoad() final { }
     void dispatchDidFinishLoad() final { }
@@ -93,7 +99,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     Frame* dispatchCreatePage(const NavigationAction&) final { return nullptr; }
     void dispatchShow() final { }
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, FramePolicyFunction&&) final { }
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String&, FramePolicyFunction&&) final { }
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, PolicyCheckIdentifier, FramePolicyFunction&&) final;
     void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) final;
     void cancelPolicyCheck() final { }
@@ -158,8 +164,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
 #endif
     void transitionToCommittedForNewPage() final { }
 
-    void didSaveToPageCache() final { }
-    void didRestoreFromPageCache() final { }
+    void didRestoreFromBackForwardCache() final { }
 
     void dispatchDidBecomeFrameset(bool) final { }
 
@@ -173,7 +178,6 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void didDetectXSS(const URL&, bool) final { }
     RefPtr<Frame> createFrame(const URL&, const String&, HTMLFrameOwnerElement&, const String&) final;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) final;
-    void recreatePlugin(Widget*) final;
     RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&, const Vector<String>&, const Vector<String>&) final;
 
     ObjectContentType objectContentType(const URL&, const String&) final { return ObjectContentType::None; }
@@ -193,16 +197,19 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
 
     Ref<FrameNetworkingContext> createNetworkingContext() final;
 
-    bool isEmptyFrameLoaderClient() final { return true; }
+    bool isEmptyFrameLoaderClient() const final { return true; }
     void prefetchDNS(const String&) final { }
 
 #if USE(QUICK_LOOK)
-    RefPtr<PreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) final { return nullptr; }
+    RefPtr<LegacyPreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) final { return nullptr; }
 #endif
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     bool hasFrameSpecificStorageAccess() final { return false; }
-    void setHasFrameSpecificStorageAccess(bool) final { }
 #endif
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::EmptyFrameLoaderClient)
+    static bool isType(const WebCore::FrameLoaderClient& frameLoaderClient) { return frameLoaderClient.isEmptyFrameLoaderClient(); }
+SPECIALIZE_TYPE_TRAITS_END()

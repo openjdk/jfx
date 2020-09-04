@@ -22,7 +22,7 @@
         "AppleCopyright": {
             "contextsAllowed": ["interface", "attribute", "operation"]
         },
-        "AtomicString": {
+        "AtomString": {
             "contextsAllowed": ["type"]
         },
         "CEReactions": {
@@ -81,6 +81,10 @@
         "ConstructorCallWith": {
             "contextsAllowed": ["interface"],
             "values": ["Document", "ExecState", "RuntimeFlags", "ScriptExecutionContext"]
+        },
+        "ConstructorEnabledBySetting": {
+            "contextsAllowed": ["attribute", "interface"],
+            "values": ["*"]
         },
         "ConstructorMayThrowException": {
             "contextsAllowed": ["interface"]
@@ -154,6 +158,9 @@
         "CustomToStringName": {
             "contextsAllowed": ["interface"]
         },
+        "CustomEnabled": {
+            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant", "iterable"]
+        },
         "DOMJIT": {
             "contextsAllowed": ["interface", "attribute", "operation"],
             "values": ["", "ReadDOM", "Getter"]
@@ -181,12 +188,15 @@
             "values": ["*"]
         },
         "EnabledBySetting": {
-            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
+            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant", "dictionary-member"],
             "values": ["*"]
         },
         "DisabledByQuirk": {
             "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
             "values": ["*"]
+        },
+        "EnabledForContext": {
+            "contextsAllowed": ["attribute", "interface"]
         },
         "EnabledForWorld": {
             "contextsAllowed": ["attribute", "operation"],
@@ -220,7 +230,7 @@
         },
         "GenerateIsReachable": {
             "contextsAllowed": ["interface"],
-            "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplDocument", "ImplElementRoot", "ImplFrame", "ImplOwnerNodeRoot", "ImplScriptExecutionContext"]
+            "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplDocument", "ImplElementRoot", "ImplOwnerNodeRoot", "ImplScriptExecutionContext", "ReachableFromDOMWindow", "ReachableFromNavigator"]
         },
         "Global": {
             "contextsAllowed": ["interface"],
@@ -362,13 +372,6 @@
             "contextsAllowed": ["interface"],
             "notes" : "Should only be used by elements that forward to Netscape plug-ins"
         },
-        "PrimaryGlobal": {
-            "contextsAllowed": ["interface"],
-            "values": ["*"],
-            "standard": {
-                "url": "https://heycam.github.io/webidl/#Global"
-            }
-        },
         "PrivateIdentifier": {
             "contextsAllowed": ["interface", "attribute", "operation"]
         },
@@ -401,7 +404,7 @@
         "ReportExternalMemoryCost": {
             "contextsAllowed": ["interface"]
         },
-        "RequiresExistingAtomicString": {
+        "RequiresExistingAtomString": {
             "contextsAllowed": ["type"]
         },
         "RethrowException": {
@@ -412,6 +415,10 @@
         },
         "ReturnValue": {
             "contextsAllowed": ["argument"]
+        },
+        "RuntimeConditionallyReadWrite": {
+            "contextsAllowed": ["attribute"],
+            "values": ["*"]
         },
         "SameObject": {
             "contextsAllowed": ["attribute"],

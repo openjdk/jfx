@@ -34,18 +34,15 @@ public:
     typedef JSNonFinalObject Base;
 
 protected:
-    JSArrayBufferPrototype(VM&, Structure*, ArrayBufferSharingMode);
-    void finishCreation(VM&, JSGlobalObject*);
+    JSArrayBufferPrototype(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*, ArrayBufferSharingMode);
 
 public:
-    static JSArrayBufferPrototype* create(VM&, JSGlobalObject*, Structure*, ArrayBufferSharingMode);
+    static JSArrayBufferPrototype* create(VM&, JSGlobalObject*, Structure*, ArrayBufferSharingMode = ArrayBufferSharingMode::Default);
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
-
-private:
-    ArrayBufferSharingMode m_sharingMode;
 };
 
 } // namespace JSC

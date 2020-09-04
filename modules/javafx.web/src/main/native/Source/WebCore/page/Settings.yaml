@@ -61,6 +61,10 @@ deviceHeight:
   type: int
   initial: 0
 
+disallowSyncXHRDuringPageDismissalEnabled:
+  type: bool
+  initial: true
+
 # Allow clients concerned with memory consumption to set a quota on session storage
 # since the memory used won't be released until the Page is destroyed.
 sessionStorageQuota:
@@ -110,6 +114,8 @@ allowSettingAnyXHRHeaderFromFileURLs:
   initial: false
 allowCrossOriginSubresourcesToAskForCredentials:
   initial: false
+allowTopNavigationToDataURLs:
+  initial: false
 needsStorageAccessFromFileURLsQuirk:
   initial: true
 needsFrameNameFallbackToIdQuirk:
@@ -122,12 +128,13 @@ javaScriptCanAccessClipboard:
   initial: false
 shouldPrintBackgrounds:
   initial: false
-usesDashboardBackwardCompatibilityMode:
-  initial: false
-  conditional: DASHBOARD_SUPPORT
 clipboardAccessPolicy:
   type: ClipboardAccessPolicy
   initial: ClipboardAccessPolicy::RequiresUserGesture
+asyncClipboardAPIEnabled:
+  initial: false
+shouldRestrictBaseURLSchemes:
+  initial: true
 
 textAreasAreResizable:
   initial: false
@@ -148,9 +155,11 @@ acceleratedCompositedAnimationsEnabled:
 showDebugBorders:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
 showRepaintCounter:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
 visibleDebugOverlayRegions:
   type: DebugOverlayRegions
   initial: 0
@@ -163,17 +172,29 @@ resourceUsageOverlayVisible:
 disableScreenSizeOverride:
   initial: false
 
+googleAntiFlickerOptimizationQuirkEnabled:
+  initial: true
+
 # This is a quirk we are pro-actively applying to old applications. It changes keyboard event dispatching,
 # making keyIdentifier available on keypress events, making charCode available on keydown/keyup events,
 # and getting keypress dispatched in more cases.
 needsKeyboardEventDisambiguationQuirks:
   initial: false
 
+# This is an iOS-specific quirk. Unlike Mac, keyboard operations are asynchronous and hence a DOM update as
+# a result of text insertion or deletion does not occur within the same event loop iteration as a dispatched
+# DOM keydown event. Some sites, notably Google Sheets, schedule timers on keypress and expect on a DOM update
+# to have occurred on expiration. When enabled, this quirk puts all such scheduled timers in a holding tank
+# until the keyboard performs the insertion or deletion. This gives Google Sheets the illusion that the DOM
+# update happened within the same event loop iteration that the keypress event was dispatched in.
+needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk:
+  initial: false
+
 treatsAnyTextCSSLinkAsStylesheet:
   initial: false
 shrinksStandaloneImagesToFit:
   initial: true
-pageCacheSupportsPlugins:
+backForwardCacheSupportsPlugins:
   initial: false
 showsURLsInToolTips:
   initial: false
@@ -235,8 +256,6 @@ webGLErrorsToConsoleEnabled:
   initial: true
 unhandledPromiseRejectionToConsoleEnabled:
   initial: true
-forceSoftwareWebGLRendering:
-  initial: false
 forceWebGLUsesLowPower:
   initial: false
 accelerated2dCanvasEnabled:
@@ -291,6 +310,8 @@ inlineMediaPlaybackRequiresPlaysInlineAttribute:
   initial: defaultInlineMediaPlaybackRequiresPlaysInlineAttribute
 allowsPictureInPictureMediaPlayback:
   initial: defaultAllowsPictureInPictureMediaPlayback
+pictureInPictureAPIEnabled:
+  initial: true
 mediaControlsScaleWithPageZoom:
   initial: defaultMediaControlsScaleWithPageZoom
 invisibleAutoplayNotPermitted:
@@ -313,6 +334,12 @@ shouldDisplayCaptions:
 shouldDisplayTextDescriptions:
   initial: false
   conditional: VIDEO_TRACK
+genericCueAPIEnabled:
+  initial: false
+  conditional: VIDEO_TRACK
+useGPUProcessForMedia:
+  initial: false
+  conditional: GPU_PROCESS
 scrollingCoordinatorEnabled:
   initial: false
 scrollingTreeIncludesFrames:
@@ -337,6 +364,8 @@ wantsBalancedSetDefersLoadingBehavior:
   initial: false
 requestAnimationFrameEnabled:
   initial: true
+requestIdleCallbackEnabled:
+  initial: false
 
 HTTPSUpgradeEnabled:
   initial: false
@@ -351,6 +380,9 @@ mediaEnabled:
 DOMPasteAllowed:
   initial: false
 
+domPasteAccessRequestsEnabled:
+  initial: false
+
 # When enabled, window.blur() does not change focus, and
 # window.focus() only changes focus when invoked from the context that
 # created the window.
@@ -358,9 +390,6 @@ windowFocusRestricted:
   initial: true
 
 diagnosticLoggingEnabled:
-  initial: false
-
-delegatesPageScaling:
   initial: false
 
 plugInSnapshottingEnabled:
@@ -392,6 +421,11 @@ asyncOverflowScrollingEnabled:
   initial: false
   onChange: setNeedsRelayoutAllFrames
 
+legacyOverflowScrollingTouchEnabled:
+  initial: true
+  onChange: setNeedsRelayoutAllFrames
+  conditional: OVERFLOW_SCROLLING_TOUCH
+
 webSecurityEnabled:
   initial: true
   inspectorOverride: true
@@ -408,8 +442,8 @@ logsPageMessagesToSystemConsoleEnabled:
   initial: false
 
 backForwardCacheExpirationInterval:
-  type: double
-  initial: 1800
+  type: Seconds
+  initial: 30_min
 
 # Some apps could have a default video poster if it is not set.
 defaultVideoPosterURL:
@@ -439,6 +473,10 @@ minimumZoomFontSize:
   type: float
   initial: defaultMinimumZoomFontSize()
   conditional: TEXT_AUTOSIZING
+textAutosizingUsesIdempotentMode:
+  initial: false
+  onChange: setNeedsRecalcStyleInAllFrames
+  conditional: TEXT_AUTOSIZING
 
 subpixelAntialiasedLayerTextEnabled:
   initial: false
@@ -449,6 +487,9 @@ simpleLineLayoutEnabled:
 simpleLineLayoutDebugBordersEnabled:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+
+contentChangeObserverEnabled:
+  initial: defaultContentChangeObserverEnabled()
 
 subpixelCSSOMElementMetricsEnabled:
   initial: false
@@ -469,6 +510,10 @@ allowMultiElementImplicitSubmission:
   initial: false
 
 allowsAirPlayForMediaPlayback:
+  initial: true
+  conditional: WIRELESS_PLAYBACK_TARGET
+
+remotePlaybackEnabled:
   initial: true
   conditional: WIRELESS_PLAYBACK_TARGET
 
@@ -575,13 +620,19 @@ layoutViewportHeightExpansionFactor:
 
 # Runtime-enabled features
 visualViewportEnabled:
-  initial: false
+  initial: true
   onChange: setNeedsRecalcStyleInAllFrames
 
 visualViewportAPIEnabled:
   initial: false
 
+syntheticEditingCommandsEnabled:
+  initial: true
+
 CSSOMViewScrollingAPIEnabled:
+  initial: false
+
+CSSOMViewSmoothScrollingEnabled:
   initial: false
 
 inputEventsEnabled:
@@ -601,6 +652,10 @@ forcedDisplayIsMonochromeAccessibilityValue:
 forcedPrefersReducedMotionAccessibilityValue:
   type: ForcedAccessibilityValue
   initial: defaultForcedPrefersReducedMotionAccessibilityValue
+forcedSupportsHighDynamicRangeValue:
+  type: ForcedAccessibilityValue
+  initial: defaultForcedSupportsHighDynamicRangeValue
+  onChange: setNeedsRecalcStyleInAllFrames
 
 largeImageAsyncDecodingEnabled:
   initial: true
@@ -653,15 +708,18 @@ fontLoadTimingOverride:
 shouldIgnoreFontLoadCompletions:
   initial: false
 
-paymentRequestEnabled:
-  initial: false
-  conditional: PAYMENT_REQUEST
-applePayEnabled:
-  initial: false
-  conditional: APPLE_PAY
 applePayCapabilityDisclosureAllowed:
-  initial: true
   conditional: APPLE_PAY
+  initial: true
+applePayEnabled:
+  conditional: APPLE_PAY
+  initial: defaultApplePayEnabled
+applePayRemoteUIEnabled:
+  conditional: APPLE_PAY_REMOTE_UI
+  initial: true
+paymentRequestEnabled:
+  conditional: PAYMENT_REQUEST
+  initial: false
 
 javaEnabled:
   initial: false
@@ -684,14 +742,17 @@ scriptEnabled:
   initial: false
   getter: isScriptEnabled
   inspectorOverride: true
+parserScriptingFlagPolicy:
+  type: ParserScriptingFlagPolicy
+  initial: ParserScriptingFlagPolicy::OnlyIfScriptIsEnabled
 pluginsEnabled:
   initial: false
   getter: arePluginsEnabled
   onChange: pluginsEnabledChanged
 
-usesPageCache:
+usesBackForwardCache:
   initial: false
-  onChange: usesPageCacheChanged
+  onChange: usesBackForwardCacheChanged
 
 dnsPrefetchingEnabled:
   initial: false
@@ -724,12 +785,18 @@ shouldAllowUserInstalledFonts:
   initial: true
   onChange: setNeedsRecalcStyleInAllFrames
 
+resizeObserverEnabled:
+  initial: false
+  conditional: RESIZE_OBSERVER
+
 # Only set by Layout Tests.
 mediaTypeOverride:
   type: String
   initial: '"screen"'
   onChange: mediaTypeOverrideChanged
 
+animatedImageDebugCanvasDrawingEnabled:
+  initial: false
 
 fontRenderingMode:
   type: FontRenderingMode
@@ -768,6 +835,11 @@ deviceOrientationEventEnabled:
   initial: true
   conditional: DEVICE_ORIENTATION
 
+deviceOrientationPermissionAPIEnabled:
+  type: bool
+  initial: false
+  conditional: DEVICE_ORIENTATION
+
 shouldEnableTextAutosizingBoost:
   type: bool
   initial: false
@@ -777,13 +849,17 @@ shouldEnableTextAutosizingBoost:
 mediaCapabilitiesEnabled:
   initial: false
 
+mediaCapabilitiesExtensionsEnabled:
+  type: bool
+  initial: false
+
+hdrMediaCapabilitiesEnabled:
+  type: bool
+  initial: false
+
 clientCoordinatesRelativeToLayoutViewport:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
-
-accessibilityEventsEnabled:
-  initial: true
-  conditional: ACCESSIBILITY_EVENTS
 
 incompleteImageBorderEnabled:
   initial: false
@@ -804,6 +880,60 @@ editableImagesEnabled:
 adClickAttributionEnabled:
   initial: false
 
+coreMathMLEnabled:
+  initial: false
+  onChange: setNeedsRecalcStyleInAllFrames
+
+blockingOfSmallPluginsEnabled:
+  initial: true
+
+shouldDecidePolicyBeforeLoadingQuickLookPreview:
+  initial: false
+
+shouldDispatchSyntheticMouseEventsWhenModifyingSelection:
+  initial: false
+
+shouldDispatchSyntheticMouseOutAfterSyntheticClick:
+  initial: false
+
+allowViewportShrinkToFitContent:
+  initial: true
+
+webRTCEncryptionEnabled:
+  initial: true
+  inspectorOverride: true
+
+isThirdPartyCookieBlockingDisabled:
+  initial: false
+
+isFirstPartyWebsiteDataRemovalDisabled:
+  initial: false
+
+isFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
+  initial: false
+
+isFirstPartyWebsiteDataRemovalReproTestingEnabled:
+  initial: false
+
+isLoggedInAPIEnabled:
+  initial: false
+
+enterKeyHintEnabled:
+  initial: false
+
+legacyGetUserMediaEnabled:
+  initial: false
+  conditional: MEDIA_STREAM
+
+isInAppBrowserPrivacyEnabled:
+  initial: false
+
+isAccessibilityIsolatedTreeEnabled:
+  initial: false
+
+aspectRatioOfImgFromWidthAndHeightEnabled:
+  initial: false
+
 # Deprecated
 
 iceCandidateFilteringEnabled:
@@ -821,3 +951,6 @@ mediaCaptureRequiresSecureConnection:
   initial: true
   conditional: MEDIA_STREAM
   inspectorOverride: true
+
+shouldUseServiceWorkerShortTimeout:
+  initial: false

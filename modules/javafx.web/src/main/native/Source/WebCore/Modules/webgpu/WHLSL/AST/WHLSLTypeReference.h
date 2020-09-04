@@ -27,10 +27,12 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLNamedType.h"
 #include "WHLSLTypeArgument.h"
 #include "WHLSLUnnamedType.h"
+#include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,38 +44,32 @@ namespace AST {
 
 class NamedType;
 
-class TypeReference : public UnnamedType {
-public:
-    TypeReference(Lexer::Token&& origin, String&& name, TypeArguments&& typeArguments)
-        : UnnamedType(WTFMove(origin))
+class TypeReference final : public UnnamedType {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(TypeReference);
+    TypeReference(CodeLocation location, String&& name, TypeArguments&& typeArguments)
+        : UnnamedType(location, Kind::TypeReference)
         , m_name(WTFMove(name))
         , m_typeArguments(WTFMove(typeArguments))
     {
     }
+public:
+    static Ref<TypeReference> create(CodeLocation location, String&& name, TypeArguments&& typeArguments)
+    {
+        return adoptRef(* new TypeReference(location, WTFMove(name), WTFMove(typeArguments)));
+    }
 
-    virtual ~TypeReference() = default;
+    ~TypeReference() = default;
 
-    TypeReference(const TypeReference&) = delete;
-    TypeReference(TypeReference&&) = default;
-
-    static UniqueRef<TypeReference> wrap(Lexer::Token&& origin, NamedType& resolvedType);
-
-    bool isTypeReference() const override { return true; }
+    static Ref<TypeReference> wrap(CodeLocation, NamedType& resolvedType);
 
     String& name() { return m_name; }
     TypeArguments& typeArguments() { return m_typeArguments; }
-    NamedType* resolvedType() const { return m_resolvedType; }
-
-    const Type& unifyNode() const override
+    NamedType* maybeResolvedType() const { return m_resolvedType; }
+    NamedType& resolvedType() const
     {
         ASSERT(m_resolvedType);
-        return m_resolvedType->unifyNode();
-    }
-
-    Type& unifyNode() override
-    {
-        ASSERT(m_resolvedType);
-        return m_resolvedType->unifyNode();
+        return *m_resolvedType;
     }
 
     void setResolvedType(NamedType& resolvedType)
@@ -81,17 +77,34 @@ public:
         m_resolvedType = &resolvedType;
     }
 
-    UniqueRef<TypeReference> cloneTypeReference() const
+    unsigned hash() const
     {
-        return makeUniqueRef<TypeReference>(Lexer::Token(origin()), String(m_name), AST::clone(m_typeArguments));
+        // Currently, we only use this function after the name resolver runs.
+        // Relying on having a resolved type simplifies this implementation.
+        ASSERT(m_resolvedType);
+        return WTF::PtrHash<const Type*>::hash(&unifyNode());
     }
 
-    UniqueRef<UnnamedType> clone() const override
+    bool operator==(const TypeReference& other) const
     {
-        return cloneTypeReference();
+        ASSERT(m_resolvedType);
+        return &unifyNode() == &other.unifyNode();
+    }
+
+    String toString() const
+    {
+        ASSERT(m_resolvedType);
+        return m_resolvedType->name();
     }
 
 private:
+    friend class Type;
+    Type& unifyNodeImpl()
+    {
+        ASSERT(m_resolvedType);
+        return m_resolvedType->unifyNode();
+    }
+
     String m_name;
     TypeArguments m_typeArguments;
     NamedType* m_resolvedType { nullptr };
@@ -103,6 +116,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_UNNAMED_TYPE(TypeReference, isTypeReference())
+DEFINE_DEFAULT_DELETE(TypeReference)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(TypeReference, isTypeReference())
 
 #endif

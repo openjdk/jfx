@@ -26,15 +26,16 @@
 
 #pragma once
 
-#include "Event.h"
+#include "AnimationEventBase.h"
 
 namespace WebCore {
 
-class TransitionEvent final : public Event {
+class TransitionEvent final : public AnimationEventBase {
+    WTF_MAKE_ISO_ALLOCATED(TransitionEvent);
 public:
-    static Ref<TransitionEvent> create(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
+    static Ref<TransitionEvent> create(const AtomString& type, const String& propertyName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation* animation)
     {
-        return adoptRef(*new TransitionEvent(type, propertyName, elapsedTime, pseudoElement));
+        return adoptRef(*new TransitionEvent(type, propertyName, elapsedTime, pseudoElement, timelineTime, animation));
     }
 
     struct Init : EventInit {
@@ -43,12 +44,14 @@ public:
         String pseudoElement;
     };
 
-    static Ref<TransitionEvent> create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<TransitionEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new TransitionEvent(type, initializer, isTrusted));
     }
 
     virtual ~TransitionEvent();
+
+    bool isTransitionEvent() const final { return true; }
 
     const String& propertyName() const;
     double elapsedTime() const;
@@ -57,8 +60,8 @@ public:
     EventInterface eventInterface() const override;
 
 private:
-    TransitionEvent(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement);
-    TransitionEvent(const AtomicString& type, const Init& initializer, IsTrusted);
+    TransitionEvent(const AtomString& type, const String& propertyName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation*);
+    TransitionEvent(const AtomString& type, const Init& initializer, IsTrusted);
 
     String m_propertyName;
     double m_elapsedTime;
@@ -66,3 +69,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ANIMATION_EVENT_BASE(TransitionEvent, isTransitionEvent())

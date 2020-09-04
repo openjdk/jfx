@@ -37,6 +37,7 @@
 #include "B3ConstPtrValue.h"
 #include "B3InsertionSetInlines.h"
 #include "B3PhaseScope.h"
+#include "B3ValueInlines.h"
 
 namespace JSC { namespace B3 {
 
@@ -137,7 +138,7 @@ private:
                 break;
             }
             case Neg: {
-                if (!isFloat(m_value->type()))
+                if (!m_value->type().isFloat())
                     break;
 
                 // X86 is odd in that it requires this.

@@ -33,8 +33,6 @@
 #include "BufferSource.h"
 #include "MediaKeyStatus.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
-#include <wtf/Optional.h>
-#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -57,7 +55,7 @@ public:
 
     unsigned long size();
     bool has(const BufferSource&);
-    JSC::JSValue get(JSC::ExecState&, const BufferSource&);
+    JSC::JSValue get(JSC::JSGlobalObject&, const BufferSource&);
 
     class Iterator {
     public:

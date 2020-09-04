@@ -303,7 +303,7 @@ RenderBoxFragmentInfo* RenderFragmentContainer::setRenderBoxFragmentInfo(const R
 {
     ASSERT(isValid());
 
-    std::unique_ptr<RenderBoxFragmentInfo>& boxInfo = m_renderBoxFragmentInfo.add(box, std::make_unique<RenderBoxFragmentInfo>(logicalLeftInset, logicalRightInset, containingBlockChainIsInset)).iterator->value;
+    std::unique_ptr<RenderBoxFragmentInfo>& boxInfo = m_renderBoxFragmentInfo.add(box, makeUnique<RenderBoxFragmentInfo>(logicalLeftInset, logicalRightInset, containingBlockChainIsInset)).iterator->value;
     return boxInfo.get();
 }
 
@@ -563,9 +563,9 @@ CurrentRenderFragmentContainerMaintainer::~CurrentRenderFragmentContainerMaintai
 
 #ifndef NDEBUG
 
-String RenderFragmentContainer::debugString() const
+TextStream& operator<<(TextStream& stream, const RenderFragmentContainer& container)
 {
-    return makeString("0x", hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    return stream << &container;
 }
 
 #endif

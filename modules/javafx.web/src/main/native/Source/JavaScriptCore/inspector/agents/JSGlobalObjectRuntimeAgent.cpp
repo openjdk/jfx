@@ -30,30 +30,27 @@
 #include "InjectedScriptManager.h"
 #include "JSGlobalObject.h"
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 JSGlobalObjectRuntimeAgent::JSGlobalObjectRuntimeAgent(JSAgentContext& context)
     : InspectorRuntimeAgent(context)
-    , m_frontendDispatcher(std::make_unique<RuntimeFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<RuntimeFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(RuntimeBackendDispatcher::create(context.backendDispatcher, this))
     , m_globalObject(context.inspectedGlobalObject)
 {
 }
 
-void JSGlobalObjectRuntimeAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
-{
-}
+JSGlobalObjectRuntimeAgent::~JSGlobalObjectRuntimeAgent() = default;
 
 InjectedScript JSGlobalObjectRuntimeAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
 {
     ASSERT_UNUSED(executionContextId, !executionContextId);
 
-    JSC::ExecState* scriptState = m_globalObject.globalExec();
-    InjectedScript injectedScript = injectedScriptManager().injectedScriptFor(scriptState);
+    InjectedScript injectedScript = injectedScriptManager().injectedScriptFor(&m_globalObject);
     if (injectedScript.hasNoValue())
-        errorString = "Internal error: main world execution context not found."_s;
+        errorString = "Missing execution context for given executionContextId."_s;
 
     return injectedScript;
 }

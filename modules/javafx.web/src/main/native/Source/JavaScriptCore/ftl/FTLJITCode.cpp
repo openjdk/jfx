@@ -36,7 +36,7 @@ namespace JSC { namespace FTL {
 using namespace B3;
 
 JITCode::JITCode()
-    : JSC::JITCode(FTLJIT)
+    : JSC::JITCode(JITType::FTLJIT)
 {
 }
 
@@ -129,6 +129,14 @@ JITCode* JITCode::ftl()
 DFG::CommonData* JITCode::dfgCommon()
 {
     return &common;
+}
+
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+{
+    common.shrinkToFit();
+    osrExit.shrinkToFit();
+    osrExitDescriptors.shrinkToFit();
+    lazySlowPaths.shrinkToFit();
 }
 
 void JITCode::validateReferences(const TrackedReferences& trackedReferences)

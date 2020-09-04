@@ -125,7 +125,9 @@ static bool isNanoMallocEnabled()
 }
 #endif
 
-Environment::Environment(std::lock_guard<Mutex>&)
+DEFINE_STATIC_PER_PROCESS_STORAGE(Environment);
+
+Environment::Environment(const LockHolder&)
     : m_isDebugHeapEnabled(computeIsDebugHeapEnabled())
 {
 }
@@ -141,6 +143,9 @@ bool Environment::computeIsDebugHeapEnabled()
 #if BUSE(CHECK_NANO_MALLOC)
     if (!isNanoMallocEnabled() && !shouldProcessUnconditionallyUseBmalloc())
         return true;
+#endif
+#if BENABLE_MALLOC_HEAP_BREAKDOWN
+    return true;
 #endif
     return false;
 }

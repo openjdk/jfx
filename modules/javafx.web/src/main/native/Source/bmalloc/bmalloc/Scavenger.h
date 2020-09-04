@@ -28,7 +28,7 @@
 #include "BPlatform.h"
 #include "DeferredDecommit.h"
 #include "Mutex.h"
-#include "PerProcess.h"
+#include "StaticPerProcess.h"
 #include "Vector.h"
 #include <chrono>
 #include <condition_variable>
@@ -40,9 +40,9 @@
 
 namespace bmalloc {
 
-class Scavenger {
+class Scavenger : public StaticPerProcess<Scavenger> {
 public:
-    BEXPORT Scavenger(std::lock_guard<Mutex>&);
+    BEXPORT Scavenger(const LockHolder&);
 
     ~Scavenger() = delete;
 
@@ -77,10 +77,10 @@ public:
 private:
     enum class State { Sleep, Run, RunSoon };
 
-    void runHoldingLock();
-    void runSoonHoldingLock();
+    void run(const LockHolder&);
+    void runSoon(const LockHolder&);
 
-    void scheduleIfUnderMemoryPressureHoldingLock(size_t bytes);
+    void scheduleIfUnderMemoryPressure(const LockHolder&, size_t bytes);
 
     BNO_RETURN static void threadEntryPoint(Scavenger*);
     BNO_RETURN void threadRunLoop();
@@ -89,20 +89,25 @@ private:
     void setThreadName(const char*);
 
     std::chrono::milliseconds timeSinceLastFullScavenge();
+#if BUSE(PARTIAL_SCAVENGE)
     std::chrono::milliseconds timeSinceLastPartialScavenge();
     void partialScavenge();
+#endif
 
     std::atomic<State> m_state { State::Sleep };
     size_t m_scavengerBytes { 0 };
+    std::chrono::milliseconds m_waitTime;
     bool m_isProbablyGrowing { false };
+    bool m_isInMiniMode { false };
 
-    Mutex m_mutex;
     Mutex m_scavengingMutex;
     std::condition_variable_any m_condition;
 
     std::thread m_thread;
     std::chrono::steady_clock::time_point m_lastFullScavengeTime { std::chrono::steady_clock::now() };
+#if BUSE(PARTIAL_SCAVENGE)
     std::chrono::steady_clock::time_point m_lastPartialScavengeTime { std::chrono::steady_clock::now() };
+#endif
 
 #if BOS(DARWIN)
     dispatch_source_t m_pressureHandlerDispatchSource;
@@ -110,9 +115,8 @@ private:
 #endif
 
     Vector<DeferredDecommit> m_deferredDecommits;
-
-    bool m_isInMiniMode { false };
 };
+DECLARE_STATIC_PER_PROCESS_STORAGE(Scavenger);
 
 } // namespace bmalloc
 

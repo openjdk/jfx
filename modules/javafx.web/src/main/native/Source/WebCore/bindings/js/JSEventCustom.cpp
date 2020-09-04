@@ -36,15 +36,15 @@
 #include "JSDOMBinding.h"
 #include "JSDataTransfer.h"
 #include <JavaScriptCore/JSLock.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Event& event)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Event& event)
 {
-    return wrap(state, globalObject, event);
+    return wrap(lexicalGlobalObject, globalObject, event);
 }
 
 #undef TRY_TO_WRAP_WITH_INTERFACE

@@ -48,9 +48,10 @@ TEST_SUPPORT_EXPORT void injectInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void resetInternalsObject(JSContextRef);
 TEST_SUPPORT_EXPORT void monitorWheelEvents(WebCore::Frame&);
 TEST_SUPPORT_EXPORT void setTestCallbackAndStartNotificationTimer(WebCore::Frame&, JSContextRef, JSObjectRef);
-TEST_SUPPORT_EXPORT void clearWheelEventTestTrigger(WebCore::Frame&);
+TEST_SUPPORT_EXPORT void clearWheelEventTestMonitor(WebCore::Frame&);
 
 TEST_SUPPORT_EXPORT void setLogChannelToAccumulate(const WTF::String& name);
+TEST_SUPPORT_EXPORT void clearAllLogChannelsToAccumulate();
 TEST_SUPPORT_EXPORT void initializeLogChannelsIfNecessary();
 TEST_SUPPORT_EXPORT void setAllowsAnySSLCertificate(bool);
 
@@ -62,5 +63,7 @@ TEST_SUPPORT_EXPORT void setMockGamepadAxisValue(unsigned index, unsigned axisIn
 TEST_SUPPORT_EXPORT void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
 
 TEST_SUPPORT_EXPORT void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier);
+
+TEST_SUPPORT_EXPORT void setAdditionalSupportedImageTypesForTesting(const WTF::String&);
 
 } // namespace WebCoreTestSupport

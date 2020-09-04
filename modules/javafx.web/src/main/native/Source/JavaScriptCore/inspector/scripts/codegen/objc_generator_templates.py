@@ -36,7 +36,9 @@ ${includes}
 """)
 
     HeaderPostlude = (
-    """""")
+    """
+${includes}
+""")
 
     TypeConversionsHeaderPrelude = (
     """${includes}
@@ -100,6 +102,7 @@ ${commandDeclarations}
 
     BackendDispatcherHeaderDomainHandlerObjCDeclaration = (
     """class ObjCInspector${domainName}BackendDispatcher final : public Alternate${domainName}BackendDispatcher {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ObjCInspector${domainName}BackendDispatcher(id<${objcPrefix}${domainName}DomainHandler> handler) { m_delegate = handler; }
 ${commandDeclarations}
@@ -110,6 +113,12 @@ private:
     BackendDispatcherHeaderDomainHandlerImplementation = (
     """void ObjCInspector${domainName}BackendDispatcher::${commandName}(${parameters})
 {
+    if (!${respondsToSelector}) {
+        backendDispatcher()->reportProtocolError(requestId, BackendDispatcher::MethodNotFound, "'${domainName}.${commandName}' was not found"_s);
+        backendDispatcher()->sendPendingErrors();
+        return;
+    }
+
     id errorCallback = ^(NSString *error) {
         backendDispatcher()->reportProtocolError(requestId, BackendDispatcher::ServerError, error);
         backendDispatcher()->sendPendingErrors();
@@ -136,8 +145,8 @@ ${invocation}
     [_${variableNamePrefix}Handler release];
     _${variableNamePrefix}Handler = [handler retain];
 
-    auto alternateDispatcher = std::make_unique<ObjCInspector${domainName}BackendDispatcher>(handler);
-    auto alternateAgent = std::make_unique<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTFMove(alternateDispatcher));
+    auto alternateDispatcher = makeUnique<ObjCInspector${domainName}BackendDispatcher>(handler);
+    auto alternateAgent = makeUnique<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTFMove(alternateDispatcher));
     _controller->appendExtraAgent(WTFMove(alternateAgent));
 }
 

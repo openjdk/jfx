@@ -27,11 +27,13 @@
 
 #if ENABLE(WEBGPU)
 
-#include <wtf/text/WTFString.h>
+#include "WHLSLMangledNames.h"
 
 namespace WebCore {
 
 namespace WHLSL {
+
+class Intrinsics;
 
 namespace AST {
 
@@ -43,7 +45,7 @@ namespace Metal {
 
 class TypeNamer;
 
-String writeNativeFunction(AST::NativeFunctionDeclaration&, String& outputFunctionName, TypeNamer&);
+void inlineNativeFunction(StringBuilder&, AST::NativeFunctionDeclaration&, const Vector<MangledVariableName>& argumentNames, MangledVariableName resultName, TypeNamer&);
 
 }
 

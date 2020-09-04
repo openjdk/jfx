@@ -27,7 +27,6 @@
 
 #include "ClassInfo.h"
 #include "CodeLocation.h"
-#include "CodeOrigin.h"
 #include "IndexingType.h"
 #include "JITStubRoutine.h"
 #include "Structure.h"
@@ -40,7 +39,7 @@ class Symbol;
 
 class StructureStubInfo;
 
-enum JITArrayMode {
+enum JITArrayMode : uint8_t {
     JITInt32,
     JITDouble,
     JITContiguous,
@@ -226,7 +225,7 @@ inline JITArrayMode jitArrayModeForStructure(Structure* structure)
 struct ByValInfo {
     ByValInfo() { }
 
-    ByValInfo(unsigned bytecodeIndex, CodeLocationJump<JSInternalPtrTag> notIndexJump, CodeLocationJump<JSInternalPtrTag> badTypeJump, CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler, JITArrayMode arrayMode, ArrayProfile* arrayProfile, CodeLocationLabel<JSInternalPtrTag> badTypeDoneTarget, CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget, CodeLocationLabel<JSInternalPtrTag> slowPathTarget)
+    ByValInfo(BytecodeIndex bytecodeIndex, CodeLocationJump<JSInternalPtrTag> notIndexJump, CodeLocationJump<JSInternalPtrTag> badTypeJump, CodeLocationLabel<ExceptionHandlerPtrTag> exceptionHandler, JITArrayMode arrayMode, ArrayProfile* arrayProfile, CodeLocationLabel<JSInternalPtrTag> badTypeDoneTarget, CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget, CodeLocationLabel<JSInternalPtrTag> slowPathTarget)
         : notIndexJump(notIndexJump)
         , badTypeJump(badTypeJump)
         , exceptionHandler(exceptionHandler)
@@ -250,7 +249,7 @@ struct ByValInfo {
     CodeLocationLabel<JSInternalPtrTag> badTypeNextHotPathTarget;
     CodeLocationLabel<JSInternalPtrTag> slowPathTarget;
     ArrayProfile* arrayProfile;
-    unsigned bytecodeIndex;
+    BytecodeIndex bytecodeIndex;
     unsigned slowPathCount;
     RefPtr<JITStubRoutine> stubRoutine;
     Identifier cachedId;
@@ -261,7 +260,7 @@ struct ByValInfo {
     bool seen : 1;
 };
 
-inline unsigned getByValInfoBytecodeIndex(ByValInfo* info)
+inline BytecodeIndex getByValInfoBytecodeIndex(ByValInfo* info)
 {
     return info->bytecodeIndex;
 }

@@ -46,12 +46,16 @@ inline EncodedJSValue vmEntryToWasm(void* code, VM* vm, ProtoCallFrame* frame)
 
 namespace LLInt {
 
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallEntryThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructEntryThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallArityCheckThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructArityCheckThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> evalEntryThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> programEntryThunkGenerator(VM*);
-MacroAssemblerCodeRef<JITThunkPtrTag> moduleProgramEntryThunkGenerator(VM*);
+MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> functionForCallArityCheckThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> functionForConstructArityCheckThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> evalEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> programEntryThunk();
+MacroAssemblerCodeRef<JITThunkPtrTag> moduleProgramEntryThunk();
+
+#if ENABLE(WEBASSEMBLY)
+MacroAssemblerCodeRef<JITThunkPtrTag> wasmFunctionEntryThunk();
+#endif // ENABLE(WEBASSEMBLY)
 
 } } // namespace JSC::LLInt

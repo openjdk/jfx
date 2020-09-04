@@ -23,6 +23,7 @@
 
 #include "ContainerNode.h"
 #include "LoadableScript.h"
+#include "ReferrerPolicy.h"
 #include "UserGestureIndicator.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/TextPosition.h>
@@ -55,9 +56,10 @@ public:
 
     // XML parser calls these
     virtual void dispatchLoadEvent() = 0;
-    void dispatchErrorEvent();
+    virtual void dispatchErrorEvent();
 
     bool haveFiredLoadEvent() const { return m_haveFiredLoad; }
+    bool errorOccurred() const { return m_errorOccurred; }
     bool willBeParserExecuted() const { return m_willBeParserExecuted; }
     bool readyToBeParserExecuted() const { return m_readyToBeParserExecuted; }
     bool willExecuteWhenDocumentFinishedParsing() const { return m_willExecuteWhenDocumentFinishedParsing; }
@@ -75,6 +77,7 @@ protected:
     ScriptElement(Element&, bool createdByParser, bool isEvaluated);
 
     void setHaveFiredLoadEvent(bool haveFiredLoad) { m_haveFiredLoad = haveFiredLoad; }
+    void setErrorOccurred(bool errorOccurred) { m_errorOccurred = errorOccurred; }
     bool isParserInserted() const { return m_parserInserted; }
     bool alreadyStarted() const { return m_alreadyStarted; }
     bool forceAsync() const { return m_forceAsync; }
@@ -113,6 +116,7 @@ private:
     virtual bool hasDeferAttribute() const = 0;
     virtual bool hasSourceAttribute() const = 0;
     virtual bool hasNoModuleAttribute() const = 0;
+    virtual ReferrerPolicy referrerPolicy() const = 0;
 
     Element& m_element;
     WTF::OrdinalNumber m_startLineNumber;
@@ -120,6 +124,7 @@ private:
     bool m_isExternalScript : 1;
     bool m_alreadyStarted : 1;
     bool m_haveFiredLoad : 1;
+    bool m_errorOccurred : 1;
     bool m_willBeParserExecuted : 1; // Same as "The parser will handle executing the script."
     bool m_readyToBeParserExecuted : 1;
     bool m_willExecuteWhenDocumentFinishedParsing : 1;

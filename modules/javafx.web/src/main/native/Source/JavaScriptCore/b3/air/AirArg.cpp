@@ -34,7 +34,7 @@
 #include "FPRInfo.h"
 #include "GPRInfo.h"
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -71,9 +71,14 @@ bool Arg::usesTmp(Air::Tmp tmp) const
     return uses;
 }
 
+bool Arg::canRepresent(Type type) const
+{
+    return isBank(bankForType(type));
+}
+
 bool Arg::canRepresent(Value* value) const
 {
-    return isBank(bankForType(value->type()));
+    return canRepresent(value->type());
 }
 
 bool Arg::isCompatibleBank(const Arg& other) const
@@ -378,7 +383,7 @@ void printInternal(PrintStream& out, Arg::Signedness signedness)
 
 } // namespace WTF
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

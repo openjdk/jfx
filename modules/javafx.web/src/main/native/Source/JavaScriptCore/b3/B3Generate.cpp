@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "B3Common.h"
 #include "B3DuplicateTails.h"
 #include "B3EliminateCommonSubexpressions.h"
+#include "B3EliminateDeadCode.h"
 #include "B3FixSSA.h"
 #include "B3FoldPathConstants.h"
 #include "B3HoistLoopInvariantValues.h"
@@ -43,9 +44,11 @@
 #include "B3LowerMacrosAfterOptimizations.h"
 #include "B3LowerToAir.h"
 #include "B3MoveConstants.h"
+#include "B3OptimizeAssociativeExpressionTrees.h"
 #include "B3Procedure.h"
 #include "B3PureCSE.h"
 #include "B3ReduceDoubleToFloat.h"
+#include "B3ReduceLoopStrength.h"
 #include "B3ReduceStrength.h"
 #include "B3TimingScope.h"
 #include "B3Validate.h"
@@ -71,7 +74,7 @@ void generateToAir(Procedure& procedure)
     TimingScope timingScope("generateToAir");
 
     if (shouldDumpIR(B3Mode) && !shouldDumpIRAtEachPhase(B3Mode)) {
-        dataLog("Initial B3:\n");
+        dataLog(tierName, "Initial B3:\n");
         dataLog(procedure);
     }
 
@@ -87,12 +90,13 @@ void generateToAir(Procedure& procedure)
         hoistLoopInvariantValues(procedure);
         if (eliminateCommonSubexpressions(procedure))
             eliminateCommonSubexpressions(procedure);
+        eliminateDeadCode(procedure);
         inferSwitches(procedure);
+        reduceLoopStrength(procedure);
         if (Options::useB3TailDup())
             duplicateTails(procedure);
         fixSSA(procedure);
         foldPathConstants(procedure);
-
         // FIXME: Add more optimizations here.
         // https://bugs.webkit.org/show_bug.cgi?id=150507
     } else if (procedure.optLevel() >= 1) {
@@ -104,6 +108,7 @@ void generateToAir(Procedure& procedure)
     lowerMacros(procedure);
 
     if (procedure.optLevel() >= 2) {
+        optimizeAssociativeExpressionTrees(procedure);
         reduceStrength(procedure);
 
         // FIXME: Add more optimizations here.
@@ -113,6 +118,7 @@ void generateToAir(Procedure& procedure)
     lowerMacrosAfterOptimizations(procedure);
     legalizeMemoryOffsets(procedure);
     moveConstants(procedure);
+    eliminateDeadCode(procedure);
 
     // FIXME: We should run pureCSE here to clean up some platform specific changes from the previous phases.
     // https://bugs.webkit.org/show_bug.cgi?id=164873

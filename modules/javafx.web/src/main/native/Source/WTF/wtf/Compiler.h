@@ -204,8 +204,9 @@
 
 #elif !defined(FALLTHROUGH) && !defined(__cplusplus)
 
-#if COMPILER(GCC)
-#if GCC_VERSION_AT_LEAST(7, 0, 0)
+#if COMPILER(GCC_COMPATIBLE) && defined(__has_attribute)
+// Break out this #if to satisy some versions Windows compilers.
+#if __has_attribute(fallthrough)
 #define FALLTHROUGH __attribute__ ((fallthrough))
 #endif
 #endif
@@ -451,6 +452,9 @@
 
 #define ALLOW_DEPRECATED_DECLARATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-declarations")
 #define ALLOW_DEPRECATED_DECLARATIONS_END IGNORE_WARNINGS_END
+
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_BEGIN IGNORE_WARNINGS_BEGIN("deprecated-implementations")
+#define ALLOW_DEPRECATED_IMPLEMENTATIONS_END IGNORE_WARNINGS_END
 
 #define ALLOW_NEW_API_WITHOUT_GUARDS_BEGIN IGNORE_CLANG_WARNINGS_BEGIN("unguarded-availability-new")
 #define ALLOW_NEW_API_WITHOUT_GUARDS_END IGNORE_CLANG_WARNINGS_END

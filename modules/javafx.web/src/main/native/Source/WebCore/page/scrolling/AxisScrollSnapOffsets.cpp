@@ -78,10 +78,8 @@ static String snapOffsetsToString(const Vector<LayoutUnit>& snapOffsets)
 {
     StringBuilder builder;
     builder.appendLiteral("[ ");
-    for (auto& offset : snapOffsets) {
-        builder.appendFixedWidthNumber(offset.toFloat(), 1);
-        builder.append(' ');
-    }
+    for (auto& offset : snapOffsets)
+        builder.append(offset.toFloat(), ' ');
     builder.append(']');
     return builder.toString();
 }
@@ -90,24 +88,15 @@ static String snapOffsetRangesToString(const Vector<ScrollOffsetRange<LayoutUnit
 {
     StringBuilder builder;
     builder.appendLiteral("[ ");
-    for (auto& range : ranges) {
-        builder.append('(');
-        builder.appendFixedWidthNumber(range.start.toFloat(), 1);
-        builder.appendLiteral(", ");
-        builder.appendFixedWidthNumber(range.end.toFloat(), 1);
-        builder.appendLiteral(") ");
-    }
+    for (auto& range : ranges)
+        builder.append('(', range.start.toFloat(), ", ", range.end.toFloat(), ") ");
     builder.append(']');
     return builder.toString();
 }
 
 static String snapPortOrAreaToString(const LayoutRect& rect)
 {
-    return makeString("{{",
-        FormattedNumber::fixedWidth(rect.x(), 1), ", ",
-        FormattedNumber::fixedWidth(rect.y(), 1), "} {",
-        FormattedNumber::fixedWidth(rect.width(), 1), ", ",
-        FormattedNumber::fixedWidth(rect.height(), 1), "}}");
+    return makeString("{{", rect.x().toFloat(), ", ", rect.y().toFloat(), "} {", rect.width().toFloat(), ", ", rect.height().toFloat(), "}}");
 }
 
 #endif
@@ -197,7 +186,7 @@ static void computeAxisProximitySnapOffsetRanges(const Vector<LayoutUnit>& snapO
     // instead, it is more intuitive to either return to the original snap position (which we arbitrarily choose here)
     // or scroll just outside of the snap offset range. This is another minor behavior tweak that we should play around
     // with to see what feels best.
-    LayoutUnit proximityDistance = ratioOfScrollPortAxisLengthToBeConsideredForProximity * scrollPortAxisLength;
+    LayoutUnit proximityDistance { ratioOfScrollPortAxisLengthToBeConsideredForProximity * scrollPortAxisLength };
     for (size_t index = 1; index < snapOffsets.size(); ++index) {
         auto startOffset = snapOffsets[index - 1] + proximityDistance;
         auto endOffset = snapOffsets[index] - proximityDistance;

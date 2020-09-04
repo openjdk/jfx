@@ -35,7 +35,6 @@
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "Logging.h"
-#include "RuntimeEnabledFeatures.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/text/CString.h>
 
@@ -99,7 +98,7 @@ void HTMLTrackElement::removedFromAncestor(RemovalType removalType, ContainerNod
         downcast<HTMLMediaElement>(oldParentOfRemovedTree).didRemoveTextTrack(*this);
 }
 
-void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == srcAttr) {
         scheduleLoad();
@@ -118,22 +117,22 @@ void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicStr
     HTMLElement::parseAttribute(name, value);
 }
 
-const AtomicString& HTMLTrackElement::kind()
+const AtomString& HTMLTrackElement::kind()
 {
     return track().kindKeyword();
 }
 
-void HTMLTrackElement::setKind(const AtomicString& kind)
+void HTMLTrackElement::setKind(const AtomString& kind)
 {
     setAttributeWithoutSynchronization(kindAttr, kind);
 }
 
-const AtomicString& HTMLTrackElement::srclang() const
+const AtomString& HTMLTrackElement::srclang() const
 {
     return attributeWithoutSynchronization(srclangAttr);
 }
 
-const AtomicString& HTMLTrackElement::label() const
+const AtomString& HTMLTrackElement::label() const
 {
     return attributeWithoutSynchronization(labelAttr);
 }
@@ -279,7 +278,7 @@ HTMLTrackElement::ReadyState HTMLTrackElement::readyState()
     return static_cast<ReadyState>(track().readinessState());
 }
 
-const AtomicString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
+const AtomString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
 {
     if (auto parent = mediaElement())
         return parent->attributeWithoutSynchronization(HTMLNames::crossoriginAttr);

@@ -30,6 +30,7 @@
 
 #include "AudioBus.h"
 #include "AudioUtilities.h"
+#include "FFTFrame.h"
 #include "VectorMath.h"
 #include <JavaScriptCore/Float32Array.h>
 #include <JavaScriptCore/Uint8Array.h>
@@ -59,7 +60,7 @@ RealtimeAnalyser::RealtimeAnalyser()
     , m_minDecibels(DefaultMinDecibels)
     , m_maxDecibels(DefaultMaxDecibels)
 {
-    m_analysisFrame = std::make_unique<FFTFrame>(DefaultFFTSize);
+    m_analysisFrame = makeUnique<FFTFrame>(DefaultFFTSize);
 }
 
 RealtimeAnalyser::~RealtimeAnalyser() = default;
@@ -83,7 +84,7 @@ bool RealtimeAnalyser::setFftSize(size_t size)
         return false;
 
     if (m_fftSize != size) {
-        m_analysisFrame = std::make_unique<FFTFrame>(size);
+        m_analysisFrame = makeUnique<FFTFrame>(size);
         // m_magnitudeBuffer has size = fftSize / 2 because it contains floats reduced from complex values in m_analysisFrame.
         m_magnitudeBuffer.allocate(size / 2);
         m_fftSize = size;

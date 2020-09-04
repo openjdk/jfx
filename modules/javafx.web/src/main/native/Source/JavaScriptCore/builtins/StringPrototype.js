@@ -38,9 +38,30 @@ function match(regexp)
             return matcher.@call(regexp, this);
     }
 
-    let thisString = @toString(this);
-    let createdRegExp = @regExpCreate(regexp, @undefined);
+    var thisString = @toString(this);
+    var createdRegExp = @regExpCreate(regexp, @undefined);
     return createdRegExp.@matchSymbol(thisString);
+}
+
+function matchAll(arg)
+{
+    "use strict";
+
+    if (@isUndefinedOrNull(this))
+        @throwTypeError("String.prototype.matchAll requires |this| not to be null nor undefined");
+
+    if (!@isUndefinedOrNull(arg)) {
+        if (@isRegExp(arg) && !@stringIncludesInternal.@call(@toString(arg.flags), "g"))
+            @throwTypeError("String.prototype.matchAll argument must not be a non-global regular expression");
+
+        var matcher = arg.@matchAllSymbol;
+        if (!@isUndefinedOrNull(matcher))
+            return matcher.@call(arg, this);
+    }
+
+    var string = @toString(this);
+    var regExp = @regExpCreate(arg, "g");
+    return regExp.@matchAllSymbol(string);
 }
 
 @globalPrivate
@@ -201,15 +222,15 @@ function hasObservableSideEffectsForStringReplace(regexp, replacer)
     if (replacer !== @regExpPrototypeSymbolReplace)
         return true;
     
-    let regexpExec = @tryGetById(regexp, "exec");
+    var regexpExec = @tryGetById(regexp, "exec");
     if (regexpExec !== @regExpBuiltinExec)
         return true;
 
-    let regexpGlobal = @tryGetById(regexp, "global");
+    var regexpGlobal = @tryGetById(regexp, "global");
     if (regexpGlobal !== @regExpProtoGlobalGetter)
         return true;
 
-    let regexpUnicode = @tryGetById(regexp, "unicode");
+    var regexpUnicode = @tryGetById(regexp, "unicode");
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
         return true;
 
@@ -225,7 +246,7 @@ function replace(search, replace)
         @throwTypeError("String.prototype.replace requires that |this| not be null or undefined");
 
     if (search != null) {
-        let replacer = search.@replaceSymbol;
+        var replacer = search.@replaceSymbol;
         if (replacer !== @undefined) {
             if (!@hasObservableSideEffectsForStringReplace(search, replacer))
                 return @toString(this).@replaceUsingRegExp(search, replace);
@@ -233,11 +254,35 @@ function replace(search, replace)
         }
     }
 
-    let thisString = @toString(this);
-    let searchString = @toString(search);
+    var thisString = @toString(this);
+    var searchString = @toString(search);
     return thisString.@replaceUsingStringSearch(searchString, replace);
 }
-    
+
+function replaceAll(search, replace)
+{
+    "use strict";
+
+    if (@isUndefinedOrNull(this))
+        @throwTypeError("String.prototype.replaceAll requires |this| not to be null nor undefined");
+
+    if (search != null) {
+        if (@isRegExp(search) && !@stringIncludesInternal.@call(@toString(search.flags), "g"))
+            @throwTypeError("String.prototype.replaceAll argument must not be a non-global regular expression");
+
+        var replacer = search.@replaceSymbol;
+        if (replacer !== @undefined) {
+            if (!@hasObservableSideEffectsForStringReplace(search, replacer))
+                return @toString(this).@replaceUsingRegExp(search, replace);
+            return replacer.@call(search, this, replace);
+        }
+    }
+
+    var thisString = @toString(this);
+    var searchString = @toString(search);
+    return thisString.@replaceAllUsingStringSearch(searchString, replace);
+}
+
 function search(regexp)
 {
     "use strict";
@@ -301,16 +346,16 @@ function createHTML(func, string, tag, attribute, value)
     "use strict";
     if (@isUndefinedOrNull(string))
         @throwTypeError(`${func} requires that |this| not be null or undefined`);
-    let S = @toString(string);
-    let p1 = "<" + tag;
+    var S = @toString(string);
+    var p1 = "<" + tag;
     if (attribute) {
-        let V = @toString(value);
-        let escapedV = V.@replaceUsingRegExp(/"/g, '&quot;');
+        var V = @toString(value);
+        var escapedV = V.@replaceUsingRegExp(/"/g, '&quot;');
         p1 = p1 + " " + @toString(attribute) + '="' + escapedV + '"'
     }
-    let p2 = p1 + ">"
-    let p3 = p2 + S;
-    let p4 = p3 + "</" + tag + ">";
+    var p2 = p1 + ">"
+    var p3 = p2 + S;
+    var p4 = p3 + "</" + tag + ">";
     return p4;
 }
 

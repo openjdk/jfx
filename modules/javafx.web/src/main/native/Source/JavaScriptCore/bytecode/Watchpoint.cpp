@@ -26,11 +26,21 @@
 #include "config.h"
 #include "Watchpoint.h"
 
+#include "AdaptiveInferredPropertyValueWatchpointBase.h"
+#include "CodeBlockJettisoningWatchpoint.h"
+#include "DFGAdaptiveStructureWatchpoint.h"
+#include "FunctionRareData.h"
 #include "HeapInlines.h"
+#include "LLIntPrototypeLoadAdaptiveStructureWatchpoint.h"
+#include "ObjectToStringAdaptiveStructureWatchpoint.h"
+#include "StructureStubClearingWatchpoint.h"
 #include "VM.h"
 #include <wtf/CompilationThread.h>
 
 namespace JSC {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Watchpoint);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WatchpointSet);
 
 void StringFireDetail::dump(PrintStream& out) const
 {
@@ -52,7 +62,14 @@ Watchpoint::~Watchpoint()
 void Watchpoint::fire(VM& vm, const FireDetail& detail)
 {
     RELEASE_ASSERT(!isOnList());
-    fireInternal(vm, detail);
+    switch (m_type) {
+#define JSC_DEFINE_WATCHPOINT_DISPATCH(type, cast) \
+    case Type::type: \
+        static_cast<cast*>(this)->fireInternal(vm, detail); \
+        break;
+    JSC_WATCHPOINT_TYPES(JSC_DEFINE_WATCHPOINT_DISPATCH)
+#undef JSC_DEFINE_WATCHPOINT_DISPATCH
+    }
 }
 
 WatchpointSet::WatchpointSet(WatchpointState state)

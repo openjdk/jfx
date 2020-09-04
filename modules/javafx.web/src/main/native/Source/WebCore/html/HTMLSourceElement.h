@@ -32,7 +32,7 @@ namespace WebCore {
 
 class MediaQuerySet;
 
-class HTMLSourceElement final : public HTMLElement, private ActiveDOMObject {
+class HTMLSourceElement final : public HTMLElement, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLSourceElement);
 public:
     static Ref<HTMLSourceElement> create(Document&);
@@ -52,12 +52,11 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     void stop() final;
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     void errorEventTimerFired();
 

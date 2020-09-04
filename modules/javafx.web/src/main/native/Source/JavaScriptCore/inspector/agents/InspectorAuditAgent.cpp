@@ -48,6 +48,8 @@ InspectorAuditAgent::InspectorAuditAgent(AgentContext& context)
 {
 }
 
+InspectorAuditAgent::~InspectorAuditAgent() = default;
+
 void InspectorAuditAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
 }
@@ -59,7 +61,7 @@ void InspectorAuditAgent::willDestroyFrontendAndBackend(DisconnectReason)
 void InspectorAuditAgent::setup(ErrorString& errorString, const int* executionContextId)
 {
     if (hasActiveAudit()) {
-        errorString = "Must call teardown before calling setup again."_s;
+        errorString = "Must call teardown before calling setup again"_s;
         return;
     }
 
@@ -67,23 +69,23 @@ void InspectorAuditAgent::setup(ErrorString& errorString, const int* executionCo
     if (injectedScript.hasNoValue())
         return;
 
-    JSC::ExecState* execState = injectedScript.scriptState();
-    if (!execState) {
-        errorString = "Missing execution state for injected script."_s;
+    JSC::JSGlobalObject* globalObject = injectedScript.globalObject();
+    if (!globalObject) {
+        errorString = "Missing execution state of injected script for given executionContextId"_s;
         return;
     }
 
-    VM& vm = execState->vm();
+    VM& vm = globalObject->vm();
 
-    JSC::JSLockHolder lock(execState);
+    JSC::JSLockHolder lock(globalObject);
 
-    m_injectedWebInspectorAuditValue.set(vm, constructEmptyObject(execState));
+    m_injectedWebInspectorAuditValue.set(vm, constructEmptyObject(globalObject));
     if (!m_injectedWebInspectorAuditValue) {
         errorString = "Unable to construct injected WebInspectorAudit object."_s;
         return;
     }
 
-    populateAuditObject(execState, m_injectedWebInspectorAuditValue);
+    populateAuditObject(globalObject, m_injectedWebInspectorAuditValue);
 }
 
 void InspectorAuditAgent::run(ErrorString& errorString, const String& test, const int* executionContextId, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown)
@@ -118,7 +120,7 @@ void InspectorAuditAgent::run(ErrorString& errorString, const String& test, cons
 void InspectorAuditAgent::teardown(ErrorString& errorString)
 {
     if (!hasActiveAudit()) {
-        errorString = "Must call setup before calling teardown."_s;
+        errorString = "Must call setup before calling teardown"_s;
         return;
     }
 
@@ -128,6 +130,18 @@ void InspectorAuditAgent::teardown(ErrorString& errorString)
 bool InspectorAuditAgent::hasActiveAudit() const
 {
     return !!m_injectedWebInspectorAuditValue;
+}
+
+void InspectorAuditAgent::populateAuditObject(JSC::JSGlobalObject* globalObject, JSC::Strong<JSC::JSObject>& auditObject)
+{
+    ASSERT(globalObject);
+    if (!globalObject)
+        return;
+
+    JSC::VM& vm = globalObject->vm();
+    JSC::JSLockHolder lock(vm);
+
+    auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Version"), JSC::JSValue(Inspector::Protocol::Audit::VERSION));
 }
 
 } // namespace Inspector

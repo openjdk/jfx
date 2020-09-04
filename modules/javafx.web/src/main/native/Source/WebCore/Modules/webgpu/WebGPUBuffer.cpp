@@ -28,16 +28,76 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUErrorScopes.h"
+#include "JSDOMPromiseDeferred.h"
+#include <wtf/text/StringConcatenate.h>
+
 namespace WebCore {
 
-Ref<WebGPUBuffer> WebGPUBuffer::create(Ref<GPUBuffer>&& buffer)
+Ref<WebGPUBuffer> WebGPUBuffer::create(RefPtr<GPUBuffer>&& buffer, GPUErrorScopes& errorScopes)
 {
-    return adoptRef(*new WebGPUBuffer(WTFMove(buffer)));
+    return adoptRef(*new WebGPUBuffer(WTFMove(buffer), errorScopes));
 }
 
-WebGPUBuffer::WebGPUBuffer(Ref<GPUBuffer>&& buffer)
-    : m_buffer(WTFMove(buffer))
+WebGPUBuffer::WebGPUBuffer(RefPtr<GPUBuffer>&& buffer, GPUErrorScopes& errorScopes)
+    : GPUObjectBase(makeRef(errorScopes))
+    , m_buffer(WTFMove(buffer))
 {
+}
+
+void WebGPUBuffer::mapReadAsync(BufferMappingPromise&& promise)
+{
+    rejectOrRegisterPromiseCallback(WTFMove(promise), true);
+}
+
+void WebGPUBuffer::mapWriteAsync(BufferMappingPromise&& promise)
+{
+    rejectOrRegisterPromiseCallback(WTFMove(promise), false);
+}
+
+void WebGPUBuffer::unmap()
+{
+    errorScopes().setErrorPrefix("GPUBuffer.unmap(): ");
+
+    if (!m_buffer)
+        errorScopes().generatePrefixedError("Invalid operation: invalid GPUBuffer!");
+    else
+        m_buffer->unmap(&errorScopes());
+}
+
+void WebGPUBuffer::destroy()
+{
+    errorScopes().setErrorPrefix("GPUBuffer.destroy(): ");
+
+    if (!m_buffer)
+        errorScopes().generatePrefixedError("Invalid operation!");
+    else {
+        m_buffer->destroy(&errorScopes());
+        m_buffer = nullptr;
+    }
+}
+
+void WebGPUBuffer::rejectOrRegisterPromiseCallback(BufferMappingPromise&& promise, bool isRead)
+{
+    errorScopes().setErrorPrefix(makeString("GPUBuffer.map", isRead ? "Read" : "Write", "Async(): "));
+
+    if (!m_buffer) {
+        errorScopes().generatePrefixedError("Invalid operation: invalid GPUBuffer!");
+        promise.reject();
+        return;
+    }
+
+    m_buffer->registerMappingCallback([promise = WTFMove(promise), protectedErrorScopes = makeRef(errorScopes())] (JSC::ArrayBuffer* arrayBuffer) mutable {
+        if (arrayBuffer)
+            promise.resolve(*arrayBuffer);
+        else {
+            // FIXME: It's possible to hit this code path in response to an unmap call, where
+            // the ArrayBuffer will definitely be null, and thus an out of memory error makes no sense.
+            // https://bugs.webkit.org/show_bug.cgi?id=204166
+            protectedErrorScopes->generateError("", GPUErrorFilter::OutOfMemory);
+            promise.reject();
+        }
+    }, isRead, errorScopes());
 }
 
 } // namespace WebCore

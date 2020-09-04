@@ -39,11 +39,11 @@ Ref<IDBConnectionToClient> IDBConnectionToClient::create(IDBConnectionToClientDe
 }
 
 IDBConnectionToClient::IDBConnectionToClient(IDBConnectionToClientDelegate& delegate)
-    : m_delegate(makeWeakPtr(delegate))
+    : m_delegate(&delegate)
 {
 }
 
-uint64_t IDBConnectionToClient::identifier() const
+IDBConnectionIdentifier IDBConnectionToClient::identifier() const
 {
     ASSERT(m_delegate);
     return m_delegate->identifier();

@@ -32,7 +32,7 @@
 #include "config.h"
 #include "WebKitAccessibleInterfaceText.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AccessibilityObject.h"
 #include "Document.h"
@@ -334,7 +334,7 @@ static IntRect textExtents(AtkText* text, gint startOffset, gint length, AtkCoor
     return extents;
 }
 
-static int offsetAdjustmentForListItem(const AccessibilityObject* object)
+static int offsetAdjustmentForListItem(const AXCoreObject* object)
 {
     // We need to adjust the offsets for the list item marker in
     // Left-To-Right text, since we expose it together with the text.
@@ -345,7 +345,7 @@ static int offsetAdjustmentForListItem(const AccessibilityObject* object)
     return 0;
 }
 
-static int webCoreOffsetToAtkOffset(const AccessibilityObject* object, int offset)
+static int webCoreOffsetToAtkOffset(const AXCoreObject* object, int offset)
 {
     if (!object->isListItem())
         return offset;
@@ -990,7 +990,7 @@ static gint webkitAccessibleTextGetCaretOffset(AtkText* text)
 
     // coreObject is the unignored object whose offset the caller is requesting.
     // focusedObject is the object with the caret. It is likely ignored -- unless it's a link.
-    AccessibilityObject* coreObject = core(text);
+    AXCoreObject* coreObject = core(text);
     if (!coreObject->isAccessibilityRenderObject())
         return 0;
 
@@ -1207,7 +1207,6 @@ static gboolean webkitAccessibleTextSetCaretOffset(AtkText* text, gint offset)
     return webkitAccessibleTextSetSelection(text, 0, offset, offset);
 }
 
-#if ATK_CHECK_VERSION(2, 10, 0)
 static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, AtkTextGranularity granularity, gint* startOffset, gint* endOffset)
 {
     // This new API has been designed to simplify the AtkText interface and it has been
@@ -1215,9 +1214,12 @@ static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, 
     // ATK_TEXT_BOUNDARY_*_START boundaries, so for now we just need to translate the
     // granularity to the right old boundary and reuse the code for the old API.
     // However, this should be simplified later on (and a lot of code removed) once
-    // WebKitGTK+ depends on ATK >= 2.9.4 *and* can safely assume that a version of
+    // WebKitGTK depends on ATK >= 2.9.4 *and* can safely assume that a version of
     // AT-SPI2 new enough not to include the old APIs is being used. But until then,
     // we will have to live with both the old and new APIs implemented here.
+    // FIXME: WebKit nowadays depends on much newer ATK and we can safely assume AT-SPI2
+    // isn't ancient. But whoever wrote this code didn't use ATK_CHECK_VERSION() guards,
+    // so it's unclear what is supposed to be changed here.
     AtkTextBoundary boundaryType = ATK_TEXT_BOUNDARY_CHAR;
     switch (granularity) {
     case ATK_TEXT_GRANULARITY_CHAR:
@@ -1247,7 +1249,6 @@ static gchar* webkitAccessibleTextGetStringAtOffset(AtkText* text, gint offset, 
 
     return webkitAccessibleTextGetTextForOffset(text, offset, boundaryType, GetTextPositionAt, startOffset, endOffset);
 }
-#endif
 
 void webkitAccessibleTextInterfaceInit(AtkTextIface* iface)
 {
@@ -1269,10 +1270,7 @@ void webkitAccessibleTextInterfaceInit(AtkTextIface* iface)
     iface->remove_selection = webkitAccessibleTextRemoveSelection;
     iface->set_selection = webkitAccessibleTextSetSelection;
     iface->set_caret_offset = webkitAccessibleTextSetCaretOffset;
-
-#if ATK_CHECK_VERSION(2, 10, 0)
     iface->get_string_at_offset = webkitAccessibleTextGetStringAtOffset;
-#endif
 }
 
 #endif

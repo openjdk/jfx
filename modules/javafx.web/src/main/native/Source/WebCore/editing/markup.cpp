@@ -38,6 +38,7 @@
 #include "ChildListMutationScope.h"
 #include "Comment.h"
 #include "ComposedTreeIterator.h"
+#include "CustomHeaderFields.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
 #include "DocumentType.h"
@@ -66,6 +67,7 @@
 #include "NodeList.h"
 #include "Page.h"
 #include "PageConfiguration.h"
+#include "PasteboardItemInfo.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RuntimeEnabledFeatures.h"
@@ -129,7 +131,7 @@ static void completeURLs(DocumentFragment* fragment, const String& baseURL)
         change.apply();
 }
 
-void replaceSubresourceURLs(Ref<DocumentFragment>&& fragment, HashMap<AtomicString, AtomicString>&& replacementMap)
+void replaceSubresourceURLs(Ref<DocumentFragment>&& fragment, HashMap<AtomString, AtomString>&& replacementMap)
 {
     Vector<AttributeChange> changes;
     for (auto& element : descendantsOfType<Element>(fragment)) {
@@ -174,16 +176,17 @@ void removeSubresourceURLAttributes(Ref<DocumentFragment>&& fragment, WTF::Funct
 
 std::unique_ptr<Page> createPageForSanitizingWebContent()
 {
-    auto pageConfiguration = pageConfigurationWithEmptyClients();
+    auto pageConfiguration = pageConfigurationWithEmptyClients(PAL::SessionID::defaultSessionID());
 
-    auto page = std::make_unique<Page>(WTFMove(pageConfiguration));
+    auto page = makeUnique<Page>(WTFMove(pageConfiguration));
     page->settings().setMediaEnabled(false);
     page->settings().setScriptEnabled(false);
+    page->settings().setParserScriptingFlagPolicy(SettingsBase::ParserScriptingFlagPolicy::Enabled);
     page->settings().setPluginsEnabled(false);
     page->settings().setAcceleratedCompositingEnabled(false);
 
     Frame& frame = page->mainFrame();
-    frame.setView(FrameView::create(frame));
+    frame.setView(FrameView::create(frame, IntSize { 800, 600 }));
     frame.init();
 
     FrameLoader& loader = frame.loader();
@@ -219,7 +222,7 @@ public:
     enum RangeFullySelectsNode { DoesFullySelectNode, DoesNotFullySelectNode };
 
     StyledMarkupAccumulator(const Position& start, const Position& end, Vector<Node*>* nodes, ResolveURLs, SerializeComposedTree,
-        AnnotateForInterchange, MSOListMode, bool needsPositionStyleConversion, Node* highestNodeToBeSerialized = nullptr);
+        AnnotateForInterchange, StandardFontFamilySerializationMode, MSOListMode, bool needsPositionStyleConversion, Node* highestNodeToBeSerialized = nullptr);
 
     Node* serializeNodes(const Position& start, const Position& end);
     void wrapWithNode(Node&, bool convertBlocksToInlines = false, RangeFullySelectsNode = DoesFullySelectNode);
@@ -315,14 +318,15 @@ private:
     RefPtr<EditingStyle> m_wrappingStyle;
     bool m_useComposedTree;
     bool m_needsPositionStyleConversion;
+    StandardFontFamilySerializationMode m_standardFontFamilySerializationMode;
+    bool m_shouldPreserveMSOList;
     bool m_needRelativeStyleWrapper { false };
     bool m_needClearingDiv { false };
-    bool m_shouldPreserveMSOList;
     bool m_inMSOList { false };
 };
 
 inline StyledMarkupAccumulator::StyledMarkupAccumulator(const Position& start, const Position& end, Vector<Node*>* nodes, ResolveURLs urlsToResolve, SerializeComposedTree serializeComposedTree,
-    AnnotateForInterchange annotate, MSOListMode msoListMode, bool needsPositionStyleConversion, Node* highestNodeToBeSerialized)
+    AnnotateForInterchange annotate, StandardFontFamilySerializationMode standardFontFamilySerializationMode, MSOListMode msoListMode, bool needsPositionStyleConversion, Node* highestNodeToBeSerialized)
     : MarkupAccumulator(nodes, urlsToResolve)
     , m_start(start)
     , m_end(end)
@@ -330,6 +334,7 @@ inline StyledMarkupAccumulator::StyledMarkupAccumulator(const Position& start, c
     , m_highestNodeToBeSerialized(highestNodeToBeSerialized)
     , m_useComposedTree(serializeComposedTree == SerializeComposedTree::Yes)
     , m_needsPositionStyleConversion(needsPositionStyleConversion)
+    , m_standardFontFamilySerializationMode(standardFontFamilySerializationMode)
     , m_shouldPreserveMSOList(msoListMode == MSOListMode::Preserve)
 {
 }
@@ -528,7 +533,7 @@ void StyledMarkupAccumulator::appendStartTag(StringBuilder& out, const Element& 
 
         if (shouldAnnotateOrForceInline) {
             if (shouldAnnotate())
-                newInlineStyle->mergeStyleFromRulesForSerialization(downcast<HTMLElement>(*const_cast<Element*>(&element)));
+                newInlineStyle->mergeStyleFromRulesForSerialization(downcast<HTMLElement>(*const_cast<Element*>(&element)), m_standardFontFamilySerializationMode);
 
             if (addDisplayInline)
                 newInlineStyle->forceInline();
@@ -576,7 +581,7 @@ Node* StyledMarkupAccumulator::serializeNodes(const Position& start, const Posit
     }
 
     if (m_highestNodeToBeSerialized && m_highestNodeToBeSerialized->parentNode())
-        m_wrappingStyle = EditingStyle::wrappingStyleForSerialization(*m_highestNodeToBeSerialized->parentNode(), shouldAnnotate());
+        m_wrappingStyle = EditingStyle::wrappingStyleForSerialization(*m_highestNodeToBeSerialized->parentNode(), shouldAnnotate(), m_standardFontFamilySerializationMode);
 
     return traverseNodesForSerialization(startNode.get(), pastEnd, NodeTraversalMode::EmitString);
 }
@@ -766,7 +771,7 @@ static RefPtr<EditingStyle> styleFromMatchedRulesAndInlineDecl(Node& node)
     auto& element = downcast<HTMLElement>(node);
     auto style = EditingStyle::create(element.inlineStyle());
     style->mergeStyleFromRules(element);
-    return WTFMove(style);
+    return style;
 }
 
 static bool isElementPresentational(const Node* node)
@@ -819,7 +824,7 @@ static Node* highestAncestorToWrapMarkup(const Position& start, const Position& 
 }
 
 static String serializePreservingVisualAppearanceInternal(const Position& start, const Position& end, Vector<Node*>* nodes, ResolveURLs urlsToResolve, SerializeComposedTree serializeComposedTree,
-    AnnotateForInterchange annotate, ConvertBlocksToInlines convertBlocksToInlines, MSOListMode msoListMode)
+    AnnotateForInterchange annotate, ConvertBlocksToInlines convertBlocksToInlines, StandardFontFamilySerializationMode standardFontFamilySerializationMode, MSOListMode msoListMode)
 {
     static NeverDestroyed<const String> interchangeNewlineString(MAKE_STATIC_STRING_IMPL("<br class=\"" AppleInterchangeNewline "\">"));
 
@@ -845,7 +850,7 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
 
     Node* specialCommonAncestor = highestAncestorToWrapMarkup(start, end, *commonAncestor, annotate);
 
-    StyledMarkupAccumulator accumulator(start, end, nodes, urlsToResolve, serializeComposedTree, annotate, msoListMode, needsPositionStyleConversion, specialCommonAncestor);
+    StyledMarkupAccumulator accumulator(start, end, nodes, urlsToResolve, serializeComposedTree, annotate, standardFontFamilySerializationMode, msoListMode, needsPositionStyleConversion, specialCommonAncestor);
 
     Position startAdjustedForInterchangeNewline = start;
     if (annotate == AnnotateForInterchange::Yes && needInterchangeNewlineAfter(visibleStart)) {
@@ -914,13 +919,13 @@ static String serializePreservingVisualAppearanceInternal(const Position& start,
 String serializePreservingVisualAppearance(const Range& range, Vector<Node*>* nodes, AnnotateForInterchange annotate, ConvertBlocksToInlines convertBlocksToInlines, ResolveURLs urlsToReslve)
 {
     return serializePreservingVisualAppearanceInternal(range.startPosition(), range.endPosition(), nodes, urlsToReslve, SerializeComposedTree::No,
-        annotate, convertBlocksToInlines, MSOListMode::DoNotPreserve);
+        annotate, convertBlocksToInlines, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve);
 }
 
 String serializePreservingVisualAppearance(const VisibleSelection& selection, ResolveURLs resolveURLs, SerializeComposedTree serializeComposedTree, Vector<Node*>* nodes)
 {
     return serializePreservingVisualAppearanceInternal(selection.start(), selection.end(), nodes, resolveURLs, serializeComposedTree,
-        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, MSOListMode::DoNotPreserve);
+        AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, StandardFontFamilySerializationMode::Keep, MSOListMode::DoNotPreserve);
 }
 
 
@@ -947,7 +952,7 @@ String sanitizedMarkupForFragmentInDocument(Ref<DocumentFragment>&& fragment, Do
 
     // SerializeComposedTree::No because there can't be a shadow tree in the pasted fragment.
     auto result = serializePreservingVisualAppearanceInternal(firstPositionInNode(bodyElement.get()), lastPositionInNode(bodyElement.get()), nullptr,
-        ResolveURLs::YesExcludingLocalFileURLsForPrivacy, SerializeComposedTree::No, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No,  msoListMode);
+        ResolveURLs::YesExcludingLocalFileURLsForPrivacy, SerializeComposedTree::No, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No,  StandardFontFamilySerializationMode::Strip, msoListMode);
 
     if (msoListMode == MSOListMode::Preserve) {
         StringBuilder builder;
@@ -1202,13 +1207,13 @@ ExceptionOr<Ref<DocumentFragment>> createFragmentForInnerOuterHTML(Element& cont
 
     if (document->isHTMLDocument()) {
         fragment->parseHTML(markup, &contextElement, parserContentPolicy);
-        return WTFMove(fragment);
+        return fragment;
     }
 
     bool wasValid = fragment->parseXML(markup, &contextElement, parserContentPolicy);
     if (!wasValid)
         return Exception { SyntaxError };
-    return WTFMove(fragment);
+    return fragment;
 }
 
 RefPtr<DocumentFragment> createFragmentForTransformToFragment(Document& outputDoc, const String& sourceString, const String& sourceMIMEType)
@@ -1235,11 +1240,14 @@ RefPtr<DocumentFragment> createFragmentForTransformToFragment(Document& outputDo
     return fragment;
 }
 
-Ref<DocumentFragment> createFragmentForImageAndURL(Document& document, const String& url)
+Ref<DocumentFragment> createFragmentForImageAndURL(Document& document, const String& url, PresentationSize preferredSize)
 {
     auto imageElement = HTMLImageElement::create(document);
     imageElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, url);
-
+    if (preferredSize.width)
+        imageElement->setAttributeWithoutSynchronization(HTMLNames::widthAttr, AtomString::number(*preferredSize.width));
+    if (preferredSize.height)
+        imageElement->setAttributeWithoutSynchronization(HTMLNames::heightAttr, AtomString::number(*preferredSize.height));
     auto fragment = document.createDocumentFragment();
     fragment->appendChild(imageElement);
 
@@ -1287,7 +1295,7 @@ ExceptionOr<Ref<DocumentFragment>> createContextualFragment(Element& element, co
     for (auto& element : toRemove)
         removeElementFromFragmentPreservingChildren(fragment, element);
 
-    return WTFMove(fragment);
+    return fragment;
 }
 
 static inline bool hasOneChild(ContainerNode& node)

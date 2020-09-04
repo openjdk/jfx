@@ -66,13 +66,15 @@ public:
     const String& altText() const { return m_altText; }
     void setAltText(const String& altText) { m_altText = altText; }
 
-    inline void setImageDevicePixelRatio(float factor) { m_imageDevicePixelRatio = factor; }
+    void setImageDevicePixelRatio(float factor);
     float imageDevicePixelRatio() const { return m_imageDevicePixelRatio; }
 
     void setHasShadowControls(bool hasShadowControls) { m_hasShadowControls = hasShadowControls; }
 
     bool isShowingMissingOrImageError() const;
     bool isShowingAltText() const;
+
+    virtual bool shouldDisplayBrokenImageIcon() const;
 
     bool hasNonBitmapImage() const;
 
@@ -99,6 +101,8 @@ protected:
     {
         imageChanged(imageResource().imagePtr());
     }
+
+    void incrementVisuallyNonEmptyPixelCountIfNeeded(const IntSize&);
 
 private:
     const char* renderName() const override { return "RenderImage"; }

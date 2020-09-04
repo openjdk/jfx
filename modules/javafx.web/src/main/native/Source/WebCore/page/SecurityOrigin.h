@@ -54,6 +54,12 @@ public:
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, Optional<uint16_t> port);
 
+    // QuickLook documents are in non-local origins even when loaded from file: URLs. They need to
+    // be allowed to display their own file: URLs in order to perform reloads and same-document
+    // navigations. This lets those documents specify the file path that should be allowed to be
+    // displayed from their non-local origin.
+    static Ref<SecurityOrigin> createNonLocalWithAllowedFilePath(const URL&, const String& filePath);
+
     // Some URL schemes use nested URLs for their security context. For example,
     // filesystem URLs look like the following:
     //
@@ -81,6 +87,8 @@ public:
     const String& host() const { return m_data.host; }
     const String& domain() const { return m_domain; }
     Optional<uint16_t> port() const { return m_data.port; }
+
+    static bool shouldIgnoreHost(const URL&);
 
     // Returns true if a given URL is secure, based either directly on its
     // own protocol, or, when relevant, on the protocol of its "inner URL"
@@ -198,10 +206,14 @@ public:
     // https://html.spec.whatwg.org/multipage/browsers.html#same-origin
     WEBCORE_EXPORT bool isSameOriginAs(const SecurityOrigin&) const;
 
+    // This method implements the "is a registrable domain suffix of or is equal to" algorithm from the HTML Standard:
+    // https://html.spec.whatwg.org/multipage/origin.html#is-a-registrable-domain-suffix-of-or-is-equal-to
+    WEBCORE_EXPORT bool isMatchingRegistrableDomainSuffix(const String&, bool treatIPAddressAsDomain = false) const;
+
     bool isPotentiallyTrustworthy() const { return m_isPotentiallyTrustworthy; }
     void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
-    static bool isLocalHostOrLoopbackIPAddress(StringView);
+    WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
 
     const SecurityOriginData& data() const { return m_data; }
 
@@ -240,8 +252,8 @@ private:
 bool shouldTreatAsPotentiallyTrustworthy(const URL&);
 
 // Returns true if the Origin header values serialized from these two origins would be the same.
-bool originsMatch(const SecurityOrigin&, const SecurityOrigin&);
-bool originsMatch(const SecurityOrigin*, const SecurityOrigin*);
+bool serializedOriginsMatch(const SecurityOrigin&, const SecurityOrigin&);
+bool serializedOriginsMatch(const SecurityOrigin*, const SecurityOrigin*);
 
 template<class Encoder> inline void SecurityOrigin::encode(Encoder& encoder) const
 {
@@ -291,7 +303,7 @@ template<class Decoder> inline RefPtr<SecurityOrigin> SecurityOrigin::decode(Dec
     if (!decoder.decode(origin->m_isLocal))
         return nullptr;
 
-    return WTFMove(origin);
+    return origin;
 }
 
 } // namespace WebCore

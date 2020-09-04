@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,18 +47,17 @@ JSArray* createEmptyRegExpMatchesArray(JSGlobalObject* globalObject, JSString* i
         // https://bugs.webkit.org/show_bug.cgi?id=169786
         RELEASE_ASSERT(array);
 
-        array->initializeIndexWithoutBarrier(scope, 0, jsEmptyString(&vm));
+        array->initializeIndexWithoutBarrier(scope, 0, jsEmptyString(vm));
 
         if (unsigned numSubpatterns = regExp->numSubpatterns()) {
             for (unsigned i = 1; i <= numSubpatterns; ++i)
                 array->initializeIndexWithoutBarrier(scope, i, jsUndefined());
         }
     } else {
-        ObjectInitializationScope scope(vm);
         array = tryCreateUninitializedRegExpMatchesArray(scope, &deferralContext, globalObject->regExpMatchesArrayStructure(), regExp->numSubpatterns() + 1);
         RELEASE_ASSERT(array);
 
-        array->initializeIndexWithoutBarrier(scope, 0, jsEmptyString(&vm), ArrayWithContiguous);
+        array->initializeIndexWithoutBarrier(scope, 0, jsEmptyString(vm), ArrayWithContiguous);
 
         if (unsigned numSubpatterns = regExp->numSubpatterns()) {
             for (unsigned i = 1; i <= numSubpatterns; ++i)
@@ -68,12 +67,11 @@ JSArray* createEmptyRegExpMatchesArray(JSGlobalObject* globalObject, JSString* i
 
     array->putDirectWithoutBarrier(RegExpMatchesArrayIndexPropertyOffset, jsNumber(-1));
     array->putDirectWithoutBarrier(RegExpMatchesArrayInputPropertyOffset, input);
+    array->putDirectWithoutBarrier(RegExpMatchesArrayGroupsPropertyOffset, jsUndefined());
     return array;
 }
 
-enum class ShouldCreateGroups { No, Yes };
-
-static Structure* createStructureImpl(VM& vm, JSGlobalObject* globalObject, IndexingType indexingType, ShouldCreateGroups shouldCreateGroups = ShouldCreateGroups::No)
+static Structure* createStructureImpl(VM& vm, JSGlobalObject* globalObject, IndexingType indexingType)
 {
     Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType);
     PropertyOffset offset;
@@ -81,14 +79,8 @@ static Structure* createStructureImpl(VM& vm, JSGlobalObject* globalObject, Inde
     ASSERT(offset == RegExpMatchesArrayIndexPropertyOffset);
     structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->input, 0, offset);
     ASSERT(offset == RegExpMatchesArrayInputPropertyOffset);
-    switch (shouldCreateGroups) {
-    case ShouldCreateGroups::Yes:
-        structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->groups, 0, offset);
-        ASSERT(offset == RegExpMatchesArrayGroupsPropertyOffset);
-        break;
-    case ShouldCreateGroups::No:
-        break;
-    }
+    structure = Structure::addPropertyTransition(vm, structure, vm.propertyNames->groups, 0, offset);
+    ASSERT(offset == RegExpMatchesArrayGroupsPropertyOffset);
     return structure;
 }
 
@@ -100,16 +92,6 @@ Structure* createRegExpMatchesArrayStructure(VM& vm, JSGlobalObject* globalObjec
 Structure* createRegExpMatchesArraySlowPutStructure(VM& vm, JSGlobalObject* globalObject)
 {
     return createStructureImpl(vm, globalObject, ArrayWithSlowPutArrayStorage);
-}
-
-Structure* createRegExpMatchesArrayWithGroupsStructure(VM& vm, JSGlobalObject* globalObject)
-{
-    return createStructureImpl(vm, globalObject, ArrayWithContiguous, ShouldCreateGroups::Yes);
-}
-
-Structure* createRegExpMatchesArrayWithGroupsSlowPutStructure(VM& vm, JSGlobalObject* globalObject)
-{
-    return createStructureImpl(vm, globalObject, ArrayWithSlowPutArrayStorage, ShouldCreateGroups::Yes);
 }
 
 } // namespace JSC

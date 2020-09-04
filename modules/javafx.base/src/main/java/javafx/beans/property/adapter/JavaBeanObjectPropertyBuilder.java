@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,18 +56,14 @@ import java.lang.reflect.Method;
  *
  * @see JavaBeanObjectProperty
  *
- * @param T the type of the wrapped {@code Object}
+ * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class JavaBeanObjectPropertyBuilder<T> {
 
     private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public JavaBeanObjectPropertyBuilder() {}
+    private JavaBeanObjectPropertyBuilder() {}
 
     /**
      * Creates a new instance of {@code JavaBeanObjectPropertyBuilder}.

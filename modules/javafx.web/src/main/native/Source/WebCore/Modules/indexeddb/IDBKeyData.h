@@ -69,7 +69,7 @@ public:
 
     WEBCORE_EXPORT RefPtr<IDBKey> maybeCreateIDBKey() const;
 
-    IDBKeyData isolatedCopy() const;
+    WEBCORE_EXPORT IDBKeyData isolatedCopy() const;
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
     WEBCORE_EXPORT static bool decode(KeyedDecoder&, IDBKeyData&);
@@ -187,6 +187,8 @@ public:
         return WTF::get<Vector<IDBKeyData>>(m_value);
     }
 
+    size_t size() const;
+
 private:
     static void isolatedCopy(const IDBKeyData& source, IDBKeyData& destination);
 
@@ -267,7 +269,7 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
         return WTF::nullopt;
 
     if (keyData.m_isNull)
-        return WTFMove(keyData);
+        return keyData;
 
     if (!decoder.decodeEnum(keyData.m_type))
         return WTF::nullopt;
@@ -300,7 +302,7 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
         break;
     }
 
-    return WTFMove(keyData);
+    return keyData;
 }
 
 using IDBKeyDataSet = StdSet<IDBKeyData>;

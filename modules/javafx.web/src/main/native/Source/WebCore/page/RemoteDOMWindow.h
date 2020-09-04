@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,15 @@
 
 #include "AbstractDOMWindow.h"
 #include "RemoteFrame.h"
+#include <JavaScriptCore/Strong.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/TypeCasts.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSObject;
 class JSValue;
-template<typename> class Strong;
 }
 
 namespace WebCore {
@@ -43,6 +45,7 @@ class Document;
 class Location;
 
 class RemoteDOMWindow final : public AbstractDOMWindow {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(RemoteDOMWindow, WEBCORE_EXPORT);
 public:
     static Ref<RemoteDOMWindow> create(Ref<RemoteFrame>&& frame, GlobalWindowIdentifier&& identifier)
     {
@@ -65,7 +68,7 @@ public:
     WindowProxy* top() const;
     WindowProxy* opener() const;
     WindowProxy* parent() const;
-    void postMessage(JSC::ExecState&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
+    void postMessage(JSC::JSGlobalObject&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
 
 private:
     WEBCORE_EXPORT RemoteDOMWindow(Ref<RemoteFrame>&&, GlobalWindowIdentifier&&);

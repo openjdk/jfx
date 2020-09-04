@@ -31,12 +31,15 @@
 #include "ColorUtilities.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
 
 static const float MaxClampedLength = 4096;
 static const float MaxClampedArea = MaxClampedLength * MaxClampedLength;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBuffer);
 
 std::unique_ptr<ImageBuffer> ImageBuffer::create(const FloatSize& size, RenderingMode renderingMode, float resolutionScale, ColorSpace colorSpace, const HostWindow* hostWindow)
 {
@@ -111,23 +114,17 @@ Vector<uint8_t> ImageBuffer::toBGRAData() const
 #endif
 
 #if !(USE(CG) || USE(DIRECT2D))
-
-FloatSize ImageBuffer::sizeForDestinationSize(FloatSize size) const
-{
-    return size;
-}
-
 void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstColorSpace)
 {
     if (srcColorSpace == dstColorSpace)
         return;
 
     // only sRGB <-> linearRGB are supported at the moment
-    if ((srcColorSpace != ColorSpaceLinearRGB && srcColorSpace != ColorSpaceSRGB)
-        || (dstColorSpace != ColorSpaceLinearRGB && dstColorSpace != ColorSpaceSRGB))
+    if ((srcColorSpace != ColorSpace::LinearRGB && srcColorSpace != ColorSpace::SRGB)
+        || (dstColorSpace != ColorSpace::LinearRGB && dstColorSpace != ColorSpace::SRGB))
         return;
 
-    if (dstColorSpace == ColorSpaceLinearRGB) {
+    if (dstColorSpace == ColorSpace::LinearRGB) {
         static const std::array<uint8_t, 256> linearRgbLUT = [] {
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
@@ -138,7 +135,7 @@ void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstCo
             return array;
         }();
         platformTransformColorSpace(linearRgbLUT);
-    } else if (dstColorSpace == ColorSpaceSRGB) {
+    } else if (dstColorSpace == ColorSpace::SRGB) {
         static const std::array<uint8_t, 256> deviceRgbLUT= [] {
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
@@ -188,7 +185,7 @@ PlatformLayer* ImageBuffer::platformLayer() const
     return 0;
 }
 
-bool ImageBuffer::copyToPlatformTexture(GraphicsContext3D&, GC3Denum, Platform3DObject, GC3Denum, bool, bool)
+bool ImageBuffer::copyToPlatformTexture(GraphicsContextGLOpenGL&, GCGLenum, PlatformGLObject, GCGLenum, bool, bool)
 {
     return false;
 }
@@ -239,11 +236,6 @@ IntSize ImageBuffer::compatibleBufferSize(const FloatSize& size, const GraphicsC
     // Enlarge the buffer size if the context's transform is scaling it so we need a higher
     // resolution than one pixel per unit.
     return expandedIntSize(size * context.scaleFactor());
-}
-
-bool ImageBuffer::isCompatibleWithContext(const GraphicsContext& context) const
-{
-    return areEssentiallyEqual(context.scaleFactor(), this->context().scaleFactor());
 }
 
 #if !USE(IOSURFACE_CANVAS_BACKING_STORE)

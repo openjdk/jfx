@@ -27,8 +27,10 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "FeaturePolicy.h"
 #include "Page.h"
 #include "UserMediaClient.h"
+#include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 
@@ -45,32 +47,14 @@ public:
     void requestUserMediaAccess(UserMediaRequest&);
     void cancelUserMediaAccessRequest(UserMediaRequest&);
 
-    void enumerateMediaDevices(MediaDevicesEnumerationRequest&);
-    void cancelMediaDevicesEnumerationRequest(MediaDevicesEnumerationRequest&);
+    void enumerateMediaDevices(Document&, CompletionHandler<void(const Vector<CaptureDevice>&, const String&)>&&);
 
     UserMediaClient::DeviceChangeObserverToken addDeviceChangeObserver(WTF::Function<void()>&&);
     void removeDeviceChangeObserver(UserMediaClient::DeviceChangeObserverToken);
 
-    enum class GetUserMediaAccess {
-        CanCall,
-        InsecureDocument,
-        InsecureParent,
-        BlockedByParent,
-        BlockedByFeaturePolicy,
-    };
-    enum class CaptureType {
-        Microphone = 1 << 0,
-        Camera = 1 << 1,
-        Display = 1 << 3
-    };
-    GetUserMediaAccess canCallGetUserMedia(Document&, OptionSet<CaptureType>);
-
-    enum class BlockedCaller {
-        GetUserMedia,
-        GetDisplayMedia,
-        EnumerateDevices,
-    };
-    void logGetUserMediaDenial(Document&, GetUserMediaAccess, BlockedCaller);
+    void logGetUserMediaDenial(Document&);
+    void logGetDisplayMediaDenial(Document&);
+    void logEnumerateDevicesDenial(Document&);
 
     WEBCORE_EXPORT static const char* supplementName();
     static UserMediaController* from(Page* page) { return static_cast<UserMediaController*>(Supplement<Page>::from(page, supplementName())); }
@@ -89,15 +73,11 @@ inline void UserMediaController::cancelUserMediaAccessRequest(UserMediaRequest& 
     m_client->cancelUserMediaAccessRequest(request);
 }
 
-inline void UserMediaController::enumerateMediaDevices(MediaDevicesEnumerationRequest& request)
+inline void UserMediaController::enumerateMediaDevices(Document& document, CompletionHandler<void(const Vector<CaptureDevice>&, const String&)>&& completionHandler)
 {
-    m_client->enumerateMediaDevices(request);
+    m_client->enumerateMediaDevices(document, WTFMove(completionHandler));
 }
 
-inline void UserMediaController::cancelMediaDevicesEnumerationRequest(MediaDevicesEnumerationRequest& request)
-{
-    m_client->cancelMediaDevicesEnumerationRequest(request);
-}
 
 inline UserMediaClient::DeviceChangeObserverToken UserMediaController::addDeviceChangeObserver(WTF::Function<void()>&& observer)
 {

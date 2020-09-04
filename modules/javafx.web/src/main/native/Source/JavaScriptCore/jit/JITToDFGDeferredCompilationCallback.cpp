@@ -45,10 +45,9 @@ void JITToDFGDeferredCompilationCallback::compilationDidBecomeReadyAsynchronousl
     CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock)
 {
     ASSERT_UNUSED(profiledDFGCodeBlock, !profiledDFGCodeBlock);
-    ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
+    ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
 
-    if (Options::verboseOSR())
-        dataLog("Optimizing compilation of ", *codeBlock, " did become ready.\n");
+    dataLogLnIf(Options::verboseOSR(), "Optimizing compilation of ", *codeBlock, " did become ready.");
 
     codeBlock->alternative()->forceOptimizationSlowPathConcurrently();
 }
@@ -57,10 +56,9 @@ void JITToDFGDeferredCompilationCallback::compilationDidComplete(
     CodeBlock* codeBlock, CodeBlock* profiledDFGCodeBlock, CompilationResult result)
 {
     ASSERT(!profiledDFGCodeBlock);
-    ASSERT(codeBlock->alternative()->jitType() == JITCode::BaselineJIT);
+    ASSERT(codeBlock->alternative()->jitType() == JITType::BaselineJIT);
 
-    if (Options::verboseOSR())
-        dataLog("Optimizing compilation of ", *codeBlock, " result: ", result, "\n");
+    dataLogLnIf(Options::verboseOSR(), "Optimizing compilation of ", *codeBlock, " result: ", result);
 
     if (result == CompilationSuccessful)
         codeBlock->ownerExecutable()->installCode(codeBlock);

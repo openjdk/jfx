@@ -27,7 +27,9 @@
 
 #include "CryptoRandom.h"
 #include "IsoDirectory.h"
+#include "IsoHeapImpl.h"
 #include "IsoPage.h"
+#include "StdLibExtras.h"
 #include "VMAllocate.h"
 
 namespace bmalloc {
@@ -44,26 +46,33 @@ IsoPage<Config>* IsoPage<Config>::tryCreate(IsoDirectoryBase<Config>& directory,
 
 template<typename Config>
 IsoPage<Config>::IsoPage(IsoDirectoryBase<Config>& directory, unsigned index)
-    : m_directory(directory)
+    : IsoPageBase(false)
     , m_index(index)
+    , m_directory(directory)
 {
     memset(m_allocBits, 0, sizeof(m_allocBits));
+}
+
+inline IsoPageBase* IsoPageBase::pageFor(void* ptr)
+{
+    return reinterpret_cast<IsoPageBase*>(reinterpret_cast<uintptr_t>(ptr) & ~(pageSize - 1));
 }
 
 template<typename Config>
 IsoPage<Config>* IsoPage<Config>::pageFor(void* ptr)
 {
-    return reinterpret_cast<IsoPage<Config>*>(reinterpret_cast<uintptr_t>(ptr) & ~(pageSize - 1));
+    return reinterpret_cast<IsoPage<Config>*>(IsoPageBase::pageFor(ptr));
 }
 
 template<typename Config>
-void IsoPage<Config>::free(void* passedPtr)
+void IsoPage<Config>::free(const LockHolder& locker, void* passedPtr)
 {
+    BASSERT(!m_isShared);
     unsigned offset = static_cast<char*>(passedPtr) - reinterpret_cast<char*>(this);
     unsigned index = offset / Config::objectSize;
 
     if (!m_eligibilityHasBeenNoted) {
-        m_eligibilityTrigger.didBecome(*this);
+        m_eligibilityTrigger.didBecome(locker, *this);
         m_eligibilityHasBeenNoted = true;
     }
 
@@ -73,12 +82,12 @@ void IsoPage<Config>::free(void* passedPtr)
     unsigned newWord = m_allocBits[wordIndex] &= ~(1 << bitIndex);
     if (!newWord) {
         if (!--m_numNonEmptyWords)
-            m_emptyTrigger.didBecome(*this);
+            m_emptyTrigger.didBecome(locker, *this);
     }
 }
 
 template<typename Config>
-FreeList IsoPage<Config>::startAllocating()
+FreeList IsoPage<Config>::startAllocating(const LockHolder&)
 {
     static constexpr bool verbose = false;
 
@@ -199,7 +208,7 @@ FreeList IsoPage<Config>::startAllocating()
 }
 
 template<typename Config>
-void IsoPage<Config>::stopAllocating(FreeList freeList)
+void IsoPage<Config>::stopAllocating(const LockHolder& locker, FreeList freeList)
 {
     static constexpr bool verbose = false;
 
@@ -208,19 +217,19 @@ void IsoPage<Config>::stopAllocating(FreeList freeList)
 
     freeList.forEach<Config>(
         [&] (void* ptr) {
-            free(ptr);
+            free(locker, ptr);
         });
 
     RELEASE_BASSERT(m_isInUseForAllocation);
     m_isInUseForAllocation = false;
 
-    m_eligibilityTrigger.handleDeferral(*this);
-    m_emptyTrigger.handleDeferral(*this);
+    m_eligibilityTrigger.handleDeferral(locker, *this);
+    m_emptyTrigger.handleDeferral(locker, *this);
 }
 
 template<typename Config>
 template<typename Func>
-void IsoPage<Config>::forEachLiveObject(const Func& func)
+void IsoPage<Config>::forEachLiveObject(const LockHolder&, const Func& func)
 {
     for (unsigned wordIndex = 0; wordIndex < bitsArrayLength(numObjects); ++wordIndex) {
         unsigned word = m_allocBits[wordIndex];

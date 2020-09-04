@@ -32,11 +32,11 @@
 namespace WebCore {
 
 class ProgressTrackerClientJava final : public ProgressTrackerClient {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ProgressTrackerClientJava(const JLObject &webPage);
 
     // ProgressTrackerClient methods
-    void progressTrackerDestroyed() override;
     void progressStarted(Frame& originatingProgressFrame) override;
     void progressEstimateChanged(Frame& originatingProgressFrame) override;
     void progressFinished(Frame& originatingProgressFrame) override;

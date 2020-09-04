@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,9 @@
 
 #include <jni.h>
 
+#include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/GetPtr.h>
 #include <wtf/text/WTFString.h>
 #include "ExceptionOr.h"
 
@@ -58,6 +60,8 @@ void raiseNotSupportedErrorException(JNIEnv*);
 void raiseDOMErrorException(JNIEnv*, Exception&&);
 
 template<typename T> T raiseOnDOMError(JNIEnv*, ExceptionOr<T>&&);
+template<typename T> T* raiseOnDOMError(JNIEnv*, ExceptionOr<Ref<T>>&&);
+String raiseOnDOMError(JNIEnv*, ExceptionOr<String>&&);
 void raiseOnDOMError(JNIEnv*, ExceptionOr<void>&&);
 
 inline void raiseOnDOMError(JNIEnv* env, ExceptionOr<void>&& possibleException)
@@ -66,10 +70,30 @@ inline void raiseOnDOMError(JNIEnv* env, ExceptionOr<void>&& possibleException)
         raiseDOMErrorException(env, possibleException.releaseException());
 }
 
+inline String raiseOnDOMError(JNIEnv* env, ExceptionOr<String>&& exceptionOrReturnValue)
+{
+    if (exceptionOrReturnValue.hasException()) {
+        raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
+        return emptyString();
+    }
+    return exceptionOrReturnValue.releaseReturnValue();
+}
+
+template<typename T> inline T* raiseOnDOMError(JNIEnv* env, ExceptionOr<Ref<T>>&& exceptionOrReturnValue)
+{
+    if (exceptionOrReturnValue.hasException()) {
+        raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
+        return nullptr;
+    }
+    return WTF::getPtr(exceptionOrReturnValue.releaseReturnValue());
+}
+
 template<typename T> inline T raiseOnDOMError(JNIEnv* env, ExceptionOr<T>&& exceptionOrReturnValue)
 {
-    if (exceptionOrReturnValue.hasException())
+    if (exceptionOrReturnValue.hasException()) {
         raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
+        return static_cast<T>(NULL);
+    }
     return exceptionOrReturnValue.releaseReturnValue();
 }
 

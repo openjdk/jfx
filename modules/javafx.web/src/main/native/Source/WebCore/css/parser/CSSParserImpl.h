@@ -83,7 +83,7 @@ public:
     };
 
     static CSSParser::ParseResult parseValue(MutableStyleProperties*, CSSPropertyID, const String&, bool important, const CSSParserContext&);
-    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties*, const AtomicString& propertyName, const String&, bool important, const CSSParserContext&);
+    static CSSParser::ParseResult parseCustomPropertyValue(MutableStyleProperties*, const AtomString& propertyName, const String&, bool important, const CSSParserContext&);
     static Ref<ImmutableStyleProperties> parseInlineStyleDeclaration(const String&, const Element*);
     static bool parseDeclarationList(MutableStyleProperties*, const String&, const CSSParserContext&);
     static RefPtr<StyleRuleBase> parseRule(const String&, const CSSParserContext&, StyleSheetContents*, AllowedRulesType);
@@ -138,10 +138,10 @@ private:
     RefPtr<StyleRuleKeyframe> consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
     RefPtr<StyleRule> consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block);
 
-    void consumeDeclarationList(CSSParserTokenRange, StyleRule::Type);
-    void consumeDeclaration(CSSParserTokenRange, StyleRule::Type);
-    void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRule::Type);
-    void consumeCustomPropertyValue(CSSParserTokenRange, const AtomicString& propertyName, bool important);
+    void consumeDeclarationList(CSSParserTokenRange, StyleRuleType);
+    void consumeDeclaration(CSSParserTokenRange, StyleRuleType);
+    void consumeDeclarationValue(CSSParserTokenRange, CSSPropertyID, bool important, StyleRuleType);
+    void consumeCustomPropertyValue(CSSParserTokenRange, const AtomString& propertyName, bool important);
 
     static std::unique_ptr<Vector<double>> consumeKeyframeKeyList(CSSParserTokenRange);
 

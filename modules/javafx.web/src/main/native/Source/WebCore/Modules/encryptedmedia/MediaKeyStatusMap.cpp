@@ -34,6 +34,7 @@
 #include "JSMediaKeyStatusMap.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -74,7 +75,7 @@ bool MediaKeyStatusMap::has(const BufferSource& keyId)
         [&keyId] (auto& it) { return keyIdsMatch(it.first, keyId); });
 }
 
-JSC::JSValue MediaKeyStatusMap::get(JSC::ExecState& state, const BufferSource& keyId)
+JSC::JSValue MediaKeyStatusMap::get(JSC::JSGlobalObject& state, const BufferSource& keyId)
 {
     if (!m_session)
         return JSC::jsUndefined();

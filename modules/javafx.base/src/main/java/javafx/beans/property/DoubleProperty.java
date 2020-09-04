@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,14 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.Logging;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableDoubleValue;
-import com.sun.javafx.binding.Logging;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableDoubleValue;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * This class defines a {@link Property} wrapping a {@code double} value.
@@ -66,6 +59,12 @@ import java.security.PrivilegedAction;
  */
 public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         Property<Number>, WritableDoubleValue {
+
+    /**
+     * Creates a default {@code DoubleProperty}.
+     */
+    public DoubleProperty() {
+    }
 
     /**
      * {@inheritDoc}
@@ -152,11 +151,8 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      * @since JavaFX 8.0
      */
     public static DoubleProperty doubleProperty(final Property<Double> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+        Objects.requireNonNull(property, "Property cannot be null");
         return new DoublePropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -169,18 +165,6 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -206,8 +190,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public ObjectProperty<Double> asObject() {
-        return new ObjectPropertyBase<Double> () {
-            private final AccessControlContext acc = AccessController.getContext();
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, DoubleProperty.this);
             }
@@ -221,21 +204,6 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             public String getName() {
                 return DoubleProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(this, DoubleProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
-
-
 }

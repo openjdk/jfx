@@ -78,7 +78,12 @@ CSSAnimationControllerPrivate::CSSAnimationControllerPrivate(Frame& frame)
 {
 }
 
-CSSAnimationControllerPrivate::~CSSAnimationControllerPrivate() = default;
+CSSAnimationControllerPrivate::~CSSAnimationControllerPrivate()
+{
+    // We need to explicitly clear the composite animations here because the
+    // destructor of CompositeAnimation will call members of this class back.
+    m_compositeAnimations.clear();
+}
 
 CompositeAnimation& CSSAnimationControllerPrivate::ensureCompositeAnimation(Element& element)
 {
@@ -145,7 +150,7 @@ Optional<Seconds> CSSAnimationControllerPrivate::updateAnimations(SetChanged cal
                     break;
 
                 Element& element = *compositeAnimation.key;
-                ASSERT(element.document().pageCacheState() == Document::NotInPageCache);
+                ASSERT(element.document().backForwardCacheState() == Document::NotInBackForwardCache);
                 element.invalidateStyle();
                 calledSetChanged = true;
             }
@@ -220,9 +225,9 @@ void CSSAnimationControllerPrivate::fireEventsAndUpdateStyle()
     for (auto& event : eventsToDispatch) {
         Element& element = event.element;
         if (event.eventType == eventNames().transitionendEvent)
-            element.dispatchEvent(TransitionEvent::create(event.eventType, event.name, event.elapsedTime, PseudoElement::pseudoElementNameForEvents(element.pseudoId())));
+            element.dispatchEvent(TransitionEvent::create(event.eventType, event.name, event.elapsedTime, PseudoElement::pseudoElementNameForEvents(element.pseudoId()), WTF::nullopt, nullptr));
         else
-            element.dispatchEvent(AnimationEvent::create(event.eventType, event.name, event.elapsedTime));
+            element.dispatchEvent(AnimationEvent::create(event.eventType, event.name, event.elapsedTime, PseudoElement::pseudoElementNameForEvents(element.pseudoId()), WTF::nullopt, nullptr));
     }
 
     for (auto& change : m_elementChangesToDispatch)
@@ -240,7 +245,7 @@ void CSSAnimationControllerPrivate::startUpdateStyleIfNeededDispatcher()
         m_updateStyleIfNeededDispatcher.startOneShot(0_s);
 }
 
-void CSSAnimationControllerPrivate::addEventToDispatch(Element& element, const AtomicString& eventType, const String& name, double elapsedTime)
+void CSSAnimationControllerPrivate::addEventToDispatch(Element& element, const AtomString& eventType, const String& name, double elapsedTime)
 {
     m_eventsToDispatch.append({ element, eventType, name, elapsedTime });
     startUpdateStyleIfNeededDispatcher();
@@ -249,7 +254,7 @@ void CSSAnimationControllerPrivate::addEventToDispatch(Element& element, const A
 void CSSAnimationControllerPrivate::addElementChangeToDispatch(Element& element)
 {
     m_elementChangesToDispatch.append(element);
-    ASSERT(m_elementChangesToDispatch.last()->document().pageCacheState() == Document::NotInPageCache);
+    ASSERT(m_elementChangesToDispatch.last()->document().backForwardCacheState() == Document::NotInBackForwardCache);
     startUpdateStyleIfNeededDispatcher();
 }
 
@@ -409,7 +414,7 @@ void CSSAnimationControllerPrivate::setAllowsNewAnimationsWhileSuspended(bool al
     m_allowsNewAnimationsWhileSuspended = allowed;
 }
 
-bool CSSAnimationControllerPrivate::pauseAnimationAtTime(Element& element, const AtomicString& name, double t)
+bool CSSAnimationControllerPrivate::pauseAnimationAtTime(Element& element, const AtomString& name, double t)
 {
     CompositeAnimation& compositeAnimation = ensureCompositeAnimation(element);
     if (compositeAnimation.pauseAnimationAtTime(name, t)) {
@@ -591,7 +596,7 @@ void CSSAnimationControllerPrivate::animationWillBeRemoved(AnimationBase& animat
 }
 
 CSSAnimationController::CSSAnimationController(Frame& frame)
-    : m_data(std::make_unique<CSSAnimationControllerPrivate>(frame))
+    : m_data(makeUnique<CSSAnimationControllerPrivate>(frame))
 {
 }
 
@@ -604,7 +609,7 @@ void CSSAnimationController::cancelAnimations(Element& element)
 
     if (element.document().renderTreeBeingDestroyed())
         return;
-    ASSERT(element.document().pageCacheState() == Document::NotInPageCache);
+    ASSERT(element.document().backForwardCacheState() == Document::NotInBackForwardCache);
     element.invalidateStyle();
 }
 
@@ -614,7 +619,7 @@ AnimationUpdate CSSAnimationController::updateAnimations(Element& element, const
     if (!hasOrHadAnimations)
         return { };
 
-    if (element.document().pageCacheState() != Document::NotInPageCache)
+    if (element.document().backForwardCacheState() != Document::NotInBackForwardCache)
         return { };
 
     // Don't run transitions when printing.
@@ -673,7 +678,7 @@ void CSSAnimationController::notifyAnimationStarted(RenderElement& renderer, Mon
     m_data->receivedStartTimeResponse(startTime);
 }
 
-bool CSSAnimationController::pauseAnimationAtTime(Element& element, const AtomicString& name, double t)
+bool CSSAnimationController::pauseAnimationAtTime(Element& element, const AtomString& name, double t)
 {
     AnimationUpdateBlock animationUpdateBlock(this);
     return m_data->pauseAnimationAtTime(element, name, t);

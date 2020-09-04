@@ -46,7 +46,7 @@ public:
 
     WEBCORE_EXPORT bool contains(const String& key) const;
 
-    WEBCORE_EXPORT void importItems(const HashMap<String, String>&);
+    WEBCORE_EXPORT void importItems(HashMap<String, String>&&);
     const HashMap<String, String>& items() const { return m_map; }
 
     unsigned quota() const { return m_quotaSize; }
@@ -62,10 +62,10 @@ private:
 
     HashMap<String, String> m_map;
     HashMap<String, String>::iterator m_iterator;
-    unsigned m_iteratorIndex;
+    unsigned m_iteratorIndex { std::numeric_limits<unsigned>::max() };
 
     unsigned m_quotaSize; // Measured in bytes.
-    unsigned m_currentLength; // Measured in UChars.
+    unsigned m_currentLength { 0 }; // Measured in UChars.
 };
 
 } // namespace WebCore

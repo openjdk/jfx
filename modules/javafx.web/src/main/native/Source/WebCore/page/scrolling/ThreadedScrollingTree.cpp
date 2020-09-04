@@ -31,6 +31,7 @@
 #include "AsyncScrollingCoordinator.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollingThread.h"
+#include "ScrollingTreeFrameScrollingNode.h"
 #include "ScrollingTreeNode.h"
 #include "ScrollingTreeScrollingNode.h"
 #include <wtf/RunLoop.h>
@@ -88,18 +89,41 @@ void ThreadedScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree> 
 {
     ASSERT(ScrollingThread::isCurrentThread());
     ScrollingTree::commitTreeState(WTFMove(scrollingStateTree));
+
+    decrementPendingCommitCount();
 }
 
-void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingNodeID nodeID, const FloatPoint& scrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction)
+void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode& node, ScrollingLayerPositionAction scrollingLayerPositionAction)
 {
     if (!m_scrollingCoordinator)
         return;
 
-    if (nodeID == rootNode()->scrollingNodeID())
+    auto scrollPosition = node.currentScrollPosition();
+
+    if (node.isRootNode())
         setMainFrameScrollPosition(scrollPosition);
 
-    RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, nodeID, scrollPosition, layoutViewportOrigin, localIsHandlingProgrammaticScroll = isHandlingProgrammaticScroll(), scrollingLayerPositionAction] {
-        scrollingCoordinator->scheduleUpdateScrollPositionAfterAsyncScroll(nodeID, scrollPosition, layoutViewportOrigin, localIsHandlingProgrammaticScroll, scrollingLayerPositionAction);
+    if (isHandlingProgrammaticScroll())
+        return;
+
+    Optional<FloatPoint> layoutViewportOrigin;
+    if (is<ScrollingTreeFrameScrollingNode>(node))
+        layoutViewportOrigin = downcast<ScrollingTreeFrameScrollingNode>(node).layoutViewport().location();
+
+    bool monitoringWheelEvents = false;
+#if PLATFORM(MAC)
+    monitoringWheelEvents = isMonitoringWheelEvents();
+    if (monitoringWheelEvents)
+        deferWheelEventTestCompletionForReason(reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(node.scrollingNodeID()), WheelEventTestMonitor::ScrollingThreadSyncNeeded);
+#endif
+    RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, nodeID = node.scrollingNodeID(), scrollPosition, layoutViewportOrigin, scrollingLayerPositionAction, monitoringWheelEvents] {
+        scrollingCoordinator->scheduleUpdateScrollPositionAfterAsyncScroll(nodeID, scrollPosition, layoutViewportOrigin, scrollingLayerPositionAction);
+#if PLATFORM(MAC)
+        if (monitoringWheelEvents)
+            scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(nodeID), WheelEventTestMonitor::ScrollingThreadSyncNeeded);
+#else
+        UNUSED_PARAM(monitoringWheelEvents);
+#endif
     });
 }
 
@@ -115,6 +139,35 @@ void ThreadedScrollingTree::reportExposedUnfilledArea(MonotonicTime timestamp, u
     RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, timestamp, unfilledArea] {
         scrollingCoordinator->reportExposedUnfilledArea(timestamp, unfilledArea);
     });
+}
+
+void ThreadedScrollingTree::incrementPendingCommitCount()
+{
+    LockHolder commitLocker(m_pendingCommitCountMutex);
+    ++m_pendingCommitCount;
+}
+
+void ThreadedScrollingTree::decrementPendingCommitCount()
+{
+    LockHolder commitLocker(m_pendingCommitCountMutex);
+    ASSERT(m_pendingCommitCount > 0);
+    if (!--m_pendingCommitCount)
+        m_commitCondition.notifyOne();
+}
+
+void ThreadedScrollingTree::waitForPendingCommits()
+{
+    ASSERT(isMainThread());
+
+    LockHolder commitLocker(m_pendingCommitCountMutex);
+    while (m_pendingCommitCount)
+        m_commitCondition.wait(m_pendingCommitCountMutex);
+}
+
+void ThreadedScrollingTree::applyLayerPositions()
+{
+    waitForPendingCommits();
+    ScrollingTree::applyLayerPositions();
 }
 
 #if PLATFORM(COCOA)
@@ -150,23 +203,23 @@ void ThreadedScrollingTree::setActiveScrollSnapIndices(ScrollingNodeID nodeID, u
     });
 }
 
-void ThreadedScrollingTree::deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason)
+void ThreadedScrollingTree::deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
 {
     if (!m_scrollingCoordinator)
         return;
 
     RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, identifier, reason] {
-        scrollingCoordinator->deferTestsForReason(identifier, reason);
+        scrollingCoordinator->deferWheelEventTestCompletionForReason(identifier, reason);
     });
 }
 
-void ThreadedScrollingTree::removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier identifier, WheelEventTestTrigger::DeferTestTriggerReason reason)
+void ThreadedScrollingTree::removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier identifier, WheelEventTestMonitor::DeferReason reason)
 {
     if (!m_scrollingCoordinator)
         return;
 
     RunLoop::main().dispatch([scrollingCoordinator = m_scrollingCoordinator, identifier, reason] {
-        scrollingCoordinator->removeTestDeferralForReason(identifier, reason);
+        scrollingCoordinator->removeWheelEventTestCompletionDeferralForReason(identifier, reason);
     });
 }
 

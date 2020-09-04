@@ -43,7 +43,6 @@ class ArrayBufferView;
 class DataView;
 class JSValue;
 class JSObject;
-template<typename> class Strong;
 }
 
 namespace WebCore {
@@ -141,11 +140,11 @@ template<typename T> struct IDLTreatNullAsEmptyAdaptor : IDLString<String> {
     using InnerType = T;
 };
 
-template<typename T> struct IDLAtomicStringAdaptor : IDLString<AtomicString> {
+template<typename T> struct IDLAtomStringAdaptor : IDLString<AtomString> {
     using InnerType = T;
 };
 
-template<typename T> struct IDLRequiresExistingAtomicStringAdaptor : IDLString<AtomicString> {
+template<typename T> struct IDLRequiresExistingAtomStringAdaptor : IDLString<AtomString> {
     using InnerType = T;
 };
 

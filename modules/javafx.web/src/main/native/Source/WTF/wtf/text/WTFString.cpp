@@ -1,6 +1,6 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -32,6 +32,7 @@
 #include <wtf/dtoa.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/IntegerToStringConversion.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/UTF8Conversion.h>
@@ -356,13 +357,13 @@ String String::convertToUppercaseWithoutLocale() const
     return m_impl ? m_impl->convertToUppercaseWithoutLocale() : String { };
 }
 
-String String::convertToLowercaseWithLocale(const AtomicString& localeIdentifier) const
+String String::convertToLowercaseWithLocale(const AtomString& localeIdentifier) const
 {
     // FIXME: Should this function, and the many others like it, be inlined?
     return m_impl ? m_impl->convertToLowercaseWithLocale(localeIdentifier) : String { };
 }
 
-String String::convertToUppercaseWithLocale(const AtomicString& localeIdentifier) const
+String String::convertToUppercaseWithLocale(const AtomString& localeIdentifier) const
 {
     // FIXME: Should this function, and the many others like it, be inlined?
     return m_impl ? m_impl->convertToUppercaseWithLocale(localeIdentifier) : String { };
@@ -454,7 +455,7 @@ String String::number(int number)
     return numberToStringSigned<String>(number);
 }
 
-String String::number(unsigned int number)
+String String::number(unsigned number)
 {
     return numberToStringUnsigned<String>(number);
 }
@@ -479,22 +480,34 @@ String String::number(unsigned long long number)
     return numberToStringUnsigned<String>(number);
 }
 
-String String::number(double number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
+String String::numberToStringFixedPrecision(float number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
 {
     NumberToStringBuffer buffer;
-    return String(numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros));
+    return numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros);
 }
 
-String String::numberToStringECMAScript(double number)
+String String::numberToStringFixedPrecision(double number, unsigned precision, TrailingZerosTruncatingPolicy trailingZerosTruncatingPolicy)
 {
     NumberToStringBuffer buffer;
-    return String(numberToString(number, buffer));
+    return numberToFixedPrecisionString(number, precision, buffer, trailingZerosTruncatingPolicy == TruncateTrailingZeros);
+}
+
+String String::number(float number)
+{
+    NumberToStringBuffer buffer;
+    return numberToString(number, buffer);
+}
+
+String String::number(double number)
+{
+    NumberToStringBuffer buffer;
+    return numberToString(number, buffer);
 }
 
 String String::numberToStringFixedWidth(double number, unsigned decimalPlaces)
 {
     NumberToStringBuffer buffer;
-    return String(numberToFixedWidthString(number, decimalPlaces, buffer));
+    return numberToFixedWidthString(number, decimalPlaces, buffer);
 }
 
 int String::toIntStrict(bool* ok, int base) const
@@ -636,9 +649,9 @@ String String::isolatedCopy() &&
 
 bool String::isSafeToSendToAnotherThread() const
 {
-    // AtomicStrings are not safe to send between threads as ~StringImpl()
-    // will try to remove them from the wrong AtomicStringTable.
-    return isEmpty() || (m_impl->hasOneRef() && !m_impl->isAtomic());
+    // AtomStrings are not safe to send between threads, as ~StringImpl()
+    // will try to remove them from the wrong AtomStringTable.
+    return isEmpty() || (m_impl->hasOneRef() && !m_impl->isAtom());
 }
 
 template<bool allowEmptyEntries>
@@ -847,7 +860,7 @@ String String::fromUTF8(const LChar* stringStart, size_t length)
 
     UChar* bufferCurrent = bufferStart;
     const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
-    if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &bufferCurrent, bufferCurrent + buffer.size()) != conversionOK)
+    if (!convertUTF8ToUTF16(stringCurrent, reinterpret_cast<const char *>(stringStart + length), &bufferCurrent, bufferCurrent + buffer.size()))
         return String();
 
     unsigned utf16Length = bufferCurrent - bufferStart;
@@ -1097,7 +1110,7 @@ Vector<char> asciiDebug(StringImpl* impl)
     if (!impl)
         return asciiDebug(String("[null]"_s).impl());
 
-    Vector<char> buffer;
+    StringBuilder buffer;
     for (unsigned i = 0; i < impl->length(); ++i) {
         UChar ch = (*impl)[i];
         if (isASCIIPrintable(ch)) {
@@ -1107,11 +1120,13 @@ Vector<char> asciiDebug(StringImpl* impl)
         } else {
             buffer.append('\\');
             buffer.append('u');
-            appendUnsignedAsHexFixedSize(ch, buffer, 4);
+            buffer.append(hex(ch, 4));
         }
     }
-    buffer.append('\0');
-    return buffer;
+    CString narrowString = buffer.toString().ascii();
+    Vector<char> result;
+    result.append(reinterpret_cast<const char*>(narrowString.data()), narrowString.length() + 1);
+    return result;
 }
 
 Vector<char> asciiDebug(String& string)

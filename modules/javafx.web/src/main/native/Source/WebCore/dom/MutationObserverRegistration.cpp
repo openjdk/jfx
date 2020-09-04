@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-MutationObserverRegistration::MutationObserverRegistration(MutationObserver& observer, Node& node, MutationObserverOptions options, const HashSet<AtomicString>& attributeFilter)
+MutationObserverRegistration::MutationObserverRegistration(MutationObserver& observer, Node& node, MutationObserverOptions options, const HashSet<AtomString>& attributeFilter)
     : m_observer(observer)
     , m_node(node)
     , m_options(options)
@@ -52,7 +52,7 @@ MutationObserverRegistration::~MutationObserverRegistration()
     m_observer->observationEnded(*this);
 }
 
-void MutationObserverRegistration::resetObservation(MutationObserverOptions options, const HashSet<AtomicString>& attributeFilter)
+void MutationObserverRegistration::resetObservation(MutationObserverOptions options, const HashSet<AtomString>& attributeFilter)
 {
     takeTransientRegistrations();
     m_options = options;
@@ -65,10 +65,10 @@ void MutationObserverRegistration::observedSubtreeNodeWillDetach(Node& node)
         return;
 
     node.registerTransientMutationObserver(*this);
-    m_observer->setHasTransientRegistration();
+    m_observer->setHasTransientRegistration(node.document());
 
     if (!m_transientRegistrationNodes) {
-        m_transientRegistrationNodes = std::make_unique<HashSet<GCReachableRef<Node>>>();
+        m_transientRegistrationNodes = makeUnique<HashSet<GCReachableRef<Node>>>();
 
         ASSERT(!m_nodeKeptAlive);
         m_nodeKeptAlive = &m_node; // Balanced in takeTransientRegistrations.

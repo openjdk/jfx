@@ -60,7 +60,7 @@ public:
     bool shouldAlwaysGrowSelectionWhenExtendingToBoundary() const { return m_type == EditingMacBehavior || m_type == EditingIOSBehavior; }
 
     // On Mac, when processing a contextual click, the object being clicked upon should be selected.
-    bool shouldSelectOnContextualMenuClick() const { return m_type == EditingMacBehavior || m_type == EditingIOSBehavior; }
+    bool shouldSelectOnContextualMenuClick() const { return m_type == EditingMacBehavior; }
 
     // On Linux, should be able to get and insert spelling suggestions without selecting the misspelled word.
     bool shouldAllowSpellingSuggestionsWithoutSelection() const
@@ -95,6 +95,12 @@ public:
 
     // On iOS, we don't want to select all the text when focusing a field. Instead, match platform behavior by going to the end of the line.
     bool shouldMoveSelectionToEndWhenFocusingTextInput() const { return m_type == EditingIOSBehavior; }
+
+    // On iOS, when smart delete is on, it is always on, and should do not additional checks (i.e. WordGranularity).
+    bool shouldAlwaysSmartDelete() const { return m_type == EditingIOSBehavior; }
+
+    // On iOS, we should turn on smart insert and delete and newlines around paragraphs to match UIKit behaviour.
+    bool shouldSmartInsertDeleteParagraphs() const { return m_type == EditingIOSBehavior; }
 
 private:
     EditingBehaviorType m_type;

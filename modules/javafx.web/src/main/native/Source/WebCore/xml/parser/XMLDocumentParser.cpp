@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
+#include "ElementAncestorIterator.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
@@ -43,6 +44,7 @@
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SVGForeignObjectElement.h"
 #include "SVGNames.h"
 #include "SVGStyleElement.h"
 #include "ScriptElement.h"
@@ -50,6 +52,7 @@
 #include "StyleScope.h"
 #include "TextResourceDecoder.h"
 #include "TreeDepthLimit.h"
+#include "XMLNSNames.h"
 #include <wtf/Ref.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
@@ -128,7 +131,7 @@ void XMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
 void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, TextPosition position)
 {
     if (!m_xmlErrors)
-        m_xmlErrors = std::make_unique<XMLErrors>(*document());
+        m_xmlErrors = makeUnique<XMLErrors>(*document());
     m_xmlErrors->handleError(type, m, position);
     if (type != XMLErrors::warning)
         m_sawError = true;
@@ -189,7 +192,7 @@ void XMLDocumentParser::end()
     if (m_parserPaused)
         return;
 
-    if (m_sawError) {
+    if (m_sawError && !isStopped()) {
         insertErrorMessageBlock();
         if (isDetached()) // Inserting an error message may have ran arbitrary scripts.
             return;
@@ -269,7 +272,28 @@ bool XMLDocumentParser::parseDocumentFragment(const String& chunk, DocumentFragm
         return true;
     }
 
-    auto parser = XMLDocumentParser::create(fragment, contextElement, parserContentPolicy);
+    HashMap<AtomString, AtomString> prefixToNamespaceMap;
+    AtomString defaultNamespaceURI;
+    bool stopLookingForDefaultNamespaceURI = false;
+
+    for (auto& element : elementLineage(contextElement)) {
+        if (is<SVGForeignObjectElement>(element))
+            stopLookingForDefaultNamespaceURI = true;
+        else if (!stopLookingForDefaultNamespaceURI)
+            defaultNamespaceURI = element.namespaceURI();
+
+        if (!element.hasAttributes())
+            continue;
+
+        for (const Attribute& attribute : element.attributesIterator()) {
+            if (attribute.prefix() == xmlnsAtom())
+                prefixToNamespaceMap.set(attribute.localName(), attribute.value());
+            else if (!stopLookingForDefaultNamespaceURI && attribute.prefix() == xmlnsAtom())
+                defaultNamespaceURI = attribute.value();
+        }
+    }
+
+    auto parser = XMLDocumentParser::create(fragment, WTFMove(prefixToNamespaceMap), defaultNamespaceURI, parserContentPolicy);
     bool wellFormed = parser->appendFragmentSource(chunk);
     // Do not call finish(). The finish() and doEnd() implementations touch the main document and loader and can cause crashes in the fragment case.
     parser->detach(); // Allows ~DocumentParser to assert it was detached before destruction.

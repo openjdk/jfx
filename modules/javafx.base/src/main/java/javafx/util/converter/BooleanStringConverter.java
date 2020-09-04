@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class BooleanStringConverter extends StringConverter<Boolean> {
+
+    /**
+     * Creates a default {@code BooleanStringConverter}.
+     */
+    public BooleanStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Boolean fromString(String value) {
         // If the specified value is null or zero-length, return null

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -324,7 +324,7 @@ Optional<IntPoint> ImageDecoderJava::hotSpot() const
 ImageOrientation ImageDecoderJava::frameOrientationAtIndex(size_t) const
 {
     notImplemented();
-    return ImageOrientation(DefaultImageOrientation);
+    return ImageOrientation(ImageOrientation::None);
 }
 
 size_t ImageDecoderJava::bytesDecodedToDetermineProperties() const

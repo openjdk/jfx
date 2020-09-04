@@ -34,6 +34,12 @@ import javafx.util.StringConverter;
  */
 public class BigDecimalStringConverter extends StringConverter<BigDecimal> {
 
+    /**
+     * Creates a default {@code BigDecimalStringConverter}.
+     */
+    public BigDecimalStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public BigDecimal fromString(String value) {
         // If the specified value is null or zero-length, return null

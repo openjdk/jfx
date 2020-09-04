@@ -39,7 +39,7 @@
 namespace WebCore {
 
 DatabaseThread::DatabaseThread()
-    : m_transactionCoordinator(std::make_unique<SQLTransactionCoordinator>())
+    : m_transactionCoordinator(makeUnique<SQLTransactionCoordinator>())
 {
     m_selfRef = this;
 }
@@ -77,7 +77,7 @@ void DatabaseThread::requestTermination(DatabaseTaskSynchronizer* cleanupSync)
 
 bool DatabaseThread::terminationRequested(DatabaseTaskSynchronizer* taskSynchronizer) const
 {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     if (taskSynchronizer)
         taskSynchronizer->setHasCheckedForTermination();
 #else

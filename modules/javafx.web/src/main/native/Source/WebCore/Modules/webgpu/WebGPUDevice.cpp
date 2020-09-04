@@ -28,169 +28,292 @@
 
 #if ENABLE(WEBGPU)
 
+#include "DOMWindow.h"
+#include "Document.h"
+#include "EventNames.h"
+#include "Exception.h"
 #include "GPUBindGroup.h"
 #include "GPUBindGroupBinding.h"
 #include "GPUBindGroupDescriptor.h"
+#include "GPUBindGroupLayoutDescriptor.h"
 #include "GPUBufferBinding.h"
+#include "GPUBufferDescriptor.h"
 #include "GPUCommandBuffer.h"
-#include "GPUPipelineStageDescriptor.h"
+#include "GPUComputePipeline.h"
+#include "GPUComputePipelineDescriptor.h"
+#include "GPUProgrammableStageDescriptor.h"
+#include "GPURenderPipeline.h"
 #include "GPURenderPipelineDescriptor.h"
+#include "GPUSampler.h"
+#include "GPUSamplerDescriptor.h"
 #include "GPUShaderModuleDescriptor.h"
 #include "GPUTextureDescriptor.h"
+#include "GPUUncapturedErrorEvent.h"
+#include "InspectorInstrumentation.h"
+#include "JSDOMConvertBufferSource.h"
+#include "JSDOMPromiseDeferred.h"
+#include "JSGPUOutOfMemoryError.h"
+#include "JSGPUValidationError.h"
+#include "JSWebGPUBuffer.h"
 #include "Logging.h"
 #include "WebGPUBindGroup.h"
 #include "WebGPUBindGroupBinding.h"
 #include "WebGPUBindGroupDescriptor.h"
 #include "WebGPUBindGroupLayout.h"
-#include "WebGPUBuffer.h"
 #include "WebGPUBufferBinding.h"
-#include "WebGPUCommandBuffer.h"
+#include "WebGPUCommandEncoder.h"
+#include "WebGPUComputePipeline.h"
+#include "WebGPUComputePipelineDescriptor.h"
+#include "WebGPUPipeline.h"
 #include "WebGPUPipelineLayout.h"
 #include "WebGPUPipelineLayoutDescriptor.h"
-#include "WebGPUPipelineStageDescriptor.h"
+#include "WebGPUProgrammableStageDescriptor.h"
 #include "WebGPUQueue.h"
 #include "WebGPURenderPipeline.h"
 #include "WebGPURenderPipelineDescriptor.h"
+#include "WebGPUSampler.h"
 #include "WebGPUShaderModule.h"
 #include "WebGPUShaderModuleDescriptor.h"
+#include "WebGPUSwapChain.h"
 #include "WebGPUTexture.h"
+#include <JavaScriptCore/ConsoleMessage.h>
+#include <memory>
+#include <wtf/HashSet.h>
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/Lock.h>
+#include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/Optional.h>
+#include <wtf/Ref.h>
+#include <wtf/RefPtr.h>
 #include <wtf/Variant.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-RefPtr<WebGPUDevice> WebGPUDevice::create(Ref<WebGPUAdapter>&& adapter)
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGPUDevice);
+
+RefPtr<WebGPUDevice> WebGPUDevice::tryCreate(ScriptExecutionContext& context, Ref<const WebGPUAdapter>&& adapter)
 {
-    if (auto device = GPUDevice::create(adapter->options()))
-        return adoptRef(new WebGPUDevice(WTFMove(adapter), device.releaseNonNull()));
+    if (auto device = GPUDevice::tryCreate(adapter->options()))
+        return adoptRef(new WebGPUDevice(context, WTFMove(adapter), device.releaseNonNull()));
     return nullptr;
 }
 
-WebGPUDevice::WebGPUDevice(Ref<WebGPUAdapter>&& adapter, Ref<GPUDevice>&& device)
-    : m_adapter(WTFMove(adapter))
+HashSet<WebGPUDevice*>& WebGPUDevice::instances(const LockHolder&)
+{
+    static NeverDestroyed<HashSet<WebGPUDevice*>> instances;
+    return instances;
+}
+
+Lock& WebGPUDevice::instancesMutex()
+{
+    static LazyNeverDestroyed<Lock> mutex;
+    static std::once_flag initializeMutex;
+    std::call_once(initializeMutex, [] {
+        mutex.construct();
+    });
+    return mutex.get();
+}
+
+WebGPUDevice::WebGPUDevice(ScriptExecutionContext& context, Ref<const WebGPUAdapter>&& adapter, Ref<GPUDevice>&& device)
+    : m_scriptExecutionContext(context)
+    , m_adapter(WTFMove(adapter))
     , m_device(WTFMove(device))
+    , m_errorScopes(GPUErrorScopes::create([this, weakThis = makeWeakPtr(this)] (GPUError&& error) {
+        if (weakThis)
+            dispatchUncapturedError(WTFMove(error));
+    }))
 {
-    UNUSED_PARAM(m_adapter);
+    ASSERT(m_scriptExecutionContext.isDocument());
+
+    {
+        LockHolder lock(instancesMutex());
+        instances(lock).add(this);
+    }
 }
 
-RefPtr<WebGPUBuffer> WebGPUDevice::createBuffer(WebGPUBufferDescriptor&& descriptor) const
+WebGPUDevice::~WebGPUDevice()
 {
-    // FIXME: Validation on descriptor needed?
-    if (auto buffer = m_device->createBuffer(GPUBufferDescriptor { descriptor.size, descriptor.usage }))
-        return WebGPUBuffer::create(buffer.releaseNonNull());
-    return nullptr;
+    InspectorInstrumentation::willDestroyWebGPUDevice(*this);
+
+    {
+        LockHolder lock(WebGPUPipeline::instancesMutex());
+        for (auto& entry : WebGPUPipeline::instances(lock)) {
+            if (entry.value == this) {
+                // Don't remove any WebGPUPipeline from the instances list, as they may still exist.
+                // Only remove the association with a WebGPU device.
+                entry.value = nullptr;
+            }
+        }
+    }
+
+    {
+        LockHolder lock(instancesMutex());
+        ASSERT(instances(lock).contains(this));
+        instances(lock).remove(this);
+    }
 }
 
-Ref<WebGPUTexture> WebGPUDevice::createTexture(GPUTextureDescriptor&& descriptor) const
+Ref<WebGPUBuffer> WebGPUDevice::createBuffer(const GPUBufferDescriptor& descriptor) const
 {
-    auto texture = m_device->tryCreateTexture(WTFMove(descriptor));
+    m_errorScopes->setErrorPrefix("GPUDevice.createBuffer(): ");
+
+    auto buffer = m_device->tryCreateBuffer(descriptor, GPUBufferMappedOption::NotMapped, m_errorScopes);
+    return WebGPUBuffer::create(WTFMove(buffer), m_errorScopes);
+}
+
+Vector<JSC::JSValue> WebGPUDevice::createBufferMapped(JSC::JSGlobalObject& lexicalGlobalObject, const GPUBufferDescriptor& descriptor) const
+{
+    m_errorScopes->setErrorPrefix("GPUDevice.createBufferMapped(): ");
+
+    JSC::JSValue wrappedArrayBuffer = JSC::jsNull();
+
+    auto buffer = m_device->tryCreateBuffer(descriptor, GPUBufferMappedOption::IsMapped, m_errorScopes);
+    if (buffer) {
+        auto arrayBuffer = buffer->mapOnCreation();
+        wrappedArrayBuffer = toJS(&lexicalGlobalObject, JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), arrayBuffer);
+    }
+
+    auto webBuffer = WebGPUBuffer::create(WTFMove(buffer), m_errorScopes);
+    auto wrappedWebBuffer = toJS(&lexicalGlobalObject, JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject), webBuffer);
+
+    return { wrappedWebBuffer, wrappedArrayBuffer };
+}
+
+Ref<WebGPUTexture> WebGPUDevice::createTexture(const GPUTextureDescriptor& descriptor) const
+{
+    auto texture = m_device->tryCreateTexture(descriptor);
     return WebGPUTexture::create(WTFMove(texture));
 }
 
-Ref<WebGPUBindGroupLayout> WebGPUDevice::createBindGroupLayout(WebGPUBindGroupLayoutDescriptor&& descriptor) const
+Ref<WebGPUSampler> WebGPUDevice::createSampler(const GPUSamplerDescriptor& descriptor) const
 {
-    auto layout = m_device->tryCreateBindGroupLayout(GPUBindGroupLayoutDescriptor { descriptor.bindings });
+    auto sampler = m_device->tryCreateSampler(descriptor);
+    return WebGPUSampler::create(WTFMove(sampler));
+}
+
+Ref<WebGPUBindGroupLayout> WebGPUDevice::createBindGroupLayout(const GPUBindGroupLayoutDescriptor& descriptor) const
+{
+    auto layout = m_device->tryCreateBindGroupLayout(descriptor);
     return WebGPUBindGroupLayout::create(WTFMove(layout));
 }
 
-Ref<WebGPUPipelineLayout> WebGPUDevice::createPipelineLayout(WebGPUPipelineLayoutDescriptor&& descriptor) const
+Ref<WebGPUPipelineLayout> WebGPUDevice::createPipelineLayout(const WebGPUPipelineLayoutDescriptor& descriptor) const
 {
-    // FIXME: Is an empty pipelineLayout an error?
-    auto bindGroupLayouts = descriptor.bindGroupLayouts.map([] (const auto& layout) -> RefPtr<const GPUBindGroupLayout> {
-        return layout->bindGroupLayout();
-    });
-    auto layout = m_device->createPipelineLayout(GPUPipelineLayoutDescriptor { WTFMove(bindGroupLayouts) });
+    auto gpuDescriptor = descriptor.tryCreateGPUPipelineLayoutDescriptor();
+    if (!gpuDescriptor)
+        return WebGPUPipelineLayout::create(nullptr);
+
+    auto layout = m_device->createPipelineLayout(WTFMove(*gpuDescriptor));
     return WebGPUPipelineLayout::create(WTFMove(layout));
 }
 
-Ref<WebGPUBindGroup> WebGPUDevice::createBindGroup(WebGPUBindGroupDescriptor&& descriptor) const
+Ref<WebGPUBindGroup> WebGPUDevice::createBindGroup(const WebGPUBindGroupDescriptor& descriptor) const
 {
-    if (!descriptor.layout || !descriptor.layout->bindGroupLayout()) {
-        LOG(WebGPU, "WebGPUDevice::createBindGroup(): Invalid WebGPUBindGroupLayout!");
+    auto gpuDescriptor = descriptor.tryCreateGPUBindGroupDescriptor();
+    if (!gpuDescriptor)
         return WebGPUBindGroup::create(nullptr);
-    }
 
-    if (descriptor.bindings.size() != descriptor.layout->bindGroupLayout()->bindingsMap().size()) {
-        LOG(WebGPU, "WebGPUDevice::createBindGroup(): Mismatched number of WebGPUBindGroupLayoutBindings and WebGPUBindGroupBindings!");
-        return WebGPUBindGroup::create(nullptr);
-    }
-
-    auto bindingResourceVisitor = WTF::makeVisitor([] (RefPtr<WebGPUTextureView> view) -> Optional<GPUBindingResource> {
-        if (view)
-            return static_cast<GPUBindingResource>(view->texture());
-        return WTF::nullopt;
-    }, [] (const WebGPUBufferBinding& binding) -> Optional<GPUBindingResource> {
-        if (binding.buffer)
-            return static_cast<GPUBindingResource>(GPUBufferBinding { binding.buffer->buffer(), binding.offset, binding.size });
-        return WTF::nullopt;
-    });
-
-    Vector<GPUBindGroupBinding> bindGroupBindings;
-    bindGroupBindings.reserveCapacity(descriptor.bindings.size());
-
-    for (const auto& binding : descriptor.bindings) {
-        if (!descriptor.layout->bindGroupLayout()->bindingsMap().contains(binding.binding)) {
-            LOG(WebGPU, "WebGPUDevice::createBindGroup(): WebGPUBindGroupBinding %lu not found in WebGPUBindGroupLayout!", binding.binding);
-            return WebGPUBindGroup::create(nullptr);
-        }
-
-        auto bindingResource = WTF::visit(bindingResourceVisitor, binding.resource);
-        if (bindingResource)
-            bindGroupBindings.uncheckedAppend(GPUBindGroupBinding { binding.binding, WTFMove(bindingResource.value()) });
-        else {
-            LOG(WebGPU, "WebGPUDevice::createBindGroup(): Invalid WebGPUBindingResource for binding %lu in WebGPUBindGroupBindings!", binding.binding);
-            return WebGPUBindGroup::create(nullptr);
-        }
-    }
-    auto bindGroup = GPUBindGroup::create(GPUBindGroupDescriptor { descriptor.layout->bindGroupLayout().releaseNonNull(), WTFMove(bindGroupBindings) });
+    auto bindGroup = m_device->tryCreateBindGroup(*gpuDescriptor, m_errorScopes);
     return WebGPUBindGroup::create(WTFMove(bindGroup));
 }
 
-RefPtr<WebGPUShaderModule> WebGPUDevice::createShaderModule(WebGPUShaderModuleDescriptor&& descriptor) const
+Ref<WebGPUShaderModule> WebGPUDevice::createShaderModule(const WebGPUShaderModuleDescriptor& descriptor) const
 {
     // FIXME: What can be validated here?
-    if (auto module = m_device->createShaderModule(GPUShaderModuleDescriptor { descriptor.code }))
-        return WebGPUShaderModule::create(module.releaseNonNull());
-    return nullptr;
+    auto module = m_device->tryCreateShaderModule(GPUShaderModuleDescriptor { descriptor.code });
+    return WebGPUShaderModule::create(WTFMove(module), descriptor.code);
 }
 
-static Optional<GPUPipelineStageDescriptor> validateAndConvertPipelineStage(const WebGPUPipelineStageDescriptor& descriptor)
+Ref<WebGPURenderPipeline> WebGPUDevice::createRenderPipeline(const WebGPURenderPipelineDescriptor& descriptor)
 {
-    if (!descriptor.module || !descriptor.module->module() || descriptor.entryPoint.isEmpty())
-        return WTF::nullopt;
+    m_errorScopes->setErrorPrefix("GPUDevice.createRenderPipeline(): ");
 
-    return GPUPipelineStageDescriptor { descriptor.module->module(), descriptor.entryPoint };
+    auto gpuDescriptor = descriptor.tryCreateGPURenderPipelineDescriptor(m_errorScopes);
+    if (!gpuDescriptor)
+        return WebGPURenderPipeline::create(*this, nullptr, m_errorScopes, { }, { });
+
+    auto gpuPipeline = m_device->tryCreateRenderPipeline(*gpuDescriptor, m_errorScopes);
+
+    WebGPUPipeline::ShaderData vertexShader = { descriptor.vertexStage.module, descriptor.vertexStage.entryPoint };
+
+    WebGPUPipeline::ShaderData fragmentShader;
+    if (descriptor.fragmentStage)
+        fragmentShader = { descriptor.fragmentStage.value().module, descriptor.fragmentStage.value().entryPoint };
+
+    auto webGPUPipeline = WebGPURenderPipeline::create(*this, WTFMove(gpuPipeline), m_errorScopes, WTFMove(vertexShader), WTFMove(fragmentShader));
+    if (webGPUPipeline->isValid())
+        InspectorInstrumentation::didCreateWebGPUPipeline(*this, webGPUPipeline.get());
+    return webGPUPipeline;
 }
 
-RefPtr<WebGPURenderPipeline> WebGPUDevice::createRenderPipeline(WebGPURenderPipelineDescriptor&& descriptor) const
+Ref<WebGPUComputePipeline> WebGPUDevice::createComputePipeline(const WebGPUComputePipelineDescriptor& descriptor)
 {
-    auto pipelineLayout = descriptor.layout ? descriptor.layout->pipelineLayout() : nullptr;
+    m_errorScopes->setErrorPrefix("GPUDevice.createComputePipeline(): ");
 
-    auto vertexStage = validateAndConvertPipelineStage(descriptor.vertexStage);
-    auto fragmentStage = validateAndConvertPipelineStage(descriptor.fragmentStage);
+    auto gpuDescriptor = descriptor.tryCreateGPUComputePipelineDescriptor(m_errorScopes);
+    if (!gpuDescriptor)
+        return WebGPUComputePipeline::create(*this, nullptr, m_errorScopes, { });
 
-    if (!vertexStage || !fragmentStage) {
-        LOG(WebGPU, "WebGPUDevice::createRenderPipeline(): Invalid WebGPUPipelineStageDescriptor!");
-        return nullptr;
-    }
+    auto gpuPipeline = m_device->tryCreateComputePipeline(*gpuDescriptor, m_errorScopes);
 
-    if (auto pipeline = m_device->createRenderPipeline(GPURenderPipelineDescriptor { WTFMove(pipelineLayout), WTFMove(*vertexStage), WTFMove(*fragmentStage), descriptor.primitiveTopology, WTFMove(descriptor.depthStencilState), WTFMove(descriptor.inputState) }))
-        return WebGPURenderPipeline::create(pipeline.releaseNonNull());
-    return nullptr;
+    WebGPUPipeline::ShaderData computeShader = { descriptor.computeStage.module, descriptor.computeStage.entryPoint };
+
+    auto webGPUPipeline = WebGPUComputePipeline::create(*this, WTFMove(gpuPipeline), m_errorScopes, WTFMove(computeShader));
+    if (webGPUPipeline->isValid())
+        InspectorInstrumentation::didCreateWebGPUPipeline(*this, webGPUPipeline.get());
+    return webGPUPipeline;
 }
 
-RefPtr<WebGPUCommandBuffer> WebGPUDevice::createCommandBuffer() const
+Ref<WebGPUCommandEncoder> WebGPUDevice::createCommandEncoder() const
 {
-    if (auto commandBuffer = m_device->createCommandBuffer())
-        return WebGPUCommandBuffer::create(commandBuffer.releaseNonNull());
-    return nullptr;
+    auto commandBuffer = m_device->tryCreateCommandBuffer();
+    return WebGPUCommandEncoder::create(WTFMove(commandBuffer));
 }
 
-RefPtr<WebGPUQueue> WebGPUDevice::getQueue()
+Ref<WebGPUQueue> WebGPUDevice::getQueue() const
 {
     if (!m_queue)
-        m_queue = WebGPUQueue::create(m_device->getQueue());
+        m_queue = WebGPUQueue::create(m_device->tryGetQueue());
 
-    return m_queue;
+    return makeRef(*m_queue.get());
+}
+
+void WebGPUDevice::popErrorScope(ErrorPromise&& promise)
+{
+    String failMessage;
+    Optional<GPUError> error = m_errorScopes->popErrorScope(failMessage);
+    if (failMessage.isEmpty())
+        promise.resolve(error);
+    else
+        promise.reject(Exception { OperationError, "GPUDevice::popErrorScope(): " + failMessage });
+}
+
+// Errors reported via the validation error event should also appear in the console as warnings.
+static void printValidationErrorToConsole(GPUError& error, ScriptExecutionContext& context)
+{
+    if (!WTF::holds_alternative<RefPtr<GPUValidationError>>(error))
+        return;
+
+    auto validationError = WTF::get<RefPtr<GPUValidationError>>(error);
+    if (!validationError)
+        return;
+
+    auto message = validationError->message();
+    auto consoleMessage = makeUnique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, MessageLevel::Warning, message);
+
+    downcast<Document>(context).addConsoleMessage(WTFMove(consoleMessage));
+}
+
+void WebGPUDevice::dispatchUncapturedError(GPUError&& error)
+{
+    printValidationErrorToConsole(error, m_scriptExecutionContext);
+
+    callOnMainThread([error = WTFMove(error), this, protectedThis = makeRef(*this)] () mutable {
+        dispatchEvent(GPUUncapturedErrorEvent::create(eventNames().uncapturederrorEvent, WTFMove(error)));
+    });
 }
 
 } // namespace WebCore

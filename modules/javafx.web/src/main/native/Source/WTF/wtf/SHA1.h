@@ -41,6 +41,7 @@
 namespace WTF {
 
 class SHA1 {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     WTF_EXPORT_PRIVATE SHA1();
 
@@ -56,7 +57,7 @@ public:
     WTF_EXPORT_PRIVATE void addBytes(const uint8_t* input, size_t length);
 
     // Size of the SHA1 hash
-    WTF_EXPORT_PRIVATE static const size_t hashSize = 20;
+    WTF_EXPORT_PRIVATE static constexpr size_t hashSize = 20;
 
     // type for computing SHA1 hash
     typedef std::array<uint8_t, hashSize> Digest;

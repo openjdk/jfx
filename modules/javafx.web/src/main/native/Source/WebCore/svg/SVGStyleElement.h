@@ -37,16 +37,16 @@ public:
     bool disabled() const;
     void setDisabled(bool);
 
-    const AtomicString& type() const;
-    void setType(const AtomicString&);
+    const AtomString& type() const;
+    void setType(const AtomString&);
 
-    const AtomicString& media() const;
-    void setMedia(const AtomicString&);
+    const AtomString& media() const;
+    void setMedia(const AtomString&);
 
 private:
     SVGStyleElement(const QualifiedName&, Document&, bool createdByParser);
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void childrenChanged(const ChildChange&) final;
@@ -58,12 +58,12 @@ private:
     virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
     bool sheetLoaded() final { return m_styleSheetOwner.sheetLoaded(*this); }
     void startLoadingDynamicSheet() final { m_styleSheetOwner.startLoadingDynamicSheet(*this); }
-    Timer* svgLoadEventTimer() final { return &m_svgLoadEventTimer; }
+    Timer* loadEventTimer() final { return &m_loadEventTimer; }
 
     String title() const final;
 
     InlineStyleSheetOwner m_styleSheetOwner;
-    Timer m_svgLoadEventTimer;
+    Timer m_loadEventTimer;
 };
 
 } // namespace WebCore

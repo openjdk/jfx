@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class FloatStringConverter extends StringConverter<Float> {
+
+    /**
+     * Creates a default {@code FloatStringConverter}.
+     */
+    public FloatStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Float fromString(String value) {
         // If the specified value is null or zero-length, return null

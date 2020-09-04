@@ -33,7 +33,7 @@
 #include <mutex>
 #include <wtf/StdLibExtras.h>
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
 #include "A64DOpcode.h"
 #endif
 
@@ -44,6 +44,8 @@ namespace JSC {
 struct SignalContext;
 
 class SigillCrashAnalyzer {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(SigillCrashAnalyzer);
 public:
     static SigillCrashAnalyzer& instance();
 
@@ -58,7 +60,7 @@ private:
     SigillCrashAnalyzer() { }
     void dumpCodeBlock(CodeBlock*, void* machinePC);
 
-#if USE(ARM64_DISASSEMBLER)
+#if ENABLE(ARM64_DISASSEMBLER)
     A64DOpcode m_arm64Opcode;
 #endif
 };

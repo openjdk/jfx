@@ -37,7 +37,7 @@ namespace JSC { namespace B3 {
 // Warning: In B3, an Opcode is just one part of a Kind. Kind is used the way that an opcode
 // would be used in simple IRs. See B3Kind.h.
 
-enum Opcode : int16_t {
+enum Opcode : uint8_t {
     // A no-op that returns Void, useful for when you want to remove a value.
     Nop,
 
@@ -296,6 +296,10 @@ enum Opcode : int16_t {
     // stack.
     Patchpoint,
 
+    // This is a projection out of a tuple. Currently only Patchpoints, Get, and Phi can produce tuples.
+    // It's assumumed that each entry in a tuple has a fixed Numeric B3 Type (i.e. not Void or Tuple).
+    Extract,
+
     // Checked math. Use the CheckValue class. Like a Patchpoint, this takes a code generation
     // callback. That callback gets to emit some code after the epilogue, and gets to link the jump
     // from the check, and the choice of registers. You also get to supply a stackmap. Note that you
@@ -398,7 +402,7 @@ inline bool isConstant(Opcode opcode)
 
 inline Opcode opcodeForConstant(Type type)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Int32: return Const32;
     case Int64: return Const64;
     case Float: return ConstFloat;
@@ -465,7 +469,7 @@ inline bool isLoadStore(Opcode opcode)
     }
 }
 
-inline bool isAtomic(Opcode opcode)
+inline bool isAtom(Opcode opcode)
 {
     switch (opcode) {
     case AtomicWeakCAS:
@@ -510,7 +514,7 @@ inline bool isAtomicXchg(Opcode opcode)
 
 inline bool isMemoryAccess(Opcode opcode)
 {
-    return isAtomic(opcode) || isLoadStore(opcode);
+    return isAtom(opcode) || isLoadStore(opcode);
 }
 
 inline Opcode signExtendOpcode(Width width)

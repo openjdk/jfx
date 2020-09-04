@@ -35,6 +35,7 @@
 #include "HTMLMapElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTTPParsers.h"
 #include "MathMLMathElement.h"
 #include "MathMLNames.h"
 #include "RenderMathMLBlock.h"
@@ -85,7 +86,6 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
     }
 
     if (is<HTMLElement>(node)) {
-        // FIXME: add the <data> and <time> tags when they are implemented.
         auto& htmlElement = downcast<HTMLElement>(node);
         return htmlElement.hasTagName(HTMLNames::aTag)
             || htmlElement.hasTagName(HTMLNames::abbrTag)
@@ -100,6 +100,7 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
             || htmlElement.hasTagName(HTMLNames::citeTag)
             || htmlElement.hasTagName(HTMLNames::codeTag)
             || htmlElement.hasTagName(HTMLNames::datalistTag)
+            || htmlElement.hasTagName(HTMLNames::dataTag)
             || htmlElement.hasTagName(HTMLNames::delTag)
             || htmlElement.hasTagName(HTMLNames::dfnTag)
             || htmlElement.hasTagName(HTMLNames::emTag)
@@ -132,6 +133,7 @@ bool MathMLPresentationElement::isPhrasingContent(const Node& node)
             || htmlElement.hasTagName(HTMLNames::supTag)
             || htmlElement.hasTagName(HTMLNames::templateTag)
             || htmlElement.hasTagName(HTMLNames::textareaTag)
+            || htmlElement.hasTagName(HTMLNames::timeTag)
             || htmlElement.hasTagName(HTMLNames::uTag)
             || htmlElement.hasTagName(HTMLNames::varTag)
             || htmlElement.hasTagName(HTMLNames::videoTag)
@@ -153,12 +155,12 @@ bool MathMLPresentationElement::isFlowContent(const Node& node)
         return false;
 
     auto& htmlElement = downcast<HTMLElement>(node);
-    // FIXME add the <dialog> tag when it is implemented.
     return htmlElement.hasTagName(HTMLNames::addressTag)
         || htmlElement.hasTagName(HTMLNames::articleTag)
         || htmlElement.hasTagName(HTMLNames::asideTag)
         || htmlElement.hasTagName(HTMLNames::blockquoteTag)
         || htmlElement.hasTagName(HTMLNames::detailsTag)
+        || htmlElement.hasTagName(HTMLNames::dialogTag)
         || htmlElement.hasTagName(HTMLNames::divTag)
         || htmlElement.hasTagName(HTMLNames::dlTag)
         || htmlElement.hasTagName(HTMLNames::fieldsetTag)
@@ -190,7 +192,7 @@ const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttri
         return attribute.value();
 
     // In MathML, attribute values are case-sensitive.
-    const AtomicString& value = attributeWithoutSynchronization(name);
+    const AtomString& value = attributeWithoutSynchronization(name);
     if (value == "true")
         attribute = BooleanValue::True;
     else if (value == "false")
@@ -294,18 +296,19 @@ MathMLElement::Length MathMLPresentationElement::parseMathMLLength(const String&
     // Instead, we just use isHTMLSpace and toFloat to parse these parts.
 
     // We first skip whitespace from both ends of the string.
-    StringView stringView = stripLeadingAndTrailingWhitespace(string);
+    StringView stringView = string;
+    StringView strippedLength = stripLeadingAndTrailingHTTPSpaces(stringView);
 
-    if (stringView.isEmpty())
+    if (strippedLength.isEmpty())
         return Length();
 
     // We consider the most typical case: a number followed by an optional unit.
-    UChar firstChar = stringView[0];
+    UChar firstChar = strippedLength[0];
     if (isASCIIDigit(firstChar) || firstChar == '-' || firstChar == '.')
-        return parseNumberAndUnit(stringView);
+        return parseNumberAndUnit(strippedLength);
 
     // Otherwise, we try and parse a named space.
-    return parseNamedSpace(stringView);
+    return parseNamedSpace(strippedLength);
 }
 
 const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const QualifiedName& name, Optional<Length>& length)
@@ -329,7 +332,7 @@ Optional<bool> MathMLPresentationElement::specifiedDisplayStyle()
     return toOptionalBool(specifiedDisplayStyle);
 }
 
-MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomicString& attributeValue)
+MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
 {
     // The mathvariant attribute values is case-sensitive.
     if (attributeValue == "normal")
@@ -380,7 +383,7 @@ Optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMathVar
     return m_mathVariant.value() == MathVariant::None ? WTF::nullopt : m_mathVariant;
 }
 
-void MathMLPresentationElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void MathMLPresentationElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     bool displayStyleAttribute = name == displaystyleAttr && acceptsDisplayStyleAttribute();
     bool mathVariantAttribute = name == mathvariantAttr && acceptsMathVariantAttribute();

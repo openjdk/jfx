@@ -41,6 +41,8 @@ public:
     unsigned hash() const;
 
     bool operator==(const ServiceWorkerRegistrationKey&) const;
+    bool operator!=(const ServiceWorkerRegistrationKey& key) const { return !(*this == key); }
+    bool isEmpty() const { return *this == emptyKey(); }
     WEBCORE_EXPORT bool isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
     bool originIsMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const;
     size_t scopeLength() const { return m_scope.string().length(); }
@@ -71,6 +73,8 @@ private:
 template<class Encoder>
 void ServiceWorkerRegistrationKey::encode(Encoder& encoder) const
 {
+    RELEASE_ASSERT(!m_topOrigin.isEmpty());
+    RELEASE_ASSERT(!m_scope.isNull());
     encoder << m_topOrigin << m_scope;
 }
 

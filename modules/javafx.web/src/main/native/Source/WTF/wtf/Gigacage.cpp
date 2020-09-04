@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,11 +34,14 @@
 
 namespace Gigacage {
 
-alignas(void*) char g_gigacageBasePtrs[gigacageBasePtrsSize];
-
 void* tryMalloc(Kind, size_t size)
 {
     return FastMalloc::tryMalloc(size);
+}
+
+void* tryRealloc(Kind, void* pointer, size_t size)
+{
+    return FastMalloc::tryRealloc(pointer, size);
 }
 
 void* tryAllocateZeroedVirtualPages(Kind, size_t requestedSize)
@@ -46,7 +49,7 @@ void* tryAllocateZeroedVirtualPages(Kind, size_t requestedSize)
     size_t size = roundUpToMultipleOf(WTF::pageSize(), requestedSize);
     RELEASE_ASSERT(size >= requestedSize);
     void* result = OSAllocator::reserveAndCommit(size);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     if (result) {
         for (size_t i = 0; i < size / sizeof(uintptr_t); ++i)
             ASSERT(static_cast<uintptr_t*>(result)[i] == 0);
@@ -89,6 +92,13 @@ void alignedFree(Kind kind, void* p)
 void* tryMalloc(Kind kind, size_t size)
 {
     void* result = bmalloc::api::tryMalloc(size, bmalloc::heapKind(kind));
+    WTF::compilerFence();
+    return result;
+}
+
+void* tryRealloc(Kind kind, void* pointer, size_t size)
+{
+    void* result = bmalloc::api::tryRealloc(pointer, size, bmalloc::heapKind(kind));
     WTF::compilerFence();
     return result;
 }

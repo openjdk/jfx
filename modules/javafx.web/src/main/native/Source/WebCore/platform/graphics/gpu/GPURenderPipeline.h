@@ -27,7 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUPipeline.h"
+#include "GPUProgrammableStageDescriptor.h"
 #include "GPURenderPipelineDescriptor.h"
+#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
@@ -40,32 +43,45 @@ OBJC_PROTOCOL(MTLRenderPipelineState);
 namespace WebCore {
 
 class GPUDevice;
+class GPUErrorScopes;
 
 using PlatformRenderPipeline = MTLRenderPipelineState;
 using PlatformRenderPipelineSmartPtr = RetainPtr<MTLRenderPipelineState>;
-using PrimitiveTopology = GPURenderPipelineDescriptor::PrimitiveTopology;
 
-class GPURenderPipeline : public RefCounted<GPURenderPipeline> {
+class GPURenderPipeline final : public GPUPipeline {
 public:
-    static RefPtr<GPURenderPipeline> create(const GPUDevice&, GPURenderPipelineDescriptor&&);
+    virtual ~GPURenderPipeline();
+
+    static RefPtr<GPURenderPipeline> tryCreate(const GPUDevice&, const GPURenderPipelineDescriptor&, GPUErrorScopes&);
+
+    bool isRenderPipeline() const { return true; }
+
+    bool recompile(const GPUDevice&, GPUProgrammableStageDescriptor&& vertexStage, Optional<GPUProgrammableStageDescriptor>&& fragmentStage);
 
 #if USE(METAL)
     MTLDepthStencilState *depthStencilState() const { return m_depthStencilState.get(); }
 #endif
     PlatformRenderPipeline* platformRenderPipeline() const { return m_platformRenderPipeline.get(); }
-    PrimitiveTopology primitiveTopology() const { return m_primitiveTopology; }
+    GPUPrimitiveTopology primitiveTopology() const { return m_primitiveTopology; }
+    Optional<GPUIndexFormat> indexFormat() const { return m_indexFormat; }
 
 private:
 #if USE(METAL)
-    GPURenderPipeline(RetainPtr<MTLDepthStencilState>&&, PlatformRenderPipelineSmartPtr&&, GPURenderPipelineDescriptor&&);
+    GPURenderPipeline(RetainPtr<MTLDepthStencilState>&&, PlatformRenderPipelineSmartPtr&&, GPUPrimitiveTopology, Optional<GPUIndexFormat>, const RefPtr<GPUPipelineLayout>&, const GPURenderPipelineDescriptorBase&);
 
     RetainPtr<MTLDepthStencilState> m_depthStencilState;
 #endif // USE(METAL)
     PlatformRenderPipelineSmartPtr m_platformRenderPipeline;
+    GPUPrimitiveTopology m_primitiveTopology;
+    Optional<GPUIndexFormat> m_indexFormat;
+
+    // Preserved for Web Inspector recompilation.
     RefPtr<GPUPipelineLayout> m_layout;
-    PrimitiveTopology m_primitiveTopology;
+    GPURenderPipelineDescriptorBase m_renderDescriptorBase;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_GPUPIPELINE(WebCore::GPURenderPipeline, isRenderPipeline())
 
 #endif // ENABLE(WEBGPU)

@@ -105,10 +105,13 @@ std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRe
 
     float scaleFactor = frame.page()->deviceScaleFactor();
 
-    if (frame.settings().delegatesPageScaling())
+    if (frame.page()->delegatesScaling())
         scaleFactor *= frame.page()->pageScaleFactor();
 
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(imageRect.size(), Unaccelerated, scaleFactor);
+    if (options & SnapshotOptionsPaintWithIntegralScaleFactor)
+        scaleFactor = ceilf(scaleFactor);
+
+    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(imageRect.size(), RenderingMode::Unaccelerated, scaleFactor);
     if (!buffer)
         return nullptr;
     buffer->context().translate(-imageRect.x(), -imageRect.y());
@@ -116,7 +119,7 @@ std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame& frame, const IntRe
     if (!clipRects.isEmpty()) {
         Path clipPath;
         for (auto& rect : clipRects)
-            clipPath.addRect(rect);
+            clipPath.addRect(encloseRectToDevicePixels(rect, scaleFactor));
         buffer->context().clipPath(clipPath);
     }
 

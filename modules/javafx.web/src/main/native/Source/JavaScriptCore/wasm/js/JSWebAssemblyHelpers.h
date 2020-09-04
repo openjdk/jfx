@@ -27,7 +27,9 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "Error.h"
 #include "JSArrayBuffer.h"
+#include "JSArrayBufferView.h"
 #include "JSCJSValue.h"
 #include "JSSourceCode.h"
 #include "WebAssemblyFunction.h"
@@ -35,24 +37,30 @@
 
 namespace JSC {
 
-ALWAYS_INLINE uint32_t toNonWrappingUint32(ExecState* exec, JSValue value)
+ALWAYS_INLINE uint32_t toNonWrappingUint32(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    double doubleValue = value.toInteger(exec);
+
+    if (value.isUInt32())
+        return value.asUInt32();
+
+    double doubleValue = value.toNumber(globalObject);
     RETURN_IF_EXCEPTION(throwScope, { });
-    if (doubleValue < 0 || doubleValue > UINT_MAX) {
-        throwException(exec, throwScope,
-            createRangeError(exec, "Expect an integer argument in the range: [0, 2^32 - 1]"_s));
-        return { };
+
+    if (!std::isnan(doubleValue) && !std::isinf(doubleValue)) {
+        double truncedValue = trunc(doubleValue);
+        if (truncedValue >= 0 && truncedValue <= UINT_MAX)
+            return static_cast<uint32_t>(truncedValue);
     }
 
-    return static_cast<uint32_t>(doubleValue);
+    throwException(globalObject, throwScope, createTypeError(globalObject, "Expect an integer argument in the range: [0, 2^32 - 1]"_s));
+    return { };
 }
 
-ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState* exec, JSValue value)
+ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
     if (auto* source = jsDynamicCast<JSSourceCode*>(vm, value)) {
@@ -64,13 +72,13 @@ ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState
     JSArrayBuffer* arrayBuffer = value.getObject() ? jsDynamicCast<JSArrayBuffer*>(vm, value.getObject()) : nullptr;
     JSArrayBufferView* arrayBufferView = value.getObject() ? jsDynamicCast<JSArrayBufferView*>(vm, value.getObject()) : nullptr;
     if (!(arrayBuffer || arrayBufferView)) {
-        throwException(exec, throwScope, createTypeError(exec,
+        throwException(globalObject, throwScope, createTypeError(globalObject,
             "first argument must be an ArrayBufferView or an ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
     if (arrayBufferView ? arrayBufferView->isNeutered() : arrayBuffer->impl()->isNeutered()) {
-        throwException(exec, throwScope, createTypeError(exec,
+        throwException(globalObject, throwScope, createTypeError(globalObject,
             "underlying TypedArray has been detatched from the ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
@@ -80,17 +88,15 @@ ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState
     return { base, byteSize };
 }
 
-ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, ExecState* exec, JSValue value)
+ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, JSGlobalObject* globalObject, JSValue value)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    const uint8_t* data;
-    size_t byteSize;
-    std::tie(data, byteSize) = getWasmBufferFromValue(exec, value);
+    auto [data, byteSize] = getWasmBufferFromValue(globalObject, value);
     RETURN_IF_EXCEPTION(throwScope, Vector<uint8_t>());
 
     Vector<uint8_t> result;
     if (!result.tryReserveCapacity(byteSize)) {
-        throwException(exec, throwScope, createOutOfMemoryError(exec));
+        throwException(globalObject, throwScope, createOutOfMemoryError(globalObject));
         return result;
     }
 
@@ -122,7 +128,7 @@ ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue value, WebAssemblyF
 }
 
 
-ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSObject* object)
+ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSValue object)
 {
     WebAssemblyFunction* unused;
     WebAssemblyWrapperFunction* unused2;

@@ -60,7 +60,7 @@ static inline bool createMaskAndSwapContextForTextGradient(GraphicsContext*& con
     AffineTransform absoluteTransform = SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(*textRootBlock);
     FloatRect repaintRect = textRootBlock->repaintRectInLocalCoordinates();
 
-    auto maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, ColorSpaceSRGB, context->renderingMode());
+    auto maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, ColorSpace::SRGB, context->renderingMode());
     if (!maskImage)
         return false;
 
@@ -104,7 +104,7 @@ bool RenderSVGResourceGradient::applyResource(RenderElement& renderer, const Ren
     // synchronization to kick in, which causes removeAllClientsFromCache() to be called, which in turn deletes our
     // GradientData object! Leaving out the line below will cause svg/dynamic-updates/SVG*GradientElement-svgdom* to crash.
     if (m_shouldCollectGradientAttributes) {
-        gradientElement().synchronizeAnimatedSVGAttribute(anyQName());
+        gradientElement().synchronizeAllAttributes();
         if (!collectGradientAttributes())
             return false;
 
@@ -119,7 +119,7 @@ bool RenderSVGResourceGradient::applyResource(RenderElement& renderer, const Ren
 
     auto& gradientData = m_gradientMap.add(&renderer, nullptr).iterator->value;
     if (!gradientData)
-        gradientData = std::make_unique<GradientData>();
+        gradientData = makeUnique<GradientData>();
 
     bool isPaintingText = resourceMode.contains(RenderSVGResourceMode::ApplyToText);
 
@@ -195,7 +195,7 @@ void RenderSVGResourceGradient::postApplyResource(RenderElement& renderer, Graph
     if (resourceMode.contains(RenderSVGResourceMode::ApplyToText)) {
 #if USE(CG)
         // CG requires special handling for gradient on text
-        GradientData* gradientData;
+        GradientData* gradientData = nullptr;
         if (m_savedContext && (gradientData = m_gradientMap.get(&renderer))) {
             // Restore on-screen drawing context
             context = m_savedContext;

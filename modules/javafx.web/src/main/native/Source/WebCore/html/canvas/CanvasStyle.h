@@ -35,7 +35,7 @@ namespace WebCore {
 
 class Document;
 class GraphicsContext;
-class HTMLCanvasElement;
+class CanvasBase;
 
 class CanvasStyle {
 public:
@@ -47,8 +47,8 @@ public:
     CanvasStyle(CanvasGradient&);
     CanvasStyle(CanvasPattern&);
 
-    static CanvasStyle createFromString(const String& color);
-    static CanvasStyle createFromStringWithOverrideAlpha(const String& color, float alpha);
+    static CanvasStyle createFromString(const String& color, CanvasBase&);
+    static CanvasStyle createFromStringWithOverrideAlpha(const String& color, float alpha, CanvasBase&);
 
     bool isValid() const { return !WTF::holds_alternative<Invalid>(m_style); }
     bool isCurrentColor() const { return WTF::holds_alternative<CurrentColor>(m_style); }
@@ -89,8 +89,11 @@ private:
     Variant<Invalid, Color, CMYKAColor, RefPtr<CanvasGradient>, RefPtr<CanvasPattern>, CurrentColor> m_style;
 };
 
-Color currentColor(HTMLCanvasElement*);
-Color parseColorOrCurrentColor(const String& colorString, HTMLCanvasElement*);
+bool isCurrentColorString(const String& colorString);
+
+Color currentColor(CanvasBase&);
+Color parseColor(const String& colorString, CanvasBase&);
+Color parseColorOrCurrentColor(const String& colorString, CanvasBase&);
 
 inline CanvasStyle::CanvasStyle()
     : m_style(Invalid { })

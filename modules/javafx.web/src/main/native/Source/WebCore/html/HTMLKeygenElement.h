@@ -34,7 +34,7 @@ class HTMLKeygenElement final : public HTMLFormControlElementWithState {
 public:
     static Ref<HTMLKeygenElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
-    void setKeytype(const AtomicString&);
+    void setKeytype(const AtomString&);
     String keytype() const;
 
 private:
@@ -43,14 +43,16 @@ private:
     bool computeWillValidate() const final { return false; }
     bool canStartSelection() const final { return false; }
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
 
     bool appendFormData(DOMFormData&, bool) final;
-    const AtomicString& formControlType() const final;
+    const AtomString& formControlType() const final;
     bool isOptionalFormControl() const final { return false; }
 
     bool isEnumeratable() const final { return true; }
     bool supportLabels() const final { return true; }
+
+    int defaultTabIndex() const final;
 
     void reset() final;
     bool shouldSaveAndRestoreFormControlState() const final;

@@ -11,6 +11,7 @@ list(APPEND WTF_PUBLIC_HEADERS
     java/JavaEnv.h
     java/JavaRef.h
     java/DbgUtils.h
+    java/JavaMath.h
     unicode/java/UnicodeJava.h
 )
 
@@ -31,22 +32,22 @@ list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 if (APPLE)
-    file(COPY mac/MachExceptions.defs DESTINATION ${DERIVED_SOURCES_WTF_DIR})
+    file(COPY mac/MachExceptions.defs DESTINATION ${WTF_DERIVED_SOURCES_DIR})
 
     add_custom_command(
         OUTPUT
-            ${DERIVED_SOURCES_WTF_DIR}/MachExceptionsServer.h
-            ${DERIVED_SOURCES_WTF_DIR}/mach_exc.h
-            ${DERIVED_SOURCES_WTF_DIR}/mach_excServer.c
-            ${DERIVED_SOURCES_WTF_DIR}/mach_excUser.c
+            ${WTF_DERIVED_SOURCES_DIR}/MachExceptionsServer.h
+            ${WTF_DERIVED_SOURCES_DIR}/mach_exc.h
+            ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
+            ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
         MAIN_DEPENDENCY mac/MachExceptions.defs
-        WORKING_DIRECTORY ${DERIVED_SOURCES_WTF_DIR}
+        WORKING_DIRECTORY ${WTF_DERIVED_SOURCES_DIR}
         COMMAND mig -sheader MachExceptionsServer.h MachExceptions.defs
         VERBATIM)
 
     list(APPEND WTF_SOURCES
-        ${DERIVED_SOURCES_WTF_DIR}/mach_excServer.c
-        ${DERIVED_SOURCES_WTF_DIR}/mach_excUser.c
+        ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
+        ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )
 
     list(APPEND WTF_PUBLIC_HEADERS
@@ -56,7 +57,7 @@ if (APPLE)
     list(APPEND WTF_PRIVATE_INCLUDE_DIRECTORIES
         # Check whether we can use WTF/icu
         # "${WTF_DIR}/icu"
-        ${DERIVED_SOURCES_WTF_DIR}
+        ${WTF_DERIVED_SOURCES_DIR}
     )
 
     list(APPEND WTF_SOURCES
@@ -99,7 +100,6 @@ elseif (WIN32)
         win/MemoryPressureHandlerWin.cpp
         win/OSAllocatorWin.cpp
         win/RunLoopWin.cpp
-        win/ThreadSpecificWin.cpp
         win/ThreadingWin.cpp
         win/WorkQueueWin.cpp
     )
@@ -111,12 +111,6 @@ elseif (WIN32)
 
     list(APPEND WTF_LIBRARIES
         winmm
-    )
-endif ()
-
-if (${CMAKE_BUILD_TYPE} MATCHES "Debug" AND WIN32)
-    list(APPEND WTF_LIBRARIES
-        dbghelp
     )
 endif ()
 

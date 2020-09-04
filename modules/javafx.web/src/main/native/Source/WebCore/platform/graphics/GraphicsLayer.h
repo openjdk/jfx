@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Animation.h"
 #include "Color.h"
+#include "EventRegion.h"
 #include "FilterOperations.h"
 #include "FloatPoint.h"
 #include "FloatPoint3D.h"
@@ -35,7 +35,9 @@
 #include "GraphicsLayerClient.h"
 #include "Path.h"
 #include "PlatformLayer.h"
+#include "Region.h"
 #include "ScrollableArea.h"
+#include "TimingFunction.h"
 #include "TransformOperations.h"
 #include "WindRule.h"
 #include <wtf/Function.h>
@@ -51,6 +53,7 @@ class TextStream;
 
 namespace WebCore {
 
+class Animation;
 class GraphicsContext;
 class GraphicsLayerFactory;
 class Image;
@@ -109,7 +112,7 @@ public:
 
     std::unique_ptr<AnimationValue> clone() const override
     {
-        return std::make_unique<FloatAnimationValue>(*this);
+        return makeUnique<FloatAnimationValue>(*this);
     }
 
     float value() const { return m_value; }
@@ -130,7 +133,7 @@ public:
 
     std::unique_ptr<AnimationValue> clone() const override
     {
-        return std::make_unique<TransformAnimationValue>(*this);
+        return makeUnique<TransformAnimationValue>(*this);
     }
 
     TransformAnimationValue(const TransformAnimationValue& other)
@@ -161,7 +164,7 @@ public:
 
     std::unique_ptr<AnimationValue> clone() const override
     {
-        return std::make_unique<FilterAnimationValue>(*this);
+        return makeUnique<FilterAnimationValue>(*this);
     }
 
     FilterAnimationValue(const FilterAnimationValue& other)
@@ -238,6 +241,7 @@ public:
         Normal,
         PageTiledBacking,
         ScrollContainer,
+        ScrolledContents,
         Shape
     };
 
@@ -265,6 +269,7 @@ public:
     // Layer name. Only used to identify layers in debug output
     const String& name() const { return m_name; }
     virtual void setName(const String& name) { m_name = name; }
+    virtual String debugName() const;
 
     GraphicsLayer* parent() const { return m_parent; };
     void setParent(GraphicsLayer*); // Internal use only.
@@ -411,8 +416,8 @@ public:
 #endif
 
     // Some GraphicsLayers paint only the foreground or the background content
-    GraphicsLayerPaintingPhase paintingPhase() const { return m_paintingPhase; }
-    void setPaintingPhase(GraphicsLayerPaintingPhase phase) { m_paintingPhase = phase; }
+    OptionSet<GraphicsLayerPaintingPhase> paintingPhase() const { return m_paintingPhase; }
+    void setPaintingPhase(OptionSet<GraphicsLayerPaintingPhase>);
 
     enum ShouldClipToLayer {
         DoNotClipToLayer,
@@ -451,6 +456,9 @@ public:
 
     WindRule shapeLayerWindRule() const;
     virtual void setShapeLayerWindRule(WindRule);
+
+    const EventRegion& eventRegion() const { return m_eventRegion; }
+    virtual void setEventRegion(EventRegion&&);
 
     // Transitions are identified by a special animation name that cannot clash with a keyframe identifier.
     static String animationNameForTransition(AnimatedPropertyID);
@@ -551,9 +559,9 @@ public:
     float pageScaleFactor() const { return client().pageScaleFactor(); }
     float deviceScaleFactor() const { return client().deviceScaleFactor(); }
 
-    // Whether this layer is viewport constrained, implying that it's moved around externally from GraphicsLayer (e.g. by the scrolling tree).
-    virtual void setIsViewportConstrained(bool) { }
-    virtual bool isViewportConstrained() const { return false; }
+    // Whether this layer can throw away backing store to save memory. False for layers that can be revealed by async scrolling.
+    virtual void setAllowsBackingStoreDetaching(bool) { }
+    virtual bool allowsBackingStoreDetaching() const { return true; }
 
     virtual void deviceOrPageScaleFactorChanged() { }
     WEBCORE_EXPORT void noteDeviceOrPageScaleFactorChangedIncludingDescendants();
@@ -569,6 +577,8 @@ public:
     // If the exposed rect of this layer changes, returns true if this or descendant layers need a flush,
     // for example to allocate new tiles.
     virtual bool visibleRectChangeRequiresFlush(const FloatRect& /* clipRect */) const { return false; }
+
+    static FloatRect adjustCoverageRectForMovement(const FloatRect& coverageRect, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect);
 
     // Return a string with a human readable form of the layer tree, If debug is true
     // pointers for the layers and timing data will be included in the returned string.
@@ -586,9 +596,6 @@ public:
 
     virtual bool backingStoreAttached() const { return true; }
     virtual bool backingStoreAttachedForTesting() const { return backingStoreAttached(); }
-
-    void setCanDetachBackingStore(bool b) { m_canDetachBackingStore = b; }
-    bool canDetachBackingStore() const { return m_canDetachBackingStore; }
 
     virtual TiledBacking* tiledBacking() const { return 0; }
 
@@ -685,7 +692,7 @@ protected:
 
     const Type m_type;
     CustomAppearance m_customAppearance { CustomAppearance::None };
-    GraphicsLayerPaintingPhase m_paintingPhase { GraphicsLayerPaintAllWithOverflowClip };
+    OptionSet<GraphicsLayerPaintingPhase> m_paintingPhase { GraphicsLayerPaintingPhase::Foreground, GraphicsLayerPaintingPhase::Background };
     CompositingCoordinatesOrientation m_contentsOrientation { CompositingCoordinatesOrientation::TopDown }; // affects orientation of layer contents
 
     bool m_beingDestroyed : 1;
@@ -726,12 +733,14 @@ protected:
     FloatRoundedRect m_backdropFiltersRect;
     Optional<FloatRect> m_animationExtent;
 
+    EventRegion m_eventRegion;
 #if USE(CA)
     WindRule m_shapeLayerWindRule { WindRule::NonZero };
     Path m_shapeLayerPath;
 #endif
 };
 
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const WebCore::GraphicsLayerPaintingPhase);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Vector<GraphicsLayer::PlatformLayerID>&);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const GraphicsLayer::CustomAppearance&);
 

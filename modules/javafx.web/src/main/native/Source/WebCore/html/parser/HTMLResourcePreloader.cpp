@@ -59,7 +59,9 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
         if (crossOriginMode.isNull())
             crossOriginMode = "omit"_s;
     }
-    auto request = createPotentialAccessControlRequest(completeURL(document), document, crossOriginMode, WTFMove(options));
+    if (m_resourceType == CachedResource::Type::Script)
+        options.referrerPolicy = m_referrerPolicy;
+    auto request = createPotentialAccessControlRequest(completeURL(document), WTFMove(options), document, crossOriginMode);
     request.setInitiator(m_initiator);
     return request;
 }

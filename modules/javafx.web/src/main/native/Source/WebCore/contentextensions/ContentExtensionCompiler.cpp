@@ -285,9 +285,9 @@ static void compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
 
 std::error_code compileRuleList(ContentExtensionCompilationClient& client, String&& ruleJSON, Vector<ContentExtensionRule>&& parsedRuleList)
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     callOnMainThread([ruleJSON = ruleJSON.isolatedCopy(), parsedRuleList = parsedRuleList.isolatedCopy()] {
-        ASSERT(parseRuleList(ruleJSON) == parsedRuleList);
+        ASSERT(parseRuleList(ruleJSON).value() == parsedRuleList);
     });
 #endif
 

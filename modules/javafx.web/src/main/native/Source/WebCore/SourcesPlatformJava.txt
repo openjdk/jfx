@@ -1,4 +1,4 @@
-// Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 //
 // This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ platform/java/ContextMenuJava.cpp
 platform/java/CursorJava.cpp
 platform/java/DragImageJava.cpp
 platform/java/DragDataJava.cpp
-platform/java/EventLoopJava.cpp
 platform/java/IDNJava.cpp
 platform/java/KeyboardEventJava.cpp
 platform/java/KeyedCodingJava.cpp
@@ -108,5 +107,6 @@ platform/network/java/URLLoader.cpp
 bindings/java/JavaDOMUtils.cpp
 bindings/java/JavaEventListener.cpp
 
+platform/java/WebKitLogging.cpp
 page/java/DragControllerJava.cpp
 page/java/EventHandlerJava.cpp

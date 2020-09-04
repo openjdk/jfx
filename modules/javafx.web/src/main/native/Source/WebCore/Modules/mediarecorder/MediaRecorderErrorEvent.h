@@ -32,19 +32,20 @@ namespace WebCore {
 class DOMException;
 
 class MediaRecorderErrorEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(MediaRecorderErrorEvent);
 public:
     struct Init : EventInit {
         RefPtr<DOMException> error;
     };
 
-    static Ref<MediaRecorderErrorEvent> create(const AtomicString&, Init&&, IsTrusted = IsTrusted::No);
-    static Ref<MediaRecorderErrorEvent> create(const AtomicString&, Exception&&);
+    static Ref<MediaRecorderErrorEvent> create(const AtomString&, Init&&, IsTrusted = IsTrusted::No);
+    static Ref<MediaRecorderErrorEvent> create(const AtomString&, Exception&&);
 
     DOMException& error() const { return m_domError.get(); }
 
 private:
-    MediaRecorderErrorEvent(const AtomicString&, Init&&, Ref<DOMException>&&, IsTrusted);
-    MediaRecorderErrorEvent(const AtomicString&, Exception&&);
+    MediaRecorderErrorEvent(const AtomString&, Init&&, Ref<DOMException>&&, IsTrusted);
+    MediaRecorderErrorEvent(const AtomString&, Exception&&);
 
     // Event
     EventInterface eventInterface() const override;

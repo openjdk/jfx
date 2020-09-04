@@ -57,12 +57,20 @@ class ObjCHeaderGenerator(ObjCGenerator):
         return '%s.h' % self.protocol_name()
 
     def generate_output(self):
-        headers = set([
+        headerPreludeHeaders = set([
             '<WebInspector/%sJSONObject.h>' % ObjCGenerator.OBJC_STATIC_PREFIX,
         ])
 
-        header_args = {
-            'includes': '\n'.join(['#import ' + header for header in sorted(headers)]),
+        headerPrelude_args = {
+            'includes': '\n'.join(['#import ' + header for header in sorted(headerPreludeHeaders)]),
+        }
+
+        headerPostludeHeaders = set([
+            '<WebInspector/%sBuildCompatibilityObjects.h>' % ObjCGenerator.OBJC_STATIC_PREFIX,
+        ])
+
+        headerPostlude_args = {
+            'includes': '\n'.join(['#import ' + header for header in sorted(headerPostludeHeaders)]),
         }
 
         domains = self.domains_to_generate()
@@ -77,7 +85,7 @@ class ObjCHeaderGenerator(ObjCGenerator):
 
         sections = []
         sections.append(self.generate_license())
-        sections.append(Template(ObjCTemplates.HeaderPrelude).substitute(None, **header_args))
+        sections.append(Template(ObjCTemplates.HeaderPrelude).substitute(None, **headerPrelude_args))
         sections.append('\n'.join([_f for _f in map(self._generate_forward_declarations, type_domains) if _f]))
         sections.append(self._generate_enum_for_platforms())
         sections.append('\n'.join([_f for _f in map(self._generate_enums, type_domains) if _f]))
@@ -87,7 +95,7 @@ class ObjCHeaderGenerator(ObjCGenerator):
             sections.append('\n\n'.join([_f for _f in map(self._generate_command_protocols, command_domains) if _f]))
             sections.append('\n\n'.join([_f for _f in map(self._generate_event_interfaces, event_domains) if _f]))
 
-        sections.append(Template(ObjCTemplates.HeaderPostlude).substitute(None))
+        sections.append(Template(ObjCTemplates.HeaderPostlude).substitute(None, **headerPostlude_args))
         return '\n\n'.join(sections)
 
     def _generate_forward_declarations(self, domain):
@@ -207,7 +215,7 @@ class ObjCHeaderGenerator(ObjCGenerator):
         if self.commands_for_domain(domain):
             objc_name = '%s%sDomainHandler' % (self.objc_prefix(), domain.domain_name)
             lines.append('@protocol %s <NSObject>' % objc_name)
-            lines.append('@required')
+            lines.append('@optional')
             for command in self.commands_for_domain(domain):
                 lines.append(self._generate_single_command_protocol(domain, command))
             lines.append('@end')

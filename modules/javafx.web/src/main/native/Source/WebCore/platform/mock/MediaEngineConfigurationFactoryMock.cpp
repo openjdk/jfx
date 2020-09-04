@@ -29,7 +29,8 @@
 #include "MediaEngineConfigurationFactoryMock.h"
 
 #include "ContentType.h"
-#include "MediaCapabilitiesInfo.h"
+#include "MediaCapabilitiesDecodingInfo.h"
+#include "MediaCapabilitiesEncodingInfo.h"
 #include "MediaDecodingConfiguration.h"
 #include "MediaEncodingConfiguration.h"
 
@@ -45,6 +46,18 @@ static bool canDecodeMedia(const MediaDecodingConfiguration& configuration)
     auto videoConfig = configuration.video;
     if (videoConfig && videoConfig->width > 1280 && videoConfig->height > 720)
         return false;
+
+    // Only the "mock-with-alpha" codec supports alphaChannel
+    if (videoConfig && videoConfig->alphaChannel && videoConfig->alphaChannel.value()) {
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-alpha")
+            return false;
+    }
+
+    // Only the "mock-with-hdr" codec supports HDR)
+    if (videoConfig && (videoConfig->colorGamut || videoConfig->hdrMetadataType || videoConfig->transferFunction)) {
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-hdr")
+            return false;
+    }
 
     // Audio decoding support limited to audio/mp4.
     auto audioConfig = configuration.audio;
@@ -91,6 +104,12 @@ static bool canEncodeMedia(const MediaEncodingConfiguration& configuration)
     if (videoConfig && videoConfig->width > 1280 && videoConfig->height > 720)
         return false;
 
+    // Only the "mock-with-alpha" codec supports alphaChannel
+    if (videoConfig && videoConfig->alphaChannel && videoConfig->alphaChannel.value()) {
+        if (ContentType(videoConfig->contentType).parameter(ContentType::codecsParameter()) != "mock-with-alpha")
+            return false;
+    }
+
     // Audio encoding support limited to audio/mp4.
     auto audioConfig = configuration.audio;
     if (audioConfig && ContentType(audioConfig->contentType).containerType() != "audio/mp4")
@@ -125,22 +144,23 @@ static bool canPowerEfficientlyEncodeMedia(const MediaEncodingConfiguration& con
     return true;
 }
 
-void MediaEngineConfigurationFactoryMock::createDecodingConfiguration(MediaDecodingConfiguration& configuration, DecodingConfigurationCallback&& callback)
+void MediaEngineConfigurationFactoryMock::createDecodingConfiguration(MediaDecodingConfiguration&& configuration, DecodingConfigurationCallback&& callback)
 {
     if (!canDecodeMedia(configuration)) {
-        callback({ });
+        MediaCapabilitiesDecodingInfo info { WTFMove(configuration) };
+        callback(WTFMove(info));
         return;
     }
-    callback({ true, canSmoothlyDecodeMedia(configuration), canPowerEfficientlyDecodeMedia(configuration) });
+    callback({{ true, canSmoothlyDecodeMedia(configuration), canPowerEfficientlyDecodeMedia(configuration) }, WTFMove(configuration)});
 }
 
-void MediaEngineConfigurationFactoryMock::createEncodingConfiguration(MediaEncodingConfiguration& configuration, EncodingConfigurationCallback&& callback)
+void MediaEngineConfigurationFactoryMock::createEncodingConfiguration(MediaEncodingConfiguration&& configuration, EncodingConfigurationCallback&& callback)
 {
     if (!canEncodeMedia(configuration)) {
-        callback({ });
+        callback({{ }, WTFMove(configuration) });
         return;
     }
-    callback({ true, canSmoothlyEncodeMedia(configuration), canPowerEfficientlyEncodeMedia(configuration) });
+    callback({{ true, canSmoothlyEncodeMedia(configuration), canPowerEfficientlyEncodeMedia(configuration) }, WTFMove(configuration)});
 }
 
 } // namespace WebCore

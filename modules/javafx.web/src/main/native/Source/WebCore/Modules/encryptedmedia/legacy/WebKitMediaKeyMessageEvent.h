@@ -33,11 +33,12 @@
 
 namespace WebCore {
 
-class WebKitMediaKeyMessageEvent : public Event {
+class WebKitMediaKeyMessageEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(WebKitMediaKeyMessageEvent);
 public:
     virtual ~WebKitMediaKeyMessageEvent();
 
-    static Ref<WebKitMediaKeyMessageEvent> create(const AtomicString& type, Uint8Array* message, const String& destinationURL)
+    static Ref<WebKitMediaKeyMessageEvent> create(const AtomString& type, Uint8Array* message, const String& destinationURL)
     {
         return adoptRef(*new WebKitMediaKeyMessageEvent(type, message, destinationURL));
     }
@@ -47,7 +48,7 @@ public:
         String destinationURL;
     };
 
-    static Ref<WebKitMediaKeyMessageEvent> create(const AtomicString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<WebKitMediaKeyMessageEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new WebKitMediaKeyMessageEvent(type, initializer, isTrusted));
     }
@@ -58,8 +59,8 @@ public:
     String destinationURL() const { return m_destinationURL; }
 
 private:
-    WebKitMediaKeyMessageEvent(const AtomicString& type, Uint8Array* message, const String& destinationURL);
-    WebKitMediaKeyMessageEvent(const AtomicString& type, const Init&, IsTrusted);
+    WebKitMediaKeyMessageEvent(const AtomString& type, Uint8Array* message, const String& destinationURL);
+    WebKitMediaKeyMessageEvent(const AtomString& type, const Init&, IsTrusted);
 
     RefPtr<Uint8Array> m_message;
     String m_destinationURL;

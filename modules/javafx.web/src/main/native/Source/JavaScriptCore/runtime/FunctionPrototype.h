@@ -35,9 +35,9 @@ public:
         return prototype;
     }
 
-    void addFunctionProperties(ExecState*, JSGlobalObject*, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction);
+    void addFunctionProperties(VM&, JSGlobalObject*, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction);
 
-    void initRestrictedProperties(ExecState*, JSGlobalObject*);
+    void initRestrictedProperties(VM&, JSGlobalObject*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
@@ -52,5 +52,6 @@ protected:
 private:
     FunctionPrototype(VM&, Structure*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(FunctionPrototype, InternalFunction);
 
 } // namespace JSC

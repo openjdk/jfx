@@ -25,7 +25,9 @@
 
 #pragma once
 
-#include "GraphicsTypes3D.h"
+#if ENABLE(WEBGL)
+
+#include "GraphicsTypesGL.h"
 #include "WebGLExtension.h"
 
 namespace WebCore {
@@ -39,7 +41,7 @@ public:
 
     RefPtr<WebGLVertexArrayObjectOES> createVertexArrayOES();
     void deleteVertexArrayOES(WebGLVertexArrayObjectOES*);
-    GC3Dboolean isVertexArrayOES(WebGLVertexArrayObjectOES*);
+    GCGLboolean isVertexArrayOES(WebGLVertexArrayObjectOES*);
     void bindVertexArrayOES(WebGLVertexArrayObjectOES*);
 
 private:
@@ -47,3 +49,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

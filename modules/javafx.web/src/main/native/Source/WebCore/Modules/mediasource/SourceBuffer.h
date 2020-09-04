@@ -67,6 +67,7 @@ class SourceBuffer final
     , private LoggerHelper
 #endif
 {
+    WTF_MAKE_ISO_ALLOCATED(SourceBuffer);
 public:
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
     virtual ~SourceBuffer();
@@ -78,8 +79,11 @@ public:
 
 #if ENABLE(VIDEO_TRACK)
     VideoTrackList& videoTracks();
+    VideoTrackList* videoTracksIfExists() const { return m_videoTracks.get(); }
     AudioTrackList& audioTracks();
+    AudioTrackList* audioTracksIfExists() const { return m_audioTracks.get(); }
     TextTrackList& textTracks();
+    TextTrackList* textTracksIfExists() const { return m_textTracks.get(); }
 #endif
 
     double appendWindowStart() const;
@@ -143,18 +147,15 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    void suspend(ReasonForSuspension) final;
-    void resume() final;
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
 
     void sourceBufferPrivateDidReceiveInitializationSegment(const InitializationSegment&) final;
     void sourceBufferPrivateDidReceiveSample(MediaSample&) final;
     bool sourceBufferPrivateHasAudio() const final;
     bool sourceBufferPrivateHasVideo() const final;
-    void sourceBufferPrivateReenqueSamples(const AtomicString& trackID) final;
-    void sourceBufferPrivateDidBecomeReadyForMoreSamples(const AtomicString& trackID) final;
+    void sourceBufferPrivateReenqueSamples(const AtomString& trackID) final;
+    void sourceBufferPrivateDidBecomeReadyForMoreSamples(const AtomString& trackID) final;
     MediaTime sourceBufferPrivateFastSeekTimeForMediaTime(const MediaTime&, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold) final;
     void sourceBufferPrivateAppendComplete(AppendResult) final;
     void sourceBufferPrivateDidReceiveRenderingError(int errorCode) final;
@@ -172,7 +173,7 @@ private:
     EventTargetInterface eventTargetInterface() const final { return SourceBufferEventTargetInterfaceType; }
 
     bool isRemoved() const;
-    void scheduleEvent(const AtomicString& eventName);
+    void scheduleEvent(const AtomString& eventName);
 
     ExceptionOr<void> appendBufferInternal(const unsigned char*, unsigned);
     void appendBufferTimerFired();
@@ -182,8 +183,8 @@ private:
 
     bool validateInitializationSegment(const InitializationSegment&);
 
-    void reenqueueMediaForTime(TrackBuffer&, const AtomicString& trackID, const MediaTime&);
-    void provideMediaData(TrackBuffer&, const AtomicString& trackID);
+    void reenqueueMediaForTime(TrackBuffer&, const AtomString& trackID, const MediaTime&);
+    void provideMediaData(TrackBuffer&, const AtomString& trackID);
     void didDropSample();
     void evictCodedFrames(size_t newDataSize);
     size_t maximumBufferSize() const;
@@ -197,6 +198,8 @@ private:
     void reportExtraMemoryAllocated();
 
     void updateBufferedFromTrackBuffers();
+    void updateMinimumUpcomingPresentationTime(TrackBuffer&, const AtomString& trackID);
+    void resetMinimumUpcomingPresentationTime(TrackBuffer&, const AtomString& trackID);
 
     void appendError(bool);
 
@@ -204,15 +207,17 @@ private:
 
     void rangeRemoval(const MediaTime&, const MediaTime&);
 
-    void trySignalAllSamplesInTrackEnqueued(const AtomicString&);
+    void trySignalAllSamplesInTrackEnqueued(const AtomString&);
 
     friend class Internals;
-    WEBCORE_EXPORT Vector<String> bufferedSamplesForTrackID(const AtomicString&);
-    WEBCORE_EXPORT Vector<String> enqueuedSamplesForTrackID(const AtomicString&);
+    WEBCORE_EXPORT Vector<String> bufferedSamplesForTrackID(const AtomString&);
+    WEBCORE_EXPORT Vector<String> enqueuedSamplesForTrackID(const AtomString&);
+    WEBCORE_EXPORT MediaTime minimumUpcomingPresentationTimeForTrackID(const AtomString&);
+    WEBCORE_EXPORT void setMaximumQueueDepthForTrackID(const AtomString&, size_t);
 
     Ref<SourceBufferPrivate> m_private;
     MediaSource* m_source;
-    GenericEventQueue m_asyncEventQueue;
+    UniqueRef<MainThreadGenericEventQueue> m_asyncEventQueue;
     AppendMode m_mode { AppendMode::Segments };
 
     Vector<unsigned char> m_pendingAppendData;
@@ -222,9 +227,9 @@ private:
     RefPtr<AudioTrackList> m_audioTracks;
     RefPtr<TextTrackList> m_textTracks;
 
-    Vector<AtomicString> m_videoCodecs;
-    Vector<AtomicString> m_audioCodecs;
-    Vector<AtomicString> m_textCodecs;
+    Vector<AtomString> m_videoCodecs;
+    Vector<AtomString> m_audioCodecs;
+    Vector<AtomString> m_textCodecs;
 
     MediaTime m_timestampOffset;
     MediaTime m_appendWindowStart;
@@ -233,7 +238,7 @@ private:
     MediaTime m_groupStartTimestamp;
     MediaTime m_groupEndTimestamp;
 
-    HashMap<AtomicString, TrackBuffer> m_trackBufferMap;
+    HashMap<AtomString, TrackBuffer> m_trackBufferMap;
     RefPtr<TimeRanges> m_buffered;
     bool m_bufferedDirty { true };
 

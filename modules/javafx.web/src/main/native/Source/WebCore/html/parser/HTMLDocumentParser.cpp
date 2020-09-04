@@ -27,9 +27,11 @@
 #include "config.h"
 #include "HTMLDocumentParser.h"
 
+#include "CustomHeaderFields.h"
 #include "CustomElementReactionQueue.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
+#include "EventLoop.h"
 #include "Frame.h"
 #include "HTMLDocument.h"
 #include "HTMLParserScheduler.h"
@@ -39,7 +41,6 @@
 #include "HTMLUnknownElement.h"
 #include "JSCustomElementInterface.h"
 #include "LinkLoader.h"
-#include "Microtasks.h"
 #include "NavigationScheduler.h"
 #include "ScriptElement.h"
 #include "ThrowOnDynamicMarkupInsertionCountIncrementer.h"
@@ -48,15 +49,17 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HTMLDocumentParser);
+
 HTMLDocumentParser::HTMLDocumentParser(HTMLDocument& document)
     : ScriptableDocumentParser(document)
     , m_options(document)
     , m_tokenizer(m_options)
-    , m_scriptRunner(std::make_unique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
-    , m_treeBuilder(std::make_unique<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
-    , m_parserScheduler(std::make_unique<HTMLParserScheduler>(*this))
+    , m_scriptRunner(makeUnique<HTMLScriptRunner>(document, static_cast<HTMLScriptRunnerHost&>(*this)))
+    , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, document, parserContentPolicy(), m_options))
+    , m_parserScheduler(makeUnique<HTMLParserScheduler>(*this))
     , m_xssAuditorDelegate(document)
-    , m_preloader(std::make_unique<HTMLResourcePreloader>(document))
+    , m_preloader(makeUnique<HTMLResourcePreloader>(document))
 {
 }
 
@@ -69,7 +72,7 @@ inline HTMLDocumentParser::HTMLDocumentParser(DocumentFragment& fragment, Elemen
     : ScriptableDocumentParser(fragment.document(), rawPolicy)
     , m_options(fragment.document())
     , m_tokenizer(m_options)
-    , m_treeBuilder(std::make_unique<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options))
+    , m_treeBuilder(makeUnique<HTMLTreeBuilder>(*this, fragment, contextElement, parserContentPolicy(), m_options))
     , m_xssAuditorDelegate(fragment.document())
 {
     // https://html.spec.whatwg.org/multipage/syntax.html#parsing-html-fragments
@@ -215,7 +218,7 @@ void HTMLDocumentParser::runScriptsForPausedTreeBuilder()
             // Prevent document.open/write during reactions by allocating the incrementer before the reactions stack.
             ThrowOnDynamicMarkupInsertionCountIncrementer incrementer(*document());
 
-            MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+            document()->eventLoop().performMicrotaskCheckpoint();
 
             CustomElementReactionStack reactionStack(document()->execState());
             auto& elementInterface = constructionData->elementInterface.get();
@@ -314,7 +317,7 @@ void HTMLDocumentParser::pumpTokenizer(SynchronousMode mode)
     if (isWaitingForScripts()) {
         ASSERT(m_tokenizer.isInDataState());
         if (!m_preloadScanner) {
-            m_preloadScanner = std::make_unique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
+            m_preloadScanner = makeUnique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
             m_preloadScanner->appendToEnd(m_input.current());
         }
         m_preloadScanner->scan(*m_preloader, *document());
@@ -328,7 +331,7 @@ void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr& raw
 {
     AtomicHTMLToken token(*rawToken);
 
-    // We clear the rawToken in case constructTreeFromAtomicToken
+    // We clear the rawToken in case constructTree
     // synchronously re-enters the parser. We don't clear the token immedately
     // for Character tokens because the AtomicHTMLToken avoids copying the
     // characters by keeping a pointer to the underlying buffer in the
@@ -373,7 +376,7 @@ void HTMLDocumentParser::insert(SegmentedString&& source)
         // Check the document.write() output with a separate preload scanner as
         // the main scanner can't deal with insertions.
         if (!m_insertionPreloadScanner)
-            m_insertionPreloadScanner = std::make_unique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
+            m_insertionPreloadScanner = makeUnique<HTMLPreloadScanner>(m_options, document()->url(), document()->deviceScaleFactor());
         m_insertionPreloadScanner->appendToEnd(source);
         m_insertionPreloadScanner->scan(*m_preloader, *document());
     }

@@ -43,7 +43,7 @@ public:
     DOMPromiseProxy() = default;
     ~DOMPromiseProxy() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
@@ -60,11 +60,12 @@ private:
 
 template<>
 class DOMPromiseProxy<IDLVoid> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     DOMPromiseProxy() = default;
     ~DOMPromiseProxy() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
@@ -84,6 +85,7 @@ private:
 // FontFace and FontFaceSet.
 template<typename IDLType>
 class DOMPromiseProxyWithResolveCallback {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     using ResolveCallback = WTF::Function<typename IDLType::ParameterType ()>;
 
@@ -92,7 +94,7 @@ public:
     DOMPromiseProxyWithResolveCallback(ResolveCallback&&);
     ~DOMPromiseProxyWithResolveCallback() = default;
 
-    JSC::JSValue promise(JSC::ExecState&, JSDOMGlobalObject&);
+    JSC::JSValue promise(JSC::JSGlobalObject&, JSDOMGlobalObject&);
 
     void clear();
 
@@ -112,15 +114,16 @@ private:
 // MARK: - DOMPromiseProxy<IDLType> generic implementation
 
 template<typename IDLType>
-inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxy<IDLType>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 
@@ -182,15 +185,16 @@ inline void DOMPromiseProxy<IDLType>::reject(Exception exception)
 
 // MARK: - DOMPromiseProxy<IDLVoid> specialization
 
-inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxy<IDLVoid>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 
@@ -249,15 +253,16 @@ inline DOMPromiseProxyWithResolveCallback<IDLType>::DOMPromiseProxyWithResolveCa
 }
 
 template<typename IDLType>
-inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::ExecState& state, JSDOMGlobalObject& globalObject)
+inline JSC::JSValue DOMPromiseProxyWithResolveCallback<IDLType>::promise(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(lexicalGlobalObject);
     for (auto& deferredPromise : m_deferredPromises) {
         if (deferredPromise->globalObject() == &globalObject)
             return deferredPromise->promise();
     }
 
     // DeferredPromise can fail construction during worker abrupt termination.
-    auto deferredPromise = DeferredPromise::create(state, globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
+    auto deferredPromise = DeferredPromise::create(globalObject, DeferredPromise::Mode::RetainPromiseOnResolve);
     if (!deferredPromise)
         return JSC::jsUndefined();
 

@@ -37,6 +37,7 @@ namespace WebCore {
 class ScriptExecutionContext;
 
 class AbortSignal final : public RefCounted<AbortSignal>, public EventTargetWithInlineData, public CanMakeWeakPtr<AbortSignal>, private ContextDestructionObserver {
+    WTF_MAKE_ISO_ALLOCATED(AbortSignal);
 public:
     static Ref<AbortSignal> create(ScriptExecutionContext&);
 
@@ -52,6 +53,8 @@ public:
 
     void follow(AbortSignal&);
 
+    bool isFollowingSignal() const { return !!m_followingSignal; }
+
 private:
     explicit AbortSignal(ScriptExecutionContext&);
 
@@ -62,6 +65,7 @@ private:
 
     bool m_aborted { false };
     Vector<Algorithm> m_algorithms;
+    WeakPtr<AbortSignal> m_followingSignal;
 };
 
 }

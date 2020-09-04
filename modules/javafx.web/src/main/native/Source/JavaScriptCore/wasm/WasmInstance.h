@@ -28,21 +28,31 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "WasmFormat.h"
+#include "WasmGlobal.h"
 #include "WasmMemory.h"
 #include "WasmModule.h"
 #include "WasmTable.h"
-#include <wtf/Optional.h>
-#include <wtf/Ref.h>
+#include "WriteBarrier.h"
+#include <wtf/BitVector.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
+
+class LLIntOffsetsExtractor;
+class JSWebAssemblyInstance;
+
+namespace Wasm {
 
 struct Context;
+class Instance;
 
 class Instance : public ThreadSafeRefCounted<Instance>, public CanMakeWeakPtr<Instance> {
+    friend LLIntOffsetsExtractor;
+
 public:
     using StoreTopCallFrameCallback = WTF::Function<void(void*)>;
+    using FunctionWrapperMap = HashMap<uint32_t, WriteBarrier<Unknown>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
     static Ref<Instance> create(Context*, Ref<Module>&&, EntryFrame** pointerToTopEntryFrame, void** pointerToActualStackLimit, StoreTopCallFrameCallback&&);
 
@@ -64,9 +74,10 @@ public:
     Module& module() { return m_module.get(); }
     CodeBlock* codeBlock() { return m_codeBlock.get(); }
     Memory* memory() { return m_memory.get(); }
-    Table* table() { return m_table.get(); }
+    Table* table(unsigned);
+    void setTable(unsigned, Ref<Table>&&);
 
-    void* cachedMemory() const { return m_cachedMemory; }
+    void* cachedMemory() const { return m_cachedMemory.getMayBeNull(cachedMemorySize()); }
     size_t cachedMemorySize() const { return m_cachedMemorySize; }
 
     void setMemory(Ref<Memory>&& memory)
@@ -78,21 +89,62 @@ public:
     void updateCachedMemory()
     {
         if (m_memory != nullptr) {
-            m_cachedMemory = memory()->memory();
+            m_cachedMemory = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>(memory()->memory(), memory()->size());
             m_cachedMemorySize = memory()->size();
         }
     }
-    void setTable(Ref<Table>&& table) { m_table = WTFMove(table); }
 
-    int32_t loadI32Global(unsigned i) const { return m_globals.get()[i]; }
-    int64_t loadI64Global(unsigned i) const { return m_globals.get()[i]; }
+    int32_t loadI32Global(unsigned i) const
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return 0;
+        }
+        return slot->m_primitive;
+    }
+    int64_t loadI64Global(unsigned i) const
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return 0;
+        }
+        return slot->m_primitive;
+    }
     float loadF32Global(unsigned i) const { return bitwise_cast<float>(loadI32Global(i)); }
     double loadF64Global(unsigned i) const { return bitwise_cast<double>(loadI64Global(i)); }
-    void setGlobal(unsigned i, int64_t bits) { m_globals.get()[i] = bits; }
+    void setGlobal(unsigned i, int64_t bits)
+    {
+        Global::Value* slot = m_globals.get() + i;
+        if (m_globalsToBinding.get(i)) {
+            slot = slot->m_pointer;
+            if (!slot)
+                return;
+        }
+        slot->m_primitive = bits;
+    }
+    void setGlobal(unsigned, JSValue);
+    void linkGlobal(unsigned, Ref<Global>&&);
+    const BitVector& globalsToMark() { return m_globalsToMark; }
+    const BitVector& globalsToBinding() { return m_globalsToBinding; }
+    JSValue getFunctionWrapper(unsigned) const;
+    typename FunctionWrapperMap::ValuesConstIteratorRange functionWrappers() const { return m_functionWrappers.values(); }
+    void setFunctionWrapper(unsigned, JSValue);
+
+    Wasm::Global* getGlobalBinding(unsigned i)
+    {
+        ASSERT(m_globalsToBinding.get(i));
+        Wasm::Global::Value* pointer = m_globals.get()[i].m_pointer;
+        if (!pointer)
+            return nullptr;
+        return &Wasm::Global::fromBinding(*pointer);
+    }
 
     static ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(Instance, m_memory); }
     static ptrdiff_t offsetOfGlobals() { return OBJECT_OFFSETOF(Instance, m_globals); }
-    static ptrdiff_t offsetOfTable() { return OBJECT_OFFSETOF(Instance, m_table); }
     static ptrdiff_t offsetOfCachedMemory() { return OBJECT_OFFSETOF(Instance, m_cachedMemory); }
     static ptrdiff_t offsetOfCachedMemorySize() { return OBJECT_OFFSETOF(Instance, m_cachedMemorySize); }
     static ptrdiff_t offsetOfPointerToTopEntryFrame() { return OBJECT_OFFSETOF(Instance, m_pointerToTopEntryFrame); }
@@ -111,7 +163,7 @@ public:
     }
 
     // Tail accessors.
-    static size_t offsetOfTail() { return WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(Instance)); }
+    static constexpr size_t offsetOfTail() { return WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(Instance)); }
     struct ImportFunctionInfo {
         // Target instance and entrypoint are only set for wasm->wasm calls, and are otherwise nullptr. The embedder-specific logic occurs through import function.
         Instance* targetInstance { nullptr };
@@ -131,6 +183,9 @@ public:
     static size_t offsetOfImportFunction(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(ImportFunctionInfo) + OBJECT_OFFSETOF(ImportFunctionInfo, importFunction); }
     template<typename T> T* importFunction(unsigned importFunctionNum) { return reinterpret_cast<T*>(&importFunctionInfo(importFunctionNum)->importFunction); }
 
+    static_assert(sizeof(ImportFunctionInfo) == WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(ImportFunctionInfo)), "We rely on this for the alignment to be correct");
+    static constexpr size_t offsetOfTablePtr(unsigned numImportFunctions, unsigned i) { return offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * i; }
+
     void storeTopCallFrame(void* callFrame)
     {
         m_storeTopCallFrame(callFrame);
@@ -139,24 +194,28 @@ public:
 private:
     Instance(Context*, Ref<Module>&&, EntryFrame**, void**, StoreTopCallFrameCallback&&);
 
-    static size_t allocationSize(Checked<size_t> numImportFunctions)
+    static size_t allocationSize(Checked<size_t> numImportFunctions, Checked<size_t> numTables)
     {
-        return (offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions).unsafeGet();
+        return (offsetOfTail() + sizeof(ImportFunctionInfo) * numImportFunctions + sizeof(Table*) * numTables).unsafeGet();
     }
     void* m_owner { nullptr }; // In a JS embedding, this is a JSWebAssemblyInstance*.
     Context* m_context { nullptr };
-    void* m_cachedMemory { nullptr };
+    CagedPtr<Gigacage::Primitive, void, tagCagedPtr> m_cachedMemory;
     size_t m_cachedMemorySize { 0 };
     Ref<Module> m_module;
     RefPtr<CodeBlock> m_codeBlock;
     RefPtr<Memory> m_memory;
-    RefPtr<Table> m_table;
-    MallocPtr<uint64_t> m_globals;
+
+    MallocPtr<Global::Value, VMMalloc> m_globals;
+    FunctionWrapperMap m_functionWrappers;
+    BitVector m_globalsToMark;
+    BitVector m_globalsToBinding;
     EntryFrame** m_pointerToTopEntryFrame { nullptr };
     void** m_pointerToActualStackLimit { nullptr };
     void* m_cachedStackLimit { bitwise_cast<void*>(std::numeric_limits<uintptr_t>::max()) };
     StoreTopCallFrameCallback m_storeTopCallFrame;
     unsigned m_numImportFunctions { 0 };
+    HashMap<uint32_t, Ref<Global>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_linkedGlobals;
 };
 
 } } // namespace JSC::Wasm

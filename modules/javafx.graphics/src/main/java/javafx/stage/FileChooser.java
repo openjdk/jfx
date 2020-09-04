@@ -204,6 +204,12 @@ public final class FileChooser {
      */
     private StringProperty title;
 
+    /**
+     * Creates a {@code FileChooser}.
+     */
+    public FileChooser() {
+    }
+
     public final void setTitle(final String value) {
         titleProperty().set(value);
     }

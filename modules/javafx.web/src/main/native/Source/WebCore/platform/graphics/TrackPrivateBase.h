@@ -32,23 +32,23 @@
 #include <wtf/LoggerHelper.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class TrackPrivateBaseClient {
 public:
     virtual ~TrackPrivateBaseClient() = default;
-    virtual void idChanged(const AtomicString&) = 0;
-    virtual void labelChanged(const AtomicString&) = 0;
-    virtual void languageChanged(const AtomicString&) = 0;
+    virtual void idChanged(const AtomString&) = 0;
+    virtual void labelChanged(const AtomString&) = 0;
+    virtual void languageChanged(const AtomString&) = 0;
     virtual void willRemove() = 0;
 };
 
-class TrackPrivateBase
+class WEBCORE_EXPORT TrackPrivateBase
     : public ThreadSafeRefCounted<TrackPrivateBase, WTF::DestructionThread::Main>
 #if !RELEASE_LOG_DISABLED
-    , private LoggerHelper
+    , public LoggerHelper
 #endif
 {
     WTF_MAKE_NONCOPYABLE(TrackPrivateBase);
@@ -58,9 +58,9 @@ public:
 
     virtual TrackPrivateBaseClient* client() const = 0;
 
-    virtual AtomicString id() const { return emptyAtom(); }
-    virtual AtomicString label() const { return emptyAtom(); }
-    virtual AtomicString language() const { return emptyAtom(); }
+    virtual AtomString id() const { return emptyAtom(); }
+    virtual AtomString label() const { return emptyAtom(); }
+    virtual AtomString language() const { return emptyAtom(); }
 
     virtual int trackIndex() const { return 0; }
 
@@ -73,7 +73,7 @@ public:
     }
 
 #if !RELEASE_LOG_DISABLED
-    void setLogger(const Logger&, const void*);
+    virtual void setLogger(const Logger&, const void*);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;

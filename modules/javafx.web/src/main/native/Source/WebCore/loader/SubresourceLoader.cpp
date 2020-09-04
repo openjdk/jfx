@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "CachedRawResource.h"
 #include "CachedResourceLoader.h"
 #include "CrossOriginAccessControl.h"
+#include "CustomHeaderFields.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "Document.h"
@@ -63,7 +64,8 @@
 #endif
 
 #if USE(QUICK_LOOK)
-#include "PreviewLoader.h"
+#include "LegacyPreviewLoader.h"
+#include "PreviewConverter.h"
 #endif
 
 #undef RELEASE_LOG_IF_ALLOWED
@@ -87,19 +89,19 @@ SubresourceLoader::RequestCountTracker::~RequestCountTracker()
     m_cachedResourceLoader.decrementRequestCount(m_resource);
 }
 
-SubresourceLoader::SubresourceLoader(DocumentLoader& documentLoader, CachedResource& resource, const ResourceLoaderOptions& options)
-    : ResourceLoader(documentLoader, options)
+SubresourceLoader::SubresourceLoader(Frame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
+    : ResourceLoader(frame, options)
     , m_resource(&resource)
     , m_state(Uninitialized)
-    , m_requestCountTracker(std::in_place, documentLoader.cachedResourceLoader(), resource)
+    , m_requestCountTracker(std::in_place, frame.document()->cachedResourceLoader(), resource)
 {
 #ifndef NDEBUG
     subresourceLoaderCounter.increment();
 #endif
 #if ENABLE(CONTENT_EXTENSIONS)
-    m_resourceType = toResourceType(resource.type());
+    m_resourceType = ContentExtensions::toResourceType(resource.type());
 #endif
-    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource || (documentLoader.frame() && documentLoader.frame()->settings().allowCrossOriginSubresourcesToAskForCredentials());
+    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource || frame.settings().allowCrossOriginSubresourcesToAskForCredentials();
 }
 
 SubresourceLoader::~SubresourceLoader()
@@ -111,9 +113,9 @@ SubresourceLoader::~SubresourceLoader()
 #endif
 }
 
-void SubresourceLoader::create(DocumentLoader& documentLoader, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
+void SubresourceLoader::create(Frame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
 {
-    auto subloader(adoptRef(*new SubresourceLoader(documentLoader, resource, options)));
+    auto subloader(adoptRef(*new SubresourceLoader(frame, resource, options)));
 #if PLATFORM(IOS_FAMILY)
     if (!IOSApplication::isWebProcess()) {
         // On iOS, do not invoke synchronous resource load delegates while resource load scheduling
@@ -162,6 +164,11 @@ void SubresourceLoader::init(ResourceRequest&& request, CompletionHandler<void(b
     ResourceLoader::init(WTFMove(request), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)] (bool initialized) mutable {
         if (!initialized)
             return completionHandler(false);
+        if (!m_documentLoader) {
+            ASSERT_NOT_REACHED();
+            RELEASE_LOG_ERROR(ResourceLoading, "SubresourceLoader::init: resource load canceled because document loader is null (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            return completionHandler(false);
+        }
         ASSERT(!reachedTerminalState());
         m_state = Initialized;
         m_documentLoader->addSubresourceLoader(this);
@@ -188,7 +195,8 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
 
     if (newRequest.requester() != ResourceRequestBase::Requester::Main) {
         tracePoint(SubresourceLoadWillStart);
-        ResourceLoadObserver::shared().logSubresourceLoading(m_frame.get(), newRequest, redirectResponse);
+        ResourceLoadObserver::shared().logSubresourceLoading(m_frame.get(), newRequest, redirectResponse,
+            (isScriptLikeDestination(options().destination) ? ResourceLoadObserver::FetchDestinationIsScriptLike::Yes : ResourceLoadObserver::FetchDestinationIsScriptLike::No));
     }
 
     auto continueWillSendRequest = [this, protectedThis = makeRef(*this), redirectResponse] (CompletionHandler<void(ResourceRequest&&)>&& completionHandler, ResourceRequest&& newRequest) mutable {
@@ -231,7 +239,7 @@ void SubresourceLoader::willSendRequestInternal(ResourceRequest&& newRequest, co
             m_resource->responseReceived(opaqueRedirectedResponse);
             if (reachedTerminalState()) {
                 RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: reached terminal state (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
-                return;
+                return completionHandler(WTFMove(newRequest));
             }
 
             RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load completed (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
@@ -304,10 +312,25 @@ bool SubresourceLoader::shouldCreatePreviewLoaderForResponse(const ResourceRespo
     if (m_previewLoader)
         return false;
 
-    return PreviewLoader::shouldCreateForMIMEType(response.mimeType());
+    return PreviewConverter::supportsMIMEType(response.mimeType());
+}
+
+void SubresourceLoader::didReceivePreviewResponse(const ResourceResponse& response)
+{
+    ASSERT(m_state == Initialized);
+    ASSERT(!response.isNull());
+    ASSERT(m_resource);
+    m_resource->previewResponseReceived(response);
+    ResourceLoader::didReceivePreviewResponse(response);
 }
 
 #endif
+
+static bool isLocationURLFailure(const ResourceResponse& response)
+{
+    auto locationString = response.httpHeaderField(HTTPHeaderName::Location);
+    return !locationString.isNull() && locationString.isEmpty();
+}
 
 void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, CompletionHandler<void()>&& policyCompletionHandler)
 {
@@ -318,8 +341,9 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
 
 #if USE(QUICK_LOOK)
     if (shouldCreatePreviewLoaderForResponse(response)) {
-        m_previewLoader = PreviewLoader::create(*this, response);
-        return;
+        m_previewLoader = makeUnique<LegacyPreviewLoader>(*this, response);
+        if (m_previewLoader->didReceiveResponse(response))
+            return;
     }
 #endif
 #if ENABLE(SERVICE_WORKER)
@@ -333,6 +357,12 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
         }
     }
 #endif
+
+    if (auto error = validateRangeRequestedFlag(request(), response)) {
+        RELEASE_LOG_IF_ALLOWED("didReceiveResponse: canceling load because receiving a range requested response for a non-range request (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+        cancel(WTFMove(*error));
+        return;
+    }
 
     // We want redirect responses to be processed through willSendRequestInternal. Exceptions are
     // redirection with no Location headers and fetch in manual redirect mode. Or in rare circumstances,
@@ -377,6 +407,22 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
         return;
     }
 
+    if (response.isRedirection()) {
+        if (options().redirect == FetchOptions::Redirect::Follow && isLocationURLFailure(response)) {
+            // Implementing https://fetch.spec.whatwg.org/#concept-http-redirect-fetch step 3
+            cancel();
+            return;
+        }
+        if (options().redirect == FetchOptions::Redirect::Manual) {
+            ResourceResponse opaqueRedirectedResponse = response;
+            opaqueRedirectedResponse.setType(ResourceResponse::Type::Opaqueredirect);
+            opaqueRedirectedResponse.setTainting(ResourceResponse::Tainting::Opaqueredirect);
+            m_resource->responseReceived(opaqueRedirectedResponse);
+            if (!reachedTerminalState())
+                ResourceLoader::didReceiveResponse(opaqueRedirectedResponse, [completionHandlerCaller = WTFMove(completionHandlerCaller)] { });
+            return;
+        }
+    }
     m_resource->responseReceived(response);
     if (reachedTerminalState())
         return;
@@ -516,8 +562,7 @@ static void logResourceLoaded(Frame* frame, CachedResource::Type type)
         resourceType = DiagnosticLoggingKeys::fontKey();
         break;
     case CachedResource::Type::Beacon:
-        ASSERT_NOT_REACHED();
-        break;
+    case CachedResource::Type::Ping:
     case CachedResource::Type::MediaResource:
     case CachedResource::Type::Icon:
     case CachedResource::Type::RawResource:
@@ -569,9 +614,11 @@ bool SubresourceLoader::checkRedirectionCrossOriginAccessControl(const ResourceR
 
     // Implementing https://fetch.spec.whatwg.org/#concept-http-redirect-fetch step 7 & 8.
     if (options().mode == FetchOptions::Mode::Cors) {
-        if (m_resource->isCrossOrigin() && !isValidCrossOriginRedirectionURL(newRequest.url())) {
-            errorMessage = "URL is either a non-HTTP URL or contains credentials."_s;
-            return false;
+        if (m_resource->isCrossOrigin()) {
+            auto locationString = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
+            errorMessage = validateCrossOriginRedirectionURL(URL(redirectResponse.url(), locationString));
+            if (!errorMessage.isNull())
+                return false;
         }
 
         ASSERT(m_origin);
@@ -685,9 +732,8 @@ void SubresourceLoader::didFail(const ResourceError& error)
     ASSERT(!reachedTerminalState());
     LOG(ResourceLoading, "Failed to load '%s'.\n", m_resource->url().string().latin1().data());
 
-    if (m_frame->document() && error.isAccessControl())
+    if (m_frame->document() && error.isAccessControl() && m_resource->type() != CachedResource::Type::Ping)
         m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, error.localizedDescription());
-
 
     Ref<SubresourceLoader> protectedThis(*this);
     CachedResourceHandle<CachedResource> protectResource(m_resource);

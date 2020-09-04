@@ -65,7 +65,7 @@ WidthIterator::WidthIterator(const FontCascade* font, const TextRun& run, HashSe
 
 struct OriginalAdvancesForCharacterTreatedAsSpace {
 public:
-    OriginalAdvancesForCharacterTreatedAsSpace(bool isSpace, float advanceBefore, float advanceAt)
+    explicit OriginalAdvancesForCharacterTreatedAsSpace(bool isSpace, float advanceBefore, float advanceAt)
         : characterIsSpace(isSpace)
         , advanceBeforeCharacter(advanceBefore)
         , advanceAtCharacter(advanceAt)
@@ -98,7 +98,7 @@ inline float WidthIterator::applyFontTransforms(GlyphBuffer* glyphBuffer, bool l
     if (!glyphBuffer)
         return 0;
 
-    unsigned glyphBufferSize = glyphBuffer->size();
+    auto glyphBufferSize = glyphBuffer->size();
     if (!force && glyphBufferSize <= lastGlyphCount + 1) {
         lastGlyphCount = glyphBufferSize;
         return 0;
@@ -113,7 +113,8 @@ inline float WidthIterator::applyFontTransforms(GlyphBuffer* glyphBuffer, bool l
     if (!ltr)
         glyphBuffer->reverse(lastGlyphCount, glyphBufferSize - lastGlyphCount);
 
-    font->applyTransforms(glyphBuffer->glyphs(lastGlyphCount), advances + lastGlyphCount, glyphBufferSize - lastGlyphCount, m_enableKerning, m_requiresShaping);
+    font->applyTransforms(*glyphBuffer, lastGlyphCount, m_enableKerning, m_requiresShaping, m_font->fontDescription().locale());
+    glyphBufferSize = glyphBuffer->size();
 
     for (unsigned i = lastGlyphCount; i < glyphBufferSize; ++i)
         advances[i].setHeight(-advances[i].height());
@@ -121,8 +122,14 @@ inline float WidthIterator::applyFontTransforms(GlyphBuffer* glyphBuffer, bool l
     if (!ltr)
         glyphBuffer->reverse(lastGlyphCount, glyphBufferSize - lastGlyphCount);
 
+    // https://bugs.webkit.org/show_bug.cgi?id=206208: This is totally, 100%, furiously, utterly, frustratingly bogus.
+    // There is absolutely no guarantee that glyph indices before shaping have any relation at all with glyph indices after shaping.
+    // One of the fundamental things that shaping does is insert glyph all over the place.
     for (size_t i = 0; i < charactersTreatedAsSpace.size(); ++i) {
-        int spaceOffset = charactersTreatedAsSpace[i].first;
+        auto spaceOffset = charactersTreatedAsSpace[i].first;
+        // Shaping may have deleted the glyph.
+        if (spaceOffset >= glyphBufferSize)
+            continue;
         const OriginalAdvancesForCharacterTreatedAsSpace& originalAdvances = charactersTreatedAsSpace[i].second;
         if (spaceOffset && !originalAdvances.characterIsSpace)
             glyphBuffer->advances(spaceOffset - 1)->setWidth(originalAdvances.advanceBeforeCharacter);
@@ -276,8 +283,7 @@ inline unsigned WidthIterator::advanceInternal(TextIterator& textIterator, Glyph
             if (treatAsSpace || ideograph || forceLeadingExpansion || forceTrailingExpansion) {
                 // Distribute the run's total expansion evenly over all expansion opportunities in the run.
                 if (m_expansion) {
-                    bool expandLeft, expandRight;
-                    std::tie(expandLeft, expandRight) = expansionLocation(ideograph, treatAsSpace, m_run.ltr(), m_isAfterExpansion, forbidLeadingExpansion, forbidTrailingExpansion, forceLeadingExpansion, forceTrailingExpansion);
+                    auto [expandLeft, expandRight] = expansionLocation(ideograph, treatAsSpace, m_run.ltr(), m_isAfterExpansion, forbidLeadingExpansion, forbidTrailingExpansion, forceLeadingExpansion, forceTrailingExpansion);
                     if (expandLeft) {
                         if (m_run.ltr()) {
                             // Increase previous width

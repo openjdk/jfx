@@ -57,7 +57,7 @@ public:
 
     bool isActive() const { return !!m_blobLoader; }
 
-    RefPtr<ReadableStream> readableStream(JSC::ExecState&);
+    RefPtr<ReadableStream> readableStream(JSC::JSGlobalObject&);
     bool hasReadableStreamBody() const { return m_body && m_body->hasReadableStream(); }
 
 #if ENABLE(STREAMS_API)
@@ -77,12 +77,12 @@ protected:
     bool isBodyNullOrOpaque() const { return !m_body || m_isBodyOpaque; }
     void cloneBody(FetchBodyOwner&);
 
-    void extractBody(ScriptExecutionContext&, FetchBody::Init&&);
+    ExceptionOr<void> extractBody(FetchBody::Init&&);
     void updateContentType();
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
 
     void setBody(FetchBody&& body) { m_body = WTFMove(body); }
-    void createReadableStream(JSC::ExecState&);
+    void createReadableStream(JSC::JSGlobalObject&);
 
     // ActiveDOMObject API
     void stop() override;

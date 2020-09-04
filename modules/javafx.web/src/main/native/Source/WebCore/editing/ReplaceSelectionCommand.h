@@ -31,6 +31,7 @@
 namespace WebCore {
 
 class DocumentFragment;
+class Range;
 class ReplacementFragment;
 
 class ReplaceSelectionCommand : public CompositeEditCommand {
@@ -51,6 +52,8 @@ public:
     }
 
     VisibleSelection visibleSelectionForInsertedText() const { return m_visibleSelectionForInsertedText; }
+
+    RefPtr<Range> insertedContentRange() const;
 
 private:
     ReplaceSelectionCommand(Document&, RefPtr<DocumentFragment>&&, OptionSet<CommandOption>, EditAction);
@@ -99,6 +102,7 @@ private:
     void removeUnrenderedTextNodesAtEnds(InsertedNodes&);
 
     void removeRedundantStylesAndKeepStyleSpanInline(InsertedNodes&);
+    void inverseTransformColor(InsertedNodes&);
     void makeInsertedContentRoundTrippableWithHTMLTreeBuilder(InsertedNodes&);
     void moveNodeOutOfAncestor(Node&, Node& ancestor, InsertedNodes&);
     void handleStyleSpans(InsertedNodes&);
@@ -108,7 +112,9 @@ private:
     VisiblePosition positionAtEndOfInsertedContent() const;
 
     bool shouldPerformSmartReplace() const;
+    bool shouldPerformSmartParagraphReplace() const;
     void addSpacesForSmartReplace();
+    void addNewLinesForSmartReplace();
     void completeHTMLReplacement(const Position& lastPositionToSelect);
     void mergeTextNodesAroundPosition(Position&, Position& positionOnlyToBeUpdated);
 

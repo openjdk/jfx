@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1290,11 +1290,13 @@ public class Scene implements EventTarget {
 
         int xMin = (int)Math.floor(x);
         int yMin = (int)Math.floor(y);
-        int xMax = (int)Math.ceil(x + w);
-        int yMax = (int)Math.ceil(y + h);
-        int width = Math.max(xMax - xMin, 1);
-        int height = Math.max(yMax - yMin, 1);
+        int width;
+        int height;
         if (wimg == null) {
+            int xMax = (int)Math.ceil(x + w);
+            int yMax = (int)Math.ceil(y + h);
+            width = Math.max(xMax - xMin, 1);
+            height = Math.max(yMax - yMin, 1);
             wimg = new WritableImage(width, height);
         } else {
             width = (int)wimg.getWidth();

@@ -32,6 +32,7 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "HTTPCookieAcceptPolicy.h"
 #include "NetworkStorageSession.h"
 #include "NetworkingContext.h"
 #include "PlatformStrategies.h"
@@ -71,8 +72,8 @@ String CookieJar::cookies(Document& document, const URL& url) const
 
     auto includeSecureCookies = shouldIncludeSecureCookies(document, url);
 
-    Optional<uint64_t> frameID;
-    Optional<uint64_t> pageID;
+    Optional<FrameIdentifier> frameID;
+    Optional<PageIdentifier> pageID;
     if (auto* frame = document.frame()) {
         frameID = frame->loader().client().frameID();
         pageID = frame->loader().client().pageID();
@@ -80,7 +81,7 @@ String CookieJar::cookies(Document& document, const URL& url) const
 
     std::pair<String, bool> result;
     if (auto* session = m_storageSessionProvider->storageSession())
-        result = session->cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, includeSecureCookies);
+        result = session->cookiesForDOM(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, includeSecureCookies, ShouldAskITP::Yes);
     else
         ASSERT_NOT_REACHED();
 
@@ -94,30 +95,27 @@ CookieRequestHeaderFieldProxy CookieJar::cookieRequestHeaderFieldProxy(const Doc
 {
     TraceScope scope(FetchCookiesStart, FetchCookiesEnd);
 
-    CookieRequestHeaderFieldProxy proxy;
-    proxy.sessionID = document.sessionID();
-    proxy.firstParty = document.firstPartyForCookies();
-    proxy.sameSiteInfo = sameSiteInfo(document);
-    proxy.url = url;
-    proxy.includeSecureCookies = shouldIncludeSecureCookies(document, url);
+    Optional<FrameIdentifier> frameID;
+    Optional<PageIdentifier> pageID;
     if (auto* frame = document.frame()) {
-        proxy.frameID = frame->loader().client().frameID();
-        proxy.pageID = frame->loader().client().pageID();
+        frameID = frame->loader().client().frameID();
+        pageID = frame->loader().client().pageID();
     }
-    return proxy;
+
+    return { document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(document, url) };
 }
 
 void CookieJar::setCookies(Document& document, const URL& url, const String& cookieString)
 {
-    Optional<uint64_t> frameID;
-    Optional<uint64_t> pageID;
+    Optional<FrameIdentifier> frameID;
+    Optional<PageIdentifier> pageID;
     if (auto* frame = document.frame()) {
         frameID = frame->loader().client().frameID();
         pageID = frame->loader().client().pageID();
     }
 
     if (auto* session = m_storageSessionProvider->storageSession())
-        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, cookieString);
+        session->setCookiesFromDOM(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, ShouldAskITP::Yes, cookieString);
     else
         ASSERT_NOT_REACHED();
 }
@@ -125,16 +123,16 @@ void CookieJar::setCookies(Document& document, const URL& url, const String& coo
 bool CookieJar::cookiesEnabled(const Document&) const
 {
     if (auto* session = m_storageSessionProvider->storageSession())
-        return session->cookiesEnabled();
+        return session->cookieAcceptPolicy() != HTTPCookieAcceptPolicy::Never;
 
     ASSERT_NOT_REACHED();
     return false;
 }
 
-std::pair<String, SecureCookiesAccessed> CookieJar::cookieRequestHeaderFieldValue(const PAL::SessionID&, const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<uint64_t> frameID, Optional<uint64_t> pageID, IncludeSecureCookies includeSecureCookies) const
+std::pair<String, SecureCookiesAccessed> CookieJar::cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo& sameSiteInfo, const URL& url, Optional<FrameIdentifier> frameID, Optional<PageIdentifier> pageID, IncludeSecureCookies includeSecureCookies) const
 {
     if (auto* session = m_storageSessionProvider->storageSession()) {
-        std::pair<String, bool> result = session->cookieRequestHeaderFieldValue(firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies);
+        std::pair<String, bool> result = session->cookieRequestHeaderFieldValue(firstParty, sameSiteInfo, url, frameID, pageID, includeSecureCookies, ShouldAskITP::Yes);
         return { result.first, result.second ? SecureCookiesAccessed::Yes : SecureCookiesAccessed::No };
     }
 
@@ -144,14 +142,14 @@ std::pair<String, SecureCookiesAccessed> CookieJar::cookieRequestHeaderFieldValu
 
 String CookieJar::cookieRequestHeaderFieldValue(Document& document, const URL& url) const
 {
-    Optional<uint64_t> frameID;
-    Optional<uint64_t> pageID;
+    Optional<FrameIdentifier> frameID;
+    Optional<PageIdentifier> pageID;
     if (auto* frame = document.frame()) {
         frameID = frame->loader().client().frameID();
         pageID = frame->loader().client().pageID();
     }
 
-    auto result = cookieRequestHeaderFieldValue(document.sessionID(), document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(document, url));
+    auto result = cookieRequestHeaderFieldValue(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, shouldIncludeSecureCookies(document, url));
     if (result.second == SecureCookiesAccessed::Yes)
         document.setSecureCookiesAccessed();
     return result.first;
@@ -159,15 +157,15 @@ String CookieJar::cookieRequestHeaderFieldValue(Document& document, const URL& u
 
 bool CookieJar::getRawCookies(const Document& document, const URL& url, Vector<Cookie>& cookies) const
 {
-    Optional<uint64_t> frameID;
-    Optional<uint64_t> pageID;
+    Optional<FrameIdentifier> frameID;
+    Optional<PageIdentifier> pageID;
     if (auto* frame = document.frame()) {
         frameID = frame->loader().client().frameID();
         pageID = frame->loader().client().pageID();
     }
 
     if (auto* session = m_storageSessionProvider->storageSession())
-        return session->getRawCookies(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, cookies);
+        return session->getRawCookies(document.firstPartyForCookies(), sameSiteInfo(document), url, frameID, pageID, ShouldAskITP::Yes, cookies);
 
     ASSERT_NOT_REACHED();
     return false;

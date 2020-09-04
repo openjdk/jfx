@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,12 +34,18 @@ class CachedFunctionCodeBlock;
 class UnlinkedFunctionCodeBlock final : public UnlinkedCodeBlock {
 public:
     typedef UnlinkedCodeBlock Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static UnlinkedFunctionCodeBlock* create(VM* vm, CodeType codeType, const ExecutableInfo& info, DebuggerMode debuggerMode)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        UnlinkedFunctionCodeBlock* instance = new (NotNull, allocateCell<UnlinkedFunctionCodeBlock>(vm->heap)) UnlinkedFunctionCodeBlock(vm, vm->unlinkedFunctionCodeBlockStructure.get(), codeType, info, debuggerMode);
-        instance->finishCreation(*vm);
+        return vm.unlinkedFunctionCodeBlockSpace<mode>();
+    }
+
+    static UnlinkedFunctionCodeBlock* create(VM& vm, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
+    {
+        UnlinkedFunctionCodeBlock* instance = new (NotNull, allocateCell<UnlinkedFunctionCodeBlock>(vm.heap)) UnlinkedFunctionCodeBlock(vm, vm.unlinkedFunctionCodeBlockStructure.get(), codeType, info, codeGenerationMode);
+        instance->finishCreation(vm);
         return instance;
     }
 
@@ -48,8 +54,8 @@ public:
 private:
     friend CachedFunctionCodeBlock;
 
-    UnlinkedFunctionCodeBlock(VM* vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, DebuggerMode debuggerMode)
-        : Base(vm, structure, codeType, info, debuggerMode)
+    UnlinkedFunctionCodeBlock(VM& vm, Structure* structure, CodeType codeType, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
+        : Base(vm, structure, codeType, info, codeGenerationMode)
     {
     }
 

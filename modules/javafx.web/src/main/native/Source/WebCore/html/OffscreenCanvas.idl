@@ -23,7 +23,11 @@
 * THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// typedef (OffscreenCanvasRenderingContext2D or WebGLRenderingContext) OffscreenRenderingContext;
+#if defined(ENABLE_WEBGL) && ENABLE_WEBGL
+typedef (OffscreenCanvasRenderingContext2D or WebGLRenderingContext) OffscreenRenderingContext;
+#else
+typedef (OffscreenCanvasRenderingContext2D) OffscreenRenderingContext;
+#endif
 
 dictionary ImageEncodeOptions
 {
@@ -41,14 +45,15 @@ enum OffscreenRenderingContextType
     ConstructorCallWith=ScriptExecutionContext,
     Constructor([EnforceRange] unsigned long width, [EnforceRange] unsigned long height),
     GenerateIsReachable=Impl,
-    EnabledAtRuntime=ImageBitmapOffscreenCanvas,
-    Exposed=(Window)
+    EnabledAtRuntime=OffscreenCanvas,
+    Conditional=OFFSCREEN_CANVAS,
+    Exposed=(Window,Worker)
 ] interface OffscreenCanvas : EventTarget {
     attribute [EnforceRange] unsigned long width;
     attribute [EnforceRange] unsigned long height;
 
-    [CallWith=ExecState, MayThrowException, Conditional=WEBGL] WebGLRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
-    ImageBitmap transferToImageBitmap();
-    // Promise<Blob> convertToBlob(optional ImageEncodeOptions options);
+    [CallWith=GlobalObject, MayThrowException] OffscreenRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
+    [MayThrowException] ImageBitmap transferToImageBitmap();
+    Promise<Blob> convertToBlob(optional ImageEncodeOptions options);
 
 };

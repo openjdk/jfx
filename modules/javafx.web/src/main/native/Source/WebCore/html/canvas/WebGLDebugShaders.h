@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLExtension.h"
 
 namespace WebCore {
@@ -38,7 +40,9 @@ public:
 
     ExtensionName getName() const override;
 
-    String getTranslatedShaderSource(WebGLShader*);
+    String getTranslatedShaderSource(WebGLShader&);
 };
 
 } // namespace WebCore
+
+#endif

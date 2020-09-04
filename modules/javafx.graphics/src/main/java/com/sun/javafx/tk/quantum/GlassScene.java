@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,7 @@ abstract class GlassScene implements TKScene {
     @Override
     public void dispose() {
         assert stage == null; // dispose() is called after setStage(null)
+        setTKScenePaintListener(null);
         root = null;
         camera = null;
         fillPaint = null;
@@ -94,7 +95,6 @@ abstract class GlassScene implements TKScene {
         dragSourceListener = null;
         dropTargetListener = null;
         inputMethodRequests = null;
-        scenePaintListener = null;
         sceneState = null;
     }
 

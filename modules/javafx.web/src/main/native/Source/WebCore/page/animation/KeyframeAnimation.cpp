@@ -253,7 +253,7 @@ bool KeyframeAnimation::computeExtentOfTransformAnimation(LayoutRect& bounds) co
     auto& box = downcast<RenderBox>(*renderer());
     auto rendererBox = snapRectToDevicePixels(box.borderBoxRect(), box.document().deviceScaleFactor());
 
-    auto cumulativeBounds = bounds;
+    LayoutRect cumulativeBounds;
 
     for (auto& keyframe : m_keyframes.keyframes()) {
         const RenderStyle* keyframeStyle = keyframe.style();
@@ -291,8 +291,8 @@ bool KeyframeAnimation::hasAnimationForProperty(CSSPropertyID property) const
 
 bool KeyframeAnimation::startAnimation(double timeOffset)
 {
-    if (auto* renderer = compositedRenderer())
-        return renderer->startAnimation(timeOffset, m_animation.ptr(), m_keyframes);
+    if (auto* renderer = this->renderer())
+        return renderer->startAnimation(timeOffset, m_animation, m_keyframes);
     return false;
 }
 
@@ -301,7 +301,7 @@ void KeyframeAnimation::pauseAnimation(double timeOffset)
     if (!element())
         return;
 
-    if (auto* renderer = compositedRenderer())
+    if (auto* renderer = this->renderer())
         renderer->animationPaused(timeOffset, m_keyframes.animationName());
 
     // Restore the original (unanimated) style
@@ -314,7 +314,7 @@ void KeyframeAnimation::endAnimation(bool fillingForwards)
     if (!element())
         return;
 
-    if (auto* renderer = compositedRenderer())
+    if (auto* renderer = this->renderer())
         renderer->animationFinished(m_keyframes.animationName());
 
     // Restore the original (unanimated) style
@@ -343,7 +343,7 @@ void KeyframeAnimation::onAnimationEnd(double elapsedTime)
     endAnimation(m_animation->fillsForwards());
 }
 
-bool KeyframeAnimation::sendAnimationEvent(const AtomicString& eventType, double elapsedTime)
+bool KeyframeAnimation::sendAnimationEvent(const AtomString& eventType, double elapsedTime)
 {
     Document::ListenerType listenerType;
     if (eventType == eventNames().webkitAnimationIterationEvent || eventType == eventNames().animationiterationEvent)
@@ -362,7 +362,7 @@ bool KeyframeAnimation::sendAnimationEvent(const AtomicString& eventType, double
         // Dispatch the event
         auto element = makeRefPtr(this->element());
 
-        ASSERT(!element || element->document().pageCacheState() == Document::NotInPageCache);
+        ASSERT(!element || element->document().backForwardCacheState() == Document::NotInBackForwardCache);
         if (!element)
             return false;
 
@@ -515,7 +515,11 @@ Optional<Seconds> KeyframeAnimation::timeToNextService()
 {
     Optional<Seconds> t = AnimationBase::timeToNextService();
     if (!t || t.value() != 0_s || preActive())
+#if COMPILER(MSVC) && _MSC_VER >= 1920
+        return WTFMove(t);
+#else
         return t;
+#endif
 
     // A return value of 0 means we need service. But if we only have accelerated animations we
     // only need service at the end of the transition.

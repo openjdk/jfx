@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Heap.h"
+#include "VM.h"
 #include "WasmIndexOrName.h"
 #include "WriteBarrier.h"
 #include <limits.h>
@@ -39,7 +40,7 @@ class SlotVisitor;
 class StackFrame {
 public:
     StackFrame(VM&, JSCell* owner, JSCell* callee);
-    StackFrame(VM&, JSCell* owner, JSCell* callee, CodeBlock*, unsigned bytecodeOffset);
+    StackFrame(VM&, JSCell* owner, JSCell* callee, CodeBlock*, BytecodeIndex);
     StackFrame(Wasm::IndexOrName);
 
     bool hasLineAndColumnInfo() const { return !!m_codeBlock; }
@@ -50,21 +51,21 @@ public:
     String sourceURL() const;
     String toString(VM&) const;
 
-    bool hasBytecodeOffset() const { return m_bytecodeOffset != UINT_MAX && !m_isWasmFrame; }
-    unsigned bytecodeOffset()
+    bool hasBytecodeIndex() const { return m_bytecodeIndex && !m_isWasmFrame; }
+    BytecodeIndex bytecodeIndex()
     {
-        ASSERT(hasBytecodeOffset());
-        return m_bytecodeOffset;
+        ASSERT(hasBytecodeIndex());
+        return m_bytecodeIndex;
     }
 
     void visitChildren(SlotVisitor&);
-    bool isMarked() const { return (!m_callee || Heap::isMarked(m_callee.get())) && (!m_codeBlock || Heap::isMarked(m_codeBlock.get())); }
+    bool isMarked(VM& vm) const { return (!m_callee || vm.heap.isMarked(m_callee.get())) && (!m_codeBlock || vm.heap.isMarked(m_codeBlock.get())); }
 
 private:
     WriteBarrier<JSCell> m_callee { };
     WriteBarrier<CodeBlock> m_codeBlock { };
     Wasm::IndexOrName m_wasmFunctionIndexOrName;
-    unsigned m_bytecodeOffset { UINT_MAX };
+    BytecodeIndex m_bytecodeIndex;
     bool m_isWasmFrame { false };
 };
 

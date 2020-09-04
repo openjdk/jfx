@@ -36,12 +36,12 @@
 #include <JavaScriptCore/InspectorRuntimeAgent.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 }
 
 namespace WebCore {
 
-class InspectorPageAgent;
+class DOMWrapperWorld;
 class Frame;
 class Page;
 class SecurityOrigin;
@@ -51,31 +51,32 @@ class PageRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
     WTF_MAKE_NONCOPYABLE(PageRuntimeAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageRuntimeAgent(PageAgentContext&, InspectorPageAgent*);
-    virtual ~PageRuntimeAgent() = default;
+    PageRuntimeAgent(PageAgentContext&);
+    ~PageRuntimeAgent() override;
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    // RuntimeBackendDispatcherHandler
     void enable(ErrorString&) override;
     void disable(ErrorString&) override;
+    void evaluate(ErrorString&, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex) override;
+    void callFunctionOn(ErrorString&, const String& objectId, const String& expression, const JSON::Array* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* emulateUserGesture, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown) override;
 
     // InspectorInstrumentation
-    void didCreateMainWorldContext(Frame&);
+    void frameNavigated(Frame&);
+    void didClearWindowObjectInWorld(Frame&, DOMWrapperWorld&);
 
 private:
     Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
     void muteConsole() override;
     void unmuteConsole() override;
     void reportExecutionContextCreation();
-    void notifyContextCreated(const String& frameId, JSC::ExecState*, SecurityOrigin*, bool isPageContext);
+    void notifyContextCreated(const String& frameId, JSC::JSGlobalObject*, const DOMWrapperWorld&, SecurityOrigin* = nullptr);
 
     std::unique_ptr<Inspector::RuntimeFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::RuntimeBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent;
+
+    InstrumentingAgents& m_instrumentingAgents;
 
     Page& m_inspectedPage;
-
-    bool m_mainWorldContextCreated { false };
 };
 
 } // namespace WebCore

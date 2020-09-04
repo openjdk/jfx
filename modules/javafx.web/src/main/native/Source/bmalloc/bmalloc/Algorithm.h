@@ -28,6 +28,7 @@
 
 #include "BAssert.h"
 #include <algorithm>
+#include <climits>
 #include <cstdint>
 #include <cstddef>
 #include <limits>
@@ -71,17 +72,22 @@ constexpr bool isPowerOfTwo(T size)
     return size && !(size & (size - 1));
 }
 
-template<typename T> inline T roundUpToMultipleOf(size_t divisor, T x)
+template<typename T> constexpr T roundUpToMultipleOfImpl(size_t divisor, T x)
 {
-    BASSERT(isPowerOfTwo(divisor));
     static_assert(sizeof(T) == sizeof(uintptr_t), "sizeof(T) must be equal to sizeof(uintptr_t).");
     return static_cast<T>((static_cast<uintptr_t>(x) + (divisor - 1)) & ~(divisor - 1));
 }
 
-template<size_t divisor, typename T> inline T roundUpToMultipleOf(T x)
+template<typename T> inline T roundUpToMultipleOf(size_t divisor, T x)
+{
+    BASSERT(isPowerOfTwo(divisor));
+    return roundUpToMultipleOfImpl(divisor, x);
+}
+
+template<size_t divisor, typename T> constexpr T roundUpToMultipleOf(T x)
 {
     static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
-    return roundUpToMultipleOf(divisor, x);
+    return roundUpToMultipleOfImpl(divisor, x);
 }
 
 template<typename T> inline T* roundUpToMultipleOf(size_t divisor, T* x)
@@ -124,7 +130,7 @@ template<typename T> inline void divideRoundingUp(T numerator, T denominator, T&
         quotient += 1;
 }
 
-template<typename T> inline T divideRoundingUp(T numerator, T denominator)
+template<typename T> constexpr T divideRoundingUp(T numerator, T denominator)
 {
     return (numerator + denominator - 1) / denominator;
 }
@@ -186,6 +192,31 @@ bool findBitInWord(T word, size_t& index, size_t endIndex, bool value)
 
     index = endIndex;
     return false;
+}
+
+template <typename T>
+constexpr unsigned ctzConstexpr(T value)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
+    unsigned zeroCount = 0;
+    for (unsigned i = 0; i < bitSize; i++) {
+        if (uValue & 1)
+            break;
+
+        zeroCount++;
+        uValue >>= 1;
+    }
+    return zeroCount;
+}
+
+template<typename T>
+constexpr unsigned getLSBSetNonZeroConstexpr(T t)
+{
+    return ctzConstexpr(t);
 }
 
 } // namespace bmalloc

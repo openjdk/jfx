@@ -39,7 +39,8 @@ class AccessCase;
 class CodeBlock;
 class StructureStubInfo;
 
-class InByIdStatus {
+class InByIdStatus final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
         // It's uncached so we have no information.
@@ -79,8 +80,8 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    static InByIdStatus computeFor(CodeBlock*, ICStatusMap&, unsigned bytecodeIndex, UniquedStringImpl* uid);
-    static InByIdStatus computeFor(CodeBlock*, ICStatusMap&, unsigned bytecodeIndex, UniquedStringImpl* uid, ExitFlag);
+    static InByIdStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex, UniquedStringImpl* uid);
+    static InByIdStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex, UniquedStringImpl* uid, ExitFlag);
     static InByIdStatus computeFor(CodeBlock* baselineBlock, ICStatusMap& baselineMap, ICStatusContextStack& contextStack, CodeOrigin, UniquedStringImpl* uid);
 
 #if ENABLE(DFG_JIT)
@@ -106,13 +107,13 @@ public:
     void filter(const StructureSet&);
 
     void markIfCheap(SlotVisitor&);
-    bool finalize();
+    bool finalize(VM&);
 
     void dump(PrintStream&) const;
 
 private:
 #if ENABLE(DFG_JIT)
-    static InByIdStatus computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, StructureStubInfo*, UniquedStringImpl* uid);
+    static InByIdStatus computeForStubInfoWithoutExitSiteFeedback(const ConcurrentJSLocker&, VM&, StructureStubInfo*, UniquedStringImpl* uid);
 #endif
     bool appendVariant(const InByIdVariant&);
 

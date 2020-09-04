@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.
+ * Copyright (C) 2017-2019 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -40,20 +40,23 @@ namespace WebCore {
 
 RealtimeOutgoingAudioSource::RealtimeOutgoingAudioSource(Ref<MediaStreamTrackPrivate>&& source)
     : m_audioSource(WTFMove(source))
-#if !RELEASE_LOG_DISABLED
-    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
-#endif
 {
 }
 
 RealtimeOutgoingAudioSource::~RealtimeOutgoingAudioSource()
 {
+ASSERT(!m_audioSource->hasObserver(*this));
+#if ASSERT_ENABLED
+    auto locker = holdLock(m_sinksLock);
+#endif
     ASSERT(m_sinks.isEmpty());
+
     stop();
 }
 
 void RealtimeOutgoingAudioSource::observeSource()
 {
+    ASSERT(!m_audioSource->hasObserver(*this));
     m_audioSource->addObserver(*this);
     initializeConverter();
 }
@@ -63,18 +66,13 @@ void RealtimeOutgoingAudioSource::unobserveSource()
     m_audioSource->removeObserver(*this);
 }
 
-bool RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
+void RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
 {
-    auto locker = holdLock(m_sinksLock);
-    bool hasSinks = !m_sinks.isEmpty();
+    ALWAYS_LOG("Changing source to ", newSource->logIdentifier());
 
-    if (hasSinks)
-        unobserveSource();
+    ASSERT(!m_audioSource->hasObserver(*this));
     m_audioSource = WTFMove(newSource);
-    if (hasSinks)
-        observeSource();
-
-    return true;
+    sourceUpdated();
 }
 
 void RealtimeOutgoingAudioSource::initializeConverter()
@@ -95,26 +93,14 @@ void RealtimeOutgoingAudioSource::sourceEnabledChanged()
 
 void RealtimeOutgoingAudioSource::AddSink(webrtc::AudioTrackSinkInterface* sink)
 {
-    {
     auto locker = holdLock(m_sinksLock);
-    if (!m_sinks.add(sink) || m_sinks.size() != 1)
-        return;
-    }
-
-    callOnMainThread([protectedThis = makeRef(*this)]() {
-        protectedThis->observeSource();
-    });
+    m_sinks.add(sink);
 }
 
 void RealtimeOutgoingAudioSource::RemoveSink(webrtc::AudioTrackSinkInterface* sink)
 {
-    {
     auto locker = holdLock(m_sinksLock);
-    if (!m_sinks.remove(sink) || !m_sinks.isEmpty())
-        return;
-    }
-
-    unobserveSource();
+    m_sinks.remove(sink);
 }
 
 void RealtimeOutgoingAudioSource::sendAudioFrames(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames)
@@ -134,14 +120,6 @@ WTFLogChannel& RealtimeOutgoingAudioSource::logChannel() const
 {
     return LogWebRTC;
 }
-
-const Logger& RealtimeOutgoingAudioSource::logger() const
-{
-    if (!m_logger)
-        m_logger = Logger::create(this);
-    return *m_logger;
-}
-
 #endif
 
 } // namespace WebCore

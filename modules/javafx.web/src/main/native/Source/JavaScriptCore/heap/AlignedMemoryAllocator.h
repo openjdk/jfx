@@ -31,6 +31,7 @@
 namespace JSC {
 
 class BlockDirectory;
+class Heap;
 class Subspace;
 
 class AlignedMemoryAllocator {
@@ -45,10 +46,16 @@ public:
 
     virtual void dump(PrintStream&) const = 0;
 
-    void registerDirectory(BlockDirectory*);
+    void registerDirectory(Heap&, BlockDirectory*);
     BlockDirectory* firstDirectory() const { return m_directories.first(); }
 
     void registerSubspace(Subspace*);
+
+    // Some of derived memory allocators do not have these features because they do not use them.
+    // For example, IsoAlignedMemoryAllocator does not have "realloc" feature since it never extends / shrinks the allocated memory region.
+    virtual void* tryAllocateMemory(size_t) = 0;
+    virtual void freeMemory(void*) = 0;
+    virtual void* tryReallocateMemory(void*, size_t) = 0;
 
 private:
     SinglyLinkedListWithTail<BlockDirectory> m_directories;

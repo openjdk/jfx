@@ -26,6 +26,7 @@
 #pragma once
 
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <float.h>
 #include <limits>
@@ -301,22 +302,6 @@ template<typename T> constexpr bool hasTwoOrMoreBitsSet(T value)
     return !hasZeroOrOneBitsSet(value);
 }
 
-// FIXME: Some Darwin projects shamelessly include WTF headers and don't build with C++14... See: rdar://problem/45395767
-// Since C++11 and before don't support constexpr statements we can't mark this function constexpr.
-#if !defined(WTF_CPP_STD_VER) || WTF_CPP_STD_VER >= 14
-template <typename T> constexpr unsigned getLSBSet(T value)
-{
-    typedef typename std::make_unsigned<T>::type UnsignedT;
-    unsigned result = 0;
-
-    UnsignedT unsignedValue = static_cast<UnsignedT>(value);
-    while (unsignedValue >>= 1)
-        ++result;
-
-    return result;
-}
-#endif
-
 template<typename T> inline T divideRoundedUp(T a, T b)
 {
     return (a + b - 1) / b;
@@ -579,44 +564,6 @@ inline bool rangesOverlap(T leftMin, T leftMax, T rightMin, T rightMax)
     return nonEmptyRangesOverlap(leftMin, leftMax, rightMin, rightMax);
 }
 
-// This mask is not necessarily the minimal mask, specifically if size is
-// a power of 2. It has the advantage that it's fast to compute, however.
-inline uint32_t computeIndexingMask(uint32_t size)
-{
-    return static_cast<uint64_t>(static_cast<uint32_t>(-1)) >> std::clz(size);
-}
-
-constexpr unsigned preciseIndexMaskShiftForSize(unsigned size)
-{
-    return size * 8 - 1;
-}
-
-template<typename T>
-constexpr unsigned preciseIndexMaskShift()
-{
-    return preciseIndexMaskShiftForSize(sizeof(T));
-}
-
-template<typename T>
-T opaque(T pointer)
-{
-#if !OS(WINDOWS)
-    asm("" : "+r"(pointer));
-#endif
-    return pointer;
-}
-
-// This masks the given pointer with 0xffffffffffffffff (ptrwidth) if `index <
-// length`. Otherwise, it masks the pointer with 0. Similar to Linux kernel's array_ptr.
-template<typename T>
-inline T* preciseIndexMaskPtr(uintptr_t index, uintptr_t length, T* value)
-{
-    uintptr_t result = bitwise_cast<uintptr_t>(value) & static_cast<uintptr_t>(
-        static_cast<intptr_t>(index - opaque(length)) >>
-        static_cast<intptr_t>(preciseIndexMaskShift<T*>()));
-    return bitwise_cast<T*>(result);
-}
-
 template<typename VectorType, typename RandomFunc>
 void shuffleVector(VectorType& vector, size_t size, const RandomFunc& randomFunc)
 {
@@ -630,88 +577,128 @@ void shuffleVector(VectorType& vector, const RandomFunc& randomFunc)
     shuffleVector(vector, vector.size(), randomFunc);
 }
 
-inline unsigned clz32(uint32_t number)
+template <typename T>
+constexpr unsigned clzConstexpr(T value)
 {
-#if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_clz(number);
-    return 32;
-#elif COMPILER(MSVC)
-    // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
-    // So we use bit-scan-reverse operation to calculate clz.
-    unsigned long ret = 0;
-    if (_BitScanReverse(&ret, number))
-        return 31 - ret;
-    return 32;
-#else
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
     unsigned zeroCount = 0;
-    for (int i = 31; i >= 0; i--) {
-        if (!(number >> i))
-            zeroCount++;
-        else
+    for (int i = bitSize - 1; i >= 0; i--) {
+        if (uValue >> i)
             break;
+        zeroCount++;
     }
     return zeroCount;
-#endif
 }
 
-inline unsigned clz64(uint64_t number)
+template<typename T>
+inline unsigned clz(T value)
 {
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
 #if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_clzll(number);
-    return 64;
+    constexpr unsigned bitSize64 = sizeof(uint64_t) * CHAR_BIT;
+    if (uValue)
+        return __builtin_clzll(uValue) - (bitSize64 - bitSize);
+    return bitSize;
 #elif COMPILER(MSVC) && !CPU(X86)
     // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
     // So we use bit-scan-reverse operation to calculate clz.
     // _BitScanReverse64 is defined in X86_64 and ARM in MSVC supported environments.
     unsigned long ret = 0;
-    if (_BitScanReverse64(&ret, number))
-        return 63 - ret;
-    return 64;
+    if (_BitScanReverse64(&ret, uValue))
+        return bitSize - 1 - ret;
+    return bitSize;
 #else
-    unsigned zeroCount = 0;
-    for (int i = 63; i >= 0; i--) {
-        if (!(number >> i))
-            zeroCount++;
-        else
-            break;
-    }
-    return zeroCount;
+    UNUSED_PARAM(bitSize);
+    UNUSED_PARAM(uValue);
+    return clzConstexpr(value);
 #endif
 }
 
-inline unsigned ctz32(uint32_t number)
+template <typename T>
+constexpr unsigned ctzConstexpr(T value)
 {
-#if COMPILER(GCC_COMPATIBLE)
-    if (number)
-        return __builtin_ctz(number);
-    return 32;
-#elif COMPILER(MSVC) && !CPU(X86)
-    unsigned long ret = 0;
-    if (_BitScanForward(&ret, number))
-        return ret;
-    return 32;
-#else
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
     unsigned zeroCount = 0;
-    for (unsigned i = 0; i < 32; i++) {
-        if (number & 1)
+    for (unsigned i = 0; i < bitSize; i++) {
+        if (uValue & 1)
             break;
 
         zeroCount++;
-        number >>= 1;
+        uValue >>= 1;
     }
     return zeroCount;
+}
+
+template<typename T>
+inline unsigned ctz(T value)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+
+    using UT = typename std::make_unsigned<T>::type;
+    UT uValue = value;
+
+#if COMPILER(GCC_COMPATIBLE)
+    if (uValue)
+        return __builtin_ctzll(uValue);
+    return bitSize;
+#elif COMPILER(MSVC) && !CPU(X86)
+    unsigned long ret = 0;
+    if (_BitScanForward64(&ret, uValue))
+        return ret;
+    return bitSize;
+#else
+    UNUSED_PARAM(bitSize);
+    UNUSED_PARAM(uValue);
+    return ctzConstexpr(value);
 #endif
+}
+
+template<typename T>
+inline unsigned getLSBSet(T t)
+{
+    ASSERT(t);
+    return ctz(t);
+}
+
+template<typename T>
+constexpr unsigned getLSBSetConstexpr(T t)
+{
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(t);
+    return ctzConstexpr(t);
+}
+
+template<typename T>
+inline unsigned getMSBSet(T t)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+    ASSERT(t);
+    return bitSize - 1 - clz(t);
+}
+
+template<typename T>
+constexpr unsigned getMSBSetConstexpr(T t)
+{
+    constexpr unsigned bitSize = sizeof(T) * CHAR_BIT;
+    ASSERT_UNDER_CONSTEXPR_CONTEXT(t);
+    return bitSize - 1 - clzConstexpr(t);
 }
 
 } // namespace WTF
 
-using WTF::opaque;
-using WTF::preciseIndexMaskPtr;
-using WTF::preciseIndexMaskShift;
-using WTF::preciseIndexMaskShiftForSize;
 using WTF::shuffleVector;
-using WTF::clz32;
-using WTF::clz64;
-using WTF::ctz32;
+using WTF::clz;
+using WTF::ctz;
+using WTF::getLSBSet;
+using WTF::getMSBSet;

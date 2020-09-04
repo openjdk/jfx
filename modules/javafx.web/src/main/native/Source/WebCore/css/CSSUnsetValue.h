@@ -37,9 +37,10 @@ public:
 
 private:
     friend LazyNeverDestroyed<CSSUnsetValue>;
-    CSSUnsetValue()
+    CSSUnsetValue(StaticCSSValueTag)
         : CSSValue(UnsetClass)
     {
+        makeStatic();
     }
 };
 

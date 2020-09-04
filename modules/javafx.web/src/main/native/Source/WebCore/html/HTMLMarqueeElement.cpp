@@ -68,7 +68,7 @@ bool HTMLMarqueeElement::isPresentationAttribute(const QualifiedName& name) cons
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLMarqueeElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLMarqueeElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr) {
         if (!value.isEmpty())
@@ -157,11 +157,6 @@ ExceptionOr<void> HTMLMarqueeElement::setLoop(int loop)
         return Exception { IndexSizeError };
     setIntegralAttribute(loopAttr, loop);
     return { };
-}
-
-bool HTMLMarqueeElement::canSuspendForDocumentSuspension() const
-{
-    return true;
 }
 
 void HTMLMarqueeElement::suspend(ReasonForSuspension)

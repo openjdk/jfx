@@ -30,13 +30,13 @@ class SourceGraphic : public FilterEffect {
 public:
     static Ref<SourceGraphic> create(Filter&);
 
-    static const AtomicString& effectName();
+    static const AtomString& effectName();
 
 private:
     SourceGraphic(Filter& filter)
         : FilterEffect(filter)
     {
-        setOperatingColorSpace(ColorSpaceSRGB);
+        setOperatingColorSpace(ColorSpace::SRGB);
     }
 
     const char* filterName() const final { return "SourceGraphic"; }

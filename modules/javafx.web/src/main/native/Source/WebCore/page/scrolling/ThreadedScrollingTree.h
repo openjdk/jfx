@@ -29,6 +29,7 @@
 
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
+#include <wtf/Condition.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -54,15 +55,19 @@ public:
 
     void invalidate() override;
 
+    void incrementPendingCommitCount();
+    void decrementPendingCommitCount();
+
 protected:
     explicit ThreadedScrollingTree(AsyncScrollingCoordinator&);
 
-    void scrollingTreeNodeDidScroll(ScrollingNodeID, const FloatPoint& scrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
+    void scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode&, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
 #if PLATFORM(MAC)
     void handleWheelEventPhase(PlatformWheelEventPhase) override;
     void setActiveScrollSnapIndices(ScrollingNodeID, unsigned horizontalIndex, unsigned verticalIndex) override;
-    void deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
-    void removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) override;
+
+    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) override;
+    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) override;
 #endif
 
 #if PLATFORM(COCOA)
@@ -74,8 +79,15 @@ protected:
 
 private:
     bool isThreadedScrollingTree() const override { return true; }
+    void applyLayerPositions() override;
 
     RefPtr<AsyncScrollingCoordinator> m_scrollingCoordinator;
+
+    void waitForPendingCommits();
+
+    Lock m_pendingCommitCountMutex;
+    unsigned m_pendingCommitCount { 0 };
+    Condition m_commitCondition;
 };
 
 } // namespace WebCore

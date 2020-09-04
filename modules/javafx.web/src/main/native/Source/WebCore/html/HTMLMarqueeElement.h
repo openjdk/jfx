@@ -29,7 +29,7 @@ namespace WebCore {
 
 class RenderMarquee;
 
-class HTMLMarqueeElement final : public HTMLElement, private ActiveDOMObject {
+class HTMLMarqueeElement final : public HTMLElement, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLMarqueeElement);
 public:
     static Ref<HTMLMarqueeElement> create(const QualifiedName&, Document&);
@@ -55,9 +55,8 @@ private:
     HTMLMarqueeElement(const QualifiedName&, Document&);
 
     bool isPresentationAttribute(const QualifiedName&) const final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
-    bool canSuspendForDocumentSuspension() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     const char* activeDOMObjectName() const final { return "HTMLMarqueeElement"; }

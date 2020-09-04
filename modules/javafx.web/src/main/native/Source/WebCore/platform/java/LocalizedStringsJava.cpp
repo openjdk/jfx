@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -522,6 +522,16 @@ String AXDefinitionListDefinitionText()
     return getLocalizedProperty("AXDefinitionListDefinitionText");
 }
 
+String AXFigureText()
+{
+    return getLocalizedProperty("AXFigureText");
+}
+
+String AXARIAContentGroupText(const String& ariaType)
+{
+    return getLocalizedProperty(String("AXARIAContentGroupText") + ariaType);
+}
+
 String AXButtonActionVerb()
 {
     return getLocalizedProperty("AXButtonActionVerb");
@@ -710,6 +720,11 @@ String unsupportedPluginText()
 {
     notImplemented();
     return String::fromUTF8("Unsupported Plug-in");
+}
+
+String pluginTooSmallText()
+{
+    return String::fromUTF8("Plug-In too small");
 }
 
 String localizedString(const char* key)

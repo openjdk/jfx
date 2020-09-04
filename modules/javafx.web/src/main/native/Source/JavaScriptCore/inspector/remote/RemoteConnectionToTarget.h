@@ -28,6 +28,7 @@
 #if ENABLE(REMOTE_INSPECTOR)
 
 #include "InspectorFrontendChannel.h"
+#include "RemoteControllableTarget.h"
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -53,7 +54,7 @@ public:
 #else
     RemoteConnectionToTarget(RemoteControllableTarget&);
 #endif
-    virtual ~RemoteConnectionToTarget();
+    ~RemoteConnectionToTarget() override;
 
     // Main API.
     bool setup(bool isAutomaticInspection = false, bool automaticallyPause = false);
@@ -65,7 +66,7 @@ public:
     void close();
     void targetClosed();
 
-    Optional<unsigned> targetIdentifier() const;
+    Optional<TargetID> targetIdentifier() const;
 #if PLATFORM(COCOA)
     NSString *connectionIdentifier() const;
     NSString *destination() const;

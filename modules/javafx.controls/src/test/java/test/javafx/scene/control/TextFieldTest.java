@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 
 import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyEvent.*;
+import static java.util.stream.Collectors.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
@@ -46,10 +48,15 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextFormatter;
+import javafx.scene.control.TextFormatter.Change;
 import javafx.scene.control.TextInputControlShim;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
@@ -65,6 +72,21 @@ public class TextFieldTest {
     @Before public void setup() {
         txtField = new TextField();
         dummyTxtField = new TextField("dummy");
+        setUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************
@@ -303,6 +325,92 @@ public class TextFieldTest {
     private StackPane root;
 
     /**
+     * Guard against potential regression of JDK-8145515: eventFilter
+     * on editor not notified for ENTER released.
+     */
+    @Test
+    public void testEditorInComboBoxEnterReleasedFilter() {
+        initStage();
+        ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        root.getChildren().add(combo);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        combo.getEditor().addEventFilter(KEY_RELEASED, events::add);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(combo);
+        keyFirer.doKeyPress(key);
+        assertEquals(1, events.size());
+    }
+
+    /**
+     * Unfixed part of JDK-8145515, reported as regression JDK-8229914: eventFilter
+     * on editor not notified for ENTER pressed.
+     */
+    @Ignore("JDK-8229914")
+    @Test
+    public void testEditorInComboBoxEnterPressedFilter() {
+        initStage();
+        ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        root.getChildren().add(combo);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        combo.getEditor().addEventFilter(KEY_PRESSED, events::add);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(combo);
+        keyFirer.doKeyPress(key);
+        assertEquals(1, events.size());
+    }
+
+    /**
+     * Test related to https://bugs.openjdk.java.net/browse/JDK-8207759
+     * broken event dispatch sequence by forwardToParent.
+     */
+    @Test
+    public void testEventSequenceEnterHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        EventHandler<KeyEvent> adder = events::add;
+        scene.addEventHandler(KEY_PRESSED, adder);
+        root.addEventHandler(KEY_PRESSED, adder);
+        txtField.addEventHandler(KEY_PRESSED, adder);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(txtField);
+        keyFirer.doKeyPress(key);
+        assertEquals("event count", 3, events.size());
+        List<Object> sources = events.stream()
+                .map(e -> e.getSource())
+                .collect(toList());
+        List<Object> expected = List.of(txtField, root, scene);
+        assertEquals(expected, sources);
+    }
+
+    @Test
+    public void testEventSequenceEscapeHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        EventHandler<KeyEvent> adder = events::add;
+        scene.addEventHandler(KEY_PRESSED, adder);
+        root.addEventHandler(KEY_PRESSED, adder);
+        txtField.addEventHandler(KEY_PRESSED, adder);
+        KeyCode key = ESCAPE;
+        KeyEventFirer keyFirer = new KeyEventFirer(txtField);
+        keyFirer.doKeyPress(key);
+        assertEquals("event count", 3, events.size());
+        List<Object> sources = events.stream()
+                .map(e -> e.getSource())
+                .collect(toList());
+        List<Object> expected = List.of(txtField, root, scene);
+        assertEquals(expected, sources);
+    }
+
+
+    /**
      * test for JDK-8207774: ENTER must not be forwared if actionHandler
      * consumed the action.
      *
@@ -357,12 +465,28 @@ public class TextFieldTest {
         assertTrue("action must be consumed ", actions.get(0).isConsumed());
     }
 
+    @Test public void replaceSelectionWithFilteredCharacters() {
+        txtField.setText("x xxxyyy");
+        txtField.selectRange(2, 5);
+        txtField.setTextFormatter(new TextFormatter<>(this::noDigits));
+        txtField.replaceSelection("a1234a");
+        assertEquals("x aayyy", txtField.getText());
+        assertEquals(4, txtField.getSelection().getStart());
+        assertEquals(4, txtField.getSelection().getEnd());
+    }
+
+    private Change noDigits(Change change) {
+        Change filtered = change.clone();
+        filtered.setText(change.getText().replaceAll("[0-9]","\n"));
+        return filtered;
+    }
+
     /**
      * Helper method to init the stage only if really needed.
      */
     private void initStage() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        Toolkit tk = Toolkit.getToolkit();
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
@@ -374,5 +498,6 @@ public class TextFieldTest {
         if (stage != null) {
             stage.hide();
         }
+        removeUncaughtExceptionHandler();
     }
 }

@@ -35,6 +35,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 #include "ResourceLoadInfo.h"
@@ -50,10 +51,12 @@ class AuthenticationChallenge;
 class DocumentLoader;
 class Frame;
 class FrameLoader;
+class LegacyPreviewLoader;
 class NetworkLoadMetrics;
-class PreviewLoader;
 
-class ResourceLoader : public RefCounted<ResourceLoader>, protected ResourceHandleClient {
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
+class ResourceLoader : public CanMakeWeakPtr<ResourceLoader>, public RefCounted<ResourceLoader>, protected ResourceHandleClient {
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
 public:
     virtual ~ResourceLoader() = 0;
 
@@ -116,6 +119,7 @@ public:
 
 #if USE(QUICK_LOOK)
     bool isQuickLookResource() const;
+    virtual void didReceivePreviewResponse(const ResourceResponse&) { };
 #endif
 
     const URL& url() const { return m_request.url(); }
@@ -128,7 +132,6 @@ public:
     WEBCORE_EXPORT bool shouldIncludeCertificateInfo() const;
 
     bool reachedTerminalState() const { return m_reachedTerminalState; }
-
 
     const ResourceRequest& request() const { return m_request; }
     void setRequest(ResourceRequest&& request) { m_request = WTFMove(request); }
@@ -153,7 +156,7 @@ public:
     ResourceRequest takeDeferredRequest() { return std::exchange(m_deferredRequest, { }); }
 
 protected:
-    ResourceLoader(DocumentLoader&, ResourceLoaderOptions);
+    ResourceLoader(Frame&, ResourceLoaderOptions);
 
     void didFinishLoadingOnePart(const NetworkLoadMetrics&);
     void cleanupForError(const ResourceError&);
@@ -177,7 +180,7 @@ protected:
     ResourceResponse m_response;
     LoadTiming m_loadTiming;
 #if USE(QUICK_LOOK)
-    std::unique_ptr<PreviewLoader> m_previewLoader;
+    std::unique_ptr<LegacyPreviewLoader> m_previewLoader;
 #endif
     bool m_canCrossOriginRequestsAskUserForCredentials { true };
 
@@ -243,7 +246,7 @@ private:
 
 #if ENABLE(CONTENT_EXTENSIONS)
 protected:
-    ResourceType m_resourceType { ResourceType::Invalid };
+    ContentExtensions::ResourceType m_resourceType { ContentExtensions::ResourceType::Invalid };
 #endif
 };
 

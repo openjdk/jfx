@@ -33,7 +33,9 @@
 
 #include "CDM.h"
 #include "CDMInstance.h"
+#include "DOMPromiseProxy.h"
 #include "Document.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Logging.h"
 #include "MediaKeyMessageEvent.h"
@@ -46,8 +48,11 @@
 #include "SecurityOriginData.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaKeySession);
 
 Ref<MediaKeySession> MediaKeySession::create(ScriptExecutionContext& context, WeakPtr<MediaKeys>&& keys, MediaKeySessionType sessionType, bool useDistinctiveIdentifier, Ref<CDM>&& implementation, Ref<CDMInstanceSession>&& instanceSession)
 {
@@ -60,12 +65,12 @@ MediaKeySession::MediaKeySession(ScriptExecutionContext& context, WeakPtr<MediaK
     : ActiveDOMObject(&context)
     , m_keys(WTFMove(keys))
     , m_expiration(std::numeric_limits<double>::quiet_NaN())
+    , m_closedPromise(makeUniqueRef<ClosedPromise>())
     , m_keyStatuses(MediaKeyStatusMap::create(*this))
     , m_useDistinctiveIdentifier(useDistinctiveIdentifier)
     , m_sessionType(sessionType)
     , m_implementation(WTFMove(implementation))
     , m_instanceSession(WTFMove(instanceSession))
-    , m_eventQueue(*this)
 {
     // https://w3c.github.io/encrypted-media/#dom-mediakeys-createsession
     // W3C Editor's Draft 09 November 2016
@@ -91,7 +96,7 @@ MediaKeySession::MediaKeySession(ScriptExecutionContext& context, WeakPtr<MediaK
     UNUSED_PARAM(m_closed);
     UNUSED_PARAM(m_uninitialized);
 
-    m_instanceSession->setClient(m_cdmInstanceSessionClientWeakPtrFactory.createWeakPtr(*this));
+    m_instanceSession->setClient(makeWeakPtr(*this));
 }
 
 MediaKeySession::~MediaKeySession()
@@ -115,7 +120,7 @@ Ref<MediaKeyStatusMap> MediaKeySession::keyStatuses() const
     return m_keyStatuses.copyRef();
 }
 
-void MediaKeySession::generateRequest(const AtomicString& initDataType, const BufferSource& initData, Ref<DeferredPromise>&& promise)
+void MediaKeySession::generateRequest(const AtomString& initDataType, const BufferSource& initData, Ref<DeferredPromise>&& promise)
 {
     // https://w3c.github.io/encrypted-media/#dom-mediakeysession-generaterequest
     // W3C Editor's Draft 09 November 2016
@@ -152,7 +157,7 @@ void MediaKeySession::generateRequest(const AtomicString& initDataType, const Bu
     // 8. Let session type be this object's session type.
     // 9. Let promise be a new promise.
     // 10. Run the following steps in parallel:
-    m_taskQueue.enqueueTask([this, initData = SharedBuffer::create(initData.data(), initData.length()), initDataType, promise = WTFMove(promise)] () mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, initData = SharedBuffer::create(initData.data(), initData.length()), initDataType, promise = WTFMove(promise)] () mutable {
         // 10.1. If the init data is not valid for initDataType, reject promise with a newly created TypeError.
         // 10.2. Let sanitized init data be a validated and sanitized version of init data.
         RefPtr<SharedBuffer> sanitizedInitData = m_implementation->sanitizeInitData(initDataType, initData);
@@ -200,7 +205,7 @@ void MediaKeySession::generateRequest(const AtomicString& initDataType, const Bu
         }
 
         LOG(EME, "EME - request license from CDM implementation");
-        m_instanceSession->requestLicense(m_sessionType, initDataType, WTFMove(initData), [this, weakThis = makeWeakPtr(*this), promise = WTFMove(promise)] (Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, CDMInstanceSession::SuccessValue succeeded) mutable {
+        m_instanceSession->requestLicense(m_sessionType, initDataType, sanitizedInitData.releaseNonNull(), [this, weakThis = makeWeakPtr(*this), promise = WTFMove(promise)] (Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, CDMInstanceSession::SuccessValue succeeded) mutable {
             if (!weakThis)
                 return;
 
@@ -221,7 +226,7 @@ void MediaKeySession::generateRequest(const AtomicString& initDataType, const Bu
             }
 
             // 10.10. Queue a task to run the following steps:
-            m_taskQueue.enqueueTask([this, promise = WTFMove(promise), message = WTFMove(message), messageType, sessionId, succeeded] () mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, promise = WTFMove(promise), message = WTFMove(message), messageType, sessionId, succeeded] () mutable {
                 // 10.10.1. If any of the preceding steps failed, reject promise with a new DOMException whose name is the appropriate error name.
                 if (succeeded == CDMInstanceSession::SuccessValue::Failed) {
                     promise->reject(NotSupportedError);
@@ -272,7 +277,7 @@ void MediaKeySession::load(const String& sessionId, Ref<DeferredPromise>&& promi
 
     // 7. Let promise be a new promise.
     // 8. Run the following steps in parallel:
-    m_taskQueue.enqueueTask([this, sessionId, promise = WTFMove(promise)] () mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, sessionId, promise = WTFMove(promise)] () mutable {
         // 8.1. Let sanitized session ID be a validated and/or sanitized version of sessionId.
         // 8.2. If the preceding step failed, or if sanitized session ID is empty, reject promise with a newly created TypeError.
         Optional<String> sanitizedSessionId = m_implementation->sanitizeSessionId(sessionId);
@@ -324,7 +329,7 @@ void MediaKeySession::load(const String& sessionId, Ref<DeferredPromise>&& promi
             }
 
             // 8.9. Queue a task to run the following steps:
-            m_taskQueue.enqueueTask([this, knownKeys = WTFMove(knownKeys), expiration = WTFMove(expiration), message = WTFMove(message), sanitizedSessionId, succeeded, promise = WTFMove(promise)] () mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, knownKeys = WTFMove(knownKeys), expiration = WTFMove(expiration), message = WTFMove(message), sanitizedSessionId, succeeded, promise = WTFMove(promise)] () mutable {
                 // 8.9.1. If any of the preceding steps failed, reject promise with a the appropriate error name.
                 if (succeeded == CDMInstanceSession::SuccessValue::Failed) {
                     promise->reject(NotSupportedError);
@@ -381,7 +386,7 @@ void MediaKeySession::update(const BufferSource& response, Ref<DeferredPromise>&
     // 4. Let response copy be a copy of the contents of the response parameter.
     // 5. Let promise be a new promise.
     // 6. Run the following steps in parallel:
-    m_taskQueue.enqueueTask([this, response = SharedBuffer::create(response.data(), response.length()), promise = WTFMove(promise)] () mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, response = SharedBuffer::create(response.data(), response.length()), promise = WTFMove(promise)] () mutable {
         // 6.1. Let sanitized response be a validated and/or sanitized version of response copy.
         RefPtr<SharedBuffer> sanitizedResponse = m_implementation->sanitizeResponse(response);
 
@@ -432,7 +437,7 @@ void MediaKeySession::update(const BufferSource& response, Ref<DeferredPromise>&
             //   6.7.3.1. Let message be that message.
             //   6.7.3.2. Let message type be the appropriate MediaKeyMessageType for the message.
             // 6.8. Queue a task to run the following steps:
-            m_taskQueue.enqueueTask([this, sessionWasClosed, changedKeys = WTFMove(changedKeys), changedExpiration = WTFMove(changedExpiration), message = WTFMove(message), promise = WTFMove(promise)] () mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, sessionWasClosed, changedKeys = WTFMove(changedKeys), changedExpiration = WTFMove(changedExpiration), message = WTFMove(message), promise = WTFMove(promise)] () mutable {
                 LOG(EME, "EME - updating CDM license succeeded for session %s, sending a message to the license server", m_sessionId.utf8().data());
                 // 6.8.1.
                 if (sessionWasClosed) {
@@ -509,7 +514,7 @@ void MediaKeySession::close(Ref<DeferredPromise>&& promise)
 
     // 4. Let promise be a new promise.
     // 5. Run the following steps in parallel:
-    m_taskQueue.enqueueTask([this, promise = WTFMove(promise)] () mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, promise = WTFMove(promise)] () mutable {
         // 5.1. Let cdm be the CDM instance represented by session's cdm instance value.
         // 5.2. Use cdm to close the key session associated with session.
         LOG(EME, "EME - closing CDM session %s", m_sessionId.utf8().data());
@@ -518,7 +523,7 @@ void MediaKeySession::close(Ref<DeferredPromise>&& promise)
                 return;
 
             // 5.3. Queue a task to run the following steps:
-            m_taskQueue.enqueueTask([this, promise = WTFMove(promise)] () mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, promise = WTFMove(promise)] () mutable {
                 // 5.3.1. Run the Session Closed algorithm on the session.
                 sessionClosed();
 
@@ -547,7 +552,7 @@ void MediaKeySession::remove(Ref<DeferredPromise>&& promise)
 
     // 3. Let promise be a new promise.
     // 4. Run the following steps in parallel:
-    m_taskQueue.enqueueTask([this, promise = WTFMove(promise)] () mutable {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, promise = WTFMove(promise)] () mutable {
         // 4.1. Let cdm be the CDM instance represented by this object's cdm instance value.
         // 4.2. Let message be null.
         // 4.3. Let message type be null.
@@ -572,7 +577,7 @@ void MediaKeySession::remove(Ref<DeferredPromise>&& promise)
             // NOTE: Step 4.4.1. should be implemented in CDMInstance.
 
             // 4.5. Queue a task to run the following steps:
-            m_taskQueue.enqueueTask([this, keys = WTFMove(keys), message = WTFMove(message), succeeded, promise = WTFMove(promise)] () mutable {
+            queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [this, keys = WTFMove(keys), message = WTFMove(message), succeeded, promise = WTFMove(promise)] () mutable {
                 // 4.5.1. Run the Update Key Statuses algorithm on the session, providing all key ID(s) in the session along with the "released" MediaKeyStatus value for each.
                 updateKeyStatuses(WTFMove(keys));
 
@@ -611,7 +616,7 @@ void MediaKeySession::enqueueMessage(MediaKeyMessageType messageType, const Shar
     //    interface with its type attribute set to message and its isTrusted attribute initialized to true, and dispatch it at the
     //    session.
     auto messageEvent = MediaKeyMessageEvent::create(eventNames().messageEvent, {messageType, message.tryCreateArrayBuffer()}, Event::IsTrusted::Yes);
-    m_eventQueue.enqueueEvent(WTFMove(messageEvent));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(messageEvent));
 }
 
 void MediaKeySession::updateKeyStatuses(CDMInstanceSession::KeyStatusVector&& inputStatuses)
@@ -656,10 +661,10 @@ void MediaKeySession::updateKeyStatuses(CDMInstanceSession::KeyStatusVector&& in
         m_statuses.uncheckedAppend({ WTFMove(status.first), toMediaKeyStatus(status.second) });
 
     // 5. Queue a task to fire a simple event named keystatuseschange at the session.
-    m_eventQueue.enqueueEvent(Event::create(eventNames().keystatuseschangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, Event::create(eventNames().keystatuseschangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     // 6. Queue a task to run the Attempt to Resume Playback If Necessary algorithm on each of the media element(s) whose mediaKeys attribute is the MediaKeys object that created the session.
-    m_taskQueue.enqueueTask(
+    queueTaskKeepingObjectAlive(*this, TaskSource::Networking,
         [this] () mutable {
             if (m_keys)
                 m_keys->attemptToResumePlaybackOnClients();
@@ -706,7 +711,7 @@ void MediaKeySession::sessionClosed()
 
     // 5. Let promise be the closed attribute of the session.
     // 6. Resolve promise.
-    m_closedPromise.resolve();
+    m_closedPromise->resolve();
 }
 
 String MediaKeySession::mediaKeysStorageDirectory() const
@@ -728,25 +733,13 @@ String MediaKeySession::mediaKeysStorageDirectory() const
 
 bool MediaKeySession::hasPendingActivity() const
 {
-    notImplemented();
-    return false;
+    // A MediaKeySession object SHALL NOT be destroyed and SHALL continue to receive events if it is not closed and the MediaKeys object that created it remains accessible.
+    return (!m_closed && m_keys) || ActiveDOMObject::hasPendingActivity();
 }
 
 const char* MediaKeySession::activeDOMObjectName() const
 {
-    notImplemented();
     return "MediaKeySession";
-}
-
-bool MediaKeySession::canSuspendForDocumentSuspension() const
-{
-    notImplemented();
-    return false;
-}
-
-void MediaKeySession::stop()
-{
-    notImplemented();
 }
 
 } // namespace WebCore

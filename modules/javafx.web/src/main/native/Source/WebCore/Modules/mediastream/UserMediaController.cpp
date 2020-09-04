@@ -30,12 +30,8 @@
 
 #include "DOMWindow.h"
 #include "Document.h"
-#include "DocumentLoader.h"
 #include "Frame.h"
 #include "HTMLIFrameElement.h"
-#include "HTMLParserIdioms.h"
-#include "SchemeRegistry.h"
-#include "Settings.h"
 #include "UserMediaRequest.h"
 
 namespace WebCore {
@@ -57,117 +53,28 @@ UserMediaController::~UserMediaController()
 
 void provideUserMediaTo(Page* page, UserMediaClient* client)
 {
-    UserMediaController::provideTo(page, UserMediaController::supplementName(), std::make_unique<UserMediaController>(client));
+    UserMediaController::provideTo(page, UserMediaController::supplementName(), makeUnique<UserMediaController>(client));
 }
 
-static bool isSecure(DocumentLoader& documentLoader)
+void UserMediaController::logGetUserMediaDenial(Document& document)
 {
-    auto& response = documentLoader.response();
-    if (SecurityOrigin::isLocalHostOrLoopbackIPAddress(documentLoader.response().url().host()))
-        return true;
-    return SchemeRegistry::shouldTreatURLSchemeAsSecure(response.url().protocol().toStringWithoutCopying())
-        && response.certificateInfo()
-        && !response.certificateInfo()->containsNonRootSHA1SignedCertificate();
+    if (auto* window = document.domWindow())
+        window->printErrorMessage(makeString("Not allowed to call getUserMedia."));
 }
 
-static UserMediaController::GetUserMediaAccess isAllowedToUse(Document& document, Document& topDocument, OptionSet<UserMediaController::CaptureType> types)
+void UserMediaController::logGetDisplayMediaDenial(Document& document)
 {
-    if (&document == &topDocument)
-        return UserMediaController::GetUserMediaAccess::CanCall;
-
-    auto* parentDocument = document.parentDocument();
-    if (!parentDocument)
-        return UserMediaController::GetUserMediaAccess::BlockedByParent;
-
-    if (document.securityOrigin().isSameSchemeHostPort(parentDocument->securityOrigin()))
-        return UserMediaController::GetUserMediaAccess::CanCall;
-
-    auto* element = document.ownerElement();
-    ASSERT(element);
-    if (!element)
-        return UserMediaController::GetUserMediaAccess::BlockedByParent;
-
-    if (!is<HTMLIFrameElement>(*element))
-        return UserMediaController::GetUserMediaAccess::BlockedByParent;
-    auto& allow = downcast<HTMLIFrameElement>(*element).allow();
-
-    bool allowCameraAccess = false;
-    bool allowMicrophoneAccess = false;
-    bool allowDisplay = false;
-    for (auto allowItem : StringView { allow }.split(';')) {
-        auto item = allowItem.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
-        if (!allowCameraAccess && item == "camera")
-            allowCameraAccess = true;
-        else if (!allowMicrophoneAccess && item == "microphone")
-            allowMicrophoneAccess = true;
-        else if (!allowDisplay && item == "display")
-            allowDisplay = true;
-    }
-    if ((allowCameraAccess || !(types & UserMediaController::CaptureType::Camera)) && (allowMicrophoneAccess || !(types & UserMediaController::CaptureType::Microphone)) && (allowDisplay || !(types & UserMediaController::CaptureType::Display)))
-        return UserMediaController::GetUserMediaAccess::CanCall;
-
-    return UserMediaController::GetUserMediaAccess::BlockedByFeaturePolicy;
+    if (auto* window = document.domWindow())
+        window->printErrorMessage(makeString("Not allowed to call getDisplayMedia."));
 }
 
-UserMediaController::GetUserMediaAccess UserMediaController::canCallGetUserMedia(Document& document, OptionSet<UserMediaController::CaptureType> types)
+void UserMediaController::logEnumerateDevicesDenial(Document& document)
 {
-    ASSERT(!types.isEmpty());
-
-    bool requiresSecureConnection = true;
-    if (auto page = document.page())
-        requiresSecureConnection = page->settings().mediaCaptureRequiresSecureConnection();
-    auto& documentLoader = *document.loader();
-    if (requiresSecureConnection && !isSecure(documentLoader))
-        return GetUserMediaAccess::InsecureDocument;
-
-    auto& topDocument = document.topDocument();
-    if (&document != &topDocument) {
-        for (auto* ancestorDocument = &document; ancestorDocument != &topDocument; ancestorDocument = ancestorDocument->parentDocument()) {
-            if (requiresSecureConnection && !isSecure(*ancestorDocument->loader()))
-                return GetUserMediaAccess::InsecureParent;
-
-            auto status = isAllowedToUse(*ancestorDocument, topDocument, types);
-            if (status != GetUserMediaAccess::CanCall)
-                return status;
-        }
-    }
-
-    return GetUserMediaAccess::CanCall;
-}
-
-void UserMediaController::logGetUserMediaDenial(Document& document, GetUserMediaAccess access, BlockedCaller caller)
-{
-    auto& domWindow = *document.domWindow();
-    const char* callerName;
-
-    switch (caller) {
-    case BlockedCaller::GetUserMedia:
-        callerName = "getUserMedia";
-        break;
-    case BlockedCaller::GetDisplayMedia:
-        callerName = "getDisplayMedia";
-        break;
-    case BlockedCaller::EnumerateDevices:
-        callerName = "enumerateDevices";
-        break;
-    }
-
-    switch (access) {
-    case UserMediaController::GetUserMediaAccess::InsecureDocument:
-        domWindow.printErrorMessage(makeString("Trying to call ", callerName, " from an insecure document."));
-        break;
-    case UserMediaController::GetUserMediaAccess::InsecureParent:
-        domWindow.printErrorMessage(makeString("Trying to call ", callerName, " from a document with an insecure parent frame."));
-        break;
-    case UserMediaController::GetUserMediaAccess::BlockedByParent:
-        domWindow.printErrorMessage(makeString("The top-level frame has prevented a document with a different security origin from calling ", callerName, "."));
-        break;
-    case GetUserMediaAccess::BlockedByFeaturePolicy:
-        domWindow.printErrorMessage(makeString("Trying to call ", callerName, " from a frame without correct 'allow' attribute."));
-        break;
-    case UserMediaController::GetUserMediaAccess::CanCall:
-        break;
-    }
+    // We redo the check to print to the console log.
+    isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Camera, document, LogFeaturePolicyFailure::Yes);
+    isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::Microphone, document, LogFeaturePolicyFailure::Yes);
+    if (auto* window = document.domWindow())
+        window->printErrorMessage(makeString("Not allowed to call enumerateDevices."));
 }
 
 } // namespace WebCore

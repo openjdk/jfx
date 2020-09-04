@@ -29,11 +29,12 @@
 namespace WebCore {
 
 class OfflineAudioContext final : public AudioContext {
+    WTF_MAKE_ISO_ALLOCATED(OfflineAudioContext);
 public:
     static ExceptionOr<Ref<OfflineAudioContext>> create(ScriptExecutionContext&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
 
 private:
-    OfflineAudioContext(Document&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
+    OfflineAudioContext(Document&, AudioBuffer* renderTarget);
 };
 
 } // namespace WebCore

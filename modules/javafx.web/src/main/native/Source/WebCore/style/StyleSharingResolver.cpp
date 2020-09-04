@@ -26,15 +26,17 @@
 #include "config.h"
 #include "StyleSharingResolver.h"
 
-#include "DocumentRuleSets.h"
 #include "ElementRuleCollector.h"
+#include "FullscreenManager.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NodeRenderStyle.h"
 #include "RenderStyle.h"
 #include "SVGElement.h"
 #include "ShadowRoot.h"
+#include "StyleResolver.h"
 #include "StyleScope.h"
+#include "StyleScopeRuleSets.h"
 #include "StyleUpdate.h"
 #include "StyledElement.h"
 #include "VisitedLinkState.h"
@@ -53,7 +55,7 @@ struct SharingResolver::Context {
     InsideLink elementLinkState;
 };
 
-SharingResolver::SharingResolver(const Document& document, const DocumentRuleSets& ruleSets, const SelectorFilter& selectorFilter)
+SharingResolver::SharingResolver(const Document& document, const ScopeRuleSets& ruleSets, const SelectorFilter& selectorFilter)
     : m_document(document)
     , m_ruleSets(ruleSets)
     , m_selectorFilter(selectorFilter)
@@ -67,7 +69,6 @@ static inline bool parentElementPreventsSharing(const Element& parentElement)
 
 static inline bool elementHasDirectionAuto(const Element& element)
 {
-    // FIXME: This line is surprisingly hot, we may wish to inline hasDirectionAuto into StyleResolver.
     return is<HTMLElement>(element) && downcast<HTMLElement>(element).hasDirectionAuto();
 }
 
@@ -292,7 +293,7 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
 
 #if ENABLE(FULLSCREEN_API)
-    if (&candidateElement == m_document.webkitCurrentFullScreenElement() || &element == m_document.webkitCurrentFullScreenElement())
+    if (&candidateElement == m_document.fullscreenManager().currentFullscreenElement() || &element == m_document.fullscreenManager().currentFullscreenElement())
         return false;
 #endif
     return true;

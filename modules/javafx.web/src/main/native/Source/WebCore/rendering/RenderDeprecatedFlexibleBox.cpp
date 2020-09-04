@@ -28,6 +28,7 @@
 #include "FontCascade.h"
 #include "LayoutRepainter.h"
 #include "RenderLayer.h"
+#include "RenderLayoutState.h"
 #include "RenderView.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
@@ -284,6 +285,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
     {
         LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
+        resetLogicalHeightBeforeLayoutIfNeeded();
         preparePaginationBeforeBlockLayout(relayoutChildren);
 
         LayoutSize previousSize = size();
@@ -300,7 +302,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
         m_stretchingChildren = false;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         LayoutSize oldLayoutDelta = view().frameView().layoutContext().layoutDelta();
 #endif
 
@@ -838,7 +840,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
                     // Now distribute the space to objects.
                     for (RenderBox* child = iterator.first(); child && spaceAvailableThisPass && totalFlex; child = iterator.next()) {
                         if (allowedChildFlex(child, expanding, i)) {
-                            LayoutUnit spaceAdd = spaceAvailableThisPass * (child->style().boxFlex() / totalFlex);
+                            LayoutUnit spaceAdd { spaceAvailableThisPass * (child->style().boxFlex() / totalFlex) };
                             if (spaceAdd) {
                                 child->setOverrideContentLogicalHeight(contentHeightForChild(child) + spaceAdd);
                                 flexingChildren = true;
@@ -989,8 +991,8 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
             continue;
 
         const UChar ellipsisAndSpace[2] = { horizontalEllipsis, ' ' };
-        static NeverDestroyed<AtomicString> ellipsisAndSpaceStr(ellipsisAndSpace, 2);
-        static NeverDestroyed<AtomicString> ellipsisStr(&horizontalEllipsis, 1);
+        static NeverDestroyed<AtomString> ellipsisAndSpaceStr(ellipsisAndSpace, 2);
+        static NeverDestroyed<AtomString> ellipsisStr(&horizontalEllipsis, 1);
         const RenderStyle& lineStyle = numVisibleLines == 1 ? firstLineStyle() : style();
         const FontCascade& font = lineStyle.fontCascade();
 
@@ -1016,13 +1018,13 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         if (!leftToRight)
             continue;
 
-        LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(lastVisibleLine->y(), DoNotIndentText);
+        LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(LayoutUnit(lastVisibleLine->y()), DoNotIndentText);
         if (!lastVisibleLine->lineCanAccommodateEllipsis(leftToRight, blockRightEdge, lastVisibleLine->x() + lastVisibleLine->logicalWidth(), totalWidth))
             continue;
 
         // Let the truncation code kick in.
         // FIXME: the text alignment should be recomputed after the width changes due to truncation.
-        LayoutUnit blockLeftEdge = destBlock.logicalLeftOffsetForLine(lastVisibleLine->y(), DoNotIndentText);
+        LayoutUnit blockLeftEdge = destBlock.logicalLeftOffsetForLine(LayoutUnit(lastVisibleLine->y()), DoNotIndentText);
         lastVisibleLine->placeEllipsis(anchorBox ? ellipsisAndSpaceStr : ellipsisStr, leftToRight, blockLeftEdge, blockRightEdge, totalWidth, anchorBox);
         destBlock.setHasMarkupTruncation(true);
     }
@@ -1105,7 +1107,7 @@ LayoutUnit RenderDeprecatedFlexibleBox::allowedChildFlex(RenderBox* child, bool 
     } else {
         Length minHeight = child->style().minHeight();
         if (minHeight.isFixed() || minHeight.isAuto()) {
-            LayoutUnit minHeight = child->style().minHeight().value();
+            LayoutUnit minHeight { child->style().minHeight().value() };
             LayoutUnit height = contentHeightForChild(child);
             LayoutUnit allowedShrinkage = std::min<LayoutUnit>(0, minHeight - height);
             return allowedShrinkage;

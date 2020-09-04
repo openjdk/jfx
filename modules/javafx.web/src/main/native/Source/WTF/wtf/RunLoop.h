@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Portions Copyright (c) 2010 Motorola Mobility, Inc.  All rights reserved.
  *
@@ -35,12 +35,25 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Seconds.h>
 #include <wtf/ThreadingPrimitives.h>
+#include <wtf/text/WTFString.h>
+
+#if USE(CF)
+#include <CoreFoundation/CFRunLoop.h>
+#endif
 
 #if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/GRefPtr.h>
 #endif
 
 namespace WTF {
+
+#if USE(CF)
+using RunLoopMode = CFStringRef;
+#define DefaultRunLoopMode kCFRunLoopDefaultMode
+#else
+using RunLoopMode = unsigned;
+#define DefaultRunLoopMode 0
+#endif
 
 class RunLoop : public FunctionDispatcher {
     WTF_MAKE_NONCOPYABLE(RunLoop);
@@ -60,6 +73,9 @@ public:
     WTF_EXPORT_PRIVATE void stop();
     WTF_EXPORT_PRIVATE void wakeUp();
 
+    enum class CycleResult { Continue, Stop };
+    WTF_EXPORT_PRIVATE CycleResult static cycle(RunLoopMode = DefaultRunLoopMode);
+
 #if USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE void runForDuration(Seconds duration);
 #endif
@@ -68,9 +84,13 @@ public:
     WTF_EXPORT_PRIVATE GMainContext* mainContext() const { return m_mainContext.get(); }
 #endif
 
-#if USE(GENERIC_EVENT_LOOP)
+#if USE(GENERIC_EVENT_LOOP) || USE(WINDOWS_EVENT_LOOP)
     // Run the single iteration of the RunLoop. It consumes the pending tasks and expired timers, but it won't be blocked.
     WTF_EXPORT_PRIVATE static void iterate();
+#endif
+
+#if USE(WINDOWS_EVENT_LOOP)
+    static void registerRunLoopMessageWindowClass();
 #endif
 
 #if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
@@ -110,11 +130,11 @@ public:
 
 #if USE(WINDOWS_EVENT_LOOP)
         bool isActive(const AbstractLocker&) const;
-        static void timerFired(RunLoop*, uint64_t ID);
-        uint64_t m_ID;
+        void timerFired();
         MonotonicTime m_nextFireDate;
         Seconds m_interval;
-        bool m_isRepeating;
+        bool m_isRepeating { false };
+        bool m_isActive { false };
 #elif USE(COCOA_EVENT_LOOP)
         static void timerFired(CFRunLoopTimerRef, void*);
         RetainPtr<CFRunLoopTimerRef> m_timer;
@@ -139,16 +159,18 @@ public:
 
         Timer(RunLoop& runLoop, TimerFiredClass* o, TimerFiredFunction f)
             : TimerBase(runLoop)
-            , m_object(o)
             , m_function(f)
+            , m_object(o)
         {
         }
 
     private:
         void fired() override { (m_object->*m_function)(); }
 
-        TimerFiredClass* m_object;
+        // This order should be maintained due to MSVC bug.
+        // http://computer-programming-forum.com/7-vc.net/6fbc30265f860ad1.htm
         TimerFiredFunction m_function;
+        TimerFiredClass* m_object;
     };
 
     class Holder;
@@ -162,14 +184,11 @@ private:
     Deque<Function<void()>> m_functionQueue;
 
 #if USE(WINDOWS_EVENT_LOOP)
-    static bool registerRunLoopMessageWindowClass();
     static LRESULT CALLBACK RunLoopWndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
     HWND m_runLoopMessageWindow;
 
-    typedef HashMap<uint64_t, TimerBase*> TimerMap;
-    Lock m_activeTimersLock;
-    TimerMap m_activeTimers;
+    Lock m_loopLock;
 #elif USE(COCOA_EVENT_LOOP)
     static void performWork(void*);
     RetainPtr<CFRunLoopRef> m_runLoop;
@@ -211,3 +230,4 @@ private:
 } // namespace WTF
 
 using WTF::RunLoop;
+using WTF::RunLoopMode;

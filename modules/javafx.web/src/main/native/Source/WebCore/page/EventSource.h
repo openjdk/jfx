@@ -34,9 +34,10 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include <wtf/URL.h>
+#include "SuspendableTimer.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -46,7 +47,7 @@ class TextResourceDecoder;
 class ThreadableLoader;
 
 class EventSource final : public RefCounted<EventSource>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(EventSource);
 public:
     struct Init {
         bool withCredentials;
@@ -78,15 +79,20 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    void dispatchErrorEvent();
+    void doExplicitLoadCancellation();
+
     // ThreadableLoaderClient
     void didReceiveResponse(unsigned long, const ResourceResponse&) final;
     void didReceiveData(const char*, int) final;
     void didFinishLoading(unsigned long) final;
     void didFail(const ResourceError&) final;
 
+    // ActiveDOMObject
     void stop() final;
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
 
     void connect();
     void networkRequestEnded();
@@ -107,12 +113,15 @@ private:
 
     Ref<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
-    Timer m_connectTimer;
+    SuspendableTimer m_connectTimer;
     Vector<UChar> m_receiveBuffer;
     bool m_discardTrailingNewline { false };
     bool m_requestInFlight { false };
+    bool m_isSuspendedForBackForwardCache { false };
+    bool m_isDoingExplicitCancellation { false };
+    bool m_shouldReconnectOnResume { false };
 
-    AtomicString m_eventName;
+    AtomString m_eventName;
     Vector<UChar> m_data;
     String m_currentlyParsedEventId;
     String m_lastEventId;

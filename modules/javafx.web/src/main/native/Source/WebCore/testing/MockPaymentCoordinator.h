@@ -60,14 +60,17 @@ public:
     const MockPaymentContactFields& requiredBillingContactFields() const { return m_requiredBillingContactFields; }
     const MockPaymentContactFields& requiredShippingContactFields() const { return m_requiredShippingContactFields; }
 
+    bool supportsUnrestrictedApplePay() const final { return m_supportsUnrestrictedApplePay; }
+    void setSupportsUnrestrictedApplePay(bool supports) { m_supportsUnrestrictedApplePay = supports; }
+
     void ref() const { }
     void deref() const { }
 
 private:
     Optional<String> validatedPaymentNetwork(const String&) final;
     bool canMakePayments() final;
-    void canMakePaymentsWithActiveCard(const String&, const String&, WTF::Function<void(bool)>&&);
-    void openPaymentSetup(const String&, const String&, WTF::Function<void(bool)>&&);
+    void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&&) final;
+    void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&&) final;
     bool showPaymentUI(const URL&, const Vector<URL>&, const ApplePaySessionPaymentRequest&) final;
     void completeMerchantValidation(const PaymentMerchantSession&) final;
     void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&) final;
@@ -79,6 +82,8 @@ private:
     void paymentCoordinatorDestroyed() final;
 
     bool isMockPaymentCoordinator() const final { return true; }
+
+    bool isAlwaysOnLoggingAllowed() const final { return true; }
 
     void updateTotalAndLineItems(const ApplePaySessionPaymentRequest::TotalAndLineItems&);
 
@@ -93,6 +98,7 @@ private:
     HashSet<String, ASCIICaseInsensitiveHash> m_availablePaymentNetworks;
     MockPaymentContactFields m_requiredBillingContactFields;
     MockPaymentContactFields m_requiredShippingContactFields;
+    bool m_supportsUnrestrictedApplePay { true };
 };
 
 } // namespace WebCore

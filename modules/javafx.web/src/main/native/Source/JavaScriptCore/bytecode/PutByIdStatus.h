@@ -42,7 +42,8 @@ class StructureStubInfo;
 
 typedef HashMap<CodeOrigin, StructureStubInfo*, CodeOriginApproximateHash> StubInfoMap;
 
-class PutByIdStatus {
+class PutByIdStatus final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
         // It's uncached so we have no information.
@@ -92,7 +93,7 @@ public:
         m_variants.append(variant);
     }
 
-    static PutByIdStatus computeFor(CodeBlock*, ICStatusMap&, unsigned bytecodeIndex, UniquedStringImpl* uid, ExitFlag, CallLinkStatus::ExitSiteData);
+    static PutByIdStatus computeFor(CodeBlock*, ICStatusMap&, BytecodeIndex, UniquedStringImpl* uid, ExitFlag, CallLinkStatus::ExitSiteData);
     static PutByIdStatus computeFor(JSGlobalObject*, const StructureSet&, UniquedStringImpl* uid, bool isDirect);
 
     static PutByIdStatus computeFor(CodeBlock* baselineBlock, ICStatusMap& baselineMap, ICStatusContextStack& contextStack, CodeOrigin, UniquedStringImpl* uid);
@@ -116,7 +117,7 @@ public:
     const PutByIdVariant& operator[](size_t index) const { return at(index); }
 
     void markIfCheap(SlotVisitor&);
-    bool finalize();
+    bool finalize(VM&);
 
     void merge(const PutByIdStatus&);
 
@@ -130,7 +131,7 @@ private:
         const ConcurrentJSLocker&, CodeBlock*, StructureStubInfo*, UniquedStringImpl* uid,
         CallLinkStatus::ExitSiteData);
 #endif
-    static PutByIdStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex, UniquedStringImpl* uid);
+    static PutByIdStatus computeFromLLInt(CodeBlock*, BytecodeIndex, UniquedStringImpl* uid);
 
     bool appendVariant(const PutByIdVariant&);
 

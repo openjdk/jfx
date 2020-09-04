@@ -27,7 +27,7 @@
 
 #if ENABLE(INTL)
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 
 struct UCollator;
 
@@ -36,18 +36,31 @@ namespace JSC {
 class IntlCollatorConstructor;
 class JSBoundFunction;
 
-class IntlCollator final : public JSDestructibleObject {
+class IntlCollator final : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
+    using Base = JSNonFinalObject;
+
+    static constexpr bool needsDestruction = true;
+
+    static void destroy(JSCell* cell)
+    {
+        static_cast<IntlCollator*>(cell)->IntlCollator::~IntlCollator();
+    }
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.intlCollatorSpace<mode>();
+    }
 
     static IntlCollator* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-    void initializeCollator(ExecState&, JSValue locales, JSValue optionsValue);
-    JSValue compareStrings(ExecState&, StringView, StringView);
-    JSObject* resolvedOptions(ExecState&);
+    void initializeCollator(JSGlobalObject*, JSValue locales, JSValue optionsValue);
+    JSValue compareStrings(JSGlobalObject*, StringView, StringView);
+    JSObject* resolvedOptions(JSGlobalObject*);
 
     JSBoundFunction* boundCompare() const { return m_boundCompare.get(); }
     void setBoundCompare(VM&, JSBoundFunction*);
@@ -55,30 +68,29 @@ public:
 protected:
     IntlCollator(VM&, Structure*);
     void finishCreation(VM&);
-    static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
 private:
-    enum class Usage { Sort, Search };
-    enum class Sensitivity { Base, Accent, Case, Variant };
-    enum class CaseFirst { Upper, Lower, False };
+    enum class Usage : uint8_t { Sort, Search };
+    enum class Sensitivity : uint8_t { Base, Accent, Case, Variant };
+    enum class CaseFirst : uint8_t { Upper, Lower, False };
 
     struct UCollatorDeleter {
         void operator()(UCollator*) const;
     };
 
-    void createCollator(ExecState&);
+    void createCollator(JSGlobalObject*);
     static ASCIILiteral usageString(Usage);
     static ASCIILiteral sensitivityString(Sensitivity);
     static ASCIILiteral caseFirstString(CaseFirst);
 
-    Usage m_usage;
     String m_locale;
     String m_collation;
-    Sensitivity m_sensitivity;
-    CaseFirst m_caseFirst;
     WriteBarrier<JSBoundFunction> m_boundCompare;
     std::unique_ptr<UCollator, UCollatorDeleter> m_collator;
+    Usage m_usage;
+    Sensitivity m_sensitivity;
+    CaseFirst m_caseFirst;
     bool m_numeric;
     bool m_ignorePunctuation;
     bool m_initializedCollator { false };

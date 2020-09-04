@@ -55,11 +55,14 @@
 #include "Text.h"
 #include "TextDocument.h"
 #include "XMLDocument.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DOMImplementation);
 
 DOMImplementation::DOMImplementation(Document& document)
     : m_document(document)
@@ -103,7 +106,7 @@ ExceptionOr<Ref<XMLDocument>> DOMImplementation::createDocument(const String& na
     if (documentElement)
         document->appendChild(*documentElement);
 
-    return WTFMove(document);
+    return document;
 }
 
 Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const String& media)
@@ -156,7 +159,7 @@ Ref<Document> DOMImplementation::createDocument(const String& type, Frame* frame
     MediaEngineSupportParameters parameters;
     parameters.type = ContentType { type };
     parameters.url = url;
-    if (MediaPlayer::supportsType(parameters))
+    if (MediaPlayer::supportsType(parameters) != MediaPlayer::SupportsType::IsNotSupported)
         return MediaDocument::create(frame, url);
 #endif
 
@@ -166,14 +169,14 @@ Ref<Document> DOMImplementation::createDocument(const String& type, Frame* frame
 #endif
 
     if (frame && frame->loader().client().shouldAlwaysUsePluginDocument(type))
-        return PluginDocument::create(frame, url);
+        return PluginDocument::create(*frame, url);
 
     // The following is the relatively costly lookup that requires initializing the plug-in database.
     if (frame && frame->page()) {
         auto allowedPluginTypes = frame->loader().subframeLoader().allowPlugins()
             ? PluginData::AllPlugins : PluginData::OnlyApplicationPlugins;
         if (frame->page()->pluginData().supportsWebVisibleMimeType(type, allowedPluginTypes))
-            return PluginDocument::create(frame, url);
+            return PluginDocument::create(*frame, url);
     }
 
     // Items listed here, after the plug-in checks, can be overridden by plug-ins.
@@ -184,8 +187,11 @@ Ref<Document> DOMImplementation::createDocument(const String& type, Frame* frame
         return TextDocument::create(frame, url);
     if (equalLettersIgnoringASCIICase(type, "image/svg+xml"))
         return SVGDocument::create(frame, url);
-    if (MIMETypeRegistry::isXMLMIMEType(type))
-        return XMLDocument::create(frame, url);
+    if (MIMETypeRegistry::isXMLMIMEType(type)) {
+        auto document = XMLDocument::create(frame, url);
+        document->overrideMIMEType(type);
+        return document;
+    }
     return HTMLDocument::create(frame, url);
 }
 

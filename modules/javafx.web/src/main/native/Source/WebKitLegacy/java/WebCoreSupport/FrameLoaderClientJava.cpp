@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -359,7 +359,7 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* da
     loader->commitData(data, length);
 }
 
-void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, FramePolicyFunction&& policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, const String&, FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     PolicyAction action;
@@ -678,7 +678,7 @@ void FrameLoaderClientJava::dispatchDidFailLoading(DocumentLoader* dl, unsigned 
     removeRequestURL(f, identifier);
 }
 
-void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error)
+void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error, WillContinueLoading)
 {
     ASSERT(frame());
     if (!frame()) {
@@ -702,7 +702,7 @@ void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& 
 
 void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 {
-    dispatchDidFailProvisionalLoad(error);
+    dispatchDidFailProvisionalLoad(error, WillContinueLoading::No);
 }
 
 // client-side redirection
@@ -1051,17 +1051,14 @@ bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error)
     return !(error.isCancellation() || (error.errorCode() == WebKitErrorFrameLoadInterruptedByPolicyChange));
 }
 
+void FrameLoaderClientJava::didRestoreFromBackForwardCache()
+{
+    // FIXME: openjfx2.26 Raise Bug to track fwd / back cache
+}
+
 bool FrameLoaderClientJava::canCachePage() const
 {
     return true;
-}
-
-void FrameLoaderClientJava::didSaveToPageCache()
-{
-}
-
-void FrameLoaderClientJava::didRestoreFromPageCache()
-{
 }
 
 void FrameLoaderClientJava::dispatchUnableToImplementPolicy(const ResourceError&)
@@ -1112,7 +1109,7 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     }
 
     JSGlobalContextRef context = toGlobalRef(frame()->script().globalObject(
-            mainThreadNormalWorld())->globalExec());
+            mainThreadNormalWorld()));
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
 
     env->CallVoidMethod(m_webPage, didClearWindowObjectMID,
@@ -1125,7 +1122,7 @@ void FrameLoaderClientJava::registerForIconNotification()
     //notImplemented();
 }
 
-void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&)
+void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&)
 {
     //notImplemented();
 }
@@ -1157,21 +1154,14 @@ void FrameLoaderClientJava::prefetchDNS(const String& hostname)
     WebCore::prefetchDNS(hostname);
 }
 
-Optional<uint64_t> FrameLoaderClientJava::pageID() const
+Optional<PageIdentifier> FrameLoaderClientJava::pageID() const
 {
     return WTF::nullopt;
 }
 
-Optional<uint64_t> FrameLoaderClientJava::frameID() const
+Optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
 {
     return WTF::nullopt;
 }
-
-PAL::SessionID FrameLoaderClientJava::sessionID() const
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return PAL::SessionID::defaultSessionID();
-}
-
 
 }

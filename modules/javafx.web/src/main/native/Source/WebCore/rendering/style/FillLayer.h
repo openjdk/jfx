@@ -145,7 +145,7 @@ public:
 
     bool containsImage(StyleImage&) const;
     bool imagesAreLoaded() const;
-    bool hasImage() const;
+    bool hasImage() const { return m_next ? hasImageInAnyLayer() : m_image; }
     bool hasFixedImage() const;
     bool hasOpaqueImage(const RenderElement&) const;
     bool hasRepeatXY() const;
@@ -163,7 +163,7 @@ public:
     static FillBox initialFillOrigin(FillLayerType type) { return type == FillLayerType::Background ? FillBox::Padding : FillBox::Border; }
     static FillRepeat initialFillRepeatX(FillLayerType) { return FillRepeat::Repeat; }
     static FillRepeat initialFillRepeatY(FillLayerType) { return FillRepeat::Repeat; }
-    static CompositeOperator initialFillComposite(FillLayerType) { return CompositeSourceOver; }
+    static CompositeOperator initialFillComposite(FillLayerType) { return CompositeOperator::SourceOver; }
     static BlendMode initialFillBlendMode(FillLayerType) { return BlendMode::Normal; }
     static FillSize initialFillSize(FillLayerType) { return { }; }
     static Length initialFillXPosition(FillLayerType) { return Length(0.0f, Percent); }
@@ -175,6 +175,8 @@ private:
     friend class RenderStyle;
 
     void computeClipMax() const;
+
+    bool hasImageInAnyLayer() const;
 
     std::unique_ptr<FillLayer> m_next;
 

@@ -33,10 +33,13 @@
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/FileMetadata.h>
 #include <wtf/FileSystem.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DOMFileSystem);
 
 struct ListedChild {
     String filename;
@@ -60,7 +63,7 @@ static ExceptionOr<Vector<ListedChild>> listDirectoryWithMetadata(const String& 
             continue;
         listedChildren.uncheckedAppend(ListedChild { FileSystem::pathGetFileName(childPath), metadata.value().type });
     }
-    return WTFMove(listedChildren);
+    return listedChildren;
 }
 
 static ExceptionOr<Vector<Ref<FileSystemEntry>>> toFileSystemEntries(ScriptExecutionContext& context, DOMFileSystem& fileSystem, ExceptionOr<Vector<ListedChild>>&& listedChildren, const String& parentVirtualPath)
@@ -84,7 +87,7 @@ static ExceptionOr<Vector<Ref<FileSystemEntry>>> toFileSystemEntries(ScriptExecu
             break;
         }
     }
-    return WTFMove(entries);
+    return entries;
 }
 
 // https://wicg.github.io/entries-api/#name
@@ -330,13 +333,13 @@ void DOMFileSystem::getEntry(ScriptExecutionContext& context, FileSystemDirector
     });
 }
 
-void DOMFileSystem::getFile(ScriptExecutionContext& context, FileSystemFileEntry& fileEntry, GetFileCallback&& completionCallback)
+void DOMFileSystem::getFile(FileSystemFileEntry& fileEntry, GetFileCallback&& completionCallback)
 {
     auto virtualPath = fileEntry.virtualPath();
     auto fullPath = evaluatePath(virtualPath);
-    m_workQueue->dispatch([context = makeRef(context), fullPath = crossThreadCopy(fullPath), virtualPath = crossThreadCopy(virtualPath), completionCallback = WTFMove(completionCallback)]() mutable {
+    m_workQueue->dispatch([fullPath = crossThreadCopy(fullPath), virtualPath = crossThreadCopy(virtualPath), completionCallback = WTFMove(completionCallback)]() mutable {
         auto validatedVirtualPath = validatePathIsExpectedType(fullPath, WTFMove(virtualPath), FileMetadata::Type::File);
-        callOnMainThread([context = WTFMove(context), fullPath = crossThreadCopy(fullPath), validatedVirtualPath = crossThreadCopy(validatedVirtualPath), completionCallback = WTFMove(completionCallback)]() mutable {
+        callOnMainThread([fullPath = crossThreadCopy(fullPath), validatedVirtualPath = crossThreadCopy(validatedVirtualPath), completionCallback = WTFMove(completionCallback)]() mutable {
             if (validatedVirtualPath.hasException())
                 completionCallback(validatedVirtualPath.releaseException());
             else

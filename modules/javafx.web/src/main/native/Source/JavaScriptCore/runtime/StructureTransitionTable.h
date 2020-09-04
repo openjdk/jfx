@@ -35,7 +35,7 @@ namespace JSC {
 class JSCell;
 class Structure;
 
-static const unsigned FirstInternalAttribute = 1 << 6; // Use for transitions that don't have to do with property additions.
+static constexpr unsigned FirstInternalAttribute = 1 << 6; // Use for transitions that don't have to do with property additions.
 
 // Support for attributes used to indicate transitions not related to properties.
 // If any of these are used, the string portion of the key should be 0.
@@ -52,6 +52,7 @@ enum class NonPropertyTransition : unsigned {
     Seal,
     Freeze
 };
+using TransitionPropertyAttributes = uint16_t;
 
 inline unsigned toAttributes(NonPropertyTransition transition)
 {
@@ -140,15 +141,64 @@ inline bool setsReadOnlyOnNonAccessorProperties(NonPropertyTransition transition
 }
 
 class StructureTransitionTable {
-    static const intptr_t UsingSingleSlotFlag = 1;
+    static constexpr intptr_t UsingSingleSlotFlag = 1;
 
 
+#if CPU(ADDRESS64)
     struct Hash {
-        typedef std::pair<UniquedStringImpl*, unsigned> Key;
+        // Logically, Key is a tuple of (1) UniquedStringImpl*, (2) unsigned attributes, and (3) bool isAddition.
+        // We encode (2) and (3) into (1)'s empty bits since a pointer is 48bit and lower 3 bits are usable because of alignment.
+        struct Key {
+            friend struct Hash;
+            static_assert(WTF_OS_CONSTANT_EFFECTIVE_ADDRESS_WIDTH <= 48);
+            static constexpr uintptr_t isAdditionMask = 1ULL;
+            static constexpr uintptr_t stringMask = ((1ULL << 48) - 1) & (~isAdditionMask);
+            static constexpr unsigned attributesShift = 48;
+            static constexpr uintptr_t hashTableDeletedValue = 0x2;
+            static_assert(sizeof(TransitionPropertyAttributes) * 8 <= 16);
+            static_assert(hashTableDeletedValue < alignof(UniquedStringImpl));
+
+            // Highest 16 bits are for TransitionPropertyAttributes.
+            // Lowest 1 bit is for isAddition flag.
+            // Remaining bits are for UniquedStringImpl*.
+            Key(UniquedStringImpl* impl, unsigned attributes, bool isAddition)
+                : m_encodedData(bitwise_cast<uintptr_t>(impl) | (static_cast<uintptr_t>(attributes) << attributesShift) | (static_cast<uintptr_t>(isAddition) & isAdditionMask))
+            {
+                ASSERT(impl == this->impl());
+                ASSERT(isAddition == this->isAddition());
+                ASSERT(attributes == this->attributes());
+            }
+
+            Key() = default;
+
+            Key(WTF::HashTableDeletedValueType)
+                : m_encodedData(hashTableDeletedValue)
+            { }
+
+            bool isHashTableDeletedValue() const { return m_encodedData == hashTableDeletedValue; }
+
+            UniquedStringImpl* impl() const { return bitwise_cast<UniquedStringImpl*>(m_encodedData & stringMask); }
+            bool isAddition() const { return m_encodedData & isAdditionMask; }
+            unsigned attributes() const { return m_encodedData >> attributesShift; }
+
+            friend bool operator==(const Key& a, const Key& b)
+            {
+                return a.m_encodedData == b.m_encodedData;
+            }
+
+            friend bool operator!=(const Key& a, const Key& b)
+            {
+                return a.m_encodedData != b.m_encodedData;
+            }
+
+        private:
+            uintptr_t m_encodedData { 0 };
+        };
+        using KeyTraits = SimpleClassHashTraits<Key>;
 
         static unsigned hash(const Key& p)
         {
-            return PtrHash<UniquedStringImpl*>::hash(p.first) + p.second;
+            return IntHash<uintptr_t>::hash(p.m_encodedData);
         }
 
         static bool equal(const Key& a, const Key& b)
@@ -156,10 +206,28 @@ class StructureTransitionTable {
             return a == b;
         }
 
-        static const bool safeToCompareToEmptyOrDeleted = true;
+        static constexpr bool safeToCompareToEmptyOrDeleted = true;
     };
+#else
+    struct Hash {
+        using Key = std::tuple<UniquedStringImpl*, unsigned, bool>;
+        using KeyTraits = HashTraits<Key>;
 
-    typedef WeakGCMap<Hash::Key, Structure, Hash> TransitionMap;
+        static unsigned hash(const Key& p)
+        {
+            return PtrHash<UniquedStringImpl*>::hash(std::get<0>(p)) + std::get<1>(p);
+        }
+
+        static bool equal(const Key& a, const Key& b)
+        {
+            return a == b;
+        }
+
+        static constexpr bool safeToCompareToEmptyOrDeleted = true;
+    };
+#endif
+
+    typedef WeakGCMap<Hash::Key, Structure, Hash, Hash::KeyTraits> TransitionMap;
 
 public:
     StructureTransitionTable()
@@ -181,8 +249,8 @@ public:
     }
 
     void add(VM&, Structure*);
-    bool contains(UniquedStringImpl*, unsigned attributes) const;
-    Structure* get(UniquedStringImpl*, unsigned attributes) const;
+    bool contains(UniquedStringImpl*, unsigned attributes, bool isAddition) const;
+    Structure* get(UniquedStringImpl*, unsigned attributes, bool isAddition) const;
 
 private:
     friend class SingleSlotTransitionWeakOwner;

@@ -26,9 +26,13 @@
 #include "config.h"
 #include "WebKitTransitionEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
-WebKitTransitionEvent::WebKitTransitionEvent(const AtomicString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitTransitionEvent);
+
+WebKitTransitionEvent::WebKitTransitionEvent(const AtomString& type, const String& propertyName, double elapsedTime, const String& pseudoElement)
     : Event(type, CanBubble::Yes, IsCancelable::Yes)
     , m_propertyName(propertyName)
     , m_elapsedTime(elapsedTime)
@@ -36,7 +40,7 @@ WebKitTransitionEvent::WebKitTransitionEvent(const AtomicString& type, const Str
 {
 }
 
-WebKitTransitionEvent::WebKitTransitionEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+WebKitTransitionEvent::WebKitTransitionEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_propertyName(initializer.propertyName)
     , m_elapsedTime(initializer.elapsedTime)

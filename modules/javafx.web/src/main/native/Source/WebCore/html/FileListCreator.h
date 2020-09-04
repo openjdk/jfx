@@ -38,7 +38,7 @@ class FileList;
 
 class FileListCreator : public ThreadSafeRefCounted<FileListCreator> {
 public:
-    using CompletionHandler = WTF::Function<void(Ref<FileList>&&)>;
+    using CompletionHandler = Function<void(Ref<FileList>&&)>;
 
     enum class ShouldResolveDirectories { No, Yes };
     static Ref<FileListCreator> create(const Vector<FileChooserFileInfo>& paths, ShouldResolveDirectories shouldResolveDirectories, CompletionHandler&& completionHandler)

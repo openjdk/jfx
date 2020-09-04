@@ -26,6 +26,7 @@
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "ThreadableLoaderClient.h"
+#include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
@@ -50,7 +51,7 @@ class XMLHttpRequestUpload;
 struct OwnedString;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(XMLHttpRequest);
 public:
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
     WEBCORE_EXPORT ~XMLHttpRequest();
@@ -127,12 +128,15 @@ public:
 
     size_t memoryCost() const;
 
+    WEBCORE_EXPORT void setMaximumIntervalForUserGestureForwarding(double);
+
 private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
 
+    TextEncoding finalResponseCharset() const;
+
     // ActiveDOMObject
     void contextDestroyed() override;
-    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
@@ -143,10 +147,6 @@ private:
 
     Document* document() const;
     SecurityOrigin* securityOrigin() const;
-
-#if ENABLE(DASHBOARD_SUPPORT)
-    bool usesDashboardBackwardCompatibilityMode() const;
-#endif
 
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
@@ -183,9 +183,11 @@ private:
     void networkError();
     void abortError();
 
-    void dispatchErrorEvents(const AtomicString&);
+    void dispatchErrorEvents(const AtomString&);
 
-    void resumeTimerFired();
+    using EventTarget::dispatchEvent;
+    void dispatchEvent(Event&) override;
+
     Ref<TextResourceDecoder> createDecoder() const;
 
     void networkErrorTimerFired();
@@ -199,7 +201,6 @@ private:
     unsigned m_uploadComplete : 1;
     unsigned m_wasAbortedByClient : 1;
     unsigned m_responseCacheIsValid : 1;
-    unsigned m_dispatchErrorOnResuming : 1;
     unsigned m_readyState : 3; // State
     unsigned m_responseType : 3; // ResponseType
 
@@ -234,13 +235,14 @@ private:
 
     mutable String m_allResponseHeaders;
 
-    Timer m_resumeTimer;
     Timer m_networkErrorTimer;
     Timer m_timeoutTimer;
 
     MonotonicTime m_sendingTime;
 
     Optional<ExceptionCode> m_exceptionCode;
+    RefPtr<UserGestureToken> m_userGestureToken;
+    Seconds m_maximumIntervalForUserGestureForwarding;
 };
 
 inline auto XMLHttpRequest::responseType() const -> ResponseType

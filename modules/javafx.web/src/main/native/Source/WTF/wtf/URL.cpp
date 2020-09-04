@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2007-2008, 2011-2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,17 +40,12 @@
 #include <wtf/text/StringHash.h>
 #include <wtf/text/TextStream.h>
 
-// FIXME: This file makes too much use of the + operator on String.
-// We either have to optimize that operator so it doesn't involve
-// so many allocations, or change this to use StringBuffer instead.
-
-
 namespace WTF {
 
 typedef Vector<char, 512> CharBuffer;
 typedef Vector<UChar, 512> UCharBuffer;
 
-static const unsigned invalidPortNumber = 0xFFFF;
+static constexpr unsigned invalidPortNumber = 0xFFFF;
 
 // Copies the source to the destination, assuming all the source characters are
 // ASCII. The destination buffer must be large enough. Null characters are allowed
@@ -319,7 +314,7 @@ bool isDefaultPortForProtocol(uint16_t port, StringView protocol)
 
 bool URL::protocolIs(const char* protocol) const
 {
-    assertProtocolIsGood(StringView(reinterpret_cast<const LChar*>(protocol), strlen(protocol)));
+    assertProtocolIsGood(StringView { protocol });
 
     // JavaScript URLs are "valid" and should be executed even if URL decides they are invalid.
     // The free function protocolIsJavaScript() should be used instead.
@@ -382,6 +377,12 @@ bool URL::setProtocol(const String& s)
         *this = parser.result();
         return true;
     }
+
+    if ((m_passwordEnd != m_userStart || port()) && *canonicalized == "file")
+        return true;
+
+    if (isLocalFile() && host().isEmpty())
+        return true;
 
     URLParser parser(makeString(*canonicalized, m_string.substring(m_schemeEnd)));
     *this = parser.result();
@@ -471,6 +472,15 @@ void URL::setPort(unsigned short i)
 
     URLParser parser(makeString(StringView(m_string).left(portStart), (colonNeeded ? ":" : ""), static_cast<unsigned>(i), StringView(m_string).substring(m_hostEnd + m_portLength)));
     *this = parser.result();
+}
+
+void URL::removeHostAndPort()
+{
+    if (!m_isValid)
+        return;
+    if (!host().isEmpty())
+        setHost({ });
+    removePort();
 }
 
 void URL::setHostAndPort(const String& hostAndPort)
@@ -775,7 +785,7 @@ template<typename StringClass>
 bool protocolIsInternal(const StringClass& url, const char* protocol)
 {
     // Do the comparison without making a new string object.
-    assertProtocolIsGood(StringView(reinterpret_cast<const LChar*>(protocol), strlen(protocol)));
+    assertProtocolIsGood(StringView { protocol });
     bool isLeading = true;
     for (unsigned i = 0, j = 0; url[i]; ++i) {
         // Skip leading whitespace and control characters.

@@ -94,6 +94,12 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
     private final ListChangeBuilder<E> changeBuilder = new ListChangeBuilder<E>(this);
 
     /**
+     * Creates a default {@code ObservableListBase}.
+     */
+    public ObservableListBase() {
+    }
+
+    /**
      * Adds a new update operation to the change.
      * <p><strong>Note</strong>: needs to be called inside {@code beginChange()} / {@code endChange()} block.
      * <p><strong>Note</strong>: needs to reflect the <em>current</em> state of the list.

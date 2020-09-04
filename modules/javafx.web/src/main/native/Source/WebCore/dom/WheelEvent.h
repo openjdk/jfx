@@ -30,6 +30,7 @@
 namespace WebCore {
 
 class WheelEvent final : public MouseEvent {
+    WTF_MAKE_ISO_ALLOCATED(WheelEvent);
 public:
     enum { TickMultiplier = 120 };
 
@@ -51,7 +52,7 @@ public:
         int wheelDeltaY { 0 }; // Deprecated.
     };
 
-    static Ref<WheelEvent> create(const AtomicString& type, const Init&);
+    static Ref<WheelEvent> create(const AtomString& type, const Init&);
 
     WEBCORE_EXPORT void initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, RefPtr<WindowProxy>&&, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
@@ -74,7 +75,7 @@ public:
 
 private:
     WheelEvent();
-    WheelEvent(const AtomicString&, const Init&);
+    WheelEvent(const AtomString&, const Init&);
     WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
 
     EventInterface eventInterface() const final;

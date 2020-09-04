@@ -36,8 +36,10 @@ enum class ScrollingNodeType : uint8_t {
     Subframe,
     FrameHosting,
     Overflow,
+    OverflowProxy,
     Fixed,
-    Sticky
+    Sticky,
+    Positioned
 };
 
 enum ScrollingStateTreeAsTextBehaviorFlags {
@@ -65,6 +67,9 @@ struct ScrollableAreaParameters {
     bool hasEnabledHorizontalScrollbar { false };
     bool hasEnabledVerticalScrollbar { false };
 
+    bool horizontalScrollbarHiddenByStyle { false };
+    bool verticalScrollbarHiddenByStyle { false };
+
     bool useDarkAppearanceForScrollbars { false };
 
     bool operator==(const ScrollableAreaParameters& other) const
@@ -74,6 +79,8 @@ struct ScrollableAreaParameters {
             && horizontalScrollbarMode == other.horizontalScrollbarMode
             && verticalScrollbarMode == other.verticalScrollbarMode
             && hasEnabledHorizontalScrollbar == other.hasEnabledHorizontalScrollbar
+            && horizontalScrollbarHiddenByStyle == other.horizontalScrollbarHiddenByStyle
+            && verticalScrollbarHiddenByStyle == other.verticalScrollbarHiddenByStyle
             && hasEnabledVerticalScrollbar == other.hasEnabledVerticalScrollbar
             && useDarkAppearanceForScrollbars == other.useDarkAppearanceForScrollbars;
     }

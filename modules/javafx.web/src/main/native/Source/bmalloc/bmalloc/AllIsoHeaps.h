@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,14 @@
 #pragma once
 
 #include "IsoHeapImpl.h"
+#include "StaticPerProcess.h"
 #include "Vector.h"
 
 namespace bmalloc {
 
-class AllIsoHeaps {
+class BEXPORT AllIsoHeaps : public StaticPerProcess<AllIsoHeaps> {
 public:
-    AllIsoHeaps(const std::lock_guard<Mutex>&);
+    AllIsoHeaps(const LockHolder&);
 
     void add(IsoHeapImplBase*);
     IsoHeapImplBase* head();
@@ -41,9 +42,9 @@ public:
     void forEach(const Func&);
 
 private:
-    Mutex m_lock;
     IsoHeapImplBase* m_head { nullptr };
 };
+DECLARE_STATIC_PER_PROCESS_STORAGE(AllIsoHeaps);
 
 } // namespace bmalloc
 

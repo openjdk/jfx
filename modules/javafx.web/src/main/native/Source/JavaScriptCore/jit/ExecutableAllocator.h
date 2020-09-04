@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +26,19 @@
 #pragma once
 
 #include "JITCompilationEffort.h"
+#include "JSCConfig.h"
 #include "JSCPtrTag.h"
+#include "Options.h"
 #include <stddef.h> // for ptrdiff_t
 #include <limits>
 #include <wtf/Assertions.h>
+#include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
 #include <wtf/MetaAllocatorHandle.h>
 #include <wtf/MetaAllocator.h>
 
-#if OS(IOS_FAMILY)
+#if OS(DARWIN)
 #include <libkern/OSCacheControl.h>
-#endif
-
-#if OS(IOS_FAMILY)
 #include <sys/mman.h>
 #endif
 
@@ -55,9 +55,42 @@
 
 namespace JSC {
 
-static const unsigned jitAllocationGranule = 32;
+static constexpr unsigned jitAllocationGranule = 32;
 
 typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
+
+class ExecutableAllocatorBase {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ExecutableAllocatorBase);
+public:
+    bool isValid() const { return false; }
+
+    static bool underMemoryPressure() { return false; }
+
+    static double memoryPressureMultiplier(size_t) { return 1.0; }
+
+    static void dumpProfile() { }
+
+    RefPtr<ExecutableMemoryHandle> allocate(size_t, void*, JITCompilationEffort) { return nullptr; }
+
+    static void setJITEnabled(bool) { };
+
+    bool isValidExecutableMemory(const AbstractLocker&, void*) { return false; }
+
+    static size_t committedByteCount() { return 0; }
+
+    Lock& getLock() const
+    {
+        return m_lock;
+    }
+
+protected:
+    ExecutableAllocatorBase() = default;
+    ~ExecutableAllocatorBase() = default;
+
+private:
+    mutable Lock m_lock;
+};
 
 #if ENABLE(JIT)
 
@@ -78,15 +111,9 @@ T endOfFixedExecutableMemoryPool()
 
 JS_EXPORT_PRIVATE bool isJITPC(void* pc);
 
-#if ENABLE(SEPARATED_WX_HEAP)
+JS_EXPORT_PRIVATE void dumpJITMemory(const void*, const void*, size_t);
 
-typedef void (*JITWriteSeparateHeapsFunction)(off_t, const void*, size_t);
-extern JS_EXPORT_PRIVATE JITWriteSeparateHeapsFunction jitWriteSeparateHeapsFunction;
-extern JS_EXPORT_PRIVATE bool useFastPermisionsJITCopy;
-
-#endif // ENABLE(SEPARATED_WX_HEAP)
-
-static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
+static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n)
 {
 #if CPU(ARM64)
     static constexpr size_t instructionSize = sizeof(unsigned);
@@ -95,24 +122,29 @@ static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
 #endif
     if (isJITPC(dst)) {
         RELEASE_ASSERT(reinterpret_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
+
+        if (UNLIKELY(Options::dumpJITMemoryPath()))
+            dumpJITMemory(dst, src, n);
 #if ENABLE(FAST_JIT_PERMISSIONS)
 #if ENABLE(SEPARATED_WX_HEAP)
-        if (useFastPermisionsJITCopy)
+        if (g_jscConfig.useFastPermisionsJITCopy)
 #endif
         {
             os_thread_self_restrict_rwx_to_rw();
             memcpy(dst, src, n);
+            RELEASE_ASSERT(!Gigacage::contains(src));
             os_thread_self_restrict_rwx_to_rx();
             return dst;
         }
 #endif // ENABLE(FAST_JIT_PERMISSIONS)
 
 #if ENABLE(SEPARATED_WX_HEAP)
-        if (jitWriteSeparateHeapsFunction) {
+        if (g_jscConfig.jitWriteSeparateHeaps) {
             // Use execute-only write thunk for writes inside the JIT region. This is a variant of
             // memcpy that takes an offset into the JIT region as its destination (first) parameter.
             off_t offset = (off_t)((uintptr_t)dst - startOfFixedExecutableMemoryPool<uintptr_t>());
-            retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(jitWriteSeparateHeapsFunction)(offset, src, n);
+            retagCodePtr<JITThunkPtrTag, CFunctionPtrTag>(g_jscConfig.jitWriteSeparateHeaps)(offset, src, n);
+            RELEASE_ASSERT(!Gigacage::contains(src));
             return dst;
         }
 #endif
@@ -122,14 +154,13 @@ static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
     return memcpy(dst, src, n);
 }
 
-class ExecutableAllocator {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(ExecutableAllocator);
-    enum ProtectionSetting { Writable, Executable };
-
+class ExecutableAllocator : private ExecutableAllocatorBase {
 public:
+    using Base = ExecutableAllocatorBase;
+
     static ExecutableAllocator& singleton();
-    static void initializeAllocator();
+    static void initialize();
+    static void initializeUnderlyingAllocator();
 
     bool isValid() const;
 
@@ -152,44 +183,23 @@ public:
     static size_t committedByteCount();
 
     Lock& getLock() const;
-private:
 
-    ExecutableAllocator();
-    ~ExecutableAllocator();
+private:
+    ExecutableAllocator() = default;
+    ~ExecutableAllocator() = default;
 };
 
 #else
 
-class ExecutableAllocator {
-    enum ProtectionSetting { Writable, Executable };
-
+class ExecutableAllocator : public ExecutableAllocatorBase {
 public:
     static ExecutableAllocator& singleton();
-    static void initializeAllocator();
-
-    bool isValid() const { return false; }
-
-    static bool underMemoryPressure() { return false; }
-
-    static double memoryPressureMultiplier(size_t) { return 1.0; }
-
-    static void dumpProfile() { }
-
-    RefPtr<ExecutableMemoryHandle> allocate(size_t, void*, JITCompilationEffort) { return nullptr; }
-
-    static void setJITEnabled(bool) { };
-
-    bool isValidExecutableMemory(const AbstractLocker&, void*) { return false; }
-
-    static size_t committedByteCount() { return 0; }
-
-    Lock& getLock() const
-    {
-        return m_lock;
-    }
+    static void initialize();
+    static void initializeUnderlyingAllocator() { }
 
 private:
-    mutable Lock m_lock;
+    ExecutableAllocator() = default;
+    ~ExecutableAllocator() = default;
 };
 
 static inline void* performJITMemcpy(void *dst, const void *src, size_t n)

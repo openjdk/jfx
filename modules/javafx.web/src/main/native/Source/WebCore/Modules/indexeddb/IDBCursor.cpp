@@ -41,9 +41,12 @@
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBCursor);
 
 Ref<IDBCursor> IDBCursor::create(IDBObjectStore& objectStore, const IDBCursorInfo& info)
 {
@@ -59,24 +62,24 @@ IDBCursor::IDBCursor(IDBObjectStore& objectStore, const IDBCursorInfo& info)
     : m_info(info)
     , m_source(&objectStore)
 {
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 }
 
 IDBCursor::IDBCursor(IDBIndex& index, const IDBCursorInfo& info)
     : m_info(info)
     , m_source(&index)
 {
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 }
 
 IDBCursor::~IDBCursor()
 {
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 }
 
 bool IDBCursor::sourcesDeleted() const
 {
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     return WTF::switchOn(m_source,
         [] (const RefPtr<IDBObjectStore>& objectStore) { return objectStore->isDeleted(); },
@@ -94,14 +97,14 @@ IDBObjectStore& IDBCursor::effectiveObjectStore() const
 
 IDBTransaction& IDBCursor::transaction() const
 {
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
     return effectiveObjectStore().transaction();
 }
 
-ExceptionOr<Ref<IDBRequest>> IDBCursor::update(ExecState& state, JSValue value)
+ExceptionOr<Ref<IDBRequest>> IDBCursor::update(JSGlobalObject& state, JSValue value)
 {
     LOG(IndexedDB, "IDBCursor::update");
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     if (sourcesDeleted())
         return Exception { InvalidStateError, "Failed to execute 'update' on 'IDBCursor': The cursor's source or effective object store has been deleted."_s };
@@ -135,13 +138,13 @@ ExceptionOr<Ref<IDBRequest>> IDBCursor::update(ExecState& state, JSValue value)
     auto request = putResult.releaseReturnValue();
     request->setSource(*this);
 
-    return WTFMove(request);
+    return request;
 }
 
 ExceptionOr<void> IDBCursor::advance(unsigned count)
 {
     LOG(IndexedDB, "IDBCursor::advance");
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     if (!m_request)
         return Exception { InvalidStateError };
@@ -165,7 +168,7 @@ ExceptionOr<void> IDBCursor::advance(unsigned count)
     return { };
 }
 
-ExceptionOr<void> IDBCursor::continuePrimaryKey(ExecState& state, JSValue keyValue, JSValue primaryKeyValue)
+ExceptionOr<void> IDBCursor::continuePrimaryKey(JSGlobalObject& state, JSValue keyValue, JSValue primaryKeyValue)
 {
     if (!m_request)
         return Exception { InvalidStateError };
@@ -217,7 +220,7 @@ ExceptionOr<void> IDBCursor::continuePrimaryKey(ExecState& state, JSValue keyVal
     return { };
 }
 
-ExceptionOr<void> IDBCursor::continueFunction(ExecState& execState, JSValue keyValue)
+ExceptionOr<void> IDBCursor::continueFunction(JSGlobalObject& execState, JSValue keyValue)
 {
     RefPtr<IDBKey> key;
     if (!keyValue.isUndefined())
@@ -229,7 +232,7 @@ ExceptionOr<void> IDBCursor::continueFunction(ExecState& execState, JSValue keyV
 ExceptionOr<void> IDBCursor::continueFunction(const IDBKeyData& key)
 {
     LOG(IndexedDB, "IDBCursor::continueFunction (to key %s)", key.loggingString().utf8().data());
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     if (!m_request)
         return Exception { InvalidStateError };
@@ -264,7 +267,7 @@ ExceptionOr<void> IDBCursor::continueFunction(const IDBKeyData& key)
 void IDBCursor::uncheckedIterateCursor(const IDBKeyData& key, unsigned count)
 {
     ASSERT(m_request);
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     m_request->willIterateCursor(*this);
     transaction().iterateCursor(*this, { key, { }, count });
@@ -273,16 +276,16 @@ void IDBCursor::uncheckedIterateCursor(const IDBKeyData& key, unsigned count)
 void IDBCursor::uncheckedIterateCursor(const IDBKeyData& key, const IDBKeyData& primaryKey)
 {
     ASSERT(m_request);
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     m_request->willIterateCursor(*this);
     transaction().iterateCursor(*this, { key, primaryKey, 0 });
 }
 
-ExceptionOr<Ref<WebCore::IDBRequest>> IDBCursor::deleteFunction(ExecState& state)
+ExceptionOr<Ref<WebCore::IDBRequest>> IDBCursor::deleteFunction(JSGlobalObject& state)
 {
     LOG(IndexedDB, "IDBCursor::deleteFunction");
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
 
     if (sourcesDeleted())
         return Exception { InvalidStateError, "Failed to execute 'delete' on 'IDBCursor': The cursor's source or effective object store has been deleted."_s };
@@ -306,13 +309,20 @@ ExceptionOr<Ref<WebCore::IDBRequest>> IDBCursor::deleteFunction(ExecState& state
     auto request = result.releaseReturnValue();
     request->setSource(*this);
 
-    return WTFMove(request);
+    return request;
 }
 
-void IDBCursor::setGetResult(IDBRequest&, const IDBGetResult& getResult)
+bool IDBCursor::setGetResult(IDBRequest& request, const IDBGetResult& getResult, uint64_t operationID)
 {
     LOG(IndexedDB, "IDBCursor::setGetResult - current key %s", getResult.keyData().loggingString().substring(0, 100).utf8().data());
-    ASSERT(&effectiveObjectStore().transaction().database().originThread() == &Thread::current());
+    ASSERT(canCurrentThreadAccessThreadLocalData(effectiveObjectStore().transaction().database().originThread()));
+
+    auto* context = request.scriptExecutionContext();
+    if (!context)
+        return false;
+
+    VM& vm = context->vm();
+    JSLockHolder lock(vm);
 
     m_keyWrapper = { };
     m_primaryKeyWrapper = { };
@@ -326,7 +336,7 @@ void IDBCursor::setGetResult(IDBRequest&, const IDBGetResult& getResult)
         m_value = { };
 
         m_gotValue = false;
-        return;
+        return false;
     }
 
     m_keyData = getResult.keyData();
@@ -334,10 +344,47 @@ void IDBCursor::setGetResult(IDBRequest&, const IDBGetResult& getResult)
     m_primaryKeyData = getResult.primaryKeyData();
     m_primaryKey = m_primaryKeyData.maybeCreateIDBKey();
 
-    if (isKeyCursorWithValue())
+    if (isKeyCursorWithValue()) {
         m_value = getResult.value();
+        m_keyPath = getResult.keyPath();
+    }
+
+    auto prefetchedRecords = getResult.prefetchedRecords();
+    if (!prefetchedRecords.isEmpty()) {
+        for (auto& record : prefetchedRecords)
+            m_prefetchedRecords.append(record);
+        m_prefetchOperationID = operationID;
+    }
 
     m_gotValue = true;
+    return true;
+}
+
+void IDBCursor::clearWrappers()
+{
+    m_keyWrapper.clear();
+    m_primaryKeyWrapper.clear();
+    m_valueWrapper.clear();
+}
+
+Optional<IDBGetResult> IDBCursor::iterateWithPrefetchedRecords(unsigned count, uint64_t lastWriteOperationID)
+{
+    unsigned step = count > 0 ? count : 1;
+    if (step > m_prefetchedRecords.size() || m_prefetchOperationID <= lastWriteOperationID)
+        return WTF::nullopt;
+
+    while (--step)
+        m_prefetchedRecords.removeFirst();
+
+    auto record = m_prefetchedRecords.takeFirst();
+
+    LOG(IndexedDB, "IDBTransaction::iterateWithPrefetchedRecords consumes %u records", count > 0 ? count : 1);
+    return IDBGetResult(record.key, record.primaryKey, IDBValue(record.value), effectiveObjectStore().keyPath());
+}
+
+void IDBCursor::clearPrefetchedRecords()
+{
+    m_prefetchedRecords.clear();
 }
 
 } // namespace WebCore

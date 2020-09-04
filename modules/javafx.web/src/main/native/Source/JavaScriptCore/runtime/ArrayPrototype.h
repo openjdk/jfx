@@ -24,8 +24,6 @@
 
 namespace JSC {
 
-class ArrayPrototypeAdaptiveInferredPropertyWatchpoint;
-
 class ArrayPrototype final : public JSArray {
 private:
     ArrayPrototype(VM&, Structure*);
@@ -48,25 +46,14 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(DerivedArrayType, StructureFlags), info(), ArrayClass);
     }
 
-    void tryInitializeSpeciesWatchpoint(ExecState*);
-
-    static const bool needsDestruction = false;
-    // We don't need destruction since we use a finalizer.
-    static void destroy(JSC::JSCell*);
-
 protected:
     void finishCreation(VM&, JSGlobalObject*);
-
-private:
-    // This bit is set if any user modifies the constructor property Array.prototype. This is used to optimize species creation for JSArrays.
-    friend ArrayPrototypeAdaptiveInferredPropertyWatchpoint;
-    std::unique_ptr<ArrayPrototypeAdaptiveInferredPropertyWatchpoint> m_constructorWatchpoint;
-    std::unique_ptr<ArrayPrototypeAdaptiveInferredPropertyWatchpoint> m_constructorSpeciesWatchpoint;
 };
 
-EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState*);
-EncodedJSValue JSC_HOST_CALL arrayProtoFuncValues(ExecState*);
-EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncConcatMemcpy(ExecState*);
-EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncAppendMemcpy(ExecState*);
+EncodedJSValue JSC_HOST_CALL arrayProtoFuncSpeciesCreate(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL arrayProtoFuncValues(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncConcatMemcpy(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncAppendMemcpy(JSGlobalObject*, CallFrame*);
 
 } // namespace JSC

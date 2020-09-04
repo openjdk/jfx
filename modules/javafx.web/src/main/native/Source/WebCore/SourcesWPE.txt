@@ -21,9 +21,25 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 // THE POSSIBILITY OF SUCH DAMAGE.
 
-accessibility/wpe/AXObjectCacheWPE.cpp
-accessibility/wpe/AccessibilityObjectWPE.cpp
+accessibility/atk/AXObjectCacheAtk.cpp
+accessibility/atk/AccessibilityObjectAtk.cpp
+accessibility/atk/WebKitAccessible.cpp
+accessibility/atk/WebKitAccessibleHyperlink.cpp
+accessibility/atk/WebKitAccessibleInterfaceAction.cpp @no-unify
+accessibility/atk/WebKitAccessibleInterfaceComponent.cpp
+accessibility/atk/WebKitAccessibleInterfaceDocument.cpp
+accessibility/atk/WebKitAccessibleInterfaceEditableText.cpp
+accessibility/atk/WebKitAccessibleInterfaceHyperlinkImpl.cpp
+accessibility/atk/WebKitAccessibleInterfaceHypertext.cpp
+accessibility/atk/WebKitAccessibleInterfaceImage.cpp
+accessibility/atk/WebKitAccessibleInterfaceSelection.cpp
+accessibility/atk/WebKitAccessibleInterfaceTable.cpp
+accessibility/atk/WebKitAccessibleInterfaceTableCell.cpp
+accessibility/atk/WebKitAccessibleInterfaceText.cpp
+accessibility/atk/WebKitAccessibleInterfaceValue.cpp
+accessibility/atk/WebKitAccessibleUtil.cpp
 
+editing/atk/FrameSelectionAtk.cpp
 editing/libwpe/EditorLibWPE.cpp
 
 loader/soup/ResourceLoaderSoup.cpp
@@ -36,17 +52,18 @@ page/scrolling/nicosia/ScrollingStateNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeFixedNode.cpp
 page/scrolling/nicosia/ScrollingTreeFrameScrollingNodeNicosia.cpp
 page/scrolling/nicosia/ScrollingTreeNicosia.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollProxyNode.cpp
+page/scrolling/nicosia/ScrollingTreeOverflowScrollingNodeNicosia.cpp
+page/scrolling/nicosia/ScrollingTreePositionedNode.cpp
 page/scrolling/nicosia/ScrollingTreeStickyNode.cpp
 
 page/scrolling/generic/ScrollingThreadGeneric.cpp
 
+platform/ScrollAnimationKinetic.cpp
+
 platform/UserAgentQuirks.cpp
 
-// This can't go into SourcesGLib.txt because it has to go into WebCorePlatformGTK.
-platform/glib/EventHandlerGLib.cpp
-
 platform/graphics/GLContext.cpp
-platform/graphics/GraphicsContext3DPrivate.cpp
 platform/graphics/PlatformDisplay.cpp
 
 platform/graphics/egl/GLContextEGL.cpp
@@ -54,10 +71,11 @@ platform/graphics/egl/GLContextEGLLibWPE.cpp
 
 platform/graphics/libwpe/PlatformDisplayLibWPE.cpp
 
-platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
-platform/graphics/opengl/Extensions3DOpenGLES.cpp @no-unify
-platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
-platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
+platform/graphics/opengl/ExtensionsGLOpenGLCommon.cpp
+platform/graphics/opengl/ExtensionsGLOpenGLES.cpp @no-unify
+platform/graphics/opengl/GraphicsContextGLOpenGLCommon.cpp
+platform/graphics/opengl/GraphicsContextGLOpenGLES.cpp
+platform/graphics/opengl/GraphicsContextGLOpenGLPrivate.cpp
 platform/graphics/opengl/TemporaryOpenGLSetting.cpp
 
 platform/graphics/opentype/OpenTypeVerticalData.cpp

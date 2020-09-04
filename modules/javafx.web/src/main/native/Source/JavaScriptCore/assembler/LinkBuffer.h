@@ -43,6 +43,10 @@
 
 namespace JSC {
 
+namespace Wasm {
+enum class CompilationMode : uint8_t;
+}
+
 class CodeBlock;
 
 // LinkBuffer:
@@ -93,10 +97,10 @@ public:
     LinkBuffer(MacroAssembler& macroAssembler, MacroAssemblerCodePtr<tag> code, size_t size, JITCompilationEffort effort = JITCompilationMustSucceed, bool shouldPerformBranchCompaction = true)
         : m_size(size)
         , m_didAllocate(false)
-        , m_code(code.template retagged<LinkBufferPtrTag>())
 #ifndef NDEBUG
         , m_completed(false)
 #endif
+        , m_code(code.template retagged<LinkBufferPtrTag>())
     {
 #if ENABLE(BRANCH_COMPACTION)
         m_shouldPerformBranchCompaction = shouldPerformBranchCompaction;
@@ -342,11 +346,11 @@ private:
     bool m_shouldPerformBranchCompaction { true };
 #endif
     bool m_didAllocate;
-    MacroAssemblerCodePtr<LinkBufferPtrTag> m_code;
 #ifndef NDEBUG
     bool m_completed;
 #endif
     bool m_alreadyDisassembled { false };
+    MacroAssemblerCodePtr<LinkBufferPtrTag> m_code;
     Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
 };
 
@@ -393,6 +397,16 @@ bool shouldDumpDisassemblyFor(CodeBlock*);
 
 #define FINALIZE_REGEXP_CODE(linkBufferReference, resultPtrTag, dataLogFArgumentsForHeading)  \
     FINALIZE_CODE_IF(JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpRegExpDisassembly(), linkBufferReference, resultPtrTag, dataLogFArgumentsForHeading)
+
+bool shouldDumpDisassemblyFor(Wasm::CompilationMode);
+
+#define FINALIZE_WASM_CODE(linkBufferReference, resultPtrTag, ...)  \
+    FINALIZE_CODE_IF((JSC::Options::asyncDisassembly() || JSC::Options::dumpDisassembly() || Options::dumpWasmDisassembly()), linkBufferReference, resultPtrTag, __VA_ARGS__)
+
+#define FINALIZE_WASM_CODE_FOR_MODE(mode, linkBufferReference, resultPtrTag, ...)  \
+    FINALIZE_CODE_IF(shouldDumpDisassemblyFor(mode), linkBufferReference, resultPtrTag, __VA_ARGS__)
+
+
 
 } // namespace JSC
 

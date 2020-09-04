@@ -32,6 +32,8 @@ namespace WTF {
 
 template<typename T>
 struct DumbPtrTraits {
+    template<typename U> using RebindTraits = DumbPtrTraits<U>;
+
     using StorageType = T*;
 
     template<typename U>
@@ -39,6 +41,9 @@ struct DumbPtrTraits {
 
     static ALWAYS_INLINE void swap(StorageType& a, StorageType& b) { std::swap(a, b); }
     static ALWAYS_INLINE T* unwrap(const StorageType& ptr) { return ptr; }
+
+    static StorageType hashTableDeletedValue() { return bitwise_cast<StorageType>(static_cast<uintptr_t>(-1)); }
+    static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr == hashTableDeletedValue(); }
 };
 
 } // namespace WTF

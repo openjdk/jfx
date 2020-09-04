@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "AudioBus.h"
 #include "AudioNode.h"
 #include "EventListener.h"
@@ -44,7 +45,8 @@ class AudioProcessingEvent;
 // The "onaudioprocess" attribute is an event listener which will get called periodically with an AudioProcessingEvent which has
 // AudioBuffers for each input and output.
 
-class ScriptProcessorNode final : public AudioNode {
+class ScriptProcessorNode final : public AudioNode, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(ScriptProcessorNode);
 public:
     // bufferSize must be one of the following values: 256, 512, 1024, 2048, 4096, 8192, 16384.
     // This value controls how frequently the onaudioprocess event handler is called and how many sample-frames need to be processed each call.
@@ -54,11 +56,14 @@ public:
 
     virtual ~ScriptProcessorNode();
 
+    const char* activeDOMObjectName() const override { return "ScriptProcessorNode"; }
+
     // AudioNode
     void process(size_t framesToProcess) override;
     void reset() override;
     void initialize() override;
     void uninitialize() override;
+    void didBecomeMarkedForDeletion() override;
 
     size_t bufferSize() const { return m_bufferSize; }
 
@@ -69,10 +74,6 @@ private:
     ScriptProcessorNode(AudioContext&, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
 
     void fireProcessEvent();
-
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) override;
-    void removeAllEventListeners() override;
 
     // Double buffering
     unsigned doubleBufferIndex() const { return m_doubleBufferIndex; }
@@ -90,7 +91,7 @@ private:
     unsigned m_numberOfOutputChannels;
 
     RefPtr<AudioBus> m_internalInputBus;
-    bool m_hasAudioProcessListener;
+    RefPtr<PendingActivity<ScriptProcessorNode>> m_pendingActivity;
 };
 
 } // namespace WebCore

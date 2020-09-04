@@ -28,15 +28,14 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "ActiveDOMObject.h"
-#include "DOMPromiseProxy.h"
 #include "EventTarget.h"
+#include "IDLTypes.h"
 #include "SWClientConnection.h"
 #include "SWServer.h"
 #include "ServiceWorkerJobClient.h"
 #include "ServiceWorkerRegistration.h"
 #include "ServiceWorkerRegistrationOptions.h"
 #include "WorkerType.h"
-#include <pal/SessionID.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -48,9 +47,11 @@ class ServiceWorker;
 enum class ServiceWorkerUpdateViaCache : uint8_t;
 enum class WorkerType;
 
+template<typename IDLType> class DOMPromiseProxy;
+
 class ServiceWorkerContainer final : public EventTargetWithInlineData, public ActiveDOMObject, public ServiceWorkerJobClient {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerContainer);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(ServiceWorkerContainer);
 public:
     ServiceWorkerContainer(ScriptExecutionContext*, NavigatorBase&);
     ~ServiceWorkerContainer();
@@ -66,9 +67,12 @@ public:
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
     void getRegistration(const String& clientURL, Ref<DeferredPromise>&&);
-    void scheduleTaskToUpdateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&);
-    void scheduleTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
-    void scheduleTaskToFireControllerChangeEvent();
+    void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&);
+    void updateWorkerState(ServiceWorkerIdentifier, ServiceWorkerState);
+    void queueTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
+    void queueTaskToDispatchControllerChangeEvent();
+
+    void postMessage(MessageWithMessagePorts&&, ServiceWorkerData&& sourceData, String&& sourceOrigin);
 
     void getRegistrations(Ref<DeferredPromise>&&);
 
@@ -85,7 +89,11 @@ public:
 
     bool isAlwaysOnLoggingAllowed() const;
 
+    NavigatorBase* navigator() { return &m_navigator; }
+
 private:
+    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions& = { }) final;
+
     void scheduleJob(std::unique_ptr<ServiceWorkerJob>&&);
 
     void jobFailedWithException(ServiceWorkerJob&, const Exception&) final;
@@ -98,21 +106,20 @@ private:
     void notifyFailedFetchingScript(ServiceWorkerJob&, const ResourceError&);
     void destroyJob(ServiceWorkerJob&);
 
-    void didFinishGetRegistrationRequest(uint64_t requestIdentifier, Optional<ServiceWorkerRegistrationData>&&);
-    void didFinishGetRegistrationsRequest(uint64_t requestIdentifier, Vector<ServiceWorkerRegistrationData>&&);
-
-    SWServerConnectionIdentifier connectionIdentifier() final;
     DocumentOrWorkerIdentifier contextIdentifier() final;
 
     SWClientConnection& ensureSWClientConnection();
 
+    // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
+
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
     EventTargetInterface eventTargetInterface() const final { return ServiceWorkerContainerEventTargetInterfaceType; }
     void refEventTarget() final;
     void derefEventTarget() final;
     void stop() final;
+
+    void notifyRegistrationIsSettled(const ServiceWorkerRegistrationKey&);
 
     std::unique_ptr<ReadyPromise> m_readyPromise;
 
@@ -133,18 +140,10 @@ private:
     Ref<Thread> m_creationThread { Thread::current() };
 #endif
 
-    struct PendingPromise {
-        PendingPromise(Ref<DeferredPromise>&& promise, Ref<PendingActivity<ServiceWorkerContainer>>&& pendingActivity)
-            : promise(WTFMove(promise))
-            , pendingActivity(WTFMove(pendingActivity))
-        { }
-
-        Ref<DeferredPromise> promise;
-        Ref<PendingActivity<ServiceWorkerContainer>> pendingActivity;
-    };
-
-    uint64_t m_lastPendingPromiseIdentifier { 0 };
-    HashMap<uint64_t, std::unique_ptr<PendingPromise>> m_pendingPromises;
+    uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };
+    HashMap<uint64_t, ServiceWorkerRegistrationKey> m_ongoingSettledRegistrations;
+    bool m_shouldDeferMessageEvents { false };
+    Vector<Ref<Event>> m_deferredMessageEvents;
 };
 
 } // namespace WebCore

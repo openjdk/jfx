@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,7 +24,6 @@
 
 #include "Document.h"
 #include "Element.h"
-#include "SVGAttributeOwnerProxy.h"
 #include "SVGElement.h"
 #include <wtf/URL.h>
 #include "XLinkNames.h"
@@ -32,44 +31,31 @@
 namespace WebCore {
 
 SVGURIReference::SVGURIReference(SVGElement* contextElement)
-    : m_attributeOwnerProxy(std::make_unique<AttributeOwnerProxy>(*this, *contextElement))
+    : m_href(SVGAnimatedString::create(contextElement))
 {
-    registerAttributes();
-}
-
-void SVGURIReference::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::hrefAttr, &SVGURIReference::m_href>();
-    registry.registerAttribute<XLinkNames::hrefAttr, &SVGURIReference::m_href>();
-}
-
-SVGURIReference::AttributeRegistry& SVGURIReference::attributeRegistry()
-{
-    return AttributeOwnerProxy::attributeRegistry();
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::hrefAttr, &SVGURIReference::m_href>();
+        PropertyRegistry::registerProperty<XLinkNames::hrefAttr, &SVGURIReference::m_href>();
+    });
 }
 
 bool SVGURIReference::isKnownAttribute(const QualifiedName& attributeName)
 {
-    return AttributeOwnerProxy::isKnownAttribute(attributeName);
+    return PropertyRegistry::isKnownAttribute(attributeName);
 }
 
-void SVGURIReference::parseAttribute(const QualifiedName& name, const AtomicString& value)
+SVGElement& SVGURIReference::contextElement() const
 {
-    if (isKnownAttribute(name))
-        m_href.setValue(value);
+    return *m_href->contextElement();
 }
 
-const String& SVGURIReference::href() const
+void SVGURIReference::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
-    return m_href.currentValue(*m_attributeOwnerProxy);
-}
-
-RefPtr<SVGAnimatedString> SVGURIReference::hrefAnimated()
-{
-    return m_href.animatedProperty(*m_attributeOwnerProxy);
+    if (name.matches(SVGNames::hrefAttr))
+        m_href->setBaseValInternal(value.isNull() ? contextElement().getAttribute(XLinkNames::hrefAttr) : value);
+    else if (name.matches(XLinkNames::hrefAttr) && !contextElement().hasAttribute(SVGNames::hrefAttr))
+        m_href->setBaseValInternal(value);
 }
 
 String SVGURIReference::fragmentIdentifierFromIRIString(const String& url, const Document& document)
@@ -78,7 +64,10 @@ String SVGURIReference::fragmentIdentifierFromIRIString(const String& url, const
     if (start == notFound)
         return emptyString();
 
-    URL base = start ? URL(document.baseURL(), url.substring(0, start)) : document.baseURL();
+    if (!start)
+        return url.substring(1);
+
+    URL base = URL(document.baseURL(), url.substring(0, start));
     String fragmentIdentifier = url.substring(start);
     URL kurl(base, fragmentIdentifier);
     if (equalIgnoringFragmentIdentifier(kurl, document.url()))
@@ -113,6 +102,25 @@ auto SVGURIReference::targetElementFromIRIString(const String& iri, const TreeSc
         return { nullptr, WTFMove(id) };
 
     return { treeScope.getElementById(id), WTFMove(id) };
+}
+
+bool SVGURIReference::haveLoadedRequiredResources() const
+{
+    if (href().isEmpty() || !isExternalURIReference(href(), contextElement().document()))
+        return true;
+    return errorOccurred() || haveFiredLoadEvent();
+}
+
+void SVGURIReference::dispatchLoadEvent()
+{
+    if (haveFiredLoadEvent())
+        return;
+
+    // Dispatch the load event
+    setHaveFiredLoadEvent(true);
+    ASSERT(contextElement().haveLoadedRequiredResources());
+
+    contextElement().sendLoadEventIfPossible();
 }
 
 }

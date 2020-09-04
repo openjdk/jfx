@@ -33,10 +33,14 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "JSDOMPromiseDeferred.h"
 #include "PeerConnectionBackend.h"
 #include "RTCRtpCapabilities.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpReceiver);
 
 RTCRtpReceiver::RTCRtpReceiver(PeerConnectionBackend& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpReceiverBackend>&& backend)
     : m_track(WTFMove(track))

@@ -30,20 +30,24 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "PostMessageOptions.h"
 #include "ServiceWorkerData.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/RefCounted.h>
 #include <wtf/URL.h>
 
 namespace JSC {
+class JSGlobalObject;
 class JSValue;
 }
 
 namespace WebCore {
 
 class Frame;
+class SWClientConnection;
 
 class ServiceWorker final : public RefCounted<ServiceWorker>, public EventTargetWithInlineData, public ActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(ServiceWorker);
 public:
     using State = ServiceWorkerState;
     static Ref<ServiceWorker> getOrCreate(ScriptExecutionContext&, ServiceWorkerData&&);
@@ -54,9 +58,9 @@ public:
 
     State state() const { return m_data.state; }
 
-    void scheduleTaskToUpdateState(State);
+    void updateState(State);
 
-    ExceptionOr<void> postMessage(ScriptExecutionContext&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
 
     ServiceWorkerIdentifier identifier() const { return m_data.identifier; }
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_data.registrationIdentifier; }
@@ -75,10 +79,11 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
 
     bool isAlwaysOnLoggingAllowed() const;
+
+    SWClientConnection& swConnection();
 
     ServiceWorkerData m_data;
     bool m_isStopped { false };

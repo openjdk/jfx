@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include <wtf/Lock.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
@@ -57,40 +58,18 @@ void initializeMainThread()
     std::call_once(initializeKey, [] {
         initializeThreading();
         initializeMainThreadPlatform();
-        initializeGCThreads();
     });
 }
 
-#if PLATFORM(COCOA)
 #if !USE(WEB_THREAD)
-void initializeMainThreadToProcessMainThread()
-{
-    std::call_once(initializeKey, [] {
-        initializeThreading();
-        initializeMainThreadToProcessMainThreadPlatform();
-        initializeGCThreads();
-    });
-}
-#else
-void initializeWebThread()
-{
-    static std::once_flag initializeKey;
-    std::call_once(initializeKey, [] {
-        initializeWebThreadPlatform();
-    });
-}
-#endif // !USE(WEB_THREAD)
-#endif // PLATFORM(COCOA)
-
-#if !USE(WEB_THREAD)
-bool canAccessThreadLocalDataForThread(Thread& thread)
+bool canCurrentThreadAccessThreadLocalData(Thread& thread)
 {
     return &thread == &Thread::current();
 }
 #endif
 
 // 0.1 sec delays in UI is approximate threshold when they become noticeable. Have a limit that's half of that.
-static const auto maxRunLoopSuspensionTime = 50_ms;
+static constexpr auto maxRunLoopSuspensionTime = 50_ms;
 
 void dispatchFunctionsFromMainThread()
 {
@@ -128,6 +107,16 @@ void dispatchFunctionsFromMainThread()
     }
 }
 
+bool isMainRunLoop()
+{
+    return RunLoop::isMain();
+}
+
+void callOnMainRunLoop(Function<void()>&& function)
+{
+    RunLoop::main().dispatch(WTFMove(function));
+}
+
 void callOnMainThread(Function<void()>&& function)
 {
     ASSERT(function);
@@ -157,49 +146,23 @@ void setMainThreadCallbacksPaused(bool paused)
         scheduleDispatchFunctionsOnMainThread();
 }
 
-static ThreadSpecific<Optional<GCThreadType>, CanBeGCThread::True>* isGCThread;
-
-void initializeGCThreads()
-{
-    static std::once_flag flag;
-    std::call_once(
-        flag,
-        [] {
-            isGCThread = new ThreadSpecific<Optional<GCThreadType>, CanBeGCThread::True>();
-        });
-}
-
-void registerGCThread(GCThreadType type)
-{
-    if (!isGCThread) {
-        // This happens if we're running in a process that doesn't care about
-        // MainThread.
-        return;
-    }
-
-    **isGCThread = type;
-}
-
 bool isMainThreadOrGCThread()
 {
-    if (mayBeGCThread())
+    if (Thread::mayBeGCThread())
         return true;
 
     return isMainThread();
 }
 
-Optional<GCThreadType> mayBeGCThread()
-{
-    if (!isGCThread)
-        return WTF::nullopt;
-    if (!isGCThread->isSet())
-        return WTF::nullopt;
-    return **isGCThread;
-}
+enum class MainStyle : bool {
+    Thread,
+    RunLoop
+};
 
-void callOnMainThreadAndWait(WTF::Function<void()>&& function)
+static void callOnMainAndWait(WTF::Function<void()>&& function, MainStyle mainStyle)
 {
-    if (isMainThread()) {
+
+    if (mainStyle == MainStyle::Thread ? isMainThread() : isMainRunLoop()) {
         function();
         return;
     }
@@ -209,18 +172,36 @@ void callOnMainThreadAndWait(WTF::Function<void()>&& function)
 
     bool isFinished = false;
 
-    callOnMainThread([&, function = WTFMove(function)] {
+    auto functionImpl = [&, function = WTFMove(function)] {
         function();
 
         std::lock_guard<Lock> lock(mutex);
         isFinished = true;
         conditionVariable.notifyOne();
-    });
+    };
+
+    switch (mainStyle) {
+    case MainStyle::Thread:
+        callOnMainThread(WTFMove(functionImpl));
+        break;
+    case MainStyle::RunLoop:
+        callOnMainRunLoop(WTFMove(functionImpl));
+    };
 
     std::unique_lock<Lock> lock(mutex);
     conditionVariable.wait(lock, [&] {
         return isFinished;
     });
+}
+
+void callOnMainRunLoopAndWait(WTF::Function<void()>&& function)
+{
+    callOnMainAndWait(WTFMove(function), MainStyle::RunLoop);
+}
+
+void callOnMainThreadAndWait(WTF::Function<void()>&& function)
+{
+    callOnMainAndWait(WTFMove(function), MainStyle::Thread);
 }
 
 } // namespace WTF

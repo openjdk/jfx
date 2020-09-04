@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000,2003 Harri Porten (porten@kde.org)
- *  Copyright (C) 2007, 2008, 2011, 2015-2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -31,8 +31,8 @@
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(ExecState*);
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(ExecState*);
+static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(JSGlobalObject*, CallFrame*);
+static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(JSGlobalObject*, CallFrame*);
 
 } // namespace JSC
 
@@ -52,8 +52,8 @@ const ClassInfo NumberConstructor::s_info = { "Function", &InternalFunction::s_i
 @end
 */
 
-static EncodedJSValue JSC_HOST_CALL callNumberConstructor(ExecState*);
-static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(ExecState*);
+static EncodedJSValue JSC_HOST_CALL callNumberConstructor(JSGlobalObject*, CallFrame*);
+static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(JSGlobalObject*, CallFrame*);
 
 NumberConstructor::NumberConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure, callNumberConstructor, constructNumberConstructor)
@@ -62,7 +62,7 @@ NumberConstructor::NumberConstructor(VM& vm, Structure* structure)
 
 void NumberConstructor::finishCreation(VM& vm, NumberPrototype* numberPrototype)
 {
-    Base::finishCreation(vm, NumberPrototype::info()->className);
+    Base::finishCreation(vm, vm.propertyNames->Number.string(), NameAdditionMode::WithoutStructureTransition);
     ASSERT(inherits(vm, info()));
 
     JSGlobalObject* globalObject = numberPrototype->globalObject(vm);
@@ -70,29 +70,29 @@ void NumberConstructor::finishCreation(VM& vm, NumberPrototype* numberPrototype)
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, numberPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "EPSILON"), jsDoubleNumber(std::numeric_limits<double>::epsilon()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "MAX_VALUE"), jsDoubleNumber(1.7976931348623157E+308), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "MIN_VALUE"), jsDoubleNumber(5E-324), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "MAX_SAFE_INTEGER"), jsDoubleNumber(maxSafeInteger()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "MIN_SAFE_INTEGER"), jsDoubleNumber(minSafeInteger()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "NEGATIVE_INFINITY"), jsDoubleNumber(-std::numeric_limits<double>::infinity()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, "POSITIVE_INFINITY"), jsDoubleNumber(std::numeric_limits<double>::infinity()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "EPSILON"), jsDoubleNumber(std::numeric_limits<double>::epsilon()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "MAX_VALUE"), jsDoubleNumber(1.7976931348623157E+308), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "MIN_VALUE"), jsDoubleNumber(5E-324), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "MAX_SAFE_INTEGER"), jsDoubleNumber(maxSafeInteger()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "MIN_SAFE_INTEGER"), jsDoubleNumber(minSafeInteger()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "NEGATIVE_INFINITY"), jsDoubleNumber(-std::numeric_limits<double>::infinity()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, Identifier::fromString(vm, "POSITIVE_INFINITY"), jsDoubleNumber(std::numeric_limits<double>::infinity()), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->NaN, jsNaN(), PropertyAttribute::DontDelete | PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 
     putDirectWithoutTransition(vm, vm.propertyNames->parseInt, numberPrototype->globalObject(vm)->parseIntFunction(), static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, vm.propertyNames->parseFloat, numberPrototype->globalObject(vm)->parseFloatFunction(), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(&vm, "isInteger"), numberConstructorFuncIsInteger, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, NumberIsIntegerIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(Identifier::fromString(vm, "isInteger"), numberConstructorFuncIsInteger, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, NumberIsIntegerIntrinsic);
 }
 
 // ECMA 15.7.1
-static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    double n = exec->argumentCount() ? exec->uncheckedArgument(0).toNumber(exec) : 0;
+    double n = callFrame->argumentCount() ? callFrame->uncheckedArgument(0).toNumber(globalObject) : 0;
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    Structure* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), exec->lexicalGlobalObject()->numberObjectStructure());
+    Structure* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), globalObject->numberObjectStructure());
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     NumberObject* object = NumberObject::create(vm, structure);
@@ -101,21 +101,21 @@ static EncodedJSValue JSC_HOST_CALL constructNumberConstructor(ExecState* exec)
 }
 
 // ECMA 15.7.2
-static EncodedJSValue JSC_HOST_CALL callNumberConstructor(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL callNumberConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    return JSValue::encode(jsNumber(!exec->argumentCount() ? 0 : exec->uncheckedArgument(0).toNumber(exec)));
+    return JSValue::encode(jsNumber(!callFrame->argumentCount() ? 0 : callFrame->uncheckedArgument(0).toNumber(globalObject)));
 }
 
 // ECMA-262 20.1.2.3
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsInteger(JSGlobalObject*, CallFrame* callFrame)
 {
-    return JSValue::encode(jsBoolean(NumberConstructor::isIntegerImpl(exec->argument(0))));
+    return JSValue::encode(jsBoolean(NumberConstructor::isIntegerImpl(callFrame->argument(0))));
 }
 
 // ECMA-262 20.1.2.5
-static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL numberConstructorFuncIsSafeInteger(JSGlobalObject*, CallFrame* callFrame)
 {
-    JSValue argument = exec->argument(0);
+    JSValue argument = callFrame->argument(0);
     bool isInteger;
     if (argument.isInt32())
         isInteger = true;

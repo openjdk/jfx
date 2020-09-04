@@ -28,10 +28,13 @@
 
 #include "InspectorAuditAccessibilityObject.h"
 #include "InspectorAuditDOMObject.h"
+#include "InspectorAuditResourcesObject.h"
 #include "JSInspectorAuditAccessibilityObject.h"
 #include "JSInspectorAuditDOMObject.h"
+#include "JSInspectorAuditResourcesObject.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
+#include "ScriptState.h"
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
@@ -51,12 +54,14 @@ PageAuditAgent::PageAuditAgent(PageAgentContext& context)
 {
 }
 
+PageAuditAgent::~PageAuditAgent() = default;
+
 InjectedScript PageAuditAgent::injectedScriptForEval(const int* executionContextId)
 {
     if (executionContextId)
         return injectedScriptManager().injectedScriptForId(*executionContextId);
 
-    JSC::ExecState* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
+    JSC::JSGlobalObject* scriptState = mainWorldExecState(&m_inspectedPage.mainFrame());
     return injectedScriptManager().injectedScriptFor(scriptState);
 }
 
@@ -65,29 +70,33 @@ InjectedScript PageAuditAgent::injectedScriptForEval(ErrorString& errorString, c
     InjectedScript injectedScript = injectedScriptForEval(executionContextId);
     if (injectedScript.hasNoValue()) {
         if (executionContextId)
-            errorString = "Execution context with given id not found."_s;
+            errorString = "Missing injected script for given executionContextId"_s;
         else
-            errorString = "Internal error: main world execution context not found."_s;
+            errorString = "Internal error: main world execution context not found"_s;
     }
     return injectedScript;
 }
 
-void PageAuditAgent::populateAuditObject(JSC::ExecState* execState, JSC::Strong<JSC::JSObject>& auditObject)
+void PageAuditAgent::populateAuditObject(JSC::JSGlobalObject* lexicalGlobalObject, JSC::Strong<JSC::JSObject>& auditObject)
 {
-    InspectorAuditAgent::populateAuditObject(execState, auditObject);
+    InspectorAuditAgent::populateAuditObject(lexicalGlobalObject, auditObject);
 
-    ASSERT(execState);
-    if (!execState)
+    ASSERT(lexicalGlobalObject);
+    if (!lexicalGlobalObject)
         return;
 
-    if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(execState->lexicalGlobalObject())) {
-        JSC::JSLockHolder lock(execState);
+    if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(lexicalGlobalObject)) {
+        JSC::VM& vm = globalObject->vm();
+        JSC::JSLockHolder lock(vm);
 
-        if (JSC::JSValue jsInspectorAuditAccessibilityObject = toJSNewlyCreated(execState, globalObject, InspectorAuditAccessibilityObject::create(*this))) \
-            auditObject->putDirect(execState->vm(), JSC::Identifier::fromString(execState, "Accessibility"), jsInspectorAuditAccessibilityObject);
+        if (JSC::JSValue jsInspectorAuditAccessibilityObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditAccessibilityObject::create(*this)))
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Accessibility"), jsInspectorAuditAccessibilityObject);
 
-        if (JSC::JSValue jsInspectorAuditDOMObject = toJSNewlyCreated(execState, globalObject, InspectorAuditDOMObject::create(*this))) \
-            auditObject->putDirect(execState->vm(), JSC::Identifier::fromString(execState, "DOM"), jsInspectorAuditDOMObject);
+        if (JSC::JSValue jsInspectorAuditDOMObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditDOMObject::create(*this)))
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "DOM"), jsInspectorAuditDOMObject);
+
+        if (JSC::JSValue jsInspectorAuditResourcesObject = toJSNewlyCreated(lexicalGlobalObject, globalObject, InspectorAuditResourcesObject::create(*this)))
+            auditObject->putDirect(vm, JSC::Identifier::fromString(vm, "Resources"), jsInspectorAuditResourcesObject);
     }
 }
 

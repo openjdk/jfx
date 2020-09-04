@@ -49,12 +49,13 @@ enum class InputSource {
 };
 
 class UserInputBridge {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(UserInputBridge);
 public:
     UserInputBridge(Page&);
 
     // User input APIs.
-#if ENABLE(CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENU_EVENT)
     WEBCORE_EXPORT bool handleContextMenuEvent(const PlatformMouseEvent&, Frame&, InputSource = InputSource::User);
 #endif
     WEBCORE_EXPORT bool handleMousePressEvent(const PlatformMouseEvent&, InputSource source = InputSource::User);

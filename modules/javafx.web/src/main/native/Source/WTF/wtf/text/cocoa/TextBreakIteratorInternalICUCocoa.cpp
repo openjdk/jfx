@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,7 +26,7 @@
 
 namespace WTF {
 
-static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomicString& locale)
+static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomString& locale)
 {
     switch (mode) {
     case TextBreakIterator::Mode::Line:
@@ -38,14 +38,14 @@ static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBacking
     }
 }
 
-TextBreakIterator::TextBreakIterator(StringView string, Mode mode, const AtomicString& locale)
+TextBreakIterator::TextBreakIterator(StringView string, Mode mode, const AtomString& locale)
     : m_backing(mapModeToBackingIterator(string, mode, locale))
     , m_mode(mode)
     , m_locale(locale)
 {
 }
 
-static const int maxLocaleStringLength = 32;
+static constexpr int maxLocaleStringLength = 32;
 
 static inline RetainPtr<CFStringRef> textBreakLocalePreference()
 {

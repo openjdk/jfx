@@ -30,15 +30,16 @@
 
 #include "IDBBindingUtilities.h"
 #include "IDBCursorWithValue.h"
-#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-JSC::JSValue JSIDBCursorWithValue::value(JSC::ExecState& state) const
+JSC::JSValue JSIDBCursorWithValue::value(JSC::JSGlobalObject& lexicalGlobalObject) const
 {
-    return cachedPropertyValue(state, *this, wrapped().valueWrapper(), [&] {
-        return deserializeIDBValueToJSValue(state, wrapped().value());
+    return cachedPropertyValue(lexicalGlobalObject, *this, wrapped().valueWrapper(), [&] {
+        auto result = deserializeIDBValueWithKeyInjection(lexicalGlobalObject, wrapped().value(), wrapped().primaryKey(), wrapped().primaryKeyPath());
+        return result ? result.value() : jsNull();
     });
 }
 

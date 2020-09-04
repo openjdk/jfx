@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -202,6 +202,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
     @Override public void saveState() {
         init();
         super.saveState();
+    }
+
+    @Override public void scale(float sx, float sy) {
+        init();
+        super.scale(sx, sy);
     }
 
     @Override public void setTransform(WCTransform tm) {

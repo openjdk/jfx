@@ -44,27 +44,31 @@ WorkletConsoleClient::WorkletConsoleClient(WorkletGlobalScope& workletGlobalScop
 
 WorkletConsoleClient::~WorkletConsoleClient() = default;
 
-void WorkletConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::ExecState* exec, Ref<Inspector::ScriptArguments>&& arguments)
+void WorkletConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::JSGlobalObject* exec, Ref<Inspector::ScriptArguments>&& arguments)
 {
     String messageText;
     arguments->getFirstArgumentAsString(messageText);
-    auto message = std::make_unique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, WTFMove(arguments), exec);
+    auto message = makeUnique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, WTFMove(arguments), exec);
     m_workletGlobalScope.addConsoleMessage(WTFMove(message));
 }
 
-void WorkletConsoleClient::count(JSC::ExecState*, Ref<ScriptArguments>&&) { }
+void WorkletConsoleClient::count(JSC::JSGlobalObject*, const String&) { }
+void WorkletConsoleClient::countReset(JSC::JSGlobalObject*, const String&) { }
 
-void WorkletConsoleClient::time(JSC::ExecState*, const String&) { }
-void WorkletConsoleClient::timeEnd(JSC::ExecState*, const String&) { }
+void WorkletConsoleClient::time(JSC::JSGlobalObject*, const String&) { }
+void WorkletConsoleClient::timeLog(JSC::JSGlobalObject*, const String&, Ref<ScriptArguments>&&) { }
+void WorkletConsoleClient::timeEnd(JSC::JSGlobalObject*, const String&) { }
 
-void WorkletConsoleClient::profile(JSC::ExecState*, const String&) { }
-void WorkletConsoleClient::profileEnd(JSC::ExecState*, const String&) { }
+void WorkletConsoleClient::profile(JSC::JSGlobalObject*, const String&) { }
+void WorkletConsoleClient::profileEnd(JSC::JSGlobalObject*, const String&) { }
 
-void WorkletConsoleClient::takeHeapSnapshot(JSC::ExecState*, const String&) { }
-void WorkletConsoleClient::timeStamp(JSC::ExecState*, Ref<ScriptArguments>&&) { }
+void WorkletConsoleClient::takeHeapSnapshot(JSC::JSGlobalObject*, const String&) { }
+void WorkletConsoleClient::timeStamp(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
 
-void WorkletConsoleClient::record(JSC::ExecState*, Ref<ScriptArguments>&&) { }
-void WorkletConsoleClient::recordEnd(JSC::ExecState*, Ref<ScriptArguments>&&) { }
+void WorkletConsoleClient::record(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
+void WorkletConsoleClient::recordEnd(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
+
+void WorkletConsoleClient::screenshot(JSC::JSGlobalObject*, Ref<ScriptArguments>&&) { }
 
 } // namespace WebCore
 #endif

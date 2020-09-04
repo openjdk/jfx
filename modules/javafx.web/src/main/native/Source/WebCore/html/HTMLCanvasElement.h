@@ -31,7 +31,6 @@
 #include "FloatRect.h"
 #include "HTMLElement.h"
 #include "ImageBitmapRenderingContextSettings.h"
-#include "IntSize.h"
 #include <memory>
 #include <wtf/Forward.h>
 
@@ -42,17 +41,16 @@
 namespace WebCore {
 
 class BlobCallback;
+class CanvasRenderingContext;
 class CanvasRenderingContext2D;
 class GraphicsContext;
-class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
 class ImageData;
 class MediaSample;
 class MediaStream;
 class WebGLRenderingContextBase;
-class WebGPURenderingContext;
-class WebMetalRenderingContext;
+class GPUCanvasContext;
 struct UncachedString;
 
 namespace DisplayList {
@@ -66,26 +64,13 @@ public:
     static Ref<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
 
-    unsigned width() const final { return size().width(); }
-    unsigned height() const final { return size().height(); }
-
     WEBCORE_EXPORT ExceptionOr<void> setWidth(unsigned);
     WEBCORE_EXPORT ExceptionOr<void> setHeight(unsigned);
 
-    const IntSize& size() const final { return m_size; }
+    void setSize(const IntSize& newSize) override;
 
-    void setSize(const IntSize& newSize) override
-    {
-        if (newSize == size())
-            return;
-        m_ignoreReset = true;
-        setWidth(newSize.width());
-        setHeight(newSize.height());
-        m_ignoreReset = false;
-        reset();
-    }
-
-    ExceptionOr<Optional<RenderingContext>> getContext(JSC::ExecState&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
+    ExceptionOr<Optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
 
     CanvasRenderingContext* getContext(const String&);
 
@@ -100,13 +85,8 @@ public:
 #endif
 #if ENABLE(WEBGPU)
     static bool isWebGPUType(const String&);
-    WebGPURenderingContext* createContextWebGPU(const String&);
-    WebGPURenderingContext* getContextWebGPU(const String&);
-#endif
-#if ENABLE(WEBMETAL)
-    static bool isWebMetalType(const String&);
-    WebMetalRenderingContext* createContextWebMetal(const String&);
-    WebMetalRenderingContext* getContextWebMetal(const String&);
+    GPUCanvasContext* createContextWebGPU(const String&);
+    GPUCanvasContext* getContextWebGPU(const String&);
 #endif
 
     static bool isBitmapRendererType(const String&);
@@ -122,15 +102,11 @@ public:
 
     void paint(GraphicsContext&, const LayoutRect&);
 
-    GraphicsContext* drawingContext() const final;
-    GraphicsContext* existingDrawingContext() const final;
-
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaSample> toMediaSample();
-    ExceptionOr<Ref<MediaStream>> captureStream(ScriptExecutionContext&, Optional<double>&& frameRequestRate);
+    ExceptionOr<Ref<MediaStream>> captureStream(Document&, Optional<double>&& frameRequestRate);
 #endif
 
-    ImageBuffer* buffer() const;
     Image* copiedImage() const final;
     void clearCopiedImage();
     RefPtr<ImageData> getImageData();
@@ -139,11 +115,6 @@ public:
 
     SecurityOrigin* securityOrigin() const final;
 
-    AffineTransform baseTransform() const final;
-
-    void makeRenderingResultsAvailable() final;
-    bool hasCreatedImageBuffer() const { return m_hasCreatedImageBuffer; }
-
     bool shouldAccelerate(const IntSize&) const;
 
     WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
@@ -151,19 +122,18 @@ public:
     WEBCORE_EXPORT String displayListAsText(DisplayList::AsTextFlags) const;
     WEBCORE_EXPORT String replayDisplayListAsText(DisplayList::AsTextFlags) const;
 
-    size_t memoryCost() const;
-    size_t externalMemoryCost() const;
-
     // FIXME: Only some canvas rendering contexts need an ImageBuffer.
     // It would be better to have the contexts own the buffers.
     void setImageBufferAndMarkDirty(std::unique_ptr<ImageBuffer>&&);
+
+    WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(size_t);
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
     bool isHTMLCanvasElement() const final { return true; }
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
     bool canContainRangeEndPoint() const final;
@@ -171,12 +141,12 @@ private:
 
     void reset();
 
-    void createImageBuffer() const;
+    void createImageBuffer() const final;
     void clearImageBuffer() const;
 
+    bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
+
     void setSurfaceSize(const IntSize&);
-    void setImageBuffer(std::unique_ptr<ImageBuffer>&&) const;
-    void releaseImageBufferAndContext();
 
     bool paintsIntoCanvasBuffer() const;
 
@@ -188,20 +158,17 @@ private:
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
     FloatRect m_dirtyRect;
-    mutable IntSize m_size;
 
     bool m_ignoreReset { false };
 
     bool m_usesDisplayListDrawing { false };
     bool m_tracksDisplayListReplay { false };
 
-    mutable Lock m_imageBufferAssignmentLock;
+    std::unique_ptr<CanvasRenderingContext> m_context;
 
-    // m_createdImageBuffer means we tried to malloc the buffer.  We didn't necessarily get it.
+    // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
     mutable bool m_didClearImageBuffer { false };
-    mutable std::unique_ptr<ImageBuffer> m_imageBuffer;
-    mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
 
     mutable RefPtr<Image> m_presentedImage;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).

@@ -27,25 +27,20 @@
 #include "Logger.h"
 
 #include <wtf/HexNumber.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTF {
 
 String Logger::LogSiteIdentifier::toString() const
 {
-    StringBuilder builder;
+    if (className)
+        return makeString(className, "::", methodName, '(', hex(objectPtr), ") ");
+    return makeString(methodName, '(', hex(objectPtr), ") ");
+}
 
-    if (className) {
-        builder.append(className);
-        builder.appendLiteral("::");
-    }
-    builder.append(methodName);
-    builder.append('(');
-    appendUnsignedAsHex(objectPtr, builder);
-    builder.appendLiteral(") ");
-    return builder.toString();
+String LogArgument<const void*>::toString(const void* argument)
+{
+    return makeString('(', hex(reinterpret_cast<uintptr_t>(argument)), ')');
 }
 
 } // namespace WTF
-
-using WTF::Logger;
-using WTF::JSONLogValue;

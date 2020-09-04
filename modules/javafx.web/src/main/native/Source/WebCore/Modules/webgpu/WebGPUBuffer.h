@@ -28,26 +28,40 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUBuffer.h"
-
-#include <wtf/RefCounted.h>
+#include "GPUBufferUsage.h"
+#include "GPUObjectBase.h"
+#include "IDLTypes.h"
 #include <wtf/RefPtr.h>
+
+namespace JSC {
+class ArrayBuffer;
+}
 
 namespace WebCore {
 
-class WebGPUBuffer : public RefCounted<WebGPUBuffer> {
+struct GPUBufferDescriptor;
+
+template<typename IDLType> class DOMPromiseDeferred;
+
+class WebGPUBuffer : public GPUObjectBase {
 public:
-    static Ref<WebGPUBuffer> create(Ref<GPUBuffer>&&);
+    static Ref<WebGPUBuffer> create(RefPtr<GPUBuffer>&&, GPUErrorScopes&);
 
-    const GPUBuffer& buffer() const { return m_buffer.get(); }
+    GPUBuffer* buffer() { return m_buffer.get(); }
+    const GPUBuffer* buffer() const { return m_buffer.get(); }
 
-    JSC::ArrayBuffer* mapping() const { return m_buffer->mapping(); }
-    void unmap() { /* FIXME: Unimplemented stub. */ }
-    void destroy() { /* FIXME: Unimplemented stub. */ }
+    using BufferMappingPromise = DOMPromiseDeferred<IDLInterface<JSC::ArrayBuffer>>;
+    void mapReadAsync(BufferMappingPromise&&);
+    void mapWriteAsync(BufferMappingPromise&&);
+    void unmap();
+    void destroy();
 
 private:
-    explicit WebGPUBuffer(Ref<GPUBuffer>&&);
+    explicit WebGPUBuffer(RefPtr<GPUBuffer>&&, GPUErrorScopes&);
 
-    Ref<GPUBuffer> m_buffer;
+    void rejectOrRegisterPromiseCallback(BufferMappingPromise&&, bool);
+
+    RefPtr<GPUBuffer> m_buffer;
 };
 
 } // namespace WebCore

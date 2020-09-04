@@ -45,9 +45,7 @@ PolymorphicCallNode::~PolymorphicCallNode()
 void PolymorphicCallNode::unlink(VM& vm)
 {
     if (m_callLinkInfo) {
-        if (Options::dumpDisassembly())
-            dataLog("Unlinking polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", ", m_callLinkInfo->codeOrigin(), "\n");
-
+        dataLogLnIf(Options::dumpDisassembly(), "Unlinking polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", ", m_callLinkInfo->codeOrigin());
         m_callLinkInfo->unlink(vm);
     }
 
@@ -57,9 +55,6 @@ void PolymorphicCallNode::unlink(VM& vm)
 
 void PolymorphicCallNode::clearCallLinkInfo()
 {
-    if (Options::dumpDisassembly())
-        dataLog("Clearing call link info for polymorphic call at ", m_callLinkInfo->callReturnLocation(), ", ", m_callLinkInfo->codeOrigin(), "\n");
-
     m_callLinkInfo = nullptr;
 }
 
@@ -69,20 +64,21 @@ void PolymorphicCallCase::dump(PrintStream& out) const
 }
 
 PolymorphicCallStubRoutine::PolymorphicCallStubRoutine(
-    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& codeRef, VM& vm, const JSCell* owner, ExecState* callerFrame,
+    const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& codeRef, VM& vm, const JSCell* owner, CallFrame* callerFrame,
     CallLinkInfo& info, const Vector<PolymorphicCallCase>& cases,
     UniqueArray<uint32_t>&& fastCounts)
     : GCAwareJITStubRoutine(codeRef, vm)
+    , m_variants(cases.size())
     , m_fastCounts(WTFMove(fastCounts))
 {
-    for (PolymorphicCallCase callCase : cases) {
-        m_variants.append(WriteBarrier<JSCell>(vm, owner, callCase.variant().rawCalleeCell()));
+    for (unsigned index = 0; index < cases.size(); ++index) {
+        const PolymorphicCallCase& callCase = cases[index];
+        m_variants[index].set(vm, owner, callCase.variant().rawCalleeCell());
         if (shouldDumpDisassemblyFor(callerFrame->codeBlock()))
             dataLog("Linking polymorphic call in ", FullCodeOrigin(callerFrame->codeBlock(), callerFrame->codeOrigin()), " to ", callCase.variant(), ", codeBlock = ", pointerDump(callCase.codeBlock()), "\n");
         if (CodeBlock* codeBlock = callCase.codeBlock())
             codeBlock->linkIncomingPolymorphicCall(callerFrame, m_callNodes.add(&info));
     }
-    m_variants.shrinkToFit();
     WTF::storeStoreFence();
 }
 
@@ -130,13 +126,13 @@ void PolymorphicCallStubRoutine::clearCallNodesFor(CallLinkInfo* info)
     }
 }
 
-bool PolymorphicCallStubRoutine::visitWeak(VM&)
+bool PolymorphicCallStubRoutine::visitWeak(VM& vm)
 {
-    for (auto& variant : m_variants) {
-        if (!Heap::isMarked(variant.get()))
-            return false;
-    }
-    return true;
+    bool isStillLive = true;
+    forEachDependentCell([&](JSCell* cell) {
+        isStillLive &= vm.heap.isMarked(cell);
+    });
+    return isStillLive;
 }
 
 void PolymorphicCallStubRoutine::markRequiredObjectsInternal(SlotVisitor& visitor)

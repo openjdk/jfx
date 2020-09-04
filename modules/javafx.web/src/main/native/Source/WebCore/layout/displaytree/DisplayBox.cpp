@@ -28,7 +28,6 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -36,25 +35,8 @@ namespace Display {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
 
-Box::Rect::Rect(LayoutUnit top, LayoutUnit left, LayoutUnit width, LayoutUnit height)
-    : m_rect(left, top, width, height)
-{
-#if !ASSERT_DISABLED
-    m_hasValidTop = true;
-    m_hasValidLeft = true;
-    m_hasValidWidth = true;
-    m_hasValidHeight = true;
-#endif
-}
-
-Box::Box(const RenderStyle& style)
-    : m_style(style)
-{
-}
-
 Box::Box(const Box& other)
-    : m_style(other.m_style)
-    , m_topLeft(other.m_topLeft)
+    : m_topLeft(other.m_topLeft)
     , m_contentWidth(other.m_contentWidth)
     , m_contentHeight(other.m_contentHeight)
     , m_horizontalMargin(other.m_horizontalMargin)
@@ -63,7 +45,7 @@ Box::Box(const Box& other)
     , m_hasClearance(other.m_hasClearance)
     , m_border(other.m_border)
     , m_padding(other.m_padding)
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     , m_hasValidTop(other.m_hasValidTop)
     , m_hasValidLeft(other.m_hasValidLeft)
     , m_hasValidHorizontalMargin(other.m_hasValidHorizontalMargin)
@@ -74,7 +56,7 @@ Box::Box(const Box& other)
     , m_hasValidPadding(other.m_hasValidPadding)
     , m_hasValidContentHeight(other.m_hasValidContentHeight)
     , m_hasValidContentWidth(other.m_hasValidContentWidth)
-    , m_hasEstimatedMarginBefore(other.m_hasEstimatedMarginBefore)
+    , m_hasPrecomputedMarginBefore(other.m_hasPrecomputedMarginBefore)
 #endif
 {
 }
@@ -83,12 +65,7 @@ Box::~Box()
 {
 }
 
-Box::Style::Style(const RenderStyle& style)
-    : boxSizing(style.boxSizing())
-{
-}
-
-Box::Rect Box::marginBox() const
+Rect Box::marginBox() const
 {
     auto borderBox = this->borderBox();
 
@@ -100,7 +77,7 @@ Box::Rect Box::marginBox() const
     return marginBox;
 }
 
-Box::Rect Box::nonCollapsedMarginBox() const
+Rect Box::nonCollapsedMarginBox() const
 {
     auto borderBox = this->borderBox();
 
@@ -112,7 +89,7 @@ Box::Rect Box::nonCollapsedMarginBox() const
     return marginBox;
 }
 
-Box::Rect Box::borderBox() const
+Rect Box::borderBox() const
 {
     Rect borderBox;
     borderBox.setTopLeft({ });
@@ -120,7 +97,7 @@ Box::Rect Box::borderBox() const
     return borderBox;
 }
 
-Box::Rect Box::paddingBox() const
+Rect Box::paddingBox() const
 {
     auto borderBox = this->borderBox();
 
@@ -132,7 +109,7 @@ Box::Rect Box::paddingBox() const
     return paddingBox;
 }
 
-Box::Rect Box::contentBox() const
+Rect Box::contentBox() const
 {
     Rect contentBox;
     contentBox.setTop(contentBoxTop());

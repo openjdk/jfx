@@ -27,12 +27,13 @@
 
 #include "DelayDSPKernel.h"
 #include "FFTConvolver.h"
-#include "HRTFDatabaseLoader.h"
 #include "Panner.h"
 
 namespace WebCore {
 
-class HRTFPanner : public Panner {
+class HRTFDatabaseLoader;
+
+class HRTFPanner final : public Panner {
 public:
     explicit HRTFPanner(float sampleRate, HRTFDatabaseLoader*);
     virtual ~HRTFPanner();

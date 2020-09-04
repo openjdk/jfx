@@ -31,8 +31,9 @@
 namespace WebCore {
 
 class CompositionEvent final : public UIEvent {
+    WTF_MAKE_ISO_ALLOCATED(CompositionEvent);
 public:
-    static Ref<CompositionEvent> create(const AtomicString& type, RefPtr<WindowProxy>&& view, const String& data)
+    static Ref<CompositionEvent> create(const AtomString& type, RefPtr<WindowProxy>&& view, const String& data)
     {
         return adoptRef(*new CompositionEvent(type, WTFMove(view), data));
     }
@@ -46,14 +47,14 @@ public:
         String data;
     };
 
-    static Ref<CompositionEvent> create(const AtomicString& type, const Init& initializer)
+    static Ref<CompositionEvent> create(const AtomString& type, const Init& initializer)
     {
         return adoptRef(*new CompositionEvent(type, initializer));
     }
 
     virtual ~CompositionEvent();
 
-    void initCompositionEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, const String& data);
+    void initCompositionEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, const String& data);
 
     String data() const { return m_data; }
 
@@ -61,8 +62,8 @@ public:
 
 private:
     CompositionEvent();
-    CompositionEvent(const AtomicString& type, RefPtr<WindowProxy>&&, const String&);
-    CompositionEvent(const AtomicString& type, const Init&);
+    CompositionEvent(const AtomString& type, RefPtr<WindowProxy>&&, const String&);
+    CompositionEvent(const AtomString& type, const Init&);
 
     bool isCompositionEvent() const override;
 

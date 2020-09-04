@@ -41,7 +41,7 @@ namespace WTF {
 
 class PrintStream;
 
-class WTF_EXPORT_PRIVATE MediaTime {
+class WTF_EXPORT_PRIVATE MediaTime final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     enum {
@@ -53,10 +53,9 @@ public:
         DoubleValue = 1 << 5,
     };
 
-    MediaTime();
-    MediaTime(int64_t value, uint32_t scale, uint8_t flags = Valid);
+    constexpr MediaTime();
+    constexpr MediaTime(int64_t value, uint32_t scale, uint8_t flags = Valid);
     MediaTime(const MediaTime& rhs);
-    ~MediaTime();
 
     static MediaTime createWithFloat(float floatTime);
     static MediaTime createWithFloat(float floatTime, uint32_t timeScale);
@@ -149,11 +148,31 @@ private:
     uint8_t m_timeFlags;
 };
 
+constexpr MediaTime::MediaTime()
+    : m_timeValue(0)
+    , m_timeScale(DefaultTimeScale)
+    , m_timeFlags(Valid)
+{
+}
+
+constexpr MediaTime::MediaTime(int64_t value, uint32_t scale, uint8_t flags)
+    : m_timeValue(value)
+    , m_timeScale(scale)
+    , m_timeFlags(flags)
+{
+    if (scale || !(flags & Valid))
+        return;
+
+    *this = value < 0 ? negativeInfiniteTime() : positiveInfiniteTime();
+}
+
 inline MediaTime operator*(int32_t lhs, const MediaTime& rhs) { return rhs.operator*(lhs); }
 
 WTF_EXPORT_PRIVATE extern MediaTime abs(const MediaTime& rhs);
 
 struct WTF_EXPORT_PRIVATE MediaTimeRange {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+
     String toJSONString() const;
 
     const MediaTime start;
@@ -173,6 +192,19 @@ bool MediaTime::decode(Decoder& decoder, MediaTime& time)
         && decoder.decode(time.m_timeScale)
         && decoder.decode(time.m_timeFlags);
 }
+
+template<typename> struct LogArgument;
+
+template<> struct LogArgument<MediaTime> {
+    static String toString(const MediaTime& time) { return time.toJSONString(); }
+};
+template<> struct LogArgument<MediaTimeRange> {
+    static String toString(const MediaTimeRange& range) { return range.toJSONString(); }
+};
+
+#ifndef NDEBUG
+WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const MediaTime&);
+#endif
 
 }
 

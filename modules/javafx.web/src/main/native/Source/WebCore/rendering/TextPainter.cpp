@@ -24,10 +24,13 @@
 #include "TextPainter.h"
 
 #include "DisplayListReplayer.h"
+#include "DisplayRun.h"
+#include "FilterOperations.h"
 #include "GraphicsContext.h"
 #include "InlineTextBox.h"
 #include "RenderCombineText.h"
 #include "RenderLayer.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ShadowData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -98,7 +101,7 @@ TextPainter::TextPainter(GraphicsContext& context)
 {
 }
 
-void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRun& textRun, const AtomicString& emphasisMark,
+void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRun& textRun, const AtomString& emphasisMark,
     float emphasisMarkOffset, const FloatPoint& textOrigin, unsigned startOffset, unsigned endOffset)
 {
     ASSERT(startOffset < endOffset);
@@ -117,7 +120,7 @@ void TextPainter::paintTextOrEmphasisMarks(const FontCascade& font, const TextRu
 }
 
 void TextPainter::paintTextWithShadows(const ShadowData* shadow, const FilterOperations* colorFilter, const FontCascade& font, const TextRun& textRun, const FloatRect& boxRect, const FloatPoint& textOrigin,
-    unsigned startOffset, unsigned endOffset, const AtomicString& emphasisMark, float emphasisMarkOffset, bool stroked)
+    unsigned startOffset, unsigned endOffset, const AtomString& emphasisMark, float emphasisMarkOffset, bool stroked)
 {
     if (!shadow) {
         paintTextOrEmphasisMarks(font, textRun, emphasisMark, emphasisMarkOffset, textOrigin, startOffset, endOffset);
@@ -212,6 +215,10 @@ void TextPainter::clearGlyphDisplayLists()
 {
     GlyphDisplayListCache<InlineTextBox>::singleton().clear();
     GlyphDisplayListCache<SimpleLineLayout::Run>::singleton().clear();
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextIntegrationEnabled())
+        GlyphDisplayListCache<Display::Run>::singleton().clear();
+#endif
 }
 
 bool TextPainter::shouldUseGlyphDisplayList(const PaintInfo& paintInfo)

@@ -55,11 +55,12 @@ public:
 
         jit.store32(
             CCallHelpers::TrustedImm32(state.callSiteIndexForExceptionHandlingOrOriginal().bits()),
-            CCallHelpers::tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+            CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
 
         jit.makeSpaceOnStackForCCall();
 
         jit.setupArguments<FunctionType>(std::get<ArgumentsIndex>(m_arguments)...);
+        jit.prepareCallOperation(state.m_vm);
 
         CCallHelpers::Call operationCall = jit.call(OperationPtrTag);
         auto function = m_function;
@@ -103,7 +104,7 @@ protected:
     void AccessCaseSnippetParams::addSlowPathCallImpl(CCallHelpers::JumpList from, CCallHelpers& jit, OperationType operation, ResultType result, std::tuple<__VA_ARGS__> args) \
     { \
         CCallHelpers::Label to = jit.label(); \
-        m_generators.append(std::make_unique<SlowPathCallGeneratorWithArguments<CCallHelpers::JumpList, OperationType, ResultType, __VA_ARGS__>>(from, to, operation, result, args)); \
+        m_generators.append(makeUnique<SlowPathCallGeneratorWithArguments<CCallHelpers::JumpList, OperationType, ResultType, __VA_ARGS__>>(from, to, operation, result, args)); \
     } \
 
 SNIPPET_SLOW_PATH_CALLS(JSC_DEFINE_CALL_OPERATIONS)

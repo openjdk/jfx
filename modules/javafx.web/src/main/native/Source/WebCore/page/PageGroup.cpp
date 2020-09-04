@@ -26,11 +26,11 @@
 #include "config.h"
 #include "PageGroup.h"
 
+#include "BackForwardCache.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
 #include "Frame.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "StorageNamespace.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/StructureInlines.h>
@@ -106,16 +106,16 @@ void PageGroup::captionPreferencesChanged()
 {
     for (auto& page : m_pages)
         page->captionPreferencesChanged();
-    PageCache::singleton().markPagesForCaptionPreferencesChanged();
+    BackForwardCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
 CaptionUserPreferences& PageGroup::captionPreferences()
 {
     if (!m_captionPreferences) {
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
-        m_captionPreferences = std::make_unique<CaptionUserPreferencesMediaAF>(*this);
+        m_captionPreferences = makeUnique<CaptionUserPreferencesMediaAF>(*this);
 #else
-        m_captionPreferences = std::make_unique<CaptionUserPreferences>(*this);
+        m_captionPreferences = makeUnique<CaptionUserPreferences>(*this);
 #endif
     }
 

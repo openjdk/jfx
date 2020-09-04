@@ -54,6 +54,7 @@ struct OSRExit;
 }
 
 class AbstractMacroAssemblerBase {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum StatusCondition {
         Success,
@@ -195,12 +196,14 @@ public:
             : base(base)
             , offset(0)
         {
+            ASSERT(base != RegisterID::InvalidGPRReg);
         }
 
         ImplicitAddress(Address address)
             : base(address.base)
             , offset(address.offset)
         {
+            ASSERT(base != RegisterID::InvalidGPRReg);
         }
 
         RegisterID base;
@@ -958,6 +961,14 @@ public:
         m_linkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
     }
 
+#if COMPILER(GCC)
+    // Workaround for GCC demanding that memcpy "must be the name of a function with external linkage".
+    static void* memcpy(void* dst, const void* src, size_t size)
+    {
+        return std::memcpy(dst, src, size);
+    }
+#endif
+
     void emitNops(size_t memoryToFillWithNopsInBytes)
     {
 #if CPU(ARM64)
@@ -969,7 +980,7 @@ public:
         size_t startCodeSize = buffer.codeSize();
         size_t targetCodeSize = startCodeSize + memoryToFillWithNopsInBytes;
         buffer.ensureSpace(memoryToFillWithNopsInBytes);
-        AssemblerType::fillNops(static_cast<char*>(buffer.data()) + startCodeSize, memoryToFillWithNopsInBytes, memcpy);
+        AssemblerType::template fillNops<memcpy>(static_cast<char*>(buffer.data()) + startCodeSize, memoryToFillWithNopsInBytes);
         buffer.setCodeSize(targetCodeSize);
 #endif
     }
@@ -977,9 +988,9 @@ public:
     ALWAYS_INLINE void tagReturnAddress() { }
     ALWAYS_INLINE void untagReturnAddress() { }
 
-    ALWAYS_INLINE void tagPtr(RegisterID, PtrTag) { }
+    ALWAYS_INLINE void tagPtr(PtrTag, RegisterID) { }
     ALWAYS_INLINE void tagPtr(RegisterID, RegisterID) { }
-    ALWAYS_INLINE void untagPtr(RegisterID, PtrTag) { }
+    ALWAYS_INLINE void untagPtr(PtrTag, RegisterID) { }
     ALWAYS_INLINE void untagPtr(RegisterID, RegisterID) { }
     ALWAYS_INLINE void removePtrTag(RegisterID) { }
 

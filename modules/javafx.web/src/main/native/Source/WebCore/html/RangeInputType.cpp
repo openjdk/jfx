@@ -86,7 +86,7 @@ bool RangeInputType::isRangeControl() const
     return true;
 }
 
-const AtomicString& RangeInputType::formControlType() const
+const AtomString& RangeInputType::formControlType() const
 {
     return InputTypeNames::range();
 }
@@ -120,7 +120,7 @@ StepRange RangeInputType::createStepRange(AnyStepHandling anyStepHandling) const
     const Decimal minimum = parseToNumber(element()->attributeWithoutSynchronization(minAttr), rangeDefaultMinimum);
     const Decimal maximum = ensureMaximum(parseToNumber(element()->attributeWithoutSynchronization(maxAttr), rangeDefaultMaximum), minimum, rangeDefaultMaximum);
 
-    const AtomicString& precisionValue = element()->attributeWithoutSynchronization(precisionAttr);
+    const AtomString& precisionValue = element()->attributeWithoutSynchronization(precisionAttr);
     if (!precisionValue.isNull()) {
         const Decimal step = equalLettersIgnoringASCIICase(precisionValue, "float") ? Decimal::nan() : 1;
         return StepRange(minimum, RangeLimitations::Valid, minimum, maximum, step, rangeStepDescription);
@@ -134,8 +134,6 @@ bool RangeInputType::isSteppable() const
 {
     return true;
 }
-
-#if !PLATFORM(IOS_FAMILY)
 
 void RangeInputType::handleMouseDownEvent(MouseEvent& event)
 {
@@ -154,8 +152,6 @@ void RangeInputType::handleMouseDownEvent(MouseEvent& event)
         return;
     thumb.dragFrom(event.absoluteLocation());
 }
-
-#endif
 
 #if ENABLE(TOUCH_EVENTS)
 void RangeInputType::handleTouchEvent(TouchEvent& event)
@@ -195,11 +191,11 @@ void RangeInputType::disabledStateChanged()
     typedSliderThumbElement().hostDisabledStateChanged();
 }
 
-void RangeInputType::handleKeydownEvent(KeyboardEvent& event)
+auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseEventHandler
 {
     ASSERT(element());
     if (element()->isDisabledFormControl())
-        return;
+        return ShouldCallBaseEventHandler::Yes;
 
     const String& key = event.keyIdentifier();
 
@@ -207,7 +203,6 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent& event)
     ASSERT(current.isFinite());
 
     StepRange stepRange(createStepRange(RejectAny));
-
 
     // FIXME: We can't use stepUp() for the step value "any". So, we increase
     // or decrease the value by 1/100 of the value range. Is it reasonable?
@@ -238,7 +233,7 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent& event)
     else if (key == "End")
         newValue = isVertical ? stepRange.minimum() : stepRange.maximum();
     else
-        return; // Did not match any key binding.
+        return ShouldCallBaseEventHandler::Yes; // Did not match any key binding.
 
     newValue = stepRange.clampValue(newValue);
 
@@ -251,6 +246,7 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent& event)
     }
 
     event.setDefaultHandled();
+    return ShouldCallBaseEventHandler::Yes;
 }
 
 void RangeInputType::createShadowSubtree()
@@ -260,7 +256,7 @@ void RangeInputType::createShadowSubtree()
 
     Document& document = element()->document();
     auto track = HTMLDivElement::create(document);
-    track->setPseudo(AtomicString("-webkit-slider-runnable-track", AtomicString::ConstructFromLiteral));
+    track->setPseudo(AtomString("-webkit-slider-runnable-track", AtomString::ConstructFromLiteral));
     track->appendChild(SliderThumbElement::create(document));
     auto container = SliderContainerElement::create(document);
     container->appendChild(track);
@@ -329,7 +325,7 @@ void RangeInputType::accessKeyAction(bool sendMouseEvents)
 void RangeInputType::attributeChanged(const QualifiedName& name)
 {
     // FIXME: Don't we need to do this work for precisionAttr too?
-    if (name == maxAttr || name == minAttr) {
+    if (name == maxAttr || name == minAttr || name == valueAttr) {
         // Sanitize the value.
         if (auto* element = this->element()) {
             if (element->hasDirtyValue())

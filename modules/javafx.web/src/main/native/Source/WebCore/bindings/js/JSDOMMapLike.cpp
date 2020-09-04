@@ -28,70 +28,100 @@
 
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/JSMap.h>
 
 namespace WebCore {
 
-static inline JSC::JSObject& getBackingMap(JSC::ExecState& state, JSC::JSObject& mapLike)
+std::pair<bool, std::reference_wrapper<JSC::JSObject>> getBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& mapLike)
 {
-    auto& vm = state.vm();
-    auto backingMap = mapLike.get(&state, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName());
-    return *JSC::asObject(backingMap);
-}
+    auto& vm = lexicalGlobalObject.vm();
+    auto backingMap = mapLike.get(&lexicalGlobalObject, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName());
+    if (!backingMap.isUndefined())
+        return { false, *JSC::asObject(backingMap) };
 
-void initializeBackingMap(JSC::VM& vm, JSC::JSObject& mapLike, JSC::JSMap& backingMap)
-{
-    mapLike.putDirect(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName(), &backingMap, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
-}
-
-JSC::JSMap& createBackingMap(JSC::ExecState& state, JSC::JSGlobalObject& globalObject, JSC::JSObject& mapLike)
-{
-    auto& vm = state.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    ASSERT(mapLike.get(&state, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName()).isUndefined());
-    auto backingMap = JSC::JSMap::create(&state, vm, globalObject.mapStructure());
+    backingMap = JSC::JSMap::create(&lexicalGlobalObject, vm, lexicalGlobalObject.mapStructure());
     scope.releaseAssertNoException();
+
     mapLike.putDirect(vm, static_cast<JSVMClientData*>(vm.clientData)->builtinNames().backingMapPrivateName(), backingMap, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum));
-    return *backingMap;
+    return { true, *JSC::asObject(backingMap) };
 }
 
-JSC::JSValue forwardAttributeGetterToBackingMap(JSC::ExecState& state, JSC::JSObject& mapLike, const JSC::Identifier& attributeName)
+void clearBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& backingMap)
 {
-    return getBackingMap(state, mapLike).get(&state, attributeName);
+    auto& vm = JSC::getVM(&lexicalGlobalObject);
+    auto function = backingMap.get(&lexicalGlobalObject, vm.propertyNames->clear);
+
+    JSC::CallData callData;
+    auto callType = JSC::getCallData(vm, function, callData);
+    if (callType == JSC::CallType::None)
+        return;
+
+    JSC::MarkedArgumentBuffer arguments;
+    JSC::call(&lexicalGlobalObject, function, callType, callData, &backingMap, arguments);
 }
 
-JSC::JSValue forwardFunctionCallToBackingMap(JSC::ExecState& state, JSC::JSObject& mapLike, const JSC::Identifier& functionName)
+void setToBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& backingMap, JSC::JSValue key, JSC::JSValue value)
 {
-    auto& backingMap = getBackingMap(state, mapLike);
+    auto& vm = JSC::getVM(&lexicalGlobalObject);
+    auto function = backingMap.get(&lexicalGlobalObject, vm.propertyNames->set);
 
-    JSC::JSValue function = backingMap.get(&state, functionName);
+    JSC::CallData callData;
+    auto callType = JSC::getCallData(vm, function, callData);
+    if (callType == JSC::CallType::None)
+        return;
+
+    JSC::MarkedArgumentBuffer arguments;
+    arguments.append(key);
+    arguments.append(value);
+    JSC::call(&lexicalGlobalObject, function, callType, callData, &backingMap, arguments);
+}
+
+JSC::JSValue forwardAttributeGetterToBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSObject& backingMap, const JSC::Identifier& attributeName)
+{
+    return backingMap.get(&lexicalGlobalObject, attributeName);
+}
+
+JSC::JSValue forwardFunctionCallToBackingMap(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, JSC::JSObject& backingMap, const JSC::Identifier& functionName)
+{
+    auto function = backingMap.get(&lexicalGlobalObject, functionName);
+
+    JSC::CallData callData;
+    auto callType = JSC::getCallData(lexicalGlobalObject.vm(), function, callData);
+    if (callType == JSC::CallType::None)
+        return JSC::jsUndefined();
+
+    JSC::MarkedArgumentBuffer arguments;
+    for (size_t cptr = 0; cptr < callFrame.argumentCount(); ++cptr)
+        arguments.append(callFrame.uncheckedArgument(cptr));
+    ASSERT(!arguments.hasOverflowed());
+    return JSC::call(&lexicalGlobalObject, function, callType, callData, &backingMap, arguments);
+}
+
+JSC::JSValue forwardForEachCallToBackingMap(JSDOMGlobalObject& globalObject, JSC::CallFrame& callFrame, JSC::JSObject& mapLike)
+{
+    auto result = getBackingMap(globalObject, mapLike);
+    ASSERT(!result.first);
+
+    auto* function = globalObject.builtinInternalFunctions().jsDOMBindingInternals().m_forEachWrapperFunction.get();
     ASSERT(function);
 
     JSC::CallData callData;
-    JSC::CallType callType = JSC::getCallData(state.vm(), function, callData);
+    auto callType = JSC::getCallData(globalObject.vm(), function, callData);
     ASSERT(callType != JSC::CallType::None);
+
     JSC::MarkedArgumentBuffer arguments;
-    for (size_t cptr = 0; cptr < state.argumentCount(); ++cptr)
-        arguments.append(state.uncheckedArgument(cptr));
+    arguments.append(&result.second.get());
+    for (size_t cptr = 0; cptr < callFrame.argumentCount(); ++cptr)
+        arguments.append(callFrame.uncheckedArgument(cptr));
     ASSERT(!arguments.hasOverflowed());
-    return JSC::call(&state, function, callType, callData, &backingMap, arguments);
+    return JSC::call(&globalObject, function, callType, callData, &mapLike, arguments);
 }
 
-JSC::JSValue forwardForEachCallToBackingMap(JSC::ExecState& state, JSDOMGlobalObject& globalObject, JSC::JSObject& mapLike)
+void DOMMapAdapter::clear()
 {
-    auto* function = globalObject.builtinInternalFunctions().jsDOMBindingInternals().m_mapLikeForEachFunction.get();
-    ASSERT(function);
-
-    getBackingMap(state, mapLike);
-
-    JSC::CallData callData;
-    JSC::CallType callType = JSC::getCallData(state.vm(), function, callData);
-    ASSERT(callType != JSC::CallType::None);
-    JSC::MarkedArgumentBuffer arguments;
-    for (size_t cptr = 0; cptr < state.argumentCount(); ++cptr)
-        arguments.append(state.uncheckedArgument(cptr));
-    ASSERT(!arguments.hasOverflowed());
-    return JSC::call(&state, function, callType, callData, &mapLike, arguments);
+    clearBackingMap(m_lexicalGlobalObject, m_backingMap);
 }
 
 }

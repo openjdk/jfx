@@ -51,7 +51,7 @@ Ref<AccessibilityARIAGrid> AccessibilityARIAGrid::create(RenderObject* renderer)
     return adoptRef(*new AccessibilityARIAGrid(renderer));
 }
 
-bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
+bool AccessibilityARIAGrid::addTableCellChild(AXCoreObject* child, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
     if (!child || (!is<AccessibilityTableRow>(*child) && !is<AccessibilityARIAGridRow>(*child)))
         return false;
@@ -81,11 +81,11 @@ bool AccessibilityARIAGrid::addTableCellChild(AccessibilityObject* child, HashSe
 
 bool AccessibilityARIAGrid::isMultiSelectable() const
 {
-    const AtomicString& ariaMultiSelectable = getAttribute(HTMLNames::aria_multiselectableAttr);
+    const AtomString& ariaMultiSelectable = getAttribute(HTMLNames::aria_multiselectableAttr);
     return !equalLettersIgnoringASCIICase(ariaMultiSelectable, "false");
 }
 
-void AccessibilityARIAGrid::addRowDescendant(AccessibilityObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
+void AccessibilityARIAGrid::addRowDescendant(AXCoreObject* rowChild, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
 {
     if (!rowChild)
         return;

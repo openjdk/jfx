@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@
 #include "WebKitLegacy/Storage/WebDatabaseProvider.h"
 #include "WebKitVersion.h" //generated
 #include "WebPageConfig.h"
-#include "WebKitLogging.h"
 #include <WebCore/WebCoreTestSupport.h>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/InitializeThreading.h>
@@ -58,6 +57,7 @@
 #include <WebCore/BridgeUtils.h>
 #include <WebCore/CharacterData.h>
 #include <WebCore/Chrome.h>
+#include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuController.h>
 #include <WebCore/CookieJar.h>
@@ -249,7 +249,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
         return;
     }
 
-    DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
+    // DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
 
     RefPtr<Frame> mainFrame((Frame*)&m_page->mainFrame());
     RefPtr<FrameView> frameView(mainFrame->view());
@@ -262,7 +262,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
     GraphicsContext gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
-    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
+    JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld()));
     JSC::JSLockHolder sw(toJS(globalContext)); // TODO-java: was JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(gc, IntRect(x, y, w, h));
@@ -454,11 +454,7 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
     markForSync();
 }
 
-void WebPage::paintContents(const GraphicsLayer*,
-                            GraphicsContext& context,
-                            GraphicsLayerPaintingPhase,
-                            const FloatRect& inClip,
-                            GraphicsLayerPaintBehavior)
+void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& inClip, GraphicsLayerPaintBehavior)
 {
     context.save();
     context.clip(inClip);
@@ -803,26 +799,21 @@ public:
 private:
     String m_localStorageDatabasePath;
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page&, unsigned quota) override
+    Ref<StorageNamespace> createSessionStorageNamespace(Page& page, unsigned quota) override
     {
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, page.sessionID());
     }
 
-    Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota) override
+    Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
-        return WebKit::StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
+        return WebKit::StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota, sessionID);
     }
 
-    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota) override
+    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota, PAL::SessionID sessionID) override
     {
         // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
         // SessionStorageNamespace here.
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
-    }
-
-    Ref<StorageNamespace> createEphemeralLocalStorageNamespace(Page&, unsigned quota) override
-    {
-        return WebKit::StorageNamespaceImpl::createEphemeralLocalStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, sessionID);
     }
 };
 
@@ -876,20 +867,20 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
     //utaTODO: history agent implementation
 
-    auto pc = pageConfigurationWithEmptyClients();
+    auto pc = pageConfigurationWithEmptyClients(PAL::SessionID::defaultSessionID());
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
-    pc.dragClient = new DragClientJava(jlself);
+    pc.dragClient = makeUnique<DragClientJava>(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
     pc.loaderClientForMainFrame = new FrameLoaderClientJava(jlself);
-    pc.progressTrackerClient = new ProgressTrackerClientJava(jlself);
+    pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
     auto page = std::make_unique<Page>(WTFMove(pc));
@@ -1120,11 +1111,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
 
     static const URL emptyParent;
 
-    frame->loader().load(FrameLoadRequest(
+    FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(URL(emptyParent, String(env, url))),
         ShouldOpenExternalURLsPolicy::ShouldNotAllow // TODO-java: recheck policy value
-    ));
+    );
+    frameLoadRequest.setIsRequestFromClientOrUserInput();
+    frame->loader().load(WTFMove(frameLoadRequest));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
@@ -1141,7 +1134,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
 
     static const URL emptyUrl({ }, "");
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
-    frame->loader().load(FrameLoadRequest(
+    FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(emptyUrl),
         ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
@@ -1150,7 +1143,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
             URL(),
             response,
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
-    ));
+    );
+    frameLoadRequest.setIsRequestFromClientOrUserInput();
+    frame->loader().load(WTFMove(frameLoadRequest));
 
     env->ReleaseStringUTFChars(text, stringChars);
 }
@@ -1313,22 +1308,30 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
         settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
-    } else if (nativePropertyName == "WebKitUsesPageCachePreferenceKey") {
-        settings.setUsesPageCache(nativePropertyValue.toInt() != 0);
     } else if (nativePropertyName == "WebKitJavaScriptCanAccessClipboardPreferenceKey") {
         settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
+    } else if (nativePropertyName == "allowTopNavigationToDataURLs") {
+        settings.setAllowTopNavigationToDataURLs(nativePropertyValue == "true");
+    } else if (nativePropertyName == "enableBackForwardCache") {
+        settings.setUsesBackForwardCache(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableColorFilter") {
         settings.setColorFilterEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "enableKeygenElement") {
+        // removed from Chrome, Firefox, and the HTML specification in 2017.
+        // https://trac.webkit.org/changeset/248960/webkit
+        RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "experimental:WebAnimationsCSSIntegrationEnabled") {
         RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsCSSIntegrationEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
+        RuntimeEnabledFeatures::sharedFeatures().setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableIntersectionObserver") {
 #if ENABLE(INTERSECTION_OBSERVER)
         RuntimeEnabledFeatures::sharedFeatures().setIntersectionObserverEnabled(nativePropertyValue == "true");
 #endif
-    } else if(nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
+    } else if (nativePropertyName == "experimental:RequestIdleCallbackEnabled") {
+        settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "jscOptions" && !nativePropertyValue.isEmpty()) {
         JSC::Options::setOptions(nativePropertyValue.utf8().data());
-    } else if(nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true");
     }
 }
 
@@ -1367,10 +1370,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setExperimentalNotificationsEnabled(false);
     settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
-    settings.setUsesPageCache(false);
+    settings.setUsesBackForwardCache(false);
     settings.setCSSOMViewScrollingAPIEnabled(true);
+    settings.setRequestIdleCallbackEnabled(true);
 
     // settings.setPrivateBrowsingEnabled(false);
+    settings.setAllowTopNavigationToDataURLs(true);
     settings.setAuthorAndUserStylesEnabled(true);
     // Shrinks standalone images to fit: YES
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -1393,7 +1398,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Async spellcheck: NO
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
-
+    RuntimeEnabledFeatures::sharedFeatures().setHighlightAPIEnabled(true);
     RuntimeEnabledFeatures::sharedFeatures().setFetchAPIEnabled(true);
     RuntimeEnabledFeatures::sharedFeatures().setShadowDOMEnabled(true);
     RuntimeEnabledFeatures::sharedFeatures().setCustomElementsEnabled(true);
@@ -1406,7 +1411,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
     Frame& coreFrame = page->mainFrame();
-    auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld())->globalExec());
+    auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld()));
     WebCoreTestSupport::resetInternalsObject(globalContext);
 }
 
@@ -1637,6 +1642,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateContent
     (JNIEnv* env, jobject self, jlong pPage, jobject rq, jint x, jint y, jint w, jint h)
 {
     WebPage::webPageFromJLong(pPage)->paint(rq, x, y, w, h);
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkUpdateRendering
+    (JNIEnv*, jobject, jlong pPage)
+{
+    WebPage::pageFromJLong(pPage)->updateRendering();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPostPaint
@@ -1874,7 +1885,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
             env->ReleaseIntArrayElements(jattributes, attrs, JNI_ABORT);
         }
         String composed = String(env, jcomposed);
-        frame->editor().setComposition(composed, underlines, caretPosition, 0);
+        frame->editor().setComposition(composed, underlines, { }, caretPosition, 0);
     }
     return JNI_TRUE;
 }
@@ -2279,7 +2290,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    return bool_to_jbool(page->settings().usesPageCache());
+    return bool_to_jbool(page->settings().usesBackForwardCache());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
@@ -2288,7 +2299,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetUsePageCache
     ASSERT(pPage);
     Page* page = WebPage::pageFromJLong(pPage);
     ASSERT(page);
-    page->settings().setUsesPageCache(jbool_to_bool(usePageCache));
+    page->settings().setUsesBackForwardCache(jbool_to_bool(usePageCache));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkIsJavaScriptEnabled

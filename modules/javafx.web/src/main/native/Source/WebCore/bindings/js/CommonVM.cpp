@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 #include <JavaScriptCore/MachineStackMarker.h>
 #include <JavaScriptCore/VM.h>
 #include <wtf/MainThread.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThreadInternal.h"
@@ -59,6 +59,8 @@ JSC::VM& commonVMSlow()
     vm.heap.acquireAccess(); // At any time, we may do things that affect the GC.
 
 #if PLATFORM(IOS_FAMILY)
+    if (WebThreadIsEnabled())
+        vm.apiLock().makeWebThreadAware();
     vm.setRunLoop(WebThreadRunLoop());
     vm.heap.machineThreads().addCurrentThread();
 #endif
@@ -72,14 +74,15 @@ JSC::VM& commonVMSlow()
 
 Frame* lexicalFrameFromCommonVM()
 {
-    if (auto* topCallFrame = commonVM().topCallFrame) {
+    JSC::VM& vm = commonVM();
+    if (auto* topCallFrame = vm.topCallFrame) {
 #if PLATFORM(JAVA) && ENABLE(C_LOOP)
         if (!topCallFrame->codeBlock()) {
             return nullptr;
         }
 #endif
-        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject())) {
-            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(commonVM(), globalObject)) {
+        if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject(vm))) {
+            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(vm, globalObject)) {
                 if (auto* frame = window->wrapped().frame())
                     return frame;
             }
@@ -88,9 +91,9 @@ Frame* lexicalFrameFromCommonVM()
     return nullptr;
 }
 
-void addImpureProperty(const AtomicString& propertyName)
+void addImpureProperty(const AtomString& propertyName)
 {
-    commonVM().addImpureProperty(propertyName);
+    commonVM().addImpureProperty(propertyName.impl());
 }
 
 } // namespace WebCore

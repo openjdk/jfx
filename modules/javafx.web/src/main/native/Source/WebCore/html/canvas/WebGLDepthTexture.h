@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(WEBGL)
+
 #include "WebGLExtension.h"
 
 namespace WebCore {
@@ -34,9 +36,11 @@ public:
     explicit WebGLDepthTexture(WebGLRenderingContextBase&);
     virtual ~WebGLDepthTexture();
 
-    static bool supported(GraphicsContext3D&);
+    static bool supported(GraphicsContextGLOpenGL&);
 
     ExtensionName getName() const override;
 };
 
 } // namespace WebCore
+
+#endif

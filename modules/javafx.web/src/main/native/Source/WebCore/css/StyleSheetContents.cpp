@@ -25,6 +25,7 @@
 #include "CSSParser.h"
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
+#include "ContentRuleListResults.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -51,7 +52,7 @@ namespace WebCore {
 unsigned StyleSheetContents::estimatedSizeInBytes() const
 {
     // Note that this does not take into account size of the strings hanging from various objects.
-    // The assumption is that nearly all of of them are atomic and would exist anyway.
+    // The assumption is that nearly all of of them are atoms that would exist anyway.
     unsigned size = sizeof(*this);
 
     // FIXME: This ignores the children of media and region rules.
@@ -155,8 +156,8 @@ void StyleSheetContents::parserAppendRule(Ref<StyleRuleBase>&& rule)
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
     // If we're adding a rule with a huge number of selectors, split it up into multiple rules
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount) {
-        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(RuleData::maximumSelectorComponentCount));
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount) {
+        m_childRules.appendVector(downcast<StyleRule>(rule.get()).splitIntoMultipleRulesWithMaximumSelectorComponentCount(Style::RuleData::maximumSelectorComponentCount));
         return;
     }
 
@@ -263,7 +264,7 @@ bool StyleSheetContents::wrapperInsertRule(Ref<StyleRuleBase>&& rule, unsigned i
     childVectorIndex -= m_namespaceRules.size();
 
     // If the number of selectors would overflow RuleData, we drop the operation.
-    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > RuleData::maximumSelectorComponentCount)
+    if (is<StyleRule>(rule) && downcast<StyleRule>(rule.get()).selectorList().componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return false;
 
     m_childRules.insert(childVectorIndex, WTFMove(rule));
@@ -294,7 +295,7 @@ void StyleSheetContents::wrapperDeleteRule(unsigned index)
     m_childRules.remove(childVectorIndex);
 }
 
-void StyleSheetContents::parserAddNamespace(const AtomicString& prefix, const AtomicString& uri)
+void StyleSheetContents::parserAddNamespace(const AtomString& prefix, const AtomString& uri)
 {
     ASSERT(!uri.isNull());
     if (prefix.isNull()) {
@@ -307,7 +308,7 @@ void StyleSheetContents::parserAddNamespace(const AtomicString& prefix, const At
     result.iterator->value = uri;
 }
 
-const AtomicString& StyleSheetContents::namespaceURIFromPrefix(const AtomicString& prefix)
+const AtomString& StyleSheetContents::namespaceURIFromPrefix(const AtomString& prefix)
 {
     PrefixNamespaceURIMap::const_iterator it = m_namespaces.find(prefix);
     if (it == m_namespaces.end())
@@ -315,7 +316,7 @@ const AtomicString& StyleSheetContents::namespaceURIFromPrefix(const AtomicStrin
     return it->value;
 }
 
-void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
+bool StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cachedStyleSheet, const SecurityOrigin* securityOrigin)
 {
     bool isSameOriginRequest = securityOrigin && securityOrigin->canRequest(baseURL());
     CachedCSSStyleSheet::MIMETypeCheckHint mimeTypeCheckHint = isStrictParserMode(m_parserContext.mode) || !isSameOriginRequest ? CachedCSSStyleSheet::MIMETypeCheckHint::Strict : CachedCSSStyleSheet::MIMETypeCheckHint::Lax;
@@ -334,21 +335,11 @@ void StyleSheetContents::parseAuthorStyleSheet(const CachedCSSStyleSheet* cached
                     page->console().addMessage(MessageSource::Security, MessageLevel::Error, makeString("Did not parse stylesheet at '", cachedStyleSheet->url().stringCenterEllipsizedToLength(), "' because non CSS MIME types are not allowed for cross-origin stylesheets."));
             }
         }
-        return;
+        return false;
     }
 
-    CSSParser p(parserContext());
-    p.parseSheet(this, sheetText, CSSParser::RuleParsing::Deferred);
-
-    if (m_parserContext.needsSiteSpecificQuirks && isStrictParserMode(m_parserContext.mode)) {
-        // Work around <https://bugs.webkit.org/show_bug.cgi?id=28350>.
-        static NeverDestroyed<const String> mediaWikiKHTMLFixesStyleSheet(MAKE_STATIC_STRING_IMPL("/* KHTML fix stylesheet */\n/* work around the horizontal scrollbars */\n#column-content { margin-left: 0; }\n\n"));
-        // There are two variants of KHTMLFixes.css. One is equal to mediaWikiKHTMLFixesStyleSheet,
-        // while the other lacks the second trailing newline.
-        if (baseURL().string().endsWith("/KHTMLFixes.css") && !sheetText.isNull() && mediaWikiKHTMLFixesStyleSheet.get().startsWith(sheetText)
-            && sheetText.length() >= mediaWikiKHTMLFixesStyleSheet.get().length() - 1)
-            clearRules();
-    }
+    CSSParser(parserContext()).parseSheet(this, sheetText, CSSParser::RuleParsing::Deferred);
+    return true;
 }
 
 bool StyleSheetContents::parseString(const String& sheetText)
@@ -436,26 +427,26 @@ static bool traverseRulesInVector(const Vector<RefPtr<StyleRuleBase>>& rules, co
         if (handler(*rule))
             return true;
         switch (rule->type()) {
-        case StyleRuleBase::Media: {
+        case StyleRuleType::Media: {
             auto* childRules = downcast<StyleRuleMedia>(*rule).childRulesWithoutDeferredParsing();
             if (childRules && traverseRulesInVector(*childRules, handler))
                 return true;
             break;
         }
-        case StyleRuleBase::Import:
+        case StyleRuleType::Import:
             ASSERT_NOT_REACHED();
             break;
-        case StyleRuleBase::Style:
-        case StyleRuleBase::FontFace:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
+        case StyleRuleType::Style:
+        case StyleRuleType::FontFace:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
+        case StyleRuleType::Viewport:
 #endif
             break;
         }
@@ -479,26 +470,26 @@ bool StyleSheetContents::traverseSubresources(const WTF::Function<bool (const Ca
 {
     return traverseRules([&] (const StyleRuleBase& rule) {
         switch (rule.type()) {
-        case StyleRuleBase::Style: {
+        case StyleRuleType::Style: {
             auto* properties = downcast<StyleRule>(rule).propertiesWithoutDeferredParsing();
             return properties && properties->traverseSubresources(handler);
         }
-        case StyleRuleBase::FontFace:
+        case StyleRuleType::FontFace:
             return downcast<StyleRuleFontFace>(rule).properties().traverseSubresources(handler);
-        case StyleRuleBase::Import:
+        case StyleRuleType::Import:
             if (auto* cachedResource = downcast<StyleRuleImport>(rule).cachedCSSStyleSheet())
                 return handler(*cachedResource);
             return false;
-        case StyleRuleBase::Media:
-        case StyleRuleBase::Page:
-        case StyleRuleBase::Keyframes:
-        case StyleRuleBase::Namespace:
-        case StyleRuleBase::Unknown:
-        case StyleRuleBase::Charset:
-        case StyleRuleBase::Keyframe:
-        case StyleRuleBase::Supports:
+        case StyleRuleType::Media:
+        case StyleRuleType::Page:
+        case StyleRuleType::Keyframes:
+        case StyleRuleType::Namespace:
+        case StyleRuleType::Unknown:
+        case StyleRuleType::Charset:
+        case StyleRuleType::Keyframe:
+        case StyleRuleType::Supports:
 #if ENABLE(CSS_DEVICE_ADAPTATION)
-        case StyleRuleBase::Viewport:
+        case StyleRuleType::Viewport:
 #endif
             return false;
         };
@@ -522,8 +513,8 @@ bool StyleSheetContents::subresourcesAllowReuse(CachePolicy cachePolicy, FrameLo
         auto* documentLoader = loader.documentLoader();
         if (page && documentLoader) {
             const auto& request = resource.resourceRequest();
-            auto blockedStatus = page->userContentProvider().processContentExtensionRulesForLoad(request.url(), toResourceType(resource.type()), *documentLoader);
-            if (blockedStatus.blockedLoad || blockedStatus.madeHTTPS)
+            auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), ContentExtensions::toResourceType(resource.type()), *documentLoader);
+            if (results.summary.blockedLoad || results.summary.madeHTTPS)
                 return true;
         }
 #else

@@ -39,7 +39,7 @@ class Element;
 class FileList;
 class File;
 class Pasteboard;
-enum class WebContentReadingPolicy;
+enum class WebContentReadingPolicy : bool;
 
 class DataTransfer : public RefCounted<DataTransfer> {
 #if PLATFORM(JAVA)
@@ -49,7 +49,7 @@ public:
     // https://html.spec.whatwg.org/multipage/dnd.html#drag-data-store-mode
     enum class StoreMode { Invalid, ReadWrite, Readonly, Protected };
 
-    static Ref<DataTransfer> createForCopyAndPaste(Document&, StoreMode, std::unique_ptr<Pasteboard>&&);
+    static Ref<DataTransfer> createForCopyAndPaste(const Document&, StoreMode, std::unique_ptr<Pasteboard>&&);
     static Ref<DataTransfer> createForInputEvent(const String& plainText, const String& htmlText);
 
     WEBCORE_EXPORT ~DataTransfer();
@@ -91,9 +91,9 @@ public:
 
 #if ENABLE(DRAG_SUPPORT)
     static Ref<DataTransfer> createForDrag();
-    static Ref<DataTransfer> createForDragStartEvent(Document&);
-    static Ref<DataTransfer> createForDrop(Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
-    static Ref<DataTransfer> createForUpdatingDropTarget(Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
+    static Ref<DataTransfer> createForDragStartEvent(const Document&);
+    static Ref<DataTransfer> createForDrop(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
+    static Ref<DataTransfer> createForUpdatingDropTarget(const Document&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
 
     bool dropEffectIsUninitialized() const { return m_dropEffect == "uninitialized"; }
 

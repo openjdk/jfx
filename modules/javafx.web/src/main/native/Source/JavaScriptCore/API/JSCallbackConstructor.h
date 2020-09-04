@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +26,26 @@
 #ifndef JSCallbackConstructor_h
 #define JSCallbackConstructor_h
 
-#include "JSDestructibleObject.h"
+#include "JSObject.h"
 #include "JSObjectRef.h"
 
 namespace JSC {
 
-class JSCallbackConstructor final : public JSDestructibleObject {
+class JSCallbackConstructor final : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance;
+    static constexpr bool needsDestruction = true;
 
-    static JSCallbackConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, JSClassRef classRef, JSObjectCallAsConstructorCallback callback)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        VM& vm = exec->vm();
+        return vm.callbackConstructorSpace<mode>();
+    }
+
+    static JSCallbackConstructor* create(JSGlobalObject* globalObject, Structure* structure, JSClassRef classRef, JSObjectCallAsConstructorCallback callback)
+    {
+        VM& vm = getVM(globalObject);
         JSCallbackConstructor* constructor = new (NotNull, allocateCell<JSCallbackConstructor>(vm.heap)) JSCallbackConstructor(globalObject, structure, classRef, callback);
         constructor->finishCreation(globalObject, classRef);
         return constructor;

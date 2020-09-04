@@ -32,18 +32,28 @@
 #include "CDMSessionType.h"
 #include <utility>
 #include <wtf/Forward.h>
-#include <wtf/Optional.h>
 #include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class SharedBuffer;
 
 class CDMInstanceSession;
+class ProxyCDM;
+
+// Handle to a "real" CDM, not the JavaScript facade. This can be used
+// from background threads (i.e. decryptors).
+class ProxyCDM : public ThreadSafeRefCounted<ProxyCDM> {
+public:
+    virtual ~ProxyCDM() = default;
+};
+
 struct CDMKeySystemConfiguration;
 
+// JavaScript's handle to a CDMInstance, must be used from the
+// main-thread only!
 class CDMInstance : public RefCounted<CDMInstance> {
 public:
     virtual ~CDMInstance() = default;
@@ -67,6 +77,7 @@ public:
     virtual SuccessValue setStorageDirectory(const String&) = 0;
     virtual const String& keySystem() const = 0;
     virtual RefPtr<CDMInstanceSession> createSession() = 0;
+    virtual RefPtr<ProxyCDM> proxyCDM() const = 0;
 
     enum class HDCPStatus {
         Unknown,

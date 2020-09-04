@@ -372,15 +372,18 @@ void RenderSVGText::layout()
         m_needsReordering = true;
         m_needsPositioningValuesUpdate = false;
         updateCachedBoundariesInParents = true;
-    } else if (m_needsTextMetricsUpdate || SVGRenderSupport::findTreeRootObject(*this)->isLayoutSizeChanged()) {
-        // If the root layout size changed (eg. window size changes) or the transform to the root
-        // context has changed then recompute the on-screen font size.
-        updateFontInAllDescendants(this, &m_layoutAttributesBuilder);
+    } else {
+        RenderSVGRoot* rootObj = SVGRenderSupport::findTreeRootObject(*this);
+        if (m_needsTextMetricsUpdate || (rootObj && rootObj->isLayoutSizeChanged())) {
+            // If the root layout size changed (eg. window size changes) or the transform to the root
+            // context has changed then recompute the on-screen font size.
+            updateFontInAllDescendants(this, &m_layoutAttributesBuilder);
 
-        ASSERT(!m_needsReordering);
-        ASSERT(!m_needsPositioningValuesUpdate);
-        m_needsTextMetricsUpdate = false;
-        updateCachedBoundariesInParents = true;
+            ASSERT(!m_needsReordering);
+            ASSERT(!m_needsPositioningValuesUpdate);
+            m_needsTextMetricsUpdate = false;
+            updateCachedBoundariesInParents = true;
+        }
     }
 
     checkLayoutAttributesConsistency(this, m_layoutAttributes);
@@ -425,13 +428,6 @@ void RenderSVGText::layout()
     clearNeedsLayout();
 }
 
-std::unique_ptr<RootInlineBox> RenderSVGText::createRootInlineBox()
-{
-    auto box = std::make_unique<SVGRootInlineBox>(*this);
-    box->setHasVirtualLogicalHeight();
-    return WTFMove(box);
-}
-
 bool RenderSVGText::nodeAtFloatPoint(const HitTestRequest& request, HitTestResult& result, const FloatPoint& pointInParent, HitTestAction hitTestAction)
 {
     PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_TEXT_HITTESTING, request, style().pointerEvents());
@@ -471,7 +467,7 @@ VisiblePosition RenderSVGText::positionForPoint(const LayoutPoint& pointInConten
     if (!closestBox)
         return createVisiblePosition(0, DOWNSTREAM);
 
-    return closestBox->renderer().positionForPoint(LayoutPoint(pointInContents.x(), closestBox->y()), fragment);
+    return closestBox->renderer().positionForPoint({ pointInContents.x(), LayoutUnit(closestBox->y()) }, fragment);
 }
 
 void RenderSVGText::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const

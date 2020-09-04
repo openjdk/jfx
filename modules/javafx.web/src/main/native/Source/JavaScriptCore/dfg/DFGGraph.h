@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -52,7 +52,7 @@ template <typename T> class SingleRootGraph;
 namespace JSC {
 
 class CodeBlock;
-class ExecState;
+class CallFrame;
 
 namespace DFG {
 
@@ -117,6 +117,40 @@ enum AddSpeculationMode {
     DontSpeculateInt32,
     SpeculateInt32AndTruncateConstants,
     SpeculateInt32
+};
+
+struct Prefix {
+    enum NoHeaderTag { NoHeader };
+
+    Prefix() { }
+
+    Prefix(const char* prefixStr, NoHeaderTag tag = NoHeader)
+        : prefixStr(prefixStr)
+        , noHeader(tag == NoHeader)
+    { }
+
+    Prefix(NoHeaderTag)
+        : noHeader(true)
+    { }
+
+    void dump(PrintStream& out) const;
+
+    void clearBlockIndex() { blockIndex = -1; }
+    void clearNodeIndex() { nodeIndex = -1; }
+
+    void enable() { m_enabled = true; }
+    void disable() { m_enabled = false; }
+
+    int32_t phaseNumber { -1 };
+    int32_t blockIndex { -1 };
+    int32_t nodeIndex { -1 };
+    const char* prefixStr { nullptr };
+    bool noHeader { false };
+
+    static constexpr const char* noString = nullptr;
+
+private:
+    bool m_enabled { true };
 };
 
 //
@@ -284,7 +318,7 @@ public:
         return addSpeculationMode(add, pass) != DontSpeculateInt32;
     }
 
-    bool addShouldSpeculateAnyInt(Node* add)
+    bool addShouldSpeculateInt52(Node* add)
     {
         if (!enableInt52())
             return false;
@@ -295,27 +329,23 @@ public:
         if (hasExitSite(add, Int52Overflow))
             return false;
 
-        if (Node::shouldSpeculateAnyInt(left, right))
+        if (Node::shouldSpeculateInt52(left, right))
             return true;
 
-        auto shouldSpeculateAnyIntForAdd = [](Node* node) {
-            auto isAnyIntSpeculationForAdd = [](SpeculatedType value) {
-                return !!value && (value & (SpecAnyInt | SpecAnyIntAsDouble)) == value;
-            };
-
+        auto shouldSpeculateInt52ForAdd = [] (Node* node) {
             // When DoubleConstant node appears, it means that users explicitly write a constant in their code with double form instead of integer form (1.0 instead of 1).
             // In that case, we should honor this decision: using it as integer is not appropriate.
             if (node->op() == DoubleConstant)
                 return false;
-            return isAnyIntSpeculationForAdd(node->prediction());
+            return isIntAnyFormat(node->prediction());
         };
 
-        // Allow AnyInt ArithAdd only when the one side of the binary operation should be speculated AnyInt. It is a bit conservative
+        // Allow Int52 ArithAdd only when the one side of the binary operation should be speculated Int52. It is a bit conservative
         // decision. This is because Double to Int52 conversion is not so cheap. Frequent back-and-forth conversions between Double and Int52
         // rather hurt the performance. If the one side of the operation is already Int52, the cost for constructing ArithAdd becomes
         // cheap since only one Double to Int52 conversion could be required.
         // This recovers some regression in assorted tests while keeping kraken crypto improvements.
-        if (!left->shouldSpeculateAnyInt() && !right->shouldSpeculateAnyInt())
+        if (!left->shouldSpeculateInt52() && !right->shouldSpeculateInt52())
             return false;
 
         auto usesAsNumbers = [](Node* node) {
@@ -329,7 +359,7 @@ public:
         if (!usesAsNumbers(add))
             return false;
 
-        return shouldSpeculateAnyIntForAdd(left) && shouldSpeculateAnyIntForAdd(right);
+        return shouldSpeculateInt52ForAdd(left) && shouldSpeculateInt52ForAdd(right);
     }
 
     bool binaryArithShouldSpeculateInt32(Node* node, PredictionPass pass)
@@ -341,7 +371,7 @@ public:
             && node->canSpeculateInt32(node->sourceFor(pass));
     }
 
-    bool binaryArithShouldSpeculateAnyInt(Node* node, PredictionPass pass)
+    bool binaryArithShouldSpeculateInt52(Node* node, PredictionPass pass)
     {
         if (!enableInt52())
             return false;
@@ -349,7 +379,7 @@ public:
         Node* left = node->child1().node();
         Node* right = node->child2().node();
 
-        return Node::shouldSpeculateAnyInt(left, right)
+        return Node::shouldSpeculateInt52(left, right)
             && node->canSpeculateInt52(pass)
             && !hasExitSite(node, Int52Overflow);
     }
@@ -360,11 +390,11 @@ public:
             && node->canSpeculateInt32(pass);
     }
 
-    bool unaryArithShouldSpeculateAnyInt(Node* node, PredictionPass pass)
+    bool unaryArithShouldSpeculateInt52(Node* node, PredictionPass pass)
     {
         if (!enableInt52())
             return false;
-        return node->child1()->shouldSpeculateAnyInt()
+        return node->child1()->shouldSpeculateInt52()
             && node->canSpeculateInt52(pass)
             && !hasExitSite(node, Int52Overflow);
     }
@@ -411,7 +441,7 @@ public:
     JSObject* globalThisObjectFor(CodeOrigin codeOrigin)
     {
         JSGlobalObject* object = globalObjectFor(codeOrigin);
-        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object->globalExec(), NotStrictMode));
+        return jsCast<JSObject*>(object->methodTable(m_vm)->toThis(object, object, NotStrictMode));
     }
 
     ScriptExecutable* executableFor(InlineCallFrame* inlineCallFrame)
@@ -424,7 +454,7 @@ public:
 
     ScriptExecutable* executableFor(const CodeOrigin& codeOrigin)
     {
-        return executableFor(codeOrigin.inlineCallFrame);
+        return executableFor(codeOrigin.inlineCallFrame());
     }
 
     CodeBlock* baselineCodeBlockFor(InlineCallFrame* inlineCallFrame)
@@ -441,9 +471,9 @@ public:
 
     bool isStrictModeFor(CodeOrigin codeOrigin)
     {
-        if (!codeOrigin.inlineCallFrame)
+        if (!codeOrigin.inlineCallFrame())
             return m_codeBlock->isStrictMode();
-        return codeOrigin.inlineCallFrame->isStrictMode();
+        return codeOrigin.inlineCallFrame()->isStrictMode();
     }
 
     ECMAMode ecmaModeFor(CodeOrigin codeOrigin)
@@ -463,7 +493,7 @@ public:
 
     bool hasExitSite(const CodeOrigin& codeOrigin, ExitKind exitKind)
     {
-        return baselineCodeBlockFor(codeOrigin)->unlinkedCodeBlock()->hasExitSite(FrequentExitSite(codeOrigin.bytecodeIndex, exitKind));
+        return baselineCodeBlockFor(codeOrigin)->unlinkedCodeBlock()->hasExitSite(FrequentExitSite(codeOrigin.bytecodeIndex(), exitKind));
     }
 
     bool hasExitSite(Node* node, ExitKind exitKind)
@@ -770,14 +800,14 @@ public:
     bool isWatchingArrayIteratorProtocolWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
-        InlineWatchpointSet& set = globalObject->arrayIteratorProtocolWatchpoint();
+        InlineWatchpointSet& set = globalObject->arrayIteratorProtocolWatchpointSet();
         return isWatchingGlobalObjectWatchpoint(globalObject, set);
     }
 
     bool isWatchingNumberToStringWatchpoint(Node* node)
     {
         JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
-        InlineWatchpointSet& set = globalObject->numberToStringWatchpoint();
+        InlineWatchpointSet& set = globalObject->numberToStringWatchpointSet();
         return isWatchingGlobalObjectWatchpoint(globalObject, set);
     }
 
@@ -810,13 +840,13 @@ public:
     // Quickly query if a single local is live at the given point. This is faster than calling
     // forAllLiveInBytecode() if you will only query one local. But, if you want to know all of the
     // locals live, then calling this for each local is much slower than forAllLiveInBytecode().
-    bool isLiveInBytecode(VirtualRegister, CodeOrigin);
+    bool isLiveInBytecode(Operand, CodeOrigin);
 
-    // Quickly get all of the non-argument locals live at the given point. This doesn't give you
+    // Quickly get all of the non-argument locals and tmps live at the given point. This doesn't give you
     // any arguments because those are all presumed live. You can call forAllLiveInBytecode() to
     // also get the arguments. This is much faster than calling isLiveInBytecode() for each local.
     template<typename Functor>
-    void forAllLocalsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
+    void forAllLocalsAndTmpsLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
         // Support for not redundantly reporting arguments. Necessary because in case of a varargs
         // call, only the callee knows that arguments are live while in the case of a non-varargs
@@ -826,20 +856,21 @@ public:
 
         CodeOrigin* codeOriginPtr = &codeOrigin;
 
+        bool isCallerOrigin = false;
         for (;;) {
-            InlineCallFrame* inlineCallFrame = codeOriginPtr->inlineCallFrame;
+            InlineCallFrame* inlineCallFrame = codeOriginPtr->inlineCallFrame();
             VirtualRegister stackOffset(inlineCallFrame ? inlineCallFrame->stackOffset : 0);
 
             if (inlineCallFrame) {
                 if (inlineCallFrame->isClosureCall)
                     functor(stackOffset + CallFrameSlot::callee);
                 if (inlineCallFrame->isVarargs())
-                    functor(stackOffset + CallFrameSlot::argumentCount);
+                    functor(stackOffset + CallFrameSlot::argumentCountIncludingThis);
             }
 
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
             FullBytecodeLiveness& fullLiveness = livenessFor(codeBlock);
-            const FastBitVector& liveness = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex);
+            const auto& livenessAtBytecode = fullLiveness.getLiveness(codeOriginPtr->bytecodeIndex(), appropriateLivenessCalculationPoint(*codeOriginPtr, isCallerOrigin));
             for (unsigned relativeLocal = codeBlock->numCalleeLocals(); relativeLocal--;) {
                 VirtualRegister reg = stackOffset + virtualRegisterForLocal(relativeLocal);
 
@@ -847,8 +878,16 @@ public:
                 if (reg >= exclusionStart && reg < exclusionEnd)
                     continue;
 
-                if (liveness[relativeLocal])
+                if (livenessAtBytecode[relativeLocal])
                     functor(reg);
+            }
+
+            if (codeOriginPtr->bytecodeIndex().checkpoint()) {
+                ASSERT(codeBlock->numTmps());
+                auto liveTmps = tmpLivenessForCheckpoint(*codeBlock, codeOriginPtr->bytecodeIndex());
+                liveTmps.forEachSetBit([&] (size_t tmp) {
+                    functor(remapOperand(inlineCallFrame, Operand::tmp(tmp)));
+                });
             }
 
             if (!inlineCallFrame)
@@ -866,28 +905,57 @@ public:
             for (VirtualRegister reg = exclusionStart; reg < exclusionEnd; reg += 1)
                 functor(reg);
 
-            codeOriginPtr = inlineCallFrame->getCallerSkippingTailCalls();
-
-            // The first inline call frame could be an inline tail call
-            if (!codeOriginPtr)
-                break;
+            // We need to handle tail callers because we may decide to exit to the
+            // the return bytecode following the tail call.
+            codeOriginPtr = &inlineCallFrame->directCaller;
+            isCallerOrigin = true;
         }
     }
 
-    // Get a BitVector of all of the non-argument locals live right now. This is mostly useful if
+    // Get a BitVector of all of the locals and tmps live right now. This is mostly useful if
     // you want to compare two sets of live locals from two different CodeOrigins.
-    BitVector localsLiveInBytecode(CodeOrigin);
+    BitVector localsAndTmpsLiveInBytecode(CodeOrigin);
 
-    // Tells you all of the arguments and locals live at the given CodeOrigin. This is a small
-    // extension to forAllLocalsLiveInBytecode(), since all arguments are always presumed live.
+    LivenessCalculationPoint appropriateLivenessCalculationPoint(CodeOrigin origin, bool isCallerOrigin)
+    {
+        if (isCallerOrigin) {
+            // We do not need to keep used registers of call bytecodes live when terminating in inlined function,
+            // except for inlining invoked by non call bytecodes including getter/setter calls.
+            BytecodeIndex bytecodeIndex = origin.bytecodeIndex();
+            InlineCallFrame* inlineCallFrame = origin.inlineCallFrame();
+            CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
+            auto instruction = codeBlock->instructions().at(bytecodeIndex.offset());
+            switch (instruction->opcodeID()) {
+            case op_call_varargs:
+            case op_tail_call_varargs:
+            case op_construct_varargs:
+                // When inlining varargs call, uses include array used for varargs. But when we are in inlined function,
+                // the content of this is already read and flushed to the stack. So, at this point, we no longer need to
+                // keep these use registers. We can use the liveness at LivenessCalculationPoint::AfterUse point.
+                // This is important to kill arguments allocations in DFG (not in FTL) when calling a function in a
+                // `func.apply(undefined, arguments)` manner.
+                return LivenessCalculationPoint::AfterUse;
+            default:
+                // We could list up the other bytecodes here, like, `op_call`, `op_get_by_id` (getter inlining). But we don't do that.
+                // To list up bytecodes here, we must ensure that these bytecodes never use `uses` registers after inlining. So we cannot
+                // return LivenessCalculationPoint::AfterUse blindly if isCallerOrigin = true. And since excluding liveness in the other
+                // bytecodes does not offer practical benefit, we do not try it.
+                break;
+            }
+        }
+        return LivenessCalculationPoint::BeforeUse;
+    }
+
+    // Tells you all of the operands live at the given CodeOrigin. This is a small
+    // extension to forAllLocalsOrTmpsLiveInBytecode(), since all arguments are always presumed live.
     template<typename Functor>
     void forAllLiveInBytecode(CodeOrigin codeOrigin, const Functor& functor)
     {
-        forAllLocalsLiveInBytecode(codeOrigin, functor);
+        forAllLocalsAndTmpsLiveInBytecode(codeOrigin, functor);
 
         // Report all arguments as being live.
         for (unsigned argument = block(0)->variablesAtHead.numberOfArguments(); argument--;)
-            functor(virtualRegisterForArgument(argument));
+            functor(virtualRegisterForArgumentIncludingThis(argument));
     }
 
     BytecodeKills& killsFor(CodeBlock*);
@@ -975,6 +1043,9 @@ public:
         return result;
     }
 
+    Prefix& prefix() { return m_prefix; }
+    void nextPhase() { m_prefix.phaseNumber++; }
+
     VM& m_vm;
     Plan& m_plan;
     CodeBlock* m_codeBlock;
@@ -991,7 +1062,7 @@ public:
 
     Bag<StorageAccessData> m_storageAccessData;
 
-    // In CPS, this is all of the SetArgument nodes for the arguments in the machine code block
+    // In CPS, this is all of the SetArgumentDefinitely nodes for the arguments in the machine code block
     // that survived DCE. All of them except maybe "this" will survive DCE, because of the Flush
     // nodes. In SSA, this has no meaning. It's empty.
     HashMap<BasicBlock*, ArgumentsVector> m_rootToArguments;
@@ -1022,16 +1093,6 @@ public:
     // So argumentFormats[0] are the argument formats for the normal call entrypoint.
     Vector<Vector<FlushFormat>> m_argumentFormats;
 
-    // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
-    // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
-    HashMap<unsigned, unsigned> m_entrypointIndexToCatchBytecodeOffset;
-
-    // This is the number of logical entrypoints that we're compiling. This is only used
-    // in SSA. Each EntrySwitch node must have m_numberOfEntrypoints cases. Note, this is
-    // not the same as m_roots.size(). m_roots.size() represents the number of roots in
-    // the CFG. In SSA, m_roots.size() == 1 even if we're compiling more than one entrypoint.
-    unsigned m_numberOfEntrypoints { UINT_MAX };
-
     SegmentedVector<VariableAccessData, 16> m_variableAccessData;
     SegmentedVector<ArgumentPosition, 8> m_argumentPositions;
     Bag<Transition> m_transitions;
@@ -1061,9 +1122,20 @@ public:
     std::unique_ptr<BackwardsCFG> m_backwardsCFG;
     std::unique_ptr<BackwardsDominators> m_backwardsDominators;
     std::unique_ptr<ControlEquivalenceAnalysis> m_controlEquivalenceAnalysis;
+    unsigned m_tmps;
     unsigned m_localVars;
     unsigned m_nextMachineLocal;
     unsigned m_parameterSlots;
+
+    // This is the number of logical entrypoints that we're compiling. This is only used
+    // in SSA. Each EntrySwitch node must have m_numberOfEntrypoints cases. Note, this is
+    // not the same as m_roots.size(). m_roots.size() represents the number of roots in
+    // the CFG. In SSA, m_roots.size() == 1 even if we're compiling more than one entrypoint.
+    unsigned m_numberOfEntrypoints { UINT_MAX };
+
+    // This maps an entrypoint index to a particular op_catch bytecode offset. By convention,
+    // it'll never have zero as a key because we use zero to mean the op_enter entrypoint.
+    HashMap<unsigned, BytecodeIndex> m_entrypointIndexToCatchBytecodeIndex;
 
     HashSet<String> m_localStrings;
     HashMap<const StringImpl*, String> m_copiedStrings;
@@ -1089,6 +1161,8 @@ public:
 
     RegisteredStructure stringStructure;
     RegisteredStructure symbolStructure;
+
+    HashSet<Node*> m_slowGetByVal;
 
 private:
     bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);
@@ -1125,6 +1199,7 @@ private:
 
     B3::SparseCollection<Node> m_nodes;
     SegmentedVector<RegisteredStructureSet, 16> m_structureSets;
+    Prefix m_prefix;
 };
 
 } } // namespace JSC::DFG

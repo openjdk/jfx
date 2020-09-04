@@ -112,10 +112,10 @@ if (length($fontNamesIn)) {
     printLicenseHeader($F);
     printHeaderHead($F, "CSS", $familyNamesFileBase, <<END, "");
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 END
 
-    printMacros($F, "extern LazyNeverDestroyed<const WTF::AtomicString>", "", \%parameters);
+    printMacros($F, "extern LazyNeverDestroyed<const WTF::AtomString>", "", \%parameters);
     print F "#endif\n\n";
 
     printInit($F, 1);
@@ -129,7 +129,7 @@ END
 
     print F StaticString::GenerateStrings(\%parameters);
 
-    printMacros($F, "LazyNeverDestroyed<const WTF::AtomicString>", "", \%parameters);
+    printMacros($F, "LazyNeverDestroyed<const WTF::AtomString>", "", \%parameters);
 
     printInit($F, 0);
 
@@ -504,9 +504,9 @@ sub printFunctionTable
         }
 
         if ($enabledTags{$tagName}{mapToTagName}) {
-            print F "        { ${tagName}Tag, $enabledTags{$tagName}{mapToTagName}To${tagName}Constructor },\n";
+            print F "        { $parameters{namespace}Names::${tagName}Tag, $enabledTags{$tagName}{mapToTagName}To${tagName}Constructor },\n";
         } else {
-            print F "        { ${tagName}Tag, $tagConstructorMap{$tagName}Constructor },\n";
+            print F "        { $parameters{namespace}Names::${tagName}Tag, $tagConstructorMap{$tagName}Constructor },\n";
         }
 
         if ($conditional) {
@@ -596,7 +596,7 @@ print F "\nvoid init()
 
     // Use placement new to initialize the globals.
 
-    AtomicString::init();
+    AtomString::init();
 ";
 }
 
@@ -715,14 +715,14 @@ sub printNamesHeaderFile
     printLicenseHeader($F);
     printHeaderHead($F, "DOM", $parameters{namespace}, <<END, "class $parameters{namespace}QualifiedName : public QualifiedName { };\n\n");
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include "QualifiedName.h"
 END
 
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
     print F "// Namespace\n";
-    print F "WEBCORE_EXPORT extern LazyNeverDestroyed<const WTF::AtomicString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
+    print F "WEBCORE_EXPORT extern LazyNeverDestroyed<const WTF::AtomString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
 
     if (keys %allTags) {
         print F "// Tags\n";
@@ -760,7 +760,7 @@ sub printNamesCppFile
     
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
-    print F "LazyNeverDestroyed<const AtomicString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
+    print F "LazyNeverDestroyed<const AtomString> ${lowercaseNamespacePrefix}NamespaceURI;\n\n";
 
     print F StaticString::GenerateStrings(\%allStrings);
 
@@ -797,7 +797,7 @@ sub printNamesCppFile
 
     printInit($F, 0);
 
-    print(F "    AtomicString ${lowercaseNamespacePrefix}NS(\"$parameters{namespaceURI}\", AtomicString::ConstructFromLiteral);\n\n");
+    print(F "    AtomString ${lowercaseNamespacePrefix}NS(\"$parameters{namespaceURI}\", AtomString::ConstructFromLiteral);\n\n");
 
     print(F "    // Namespace\n");
     print(F "    ${lowercaseNamespacePrefix}NamespaceURI.construct(${lowercaseNamespacePrefix}NS);\n");
@@ -919,7 +919,7 @@ print F <<END;
     };
 
     for (auto& entry : ${type}Table)
-        entry.targetAddress->construct(nullAtom(), AtomicString(&entry.name), $namespaceURI);
+        entry.targetAddress->construct(nullAtom(), AtomString(&entry.name), $namespaceURI);
 END
 
 }
@@ -967,8 +967,6 @@ END
 
 namespace WebCore {
 
-using namespace $parameters{namespace}Names;
-
 typedef Ref<$parameters{namespace}Element> (*$parameters{namespace}ConstructorFunction)(const QualifiedName&, Document&$formElementArgumentForDeclaration, bool createdByParser);
 
 END
@@ -1004,7 +1002,7 @@ struct $parameters{namespace}ConstructorFunctionMapEntry {
     const QualifiedName* qualifiedName; // Use pointer instead of reference so that emptyValue() in HashMap is cheap to create.
 };
 
-static NEVER_INLINE HashMap<AtomicStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> create$parameters{namespace}FactoryMap()
+static NEVER_INLINE HashMap<AtomStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> create$parameters{namespace}FactoryMap()
 {
     struct TableEntry {
         const QualifiedName& name;
@@ -1020,19 +1018,19 @@ END
     print F <<END
     };
 
-    HashMap<AtomicStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> map;
+    HashMap<AtomStringImpl*, $parameters{namespace}ConstructorFunctionMapEntry> map;
     for (auto& entry : table)
         map.add(entry.name.localName().impl(), $parameters{namespace}ConstructorFunctionMapEntry(entry.function, entry.name));
     return map;
 }
 
-static $parameters{namespace}ConstructorFunctionMapEntry find$parameters{namespace}ElementConstructorFunction(const AtomicString& localName)
+static $parameters{namespace}ConstructorFunctionMapEntry find$parameters{namespace}ElementConstructorFunction(const AtomString& localName)
 {
     static const auto map = makeNeverDestroyed(create$parameters{namespace}FactoryMap());
     return map.get().get(localName.impl());
 }
 
-RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(const AtomicString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
+RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(const AtomString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
 {
     const $parameters{namespace}ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(localName);
     if (LIKELY(entry.function)) {
@@ -1051,7 +1049,7 @@ RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::crea
     return nullptr;
 }
 
-Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const AtomicString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
+Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const AtomString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
 {
     const $parameters{namespace}ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(localName);
     if (LIKELY(entry.function)) {
@@ -1059,7 +1057,7 @@ Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createE
         const auto& name = *entry.qualifiedName;
         return entry.function($argumentList);
     }
-    return $parameters{fallbackInterfaceName}::create(QualifiedName(nullAtom(), localName, ${lowercaseNamespacePrefix}NamespaceURI), document);
+    return $parameters{fallbackInterfaceName}::create(QualifiedName(nullAtom(), localName, $parameters{namespace}Names::${lowercaseNamespacePrefix}NamespaceURI), document);
 }
 
 Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const QualifiedName& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
@@ -1107,7 +1105,7 @@ public:
 END
 ;
 
-print F "static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomicString&, Document&";
+print F "static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomString&, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
@@ -1115,7 +1113,7 @@ print F "static RefPtr<$parameters{namespace}Element> createKnownElement(const Q
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
-print F "static Ref<$parameters{namespace}Element> createElement(const AtomicString&, Document&";
+print F "static Ref<$parameters{namespace}Element> createElement(const AtomString&, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
@@ -1249,8 +1247,6 @@ using namespace JSC;
 
 namespace WebCore {
 
-using namespace $parameters{namespace}Names;
-
 typedef JSDOMObject* (*Create$parameters{namespace}ElementWrapperFunction)(JSDOMGlobalObject*, Ref<$parameters{namespace}Element>&&);
 
 END
@@ -1260,7 +1256,7 @@ END
 
 print F <<END
 
-static NEVER_INLINE HashMap<AtomicStringImpl*, Create$parameters{namespace}ElementWrapperFunction> create$parameters{namespace}WrapperMap()
+static NEVER_INLINE HashMap<AtomStringImpl*, Create$parameters{namespace}ElementWrapperFunction> create$parameters{namespace}WrapperMap()
 {
     struct TableEntry {
         const QualifiedName& name;
@@ -1288,7 +1284,7 @@ END
             $ucTag = $enabledTags{$tag}{JSInterfaceName};
         }
 
-        print F "        { ${tag}Tag, create${ucTag}Wrapper },\n";
+        print F "        { $parameters{namespace}Names::${tag}Tag, create${ucTag}Wrapper },\n";
 
         if ($conditional) {
             print F "#endif\n";
@@ -1298,7 +1294,7 @@ END
     print F <<END
     };
 
-    HashMap<AtomicStringImpl*, Create$parameters{namespace}ElementWrapperFunction> map;
+    HashMap<AtomStringImpl*, Create$parameters{namespace}ElementWrapperFunction> map;
     for (auto& entry : table)
         map.add(entry.name.localName().impl(), entry.function);
     return map;

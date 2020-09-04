@@ -77,10 +77,8 @@ public:
     void scroll(const IntSize&, const IntRect&, const IntRect&) override;
     IntPoint screenToRootView(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
-#if PLATFORM(IOS_FAMILY)
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
-#endif
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
@@ -144,8 +142,6 @@ public:
 
     void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags);
 
-    void setToolTip(const HitTestResult&);
-
     WEBCORE_EXPORT bool print(Frame&);
 
     WEBCORE_EXPORT void enableSuddenTermination();
@@ -189,6 +185,8 @@ public:
 
 private:
     void notifyPopupOpeningObservers() const;
+
+    void getToolTip(const HitTestResult&, String&, TextDirection&);
 
     Page& m_page;
     ChromeClient& m_client;

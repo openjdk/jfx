@@ -34,9 +34,12 @@
 
 #if ENABLE(WEB_RTC)
 
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpTransceiver);
 
 RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend)
     : m_direction(RTCRtpTransceiverDirection::Sendrecv)
@@ -104,6 +107,13 @@ void RTCRtpTransceiver::stop()
     m_sender->stop();
     if (m_backend)
         m_backend->stop();
+}
+
+ExceptionOr<void> RTCRtpTransceiver::setCodecPreferences(const Vector<RTCRtpCodecCapability>& codecs)
+{
+    if (!m_backend)
+        return { };
+    return m_backend->setCodecPreferences(codecs);
 }
 
 bool RTCRtpTransceiver::stopped() const

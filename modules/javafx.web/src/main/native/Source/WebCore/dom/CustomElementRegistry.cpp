@@ -32,12 +32,13 @@
 #include "Element.h"
 #include "ElementTraversal.h"
 #include "JSCustomElementInterface.h"
+#include "JSDOMPromiseDeferred.h"
 #include "MathMLNames.h"
 #include "QualifiedName.h"
 #include "ShadowRoot.h"
 #include "TypedElementDescendantIterator.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -69,7 +70,7 @@ static void enqueueUpgradeInShadowIncludingTreeOrder(ContainerNode& node, JSCust
 
 void CustomElementRegistry::addElementDefinition(Ref<JSCustomElementInterface>&& elementInterface)
 {
-    AtomicString localName = elementInterface->name().localName();
+    AtomString localName = elementInterface->name().localName();
     ASSERT(!m_nameMap.contains(localName));
     m_constructorMap.add(elementInterface->constructor(), elementInterface.ptr());
     m_nameMap.add(localName, elementInterface.copyRef());
@@ -93,7 +94,7 @@ JSCustomElementInterface* CustomElementRegistry::findInterface(const QualifiedNa
     return m_nameMap.get(name.localName());
 }
 
-JSCustomElementInterface* CustomElementRegistry::findInterface(const AtomicString& name) const
+JSCustomElementInterface* CustomElementRegistry::findInterface(const AtomString& name) const
 {
     return m_nameMap.get(name);
 }
@@ -108,7 +109,7 @@ bool CustomElementRegistry::containsConstructor(const JSC::JSObject* constructor
     return m_constructorMap.contains(constructor);
 }
 
-JSC::JSValue CustomElementRegistry::get(const AtomicString& name)
+JSC::JSValue CustomElementRegistry::get(const AtomString& name)
 {
     if (auto* elementInterface = m_nameMap.get(name))
         return elementInterface->constructor();

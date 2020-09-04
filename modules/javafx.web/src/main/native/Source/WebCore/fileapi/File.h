@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Blob.h"
+#include <wtf/IsoMalloc.h>
 #include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/TypeCasts.h>
@@ -34,15 +35,14 @@
 namespace WebCore {
 
 class File final : public Blob {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(File, WEBCORE_EXPORT);
 public:
     struct PropertyBag : BlobPropertyBag {
         Optional<int64_t> lastModified;
     };
 
-    static Ref<File> create(const String& path)
-    {
-        return adoptRef(*new File(path));
-    }
+    // Create a file with an optional name exposed to the author (via File.name and associated DOM properties) that differs from the one provided in the path.
+    WEBCORE_EXPORT static Ref<File> create(const String& path, const String& nameOverride = { });
 
     // Create a File using the 'new File' constructor.
     static Ref<File> create(Vector<BlobPartVariant>&& blobPartVariants, const String& filename, const PropertyBag& propertyBag)
@@ -53,14 +53,6 @@ public:
     static Ref<File> deserialize(const String& path, const URL& srcURL, const String& type, const String& name, const Optional<int64_t>& lastModified = WTF::nullopt)
     {
         return adoptRef(*new File(deserializationContructor, path, srcURL, type, name, lastModified));
-    }
-
-    // Create a file with a name exposed to the author (via File.name and associated DOM properties) that differs from the one provided in the path.
-    static Ref<File> createWithName(const String& path, const String& nameOverride)
-    {
-        if (nameOverride.isEmpty())
-            return adoptRef(*new File(path));
-        return adoptRef(*new File(path, nameOverride));
     }
 
     static Ref<File> create(const Blob& blob, const String& name)
@@ -94,7 +86,7 @@ public:
 
 private:
     WEBCORE_EXPORT explicit File(const String& path);
-    File(const String& path, const String& nameOverride);
+    File(URL&&, String&& type, String&& path, String&& name);
     File(Vector<BlobPartVariant>&& blobPartVariants, const String& filename, const PropertyBag&);
     File(const Blob&, const String& name);
     File(const File&, const String& name);

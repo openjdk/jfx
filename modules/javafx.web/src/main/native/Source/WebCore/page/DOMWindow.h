@@ -33,19 +33,21 @@
 #include "Frame.h"
 #include "FrameDestructionObserver.h"
 #include "ImageBitmap.h"
+#include "PostMessageOptions.h"
 #include "ScrollToOptions.h"
 #include "ScrollTypes.h"
 #include "Supplementable.h"
 #include <JavaScriptCore/HandleTypes.h>
+#include <JavaScriptCore/Strong.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSObject;
 class JSValue;
-template<typename> class Strong;
 }
 
 namespace WebCore {
@@ -64,6 +66,7 @@ class Element;
 class EventListener;
 class FloatRect;
 class History;
+class IdleRequestCallback;
 class Location;
 class MediaQueryList;
 class Navigator;
@@ -74,6 +77,7 @@ class PageConsoleClient;
 class Performance;
 class PostMessageTimer;
 class RequestAnimationFrameCallback;
+class RequestIdleCallback;
 class ScheduledAction;
 class Screen;
 class Storage;
@@ -82,11 +86,27 @@ class VisualViewport;
 class WebKitNamespace;
 class WebKitPoint;
 
+#if ENABLE(DEVICE_ORIENTATION)
+class DeviceMotionController;
+class DeviceOrientationController;
+#endif
+
+struct IdleRequestOptions;
 struct ImageBitmapOptions;
 struct WindowFeatures;
 
 enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
 enum class IncludeTargetOrigin { No, Yes };
+
+struct WindowPostMessageOptions : public PostMessageOptions {
+    WindowPostMessageOptions() = default;
+    WindowPostMessageOptions(String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+        : PostMessageOptions(WTFMove(transfer))
+        , targetOrigin(WTFMove(targetOrigin))
+    { }
+
+    String targetOrigin { "/"_s };
+};
 
 // FIXME: Rename DOMWindow to LocalWindow and AbstractDOMWindow to DOMWindow.
 class DOMWindow final
@@ -95,7 +115,9 @@ class DOMWindow final
     , public ContextDestructionObserver
     , public Base64Utilities
     , public Supplementable<DOMWindow> {
+    WTF_MAKE_ISO_ALLOCATED(DOMWindow);
 public:
+
     static Ref<DOMWindow> create(Document& document) { return adoptRef(*new DOMWindow(document)); }
     WEBCORE_EXPORT virtual ~DOMWindow();
 
@@ -108,12 +130,23 @@ public:
     // the network load. See also SecurityContext::isSecureTransitionTo.
     void didSecureTransitionTo(Document&);
 
-    void registerProperty(DOMWindowProperty&);
-    void unregisterProperty(DOMWindowProperty&);
+    class Observer {
+    public:
+        virtual ~Observer() { }
+
+        virtual void suspendForBackForwardCache() { }
+        virtual void resumeFromBackForwardCache() { }
+        virtual void willDestroyGlobalObjectInCachedFrame() { }
+        virtual void willDestroyGlobalObjectInFrame() { }
+        virtual void willDetachGlobalObjectFromFrame() { }
+    };
+
+    void registerObserver(Observer&);
+    void unregisterObserver(Observer&);
 
     void resetUnlessSuspendedForDocumentSuspension();
-    void suspendForPageCache();
-    void resumeFromPageCache();
+    void suspendForBackForwardCache();
+    void resumeFromBackForwardCache();
 
     WEBCORE_EXPORT Frame* frame() const final;
 
@@ -140,11 +173,18 @@ public:
     BarProp& scrollbars();
     BarProp& statusbar();
     BarProp& toolbar();
-    Navigator& navigator();
+    WEBCORE_EXPORT Navigator& navigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
     Navigator& clientInformation() { return navigator(); }
 
-    Location& location();
+    WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(Optional<Seconds>&&);
+    void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
+    MonotonicTime lastActivationTimestamp() const { return m_lastActivationTimestamp; }
+    void notifyActivated(MonotonicTime);
+    bool hasTransientActivation() const;
+    bool consumeTransientActivation();
+
+    WEBCORE_EXPORT Location& location();
     void setLocation(DOMWindow& activeWindow, const URL& completedURL, SetLocationLocking = LockHistoryBasedOnGestureState);
 
     DOMSelection* getSelection();
@@ -159,12 +199,14 @@ public:
     void print();
     void stop();
 
-    WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString, const AtomicString& frameName, const String& windowFeaturesString);
+    WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString, const AtomString& frameName, const String& windowFeaturesString);
 
     void showModalDialog(const String& urlString, const String& dialogFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction);
 
+    void prewarmLocalStorageIfNecessary();
+
     void alert(const String& message = emptyString());
-    bool confirm(const String& message);
+    bool confirmForBindings(const String& message);
     String prompt(const String& message, const String& defaultValue);
 
     bool find(const String&, bool caseSensitive, bool backwards, bool wrap, bool wholeWord, bool searchInFrames, bool showDialog) const;
@@ -194,14 +236,13 @@ public:
     String defaultStatus() const;
     void setDefaultStatus(const String&);
 
-    WindowProxy* self() const;
-
     WindowProxy* opener() const;
     void disownOpener();
     WindowProxy* parent() const;
     WindowProxy* top() const;
 
     String origin() const;
+    SecurityOrigin* securityOrigin() const;
 
     // DOM Level 2 AbstractView Interface
 
@@ -225,11 +266,16 @@ public:
 
     PageConsoleClient* console() const;
 
-    void printErrorMessage(const String&);
+    void printErrorMessage(const String&) const;
 
     String crossDomainAccessErrorMessage(const DOMWindow& activeWindow, IncludeTargetOrigin);
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, DOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject& globalObject, DOMWindow& incumbentWindow, JSC::JSValue message, String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+    {
+        return postMessage(globalObject, incumbentWindow, message, WindowPostMessageOptions { WTFMove(targetOrigin), WTFMove(transfer) });
+    }
+
     void postMessageTimerFired(PostMessageTimer&);
 
     void languagesChanged();
@@ -248,14 +294,17 @@ public:
     VisualViewport& visualViewport();
 
     // Timers
-    ExceptionOr<int> setTimeout(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<int> setTimeout(JSC::JSGlobalObject&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearTimeout(int timeoutId);
-    ExceptionOr<int> setInterval(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<int> setInterval(JSC::JSGlobalObject&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearInterval(int timeoutId);
 
     int requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     int webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(int id);
+
+    int requestIdleCallback(Ref<IdleRequestCallback>&&, const IdleRequestOptions&);
+    void cancelIdleCallback(int id);
 
     // ImageBitmap
     void createImageBitmap(ImageBitmap::Source&&, ImageBitmapOptions&&, ImageBitmap::Promise&&);
@@ -266,8 +315,8 @@ public:
 
     // Events
     // EventTarget API
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) final;
+    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) final;
     void removeAllEventListeners() final;
 
     using EventTarget::dispatchEvent;
@@ -311,6 +360,19 @@ public:
     unsigned scrollEventListenerCount() const { return m_scrollEventListenerCount; }
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
+    void startListeningForDeviceOrientationIfNecessary();
+    void stopListeningForDeviceOrientationIfNecessary();
+    void startListeningForDeviceMotionIfNecessary();
+    void stopListeningForDeviceMotionIfNecessary();
+
+    bool isAllowedToUseDeviceMotionOrientation(String& message) const;
+    bool isAllowedToAddDeviceMotionOrientationListener(String& message) const;
+
+    DeviceOrientationController* deviceOrientationController() const;
+    DeviceMotionController* deviceMotionController() const;
+#endif
+
     void resetAllGeolocationPermission();
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
@@ -348,10 +410,12 @@ private:
     Page* page();
     bool allowedToChangeWindowGeometry() const;
 
-    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
+    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
     bool isInsecureScriptAccess(DOMWindow& activeWindow, const String& urlString);
 
-    void resetDOMWindowProperties();
+#if ENABLE(DEVICE_ORIENTATION)
+    void failedToRegisterDeviceMotionEventListener();
+#endif
 
     bool isSameSecurityOriginAsMainFrame() const;
 
@@ -362,9 +426,10 @@ private:
 
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
+    bool m_isSuspendingObservers { false };
     Optional<bool> m_canShowModalDialogOverride;
 
-    HashSet<DOMWindowProperty*> m_properties;
+    HashSet<Observer*> m_observers;
 
     mutable RefPtr<Crypto> m_crypto;
     mutable RefPtr<History> m_history;
@@ -406,6 +471,12 @@ private:
     RefPtr<CustomElementRegistry> m_customElementRegistry;
 
     mutable RefPtr<Performance> m_performance;
+
+    // For the purpose of tracking user activation, each Window W has a last activation timestamp. This is a number indicating the last time W got
+    // an activation notification. It corresponds to a DOMHighResTimeStamp value except for two cases: positive infinity indicates that W has never
+    // been activated, while negative infinity indicates that a user activation-gated API has consumed the last user activation of W. The initial
+    // value is positive infinity.
+    MonotonicTime m_lastActivationTimestamp { MonotonicTime::infinity() };
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
     mutable RefPtr<WebKitNamespace> m_webkitNamespace;

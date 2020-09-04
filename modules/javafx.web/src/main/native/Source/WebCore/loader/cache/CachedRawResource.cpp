@@ -208,7 +208,7 @@ void CachedRawResource::redirectReceived(ResourceRequest&& request, const Resour
         CachedResource::redirectReceived(WTFMove(request), response, WTFMove(completionHandler));
     else {
         m_redirectChain.append(RedirectPair(request, response));
-        iterateClients(CachedResourceClientWalker<CachedRawResourceClient>(m_clients), CachedResourceHandle<CachedRawResource>(this), WTFMove(request), std::make_unique<ResourceResponse>(response), [this, protectedThis = CachedResourceHandle<CachedRawResource>(this), completionHandler = WTFMove(completionHandler), response] (ResourceRequest&& request) mutable {
+        iterateClients(CachedResourceClientWalker<CachedRawResourceClient>(m_clients), CachedResourceHandle<CachedRawResource>(this), WTFMove(request), makeUnique<ResourceResponse>(response), [this, protectedThis = CachedResourceHandle<CachedRawResource>(this), completionHandler = WTFMove(completionHandler), response] (ResourceRequest&& request) mutable {
             CachedResource::redirectReceived(WTFMove(request), response, WTFMove(completionHandler));
         });
     }
@@ -340,5 +340,17 @@ void CachedRawResource::clear()
     if (m_loader)
         m_loader->clearResourceData();
 }
+
+#if USE(QUICK_LOOK)
+void CachedRawResource::previewResponseReceived(const ResourceResponse& response)
+{
+    CachedResourceHandle<CachedRawResource> protectedThis(this);
+    CachedResource::previewResponseReceived(response);
+    CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
+    while (CachedRawResourceClient* c = w.next())
+        c->previewResponseReceived(*this, m_response);
+}
+
+#endif
 
 } // namespace WebCore

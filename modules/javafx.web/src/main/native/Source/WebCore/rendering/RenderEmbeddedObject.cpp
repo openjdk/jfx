@@ -158,6 +158,8 @@ static String unavailablePluginReplacementText(RenderEmbeddedObject::PluginUnava
         return insecurePluginVersionText();
     case RenderEmbeddedObject::UnsupportedPlugin:
         return unsupportedPluginText();
+    case RenderEmbeddedObject::PluginTooSmall:
+        return pluginTooSmallText();
     }
 
     ASSERT_NOT_REACHED();
@@ -222,8 +224,7 @@ void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const Layout
         return;
 
     InterpolationQuality interpolation = chooseInterpolationQuality(context, image, &image, alignedRect.size());
-    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation(), style().imageOrientation());
-    context.drawImage(image, alignedRect, ImagePaintingOptions(orientationDescription, interpolation));
+    context.drawImage(image, alignedRect, { imageOrientation(), interpolation });
 }
 
 void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -338,7 +339,7 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
         context.setFillColor(replacementTextColor());
         context.fillEllipse(arrowRect);
 
-        context.setCompositeOperation(CompositeClear);
+        context.setCompositeOperation(CompositeOperator::Clear);
         drawReplacementArrow(context, arrowRect);
         context.endTransparencyLayer();
     }

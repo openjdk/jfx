@@ -61,18 +61,18 @@ public:
     void decrementAccessCount() override;
     void closeDatabaseIfIdle() override;
 
-    const WebCore::SecurityOriginData& securityOrigin() const override { return m_securityOrigin; }
-
     Ref<StorageAreaImpl> copy();
     void close();
 
     // Only called from a background thread.
-    void importItems(const HashMap<String, String>& items);
+    void importItems(HashMap<String, String>&& items);
 
     // Used to clear a StorageArea and close db before backing db file is deleted.
     void clearForOriginDeletion();
 
     void sync();
+
+    void sessionChanged(bool isNewSessionPersistent);
 
 private:
     StorageAreaImpl(WebCore::StorageType, const WebCore::SecurityOriginData&, RefPtr<WebCore::StorageSyncManager>&&, unsigned quota);
@@ -90,8 +90,8 @@ private:
     RefPtr<StorageAreaSync> m_storageAreaSync;
     RefPtr<WebCore::StorageSyncManager> m_storageSyncManager;
 
-#ifndef NDEBUG
-    bool m_isShutdown;
+#if ASSERT_ENABLED
+    bool m_isShutdown { false };
 #endif
     unsigned m_accessCount;
     WebCore::Timer m_closeDatabaseTimer;

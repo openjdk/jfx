@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package javafx.scene.paint;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,11 +48,9 @@ import javafx.beans.NamedArg;
  */
 public final class Stop {
 
-    static final List<Stop> NO_STOPS =
-        Collections.unmodifiableList(Arrays.asList(
-            new Stop(0.0, Color.TRANSPARENT),
-            new Stop(1.0, Color.TRANSPARENT)
-        ));
+    static final List<Stop> NO_STOPS = List.of(
+        new Stop(0.0, Color.TRANSPARENT),
+        new Stop(1.0, Color.TRANSPARENT));
 
     static List<Stop> normalize(Stop stops[]) {
         List<Stop> stoplist = (stops == null ? null : Arrays.asList(stops));

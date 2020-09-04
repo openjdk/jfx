@@ -38,6 +38,13 @@ import javafx.scene.image.Image;
  * @since JavaFX 2.0
  */
 public class ClipboardContent extends HashMap<DataFormat, Object> {
+
+    /**
+     * Creates a {@code ClipboardContent}.
+     */
+    public ClipboardContent() {
+    }
+
     /**
      * Gets whether a plain text String ({@code DataFormat.PLAIN_TEXT})
      * has been put to this {@code ClipboardContent}.

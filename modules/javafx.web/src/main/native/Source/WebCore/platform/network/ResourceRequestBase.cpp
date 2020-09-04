@@ -72,7 +72,7 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
 
     if (!other.isSameSiteUnspecified())
         setIsSameSite(other.isSameSite());
-        setIsTopSite(other.isTopSite());
+    setIsTopSite(other.isTopSite());
 
     updateResourceRequest();
     m_httpHeaderFields = other.httpHeaderFields().isolatedCopy();
@@ -357,6 +357,15 @@ void ResourceRequestBase::clearHTTPContentType()
     m_platformRequestUpdated = false;
 }
 
+void ResourceRequestBase::clearPurpose()
+{
+    updateResourceRequest();
+
+    m_httpHeaderFields.remove(HTTPHeaderName::Purpose);
+
+    m_platformRequestUpdated = false;
+}
+
 String ResourceRequestBase::httpReferrer() const
 {
     return httpHeaderField(HTTPHeaderName::Referer);
@@ -488,6 +497,18 @@ FormData* ResourceRequestBase::httpBody() const
     return m_httpBody.get();
 }
 
+bool ResourceRequestBase::hasUpload() const
+{
+    if (auto* body = httpBody()) {
+        for (auto& element : body->elements()) {
+            if (WTF::holds_alternative<WebCore::FormDataElement::EncodedFileData>(element.data) || WTF::holds_alternative<WebCore::FormDataElement::EncodedBlobData>(element.data))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 void ResourceRequestBase::setHTTPBody(RefPtr<FormData>&& httpBody)
 {
     updateResourceRequest();
@@ -582,22 +603,17 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
 #if USE(SYSTEM_PREVIEW)
 bool ResourceRequestBase::isSystemPreview() const
 {
-    return m_isSystemPreview;
+    return m_systemPreviewInfo.hasValue();
 }
 
-void ResourceRequestBase::setSystemPreview(bool s)
+SystemPreviewInfo ResourceRequestBase::systemPreviewInfo() const
 {
-    m_isSystemPreview = s;
+    return m_systemPreviewInfo.valueOr(SystemPreviewInfo { });
 }
 
-const IntRect& ResourceRequestBase::systemPreviewRect() const
+void ResourceRequestBase::setSystemPreviewInfo(const SystemPreviewInfo& info)
 {
-    return m_systemPreviewRect;
-}
-
-void ResourceRequestBase::setSystemPreviewRect(const IntRect& rect)
-{
-    m_systemPreviewRect = rect;
+    m_systemPreviewInfo = info;
 }
 #endif
 

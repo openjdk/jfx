@@ -29,6 +29,7 @@
 
 #include "ApplyStyleCommand.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "CSSFontFamily.h"
 #include "CSSFontStyleValue.h"
 #include "CSSParser.h"
 #include "CSSRuleList.h"
@@ -37,6 +38,8 @@
 #include "CSSValuePool.h"
 #include "Editing.h"
 #include "Editor.h"
+#include "FontCache.h"
+#include "FontCascade.h"
 #include "Frame.h"
 #include "HTMLFontElement.h"
 #include "HTMLInterchange.h"
@@ -53,6 +56,7 @@
 #include "StyleRule.h"
 #include "StyledElement.h"
 #include "VisibleUnits.h"
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -295,7 +299,7 @@ void HTMLAttributeEquivalent::addToStyle(Element* element, EditingStyle* style) 
 RefPtr<CSSValue> HTMLAttributeEquivalent::attributeValueAsCSSValue(Element* element) const
 {
     ASSERT(element);
-    const AtomicString& value = element->getAttribute(m_attrName);
+    const AtomString& value = element->getAttribute(m_attrName);
     if (value.isNull())
         return nullptr;
 
@@ -320,7 +324,7 @@ HTMLFontSizeEquivalent::HTMLFontSizeEquivalent()
 RefPtr<CSSValue> HTMLFontSizeEquivalent::attributeValueAsCSSValue(Element* element) const
 {
     ASSERT(element);
-    const AtomicString& value = element->getAttribute(m_attrName);
+    const AtomString& value = element->getAttribute(m_attrName);
     if (value.isNull())
         return nullptr;
     CSSValueID size;
@@ -1153,10 +1157,10 @@ static RefPtr<MutableStyleProperties> extractEditingProperties(const StyleProper
     return copyEditingProperties(style, AllEditingProperties);
 }
 
-void EditingStyle::mergeInlineAndImplicitStyleOfElement(StyledElement& element, CSSPropertyOverrideMode mode, PropertiesToInclude propertiesToInclude)
+void EditingStyle::mergeInlineAndImplicitStyleOfElement(StyledElement& element, CSSPropertyOverrideMode mode, PropertiesToInclude propertiesToInclude, StandardFontFamilySerializationMode standardFontFamilySerializationMode)
 {
     auto styleFromRules = EditingStyle::create();
-    styleFromRules->mergeStyleFromRulesForSerialization(element);
+    styleFromRules->mergeStyleFromRulesForSerialization(element, standardFontFamilySerializationMode);
 
     if (element.inlineStyle())
         styleFromRules->m_mutableStyle->mergeAndOverrideOnConflict(*element.inlineStyle());
@@ -1177,7 +1181,7 @@ void EditingStyle::mergeInlineAndImplicitStyleOfElement(StyledElement& element, 
     }
 }
 
-Ref<EditingStyle> EditingStyle::wrappingStyleForSerialization(Node& context, bool shouldAnnotate)
+Ref<EditingStyle> EditingStyle::wrappingStyleForSerialization(Node& context, bool shouldAnnotate, StandardFontFamilySerializationMode standardFontFamilySerializationMode)
 {
     if (shouldAnnotate) {
         auto wrappingStyle = EditingStyle::create(&context, EditingStyle::EditingPropertiesInEffect);
@@ -1198,7 +1202,7 @@ Ref<EditingStyle> EditingStyle::wrappingStyleForSerialization(Node& context, boo
     // When not annotating for interchange, we only preserve inline style declarations.
     for (Node* node = &context; node && !node->isDocumentNode(); node = node->parentNode()) {
         if (is<StyledElement>(*node) && !isMailBlockquote(node))
-            wrappingStyle->mergeInlineAndImplicitStyleOfElement(downcast<StyledElement>(*node), EditingStyle::DoNotOverrideValues, EditingStyle::EditingPropertiesInEffect);
+            wrappingStyle->mergeInlineAndImplicitStyleOfElement(downcast<StyledElement>(*node), DoNotOverrideValues, EditingPropertiesInEffect, standardFontFamilySerializationMode);
     }
 
     return wrappingStyle;
@@ -1257,10 +1261,8 @@ void EditingStyle::mergeStyle(const StyleProperties* style, CSSPropertyOverrideM
 static Ref<MutableStyleProperties> styleFromMatchedRulesForElement(Element& element, unsigned rulesToInclude)
 {
     auto style = MutableStyleProperties::create();
-    for (auto& matchedRule : element.styleResolver().styleRulesForElement(&element, rulesToInclude)) {
-        if (matchedRule->isStyleRule())
-            style->mergeAndOverrideOnConflict(static_pointer_cast<StyleRule>(matchedRule)->properties());
-    }
+    for (auto& matchedRule : element.styleResolver().styleRulesForElement(&element, rulesToInclude))
+        style->mergeAndOverrideOnConflict(matchedRule->properties());
 
     return style;
 }
@@ -1268,7 +1270,7 @@ static Ref<MutableStyleProperties> styleFromMatchedRulesForElement(Element& elem
 void EditingStyle::mergeStyleFromRules(StyledElement& element)
 {
     RefPtr<MutableStyleProperties> styleFromMatchedRules = styleFromMatchedRulesForElement(element,
-        StyleResolver::AuthorCSSRules);
+        Style::Resolver::AuthorCSSRules);
     // Styles from the inline style declaration, held in the variable "style", take precedence
     // over those from matched rules.
     if (m_mutableStyle)
@@ -1278,7 +1280,29 @@ void EditingStyle::mergeStyleFromRules(StyledElement& element)
     m_mutableStyle = styleFromMatchedRules;
 }
 
-void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement& element)
+static String familyNameFromCSSPrimitiveValue(const CSSPrimitiveValue& primitiveValue)
+{
+    if (!primitiveValue.isFontFamily())
+        return { };
+    return primitiveValue.fontFamily().familyName;
+}
+
+static String loneFontFamilyName(const CSSValue& value)
+{
+    if (is<CSSPrimitiveValue>(value))
+        return familyNameFromCSSPrimitiveValue(downcast<CSSPrimitiveValue>(value));
+
+    if (!is<CSSValueList>(value) || downcast<CSSValueList>(value).length() != 1)
+        return { };
+
+    auto& item = *downcast<CSSValueList>(value).item(0);
+    if (!is<CSSPrimitiveValue>(item))
+        return { };
+
+    return familyNameFromCSSPrimitiveValue(downcast<CSSPrimitiveValue>(item));
+}
+
+void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement& element, StandardFontFamilySerializationMode standardFontFamilySerializationMode)
 {
     mergeStyleFromRules(element);
 
@@ -1288,18 +1312,30 @@ void EditingStyle::mergeStyleFromRulesForSerialization(StyledElement& element)
     auto fromComputedStyle = MutableStyleProperties::create();
     ComputedStyleExtractor computedStyle(&element);
 
+    bool shouldRemoveFontFamily = false;
     {
         unsigned propertyCount = m_mutableStyle->propertyCount();
         for (unsigned i = 0; i < propertyCount; ++i) {
             StyleProperties::PropertyReference property = m_mutableStyle->propertyAt(i);
-            CSSValue* value = property.value();
-            if (!is<CSSPrimitiveValue>(*value))
+            CSSValue& value = *property.value();
+            if (property.id() == CSSPropertyFontFamily) {
+                auto familyName = loneFontFamilyName(value);
+                if (FontCache::isSystemFontForbiddenForEditing(familyName)
+                    || (standardFontFamilySerializationMode == StandardFontFamilySerializationMode::Strip && familyName == standardFamily))
+                    shouldRemoveFontFamily = true;
                 continue;
-            if (downcast<CSSPrimitiveValue>(*value).isPercentage()) {
+            }
+            if (!is<CSSPrimitiveValue>(value))
+                continue;
+            if (downcast<CSSPrimitiveValue>(value).isPercentage()) {
                 if (auto computedPropertyValue = computedStyle.propertyValue(property.id()))
                     fromComputedStyle->addParsedProperty(CSSProperty(property.id(), WTFMove(computedPropertyValue)));
             }
         }
+    }
+    if (shouldRemoveFontFamily) {
+        m_mutableStyle->removeProperty(CSSPropertyFontFamily);
+        fromComputedStyle->removeProperty(CSSPropertyFontFamily);
     }
     m_mutableStyle->mergeAndOverrideOnConflict(fromComputedStyle.get());
 }
@@ -1320,7 +1356,7 @@ void EditingStyle::removeStyleFromRulesAndContext(StyledElement& element, Node* 
         return;
 
     // 1. Remove style from matched rules because style remain without repeating it in inline style declaration
-    RefPtr<MutableStyleProperties> styleFromMatchedRules = styleFromMatchedRulesForElement(element, StyleResolver::AllButEmptyCSSRules);
+    RefPtr<MutableStyleProperties> styleFromMatchedRules = styleFromMatchedRulesForElement(element, Style::Resolver::AllButEmptyCSSRules);
     if (styleFromMatchedRules && !styleFromMatchedRules->isEmpty())
         m_mutableStyle = getPropertiesNotIn(*m_mutableStyle, *styleFromMatchedRules);
 
@@ -1349,7 +1385,7 @@ void EditingStyle::removePropertiesInElementDefaultStyle(Element& element)
     if (!m_mutableStyle || m_mutableStyle->isEmpty())
         return;
 
-    RefPtr<MutableStyleProperties> defaultStyle = styleFromMatchedRulesForElement(element, StyleResolver::UAAndUserCSSRules);
+    RefPtr<MutableStyleProperties> defaultStyle = styleFromMatchedRulesForElement(element, Style::Resolver::UAAndUserCSSRules);
 
     removePropertiesInStyle(m_mutableStyle.get(), defaultStyle.get());
 }
@@ -1388,7 +1424,7 @@ bool EditingStyle::convertPositionStyle()
         return false;
 
     auto& cssValuePool = CSSValuePool::singleton();
-    RefPtr<CSSPrimitiveValue> sticky = cssValuePool.createIdentifierValue(CSSValueWebkitSticky);
+    RefPtr<CSSPrimitiveValue> sticky = cssValuePool.createIdentifierValue(CSSValueSticky);
     if (m_mutableStyle->propertyMatches(CSSPropertyPosition, sticky.get())) {
         m_mutableStyle->setProperty(CSSPropertyPosition, cssValuePool.createIdentifierValue(CSSValueStatic), m_mutableStyle->propertyIsImportant(CSSPropertyPosition));
         return false;
@@ -1457,7 +1493,7 @@ RefPtr<EditingStyle> EditingStyle::styleAtSelectionStart(const VisibleSelection&
         }
     }
 
-    return WTFMove(style);
+    return style;
 }
 
 WritingDirection EditingStyle::textDirectionForSelection(const VisibleSelection& selection, EditingStyle* typingStyle, bool& hasNestedOrMultipleEmbeddings)
@@ -1552,8 +1588,9 @@ Ref<EditingStyle> EditingStyle::inverseTransformColorIfNeeded(Element& element)
         return *this;
 
     bool hasColor = m_mutableStyle->getPropertyCSSValue(CSSPropertyColor);
+    bool hasCaretColor = m_mutableStyle->getPropertyCSSValue(CSSPropertyCaretColor);
     bool hasBackgroundColor = m_mutableStyle->getPropertyCSSValue(CSSPropertyBackgroundColor);
-    if (!hasColor && !hasBackgroundColor)
+    if (!hasColor && !hasCaretColor && !hasBackgroundColor)
         return *this;
 
     auto styleWithInvertedColors = copy();
@@ -1568,6 +1605,9 @@ Ref<EditingStyle> EditingStyle::inverseTransformColorIfNeeded(Element& element)
 
     if (hasColor)
         invertedColor(CSSPropertyColor);
+
+    if (hasCaretColor)
+        invertedColor(CSSPropertyCaretColor);
 
     if (hasBackgroundColor)
         invertedColor(CSSPropertyBackgroundColor);
@@ -1842,7 +1882,7 @@ static bool isCSSValueLength(CSSPrimitiveValue* value)
 int legacyFontSizeFromCSSValue(Document& document, CSSPrimitiveValue* value, bool shouldUseFixedFontDefaultSize, LegacyFontSizeMode mode)
 {
     if (isCSSValueLength(value)) {
-        int pixelFontSize = value->intValue(CSSPrimitiveValue::CSS_PX);
+        int pixelFontSize = value->intValue(CSSUnitType::CSS_PX);
         int legacyFontSize = Style::legacyFontSizeForPixelSize(pixelFontSize, shouldUseFixedFontDefaultSize, document);
         // Use legacy font size only if pixel value matches exactly to that of legacy font size.
         int cssPrimitiveEquivalent = legacyFontSize - 1 + CSSValueXSmall;

@@ -40,42 +40,41 @@
 
 namespace JSC {
 
-const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable", &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
+const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
 
-ModuleProgramExecutable::ModuleProgramExecutable(ExecState* exec, const SourceCode& source)
-    : ScriptExecutable(exec->vm().moduleProgramExecutableStructure.get(), exec->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
+ModuleProgramExecutable::ModuleProgramExecutable(JSGlobalObject* globalObject, const SourceCode& source)
+    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Module);
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     if (vm.typeProfiler() || vm.controlFlowProfiler())
         vm.functionHasExecutedCache()->insertUnexecutedRange(sourceID(), typeProfilingStartOffset(vm), typeProfilingEndOffset(vm));
 }
 
-ModuleProgramExecutable* ModuleProgramExecutable::create(ExecState* exec, const SourceCode& source)
+ModuleProgramExecutable* ModuleProgramExecutable::create(JSGlobalObject* globalObject, const SourceCode& source)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-    ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm.heap)) ModuleProgramExecutable(exec, source);
-    executable->finishCreation(exec->vm());
+    ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm.heap)) ModuleProgramExecutable(globalObject, source);
+    executable->finishCreation(globalObject->vm());
 
     ParserError error;
-    DebuggerMode debuggerMode = globalObject->hasInteractiveDebugger() ? DebuggerOn : DebuggerOff;
+    OptionSet<CodeGenerationMode> codeGenerationMode = globalObject->defaultCodeGenerationMode();
     UnlinkedModuleProgramCodeBlock* unlinkedModuleProgramCode = vm.codeCache()->getUnlinkedModuleProgramCodeBlock(
-        vm, executable, executable->source(), debuggerMode, error);
+        vm, executable, executable->source(), codeGenerationMode, error);
 
     if (globalObject->hasDebugger())
-        globalObject->debugger()->sourceParsed(exec, executable->source().provider(), error.line(), error.message());
+        globalObject->debugger()->sourceParsed(globalObject, executable->source().provider(), error.line(), error.message());
 
     if (error.isValid()) {
-        throwVMError(exec, scope, error.toErrorObject(globalObject, executable->source()));
+        throwVMError(globalObject, scope, error.toErrorObject(globalObject, executable->source()));
         return nullptr;
     }
 
-    executable->m_unlinkedModuleProgramCodeBlock.set(exec->vm(), executable, unlinkedModuleProgramCode);
+    executable->m_unlinkedModuleProgramCodeBlock.set(globalObject->vm(), executable, unlinkedModuleProgramCode);
 
-    executable->m_moduleEnvironmentSymbolTable.set(exec->vm(), executable, jsCast<SymbolTable*>(unlinkedModuleProgramCode->constantRegister(unlinkedModuleProgramCode->moduleEnvironmentSymbolTableConstantRegisterOffset()).get())->cloneScopePart(exec->vm()));
+    executable->m_moduleEnvironmentSymbolTable.set(globalObject->vm(), executable, jsCast<SymbolTable*>(unlinkedModuleProgramCode->constantRegister(VirtualRegister(unlinkedModuleProgramCode->moduleEnvironmentSymbolTableConstantRegisterOffset())).get())->cloneScopePart(globalObject->vm()));
 
     return executable;
 }
@@ -83,6 +82,11 @@ ModuleProgramExecutable* ModuleProgramExecutable::create(ExecState* exec, const 
 void ModuleProgramExecutable::destroy(JSCell* cell)
 {
     static_cast<ModuleProgramExecutable*>(cell)->ModuleProgramExecutable::~ModuleProgramExecutable();
+}
+
+auto ModuleProgramExecutable::ensureTemplateObjectMap(VM&) -> TemplateObjectMap&
+{
+    return ensureTemplateObjectMapImpl(m_templateObjectMap);
 }
 
 void ModuleProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -93,6 +97,11 @@ void ModuleProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_unlinkedModuleProgramCodeBlock);
     visitor.append(thisObject->m_moduleEnvironmentSymbolTable);
     visitor.append(thisObject->m_moduleProgramCodeBlock);
+    if (TemplateObjectMap* map = thisObject->m_templateObjectMap.get()) {
+        auto locker = holdLock(thisObject->cellLock());
+        for (auto& entry : *map)
+            visitor.append(entry.value);
+    }
 }
 
 } // namespace JSC

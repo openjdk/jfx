@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "ElementContext.h"
 #include "IntRect.h"
 #include "ProcessIdentifier.h"
 
@@ -66,6 +67,8 @@ enum class FrameLoadType : uint8_t {
     ReloadFromOrigin,
     ReloadExpiredOnly
 };
+
+enum class WillContinueLoading : bool { No, Yes };
 
 class PolicyCheckIdentifier {
 public:
@@ -139,6 +142,11 @@ enum ClearProvisionalItemPolicy {
     ShouldNotClearProvisionalItem
 };
 
+enum class StopLoadingPolicy {
+    PreventDuringUnloadEvents,
+    AlwaysStopLoading
+};
+
 enum class ObjectContentType : uint8_t {
     None,
     Image,
@@ -178,9 +186,41 @@ enum class AllowNavigationToInvalidURL : bool { No, Yes };
 enum class HasInsecureContent : bool { No, Yes };
 
 struct SystemPreviewInfo {
-    IntRect systemPreviewRect;
-    bool isSystemPreview { false };
+    ElementContext element;
+
+    IntRect previewRect;
+    bool isPreview { false };
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<SystemPreviewInfo> decode(Decoder&);
 };
+
+template<class Encoder>
+void SystemPreviewInfo::encode(Encoder& encoder) const
+{
+    encoder << element << previewRect << isPreview;
+}
+
+template<class Decoder>
+Optional<SystemPreviewInfo> SystemPreviewInfo::decode(Decoder& decoder)
+{
+    Optional<ElementContext> element;
+    decoder >> element;
+    if (!element)
+        return WTF::nullopt;
+
+    Optional<IntRect> previewRect;
+    decoder >> previewRect;
+    if (!previewRect)
+        return WTF::nullopt;
+
+    Optional<bool> isPreview;
+    decoder >> isPreview;
+    if (!isPreview)
+        return WTF::nullopt;
+
+    return { { WTFMove(*element), WTFMove(*previewRect), WTFMove(*isPreview) } };
+}
 
 enum class LoadCompletionType : uint8_t {
     Finish,
@@ -214,6 +254,15 @@ template<> struct EnumTraits<WebCore::FrameLoadType> {
         WebCore::FrameLoadType::Replace,
         WebCore::FrameLoadType::ReloadFromOrigin,
         WebCore::FrameLoadType::ReloadExpiredOnly
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
+    using values = EnumValues<
+        WebCore::ShouldOpenExternalURLsPolicy,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
     >;
 };
 

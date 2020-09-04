@@ -29,26 +29,29 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "Blob.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-Ref<BlobEvent> BlobEvent::create(const AtomicString& type, Init&& init, IsTrusted isTrusted)
+WTF_MAKE_ISO_ALLOCATED_IMPL(BlobEvent);
+
+Ref<BlobEvent> BlobEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
     return adoptRef(*new BlobEvent(type, WTFMove(init), isTrusted));
 }
 
-Ref<BlobEvent> BlobEvent::create(const AtomicString& type, CanBubble canBubble, IsCancelable isCancelable, Ref<Blob>&& data)
+Ref<BlobEvent> BlobEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, Ref<Blob>&& data)
 {
     return adoptRef(*new BlobEvent(type, canBubble, isCancelable, WTFMove(data)));
 }
 
-BlobEvent::BlobEvent(const AtomicString& type, Init&& init, IsTrusted isTrusted)
+BlobEvent::BlobEvent(const AtomString& type, Init&& init, IsTrusted isTrusted)
     : Event(type, init, isTrusted)
     , m_blob(init.data.releaseNonNull())
 {
 }
 
-BlobEvent::BlobEvent(const AtomicString& type, CanBubble canBubble, IsCancelable isCancelable, Ref<Blob>&& data)
+BlobEvent::BlobEvent(const AtomString& type, CanBubble canBubble, IsCancelable isCancelable, Ref<Blob>&& data)
     : Event(type, canBubble, isCancelable)
     , m_blob(WTFMove(data))
 {

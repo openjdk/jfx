@@ -37,7 +37,6 @@ class ApplicationCacheFrontendDispatcher;
 namespace WebCore {
 
 class Frame;
-class InspectorPageAgent;
 class Page;
 
 typedef String ErrorString;
@@ -46,19 +45,23 @@ class InspectorApplicationCacheAgent final : public InspectorAgentBase, public I
     WTF_MAKE_NONCOPYABLE(InspectorApplicationCacheAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorApplicationCacheAgent(WebAgentContext&, InspectorPageAgent*);
-    virtual ~InspectorApplicationCacheAgent() = default;
+    InspectorApplicationCacheAgent(PageAgentContext&);
+    ~InspectorApplicationCacheAgent() override;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
-    void updateApplicationCacheStatus(Frame*);
-    void networkStateChanged();
-
+    // ApplicationCacheBackendDispatcherHandler
     void enable(ErrorString&) override;
+    void disable(ErrorString&) override;
     void getFramesWithManifests(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>& result) override;
     void getManifestForFrame(ErrorString&, const String& frameId, String* manifestURL) override;
     void getApplicationCacheForFrame(ErrorString&, const String& frameId, RefPtr<Inspector::Protocol::ApplicationCache::ApplicationCache>&) override;
+
+    // InspectorInstrumentation
+    void updateApplicationCacheStatus(Frame*);
+    void networkStateChanged();
 
 private:
     Ref<Inspector::Protocol::ApplicationCache::ApplicationCache> buildObjectForApplicationCache(const Vector<ApplicationCacheHost::ResourceInfo>&, const ApplicationCacheHost::CacheInfo&);
@@ -69,7 +72,7 @@ private:
 
     std::unique_ptr<Inspector::ApplicationCacheFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::ApplicationCacheBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent { nullptr };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

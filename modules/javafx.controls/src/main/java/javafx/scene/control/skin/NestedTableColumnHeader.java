@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,27 @@
 
 package javafx.scene.control.skin;
 
-import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.property.ObjectProperty;
-import javafx.collections.WeakListChangeListener;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.ResizeFeaturesBase;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * <p>This class is used to construct the header of a TableView. We take the approach
@@ -165,7 +165,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
             // the user wants to resize the column such that its
             // width is equal to the widest element in the column
-            TableSkinUtils.resizeColumnToFitContent(header.getTableSkin(), column, -1);
+            TableHeaderRow tableHeader = header.getTableHeaderRow();
+            TableColumnHeader columnHeader = tableHeader.getColumnHeaderFor(column);
+            if (columnHeader != null) {
+                columnHeader.resizeColumnToFitContent(-1);
+            }
         } else {
             // rather than refer to the rect variable, we just grab
             // it from the source to prevent a small memory leak.

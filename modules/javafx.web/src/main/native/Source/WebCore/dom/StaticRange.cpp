@@ -26,6 +26,7 @@
 #include "config.h"
 #include "StaticRange.h"
 
+#include "DOMException.h"
 #include "Node.h"
 #include "Range.h"
 
@@ -51,6 +52,20 @@ Ref<StaticRange> StaticRange::createFromRange(const Range& range)
     return StaticRange::create(range.startContainer(), range.startOffset(), range.endContainer(), range.endOffset());
 }
 
+static inline bool isDocumentTypeOrAttr(Node& node)
+{
+    return node.isDocumentTypeNode() || node.isAttributeNode();
+}
+
+ExceptionOr<Ref<StaticRange>> StaticRange::create(Init&& init)
+{
+    ASSERT(init.startContainer);
+    ASSERT(init.endContainer);
+    if (isDocumentTypeOrAttr(*init.startContainer) || isDocumentTypeOrAttr(*init.endContainer))
+        return Exception { InvalidNodeTypeError };
+    return StaticRange::create(init.startContainer.releaseNonNull(), init.startOffset, init.endContainer.releaseNonNull(), init.endOffset);
+}
+
 Node* StaticRange::startContainer() const
 {
     return (Node*)m_startContainer.ptr();
@@ -64,6 +79,11 @@ Node* StaticRange::endContainer() const
 bool StaticRange::collapsed() const
 {
     return m_startOffset == m_endOffset && m_startContainer.ptr() == m_endContainer.ptr();
+}
+
+bool StaticRange::operator==(const StaticRange& other) const
+{
+    return (m_startOffset == other.startOffset() && m_endOffset == other.endOffset() && m_startContainer->isEqualNode(other.startContainer()) && m_endContainer->isEqualNode(other.endContainer()));
 }
 
 }

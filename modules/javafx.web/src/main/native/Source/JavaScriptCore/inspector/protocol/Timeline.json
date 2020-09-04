@@ -1,7 +1,8 @@
 {
     "domain": "Timeline",
     "description": "Timeline provides its clients with instrumentation records that are generated during the page runtime. Timeline instrumentation can be started and stopped using corresponding commands. While timeline is started, it is generating timeline event records.",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page"],
     "types": [
         {
             "id": "EventType",
@@ -41,7 +42,8 @@
                 "Timeline",
                 "CPU",
                 "Memory",
-                "Heap"
+                "Heap",
+                "Animation"
             ]
         },
         {
@@ -56,6 +58,14 @@
         }
     ],
     "commands": [
+        {
+            "name": "enable",
+            "description": "Enables Timeline domain events."
+        },
+        {
+            "name": "disable",
+            "description": "Disables Timeline domain events."
+        },
         {
             "name": "start",
             "description": "Starts capturing instrumentation events.",
@@ -107,14 +117,6 @@
         {
             "name": "autoCaptureStarted",
             "description": "Fired when auto capture started."
-        },
-        {
-            "name": "programmaticCaptureStarted",
-            "description": "Fired when programmatic capture starts (console.profile)."
-        },
-        {
-            "name": "programmaticCaptureStopped",
-            "description": "Fired when programmatic capture stops (console.profileEnd)."
         }
     ]
 }

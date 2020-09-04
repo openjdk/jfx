@@ -34,6 +34,7 @@ namespace WTF {
 #define MINIMUM_BUMP_POOL_SIZE 0x1000
 
 class BumpPointerPool {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     // ensureCapacity will check whether the current pool has capacity to
     // allocate 'size' bytes of memory  If it does not, it will attempt to
@@ -165,6 +166,9 @@ private:
             ASSERT_WITH_SECURITY_IMPLICATION(allocationEnd > current); // check for overflow
             if (allocationEnd <= static_cast<void*>(pool))
                 return pool;
+
+            previousPool = pool;
+            pool = pool->m_next;
         }
     }
 
@@ -215,6 +219,7 @@ private:
 // This allocator is non-renetrant, it is encumbant on the clients to ensure
 // startAllocator() is not called again until stopAllocator() has been called.
 class BumpPointerAllocator {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     BumpPointerAllocator()
         : m_head(0)

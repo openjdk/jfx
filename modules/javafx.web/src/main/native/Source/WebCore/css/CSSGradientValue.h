@@ -35,6 +35,10 @@ namespace WebCore {
 class FloatPoint;
 class StyleResolver;
 
+namespace Style {
+class BuilderState;
+}
+
 enum CSSGradientType {
     CSSDeprecatedLinearGradient,
     CSSDeprecatedRadialGradient,
@@ -86,12 +90,12 @@ public:
     bool knownToBeOpaque(const RenderElement&) const;
 
     void loadSubimages(CachedResourceLoader&, const ResourceLoaderOptions&) { }
-    Ref<CSSGradientValue> gradientWithStylesResolved(const StyleResolver&);
+    Ref<CSSGradientValue> gradientWithStylesResolved(Style::BuilderState&);
+    void resolveRGBColors();
 
 protected:
     CSSGradientValue(ClassType classType, CSSGradientRepeat repeat, CSSGradientType gradientType)
         : CSSImageGeneratorValue(classType)
-        , m_stopsSorted(false)
         , m_gradientType(gradientType)
         , m_repeating(repeat == Repeating)
     {
@@ -106,7 +110,7 @@ protected:
         , m_stops(other.m_stops)
         , m_stopsSorted(other.m_stopsSorted)
         , m_gradientType(gradientType)
-        , m_repeating(other.isRepeating() ? Repeating : NonRepeating)
+        , m_repeating(other.m_repeating)
     {
     }
 
@@ -118,6 +122,8 @@ protected:
 
     bool isCacheable() const;
 
+    void writeColorStop(StringBuilder&, const CSSGradientColorStop&) const;
+
     // Points. Some of these may be null.
     RefPtr<CSSPrimitiveValue> m_firstX;
     RefPtr<CSSPrimitiveValue> m_firstY;
@@ -127,9 +133,9 @@ protected:
 
     // Stops
     Vector<CSSGradientColorStop, 2> m_stops;
-    bool m_stopsSorted;
+    bool m_stopsSorted { false };
     CSSGradientType m_gradientType;
-    bool m_repeating;
+    bool m_repeating { false };
 };
 
 class CSSLinearGradientValue final : public CSSGradientValue {

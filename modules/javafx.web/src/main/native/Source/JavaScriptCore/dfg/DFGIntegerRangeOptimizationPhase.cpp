@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ namespace JSC { namespace DFG {
 namespace {
 
 namespace DFGIntegerRangeOptimizationPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 const unsigned giveUpThreshold = 50;
 
@@ -97,8 +97,8 @@ public:
         return 0;
     }
 
-    static const unsigned minVagueness = 0;
-    static const unsigned maxVagueness = 2;
+    static constexpr unsigned minVagueness = 0;
+    static constexpr unsigned maxVagueness = 2;
 
     static Kind flipped(Kind kind)
     {
@@ -274,6 +274,11 @@ public:
     {
         RELEASE_ASSERT(left != m_right);
         m_left = left;
+    }
+    void setRight(NodeFlowProjection right)
+    {
+        RELEASE_ASSERT(right != m_left);
+        m_right = right;
     }
     bool addToOffset(int offset)
     {
@@ -1010,8 +1015,16 @@ public:
         ASSERT(m_graph.m_form == SSA);
 
         // Before we do anything, make sure that we have a zero constant at the top.
-        m_zero = m_insertionSet.insertConstant(0, m_graph.block(0)->at(0)->origin, jsNumber(0));
-        m_insertionSet.execute(m_graph.block(0));
+        for (Node* node : *m_graph.block(0)) {
+            if (node->isInt32Constant() && !node->asInt32()) {
+                m_zero = node;
+                break;
+            }
+        }
+        if (!m_zero) {
+            m_zero = m_insertionSet.insertConstant(0, m_graph.block(0)->at(0)->origin, jsNumber(0));
+            m_insertionSet.execute(m_graph.block(0));
+        }
 
         if (DFGIntegerRangeOptimizationPhaseInternal::verbose) {
             dataLog("Graph before integer range optimization:\n");
@@ -1319,9 +1332,13 @@ public:
                         }
                     }
 
+                    if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
+                        dataLogLn("CheckInBounds ", node, " has: ", nonNegative, " ", lessThanLength);
+
                     if (nonNegative && lessThanLength) {
                         executeNode(block->at(nodeIndex));
-                        node->convertToIdentityOn(m_zero);
+                        // We just need to make sure we are a value-producing node.
+                        node->convertToIdentityOn(node->child1().node());
                         changed = true;
                     }
                     break;
@@ -1634,7 +1651,7 @@ private:
 
             if (timeToLive && otherRelationship.kind() == Relationship::Equal) {
                 if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
-                    dataLog("      Considering: ", otherRelationship, "\n");
+                    dataLog("      Considering (lhs): ", otherRelationship, "\n");
 
                 // We have:
                 //     @a op @b + C
@@ -1655,6 +1672,31 @@ private:
                             toAdd.append(newRelationship);
                     }
                 }
+            }
+        }
+
+        if (timeToLive && relationship.kind() != Relationship::Equal) {
+            for (Relationship& possibleEquality : relationshipMap.get(relationship.right())) {
+                if (possibleEquality.kind() != Relationship::Equal
+                    || possibleEquality.offset() == std::numeric_limits<int>::min()
+                    || possibleEquality.right() == relationship.left())
+                    continue;
+                if (DFGIntegerRangeOptimizationPhaseInternal::verbose)
+                    dataLog("      Considering (rhs): ", possibleEquality, "\n");
+
+                // We have:
+                //     @a op @b + C
+                //     @b == @c + D
+                //
+                // This implies:
+                //     @a op @c + (C + D)
+                //
+                // Where: @a == relationship.left(), @b == relationship.right()
+
+                Relationship newRelationship = relationship;
+                newRelationship.setRight(possibleEquality.right());
+                if (newRelationship.addToOffset(possibleEquality.offset()))
+                    toAdd.append(newRelationship);
             }
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,7 @@ public:
 private:
     VisitedLinkStoreJava();
 
-    bool isLinkVisited(WebCore::Page&, WebCore::SharedStringHash, const WTF::URL& baseURL, const AtomicString& attributeURL) override;
+    bool isLinkVisited(WebCore::Page&, WebCore::SharedStringHash, const WTF::URL& baseURL, const AtomString& attributeURL) override;
     void addVisitedLink(WebCore::Page&, WebCore::SharedStringHash) override;
 
     void populateVisitedLinksIfNeeded(WebCore::Page&);

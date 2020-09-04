@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,13 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableLongValue;
 import com.sun.javafx.binding.Logging;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * This class defines a {@link Property} wrapping a {@code long} value.
@@ -59,6 +57,12 @@ import java.security.PrivilegedAction;
  */
 public abstract class LongProperty extends ReadOnlyLongProperty implements
         Property<Number>, WritableLongValue {
+
+    /**
+     * Creates a default {@code LongProperty}.
+     */
+    public LongProperty() {
+    }
 
     /**
      * {@inheritDoc}
@@ -144,12 +148,9 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * @see #asObject()
      * @since JavaFX 8.0
      */
-     public static LongProperty longProperty(final Property<Long> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+    public static LongProperty longProperty(final Property<Long> property) {
+        Objects.requireNonNull(property, "Property cannot be null");
         return new LongPropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -162,18 +163,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -199,8 +188,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      */
     @Override
     public ObjectProperty<Long> asObject() {
-        return new ObjectPropertyBase<Long> () {
-            private final AccessControlContext acc = AccessController.getContext();
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, LongProperty.this);
             }
@@ -214,19 +202,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             public String getName() {
                 return LongProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(this, LongProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
 }

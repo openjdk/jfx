@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,8 +33,8 @@
 namespace JSC { namespace Profiler {
 
 OSRExit::OSRExit(unsigned id, const OriginStack& origin, ExitKind kind, bool isWatchpoint)
-    : m_id(id)
-    , m_origin(origin)
+    : m_origin(origin)
+    , m_id(id)
     , m_exitKind(kind)
     , m_isWatchpoint(isWatchpoint)
     , m_counter(0)
@@ -45,13 +45,13 @@ OSRExit::~OSRExit()
 {
 }
 
-JSValue OSRExit::toJS(ExecState* exec) const
+JSValue OSRExit::toJS(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
-    JSObject* result = constructEmptyObject(exec);
+    VM& vm = globalObject->vm();
+    JSObject* result = constructEmptyObject(globalObject);
     result->putDirect(vm, vm.propertyNames->id, jsNumber(m_id));
-    result->putDirect(vm, vm.propertyNames->origin, m_origin.toJS(exec));
-    result->putDirect(vm, vm.propertyNames->exitKind, jsString(exec, exitKindToString(m_exitKind)));
+    result->putDirect(vm, vm.propertyNames->origin, m_origin.toJS(globalObject));
+    result->putDirect(vm, vm.propertyNames->exitKind, jsString(vm, exitKindToString(m_exitKind)));
     result->putDirect(vm, vm.propertyNames->isWatchpoint, jsBoolean(m_isWatchpoint));
     result->putDirect(vm, vm.propertyNames->count, jsNumber(m_counter));
     return result;

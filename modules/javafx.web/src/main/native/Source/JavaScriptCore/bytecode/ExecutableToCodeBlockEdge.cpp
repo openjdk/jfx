@@ -26,7 +26,10 @@
 #include "config.h"
 #include "ExecutableToCodeBlockEdge.h"
 
+#include "CodeBlock.h"
 #include "IsoCellSetInlines.h"
+#include "JSObjectInlines.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -54,6 +57,7 @@ void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor
 {
     VM& vm = visitor.vm();
     ExecutableToCodeBlockEdge* edge = jsCast<ExecutableToCodeBlockEdge*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(cell, info());
     Base::visitChildren(cell, visitor);
 
     CodeBlock* codeBlock = edge->m_codeBlock.get();
@@ -75,7 +79,7 @@ void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor
     if (codeBlock->shouldVisitStrongly(locker))
         visitor.appendUnbarriered(codeBlock);
 
-    if (!Heap::isMarked(codeBlock))
+    if (!vm.heap.isMarked(codeBlock))
         vm.executableToCodeBlockEdgesWithFinalizers.add(edge);
 
     if (JITCode::isOptimizingJIT(codeBlock->jitType())) {
@@ -125,8 +129,8 @@ void ExecutableToCodeBlockEdge::finalizeUnconditionally(VM& vm)
 {
     CodeBlock* codeBlock = m_codeBlock.get();
 
-    if (!Heap::isMarked(codeBlock)) {
-        if (codeBlock->shouldJettisonDueToWeakReference())
+    if (!vm.heap.isMarked(codeBlock)) {
+        if (codeBlock->shouldJettisonDueToWeakReference(vm))
             codeBlock->jettison(Profiler::JettisonDueToWeakReference);
         else
             codeBlock->jettison(Profiler::JettisonDueToOldAge);
@@ -189,7 +193,7 @@ void ExecutableToCodeBlockEdge::runConstraint(const ConcurrentJSLocker& locker, 
     codeBlock->propagateTransitions(locker, visitor);
     codeBlock->determineLiveness(locker, visitor);
 
-    if (Heap::isMarked(codeBlock))
+    if (vm.heap.isMarked(codeBlock))
         vm.executableToCodeBlockEdgesWithConstraints.remove(this);
 }
 

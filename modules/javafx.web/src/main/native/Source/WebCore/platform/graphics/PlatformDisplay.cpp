@@ -42,7 +42,7 @@
 #include "PlatformDisplayWin.h"
 #endif
 
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
 #include "PlatformDisplayLibWPE.h"
 #endif
 
@@ -52,9 +52,12 @@
 
 #if PLATFORM(GTK) && PLATFORM(X11)
 #include <gdk/gdkx.h>
+#if defined(None)
+#undef None
+#endif
 #endif
 
-#if PLATFORM(GTK) && PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2)
+#if PLATFORM(GTK) && PLATFORM(WAYLAND)
 #include <gdk/gdkwayland.h>
 #endif
 
@@ -74,9 +77,6 @@ namespace WebCore {
 std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
 {
 #if PLATFORM(GTK)
-#if defined(GTK_API_VERSION_2)
-    return PlatformDisplayX11::create(GDK_DISPLAY_XDISPLAY(gdk_display_get_default()));
-#else
     if (gtk_init_check(nullptr, nullptr)) {
         GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
 #if PLATFORM(X11)
@@ -88,14 +88,7 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
             return PlatformDisplayWayland::create(gdk_wayland_display_get_wl_display(display));
 #endif
     }
-#endif
 #endif // PLATFORM(GTK)
-
-#if USE(LIBWPE)
-    return PlatformDisplayLibWPE::create();
-#elif PLATFORM(WIN)
-    return PlatformDisplayWin::create();
-#endif
 
 #if PLATFORM(WAYLAND)
     if (auto platformDisplay = PlatformDisplayWayland::create())
@@ -112,6 +105,12 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
     return PlatformDisplayWayland::create(nullptr);
 #elif PLATFORM(X11)
     return PlatformDisplayX11::create(nullptr);
+#endif
+
+#if USE(WPE_RENDERER)
+    return PlatformDisplayLibWPE::create();
+#elif PLATFORM(WIN)
+    return PlatformDisplayWin::create();
 #endif
 
     RELEASE_ASSERT_NOT_REACHED();
@@ -154,6 +153,8 @@ PlatformDisplay::~PlatformDisplay()
 #if USE(EGL)
     ASSERT(m_eglDisplay == EGL_NO_DISPLAY);
 #endif
+    if (s_sharedDisplayForCompositing == this)
+        s_sharedDisplayForCompositing = nullptr;
 }
 
 #if USE(EGL) || USE(GLX)

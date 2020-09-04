@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -80,12 +80,12 @@ private:
 };
 
 struct VariableEnvironmentEntryHashTraits : HashTraits<VariableEnvironmentEntry> {
-    static const bool needsDestruction = false;
+    static constexpr bool needsDestruction = false;
 };
 
 class VariableEnvironment {
 private:
-    typedef HashMap<RefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
+    typedef HashMap<PackedRefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
 public:
     VariableEnvironment() = default;
     VariableEnvironment(VariableEnvironment&& other) = default;
@@ -114,6 +114,7 @@ public:
     void markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier);
 
     bool isEverythingCaptured() const { return m_isEverythingCaptured; }
+    bool isEmpty() const { return !m_map.size(); }
 
 private:
     friend class CachedVariableEnvironment;
@@ -125,6 +126,9 @@ private:
 class CompactVariableEnvironment {
     WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(CompactVariableEnvironment);
+
+    friend class CachedCompactVariableEnvironment;
+
 public:
     CompactVariableEnvironment(const VariableEnvironment&);
     VariableEnvironment toVariableEnvironment() const;
@@ -133,7 +137,9 @@ public:
     unsigned hash() const { return m_hash; }
 
 private:
-    Vector<RefPtr<UniquedStringImpl>> m_variables;
+    CompactVariableEnvironment() = default;
+
+    Vector<PackedRefPtr<UniquedStringImpl>> m_variables;
     Vector<VariableEnvironmentEntry> m_variableMetadata;
     unsigned m_hash;
     bool m_isEverythingCaptured;
@@ -152,7 +158,7 @@ struct CompactVariableMapKey {
 
     static unsigned hash(const CompactVariableMapKey& key) { return key.m_environment->hash(); }
     static bool equal(const CompactVariableMapKey& a, const CompactVariableMapKey& b) { return *a.m_environment == *b.m_environment; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
+    static constexpr bool safeToCompareToEmptyOrDeleted = false;
     static void makeDeletedValue(CompactVariableMapKey& key)
     {
         key.m_environment = reinterpret_cast<CompactVariableEnvironment*>(1);
@@ -187,10 +193,10 @@ template<> struct DefaultHash<JSC::CompactVariableMapKey> {
 };
 
 template<> struct HashTraits<JSC::CompactVariableMapKey> : GenericHashTraits<JSC::CompactVariableMapKey> {
-    static const bool emptyValueIsZero = true;
+    static constexpr bool emptyValueIsZero = true;
     static JSC::CompactVariableMapKey emptyValue() { return JSC::CompactVariableMapKey(); }
 
-    static const bool hasIsEmptyValueFunction = true;
+    static constexpr bool hasIsEmptyValueFunction = true;
     static bool isEmptyValue(JSC::CompactVariableMapKey key) { return key.isHashTableEmptyValue(); }
 
     static void constructDeletedValue(JSC::CompactVariableMapKey& key) { JSC::CompactVariableMapKey::makeDeletedValue(key); }
@@ -204,24 +210,31 @@ namespace JSC {
 class CompactVariableMap : public RefCounted<CompactVariableMap> {
 public:
     class Handle {
+        friend class CachedCompactVariableMapHandle;
+
     public:
         Handle() = default;
 
-        Handle(CompactVariableEnvironment& environment, CompactVariableMap& map)
-            : m_environment(&environment)
-            , m_map(&map)
-        { }
+        Handle(CompactVariableEnvironment&, CompactVariableMap&);
+
         Handle(Handle&& other)
-            : m_environment(other.m_environment)
-            , m_map(WTFMove(other.m_map))
         {
-            RELEASE_ASSERT(!!m_environment == !!m_map);
-            ASSERT(!other.m_map);
-            other.m_environment = nullptr;
+            swap(other);
+        }
+        Handle& operator=(Handle&& other)
+        {
+            Handle handle(WTFMove(other));
+            swap(handle);
+            return *this;
         }
 
         Handle(const Handle&);
-        Handle& operator=(const Handle&);
+        Handle& operator=(const Handle& other)
+        {
+            Handle handle(other);
+            swap(handle);
+            return *this;
+        }
 
         ~Handle();
 
@@ -233,6 +246,12 @@ public:
         }
 
     private:
+        void swap(Handle& other)
+        {
+            std::swap(other.m_environment, m_environment);
+            std::swap(other.m_map, m_map);
+        }
+
         CompactVariableEnvironment* m_environment { nullptr };
         RefPtr<CompactVariableMap> m_map;
     };
@@ -241,6 +260,10 @@ public:
 
 private:
     friend class Handle;
+    friend class CachedCompactVariableMapHandle;
+
+    Handle get(CompactVariableEnvironment*, bool& isNewEntry);
+
     HashMap<CompactVariableMapKey, unsigned> m_map;
 };
 

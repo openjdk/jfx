@@ -27,8 +27,8 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "IDBError.h"
 #include "IDBTransactionInfo.h"
-#include "UniqueIDBDatabaseConnection.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -36,7 +36,6 @@ namespace WebCore {
 
 class IDBCursorInfo;
 class IDBDatabaseInfo;
-class IDBError;
 class IDBIndexInfo;
 class IDBKeyData;
 class IDBObjectStoreInfo;
@@ -50,6 +49,7 @@ struct IDBKeyRangeData;
 
 namespace IDBServer {
 
+class IDBServer;
 class UniqueIDBDatabaseConnection;
 
 class UniqueIDBDatabaseTransaction : public RefCounted<UniqueIDBDatabaseTransaction> {
@@ -58,7 +58,7 @@ public:
 
     ~UniqueIDBDatabaseTransaction();
 
-    UniqueIDBDatabaseConnection& databaseConnection() { return m_databaseConnection.get(); }
+    UniqueIDBDatabaseConnection& databaseConnection() { return *m_databaseConnection; }
     const IDBTransactionInfo& info() const { return m_transactionInfo; }
     bool isVersionChange() const;
     bool isReadOnly() const;
@@ -88,15 +88,20 @@ public:
 
     const Vector<uint64_t>& objectStoreIdentifiers();
 
+    void setMainThreadAbortResult(const IDBError& error) { m_mainThreadAbortResult = { error }; }
+    const Optional<IDBError>& mainThreadAbortResult() const { return m_mainThreadAbortResult; }
+
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
 
-    Ref<UniqueIDBDatabaseConnection> m_databaseConnection;
+    UniqueIDBDatabaseConnection* m_databaseConnection;
     IDBTransactionInfo m_transactionInfo;
 
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
 
     Vector<uint64_t> m_objectStoreIdentifiers;
+
+    Optional<IDBError> m_mainThreadAbortResult;
 };
 
 } // namespace IDBServer

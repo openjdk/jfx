@@ -29,6 +29,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Optional.h>
+#include <wtf/RunLoop.h>
 #include <wtf/SynchronizedFixedQueue.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
@@ -39,6 +40,7 @@ namespace WebCore {
 class BitmapImage;
 class GraphicsContext;
 class ImageDecoder;
+class SharedBuffer;
 
 class ImageSource : public ThreadSafeRefCounted<ImageSource>, public CanMakeWeakPtr<ImageSource> {
     friend class BitmapImage;
@@ -88,14 +90,15 @@ public:
     // from the NativeImage if this class was created for a memory image.
     EncodedDataStatus encodedDataStatus();
     bool isSizeAvailable() { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
-    size_t frameCount();
+    WEBCORE_EXPORT size_t frameCount();
     RepetitionCount repetitionCount();
     String uti();
     String filenameExtension();
     Optional<IntPoint> hotSpot();
+    ImageOrientation orientation();
 
     // Image metadata which is calculated from the first ImageFrame.
-    WEBCORE_EXPORT IntSize size();
+    WEBCORE_EXPORT IntSize size(ImageOrientation = ImageOrientation::FromImage);
     IntSize sizeRespectingOrientation();
     Color singlePixelSolidColor();
     SubsamplingLevel maximumSubsamplingLevel();
@@ -112,7 +115,7 @@ public:
     // ImageFrame metadata which forces caching or re-caching the ImageFrame.
     IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default);
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default);
-    Seconds frameDurationAtIndex(size_t);
+    WEBCORE_EXPORT Seconds frameDurationAtIndex(size_t);
     ImageOrientation frameOrientationAtIndex(size_t);
 
 #if USE(DIRECT2D)
@@ -196,9 +199,11 @@ private:
 
     // Image metadata which is calculated from the first ImageFrame.
     Optional<IntSize> m_size;
-    Optional<IntSize> m_sizeRespectingOrientation;
+    Optional<ImageOrientation> m_orientation;
     Optional<Color> m_singlePixelSolidColor;
     Optional<SubsamplingLevel> m_maximumSubsamplingLevel;
+
+    RunLoop& m_runLoop;
 };
 
 }

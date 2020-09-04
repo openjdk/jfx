@@ -42,7 +42,10 @@ SVGGraphicsElement::SVGGraphicsElement(const QualifiedName& tagName, Document& d
     , SVGTests(this)
     , m_shouldIsolateBlending(false)
 {
-    registerAttributes();
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::transformAttr, &SVGGraphicsElement::m_transform>();
+    });
 }
 
 SVGGraphicsElement::~SVGGraphicsElement() = default;
@@ -77,11 +80,16 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 
         FloatRect boundingBox;
         switch (style->transformBox()) {
+        case TransformBox::BorderBox:
+            // For SVG elements without an associated CSS layout box, the used value for border-box is stroke-box.
+        case TransformBox::StrokeBox:
+            boundingBox = renderer()->strokeBoundingBox();
+            break;
+        case TransformBox::ContentBox:
+            // For SVG elements without an associated CSS layout box, the used value for content-box is fill-box.
         case TransformBox::FillBox:
             boundingBox = renderer()->objectBoundingBox();
             break;
-        case TransformBox::BorderBox:
-            // For SVG elements without an associated CSS layout box, the used value for border-box is view-box.
         case TransformBox::ViewBox: {
             FloatSize viewportSize;
             SVGLengthContext(this).determineViewport(viewportSize);
@@ -106,7 +114,7 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
         }
 
     } else
-        transform().concatenate(matrix);
+        matrix = transform().concatenate();
 
     if (m_supplementalTransform)
         return *m_supplementalTransform * matrix;
@@ -116,25 +124,14 @@ AffineTransform SVGGraphicsElement::animatedLocalTransform() const
 AffineTransform* SVGGraphicsElement::supplementalTransform()
 {
     if (!m_supplementalTransform)
-        m_supplementalTransform = std::make_unique<AffineTransform>();
+        m_supplementalTransform = makeUnique<AffineTransform>();
     return m_supplementalTransform.get();
 }
 
-void SVGGraphicsElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::transformAttr, &SVGGraphicsElement::m_transform>();
-}
-
-void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::transformAttr) {
-        SVGTransformListValues newList;
-        newList.parse(value);
-        m_transform.detachAnimatedListWrappers(attributeOwnerProxy(), newList.size());
-        m_transform.setValue(newList);
+        m_transform->baseVal()->parse(value);
         return;
     }
 
@@ -144,18 +141,15 @@ void SVGGraphicsElement::parseAttribute(const QualifiedName& name, const AtomicS
 
 void SVGGraphicsElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (isKnownAttribute(attrName)) {
+    if (attrName == SVGNames::transformAttr) {
         InstanceInvalidationGuard guard(*this);
 
-        auto renderer = this->renderer();
-        if (!renderer)
-            return;
-
-        if (attrName == SVGNames::transformAttr) {
+        if (auto renderer = this->renderer()) {
             renderer->setNeedsTransformUpdate();
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-            return;
         }
+
+        return;
     }
 
     SVGElement::svgAttributeChanged(attrName);

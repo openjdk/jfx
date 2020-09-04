@@ -28,22 +28,29 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUShaderModule.h"
-
+#include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
+class WebGPUDevice;
+
 class WebGPUShaderModule : public RefCounted<WebGPUShaderModule> {
 public:
-    static Ref<WebGPUShaderModule> create(Ref<GPUShaderModule>&&);
+    static Ref<WebGPUShaderModule> create(RefPtr<GPUShaderModule>&&, const String& source);
 
-    const GPUShaderModule* module() const { return m_module.ptr(); }
+    GPUShaderModule* module() const { return m_module.get(); }
+    const String& source() const { return m_source; }
+
+    void update(const WebGPUDevice&, const String& source);
 
 private:
-    WebGPUShaderModule(Ref<GPUShaderModule>&&);
+    WebGPUShaderModule(RefPtr<GPUShaderModule>&&, const String& source);
 
-    Ref<GPUShaderModule> m_module;
+    RefPtr<GPUShaderModule> m_module;
+
+    // Preserved for Web Inspector recompilation.
+    String m_source;
 };
 
 } // namespace WebCore

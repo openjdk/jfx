@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,7 +56,7 @@ class Plan : public ThreadSafeRefCounted<Plan> {
 public:
     Plan(
         CodeBlock* codeBlockToCompile, CodeBlock* profiledDFGCodeBlock,
-        CompilationMode, unsigned osrEntryBytecodeIndex,
+        CompilationMode, BytecodeIndex osrEntryBytecodeIndex,
         const Operands<Optional<JSValue>>& mustHandleValues);
     ~Plan();
 
@@ -87,7 +87,7 @@ public:
 
     bool isFTL() const { return DFG::isFTL(m_mode); }
     CompilationMode mode() const { return m_mode; }
-    unsigned osrEntryBytecodeIndex() const { return m_osrEntryBytecodeIndex; }
+    BytecodeIndex osrEntryBytecodeIndex() const { return m_osrEntryBytecodeIndex; }
     const Operands<Optional<JSValue>>& mustHandleValues() const { return m_mustHandleValues; }
     ThreadData* threadData() const { return m_threadData; }
     Profiler::Compilation* compilation() const { return m_compilation.get(); }
@@ -106,8 +106,8 @@ public:
     bool willTryToTierUp() const { return m_willTryToTierUp; }
     void setWillTryToTierUp(bool willTryToTierUp) { m_willTryToTierUp = willTryToTierUp; }
 
-    HashMap<unsigned, Vector<unsigned>>& tierUpInLoopHierarchy() { return m_tierUpInLoopHierarchy; }
-    Vector<unsigned>& tierUpAndOSREnterBytecodes() { return m_tierUpAndOSREnterBytecodes; }
+    HashMap<BytecodeIndex, Vector<BytecodeIndex>>& tierUpInLoopHierarchy() { return m_tierUpInLoopHierarchy; }
+    Vector<BytecodeIndex>& tierUpAndOSREnterBytecodes() { return m_tierUpAndOSREnterBytecodes; }
 
     enum Stage { Preparing, Compiling, Ready, Cancelled };
     Stage stage() const { return m_stage; }
@@ -129,17 +129,21 @@ private:
     // Warning: pretty much all of the pointer fields in this object get nulled by cancel(). So, if
     // you're writing code that is callable on the cancel path, be sure to null check everything!
 
+    CompilationMode m_mode;
+
     VM* m_vm;
 
     // These can be raw pointers because we visit them during every GC in checkLivenessAndVisitChildren.
     CodeBlock* m_codeBlock;
     CodeBlock* m_profiledDFGCodeBlock;
 
-    CompilationMode m_mode;
-    const unsigned m_osrEntryBytecodeIndex;
     Operands<Optional<JSValue>> m_mustHandleValues;
     bool m_mustHandleValuesMayIncludeGarbage { true };
     Lock m_mustHandleValueCleaningLock;
+
+    bool m_willTryToTierUp { false };
+
+    const BytecodeIndex m_osrEntryBytecodeIndex;
 
     ThreadData* m_threadData;
 
@@ -155,10 +159,8 @@ private:
     DesiredGlobalProperties m_globalProperties;
     RecordedStatuses m_recordedStatuses;
 
-    bool m_willTryToTierUp { false };
-
-    HashMap<unsigned, Vector<unsigned>> m_tierUpInLoopHierarchy;
-    Vector<unsigned> m_tierUpAndOSREnterBytecodes;
+    HashMap<BytecodeIndex, Vector<BytecodeIndex>> m_tierUpInLoopHierarchy;
+    Vector<BytecodeIndex> m_tierUpAndOSREnterBytecodes;
 
     Stage m_stage;
 

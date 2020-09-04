@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,17 +31,18 @@
 #include "GPRInfo.h"
 #include "JSExportMacros.h"
 #include "Options.h"
-#include <wtf/Optional.h>
 
 namespace JSC { namespace B3 {
 
-enum B3ComplitationMode {
+extern const char* const tierName;
+
+enum B3CompilationMode {
     B3Mode,
     AirMode
 };
 
-JS_EXPORT_PRIVATE bool shouldDumpIR(B3ComplitationMode);
-bool shouldDumpIRAtEachPhase(B3ComplitationMode);
+JS_EXPORT_PRIVATE bool shouldDumpIR(B3CompilationMode);
+bool shouldDumpIRAtEachPhase(B3CompilationMode);
 bool shouldValidateIR();
 bool shouldValidateIRAtEachPhase();
 bool shouldSaveIRBeforePhase();

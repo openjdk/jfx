@@ -1546,6 +1546,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     // blending on canvas
                     dstImg = (PrDrawable) Effect.getCompatibleImage(fctx, clip.width, clip.height);
                     Graphics dstG = dstImg.createGraphics();
+                    state.apply(dstG);
                     ((PrismImage) image).draw(dstG,
                             0, 0, clip.width, clip.height,
                             clip.x, clip.y, clip.width, clip.height);

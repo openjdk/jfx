@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "AllocationFailureMode.h"
 #include "FreeList.h"
 #include "MarkedBlock.h"
 #include <wtf/Noncopyable.h>
@@ -33,6 +34,7 @@ namespace JSC {
 
 class BlockDirectory;
 class GCDeferralContext;
+class Heap;
 
 class LocalAllocator : public BasicRawSentinelNode<LocalAllocator> {
     WTF_MAKE_NONCOPYABLE(LocalAllocator);
@@ -41,7 +43,7 @@ public:
     LocalAllocator(BlockDirectory*);
     ~LocalAllocator();
 
-    void* allocate(GCDeferralContext*, AllocationFailureMode);
+    void* allocate(Heap&, GCDeferralContext*, AllocationFailureMode);
 
     unsigned cellSize() const { return m_freeList.cellSize(); }
 
@@ -59,12 +61,12 @@ private:
     friend class BlockDirectory;
 
     void reset();
-    JS_EXPORT_PRIVATE void* allocateSlowCase(GCDeferralContext*, AllocationFailureMode failureMode);
+    JS_EXPORT_PRIVATE void* allocateSlowCase(Heap&, GCDeferralContext*, AllocationFailureMode);
     void didConsumeFreeList();
     void* tryAllocateWithoutCollecting();
     void* tryAllocateIn(MarkedBlock::Handle*);
     void* allocateIn(MarkedBlock::Handle*);
-    ALWAYS_INLINE void doTestCollectionsIfNeeded(GCDeferralContext*);
+    ALWAYS_INLINE void doTestCollectionsIfNeeded(Heap&, GCDeferralContext*);
 
     BlockDirectory* m_directory;
     FreeList m_freeList;
@@ -74,7 +76,7 @@ private:
 
     // After you do something to a block based on one of these cursors, you clear the bit in the
     // corresponding bitvector and leave the cursor where it was.
-    size_t m_allocationCursor { 0 }; // Points to the next block that is a candidate for allocation.
+    unsigned m_allocationCursor { 0 }; // Points to the next block that is a candidate for allocation.
 };
 
 inline ptrdiff_t LocalAllocator::offsetOfFreeList()

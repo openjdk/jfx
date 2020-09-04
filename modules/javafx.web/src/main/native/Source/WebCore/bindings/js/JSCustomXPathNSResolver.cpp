@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007, 2013 Alexey Proskuryakov (ap@nypop.com)
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,7 +43,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-ExceptionOr<Ref<JSCustomXPathNSResolver>> JSCustomXPathNSResolver::create(ExecState& state, JSValue value)
+ExceptionOr<Ref<JSCustomXPathNSResolver>> JSCustomXPathNSResolver::create(JSGlobalObject& lexicalGlobalObject, JSValue value)
 {
     if (value.isUndefinedOrNull())
         return Exception { TypeError };
@@ -51,8 +52,8 @@ ExceptionOr<Ref<JSCustomXPathNSResolver>> JSCustomXPathNSResolver::create(ExecSt
     if (!resolverObject)
         return Exception { TypeMismatchError };
 
-    VM& vm = state.vm();
-    return adoptRef(*new JSCustomXPathNSResolver(vm, resolverObject, asJSDOMWindow(vm.vmEntryGlobalObject(&state))));
+    VM& vm = lexicalGlobalObject.vm();
+    return adoptRef(*new JSCustomXPathNSResolver(vm, resolverObject, asJSDOMWindow(&lexicalGlobalObject)));
 }
 
 JSCustomXPathNSResolver::JSCustomXPathNSResolver(VM& vm, JSObject* customResolver, JSDOMWindow* globalObject)
@@ -69,10 +70,10 @@ String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
 
     JSLockHolder lock(commonVM());
 
-    ExecState* exec = m_globalObject->globalExec();
-    VM& vm = exec->vm();
+    JSGlobalObject* lexicalGlobalObject = m_globalObject.get();
+    VM& vm = lexicalGlobalObject->vm();
 
-    JSValue function = m_customResolver->get(exec, Identifier::fromString(exec, "lookupNamespaceURI"));
+    JSValue function = m_customResolver->get(lexicalGlobalObject, Identifier::fromString(vm, "lookupNamespaceURI"));
     CallData callData;
     CallType callType = getCallData(vm, function, callData);
     if (callType == CallType::None) {
@@ -88,18 +89,18 @@ String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
     Ref<JSCustomXPathNSResolver> protectedThis(*this);
 
     MarkedArgumentBuffer args;
-    args.append(jsStringWithCache(exec, prefix));
+    args.append(jsStringWithCache(lexicalGlobalObject, prefix));
     ASSERT(!args.hasOverflowed());
 
     NakedPtr<JSC::Exception> exception;
-    JSValue retval = JSExecState::call(exec, function, callType, callData, m_customResolver.get(), args, exception);
+    JSValue retval = JSExecState::call(lexicalGlobalObject, function, callType, callData, m_customResolver.get(), args, exception);
 
     String result;
     if (exception)
-        reportException(exec, exception);
+        reportException(lexicalGlobalObject, exception);
     else {
         if (!retval.isUndefinedOrNull())
-            result = retval.toWTFString(exec);
+            result = retval.toWTFString(lexicalGlobalObject);
     }
 
     return result;

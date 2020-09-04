@@ -45,6 +45,9 @@ function toStringDescription(obj)
     if (obj === 0 && 1 / obj < 0)
         return "-0";
 
+    if (isBigInt(obj))
+        return toString(obj) + "n";
+
     return toString(obj);
 }
 
@@ -55,9 +58,14 @@ function isUInt32(obj)
     return "" + (obj >>> 0) === obj;
 }
 
-function isSymbol(obj)
+function isSymbol(value)
 {
-    return typeof obj === "symbol";
+    return typeof value === "symbol";
+}
+
+function isBigInt(value)
+{
+    return typeof value === "bigint";
 }
 
 function isEmptyObject(object)
@@ -222,18 +230,16 @@ let InjectedScript = class InjectedScript
         return RemoteObject.createObjectPreviewForValue(object, true);
     }
 
-    getProperties(objectId, ownProperties, generatePreview)
+    getProperties(objectId, ownProperties, fetchStart, fetchCount, generatePreview)
     {
-        let nativeGettersAsValues = false;
         let collectionMode = ownProperties ? InjectedScript.CollectionMode.OwnProperties : InjectedScript.CollectionMode.AllProperties;
-        return this._getProperties(objectId, collectionMode, generatePreview, nativeGettersAsValues);
+        return this._getProperties(objectId, collectionMode, {fetchStart, fetchCount, generatePreview});
     }
 
-    getDisplayableProperties(objectId, generatePreview)
+    getDisplayableProperties(objectId, fetchStart, fetchCount, generatePreview)
     {
-        let nativeGettersAsValues = true;
         let collectionMode = InjectedScript.CollectionMode.OwnProperties | InjectedScript.CollectionMode.NativeGetterProperties;
-        return this._getProperties(objectId, collectionMode, generatePreview, nativeGettersAsValues);
+        return this._getProperties(objectId, collectionMode, {fetchStart, fetchCount, generatePreview, nativeGettersAsValues: true});
     }
 
     getInternalProperties(objectId, generatePreview)
@@ -261,7 +267,7 @@ let InjectedScript = class InjectedScript
         return descriptors;
     }
 
-    getCollectionEntries(objectId, objectGroupName, startIndex, numberToFetch)
+    getCollectionEntries(objectId, objectGroupName, fetchStart, fetchCount)
     {
         let parsedObjectId = this._parseObjectId(objectId);
         let object = this._objectForId(parsedObjectId);
@@ -273,7 +279,7 @@ let InjectedScript = class InjectedScript
         if (typeof object !== "object")
             return;
 
-        let entries = this._entries(object, InjectedScriptHost.subtype(object), startIndex, numberToFetch);
+        let entries = this._entries(object, InjectedScriptHost.subtype(object), fetchStart, fetchCount);
         return entries.map(function(entry) {
             entry.value = RemoteObject.create(entry.value, objectGroupName, false, true);
             if ("key" in entry)
@@ -290,7 +296,7 @@ let InjectedScript = class InjectedScript
             let callArgument = InjectedScriptHost.evaluate("(" + callArgumentJSON + ")");
             let value = this._resolveCallArgument(callArgument);
             this._saveResult(value);
-        } catch (e) {}
+        } catch { }
 
         return this._savedResultIndex;
     }
@@ -353,6 +359,16 @@ let InjectedScript = class InjectedScript
         return RemoteObject.createObjectPreviewForValue(value, true);
     }
 
+    setEventValue(value)
+    {
+        this._eventValue = value;
+    }
+
+    clearEventValue()
+    {
+        delete this._eventValue;
+    }
+
     setExceptionValue(value)
     {
         this._exceptionValue = value;
@@ -367,12 +383,6 @@ let InjectedScript = class InjectedScript
     {
         let parsedObjectId = this._parseObjectId(objectId);
         return this._objectForId(parsedObjectId);
-    }
-
-    inspectObject(object)
-    {
-        if (this._commandLineAPIImpl)
-            this._commandLineAPIImpl.inspect(object);
     }
 
     releaseObject(objectId)
@@ -399,27 +409,31 @@ let InjectedScript = class InjectedScript
         delete this._objectGroups[objectGroupName];
     }
 
+    // CommandLineAPI
+
+    inspectObject(object)
+    {
+        if (this._inspectObject)
+            this._inspectObject(object);
+    }
+
     // InjectedScriptModule C++ API
 
-    module(name)
+    hasInjectedModule(name)
     {
         return this._modules[name];
     }
 
     injectModule(name, source, host)
     {
-        delete this._modules[name];
+        this._modules[name] = false;
 
         let moduleFunction = InjectedScriptHost.evaluate("(" + source + ")");
-        if (typeof moduleFunction !== "function") {
-            if (inspectedGlobalObject.console)
-                inspectedGlobalObject.console.error("Web Inspector error: A function was expected for module %s evaluation", name);
-            return null;
-        }
+        if (typeof moduleFunction !== "function")
+            throw "Error: Web Inspector: a function was expected for injectModule";
+        moduleFunction(InjectedScriptHost, inspectedGlobalObject, injectedScriptId, this, {RemoteObject, CommandLineAPI}, host);
 
-        let module = moduleFunction.call(inspectedGlobalObject, InjectedScriptHost, inspectedGlobalObject, injectedScriptId, this, RemoteObject, host);
-        this._modules[name] = module;
-        return module;
+        this._modules[name] = true;
     }
 
     // InjectedScriptModule JavaScript API
@@ -474,7 +488,7 @@ let InjectedScript = class InjectedScript
         if (isPrimitiveValue(object))
             result.value = object;
         else
-            result.description = toString(object);
+            result.description = toStringDescription(object);
         return result;
     }
 
@@ -504,7 +518,7 @@ let InjectedScript = class InjectedScript
         let remoteObject = RemoteObject.create(value, objectGroup);
         try {
             remoteObject.description = toStringDescription(value);
-        } catch (e) {}
+        } catch { }
         return {
             wasThrown: true,
             result: remoteObject
@@ -550,13 +564,8 @@ let InjectedScript = class InjectedScript
     _evaluateOn(evalFunction, object, expression, isEvalOnCallFrame, includeCommandLineAPI)
     {
         let commandLineAPI = null;
-        if (includeCommandLineAPI) {
-            if (this.CommandLineAPI)
-                commandLineAPI = new this.CommandLineAPI(this._commandLineAPIImpl, isEvalOnCallFrame ? object : null);
-            else
-                commandLineAPI = new BasicCommandLineAPI(isEvalOnCallFrame ? object : null);
-        }
-
+        if (includeCommandLineAPI)
+            commandLineAPI = new CommandLineAPI(isEvalOnCallFrame ? object : null);
         return evalFunction.call(object, expression, commandLineAPI);
     }
 
@@ -570,7 +579,7 @@ let InjectedScript = class InjectedScript
         return callFrame;
     }
 
-    _getProperties(objectId, collectionMode, generatePreview, nativeGettersAsValues)
+    _getProperties(objectId, collectionMode, {fetchStart, fetchCount, generatePreview, nativeGettersAsValues})
     {
         let parsedObjectId = this._parseObjectId(objectId);
         let object = this._objectForId(parsedObjectId);
@@ -582,24 +591,39 @@ let InjectedScript = class InjectedScript
         if (isSymbol(object))
             return false;
 
-        let descriptors = this._propertyDescriptors(object, collectionMode, nativeGettersAsValues);
+        let start = fetchStart || 0;
+        if (start < 0)
+            start = 0;
 
-        for (let i = 0; i < descriptors.length; ++i) {
-            let descriptor = descriptors[i];
+        let count = fetchCount || 0;
+        if (count < 0)
+            count = 0;
+
+        // Always include __proto__ at the end, but only for the first fetch.
+        let includeProto = !start;
+
+        let descriptors = [];
+        this._forEachPropertyDescriptor(object, collectionMode, (descriptor) => {
+            if (start > 0) {
+                --start;
+                return InjectedScript.PropertyFetchAction.Continue;
+            }
+
             if ("get" in descriptor)
                 descriptor.get = RemoteObject.create(descriptor.get, objectGroupName);
             if ("set" in descriptor)
                 descriptor.set = RemoteObject.create(descriptor.set, objectGroupName);
             if ("value" in descriptor)
                 descriptor.value = RemoteObject.create(descriptor.value, objectGroupName, false, generatePreview);
-            if (!("configurable" in descriptor))
-                descriptor.configurable = false;
-            if (!("enumerable" in descriptor))
-                descriptor.enumerable = false;
             if ("symbol" in descriptor)
                 descriptor.symbol = RemoteObject.create(descriptor.symbol, objectGroupName);
-        }
+            descriptors.push(descriptor);
 
+            if (includeProto && count && descriptors.length >= count && descriptor.name !== "__proto__")
+                return InjectedScript.PropertyFetchAction.Stop;
+
+            return (count && descriptors.length >= count) ? InjectedScript.PropertyFetchAction.Stop : InjectedScript.PropertyFetchAction.Continue;
+        }, {nativeGettersAsValues, includeProto});
         return descriptors;
     }
 
@@ -613,29 +637,35 @@ let InjectedScript = class InjectedScript
         for (let i = 0; i < internalProperties.length; i++) {
             let property = internalProperties[i];
             let descriptor = {name: property.name, value: property.value};
-            if (completeDescriptor) {
-                descriptor.writable = false;
-                descriptor.configurable = false;
-                descriptor.enumerable = false;
+            if (completeDescriptor)
                 descriptor.isOwn = true;
-            }
             descriptors.push(descriptor);
         }
         return descriptors;
     }
 
-    _propertyDescriptors(object, collectionMode, nativeGettersAsValues)
+    _forEachPropertyDescriptor(object, collectionMode, callback, {nativeGettersAsValues, includeProto})
     {
         if (InjectedScriptHost.subtype(object) === "proxy")
-            return [];
+            return;
 
-        let descriptors = [];
         let nameProcessed = new Set;
+
+        // Handled below when `includeProto`.
+        nameProcessed.add("__proto__");
 
         function createFakeValueDescriptor(name, symbol, descriptor, isOwnProperty, possibleNativeBindingGetter)
         {
             try {
-                let fakeDescriptor = {name, value: object[name], writable: descriptor.writable || false, configurable: descriptor.configurable || false, enumerable: descriptor.enumerable || false};
+                let fakeDescriptor = {name, value: object[name]};
+                if (descriptor) {
+                    if (descriptor.writable)
+                        fakeDescriptor.writable = true;
+                    if (descriptor.configurable)
+                        fakeDescriptor.configurable = true;
+                    if (descriptor.enumerable)
+                        fakeDescriptor.enumerable = true;
+                }
                 if (possibleNativeBindingGetter)
                     fakeDescriptor.nativeGetter = true;
                 if (isOwnProperty)
@@ -643,7 +673,7 @@ let InjectedScript = class InjectedScript
                 if (symbol)
                     fakeDescriptor.symbol = symbol;
                 // Silence any possible unhandledrejection exceptions created from accessing a native accessor with a wrong this object.
-                if (fakeDescriptor.value instanceof Promise)
+                if (fakeDescriptor.value instanceof Promise && InjectedScriptHost.isPromiseRejectedWithNativeGetterTypeError(fakeDescriptor.value))
                     fakeDescriptor.value.catch(function(){});
                 return fakeDescriptor;
             } catch (e) {
@@ -659,174 +689,180 @@ let InjectedScript = class InjectedScript
         function processDescriptor(descriptor, isOwnProperty, possibleNativeBindingGetter)
         {
             // All properties.
-            if (collectionMode & InjectedScript.CollectionMode.AllProperties) {
-                descriptors.push(descriptor);
-                return;
-            }
+            if (collectionMode & InjectedScript.CollectionMode.AllProperties)
+                return callback(descriptor);
 
             // Own properties.
-            if (collectionMode & InjectedScript.CollectionMode.OwnProperties && isOwnProperty) {
-                descriptors.push(descriptor);
-                return;
-            }
+            if (collectionMode & InjectedScript.CollectionMode.OwnProperties && isOwnProperty)
+                return callback(descriptor);
 
             // Native Getter properties.
             if (collectionMode & InjectedScript.CollectionMode.NativeGetterProperties) {
-                if (possibleNativeBindingGetter) {
-                    descriptors.push(descriptor);
-                    return;
-                }
+                if (possibleNativeBindingGetter)
+                    return callback(descriptor);
             }
         }
 
-        function processProperties(o, properties, isOwnProperty)
+        function processProperty(o, propertyName, isOwnProperty)
         {
-            for (let i = 0; i < properties.length; ++i) {
-                let property = properties[i];
-                if (nameProcessed.has(property) || property === "__proto__")
-                    continue;
+            if (nameProcessed.has(propertyName))
+                return InjectedScript.PropertyFetchAction.Continue;
 
-                nameProcessed.add(property);
+            nameProcessed.add(propertyName);
 
-                let name = toString(property);
-                let symbol = isSymbol(property) ? property : null;
+            let name = toString(propertyName);
+            let symbol = isSymbol(propertyName) ? propertyName : null;
 
-                let descriptor = Object.getOwnPropertyDescriptor(o, property);
-                if (!descriptor) {
-                    // FIXME: Bad descriptor. Can we get here?
-                    // Fall back to very restrictive settings.
-                    let fakeDescriptor = createFakeValueDescriptor(name, symbol, {writable: false, configurable: false, enumerable: false}, isOwnProperty);
-                    processDescriptor(fakeDescriptor, isOwnProperty);
-                    continue;
-                }
-
-                if (nativeGettersAsValues) {
-                    if (String(descriptor.get).endsWith("[native code]\n}") || (!descriptor.get && descriptor.hasOwnProperty("get") && !descriptor.set && descriptor.hasOwnProperty("set"))) {
-                        // Developers may create such a descriptor, so we should be resilient:
-                        // let x = {}; Object.defineProperty(x, "p", {get:undefined}); Object.getOwnPropertyDescriptor(x, "p")
-                        let fakeDescriptor = createFakeValueDescriptor(name, symbol, descriptor, isOwnProperty, true);
-                        processDescriptor(fakeDescriptor, isOwnProperty, true);
-                        continue;
-                    }
-                }
-
-                descriptor.name = name;
-                if (isOwnProperty)
-                    descriptor.isOwn = true;
-                if (symbol)
-                    descriptor.symbol = symbol;
-                processDescriptor(descriptor, isOwnProperty);
+            let descriptor = Object.getOwnPropertyDescriptor(o, propertyName);
+            if (!descriptor) {
+                // FIXME: Bad descriptor. Can we get here?
+                // Fall back to very restrictive settings.
+                let fakeDescriptor = createFakeValueDescriptor(name, symbol, descriptor, isOwnProperty);
+                return processDescriptor(fakeDescriptor, isOwnProperty);
             }
+
+            if (nativeGettersAsValues) {
+                if (String(descriptor.get).endsWith("[native code]\n}") || (!descriptor.get && descriptor.hasOwnProperty("get") && !descriptor.set && descriptor.hasOwnProperty("set"))) {
+                    // Developers may create such a descriptor, so we should be resilient:
+                    // let x = {}; Object.defineProperty(x, "p", {get:undefined}); Object.getOwnPropertyDescriptor(x, "p")
+                    let fakeDescriptor = createFakeValueDescriptor(name, symbol, descriptor, isOwnProperty, true);
+                    return processDescriptor(fakeDescriptor, isOwnProperty, true);
+                }
+            }
+
+            descriptor.name = name;
+            if (isOwnProperty)
+                descriptor.isOwn = true;
+            if (symbol)
+                descriptor.symbol = symbol;
+            return processDescriptor(descriptor, isOwnProperty);
         }
 
-        function arrayIndexPropertyNames(o, length)
-        {
-            let array = [];
-            for (let i = 0; i < length; ++i) {
-                if (i in o)
-                    array.push("" + i);
-            }
-            return array;
-        }
-
-        // FIXME: <https://webkit.org/b/143589> Web Inspector: Better handling for large collections in Object Trees
-        // For array types with a large length we attempt to skip getOwnPropertyNames and instead just sublist of indexes.
         let isArrayLike = false;
         try {
             isArrayLike = RemoteObject.subtype(object) === "array" && isFinite(object.length) && object.length > 0;
-        } catch(e) {}
+        } catch { }
 
         for (let o = object; isDefined(o); o = Object.getPrototypeOf(o)) {
             let isOwnProperty = o === object;
+            let shouldBreak = false;
 
-            if (isArrayLike && isOwnProperty)
-                processProperties(o, arrayIndexPropertyNames(o, Math.min(object.length, 100)), isOwnProperty);
-            else {
-                processProperties(o, Object.getOwnPropertyNames(o), isOwnProperty);
-                if (Object.getOwnPropertySymbols)
-                    processProperties(o, Object.getOwnPropertySymbols(o), isOwnProperty);
+            // FIXME: <https://webkit.org/b/201861> Web Inspector: show autocomplete entries for non-index properties on arrays
+            if (isArrayLike && isOwnProperty) {
+                for (let i = 0; i < o.length; ++i) {
+                    if (!(i in o))
+                        continue;
+
+                    let result = processProperty(o, toString(i), isOwnProperty);
+                    shouldBreak = result === InjectedScript.PropertyFetchAction.Stop;
+                    if (shouldBreak)
+                        break;
+                }
+            } else {
+                let propertyNames = Object.getOwnPropertyNames(o);
+                for (let i = 0; i < propertyNames.length; ++i) {
+                    let result = processProperty(o, propertyNames[i], isOwnProperty);
+                    shouldBreak = result === InjectedScript.PropertyFetchAction.Stop;
+                    if (shouldBreak)
+                        break;
+                }
             }
+
+            if (shouldBreak)
+                break;
+
+            if (Object.getOwnPropertySymbols) {
+                let propertySymbols = Object.getOwnPropertySymbols(o);
+                for (let i = 0; i < propertySymbols.length; ++i) {
+                    let result = processProperty(o, propertySymbols[i], isOwnProperty);
+                    shouldBreak = result === InjectedScript.PropertyFetchAction.Stop;
+                    if (shouldBreak)
+                        break;
+                }
+            }
+
+            if (shouldBreak)
+                break;
 
             if (collectionMode === InjectedScript.CollectionMode.OwnProperties)
                 break;
         }
 
-        // Always include __proto__ at the end.
-        try {
-            if (object.__proto__)
-                descriptors.push({name: "__proto__", value: object.__proto__, writable: true, configurable: true, enumerable: false, isOwn: true});
-        } catch (e) {}
-
-        return descriptors;
+        if (includeProto) {
+            try {
+                if (object.__proto__)
+                    callback({name: "__proto__", value: object.__proto__, writable: true, configurable: true, isOwn: true});
+            } catch { }
+        }
     }
 
-    _getSetEntries(object, skip, numberToFetch)
+    _getSetEntries(object, fetchStart, fetchCount)
     {
         let entries = [];
 
         // FIXME: This is observable if the page overrides Set.prototype[Symbol.iterator].
         for (let value of object) {
-            if (skip > 0) {
-                skip--;
+            if (fetchStart > 0) {
+                fetchStart--;
                 continue;
             }
 
             entries.push({value});
 
-            if (numberToFetch && entries.length === numberToFetch)
+            if (fetchCount && entries.length === fetchCount)
                 break;
         }
 
         return entries;
     }
 
-    _getMapEntries(object, skip, numberToFetch)
+    _getMapEntries(object, fetchStart, fetchCount)
     {
         let entries = [];
 
         // FIXME: This is observable if the page overrides Map.prototype[Symbol.iterator].
         for (let [key, value] of object) {
-            if (skip > 0) {
-                skip--;
+            if (fetchStart > 0) {
+                fetchStart--;
                 continue;
             }
 
             entries.push({key, value});
 
-            if (numberToFetch && entries.length === numberToFetch)
+            if (fetchCount && entries.length === fetchCount)
                 break;
         }
 
         return entries;
     }
 
-    _getWeakMapEntries(object, numberToFetch)
+    _getWeakMapEntries(object, fetchCount)
     {
-        return InjectedScriptHost.weakMapEntries(object, numberToFetch);
+        return InjectedScriptHost.weakMapEntries(object, fetchCount);
     }
 
-    _getWeakSetEntries(object, numberToFetch)
+    _getWeakSetEntries(object, fetchCount)
     {
-        return InjectedScriptHost.weakSetEntries(object, numberToFetch);
+        return InjectedScriptHost.weakSetEntries(object, fetchCount);
     }
 
-    _getIteratorEntries(object, numberToFetch)
+    _getIteratorEntries(object, fetchCount)
     {
-        return InjectedScriptHost.iteratorEntries(object, numberToFetch);
+        return InjectedScriptHost.iteratorEntries(object, fetchCount);
     }
 
-    _entries(object, subtype, startIndex, numberToFetch)
+    _entries(object, subtype, fetchStart, fetchCount)
     {
         if (subtype === "set")
-            return this._getSetEntries(object, startIndex, numberToFetch);
+            return this._getSetEntries(object, fetchStart, fetchCount);
         if (subtype === "map")
-            return this._getMapEntries(object, startIndex, numberToFetch);
+            return this._getMapEntries(object, fetchStart, fetchCount);
         if (subtype === "weakmap")
-            return this._getWeakMapEntries(object, numberToFetch);
+            return this._getWeakMapEntries(object, fetchCount);
         if (subtype === "weakset")
-            return this._getWeakSetEntries(object, numberToFetch);
+            return this._getWeakSetEntries(object, fetchCount);
         if (subtype === "iterator")
-            return this._getIteratorEntries(object, numberToFetch);
+            return this._getIteratorEntries(object, fetchCount);
 
         throw "unexpected type";
     }
@@ -851,18 +887,18 @@ let InjectedScript = class InjectedScript
         if (this._nextSavedResultIndex >= 100)
             this._nextSavedResultIndex = 1;
     }
-
-    _savedResult(index)
-    {
-        return this._savedResults[index];
-    }
-}
+};
 
 InjectedScript.CollectionMode = {
     OwnProperties: 1 << 0,          // own properties.
     NativeGetterProperties: 1 << 1, // native getter properties in the prototype chain.
     AllProperties: 1 << 2,          // all properties in the prototype chain.
 };
+
+InjectedScript.PropertyFetchAction = {
+    Continue: Symbol("continue"),
+    Stop: Symbol("stop"),
+}
 
 var injectedScript = new InjectedScript;
 
@@ -877,9 +913,10 @@ let RemoteObject = class RemoteObject
         if (this.type === "undefined" && InjectedScriptHost.isHTMLAllCollection(object))
             this.type = "object";
 
-        if (isPrimitiveValue(object) || object === null || forceValueType) {
+        if (isPrimitiveValue(object) || isBigInt(object) || object === null || forceValueType) {
             // We don't send undefined values over JSON.
-            if (this.type !== "undefined")
+            // BigInt values are not JSON serializable.
+            if (this.type !== "undefined" && this.type !== "bigint")
                 this.value = object;
 
             // Null object is object with 'null' subtype.
@@ -887,8 +924,9 @@ let RemoteObject = class RemoteObject
                 this.subtype = "null";
 
             // Provide user-friendly number values.
-            if (this.type === "number")
+            if (this.type === "number" || this.type === "bigint")
                 this.description = toStringDescription(object);
+
             return;
         }
 
@@ -956,7 +994,7 @@ let RemoteObject = class RemoteObject
         if (value === null)
             return "null";
 
-        if (isPrimitiveValue(value) || isSymbol(value))
+        if (isPrimitiveValue(value) || isBigInt(value) || isSymbol(value))
             return null;
 
         if (InjectedScriptHost.isHTMLAllCollection(value))
@@ -970,7 +1008,7 @@ let RemoteObject = class RemoteObject
         try {
             if (typeof value.splice === "function" && isFinite(value.length))
                 return "array";
-        } catch (e) {}
+        } catch { }
 
         return null;
     }
@@ -978,6 +1016,9 @@ let RemoteObject = class RemoteObject
     static describe(value)
     {
         if (isPrimitiveValue(value))
+            return null;
+
+        if (isBigInt(value))
             return null;
 
         if (isSymbol(value))
@@ -1110,166 +1151,153 @@ let RemoteObject = class RemoteObject
             // Internal Properties.
             let internalPropertyDescriptors = injectedScript._internalPropertyDescriptors(object, true);
             if (internalPropertyDescriptors) {
-                this._appendPropertyPreviews(object, preview, internalPropertyDescriptors, true, propertiesThreshold, firstLevelKeys, secondLevelKeys);
-                if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0)
-                    return preview;
+                for (let i = 0; i < internalPropertyDescriptors.length; ++i) {
+                    let result = this._appendPropertyPreview(object, preview, internalPropertyDescriptors[i], propertiesThreshold, firstLevelKeys, secondLevelKeys, {internal: true});
+                    if (result === InjectedScript.PropertyFetchAction.Stop)
+                        return preview;
+                }
             }
 
             if (preview.entries)
                 return preview;
 
             // Properties.
-            let nativeGettersAsValues = true;
-            let descriptors = injectedScript._propertyDescriptors(object, InjectedScript.CollectionMode.AllProperties, nativeGettersAsValues);
-            this._appendPropertyPreviews(object, preview, descriptors, false, propertiesThreshold, firstLevelKeys, secondLevelKeys);
-            if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0)
-                return preview;
-        } catch (e) {
+            injectedScript._forEachPropertyDescriptor(object, InjectedScript.CollectionMode.AllProperties, (descriptor) => {
+                return this._appendPropertyPreview(object, preview, descriptor, propertiesThreshold, firstLevelKeys, secondLevelKeys);
+            }, {nativeGettersAsValues: true, includeProto: true})
+        } catch {
             preview.lossless = false;
         }
 
         return preview;
     }
 
-    _appendPropertyPreviews(object, preview, descriptors, internal, propertiesThreshold, firstLevelKeys, secondLevelKeys)
+    _appendPropertyPreview(object, preview, descriptor, propertiesThreshold, firstLevelKeys, secondLevelKeys, {internal} = {})
     {
-        for (let i = 0; i < descriptors.length; ++i) {
-            let descriptor = descriptors[i];
-
-            // Seen enough.
-            if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0)
-                break;
-
-            // Error in descriptor.
-            if (descriptor.wasThrown) {
-                preview.lossless = false;
-                continue;
-            }
-
-            // Do not show "__proto__" in preview.
-            let name = descriptor.name;
-            if (name === "__proto__") {
-                // Non basic __proto__ objects may have interesting, non-enumerable, methods to show.
-                if (descriptor.value && descriptor.value.constructor
-                    && descriptor.value.constructor !== Object
-                    && descriptor.value.constructor !== Array
-                    && descriptor.value.constructor !== RegExp)
-                    preview.lossless = false;
-                continue;
-            }
-
-            // For arrays, only allow indexes.
-            if (this.subtype === "array" && !isUInt32(name))
-                continue;
-
-            // Do not show non-enumerable non-own properties.
-            // Special case to allow array indexes that may be on the prototype.
-            // Special case to allow native getters on non-RegExp objects.
-            if (!descriptor.enumerable && !descriptor.isOwn && !(this.subtype === "array" || (this.subtype !== "regexp" && descriptor.nativeGetter)))
-                continue;
-
-            // If we have a filter, only show properties in the filter.
-            // FIXME: Currently these filters do nothing on the backend.
-            if (firstLevelKeys && !firstLevelKeys.includes(name))
-                continue;
-
-            // Getter/setter.
-            if (!("value" in descriptor)) {
-                preview.lossless = false;
-                this._appendPropertyPreview(preview, internal, {name, type: "accessor"}, propertiesThreshold);
-                continue;
-            }
-
-            // Null value.
-            let value = descriptor.value;
-            if (value === null) {
-                this._appendPropertyPreview(preview, internal, {name, type: "object", subtype: "null", value: "null"}, propertiesThreshold);
-                continue;
-            }
-
-            // Ignore non-enumerable functions.
-            let type = typeof value;
-            if (!descriptor.enumerable && type === "function")
-                continue;
-
-            // Fix type of document.all.
-            if (InjectedScriptHost.isHTMLAllCollection(value))
-                type = "object";
-
-            // Primitive.
-            const maxLength = 100;
-            if (isPrimitiveValue(value)) {
-                if (type === "string" && value.length > maxLength) {
-                    value = this._abbreviateString(value, maxLength, true);
-                    preview.lossless = false;
-                }
-                this._appendPropertyPreview(preview, internal, {name, type, value: toStringDescription(value)}, propertiesThreshold);
-                continue;
-            }
-
-            // Symbol.
-            if (isSymbol(value)) {
-                let symbolString = toString(value);
-                if (symbolString.length > maxLength) {
-                    symbolString = this._abbreviateString(symbolString, maxLength, true);
-                    preview.lossless = false;
-                }
-                this._appendPropertyPreview(preview, internal, {name, type, value: symbolString}, propertiesThreshold);
-                continue;
-            }
-
-            // Object.
-            let property = {name, type};
-            let subtype = RemoteObject.subtype(value);
-            if (subtype)
-                property.subtype = subtype;
-
-            // Second level.
-            if ((secondLevelKeys === null || secondLevelKeys) || this._isPreviewableObject(value, object)) {
-                // FIXME: If we want secondLevelKeys filter to continue we would need some refactoring.
-                let subPreview = RemoteObject.createObjectPreviewForValue(value, value !== object, secondLevelKeys);
-                property.valuePreview = subPreview;
-                if (!subPreview.lossless)
-                    preview.lossless = false;
-                if (subPreview.overflow)
-                    preview.overflow = true;
-            } else {
-                let description = "";
-                if (type !== "function" || subtype === "class") {
-                    let fullDescription;
-                    if (subtype === "class")
-                        fullDescription = "class " + value.name;
-                    else if (subtype === "node")
-                        fullDescription = RemoteObject.nodePreview(value);
-                    else
-                        fullDescription = RemoteObject.describe(value);
-                    description = this._abbreviateString(fullDescription, maxLength, subtype === "regexp");
-                }
-                property.value = description;
-                preview.lossless = false;
-            }
-
-            this._appendPropertyPreview(preview, internal, property, propertiesThreshold);
-        }
-    }
-
-    _appendPropertyPreview(preview, internal, property, propertiesThreshold)
-    {
-        if (toString(property.name >>> 0) === property.name)
-            propertiesThreshold.indexes--;
-        else
-            propertiesThreshold.properties--;
-
-        if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0) {
-            preview.overflow = true;
+        // Error in descriptor.
+        if (descriptor.wasThrown) {
             preview.lossless = false;
-            return;
+            return InjectedScript.PropertyFetchAction.Continue;
         }
 
-        if (internal)
-            property.internal = true;
+        // Do not show "__proto__" in preview.
+        let name = descriptor.name;
+        if (name === "__proto__") {
+            // Non basic __proto__ objects may have interesting, non-enumerable, methods to show.
+            if (descriptor.value && descriptor.value.constructor
+                && descriptor.value.constructor !== Object
+                && descriptor.value.constructor !== Array
+                && descriptor.value.constructor !== RegExp)
+                preview.lossless = false;
+            return InjectedScript.PropertyFetchAction.Continue;
+        }
 
-        preview.properties.push(property);
+        // For arrays, only allow indexes.
+        if (this.subtype === "array" && !isUInt32(name))
+            return InjectedScript.PropertyFetchAction.Continue;
+
+        // Do not show non-enumerable non-own properties.
+        // Special case to allow array indexes that may be on the prototype.
+        // Special case to allow native getters on non-RegExp objects.
+        if (!descriptor.enumerable && !descriptor.isOwn && !(this.subtype === "array" || (this.subtype !== "regexp" && descriptor.nativeGetter)))
+            return InjectedScript.PropertyFetchAction.Continue;
+
+        // If we have a filter, only show properties in the filter.
+        // FIXME: Currently these filters do nothing on the backend.
+        if (firstLevelKeys && !firstLevelKeys.includes(name))
+            return InjectedScript.PropertyFetchAction.Continue;
+
+        function appendPreview(property) {
+            if (toString(property.name >>> 0) === property.name)
+                propertiesThreshold.indexes--;
+            else
+                propertiesThreshold.properties--;
+
+            if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0) {
+                preview.overflow = true;
+                preview.lossless = false;
+                return InjectedScript.PropertyFetchAction.Stop;
+            }
+
+            if (internal)
+                property.internal = true;
+
+            preview.properties.push(property);
+            return InjectedScript.PropertyFetchAction.Continue;
+        }
+
+        // Getter/setter.
+        if (!("value" in descriptor)) {
+            preview.lossless = false;
+            return appendPreview({name, type: "accessor"});
+        }
+
+        // Null value.
+        let value = descriptor.value;
+        if (value === null)
+            return appendPreview({name, type: "object", subtype: "null", value: "null"});
+
+        // Ignore non-enumerable functions.
+        let type = typeof value;
+        if (!descriptor.enumerable && type === "function")
+            return InjectedScript.PropertyFetchAction.Continue;
+
+        // Fix type of document.all.
+        if (InjectedScriptHost.isHTMLAllCollection(value))
+            type = "object";
+
+        // Primitive.
+        const maxLength = 100;
+        if (isPrimitiveValue(value) || isBigInt(value)) {
+            if (type === "string" && value.length > maxLength) {
+                value = this._abbreviateString(value, maxLength, true);
+                preview.lossless = false;
+            }
+            return appendPreview({name, type, value: toStringDescription(value)});
+        }
+
+        // Symbol.
+        if (isSymbol(value)) {
+            let symbolString = toString(value);
+            if (symbolString.length > maxLength) {
+                symbolString = this._abbreviateString(symbolString, maxLength, true);
+                preview.lossless = false;
+            }
+            return appendPreview({name, type, value: symbolString});
+        }
+
+        // Object.
+        let property = {name, type};
+        let subtype = RemoteObject.subtype(value);
+        if (subtype)
+            property.subtype = subtype;
+
+        // Second level.
+        if ((secondLevelKeys === null || secondLevelKeys) || this._isPreviewableObject(value, object)) {
+            // FIXME: If we want secondLevelKeys filter to continue we would need some refactoring.
+            let subPreview = RemoteObject.createObjectPreviewForValue(value, value !== object, secondLevelKeys);
+            property.valuePreview = subPreview;
+            if (!subPreview.lossless)
+                preview.lossless = false;
+            if (subPreview.overflow)
+                preview.overflow = true;
+        } else {
+            let description = "";
+            if (type !== "function" || subtype === "class") {
+                let fullDescription;
+                if (subtype === "class")
+                    fullDescription = "class " + value.name;
+                else if (subtype === "node")
+                    fullDescription = RemoteObject.nodePreview(value);
+                else
+                    fullDescription = RemoteObject.describe(value);
+                description = this._abbreviateString(fullDescription, maxLength, subtype === "regexp");
+            }
+            property.value = description;
+            preview.lossless = false;
+        }
+
+        return appendPreview(property);
     }
 
     _appendEntryPreviews(object, preview)
@@ -1316,7 +1344,7 @@ let RemoteObject = class RemoteObject
             return false;
 
         // Primitive.
-        if (isPrimitiveValue(object) || isSymbol(object))
+        if (isPrimitiveValue(object) || isBigInt(object) || isSymbol(object))
             return true;
 
         // Null.
@@ -1376,7 +1404,7 @@ let RemoteObject = class RemoteObject
 
         return string.substr(0, maxLength) + "\u2026";
     }
-}
+};
 
 // -------
 
@@ -1388,7 +1416,7 @@ InjectedScript.CallFrameProxy = function(ordinal, callFrame)
     this.scopeChain = this._wrapScopeChain(callFrame);
     this.this = RemoteObject.create(callFrame.thisObject, "backtrace");
     this.isTailDeleted = callFrame.isTailDeleted;
-}
+};
 
 InjectedScript.CallFrameProxy.prototype = {
     _wrapScopeChain(callFrame)
@@ -1401,7 +1429,7 @@ InjectedScript.CallFrameProxy.prototype = {
             scopeChainProxy[i] = InjectedScript.CallFrameProxy._createScopeJson(scopeChain[i], scopeDescriptions[i], "backtrace");
         return scopeChainProxy;
     }
-}
+};
 
 InjectedScript.CallFrameProxy._scopeTypeNames = {
     0: "global", // GLOBAL_SCOPE
@@ -1434,53 +1462,83 @@ InjectedScript.CallFrameProxy._createScopeJson = function(object, {name, type, l
 
 // -------
 
-function bind(func, thisObject, ...outerArgs)
+function CommandLineAPI(callFrame)
 {
-    return function(...innerArgs) {
-        return func.apply(thisObject, outerArgs.concat(innerArgs));
-    };
-}
+    let savedResultAlias = InjectedScriptHost.savedResultAlias;
 
-function BasicCommandLineAPI(callFrame)
-{
-    this.$_ = injectedScript._lastResult;
-    this.$exception = injectedScript._exceptionValue;
+    let defineGetter = (key, value, wrap) => {
+        if (wrap) {
+            let originalValue = value;
+            value = function() { return originalValue; };
+        }
+
+        this.__defineGetter__("$" + key, value);
+        if (savedResultAlias && savedResultAlias !== "$")
+            this.__defineGetter__(savedResultAlias + key, value);
+    };
+
+    if ("_lastResult" in injectedScript)
+        defineGetter("_", injectedScript._lastResult, true);
+
+    if ("_exceptionValue" in injectedScript)
+        defineGetter("exception", injectedScript._exceptionValue, true);
+
+    if ("_eventValue" in injectedScript)
+        defineGetter("event", injectedScript._eventValue, true);
 
     // $1-$99
-    for (let i = 1; i <= injectedScript._savedResults.length; ++i)
-        this.__defineGetter__("$" + i, bind(injectedScript._savedResult, injectedScript, i));
+    for (let i = 1; i < injectedScript._savedResults.length; ++i)
+        defineGetter(i, injectedScript._savedResults[i], true);
 
-    // Command Line API methods.
-    for (let i = 0; i < BasicCommandLineAPI.methods.length; ++i) {
-        let method = BasicCommandLineAPI.methods[i];
-        this[method.name] = method;
-    }
+    for (let name in CommandLineAPI.getters)
+        defineGetter(name, CommandLineAPI.getters[name]);
+
+    for (let name in CommandLineAPI.methods)
+        this[name] = CommandLineAPI.methods[name];
 }
 
-BasicCommandLineAPI.methods = [
-    function dir() { return inspectedGlobalObject.console.dir(...arguments); },
-    function clear() { return inspectedGlobalObject.console.clear(...arguments); },
-    function table() { return inspectedGlobalObject.console.table(...arguments); },
-    function profile() { return inspectedGlobalObject.console.profile(...arguments); },
-    function profileEnd() { return inspectedGlobalObject.console.profileEnd(...arguments); },
+CommandLineAPI.getters = {};
 
-    function keys(object) { return Object.keys(object); },
-    function values(object) {
-        let result = [];
-        for (let key in object)
-            result.push(object[key]);
-        return result;
-    },
+CommandLineAPI.methods = {};
 
-    function queryObjects() {
-        return InjectedScriptHost.queryObjects(...arguments);
-    },
-];
+CommandLineAPI.methods["keys"] = function(object) { return Object.keys(object); };
+CommandLineAPI.methods["values"] = function(object) { return Object.values(object); };
 
-for (let i = 0; i < BasicCommandLineAPI.methods.length; ++i) {
-    let method = BasicCommandLineAPI.methods[i];
-    method.toString = function() { return "function " + method.name + "() { [Command Line API] }"; };
-}
+CommandLineAPI.methods["queryInstances"] = function() { return InjectedScriptHost.queryInstances(...arguments); };
+CommandLineAPI.methods["queryObjects"] = function() { return InjectedScriptHost.queryInstances(...arguments); };
+CommandLineAPI.methods["queryHolders"] = function() { return InjectedScriptHost.queryHolders(...arguments); };
+
+CommandLineAPI.methods["inspect"] = function(object) { return injectedScript.inspectObject(object); };
+
+CommandLineAPI.methods["assert"] = function() { return inspectedGlobalObject.console.assert(...arguments); };
+CommandLineAPI.methods["clear"] = function() { return inspectedGlobalObject.console.clear(...arguments); };
+CommandLineAPI.methods["count"] = function() { return inspectedGlobalObject.console.count(...arguments); };
+CommandLineAPI.methods["countReset"] = function() { return inspectedGlobalObject.console.countReset(...arguments); };
+CommandLineAPI.methods["debug"] = function() { return inspectedGlobalObject.console.debug(...arguments); };
+CommandLineAPI.methods["dir"] = function() { return inspectedGlobalObject.console.dir(...arguments); };
+CommandLineAPI.methods["dirxml"] = function() { return inspectedGlobalObject.console.dirxml(...arguments); };
+CommandLineAPI.methods["error"] = function() { return inspectedGlobalObject.console.error(...arguments); };
+CommandLineAPI.methods["group"] = function() { return inspectedGlobalObject.console.group(...arguments); };
+CommandLineAPI.methods["groupCollapsed"] = function() { return inspectedGlobalObject.console.groupCollapsed(...arguments); };
+CommandLineAPI.methods["groupEnd"] = function() { return inspectedGlobalObject.console.groupEnd(...arguments); };
+CommandLineAPI.methods["info"] = function() { return inspectedGlobalObject.console.info(...arguments); };
+CommandLineAPI.methods["log"] = function() { return inspectedGlobalObject.console.log(...arguments); };
+CommandLineAPI.methods["profile"] = function() { return inspectedGlobalObject.console.profile(...arguments); };
+CommandLineAPI.methods["profileEnd"] = function() { return inspectedGlobalObject.console.profileEnd(...arguments); };
+CommandLineAPI.methods["record"] = function() { return inspectedGlobalObject.console.record(...arguments); };
+CommandLineAPI.methods["recordEnd"] = function() { return inspectedGlobalObject.console.recordEnd(...arguments); };
+CommandLineAPI.methods["screenshot"] = function() { return inspectedGlobalObject.console.screenshot(...arguments); };
+CommandLineAPI.methods["table"] = function() { return inspectedGlobalObject.console.table(...arguments); };
+CommandLineAPI.methods["takeHeapSnapshot"] = function() { return inspectedGlobalObject.console.takeHeapSnapshot(...arguments); };
+CommandLineAPI.methods["time"] = function() { return inspectedGlobalObject.console.time(...arguments); };
+CommandLineAPI.methods["timeEnd"] = function() { return inspectedGlobalObject.console.timeEnd(...arguments); };
+CommandLineAPI.methods["timeLog"] = function() { return inspectedGlobalObject.console.timeLog(...arguments); };
+CommandLineAPI.methods["timeStamp"] = function() { return inspectedGlobalObject.console.timeStamp(...arguments); };
+CommandLineAPI.methods["trace"] = function() { return inspectedGlobalObject.console.trace(...arguments); };
+CommandLineAPI.methods["warn"] = function() { return inspectedGlobalObject.console.warn(...arguments); };
+
+for (let name in CommandLineAPI.methods)
+    CommandLineAPI.methods[name].toString = function() { return "function " + name + "() { [Command Line API] }"; };
 
 return injectedScript;
 })

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,9 @@ import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
+import javafx.print.JobSettings;
 import javafx.print.PageLayout;
+import javafx.print.PageRange;
 import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.util.Callback;
@@ -326,6 +328,12 @@ window.setMember("app", javaApp);
  * unconditionally.
  * </p>
  *
+ * <p>
+ * Starting with JavaFX 14, <a href="https://tools.ietf.org/html/rfc7540">HTTP/2</a> support has been added to WebEngine.
+ * This is achieved by using {@link java.net.http.HttpClient} instead of {@link URLConnection}. HTTP/2 is activated
+ * by default when JavaFX 14 (or later) is used with JDK 12 (or later).
+ * </p>
+ *
  * <p><b>Threading</b></p>
  * <p>{@code WebEngine} objects must be created and accessed solely from the
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript
@@ -491,7 +499,7 @@ final public class WebEngine {
      * Location of the user stylesheet as a string URL.
      *
      * <p>This should be a local URL, i.e. either {@code 'data:'},
-     * {@code 'file:'}, or {@code 'jar:'}. Remote URLs are not allowed
+     * {@code 'file:'}, {@code 'jar:'}, or {@code 'jrt:'}. Remote URLs are not allowed
      * for security reasons.
      *
      * @defaultValue null
@@ -554,6 +562,7 @@ final public class WebEngine {
                         dataUrl = url;
                     } else if (url.startsWith("file:") ||
                                url.startsWith("jar:")  ||
+                               url.startsWith("jrt:")  ||
                                url.startsWith("data:"))
                     {
                         try {
@@ -1603,10 +1612,23 @@ final public class WebEngine {
         float height = (float) pl.getPrintableHeight();
         int pageCount = page.beginPrinting(width, height);
 
-        for (int i = 0; i < pageCount; i++) {
-            if (printStatusOK(job)) {
-                Node printable = new Printable(page, i, width);
-                job.printPage(printable);
+        JobSettings jobSettings = job.getJobSettings();
+        if (jobSettings.getPageRanges() != null) {
+            PageRange[] pageRanges = jobSettings.getPageRanges();
+            for (PageRange p : pageRanges) {
+                for (int i = p.getStartPage(); i <= p.getEndPage() && i <= pageCount; ++i) {
+                    if (printStatusOK(job)) {
+                        Node printable = new Printable(page, i - 1, width);
+                        job.printPage(printable);
+                    }
+                }
+            }
+        } else {
+            for (int i = 0; i < pageCount; i++) {
+                if (printStatusOK(job)) {
+                    Node printable = new Printable(page, i, width);
+                    job.printPage(printable);
+                }
             }
         }
         page.endPrinting();

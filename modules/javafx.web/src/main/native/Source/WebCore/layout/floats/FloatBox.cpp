@@ -35,12 +35,13 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(FloatBox);
 
-FloatBox::FloatBox(const Box& layoutBox, const FloatingState& floatingState, const LayoutState& layoutState)
-    : FloatAvoider(layoutBox, floatingState, layoutState)
+FloatBox::FloatBox(const Box& layoutBox, Display::Box absoluteDisplayBox, LayoutPoint containingBlockAbsoluteTopLeft, HorizontalEdges containingBlockAbsoluteContentBox, Optional<LayoutUnit> previousFloatAbsoluteTop)
+    : FloatAvoider(layoutBox, absoluteDisplayBox, containingBlockAbsoluteTopLeft, containingBlockAbsoluteContentBox)
 {
+    displayBox().setTopLeft({ initialHorizontalPosition(), initialVerticalPosition(previousFloatAbsoluteTop) });
 }
 
-Display::Box::Rect FloatBox::rect() const
+Display::Rect FloatBox::rect() const
 {
     auto rect = displayBox().rect();
     return { rect.top() - marginBefore(), rect.left() - marginStart(), marginStart() + rect.width() + marginEnd(), marginBefore() + rect.height() + marginAfter() };
@@ -59,13 +60,13 @@ PositionInContextRoot FloatBox::verticalPositionCandidate(PositionInContextRoot 
     return { verticalConstraint + marginBefore() };
 }
 
-PositionInContextRoot FloatBox::initialVerticalPosition() const
+PositionInContextRoot FloatBox::initialVerticalPosition(Optional<LayoutUnit> previousFloatAbsoluteTop) const
 {
     // Incoming float cannot be placed higher than existing floats (margin box of the last float).
     // Take the static position (where the box would go if it wasn't floating) and adjust it with the last float.
-    auto top = FloatAvoider::initialVerticalPosition() - marginBefore();
-    if (auto lastFloat = floatingState().last())
-        top = std::max(top, lastFloat->rectWithMargin().top());
+    auto top = displayBox().top() - marginBefore();
+    if (previousFloatAbsoluteTop)
+        top = std::max(top, *previousFloatAbsoluteTop);
     top += marginBefore();
 
     return { top };

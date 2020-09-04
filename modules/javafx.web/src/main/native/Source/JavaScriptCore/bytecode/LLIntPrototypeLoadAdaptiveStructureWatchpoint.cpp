@@ -32,9 +32,11 @@
 
 namespace JSC {
 
-LLIntPrototypeLoadAdaptiveStructureWatchpoint::LLIntPrototypeLoadAdaptiveStructureWatchpoint(const ObjectPropertyCondition& key, OpGetById::Metadata& getByIdMetadata)
-    : m_key(key)
-    , m_getByIdMetadata(getByIdMetadata)
+LLIntPrototypeLoadAdaptiveStructureWatchpoint::LLIntPrototypeLoadAdaptiveStructureWatchpoint(CodeBlock* owner, const ObjectPropertyCondition& key, unsigned bytecodeOffset)
+    : Watchpoint(Watchpoint::Type::LLIntPrototypeLoadAdaptiveStructure)
+    , m_owner(owner)
+    , m_bytecodeOffset(bytecodeOffset)
+    , m_key(key)
 {
     RELEASE_ASSERT(key.watchingRequiresStructureTransitionWatchpoint());
     RELEASE_ASSERT(!key.watchingRequiresReplacementWatchpoint());
@@ -49,19 +51,22 @@ void LLIntPrototypeLoadAdaptiveStructureWatchpoint::install(VM& vm)
 
 void LLIntPrototypeLoadAdaptiveStructureWatchpoint::fireInternal(VM& vm, const FireDetail&)
 {
+    if (!m_owner->isLive())
+        return;
+
     if (m_key.isWatchable(PropertyCondition::EnsureWatchability)) {
         install(vm);
         return;
     }
 
-    clearLLIntGetByIdCache(m_getByIdMetadata);
+    auto& instruction = m_owner->instructions().at(m_bytecodeOffset.get());
+    clearLLIntGetByIdCache(instruction->as<OpGetById>().metadata(m_owner.get()));
 }
 
 void LLIntPrototypeLoadAdaptiveStructureWatchpoint::clearLLIntGetByIdCache(OpGetById::Metadata& metadata)
 {
-    metadata.m_mode = GetByIdMode::Default;
-    metadata.m_modeMetadata.defaultMode.cachedOffset = 0;
-    metadata.m_modeMetadata.defaultMode.structureID = 0;
+    // Keep hitCountForLLIntCaching value.
+    metadata.m_modeMetadata.clearToDefaultModeWithoutCache();
 }
 
 

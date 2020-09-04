@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2018 Igalia S.L.
+ * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +30,13 @@
 
 #if ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)
 
+#include "ScrollingConstraints.h"
 #include "ScrollingTreeNode.h"
+#include <wtf/RefPtr.h>
+
+namespace Nicosia {
+class CompositionLayer;
+}
 
 namespace WebCore {
 
@@ -42,9 +49,16 @@ private:
     ScrollingTreeFixedNode(ScrollingTree&, ScrollingNodeID);
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
-    void updateLayersAfterAncestorChange(const ScrollingTreeNode&, const FloatRect&, const FloatSize&) override;
+    void applyLayerPositions() override;
+
+    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+
+    FixedPositionViewportConstraints m_constraints;
+    RefPtr<Nicosia::CompositionLayer> m_layer;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_SCROLLING_NODE(ScrollingTreeFixedNode, isFixedNode())
 
 #endif // ENABLE(ASYNC_SCROLLING) && USE(NICOSIA)

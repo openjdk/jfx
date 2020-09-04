@@ -38,7 +38,6 @@
 #include "QuotesData.h"
 #include "RenderObject.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScaleTransformOperation.h"
 #include "ShadowData.h"
 #include "StyleBuilderConverter.h"
@@ -79,12 +78,14 @@ struct SameSizeAsRenderStyle {
     struct NonInheritedFlags {
         unsigned m_bitfields[2];
     } m_nonInheritedFlags;
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     bool deletionCheck;
 #endif
 };
 
 static_assert(sizeof(RenderStyle) == sizeof(SameSizeAsRenderStyle), "RenderStyle should stay small");
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
 
 RenderStyle& RenderStyle::defaultStyle()
 {
@@ -109,7 +110,7 @@ RenderStyle RenderStyle::clone(const RenderStyle& style)
 
 std::unique_ptr<RenderStyle> RenderStyle::clonePtr(const RenderStyle& style)
 {
-    return std::make_unique<RenderStyle>(style, Clone);
+    return makeUnique<RenderStyle>(style, Clone);
 }
 
 RenderStyle RenderStyle::createAnonymousStyleWithDisplay(const RenderStyle& parentStyle, DisplayType display)
@@ -165,6 +166,9 @@ RenderStyle::RenderStyle(CreateDefaultStyleTag)
     m_inheritedFlags.insideLink = static_cast<unsigned>(InsideLink::NotInside);
     m_inheritedFlags.insideDefaultButton = false;
     m_inheritedFlags.writingMode = initialWritingMode();
+#if ENABLE(TEXT_AUTOSIZING)
+    m_inheritedFlags.autosizeStatus = 0;
+#endif
 
     m_nonInheritedFlags.effectiveDisplay = static_cast<unsigned>(initialDisplay());
     m_nonInheritedFlags.originalDisplay = static_cast<unsigned>(initialDisplay());
@@ -227,7 +231,7 @@ inline RenderStyle::RenderStyle(RenderStyle& a, RenderStyle&& b)
 
 RenderStyle::~RenderStyle()
 {
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
     m_deletionHasBegun = true;
 #endif
@@ -406,7 +410,7 @@ RenderStyle* RenderStyle::addCachedPseudoStyle(std::unique_ptr<RenderStyle> pseu
     RenderStyle* result = pseudo.get();
 
     if (!m_cachedPseudoStyles)
-        m_cachedPseudoStyles = std::make_unique<PseudoStyleCache>();
+        m_cachedPseudoStyles = makeUnique<PseudoStyleCache>();
 
     m_cachedPseudoStyles->append(WTFMove(pseudo));
 
@@ -426,12 +430,21 @@ void RenderStyle::removeCachedPseudoStyle(PseudoId pid)
     }
 }
 
-bool RenderStyle::inheritedNotEqual(const RenderStyle* other) const
+bool RenderStyle::inheritedEqual(const RenderStyle& other) const
 {
-    return m_inheritedFlags != other->m_inheritedFlags
-        || m_inheritedData != other->m_inheritedData
-        || m_svgStyle->inheritedNotEqual(other->m_svgStyle)
-        || m_rareInheritedData != other->m_rareInheritedData;
+    return m_inheritedFlags == other.m_inheritedFlags
+        && m_inheritedData == other.m_inheritedData
+        && (m_svgStyle.ptr() == other.m_svgStyle.ptr() || m_svgStyle->inheritedEqual(other.m_svgStyle))
+        && m_rareInheritedData == other.m_rareInheritedData;
+}
+
+bool RenderStyle::descendantAffectingNonInheritedPropertiesEqual(const RenderStyle& other) const
+{
+    if (m_rareNonInheritedData.ptr() == other.m_rareNonInheritedData.ptr())
+        return true;
+
+    return m_rareNonInheritedData->alignItems == other.m_rareNonInheritedData->alignItems
+        && m_rareNonInheritedData->justifyItems == other.m_rareNonInheritedData->justifyItems;
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -489,16 +502,95 @@ bool RenderStyle::equalForTextAutosizing(const RenderStyle& other) const
         && m_rareNonInheritedData->textOverflow == other.m_rareNonInheritedData->textOverflow;
 }
 
-#endif // ENABLE(TEXT_AUTOSIZING)
-
-bool RenderStyle::inheritedDataShared(const RenderStyle* other) const
+bool RenderStyle::isIdempotentTextAutosizingCandidate() const
 {
-    // This is a fast check that only looks if the data structures are shared.
-    return m_inheritedFlags == other->m_inheritedFlags
-        && m_inheritedData.ptr() == other->m_inheritedData.ptr()
-        && m_svgStyle.ptr() == other->m_svgStyle.ptr()
-        && m_rareInheritedData.ptr() == other->m_rareInheritedData.ptr();
+    // Refer to <rdar://problem/51826266> for more information regarding how this function was generated.
+    auto fields = OptionSet<AutosizeStatus::Fields>::fromRaw(m_inheritedFlags.autosizeStatus);
+    if (fields.contains(AutosizeStatus::Fields::AvoidSubtree))
+        return false;
+
+    const float smallMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 5;
+    const float largeMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText = 25;
+
+    if (fields.contains(AutosizeStatus::Fields::FixedHeight)) {
+        if (fields.contains(AutosizeStatus::Fields::FixedWidth)) {
+            if (whiteSpace() == WhiteSpace::NoWrap) {
+                if (width().isFixed())
+                    return false;
+
+                if (height().isFixed() && specifiedLineHeight().isFixed()) {
+                    float specifiedSize = specifiedFontSize();
+                    if (height().value() == specifiedSize && specifiedLineHeight().value() == specifiedSize)
+                        return false;
+                }
+
+                return true;
+            }
+
+            if (fields.contains(AutosizeStatus::Fields::Floating)) {
+                if (specifiedLineHeight().isFixed() && height().isFixed()) {
+                    float specifiedSize = specifiedFontSize();
+                    if (specifiedLineHeight().value() - specifiedSize > smallMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText
+                        && height().value() - specifiedSize > smallMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            if (fields.contains(AutosizeStatus::Fields::OverflowXHidden))
+                return false;
+
+            return true;
+        }
+
+        if (fields.contains(AutosizeStatus::Fields::OverflowXHidden)) {
+            if (fields.contains(AutosizeStatus::Fields::Floating))
+                return false;
+
+            return true;
+        }
+
+        return true;
+    }
+
+    if (width().isFixed()) {
+        if (breakWords())
+            return true;
+
+        return false;
+    }
+
+    if (textSizeAdjust().isPercentage() && textSizeAdjust().percentage() == 100) {
+        if (fields.contains(AutosizeStatus::Fields::Floating))
+            return true;
+
+        if (fields.contains(AutosizeStatus::Fields::FixedWidth))
+            return true;
+
+        if (specifiedLineHeight().isFixed() && specifiedLineHeight().value() - specifiedFontSize() > largeMinimumDifferenceThresholdBetweenLineHeightAndSpecifiedFontSizeForBoostingText)
+            return true;
+
+        return false;
+    }
+
+    if (hasBackgroundImage() && backgroundRepeatX() == FillRepeat::NoRepeat && backgroundRepeatY() == FillRepeat::NoRepeat)
+        return false;
+
+    return true;
 }
+
+AutosizeStatus RenderStyle::autosizeStatus() const
+{
+    return OptionSet<AutosizeStatus::Fields>::fromRaw(m_inheritedFlags.autosizeStatus);
+}
+
+void RenderStyle::setAutosizeStatus(AutosizeStatus autosizeStatus)
+{
+    m_inheritedFlags.autosizeStatus = autosizeStatus.fields().toRaw();
+}
+
+#endif // ENABLE(TEXT_AUTOSIZING)
 
 static bool positionChangeIsMovementOnly(const LengthBox& a, const LengthBox& b, const Length& width)
 {
@@ -542,7 +634,11 @@ inline bool RenderStyle::changeAffectsVisualOverflow(const RenderStyle& other) c
         || m_rareInheritedData->textDecorationThickness != other.m_rareInheritedData->textDecorationThickness
         || m_rareInheritedData->textUnderlineOffset != other.m_rareInheritedData->textUnderlineOffset
         || m_rareInheritedData->textUnderlinePosition != other.m_rareInheritedData->textUnderlinePosition) {
-        return true;
+        // Underlines are always drawn outside of their textbox bounds when text-underline-position: under;
+        // is specified. We can take an early out here.
+        if (textUnderlinePosition() == TextUnderlinePosition::Under || other.textUnderlinePosition() == TextUnderlinePosition::Under)
+            return true;
+        return visualOverflowForDecorations(*this, nullptr) != visualOverflowForDecorations(other, nullptr);
     }
 
     if (hasOutlineInVisualOverflow() != other.hasOutlineInVisualOverflow())
@@ -598,12 +694,6 @@ static bool rareNonInheritedDataChangeRequiresLayout(const StyleRareNonInherited
     if (first.grid != second.grid
         || first.gridItem != second.gridItem)
         return true;
-
-#if ENABLE(DASHBOARD_SUPPORT)
-    // If regions change, trigger a relayout to re-calc regions.
-    if (first.dashboardRegions != second.dashboardRegions)
-        return true;
-#endif
 
     if (!arePointingToEqualData(first.willChange, second.willChange)) {
         changedContextSensitiveProperties.add(StyleDifferenceContextSensitiveProperty::WillChange);
@@ -677,9 +767,7 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
         || first.tabSize != second.tabSize
         || first.lineBoxContain != second.lineBoxContain
         || first.lineGrid != second.lineGrid
-#if ENABLE(CSS_IMAGE_ORIENTATION)
         || first.imageOrientation != second.imageOrientation
-#endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
         || first.imageResolutionSource != second.imageResolutionSource
         || first.imageResolutionSnap != second.imageResolutionSnap
@@ -688,7 +776,7 @@ static bool rareInheritedDataChangeRequiresLayout(const StyleRareInheritedData& 
         || first.lineSnap != second.lineSnap
         || first.lineAlign != second.lineAlign
         || first.hangingPunctuation != second.hangingPunctuation
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
         || first.useTouchOverflowScrolling != second.useTouchOverflowScrolling
 #endif
         || first.listStyleImage != second.listStyleImage) // FIXME: needs arePointingToEqualData()?
@@ -902,8 +990,8 @@ static bool rareNonInheritedDataChangeRequiresLayerRepaint(const StyleRareNonInh
 
 bool RenderStyle::changeRequiresLayerRepaint(const RenderStyle& other, OptionSet<StyleDifferenceContextSensitiveProperty>& changedContextSensitiveProperties) const
 {
-    // StyleResolver has ensured that zIndex is non-auto only if it's applicable.
-    if (m_boxData->zIndex() != other.m_boxData->zIndex() || m_boxData->hasAutoZIndex() != other.m_boxData->hasAutoZIndex())
+    // Style::Resolver has ensured that zIndex is non-auto only if it's applicable.
+    if (m_boxData->usedZIndex() != other.m_boxData->usedZIndex() || m_boxData->hasAutoUsedZIndex() != other.m_boxData->hasAutoUsedZIndex())
         return true;
 
     if (position() != PositionType::Static) {
@@ -959,7 +1047,7 @@ static bool rareInheritedDataChangeRequiresRepaint(const StyleRareInheritedData&
         || first.appleColorFilter != second.appleColorFilter
         || first.imageRendering != second.imageRendering
 #if ENABLE(DARK_MODE_CSS)
-        || first.supportedColorSchemes != second.supportedColorSchemes
+        || first.colorScheme != second.colorScheme
 #endif
     ;
 }
@@ -969,7 +1057,7 @@ void RenderStyle::addCustomPaintWatchProperty(const String& name)
 {
     auto& data = m_rareNonInheritedData.access();
     if (!data.customPaintWatchedProperties)
-        data.customPaintWatchedProperties = std::make_unique<HashSet<String>>();
+        data.customPaintWatchedProperties = makeUnique<HashSet<String>>();
     data.customPaintWatchedProperties->add(name);
 }
 
@@ -998,8 +1086,8 @@ inline static bool changedCustomPaintWatchedProperty(const RenderStyle& a, const
                     CSSPropertyID propertyID = cssPropertyID(name);
                     if (!propertyID)
                         continue;
-                    valueA = extractor.valueForPropertyinStyle(a, propertyID);
-                    valueB = extractor.valueForPropertyinStyle(b, propertyID);
+                    valueA = extractor.valueForPropertyInStyle(a, propertyID);
+                    valueB = extractor.valueForPropertyInStyle(b, propertyID);
                 }
 
                 if ((valueA && !valueB) || (!valueA && valueB))
@@ -1212,7 +1300,7 @@ void RenderStyle::setContent(RefPtr<StyleImage>&& image, bool add)
 {
     if (!image)
         return;
-    setContent(std::make_unique<ImageContentData>(image.releaseNonNull()), add);
+    setContent(makeUnique<ImageContentData>(image.releaseNonNull()), add);
 }
 
 void RenderStyle::setContent(const String& string, bool add)
@@ -1221,13 +1309,13 @@ void RenderStyle::setContent(const String& string, bool add)
     if (add && data.content) {
         auto& last = lastContent(*data.content);
         if (!is<TextContentData>(last))
-            last.setNext(std::make_unique<TextContentData>(string));
+            last.setNext(makeUnique<TextContentData>(string));
         else {
             auto& textContent = downcast<TextContentData>(last);
             textContent.setText(textContent.text() + string);
         }
     } else {
-        data.content = std::make_unique<TextContentData>(string);
+        data.content = makeUnique<TextContentData>(string);
         auto& altText = data.altText;
         if (!altText.isNull())
             data.content->setAltText(altText);
@@ -1238,12 +1326,12 @@ void RenderStyle::setContent(std::unique_ptr<CounterContent> counter, bool add)
 {
     if (!counter)
         return;
-    setContent(std::make_unique<CounterContentData>(WTFMove(counter)), add);
+    setContent(makeUnique<CounterContentData>(WTFMove(counter)), add);
 }
 
 void RenderStyle::setContent(QuoteType quote, bool add)
 {
-    setContent(std::make_unique<QuoteContentData>(quote), add);
+    setContent(makeUnique<QuoteContentData>(quote), add);
 }
 
 void RenderStyle::setContentAltText(const String& string)
@@ -1320,7 +1408,7 @@ void RenderStyle::setPageScaleTransform(float scale)
 
 void RenderStyle::setTextShadow(std::unique_ptr<ShadowData> shadowData, bool add)
 {
-    ASSERT(!shadowData || (!shadowData->spread() && shadowData->style() == Normal));
+    ASSERT(!shadowData || (!shadowData->spread() && shadowData->style() == ShadowStyle::Normal));
 
     auto& rareData = m_rareInheritedData.access();
     if (!add) {
@@ -1347,10 +1435,10 @@ void RenderStyle::setBoxShadow(std::unique_ptr<ShadowData> shadowData, bool add)
 static RoundedRect::Radii calcRadiiFor(const BorderData& border, const LayoutSize& size)
 {
     return {
-        sizeForLengthSize(border.topLeft(), size),
-        sizeForLengthSize(border.topRight(), size),
-        sizeForLengthSize(border.bottomLeft(), size),
-        sizeForLengthSize(border.bottomRight(), size)
+        sizeForLengthSize(border.topLeftRadius(), size),
+        sizeForLengthSize(border.topRightRadius(), size),
+        sizeForLengthSize(border.bottomLeftRadius(), size),
+        sizeForLengthSize(border.bottomRightRadius(), size)
     };
 }
 
@@ -1419,10 +1507,10 @@ RoundedRect RenderStyle::getRoundedBorderFor(const LayoutRect& borderRect, bool 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
 {
     bool horizontal = isHorizontalWritingMode();
-    auto leftWidth = (!horizontal || includeLogicalLeftEdge) ? borderLeftWidth() : 0;
-    auto rightWidth = (!horizontal || includeLogicalRightEdge) ? borderRightWidth() : 0;
-    auto topWidth = (horizontal || includeLogicalLeftEdge) ? borderTopWidth() : 0;
-    auto bottomWidth = (horizontal || includeLogicalRightEdge) ? borderBottomWidth() : 0;
+    LayoutUnit leftWidth { (!horizontal || includeLogicalLeftEdge) ? borderLeftWidth() : 0 };
+    LayoutUnit rightWidth { (!horizontal || includeLogicalRightEdge) ? borderRightWidth() : 0 };
+    LayoutUnit topWidth { (horizontal || includeLogicalLeftEdge) ? borderTopWidth() : 0 };
+    LayoutUnit bottomWidth { (horizontal || includeLogicalRightEdge) ? borderBottomWidth() : 0 };
     return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, includeLogicalLeftEdge, includeLogicalRightEdge);
 }
 
@@ -1462,11 +1550,11 @@ CounterDirectiveMap& RenderStyle::accessCounterDirectives()
 {
     auto& map = m_rareNonInheritedData.access().counterDirectives;
     if (!map)
-        map = std::make_unique<CounterDirectiveMap>();
+        map = makeUnique<CounterDirectiveMap>();
     return *map;
 }
 
-const AtomicString& RenderStyle::hyphenString() const
+const AtomString& RenderStyle::hyphenString() const
 {
     ASSERT(hyphens() != Hyphens::None);
 
@@ -1475,12 +1563,12 @@ const AtomicString& RenderStyle::hyphenString() const
         return hyphenationString;
 
     // FIXME: This should depend on locale.
-    static NeverDestroyed<AtomicString> hyphenMinusString(&hyphenMinus, 1);
-    static NeverDestroyed<AtomicString> hyphenString(&hyphen, 1);
+    static NeverDestroyed<AtomString> hyphenMinusString(&hyphenMinus, 1);
+    static NeverDestroyed<AtomString> hyphenString(&hyphen, 1);
     return fontCascade().primaryFont().glyphForCharacter(hyphen) ? hyphenString : hyphenMinusString;
 }
 
-const AtomicString& RenderStyle::textEmphasisMarkString() const
+const AtomString& RenderStyle::textEmphasisMarkString() const
 {
     switch (textEmphasisMark()) {
     case TextEmphasisMark::None:
@@ -1488,28 +1576,28 @@ const AtomicString& RenderStyle::textEmphasisMarkString() const
     case TextEmphasisMark::Custom:
         return textEmphasisCustomMark();
     case TextEmphasisMark::Dot: {
-        static NeverDestroyed<AtomicString> filledDotString(&bullet, 1);
-        static NeverDestroyed<AtomicString> openDotString(&whiteBullet, 1);
+        static NeverDestroyed<AtomString> filledDotString(&bullet, 1);
+        static NeverDestroyed<AtomString> openDotString(&whiteBullet, 1);
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledDotString : openDotString;
     }
     case TextEmphasisMark::Circle: {
-        static NeverDestroyed<AtomicString> filledCircleString(&blackCircle, 1);
-        static NeverDestroyed<AtomicString> openCircleString(&whiteCircle, 1);
+        static NeverDestroyed<AtomString> filledCircleString(&blackCircle, 1);
+        static NeverDestroyed<AtomString> openCircleString(&whiteCircle, 1);
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledCircleString : openCircleString;
     }
     case TextEmphasisMark::DoubleCircle: {
-        static NeverDestroyed<AtomicString> filledDoubleCircleString(&fisheye, 1);
-        static NeverDestroyed<AtomicString> openDoubleCircleString(&bullseye, 1);
+        static NeverDestroyed<AtomString> filledDoubleCircleString(&fisheye, 1);
+        static NeverDestroyed<AtomString> openDoubleCircleString(&bullseye, 1);
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledDoubleCircleString : openDoubleCircleString;
     }
     case TextEmphasisMark::Triangle: {
-        static NeverDestroyed<AtomicString> filledTriangleString(&blackUpPointingTriangle, 1);
-        static NeverDestroyed<AtomicString> openTriangleString(&whiteUpPointingTriangle, 1);
+        static NeverDestroyed<AtomString> filledTriangleString(&blackUpPointingTriangle, 1);
+        static NeverDestroyed<AtomString> openTriangleString(&whiteUpPointingTriangle, 1);
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledTriangleString : openTriangleString;
     }
     case TextEmphasisMark::Sesame: {
-        static NeverDestroyed<AtomicString> filledSesameString(&sesameDot, 1);
-        static NeverDestroyed<AtomicString> openSesameString(&whiteSesameDot, 1);
+        static NeverDestroyed<AtomString> filledSesameString(&sesameDot, 1);
+        static NeverDestroyed<AtomString> openSesameString(&whiteSesameDot, 1);
         return textEmphasisFill() == TextEmphasisFill::Filled ? filledSesameString : openSesameString;
     }
     case TextEmphasisMark::Auto:
@@ -1520,27 +1608,6 @@ const AtomicString& RenderStyle::textEmphasisMarkString() const
     ASSERT_NOT_REACHED();
     return nullAtom();
 }
-
-#if ENABLE(DASHBOARD_SUPPORT)
-
-const Vector<StyleDashboardRegion>& RenderStyle::initialDashboardRegions()
-{
-    static NeverDestroyed<Vector<StyleDashboardRegion>> emptyList;
-    return emptyList;
-}
-
-const Vector<StyleDashboardRegion>& RenderStyle::noneDashboardRegions()
-{
-    static NeverDestroyed<Vector<StyleDashboardRegion>> noneList;
-    static bool noneListInitialized = false;
-    if (!noneListInitialized) {
-        noneList.get().append(StyleDashboardRegion { emptyString(), { }, StyleDashboardRegion::None });
-        noneListInitialized = true;
-    }
-    return noneList;
-}
-
-#endif
 
 void RenderStyle::adjustAnimations()
 {
@@ -1603,14 +1670,14 @@ void RenderStyle::adjustTransitions()
 AnimationList& RenderStyle::ensureAnimations()
 {
     if (!m_rareNonInheritedData.access().animations)
-        m_rareNonInheritedData.access().animations = std::make_unique<AnimationList>();
+        m_rareNonInheritedData.access().animations = AnimationList::create();
     return *m_rareNonInheritedData->animations;
 }
 
 AnimationList& RenderStyle::ensureTransitions()
 {
     if (!m_rareNonInheritedData.access().transitions)
-        m_rareNonInheritedData.access().transitions = std::make_unique<AnimationList>();
+        m_rareNonInheritedData.access().transitions = AnimationList::create();
     return *m_rareNonInheritedData->transitions;
 }
 
@@ -1815,10 +1882,10 @@ void RenderStyle::getShadowExtent(const ShadowData* shadow, LayoutUnit& top, Lay
     left = 0;
 
     for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == Inset)
+        if (shadow->style() == ShadowStyle::Inset)
             continue;
 
-        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        auto extentAndSpread = shadow->paintingExtent() + shadow->spread();
         top = std::min<LayoutUnit>(top, shadow->y() - extentAndSpread);
         right = std::max<LayoutUnit>(right, shadow->x() + extentAndSpread);
         bottom = std::max<LayoutUnit>(bottom, shadow->y() + extentAndSpread);
@@ -1834,10 +1901,10 @@ LayoutBoxExtent RenderStyle::getShadowInsetExtent(const ShadowData* shadow) cons
     LayoutUnit left;
 
     for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == Normal)
+        if (shadow->style() == ShadowStyle::Normal)
             continue;
 
-        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        auto extentAndSpread = shadow->paintingExtent() + shadow->spread();
         top = std::max<LayoutUnit>(top, shadow->y() + extentAndSpread);
         right = std::min<LayoutUnit>(right, shadow->x() - extentAndSpread);
         bottom = std::min<LayoutUnit>(bottom, shadow->y() - extentAndSpread);
@@ -1853,10 +1920,10 @@ void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit
     right = 0;
 
     for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == Inset)
+        if (shadow->style() == ShadowStyle::Inset)
             continue;
 
-        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        auto extentAndSpread = shadow->paintingExtent() + shadow->spread();
         left = std::min<LayoutUnit>(left, shadow->x() - extentAndSpread);
         right = std::max<LayoutUnit>(right, shadow->x() + extentAndSpread);
     }
@@ -1868,10 +1935,10 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &
     bottom = 0;
 
     for ( ; shadow; shadow = shadow->next()) {
-        if (shadow->style() == Inset)
+        if (shadow->style() == ShadowStyle::Inset)
             continue;
 
-        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        auto extentAndSpread = shadow->paintingExtent() + shadow->spread();
         top = std::min<LayoutUnit>(top, shadow->y() - extentAndSpread);
         bottom = std::max<LayoutUnit>(bottom, shadow->y() + extentAndSpread);
     }
@@ -2123,10 +2190,12 @@ Color RenderStyle::initialTapHighlightColor()
 
 LayoutBoxExtent RenderStyle::imageOutsets(const NinePieceImage& image) const
 {
-    return LayoutBoxExtent(NinePieceImage::computeOutset(image.outset().top(), borderTopWidth()),
-                           NinePieceImage::computeOutset(image.outset().right(), borderRightWidth()),
-                           NinePieceImage::computeOutset(image.outset().bottom(), borderBottomWidth()),
-                           NinePieceImage::computeOutset(image.outset().left(), borderLeftWidth()));
+    return {
+        NinePieceImage::computeOutset(image.outset().top(), LayoutUnit(borderTopWidth())),
+        NinePieceImage::computeOutset(image.outset().right(), LayoutUnit(borderRightWidth())),
+        NinePieceImage::computeOutset(image.outset().bottom(), LayoutUnit(borderBottomWidth())),
+        NinePieceImage::computeOutset(image.outset().left(), LayoutUnit(borderLeftWidth()))
+    };
 }
 
 std::pair<FontOrientation, NonCJKGlyphOrientation> RenderStyle::fontAndGlyphOrientation()
@@ -2383,17 +2452,6 @@ bool RenderStyle::shouldPlaceBlockDirectionScrollbarOnLeft() const
 {
     return !isLeftToRightDirection() && isHorizontalWritingMode();
 }
-
-#if ENABLE(DASHBOARD_SUPPORT)
-
-void RenderStyle::setDashboardRegion(int type, const String& label, Length&& top, Length&& right, Length&& bottom, Length&& left, bool append)
-{
-    if (!append)
-        m_rareNonInheritedData.access().dashboardRegions.clear();
-    m_rareNonInheritedData.access().dashboardRegions.append({ label, { WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left) }, type });
-}
-
-#endif
 
 Vector<PaintType, 3> RenderStyle::paintTypesForPaintOrder(PaintOrder order)
 {

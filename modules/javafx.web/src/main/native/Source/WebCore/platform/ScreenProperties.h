@@ -45,6 +45,7 @@ struct ScreenData {
     bool screenSupportsExtendedColor { false };
     bool screenHasInvertedColors { false };
     bool screenIsMonochrome { false };
+    bool screenSupportsHighDynamicRange { false };
     uint32_t displayMask { 0 };
     IORegistryGPUID gpuID { 0 };
 
@@ -94,7 +95,7 @@ Optional<ScreenProperties> ScreenProperties::decode(Decoder& decoder)
 template<class Encoder>
 void ScreenData::encode(Encoder& encoder) const
 {
-    encoder << screenAvailableRect << screenRect << screenDepth << screenDepthPerComponent << screenSupportsExtendedColor << screenHasInvertedColors << screenIsMonochrome << displayMask << gpuID;
+    encoder << screenAvailableRect << screenRect << screenDepth << screenDepthPerComponent << screenSupportsExtendedColor << screenHasInvertedColors << screenIsMonochrome << screenSupportsHighDynamicRange << displayMask << gpuID;
 
     if (colorSpace) {
         // Try to encode the name.
@@ -158,6 +159,11 @@ Optional<ScreenData> ScreenData::decode(Decoder& decoder)
     if (!screenIsMonochrome)
         return WTF::nullopt;
 
+    Optional<bool> screenSupportsHighDynamicRange;
+    decoder >> screenSupportsHighDynamicRange;
+    if (!screenSupportsHighDynamicRange)
+        return WTF::nullopt;
+
     Optional<uint32_t> displayMask;
     decoder >> displayMask;
     if (!displayMask)
@@ -194,15 +200,12 @@ Optional<ScreenData> ScreenData::decode(Decoder& decoder)
             return WTF::nullopt;
 
         auto colorSpaceData = adoptCF(CFDataCreate(kCFAllocatorDefault, iccData->data(), iccData->size()));
-        // FIXME: <http://webkit.org/b/184358> We should switch to CGColorSpaceCreateICCBased.
-        ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-        cgColorSpace = adoptCF(CGColorSpaceCreateWithICCProfile(colorSpaceData.get()));
-        ALLOW_DEPRECATED_DECLARATIONS_END
+        cgColorSpace = adoptCF(CGColorSpaceCreateWithICCData(colorSpaceData.get()));
         break;
     }
     }
 
-    return { { WTFMove(*screenAvailableRect), WTFMove(*screenRect), WTFMove(cgColorSpace), WTFMove(*screenDepth), WTFMove(*screenDepthPerComponent), WTFMove(*screenSupportsExtendedColor), WTFMove(*screenHasInvertedColors), WTFMove(*screenIsMonochrome), WTFMove(*displayMask), WTFMove(*gpuID) } };
+    return { { WTFMove(*screenAvailableRect), WTFMove(*screenRect), WTFMove(cgColorSpace), WTFMove(*screenDepth), WTFMove(*screenDepthPerComponent), WTFMove(*screenSupportsExtendedColor), WTFMove(*screenHasInvertedColors), WTFMove(*screenIsMonochrome), WTFMove(*screenSupportsHighDynamicRange), WTFMove(*displayMask), WTFMove(*gpuID) } };
 }
 
 } // namespace WebCore

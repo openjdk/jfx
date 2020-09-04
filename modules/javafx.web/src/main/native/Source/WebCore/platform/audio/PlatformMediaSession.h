@@ -29,6 +29,7 @@
 #include "Timer.h"
 #include <wtf/LoggerHelper.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -40,10 +41,12 @@ namespace WebCore {
 class Document;
 class MediaPlaybackTarget;
 class PlatformMediaSessionClient;
+enum class DelayCallingUpdateNowPlaying { No, Yes };
 
 class PlatformMediaSession
+    : public CanMakeWeakPtr<PlatformMediaSession>
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
-    : public MediaPlaybackTargetClient
+    , public MediaPlaybackTargetClient
 #endif
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
@@ -111,8 +114,13 @@ public:
     virtual bool clientWillBeginPlayback();
     virtual bool clientWillPausePlayback();
 
+    void clientWillBeDOMSuspended();
+
     void pauseSession();
     void stopSession();
+
+    virtual void suspendBuffering() { }
+    virtual void resumeBuffering() { }
 
 #if ENABLE(VIDEO)
     uint64_t uniqueIdentifier() const;
@@ -161,13 +169,14 @@ public:
     void setPlaybackTarget(Ref<MediaPlaybackTarget>&&) override { }
     void externalOutputDeviceAvailableDidChange(bool) override { }
     void setShouldPlayToPlaybackTarget(bool) override { }
+    void playbackTargetPickerWasDismissed() override { }
 #endif
 
 #if PLATFORM(IOS_FAMILY)
     virtual bool requiresPlaybackTargetRouteMonitoring() const { return false; }
 #endif
 
-    bool activeAudioSessionRequired();
+    bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
     void canProduceAudioChanged();
 
@@ -179,17 +188,22 @@ public:
     bool hasPlayedSinceLastInterruption() const { return m_hasPlayedSinceLastInterruption; }
     void clearHasPlayedSinceLastInterruption() { m_hasPlayedSinceLastInterruption = false; }
 
-protected:
-    PlatformMediaSessionClient& client() const { return m_client; }
-
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const void* logIdentifier() const override { return reinterpret_cast<const void*>(m_logIdentifier); }
+    const void* logIdentifier() const override { return m_logIdentifier; }
     const char* logClassName() const override { return "PlatformMediaSession"; }
     WTFLogChannel& logChannel() const final;
 #endif
 
+    bool canPlayConcurrently(const PlatformMediaSession&) const;
+    bool shouldOverridePauseDuringRouteChange() const;
+
+protected:
+    PlatformMediaSessionClient& client() const { return m_client; }
+
 private:
+    bool processClientWillPausePlayback(DelayCallingUpdateNowPlaying);
+
     PlatformMediaSessionClient& m_client;
     State m_state;
     State m_stateToRestore;
@@ -201,7 +215,7 @@ private:
 
 #if !RELEASE_LOG_DISABLED
     Ref<const Logger> m_logger;
-    uint64_t m_logIdentifier;
+    const void* m_logIdentifier;
 #endif
 
     friend class PlatformMediaSessionManager;
@@ -242,6 +256,7 @@ public:
     virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
     virtual bool isPlayingToWirelessPlaybackTarget() const { return false; }
     virtual void setShouldPlayToPlaybackTarget(bool) { }
+    virtual void playbackTargetPickerWasDismissed() { }
 
     virtual bool isPlayingOnSecondScreen() const { return false; }
 
@@ -249,6 +264,12 @@ public:
     virtual String sourceApplicationIdentifier() const = 0;
 
     virtual bool processingUserGestureForMedia() const = 0;
+
+    virtual bool hasMediaStreamSource() const { return false; }
+
+    virtual void processIsSuspendedChanged() { }
+
+    virtual bool shouldOverridePauseDuringRouteChange() const { return false; }
 
 protected:
     virtual ~PlatformMediaSessionClient() = default;

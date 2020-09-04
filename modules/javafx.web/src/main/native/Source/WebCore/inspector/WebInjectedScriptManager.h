@@ -38,10 +38,11 @@ class WebInjectedScriptManager final : public Inspector::InjectedScriptManager {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WebInjectedScriptManager(Inspector::InspectorEnvironment&, Ref<Inspector::InjectedScriptHost>&&);
-    virtual ~WebInjectedScriptManager() = default;
+    ~WebInjectedScriptManager() override = default;
 
-    CommandLineAPIHost* commandLineAPIHost() const { return m_commandLineAPIHost.get(); }
+    const RefPtr<CommandLineAPIHost>& commandLineAPIHost() const { return m_commandLineAPIHost; }
 
+    void connect() override;
     void disconnect() override;
     void discardInjectedScripts() override;
 

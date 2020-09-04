@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,8 @@
  * questions.
  */
 package com.sun.glass.ui.monocle;
+
+import javafx.application.Platform;
 
 class AndroidInputProcessor {
 
@@ -52,6 +54,20 @@ class AndroidInputProcessor {
 
     synchronized void pushKeyEvent(KeyState keyState) {
         keyInput.setState(keyState);
+    }
+
+    synchronized void dispatchKeyEvent(int type, int key, char[] chars, int modifiers) {
+        Platform.runLater( () -> {
+            MonocleWindow window = (MonocleWindow) MonocleWindowManager.getInstance().getFocusedWindow();
+            if (window == null) {
+                return;
+            }
+            MonocleView view = (MonocleView) window.getView();
+            if (view == null) {
+                return;
+            }
+            RunnableProcessor.runLater( () ->  view.notifyKey(type, key, chars, modifiers));
+        });
     }
 
 }

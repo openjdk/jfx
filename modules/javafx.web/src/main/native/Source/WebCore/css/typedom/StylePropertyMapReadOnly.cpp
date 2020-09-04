@@ -32,8 +32,12 @@
 
 #if ENABLE(CSS_TYPED_OM)
 
+#include "CSSCustomPropertyValue.h"
 #include "CSSImageValue.h"
+#include "CSSPrimitiveValue.h"
+#include "Document.h"
 #include "TypedOMCSSImageValue.h"
+#include "TypedOMCSSStyleValue.h"
 #include "TypedOMCSSUnitValue.h"
 #include "TypedOMCSSUnparsedValue.h"
 #include <wtf/HashMap.h>
@@ -47,7 +51,7 @@ RefPtr<TypedOMCSSStyleValue> StylePropertyMapReadOnly::reifyValue(CSSValue* valu
         return nullptr;
 
     // FIXME: Properly reify all length values.
-    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).primitiveType() == CSSPrimitiveValue::CSS_PX)
+    if (is<CSSPrimitiveValue>(*value) && downcast<CSSPrimitiveValue>(*value).primitiveType() == CSSUnitType::CSS_PX)
         return TypedOMCSSUnitValue::create(downcast<CSSPrimitiveValue>(*value).doubleValue(), "px");
 
     if (is<CSSImageValue>(*value))

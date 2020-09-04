@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,6 @@
 #import "GlassViewDelegate.h"
 
 // main GlassView protocol
-// not optimal since we'll have to duplicate code for GlassView2D and GlassView3D
-// but we'll use delegate to implement shared code to minimize this
 // TODO: now that we removed GlassView2D, we should collapse the delegate back into GlassView3D
 // and use Obj-C catgegories to partition the implementation (just like GlassWindow)
 @protocol GlassView <NSObject>

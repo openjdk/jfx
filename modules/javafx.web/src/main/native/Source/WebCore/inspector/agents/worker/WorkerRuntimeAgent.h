@@ -44,10 +44,7 @@ class WorkerRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WorkerRuntimeAgent(WorkerAgentContext&);
-    ~WorkerRuntimeAgent() = default;
-
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    ~WorkerRuntimeAgent() override;
 
 private:
     Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;

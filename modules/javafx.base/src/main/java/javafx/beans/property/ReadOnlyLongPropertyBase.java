@@ -41,6 +41,12 @@ public abstract class ReadOnlyLongPropertyBase extends ReadOnlyLongProperty {
 
     ExpressionHelper<Number> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyLongPropertyBase}.
+     */
+    public ReadOnlyLongPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

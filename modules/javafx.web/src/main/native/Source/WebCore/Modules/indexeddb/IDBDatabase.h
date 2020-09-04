@@ -45,7 +45,8 @@ class IDBTransactionInfo;
 
 struct EventNames;
 
-class IDBDatabase : public ThreadSafeRefCounted<IDBDatabase>, public EventTargetWithInlineData, public IDBActiveDOMObject {
+class IDBDatabase final : public ThreadSafeRefCounted<IDBDatabase>, public EventTargetWithInlineData, public IDBActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(IDBDatabase);
 public:
     static Ref<IDBDatabase> create(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBResultData&);
 
@@ -81,10 +82,9 @@ public:
     using ThreadSafeRefCounted<IDBDatabase>::deref;
 
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
 
-    const IDBDatabaseInfo& info() const { return m_info; }
+    IDBDatabaseInfo& info() { return m_info; }
     uint64_t databaseConnectionIdentifier() const { return m_databaseConnectionIdentifier; }
 
     Ref<IDBTransaction> startVersionChangeTransaction(const IDBTransactionInfo&, IDBOpenDBRequest&);
@@ -110,6 +110,9 @@ public:
 
     bool hasPendingActivity() const final;
 
+    void setIsContextSuspended(bool isContextSuspended) { m_isContextSuspended = isContextSuspended; }
+    bool isContextSuspended() const { return m_isContextSuspended; }
+
 private:
     IDBDatabase(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, const IDBResultData&);
 
@@ -130,6 +133,8 @@ private:
     HashMap<IDBResourceIdentifier, RefPtr<IDBTransaction>> m_abortingTransactions;
 
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
+
+    bool m_isContextSuspended { false };
 };
 
 } // namespace WebCore

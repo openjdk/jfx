@@ -60,7 +60,6 @@ all : \
     UnicodePatternTables.h \
     yarr/YarrCanonicalizeUnicode.cpp \
     WasmOps.h \
-    WasmValidateInlines.h \
     WasmB3IRGeneratorInlines.h \
 #
 
@@ -111,6 +110,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/PromisePrototype.js \
     $(JavaScriptCore)/builtins/ReflectObject.js \
     $(JavaScriptCore)/builtins/RegExpPrototype.js \
+    ${JavaScriptCore}/builtins/RegExpStringIteratorPrototype.js \
     $(JavaScriptCore)/builtins/SetIteratorPrototype.js \
     $(JavaScriptCore)/builtins/SetPrototype.js \
     $(JavaScriptCore)/builtins/StringConstructor.js \
@@ -118,7 +118,7 @@ JavaScriptCore_BUILTINS_SOURCES = \
     $(JavaScriptCore)/builtins/StringPrototype.js \
     $(JavaScriptCore)/builtins/TypedArrayConstructor.js \
     $(JavaScriptCore)/builtins/TypedArrayPrototype.js \
-    $(JavaScriptCore)/builtins/WebAssemblyPrototype.js \
+    $(JavaScriptCore)/builtins/WebAssembly.js \
 #
 
 # The combined output file depends on the contents of builtins and generator scripts, so
@@ -135,7 +135,6 @@ JSCBuiltins.h: $(BUILTINS_GENERATOR_SCRIPTS) $(JavaScriptCore_BUILTINS_SOURCES) 
 OBJECT_LUT_HEADERS = \
     AsyncFromSyncIteratorPrototype.lut.h \
     ArrayConstructor.lut.h \
-    ArrayIteratorPrototype.lut.h \
     AsyncGeneratorPrototype.lut.h \
     BigIntConstructor.lut.h \
     BigIntPrototype.lut.h \
@@ -161,6 +160,7 @@ OBJECT_LUT_HEADERS = \
     JSONObject.lut.h \
     JSPromiseConstructor.lut.h \
     JSPromisePrototype.lut.h \
+    JSWebAssembly.lut.h \
     MapPrototype.lut.h \
     NumberConstructor.lut.h \
     NumberPrototype.lut.h \
@@ -169,12 +169,13 @@ OBJECT_LUT_HEADERS = \
     RegExpConstructor.lut.h \
     SetPrototype.lut.h \
     StringConstructor.lut.h \
-    StringIteratorPrototype.lut.h \
     StringPrototype.lut.h \
     SymbolConstructor.lut.h \
     SymbolPrototype.lut.h \
     WebAssemblyCompileErrorConstructor.lut.h \
     WebAssemblyCompileErrorPrototype.lut.h \
+    WebAssemblyGlobalConstructor.lut.h \
+    WebAssemblyGlobalPrototype.lut.h \
     WebAssemblyInstanceConstructor.lut.h \
     WebAssemblyInstancePrototype.lut.h \
     WebAssemblyLinkErrorConstructor.lut.h \
@@ -183,7 +184,6 @@ OBJECT_LUT_HEADERS = \
     WebAssemblyMemoryPrototype.lut.h \
     WebAssemblyModuleConstructor.lut.h \
     WebAssemblyModulePrototype.lut.h \
-    WebAssemblyPrototype.lut.h \
     WebAssemblyRuntimeErrorConstructor.lut.h \
     WebAssemblyRuntimeErrorPrototype.lut.h \
     WebAssemblyTableConstructor.lut.h \
@@ -216,17 +216,29 @@ BYTECODE_FILES = \
     BytecodeIndices.h \
     BytecodeStructs.h \
     InitBytecodes.asm \
+    WasmLLIntGeneratorInlines.h \
+    InitWasm.asm \
+    BytecodeDumperGenerated.cpp \
 #
 BYTECODE_FILES_PATTERNS = $(subst .,%,$(BYTECODE_FILES))
 
 all : $(BYTECODE_FILES)
 
-$(BYTECODE_FILES_PATTERNS): $(wildcard $(JavaScriptCore)/generator/*.rb) $(JavaScriptCore)/bytecode/BytecodeList.rb
-	$(RUBY) $(JavaScriptCore)/generator/main.rb $(JavaScriptCore)/bytecode/BytecodeList.rb --bytecode_structs_h BytecodeStructs.h --init_bytecodes_asm InitBytecodes.asm --bytecodes_h Bytecodes.h --bytecode_indices_h BytecodeIndices.h
+$(BYTECODE_FILES_PATTERNS): $(wildcard $(JavaScriptCore)/generator/*.rb) $(JavaScriptCore)/bytecode/BytecodeList.rb $(JavaScriptCore)/wasm/wasm.json
+   $(RUBY) $(JavaScriptCore)/generator/main.rb $(JavaScriptCore)/bytecode/BytecodeList.rb \
+    --bytecode_structs_h BytecodeStructs.h \
+    --init_bytecodes_asm InitBytecodes.asm \
+    --bytecodes_h Bytecodes.h \
+    --bytecode_indices_h BytecodeIndices.h \
+    --wasm_json $(JavaScriptCore)/wasm/wasm.json \
+    --wasm_llint_generator_h WasmLLIntGeneratorInlines.h \
+    --init_wasm_llint InitWasm.asm \
+    --bytecode_dumper BytecodeDumperGenerated.cpp \
 
 # Inspector interfaces
 
 INSPECTOR_DOMAINS := \
+    $(JavaScriptCore)/inspector/protocol/Animation.json \
     $(JavaScriptCore)/inspector/protocol/ApplicationCache.json \
     $(JavaScriptCore)/inspector/protocol/Audit.json \
     $(JavaScriptCore)/inspector/protocol/CSS.json \
@@ -242,7 +254,6 @@ INSPECTOR_DOMAINS := \
     $(JavaScriptCore)/inspector/protocol/Inspector.json \
     $(JavaScriptCore)/inspector/protocol/LayerTree.json \
     $(JavaScriptCore)/inspector/protocol/Network.json \
-    $(JavaScriptCore)/inspector/protocol/OverlayTypes.json \
     $(JavaScriptCore)/inspector/protocol/Page.json \
     $(JavaScriptCore)/inspector/protocol/Recording.json \
     $(JavaScriptCore)/inspector/protocol/Runtime.json \
@@ -344,9 +355,6 @@ IntlCanonicalizeLanguage.h: $(JavaScriptCore)/Scripts/generateIntlCanonicalizeLa
 WasmOps.h: $(JavaScriptCore)/wasm/generateWasmOpsHeader.py $(JavaScriptCore)/wasm/generateWasm.py $(JavaScriptCore)/wasm/wasm.json
 	$(PYTHON) $(JavaScriptCore)/wasm/generateWasmOpsHeader.py $(JavaScriptCore)/wasm/wasm.json ./WasmOps.h
 
-WasmValidateInlines.h: $(JavaScriptCore)/wasm/generateWasmValidateInlinesHeader.py $(JavaScriptCore)/wasm/generateWasm.py $(JavaScriptCore)/wasm/wasm.json
-	$(PYTHON) $(JavaScriptCore)/wasm/generateWasmValidateInlinesHeader.py $(JavaScriptCore)/wasm/wasm.json ./WasmValidateInlines.h
-
 WasmB3IRGeneratorInlines.h: $(JavaScriptCore)/wasm/generateWasmB3IRGeneratorInlinesHeader.py $(JavaScriptCore)/wasm/generateWasm.py $(JavaScriptCore)/wasm/wasm.json
 	$(PYTHON) $(JavaScriptCore)/wasm/generateWasmB3IRGeneratorInlinesHeader.py $(JavaScriptCore)/wasm/wasm.json ./WasmB3IRGeneratorInlines.h
 
@@ -355,10 +363,3 @@ WasmB3IRGeneratorInlines.h: $(JavaScriptCore)/wasm/generateWasmB3IRGeneratorInli
 all : \
     $(OBJECT_LUT_HEADERS) \
 #
-
-.PHONY : BytecodeCacheVersion.h
-
-BytecodeCacheVersion.h:
-	echo "#define JSC_BYTECODE_CACHE_VERSION $(shell date '+%s')" > BytecodeCacheVersion.h
-
-all : BytecodeCacheVersion.h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,13 +31,20 @@ namespace JSC {
 
 class CellContainer;
 class Heap;
-class LargeAllocation;
+class PreciseAllocation;
 class MarkedBlock;
 class Subspace;
 class VM;
 struct CellAttributes;
 
-static constexpr unsigned minimumDistanceBetweenCellsFromDifferentOrigins = sizeof(void*) == 8 ? 304 : 288;
+#if COMPILER(GCC_COMPATIBLE)
+ALWAYS_INLINE void keepAlive(const void* pointer)
+{
+    asm volatile ("" : : "r"(pointer) : "memory");
+}
+#else
+JS_EXPORT_PRIVATE void keepAlive(const void*);
+#endif
 
 class HeapCell {
 public:
@@ -49,24 +56,33 @@ public:
 
     HeapCell() { }
 
-    void zap() { *reinterpret_cast_ptr<uintptr_t**>(this) = 0; }
-    bool isZapped() const { return !*reinterpret_cast_ptr<uintptr_t* const*>(this); }
+    // We're intentionally only zapping the bits for the structureID and leaving
+    // the rest of the cell header bits intact for crash analysis uses.
+    enum ZapReason : int8_t { Unspecified, Destruction, StopAllocating };
+    void zap(ZapReason reason)
+    {
+        uint32_t* cellWords = bitwise_cast<uint32_t*>(this);
+        cellWords[0] = 0;
+        // Leaving cellWords[1] alone for crash analysis if needed.
+        cellWords[2] = reason;
+    }
+    bool isZapped() const { return !*bitwise_cast<const uint32_t*>(this); }
 
     bool isLive();
 
-    bool isLargeAllocation() const;
+    bool isPreciseAllocation() const;
     CellContainer cellContainer() const;
     MarkedBlock& markedBlock() const;
-    LargeAllocation& largeAllocation() const;
+    PreciseAllocation& preciseAllocation() const;
 
     // If you want performance and you know that your cell is small, you can do this instead:
-    // ASSERT(!cell->isLargeAllocation());
+    // ASSERT(!cell->isPreciseAllocation());
     // cell->markedBlock().vm()
-    // We currently only use this hack for callees to make ExecState::vm() fast. It's not
+    // We currently only use this hack for callees to make CallFrame::vm() fast. It's not
     // recommended to use it for too many other things, since the large allocation cutoff is
     // a runtime option and its default value is small (400 bytes).
     Heap* heap() const;
-    VM* vm() const;
+    VM& vm() const;
 
     size_t cellSize() const;
     CellAttributes cellAttributes() const;
@@ -77,14 +93,10 @@ public:
     // Call use() after the last point where you need `this` pointer to be kept alive. You usually don't
     // need to use this, but it might be necessary if you're otherwise referring to an object's innards
     // but not the object itself.
-#if COMPILER(GCC_COMPATIBLE)
-    void use() const
+    ALWAYS_INLINE void use() const
     {
-        asm volatile ("" : : "r"(this) : "memory");
+        keepAlive(this);
     }
-#else
-    void use() const;
-#endif
 };
 
 inline bool isJSCellKind(HeapCell::Kind kind)

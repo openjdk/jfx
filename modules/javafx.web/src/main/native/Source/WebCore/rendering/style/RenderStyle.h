@@ -77,16 +77,12 @@
 #include "StyleGridData.h"
 #include "StyleGridItemData.h"
 
-#if ENABLE(DASHBOARD_SUPPORT)
-#include "StyleDashboardRegion.h"
-#endif
-
 #if ENABLE(TEXT_AUTOSIZING)
 #include "TextSizeAdjustment.h"
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-#include "StyleSupportedColorSchemes.h"
+#include "StyleColorScheme.h"
 #endif
 
 #define SET_VAR(group, variable, value) do { \
@@ -117,7 +113,6 @@ class Pair;
 class ShadowData;
 class StyleImage;
 class StyleInheritedData;
-class StyleResolver;
 class StyleScrollSnapArea;
 class StyleScrollSnapPort;
 class TransformationMatrix;
@@ -129,9 +124,9 @@ using PseudoStyleCache = Vector<std::unique_ptr<RenderStyle>, 4>;
 
 template<typename T, typename U> inline bool compareEqual(const T& t, const U& u) { return t == static_cast<const T&>(u); }
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(RenderStyle);
 class RenderStyle {
-    WTF_MAKE_FAST_ALLOCATED;
-
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RenderStyle);
 private:
     enum CloneTag { Clone };
     enum CreateDefaultStyleTag { CreateDefaultStyle };
@@ -139,7 +134,7 @@ private:
 public:
     RenderStyle(RenderStyle&&);
     RenderStyle& operator=(RenderStyle&&);
-    ~RenderStyle();
+    WEBCORE_EXPORT ~RenderStyle();
 
     RenderStyle replace(RenderStyle&&) WARN_UNUSED_RETURN;
 
@@ -157,7 +152,7 @@ public:
     static RenderStyle createAnonymousStyleWithDisplay(const RenderStyle& parentStyle, DisplayType);
     static RenderStyle createStyleInheritingFromPseudoStyle(const RenderStyle& pseudoStyle);
 
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     bool deletionHasBegun() const { return m_deletionHasBegun; }
 #endif
 
@@ -190,9 +185,9 @@ public:
 
     const CustomPropertyValueMap& inheritedCustomProperties() const { return m_rareInheritedData->customProperties->values; }
     const CustomPropertyValueMap& nonInheritedCustomProperties() const { return m_rareNonInheritedData->customProperties->values; }
-    const CSSCustomPropertyValue* getCustomProperty(const AtomicString&) const;
-    void setInheritedCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
-    void setNonInheritedCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
+    const CSSCustomPropertyValue* getCustomProperty(const AtomString&) const;
+    void setInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
+    void setNonInheritedCustomPropertyValue(const AtomString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
 
     void setHasViewportUnits(bool v = true) { m_nonInheritedFlags.hasViewportUnits = v; }
     bool hasViewportUnits() const { return m_nonInheritedFlags.hasViewportUnits; }
@@ -233,8 +228,7 @@ public:
 
     LayoutBoxExtent maskBoxImageOutsets() const { return imageOutsets(maskBoxImage()); }
 
-    bool hasFilterOutsets() const { return hasFilter() && filter().hasOutsets(); }
-    FilterOutsets filterOutsets() const { return hasFilter() ? filter().outsets() : FilterOutsets(); }
+    IntOutsets filterOutsets() const { return hasFilter() ? filter().outsets() : IntOutsets(); }
 
     Order rtlOrdering() const { return static_cast<Order>(m_inheritedFlags.rtlOrdering); }
     void setRTLOrdering(Order ordering) { m_inheritedFlags.rtlOrdering = static_cast<unsigned>(ordering); }
@@ -303,10 +297,10 @@ public:
     const LengthBox& borderImageWidth() const { return m_surroundData->border.image().borderSlices(); }
     const LengthBox& borderImageOutset() const { return m_surroundData->border.image().outset(); }
 
-    const LengthSize& borderTopLeftRadius() const { return m_surroundData->border.topLeft(); }
-    const LengthSize& borderTopRightRadius() const { return m_surroundData->border.topRight(); }
-    const LengthSize& borderBottomLeftRadius() const { return m_surroundData->border.bottomLeft(); }
-    const LengthSize& borderBottomRightRadius() const { return m_surroundData->border.bottomRight(); }
+    const LengthSize& borderTopLeftRadius() const { return m_surroundData->border.topLeftRadius(); }
+    const LengthSize& borderTopRightRadius() const { return m_surroundData->border.topRightRadius(); }
+    const LengthSize& borderBottomLeftRadius() const { return m_surroundData->border.bottomLeftRadius(); }
+    const LengthSize& borderBottomRightRadius() const { return m_surroundData->border.bottomRightRadius(); }
     bool hasBorderRadius() const { return m_surroundData->border.hasBorderRadius(); }
 
     float borderLeftWidth() const { return m_surroundData->border.borderLeftWidth(); }
@@ -602,8 +596,8 @@ public:
     short hyphenationLimitBefore() const { return m_rareInheritedData->hyphenationLimitBefore; }
     short hyphenationLimitAfter() const { return m_rareInheritedData->hyphenationLimitAfter; }
     short hyphenationLimitLines() const { return m_rareInheritedData->hyphenationLimitLines; }
-    const AtomicString& hyphenationString() const { return m_rareInheritedData->hyphenationString; }
-    const AtomicString& locale() const { return fontDescription().locale(); }
+    const AtomString& hyphenationString() const { return m_rareInheritedData->hyphenationString; }
+    const AtomString& locale() const { return fontDescription().locale(); }
     BorderFit borderFit() const { return static_cast<BorderFit>(m_rareNonInheritedData->borderFit); }
     Resize resize() const { return static_cast<Resize>(m_rareNonInheritedData->resize); }
     ColumnAxis columnAxis() const { return static_cast<ColumnAxis>(m_rareNonInheritedData->multiCol->axis); }
@@ -631,16 +625,16 @@ public:
 
     TextEmphasisFill textEmphasisFill() const { return static_cast<TextEmphasisFill>(m_rareInheritedData->textEmphasisFill); }
     TextEmphasisMark textEmphasisMark() const;
-    const AtomicString& textEmphasisCustomMark() const { return m_rareInheritedData->textEmphasisCustomMark; }
+    const AtomString& textEmphasisCustomMark() const { return m_rareInheritedData->textEmphasisCustomMark; }
     OptionSet<TextEmphasisPosition> textEmphasisPosition() const { return OptionSet<TextEmphasisPosition>::fromRaw(m_rareInheritedData->textEmphasisPosition); }
-    const AtomicString& textEmphasisMarkString() const;
+    const AtomString& textEmphasisMarkString() const;
 
     RubyPosition rubyPosition() const { return static_cast<RubyPosition>(m_rareInheritedData->rubyPosition); }
 
 #if ENABLE(DARK_MODE_CSS)
-    StyleSupportedColorSchemes supportedColorSchemes() const { return m_rareInheritedData->supportedColorSchemes; }
-    void setHasExplicitlySetSupportedColorSchemes(bool v) { m_nonInheritedFlags.hasExplicitlySetSupportedColorSchemes = v; }
-    bool hasExplicitlySetSupportedColorSchemes() const { return m_nonInheritedFlags.hasExplicitlySetSupportedColorSchemes; };
+    StyleColorScheme colorScheme() const { return m_rareInheritedData->colorScheme; }
+    void setHasExplicitlySetColorScheme(bool v) { m_nonInheritedFlags.hasExplicitlySetColorScheme = v; }
+    bool hasExplicitlySetColorScheme() const { return m_nonInheritedFlags.hasExplicitlySetColorScheme; };
 #endif
 
     TextOrientation textOrientation() const { return static_cast<TextOrientation>(m_rareInheritedData->textOrientation); }
@@ -661,11 +655,11 @@ public:
     TextCombine textCombine() const { return static_cast<TextCombine>(m_rareNonInheritedData->textCombine); }
     bool hasTextCombine() const { return textCombine() != TextCombine::None; }
 
-    unsigned tabSize() const { return m_rareInheritedData->tabSize; }
+    const TabSize& tabSize() const { return m_rareInheritedData->tabSize; }
 
     // End CSS3 Getters
 
-    const AtomicString& lineGrid() const { return m_rareInheritedData->lineGrid; }
+    const AtomString& lineGrid() const { return m_rareInheritedData->lineGrid; }
     LineSnap lineSnap() const { return static_cast<LineSnap>(m_rareInheritedData->lineSnap); }
     LineAlign lineAlign() const { return static_cast<LineAlign>(m_rareInheritedData->lineAlign); }
 
@@ -698,7 +692,7 @@ public:
     const LengthSize& pageSize() const { return m_rareNonInheritedData->pageSize; }
     PageSizeType pageSizeType() const { return static_cast<PageSizeType>(m_rareNonInheritedData->pageSizeType); }
 
-    LineBoxContain lineBoxContain() const { return m_rareInheritedData->lineBoxContain; }
+    OptionSet<LineBoxContain> lineBoxContain() const { return OptionSet<LineBoxContain>::fromRaw(m_rareInheritedData->lineBoxContain); }
     const LineClampValue& lineClamp() const { return m_rareNonInheritedData->lineClamp; }
     const IntSize& initialLetter() const { return m_rareNonInheritedData->initialLetter; }
     int initialLetterDrop() const { return initialLetter().width(); }
@@ -706,6 +700,8 @@ public:
 
 #if ENABLE(POINTER_EVENTS)
     OptionSet<TouchAction> touchActions() const { return OptionSet<TouchAction>::fromRaw(m_rareNonInheritedData->touchActions); }
+    // 'touch-action' behavior depends on values in ancestors. We use an additional inherited property to implement that.
+    OptionSet<TouchAction> effectiveTouchActions() const { return OptionSet<TouchAction>::fromRaw(m_rareInheritedData->effectiveTouchActions); }
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -736,12 +732,16 @@ public:
     bool touchCalloutEnabled() const { return m_rareInheritedData->touchCalloutEnabled; }
 #endif
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     bool useTouchOverflowScrolling() const { return m_rareInheritedData->useTouchOverflowScrolling; }
 #endif
 
+    bool useSmoothScrolling() const { return m_rareNonInheritedData->useSmoothScrolling; }
+
 #if ENABLE(TEXT_AUTOSIZING)
     TextSizeAdjustment textSizeAdjust() const { return m_rareInheritedData->textSizeAdjust; }
+    AutosizeStatus autosizeStatus() const;
+    bool isIdempotentTextAutosizingCandidate() const;
 #endif
 
     TextSecurity textSecurity() const { return static_cast<TextSecurity>(m_rareInheritedData->textSecurity); }
@@ -752,7 +752,7 @@ public:
     bool isFlippedLinesWritingMode() const { return WebCore::isFlippedLinesWritingMode(writingMode()); }
     bool isFlippedBlocksWritingMode() const { return WebCore::isFlippedWritingMode(writingMode()); }
 
-    ImageOrientationEnum imageOrientation() const;
+    ImageOrientation imageOrientation() const;
 
     ImageRendering imageRendering() const { return static_cast<ImageRendering>(m_rareInheritedData->imageRendering); }
 
@@ -831,12 +831,6 @@ public:
     void setMinHeight(Length&& length) { SET_VAR(m_boxData, m_minHeight, WTFMove(length)); }
     void setMaxHeight(Length&& length) { SET_VAR(m_boxData, m_maxHeight, WTFMove(length)); }
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    const Vector<StyleDashboardRegion>& dashboardRegions() const { return m_rareNonInheritedData->dashboardRegions; }
-    void setDashboardRegions(const Vector<StyleDashboardRegion>& regions) { SET_VAR(m_rareNonInheritedData, dashboardRegions, regions); }
-    void setDashboardRegion(int type, const String& label, Length&& top, Length&& right, Length&& bottom, Length&& left, bool append);
-#endif
-
     void resetBorder() { resetBorderImage(); resetBorderTop(); resetBorderRight(); resetBorderBottom(); resetBorderLeft(); resetBorderRadius(); }
     void resetBorderTop() { SET_VAR(m_surroundData, border.m_top, BorderValue()); }
     void resetBorderRight() { SET_VAR(m_surroundData, border.m_right, BorderValue()); }
@@ -844,10 +838,10 @@ public:
     void resetBorderLeft() { SET_VAR(m_surroundData, border.m_left, BorderValue()); }
     void resetBorderImage() { SET_VAR(m_surroundData, border.m_image, NinePieceImage()); }
     void resetBorderRadius() { resetBorderTopLeftRadius(); resetBorderTopRightRadius(); resetBorderBottomLeftRadius(); resetBorderBottomRightRadius(); }
-    void resetBorderTopLeftRadius() { SET_VAR(m_surroundData, border.m_topLeft, initialBorderRadius()); }
-    void resetBorderTopRightRadius() { SET_VAR(m_surroundData, border.m_topRight, initialBorderRadius()); }
-    void resetBorderBottomLeftRadius() { SET_VAR(m_surroundData, border.m_bottomLeft, initialBorderRadius()); }
-    void resetBorderBottomRightRadius() { SET_VAR(m_surroundData, border.m_bottomRight, initialBorderRadius()); }
+    void resetBorderTopLeftRadius() { SET_VAR(m_surroundData, border.m_topLeftRadius, initialBorderRadius()); }
+    void resetBorderTopRightRadius() { SET_VAR(m_surroundData, border.m_topRightRadius, initialBorderRadius()); }
+    void resetBorderBottomLeftRadius() { SET_VAR(m_surroundData, border.m_bottomLeftRadius, initialBorderRadius()); }
+    void resetBorderBottomRightRadius() { SET_VAR(m_surroundData, border.m_bottomRightRadius, initialBorderRadius()); }
 
     void setBackgroundColor(const Color& v) { SET_VAR(m_backgroundData, color, v); }
 
@@ -862,10 +856,10 @@ public:
     void setBorderImageWidth(LengthBox&&);
     void setBorderImageOutset(LengthBox&&);
 
-    void setBorderTopLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topLeft, WTFMove(size)); }
-    void setBorderTopRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topRight, WTFMove(size)); }
-    void setBorderBottomLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomLeft, WTFMove(size)); }
-    void setBorderBottomRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomRight, WTFMove(size)); }
+    void setBorderTopLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topLeftRadius, WTFMove(size)); }
+    void setBorderTopRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_topRightRadius, WTFMove(size)); }
+    void setBorderBottomLeftRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomLeftRadius, WTFMove(size)); }
+    void setBorderBottomRightRadius(LengthSize&& size) { SET_VAR(m_surroundData, border.m_bottomRightRadius, WTFMove(size)); }
 
     void setBorderRadius(LengthSize&&);
     void setBorderRadius(const IntSize&);
@@ -956,10 +950,7 @@ public:
     void setSpecifiedLineHeight(Length&&);
 #endif
 
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    void setImageOrientation(ImageOrientationEnum v) { SET_VAR(m_rareInheritedData, imageOrientation, static_cast<int>(v)); }
-#endif
-
+    void setImageOrientation(ImageOrientation v) { SET_VAR(m_rareInheritedData, imageOrientation, static_cast<int>(v)); }
     void setImageRendering(ImageRendering v) { SET_VAR(m_rareInheritedData, imageRendering, static_cast<unsigned>(v)); }
 
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -1037,10 +1028,31 @@ public:
     PrintColorAdjust printColorAdjust() const { return static_cast<PrintColorAdjust>(m_inheritedFlags.printColorAdjust); }
     void setPrintColorAdjust(PrintColorAdjust value) { m_inheritedFlags.printColorAdjust = static_cast<unsigned>(value); }
 
-    bool hasAutoZIndex() const { return m_boxData->hasAutoZIndex(); }
-    void setHasAutoZIndex() { SET_VAR(m_boxData, m_hasAutoZIndex, true); SET_VAR(m_boxData, m_zIndex, 0); }
-    int zIndex() const { return m_boxData->zIndex(); }
-    void setZIndex(int v) { SET_VAR(m_boxData, m_hasAutoZIndex, false); SET_VAR(m_boxData, m_zIndex, v); }
+    int specifiedZIndex() const { return m_boxData->specifiedZIndex(); }
+    bool hasAutoSpecifiedZIndex() const { return m_boxData->hasAutoSpecifiedZIndex(); }
+    void setSpecifiedZIndex(int v)
+    {
+        SET_VAR(m_boxData, m_hasAutoSpecifiedZIndex, false);
+        SET_VAR(m_boxData, m_specifiedZIndex, v);
+    }
+    void setHasAutoSpecifiedZIndex()
+    {
+        SET_VAR(m_boxData, m_hasAutoSpecifiedZIndex, true);
+        SET_VAR(m_boxData, m_specifiedZIndex, 0);
+    }
+
+    int usedZIndex() const { return m_boxData->usedZIndex(); }
+    bool hasAutoUsedZIndex() const { return m_boxData->hasAutoUsedZIndex(); }
+    void setUsedZIndex(int v)
+    {
+        SET_VAR(m_boxData, m_hasAutoUsedZIndex, false);
+        SET_VAR(m_boxData, m_usedZIndex, v);
+    }
+    void setHasAutoUsedZIndex()
+    {
+        SET_VAR(m_boxData, m_hasAutoUsedZIndex, true);
+        SET_VAR(m_boxData, m_usedZIndex, 0);
+    }
 
     void setHasAutoWidows() { SET_VAR(m_rareInheritedData, hasAutoWidows, true); SET_VAR(m_rareInheritedData, widows, initialWidows()); }
     void setWidows(short w) { SET_VAR(m_rareInheritedData, hasAutoWidows, false); SET_VAR(m_rareInheritedData, widows, w); }
@@ -1136,7 +1148,7 @@ public:
     void setHyphenationLimitBefore(short limit) { SET_VAR(m_rareInheritedData, hyphenationLimitBefore, limit); }
     void setHyphenationLimitAfter(short limit) { SET_VAR(m_rareInheritedData, hyphenationLimitAfter, limit); }
     void setHyphenationLimitLines(short limit) { SET_VAR(m_rareInheritedData, hyphenationLimitLines, limit); }
-    void setHyphenationString(const AtomicString& h) { SET_VAR(m_rareInheritedData, hyphenationString, h); }
+    void setHyphenationString(const AtomString& h) { SET_VAR(m_rareInheritedData, hyphenationString, h); }
     void setBorderFit(BorderFit b) { SET_VAR(m_rareNonInheritedData, borderFit, static_cast<unsigned>(b)); }
     void setResize(Resize r) { SET_VAR(m_rareNonInheritedData, resize, static_cast<unsigned>(r)); }
     void setColumnAxis(ColumnAxis axis) { SET_NESTED_VAR(m_rareNonInheritedData, multiCol, axis, static_cast<unsigned>(axis)); }
@@ -1167,7 +1179,7 @@ public:
     void setTextEmphasisColor(const Color& c) { SET_VAR(m_rareInheritedData, textEmphasisColor, c); }
     void setTextEmphasisFill(TextEmphasisFill fill) { SET_VAR(m_rareInheritedData, textEmphasisFill, static_cast<unsigned>(fill)); }
     void setTextEmphasisMark(TextEmphasisMark mark) { SET_VAR(m_rareInheritedData, textEmphasisMark, static_cast<unsigned>(mark)); }
-    void setTextEmphasisCustomMark(const AtomicString& mark) { SET_VAR(m_rareInheritedData, textEmphasisCustomMark, mark); }
+    void setTextEmphasisCustomMark(const AtomString& mark) { SET_VAR(m_rareInheritedData, textEmphasisCustomMark, mark); }
     void setTextEmphasisPosition(OptionSet<TextEmphasisPosition> position) { SET_VAR(m_rareInheritedData, textEmphasisPosition, static_cast<unsigned>(position.toRaw())); }
     bool setTextOrientation(TextOrientation);
 
@@ -1177,7 +1189,7 @@ public:
     void setRubyPosition(RubyPosition position) { SET_VAR(m_rareInheritedData, rubyPosition, static_cast<unsigned>(position)); }
 
 #if ENABLE(DARK_MODE_CSS)
-    void setSupportedColorSchemes(StyleSupportedColorSchemes supported) { SET_VAR(m_rareInheritedData, supportedColorSchemes, supported); }
+    void setColorScheme(StyleColorScheme supported) { SET_VAR(m_rareInheritedData, colorScheme, supported); }
 #endif
 
     void setFilter(const FilterOperations& ops) { SET_NESTED_VAR(m_rareNonInheritedData, filter, operations, ops); }
@@ -1187,7 +1199,7 @@ public:
     void setBackdropFilter(const FilterOperations& ops) { SET_NESTED_VAR(m_rareNonInheritedData, backdropFilter, operations, ops); }
 #endif
 
-    void setTabSize(unsigned size) { SET_VAR(m_rareInheritedData, tabSize, size); }
+    void setTabSize(const TabSize& size) { SET_VAR(m_rareInheritedData, tabSize, size); }
 
     void setBreakBefore(BreakBetween breakBehavior) { SET_VAR(m_rareNonInheritedData, breakBefore, static_cast<unsigned>(breakBehavior)); }
     void setBreakAfter(BreakBetween breakBehavior) { SET_VAR(m_rareNonInheritedData, breakAfter, static_cast<unsigned>(breakBehavior)); }
@@ -1197,7 +1209,7 @@ public:
 
     // End CSS3 Setters
 
-    void setLineGrid(const AtomicString& lineGrid) { SET_VAR(m_rareInheritedData, lineGrid, lineGrid); }
+    void setLineGrid(const AtomString& lineGrid) { SET_VAR(m_rareInheritedData, lineGrid, lineGrid); }
     void setLineSnap(LineSnap lineSnap) { SET_VAR(m_rareInheritedData, lineSnap, static_cast<unsigned>(lineSnap)); }
     void setLineAlign(LineAlign lineAlign) { SET_VAR(m_rareInheritedData, lineAlign, static_cast<unsigned>(lineAlign)); }
 
@@ -1218,13 +1230,14 @@ public:
     void setPageSizeType(PageSizeType t) { SET_VAR(m_rareNonInheritedData, pageSizeType, t); }
     void resetPageSizeType() { SET_VAR(m_rareNonInheritedData, pageSizeType, PAGE_SIZE_AUTO); }
 
-    void setLineBoxContain(LineBoxContain c) { SET_VAR(m_rareInheritedData, lineBoxContain, c); }
+    void setLineBoxContain(OptionSet<LineBoxContain> c) { SET_VAR(m_rareInheritedData, lineBoxContain, c.toRaw()); }
     void setLineClamp(LineClampValue c) { SET_VAR(m_rareNonInheritedData, lineClamp, c); }
 
     void setInitialLetter(const IntSize& size) { SET_VAR(m_rareNonInheritedData, initialLetter, size); }
 
 #if ENABLE(POINTER_EVENTS)
     void setTouchActions(OptionSet<TouchAction> touchActions) { SET_VAR(m_rareNonInheritedData, touchActions, touchActions.toRaw()); }
+    void setEffectiveTouchActions(OptionSet<TouchAction> touchActions) { SET_VAR(m_rareInheritedData, effectiveTouchActions, touchActions.toRaw()); }
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -1249,12 +1262,15 @@ public:
     void setTouchCalloutEnabled(bool v) { SET_VAR(m_rareInheritedData, touchCalloutEnabled, v); }
 #endif
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     void setUseTouchOverflowScrolling(bool v) { SET_VAR(m_rareInheritedData, useTouchOverflowScrolling, v); }
 #endif
 
+    void setUseSmoothScrolling(bool v) { SET_VAR(m_rareNonInheritedData, useSmoothScrolling, v); }
+
 #if ENABLE(TEXT_AUTOSIZING)
     void setTextSizeAdjust(TextSizeAdjustment adjustment) { SET_VAR(m_rareInheritedData, textSizeAdjust, adjustment); }
+    void setAutosizeStatus(AutosizeStatus);
 #endif
 
     void setTextSecurity(TextSecurity security) { SET_VAR(m_rareInheritedData, textSecurity, static_cast<unsigned>(security)); }
@@ -1399,10 +1415,10 @@ public:
 
     bool willChangeCreatesStackingContext() const;
 
-    const AtomicString& hyphenString() const;
+    const AtomString& hyphenString() const;
 
-    bool inheritedNotEqual(const RenderStyle*) const;
-    bool inheritedDataShared(const RenderStyle*) const;
+    bool inheritedEqual(const RenderStyle&) const;
+    bool descendantAffectingNonInheritedPropertiesEqual(const RenderStyle&) const;
 
 #if ENABLE(TEXT_AUTOSIZING)
     uint32_t hashForTextAutosizing() const;
@@ -1493,6 +1509,7 @@ public:
     static Length initialMinSize() { return Length(); }
     static Length initialMaxSize() { return Length(Undefined); }
     static Length initialOffset() { return Length(); }
+    static Length initialRadius() { return Length(); }
     static Length initialMargin() { return Length(Fixed); }
     static Length initialPadding() { return Length(Fixed); }
     static Length initialTextIndent() { return Length(Fixed); }
@@ -1553,7 +1570,7 @@ public:
     static short initialHyphenationLimitBefore() { return -1; }
     static short initialHyphenationLimitAfter() { return -1; }
     static short initialHyphenationLimitLines() { return -1; }
-    static const AtomicString& initialHyphenationString() { return nullAtom(); }
+    static const AtomString& initialHyphenationString() { return nullAtom(); }
     static BorderFit initialBorderFit() { return BorderFit::Border; }
     static Resize initialResize() { return Resize::None; }
     static ControlPart initialAppearance() { return NoControlPart; }
@@ -1582,11 +1599,11 @@ public:
     static Color initialTextEmphasisColor() { return Color(); }
     static TextEmphasisFill initialTextEmphasisFill() { return TextEmphasisFill::Filled; }
     static TextEmphasisMark initialTextEmphasisMark() { return TextEmphasisMark::None; }
-    static const AtomicString& initialTextEmphasisCustomMark() { return nullAtom(); }
+    static const AtomString& initialTextEmphasisCustomMark() { return nullAtom(); }
     static OptionSet<TextEmphasisPosition> initialTextEmphasisPosition() { return { TextEmphasisPosition::Over, TextEmphasisPosition::Right }; }
     static RubyPosition initialRubyPosition() { return RubyPosition::Before; }
-    static LineBoxContain initialLineBoxContain() { return LineBoxContainBlock | LineBoxContainInline | LineBoxContainReplaced; }
-    static ImageOrientationEnum initialImageOrientation() { return OriginTopLeft; }
+    static OptionSet<LineBoxContain> initialLineBoxContain() { return { LineBoxContain::Block, LineBoxContain::Inline, LineBoxContain::Replaced }; }
+    static ImageOrientation initialImageOrientation() { return ImageOrientation::FromImage; }
     static ImageRendering initialImageRendering() { return ImageRendering::Auto; }
     static ImageResolutionSource initialImageResolutionSource() { return ImageResolutionSource::Specified; }
     static ImageResolutionSnap initialImageResolutionSnap() { return ImageResolutionSnap::None; }
@@ -1595,10 +1612,10 @@ public:
     static StyleImage* initialMaskBoxImageSource() { return nullptr; }
     static PrintColorAdjust initialPrintColorAdjust() { return PrintColorAdjust::Economy; }
     static QuotesData* initialQuotes() { return nullptr; }
-    static const AtomicString& initialContentAltText() { return emptyAtom(); }
+    static const AtomString& initialContentAltText() { return emptyAtom(); }
 
 #if ENABLE(DARK_MODE_CSS)
-    static StyleSupportedColorSchemes initialSupportedColorSchemes() { return { }; }
+    static StyleColorScheme initialColorScheme() { return { }; }
 #endif
 
 #if ENABLE(CSS3_TEXT)
@@ -1667,9 +1684,9 @@ public:
     static GridPosition initialGridItemRowStart() { return GridPosition(); }
     static GridPosition initialGridItemRowEnd() { return GridPosition(); }
 
-    static unsigned initialTabSize() { return 8; }
+    static TabSize initialTabSize() { return 8; }
 
-    static const AtomicString& initialLineGrid() { return nullAtom(); }
+    static const AtomString& initialLineGrid() { return nullAtom(); }
     static LineSnap initialLineSnap() { return LineSnap::None; }
     static LineAlign initialLineAlign() { return LineAlign::None; }
 
@@ -1685,14 +1702,11 @@ public:
     static Color initialTapHighlightColor();
 #endif
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     static bool initialUseTouchOverflowScrolling() { return false; }
 #endif
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    static const Vector<StyleDashboardRegion>& initialDashboardRegions();
-    static const Vector<StyleDashboardRegion>& noneDashboardRegions();
-#endif
+    static bool initialUseSmoothScrolling() { return false; }
 
     static const FilterOperations& initialFilter() { static NeverDestroyed<FilterOperations> ops; return ops; }
     static const FilterOperations& initialAppleColorFilter() { static NeverDestroyed<FilterOperations> ops; return ops; }
@@ -1737,7 +1751,7 @@ public:
     const Color& borderTopColor() const { return m_surroundData->border.top().color(); }
     const Color& borderBottomColor() const { return m_surroundData->border.bottom().color(); }
     const Color& backgroundColor() const { return m_backgroundData->color; }
-    const Color& color() const;
+    WEBCORE_EXPORT const Color& color() const;
     const Color& columnRuleColor() const { return m_rareNonInheritedData->multiCol->rule.color(); }
     const Color& outlineColor() const { return m_backgroundData->outline.color(); }
     const Color& textEmphasisColor() const { return m_rareInheritedData->textEmphasisColor; }
@@ -1790,7 +1804,7 @@ private:
         unsigned hasExplicitlySetWritingMode : 1;
         unsigned hasExplicitlySetTextAlign : 1;
 #if ENABLE(DARK_MODE_CSS)
-        unsigned hasExplicitlySetSupportedColorSchemes : 1;
+        unsigned hasExplicitlySetColorScheme : 1;
 #endif
         unsigned hasViewportUnits : 1;
         unsigned hasExplicitlyInheritedProperties : 1; // Explicitly inherits a non-inherited property.
@@ -1842,6 +1856,11 @@ private:
         // CSS Text Layout Module Level 3: Vertical writing support
         unsigned writingMode : 2; // WritingMode
         // 48 bits
+
+#if ENABLE(TEXT_AUTOSIZING)
+        unsigned autosizeStatus : 5;
+#endif
+        // 53 bits
     };
 
     // This constructor is used to implement the replace operation.
@@ -1890,7 +1909,7 @@ private:
 
     DataRef<SVGRenderStyle> m_svgStyle;
 
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
     bool m_deletionHasBegun { false };
 #endif
 };
@@ -1919,7 +1938,7 @@ inline bool RenderStyle::NonInheritedFlags::operator==(const NonInheritedFlags& 
         && hasExplicitlySetWritingMode == other.hasExplicitlySetWritingMode
         && hasExplicitlySetTextAlign == other.hasExplicitlySetTextAlign
 #if ENABLE(DARK_MODE_CSS)
-        && hasExplicitlySetSupportedColorSchemes == other.hasExplicitlySetSupportedColorSchemes
+        && hasExplicitlySetColorScheme == other.hasExplicitlySetColorScheme
 #endif
         && hasViewportUnits == other.hasViewportUnits
         && hasExplicitlyInheritedProperties == other.hasExplicitlyInheritedProperties
@@ -2022,7 +2041,7 @@ inline float adjustFloatForAbsoluteZoom(float value, const RenderStyle& style)
 
 inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderStyle& style)
 {
-    return value / style.effectiveZoom();
+    return LayoutUnit(value / style.effectiveZoom());
 }
 
 inline BorderStyle collapsedBorderStyle(BorderStyle style)
@@ -2034,7 +2053,7 @@ inline BorderStyle collapsedBorderStyle(BorderStyle style)
     return style;
 }
 
-inline const CSSCustomPropertyValue* RenderStyle::getCustomProperty(const AtomicString& name) const
+inline const CSSCustomPropertyValue* RenderStyle::getCustomProperty(const AtomString& name) const
 {
     for (auto* map : { &nonInheritedCustomProperties(), &inheritedCustomProperties() }) {
         if (auto* val = map->get(name))
@@ -2063,7 +2082,7 @@ inline bool RenderStyle::preserveNewline(WhiteSpace whiteSpace)
 inline bool RenderStyle::collapseWhiteSpace(WhiteSpace ws)
 {
     // Pre and prewrap do not collapse whitespace.
-    return ws != WhiteSpace::Pre && ws != WhiteSpace::PreWrap;
+    return ws != WhiteSpace::Pre && ws != WhiteSpace::PreWrap && ws != WhiteSpace::BreakSpaces;
 }
 
 inline bool RenderStyle::isCollapsibleWhiteSpace(UChar character) const
@@ -2081,7 +2100,7 @@ inline bool RenderStyle::isCollapsibleWhiteSpace(UChar character) const
 
 inline bool RenderStyle::breakOnlyAfterWhiteSpace() const
 {
-    return whiteSpace() == WhiteSpace::PreWrap || lineBreak() == LineBreak::AfterWhiteSpace;
+    return whiteSpace() == WhiteSpace::PreWrap || whiteSpace() == WhiteSpace::BreakSpaces || lineBreak() == LineBreak::AfterWhiteSpace;
 }
 
 inline bool RenderStyle::breakWords() const
@@ -2095,13 +2114,9 @@ inline bool RenderStyle::hasInlineColumnAxis() const
     return axis == ColumnAxis::Auto || isHorizontalWritingMode() == (axis == ColumnAxis::Horizontal);
 }
 
-inline ImageOrientationEnum RenderStyle::imageOrientation() const
+inline ImageOrientation RenderStyle::imageOrientation() const
 {
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    return static_cast<ImageOrientationEnum>(m_rareInheritedData->imageOrientation);
-#else
-    return DefaultImageOrientation;
-#endif
+    return static_cast<ImageOrientation::Orientation>(m_rareInheritedData->imageOrientation);
 }
 
 inline void RenderStyle::setLogicalWidth(Length&& logicalWidth)

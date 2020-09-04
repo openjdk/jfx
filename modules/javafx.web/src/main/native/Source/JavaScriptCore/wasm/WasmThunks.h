@@ -34,7 +34,7 @@ namespace JSC { namespace Wasm {
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromWasmThunkGenerator(const AbstractLocker&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(const AbstractLocker&);
-MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGTierUpThunkGenerator(const AbstractLocker&);
+MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGenerator(const AbstractLocker&);
 
 typedef MacroAssemblerCodeRef<JITThunkPtrTag> (*ThunkGenerator)(const AbstractLocker&);
 
@@ -45,9 +45,6 @@ public:
     static void initialize();
     static Thunks& singleton();
 
-    void setThrowWasmException(ThrowWasmException);
-    ThrowWasmException throwWasmException();
-
     MacroAssemblerCodeRef<JITThunkPtrTag> stub(ThunkGenerator);
     MacroAssemblerCodeRef<JITThunkPtrTag> stub(const AbstractLocker&, ThunkGenerator);
     MacroAssemblerCodeRef<JITThunkPtrTag> existingStub(ThunkGenerator);
@@ -56,7 +53,6 @@ private:
     Thunks() = default;
 
     HashMap<ThunkGenerator, MacroAssemblerCodeRef<JITThunkPtrTag>> m_stubs;
-    ThrowWasmException m_throwWasmException { nullptr };
     Lock m_lock;
 };
 

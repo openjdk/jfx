@@ -24,6 +24,7 @@
 #include "SVGClipPathElement.h"
 
 #include "Document.h"
+#include "ImageBuffer.h"
 #include "RenderSVGResourceClipper.h"
 #include "SVGNames.h"
 #include "StyleResolver.h"
@@ -36,41 +37,34 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGClipPathElement);
 
 inline SVGClipPathElement::SVGClipPathElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::clipPathTag));
-    registerAttributes();
-}
+
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::clipPathUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGClipPathElement::m_clipPathUnits>();
+    });}
 
 Ref<SVGClipPathElement> SVGClipPathElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new SVGClipPathElement(tagName, document));
 }
 
-void SVGClipPathElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::clipPathUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGClipPathElement::m_clipPathUnits>();
-}
-
-void SVGClipPathElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGClipPathElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::clipPathUnitsAttr) {
         auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(value);
         if (propertyValue > 0)
-            m_clipPathUnits.setValue(propertyValue);
+            m_clipPathUnits->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         return;
     }
 
     SVGGraphicsElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGClipPathElement::svgAttributeChanged(const QualifiedName& attrName)
 {
-    if (isKnownAttribute(attrName)) {
+    if (PropertyRegistry::isKnownAttribute(attrName)) {
         InstanceInvalidationGuard guard(*this);
 
         if (RenderObject* object = renderer())
@@ -79,7 +73,6 @@ void SVGClipPathElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGGraphicsElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 void SVGClipPathElement::childrenChanged(const ChildChange& change)

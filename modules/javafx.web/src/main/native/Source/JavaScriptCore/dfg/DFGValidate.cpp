@@ -31,6 +31,7 @@
 #include "CodeBlockWithJITType.h"
 #include "DFGClobberize.h"
 #include "DFGClobbersExitState.h"
+#include "DFGDominators.h"
 #include "DFGMayExit.h"
 #include "JSCInlines.h"
 #include <wtf/Assertions.h>
@@ -257,6 +258,8 @@ public:
                 case ValueSub:
                 case ValueMul:
                 case ValueDiv:
+                case ValueMod:
+                case ValuePow:
                 case ArithAdd:
                 case ArithSub:
                 case ArithMul:
@@ -282,6 +285,11 @@ public:
                 case CompareEqPtr:
                     VALIDATE((node), !!node->child1());
                     VALIDATE((node), !!node->cellOperand()->value() && node->cellOperand()->value().isCell());
+                    break;
+                case CheckArrayOrEmpty:
+                    VALIDATE((node), is64Bit());
+                    VALIDATE((node), !!node->child1());
+                    VALIDATE((node), node->child1().useKind() == CellUse);
                     break;
                 case CheckStructureOrEmpty:
                     VALIDATE((node), is64Bit());
@@ -470,7 +478,7 @@ private:
                     Node* node = block->at(i);
                     m_graph.doToChildren(node, [&] (const Edge& edge) {
                         Node* child = edge.node();
-                        VALIDATE((node), block->isInPhis(child) || seenNodes.contains(child));
+                        VALIDATE((node, edge), block->isInPhis(child) || seenNodes.contains(child));
                     });
                     seenNodes.add(node);
                 }
@@ -480,7 +488,7 @@ private:
                 Node* node = block->phis[i];
                 ASSERT(phisInThisBlock.contains(node));
                 VALIDATE((node), node->op() == Phi);
-                VirtualRegister local = node->local();
+                Operand operand = node->operand();
                 for (unsigned j = 0; j < m_graph.numChildren(node); ++j) {
                     // Phi children in LoadStore form are invalid.
                     if (m_graph.m_form == LoadStore && block->isPhiIndex(i))
@@ -493,8 +501,8 @@ private:
                     VALIDATE(
                         (node, edge),
                         edge->op() == SetLocal
-                        || edge->op() == SetArgument
-                        || edge->op() == Flush
+                        || edge->op() == SetArgumentDefinitely
+                        || edge->op() == SetArgumentMaybe
                         || edge->op() == Phi);
 
                     if (phisInThisBlock.contains(edge.node()))
@@ -504,8 +512,8 @@ private:
                         VALIDATE(
                             (node, edge),
                             edge->op() == SetLocal
-                            || edge->op() == SetArgument
-                            || edge->op() == Flush);
+                            || edge->op() == SetArgumentDefinitely
+                            || edge->op() == SetArgumentMaybe);
 
                         continue;
                     }
@@ -516,10 +524,10 @@ private:
                     for (unsigned k = 0; k < block->predecessors.size(); ++k) {
                         BasicBlock* prevBlock = block->predecessors[k];
                         VALIDATE((block->predecessors[k]), prevBlock);
-                        Node* prevNode = prevBlock->variablesAtTail.operand(local);
+                        Node* prevNode = prevBlock->variablesAtTail.operand(operand);
                         // If we have a Phi that is not referring to *this* block then all predecessors
                         // must have that local available.
-                        VALIDATE((local, block, block->predecessors[k]), prevNode);
+                        VALIDATE((operand, block, block->predecessors[k]), prevNode);
                         switch (prevNode->op()) {
                         case GetLocal:
                         case Flush:
@@ -530,37 +538,34 @@ private:
                             break;
                         }
                         if (node->shouldGenerate()) {
-                            VALIDATE((local, block->predecessors[k], prevNode),
+                            VALIDATE((operand, block->predecessors[k], prevNode),
                                      prevNode->shouldGenerate());
                         }
                         VALIDATE(
-                            (local, block->predecessors[k], prevNode),
+                            (operand, block->predecessors[k], prevNode),
                             prevNode->op() == SetLocal
-                            || prevNode->op() == SetArgument
+                            || prevNode->op() == SetArgumentDefinitely
+                            || prevNode->op() == SetArgumentMaybe
                             || prevNode->op() == Phi);
                         if (prevNode == edge.node()) {
                             found = true;
                             break;
                         }
                         // At this point it cannot refer into this block.
-                        VALIDATE((local, block->predecessors[k], prevNode), !prevBlock->isInBlock(edge.node()));
+                        VALIDATE((operand, block->predecessors[k], prevNode), !prevBlock->isInBlock(edge.node()));
                     }
 
                     VALIDATE((node, edge), found);
                 }
             }
 
-            Operands<size_t> getLocalPositions(
-                block->variablesAtHead.numberOfArguments(),
-                block->variablesAtHead.numberOfLocals());
-            Operands<size_t> setLocalPositions(
-                block->variablesAtHead.numberOfArguments(),
-                block->variablesAtHead.numberOfLocals());
+            Operands<size_t> getLocalPositions(OperandsLike, block->variablesAtHead);
+            Operands<size_t> setLocalPositions(OperandsLike, block->variablesAtHead);
 
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
-                VALIDATE((virtualRegisterForArgument(i), block), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->accessesStack(m_graph));
+                VALIDATE((virtualRegisterForArgumentIncludingThis(i), block), !block->variablesAtHead.argument(i) || block->variablesAtHead.argument(i)->accessesStack(m_graph));
                 if (m_graph.m_form == ThreadedCPS)
-                    VALIDATE((virtualRegisterForArgument(i), block), !block->variablesAtTail.argument(i) || block->variablesAtTail.argument(i)->accessesStack(m_graph));
+                    VALIDATE((virtualRegisterForArgumentIncludingThis(i), block), !block->variablesAtTail.argument(i) || block->variablesAtTail.argument(i)->accessesStack(m_graph));
 
                 getLocalPositions.argument(i) = notSet;
                 setLocalPositions.argument(i) = notSet;
@@ -664,23 +669,38 @@ private:
                     if (!m_myRefCounts.get(node))
                         break;
                     if (m_graph.m_form == ThreadedCPS) {
-                        VALIDATE((node, block), getLocalPositions.operand(node->local()) == notSet);
+                        VALIDATE((node, block), getLocalPositions.operand(node->operand()) == notSet);
                         VALIDATE((node, block), !!node->child1());
+                        VALIDATE((node, block), node->child1()->op() == SetArgumentDefinitely || node->child1()->op() == Phi);
                     }
-                    getLocalPositions.operand(node->local()) = i;
+                    getLocalPositions.operand(node->operand()) = i;
                     break;
                 case SetLocal:
                     // Only record the first SetLocal. There may be multiple SetLocals
                     // because of flushing.
-                    if (setLocalPositions.operand(node->local()) != notSet)
+                    if (setLocalPositions.operand(node->operand()) != notSet)
                         break;
-                    setLocalPositions.operand(node->local()) = i;
+                    setLocalPositions.operand(node->operand()) = i;
                     break;
-                case SetArgument:
+                case SetArgumentDefinitely:
                     // This acts like a reset. It's ok to have a second GetLocal for a local in the same
-                    // block if we had a SetArgument for that local.
-                    getLocalPositions.operand(node->local()) = notSet;
-                    setLocalPositions.operand(node->local()) = notSet;
+                    // block if we had a SetArgumentDefinitely for that local.
+                    getLocalPositions.operand(node->operand()) = notSet;
+                    setLocalPositions.operand(node->operand()) = notSet;
+                    break;
+                case SetArgumentMaybe:
+                    break;
+                case Flush:
+                case PhantomLocal:
+                    if (m_graph.m_form == ThreadedCPS) {
+                        VALIDATE((node, block),
+                            node->child1()->op() == Phi
+                            || node->child1()->op() == SetLocal
+                            || node->child1()->op() == SetArgumentDefinitely
+                            || node->child1()->op() == SetArgumentMaybe);
+                        if (node->op() == PhantomLocal)
+                            VALIDATE((node, block), node->child1()->op() != SetArgumentMaybe);
+                    }
                     break;
                 default:
                     break;
@@ -692,11 +712,57 @@ private:
 
             for (size_t i = 0; i < block->variablesAtHead.numberOfArguments(); ++i) {
                 checkOperand(
-                    block, getLocalPositions, setLocalPositions, virtualRegisterForArgument(i));
+                    block, getLocalPositions, setLocalPositions, virtualRegisterForArgumentIncludingThis(i));
             }
             for (size_t i = 0; i < block->variablesAtHead.numberOfLocals(); ++i) {
                 checkOperand(
                     block, getLocalPositions, setLocalPositions, virtualRegisterForLocal(i));
+            }
+        }
+
+        if (m_graph.m_form == ThreadedCPS) {
+            Vector<Node*> worklist;
+            HashSet<Node*> seen;
+            for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+                for (Node* node : *block) {
+                    if (node->op() == GetLocal || node->op() == PhantomLocal) {
+                        worklist.append(node);
+                        auto addResult = seen.add(node);
+                        VALIDATE((node, block), addResult.isNewEntry);
+                    }
+                }
+            }
+
+            while (worklist.size()) {
+                Node* node = worklist.takeLast();
+                switch (node->op()) {
+                case PhantomLocal:
+                case GetLocal: {
+                    Node* child = node->child1().node();
+                    if (seen.add(child).isNewEntry)
+                        worklist.append(child);
+                    break;
+                }
+                case Phi: {
+                    for (unsigned i = 0; i < m_graph.numChildren(node); ++i) {
+                        Edge edge = m_graph.child(node, i);
+                        if (!edge)
+                            continue;
+                        if (seen.add(edge.node()).isNewEntry)
+                            worklist.append(edge.node());
+                    }
+                    break;
+                }
+                case SetLocal:
+                case SetArgumentDefinitely:
+                    break;
+                case SetArgumentMaybe:
+                    VALIDATE((node), !"Should not reach SetArgumentMaybe. GetLocal that has data flow that reaches a SetArgumentMaybe is invalid IR.");
+                    break;
+                default:
+                    VALIDATE((node), !"Unexpected node type.");
+                    break;
+                }
             }
         }
     }
@@ -711,7 +777,11 @@ private:
         VALIDATE((), !m_graph.m_argumentFormats.isEmpty()); // We always have at least one entrypoint.
         VALIDATE((), m_graph.m_rootToArguments.isEmpty()); // This is only used in CPS.
 
-        for (unsigned entrypointIndex : m_graph.m_entrypointIndexToCatchBytecodeOffset.keys())
+        m_graph.initializeNodeOwners();
+
+        auto& dominators = m_graph.ensureSSADominators();
+
+        for (unsigned entrypointIndex : m_graph.m_entrypointIndexToCatchBytecodeIndex.keys())
             VALIDATE((), entrypointIndex > 0); // By convention, 0 is the entrypoint index for the op_enter entrypoint, which can not be in a catch.
 
         for (BlockIndex blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
@@ -723,6 +793,8 @@ private:
 
             bool didSeeExitOK = false;
             bool isOSRExited = false;
+
+            HashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
                 didSeeExitOK |= node->origin.exitOK;
@@ -739,7 +811,8 @@ private:
 
                 case GetLocal:
                 case SetLocal:
-                case SetArgument:
+                case SetArgumentDefinitely:
+                case SetArgumentMaybe:
                 case Phantom:
                     VALIDATE((node), !"bad node type for SSA");
                     break;
@@ -841,7 +914,13 @@ private:
                         });
                     break;
                 }
+
                 isOSRExited |= node->isPseudoTerminal();
+
+                m_graph.doToChildren(node, [&] (Edge child) {
+                    VALIDATE((node), dominators.strictlyDominates(child->owner, block) || nodesInThisBlock.contains(child.node()));
+                });
+                nodesInThisBlock.add(node);
             }
         }
     }
@@ -890,26 +969,26 @@ private:
         dataLog(node, " -> ", edge);
     }
 
-    void reportValidationContext(VirtualRegister local, BasicBlock* block)
+    void reportValidationContext(Operand operand, BasicBlock* block)
     {
         if (!block) {
-            dataLog(local, " in null Block ");
+            dataLog(operand, " in null Block ");
             return;
         }
 
-        dataLog(local, " in Block ", *block);
+        dataLog(operand, " in Block ", *block);
     }
 
     void reportValidationContext(
-        VirtualRegister local, BasicBlock* sourceBlock, BasicBlock* destinationBlock)
+        Operand operand, BasicBlock* sourceBlock, BasicBlock* destinationBlock)
     {
-        dataLog(local, " in Block ", *sourceBlock, " -> ", *destinationBlock);
+        dataLog(operand, " in Block ", *sourceBlock, " -> ", *destinationBlock);
     }
 
     void reportValidationContext(
-        VirtualRegister local, BasicBlock* sourceBlock, Node* prevNode)
+        Operand operand, BasicBlock* sourceBlock, Node* prevNode)
     {
-        dataLog(prevNode, " for ", local, " in Block ", *sourceBlock);
+        dataLog(prevNode, " for ", operand, " in Block ", *sourceBlock);
     }
 
     void reportValidationContext(Node* node, BasicBlock* block)

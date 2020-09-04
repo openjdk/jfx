@@ -27,6 +27,7 @@
 
 #include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
+#include "InspectorFrontendChannel.h"
 #include "InspectorFrontendDispatchers.h"
 #include <wtf/Forward.h>
 
@@ -41,32 +42,37 @@ class JS_EXPORT_PRIVATE InspectorTargetAgent : public InspectorAgentBase, public
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorTargetAgent(FrontendRouter&, BackendDispatcher&);
-    virtual ~InspectorTargetAgent() = default;
+    ~InspectorTargetAgent() override;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
 
-    virtual FrontendChannel& frontendChannel() = 0;
-
     // TargetBackendDispatcherHandler
-    void exists(ErrorString&) final;
+    void setPauseOnStart(ErrorString&, bool pauseOnStart) override;
+    void resume(ErrorString&, const String& targetId) override;
     void sendMessageToTarget(ErrorString&, const String& targetId, const String& message) final;
 
     // Target lifecycle.
     void targetCreated(InspectorTarget&);
     void targetDestroyed(InspectorTarget&);
+    void didCommitProvisionalTarget(const String& oldTargetID, const String& committedTargetID);
 
     // Target messages.
     void sendMessageFromTargetToFrontend(const String& targetId, const String& message);
 
 private:
+    // FrontendChannel
+    FrontendChannel::ConnectionType connectionType() const;
     void connectToTargets();
     void disconnectFromTargets();
 
+    Inspector::FrontendRouter& m_router;
     std::unique_ptr<TargetFrontendDispatcher> m_frontendDispatcher;
     Ref<TargetBackendDispatcher> m_backendDispatcher;
     HashMap<String, InspectorTarget*> m_targets;
     bool m_isConnected { false };
+    bool m_shouldPauseOnStart { false };
 };
 
 } // namespace Inspector

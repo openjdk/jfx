@@ -40,11 +40,11 @@ class ScriptElement;
 struct CustomElementConstructionData {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, const AtomicString& name, Vector<Attribute>&&);
+    CustomElementConstructionData(Ref<JSCustomElementInterface>&&, const AtomString& name, Vector<Attribute>&&);
     ~CustomElementConstructionData();
 
     Ref<JSCustomElementInterface> elementInterface;
-    AtomicString name;
+    AtomString name;
     Vector<Attribute> attributes;
 };
 
@@ -143,7 +143,7 @@ private:
 
     void processFakeStartTag(const QualifiedName&, Vector<Attribute>&& attributes = Vector<Attribute>());
     void processFakeEndTag(const QualifiedName&);
-    void processFakeEndTag(const AtomicString&);
+    void processFakeEndTag(const AtomString&);
     void processFakeCharacters(const String&);
     void processFakePEndTagIfPInButtonScope();
 
@@ -218,7 +218,7 @@ private:
 
     bool m_framesetOk { true };
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool m_destroyed { false };
     bool m_destructionProhibited { true };
 #endif
@@ -226,7 +226,7 @@ private:
 
 inline HTMLTreeBuilder::~HTMLTreeBuilder()
 {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     ASSERT(!m_destroyed);
     ASSERT(!m_destructionProhibited);
     m_destroyed = true;

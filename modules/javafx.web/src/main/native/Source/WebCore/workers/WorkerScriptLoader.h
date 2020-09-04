@@ -41,6 +41,7 @@
 
 namespace WebCore {
 
+class Exception;
 class ResourceResponse;
 class ScriptExecutionContext;
 class TextResourceDecoder;
@@ -76,8 +77,11 @@ public:
 
     void cancel();
 
+    WEBCORE_EXPORT static ResourceError validateWorkerResponse(const ResourceResponse&, FetchOptions::Destination);
+
 private:
     friend class WTF::RefCounted<WorkerScriptLoader>;
+    friend struct std::default_delete<WorkerScriptLoader>;
 
     WorkerScriptLoader();
     ~WorkerScriptLoader();

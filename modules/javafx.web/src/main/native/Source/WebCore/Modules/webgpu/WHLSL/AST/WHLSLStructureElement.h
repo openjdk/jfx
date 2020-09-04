@@ -27,11 +27,11 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLQualifier.h"
 #include "WHLSLSemantic.h"
 #include "WHLSLType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -40,10 +40,11 @@ namespace WHLSL {
 
 namespace AST {
 
-class StructureElement : public Node {
+class StructureElement final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    StructureElement(Lexer::Token&& origin, Qualifiers&& qualifiers, UniqueRef<UnnamedType>&& type, String&& name, Optional<Semantic> semantic)
-        : m_origin(WTFMove(origin))
+    StructureElement(CodeLocation location, Qualifiers&& qualifiers, Ref<UnnamedType> type, String&& name, std::unique_ptr<Semantic>&& semantic)
+        : m_codeLocation(location)
         , m_qualifiers(WTFMove(qualifiers))
         , m_type(WTFMove(type))
         , m_name(WTFMove(name))
@@ -51,22 +52,22 @@ public:
     {
     }
 
-    virtual ~StructureElement() = default;
+    ~StructureElement() = default;
 
     StructureElement(const StructureElement&) = delete;
     StructureElement(StructureElement&&) = default;
 
-    const Lexer::Token& origin() const { return m_origin; }
+    const CodeLocation& codeLocation() const { return m_codeLocation; }
     UnnamedType& type() { return m_type; }
     const String& name() { return m_name; }
-    Optional<Semantic>& semantic() { return m_semantic; }
+    Semantic* semantic() { return m_semantic.get(); }
 
 private:
-    Lexer::Token m_origin;
+    CodeLocation m_codeLocation;
     Qualifiers m_qualifiers;
-    UniqueRef<UnnamedType> m_type;
+    Ref<UnnamedType> m_type;
     String m_name;
-    Optional<Semantic> m_semantic;
+    std::unique_ptr<Semantic> m_semantic;
 };
 
 using StructureElements = Vector<StructureElement>;

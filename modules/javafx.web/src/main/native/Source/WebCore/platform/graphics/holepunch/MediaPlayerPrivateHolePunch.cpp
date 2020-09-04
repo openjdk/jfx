@@ -76,7 +76,7 @@ void MediaPlayerPrivateHolePunch::pushNextHolePunchBuffer()
         [this](TextureMapperPlatformLayerProxy& proxy)
         {
             LockHolder holder(proxy.lock());
-            std::unique_ptr<TextureMapperPlatformLayerBuffer> layerBuffer = std::make_unique<TextureMapperPlatformLayerBuffer>(0, m_size, TextureMapperGL::ShouldNotBlend, GL_DONT_CARE);
+            std::unique_ptr<TextureMapperPlatformLayerBuffer> layerBuffer = makeUnique<TextureMapperPlatformLayerBuffer>(0, m_size, TextureMapperGL::ShouldNotBlend, GL_DONT_CARE);
             proxy.pushNextBuffer(WTFMove(layerBuffer));
         };
 
@@ -131,18 +131,37 @@ MediaPlayer::SupportsType MediaPlayerPrivateHolePunch::supportsType(const MediaE
     // Spec says we should not return "probably" if the codecs string is empty.
     if (!containerType.isEmpty() && mimeTypeCache().contains(containerType)) {
         if (parameters.type.codecs().isEmpty())
-            return MediaPlayer::MayBeSupported;
+            return MediaPlayer::SupportsType::MayBeSupported;
 
-        return MediaPlayer::IsSupported;
+        return MediaPlayer::SupportsType::IsSupported;
     }
 
-    return MediaPlayer::IsNotSupported;
+    return MediaPlayer::SupportsType::IsNotSupported;
 }
+
+class MediaPlayerFactoryHolePunch final : public MediaPlayerFactory {
+private:
+    MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::HolePunch; };
+
+    std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    {
+        return makeUnique<MediaPlayerPrivateHolePunch>(player);
+    }
+
+    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    {
+        return MediaPlayerPrivateHolePunch::getSupportedTypes(types);
+    }
+
+    MediaPlayer::SupportsType supportsTypeAndCodecs(const MediaEngineSupportParameters& parameters) const final
+    {
+        return MediaPlayerPrivateHolePunch::supportsType(parameters);
+    }
+};
 
 void MediaPlayerPrivateHolePunch::registerMediaEngine(MediaEngineRegistrar registrar)
 {
-    registrar([](MediaPlayer* player) { return std::make_unique<MediaPlayerPrivateHolePunch>(player); },
-        getSupportedTypes, supportsType, nullptr, nullptr, nullptr, nullptr);
+    registrar(makeUnique<MediaPlayerFactoryHolePunch>());
 }
 
 void MediaPlayerPrivateHolePunch::notifyReadyState()

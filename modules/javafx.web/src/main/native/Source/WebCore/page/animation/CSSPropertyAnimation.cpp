@@ -107,19 +107,19 @@ static inline ShadowStyle blendFunc(const CSSPropertyBlendingClient* anim, Shado
     if (from == to)
         return to;
 
-    double fromVal = from == Normal ? 1 : 0;
-    double toVal = to == Normal ? 1 : 0;
+    double fromVal = from == ShadowStyle::Normal ? 1 : 0;
+    double toVal = to == ShadowStyle::Normal ? 1 : 0;
     double result = blendFunc(anim, fromVal, toVal, progress);
-    return result > 0 ? Normal : Inset;
+    return result > 0 ? ShadowStyle::Normal : ShadowStyle::Inset;
 }
 
 static inline std::unique_ptr<ShadowData> blendFunc(const CSSPropertyBlendingClient* anim, const ShadowData* from, const ShadowData* to, double progress)
 {
     ASSERT(from && to);
     if (from->style() != to->style())
-        return std::make_unique<ShadowData>(*to);
+        return makeUnique<ShadowData>(*to);
 
-    return std::make_unique<ShadowData>(blend(from->location(), to->location(), progress),
+    return makeUnique<ShadowData>(blend(from->location(), to->location(), progress),
         blend(from->radius(), to->radius(), progress),
         blend(from->spread(), to->spread(), progress),
         blendFunc(anim, from->style(), to->style(), progress),
@@ -285,7 +285,7 @@ static inline LengthBox blendFunc(const CSSPropertyBlendingClient* anim, const L
 
 static inline SVGLengthValue blendFunc(const CSSPropertyBlendingClient*, const SVGLengthValue& from, const SVGLengthValue& to, double progress)
 {
-    return to.blend(from, narrowPrecisionToFloat(progress));
+    return SVGLengthValue::blend(from, to, narrowPrecisionToFloat(progress));
 }
 
 static inline Vector<SVGLengthValue> blendFunc(const CSSPropertyBlendingClient*, const Vector<SVGLengthValue>& from, const Vector<SVGLengthValue>& to, double progress)
@@ -305,7 +305,7 @@ static inline Vector<SVGLengthValue> blendFunc(const CSSPropertyBlendingClient*,
     }
     Vector<SVGLengthValue> result(resultLength);
     for (size_t i = 0; i < resultLength; ++i)
-        result[i] = to[i % toLength].blend(from[i % fromLength], narrowPrecisionToFloat(progress));
+        result[i] = SVGLengthValue::blend(from[i % fromLength], to[i % toLength], narrowPrecisionToFloat(progress));
     return result;
 }
 
@@ -322,7 +322,7 @@ static inline RefPtr<StyleImage> crossfadeBlend(const CSSPropertyBlendingClient*
 
     auto fromImageValue = CSSImageValue::create(*fromStyleImage->cachedImage());
     auto toImageValue = CSSImageValue::create(*toStyleImage->cachedImage());
-    auto percentageValue = CSSPrimitiveValue::create(progress, CSSPrimitiveValue::CSS_NUMBER);
+    auto percentageValue = CSSPrimitiveValue::create(progress, CSSUnitType::CSS_NUMBER);
 
     auto crossfadeValue = CSSCrossfadeValue::create(WTFMove(fromImageValue), WTFMove(toImageValue), WTFMove(percentageValue));
     return StyleGeneratedImage::create(WTFMove(crossfadeValue));
@@ -330,6 +330,12 @@ static inline RefPtr<StyleImage> crossfadeBlend(const CSSPropertyBlendingClient*
 
 static inline RefPtr<StyleImage> blendFunc(const CSSPropertyBlendingClient* anim, StyleImage* from, StyleImage* to, double progress)
 {
+    if (!from || !to)
+        return to;
+
+    from = from->selectedImage();
+    to = to->selectedImage();
+
     if (!from || !to)
         return to;
 
@@ -438,7 +444,7 @@ class AnimationPropertyWrapperBase {
     WTF_MAKE_NONCOPYABLE(AnimationPropertyWrapperBase);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    AnimationPropertyWrapperBase(CSSPropertyID prop)
+    explicit AnimationPropertyWrapperBase(CSSPropertyID prop)
         : m_prop(prop)
     {
     }
@@ -759,15 +765,15 @@ static inline size_t shadowListLength(const ShadowData* shadow)
 
 static inline const ShadowData* shadowForBlending(const ShadowData* srcShadow, const ShadowData* otherShadow)
 {
-    static NeverDestroyed<ShadowData> defaultShadowData(IntPoint(), 0, 0, Normal, false, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultInsetShadowData(IntPoint(), 0, 0, Inset, false, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData(IntPoint(), 0, 0, Normal, true, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData(IntPoint(), 0, 0, Inset, true, Color::transparent);
+    static NeverDestroyed<ShadowData> defaultShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, false, Color::transparent);
+    static NeverDestroyed<ShadowData> defaultInsetShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, false, Color::transparent);
+    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, true, Color::transparent);
+    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, true, Color::transparent);
 
     if (srcShadow)
         return srcShadow;
 
-    if (otherShadow->style() == Inset)
+    if (otherShadow->style() == ShadowStyle::Inset)
         return otherShadow->isWebkitBoxShadow() ? &defaultInsetWebKitBoxShadowData.get() : &defaultInsetShadowData.get();
 
     return otherShadow->isWebkitBoxShadow() ? &defaultWebKitBoxShadowData.get() : &defaultShadowData.get();
@@ -974,15 +980,15 @@ public:
     PropertyWrapperVisitedAffectedColor(CSSPropertyID prop, const Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&),
         const Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Color&))
         : AnimationPropertyWrapperBase(prop)
-        , m_wrapper(std::make_unique<PropertyWrapperColor>(prop, getter, setter))
-        , m_visitedWrapper(std::make_unique<PropertyWrapperColor>(prop, visitedGetter, visitedSetter))
+        , m_wrapper(makeUnique<PropertyWrapperColor>(prop, getter, setter))
+        , m_visitedWrapper(makeUnique<PropertyWrapperColor>(prop, visitedGetter, visitedSetter))
     {
     }
     PropertyWrapperVisitedAffectedColor(CSSPropertyID prop, MaybeInvalidColorTag, const Color& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&),
         const Color& (RenderStyle::*visitedGetter)() const, void (RenderStyle::*visitedSetter)(const Color&))
         : AnimationPropertyWrapperBase(prop)
-        , m_wrapper(std::make_unique<PropertyWrapperMaybeInvalidColor>(prop, getter, setter))
-        , m_visitedWrapper(std::make_unique<PropertyWrapperMaybeInvalidColor>(prop, visitedGetter, visitedSetter))
+        , m_wrapper(makeUnique<PropertyWrapperMaybeInvalidColor>(prop, getter, setter))
+        , m_visitedWrapper(makeUnique<PropertyWrapperMaybeInvalidColor>(prop, visitedGetter, visitedSetter))
     {
     }
     bool equals(const RenderStyle* a, const RenderStyle* b) const override
@@ -1229,19 +1235,19 @@ public:
         switch (property) {
         case CSSPropertyBackgroundPositionX:
         case CSSPropertyWebkitMaskPositionX:
-            m_fillLayerPropertyWrapper = std::make_unique<FillLayerPositionPropertyWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition, &FillLayer::backgroundXOrigin, &FillLayer::setBackgroundXOrigin, Edge::Right);
+            m_fillLayerPropertyWrapper = makeUnique<FillLayerPositionPropertyWrapper>(property, &FillLayer::xPosition, &FillLayer::setXPosition, &FillLayer::backgroundXOrigin, &FillLayer::setBackgroundXOrigin, Edge::Right);
             break;
         case CSSPropertyBackgroundPositionY:
         case CSSPropertyWebkitMaskPositionY:
-            m_fillLayerPropertyWrapper = std::make_unique<FillLayerPositionPropertyWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition, &FillLayer::backgroundYOrigin, &FillLayer::setBackgroundYOrigin, Edge::Bottom);
+            m_fillLayerPropertyWrapper = makeUnique<FillLayerPositionPropertyWrapper>(property, &FillLayer::yPosition, &FillLayer::setYPosition, &FillLayer::backgroundYOrigin, &FillLayer::setBackgroundYOrigin, Edge::Bottom);
             break;
         case CSSPropertyBackgroundSize:
         case CSSPropertyWebkitBackgroundSize:
         case CSSPropertyWebkitMaskSize:
-            m_fillLayerPropertyWrapper = std::make_unique<FillLayerPropertyWrapper<LengthSize>>(property, &FillLayer::sizeLength, &FillLayer::setSizeLength);
+            m_fillLayerPropertyWrapper = makeUnique<FillLayerPropertyWrapper<LengthSize>>(property, &FillLayer::sizeLength, &FillLayer::setSizeLength);
             break;
         case CSSPropertyBackgroundImage:
-            m_fillLayerPropertyWrapper = std::make_unique<FillLayerStyleImagePropertyWrapper>(property, &FillLayer::image, &FillLayer::setImage);
+            m_fillLayerPropertyWrapper = makeUnique<FillLayerStyleImagePropertyWrapper>(property, &FillLayer::image, &FillLayer::setImage);
             break;
         default:
             break;
@@ -1612,7 +1618,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapper<float>(CSSPropertyColumnWidth, &RenderStyle::columnWidth, &RenderStyle::setColumnWidth),
         new PropertyWrapper<float>(CSSPropertyWebkitBorderHorizontalSpacing, &RenderStyle::horizontalBorderSpacing, &RenderStyle::setHorizontalBorderSpacing),
         new PropertyWrapper<float>(CSSPropertyWebkitBorderVerticalSpacing, &RenderStyle::verticalBorderSpacing, &RenderStyle::setVerticalBorderSpacing),
-        new PropertyWrapper<int>(CSSPropertyZIndex, &RenderStyle::zIndex, &RenderStyle::setZIndex),
+        new PropertyWrapper<int>(CSSPropertyZIndex, &RenderStyle::specifiedZIndex, &RenderStyle::setSpecifiedZIndex),
         new PropertyWrapper<short>(CSSPropertyOrphans, &RenderStyle::orphans, &RenderStyle::setOrphans),
         new PropertyWrapper<short>(CSSPropertyWidows, &RenderStyle::widows, &RenderStyle::setWidows),
         new LengthPropertyWrapper(CSSPropertyLineHeight, &RenderStyle::specifiedLineHeight, &RenderStyle::setLineHeight),
@@ -1646,7 +1652,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 #endif
         new PropertyWrapperFilter(CSSPropertyAppleColorFilter, &RenderStyle::appleColorFilter, &RenderStyle::setAppleColorFilter),
 
-        new PropertyWrapperClipPath(CSSPropertyWebkitClipPath, &RenderStyle::clipPath, &RenderStyle::setClipPath),
+        new PropertyWrapperClipPath(CSSPropertyClipPath, &RenderStyle::clipPath, &RenderStyle::setClipPath),
 
         new PropertyWrapperShape(CSSPropertyShapeOutside, &RenderStyle::shapeOutside, &RenderStyle::setShapeOutside),
         new LengthPropertyWrapper(CSSPropertyShapeMargin, &RenderStyle::shapeMargin, &RenderStyle::setShapeMargin),
@@ -1770,7 +1776,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
             longhandWrappers.uncheckedAppend(m_propertyWrappers[wrapperIndex].get());
         }
 
-        m_propertyWrappers.uncheckedAppend(std::make_unique<ShorthandPropertyWrapper>(propertyID, WTFMove(longhandWrappers)));
+        m_propertyWrappers.uncheckedAppend(makeUnique<ShorthandPropertyWrapper>(propertyID, WTFMove(longhandWrappers)));
         indexFromPropertyID(propertyID) = animatableLonghandPropertiesCount + i;
     }
 }
@@ -1794,7 +1800,7 @@ static bool gatherEnclosingShorthandProperties(CSSPropertyID property, Animation
 }
 
 // Returns true if we need to start animation timers
-bool CSSPropertyAnimation::blendProperties(const CSSPropertyBlendingClient* anim, CSSPropertyID prop, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress)
+void CSSPropertyAnimation::blendProperties(const CSSPropertyBlendingClient* anim, CSSPropertyID prop, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress)
 {
     ASSERT(prop != CSSPropertyInvalid);
 
@@ -1804,9 +1810,7 @@ bool CSSPropertyAnimation::blendProperties(const CSSPropertyBlendingClient* anim
 #if !LOG_DISABLED
         wrapper->logBlend(a, b, dst, progress);
 #endif
-        return !wrapper->animationIsAccelerated() || !anim->isAccelerated();
     }
-    return false;
 }
 
 bool CSSPropertyAnimation::isPropertyAnimatable(CSSPropertyID prop)

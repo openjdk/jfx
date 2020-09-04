@@ -27,14 +27,23 @@
 
 #include "JSGlobalObject.h"
 
+OBJC_CLASS JSScript;
+
 namespace JSC {
 
-class JSAPIGlobalObject : public JSGlobalObject {
+class JSAPIGlobalObject final : public JSGlobalObject {
 public:
     using Base = JSGlobalObject;
 
     DECLARE_EXPORT_INFO;
     static const GlobalObjectMethodTable s_globalObjectMethodTable;
+
+    static constexpr bool needsDestruction = true;
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.apiGlobalObjectSpace<mode>();
+    }
 
     static JSAPIGlobalObject* create(VM& vm, Structure* structure)
     {
@@ -50,10 +59,13 @@ public:
         return result;
     }
 
-    static JSInternalPromise* moduleLoaderImportModule(JSGlobalObject*, ExecState*, JSModuleLoader*, JSString* moduleNameValue, JSValue parameters, const SourceOrigin&);
-    static Identifier moduleLoaderResolve(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue keyValue, JSValue referrerValue, JSValue);
-    static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue, JSValue, JSValue);
-    static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
+    static JSInternalPromise* moduleLoaderImportModule(JSGlobalObject*, JSModuleLoader*, JSString* moduleNameValue, JSValue parameters, const SourceOrigin&);
+    static Identifier moduleLoaderResolve(JSGlobalObject*, JSModuleLoader*, JSValue keyValue, JSValue referrerValue, JSValue);
+    static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
+    static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
+    static JSValue moduleLoaderEvaluate(JSGlobalObject*, JSModuleLoader*, JSValue, JSValue, JSValue);
+
+    JSValue loadAndEvaluateJSScriptModule(const JSLockHolder&, JSScript *);
 
 private:
     JSAPIGlobalObject(VM& vm, Structure* structure)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 
 namespace JSC {
 
-HandleSet::HandleSet(VM* vm)
+HandleSet::HandleSet(VM& vm)
     : m_vm(vm)
 {
     grow();
@@ -102,7 +102,7 @@ unsigned HandleSet::protectedGlobalObjectCount()
     return count;
 }
 
-#if ENABLE(GC_VALIDATION) || !ASSERT_DISABLED
+#if ENABLE(GC_VALIDATION) || ASSERT_ENABLED
 bool HandleSet::isLiveNode(Node* node)
 {
     if (node->prev()->next() != node)
@@ -112,6 +112,6 @@ bool HandleSet::isLiveNode(Node* node)
 
     return true;
 }
-#endif
+#endif // ENABLE(GC_VALIDATION) || ASSERT_ENABLED
 
 } // namespace JSC

@@ -107,6 +107,8 @@ enum class CtapDeviceResponseCode : uint8_t {
 
 bool isCtapDeviceResponseCode(CtapDeviceResponseCode);
 
+const size_t kResponseCodeLength = 1;
+
 // Commands supported by CTAPHID device as specified in
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#ctaphid-commands
 enum class FidoHidDeviceCommand : uint8_t {
@@ -207,7 +209,6 @@ enum class U2fApduInstruction : uint8_t {
 const char kFormatKey[] = "fmt";
 const char kAttestationStatementKey[] = "attStmt";
 const char kAuthDataKey[] = "authData";
-const char kNoneAttestationValue[] = "none";
 
 // String representation of public key credential enum.
 // https://w3c.github.io/webauthn/#credentialType
@@ -221,8 +222,38 @@ const char kU2fVersion[] = "U2F_V2";
 
 // CTAPHID Usage Page and Usage
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#hid-report-descriptor-and-device-discovery
-const uint32_t kCTAPHIDUsagePage = 0xF1D0;
-const uint32_t kCTAPHIDUsage = 0x01;
+const uint32_t kCtapHidUsagePage = 0xF1D0;
+const uint32_t kCtapHidUsage = 0x01;
+
+// U2F_VERSION command
+// https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#getversion-request-and-response---u2f_version
+const uint8_t kCtapNfcU2fVersionCommand[] = {
+    0x00, 0x03, 0x00, 0x00, // CLA, INS, P1, P2
+    0x00, // L
+};
+
+// CTAPNFC Applet selection command and responses
+// https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-applet-selection
+const uint8_t kCtapNfcAppletSelectionCommand[] = {
+    0x00, 0xA4, 0x04, 0x00, // CLA, INS, P1, P2
+    0x08, // L
+    0xA0, 0x00, 0x00, 0x06, 0x47, // RID
+    0x2F, 0x00, 0x01 // PIX
+};
+
+const uint8_t kCtapNfcAppletSelectionU2f[] = {
+    0x55, 0x32, 0x46, 0x5F, 0x56, 0x32, // Version
+    0x90, 0x00 // APDU response code
+};
+
+const uint8_t kCtapNfcAppletSelectionCtap[] = {
+    0x46, 0x49, 0x44, 0x4f, 0x5f, 0x32, 0x5f, 0x30, // Version
+    0x90, 0x00 // APDU response code
+};
+
+// https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-command-framing
+const uint8_t kCtapNfcApduCla = 0x80;
+const uint8_t kCtapNfcApduIns = 0x10;
 
 } // namespace fido
 

@@ -34,9 +34,9 @@
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 JSGlobalObjectAuditAgent::JSGlobalObjectAuditAgent(JSAgentContext& context)
     : InspectorAuditAgent(context)
@@ -44,17 +44,18 @@ JSGlobalObjectAuditAgent::JSGlobalObjectAuditAgent(JSAgentContext& context)
 {
 }
 
+JSGlobalObjectAuditAgent::~JSGlobalObjectAuditAgent() = default;
+
 InjectedScript JSGlobalObjectAuditAgent::injectedScriptForEval(ErrorString& errorString, const int* executionContextId)
 {
     if (executionContextId) {
-        errorString = "Execution context id is not supported for JSContexts as there is only one execution context."_s;
+        errorString = "executionContextId is not supported for JSContexts as there is only one execution context"_s;
         return InjectedScript();
     }
 
-    JSC::ExecState* scriptState = m_globalObject.globalExec();
-    InjectedScript injectedScript = injectedScriptManager().injectedScriptFor(scriptState);
+    InjectedScript injectedScript = injectedScriptManager().injectedScriptFor(&m_globalObject);
     if (injectedScript.hasNoValue())
-        errorString = "Internal error: main world execution context not found."_s;
+        errorString = "Internal error: main world execution context not found"_s;
 
     return injectedScript;
 }

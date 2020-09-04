@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,16 @@ public class Utils {
      * between the min and max values.
      */
     public static double clamp(double min, double value, double max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    /**
+     * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     */
+    public static long clamp(long min, long value, long max) {
         if (value < min) return min;
         if (value > max) return max;
         return value;

@@ -104,6 +104,13 @@ enum class GetAllType {
     Values,
 };
 
+enum class ConnectionClosedOnBehalfOfServer : bool { No, Yes };
+
+enum class CursorIterateOption {
+    DoNotReply,
+    Reply,
+};
+
 } // namespace IndexedDB
 
 } // namespace WebCore

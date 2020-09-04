@@ -33,9 +33,12 @@
 #include "IDBKeyData.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(IDBKeyRange);
 
 Ref<IDBKeyRange> IDBKeyRange::create(RefPtr<IDBKey>&& lower, RefPtr<IDBKey>&& upper, bool isLowerOpen, bool isUpperOpen)
 {
@@ -66,12 +69,12 @@ ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::only(RefPtr<IDBKey>&& key)
     return create(WTFMove(key));
 }
 
-ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::only(ExecState& state, JSValue keyValue)
+ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::only(JSGlobalObject& state, JSValue keyValue)
 {
     return only(scriptValueToIDBKey(state, keyValue));
 }
 
-ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::lowerBound(ExecState& state, JSValue boundValue, bool open)
+ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::lowerBound(JSGlobalObject& state, JSValue boundValue, bool open)
 {
     auto bound = scriptValueToIDBKey(state, boundValue);
     if (!bound->isValid())
@@ -80,7 +83,7 @@ ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::lowerBound(ExecState& state, JSValue 
     return create(WTFMove(bound), nullptr, open, true);
 }
 
-ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::upperBound(ExecState& state, JSValue boundValue, bool open)
+ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::upperBound(JSGlobalObject& state, JSValue boundValue, bool open)
 {
     auto bound = scriptValueToIDBKey(state, boundValue);
     if (!bound->isValid())
@@ -89,12 +92,13 @@ ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::upperBound(ExecState& state, JSValue 
     return create(nullptr, WTFMove(bound), true, open);
 }
 
-ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::bound(ExecState& state, JSValue lowerValue, JSValue upperValue, bool lowerOpen, bool upperOpen)
+ExceptionOr<Ref<IDBKeyRange>> IDBKeyRange::bound(JSGlobalObject& state, JSValue lowerValue, JSValue upperValue, bool lowerOpen, bool upperOpen)
 {
     auto lower = scriptValueToIDBKey(state, lowerValue);
+    if (!lower->isValid())
+        return Exception { DataError };
     auto upper = scriptValueToIDBKey(state, upperValue);
-
-    if (!lower->isValid() || !upper->isValid())
+    if (!upper->isValid())
         return Exception { DataError };
     if (upper->isLessThan(lower.get()))
         return Exception { DataError };
@@ -109,7 +113,7 @@ bool IDBKeyRange::isOnlyKey() const
     return m_lower && m_upper && !m_isLowerOpen && !m_isUpperOpen && m_lower->isEqual(*m_upper);
 }
 
-ExceptionOr<bool> IDBKeyRange::includes(JSC::ExecState& state, JSC::JSValue keyValue)
+ExceptionOr<bool> IDBKeyRange::includes(JSC::JSGlobalObject& state, JSC::JSValue keyValue)
 {
     auto key = scriptValueToIDBKey(state, keyValue);
     if (!key->isValid())

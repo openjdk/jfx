@@ -12,9 +12,23 @@
         "description": "Resources are saved for offline use using a manifest."
     },
     {
+        "name": "Async Clipboard API",
+        "status": {
+            "status": "In Development"
+        },
+        "url": "https://www.w3.org/TR/clipboard-apis/#async-clipboard-api",
+        "category": "webapps",
+        "description": "An API that allows reading from and writing to the system clipboard.",
+        "contact": {
+            "name": "Wenson Hsieh",
+            "email": "wenson_hsieh@apple.com",
+            "twitter": "@wensonhsieh"
+        }
+    },
+    {
         "name": "Battery Status API",
         "status": {
-            "status": "Removed"
+            "status": "Not Considering"
         },
         "url": "https://w3c.github.io/battery/",
         "webkit-url": "https://webkit.org/b/62698",
@@ -25,7 +39,7 @@
     {
         "name": "Beacon API",
         "status": {
-            "status": "Supported In Preview"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/beacon/",
         "webkit-url": "https://webkit.org/b/147885",
@@ -115,6 +129,21 @@
         "url": "http://dev.w3.org/csswg/css-inline/",
         "keywords": ["css inline layout", "css inline", "inline"],
         "category": "css"
+    },
+    {
+        "name": "CSS Masking Level 1",
+        "url": "https://drafts.fxtf.org/css-masking-1/",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "keywords": ["css masking", "clip-path", "clipping", "masking", "mask"],
+        "category": "css",
+        "contact": {
+            "name": "Dirk Schulze",
+            "twitter": "@dirkschulze",
+            "email": "dschulze@adobe.com"
+        }
     },
     {
         "name": "CSS Layout API Level 1",
@@ -214,9 +243,25 @@
         }
     },
     {
+        "name": "CSS Shadow Parts",
+        "status": {
+            "status": "Supported",
+            "enabled-by-default": true
+        },
+        "url": "https://drafts.csswg.org/css-shadow-parts/",
+        "webkit-url": "https://webkit.org/b/149443",
+        "keywords": ["css selectors", "selectors", "shadow dom", "shadow parts"],
+        "category": "css",
+        "description": "Allows web components to define and expose stylable parts",
+        "contact": {
+            "name": "Ryosuke Niwa",
+            "email": "rniwa@webkit.org"
+        }
+    },
+    {
         "name": "CSS Text Decoration Level 4",
         "status": {
-            "status": "Supported in Preview",
+            "status": "Supported",
             "enabled-by-default": true
         },
         "url": "https://drafts.csswg.org/css-text-decor-4/",
@@ -427,7 +472,7 @@
     {
         "name": "Intersection Observer",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://wicg.github.io/IntersectionObserver/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=159475",
@@ -532,6 +577,21 @@
             "name": "Joseph Pecoraro",
             "email": "joepeck@webkit.org",
             "twitter": "@JosephPecoraro"
+        }
+    },
+    {
+        "name": "SVG 2",
+        "url": "https://svgwg.org/svg2-draft/",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": true
+        },
+        "keywords": ["svg"],
+        "category": "svg",
+        "contact": {
+            "name": "Dirk Schulze",
+            "twitter": "@dirkschulze",
+            "email": "dschulze@adobe.com"
         }
     },
     {
@@ -663,7 +723,7 @@
     {
         "name": "Web SQL Database",
         "status": {
-            "status": "Removed In Preview"
+            "status": "Removed"
         },
         "url": "https://dev.w3.org/html5/webdatabase/",
         "keywords": ["websql", "web sql", "db", "storage", "database"],
@@ -687,7 +747,7 @@
     {
         "name": "WebGL 2",
         "status": {
-            "status": "Supported In Preview",
+            "status": "In Development",
             "enabled-by-default": true
         },
         "url": "https://www.khronos.org/registry/webgl/specs/latest/2.0/",
@@ -708,22 +768,6 @@
             "name": "Jon Davis",
             "twitter": "@jonathandavis",
             "email": "web-evangelist@apple.com"
-        }
-    },
-    {
-        "name": "WebVR",
-        "status": {
-            "status": "In Development",
-            "enabled-by-default": false
-        },
-        "url": "https://w3c.github.io/webvr/spec/1.1/",
-        "keywords": ["WebVR, VR"],
-        "category": "html",
-        "description": "A JavaScript API providing access to VR devices to allow developers to build comfortable VR experiences.",
-        "contact": {
-            "name": "Sergio Villar Senin",
-            "twitter": "@svillarsenin",
-            "email": "svillar@igalia.com"
         }
     },
     {
@@ -872,7 +916,7 @@
     {
         "name": "Conic Gradients",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/css4-images/#conic-gradients",
         "specification": "CSS Image Values and Replaced Content Module Level 4",
@@ -900,13 +944,29 @@
     {
         "name": "Datalist Element",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://html.spec.whatwg.org/multipage/form-elements.html#the-datalist-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=27247",
         "specification": "HTML5",
         "category": "html",
         "description": "The datalist element represents a set of option elements that represent predefined options for other controls.",
+        "contact": {
+            "name": "Jon Davis",
+            "twitter": "@jonathandavis",
+            "email": "web-evangelist@apple.com"
+        }
+    },
+    {
+        "name": "Dialog Element",
+        "status": {
+            "status": "Under Consideration"
+        },
+        "url": "https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=84635",
+        "specification": "HTML5",
+        "category": "html",
+        "description": "The dialog element represents a part of an application that a user interacts with to perform a task, for example a dialog box, inspector, or window.",
         "contact": {
             "name": "Jon Davis",
             "twitter": "@jonathandavis",
@@ -1056,6 +1116,16 @@
         "description": "Allows pages to override default editing behaviors and to monitor DOM changes due to user input."
     },
     {
+        "name": "Input modalities (inputmode attribute)",
+        "status": {
+            "status": "Supported",
+            "enabled-by-default": false
+        },
+        "url": "https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute",
+        "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode",
+        "description": "Allows pages to specify what kind of input mechanism would be most suitable to a given form control or a contenteditable element."
+    },
+    {
         "name": "Interaction Media Features (pointer, hover, any-pointer, any-hover)",
         "status": {
             "status": "Supported",
@@ -1132,6 +1202,21 @@
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=138967",
         "specification": "Streams",
         "comment": "The implementation does not support ReadableStreamBYOBReader."
+    },
+    {
+        "name": "Resize Observer",
+        "status": {
+            "status": "Supported In Preview",
+            "enabled-by-default": false
+        },
+        "url": "https://drafts.csswg.org/resize-observer/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=157743",
+        "keywords": ["resize", "resize observer", "resizeobserver"],
+        "description": "An API for observing changes to Element's size.",
+        "contact": {
+            "name": "Cathie Chen",
+            "email": "cathiechen@igalia.com"
+        }
     },
     {
         "name": "Scroll Anchoring",
@@ -1299,7 +1384,7 @@
     {
         "name": "Web Authentication",
         "status": {
-            "status": "In Development"
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/webauthn/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=181943",
@@ -1321,6 +1406,15 @@
         "description": "An API to discover and communicate with devices over the Bluetooth."
     },
     {
+        "name": "Web Bluetooth Scanning",
+        "status": {
+            "status": "Not Considering"
+        },
+        "url": "https://webbluetoothcg.github.io/web-bluetooth/",
+        "keywords": ["bluetooth"],
+        "description": "An API to listen for Bluetooth Low Energy advertising packets."
+    },
+    {
         "name": "Web MIDI",
         "status": {
             "status": "Not Considering"
@@ -1332,7 +1426,7 @@
     {
         "name": "Web Share",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://github.com/WICG/web-share/blob/master/docs/interface.md",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=171100",

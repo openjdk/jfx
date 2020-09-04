@@ -32,8 +32,11 @@
 
 namespace JSC {
 
-JITCode::JITCode(JITType jitType)
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
+
+JITCode::JITCode(JITType jitType, ShareAttribute shareAttribute)
     : m_jitType(jitType)
+    , m_shareAttribute(shareAttribute)
 {
 }
 
@@ -44,17 +47,17 @@ JITCode::~JITCode()
 const char* JITCode::typeName(JITType jitType)
 {
     switch (jitType) {
-    case None:
+    case JITType::None:
         return "None";
-    case HostCallThunk:
+    case JITType::HostCallThunk:
         return "Host";
-    case InterpreterThunk:
+    case JITType::InterpreterThunk:
         return "LLInt";
-    case BaselineJIT:
+    case JITType::BaselineJIT:
         return "Baseline";
-    case DFGJIT:
+    case JITType::DFGJIT:
         return "DFG";
-    case FTLJIT:
+    case JITType::FTLJIT:
         return "FTL";
     default:
         CRASH();
@@ -90,13 +93,17 @@ FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
     return 0;
 }
 
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+{
+}
+
 JITCodeWithCodeRef::JITCodeWithCodeRef(JITType jitType)
     : JITCode(jitType)
 {
 }
 
-JITCodeWithCodeRef::JITCodeWithCodeRef(CodeRef<JSEntryPtrTag> ref, JITType jitType)
-    : JITCode(jitType)
+JITCodeWithCodeRef::JITCodeWithCodeRef(CodeRef<JSEntryPtrTag> ref, JITType jitType, JITCode::ShareAttribute shareAttribute)
+    : JITCode(jitType, shareAttribute)
     , m_ref(ref)
 {
 }
@@ -151,16 +158,16 @@ DirectJITCode::DirectJITCode(JITType jitType)
 {
 }
 
-DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, JITCode::CodePtr<JSEntryPtrTag> withArityCheck, JITType jitType)
-    : JITCodeWithCodeRef(ref, jitType)
+DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, JITCode::CodePtr<JSEntryPtrTag> withArityCheck, JITType jitType, JITCode::ShareAttribute shareAttribute)
+    : JITCodeWithCodeRef(ref, jitType, shareAttribute)
     , m_withArityCheck(withArityCheck)
 {
     ASSERT(m_ref);
     ASSERT(m_withArityCheck);
 }
 
-DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, JITCode::CodePtr<JSEntryPtrTag> withArityCheck, JITType jitType, Intrinsic intrinsic)
-    : JITCodeWithCodeRef(ref, jitType)
+DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, JITCode::CodePtr<JSEntryPtrTag> withArityCheck, JITType jitType, Intrinsic intrinsic, JITCode::ShareAttribute shareAttribute)
+    : JITCodeWithCodeRef(ref, jitType, shareAttribute)
     , m_withArityCheck(withArityCheck)
 {
     m_intrinsic = intrinsic;
@@ -200,8 +207,8 @@ NativeJITCode::NativeJITCode(JITType jitType)
 {
 }
 
-NativeJITCode::NativeJITCode(CodeRef<JSEntryPtrTag> ref, JITType jitType, Intrinsic intrinsic)
-    : JITCodeWithCodeRef(ref, jitType)
+NativeJITCode::NativeJITCode(CodeRef<JSEntryPtrTag> ref, JITType jitType, Intrinsic intrinsic, JITCode::ShareAttribute shareAttribute)
+    : JITCodeWithCodeRef(ref, jitType, shareAttribute)
 {
     m_intrinsic = intrinsic;
 }
@@ -240,7 +247,7 @@ RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBloc
 
 namespace WTF {
 
-void printInternal(PrintStream& out, JSC::JITCode::JITType type)
+void printInternal(PrintStream& out, JSC::JITType type)
 {
     out.print(JSC::JITCode::typeName(type));
 }

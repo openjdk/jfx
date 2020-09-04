@@ -33,7 +33,13 @@
 
 namespace WebCore {
 
-static ExceptionOr<bool> canWriteHeader(const String& name, const String& value, FetchHeaders::Guard guard)
+// https://fetch.spec.whatwg.org/#concept-headers-remove-privileged-no-cors-request-headers
+static void removePrivilegedNoCORSRequestHeaders(HTTPHeaderMap& headers)
+{
+    headers.remove(HTTPHeaderName::Range);
+}
+
+static ExceptionOr<bool> canWriteHeader(const String& name, const String& value, const String& combinedValue, FetchHeaders::Guard guard)
 {
     if (!isValidHTTPToken(name))
         return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
@@ -43,7 +49,7 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
         return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
     if (guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
         return false;
-    if (guard == FetchHeaders::Guard::RequestNoCors && !isSimpleHeader(name, value))
+    if (guard == FetchHeaders::Guard::RequestNoCors && !combinedValue.isEmpty() && !isSimpleHeader(name, combinedValue))
         return false;
     if (guard == FetchHeaders::Guard::Response && isForbiddenResponseHeaderName(name))
         return false;
@@ -53,18 +59,25 @@ static ExceptionOr<bool> canWriteHeader(const String& name, const String& value,
 static ExceptionOr<void> appendToHeaderMap(const String& name, const String& value, HTTPHeaderMap& headers, FetchHeaders::Guard guard)
 {
     String normalizedValue = stripLeadingAndTrailingHTTPSpaces(value);
-    auto canWriteResult = canWriteHeader(name, normalizedValue, guard);
+    String combinedValue = normalizedValue;
+    if (headers.contains(name))
+        combinedValue = makeString(headers.get(name), ", ", normalizedValue);
+    auto canWriteResult = canWriteHeader(name, normalizedValue, combinedValue, guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
     if (!canWriteResult.releaseReturnValue())
         return { };
-    headers.add(name, normalizedValue);
+    headers.set(name, combinedValue);
+
+    if (guard == FetchHeaders::Guard::RequestNoCors)
+        removePrivilegedNoCORSRequestHeaders(headers);
+
     return { };
 }
 
 static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapConstIterator::KeyValue& header, HTTPHeaderMap& headers, FetchHeaders::Guard guard)
 {
-    auto canWriteResult = canWriteHeader(header.key, header.value, guard);
+    auto canWriteResult = canWriteHeader(header.key, header.value, header.value, guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
     if (!canWriteResult.releaseReturnValue())
@@ -73,6 +86,10 @@ static ExceptionOr<void> appendToHeaderMap(const HTTPHeaderMap::HTTPHeaderMapCon
         headers.add(header.keyAsHTTPHeaderName.value(), header.value);
     else
         headers.add(header.key, header.value);
+
+    if (guard == FetchHeaders::Guard::RequestNoCors)
+        removePrivilegedNoCORSRequestHeaders(headers);
+
     return { };
 }
 
@@ -134,14 +151,25 @@ ExceptionOr<void> FetchHeaders::append(const String& name, const String& value)
     return appendToHeaderMap(name, value, m_headers, m_guard);
 }
 
+// https://fetch.spec.whatwg.org/#dom-headers-delete
 ExceptionOr<void> FetchHeaders::remove(const String& name)
 {
-    auto canWriteResult = canWriteHeader(name, { }, m_guard);
-    if (canWriteResult.hasException())
-        return canWriteResult.releaseException();
-    if (!canWriteResult.releaseReturnValue())
+    if (!isValidHTTPToken(name))
+        return Exception { TypeError, makeString("Invalid header name: '", name, "'") };
+    if (m_guard == FetchHeaders::Guard::Immutable)
+        return Exception { TypeError, "Headers object's guard is 'immutable'"_s };
+    if (m_guard == FetchHeaders::Guard::Request && isForbiddenHeaderName(name))
         return { };
+    if (m_guard == FetchHeaders::Guard::RequestNoCors && !isNoCORSSafelistedRequestHeaderName(name) && !isPriviledgedNoCORSRequestHeaderName(name))
+        return { };
+    if (m_guard == FetchHeaders::Guard::Response && isForbiddenResponseHeaderName(name))
+        return { };
+
     m_headers.remove(name);
+
+    if (m_guard == FetchHeaders::Guard::RequestNoCors)
+        removePrivilegedNoCORSRequestHeaders(m_headers);
+
     return { };
 }
 
@@ -162,19 +190,24 @@ ExceptionOr<bool> FetchHeaders::has(const String& name) const
 ExceptionOr<void> FetchHeaders::set(const String& name, const String& value)
 {
     String normalizedValue = stripLeadingAndTrailingHTTPSpaces(value);
-    auto canWriteResult = canWriteHeader(name, normalizedValue, m_guard);
+    auto canWriteResult = canWriteHeader(name, normalizedValue, normalizedValue, m_guard);
     if (canWriteResult.hasException())
         return canWriteResult.releaseException();
     if (!canWriteResult.releaseReturnValue())
         return { };
+
     m_headers.set(name, normalizedValue);
+
+    if (m_guard == FetchHeaders::Guard::RequestNoCors)
+        removePrivilegedNoCORSRequestHeaders(m_headers);
+
     return { };
 }
 
 void FetchHeaders::filterAndFill(const HTTPHeaderMap& headers, Guard guard)
 {
     for (auto& header : headers) {
-        auto canWriteResult = canWriteHeader(header.key, header.value, guard);
+        auto canWriteResult = canWriteHeader(header.key, header.value, header.value, guard);
         if (canWriteResult.hasException())
             continue;
         if (!canWriteResult.releaseReturnValue())

@@ -33,7 +33,6 @@
 
 namespace WebCore {
 
-class ScriptExecutionContext;
 class SecurityOrigin;
 class URLRegistry;
 class URLRegistrable;
@@ -45,13 +44,12 @@ public:
 
     static std::unique_ptr<PublicURLManager> create(ScriptExecutionContext*);
 
-    void registerURL(SecurityOrigin*, const URL&, URLRegistrable&);
+    void registerURL(const URL&, URLRegistrable&);
     void revoke(const URL&);
 
 private:
     // ActiveDOMObject API.
     void stop() override;
-    bool canSuspendForDocumentSuspension() const override;
     const char* activeDOMObjectName() const override;
 
     typedef HashSet<String> URLSet;

@@ -59,6 +59,7 @@ struct Node;
 // may need be performed should a speculation check fail.
 enum SpeculationRecoveryType : uint8_t {
     SpeculativeAdd,
+    SpeculativeAddSelf,
     SpeculativeAddImmediate,
     BooleanSpeculationCheck
 };
@@ -74,7 +75,7 @@ public:
         , m_dest(dest)
         , m_type(type)
     {
-        ASSERT(m_type == SpeculativeAdd || m_type == BooleanSpeculationCheck);
+        ASSERT(m_type == SpeculativeAdd || m_type == SpeculativeAddSelf || m_type == BooleanSpeculationCheck);
     }
 
     SpeculationRecovery(SpeculationRecoveryType type, GPRReg dest, int32_t immediate)
@@ -105,7 +106,7 @@ private:
 enum class ExtraInitializationLevel;
 
 struct OSRExitState : RefCounted<OSRExitState> {
-    OSRExitState(OSRExitBase& exit, CodeBlock* codeBlock, CodeBlock* baselineCodeBlock, Operands<ValueRecovery>& operands, Vector<UndefinedOperandSpan>&& undefinedOperandSpans, SpeculationRecovery* recovery, ptrdiff_t stackPointerOffset, int32_t activeThreshold, double memoryUsageAdjustedThreshold, void* jumpTarget, ArrayProfile* arrayProfile)
+    OSRExitState(OSRExitBase& exit, CodeBlock* codeBlock, CodeBlock* baselineCodeBlock, Operands<ValueRecovery>& operands, Vector<UndefinedOperandSpan>&& undefinedOperandSpans, SpeculationRecovery* recovery, ptrdiff_t stackPointerOffset, int32_t activeThreshold, double memoryUsageAdjustedThreshold, void* jumpTarget, ArrayProfile* arrayProfile, bool isJumpToLLInt)
         : exit(exit)
         , codeBlock(codeBlock)
         , baselineCodeBlock(baselineCodeBlock)
@@ -117,6 +118,7 @@ struct OSRExitState : RefCounted<OSRExitState> {
         , memoryUsageAdjustedThreshold(memoryUsageAdjustedThreshold)
         , jumpTarget(jumpTarget)
         , arrayProfile(arrayProfile)
+        , isJumpToLLInt(isJumpToLLInt)
     { }
 
     OSRExitBase& exit;
@@ -130,10 +132,14 @@ struct OSRExitState : RefCounted<OSRExitState> {
     double memoryUsageAdjustedThreshold;
     void* jumpTarget;
     ArrayProfile* arrayProfile;
+    bool isJumpToLLInt;
 
     ExtraInitializationLevel extraInitializationLevel;
     Profiler::OSRExit* profilerExit { nullptr };
 };
+
+void JIT_OPERATION operationCompileOSRExit(CallFrame*) WTF_INTERNAL;
+void JIT_OPERATION operationDebugPrintSpeculationFailure(CallFrame*, void*, void*) WTF_INTERNAL;
 
 // === OSRExit ===
 //
@@ -142,8 +148,7 @@ struct OSRExitState : RefCounted<OSRExitState> {
 struct OSRExit : public OSRExitBase {
     OSRExit(ExitKind, JSValueSource, MethodOfGettingAValueProfile, SpeculativeJIT*, unsigned streamIndex, unsigned recoveryIndex = UINT_MAX);
 
-    static void JIT_OPERATION compileOSRExit(ExecState*) WTF_INTERNAL;
-    static void executeOSRExit(Probe::Context&);
+    friend void JIT_OPERATION operationCompileOSRExit(CallFrame*);
 
     CodeLocationLabel<JSInternalPtrTag> m_patchableJumpLocation;
     MacroAssemblerCodeRef<OSRExitPtrTag> m_code;
@@ -165,14 +170,15 @@ struct OSRExit : public OSRExitBase {
 
 private:
     static void compileExit(CCallHelpers&, VM&, const OSRExit&, const Operands<ValueRecovery>&, SpeculationRecovery*);
-    static void emitRestoreArguments(CCallHelpers&, const Operands<ValueRecovery>&);
-    static void JIT_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*, void*) WTF_INTERNAL;
+    static void emitRestoreArguments(CCallHelpers&, VM&, const Operands<ValueRecovery>&);
+    friend void JIT_OPERATION operationDebugPrintSpeculationFailure(CallFrame*, void*, void*);
 };
 
 struct SpeculationFailureDebugInfo {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
     CodeBlock* codeBlock;
     ExitKind kind;
-    unsigned bytecodeOffset;
+    BytecodeIndex bytecodeIndex;
 };
 
 } } // namespace JSC::DFG

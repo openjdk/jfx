@@ -22,6 +22,7 @@
 #include "config.h"
 #include "JSDOMConstructor.h"
 
+#include "WebCoreJSClientData.h"
 #include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
@@ -29,11 +30,11 @@ using namespace JSC;
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMConstructorBase);
 
-static EncodedJSValue JSC_HOST_CALL callThrowTypeError(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL callThrowTypeError(JSGlobalObject* globalObject, CallFrame*)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    throwTypeError(exec, scope, "Constructor requires 'new' operator"_s);
+    throwTypeError(globalObject, scope, "Constructor requires 'new' operator"_s);
     return JSValue::encode(jsNull());
 }
 
@@ -48,12 +49,17 @@ String JSDOMConstructorBase::className(const JSObject*, JSC::VM&)
     return "Function"_s;
 }
 
-String JSDOMConstructorBase::toStringName(const JSObject* object, JSC::ExecState* exec)
+String JSDOMConstructorBase::toStringName(const JSObject* object, JSC::JSGlobalObject* lexicalGlobalObject)
 {
-    VM& vm = exec->vm();
+    VM& vm = lexicalGlobalObject->vm();
     const ClassInfo* info = object->classInfo(vm);
     ASSERT(info);
     return info->methodTable.className(object, vm);
+}
+
+JSC::IsoSubspace* JSDOMConstructorBase::subspaceForImpl(JSC::VM& vm)
+{
+    return &static_cast<JSVMClientData*>(vm.clientData)->domConstructorSpace();
 }
 
 } // namespace WebCore

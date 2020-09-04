@@ -28,8 +28,10 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmModuleParser.h"
+#include "WasmOps.h"
 #include "WasmSectionParser.h"
+#include "WasmSignatureInlines.h"
+#include <wtf/Optional.h>
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC { namespace Wasm {
@@ -66,8 +68,9 @@ NEVER_INLINE auto WARN_UNUSED_RETURN StreamingParser::fail(Args... args) -> Stat
     return State::FatalError;
 }
 
-StreamingParser::StreamingParser(ModuleInformation& info)
+StreamingParser::StreamingParser(ModuleInformation& info, StreamingParserClient& client)
     : m_info(info)
+    , m_client(client)
 {
     dataLogLnIf(WasmStreamingParserInternal::verbose, "starting validation");
 }
@@ -109,6 +112,7 @@ auto StreamingParser::parseSectionSize(uint32_t sectionLength) -> State
 
 auto StreamingParser::parseCodeSectionSize(uint32_t functionCount) -> State
 {
+    m_info->codeSectionSize = m_sectionLength;
     m_functionCount = functionCount;
     m_functionIndex = 0;
     m_codeOffset = m_offset;
@@ -118,6 +122,8 @@ auto StreamingParser::parseCodeSectionSize(uint32_t functionCount) -> State
 
     if (m_functionIndex == m_functionCount) {
         WASM_PARSER_FAIL_IF((m_codeOffset + m_sectionLength) != m_nextOffset, "parsing ended before the end of ", m_section, " section");
+        if (!m_client.didReceiveSectionData(m_section))
+            return State::FatalError;
         return State::SectionID;
     }
     return State::FunctionSize;
@@ -137,9 +143,14 @@ auto StreamingParser::parseFunctionPayload(Vector<uint8_t>&& data) -> State
     function.end = m_offset + m_functionSize;
     function.data = WTFMove(data);
     dataLogLnIf(WasmStreamingParserInternal::verbose, "Processing function starting at: ", function.start, " and ending at: ", function.end);
+    if (!m_client.didReceiveFunctionData(m_functionIndex, function))
+        return State::FatalError;
     ++m_functionIndex;
+
     if (m_functionIndex == m_functionCount) {
         WASM_PARSER_FAIL_IF((m_codeOffset + m_sectionLength) != (m_offset + m_functionSize), "parsing ended before the end of ", m_section, " section");
+        if (!m_client.didReceiveSectionData(m_section))
+            return State::FatalError;
         return State::SectionID;
     }
     return State::FunctionSize;
@@ -170,6 +181,8 @@ auto StreamingParser::parseSectionPayload(Vector<uint8_t>&& data) -> State
 
     WASM_PARSER_FAIL_IF(parser.length() != parser.offset(), "parsing ended before the end of ", m_section, " section");
 
+    if (!m_client.didReceiveSectionData(m_section))
+        return State::FatalError;
     return State::SectionID;
 }
 
@@ -178,7 +191,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
     if (m_remaining.size() == requiredSize) {
         Vector<uint8_t> result = WTFMove(m_remaining);
         m_nextOffset += requiredSize;
-        return WTFMove(result);
+        return result;
     }
 
     if (m_remaining.size() > requiredSize) {
@@ -186,7 +199,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
         memcpy(result.data(), m_remaining.data(), requiredSize);
         m_remaining.remove(0, requiredSize);
         m_nextOffset += requiredSize;
-        return WTFMove(result);
+        return result;
     }
 
     ASSERT(m_remaining.size() < requiredSize);
@@ -203,7 +216,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
     offsetInBytes += usedSize;
     Vector<uint8_t> result = WTFMove(m_remaining);
     m_nextOffset += requiredSize;
-    return WTFMove(result);
+    return result;
 }
 
 auto StreamingParser::consumeVarUInt32(const uint8_t* bytes, size_t bytesSize, size_t& offsetInBytes, IsEndOfStream isEndOfStream) -> Expected<uint32_t, State>
@@ -376,10 +389,15 @@ auto StreamingParser::finalize() -> State
         break;
 
     case State::SectionID:
+        if (m_functionIndex != m_info->functions.size()) {
+            m_state = fail("Number of functions parsed (", m_functionCount, ") does not match the number of declared functions (", m_info->functions.size(), ")");
+            break;
+        }
         if (m_remaining.isEmpty()) {
             if (UNLIKELY(Options::useEagerWebAssemblyModuleHashing()))
                 m_info->nameSection->setHash(m_hasher.computeHexDigest());
             m_state = State::Finished;
+            m_client.didFinishParsing();
         } else
             m_state = failOnState(State::SectionID);
         break;

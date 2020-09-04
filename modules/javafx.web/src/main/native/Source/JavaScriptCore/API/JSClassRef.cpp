@@ -35,10 +35,8 @@
 #include "ObjectPrototype.h"
 #include "JSCInlines.h"
 #include <wtf/text/StringHash.h>
-#include <wtf/unicode/UTF8Conversion.h>
 
 using namespace JSC;
-using namespace WTF::Unicode;
 
 const JSClassDefinition kJSClassDefinitionEmpty = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -61,21 +59,21 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
     initializeThreading();
 
     if (const JSStaticValue* staticValue = definition->staticValues) {
-        m_staticValues = std::make_unique<OpaqueJSClassStaticValuesTable>();
+        m_staticValues = makeUnique<OpaqueJSClassStaticValuesTable>();
         while (staticValue->name) {
             String valueName = String::fromUTF8(staticValue->name);
             if (!valueName.isNull())
-                m_staticValues->set(valueName.impl(), std::make_unique<StaticValueEntry>(staticValue->getProperty, staticValue->setProperty, staticValue->attributes, valueName));
+                m_staticValues->set(valueName.impl(), makeUnique<StaticValueEntry>(staticValue->getProperty, staticValue->setProperty, staticValue->attributes, valueName));
             ++staticValue;
         }
     }
 
     if (const JSStaticFunction* staticFunction = definition->staticFunctions) {
-        m_staticFunctions = std::make_unique<OpaqueJSClassStaticFunctionsTable>();
+        m_staticFunctions = makeUnique<OpaqueJSClassStaticFunctionsTable>();
         while (staticFunction->name) {
             String functionName = String::fromUTF8(staticFunction->name);
             if (!functionName.isNull())
-                m_staticFunctions->set(functionName.impl(), std::make_unique<StaticFunctionEntry>(staticFunction->callAsFunction, staticFunction->attributes));
+                m_staticFunctions->set(functionName.impl(), makeUnique<StaticFunctionEntry>(staticFunction->callAsFunction, staticFunction->attributes));
             ++staticFunction;
         }
     }
@@ -87,19 +85,19 @@ OpaqueJSClass::OpaqueJSClass(const JSClassDefinition* definition, OpaqueJSClass*
 OpaqueJSClass::~OpaqueJSClass()
 {
     // The empty string is shared across threads & is an identifier, in all other cases we should have done a deep copy in className(), below.
-    ASSERT(!m_className.length() || !m_className.impl()->isAtomic());
+    ASSERT(!m_className.length() || !m_className.impl()->isAtom());
 
 #ifndef NDEBUG
     if (m_staticValues) {
         OpaqueJSClassStaticValuesTable::const_iterator end = m_staticValues->end();
         for (OpaqueJSClassStaticValuesTable::const_iterator it = m_staticValues->begin(); it != end; ++it)
-            ASSERT(!it->key->isAtomic());
+            ASSERT(!it->key->isAtom());
     }
 
     if (m_staticFunctions) {
         OpaqueJSClassStaticFunctionsTable::const_iterator end = m_staticFunctions->end();
         for (OpaqueJSClassStaticFunctionsTable::const_iterator it = m_staticFunctions->begin(); it != end; ++it)
-            ASSERT(!it->key->isAtomic());
+            ASSERT(!it->key->isAtom());
     }
 #endif
 
@@ -130,50 +128,50 @@ OpaqueJSClassContextData::OpaqueJSClassContextData(JSC::VM&, OpaqueJSClass* jsCl
     : m_class(jsClass)
 {
     if (jsClass->m_staticValues) {
-        staticValues = std::make_unique<OpaqueJSClassStaticValuesTable>();
+        staticValues = makeUnique<OpaqueJSClassStaticValuesTable>();
         OpaqueJSClassStaticValuesTable::const_iterator end = jsClass->m_staticValues->end();
         for (OpaqueJSClassStaticValuesTable::const_iterator it = jsClass->m_staticValues->begin(); it != end; ++it) {
-            ASSERT(!it->key->isAtomic());
+            ASSERT(!it->key->isAtom());
             String valueName = it->key->isolatedCopy();
-            staticValues->add(valueName.impl(), std::make_unique<StaticValueEntry>(it->value->getProperty, it->value->setProperty, it->value->attributes, valueName));
+            staticValues->add(valueName.impl(), makeUnique<StaticValueEntry>(it->value->getProperty, it->value->setProperty, it->value->attributes, valueName));
         }
     }
 
     if (jsClass->m_staticFunctions) {
-        staticFunctions = std::make_unique<OpaqueJSClassStaticFunctionsTable>();
+        staticFunctions = makeUnique<OpaqueJSClassStaticFunctionsTable>();
         OpaqueJSClassStaticFunctionsTable::const_iterator end = jsClass->m_staticFunctions->end();
         for (OpaqueJSClassStaticFunctionsTable::const_iterator it = jsClass->m_staticFunctions->begin(); it != end; ++it) {
-            ASSERT(!it->key->isAtomic());
-            staticFunctions->add(it->key->isolatedCopy(), std::make_unique<StaticFunctionEntry>(it->value->callAsFunction, it->value->attributes));
+            ASSERT(!it->key->isAtom());
+            staticFunctions->add(it->key->isolatedCopy(), makeUnique<StaticFunctionEntry>(it->value->callAsFunction, it->value->attributes));
         }
     }
 }
 
-OpaqueJSClassContextData& OpaqueJSClass::contextData(ExecState* exec)
+OpaqueJSClassContextData& OpaqueJSClass::contextData(JSGlobalObject* globalObject)
 {
-    std::unique_ptr<OpaqueJSClassContextData>& contextData = exec->lexicalGlobalObject()->opaqueJSClassData().add(this, nullptr).iterator->value;
+    std::unique_ptr<OpaqueJSClassContextData>& contextData = globalObject->opaqueJSClassData().add(this, nullptr).iterator->value;
     if (!contextData)
-        contextData = std::make_unique<OpaqueJSClassContextData>(exec->vm(), this);
+        contextData = makeUnique<OpaqueJSClassContextData>(globalObject->vm(), this);
     return *contextData;
 }
 
 String OpaqueJSClass::className()
 {
-    // Make a deep copy, so that the caller has no chance to put the original into AtomicStringTable.
+    // Make a deep copy, so that the caller has no chance to put the original into AtomStringTable.
     return m_className.isolatedCopy();
 }
 
-OpaqueJSClassStaticValuesTable* OpaqueJSClass::staticValues(JSC::ExecState* exec)
+OpaqueJSClassStaticValuesTable* OpaqueJSClass::staticValues(JSC::JSGlobalObject* globalObject)
 {
-    return contextData(exec).staticValues.get();
+    return contextData(globalObject).staticValues.get();
 }
 
-OpaqueJSClassStaticFunctionsTable* OpaqueJSClass::staticFunctions(JSC::ExecState* exec)
+OpaqueJSClassStaticFunctionsTable* OpaqueJSClass::staticFunctions(JSC::JSGlobalObject* globalObject)
 {
-    return contextData(exec).staticFunctions.get();
+    return contextData(globalObject).staticFunctions.get();
 }
 
-JSObject* OpaqueJSClass::prototype(ExecState* exec)
+JSObject* OpaqueJSClass::prototype(JSGlobalObject* globalObject)
 {
     /* Class (C++) and prototype (JS) inheritance are parallel, so:
      *     (C++)      |        (JS)
@@ -186,16 +184,16 @@ JSObject* OpaqueJSClass::prototype(ExecState* exec)
     if (!prototypeClass)
         return 0;
 
-    OpaqueJSClassContextData& jsClassData = contextData(exec);
+    OpaqueJSClassContextData& jsClassData = contextData(globalObject);
 
     if (JSObject* prototype = jsClassData.cachedPrototype.get())
         return prototype;
 
     // Recursive, but should be good enough for our purposes
-    JSObject* prototype = JSCallbackObject<JSDestructibleObject>::create(exec, exec->lexicalGlobalObject(), exec->lexicalGlobalObject()->callbackObjectStructure(), prototypeClass, &jsClassData); // set jsClassData as the object's private data, so it can clear our reference on destruction
+    JSObject* prototype = JSCallbackObject<JSNonFinalObject>::create(globalObject, globalObject->callbackObjectStructure(), prototypeClass, &jsClassData); // set jsClassData as the object's private data, so it can clear our reference on destruction
     if (parentClass) {
-        if (JSObject* parentPrototype = parentClass->prototype(exec))
-            prototype->setPrototypeDirect(exec->vm(), parentPrototype);
+        if (JSObject* parentPrototype = parentClass->prototype(globalObject))
+            prototype->setPrototypeDirect(globalObject->vm(), parentPrototype);
     }
 
     jsClassData.cachedPrototype = Weak<JSObject>(prototype);

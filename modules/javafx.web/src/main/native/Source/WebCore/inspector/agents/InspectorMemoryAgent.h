@@ -42,8 +42,9 @@ class InspectorMemoryAgent final : public InspectorAgentBase, public Inspector::
     WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorMemoryAgent(PageAgentContext&);
-    virtual ~InspectorMemoryAgent() = default;
+    ~InspectorMemoryAgent() override;
 
+    // InspectorAgentBase
     void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
@@ -61,7 +62,6 @@ private:
 
     std::unique_ptr<Inspector::MemoryFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::MemoryBackendDispatcher> m_backendDispatcher;
-    bool m_enabled { false };
     bool m_tracking { false };
 };
 

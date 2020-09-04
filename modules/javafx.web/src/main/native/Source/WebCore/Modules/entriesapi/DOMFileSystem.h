@@ -39,7 +39,8 @@ class FileSystemFileEntry;
 class FileSystemEntry;
 class ScriptExecutionContext;
 
-class DOMFileSystem : public ScriptWrappable, public RefCounted<DOMFileSystem> {
+class DOMFileSystem final : public ScriptWrappable, public RefCounted<DOMFileSystem> {
+    WTF_MAKE_ISO_ALLOCATED(DOMFileSystem);
 public:
     static Ref<FileSystemEntry> createEntryForFile(ScriptExecutionContext& context, Ref<File>&& file)
     {
@@ -62,7 +63,7 @@ public:
     void getEntry(ScriptExecutionContext&, FileSystemDirectoryEntry&, const String& virtualPath, const FileSystemDirectoryEntry::Flags&, GetEntryCallback&&);
 
     using GetFileCallback = WTF::Function<void(ExceptionOr<Ref<File>>&&)>;
-    void getFile(ScriptExecutionContext&, FileSystemFileEntry&, GetFileCallback&&);
+    void getFile(FileSystemFileEntry&, GetFileCallback&&);
 
 private:
     explicit DOMFileSystem(Ref<File>&&);
@@ -74,7 +75,6 @@ private:
     Ref<File> m_file;
     String m_rootPath;
     Ref<WorkQueue> m_workQueue;
-
 };
 
 } // namespace WebCore

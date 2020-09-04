@@ -30,11 +30,14 @@
 #include "JSDOMPromise.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
-PromiseRejectionEvent::PromiseRejectionEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+WTF_MAKE_ISO_ALLOCATED_IMPL(PromiseRejectionEvent);
+
+PromiseRejectionEvent::PromiseRejectionEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_promise(*(initializer.promise))
     , m_reason(initializer.reason)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,23 +45,23 @@ RecordedStatuses::RecordedStatuses(RecordedStatuses&& other)
 
 CallLinkStatus* RecordedStatuses::addCallLinkStatus(const CodeOrigin& codeOrigin, const CallLinkStatus& status)
 {
-    auto statusPtr = std::make_unique<CallLinkStatus>(status);
+    auto statusPtr = makeUnique<CallLinkStatus>(status);
     CallLinkStatus* result = statusPtr.get();
     calls.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
 
-GetByIdStatus* RecordedStatuses::addGetByIdStatus(const CodeOrigin& codeOrigin, const GetByIdStatus& status)
+GetByStatus* RecordedStatuses::addGetByStatus(const CodeOrigin& codeOrigin, const GetByStatus& status)
 {
-    auto statusPtr = std::make_unique<GetByIdStatus>(status);
-    GetByIdStatus* result = statusPtr.get();
+    auto statusPtr = makeUnique<GetByStatus>(status);
+    GetByStatus* result = statusPtr.get();
     gets.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
 }
 
 PutByIdStatus* RecordedStatuses::addPutByIdStatus(const CodeOrigin& codeOrigin, const PutByIdStatus& status)
 {
-    auto statusPtr = std::make_unique<PutByIdStatus>(status);
+    auto statusPtr = makeUnique<PutByIdStatus>(status);
     PutByIdStatus* result = statusPtr.get();
     puts.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
@@ -69,10 +69,16 @@ PutByIdStatus* RecordedStatuses::addPutByIdStatus(const CodeOrigin& codeOrigin, 
 
 InByIdStatus* RecordedStatuses::addInByIdStatus(const CodeOrigin& codeOrigin, const InByIdStatus& status)
 {
-    auto statusPtr = std::make_unique<InByIdStatus>(status);
+    auto statusPtr = makeUnique<InByIdStatus>(status);
     InByIdStatus* result = statusPtr.get();
     ins.append(std::make_pair(codeOrigin, WTFMove(statusPtr)));
     return result;
+}
+
+void RecordedStatuses::visitAggregate(SlotVisitor& slotVisitor)
+{
+    for (auto& pair : gets)
+        pair.second->visitAggregate(slotVisitor);
 }
 
 void RecordedStatuses::markIfCheap(SlotVisitor& slotVisitor)
@@ -85,28 +91,28 @@ void RecordedStatuses::markIfCheap(SlotVisitor& slotVisitor)
         pair.second->markIfCheap(slotVisitor);
 }
 
-void RecordedStatuses::finalizeWithoutDeleting()
+void RecordedStatuses::finalizeWithoutDeleting(VM& vm)
 {
     // This variant of finalize gets called from within graph safepoints -- so there may be DFG IR in
     // some compiler thread that points to the statuses. That thread is stopped at a safepoint so
     // it's OK to edit its data structure, but it's not OK to delete them. Hence we don't remove
     // anything from the vector or delete the unique_ptrs.
 
-    auto finalize = [] (auto& vector) {
+    auto finalize = [&] (auto& vector) {
         for (auto& pair : vector) {
-            if (!pair.second->finalize())
+            if (!pair.second->finalize(vm))
                 *pair.second = { };
         }
     };
     forEachVector(finalize);
 }
 
-void RecordedStatuses::finalize()
+void RecordedStatuses::finalize(VM& vm)
 {
-    auto finalize = [] (auto& vector) {
+    auto finalize = [&] (auto& vector) {
         vector.removeAllMatching(
             [&] (auto& pair) -> bool {
-                return !*pair.second || !pair.second->finalize();
+                return !*pair.second || !pair.second->finalize(vm);
             });
         vector.shrinkToFit();
     };

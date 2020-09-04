@@ -56,6 +56,8 @@ String inputTypeNameForEditingAction(EditAction action)
         return "formatSuperscript"_s;
     case EditAction::Underline:
         return "formatUnderline"_s;
+    case EditAction::StrikeThrough:
+        return "formatStrikeThrough"_s;
     case EditAction::SetColor:
         return "formatFontColor"_s;
     case EditAction::DeleteByDrag:
@@ -110,8 +112,12 @@ String inputTypeNameForEditingAction(EditAction action)
         return "formatIndent"_s;
     case EditAction::Outdent:
         return "formatOutdent"_s;
-    case EditAction::SetWritingDirection:
+    case EditAction::SetInlineWritingDirection:
         return "formatSetInlineTextDirection"_s;
+    case EditAction::SetBlockWritingDirection:
+        return "formatSetBlockTextDirection"_s;
+    case EditAction::CreateLink:
+        return "insertLink"_s;
     default:
         return emptyString();
     }

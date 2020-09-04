@@ -80,7 +80,6 @@ my (
     $cursorVisibilitySupport,
     $customSchemeHandlerSupport,
     $darkModeCSSSupport,
-    $dashboardSupportSupport,
     $dataInteractionSupport,
     $datacueValueSupport,
     $datalistElementSupport,
@@ -135,14 +134,17 @@ my (
     $mouseCursorScaleSupport,
     $netscapePluginAPISupport,
     $notificationsSupport,
+    $offscreenCanvasSupport,
     $orientationEventsSupport,
     $paymentRequestSupport,
     $pdfkitPluginSupport,
+    $pictureInPictureAPISupport,
     $pointerLockSupport,
     $publicSuffixListSupport,
     $quotaSupport,
     $registerProtocolHandlerSupport,
     $remoteInspectorSupport,
+    $resizeObserverSupport,
     $resolutionMediaQuerySupport,
     $resourceLoadStatisticsSupport,
     $resourceUsageSupport,
@@ -161,6 +163,7 @@ my (
     $threeDTransformsSupport,
     $touchEventsSupport,
     $touchSliderSupport,
+    $unifiedBuildSupport,
     $userMessageHandlersSupport,
     $userselectAllSupport,
     $variationFontsSupport,
@@ -178,7 +181,6 @@ my (
     $webgl2Support,
     $webglSupport,
     $webgpuSupport,
-    $webmetalSupport,
     $wirelessPlaybackTargetSupport,
     $xsltSupport,
     $imageio,
@@ -282,9 +284,6 @@ my @features = (
     { option => "dark-mode-css", desc => "Toggle Dark Mode CSS support",
       define => "ENABLE_DARK_MODE_CSS", value => \$darkModeCSSSupport },
 
-    { option => "dashboard-support", desc => "Toggle dashboard support",
-      define => "ENABLE_DASHBOARD_SUPPORT", value => \$dashboardSupportSupport },
-
     { option => "datacue-value", desc => "Toggle datacue value support",
       define => "ENABLE_DATACUE_VALUE", value => \$datacueValueSupport },
 
@@ -333,9 +332,6 @@ my @features = (
     { option => "geolocation", desc => "Toggle Geolocation support",
       define => "ENABLE_GEOLOCATION", value => \$geolocationSupport },
 
-    { option => "icon-database", desc => "Toggle Icondatabase support",
-      define => "ENABLE_ICONDATABASE", value => \$icondatabaseSupport },
-
     { option => "indexed-database", desc => "Toggle Indexed Database support",
       define => "ENABLE_INDEXED_DATABASE", value => \$indexedDatabaseSupport },
 
@@ -380,12 +376,6 @@ my @features = (
 
     { option => "jit", desc => "Enable JustInTime JavaScript support",
       define => "ENABLE_JIT", value => \$jitSupport },
-
-    { option => "keyboard-code-attribute", desc => "Toggle keyboard code attribute support",
-      define => "ENABLE_KEYBOARD_CODE_ATTRIBUTE", value => \$keyboardCodeAttributeSupport },
-
-    { option => "keyboard-key-attribute", desc => "Toggle keyboard key attribute support",
-      define => "ENABLE_KEYBOARD_KEY_ATTRIBUTE", value => \$keyboardKeyAttributeSupport },
 
     { option => "layout-formatting-context", desc => "Toggle Layout Formatting Context support",
       define => "ENABLE_LAYOUT_FORMATTING_CONTEXT", value => \$layoutFormattingContextSupport },
@@ -438,14 +428,14 @@ my @features = (
     { option => "mouse-cursor-scale", desc => "Toggle Scaled mouse cursor support",
       define => "ENABLE_MOUSE_CURSOR_SCALE", value => \$mouseCursorScaleSupport },
 
-    { option => "navigator-content-utils", desc => "Toggle Navigator Content Utils support",
-      define => "ENABLE_NAVIGATOR_CONTENT_UTILS", value => \$registerProtocolHandlerSupport },
-
     { option => "netscape-plugin-api", desc => "Toggle Netscape Plugin API support",
       define => "ENABLE_NETSCAPE_PLUGIN_API", value => \$netscapePluginAPISupport },
 
     { option => "notifications", desc => "Toggle Notifications support",
       define => "ENABLE_NOTIFICATIONS", value => \$notificationsSupport },
+
+    { option => "offscreen-canvas", desc => "Toggle OffscreenCanvas support",
+      define => "ENABLE_OFFSCREEN_CANVAS", value => \$offscreenCanvasSupport },
 
     { option => "orientation-events", desc => "Toggle Orientation Events support",
       define => "ENABLE_ORIENTATION_EVENTS", value => \$orientationEventsSupport },
@@ -455,6 +445,9 @@ my @features = (
 
     { option => "pdfkit-plugin", desc => "Toggle PDFKit plugin support",
       define => "ENABLE_PDFKIT_PLUGIN", value => \$pdfkitPluginSupport },
+
+    { option => "picture-in-picture-api", desc => "Toggle Picture-in-Picture API support",
+      define => "ENABLE_PICTURE_IN_PICTURE_API", value => \$pictureInPictureAPISupport },
 
     { option => "pointer-lock", desc => "Toggle pointer lock support",
       define => "ENABLE_POINTER_LOCK", value => \$pointerLockSupport },
@@ -467,6 +460,9 @@ my @features = (
 
     { option => "remote-inspector", desc => "Toggle remote inspector support",
       define => "ENABLE_REMOTE_INSPECTOR", value => \$remoteInspectorSupport },
+
+    { option => "resize-observer", desc => "Enable Resize Observer support",
+      define => "ENABLE_RESIZE_OBSERVER", value => \$resizeObserverSupport },
 
     { option => "resolution-media-query", desc => "Toggle resolution media query support",
       define => "ENABLE_RESOLUTION_MEDIA_QUERY", value => \$resolutionMediaQuerySupport },
@@ -555,9 +551,6 @@ my @features = (
     { option => "webgpu", desc => "Toggle WebGPU support",
       define => "ENABLE_WEBGPU", value => \$webgpuSupport },
 
-    { option => "webmetal", desc => "Toggle WebMetal support",
-      define => "ENABLE_WEBMETAL", value => \$webmetalSupport },
-
     { option => "web-audio", desc => "Toggle Web Audio support",
       define => "ENABLE_WEB_AUDIO", value => \$webAudioSupport },
 
@@ -581,6 +574,9 @@ my @features = (
 
     { option => "system-malloc", desc => "Toggle system allocator instead of bmalloc",
       define => "USE_SYSTEM_MALLOC", value => \$systemMallocSupport },
+
+    { option => "unified-builds", desc => "Toggle unified builds",
+      define => "ENABLE_UNIFIED_BUILDS", value => \$unifiedBuildSupport },
 );
 
 sub getFeatureOptionList()

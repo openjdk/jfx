@@ -33,8 +33,14 @@ from string import Template
 from builtins_generator import BuiltinsGenerator
 from builtins_templates import BuiltinsGeneratorTemplates as Templates
 
-log = logging.getLogger('global')
 
+def get_var_name(function):
+    var_name = function.function_name
+    if function.is_constructor:
+        return var_name[:1].lower() + var_name[1:] + 'Constructor'
+    return var_name
+
+log = logging.getLogger('global')
 
 class BuiltinsCombinedHeaderGenerator(BuiltinsGenerator):
     def __init__(self, model):
@@ -72,7 +78,8 @@ class BuiltinsCombinedHeaderGenerator(BuiltinsGenerator):
 class FunctionExecutable;
 class VM;
 
-enum class ConstructAbility : unsigned;
+enum class ConstructAbility : uint8_t;
+enum class ConstructorKind : uint8_t;
 }"""
 
     def generate_section_for_object(self, object):
@@ -93,7 +100,8 @@ enum class ConstructAbility : unsigned;
 
             lines.append("""extern const char* const s_%(codeName)s;
 extern const int s_%(codeName)sLength;
-extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;""" % function_args)
+extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
+extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;""" % function_args)
 
         return lines
 

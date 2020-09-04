@@ -42,6 +42,13 @@ import java.util.Set;
  */
 abstract public class Selector {
 
+    /**
+     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #createSelector(String)} instead.
+     */
+    @Deprecated(since="16", forRemoval=true)
+    public Selector() {
+    }
+
     private static class UniversalSelector {
         private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);

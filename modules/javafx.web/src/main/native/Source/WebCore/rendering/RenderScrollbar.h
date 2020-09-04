@@ -56,12 +56,13 @@ public:
 
     float opacity();
 
-    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId);
+    bool isHiddenByStyle() const final;
+
+    std::unique_ptr<RenderStyle> getScrollbarPseudoStyle(ScrollbarPart, PseudoId) const;
 
 private:
     RenderScrollbar(ScrollableArea&, ScrollbarOrientation, Element*, Frame*);
 
-    bool isCustomScrollbar() const override { return true; }
     bool isOverlayScrollbar() const override { return false; }
 
     void setParent(ScrollView*) override;

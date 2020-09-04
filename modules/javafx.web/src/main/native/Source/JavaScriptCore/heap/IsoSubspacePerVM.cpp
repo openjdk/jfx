@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,14 @@
 #include "IsoSubspacePerVM.h"
 
 #include "JSCInlines.h"
+#include "MarkedSpaceInlines.h"
 
 namespace JSC {
 
 class IsoSubspacePerVM::AutoremovingIsoSubspace : public IsoSubspace {
 public:
     AutoremovingIsoSubspace(IsoSubspacePerVM& perVM, CString name, Heap& heap, HeapCellType* heapCellType, size_t size)
-        : IsoSubspace(name, heap, heapCellType, size)
+        : IsoSubspace(name, heap, heapCellType, size, /* numberOfLowerTierCells */ 0)
         , m_perVM(perVM)
     {
     }
@@ -41,7 +42,7 @@ public:
     ~AutoremovingIsoSubspace()
     {
         auto locker = holdLock(m_perVM.m_lock);
-        m_perVM.m_subspacePerVM.remove(space().heap()->vm());
+        m_perVM.m_subspacePerVM.remove(&space().heap().vm());
     }
 
 private:

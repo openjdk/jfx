@@ -33,7 +33,7 @@ template<typename To, typename From>
 inline To jsCast(From* from)
 {
     static_assert(std::is_base_of<JSCell, typename std::remove_pointer<To>::type>::value && std::is_base_of<JSCell, typename std::remove_pointer<From>::type>::value, "JS casting expects that the types you are casting to/from are subclasses of JSCell");
-    ASSERT_WITH_SECURITY_IMPLICATION(!from || from->JSCell::inherits(*from->JSCell::vm(), std::remove_pointer<To>::type::info()));
+    ASSERT_WITH_SECURITY_IMPLICATION(!from || from->JSCell::inherits(from->JSCell::vm(), std::remove_pointer<To>::type::info()));
     return static_cast<To>(from);
 }
 
@@ -41,13 +41,15 @@ template<typename To>
 inline To jsCast(JSValue from)
 {
     static_assert(std::is_base_of<JSCell, typename std::remove_pointer<To>::type>::value, "JS casting expects that the types you are casting to is a subclass of JSCell");
-    ASSERT_WITH_SECURITY_IMPLICATION(from.isCell() && from.asCell()->JSCell::inherits(*from.asCell()->vm(), std::remove_pointer<To>::type::info()));
+    ASSERT_WITH_SECURITY_IMPLICATION(from.isCell() && from.asCell()->JSCell::inherits(from.asCell()->vm(), std::remove_pointer<To>::type::info()));
     return static_cast<To>(from.asCell());
 }
 
 // Specific type overloads.
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD(macro) \
-    macro(JSFixedArray, JSType::JSFixedArrayType, JSType::JSFixedArrayType) \
+    macro(JSImmutableButterfly, JSType::JSImmutableButterflyType, JSType::JSImmutableButterflyType) \
+    macro(JSArrayIterator, JSType::JSArrayIteratorType, JSType::JSArrayIteratorType) \
+    macro(JSStringIterator, JSType::JSStringIteratorType, JSType::JSStringIteratorType) \
     macro(JSObject, FirstObjectType, LastObjectType) \
     macro(JSFinalObject, JSType::FinalObjectType, JSType::FinalObjectType) \
     macro(JSFunction, JSType::JSFunctionType, JSType::JSFunctionType) \
@@ -55,6 +57,7 @@ inline To jsCast(JSValue from)
     macro(JSArray, JSType::ArrayType, JSType::DerivedArrayType) \
     macro(JSArrayBuffer, JSType::ArrayBufferType, JSType::ArrayBufferType) \
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
+    macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
     macro(JSMap, JSType::JSMapType, JSType::JSMapType) \
     macro(JSWeakSet, JSType::JSWeakSetType, JSType::JSWeakSetType) \
@@ -62,7 +65,7 @@ inline To jsCast(JSValue from)
     macro(NumberObject, JSType::NumberObjectType, JSType::NumberObjectType) \
     macro(ProxyObject, JSType::ProxyObjectType, JSType::ProxyObjectType) \
     macro(RegExpObject, JSType::RegExpObjectType, JSType::RegExpObjectType) \
-    macro(WebAssemblyToJSCallee, JSType::WebAssemblyToJSCalleeType, JSType::WebAssemblyToJSCalleeType) \
+    macro(JSWebAssemblyModule, JSType::WebAssemblyModuleType, JSType::WebAssemblyModuleType) \
     macro(DirectArguments, JSType::DirectArgumentsType, JSType::DirectArgumentsType) \
     macro(ScopedArguments, JSType::ScopedArgumentsType, JSType::ScopedArgumentsType) \
     macro(ClonedArguments, JSType::ClonedArgumentsType, JSType::ClonedArgumentsType) \
@@ -73,6 +76,7 @@ inline To jsCast(JSValue from)
     macro(JSLexicalEnvironment, JSType::LexicalEnvironmentType, JSType::ModuleEnvironmentType) \
     macro(JSSymbolTableObject, JSType::GlobalObjectType, JSType::ModuleEnvironmentType) \
     macro(JSScope, JSType::GlobalObjectType, JSType::WithScopeType) \
+    macro(StringObject, JSType::StringObjectType, JSType::DerivedStringObjectType) \
 
 
 // Forward declare the classes because they may not already exist.

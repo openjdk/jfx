@@ -35,6 +35,7 @@ class HTMLImageElement;
 // The famous <table><tr><form><td> problem.
 
 class HTMLFormControlsCollection final : public CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType> {
+    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlsCollection);
 public:
     static Ref<HTMLFormControlsCollection> create(ContainerNode&, CollectionType);
     virtual ~HTMLFormControlsCollection();
@@ -55,7 +56,6 @@ private:
 
     const Vector<FormAssociatedElement*>& unsafeFormControlElements() const;
     Vector<Ref<FormAssociatedElement>> copyFormControlElementsVector() const;
-    const Vector<HTMLImageElement*>& formImageElements() const;
 
     mutable Element* m_cachedElement;
     mutable unsigned m_cachedElementOffsetInArray;

@@ -45,8 +45,6 @@ bool ResourceTimingInformation::shouldAddResourceTiming(CachedResource& resource
     // <https://github.com/w3c/resource-timing/issues/100>
     if (!resource.resourceRequest().url().protocolIsInHTTPFamily())
         return false;
-    if (resource.response().httpStatusCode() >= 400)
-        return false;
     if (resource.errorOccurred())
         return false;
     if (resource.wasCanceled())
@@ -89,7 +87,7 @@ void ResourceTimingInformation::addResourceTiming(CachedResource& resource, Docu
     info.added = Added;
 }
 
-void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomicString& initiatorName, Frame* frame)
+void ResourceTimingInformation::storeResourceTimingInitiatorInformation(const CachedResourceHandle<CachedResource>& resource, const AtomString& initiatorName, Frame* frame)
 {
     ASSERT(RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled());
     ASSERT(resource.get());

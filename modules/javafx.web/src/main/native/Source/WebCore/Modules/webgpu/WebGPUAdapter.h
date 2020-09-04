@@ -28,22 +28,26 @@
 #if ENABLE(WEBGPU)
 
 #include "GPURequestAdapterOptions.h"
+#include "IDLTypes.h"
 #include <wtf/Optional.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class ScriptExecutionContext;
+class Document;
 class WebGPUDevice;
+
+template<typename IDLType> class DOMPromiseDeferred;
 
 class WebGPUAdapter : public RefCounted<WebGPUAdapter> {
 public:
     static Ref<WebGPUAdapter> create(Optional<GPURequestAdapterOptions>&&);
 
-    RefPtr<WebGPUDevice> createDevice();
+    using DeviceRequestPromise = DOMPromiseDeferred<IDLInterface<WebGPUDevice>>;
+    void requestDevice(Document&, DeviceRequestPromise&&) const;
 
-    Optional<GPURequestAdapterOptions> options() const { return m_options; }
+    const Optional<GPURequestAdapterOptions>& options() const { return m_options; }
 
 private:
     explicit WebGPUAdapter(Optional<GPURequestAdapterOptions>&&);

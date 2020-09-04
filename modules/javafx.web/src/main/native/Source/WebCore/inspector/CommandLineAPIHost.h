@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "InstrumentingAgents.h"
 #include <JavaScriptCore/PerGlobalObjectWrapperWorld.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -38,19 +39,11 @@ namespace JSC {
 class JSValue;
 }
 
-namespace Inspector {
-class InspectorAgent;
-class InspectorConsoleAgent;
-}
-
 namespace WebCore {
 
 class Database;
-class InspectorDOMAgent;
-class InspectorDOMStorageAgent;
-class InspectorDatabaseAgent;
+class EventTarget;
 class JSDOMGlobalObject;
-class Node;
 class Storage;
 
 struct EventListenerInfo;
@@ -60,18 +53,9 @@ public:
     static Ref<CommandLineAPIHost> create();
     ~CommandLineAPIHost();
 
-    void init(Inspector::InspectorAgent* inspectorAgent
-        , Inspector::InspectorConsoleAgent* consoleAgent
-        , InspectorDOMAgent* domAgent
-        , InspectorDOMStorageAgent* domStorageAgent
-        , InspectorDatabaseAgent* databaseAgent
-        )
+    void init(RefPtr<InstrumentingAgents> instrumentingAgents)
     {
-        m_inspectorAgent = inspectorAgent;
-        m_consoleAgent = consoleAgent;
-        m_domAgent = domAgent;
-        m_domStorageAgent = domStorageAgent;
-        m_databaseAgent = databaseAgent;
+        m_instrumentingAgents = instrumentingAgents;
     }
 
     void disconnect();
@@ -82,12 +66,12 @@ public:
     class InspectableObject {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        virtual JSC::JSValue get(JSC::ExecState&);
+        virtual JSC::JSValue get(JSC::JSGlobalObject&);
         virtual ~InspectableObject() = default;
     };
     void addInspectedObject(std::unique_ptr<InspectableObject>);
-    JSC::JSValue inspectedObject(JSC::ExecState&);
-    void inspect(JSC::ExecState&, JSC::JSValue objectToInspect, JSC::JSValue hints);
+    JSC::JSValue inspectedObject(JSC::JSGlobalObject&);
+    void inspect(JSC::JSGlobalObject&, JSC::JSValue objectToInspect, JSC::JSValue hints);
 
     struct ListenerEntry {
         JSC::Strong<JSC::JSObject> listener;
@@ -97,23 +81,18 @@ public:
     };
 
     using EventListenersRecord = Vector<WTF::KeyValuePair<String, Vector<ListenerEntry>>>;
-    EventListenersRecord getEventListeners(JSC::ExecState&, Node*);
+    EventListenersRecord getEventListeners(JSC::JSGlobalObject&, EventTarget&);
 
     String databaseId(Database&);
     String storageId(Storage&);
 
-    JSC::JSValue wrapper(JSC::ExecState*, JSDOMGlobalObject*);
+    JSC::JSValue wrapper(JSC::JSGlobalObject*, JSDOMGlobalObject*);
     void clearAllWrappers();
 
 private:
     CommandLineAPIHost();
 
-    Inspector::InspectorAgent* m_inspectorAgent { nullptr };
-    Inspector::InspectorConsoleAgent* m_consoleAgent { nullptr };
-    InspectorDOMAgent* m_domAgent { nullptr };
-    InspectorDOMStorageAgent* m_domStorageAgent { nullptr };
-    InspectorDatabaseAgent* m_databaseAgent { nullptr };
-
+    RefPtr<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<InspectableObject> m_inspectedObject; // $0
     Inspector::PerGlobalObjectWrapperWorld m_wrappers;
 };

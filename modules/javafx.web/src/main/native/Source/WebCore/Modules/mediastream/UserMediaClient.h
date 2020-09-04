@@ -33,11 +33,13 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include <wtf/CompletionHandler.h>
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
-class MediaDevicesEnumerationRequest;
+class CaptureDevice;
+class Document;
 class Page;
 class UserMediaRequest;
 
@@ -48,8 +50,7 @@ public:
     virtual void requestUserMediaAccess(UserMediaRequest&) = 0;
     virtual void cancelUserMediaAccessRequest(UserMediaRequest&) = 0;
 
-    virtual void enumerateMediaDevices(MediaDevicesEnumerationRequest&) = 0;
-    virtual void cancelMediaDevicesEnumerationRequest(MediaDevicesEnumerationRequest&) = 0;
+    virtual void enumerateMediaDevices(Document&, CompletionHandler<void(const Vector<CaptureDevice>&, const String&)>&&) = 0;
 
     enum DeviceChangeObserverTokenType { };
     using DeviceChangeObserverToken = ObjectIdentifier<DeviceChangeObserverTokenType>;

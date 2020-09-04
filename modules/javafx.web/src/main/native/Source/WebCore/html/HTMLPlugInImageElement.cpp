@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -33,6 +33,7 @@
 #include "JSDOMConvertInterface.h"
 #include "JSDOMConvertStrings.h"
 #include "JSShadowRoot.h"
+#include "LegacySchemeRegistry.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MouseEvent.h"
@@ -43,7 +44,6 @@
 #include "RenderImage.h"
 #include "RenderSnapshottedPlugIn.h"
 #include "RenderTreeUpdater.h"
-#include "SchemeRegistry.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -53,6 +53,7 @@
 #include "TypedElementDescendantIterator.h"
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/JSGlobalObjectInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -154,35 +155,43 @@ bool HTMLPlugInImageElement::isImageType()
     return Image::supportsType(m_serviceType);
 }
 
-// We don't use m_url, as it may not be the final URL that the object loads, depending on <param> values.
-bool HTMLPlugInImageElement::allowedToLoadFrameURL(const String& url)
+bool HTMLPlugInImageElement::canLoadURL(const String& relativeURL) const
 {
-    URL completeURL = document().completeURL(url);
-    if (contentFrame() && WTF::protocolIsJavaScript(completeURL) && !document().securityOrigin().canAccess(contentDocument()->securityOrigin()))
-        return false;
-    return document().frame()->isURLAllowed(completeURL);
+    return canLoadURL(document().completeURL(relativeURL));
+}
+
+// Note that unlike HTMLFrameElementBase::canLoadURL this uses SecurityOrigin::canAccess.
+bool HTMLPlugInImageElement::canLoadURL(const URL& completeURL) const
+{
+    if (WTF::protocolIsJavaScript(completeURL)) {
+        RefPtr<Document> contentDocument = this->contentDocument();
+        if (contentDocument && !document().securityOrigin().canAccess(contentDocument->securityOrigin()))
+            return false;
+    }
+
+    return !isProhibitedSelfReference(completeURL);
 }
 
 // We don't use m_url, or m_serviceType as they may not be the final values
 // that <object> uses depending on <param> values.
-bool HTMLPlugInImageElement::wouldLoadAsPlugIn(const String& url, const String& serviceType)
+bool HTMLPlugInImageElement::wouldLoadAsPlugIn(const String& relativeURL, const String& serviceType)
 {
     ASSERT(document().frame());
     URL completedURL;
-    if (!url.isEmpty())
-        completedURL = document().completeURL(url);
+    if (!relativeURL.isEmpty())
+        completedURL = document().completeURL(relativeURL);
     return document().frame()->loader().client().objectContentType(completedURL, serviceType) == ObjectContentType::PlugIn;
 }
 
 RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
-    ASSERT(document().pageCacheState() == Document::NotInPageCache);
+    ASSERT(document().backForwardCacheState() == Document::NotInBackForwardCache);
 
     if (displayState() >= PreparingPluginReplacement)
         return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 
     // Once a plug-in element creates its renderer, it needs to be told when the document goes
-    // inactive or reactivates so it can clear the renderer before going into the page cache.
+    // inactive or reactivates so it can clear the renderer before going into the back/forward cache.
     if (!m_needsDocumentActivationCallbacks) {
         m_needsDocumentActivationCallbacks = true;
         document().registerForDocumentSuspensionCallbacks(*this);
@@ -191,7 +200,7 @@ RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(RenderSty
     if (displayState() == DisplayingSnapshot) {
         auto renderSnapshottedPlugIn = createRenderer<RenderSnapshottedPlugIn>(*this, WTFMove(style));
         renderSnapshottedPlugIn->updateSnapshot(m_snapshotImage.get());
-        return WTFMove(renderSnapshottedPlugIn);
+        return renderSnapshottedPlugIn;
     }
 
     if (useFallbackContent())
@@ -279,7 +288,7 @@ void HTMLPlugInImageElement::updateAfterStyleResolution()
     if (renderer() && !useFallbackContent()) {
         if (isImageType()) {
             if (!m_imageLoader)
-                m_imageLoader = std::make_unique<HTMLImageLoader>(*this);
+                m_imageLoader = makeUnique<HTMLImageLoader>(*this);
             if (m_needsImageReload)
                 m_imageLoader->updateFromElementIgnoringPreviousError();
             else
@@ -354,7 +363,7 @@ void HTMLPlugInImageElement::updateSnapshot(Image* image)
 
 static DOMWrapperWorld& plugInImageElementIsolatedWorld()
 {
-    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM()).leakRef();
+    static auto& isolatedWorld = DOMWrapperWorld::create(commonVM(), DOMWrapperWorld::Type::Internal, "Plugin"_s).leakRef();
     return isolatedWorld;
 }
 
@@ -384,12 +393,12 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     auto& vm = globalObject.vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
 
     JSC::MarkedArgumentBuffer argList;
-    argList.append(toJS<IDLInterface<ShadowRoot>>(state, globalObject, root));
-    argList.append(toJS<IDLDOMString>(state, titleText(*page, mimeType)));
-    argList.append(toJS<IDLDOMString>(state, subtitleText(*page, mimeType)));
+    argList.append(toJS<IDLInterface<ShadowRoot>>(lexicalGlobalObject, globalObject, root));
+    argList.append(toJS<IDLDOMString>(lexicalGlobalObject, titleText(*page, mimeType)));
+    argList.append(toJS<IDLDOMString>(lexicalGlobalObject, subtitleText(*page, mimeType)));
 
     // This parameter determines whether or not the snapshot overlay should always be visible over the plugin snapshot.
     // If no snapshot was found then we want the overlay to be visible.
@@ -397,7 +406,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     ASSERT(!argList.hasOverflowed());
 
     // It is expected the JS file provides a createOverlay(shadowRoot, title, subtitle) function.
-    auto* overlay = globalObject.get(&state, JSC::Identifier::fromString(&state, "createOverlay")).toObject(&state);
+    auto* overlay = globalObject.get(&lexicalGlobalObject, JSC::Identifier::fromString(vm, "createOverlay")).toObject(&lexicalGlobalObject);
     ASSERT(!overlay == !!scope.exception());
     if (!overlay) {
         scope.clearException();
@@ -408,13 +417,13 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     if (callType == JSC::CallType::None)
         return;
 
-    call(&state, overlay, callType, callData, &globalObject, argList);
+    call(&lexicalGlobalObject, overlay, callType, callData, &globalObject, argList);
     scope.clearException();
 }
 
 bool HTMLPlugInImageElement::partOfSnapshotOverlay(const EventTarget* target) const
 {
-    static NeverDestroyed<AtomicString> selector(".snapshot-overlay", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<AtomString> selector(".snapshot-overlay", AtomString::ConstructFromLiteral);
     auto shadow = userAgentShadowRoot();
     if (!shadow)
         return false;
@@ -476,8 +485,8 @@ void HTMLPlugInImageElement::userDidClickSnapshot(MouseEvent& event, bool forwar
         m_pendingClickEventFromSnapshot = &event;
 
     auto plugInOrigin = m_loadedUrl.host();
-    if (document().page() && !SchemeRegistry::shouldTreatURLSchemeAsLocal(document().page()->mainFrame().document()->baseURL().protocol().toStringWithoutCopying()) && document().page()->settings().autostartOriginPlugInSnapshottingEnabled())
-        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), plugInOrigin.toString(), serviceType(), document().page()->sessionID());
+    if (document().page() && !LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(document().page()->mainFrame().document()->baseURL().protocol().toStringWithoutCopying()) && document().page()->settings().autostartOriginPlugInSnapshottingEnabled())
+        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), plugInOrigin.toString(), serviceType());
 
     LOG(Plugins, "%p User clicked on snapshotted plug-in. Restart.", this);
     restartSnapshottedPlugIn();
@@ -693,7 +702,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const URL& url)
         return;
     }
 
-    if (!SchemeRegistry::shouldTreatURLSchemeAsLocal(m_loadedUrl.protocol().toStringWithoutCopying()) && !m_loadedUrl.host().isEmpty() && m_loadedUrl.host() == document().page()->mainFrame().document()->baseURL().host()) {
+    if (!LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(m_loadedUrl.protocol().toStringWithoutCopying()) && !m_loadedUrl.host().isEmpty() && m_loadedUrl.host() == document().page()->mainFrame().document()->baseURL().host()) {
         LOG(Plugins, "%p Plug-in is served from page's domain, set to play", this);
         m_snapshotDecision = NeverSnapshot;
         return;
@@ -762,15 +771,15 @@ void HTMLPlugInImageElement::defaultEventHandler(Event& event)
     HTMLPlugInElement::defaultEventHandler(event);
 }
 
-bool HTMLPlugInImageElement::allowedToLoadPluginContent(const String& url, const String& mimeType) const
+bool HTMLPlugInImageElement::canLoadPlugInContent(const String& relativeURL, const String& mimeType) const
 {
     // Elements in user agent show tree should load whatever the embedding document policy is.
     if (isInUserAgentShadowTree())
         return true;
 
     URL completedURL;
-    if (!url.isEmpty())
-        completedURL = document().completeURL(url);
+    if (!relativeURL.isEmpty())
+        completedURL = document().completeURL(relativeURL);
 
     ASSERT(document().contentSecurityPolicy());
     const ContentSecurityPolicy& contentSecurityPolicy = *document().contentSecurityPolicy();
@@ -785,22 +794,22 @@ bool HTMLPlugInImageElement::allowedToLoadPluginContent(const String& url, const
     return contentSecurityPolicy.allowPluginType(mimeType, declaredMimeType, completedURL);
 }
 
-bool HTMLPlugInImageElement::requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+bool HTMLPlugInImageElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
     ASSERT(document().frame());
 
-    if (url.isEmpty() && mimeType.isEmpty())
+    if (relativeURL.isEmpty() && mimeType.isEmpty())
         return false;
 
-    if (!allowedToLoadPluginContent(url, mimeType)) {
+    if (!canLoadPlugInContent(relativeURL, mimeType)) {
         renderEmbeddedObject()->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginBlockedByContentSecurityPolicy);
         return false;
     }
 
-    if (HTMLPlugInElement::requestObject(url, mimeType, paramNames, paramValues))
+    if (HTMLPlugInElement::requestObject(relativeURL, mimeType, paramNames, paramValues))
         return true;
 
-    return document().frame()->loader().subframeLoader().requestObject(*this, url, getNameAttribute(), mimeType, paramNames, paramValues);
+    return document().frame()->loader().subframeLoader().requestObject(*this, relativeURL, getNameAttribute(), mimeType, paramNames, paramValues);
 }
 
 void HTMLPlugInImageElement::updateImageLoaderWithNewURLSoon()

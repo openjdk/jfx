@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,15 +98,18 @@ public:
 #endif
     IntPoint screenToRootView(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
+    IntPoint accessibilityScreenToRootView(const IntPoint&) const final;
+    IntRect rootViewToAccessibilityScreen(const IntRect&) const final;
+    void intrinsicContentsSizeChanged(const IntSize&) const final;
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
     // End methods used by HostWindow.
 
     void contentsSizeChanged(Frame&, const IntSize&) const override;
-    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags) override;
+    void mouseDidMoveOverElement(const HitTestResult&, unsigned modifierFlags, const String& toolTip, TextDirection) override;
 
-    void setToolTip(const String&, TextDirection) override;
+    void setToolTip(const String&);
 
     void print(Frame&) override;
 
@@ -166,6 +169,8 @@ public:
     void wheelEventHandlersChanged(bool) override {};
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
+    void didFinishLoadingImageForElement(HTMLImageElement&) override;
+
 
 private:
     void repaint(const IntRect&);

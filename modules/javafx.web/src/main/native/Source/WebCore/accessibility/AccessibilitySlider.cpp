@@ -90,17 +90,17 @@ void AccessibilitySlider::addChildren()
     // Before actually adding the value indicator to the hierarchy,
     // allow the platform to make a final decision about it.
     if (thumb.accessibilityIsIgnored())
-        cache->remove(thumb.axObjectID());
+        cache->remove(thumb.objectID());
     else
         m_children.append(&thumb);
 }
 
-const AtomicString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
+const AtomString& AccessibilitySlider::getAttribute(const QualifiedName& attribute) const
 {
     return inputElement()->getAttribute(attribute);
 }
 
-AccessibilityObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
+AXCoreObject* AccessibilitySlider::elementAccessibilityHitTest(const IntPoint& point) const
 {
     if (m_children.size()) {
         ASSERT(m_children.size() == 1);
@@ -128,9 +128,6 @@ float AccessibilitySlider::minValueForRange() const
 
 void AccessibilitySlider::setValue(const String& value)
 {
-    if (dispatchAccessibleSetValueEvent(value))
-        return;
-
     HTMLInputElement* input = inputElement();
 
     if (input->value() == value)

@@ -29,6 +29,8 @@
 #include "Frame.h"
 #include "GraphicsContext.h"
 #include "HTMLElement.h"
+#include "HTMLImageElement.h"
+#include "HTMLParserIdioms.h"
 #include "InlineElementBox.h"
 #include "LayoutRepainter.h"
 #include "RenderBlock.h"
@@ -38,6 +40,7 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
+#include "Settings.h"
 #include "VisiblePosition.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
@@ -155,6 +158,17 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     if (!shouldPaint(paintInfo, paintOffset))
         return;
 
+    LayoutPoint adjustedPaintOffset = paintOffset + location();
+
+    if (paintInfo.phase == PaintPhase::EventRegion) {
+        if (visibleToHitTesting()) {
+            auto borderRect = LayoutRect(adjustedPaintOffset, size());
+            auto borderRegion = approximateAsRegion(style().getRoundedBorderFor(borderRect));
+            paintInfo.eventRegionContext->unite(borderRegion, style());
+        }
+        return;
+    }
+
 #ifndef NDEBUG
     SetLayoutNeededForbiddenScope scope(this);
 #endif
@@ -168,8 +182,6 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
             paintInfo.context().setAlpha(0.25);
         }
     }
-
-    LayoutPoint adjustedPaintOffset = paintOffset + location();
 
     if (hasVisibleBoxDecorations() && paintInfo.phase == PaintPhase::Foreground)
         paintBoxDecorations(paintInfo, adjustedPaintOffset);
@@ -239,7 +251,8 @@ bool RenderReplaced::shouldPaint(PaintInfo& paintInfo, const LayoutPoint& paintO
         && paintInfo.phase != PaintPhase::Outline
         && paintInfo.phase != PaintPhase::SelfOutline
         && paintInfo.phase != PaintPhase::Selection
-        && paintInfo.phase != PaintPhase::Mask)
+        && paintInfo.phase != PaintPhase::Mask
+        && paintInfo.phase != PaintPhase::EventRegion)
         return false;
 
     if (!paintInfo.shouldPaintWithinRoot(*this))
@@ -427,8 +440,27 @@ void RenderReplaced::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, 
     intrinsicSize = FloatSize(intrinsicLogicalWidth(), intrinsicLogicalHeight());
 
     // Figure out if we need to compute an intrinsic ratio.
-    if (intrinsicSize.isEmpty() || !hasAspectRatio())
+    if (!hasAspectRatio())
         return;
+
+    if (intrinsicSize.isEmpty()) {
+        if (!settings().aspectRatioOfImgFromWidthAndHeightEnabled())
+            return;
+
+        auto* node = element();
+        // The aspectRatioOfImgFromWidthAndHeight only applies to <img>.
+        if (!node || !is<HTMLImageElement>(*node) || !node->hasAttribute(HTMLNames::widthAttr) || !node->hasAttribute(HTMLNames::heightAttr))
+            return;
+
+        // We shouldn't override the aspect-ratio when the <img> element has an empty src attribute.
+        if (!is<RenderImage>(*this) || !downcast<RenderImage>(*this).cachedImage())
+            return;
+
+        intrinsicSize.setWidth(parseValidHTMLFloatingPointNumber(node->getAttribute(HTMLNames::widthAttr)).valueOr(0));
+        intrinsicSize.setHeight(parseValidHTMLFloatingPointNumber(node->getAttribute(HTMLNames::heightAttr)).valueOr(0));
+        if (intrinsicSize.isEmpty())
+            return;
+    }
 
     intrinsicRatio = intrinsicSize.width() / intrinsicSize.height();
 }
@@ -448,7 +480,9 @@ LayoutUnit RenderReplaced::computeConstrainedLogicalWidth(ShouldComputePreferred
     // This solves above equation for 'width' (== logicalWidth).
     LayoutUnit marginStart = minimumValueForLength(style().marginStart(), logicalWidth);
     LayoutUnit marginEnd = minimumValueForLength(style().marginEnd(), logicalWidth);
-    logicalWidth = std::max(0_lu, (logicalWidth - (marginStart + marginEnd + (size().width() - clientWidth()))));
+
+    // FIXME: This expression does not align with the comment above, which is quoting https://www.w3.org/TR/CSS22/visudet.html#blockwidth.
+    logicalWidth = std::max(0_lu, (logicalWidth - (marginStart + marginEnd + borderLeft() + borderRight())));
     return computeReplacedLogicalWidthRespectingMinMaxWidth(logicalWidth, shouldComputePreferred);
 }
 
@@ -632,7 +666,7 @@ LayoutRect RenderReplaced::localSelectionRect(bool checkWhetherSelected) const
         return LayoutRect(LayoutPoint(), size());
 
     const RootInlineBox& rootBox = m_inlineBoxWrapper->root();
-    LayoutUnit newLogicalTop = rootBox.blockFlow().style().isFlippedBlocksWritingMode() ? m_inlineBoxWrapper->logicalBottom() - rootBox.selectionBottom() : rootBox.selectionTop() - m_inlineBoxWrapper->logicalTop();
+    LayoutUnit newLogicalTop { rootBox.blockFlow().style().isFlippedBlocksWritingMode() ? m_inlineBoxWrapper->logicalBottom() - rootBox.selectionBottom() : rootBox.selectionTop() - m_inlineBoxWrapper->logicalTop() };
     if (rootBox.blockFlow().style().isHorizontalWritingMode())
         return LayoutRect(0_lu, newLogicalTop, width(), rootBox.selectionHeight());
     return LayoutRect(newLogicalTop, 0_lu, rootBox.selectionHeight(), height());
@@ -655,8 +689,8 @@ bool RenderReplaced::isSelected() const
     if (state == SelectionInside)
         return true;
 
-    auto selectionStart = view().selection().startPosition();
-    auto selectionEnd = view().selection().endPosition();
+    auto selectionStart = view().selection().startOffset();
+    auto selectionEnd = view().selection().endOffset();
     if (state == SelectionStart)
         return !selectionStart;
 

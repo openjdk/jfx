@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@
 #include <WebCore/Element.h>
 #include <WebCore/Event.h>
 #include <WebCore/EventListener.h>
+#include <WebCore/FullscreenManager.h>
 #include <WebCore/HTMLCollection.h>
 #include <WebCore/HTMLElement.h>
 #include <WebCore/HTMLHeadElement.h>
@@ -49,6 +50,7 @@
 #include <WebCore/NodeList.h>
 #include <WebCore/ProcessingInstruction.h>
 #include <WebCore/Range.h>
+#include <WebCore/SecurityOrigin.h>
 #include <WebCore/ScrollIntoViewOptions.h>
 #include <WebCore/StyleSheetList.h>
 #include <WebCore/Text.h>
@@ -327,31 +329,31 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCompatModeImpl
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitIsFullScreenImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->webkitIsFullScreen();
+    return IMPL->fullscreenManager().isFullscreen();
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullScreenKeyboardInputAllowedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->webkitFullScreenKeyboardInputAllowed();
+    return IMPL->fullscreenManager().isFullscreenKeyboardInputAllowed();
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitCurrentFullScreenElementImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->webkitCurrentFullScreenElement()));
+    return JavaReturn<Element>(env, WTF::getPtr(IMPL->fullscreenManager().currentFullscreenElement()));
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenEnabledImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->webkitFullscreenEnabled();
+    return IMPL->fullscreenManager().isFullscreenEnabled();
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getWebkitFullscreenElementImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Element>(env, WTF::getPtr(IMPL->webkitFullscreenElement()));
+    return JavaReturn<Element>(env, WTF::getPtr(IMPL->fullscreenManager().fullscreenElement()));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getVisibilityStateImpl(JNIEnv* env, jclass, jlong peer)
@@ -386,7 +388,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCurrentScriptImp
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getOriginImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->origin());
+    return JavaReturn<String>(env, IMPL->securityOrigin().toString());
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getScrollingElementImpl(JNIEnv* env, jclass, jlong peer)
@@ -1415,9 +1417,17 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createNSResolverImp
     , jlong nodeResolver)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
+    if (!nodeResolver)
+        return 0;
+
+    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(*static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
 }
 
+// - (DOMXPathResult *)evaluate:(NSString *)expression
+// contextNode:(DOMNode *)contextNode
+// resolver:(id <DOMXPathNSResolver>)resolver
+// type:(unsigned short)type
+// inResult:(DOMXPathResult *)inResult WEBKIT_AVAILABLE_MAC(10_5);
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl(JNIEnv* env, jclass, jlong peer
     , jstring expression
@@ -1428,7 +1438,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl(JNIEnv
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(String(env, expression)
-            , static_cast<Node*>(jlong_to_ptr(contextNode))
+            , *static_cast<Node*>(jlong_to_ptr(contextNode))
             , static_cast<XPathNSResolver*>(jlong_to_ptr(resolver))
             , type
             , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));
@@ -1540,14 +1550,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DocumentImpl_hasFocusImpl(JNI
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_webkitCancelFullScreenImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->webkitCancelFullScreen();
+    IMPL->fullscreenManager().cancelFullscreen();
 }
 
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_webkitExitFullscreenImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->webkitExitFullscreen();
+    IMPL->fullscreenManager().exitFullscreen();
 }
 
 

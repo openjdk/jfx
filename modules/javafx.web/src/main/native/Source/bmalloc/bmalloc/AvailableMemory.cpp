@@ -32,6 +32,7 @@
 #include "PerProcess.h"
 #include "Scavenger.h"
 #include "Sizes.h"
+#include <array>
 #include <mutex>
 #if BOS(DARWIN)
 #if BPLATFORM(IOS_FAMILY)
@@ -52,7 +53,7 @@
 
 namespace bmalloc {
 
-static const size_t availableMemoryGuess = 512 * bmalloc::MB;
+static constexpr size_t availableMemoryGuess = 512 * bmalloc::MB;
 
 #if BOS(DARWIN)
 static size_t memorySizeAccordingToKernel()

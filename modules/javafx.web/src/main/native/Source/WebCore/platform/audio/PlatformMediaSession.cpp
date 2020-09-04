@@ -31,19 +31,12 @@
 #include "Logging.h"
 #include "MediaPlayer.h"
 #include "PlatformMediaSessionManager.h"
-#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
 
 static const Seconds clientDataBufferingTimerThrottleDelay { 100_ms };
 
 #if !RELEASE_LOG_DISABLED
-static uint64_t nextLogIdentifier()
-{
-    static uint64_t logIdentifier = cryptographicallyRandomNumber();
-    return ++logIdentifier;
-}
-
 String convertEnumerationToString(PlatformMediaSession::State state)
 {
     static const NeverDestroyed<String> values[] = {
@@ -116,7 +109,7 @@ String convertEnumerationToString(PlatformMediaSession::RemoteControlCommandType
 
 std::unique_ptr<PlatformMediaSession> PlatformMediaSession::create(PlatformMediaSessionClient& client)
 {
-    return std::make_unique<PlatformMediaSession>(client);
+    return makeUnique<PlatformMediaSession>(client);
 }
 
 PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionClient& client)
@@ -126,7 +119,7 @@ PlatformMediaSession::PlatformMediaSession(PlatformMediaSessionClient& client)
     , m_notifyingClient(false)
 #if !RELEASE_LOG_DISABLED
     , m_logger(client.hostingDocument()->logger())
-    , m_logIdentifier(nextLogIdentifier())
+    , m_logIdentifier(uniqueLogIdentifier())
 #endif
 {
     ASSERT(m_client.mediaType() >= None && m_client.mediaType() <= MediaStreamCapturingAudio);
@@ -231,7 +224,7 @@ bool PlatformMediaSession::clientWillBeginPlayback()
     return true;
 }
 
-bool PlatformMediaSession::clientWillPausePlayback()
+bool PlatformMediaSession::processClientWillPausePlayback(DelayCallingUpdateNowPlaying shouldDelayCallingUpdateNowPlaying)
 {
     if (m_notifyingClient)
         return true;
@@ -244,8 +237,18 @@ bool PlatformMediaSession::clientWillPausePlayback()
     }
 
     setState(Paused);
-    PlatformMediaSessionManager::sharedManager().sessionWillEndPlayback(*this);
+    PlatformMediaSessionManager::sharedManager().sessionWillEndPlayback(*this, shouldDelayCallingUpdateNowPlaying);
     return true;
+}
+
+bool PlatformMediaSession::clientWillPausePlayback()
+{
+    return processClientWillPausePlayback(DelayCallingUpdateNowPlaying::No);
+}
+
+void PlatformMediaSession::clientWillBeDOMSuspended()
+{
+    processClientWillPausePlayback(DelayCallingUpdateNowPlaying::Yes);
 }
 
 void PlatformMediaSession::pauseSession()
@@ -349,7 +352,7 @@ PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
     return m_client.displayType();
 }
 
-bool PlatformMediaSession::activeAudioSessionRequired()
+bool PlatformMediaSession::activeAudioSessionRequired() const
 {
     if (mediaType() == PlatformMediaSession::None)
         return false;
@@ -365,7 +368,7 @@ bool PlatformMediaSession::canProduceAudio() const
 
 void PlatformMediaSession::canProduceAudioChanged()
 {
-    PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged(*this);
+    PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged();
 }
 
 #if ENABLE(VIDEO)
@@ -393,6 +396,16 @@ double PlatformMediaSessionClient::mediaSessionCurrentTime() const
 void PlatformMediaSession::clientCharacteristicsChanged()
 {
     PlatformMediaSessionManager::sharedManager().clientCharacteristicsChanged(*this);
+}
+
+bool PlatformMediaSession::canPlayConcurrently(const PlatformMediaSession& otherSession) const
+{
+    return m_client.hasMediaStreamSource() && otherSession.m_client.hasMediaStreamSource();
+}
+
+bool PlatformMediaSession::shouldOverridePauseDuringRouteChange() const
+{
+    return m_client.shouldOverridePauseDuringRouteChange();
 }
 
 #if !RELEASE_LOG_DISABLED

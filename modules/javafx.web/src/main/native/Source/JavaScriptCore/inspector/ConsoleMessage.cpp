@@ -52,7 +52,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
 {
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::ExecState* state, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned column, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -62,7 +62,7 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_column(column)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    autogenerateMetadata(state);
+    autogenerateMetadata(globalObject);
 }
 
 ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier)
@@ -82,7 +82,25 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     }
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, JSC::ExecState* state, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier)
+    : m_source(source)
+    , m_type(type)
+    , m_level(level)
+    , m_message(message)
+    , m_arguments(WTFMove(arguments))
+    , m_callStack(WTFMove(callStack))
+    , m_url()
+    , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
+{
+    const ScriptCallFrame* frame = m_callStack ? m_callStack->firstNonNativeCallFrame() : nullptr;
+    if (frame) {
+        m_url = frame->sourceURL();
+        m_line = frame->lineNumber();
+        m_column = frame->columnNumber();
+    }
+}
+
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -91,17 +109,19 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_url()
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
-    autogenerateMetadata(state);
+    autogenerateMetadata(globalObject);
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, Vector<JSONLogValue>&& messages, JSC::ExecState* state, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, Vector<JSONLogValue>&& messages, JSC::JSGlobalObject* globalObject, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
     , m_url()
-    , m_scriptState(state)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    if (globalObject)
+        m_globalObject = { globalObject->vm(), globalObject };
+
     if (!messages.size())
         return;
 
@@ -135,16 +155,16 @@ ConsoleMessage::~ConsoleMessage()
 {
 }
 
-void ConsoleMessage::autogenerateMetadata(JSC::ExecState* state)
+void ConsoleMessage::autogenerateMetadata(JSC::JSGlobalObject* globalObject)
 {
-    if (!state)
+    if (!globalObject)
         return;
 
     if (m_type == MessageType::EndGroup)
         return;
 
     // FIXME: Should this really be using "for console" in the generic ConsoleMessage autogeneration? This can skip the first frame.
-    m_callStack = createScriptCallStackForConsole(state);
+    m_callStack = createScriptCallStackForConsole(globalObject);
 
     if (const ScriptCallFrame* frame = m_callStack->firstNonNativeCallFrame()) {
         m_url = frame->sourceURL();
@@ -170,6 +190,7 @@ static Protocol::Console::ChannelSource messageSourceValue(MessageSource source)
     case MessageSource::Other: return Protocol::Console::ChannelSource::Other;
     case MessageSource::Media: return Protocol::Console::ChannelSource::Media;
     case MessageSource::WebRTC: return Protocol::Console::ChannelSource::WebRTC;
+    case MessageSource::MediaSource: return Protocol::Console::ChannelSource::MediaSource;
     }
     return Protocol::Console::ChannelSource::Other;
 }
@@ -190,6 +211,7 @@ static Protocol::Console::ConsoleMessage::Type messageTypeValue(MessageType type
     case MessageType::Timing: return Protocol::Console::ConsoleMessage::Type::Timing;
     case MessageType::Profile: return Protocol::Console::ConsoleMessage::Type::Profile;
     case MessageType::ProfileEnd: return Protocol::Console::ConsoleMessage::Type::ProfileEnd;
+    case MessageType::Image: return Protocol::Console::ConsoleMessage::Type::Image;
     }
     return Protocol::Console::ConsoleMessage::Type::Log;
 }
@@ -225,7 +247,7 @@ void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDis
         messageObject->setNetworkRequestId(m_requestId);
 
     if ((m_arguments && m_arguments->argumentCount()) || m_jsonLogValues.size()) {
-        InjectedScript injectedScript = injectedScriptManager.injectedScriptFor(scriptState());
+        InjectedScript injectedScript = injectedScriptManager.injectedScriptFor(globalObject());
         if (!injectedScript.hasNoValue()) {
             auto argumentsObject = JSON::ArrayOf<Protocol::Runtime::RemoteObject>::create();
             if (m_arguments && m_arguments->argumentCount()) {
@@ -320,15 +342,18 @@ void ConsoleMessage::clear()
 
     if (m_arguments)
         m_arguments = nullptr;
+
+    if (m_globalObject)
+        m_globalObject.clear();
 }
 
-JSC::ExecState* ConsoleMessage::scriptState() const
+JSC::JSGlobalObject* ConsoleMessage::globalObject() const
 {
     if (m_arguments)
-        return m_arguments->globalState();
+        return m_arguments->globalObject();
 
-    if (m_scriptState)
-        return m_scriptState;
+    if (m_globalObject)
+        return m_globalObject.get();
 
     return nullptr;
 }

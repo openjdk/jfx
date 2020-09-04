@@ -40,13 +40,14 @@ public:
         return adoptRef(*new FileSystemFileEntry(context, filesystem, virtualPath));
     }
 
-    void file(ScriptExecutionContext&, Ref<FileCallback>&&, RefPtr<ErrorCallback>&& = nullptr);
+    void file(Ref<FileCallback>&&, RefPtr<ErrorCallback>&& = nullptr);
 
 private:
     bool isFile() const final { return true; }
 
     FileSystemFileEntry(ScriptExecutionContext&, DOMFileSystem&, const String& virtualPath);
 };
+static_assert(sizeof(FileSystemFileEntry) == sizeof(FileSystemEntry), "");
 
 } // namespace WebCore
 

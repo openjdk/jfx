@@ -27,7 +27,7 @@
 #include "FormAssociatedElement.h"
 #include "LabelableElement.h"
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
 #endif
 
@@ -55,7 +55,7 @@ public:
     WEBCORE_EXPORT void setFormMethod(const String&);
     bool formNoValidate() const;
     WEBCORE_EXPORT String formAction() const;
-    WEBCORE_EXPORT void setFormAction(const AtomicString&);
+    WEBCORE_EXPORT void setFormAction(const AtomString&);
 
     void setAncestorDisabled(bool isDisabled);
 
@@ -77,9 +77,9 @@ public:
 
     bool isRequired() const;
 
-    const AtomicString& type() const { return formControlType(); }
+    const AtomString& type() const { return formControlType(); }
 
-    virtual const AtomicString& formControlType() const = 0;
+    virtual const AtomString& formControlType() const = 0;
 
     virtual bool canTriggerImplicitSubmission() const { return false; }
 
@@ -91,8 +91,11 @@ public:
     virtual bool isActivatedSubmit() const { return false; }
     virtual void setActivatedSubmit(bool) { }
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#if ENABLE(AUTOCORRECT)
     WEBCORE_EXPORT bool shouldAutocorrect() const final;
+#endif
+
+#if ENABLE(AUTOCAPITALIZE)
     WEBCORE_EXPORT AutocapitalizeType autocapitalizeType() const final;
 #endif
 
@@ -130,7 +133,7 @@ protected:
 
     bool disabledByAncestorFieldset() const { return m_disabledByAncestorFieldset; }
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void parseAttribute(const QualifiedName&, const AtomString&) override;
     virtual void disabledAttributeChanged();
     virtual void disabledStateChanged();
     virtual void readOnlyStateChanged();
@@ -167,15 +170,14 @@ private:
 
     bool isFormControlElement() const final { return true; }
 
-    int tabIndex() const final;
-
     bool isValidFormControlElement() const;
 
     bool computeIsDisabledByFieldsetAncestor() const;
 
     HTMLElement& asHTMLElement() final { return *this; }
     const HTMLFormControlElement& asHTMLElement() const final { return *this; }
-    HTMLFormControlElement* asFormNamedItem() final { return this; }
+    FormNamedItem* asFormNamedItem() final { return this; }
+    FormAssociatedElement* asFormAssociatedElement() final { return this; }
 
     bool needsMouseFocusableQuirk() const;
 

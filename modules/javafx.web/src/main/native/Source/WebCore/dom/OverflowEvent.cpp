@@ -27,8 +27,11 @@
 #include "OverflowEvent.h"
 
 #include "EventNames.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(OverflowEvent);
 
 OverflowEvent::OverflowEvent()
     : m_orient(VERTICAL)
@@ -52,7 +55,7 @@ OverflowEvent::OverflowEvent(bool horizontalOverflowChanged, bool horizontalOver
         m_orient = VERTICAL;
 }
 
-OverflowEvent::OverflowEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
+OverflowEvent::OverflowEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
     , m_orient(initializer.orient)
     , m_horizontalOverflow(initializer.horizontalOverflow)

@@ -27,7 +27,10 @@
 
 #include "JSGlobalObject.h"
 
+#include "ArrayConstructor.h"
 #include "ArrayPrototype.h"
+#include "JSFunction.h"
+#include "LinkTimeConstant.h"
 #include "ObjectPrototype.h"
 
 namespace JSC {
@@ -62,7 +65,7 @@ ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObs
     // carefully set up watchpoints to have correct ordering while JS code is
     // executing concurrently.
 
-    return arrayIteratorProtocolWatchpoint().isStillValid() && !isHavingABadTime() && arrayPrototypeChainIsSane();
+    return arrayIteratorProtocolWatchpointSet().isStillValid() && !isHavingABadTime() && arrayPrototypeChainIsSane();
 }
 
 // We're non-observable if the iteration protocol hasn't changed.
@@ -73,27 +76,46 @@ ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObs
 // executing concurrently.
 ALWAYS_INLINE bool JSGlobalObject::isMapPrototypeIteratorProtocolFastAndNonObservable()
 {
-    return mapIteratorProtocolWatchpoint().isStillValid();
+    return mapIteratorProtocolWatchpointSet().isStillValid();
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isSetPrototypeIteratorProtocolFastAndNonObservable()
 {
-    return setIteratorProtocolWatchpoint().isStillValid();
+    return setIteratorProtocolWatchpointSet().isStillValid();
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isStringPrototypeIteratorProtocolFastAndNonObservable()
 {
-    return stringIteratorProtocolWatchpoint().isStillValid();
+    return stringIteratorProtocolWatchpointSet().isStillValid();
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isMapPrototypeSetFastAndNonObservable()
 {
-    return mapSetWatchpoint().isStillValid();
+    return mapSetWatchpointSet().isStillValid();
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isSetPrototypeAddFastAndNonObservable()
 {
-    return setAddWatchpoint().isStillValid();
+    return setAddWatchpointSet().isStillValid();
+}
+
+ALWAYS_INLINE Structure* JSGlobalObject::arrayStructureForIndexingTypeDuringAllocation(JSGlobalObject* globalObject, IndexingType indexingType, JSValue newTarget) const
+{
+    return InternalFunction::createSubclassStructure(globalObject, globalObject->arrayConstructor(), newTarget, arrayStructureForIndexingTypeDuringAllocation(indexingType));
+}
+
+inline JSFunction* JSGlobalObject::throwTypeErrorFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::throwTypeErrorFunction)); }
+inline JSFunction* JSGlobalObject::newPromiseCapabilityFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::newPromiseCapability)); }
+inline JSFunction* JSGlobalObject::resolvePromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::resolvePromise)); }
+inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::rejectPromise)); }
+inline JSFunction* JSGlobalObject::promiseProtoThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::defaultPromiseThen)); }
+inline JSFunction* JSGlobalObject::regExpProtoExecFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::regExpBuiltinExec)); }
+inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
+
+ALWAYS_INLINE VM& getVM(JSGlobalObject* globalObject)
+{
+    return globalObject->vm();
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,66 +37,6 @@
 #else
     #define LOG(MSG, ...) GLASS_LOG(MSG, ## __VA_ARGS__);
 #endif
-
-static BOOL doPerformKeyEquivalent(NSEvent* theEvent, NSWindow* panel)
-{
-    NSResponder* responder = [panel firstResponder];
-    if ([responder isKindOfClass:[NSText class]])
-    {
-        NSText* text = (NSText*)responder;
-        if ([theEvent type] == NSKeyDown
-            && ([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask) == NSCommandKeyMask)
-        {
-            NSRange range = [text selectedRange];
-            BOOL hasSelectedText = range.length > 0;
-            if ([theEvent keyCode] == 7 && hasSelectedText) // Cmd + X - Cut
-            {
-                [text cut:panel];
-                return true;
-            }
-            if ([theEvent keyCode] == 8 && hasSelectedText) // Cmd + C - Copy
-            {
-                [text copy:panel];
-                return true;
-            }
-            if ([theEvent keyCode] == 9) // Cmd + V - Paste
-            {
-                [text paste:panel];
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-@interface GlassSavePanel : NSSavePanel
-@end
-
-@implementation GlassSavePanel
-
-- (BOOL)performKeyEquivalent:(NSEvent *)theEvent
-{
-    if (doPerformKeyEquivalent(theEvent, self)) {
-        return true;
-    }
-    return [super performKeyEquivalent:theEvent];
-}
-@end
-
-@interface GlassOpenPanel : NSOpenPanel
-@end
-
-@implementation GlassOpenPanel
-
-- (BOOL)performKeyEquivalent:(NSEvent *)theEvent
-{
-    if (doPerformKeyEquivalent(theEvent, self)) {
-        return true;
-    }
-    return [super performKeyEquivalent:theEvent];
-}
-@end
-
 
 #pragma mark --- Dispatcher
 
@@ -485,7 +425,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
         [panel setAllowsMultipleSelection:(jMultipleMode==JNI_TRUE)];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
@@ -561,7 +501,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSSavePanel *panel = [GlassApplication isSandboxed] ? [NSSavePanel savePanel] : [GlassSavePanel savePanel];
+        NSSavePanel *panel = [NSSavePanel savePanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)
@@ -633,7 +573,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = [NSOpenPanel openPanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)

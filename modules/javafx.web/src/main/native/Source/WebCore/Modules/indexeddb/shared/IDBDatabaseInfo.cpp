@@ -36,9 +36,10 @@ IDBDatabaseInfo::IDBDatabaseInfo()
 {
 }
 
-IDBDatabaseInfo::IDBDatabaseInfo(const String& name, uint64_t version)
+IDBDatabaseInfo::IDBDatabaseInfo(const String& name, uint64_t version, uint64_t maxIndexID)
     : m_name(name)
     , m_version(version)
+    , m_maxIndexID(maxIndexID)
 {
 }
 
@@ -46,6 +47,7 @@ IDBDatabaseInfo::IDBDatabaseInfo(const IDBDatabaseInfo& other, IsolatedCopyTag)
     : m_name(other.m_name.isolatedCopy())
     , m_version(other.m_version)
     , m_maxObjectStoreID(other.m_maxObjectStoreID)
+    , m_maxIndexID(other.m_maxIndexID)
 {
     for (const auto& entry : other.m_objectStoreMap)
         m_objectStoreMap.set(entry.key, entry.value.isolatedCopy());
@@ -156,22 +158,23 @@ void IDBDatabaseInfo::deleteObjectStore(uint64_t objectStoreIdentifier)
 }
 
 #if !LOG_DISABLED
+
 String IDBDatabaseInfo::loggingString() const
 {
     StringBuilder builder;
-    builder.appendLiteral("Database:");
-    builder.append(m_name);
-    builder.appendLiteral(" version ");
-    builder.appendNumber(m_version);
-    builder.append('\n');
-    for (const auto& objectStore : m_objectStoreMap.values()) {
-        builder.append(objectStore.loggingString(1));
-        builder.append('\n');
-    }
-
+    builder.append("Database:", m_name, " version ", m_version, '\n');
+    for (auto& objectStore : m_objectStoreMap.values())
+        builder.append(objectStore.loggingString(1), '\n');
     return builder.toString();
 }
+
 #endif
+
+void IDBDatabaseInfo::setMaxIndexID(uint64_t maxIndexID)
+{
+    ASSERT(maxIndexID > m_maxIndexID || (!maxIndexID && !m_maxIndexID));
+    m_maxIndexID = maxIndexID;
+}
 
 } // namespace WebCore
 

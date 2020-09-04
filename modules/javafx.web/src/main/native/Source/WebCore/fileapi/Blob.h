@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,7 +32,9 @@
 #pragma once
 
 #include "BlobPropertyBag.h"
+#include "ScriptExecutionContext.h"
 #include "ScriptWrappable.h"
+#include <wtf/IsoMalloc.h>
 #include <wtf/URL.h>
 #include "URLRegistry.h"
 #include <wtf/Variant.h>
@@ -50,6 +53,7 @@ class SharedBuffer;
 using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob> {
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
 public:
     static Ref<Blob> create()
     {
@@ -89,7 +93,7 @@ public:
     static bool isValidContentType(const String&);
     // The normalization procedure described in the File API spec.
     static String normalizedContentType(const String&);
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     static bool isNormalizedContentType(const String&);
     static bool isNormalizedContentType(const CString&);
 #endif
@@ -112,21 +116,23 @@ protected:
     Blob(ReferencingExistingBlobConstructor, const Blob&);
 
     enum UninitializedContructor { uninitializedContructor };
-    Blob(UninitializedContructor);
+    Blob(UninitializedContructor, URL&&, String&& type);
 
     enum DeserializationContructor { deserializationContructor };
-    Blob(DeserializationContructor, const URL& srcURL, const String& type, long long size, const String& fileBackedPath);
+    Blob(DeserializationContructor, const URL& srcURL, const String& type, Optional<unsigned long long> size, const String& fileBackedPath);
 
     // For slicing.
     Blob(const URL& srcURL, long long start, long long end, const String& contentType);
 
+private:
     // This is an internal URL referring to the blob data associated with this object. It serves
     // as an identifier for this blob. The internal URL is never used to source the blob's content
     // into an HTML or for FileRead'ing, public blob URLs must be used for those purposes.
     URL m_internalURL;
 
     String m_type;
-    mutable long long m_size;
+
+    mutable Optional<unsigned long long> m_size;
 };
 
 } // namespace WebCore

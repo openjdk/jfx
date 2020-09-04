@@ -33,7 +33,6 @@ namespace Inspector {
 // FIXME: Add DedicatedWorker Inspector Targets
 // FIXME: Add ServiceWorker Inspector Targets
 enum class InspectorTargetType : uint8_t {
-    JavaScriptContext,
     Page,
     DedicatedWorker,
     ServiceWorker,
@@ -47,10 +46,20 @@ public:
     virtual String identifier() const = 0;
     virtual InspectorTargetType type() const = 0;
 
+    virtual bool isProvisional() const { return false; }
+    bool isPaused() const { return m_isPaused; }
+    void pause();
+    void resume();
+    void setResumeCallback(WTF::Function<void()>&&);
+
     // Connection management.
-    virtual void connect(FrontendChannel&) = 0;
-    virtual void disconnect(FrontendChannel&) = 0;
+    virtual void connect(FrontendChannel::ConnectionType) = 0;
+    virtual void disconnect() = 0;
     virtual void sendMessageToTargetBackend(const String&) = 0;
+
+private:
+    WTF::Function<void()> m_resumeCallback;
+    bool m_isPaused { false };
 };
 
 } // namespace Inspector
@@ -60,7 +69,6 @@ namespace WTF {
 template<> struct EnumTraits<Inspector::InspectorTargetType> {
     using values = EnumValues<
         Inspector::InspectorTargetType,
-        Inspector::InspectorTargetType::JavaScriptContext,
         Inspector::InspectorTargetType::Page,
         Inspector::InspectorTargetType::DedicatedWorker,
         Inspector::InspectorTargetType::ServiceWorker

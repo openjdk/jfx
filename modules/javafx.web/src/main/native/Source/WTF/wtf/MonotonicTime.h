@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,10 @@ class PrintStream;
 // possibly don't count downtime. This uses floating point internally so that you can reason about
 // infinity and other things that arise in math. It's acceptable to use this to wrap NaN times,
 // negative times, and infinite times, so long as they are all relative to the same clock.
-class MonotonicTime {
+class MonotonicTime final {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static const ClockType clockType = ClockType::Monotonic;
+    static constexpr ClockType clockType = ClockType::Monotonic;
 
     // This is the epoch. So, x.secondsSinceEpoch() should be the same as x - MonotonicTime().
     constexpr MonotonicTime() { }

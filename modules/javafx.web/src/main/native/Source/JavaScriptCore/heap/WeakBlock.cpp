@@ -28,23 +28,26 @@
 
 #include "CellContainerInlines.h"
 #include "Heap.h"
-#include "HeapSnapshotBuilder.h"
+#include "HeapAnalyzer.h"
 #include "JSCInlines.h"
 #include "JSObject.h"
 #include "WeakHandleOwner.h"
 
 namespace JSC {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WeakBlock);
+
 WeakBlock* WeakBlock::create(Heap& heap, CellContainer container)
 {
     heap.didAllocateBlock(WeakBlock::blockSize);
-    return new (NotNull, fastMalloc(blockSize)) WeakBlock(container);
+    return new (NotNull, WeakBlockMalloc::malloc(blockSize)) WeakBlock(container);
+
 }
 
 void WeakBlock::destroy(Heap& heap, WeakBlock* block)
 {
     block->~WeakBlock();
-    fastFree(block);
+    WeakBlockMalloc::free(block);
     heap.didFreeBlock(WeakBlock::blockSize);
 }
 
@@ -117,7 +120,7 @@ void WeakBlock::specializedVisit(ContainerType& container, SlotVisitor& visitor)
 
         const char* reason = "";
         const char** reasonPtr = nullptr;
-        if (UNLIKELY(visitor.isBuildingHeapSnapshot()))
+        if (UNLIKELY(visitor.isAnalyzingHeap()))
             reasonPtr = &reason;
 
         if (!weakHandleOwner->isReachableFromOpaqueRoots(Handle<Unknown>::wrapSlot(&const_cast<JSValue&>(jsValue)), weakImpl->context(), visitor, reasonPtr))
@@ -125,9 +128,9 @@ void WeakBlock::specializedVisit(ContainerType& container, SlotVisitor& visitor)
 
         visitor.appendUnbarriered(jsValue);
 
-        if (UNLIKELY(visitor.isBuildingHeapSnapshot())) {
+        if (UNLIKELY(visitor.isAnalyzingHeap())) {
             if (jsValue.isCell())
-                visitor.heapSnapshotBuilder()->setOpaqueRootReachabilityReasonForCell(jsValue.asCell(), *reasonPtr);
+                visitor.heapAnalyzer()->setOpaqueRootReachabilityReasonForCell(jsValue.asCell(), *reasonPtr);
         }
     }
 }
@@ -141,8 +144,8 @@ void WeakBlock::visit(SlotVisitor& visitor)
     // If this WeakBlock doesn't belong to a CellContainer, we won't even be here.
     ASSERT(m_container);
 
-    if (m_container.isLargeAllocation())
-        specializedVisit(m_container.largeAllocation(), visitor);
+    if (m_container.isPreciseAllocation())
+        specializedVisit(m_container.preciseAllocation(), visitor);
     else
         specializedVisit(m_container.markedBlock(), visitor);
 }

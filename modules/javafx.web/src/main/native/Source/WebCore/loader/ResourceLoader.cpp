@@ -32,6 +32,8 @@
 
 #include "ApplicationCacheHost.h"
 #include "AuthenticationChallenge.h"
+#include "ContentRuleListResults.h"
+#include "CustomHeaderFields.h"
 #include "DataURLDecoder.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
@@ -57,8 +59,8 @@
 #endif
 
 #if USE(QUICK_LOOK)
+#include "LegacyPreviewLoader.h"
 #include "PreviewConverter.h"
-#include "PreviewLoader.h"
 #endif
 
 #undef RELEASE_LOG_IF_ALLOWED
@@ -66,10 +68,12 @@
 
 namespace WebCore {
 
-ResourceLoader::ResourceLoader(DocumentLoader& documentLoader, ResourceLoaderOptions options)
-    : m_frame { documentLoader.frame() }
-    , m_documentLoader { & documentLoader }
-    , m_defersLoading { options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && m_frame->page()->defersLoading() }
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
+
+ResourceLoader::ResourceLoader(Frame& frame, ResourceLoaderOptions options)
+    : m_frame { &frame }
+    , m_documentLoader { frame.loader().activeDocumentLoader() }
+    , m_defersLoading { options.defersLoadingPolicy == DefersLoadingPolicy::AllowDefersLoading && frame.page()->defersLoading() }
     , m_options { options }
 {
 }
@@ -117,6 +121,14 @@ void ResourceLoader::releaseResources()
 
 void ResourceLoader::init(ResourceRequest&& clientRequest, CompletionHandler<void(bool)>&& completionHandler)
 {
+#if PLATFORM(IOS_FAMILY)
+    if (!m_documentLoader) {
+        // We should always have a DocumentLoader at this point, but crash reports indicate that it is sometimes null.
+        // See https://bugs.webkit.org/show_bug.cgi?id=187360
+        ASSERT_NOT_REACHED();
+        return completionHandler(false);
+    }
+#endif
     ASSERT(!m_handle);
     ASSERT(m_request.isNull());
     ASSERT(m_deferredRequest.isNull());
@@ -275,7 +287,7 @@ void ResourceLoader::loadDataURL()
         dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
         dataResponse.setSource(ResourceResponse::Source::Network);
         this->didReceiveResponse(dataResponse, [this, protectedThis = WTFMove(protectedThis), dataSize, data = result.data.releaseNonNull()]() mutable {
-            if (!this->reachedTerminalState() && dataSize)
+            if (!this->reachedTerminalState() && dataSize && m_request.httpMethod() != "HEAD")
                 this->didReceiveBuffer(WTFMove(data), dataSize, DataPayloadWholeResource);
 
             if (!this->reachedTerminalState()) {
@@ -341,7 +353,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
 
     ASSERT(!m_reachedTerminalState);
 #if ENABLE(CONTENT_EXTENSIONS)
-    ASSERT(m_resourceType != ResourceType::Invalid);
+    ASSERT(m_resourceType != ContentExtensions::ResourceType::Invalid);
 #endif
 
     // We need a resource identifier for all requests, even if FrameLoader is never going to see it (such as with CORS preflight requests).
@@ -355,9 +367,10 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest&& request, const Re
     if (!redirectResponse.isNull() && frameLoader()) {
         Page* page = frameLoader()->frame().page();
         if (page && m_documentLoader) {
-            auto blockedStatus = page->userContentProvider().processContentExtensionRulesForLoad(request.url(), m_resourceType, *m_documentLoader);
-            applyBlockedStatusToRequest(blockedStatus, page, request);
-            if (blockedStatus.blockedLoad) {
+            auto results = page->userContentProvider().processContentRuleListsForLoad(request.url(), m_resourceType, *m_documentLoader);
+            bool blockedLoad = results.summary.blockedLoad;
+            ContentExtensions::applyResultsToRequest(WTFMove(results), page, request);
+            if (blockedLoad) {
                 RELEASE_LOG_IF_ALLOWED("willSendRequestinternal: resource load canceled because of content blocker (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
                 didFail(blockedByContentBlockerError());
                 completionHandler({ });
@@ -446,7 +459,9 @@ static void logResourceResponseSource(Frame* frame, ResourceResponse::Source sou
         break;
     case ResourceResponse::Source::MemoryCache:
     case ResourceResponse::Source::MemoryCacheAfterValidation:
+    case ResourceResponse::Source::DOMCache:
     case ResourceResponse::Source::ApplicationCache:
+    case ResourceResponse::Source::InspectorOverride:
     case ResourceResponse::Source::Unknown:
         return;
     }
@@ -480,9 +495,6 @@ void ResourceLoader::didReceiveResponse(const ResourceResponse& r, CompletionHan
     logResourceResponseSource(m_frame.get(), r.source());
 
     m_response = r;
-
-    if (FormData* data = m_request.httpBody())
-        data->removeGeneratedFilesIfNeeded();
 
     if (m_options.sendLoadCallbacks == SendCallbackPolicy::SendCallbacks)
         frameLoader()->notifier().didReceiveResponse(this, m_response);
@@ -568,9 +580,6 @@ void ResourceLoader::didFail(const ResourceError& error)
 
 void ResourceLoader::cleanupForError(const ResourceError& error)
 {
-    if (FormData* data = m_request.httpBody())
-        data->removeGeneratedFilesIfNeeded();
-
     if (m_notifiedLoadComplete)
         return;
     m_notifiedLoadComplete = true;
@@ -715,7 +724,7 @@ void ResourceLoader::cannotShowURL(ResourceHandle*)
 
 bool ResourceLoader::shouldUseCredentialStorage()
 {
-    if (m_options.storedCredentialsPolicy == StoredCredentialsPolicy::DoNotUse)
+    if (m_options.storedCredentialsPolicy != StoredCredentialsPolicy::Use)
         return false;
 
     Ref<ResourceLoader> protectedThis(*this);

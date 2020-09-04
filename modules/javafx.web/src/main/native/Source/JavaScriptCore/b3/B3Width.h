@@ -30,7 +30,7 @@
 #include "B3Bank.h"
 #include "B3Type.h"
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -59,8 +59,9 @@ inline Width pointerWidth()
 
 inline Width widthForType(Type type)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Void:
+    case Tuple:
         ASSERT_NOT_REACHED();
         return Width8;
     case Int32:
@@ -142,7 +143,7 @@ void printInternal(PrintStream&, JSC::B3::Width);
 
 } // namespace WTF
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

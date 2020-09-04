@@ -83,7 +83,7 @@ DataTransfer::DataTransfer(StoreMode mode, std::unique_ptr<Pasteboard> pasteboar
 #endif
 }
 
-Ref<DataTransfer> DataTransfer::createForCopyAndPaste(Document& document, StoreMode storeMode, std::unique_ptr<Pasteboard>&& pasteboard)
+Ref<DataTransfer> DataTransfer::createForCopyAndPaste(const Document& document, StoreMode storeMode, std::unique_ptr<Pasteboard>&& pasteboard)
 {
     auto dataTransfer = adoptRef(*new DataTransfer(storeMode, WTFMove(pasteboard)));
     dataTransfer->m_originIdentifier = document.originIdentifierForPasteboard();
@@ -289,7 +289,7 @@ void DataTransfer::didAddFileToItemList()
 DataTransferItemList& DataTransfer::items()
 {
     if (!m_itemList)
-        m_itemList = std::make_unique<DataTransferItemList>(*this);
+        m_itemList = makeUnique<DataTransferItemList>(*this);
     return *m_itemList;
 }
 
@@ -415,7 +415,7 @@ bool DataTransfer::hasStringOfType(const String& type)
 
 Ref<DataTransfer> DataTransfer::createForInputEvent(const String& plainText, const String& htmlText)
 {
-    auto pasteboard = std::make_unique<StaticPasteboard>();
+    auto pasteboard = makeUnique<StaticPasteboard>();
     pasteboard->writeString("text/plain"_s, plainText);
     pasteboard->writeString("text/html"_s, htmlText);
     return adoptRef(*new DataTransfer(StoreMode::Readonly, WTFMove(pasteboard), Type::InputEvent));
@@ -425,16 +425,22 @@ void DataTransfer::commitToPasteboard(Pasteboard& nativePasteboard)
 {
     ASSERT(is<StaticPasteboard>(*m_pasteboard) && !is<StaticPasteboard>(nativePasteboard));
     PasteboardCustomData customData = downcast<StaticPasteboard>(*m_pasteboard).takeCustomData();
+    if (!customData.hasData())
+        return;
+
     if (RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled()) {
-        customData.origin = m_originIdentifier;
-        nativePasteboard.writeCustomData(customData);
+        customData.setOrigin(m_originIdentifier);
+        nativePasteboard.writeCustomData({ customData });
         return;
     }
 
-    for (auto& entry : customData.platformData)
-        nativePasteboard.writeString(entry.key, entry.value);
-    for (auto& entry : customData.sameOriginCustomData)
-        nativePasteboard.writeString(entry.key, entry.value);
+    customData.forEachPlatformString([&] (auto& type, auto& string) {
+        nativePasteboard.writeString(type, string);
+    });
+
+    customData.forEachCustomString([&] (auto& type, auto& string) {
+        nativePasteboard.writeString(type, string);
+    });
 }
 
 #if !ENABLE(DRAG_SUPPORT)
@@ -468,14 +474,14 @@ Ref<DataTransfer> DataTransfer::createForDrag()
     return adoptRef(*new DataTransfer(StoreMode::ReadWrite, Pasteboard::createForDragAndDrop(), Type::DragAndDropData));
 }
 
-Ref<DataTransfer> DataTransfer::createForDragStartEvent(Document& document)
+Ref<DataTransfer> DataTransfer::createForDragStartEvent(const Document& document)
 {
-    auto dataTransfer = adoptRef(*new DataTransfer(StoreMode::ReadWrite, std::make_unique<StaticPasteboard>(), Type::DragAndDropData));
+    auto dataTransfer = adoptRef(*new DataTransfer(StoreMode::ReadWrite, makeUnique<StaticPasteboard>(), Type::DragAndDropData));
     dataTransfer->m_originIdentifier = document.originIdentifierForPasteboard();
     return dataTransfer;
 }
 
-Ref<DataTransfer> DataTransfer::createForDrop(Document& document, std::unique_ptr<Pasteboard>&& pasteboard, DragOperation sourceOperation, bool draggingFiles)
+Ref<DataTransfer> DataTransfer::createForDrop(const Document& document, std::unique_ptr<Pasteboard>&& pasteboard, DragOperation sourceOperation, bool draggingFiles)
 {
     auto dataTransfer = adoptRef(*new DataTransfer(DataTransfer::StoreMode::Readonly, WTFMove(pasteboard), draggingFiles ? Type::DragAndDropFiles : Type::DragAndDropData));
     dataTransfer->setSourceOperation(sourceOperation);
@@ -483,16 +489,9 @@ Ref<DataTransfer> DataTransfer::createForDrop(Document& document, std::unique_pt
     return dataTransfer;
 }
 
-Ref<DataTransfer> DataTransfer::createForUpdatingDropTarget(Document& document, std::unique_ptr<Pasteboard>&& pasteboard, DragOperation sourceOperation, bool draggingFiles)
+Ref<DataTransfer> DataTransfer::createForUpdatingDropTarget(const Document& document, std::unique_ptr<Pasteboard>&& pasteboard, DragOperation sourceOperation, bool draggingFiles)
 {
-    auto mode = DataTransfer::StoreMode::Protected;
-#if ENABLE(DASHBOARD_SUPPORT)
-    if (document.settings().usesDashboardBackwardCompatibilityMode() && document.securityOrigin().isLocal())
-        mode = DataTransfer::StoreMode::Readonly;
-#else
-    UNUSED_PARAM(document);
-#endif
-    auto dataTransfer = adoptRef(*new DataTransfer(mode, WTFMove(pasteboard), draggingFiles ? Type::DragAndDropFiles : Type::DragAndDropData));
+    auto dataTransfer = adoptRef(*new DataTransfer(DataTransfer::StoreMode::Protected, WTFMove(pasteboard), draggingFiles ? Type::DragAndDropFiles : Type::DragAndDropData));
     dataTransfer->setSourceOperation(sourceOperation);
     dataTransfer->m_originIdentifier = document.originIdentifierForPasteboard();
     return dataTransfer;
@@ -514,7 +513,7 @@ void DataTransfer::setDragImage(Element* element, int x, int y)
     m_dragImage = image;
     if (m_dragImage) {
         if (!m_dragImageLoader)
-            m_dragImageLoader = std::make_unique<DragImageLoader>(this);
+            m_dragImageLoader = makeUnique<DragImageLoader>(this);
         m_dragImageLoader->startLoading(m_dragImage);
     }
 
@@ -550,7 +549,7 @@ DragImageRef DataTransfer::createDragImage(IntPoint& location) const
     location = m_dragLocation;
 
     if (m_dragImage)
-        return createDragImageFromImage(m_dragImage->image(), ImageOrientationDescription());
+        return createDragImageFromImage(m_dragImage->image(), ImageOrientation::None);
 
     if (m_dragImageElement) {
         if (Frame* frame = m_dragImageElement->document().frame())

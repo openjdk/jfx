@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved
  * Copyright (C) Research In Motion Limited 2009. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
 #pragma once
 
 #include <wtf/HashTraits.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/StringHasher.h>
 
 namespace WTF {
@@ -56,6 +56,7 @@ namespace WTF {
         }
 
         static unsigned hash(const RefPtr<StringImpl>& key) { return key->hash(); }
+        static unsigned hash(const PackedPtr<StringImpl>& key) { return key->hash(); }
         static bool equal(const RefPtr<StringImpl>& a, const RefPtr<StringImpl>& b)
         {
             return equal(a.get(), b.get());
@@ -69,13 +70,26 @@ namespace WTF {
             return equal(a, b.get());
         }
 
+        static bool equal(const PackedPtr<StringImpl>& a, const PackedPtr<StringImpl>& b)
+        {
+            return equal(a.get(), b.get());
+        }
+        static bool equal(const PackedPtr<StringImpl>& a, const StringImpl* b)
+        {
+            return equal(a.get(), b);
+        }
+        static bool equal(const StringImpl* a, const PackedPtr<StringImpl>& b)
+        {
+            return equal(a, b.get());
+        }
+
         static unsigned hash(const String& key) { return key.impl()->hash(); }
         static bool equal(const String& a, const String& b)
         {
             return equal(a.impl(), b.impl());
         }
 
-        static const bool safeToCompareToEmptyOrDeleted = false;
+        static constexpr bool safeToCompareToEmptyOrDeleted = false;
     };
 
     struct ASCIICaseInsensitiveHash {
@@ -135,11 +149,21 @@ namespace WTF {
             return equal(a.get(), b.get());
         }
 
+        static unsigned hash(const PackedPtr<StringImpl>& key)
+        {
+            return hash(key.get());
+        }
+
+        static bool equal(const PackedPtr<StringImpl>& a, const PackedPtr<StringImpl>& b)
+        {
+            return equal(a.get(), b.get());
+        }
+
         static unsigned hash(const String& key)
         {
             return hash(key.impl());
         }
-        static unsigned hash(const AtomicString& key)
+        static unsigned hash(const AtomString& key)
         {
             return hash(key.impl());
         }
@@ -147,14 +171,14 @@ namespace WTF {
         {
             return equal(a.impl(), b.impl());
         }
-        static bool equal(const AtomicString& a, const AtomicString& b)
+        static bool equal(const AtomString& a, const AtomString& b)
         {
             // FIXME: Is the "a == b" here a helpful optimization?
             // It makes all cases where the strings are not identical slightly slower.
             return a == b || equal(a.impl(), b.impl());
         }
 
-        static const bool safeToCompareToEmptyOrDeleted = false;
+        static constexpr bool safeToCompareToEmptyOrDeleted = false;
     };
 
     // This hash can be used in cases where the key is a hash of a string, but we don't

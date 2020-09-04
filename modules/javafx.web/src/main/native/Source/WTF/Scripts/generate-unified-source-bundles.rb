@@ -55,10 +55,12 @@ def usage(message)
     puts "Generation options:"
     puts "--max-cpp-bundle-count               Use global sequential numbers for cpp bundle filenames and set the limit on the number"
     puts "--max-obj-c-bundle-count             Use global sequential numbers for Obj-C bundle filenames and set the limit on the number"
+    puts "--dense-bundle-filter                Densely bundle files matching the given path glob"
     exit 1
 end
 
 MAX_BUNDLE_SIZE = 8
+MAX_DENSE_BUNDLE_SIZE = 64
 $derivedSourcesPath = nil
 $unifiedSourceOutputPath = nil
 $sourceTreePath = nil
@@ -69,6 +71,7 @@ $inputXCFilelistPath = nil
 $outputXCFilelistPath = nil
 $maxCppBundleCount = nil
 $maxObjCBundleCount = nil
+$denseBundleFilters = []
 
 def log(text)
     $stderr.puts text if $verbose
@@ -85,7 +88,8 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
                ['--input-xcfilelist-path', GetoptLong::REQUIRED_ARGUMENT],
                ['--output-xcfilelist-path', GetoptLong::REQUIRED_ARGUMENT],
                ['--max-cpp-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
-               ['--max-obj-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT]).each {
+               ['--max-obj-c-bundle-count', GetoptLong::REQUIRED_ARGUMENT],
+               ['--dense-bundle-filter', GetoptLong::REQUIRED_ARGUMENT]).each {
     | opt, arg |
     case opt
     when '--help'
@@ -113,6 +117,8 @@ GetoptLong.new(['--help', '-h', GetoptLong::NO_ARGUMENT],
         $maxCppBundleCount = arg.to_i
     when '--max-obj-c-bundle-count'
         $maxObjCBundleCount = arg.to_i
+    when '--dense-bundle-filter'
+        $denseBundleFilters.push(arg)
     end
 }
 
@@ -194,6 +200,7 @@ class BundleManager
         @maxCount = max
         @extraFiles = []
         @currentDirectory = nil
+        @lastBundlingPrefix = nil
     end
 
     def writeFile(file, text)
@@ -241,19 +248,31 @@ class BundleManager
     def addFile(sourceFile)
         path = sourceFile.path
         raise "wrong extension: #{path.extname} expected #{@extension}" unless path.extname == ".#{@extension}"
-        if (TopLevelDirectoryForPath(@currentDirectory) != TopLevelDirectoryForPath(path.dirname))
+        bundlePrefix, bundleSize = BundlePrefixAndSizeForPath(path)
+        if (@lastBundlingPrefix != bundlePrefix)
             log("Flushing because new top level directory; old: #{@currentDirectory}, new: #{path.dirname}")
             flush
+            @lastBundlingPrefix = bundlePrefix
             @currentDirectory = path.dirname
             @bundleCount = 0 unless @maxCount
         end
-        if @fileCount == MAX_BUNDLE_SIZE
+        if @fileCount >= bundleSize
             log("Flushing because new bundle is full (#{@fileCount} sources)")
             flush
         end
         @currentBundleText += "#include \"#{sourceFile}\"\n"
         @fileCount += 1
     end
+end
+
+def BundlePrefixAndSizeForPath(path)
+    topLevelDirectory = TopLevelDirectoryForPath(path.dirname)
+    $denseBundleFilters.each { |filter|
+        if path.fnmatch(filter)
+            return filter, MAX_DENSE_BUNDLE_SIZE
+        end
+    }
+    return topLevelDirectory, MAX_BUNDLE_SIZE
 end
 
 def TopLevelDirectoryForPath(path)
@@ -343,22 +362,24 @@ sourceFiles.sort.each {
     end
 }
 
-$bundleManagers.each_value {
-    | manager |
-    manager.flush
+if $mode != :PrintAllSources
+    $bundleManagers.each_value {
+        | manager |
+        manager.flush
 
-    maxCount = manager.maxCount
-    next if !maxCount
+        maxCount = manager.maxCount
+        next if !maxCount
 
-    manager.flushToMax
+        manager.flushToMax
 
-    unless manager.extraFiles.empty?
-        extension = manager.extension
-        bundleCount = manager.bundleCount
-        filesToAdd = manager.extraFiles.join(", ")
-        raise "number of bundles for #{extension} sources, #{bundleCount}, exceeded limit, #{maxCount}. Please add #{filesToAdd} to Xcode then update UnifiedSource#{extension.capitalize}FileCount"
-    end
-}
+        unless manager.extraFiles.empty?
+            extension = manager.extension
+            bundleCount = manager.bundleCount
+            filesToAdd = manager.extraFiles.join(", ")
+            raise "number of bundles for #{extension} sources, #{bundleCount}, exceeded limit, #{maxCount}. Please add #{filesToAdd} to Xcode then update UnifiedSource#{extension.capitalize}FileCount"
+        end
+    }
+end
 
 if $mode == :GenerateXCFilelists
     IO::write($inputXCFilelistPath, $inputSources.sort.join("\n") + "\n") if $inputXCFilelistPath

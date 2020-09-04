@@ -47,11 +47,12 @@ typedef USVString CSSOMString;
     JSCustomToNativeObject,
     JSLegacyParent=JSDOMWindowBase,
     LegacyUnenumerableNamedProperties,
-    PrimaryGlobal,
+    Global=Window,
+    Exposed=Window,
 ] interface DOMWindow : EventTarget {
     // The current browsing context.
-    [DoNotCheckSecurity, Unforgeable, ImplementedAs=self] readonly attribute WindowProxy window;
-    [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute WindowProxy self;
+    [DoNotCheckSecurity, Unforgeable, CustomGetter] readonly attribute WindowProxy window;
+    [Replaceable, DoNotCheckSecurityOnGetter, CustomGetter] readonly attribute WindowProxy self;
     [Unforgeable] readonly attribute Document document;
     attribute DOMString name;
     [DoNotCheckSecurity, PutForwards=href, Unforgeable] readonly attribute Location location;
@@ -71,13 +72,13 @@ typedef USVString CSSOMString;
     [DoNotCheckSecurity, ForwardDeclareInHeader] void blur();
 
     // Other browsing contexts.
-    [Replaceable, DoNotCheckSecurityOnGetter, ImplementedAs=self] readonly attribute WindowProxy frames;
+    [Replaceable, DoNotCheckSecurityOnGetter, CustomGetter] readonly attribute WindowProxy frames;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute unsigned long length;
     [DoNotCheckSecurityOnGetter, Unforgeable] readonly attribute WindowProxy? top;
     [DoNotCheckSecurityOnGetter, CustomSetter] attribute WindowProxy? opener;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute WindowProxy? parent;
     [CheckSecurityForNode] readonly attribute Element? frameElement;
-    [CallWith=ActiveWindow&FirstWindow, MayThrowException] WindowProxy? open(optional USVString url = "about:blank", optional DOMString target = "_blank", optional [TreatNullAs=EmptyString] DOMString features = "");
+    [CallWith=ActiveWindow&FirstWindow, MayThrowException] WindowProxy? open(optional USVString url = "", optional DOMString target = "_blank", optional [TreatNullAs=EmptyString] DOMString features = "");
 
     // The user agent.
     readonly attribute Navigator navigator;
@@ -86,14 +87,18 @@ typedef USVString CSSOMString;
     // User prompts.
     void alert();
     void alert(DOMString message);
-    boolean confirm(optional DOMString message = "");
+    [ImplementedAs=confirmForBindings]boolean confirm(optional DOMString message = "");
     DOMString? prompt(optional DOMString message = "", optional DOMString defaultValue = "");
     void print();
 
     long requestAnimationFrame(RequestAnimationFrameCallback callback); // FIXME: Should return an unsigned long.
     void cancelAnimationFrame(long handle); // FIXME: handle should be an unsigned long.
 
-    [CallWith=ExecState&IncumbentWindow, DoNotCheckSecurity, ForwardDeclareInHeader, MayThrowException] void postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+    [EnabledBySetting=requestIdleCallback] unsigned long requestIdleCallback(IdleRequestCallback callback, optional IdleRequestOptions options);
+    [EnabledBySetting=requestIdleCallback] void cancelIdleCallback(unsigned long handle);
+
+    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity, ForwardDeclareInHeader, MayThrowException] void postMessage(any message, USVString targetOrigin, optional sequence<object> transfer = []);
+    [CallWith=GlobalObject&IncumbentWindow, DoNotCheckSecurity, ForwardDeclareInHeader, MayThrowException] void postMessage(any message, optional WindowPostMessageOptions options);
 
     // Obsolete members, still part of the HTML specification (https://html.spec.whatwg.org/#Window-partial).
     void captureEvents(); // Not implemented. Also not in modern standards. Empty function may help compatibility with legacy content.
@@ -199,6 +204,12 @@ typedef USVString CSSOMString;
     [NotEnumerable, ImplementedAs=onwebkitAnimationIteration] attribute EventHandler onwebkitanimationiteration;
     [NotEnumerable, ImplementedAs=onwebkitAnimationStart] attribute EventHandler onwebkitanimationstart;
     [NotEnumerable, ImplementedAs=onwebkitTransitionEnd] attribute EventHandler onwebkittransitionend;
+};
+
+[
+    ImplementedAs=WindowPostMessageOptions
+] dictionary WindowPostMessageOptions : PostMessageOptions {
+  USVString targetOrigin = "/";
 };
 
 DOMWindow implements GlobalCrypto;

@@ -117,7 +117,7 @@ PatternData* RenderSVGResourcePattern::buildPattern(RenderElement& renderer, Opt
         return nullptr;
 
     // Build pattern.
-    auto patternData = std::make_unique<PatternData>();
+    auto patternData = makeUnique<PatternData>();
     patternData->pattern = Pattern::create(copiedImage.releaseNonNull(), true, true);
 
     // Compute pattern space transformation.
@@ -149,7 +149,7 @@ bool RenderSVGResourcePattern::applyResource(RenderElement& renderer, const Rend
     ASSERT(!resourceMode.isEmpty());
 
     if (m_shouldCollectPatternAttributes) {
-        patternElement().synchronizeAnimatedSVGAttribute(anyQName());
+        patternElement().synchronizeAllAttributes();
 
         m_attributes = PatternAttributes();
         collectPatternAttributes(m_attributes);
@@ -255,7 +255,7 @@ bool RenderSVGResourcePattern::buildTileImageTransform(RenderElement& renderer,
 std::unique_ptr<ImageBuffer> RenderSVGResourcePattern::createTileImage(const PatternAttributes& attributes, const FloatRect& tileBoundaries, const FloatRect& absoluteTileBoundaries, const AffineTransform& tileImageTransform, FloatRect& clampedAbsoluteTileBoundaries, RenderingMode renderingMode) const
 {
     clampedAbsoluteTileBoundaries = ImageBuffer::clampedRect(absoluteTileBoundaries);
-    auto tileImage = SVGRenderingContext::createImageBuffer(absoluteTileBoundaries, clampedAbsoluteTileBoundaries, ColorSpaceSRGB, renderingMode);
+    auto tileImage = SVGRenderingContext::createImageBuffer(absoluteTileBoundaries, clampedAbsoluteTileBoundaries, ColorSpace::SRGB, renderingMode);
     if (!tileImage)
         return nullptr;
 

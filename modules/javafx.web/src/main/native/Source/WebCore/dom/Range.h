@@ -28,6 +28,7 @@
 #include "IntRect.h"
 #include "RangeBoundaryPoint.h"
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -115,14 +116,20 @@ public:
         EntirelyFixedPosition
     };
 
+    enum class BoundingRectBehavior : uint8_t {
+        RespectClipping = 1 << 0,
+        UseVisibleBounds = 1 << 1,
+        IgnoreTinyRects = 1 << 2,
+        IgnoreEmptyTextSelections = 1 << 3, // Do not return empty text rectangles, which is required for Element.getClientRect() conformance.
+    };
+
     // Not transform-friendly
-    enum class RespectClippingForTextRects { No, Yes };
-    WEBCORE_EXPORT void absoluteTextRects(Vector<IntRect>&, bool useSelectionHeight = false, RangeInFixedPosition* = nullptr, RespectClippingForTextRects = RespectClippingForTextRects::No) const;
-    WEBCORE_EXPORT IntRect absoluteBoundingBox() const;
+    WEBCORE_EXPORT void absoluteTextRects(Vector<IntRect>&, bool useSelectionHeight = false, RangeInFixedPosition* = nullptr, OptionSet<BoundingRectBehavior> = { }) const;
+    WEBCORE_EXPORT IntRect absoluteBoundingBox(OptionSet<BoundingRectBehavior> = { }) const;
 
     // Transform-friendly
     WEBCORE_EXPORT void absoluteTextQuads(Vector<FloatQuad>&, bool useSelectionHeight = false, RangeInFixedPosition* = nullptr) const;
-    WEBCORE_EXPORT FloatRect absoluteBoundingRect(RespectClippingForTextRects = RespectClippingForTextRects::No) const;
+    WEBCORE_EXPORT FloatRect absoluteBoundingRect(OptionSet<BoundingRectBehavior> = { }) const;
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void collectSelectionRects(Vector<SelectionRect>&) const;
     WEBCORE_EXPORT int collectSelectionRectsWithoutUnionInteriorLines(Vector<SelectionRect>&) const;
@@ -131,6 +138,8 @@ public:
     void nodeChildrenChanged(ContainerNode&);
     void nodeChildrenWillBeRemoved(ContainerNode&);
     void nodeWillBeRemoved(Node&);
+    bool parentlessNodeMovedToNewDocumentAffectsRange(Node&);
+    void updateRangeForParentlessNodeMovedToNewDocument(Node&);
 
     void textInserted(Node&, unsigned offset, unsigned length);
     void textRemoved(Node&, unsigned offset, unsigned length);
@@ -163,10 +172,10 @@ private:
     ExceptionOr<RefPtr<DocumentFragment>> processContents(ActionType);
 
     enum class CoordinateSpace { Absolute, Client };
-    Vector<FloatRect> borderAndTextRects(CoordinateSpace, RespectClippingForTextRects = RespectClippingForTextRects::No) const;
-    FloatRect boundingRect(CoordinateSpace, RespectClippingForTextRects = RespectClippingForTextRects::No) const;
+    Vector<FloatRect> borderAndTextRects(CoordinateSpace, OptionSet<BoundingRectBehavior> = { }) const;
+    FloatRect boundingRect(CoordinateSpace, OptionSet<BoundingRectBehavior> = { }) const;
 
-    Vector<FloatRect> absoluteRectsForRangeInText(Node*, RenderText&, bool useSelectionHeight, bool& isFixed, RespectClippingForTextRects) const;
+    Vector<FloatRect> absoluteRectsForRangeInText(Node*, RenderText&, bool useSelectionHeight, bool& isFixed, OptionSet<BoundingRectBehavior>) const;
 
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
@@ -176,7 +185,7 @@ private:
 WEBCORE_EXPORT Ref<Range> rangeOfContents(Node&);
 
 WEBCORE_EXPORT bool areRangesEqual(const Range*, const Range*);
-bool rangesOverlap(const Range*, const Range*);
+WEBCORE_EXPORT bool rangesOverlap(const Range*, const Range*);
 
 inline bool documentOrderComparator(const Node* a, const Node* b)
 {

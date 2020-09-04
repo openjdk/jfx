@@ -30,7 +30,11 @@
 
 #include "CSSStyleSheet.h"
 #include "ElementTraversal.h"
+#include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
+#if ENABLE(PICTURE_IN_PICTURE_API)
+#include "NotImplemented.h"
+#endif
 #include "RenderElement.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SlotAssignment.h"
@@ -45,20 +49,23 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(ShadowRoot);
 
 struct SameSizeAsShadowRoot : public DocumentFragment, public TreeScope {
-    unsigned countersAndFlags[1];
+    bool flags[4];
+    uint8_t mode;
     void* styleScope;
     void* styleSheetList;
     void* host;
     void* slotAssignment;
+    Optional<HashMap<AtomString, AtomString>> partMappings;
 };
 
 COMPILE_ASSERT(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), shadowroot_should_stay_small);
 
-ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type)
+ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type, DelegatesFocus delegatesFocus)
     : DocumentFragment(document, CreateShadowRoot)
     , TreeScope(*this, document)
+    , m_delegatesFocus(delegatesFocus == DelegatesFocus::Yes)
     , m_type(type)
-    , m_styleScope(std::make_unique<Style::Scope>(*this))
+    , m_styleScope(makeUnique<Style::Scope>(*this))
 {
 }
 
@@ -67,7 +74,7 @@ ShadowRoot::ShadowRoot(Document& document, std::unique_ptr<SlotAssignment>&& slo
     : DocumentFragment(document, CreateShadowRoot)
     , TreeScope(*this, document)
     , m_type(ShadowRootMode::UserAgent)
-    , m_styleScope(std::make_unique<Style::Scope>(*this))
+    , m_styleScope(makeUnique<Style::Scope>(*this))
     , m_slotAssignment(WTFMove(slotAssignment))
 {
 }
@@ -147,7 +154,7 @@ void ShadowRoot::moveShadowRootToNewDocument(Document& newDocument)
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!parentTreeScope() || &parentTreeScope()->documentScope() == &newDocument);
 
     // Style scopes are document specific.
-    m_styleScope = std::make_unique<Style::Scope>(*this);
+    m_styleScope = makeUnique<Style::Scope>(*this);
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&m_styleScope->document() == &newDocument);
 }
 
@@ -218,22 +225,22 @@ HTMLSlotElement* ShadowRoot::findAssignedSlot(const Node& node)
     return m_slotAssignment->findAssignedSlot(node, *this);
 }
 
-void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomicString& oldName, const AtomicString& newName)
+void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomString& oldName, const AtomString& newName)
 {
     ASSERT(m_slotAssignment);
     return m_slotAssignment->renameSlotElement(slot, oldName, newName, *this);
 }
 
-void ShadowRoot::addSlotElementByName(const AtomicString& name, HTMLSlotElement& slot)
+void ShadowRoot::addSlotElementByName(const AtomString& name, HTMLSlotElement& slot)
 {
     ASSERT(&slot.rootNode() == this);
     if (!m_slotAssignment)
-        m_slotAssignment = std::make_unique<SlotAssignment>();
+        m_slotAssignment = makeUnique<SlotAssignment>();
 
     return m_slotAssignment->addSlotElementByName(name, slot, *this);
 }
 
-void ShadowRoot::removeSlotElementByName(const AtomicString& name, HTMLSlotElement& slot, ContainerNode& oldParentOfRemovedTree)
+void ShadowRoot::removeSlotElementByName(const AtomString& name, HTMLSlotElement& slot, ContainerNode& oldParentOfRemovedTree)
 {
     ASSERT(m_slotAssignment);
     return m_slotAssignment->removeSlotElementByName(name, slot, &oldParentOfRemovedTree, *this);
@@ -252,6 +259,96 @@ const Vector<Node*>* ShadowRoot::assignedNodesForSlot(const HTMLSlotElement& slo
     return m_slotAssignment->assignedNodesForSlot(slot, *this);
 }
 
+static Optional<std::pair<AtomString, AtomString>> parsePartMapping(StringView mappingString)
+{
+    const auto end = mappingString.length();
+
+    auto skipWhitespace = [&](auto position) {
+        while (position < end && isHTMLSpace(mappingString[position]))
+            ++position;
+        return position;
+    };
+
+    auto collectValue = [&](auto position) {
+        while (position < end && (!isHTMLSpace(mappingString[position]) && mappingString[position] != ':'))
+            ++position;
+        return position;
+    };
+
+    size_t begin = 0;
+    begin = skipWhitespace(begin);
+
+    auto firstPartEnd = collectValue(begin);
+    if (firstPartEnd == begin)
+        return { };
+
+    auto firstPart = mappingString.substring(begin, firstPartEnd - begin).toAtomString();
+
+    begin = skipWhitespace(firstPartEnd);
+    if (begin == end)
+        return std::make_pair(firstPart, firstPart);
+
+    if (mappingString[begin] != ':')
+        return { };
+
+    begin = skipWhitespace(begin + 1);
+
+    auto secondPartEnd = collectValue(begin);
+    if (secondPartEnd == begin)
+        return { };
+
+    auto secondPart = mappingString.substring(begin, secondPartEnd - begin).toAtomString();
+
+    begin = skipWhitespace(secondPartEnd);
+    if (begin != end)
+        return { };
+
+    return std::make_pair(firstPart, secondPart);
+}
+
+static ShadowRoot::PartMappings parsePartMappingsList(StringView mappingsListString)
+{
+    if (!RuntimeEnabledFeatures::sharedFeatures().cssShadowPartsEnabled())
+        return { };
+
+    ShadowRoot::PartMappings mappings;
+
+    const auto end = mappingsListString.length();
+
+    size_t begin = 0;
+    while (begin < end) {
+        size_t mappingEnd = begin;
+        while (mappingEnd < end && mappingsListString[mappingEnd] != ',')
+            ++mappingEnd;
+
+        auto result = parsePartMapping(mappingsListString.substring(begin, mappingEnd - begin));
+        if (result)
+            mappings.add(result->first, Vector<AtomString, 1>()).iterator->value.append(result->second);
+
+        if (mappingEnd == end)
+            break;
+
+        begin = mappingEnd + 1;
+    }
+
+    return mappings;
+}
+
+const ShadowRoot::PartMappings& ShadowRoot::partMappings() const
+{
+    if (!m_partMappings) {
+        auto exportpartsValue = host()->attributeWithoutSynchronization(HTMLNames::exportpartsAttr);
+        m_partMappings = parsePartMappingsList(exportpartsValue);
+    }
+
+    return *m_partMappings;
+}
+
+void ShadowRoot::invalidatePartMappings()
+{
+    m_partMappings = { };
+}
+
 Vector<ShadowRoot*> assignedShadowRootsIfSlotted(const Node& node)
 {
     Vector<ShadowRoot*> result;
@@ -261,5 +358,13 @@ Vector<ShadowRoot*> assignedShadowRootsIfSlotted(const Node& node)
     }
     return result;
 }
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+HTMLVideoElement* ShadowRoot::pictureInPictureElement() const
+{
+    notImplemented();
+    return nullptr;
+}
+#endif
 
 }

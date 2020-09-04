@@ -34,6 +34,7 @@
 #include <wtf/Deque.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -89,6 +90,8 @@ public:
     void selectCacheWithoutManifest();
     void selectCacheWithManifest(const URL& manifestURL);
 
+    bool canLoadMainResource(const ResourceRequest&);
+
     void maybeLoadMainResource(const ResourceRequest&, SubstituteData&);
     void maybeLoadMainResourceForRedirect(const ResourceRequest&, SubstituteData&);
     bool maybeLoadFallbackForMainResponse(const ResourceRequest&, const ResourceResponse&);
@@ -104,7 +107,7 @@ public:
     bool maybeLoadSynchronously(ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
     void maybeLoadFallbackSynchronously(const ResourceRequest&, ResourceError&, ResourceResponse&, RefPtr<SharedBuffer>&);
 
-    bool canCacheInPageCache();
+    bool canCacheInBackForwardCache();
 
     Status status() const;
     bool update();
@@ -112,7 +115,7 @@ public:
     void abort();
 
     void setDOMApplicationCache(DOMApplicationCache*);
-    void notifyDOMApplicationCache(const AtomicString& eventType, int progressTotal, int progressDone);
+    void notifyDOMApplicationCache(const AtomString& eventType, int progressTotal, int progressDone);
 
     void stopLoadingInFrame(Frame&);
 
@@ -128,7 +131,7 @@ private:
     friend class ApplicationCacheGroup;
 
     struct DeferredEvent {
-        AtomicString eventType;
+        AtomString eventType;
         int progressTotal;
         int progressDone;
     };
@@ -136,17 +139,17 @@ private:
     bool isApplicationCacheEnabled();
     bool isApplicationCacheBlockedForRequest(const ResourceRequest&);
 
-    void dispatchDOMEvent(const AtomicString& eventType, int progressTotal, int progressDone);
+    void dispatchDOMEvent(const AtomString& eventType, int progressTotal, int progressDone);
 
     bool scheduleLoadFallbackResourceFromApplicationCache(ResourceLoader*, ApplicationCache* = nullptr);
     void setCandidateApplicationCacheGroup(ApplicationCacheGroup*);
-    ApplicationCacheGroup* candidateApplicationCacheGroup() const { return m_candidateApplicationCacheGroup; }
+    ApplicationCacheGroup* candidateApplicationCacheGroup() const;
     void setApplicationCache(RefPtr<ApplicationCache>&&);
     ApplicationCache* applicationCache() const { return m_applicationCache.get(); }
     ApplicationCache* mainResourceApplicationCache() const { return m_mainResourceApplicationCache.get(); }
     bool maybeLoadFallbackForMainError(const ResourceRequest&, const ResourceError&);
 
-    DOMApplicationCache* m_domApplicationCache { nullptr };
+    WeakPtr<DOMApplicationCache> m_domApplicationCache;
     DocumentLoader& m_documentLoader;
 
     bool m_defersEvents { true }; // Events are deferred until after document onload.
@@ -157,7 +160,7 @@ private:
 
     // Before an application cache has finished loading, this will be the candidate application
     // group that the document loader is associated with.
-    ApplicationCacheGroup* m_candidateApplicationCacheGroup { nullptr };
+    WeakPtr<ApplicationCacheGroup> m_candidateApplicationCacheGroup;
 
     // This is the application cache the main resource was loaded from (if any).
     RefPtr<ApplicationCache> m_mainResourceApplicationCache;

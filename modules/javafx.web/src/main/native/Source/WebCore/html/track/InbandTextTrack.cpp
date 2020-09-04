@@ -33,8 +33,11 @@
 #include "InbandGenericTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "InbandWebVTTTextTrack.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(InbandTextTrack);
 
 Ref<InbandTextTrack> InbandTextTrack::create(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
 {
@@ -134,29 +137,29 @@ size_t InbandTextTrack::inbandTrackIndex()
     return m_private->trackIndex();
 }
 
-AtomicString InbandTextTrack::inBandMetadataTrackDispatchType() const
+AtomString InbandTextTrack::inBandMetadataTrackDispatchType() const
 {
     return m_private->inBandMetadataTrackDispatchType();
 }
 
-void InbandTextTrack::idChanged(const AtomicString& id)
+void InbandTextTrack::idChanged(const AtomString& id)
 {
     setId(id);
 }
 
-void InbandTextTrack::labelChanged(const AtomicString& label)
+void InbandTextTrack::labelChanged(const AtomString& label)
 {
     setLabel(label);
 }
 
-void InbandTextTrack::languageChanged(const AtomicString& language)
+void InbandTextTrack::languageChanged(const AtomString& language)
 {
     setLanguage(language);
 }
 
 void InbandTextTrack::willRemove()
 {
-    auto element = makeRefPtr(mediaElement());
+    auto element = makeRefPtr(mediaElement().get());
     if (!element)
         return;
     element->removeTextTrack(*this);
@@ -194,7 +197,7 @@ MediaTime InbandTextTrack::startTimeVariance() const
     return m_private->startTimeVariance();
 }
 
-void InbandTextTrack::setMediaElement(HTMLMediaElement* element)
+void InbandTextTrack::setMediaElement(WeakPtr<HTMLMediaElement> element)
 {
     TrackBase::setMediaElement(element);
 #if !RELEASE_LOG_DISABLED

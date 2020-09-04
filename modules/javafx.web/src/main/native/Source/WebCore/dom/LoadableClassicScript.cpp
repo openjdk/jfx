@@ -35,9 +35,9 @@
 
 namespace WebCore {
 
-Ref<LoadableClassicScript> LoadableClassicScript::create(const String& nonce, const String& integrityMetadata, const String& crossOriginMode, const String& charset, const AtomicString& initiatorName, bool isInUserAgentShadowTree)
+Ref<LoadableClassicScript> LoadableClassicScript::create(const String& nonce, const String& integrityMetadata, ReferrerPolicy policy, const String& crossOriginMode, const String& charset, const AtomString& initiatorName, bool isInUserAgentShadowTree)
 {
-    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, crossOriginMode, charset, initiatorName, isInUserAgentShadowTree));
+    return adoptRef(*new LoadableClassicScript(nonce, integrityMetadata, policy, crossOriginMode, charset, initiatorName, isInUserAgentShadowTree));
 }
 
 LoadableClassicScript::~LoadableClassicScript()
@@ -110,7 +110,7 @@ void LoadableClassicScript::notifyFinished(CachedResource& resource)
     if (!m_error && !resource.errorOccurred() && !matchIntegrityMetadata(resource, m_integrity)) {
         m_error = Error {
             ErrorType::FailedIntegrityCheck,
-            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", m_cachedScript->url().stringCenterEllipsizedToLength(), ". Failed integrity metadata check.") }
+            ConsoleMessage { MessageSource::Security, MessageLevel::Error, makeString("Cannot load script ", integrityMismatchDescription(resource, m_integrity)) }
         };
     }
 

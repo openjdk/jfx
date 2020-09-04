@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,17 @@
 
 #pragma once
 
+#include "Event.h"
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Document;
+class Element;
+class EventListener;
+class EventTarget;
+class HTMLElement;
+class LayoutUnit;
 
 class Quirks {
     WTF_MAKE_NONCOPYABLE(Quirks); WTF_MAKE_FAST_ALLOCATED;
@@ -37,12 +43,76 @@ public:
     Quirks(Document&);
     ~Quirks();
 
+    bool shouldIgnoreInvalidSignal() const;
+    bool needsFormControlToBeMouseFocusable() const;
+    bool needsAutoplayPlayPauseEvents() const;
+    bool needsSeekingSupportDisabled() const;
+    bool needsPerDocumentAutoplayBehavior() const;
+    bool shouldAutoplayForArbitraryUserGesture() const;
     bool hasBrokenEncryptedMediaAPISupportQuirk() const;
+    bool shouldStripQuotationMarkInFontFaceSetFamily() const;
+#if ENABLE(TOUCH_EVENTS)
+    bool shouldDispatchSimulatedMouseEvents() const;
+    bool shouldDispatchedSimulatedMouseEventsAssumeDefaultPrevented(EventTarget*) const;
+    Optional<Event::IsCancelable> simulatedMouseEventTypeForTarget(EventTarget*) const;
+    bool shouldMakeTouchEventNonCancelableForTarget(EventTarget*) const;
+#endif
+    bool shouldDisablePointerEventsQuirk() const;
+    bool needsInputModeNoneImplicitly(const HTMLElement&) const;
+    bool needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommand() const;
+    bool shouldDisableContentChangeObserverTouchEventAdjustment() const;
+
+    WEBCORE_EXPORT bool shouldDispatchSyntheticMouseEventsWhenModifyingSelection() const;
+    WEBCORE_EXPORT bool shouldSuppressAutocorrectionAndAutocaptializationInHiddenEditableAreas() const;
+    WEBCORE_EXPORT bool isTouchBarUpdateSupressedForHiddenContentEditable() const;
+    WEBCORE_EXPORT bool isNeverRichlyEditableForTouchBar() const;
+    WEBCORE_EXPORT bool shouldAvoidResizingWhenInputViewBoundsChange() const;
+    WEBCORE_EXPORT bool shouldAvoidScrollingWhenFocusedContentIsVisible() const;
+    WEBCORE_EXPORT bool shouldUseLegacySelectPopoverDismissalBehaviorInDataActivation() const;
+    WEBCORE_EXPORT bool shouldIgnoreAriaForFastPathContentObservationCheck() const;
+
+    WEBCORE_EXPORT bool needsYouTubeMouseOutQuirk() const;
+
+    WEBCORE_EXPORT bool shouldAvoidUsingIOS13ForGmail() const;
+
+    bool needsGMailOverflowScrollQuirk() const;
+    bool needsYouTubeOverflowScrollQuirk() const;
+
+    bool shouldOpenAsAboutBlank(const String&) const;
+
+    bool needsPreloadAutoQuirk() const;
+
+    bool shouldBypassBackForwardCache() const;
+
+    static bool shouldMakeEventListenerPassive(const EventTarget&, const AtomString& eventType, const EventListener&);
+
+#if ENABLE(MEDIA_STREAM)
+    bool shouldEnableLegacyGetUserMedia() const;
+#endif
+
+    bool shouldDisableElementFullscreenQuirk() const;
 
 private:
+    bool needsQuirks() const;
+
+#if ENABLE(TOUCH_EVENTS)
+    bool isAmazon() const;
+    bool isGoogleMaps() const;
+#endif
+
     WeakPtr<Document> m_document;
 
     mutable Optional<bool> m_hasBrokenEncryptedMediaAPISupportQuirk;
+    mutable Optional<bool> m_needsFullWidthHeightFullscreenStyleQuirk;
+#if PLATFORM(IOS_FAMILY)
+    mutable Optional<bool> m_needsGMailOverflowScrollQuirk;
+    mutable Optional<bool> m_needsYouTubeOverflowScrollQuirk;
+    mutable Optional<bool> m_needsPreloadAutoQuirk;
+#endif
+    mutable Optional<bool> m_shouldDisableElementFullscreenQuirk;
+#if ENABLE(TOUCH_EVENTS)
+    mutable Optional<bool> m_shouldDispatchSimulatedMouseEventsQuirk;
+#endif
 };
 
 }

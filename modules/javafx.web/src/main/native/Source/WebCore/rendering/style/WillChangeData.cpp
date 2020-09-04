@@ -70,7 +70,6 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
     case CSSPropertyTransformStyle:
     case CSSPropertyWebkitTransformStyle:
     case CSSPropertyClipPath:
-    case CSSPropertyWebkitClipPath:
     case CSSPropertyMask:
     case CSSPropertyOpacity:
     case CSSPropertyPosition:
@@ -87,7 +86,7 @@ bool WillChangeData::propertyCreatesStackingContext(CSSPropertyID property)
     case CSSPropertyWebkitMask:
     case CSSPropertyWebkitMaskImage:
     case CSSPropertyWebkitMaskBoxImage:
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     case CSSPropertyWebkitOverflowScrolling:
 #endif
         return true;

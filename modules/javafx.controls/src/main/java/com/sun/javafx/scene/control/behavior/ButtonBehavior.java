@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
+
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.scene.control.ButtonBase;
 import com.sun.javafx.scene.control.inputmap.InputMap;
@@ -56,6 +58,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      */
     private boolean keyDown;
 
+    private InvalidationListener focusListener = this::focusChanged;
 
 
     /***************************************************************************
@@ -89,7 +92,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
         );
 
         // Button also cares about focus
-        control.focusedProperty().addListener(this::focusChanged);
+        control.focusedProperty().addListener(focusListener);
     }
 
 
@@ -105,10 +108,9 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
     }
 
     @Override public void dispose() {
+        // TODO specify contract of dispose and post-condition for getNode()
+        getNode().focusedProperty().removeListener(focusListener);
         super.dispose();
-
-        // TODO
-        getNode().focusedProperty().removeListener(this::focusChanged);
     }
 
 

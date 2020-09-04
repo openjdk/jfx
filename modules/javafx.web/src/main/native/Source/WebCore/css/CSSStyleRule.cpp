@@ -97,7 +97,7 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
         return;
 
     // NOTE: The selector list has to fit into RuleData. <http://webkit.org/b/118369>
-    if (selectorList.componentCount() > RuleData::maximumSelectorComponentCount)
+    if (selectorList.componentCount() > Style::RuleData::maximumSelectorComponentCount)
         return;
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
@@ -112,15 +112,10 @@ void CSSStyleRule::setSelectorText(const String& selectorText)
 
 String CSSStyleRule::cssText() const
 {
-    StringBuilder result;
-    result.append(selectorText());
-    result.appendLiteral(" { ");
-    String decls = m_styleRule->properties().asText();
-    result.append(decls);
-    if (!decls.isEmpty())
-        result.append(' ');
-    result.append('}');
-    return result.toString();
+    String declarations = m_styleRule->properties().asText();
+    if (declarations.isEmpty())
+        return makeString(selectorText(), " { }");
+    return makeString(selectorText(), " { ", declarations, " }");
 }
 
 void CSSStyleRule::reattach(StyleRuleBase& rule)

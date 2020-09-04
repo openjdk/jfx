@@ -26,13 +26,17 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/Markable.h>
+#include <wtf/Optional.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WTF {
 
 class TextStream {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     struct FormatNumberRespectingIntegers {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
         FormatNumberRespectingIntegers(double number)
             : value(number) { }
 
@@ -55,6 +59,7 @@ public:
     }
 
     WTF_EXPORT_PRIVATE TextStream& operator<<(bool);
+    WTF_EXPORT_PRIVATE TextStream& operator<<(char);
     WTF_EXPORT_PRIVATE TextStream& operator<<(int);
     WTF_EXPORT_PRIVATE TextStream& operator<<(unsigned);
     WTF_EXPORT_PRIVATE TextStream& operator<<(long);
@@ -69,6 +74,10 @@ public:
     WTF_EXPORT_PRIVATE TextStream& operator<<(const String&);
     // Deprecated. Use the NumberRespectingIntegers FormattingFlag instead.
     WTF_EXPORT_PRIVATE TextStream& operator<<(const FormatNumberRespectingIntegers&);
+
+#ifdef __OBJC__
+    WTF_EXPORT_PRIVATE TextStream& operator<<(id<NSObject>);
+#endif
 
     FormattingFlags formattingFlags() const { return m_formattingFlags; }
     void setFormattingFlags(FormattingFlags flags) { m_formattingFlags = flags; }
@@ -91,6 +100,7 @@ public:
     WTF_EXPORT_PRIVATE void nextLine(); // Output newline and indent.
 
     int indent() const { return m_indent; }
+    void setIndent(int indent) { m_indent = indent; }
     void increaseIndent(int amount = 1) { m_indent += amount; }
     void decreaseIndent(int amount = 1) { m_indent -= amount; ASSERT(m_indent >= 0); }
 
@@ -100,6 +110,23 @@ public:
     TextStream& operator<<(TextStream& (*func)(TextStream&))
     {
         return (*func)(*this);
+    }
+
+    struct Repeat {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        Repeat(unsigned inWidth, char inCharacter)
+            : width(inWidth), character(inCharacter)
+        { }
+        unsigned width { 0 };
+        char character { ' ' };
+    };
+
+    TextStream& operator<<(const Repeat& repeated)
+    {
+        for (unsigned i = 0; i < repeated.width; ++i)
+            m_text.append(repeated.character);
+
+        return *this;
     }
 
     class IndentScope {
@@ -150,6 +177,24 @@ inline TextStream& indent(TextStream& ts)
 }
 
 template<typename Item>
+TextStream& operator<<(TextStream& ts, const Optional<Item>& item)
+{
+    if (item)
+        return ts << item.value();
+
+    return ts << "nullopt";
+}
+
+template<typename T, typename Traits>
+TextStream& operator<<(TextStream& ts, const Markable<T, Traits>& item)
+{
+    if (item)
+        return ts << item.value();
+
+    return ts << "unset";
+}
+
+template<typename Item>
 TextStream& operator<<(TextStream& ts, const Vector<Item>& vector)
 {
     ts << "[";
@@ -161,6 +206,52 @@ TextStream& operator<<(TextStream& ts, const Vector<Item>& vector)
             ts << ", ";
     }
 
+    return ts << "]";
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+TextStream& operator<<(TextStream& ts, const HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>& map)
+{
+    ts << "{";
+
+    bool first = true;
+    for (const auto& keyValuePair : map) {
+        ts << keyValuePair.key << ": " << keyValuePair.value;
+        if (!first)
+            ts << ", ";
+        first = false;
+    }
+
+    return ts << "}";
+}
+
+template<typename ValueArg, typename HashArg, typename TraitsArg>
+TextStream& operator<<(TextStream& ts, const HashSet<ValueArg, HashArg, TraitsArg>& set)
+{
+    ts << "[";
+
+    bool first = true;
+    for (const auto& item : set) {
+        ts << item;
+        if (!first)
+            ts << ", ";
+        first = false;
+    }
+
+    return ts << "]";
+}
+
+template<typename Option>
+TextStream& operator<<(TextStream& ts, const OptionSet<Option>& options)
+{
+    ts << "[";
+    bool needComma = false;
+    for (auto option : options) {
+        if (needComma)
+            ts << ", ";
+        needComma = true;
+        ts << option;
+    }
     return ts << "]";
 }
 

@@ -41,25 +41,11 @@
 #include "JSSVGPathSegMovetoAbs.h"
 #include "JSSVGPathSegMovetoRel.h"
 #include "SVGPathSeg.h"
-#include "SVGPathSegArc.h"
-#include "SVGPathSegClosePath.h"
-#include "SVGPathSegCurvetoCubic.h"
-#include "SVGPathSegCurvetoCubicSmooth.h"
-#include "SVGPathSegCurvetoQuadratic.h"
-#include "SVGPathSegCurvetoQuadraticSmoothAbs.h"
-#include "SVGPathSegCurvetoQuadraticSmoothRel.h"
-#include "SVGPathSegLinetoAbs.h"
-#include "SVGPathSegLinetoHorizontal.h"
-#include "SVGPathSegLinetoRel.h"
-#include "SVGPathSegLinetoVertical.h"
-#include "SVGPathSegMovetoAbs.h"
-#include "SVGPathSegMovetoRel.h"
-
 
 namespace WebCore {
 using namespace JSC;
 
-JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<SVGPathSeg>&& object)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<SVGPathSeg>&& object)
 {
     switch (object->pathSegType()) {
     case SVGPathSeg::PATHSEG_CLOSEPATH:
@@ -106,9 +92,9 @@ JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<SVGPat
     }
 }
 
-JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, SVGPathSeg& object)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, SVGPathSeg& object)
 {
-    return wrap(state, globalObject, object);
+    return wrap(lexicalGlobalObject, globalObject, object);
 }
 
 }

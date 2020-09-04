@@ -35,13 +35,15 @@ public:
 private:
     HTMLEmbedElement(const QualifiedName&, Document&);
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) final;
-    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
+    void parseAttribute(const QualifiedName&, const AtomString&) final;
+    void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
     bool rendererIsNeeded(const RenderStyle&) final;
 
     bool isURLAttribute(const Attribute&) const final;
-    const AtomicString& imageSourceURL() const final;
+    const AtomString& imageSourceURL() const final;
+
+    bool isInteractiveContent() const final { return true; }
 
     RenderWidget* renderWidgetLoadingPlugin() const final;
 

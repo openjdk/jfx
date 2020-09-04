@@ -36,14 +36,14 @@
 
 namespace WebCore {
 
-StyleRuleKeyframes::StyleRuleKeyframes(const AtomicString& name)
-    : StyleRuleBase(Keyframes)
+StyleRuleKeyframes::StyleRuleKeyframes(const AtomString& name)
+    : StyleRuleBase(StyleRuleType::Keyframes)
     , m_name(name)
 {
 }
 
-StyleRuleKeyframes::StyleRuleKeyframes(const AtomicString& name, std::unique_ptr<DeferredStyleGroupRuleList>&& deferredRules)
-    : StyleRuleBase(Keyframes)
+StyleRuleKeyframes::StyleRuleKeyframes(const AtomString& name, std::unique_ptr<DeferredStyleGroupRuleList>&& deferredRules)
+    : StyleRuleBase(StyleRuleType::Keyframes)
     , m_name(name)
     , m_deferredRules(WTFMove(deferredRules))
 {
@@ -220,7 +220,7 @@ CSSKeyframeRule* CSSKeyframesRule::item(unsigned index) const
 CSSRuleList& CSSKeyframesRule::cssRules()
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = std::make_unique<LiveCSSRuleList<CSSKeyframesRule>>(*this);
+        m_ruleListCSSOMWrapper = makeUnique<LiveCSSRuleList<CSSKeyframesRule>>(*this);
     return *m_ruleListCSSOMWrapper;
 }
 

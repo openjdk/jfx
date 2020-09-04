@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 #include "DFGWorklist.h"
 #include "HeapIterationScope.h"
 #include "InjectedScript.h"
+#include "InjectedScriptHost.h"
 #include "InjectedScriptManager.h"
 #include "InspectorFrontendRouter.h"
 #include "JSLock.h"
@@ -53,6 +54,13 @@ using namespace JSC;
 static bool asBool(const bool* b)
 {
     return b && *b;
+}
+
+static int asInt(const int* i)
+{
+    if (i)
+        return *i;
+    return 0;
 }
 
 InspectorRuntimeAgent::InspectorRuntimeAgent(AgentContext& context)
@@ -111,7 +119,7 @@ void InspectorRuntimeAgent::parse(ErrorString&, const String& expression, Protoc
     }
 }
 
-void InspectorRuntimeAgent::evaluate(ErrorString& errorString, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex)
+void InspectorRuntimeAgent::evaluate(ErrorString& errorString, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const int* executionContextId, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, const bool* /* emulateUserGesture */, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex)
 {
     InjectedScript injectedScript = injectedScriptForEval(errorString, executionContextId);
     if (injectedScript.hasNoValue())
@@ -135,7 +143,7 @@ void InspectorRuntimeAgent::awaitPromise(const String& promiseObjectId, const bo
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(promiseObjectId);
     if (injectedScript.hasNoValue()) {
-        callback->sendFailure("Could not find InjectedScript for promiseObjectId"_s);
+        callback->sendFailure("Missing injected script for given promiseObjectId"_s);
         return;
     }
 
@@ -147,11 +155,11 @@ void InspectorRuntimeAgent::awaitPromise(const String& promiseObjectId, const bo
     });
 }
 
-void InspectorRuntimeAgent::callFunctionOn(ErrorString& errorString, const String& objectId, const String& expression, const JSON::Array* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown)
+void InspectorRuntimeAgent::callFunctionOn(ErrorString& errorString, const String& objectId, const String& expression, const JSON::Array* optionalArguments, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* /* emulateUserGesture */, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown)
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
-        errorString = "Could not find InjectedScript for objectId"_s;
+        errorString = "Missing injected script for given objectId"_s;
         return;
     }
 
@@ -177,7 +185,7 @@ void InspectorRuntimeAgent::getPreview(ErrorString& errorString, const String& o
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
-        errorString = "Could not find InjectedScript for objectId"_s;
+        errorString = "Missing injected script for given objectId"_s;
         return;
     }
 
@@ -190,54 +198,93 @@ void InspectorRuntimeAgent::getPreview(ErrorString& errorString, const String& o
     setPauseOnExceptionsState(m_scriptDebugServer, previousPauseOnExceptionsState);
 }
 
-void InspectorRuntimeAgent::getProperties(ErrorString& errorString, const String& objectId, const bool* ownProperties, const bool* generatePreview, RefPtr<JSON::ArrayOf<Protocol::Runtime::PropertyDescriptor>>& result, RefPtr<JSON::ArrayOf<Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties)
+void InspectorRuntimeAgent::getProperties(ErrorString& errorString, const String& objectId, const bool* ownProperties, const int* fetchStart, const int* fetchCount, const bool* generatePreview, RefPtr<JSON::ArrayOf<Protocol::Runtime::PropertyDescriptor>>& properties, RefPtr<JSON::ArrayOf<Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties)
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
-        errorString = "Could not find InjectedScript for objectId"_s;
+        errorString = "Missing injected script for given objectId"_s;
+        return;
+    }
+
+    int start = asInt(fetchStart);
+    if (start < 0) {
+        errorString = "fetchStart cannot be negative"_s;
+        return;
+    }
+
+    int count = asInt(fetchCount);
+    if (count < 0) {
+        errorString = "fetchCount cannot be negative"_s;
         return;
     }
 
     ScriptDebugServer::PauseOnExceptionsState previousPauseOnExceptionsState = setPauseOnExceptionsState(m_scriptDebugServer, ScriptDebugServer::DontPauseOnExceptions);
     muteConsole();
 
-    injectedScript.getProperties(errorString, objectId, asBool(ownProperties), asBool(generatePreview), result);
-    injectedScript.getInternalProperties(errorString, objectId, asBool(generatePreview), internalProperties);
+    injectedScript.getProperties(errorString, objectId, asBool(ownProperties), start, count, asBool(generatePreview), properties);
+
+    // Only include internal properties for the first fetch.
+    if (!start)
+        injectedScript.getInternalProperties(errorString, objectId, asBool(generatePreview), internalProperties);
 
     unmuteConsole();
     setPauseOnExceptionsState(m_scriptDebugServer, previousPauseOnExceptionsState);
 }
 
-void InspectorRuntimeAgent::getDisplayableProperties(ErrorString& errorString, const String& objectId, const bool* generatePreview, RefPtr<JSON::ArrayOf<Protocol::Runtime::PropertyDescriptor>>& result, RefPtr<JSON::ArrayOf<Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties)
+void InspectorRuntimeAgent::getDisplayableProperties(ErrorString& errorString, const String& objectId, const int* fetchStart, const int* fetchCount, const bool* generatePreview, RefPtr<JSON::ArrayOf<Protocol::Runtime::PropertyDescriptor>>& properties, RefPtr<JSON::ArrayOf<Protocol::Runtime::InternalPropertyDescriptor>>& internalProperties)
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
-        errorString = "Could not find InjectedScript for objectId"_s;
+        errorString = "Missing injected script for given objectId"_s;
+        return;
+    }
+
+    int start = asInt(fetchStart);
+    if (start < 0) {
+        errorString = "fetchStart cannot be negative"_s;
+        return;
+    }
+
+    int count = asInt(fetchCount);
+    if (count < 0) {
+        errorString = "fetchCount cannot be negative"_s;
         return;
     }
 
     ScriptDebugServer::PauseOnExceptionsState previousPauseOnExceptionsState = setPauseOnExceptionsState(m_scriptDebugServer, ScriptDebugServer::DontPauseOnExceptions);
     muteConsole();
 
-    injectedScript.getDisplayableProperties(errorString, objectId, asBool(generatePreview), result);
-    injectedScript.getInternalProperties(errorString, objectId, asBool(generatePreview), internalProperties);
+    injectedScript.getDisplayableProperties(errorString, objectId, start, count, asBool(generatePreview), properties);
+
+    // Only include internal properties for the first fetch.
+    if (!start)
+        injectedScript.getInternalProperties(errorString, objectId, asBool(generatePreview), internalProperties);
 
     unmuteConsole();
     setPauseOnExceptionsState(m_scriptDebugServer, previousPauseOnExceptionsState);
 }
 
-void InspectorRuntimeAgent::getCollectionEntries(ErrorString& errorString, const String& objectId, const String* objectGroup, const int* startIndex, const int* numberToFetch, RefPtr<JSON::ArrayOf<Protocol::Runtime::CollectionEntry>>& entries)
+void InspectorRuntimeAgent::getCollectionEntries(ErrorString& errorString, const String& objectId, const String* objectGroup, const int* fetchStart, const int* fetchCount, RefPtr<JSON::ArrayOf<Protocol::Runtime::CollectionEntry>>& entries)
 {
     InjectedScript injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
     if (injectedScript.hasNoValue()) {
-        errorString = "Could not find InjectedScript for objectId"_s;
+        errorString = "Missing injected script for given objectId"_s;
         return;
     }
 
-    int start = startIndex && *startIndex >= 0 ? *startIndex : 0;
-    int fetch = numberToFetch && *numberToFetch >= 0 ? *numberToFetch : 0;
+    int start = asInt(fetchStart);
+    if (start < 0) {
+        errorString = "fetchStart cannot be negative"_s;
+        return;
+    }
 
-    injectedScript.getCollectionEntries(errorString, objectId, objectGroup ? *objectGroup : String(), start, fetch, entries);
+    int count = asInt(fetchCount);
+    if (count < 0) {
+        errorString = "fetchCount cannot be negative"_s;
+        return;
+    }
+
+    injectedScript.getCollectionEntries(errorString, objectId, objectGroup ? *objectGroup : String(), start, count, entries);
 }
 
 void InspectorRuntimeAgent::saveResult(ErrorString& errorString, const JSON::Object& callArgument, const int* executionContextId, Optional<int>& savedResultIndex)
@@ -248,7 +295,7 @@ void InspectorRuntimeAgent::saveResult(ErrorString& errorString, const JSON::Obj
     if (callArgument.getString("objectId"_s, objectId)) {
         injectedScript = m_injectedScriptManager.injectedScriptForObjectId(objectId);
         if (injectedScript.hasNoValue()) {
-            errorString = "Could not find InjectedScript for objectId"_s;
+            errorString = "Missing injected script for given objectId"_s;
             return;
         }
     } else {
@@ -258,6 +305,14 @@ void InspectorRuntimeAgent::saveResult(ErrorString& errorString, const JSON::Obj
     }
 
     injectedScript.saveResult(errorString, callArgument.toJSONString(), savedResultIndex);
+}
+
+void InspectorRuntimeAgent::setSavedResultAlias(ErrorString&, const String* alias)
+{
+    Optional<String> savedResultAlias;
+    if (alias && !alias->isEmpty())
+        savedResultAlias = *alias;
+    m_injectedScriptManager.injectedScriptHost().setSavedResultAlias(savedResultAlias);
 }
 
 void InspectorRuntimeAgent::releaseObject(ErrorString&, const String& objectId)
@@ -274,11 +329,11 @@ void InspectorRuntimeAgent::releaseObjectGroup(ErrorString&, const String& objec
 
 void InspectorRuntimeAgent::getRuntimeTypesForVariablesAtOffsets(ErrorString& errorString, const JSON::Array& locations, RefPtr<JSON::ArrayOf<Protocol::Runtime::TypeDescription>>& typeDescriptions)
 {
-    static const bool verbose = false;
+    static constexpr bool verbose = false;
 
     typeDescriptions = JSON::ArrayOf<Protocol::Runtime::TypeDescription>::create();
     if (!m_vm.typeProfiler()) {
-        errorString = "The VM does not currently have Type Information."_s;
+        errorString = "VM has no type information"_s;
         return;
     }
 
@@ -289,7 +344,7 @@ void InspectorRuntimeAgent::getRuntimeTypesForVariablesAtOffsets(ErrorString& er
         RefPtr<JSON::Value> value = locations.get(i);
         RefPtr<JSON::Object> location;
         if (!value->asObject(location)) {
-            errorString = "Array of TypeLocation objects has an object that does not have type of TypeLocation."_s;
+            errorString = "Unexpected non-object item in locations"_s;
             return;
         }
 
@@ -332,10 +387,17 @@ void InspectorRuntimeAgent::getRuntimeTypesForVariablesAtOffsets(ErrorString& er
         dataLogF("Inspector::getRuntimeTypesForVariablesAtOffsets took %lfms\n", (end - start).milliseconds());
 }
 
+void InspectorRuntimeAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
+{
+}
+
 void InspectorRuntimeAgent::willDestroyFrontendAndBackend(DisconnectReason reason)
 {
     if (reason != DisconnectReason::InspectedTargetDestroyed && m_isTypeProfilingEnabled)
         setTypeProfilerEnabledState(false);
+
+    String unused;
+    disable(unused);
 }
 
 void InspectorRuntimeAgent::enableTypeProfiler(ErrorString&)
@@ -390,7 +452,7 @@ void InspectorRuntimeAgent::setControlFlowProfilerEnabledState(bool isControlFlo
 void InspectorRuntimeAgent::getBasicBlocks(ErrorString& errorString, const String& sourceIDAsString, RefPtr<JSON::ArrayOf<Protocol::Runtime::BasicBlock>>& basicBlocks)
 {
     if (!m_vm.controlFlowProfiler()) {
-        errorString = "The VM does not currently have a Control Flow Profiler."_s;
+        errorString = "VM has no control flow information"_s;
         return;
     }
 

@@ -41,7 +41,7 @@ class JSFunction;
 enum OpcodeID : unsigned;
 struct CallFrameShuffleData;
 
-class CallLinkInfo : public BasicRawSentinelNode<CallLinkInfo> {
+class CallLinkInfo : public PackedRawSentinelNode<CallLinkInfo> {
 public:
     enum CallType {
         None,
@@ -134,7 +134,7 @@ public:
         return callModeFor(static_cast<CallType>(m_callType));
     }
 
-    bool isDirect()
+    bool isDirect() const
     {
         return isDirect(static_cast<CallType>(m_callType));
     }
@@ -146,7 +146,7 @@ public:
 
     NearCallMode nearCallMode() const
     {
-        return isTailCall() ? Tail : Regular;
+        return isTailCall() ? NearCallMode::Tail : NearCallMode::Regular;
     }
 
     bool isVarargs() const
@@ -154,10 +154,10 @@ public:
         return isVarargsCallType(static_cast<CallType>(m_callType));
     }
 
-    bool isLinked() { return m_stub || m_calleeOrCodeBlock; }
+    bool isLinked() const { return m_stub || m_calleeOrCodeBlock; }
     void unlink(VM&);
 
-    void setUpCall(CallType callType, CodeOrigin codeOrigin, unsigned calleeGPR)
+    void setUpCall(CallType callType, CodeOrigin codeOrigin, GPRReg calleeGPR)
     {
         m_callType = callType;
         m_codeOrigin = codeOrigin;
@@ -201,8 +201,8 @@ public:
 
     void setLastSeenCallee(VM&, const JSCell* owner, JSObject* callee);
     void clearLastSeenCallee();
-    JSObject* lastSeenCallee();
-    bool haveLastSeenCallee();
+    JSObject* lastSeenCallee() const;
+    bool haveLastSeenCallee() const;
 
     void setExecutableDuringCompilation(ExecutableBase*);
     ExecutableBase* executable();
@@ -215,7 +215,7 @@ public:
 
     void clearStub();
 
-    PolymorphicCallStubRoutine* stub()
+    PolymorphicCallStubRoutine* stub() const
     {
         return m_stub.get();
     }
@@ -270,9 +270,19 @@ public:
         return m_clearedByVirtual;
     }
 
+    bool clearedByJettison()
+    {
+        return m_clearedByJettison;
+    }
+
     void setClearedByVirtual()
     {
         m_clearedByVirtual = true;
+    }
+
+    void setClearedByJettison()
+    {
+        m_clearedByJettison = true;
     }
 
     void setCallType(CallType callType)
@@ -285,29 +295,24 @@ public:
         return static_cast<CallType>(m_callType);
     }
 
-    uint32_t* addressOfMaxNumArguments()
+    uint32_t* addressOfMaxArgumentCountIncludingThis()
     {
-        return &m_maxNumArguments;
+        return &m_maxArgumentCountIncludingThis;
     }
 
-    uint32_t maxNumArguments()
+    uint32_t maxArgumentCountIncludingThis()
     {
-        return m_maxNumArguments;
+        return m_maxArgumentCountIncludingThis;
     }
 
-    void setMaxNumArguments(unsigned);
+    void setMaxArgumentCountIncludingThis(unsigned);
 
     static ptrdiff_t offsetOfSlowPathCount()
     {
         return OBJECT_OFFSETOF(CallLinkInfo, m_slowPathCount);
     }
 
-    void setCalleeGPR(unsigned calleeGPR)
-    {
-        m_calleeGPR = calleeGPR;
-    }
-
-    unsigned calleeGPR()
+    GPRReg calleeGPR()
     {
         return m_calleeGPR;
     }
@@ -327,6 +332,22 @@ public:
         return m_codeOrigin;
     }
 
+    template<typename Functor>
+    void forEachDependentCell(const Functor& functor) const
+    {
+        if (isLinked()) {
+            if (stub())
+                stub()->forEachDependentCell(functor);
+            else {
+                functor(m_calleeOrCodeBlock.get());
+                if (isDirect())
+                    functor(m_lastSeenCalleeOrExecutable.get());
+            }
+        }
+        if (!isDirect() && haveLastSeenCallee())
+            functor(lastSeenCallee());
+    }
+
     void visitWeak(VM&);
 
     void setFrameShuffleData(const CallFrameShuffleData&);
@@ -337,6 +358,7 @@ public:
     }
 
 private:
+    uint32_t m_maxArgumentCountIncludingThis { 0 }; // For varargs: the profiled maximum number of arguments. For direct: the number of stack slots allocated for arguments.
     CodeLocationLabel<JSInternalPtrTag> m_callReturnLocationOrPatchableJump;
     CodeLocationLabel<JSInternalPtrTag> m_hotPathBeginOrSlowPathStart;
     CodeLocationNearCall<JSInternalPtrTag> m_hotPathOther;
@@ -345,17 +367,16 @@ private:
     RefPtr<PolymorphicCallStubRoutine> m_stub;
     RefPtr<JITStubRoutine> m_slowStub;
     std::unique_ptr<CallFrameShuffleData> m_frameShuffleData;
+    CodeOrigin m_codeOrigin;
     bool m_hasSeenShouldRepatch : 1;
     bool m_hasSeenClosure : 1;
     bool m_clearedByGC : 1;
     bool m_clearedByVirtual : 1;
     bool m_allowStubs : 1;
-    bool m_isLinked : 1;
+    bool m_clearedByJettison : 1;
     unsigned m_callType : 4; // CallType
-    unsigned m_calleeGPR : 8;
-    uint32_t m_maxNumArguments; // For varargs: the profiled maximum number of arguments. For direct: the number of stack slots allocated for arguments.
-    uint32_t m_slowPathCount;
-    CodeOrigin m_codeOrigin;
+    GPRReg m_calleeGPR { InvalidGPRReg };
+    uint32_t m_slowPathCount { 0 };
 };
 
 inline CodeOrigin getCallLinkInfoCodeOrigin(CallLinkInfo& callLinkInfo)

@@ -59,7 +59,7 @@ MediaControls::MediaControls(Document& document)
     , m_isFullscreen(false)
     , m_isMouseOverControls(false)
 {
-    setPseudo(AtomicString("-webkit-media-controls", AtomicString::ConstructFromLiteral));
+    setPseudo(AtomString("-webkit-media-controls", AtomString::ConstructFromLiteral));
 }
 
 void MediaControls::setMediaController(MediaControllerInterface* controller)
@@ -410,7 +410,7 @@ void MediaControls::textTrackPreferencesChanged()
 {
     closedCaptionTracksChanged();
     if (m_textDisplayContainer)
-        m_textDisplayContainer->updateSizes(true);
+        m_textDisplayContainer->updateSizes(MediaControlTextTrackContainerElement::ForceUpdate::Yes);
 }
 
 void MediaControls::clearTextDisplayContainer()

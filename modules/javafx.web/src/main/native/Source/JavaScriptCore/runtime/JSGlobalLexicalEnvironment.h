@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,16 @@
 namespace JSC {
 
 class JSGlobalLexicalEnvironment final : public JSSegmentedVariableObject {
-
 public:
     using Base = JSSegmentedVariableObject;
 
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.globalLexicalEnvironmentSpace;
+    }
 
     static JSGlobalLexicalEnvironment* create(VM& vm, Structure* structure, JSScope* parentScope)
     {
@@ -45,12 +50,11 @@ public:
         return result;
     }
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     static void destroy(JSCell*);
-    // We don't need a destructor because we use a finalizer instead.
-    static const bool needsDestruction = false;
+    static constexpr bool needsDestruction = true;
 
     bool isEmpty() const { return !symbolTable()->size(); }
     bool isConstVariable(UniquedStringImpl*);

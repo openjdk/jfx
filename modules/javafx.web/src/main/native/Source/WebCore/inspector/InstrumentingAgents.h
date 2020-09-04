@@ -39,10 +39,12 @@
 namespace Inspector {
 class InspectorAgent;
 class InspectorDebuggerAgent;
+class InspectorScriptProfilerAgent;
 }
 
 namespace WebCore {
 
+class InspectorAnimationAgent;
 class InspectorApplicationCacheAgent;
 class InspectorCPUProfilerAgent;
 class InspectorCSSAgent;
@@ -58,10 +60,12 @@ class InspectorPageAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
 class Page;
+class PageDOMDebuggerAgent;
 class PageDebuggerAgent;
 class PageHeapAgent;
 class PageRuntimeAgent;
 class WebConsoleAgent;
+class WebDebuggerAgent;
 
 class InstrumentingAgents : public RefCounted<InstrumentingAgents> {
     WTF_MAKE_NONCOPYABLE(InstrumentingAgents);
@@ -102,11 +106,14 @@ public:
     PageRuntimeAgent* pageRuntimeAgent() const { return m_pageRuntimeAgent; }
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
+    Inspector::InspectorScriptProfilerAgent* inspectorScriptProfilerAgent() const { return m_inspectorScriptProfilerAgent; }
+    void setInspectorScriptProfilerAgent(Inspector::InspectorScriptProfilerAgent* agent) { m_inspectorScriptProfilerAgent = agent; }
+
     InspectorTimelineAgent* inspectorTimelineAgent() const { return m_inspectorTimelineAgent; }
     void setInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_inspectorTimelineAgent = agent; }
 
-    InspectorTimelineAgent* persistentInspectorTimelineAgent() const { return m_persistentInspectorTimelineAgent; }
-    void setPersistentInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_persistentInspectorTimelineAgent = agent; }
+    InspectorTimelineAgent* trackingInspectorTimelineAgent() const { return m_trackingInspectorTimelineAgent; }
+    void setTrackingInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_trackingInspectorTimelineAgent = agent; }
 
     InspectorDOMStorageAgent* inspectorDOMStorageAgent() const { return m_inspectorDOMStorageAgent; }
     void setInspectorDOMStorageAgent(InspectorDOMStorageAgent* agent) { m_inspectorDOMStorageAgent = agent; }
@@ -125,8 +132,8 @@ public:
     InspectorApplicationCacheAgent* inspectorApplicationCacheAgent() const { return m_inspectorApplicationCacheAgent; }
     void setInspectorApplicationCacheAgent(InspectorApplicationCacheAgent* agent) { m_inspectorApplicationCacheAgent = agent; }
 
-    Inspector::InspectorDebuggerAgent* inspectorDebuggerAgent() const { return m_inspectorDebuggerAgent; }
-    void setInspectorDebuggerAgent(Inspector::InspectorDebuggerAgent* agent) { m_inspectorDebuggerAgent = agent; }
+    WebDebuggerAgent* webDebuggerAgent() const { return m_webDebuggerAgent; }
+    void setWebDebuggerAgent(WebDebuggerAgent* agent) { m_webDebuggerAgent = agent; }
 
     PageDebuggerAgent* pageDebuggerAgent() const { return m_pageDebuggerAgent; }
     void setPageDebuggerAgent(PageDebuggerAgent* agent) { m_pageDebuggerAgent = agent; }
@@ -137,11 +144,23 @@ public:
     InspectorDOMDebuggerAgent* inspectorDOMDebuggerAgent() const { return m_inspectorDOMDebuggerAgent; }
     void setInspectorDOMDebuggerAgent(InspectorDOMDebuggerAgent* agent) { m_inspectorDOMDebuggerAgent = agent; }
 
+    PageDOMDebuggerAgent* pageDOMDebuggerAgent() const { return m_pageDOMDebuggerAgent; }
+    void setPageDOMDebuggerAgent(PageDOMDebuggerAgent* agent) { m_pageDOMDebuggerAgent = agent; }
+
     InspectorLayerTreeAgent* inspectorLayerTreeAgent() const { return m_inspectorLayerTreeAgent; }
     void setInspectorLayerTreeAgent(InspectorLayerTreeAgent* agent) { m_inspectorLayerTreeAgent = agent; }
 
     InspectorWorkerAgent* inspectorWorkerAgent() const { return m_inspectorWorkerAgent; }
     void setInspectorWorkerAgent(InspectorWorkerAgent* agent) { m_inspectorWorkerAgent = agent; }
+
+    InspectorAnimationAgent* persistentInspectorAnimationAgent() const { return m_persistentInspectorAnimationAgent; }
+    void setPersistentInspectorAnimationAgent(InspectorAnimationAgent* agent) { m_persistentInspectorAnimationAgent = agent; }
+
+    InspectorAnimationAgent* enabledInspectorAnimationAgent() const { return m_enabledInspectorAnimationAgent; }
+    void setEnabledInspectorAnimationAgent(InspectorAnimationAgent* agent) { m_enabledInspectorAnimationAgent = agent; }
+
+    InspectorAnimationAgent* trackingInspectorAnimationAgent() const { return m_trackingInspectorAnimationAgent; }
+    void setTrackingInspectorAnimationAgent(InspectorAnimationAgent* agent) { m_trackingInspectorAnimationAgent = agent; }
 
 private:
     InstrumentingAgents(Inspector::InspectorEnvironment&);
@@ -157,8 +176,9 @@ private:
     InspectorDOMAgent* m_inspectorDOMAgent { nullptr };
     InspectorNetworkAgent* m_inspectorNetworkAgent { nullptr };
     PageRuntimeAgent* m_pageRuntimeAgent { nullptr };
+    Inspector::InspectorScriptProfilerAgent* m_inspectorScriptProfilerAgent { nullptr };
     InspectorTimelineAgent* m_inspectorTimelineAgent { nullptr };
-    InspectorTimelineAgent* m_persistentInspectorTimelineAgent { nullptr };
+    InspectorTimelineAgent* m_trackingInspectorTimelineAgent { nullptr };
     InspectorDOMStorageAgent* m_inspectorDOMStorageAgent { nullptr };
 #if ENABLE(RESOURCE_USAGE)
     InspectorCPUProfilerAgent* m_inspectorCPUProfilerAgent { nullptr };
@@ -166,11 +186,15 @@ private:
 #endif
     InspectorDatabaseAgent* m_inspectorDatabaseAgent { nullptr };
     InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent { nullptr };
-    Inspector::InspectorDebuggerAgent* m_inspectorDebuggerAgent { nullptr };
+    WebDebuggerAgent* m_webDebuggerAgent { nullptr };
     PageDebuggerAgent* m_pageDebuggerAgent { nullptr };
     PageHeapAgent* m_pageHeapAgent { nullptr };
     InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent { nullptr };
+    PageDOMDebuggerAgent* m_pageDOMDebuggerAgent { nullptr };
     InspectorCanvasAgent* m_inspectorCanvasAgent { nullptr };
+    InspectorAnimationAgent* m_persistentInspectorAnimationAgent { nullptr };
+    InspectorAnimationAgent* m_enabledInspectorAnimationAgent { nullptr };
+    InspectorAnimationAgent* m_trackingInspectorAnimationAgent { nullptr };
 };
 
 } // namespace WebCore

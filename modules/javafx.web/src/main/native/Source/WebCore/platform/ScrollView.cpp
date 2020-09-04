@@ -206,21 +206,73 @@ IntPoint ScrollView::contentsScrollPosition() const
     return scrollPosition();
 }
 
-void ScrollView::setContentsScrollPosition(const IntPoint& position)
+void ScrollView::setContentsScrollPosition(const IntPoint& position, ScrollClamping clamping)
 {
 #if PLATFORM(IOS_FAMILY)
     if (platformWidget())
         setActualScrollPosition(position);
 #endif
-    setScrollPosition(position);
+    setScrollPosition(position, clamping);
 }
 
-#if !PLATFORM(IOS_FAMILY)
+FloatRect ScrollView::exposedContentRect() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (platformWidget())
+        return platformExposedContentRect();
+#endif
+
+    const ScrollView* parent = this->parent();
+    if (!parent)
+        return m_delegatedScrollingGeometry ? m_delegatedScrollingGeometry->exposedContentRect : FloatRect();
+
+    IntRect parentViewExtentContentRect = enclosingIntRect(parent->exposedContentRect());
+    IntRect selfExtentContentRect = rootViewToContents(parentViewExtentContentRect);
+    selfExtentContentRect.intersect(boundsRect());
+    return selfExtentContentRect;
+}
+
+void ScrollView::setExposedContentRect(const FloatRect& rect)
+{
+    ASSERT(!platformWidget());
+
+    if (!m_delegatedScrollingGeometry)
+        m_delegatedScrollingGeometry = DelegatedScrollingGeometry();
+
+    m_delegatedScrollingGeometry->exposedContentRect = rect;
+}
+
+FloatSize ScrollView::unobscuredContentSize() const
+{
+    ASSERT(m_delegatedScrollingGeometry);
+    if (m_delegatedScrollingGeometry)
+        return m_delegatedScrollingGeometry->unobscuredContentSize;
+    return { };
+}
+
+void ScrollView::setUnobscuredContentSize(const FloatSize& size)
+{
+    ASSERT(!platformWidget());
+    if (m_delegatedScrollingGeometry && size == m_delegatedScrollingGeometry->unobscuredContentSize)
+        return;
+
+    if (!m_delegatedScrollingGeometry)
+        m_delegatedScrollingGeometry = DelegatedScrollingGeometry();
+
+    m_delegatedScrollingGeometry->unobscuredContentSize = size;
+    unobscuredContentSizeChanged();
+}
+
 IntRect ScrollView::unobscuredContentRect(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
+    if (platformWidget())
+        return platformUnobscuredContentRect(scrollbarInclusion);
+
+    if (m_delegatedScrollingGeometry)
+        return IntRect(m_scrollPosition, roundedIntSize(m_delegatedScrollingGeometry->unobscuredContentSize));
+
     return unobscuredContentRectInternal(scrollbarInclusion);
 }
-#endif
 
 IntRect ScrollView::unobscuredContentRectInternal(VisibleContentRectIncludesScrollbars scrollbarInclusion) const
 {
@@ -378,19 +430,6 @@ ScrollPosition ScrollView::documentScrollPositionRelativeToScrollableAreaOrigin(
     return scrollPosition() - IntSize(0, headerHeight());
 }
 
-int ScrollView::scrollSize(ScrollbarOrientation orientation) const
-{
-    // If no scrollbars are present, it does not indicate content is not be scrollable.
-    if (!m_horizontalScrollbar && !m_verticalScrollbar && !prohibitsScrolling()) {
-        IntSize scrollSize = m_contentsSize - visibleContentRect(LegacyIOSDocumentVisibleRect).size();
-        scrollSize.clampNegativeToZero();
-        return orientation == HorizontalScrollbar ? scrollSize.width() : scrollSize.height();
-    }
-
-    Scrollbar* scrollbar = ((orientation == HorizontalScrollbar) ? m_horizontalScrollbar : m_verticalScrollbar).get();
-    return scrollbar ? (scrollbar->totalSize() - scrollbar->visibleSize()) : 0;
-}
-
 void ScrollView::notifyPageThatContentAreaWillPaint() const
 {
 }
@@ -474,20 +513,7 @@ void ScrollView::completeUpdatesAfterScrollTo(const IntSize& scrollDelta)
     updateCompositingLayersAfterScrolling();
 }
 
-int ScrollView::scrollOffset(ScrollbarOrientation orientation) const
-{
-    ScrollOffset offset = scrollOffsetFromPosition(scrollPosition());
-
-    if (orientation == HorizontalScrollbar)
-        return offset.x();
-
-    if (orientation == VerticalScrollbar)
-        return offset.y();
-
-    return 0;
-}
-
-void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
+void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition, ScrollClamping clamping)
 {
     LOG_WITH_STREAM(Scrolling, stream << "ScrollView::setScrollPosition " << scrollPosition);
 
@@ -499,12 +525,12 @@ void ScrollView::setScrollPosition(const ScrollPosition& scrollPosition)
         return;
     }
 
-    ScrollPosition newScrollPosition = !delegatesScrolling() ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
+    ScrollPosition newScrollPosition = (!delegatesScrolling() && clamping == ScrollClamping::Clamped) ? adjustScrollPositionWithinRange(scrollPosition) : scrollPosition;
 
-    if ((!delegatesScrolling() || !inProgrammaticScroll()) && newScrollPosition == this->scrollPosition())
+    if ((!delegatesScrolling() || currentScrollType() == ScrollType::User) && newScrollPosition == this->scrollPosition())
         return;
 
-    if (requestScrollPositionUpdate(newScrollPosition))
+    if (requestScrollPositionUpdate(newScrollPosition, currentScrollType(), clamping))
         return;
 
     updateScrollbars(newScrollPosition);
@@ -528,7 +554,7 @@ IntSize ScrollView::overhangAmount() const
     IntSize stretch;
 
     // FIXME: use maximumScrollOffset()
-    ScrollOffset scrollOffset = scrollOffsetFromPosition(scrollPosition());
+    ScrollOffset scrollOffset = this->scrollOffset();
     if (scrollOffset.y() < 0)
         stretch.setHeight(scrollOffset.y());
     else if (totalContentsSize().height() && scrollOffset.y() > totalContentsSize().height() - visibleHeight())
@@ -842,6 +868,22 @@ IntPoint ScrollView::contentsToView(const IntPoint& point) const
     return point - toIntSize(documentScrollPositionRelativeToViewOrigin());
 }
 
+FloatPoint ScrollView::viewToContents(const FloatPoint& point) const
+{
+    if (delegatesScrolling())
+        return point;
+
+    return viewToContents(IntPoint(point));
+}
+
+FloatPoint ScrollView::contentsToView(const FloatPoint& point) const
+{
+    if (delegatesScrolling())
+        return point;
+
+    return contentsToView(IntPoint(point));
+}
+
 IntRect ScrollView::viewToContents(IntRect rect) const
 {
     if (delegatesScrolling())
@@ -908,6 +950,11 @@ IntPoint ScrollView::contentsToRootView(const IntPoint& contentsPoint) const
     return convertToRootView(contentsToView(contentsPoint));
 }
 
+FloatPoint ScrollView::contentsToRootView(const FloatPoint& contentsPoint) const
+{
+    return convertToRootView(contentsToView(contentsPoint));
+}
+
 IntRect ScrollView::rootViewToContents(const IntRect& rootViewRect) const
 {
     return viewToContents(convertFromRootView(rootViewRect));
@@ -916,6 +963,11 @@ IntRect ScrollView::rootViewToContents(const IntRect& rootViewRect) const
 FloatRect ScrollView::rootViewToContents(const FloatRect& rootViewRect) const
 {
     return viewToContents(convertFromRootView(rootViewRect));
+}
+
+FloatRect ScrollView::contentsToRootView(const FloatRect& contentsRect) const
+{
+    return convertToRootView(contentsToView(contentsRect));
 }
 
 IntPoint ScrollView::rootViewToTotalContents(const IntPoint& rootViewPoint) const
@@ -1528,7 +1580,7 @@ bool ScrollView::platformCanBlitOnScroll() const
 
 IntRect ScrollView::platformVisibleContentRect(bool) const
 {
-    return IntRect();
+    return { };
 }
 
 float ScrollView::platformTopContentInset() const
@@ -1542,17 +1594,27 @@ void ScrollView::platformSetTopContentInset(float)
 
 IntSize ScrollView::platformVisibleContentSize(bool) const
 {
-    return IntSize();
+    return { };
 }
 
 IntRect ScrollView::platformVisibleContentRectIncludingObscuredArea(bool) const
 {
-    return IntRect();
+    return { };
 }
 
 IntSize ScrollView::platformVisibleContentSizeIncludingObscuredArea(bool) const
 {
-    return IntSize();
+    return { };
+}
+
+IntRect ScrollView::platformUnobscuredContentRect(VisibleContentRectIncludesScrollbars) const
+{
+    return { };
+}
+
+FloatRect ScrollView::platformExposedContentRect() const
+{
+    return { };
 }
 
 void ScrollView::platformSetContentsSize()

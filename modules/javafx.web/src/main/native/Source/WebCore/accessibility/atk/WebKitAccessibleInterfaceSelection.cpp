@@ -31,7 +31,7 @@
 #include "config.h"
 #include "WebKitAccessibleInterfaceSelection.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AccessibilityListBox.h"
 #include "AccessibilityObject.h"
@@ -50,10 +50,8 @@ static AccessibilityObject* core(AtkSelection* selection)
     return &webkitAccessibleGetAccessibilityObject(WEBKIT_ACCESSIBLE(selection));
 }
 
-static AccessibilityObject* listObjectForSelection(AtkSelection* selection)
+static AXCoreObject* listObjectForCoreSelection(AccessibilityObject* coreSelection)
 {
-    AccessibilityObject* coreSelection = core(selection);
-
     // Only list boxes and menu lists supported so far.
     if (!coreSelection->isListBox() && !coreSelection->isMenuList())
         return nullptr;
@@ -69,21 +67,21 @@ static AccessibilityObject* listObjectForSelection(AtkSelection* selection)
     if (!children.size())
         return nullptr;
 
-    AccessibilityObject* listObject = children.at(0).get();
+    AXCoreObject* listObject = children.at(0).get();
     if (!listObject->isMenuListPopup())
         return nullptr;
 
     return listObject;
 }
 
-static AccessibilityObject* optionFromList(AtkSelection* selection, gint index)
+static AXCoreObject* optionFromList(AtkSelection* selection, gint index)
 {
     AccessibilityObject* coreSelection = core(selection);
     if (!coreSelection || index < 0)
         return nullptr;
 
     // Need to select the proper list object depending on the type.
-    AccessibilityObject* listObject = listObjectForSelection(selection);
+    AXCoreObject* listObject = listObjectForCoreSelection(coreSelection);
     if (!listObject)
         return nullptr;
 
@@ -94,7 +92,7 @@ static AccessibilityObject* optionFromList(AtkSelection* selection, gint index)
     return nullptr;
 }
 
-static AccessibilityObject* optionFromSelection(AtkSelection* selection, gint index)
+static AXCoreObject* optionFromSelection(AtkSelection* selection, gint index)
 {
     AccessibilityObject* coreSelection = core(selection);
     if (!coreSelection || !coreSelection->isAccessibilityRenderObject() || index < 0)
@@ -122,7 +120,7 @@ static gboolean webkitAccessibleSelectionAddSelection(AtkSelection* selection, g
     if (!coreSelection)
         return FALSE;
 
-    AccessibilityObject* option = optionFromList(selection, index);
+    AXCoreObject* option = optionFromList(selection, index);
     if (option && (coreSelection->isListBox() || coreSelection->isMenuList())) {
         option->setSelected(true);
         return option->isSelected();
@@ -156,7 +154,7 @@ static AtkObject* webkitAccessibleSelectionRefSelection(AtkSelection* selection,
     g_return_val_if_fail(ATK_SELECTION(selection), nullptr);
     returnValIfWebKitAccessibleIsInvalid(WEBKIT_ACCESSIBLE(selection), nullptr);
 
-    AccessibilityObject* option = optionFromSelection(selection, index);
+    AXCoreObject* option = optionFromSelection(selection, index);
     if (option) {
         auto* child = option->wrapper();
         g_object_ref(child);
@@ -198,7 +196,7 @@ static gboolean webkitAccessibleSelectionIsChildSelected(AtkSelection* selection
     if (!coreSelection)
         return FALSE;
 
-    AccessibilityObject* option = optionFromList(selection, index);
+    AXCoreObject* option = optionFromList(selection, index);
     if (option && (coreSelection->isListBox() || coreSelection->isMenuList()))
         return option->isSelected();
 
@@ -214,7 +212,7 @@ static gboolean webkitAccessibleSelectionRemoveSelection(AtkSelection* selection
     if (!coreSelection)
         return FALSE;
 
-    AccessibilityObject* option = optionFromSelection(selection, index);
+    AXCoreObject* option = optionFromSelection(selection, index);
     if (option && (coreSelection->isListBox() || coreSelection->isMenuList())) {
         option->setSelected(false);
         return !option->isSelected();

@@ -78,13 +78,14 @@ bool doesGC(Graph& graph, Node* node)
     case Phi:
     case Flush:
     case PhantomLocal:
-    case SetArgument:
+    case SetArgumentDefinitely:
+    case SetArgumentMaybe:
     case ArithBitNot:
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
-    case BitLShift:
-    case BitRShift:
+    case ArithBitLShift:
+    case ArithBitRShift:
     case BitURShift:
     case ValueToInt32:
     case UInt32ToNumber:
@@ -116,12 +117,16 @@ bool doesGC(Graph& graph, Node* node)
     case GetButterfly:
     case CheckSubClass:
     case CheckArray:
+    case CheckArrayOrEmpty:
+    case CheckNeutered:
     case GetScope:
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
     case GetClosureVar:
     case PutClosureVar:
+    case GetInternalField:
+    case PutInternalField:
     case GetRegExpObjectLastIndex:
     case SetRegExpObjectLastIndex:
     case RecordRegExpCachedResult:
@@ -131,7 +136,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckCell:
     case CheckNotEmpty:
     case AssertNotEmpty:
-    case CheckStringIdent:
+    case CheckIdent:
     case CompareBelow:
     case CompareBelowEq:
     case CompareEqPtr:
@@ -189,6 +194,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetArrayLength:
     case GetVectorLength:
     case StringCharCodeAt:
+    case StringCodePointAt:
     case GetTypedArrayByteOffset:
     case GetPrototypeOf:
     case PutStructure:
@@ -204,6 +210,7 @@ bool doesGC(Graph& graph, Node* node)
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
     case PhantomNewAsyncGeneratorFunction:
+    case PhantomNewArrayIterator:
     case PhantomCreateActivation:
     case PhantomDirectArguments:
     case PhantomCreateRest:
@@ -235,15 +242,17 @@ bool doesGC(Graph& graph, Node* node)
     case AtomicsIsLockFree:
     case MatchStructure:
     case FilterCallLinkStatus:
-    case FilterGetByIdStatus:
+    case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
+    case DateGetInt32OrNaN:
+    case DateGetTime:
     case DataViewGetInt:
     case DataViewGetFloat:
     case DataViewSet:
         return false;
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     case ArrayPush:
     case ArrayPop:
     case PushWithScope:
@@ -251,6 +260,7 @@ bool doesGC(Graph& graph, Node* node)
     case CreateDirectArguments:
     case CreateScopedArguments:
     case CreateClonedArguments:
+    case CreateArgumentsButterfly:
     case Call:
     case CallEval:
     case CallForwardVarargs:
@@ -288,6 +298,7 @@ bool doesGC(Graph& graph, Node* node)
     case InByVal:
     case InstanceOf:
     case InstanceOfCustom:
+    case VarargsLength:
     case LoadVarargs:
     case NumberToStringWithRadix:
     case NumberToStringWithValidRadixConstant:
@@ -323,11 +334,16 @@ bool doesGC(Graph& graph, Node* node)
     case TailCallVarargsInlinedCaller:
     case Throw:
     case ToNumber:
+    case ToNumeric:
     case ToObject:
     case ToPrimitive:
+    case ToPropertyKey:
     case ToThis:
     case TryGetById:
     case CreateThis:
+    case CreatePromise:
+    case CreateGenerator:
+    case CreateAsyncGenerator:
     case ObjectCreate:
     case ObjectKeys:
     case AllocatePropertyStorage:
@@ -335,8 +351,12 @@ bool doesGC(Graph& graph, Node* node)
     case Arrayify:
     case ArrayifyToStructure:
     case NewObject:
+    case NewPromise:
+    case NewGenerator:
+    case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSpread:
+    case NewArrayIterator:
     case Spread:
     case NewArrayWithSize:
     case NewArrayBuffer:
@@ -355,6 +375,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetEnumeratorGenericPname:
     case ToIndexString:
     case MaterializeNewObject:
+    case MaterializeNewInternalFieldObject:
     case MaterializeCreateActivation:
     case SetFunctionName:
     case StrCat:
@@ -374,16 +395,21 @@ bool doesGC(Graph& graph, Node* node)
     case ValueBitAnd:
     case ValueBitOr:
     case ValueBitXor:
+    case ValueBitLShift:
+    case ValueBitRShift:
     case ValueAdd:
     case ValueSub:
     case ValueMul:
     case ValueDiv:
+    case ValueMod:
+    case ValuePow:
+    case ValueBitNot:
     case ValueNegate:
-#else
-    // See comment at the top for why be default for all nodes should be to
+#else // not ASSERT_ENABLED
+    // See comment at the top for why the default for all nodes should be to
     // return true.
     default:
-#endif
+#endif // not ASSERT_ENABLED
         return true;
 
     case CallStringConstructor:
@@ -510,6 +536,17 @@ bool doesGC(Graph& graph, Node* node)
             return true;
         }
         RELEASE_ASSERT_NOT_REACHED();
+
+    case Inc:
+    case Dec:
+        switch (node->child1().useKind()) {
+        case Int32Use:
+        case Int52RepUse:
+        case DoubleRepUse:
+            return false;
+        default:
+            return true;
+        }
 
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();

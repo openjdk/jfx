@@ -106,17 +106,18 @@ private:
     int scrollTop() const override;
     int scrollWidth() const override;
     int scrollHeight() const override;
-    void setScrollLeft(int, ScrollClamping) override;
-    void setScrollTop(int, ScrollClamping) override;
+    void setScrollLeft(int, ScrollType, ScrollClamping) override;
+    void setScrollTop(int, ScrollType, ScrollClamping) override;
 
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     // ScrollableArea interface.
-    int scrollSize(ScrollbarOrientation) const override;
-    int scrollOffset(ScrollbarOrientation) const override;
     void setScrollOffset(const ScrollOffset&) override;
+
+    ScrollPosition scrollPosition() const override;
     ScrollPosition minimumScrollPosition() const override;
     ScrollPosition maximumScrollPosition() const override;
+
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) override;
     bool isActive() const override;
     bool isScrollCornerVisible() const override { return false; } // We don't support resize on list boxes yet. If we did these would have to change.

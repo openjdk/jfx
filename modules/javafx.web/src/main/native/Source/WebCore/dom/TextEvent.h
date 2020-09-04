@@ -37,6 +37,7 @@ namespace WebCore {
     enum class MailBlockquoteHandling;
 
     class TextEvent final : public UIEvent {
+        WTF_MAKE_ISO_ALLOCATED(TextEvent);
     public:
         static Ref<TextEvent> create(RefPtr<WindowProxy>&&, const String& data, TextEventInputType = TextEventInputKeyboard);
         static Ref<TextEvent> createForBindings();
@@ -47,7 +48,7 @@ namespace WebCore {
 
         virtual ~TextEvent();
 
-        WEBCORE_EXPORT void initTextEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, const String& data);
+        WEBCORE_EXPORT void initTextEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&&, const String& data);
 
         String data() const { return m_data; }
 

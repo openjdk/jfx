@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller ( mueller@kde.org )
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  *
  * This library is free software; you can redistribute it and/or
@@ -27,7 +27,7 @@
 
 #include <wtf/ProcessID.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/ExternalStringImpl.h>
 #include <wtf/text/StringBuffer.h>
@@ -102,7 +102,9 @@ void StringStats::printStats()
 }
 #endif
 
-StringImpl::StaticStringImpl StringImpl::s_atomicEmptyString("", StringImpl::StringAtomic);
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringImpl);
+
+StringImpl::StaticStringImpl StringImpl::s_emptyAtomString("", StringImpl::StringAtom);
 
 StringImpl::~StringImpl()
 {
@@ -112,10 +114,10 @@ StringImpl::~StringImpl()
 
     STRING_STATS_REMOVE_STRING(*this);
 
-    if (isAtomic()) {
+    if (isAtom()) {
         ASSERT(!isSymbol());
         if (length())
-            AtomicStringImpl::remove(static_cast<AtomicStringImpl*>(this));
+            AtomStringImpl::remove(static_cast<AtomStringImpl*>(this));
     } else if (isSymbol()) {
         auto& symbol = static_cast<SymbolImpl&>(*this);
         auto* symbolRegistry = symbol.symbolRegistry();
@@ -130,7 +132,7 @@ StringImpl::~StringImpl()
     if (ownership == BufferOwned) {
         // We use m_data8, but since it is a union with m_data16 this works either way.
         ASSERT(m_data8);
-        fastFree(const_cast<LChar*>(m_data8));
+        StringImplMalloc::free(const_cast<LChar*>(m_data8));
         return;
     }
     if (ownership == BufferExternal) {
@@ -148,13 +150,13 @@ StringImpl::~StringImpl()
 void StringImpl::destroy(StringImpl* stringImpl)
 {
     stringImpl->~StringImpl();
-    fastFree(stringImpl);
+    StringImplMalloc::free(stringImpl);
 }
 
 Ref<StringImpl> StringImpl::createFromLiteral(const char* characters, unsigned length)
 {
     ASSERT_WITH_MESSAGE(length, "Use StringImpl::empty() to create an empty string");
-    ASSERT(charactersAreAllASCII<LChar>(reinterpret_cast<const LChar*>(characters), length));
+    ASSERT(charactersAreAllASCII(reinterpret_cast<const LChar*>(characters), length));
     return adoptRef(*new StringImpl(reinterpret_cast<const LChar*>(characters), length, ConstructWithoutCopying));
 }
 
@@ -195,8 +197,7 @@ template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninit
     // heap allocation from this call.
     if (length > maxInternalLength<CharacterType>())
         CRASH();
-    StringImpl* string = static_cast<StringImpl*>(fastMalloc(allocationSize<CharacterType>(length)));
-
+    StringImpl* string = static_cast<StringImpl*>(StringImplMalloc::malloc(allocationSize<CharacterType>(length)));
     data = string->tailPointer<CharacterType>();
     return constructInternal<CharacterType>(*string, length);
 }
@@ -226,8 +227,8 @@ template<typename CharacterType> inline Expected<Ref<StringImpl>, UTF8Conversion
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     originalString->~StringImpl();
-    StringImpl* string;
-    if (!tryFastRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)).getValue(string))
+    auto* string = static_cast<StringImpl*>(StringImplMalloc::tryRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)));
+    if (!string)
         return makeUnexpected(UTF8ConversionError::OutOfMemory);
 
     data = string->tailPointer<CharacterType>();
@@ -278,6 +279,16 @@ Ref<StringImpl> StringImpl::create(const UChar* characters, unsigned length)
 Ref<StringImpl> StringImpl::create(const LChar* characters, unsigned length)
 {
     return createInternal(characters, length);
+}
+
+Ref<StringImpl> StringImpl::createStaticStringImpl(const char* characters, unsigned length)
+{
+    const LChar* lcharCharacters = reinterpret_cast<const LChar*>(characters);
+    ASSERT(charactersAreAllASCII(lcharCharacters, length));
+    Ref<StringImpl> result = createInternal(lcharCharacters, length);
+    result->setHash(StringHasher::computeHashAndMaskTop8Bits(lcharCharacters, length));
+    result->m_refCount |= s_refCountFlagIsStaticString;
+    return result;
 }
 
 Ref<StringImpl> StringImpl::create8BitIfPossible(const UChar* characters, unsigned length)
@@ -349,7 +360,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocale()
     if (is8Bit()) {
         for (unsigned i = 0; i < m_length; ++i) {
             LChar character = m_data8[i];
-            if (UNLIKELY((character & ~0x7F) || isASCIIUpper(character)))
+            if (UNLIKELY(!isASCII(character) || isASCIIUpper(character)))
                 return convertToLowercaseWithoutLocaleStartingAtFailingIndex8Bit(i);
         }
 
@@ -405,13 +416,14 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithoutLocaleStartingAtFailingInde
     auto newImpl = createUninitializedInternalNonEmpty(m_length, data8);
 
     for (unsigned i = 0; i < failingIndex; ++i) {
-        ASSERT(!(m_data8[i] & ~0x7F) && !isASCIIUpper(m_data8[i]));
+        ASSERT(isASCII(m_data8[i]));
+        ASSERT(!isASCIIUpper(m_data8[i]));
         data8[i] = m_data8[i];
     }
 
     for (unsigned i = failingIndex; i < m_length; ++i) {
         LChar character = m_data8[i];
-        if (!(character & ~0x7F))
+        if (isASCII(character))
             data8[i] = toASCIILower(character);
         else {
             ASSERT(isLatin1(u_tolower(character)));
@@ -518,7 +530,7 @@ upconvert:
     return newImpl;
 }
 
-static inline bool needsTurkishCasingRules(const AtomicString& localeIdentifier)
+static inline bool needsTurkishCasingRules(const AtomString& localeIdentifier)
 {
     // Either "tr" or "az" locale, with case sensitive comparison and allowing for an ignored subtag.
     UChar first = localeIdentifier[0];
@@ -528,7 +540,7 @@ static inline bool needsTurkishCasingRules(const AtomicString& localeIdentifier)
         && (localeIdentifier.length() == 2 || localeIdentifier[2] == '-');
 }
 
-Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomicString& localeIdentifier)
+Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomString& localeIdentifier)
 {
     // Use the more-optimized code path most of the time.
     // Assuming here that the only locale-specific lowercasing is the Turkish casing rules.
@@ -564,7 +576,7 @@ Ref<StringImpl> StringImpl::convertToLowercaseWithLocale(const AtomicString& loc
     return newString;
 }
 
-Ref<StringImpl> StringImpl::convertToUppercaseWithLocale(const AtomicString& localeIdentifier)
+Ref<StringImpl> StringImpl::convertToUppercaseWithLocale(const AtomString& localeIdentifier)
 {
     // Use the more-optimized code path most of the time.
     // Assuming here that the only locale-specific lowercasing is the Turkish casing rules,
@@ -1756,11 +1768,11 @@ UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned lengt
         char* bufferEnd = buffer + bufferSize;
         while (characters < charactersEnd) {
             // Use strict conversion to detect unpaired surrogates.
-            ConversionResult result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd, true);
-            ASSERT(result != targetExhausted);
+            auto result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd);
+            ASSERT(result != TargetExhausted);
             // Conversion fails when there is an unpaired surrogate.
             // Put replacement character (U+FFFD) instead of the unpaired surrogate.
-            if (result != conversionOK) {
+            if (result != ConversionOK) {
                 ASSERT((0xD800 <= *characters && *characters <= 0xDFFF));
                 // There should be room left, since one UChar hasn't been converted.
                 ASSERT((buffer + 3) <= bufferEnd);
@@ -1771,17 +1783,17 @@ UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned lengt
     } else {
         bool strict = mode == StrictConversion;
         const UChar* originalCharacters = characters;
-        ConversionResult result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferSize, strict);
-        ASSERT(result != targetExhausted); // (length * 3) should be sufficient for any conversion
+        auto result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferSize, strict);
+        ASSERT(result != TargetExhausted); // (length * 3) should be sufficient for any conversion
 
         // Only produced from strict conversion.
-        if (result == sourceIllegal) {
+        if (result == SourceIllegal) {
             ASSERT(strict);
             return UTF8ConversionError::IllegalSource;
         }
 
         // Check for an unconverted high surrogate.
-        if (result == sourceExhausted) {
+        if (result == SourceExhausted) {
             if (strict)
                 return UTF8ConversionError::SourceExhausted;
             // This should be one unpaired high surrogate. Treat it the same
@@ -1809,8 +1821,8 @@ Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const LChar
     Vector<char, 1024> bufferVector(length * 3);
     char* buffer = bufferVector.data();
     const LChar* source = characters;
-    ConversionResult result = convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
-    ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
+    bool success = convertLatin1ToUTF8(&source, source + length, &buffer, buffer + bufferVector.size());
+    ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
     return CString(bufferVector.data(), buffer - bufferVector.data());
 }
 
@@ -1854,9 +1866,8 @@ Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(unsigned o
 
     if (is8Bit()) {
         const LChar* characters = this->characters8() + offset;
-
-        ConversionResult result = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
-        ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
+        auto success = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
+        ASSERT_UNUSED(success, success); // (length * 3) should be sufficient for any conversion
     } else {
         UTF8ConversionError error = utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode);
         if (error != UTF8ConversionError::None)

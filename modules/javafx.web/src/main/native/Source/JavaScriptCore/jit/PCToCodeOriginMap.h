@@ -30,7 +30,6 @@
 #include "CodeOrigin.h"
 #include "MacroAssembler.h"
 #include "VM.h"
-#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -45,6 +44,7 @@ class LinkBuffer;
 class PCToCodeOriginMapBuilder;
 
 class PCToCodeOriginMapBuilder {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMapBuilder);
     friend class PCToCodeOriginMap;
 
@@ -57,7 +57,7 @@ public:
 #endif
 
     void appendItem(MacroAssembler::Label, const CodeOrigin&);
-    static CodeOrigin defaultCodeOrigin() { return CodeOrigin(0, nullptr); }
+    static CodeOrigin defaultCodeOrigin() { return CodeOrigin(BytecodeIndex(0)); }
 
     bool didBuildMapping() const { return m_shouldBuildMapping; }
 
@@ -76,6 +76,7 @@ private:
 
 // FIXME: <rdar://problem/39436658>
 class PCToCodeOriginMap {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMap);
 public:
     PCToCodeOriginMap(PCToCodeOriginMapBuilder&&, LinkBuffer&);

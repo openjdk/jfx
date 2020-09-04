@@ -25,9 +25,9 @@
 
 // http://www.w3.org/TR/geolocation-API/#geolocation_interface
 [
-    NoInterfaceObject,
+    ActiveDOMObject,
     Conditional=GEOLOCATION, 
-    GenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ReachableFromNavigator,
 ] interface Geolocation {
     // FIXME: PositionErrorCallback should not be nullable
     void getCurrentPosition(PositionCallback successCallback,

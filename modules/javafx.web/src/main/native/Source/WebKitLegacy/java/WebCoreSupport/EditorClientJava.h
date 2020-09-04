@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/DOMPasteAccess.h>
 #include <WebCore/EditorClient.h>
 #include <WebCore/TextCheckerClient.h>
 #include <WebCore/PlatformJavaClasses.h>
@@ -87,8 +88,8 @@ public:
     void undo() override;
     void redo() override;
 
-    void handleKeyboardEvent(KeyboardEvent*) override;
-    void handleInputMethodKeydown(KeyboardEvent*) override;
+    void handleKeyboardEvent(KeyboardEvent&) override;
+    void handleInputMethodKeydown(KeyboardEvent&) override;
 
     void textFieldDidBeginEditing(Element*) override;
     void textFieldDidEndEditing(Element*) override;
@@ -97,6 +98,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
+    void subFrameScrollPositionChanged() final { }
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -131,7 +133,7 @@ public:
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
     void willSetInputMethodState() override;
-    void setInputMethodState(bool enabled) override;
+    void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions
     bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const override;
@@ -151,7 +153,10 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range&, bool) final { return false; }
-    String replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&) override;
+    bool canShowFontPanel() const final { return false; }
+
+    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
+
 protected:
     JGObject m_webPage;
 

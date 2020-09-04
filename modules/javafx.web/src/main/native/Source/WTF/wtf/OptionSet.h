@@ -37,11 +37,14 @@ namespace WTF {
 // must be powers of two greater than 0. This class is useful as a replacement for passing a bitmask of
 // enumerators around.
 template<typename T> class OptionSet {
+    WTF_MAKE_FAST_ALLOCATED;
     static_assert(std::is_enum<T>::value, "T is not an enum type");
-    typedef typename std::make_unsigned<typename std::underlying_type<T>::type>::type StorageType;
 
 public:
+    using StorageType = std::make_unsigned_t<std::underlying_type_t<T>>;
+
     template<typename StorageType> class Iterator {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         // Isolate the rightmost set bit.
         T operator*() const { return static_cast<T>(m_value & -m_value); }
@@ -76,13 +79,19 @@ public:
     constexpr OptionSet(T t)
         : m_storage(static_cast<StorageType>(t))
     {
+#ifndef NDEBUG
+        // This assertion will conflict with the constexpr attribute if we enable it on NDEBUG builds.
         ASSERT_WITH_MESSAGE(!m_storage || hasOneBitSet(m_storage), "Enumerator is not a zero or a positive power of two.");
+#endif
     }
 
     constexpr OptionSet(std::initializer_list<T> initializerList)
     {
         for (auto& option : initializerList) {
+#ifndef NDEBUG
+            // This assertion will conflict with the constexpr attribute if we enable it on NDEBUG builds.
             ASSERT_WITH_MESSAGE(hasOneBitSet(static_cast<StorageType>(option)), "Enumerator is not a positive power of two.");
+#endif
             m_storage |= static_cast<StorageType>(option);
         }
     }

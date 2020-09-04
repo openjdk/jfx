@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "VMTraps.h"
 
 #include "CallFrame.h"
+#include "CallFrameInlines.h"
 #include "CodeBlock.h"
 #include "CodeBlockSet.h"
 #include "DFGCommonData.h"
@@ -164,13 +165,13 @@ void VMTraps::invalidateCodeBlocksOnStack()
     invalidateCodeBlocksOnStack(vm().topCallFrame);
 }
 
-void VMTraps::invalidateCodeBlocksOnStack(ExecState* topCallFrame)
+void VMTraps::invalidateCodeBlocksOnStack(CallFrame* topCallFrame)
 {
     auto codeBlockSetLocker = holdLock(vm().heap.codeBlockSet().getLock());
     invalidateCodeBlocksOnStack(codeBlockSetLocker, topCallFrame);
 }
 
-void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, ExecState* topCallFrame)
+void VMTraps::invalidateCodeBlocksOnStack(Locker<Lock>&, CallFrame* topCallFrame)
 {
     if (!m_needToInvalidatedCodeBlocks)
         return;
@@ -215,7 +216,7 @@ public:
                     return SignalAction::NotHandled;
                 }
                 ASSERT(currentCodeBlock->hasInstalledVMTrapBreakpoints());
-                VM& vm = *currentCodeBlock->vm();
+                VM& vm = currentCodeBlock->vm();
 
                 // We are in JIT code so it's safe to acquire this lock.
                 auto codeBlockSetLocker = holdLock(vm.heap.codeBlockSet().getLock());
@@ -334,7 +335,7 @@ void VMTraps::fireTrap(VMTraps::EventType eventType)
 #endif
 }
 
-void VMTraps::handleTraps(ExecState* exec, VMTraps::Mask mask)
+void VMTraps::handleTraps(JSGlobalObject* globalObject, CallFrame* callFrame, VMTraps::Mask mask)
 {
     VM& vm = this->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -354,17 +355,22 @@ void VMTraps::handleTraps(ExecState* exec, VMTraps::Mask mask)
         switch (eventType) {
         case NeedDebuggerBreak:
             dataLog("VM ", RawPointer(&vm), " on pid ", getCurrentProcessID(), " received NeedDebuggerBreak trap\n");
-            invalidateCodeBlocksOnStack(exec);
+            invalidateCodeBlocksOnStack(callFrame);
+            break;
+
+        case NeedShellTimeoutCheck:
+            RELEASE_ASSERT(g_jscConfig.shellTimeoutCheckCallback);
+            g_jscConfig.shellTimeoutCheckCallback(vm);
             break;
 
         case NeedWatchdogCheck:
             ASSERT(vm.watchdog());
-            if (LIKELY(!vm.watchdog()->shouldTerminate(exec)))
+            if (LIKELY(!vm.watchdog()->shouldTerminate(globalObject)))
                 continue;
             FALLTHROUGH;
 
         case NeedTermination:
-            throwException(exec, scope, createTerminatedExecutionException(&vm));
+            throwException(globalObject, scope, createTerminatedExecutionException(&vm));
             return;
 
         default:

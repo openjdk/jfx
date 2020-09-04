@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -327,7 +327,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
     // Write the bytes of the image to the file format
     writeImageToDataObject(m_dataObject,    node, url);
 
-    AtomicString imageURL = node.getAttribute(HTMLNames::srcAttr);
+    AtomString imageURL = node.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
         String fullURL = node.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL));
         if (!fullURL.isEmpty()) {
@@ -452,7 +452,7 @@ Pasteboard::FileContentState Pasteboard::fileContentState()
     return reader.count ? FileContentState::MayContainFilePaths : FileContentState::NoFileOrImageData;
 }
 
-void Pasteboard::read(PasteboardPlainText& text)
+void Pasteboard::read(PasteboardPlainText& text, PlainTextURLReadingPolicy, Optional<size_t>)
 {
     if (m_copyPasteMode) {
         text.text = jGetPlainText();
@@ -515,7 +515,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy, Optional<size_t>)
 {
 }
 
@@ -531,7 +531,7 @@ void Pasteboard::writeMarkup(const String&)
 {
 }
 
-void Pasteboard::writeCustomData(const PasteboardCustomData&)
+void Pasteboard::writeCustomData(const Vector<PasteboardCustomData>&)
 {
 }
 

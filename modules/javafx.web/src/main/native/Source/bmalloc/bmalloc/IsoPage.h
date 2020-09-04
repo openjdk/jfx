@@ -28,10 +28,13 @@
 #include "Bits.h"
 #include "DeferredTrigger.h"
 #include "FreeList.h"
+#include "Mutex.h"
 #include <climits>
+#include <mutex>
 
 namespace bmalloc {
 
+class IsoHeapImplBase;
 template<typename Config> class IsoDirectoryBase;
 template<typename Config> class IsoHeapImpl;
 
@@ -39,8 +42,23 @@ class IsoPageBase {
 public:
     static constexpr size_t pageSize = 16384;
 
+    explicit IsoPageBase(bool isShared)
+        : m_isShared(isShared)
+        , m_eligibilityHasBeenNoted(true)
+        , m_isInUseForAllocation(false)
+    {
+    }
+
+    static IsoPageBase* pageFor(void*);
+
+    bool isShared() const { return m_isShared; }
+
 protected:
     BEXPORT static void* allocatePageMemory();
+
+    bool m_isShared : 1;
+    bool m_eligibilityHasBeenNoted : 1;
+    bool m_isInUseForAllocation : 1;
 };
 
 template<typename Config>
@@ -59,19 +77,19 @@ public:
 
     unsigned index() const { return m_index; }
 
-    void free(void*);
+    void free(const LockHolder&, void*);
 
     // Called after this page is already selected for allocation.
-    FreeList startAllocating();
+    FreeList startAllocating(const LockHolder&);
 
     // Called after the allocator picks another page to replace this one.
-    void stopAllocating(FreeList freeList);
+    void stopAllocating(const LockHolder&, FreeList);
 
     IsoDirectoryBase<Config>& directory() { return m_directory; }
     bool isInUseForAllocation() const { return m_isInUseForAllocation; }
 
     template<typename Func>
-    void forEachLiveObject(const Func&);
+    void forEachLiveObject(const LockHolder&, const Func&);
 
     IsoHeapImpl<Config>& heap();
 
@@ -80,9 +98,6 @@ private:
     {
         return (sizeof(IsoPage) + Config::objectSize - 1) / Config::objectSize;
     }
-
-    IsoDirectoryBase<Config>& m_directory;
-    unsigned m_index { UINT_MAX };
 
     // The possible states of a page are as follows. We mark these states by their corresponding
     // eligible, empty, and committed bits (respectively).
@@ -102,12 +117,13 @@ private:
 
     // This must have a trivial destructor.
 
-    unsigned m_allocBits[bitsArrayLength(numObjects)];
-    unsigned m_numNonEmptyWords { 0 };
-    bool m_eligibilityHasBeenNoted { true };
-    bool m_isInUseForAllocation { false };
     DeferredTrigger<IsoPageTrigger::Eligible> m_eligibilityTrigger;
     DeferredTrigger<IsoPageTrigger::Empty> m_emptyTrigger;
+    uint8_t m_numNonEmptyWords { 0 };
+    static_assert(bitsArrayLength(numObjects) <= UINT8_MAX);
+    unsigned m_index { UINT_MAX };
+    IsoDirectoryBase<Config>& m_directory;
+    unsigned m_allocBits[bitsArrayLength(numObjects)];
 };
 
 } // namespace bmalloc

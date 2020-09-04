@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,17 +41,15 @@ public:
     static WeakImpl* allocate(JSValue, WeakHandleOwner* = 0, void* context = 0);
     static void deallocate(WeakImpl*);
 
-    WeakSet(VM*, CellContainer);
+    WeakSet(VM&);
     ~WeakSet();
     void lastChanceToFinalize();
 
-    CellContainer container() const { return m_container; }
-    void setContainer(CellContainer container) { m_container = container; }
-
     Heap* heap() const;
-    VM* vm() const;
+    VM& vm() const;
 
     bool isEmpty() const;
+    bool isTriviallyDestructible() const;
 
     void visit(SlotVisitor&);
 
@@ -61,29 +59,27 @@ public:
     void resetAllocator();
 
 private:
-    JS_EXPORT_PRIVATE WeakBlock::FreeCell* findAllocator();
+    JS_EXPORT_PRIVATE WeakBlock::FreeCell* findAllocator(CellContainer);
     WeakBlock::FreeCell* tryFindAllocator();
-    WeakBlock::FreeCell* addAllocator();
+    WeakBlock::FreeCell* addAllocator(CellContainer);
     void removeAllocator(WeakBlock*);
 
-    WeakBlock::FreeCell* m_allocator;
-    WeakBlock* m_nextAllocator;
+    WeakBlock::FreeCell* m_allocator { nullptr };
+    WeakBlock* m_nextAllocator { nullptr };
     DoublyLinkedList<WeakBlock> m_blocks;
+    // m_vm must be a pointer (instead of a reference) because the JSCLLIntOffsetsExtractor
+    // cannot handle it being a reference.
     VM* m_vm;
-    CellContainer m_container;
 };
 
-inline WeakSet::WeakSet(VM* vm, CellContainer container)
-    : m_allocator(0)
-    , m_nextAllocator(0)
-    , m_vm(vm)
-    , m_container(container)
+inline WeakSet::WeakSet(VM& vm)
+    : m_vm(&vm)
 {
 }
 
-inline VM* WeakSet::vm() const
+inline VM& WeakSet::vm() const
 {
-    return m_vm;
+    return *m_vm;
 }
 
 inline bool WeakSet::isEmpty() const
@@ -93,6 +89,15 @@ inline bool WeakSet::isEmpty() const
             return false;
     }
 
+    return true;
+}
+
+inline bool WeakSet::isTriviallyDestructible() const
+{
+    if (!m_blocks.isEmpty())
+        return false;
+    if (isOnList())
+        return false;
     return true;
 }
 
@@ -121,7 +126,7 @@ inline void WeakSet::reap()
 
 inline void WeakSet::resetAllocator()
 {
-    m_allocator = 0;
+    m_allocator = nullptr;
     m_nextAllocator = m_blocks.head();
 }
 

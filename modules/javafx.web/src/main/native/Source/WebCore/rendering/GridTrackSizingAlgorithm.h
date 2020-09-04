@@ -27,7 +27,7 @@
 #include "Grid.h"
 #include "GridBaselineAlignment.h"
 #include "GridTrackSize.h"
-#include "LayoutUnit.h"
+#include "LayoutSize.h"
 
 namespace WebCore {
 
@@ -130,7 +130,7 @@ public:
 
     bool hasAnyPercentSizedRowsIndefiniteHeight() const { return m_hasPercentSizedRowsIndefiniteHeight; }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     bool tracksAreWiderThanMinTrackBreadth() const;
 #endif
 

@@ -29,9 +29,11 @@
 
 #pragma once
 
+#include "FrameIdentifier.h"
 #include "FrameLoaderTypes.h"
 #include "LayoutMilestone.h"
 #include "LinkIcon.h"
+#include "PageIdentifier.h"
 #include <functional>
 #include <wtf/Forward.h>
 #include <wtf/WallTime.h>
@@ -61,10 +63,6 @@ OBJC_CLASS NSDictionary;
 OBJC_CLASS NSView;
 #endif
 
-namespace PAL {
-class SessionID;
-}
-
 namespace WebCore {
 
 class AuthenticationChallenge;
@@ -86,11 +84,11 @@ class HTMLFrameOwnerElement;
 class HTMLPlugInElement;
 class HistoryItem;
 class IntSize;
+class LegacyPreviewLoaderClient;
 class MessageEvent;
 class NavigationAction;
 class Page;
 class PluginViewBase;
-class PreviewLoaderClient;
 class ProtectionSpace;
 class RTCPeerConnectionHandler;
 class ResourceError;
@@ -126,13 +124,12 @@ public:
 
     virtual void makeRepresentation(DocumentLoader*) = 0;
 
-    virtual Optional<uint64_t> pageID() const = 0;
-    virtual Optional<uint64_t> frameID() const = 0;
-    virtual PAL::SessionID sessionID() const = 0;
+    virtual Optional<PageIdentifier> pageID() const = 0;
+    virtual Optional<FrameIdentifier> frameID() const = 0;
 
 #if PLATFORM(IOS_FAMILY)
     // Returns true if the client forced the layout.
-    virtual bool forceLayoutOnRestoreFromPageCache() = 0;
+    virtual bool forceLayoutOnRestoreFromBackForwardCache() = 0;
 #endif
     virtual void forceLayoutForNonHTML() = 0;
 
@@ -177,10 +174,11 @@ public:
     virtual void dispatchDidStartProvisionalLoad() = 0;
     virtual void dispatchDidReceiveTitle(const StringWithDirection&) = 0;
     virtual void dispatchDidCommitLoad(Optional<HasInsecureContent>) = 0;
-    virtual void dispatchDidFailProvisionalLoad(const ResourceError&) = 0;
+    virtual void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) = 0;
     virtual void dispatchDidFailLoad(const ResourceError&) = 0;
     virtual void dispatchDidFinishDocumentLoad() = 0;
     virtual void dispatchDidFinishLoad() = 0;
+    virtual void dispatchDidExplicitOpen(const URL&, const String& /* mimeType */) { }
 #if ENABLE(DATA_DETECTION)
     virtual void dispatchDidFinishDataDetection(NSArray *detectionResults) = 0;
 #endif
@@ -191,7 +189,7 @@ public:
     virtual Frame* dispatchCreatePage(const NavigationAction&) = 0;
     virtual void dispatchShow() = 0;
 
-    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
     virtual void cancelPolicyCheck() = 0;
@@ -280,17 +278,15 @@ public:
 #endif
     virtual void transitionToCommittedForNewPage() = 0;
 
-    virtual void didSaveToPageCache() = 0;
-    virtual void didRestoreFromPageCache() = 0;
+    virtual void didRestoreFromBackForwardCache() = 0;
 
     virtual void dispatchDidBecomeFrameset(bool) = 0; // Can change due to navigation or DOM modification.
 
     virtual bool canCachePage() const = 0;
-    virtual void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) = 0;
+    virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) = 0;
 
     virtual RefPtr<Frame> createFrame(const URL&, const String& name, HTMLFrameOwnerElement&, const String& referrer) = 0;
     virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
-    virtual void recreatePlugin(Widget*) = 0;
     virtual void redirectDataToPlugin(Widget&) = 0;
 
     virtual RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
@@ -342,7 +338,7 @@ public:
 #if ENABLE(WEBGL)
     virtual bool allowWebGL(bool enabledPerSettings) { return enabledPerSettings; }
     // Informs the embedder that a WebGL canvas inside this frame received a lost context
-    // notification with the given GL_ARB_robustness guilt/innocence code (see Extensions3D.h).
+    // notification with the given GL_ARB_robustness guilt/innocence code (see ExtensionsGL.h).
     virtual void didLoseWebGLContext(int) { }
     virtual WebGLLoadPolicy webGLPolicyForURL(const URL&) const { return WebGLAllowCreation; }
     virtual WebGLLoadPolicy resolveWebGLPolicyForURL(const URL&) const { return WebGLAllowCreation; }
@@ -351,13 +347,14 @@ public:
     virtual void forcePageTransitionIfNeeded() { }
 
     // FIXME (bug 116233): We need to get rid of EmptyFrameLoaderClient completely, then this will no longer be needed.
-    virtual bool isEmptyFrameLoaderClient() { return false; }
+    virtual bool isEmptyFrameLoaderClient() const { return false; }
+    virtual bool isServiceWorkerFrameLoaderClient() const { return false; }
 
 #if PLATFORM(JAVA)
         virtual bool isJavaFrameLoaderClient() { return false; }
 #endif
 #if USE(QUICK_LOOK)
-    virtual RefPtr<PreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) = 0;
+    virtual RefPtr<LegacyPreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) = 0;
 #endif
 
 #if ENABLE(CONTENT_FILTERING)
@@ -379,7 +376,6 @@ public:
 
 #if ENABLE(RESOURCE_LOAD_STATISTICS)
     virtual bool hasFrameSpecificStorageAccess() { return false; }
-    virtual void setHasFrameSpecificStorageAccess(bool) { }
 #endif
 };
 

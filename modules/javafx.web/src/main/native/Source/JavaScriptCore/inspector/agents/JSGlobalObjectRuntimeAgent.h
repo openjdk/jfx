@@ -39,9 +39,9 @@ class JSGlobalObjectRuntimeAgent final : public InspectorRuntimeAgent {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     JSGlobalObjectRuntimeAgent(JSAgentContext&);
+    ~JSGlobalObjectRuntimeAgent() override;
 
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override;
-
+private:
     InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
 
     // NOTE: JavaScript inspector does not yet need to mute a console because no messages
@@ -49,7 +49,6 @@ public:
     void muteConsole() override { }
     void unmuteConsole() override { }
 
-private:
     std::unique_ptr<RuntimeFrontendDispatcher> m_frontendDispatcher;
     RefPtr<RuntimeBackendDispatcher> m_backendDispatcher;
     JSC::JSGlobalObject& m_globalObject;

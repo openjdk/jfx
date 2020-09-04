@@ -397,7 +397,7 @@ Optional<MediaKeySystemConfiguration> CDM::getSupportedConfiguration(const Media
     if ((accumulatedConfiguration.distinctiveIdentifier == MediaKeysRequirement::Required || accumulatedConfiguration.persistentState == MediaKeysRequirement::Required) && !origin.canAccessLocalStorage(&topOrigin))
         return WTF::nullopt;
 
-    return WTFMove(accumulatedConfiguration);
+    return accumulatedConfiguration;
     // NOTE: Continued in getConsentStatus().
 }
 
@@ -468,10 +468,11 @@ Optional<Vector<MediaKeySystemMediaCapability>> CDM::getSupportedCapabilitiesFor
         //       with restrictions:
         MediaEngineSupportParameters parameters;
         parameters.type = ContentType(contentType->mimeType());
-        if (!MediaPlayer::supportsType(parameters)) {
+        if (MediaPlayer::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported) {
+
             // Try with Media Source:
             parameters.isMediaSource = true;
-            if (!MediaPlayer::supportsType(parameters))
+            if (MediaPlayer::supportsType(parameters) == MediaPlayer::SupportsType::IsNotSupported)
                 continue;
         }
 
@@ -609,17 +610,17 @@ bool CDM::supportsSessions() const
     return m_private && m_private->supportsSessions();
 }
 
-bool CDM::supportsInitDataType(const AtomicString& initDataType) const
+bool CDM::supportsInitDataType(const AtomString& initDataType) const
 {
     return m_private && m_private->supportsInitDataType(initDataType);
 }
 
-RefPtr<SharedBuffer> CDM::sanitizeInitData(const AtomicString& initDataType, const SharedBuffer& initData)
+RefPtr<SharedBuffer> CDM::sanitizeInitData(const AtomString& initDataType, const SharedBuffer& initData)
 {
     return InitDataRegistry::shared().sanitizeInitData(initDataType, initData);
 }
 
-bool CDM::supportsInitData(const AtomicString& initDataType, const SharedBuffer& initData)
+bool CDM::supportsInitData(const AtomString& initDataType, const SharedBuffer& initData)
 {
     return m_private && m_private->supportsInitData(initDataType, initData);
 }

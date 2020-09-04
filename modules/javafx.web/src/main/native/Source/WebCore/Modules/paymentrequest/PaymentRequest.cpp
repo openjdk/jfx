@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,9 +32,12 @@
 #include "Document.h"
 #include "EventNames.h"
 #include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSPaymentDetailsUpdate.h"
 #include "JSPaymentResponse.h"
+#include "Page.h"
 #include "PaymentAddress.h"
+#include "PaymentCoordinator.h"
 #include "PaymentCurrencyAmount.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentHandler.h"
@@ -47,11 +50,14 @@
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/UUID.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 
 // Implements the IsWellFormedCurrencyCode abstract operation from ECMA 402
 // https://tc39.github.io/ecma402/#sec-iswellformedcurrencycode
@@ -245,7 +251,7 @@ enum class ShouldValidatePaymentMethodIdentifier {
     Yes,
 };
 
-static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetails(JSC::ExecState& execState, PaymentDetailsBase& details, bool requestShipping, ShouldValidatePaymentMethodIdentifier shouldValidatePaymentMethodIdentifier)
+static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetails(JSC::JSGlobalObject& execState, PaymentDetailsBase& details, bool requestShipping, ShouldValidatePaymentMethodIdentifier shouldValidatePaymentMethodIdentifier)
 {
     for (auto& item : details.displayItems) {
         auto exception = checkAndCanonicalizeAmount(item.amount);
@@ -305,6 +311,15 @@ static ExceptionOr<std::tuple<String, Vector<String>>> checkAndCanonicalizeDetai
     return std::make_tuple(WTFMove(selectedShippingOption), WTFMove(serializedModifierData));
 }
 
+static ExceptionOr<JSC::JSValue> parse(ScriptExecutionContext& context, const String& string)
+{
+    auto scope = DECLARE_THROW_SCOPE(context.vm());
+    JSC::JSValue data = JSONParse(context.execState(), string);
+    if (scope.exception())
+        return Exception { ExistingExceptionError };
+    return data;
+}
+
 // Implements the PaymentRequest Constructor
 // https://www.w3.org/TR/payment-request/#constructor
 ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vector<PaymentMethodData>&& methodData, PaymentDetailsInit&& details, PaymentOptions&& options)
@@ -332,6 +347,14 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
             serializedData = JSONStringify(document.execState(), paymentMethod.data.get(), 0);
             if (scope.exception())
                 return Exception { ExistingExceptionError };
+
+            auto parsedDataOrException = parse(document, serializedData);
+            if (parsedDataOrException.hasException())
+                return parsedDataOrException.releaseException();
+
+            auto exception = PaymentHandler::validateData(document, parsedDataOrException.releaseReturnValue(), *identifier);
+            if (exception.hasException())
+                return exception.releaseException();
         }
         serializedMethodData.uncheckedAppend({ WTFMove(*identifier), WTFMove(serializedData) });
     }
@@ -346,6 +369,11 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
 
     auto shippingOptionAndModifierData = detailsResult.releaseReturnValue();
     return adoptRef(*new PaymentRequest(document, WTFMove(options), WTFMove(details), WTFMove(std::get<1>(shippingOptionAndModifierData)), WTFMove(serializedMethodData), WTFMove(std::get<0>(shippingOptionAndModifierData))));
+}
+
+bool PaymentRequest::enabledForContext(ScriptExecutionContext& context)
+{
+    return PaymentHandler::enabledForContext(context);
 }
 
 PaymentRequest::PaymentRequest(Document& document, PaymentOptions&& options, PaymentDetailsInit&& details, Vector<String>&& serializedModifierData, Vector<Method>&& serializedMethodData, String&& selectedShippingOption)
@@ -363,15 +391,6 @@ PaymentRequest::~PaymentRequest()
 {
     ASSERT(!hasPendingActivity());
     ASSERT(!m_activePaymentHandler);
-}
-
-static ExceptionOr<JSC::JSValue> parse(ScriptExecutionContext& context, const String& string)
-{
-    auto scope = DECLARE_THROW_SCOPE(context.vm());
-    JSC::JSValue data = JSONParse(context.execState(), string);
-    if (scope.exception())
-        return Exception { ExistingExceptionError };
-    return WTFMove(data);
 }
 
 // https://www.w3.org/TR/payment-request/#show()-method
@@ -394,12 +413,13 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
 
     if (PaymentHandler::hasActiveSession(document)) {
         promise.reject(Exception { AbortError });
+        m_state = State::Closed;
         return;
     }
 
     m_state = State::Interactive;
     ASSERT(!m_showPromise);
-    m_showPromise = WTFMove(promise);
+    m_showPromise = WTF::makeUnique<ShowPromise>(WTFMove(promise));
 
     RefPtr<PaymentHandler> selectedPaymentHandler;
     for (auto& paymentMethod : m_serializedMethodData) {
@@ -428,7 +448,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
         return;
     }
 
-    auto exception = selectedPaymentHandler->show();
+    auto exception = selectedPaymentHandler->show(document);
     if (exception.hasException()) {
         settleShowPromise(exception.releaseException());
         return;
@@ -457,7 +477,7 @@ void PaymentRequest::abortWithException(Exception&& exception)
 
 void PaymentRequest::settleShowPromise(ExceptionOr<PaymentResponse&>&& result)
 {
-    if (auto showPromise = std::exchange(m_showPromise, WTF::nullopt))
+    if (auto showPromise = std::exchange(m_showPromise, nullptr))
         showPromise->settle(WTFMove(result));
 }
 
@@ -474,6 +494,20 @@ void PaymentRequest::stop()
 {
     closeActivePaymentHandler();
     settleShowPromise(Exception { AbortError });
+}
+
+void PaymentRequest::suspend(ReasonForSuspension reason)
+{
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    if (!m_activePaymentHandler) {
+        ASSERT(!m_showPromise);
+        ASSERT(m_state != State::Interactive);
+        return;
+    }
+
+    stop();
 }
 
 // https://www.w3.org/TR/payment-request/#abort()-method
@@ -506,7 +540,7 @@ void PaymentRequest::canMakePayment(Document& document, CanMakePaymentPromise&& 
         if (!handler)
             continue;
 
-        handler->canMakePayment([promise = WTFMove(promise)](bool canMakePayment) mutable {
+        handler->canMakePayment(document, [promise = WTFMove(promise)](bool canMakePayment) mutable {
             promise.resolve(canMakePayment);
         });
         return;
@@ -525,11 +559,6 @@ Optional<PaymentShippingType> PaymentRequest::shippingType() const
     if (m_options.requestShipping)
         return m_options.shippingType;
     return WTF::nullopt;
-}
-
-bool PaymentRequest::canSuspendForDocumentSuspension() const
-{
-    return !hasPendingActivity();
 }
 
 void PaymentRequest::shippingAddressChanged(Ref<PaymentAddress>&& shippingAddress)

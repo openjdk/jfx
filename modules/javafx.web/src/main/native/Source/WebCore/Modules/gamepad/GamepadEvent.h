@@ -33,11 +33,12 @@
 
 namespace WebCore {
 
-class GamepadEvent : public Event {
+class GamepadEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(GamepadEvent);
 public:
     ~GamepadEvent() = default;
 
-    static Ref<GamepadEvent> create(const AtomicString& eventType, Gamepad& gamepad)
+    static Ref<GamepadEvent> create(const AtomString& eventType, Gamepad& gamepad)
     {
         return adoptRef(*new GamepadEvent(eventType, gamepad));
     }
@@ -46,7 +47,7 @@ public:
         RefPtr<Gamepad> gamepad;
     };
 
-    static Ref<GamepadEvent> create(const AtomicString& eventType, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<GamepadEvent> create(const AtomString& eventType, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new GamepadEvent(eventType, initializer, isTrusted));
     }
@@ -56,8 +57,8 @@ public:
     EventInterface eventInterface() const override { return GamepadEventInterfaceType; }
 
 private:
-    explicit GamepadEvent(const AtomicString& eventType, Gamepad&);
-    GamepadEvent(const AtomicString& eventType, const Init&, IsTrusted);
+    explicit GamepadEvent(const AtomString& eventType, Gamepad&);
+    GamepadEvent(const AtomString& eventType, const Init&, IsTrusted);
 
     RefPtr<Gamepad> m_gamepad;
 };

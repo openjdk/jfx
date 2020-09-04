@@ -36,7 +36,8 @@ class WorkerAuditAgent final : public Inspector::InspectorAuditAgent {
     WTF_MAKE_NONCOPYABLE(WorkerAuditAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit WorkerAuditAgent(WorkerAgentContext&);
+    WorkerAuditAgent(WorkerAgentContext&);
+    ~WorkerAuditAgent() override;
 
 private:
     Inspector::InjectedScript injectedScriptForEval(Inspector::ErrorString&, const int* executionContextId) override;

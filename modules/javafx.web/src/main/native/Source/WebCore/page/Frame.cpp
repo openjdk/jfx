@@ -5,7 +5,7 @@
  *                     2000 Simon Hausmann <hausmann@kde.org>
  *                     2000 Stefan Schimanski <1Stein@gmx.de>
  *                     2001 George Staikos <staikos@kde.org>
- * Copyright (C) 2004-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov <ap@nypop.com>
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008 Eric Seidel <eric@webkit.org>
@@ -31,6 +31,7 @@
 #include "Frame.h"
 
 #include "ApplyStyleCommand.h"
+#include "BackForwardCache.h"
 #include "BackForwardController.h"
 #include "CSSAnimationController.h"
 #include "CSSComputedStyleDeclaration.h"
@@ -73,7 +74,6 @@
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "Page.h"
-#include "PageCache.h"
 #include "ProcessWarming.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTableCell.h"
@@ -95,6 +95,7 @@
 #include "TextResourceDecoder.h"
 #include "UserContentController.h"
 #include "UserContentURLPattern.h"
+#include "UserGestureIndicator.h"
 #include "UserScript.h"
 #include "UserTypingGestureIndicator.h"
 #include "VisibleUnits.h"
@@ -106,10 +107,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include "WKContentObservation.h"
-#endif
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -119,6 +116,9 @@ static const Seconds scrollFrequency { 1000_s / 60. };
 #endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, frameCounter, ("Frame"));
+
+// We prewarm local storage for at most 5 origins in a given page.
+static const unsigned maxlocalStoragePrewarmingCount { 5 };
 
 static inline Frame* parentFromOwnerElement(HTMLFrameOwnerElement* ownerElement)
 {
@@ -155,13 +155,8 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     , m_editor(makeUniqueRef<Editor>(*this))
     , m_selection(makeUniqueRef<FrameSelection>(this))
     , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
-#if PLATFORM(IOS_FAMILY)
-    , m_overflowAutoScrollTimer(*this, &Frame::overflowAutoScrollTimerFired)
-    , m_selectionChangeCallbacksDisabled(false)
-#endif
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
-    , m_activeDOMObjectsAndAnimationsSuspendedCount(0)
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
     ProcessWarming::initializeNames();
@@ -235,7 +230,7 @@ void Frame::setView(RefPtr<FrameView>&& view)
     // Prepare for destruction now, so any unload event handlers get run and the DOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
     // these calls to work.
-    if (!view && m_doc && m_doc->pageCacheState() != Document::InPageCache)
+    if (!view && m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
         m_doc->prepareForDestruction();
 
     if (m_view)
@@ -280,7 +275,7 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     }
 #endif
 
-    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
+    if (m_doc && m_doc->backForwardCacheState() != Document::InBackForwardCache)
         m_doc->prepareForDestruction();
 
     m_doc = newDocument.copyRef();
@@ -503,149 +498,6 @@ String Frame::matchLabelsAgainstElement(const Vector<String>& labels, Element* e
 }
 
 #if PLATFORM(IOS_FAMILY)
-void Frame::scrollOverflowLayer(RenderLayer* layer, const IntRect& visibleRect, const IntRect& exposeRect)
-{
-    if (!layer)
-        return;
-
-    RenderBox* box = layer->renderBox();
-    if (!box)
-        return;
-
-    if (visibleRect.intersects(exposeRect))
-        return;
-
-    // FIXME: Why isn't this just calling RenderLayer::scrollRectToVisible()?
-    ScrollOffset scrollOffset = layer->scrollOffset();
-    int exposeLeft = exposeRect.x();
-    int exposeRight = exposeLeft + exposeRect.width();
-    int clientWidth = roundToInt(box->clientWidth());
-    if (exposeLeft <= 0)
-        scrollOffset.setX(std::max(0, scrollOffset.x() + exposeLeft - clientWidth / 2));
-    else if (exposeRight >= clientWidth)
-        scrollOffset.setX(std::min(box->scrollWidth() - clientWidth, scrollOffset.x() + clientWidth / 2));
-
-    int exposeTop = exposeRect.y();
-    int exposeBottom = exposeTop + exposeRect.height();
-    int clientHeight = roundToInt(box->clientHeight());
-    if (exposeTop <= 0)
-        scrollOffset.setY(std::max(0, scrollOffset.y() + exposeTop - clientHeight / 2));
-    else if (exposeBottom >= clientHeight)
-        scrollOffset.setY(std::min(box->scrollHeight() - clientHeight, scrollOffset.y() + clientHeight / 2));
-
-    layer->scrollToOffset(scrollOffset, ScrollClamping::Unclamped);
-    selection().setCaretRectNeedsUpdate();
-    selection().updateAppearance();
-}
-
-void Frame::overflowAutoScrollTimerFired()
-{
-    if (!eventHandler().mousePressed() || checkOverflowScroll(PerformOverflowScroll) == OverflowScrollNone) {
-        if (m_overflowAutoScrollTimer.isActive())
-            m_overflowAutoScrollTimer.stop();
-    }
-}
-
-void Frame::startOverflowAutoScroll(const IntPoint& mousePosition)
-{
-    m_overflowAutoScrollPos = mousePosition;
-
-    if (m_overflowAutoScrollTimer.isActive())
-        return;
-
-    if (checkOverflowScroll(DoNotPerformOverflowScroll) == OverflowScrollNone)
-        return;
-
-    m_overflowAutoScrollTimer.startRepeating(scrollFrequency);
-    m_overflowAutoScrollDelta = 3;
-}
-
-int Frame::checkOverflowScroll(OverflowScrollAction action)
-{
-    Position extent = selection().selection().extent();
-    if (extent.isNull())
-        return OverflowScrollNone;
-
-    RenderObject* renderer = extent.deprecatedNode()->renderer();
-    if (!renderer)
-        return OverflowScrollNone;
-
-    FrameView* view = this->view();
-    if (!view)
-        return OverflowScrollNone;
-
-    RenderBlock* containingBlock = renderer->containingBlock();
-    if (!containingBlock || !containingBlock->hasOverflowClip())
-        return OverflowScrollNone;
-    RenderLayer* layer = containingBlock->layer();
-    ASSERT(layer);
-
-    IntRect visibleRect = IntRect(view->scrollX(), view->scrollY(), view->visibleWidth(), view->visibleHeight());
-    IntPoint position = m_overflowAutoScrollPos;
-    if (visibleRect.contains(position.x(), position.y()))
-        return OverflowScrollNone;
-
-    int scrollType = 0;
-    int deltaX = 0;
-    int deltaY = 0;
-    IntPoint selectionPosition;
-
-    // This constant will make the selection draw a little bit beyond the edge of the visible area.
-    // This prevents a visual glitch, in that you can fail to select a portion of a character that
-    // is being rendered right at the edge of the visible rectangle.
-    // FIXME: This probably needs improvement, and may need to take the font size into account.
-    static const int scrollBoundsAdjustment = 3;
-
-    // FIXME: Make a small buffer at the end of a visible rectangle so that autoscrolling works
-    // even if the visible extends to the limits of the screen.
-    if (position.x() < visibleRect.x()) {
-        scrollType |= OverflowScrollLeft;
-        if (action == PerformOverflowScroll) {
-            deltaX -= static_cast<int>(m_overflowAutoScrollDelta);
-            selectionPosition.setX(view->scrollX() - scrollBoundsAdjustment);
-        }
-    } else if (position.x() > visibleRect.maxX()) {
-        scrollType |= OverflowScrollRight;
-        if (action == PerformOverflowScroll) {
-            deltaX += static_cast<int>(m_overflowAutoScrollDelta);
-            selectionPosition.setX(view->scrollX() + view->visibleWidth() + scrollBoundsAdjustment);
-        }
-    }
-
-    if (position.y() < visibleRect.y()) {
-        scrollType |= OverflowScrollUp;
-        if (action == PerformOverflowScroll) {
-            deltaY -= static_cast<int>(m_overflowAutoScrollDelta);
-            selectionPosition.setY(view->scrollY() - scrollBoundsAdjustment);
-        }
-    } else if (position.y() > visibleRect.maxY()) {
-        scrollType |= OverflowScrollDown;
-        if (action == PerformOverflowScroll) {
-            deltaY += static_cast<int>(m_overflowAutoScrollDelta);
-            selectionPosition.setY(view->scrollY() + view->visibleHeight() + scrollBoundsAdjustment);
-        }
-    }
-
-    Ref<Frame> protectedThis(*this);
-
-    if (action == PerformOverflowScroll && (deltaX || deltaY)) {
-        layer->scrollToOffset(layer->scrollOffset() + IntSize(deltaX, deltaY), ScrollClamping::Unclamped);
-
-        // Handle making selection.
-        VisiblePosition visiblePosition(renderer->positionForPoint(selectionPosition, nullptr));
-        if (visiblePosition.isNotNull()) {
-            VisibleSelection visibleSelection = selection().selection();
-            visibleSelection.setExtent(visiblePosition);
-            if (selection().granularity() != CharacterGranularity)
-                visibleSelection.expandUsingGranularity(selection().granularity());
-            if (selection().shouldChangeSelection(visibleSelection))
-                selection().setSelection(visibleSelection);
-        }
-
-        m_overflowAutoScrollDelta *= 1.02f; // Accelerate the scroll
-    }
-    return scrollType;
-}
 
 void Frame::setSelectionChangeCallbacksDisabled(bool selectionChangeCallbacksDisabled)
 {
@@ -658,6 +510,44 @@ bool Frame::selectionChangeCallbacksDisabled() const
 }
 #endif // PLATFORM(IOS_FAMILY)
 
+bool Frame::requestDOMPasteAccess()
+{
+    if (m_settings->javaScriptCanAccessClipboard() && m_settings->DOMPasteAllowed())
+        return true;
+
+    if (!m_settings->domPasteAccessRequestsEnabled() || !m_doc)
+        return false;
+
+    auto gestureToken = UserGestureIndicator::currentUserGesture();
+    if (!gestureToken || !gestureToken->processingUserGesture())
+        return false;
+
+    switch (gestureToken->domPasteAccessPolicy()) {
+    case DOMPasteAccessPolicy::Granted:
+        return true;
+    case DOMPasteAccessPolicy::Denied:
+        return false;
+    case DOMPasteAccessPolicy::NotRequestedYet: {
+        auto* client = m_editor->client();
+        if (!client)
+            return false;
+
+        auto response = client->requestDOMPasteAccess(m_doc->originIdentifierForPasteboard());
+        gestureToken->didRequestDOMPasteAccess(response);
+        switch (response) {
+        case DOMPasteAccessResponse::GrantedForCommand:
+        case DOMPasteAccessResponse::GrantedForGesture:
+            return true;
+        case DOMPasteAccessResponse::DeniedForGesture:
+            return false;
+        }
+    }
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot shouldAdjustViewSize)
 {
     if (!view())
@@ -667,10 +557,15 @@ void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSiz
     ResourceCacheValidationSuppressor validationSuppressor(m_doc->cachedResourceLoader());
 
     m_doc->setPrinting(printing);
-    auto& frameView = *view();
-    frameView.adjustMediaTypeForPrinting(printing);
+    view()->adjustMediaTypeForPrinting(printing);
 
+    // FIXME: Consider invoking Page::updateRendering or an equivalent.
     m_doc->styleScope().didChangeStyleSheetEnvironment();
+    m_doc->evaluateMediaQueriesAndReportChanges();
+    if (!view())
+        return;
+
+    auto& frameView = *view();
     if (shouldUsePrintingLayout())
         frameView.forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
     else {
@@ -734,10 +629,12 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
         return;
     if (!UserContentURLPattern::matchesPatterns(document->url(), script.whitelist(), script.blacklist()))
         return;
+    if (!m_script->shouldAllowUserAgentScripts(*document))
+        return;
 
-    document->topDocument().setAsRunningUserScripts();
+    document->setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorld(ScriptSourceCode(script.source(), URL(script.url())), world);
+    m_script->evaluateInWorldIgnoringException(ScriptSourceCode(script.source(), URL(script.url())), world);
 }
 
 RenderView* Frame::contentRenderer() const
@@ -804,13 +701,6 @@ void Frame::willDetachPage()
     if (page() && page()->scrollingCoordinator() && m_view)
         page()->scrollingCoordinator()->willDestroyScrollableArea(*m_view);
 
-#if PLATFORM(IOS_FAMILY)
-    if (WebThreadCountOfObservedDOMTimers() > 0 && m_page) {
-        LOG(ContentObservation, "Frame::willDetachPage: remove registered timers.");
-        m_page->chrome().client().clearContentChangeObservers(*this);
-    }
-#endif
-
     script().clearScriptObjects();
     script().updatePlatformScriptObjects();
 
@@ -821,7 +711,7 @@ void Frame::willDetachPage()
     // - When calling Frame::setView() with a null FrameView*. This is always done before calling
     //   Frame::willDetachPage (this function.) Hence the assertion below.
     //
-    // - When adding a document to the page cache, the tree is torn down before instantiating
+    // - When adding a document to the back/forward cache, the tree is torn down before instantiating
     //   the CachedPage+CachedFrame object tree.
     ASSERT(!document() || !document()->renderView());
 }
@@ -846,7 +736,7 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint) const
 {
-    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active);
+    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent);
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
@@ -868,7 +758,7 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     HitTestResult result = HitTestResult(pt);
 
     if (contentRenderer())
-        result = eventHandler().hitTestResultAtPoint(pt);
+        result = eventHandler().hitTestResultAtPoint(pt, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent | HitTestRequest::AllowChildFrameContent);
     return result.innerNode() ? &result.innerNode()->document() : 0;
 }
 
@@ -1029,7 +919,10 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || &page->mainFrame() != this || settings().delegatesPageScaling())
+    if (!page || !isMainFrame())
+        return 1;
+
+    if (page->delegatesScaling())
         return 1;
 
     return page->pageScaleFactor();
@@ -1067,7 +960,12 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
     m_doc->resumeScheduledTasks(ReasonForSuspension::PageWillBeSuspended);
 
     // Frame::clearTimers() suspended animations and pending relayouts.
-    animation().resumeAnimationsForDocument(m_doc.get());
+
+    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+        if (auto* timeline = m_doc->existingTimeline())
+            timeline->resumeAnimations();
+    } else
+        animation().resumeAnimationsForDocument(m_doc.get());
     if (m_view)
         m_view->layoutContext().scheduleLayout();
 }
@@ -1081,23 +979,6 @@ void Frame::deviceOrPageScaleFactorChanged()
         root->compositor().deviceOrPageScaleFactorChanged();
 }
 
-bool Frame::isURLAllowed(const URL& url) const
-{
-    // We allow one level of self-reference because some sites depend on that,
-    // but we don't allow more than one.
-    if (m_page->subframeCount() >= Page::maxNumberOfFrames)
-        return false;
-    bool foundSelfReference = false;
-    for (const Frame* frame = this; frame; frame = frame->tree().parent()) {
-        if (equalIgnoringFragmentIdentifier(frame->document()->url(), url)) {
-            if (foundSelfReference)
-                return false;
-            foundSelfReference = true;
-        }
-    }
-    return true;
-}
-
 bool Frame::isAlwaysOnLoggingAllowed() const
 {
     return page() && page()->isAlwaysOnLoggingAllowed();
@@ -1108,6 +989,19 @@ void Frame::dropChildren()
     ASSERT(isMainFrame());
     while (Frame* child = tree().firstChild())
         tree().removeChild(*child);
+}
+
+void Frame::didPrewarmLocalStorage()
+{
+    ASSERT(isMainFrame());
+    ASSERT(m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount);
+    ++m_localStoragePrewarmingCount;
+}
+
+bool Frame::mayPrewarmLocalStorage() const
+{
+    ASSERT(isMainFrame());
+    return m_localStoragePrewarmingCount < maxlocalStoragePrewarmingCount;
 }
 
 void Frame::selfOnlyRef()

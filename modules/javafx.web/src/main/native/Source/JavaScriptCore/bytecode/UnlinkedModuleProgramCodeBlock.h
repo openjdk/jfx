@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,12 +35,18 @@ class CachedModuleCodeBlock;
 class UnlinkedModuleProgramCodeBlock final : public UnlinkedGlobalCodeBlock {
 public:
     typedef UnlinkedGlobalCodeBlock Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static UnlinkedModuleProgramCodeBlock* create(VM* vm, const ExecutableInfo& info, DebuggerMode debuggerMode)
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
     {
-        UnlinkedModuleProgramCodeBlock* instance = new (NotNull, allocateCell<UnlinkedModuleProgramCodeBlock>(vm->heap)) UnlinkedModuleProgramCodeBlock(vm, vm->unlinkedModuleProgramCodeBlockStructure.get(), info, debuggerMode);
-        instance->finishCreation(*vm);
+        return vm.unlinkedModuleProgramCodeBlockSpace<mode>();
+    }
+
+    static UnlinkedModuleProgramCodeBlock* create(VM& vm, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
+    {
+        UnlinkedModuleProgramCodeBlock* instance = new (NotNull, allocateCell<UnlinkedModuleProgramCodeBlock>(vm.heap)) UnlinkedModuleProgramCodeBlock(vm, vm.unlinkedModuleProgramCodeBlockStructure.get(), info, codeGenerationMode);
+        instance->finishCreation(vm);
         return instance;
     }
 
@@ -79,8 +85,8 @@ public:
 private:
     friend CachedModuleCodeBlock;
 
-    UnlinkedModuleProgramCodeBlock(VM* vm, Structure* structure, const ExecutableInfo& info, DebuggerMode debuggerMode)
-        : Base(vm, structure, ModuleCode, info, debuggerMode)
+    UnlinkedModuleProgramCodeBlock(VM& vm, Structure* structure, const ExecutableInfo& info, OptionSet<CodeGenerationMode> codeGenerationMode)
+        : Base(vm, structure, ModuleCode, info, codeGenerationMode)
     {
     }
 

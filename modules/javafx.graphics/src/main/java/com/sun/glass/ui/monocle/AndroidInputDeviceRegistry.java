@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
                 touchState.addPoint(p);
             }
         }
-        instance.gotTouchEvent(touchState);
+        Platform.runLater(() -> instance.gotTouchEvent(touchState));
     }
 
     private void gotTouchEvent(TouchState touchState) {
@@ -76,6 +76,10 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
         processor.pushEvent(touchState);
     }
 
+
+    public static void dispatchKeyEventFromNative(int type, int key, char[] chars, int modifiers) {
+        instance.processor.dispatchKeyEvent(type, key, chars, modifiers);
+    }
 
     public static void gotKeyEventFromNative(int action, int linuxKey) {
         instance.gotKeyEvent (action, linuxKey);

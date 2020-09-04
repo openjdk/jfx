@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "AirCode.h"
 #include "AirInst.h"
 #include "B3Value.h"
+#include "CCallHelpers.h"
 #include "Disassembler.h"
 #include "LinkBuffer.h"
 
@@ -63,7 +64,7 @@ void Disassembler::startBlock(BasicBlock* block, CCallHelpers& jit)
     m_blocks.append(block);
 }
 
-void Disassembler::addInst(Inst* inst, CCallHelpers::Label start, CCallHelpers::Label end)
+void Disassembler::addInst(Inst* inst, MacroAssembler::Label start, MacroAssembler::Label end)
 {
     auto addResult = m_instToRange.add(inst, std::make_pair(start, end));
     RELEASE_ASSERT(addResult.isNewEntry);
@@ -105,7 +106,7 @@ void Disassembler::dump(Code& code, PrintStream& out, LinkBuffer& linkBuffer, co
 
     // FIXME: We could be better about various late paths. We can implement
     // this later if we find a strong use for it.
-    out.print("# Late paths\n");
+    out.print(tierName, "# Late paths\n");
     dumpAsmRange(m_latePathStart, m_latePathEnd);
 }
 

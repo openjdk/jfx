@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,11 +179,6 @@ RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, PreserveResolution) const
         m_data.m_image,
         m_data.m_context->platformContext()->rq_ref(),
         m_size.width(), m_size.height());
-}
-
-BackingStoreCopy ImageBuffer::fastCopyImageMode()
-{
-    return CopyBackingStore; // todo tav revise
 }
 
 void ImageBuffer::platformTransformColorSpace(const std::array<uint8_t, 256>&)
@@ -403,28 +398,23 @@ void ImageBuffer::putByteArray(
     m_data.update();
 }
 
-void ImageBuffer::drawConsuming(std::unique_ptr<ImageBuffer> imageBuffer, GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator op, BlendMode blendMode)
+void ImageBuffer::drawConsuming(std::unique_ptr<ImageBuffer> imageBuffer, GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& options)
 {
-    imageBuffer->draw(destContext, destRect, srcRect, op, blendMode);
+    imageBuffer->draw(destContext, destRect, srcRect, options);
 }
 
 void ImageBuffer::draw(
     GraphicsContext& context,
     const FloatRect& destRect,
     const FloatRect& srcRect,
-    CompositeOperator op,
-    BlendMode bm)
+    const ImagePaintingOptions& options)
 {
     RefPtr<Image> imageCopy = copyImage();
     context.drawImage(
         *imageCopy,
         destRect,
         srcRect,
-        ImagePaintingOptions(
-            op,
-            bm,
-            DecodingMode::Synchronous,
-            DoNotRespectImageOrientation)
+        options
         );
 }
 
@@ -435,8 +425,7 @@ void ImageBuffer::drawPattern(
     const AffineTransform& patternTransform,
     const FloatPoint& phase,
     const FloatSize& spacing,
-    CompositeOperator op,
-    BlendMode bm) // todo tav new param
+    const ImagePaintingOptions& options) // todo tav new param
 {
     RefPtr<Image> imageCopy = copyImage();
     imageCopy->drawPattern(
@@ -446,8 +435,7 @@ void ImageBuffer::drawPattern(
         patternTransform,
         phase,
         spacing,
-        op,
-        bm);
+        options);
 }
 
 RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffer, PreserveResolution preserveResolution)

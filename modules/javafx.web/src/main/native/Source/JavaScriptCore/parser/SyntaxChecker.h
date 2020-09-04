@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,7 +64,7 @@ public:
         SyntaxChecker* m_context;
     };
 
-    SyntaxChecker(VM* , void*)
+    SyntaxChecker(VM& , void*)
     {
     }
 
@@ -73,7 +73,7 @@ public:
         ResolveEvalExpr, ResolveExpr, IntegerExpr, DoubleExpr, StringExpr, BigIntExpr,
         ThisExpr, NullExpr, BoolExpr, RegExpExpr, ObjectLiteralExpr,
         FunctionExpr, ClassExpr, SuperExpr, ImportExpr, BracketExpr, DotExpr, CallExpr,
-        NewExpr, PreExpr, PostExpr, UnaryExpr, BinaryExpr,
+        NewExpr, PreExpr, PostExpr, UnaryExpr, BinaryExpr, OptionalChain,
         ConditionalExpr, AssignmentExpr, TypeofExpr,
         DeleteExpr, ArrayLiteralExpr, BindingDestructuring, RestParameter,
         ArrayDestructuring, ObjectDestructuring, SourceElementsResult,
@@ -140,14 +140,14 @@ public:
     typedef DestructuringPattern ObjectPattern;
     typedef DestructuringPattern RestPattern;
 
-    static const bool CreatesAST = false;
-    static const bool NeedsFreeVariableInfo = false;
-    static const bool CanUseFunctionCache = true;
-    static const unsigned DontBuildKeywords = LexexFlagsDontBuildKeywords;
-    static const unsigned DontBuildStrings = LexerFlagsDontBuildStrings;
+    static constexpr bool CreatesAST = false;
+    static constexpr bool NeedsFreeVariableInfo = false;
+    static constexpr bool CanUseFunctionCache = true;
+    static constexpr OptionSet<LexerFlags> DontBuildKeywords = LexerFlags::DontBuildKeywords;
+    static constexpr OptionSet<LexerFlags> DontBuildStrings = LexerFlags::DontBuildStrings;
 
     int createSourceElements() { return SourceElementsResult; }
-    ExpressionType makeFunctionCallNode(const JSTokenLocation&, int, bool, int, int, int, int, size_t) { return CallExpr; }
+    ExpressionType makeFunctionCallNode(const JSTokenLocation&, ExpressionType, bool, int, int, int, int, size_t, bool) { return CallExpr; }
     ExpressionType createCommaExpr(const JSTokenLocation&, ExpressionType expr) { return expr; }
     ExpressionType appendToCommaExpr(const JSTokenLocation&, ExpressionType& head, ExpressionType, ExpressionType next) { head = next; return next; }
     ExpressionType makeAssignNode(const JSTokenLocation&, ExpressionType, Operator, ExpressionType, bool, bool, int, int, int) { return AssignmentExpr; }
@@ -184,6 +184,7 @@ public:
     ExpressionType createRegExp(const JSTokenLocation&, const Identifier& pattern, const Identifier& flags, int) { return Yarr::hasError(Yarr::checkSyntax(pattern.string(), flags.string())) ? 0 : RegExpExpr; }
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int, int, int) { return NewExpr; }
     ExpressionType createNewExpr(const JSTokenLocation&, ExpressionType, int, int) { return NewExpr; }
+    ExpressionType createOptionalChain(const JSTokenLocation&, ExpressionType, ExpressionType, bool) { return OptionalChain; }
     ExpressionType createConditionalExpr(const JSTokenLocation&, ExpressionType, ExpressionType, ExpressionType) { return ConditionalExpr; }
     ExpressionType createAssignResolve(const JSTokenLocation&, const Identifier&, ExpressionType, int, int, int, AssignmentContext) { return AssignmentExpr; }
     ExpressionType createEmptyVarExpression(const JSTokenLocation&, const Identifier&) { return AssignmentExpr; }
@@ -225,13 +226,17 @@ public:
     {
         return Property(type);
     }
-    Property createProperty(VM* vm, ParserArena& parserArena, double name, int, PropertyNode::Type type, PropertyNode::PutType, bool complete, SuperBinding, ClassElementTag)
+    Property createProperty(VM& vm, ParserArena& parserArena, double name, int, PropertyNode::Type type, PropertyNode::PutType, bool complete, SuperBinding, ClassElementTag)
     {
         if (!complete)
             return Property(type);
         return Property(&parserArena.identifierArena().makeNumericIdentifier(vm, name), type);
     }
     Property createProperty(int, int, PropertyNode::Type type, PropertyNode::PutType, bool, SuperBinding, ClassElementTag)
+    {
+        return Property(type);
+    }
+    Property createProperty(const Identifier*, int, int, PropertyNode::Type type, PropertyNode::PutType, bool, SuperBinding, ClassElementTag)
     {
         return Property(type);
     }
@@ -246,6 +251,7 @@ public:
     int createClauseList(int) { return ClauseListResult; }
     int createClauseList(int, int) { return ClauseListResult; }
     int createFuncDeclStatement(const JSTokenLocation&, const ParserFunctionInfo<SyntaxChecker>&) { return StatementResult; }
+    int createDefineField(const JSTokenLocation&, const Identifier*, int, DefineFieldNode::Type) { return 0; }
     int createClassDeclStatement(const JSTokenLocation&, ClassExpression,
         const JSTextPosition&, const JSTextPosition&, int, int) { return StatementResult; }
     int createBlockStatement(const JSTokenLocation&, int, int, int, VariableEnvironment&, DeclarationStacks::FunctionStack&&) { return StatementResult; }
@@ -296,7 +302,7 @@ public:
     {
         return Property(type);
     }
-    Property createGetterOrSetterProperty(VM* vm, ParserArena& parserArena, const JSTokenLocation&, PropertyNode::Type type, bool strict, double name, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
+    Property createGetterOrSetterProperty(VM& vm, ParserArena& parserArena, const JSTokenLocation&, PropertyNode::Type type, bool strict, double name, const ParserFunctionInfo<SyntaxChecker>&, ClassElementTag)
     {
         if (!strict)
             return Property(type);
@@ -328,9 +334,11 @@ public:
     int unaryTokenStackLastType(int&) { return m_topUnaryToken; }
     JSTextPosition unaryTokenStackLastStart(int&) { return JSTextPosition(0, 0, 0); }
     void unaryTokenStackRemoveLast(int& stackDepth) { stackDepth = 0; }
+    int unaryTokenStackDepth() const { return 0; }
+    void setUnaryTokenStackDepth(int) { }
 
-    void assignmentStackAppend(int, int, int, int, int, Operator) { }
-    int createAssignment(const JSTokenLocation&, int, int, int, int, int) { RELEASE_ASSERT_NOT_REACHED(); return AssignmentExpr; }
+    void assignmentStackAppend(int& assignmentStackDepth, int, int, int, int, Operator) { assignmentStackDepth = 1; }
+    int createAssignment(const JSTokenLocation&, int& assignmentStackDepth, int, int, int, int) { assignmentStackDepth = 0; return AssignmentExpr; }
     const Identifier* getName(const Property& property) const { return property.name; }
     PropertyNode::Type getType(const Property& property) const { return property.type; }
     bool isResolve(ExpressionType expr) const { return expr == ResolveExpr || expr == ResolveEvalExpr; }
@@ -393,9 +401,14 @@ public:
         return pattern == BindingDestructuring;
     }
 
-    bool isAssignmentLocation(ExpressionType type)
+    bool isLocation(ExpressionType type)
     {
         return type == ResolveExpr || type == DotExpr || type == BracketExpr;
+    }
+
+    bool isAssignmentLocation(ExpressionType type)
+    {
+        return isLocation(type) || type == DestructuringAssignment;
     }
 
     bool isObjectLiteral(ExpressionType type)
@@ -413,13 +426,18 @@ public:
         return isObjectLiteral(type) || isArrayLiteral(type);
     }
 
+    bool isFunctionCall(ExpressionType type)
+    {
+        return type == CallExpr;
+    }
+
     bool shouldSkipPauseLocation(int) const { return true; }
 
     void setEndOffset(int, int) { }
     int endOffset(int) { return 0; }
     void setStartOffset(int, int) { }
 
-    JSTextPosition breakpointLocation(int) { return JSTextPosition(-1, 0, 0); }
+    JSTextPosition breakpointLocation(int) { return { }; }
 
     void propagateArgumentsUse() { }
 

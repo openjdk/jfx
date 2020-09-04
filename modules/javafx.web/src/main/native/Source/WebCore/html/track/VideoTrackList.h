@@ -35,13 +35,13 @@ class VideoTrack;
 
 class VideoTrackList final : public TrackListBase {
 public:
-    static Ref<VideoTrackList> create(HTMLMediaElement* owner, ScriptExecutionContext* context)
+    static Ref<VideoTrackList> create(WeakPtr<HTMLMediaElement> owner, ScriptExecutionContext* context)
     {
         return adoptRef(*new VideoTrackList(owner, context));
     }
     virtual ~VideoTrackList();
 
-    VideoTrack* getTrackById(const AtomicString&) const;
+    VideoTrack* getTrackById(const AtomString&) const;
     int selectedIndex() const;
 
     VideoTrack* item(unsigned) const;
@@ -52,9 +52,9 @@ public:
     EventTargetInterface eventTargetInterface() const override;
 
 private:
-    VideoTrackList(HTMLMediaElement*, ScriptExecutionContext*);
-    const char* activeDOMObjectName() const final;
+    VideoTrackList(WeakPtr<HTMLMediaElement>, ScriptExecutionContext*);
 };
+static_assert(sizeof(VideoTrackList) == sizeof(TrackListBase), "");
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,8 @@
 namespace JSC {
 
 const ClassInfo SymbolTable::s_info = { "SymbolTable", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(SymbolTable) };
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
 
 SymbolTableEntry& SymbolTableEntry::copySlow(const SymbolTableEntry& other)
 {
@@ -90,17 +92,15 @@ SymbolTable::~SymbolTable() { }
 void SymbolTable::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    if (VM::canUseJIT())
-        m_singletonScope.set(vm, this, InferredValue::create(vm));
 }
 
 void SymbolTable::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
 {
     SymbolTable* thisSymbolTable = jsCast<SymbolTable*>(thisCell);
+    ASSERT_GC_OBJECT_INHERITS(thisSymbolTable, info());
     Base::visitChildren(thisSymbolTable, visitor);
 
     visitor.append(thisSymbolTable->m_arguments);
-    visitor.append(thisSymbolTable->m_singletonScope);
 
     if (thisSymbolTable->m_rareData)
         visitor.append(thisSymbolTable->m_rareData->m_codeBlock);
@@ -120,7 +120,7 @@ const SymbolTable::LocalToEntryVec& SymbolTable::localToEntry(const ConcurrentJS
                 size = std::max(size, offset.scopeOffset().offset() + 1);
         }
 
-        m_localToEntry = std::make_unique<LocalToEntryVec>(size, nullptr);
+        m_localToEntry = makeUnique<LocalToEntryVec>(size, nullptr);
         for (auto& entry : m_map) {
             VarOffset offset = entry.value.varOffset();
             if (offset.isScope())
@@ -161,7 +161,7 @@ SymbolTable* SymbolTable::cloneScopePart(VM& vm)
         result->m_arguments.set(vm, result, arguments);
 
     if (m_rareData) {
-        result->m_rareData = std::make_unique<SymbolTableRareData>();
+        result->m_rareData = makeUnique<SymbolTableRareData>();
 
         {
             auto iter = m_rareData->m_uniqueIDMap.begin();
@@ -193,7 +193,7 @@ void SymbolTable::prepareForTypeProfiling(const ConcurrentJSLocker&)
     if (m_rareData)
         return;
 
-    m_rareData = std::make_unique<SymbolTableRareData>();
+    m_rareData = makeUnique<SymbolTableRareData>();
 
     for (auto iter = m_map.begin(), end = m_map.end(); iter != end; ++iter) {
         m_rareData->m_uniqueIDMap.set(iter->key, TypeProfilerNeedsUniqueIDGeneration);
@@ -212,10 +212,10 @@ CodeBlock* SymbolTable::rareDataCodeBlock()
 void SymbolTable::setRareDataCodeBlock(CodeBlock* codeBlock)
 {
     if (!m_rareData)
-        m_rareData = std::make_unique<SymbolTableRareData>();
+        m_rareData = makeUnique<SymbolTableRareData>();
 
     ASSERT(!m_rareData->m_codeBlock);
-    m_rareData->m_codeBlock.set(*codeBlock->vm(), this, codeBlock);
+    m_rareData->m_codeBlock.set(codeBlock->vm(), this, codeBlock);
 }
 
 GlobalVariableID SymbolTable::uniqueIDForVariable(const ConcurrentJSLocker&, UniquedStringImpl* key, VM& vm)

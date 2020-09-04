@@ -77,21 +77,26 @@ namespace JSC {
     };
 
     struct SimpleJumpTable {
-        // FIXME: The two Vectors can be combind into one Vector<OffsetLocation>
+        // FIXME: The two Vectors can be combined into one Vector<OffsetLocation>
         Vector<int32_t> branchOffsets;
-        int32_t min;
+        int32_t min { INT32_MIN };
 #if ENABLE(JIT)
         Vector<CodeLocationLabel<JSSwitchPtrTag>> ctiOffsets;
         CodeLocationLabel<JSSwitchPtrTag> ctiDefault;
 #endif
 
-        int32_t offsetForValue(int32_t value, int32_t defaultOffset);
-        void add(int32_t key, int32_t offset)
+#if ENABLE(DFG_JIT)
+        // JIT part can be later expanded without taking a lock while non-JIT part is stable after CodeBlock is finalized.
+        SimpleJumpTable cloneNonJITPart() const
         {
-            if (!branchOffsets[key])
-                branchOffsets[key] = offset;
+            SimpleJumpTable result;
+            result.branchOffsets = branchOffsets;
+            result.min = min;
+            return result;
         }
+#endif
 
+        int32_t offsetForValue(int32_t value, int32_t defaultOffset);
 #if ENABLE(JIT)
         void ensureCTITable()
         {
@@ -107,13 +112,13 @@ namespace JSC {
         }
 #endif
 
+#if ENABLE(DFG_JIT)
         void clear()
         {
             branchOffsets.clear();
-#if ENABLE(JIT)
             ctiOffsets.clear();
-#endif
         }
+#endif
     };
 
 } // namespace JSC

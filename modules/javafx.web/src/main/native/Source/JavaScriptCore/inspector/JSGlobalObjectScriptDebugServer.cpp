@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,14 @@
 #include "config.h"
 #include "JSGlobalObjectScriptDebugServer.h"
 
-#include "EventLoop.h"
+#include <wtf/RunLoop.h>
 #include "JSCInlines.h"
 #include "JSLock.h"
-
-using namespace JSC;
+#include "RemoteInspectionTarget.h"
 
 namespace Inspector {
+
+using namespace JSC;
 
 JSGlobalObjectScriptDebugServer::JSGlobalObjectScriptDebugServer(JSGlobalObject& globalObject)
     : ScriptDebugServer(globalObject.vm())
@@ -57,9 +58,28 @@ void JSGlobalObjectScriptDebugServer::runEventLoopWhilePaused()
     // Drop all locks so another thread can work in the VM while we are nested.
     JSC::JSLock::DropAllLocks dropAllLocks(&m_globalObject.vm());
 
-    EventLoop loop;
-    while (!m_doneProcessingDebuggerEvents && !loop.ended())
-        loop.cycle();
+    while (!m_doneProcessingDebuggerEvents) {
+        if (RunLoop::cycle(JSGlobalObjectScriptDebugServer::runLoopMode()) == RunLoop::CycleResult::Stop)
+            break;
+    }
+}
+
+RunLoopMode JSGlobalObjectScriptDebugServer::runLoopMode()
+{
+#if USE(CF) && !PLATFORM(WATCHOS)
+    // Run the RunLoop in a custom run loop mode to prevent default observers
+    // to run and potentially evaluate JavaScript in this context while we are
+    // nested. Only the debugger should control things until we continue.
+    // FIXME: This is not a perfect solution, as background threads are not
+    // paused and can still access and evalute script in the JSContext.
+
+    // FIXME: <rdar://problem/25972777>. On watchOS, in order for auto-attach to work,
+    // we need to run in the default run loop mode otherwise we do not receive the XPC messages
+    // necessary to setup the relay connection and negotiate an auto-attach debugger.
+    return CFSTR("com.apple.JavaScriptCore.remote-inspector-runloop-mode");
+#else
+    return DefaultRunLoopMode;
+#endif
 }
 
 } // namespace Inspector

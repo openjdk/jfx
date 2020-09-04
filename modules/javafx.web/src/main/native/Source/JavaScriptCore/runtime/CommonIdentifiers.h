@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -49,10 +49,12 @@
     macro(Promise) \
     macro(Reflect) \
     macro(RegExp) \
+    macro(RemotePlayback) \
     macro(Set) \
     macro(SharedArrayBuffer) \
     macro(String) \
     macro(Symbol) \
+    macro(WeakRef) \
     macro(__defineGetter__) \
     macro(__defineSetter__) \
     macro(__lookupGetter__) \
@@ -88,12 +90,14 @@
     macro(counters) \
     macro(day) \
     macro(defineProperty) \
+    macro(deref) \
     macro(description) \
     macro(descriptions) \
     macro(detail) \
     macro(displayName) \
     macro(done) \
     macro(dotAll) \
+    macro(entries) \
     macro(enumerable) \
     macro(era) \
     macro(eval) \
@@ -133,6 +137,7 @@
     macro(isWatchpoint) \
     macro(jettisonReason) \
     macro(join) \
+    macro(keys) \
     macro(lastIndex) \
     macro(length) \
     macro(line) \
@@ -194,6 +199,7 @@
     macro(unicode) \
     macro(usage) \
     macro(value) \
+    macro(values) \
     macro(valueOf) \
     macro(weekday) \
     macro(writable) \
@@ -254,6 +260,7 @@
     macro(asyncIterator) \
     macro(iterator) \
     macro(match) \
+    macro(matchAll) \
     macro(replace) \
     macro(search) \
     macro(species) \
@@ -279,7 +286,7 @@ namespace JSC {
     class CommonIdentifiers {
         WTF_MAKE_NONCOPYABLE(CommonIdentifiers); WTF_MAKE_FAST_ALLOCATED;
     private:
-        CommonIdentifiers(VM*);
+        CommonIdentifiers(VM&);
         ~CommonIdentifiers();
         friend class VM;
 

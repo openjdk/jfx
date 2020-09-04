@@ -29,10 +29,11 @@
 #define ResourceRequestBase_h
 
 #include "FormData.h"
+#include "FrameLoaderTypes.h"
 #include "HTTPHeaderMap.h"
 #include "IntRect.h"
-#include <wtf/URL.h>
 #include "ResourceLoadPriority.h"
+#include <wtf/URL.h>
 
 namespace WebCore {
 
@@ -73,7 +74,7 @@ public:
     WEBCORE_EXPORT ResourceRequestCachePolicy cachePolicy() const;
     WEBCORE_EXPORT void setCachePolicy(ResourceRequestCachePolicy cachePolicy);
 
-    double timeoutInterval() const; // May return 0 when using platform default.
+    WEBCORE_EXPORT double timeoutInterval() const; // May return 0 when using platform default.
     void setTimeoutInterval(double timeoutInterval);
 
     WEBCORE_EXPORT const URL& firstPartyForCookies() const;
@@ -140,10 +141,13 @@ public:
 
     void clearHTTPAcceptEncoding();
 
+    WEBCORE_EXPORT void clearPurpose();
+
     const Vector<String>& responseContentDispositionEncodingFallbackArray() const { return m_responseContentDispositionEncodingFallbackArray; }
     WEBCORE_EXPORT void setResponseContentDispositionEncodingFallbackArray(const String& encoding1, const String& encoding2 = String(), const String& encoding3 = String());
 
     WEBCORE_EXPORT FormData* httpBody() const;
+    WEBCORE_EXPORT bool hasUpload() const;
     WEBCORE_EXPORT void setHTTPBody(RefPtr<FormData>&&);
 
     bool allowCookies() const;
@@ -178,10 +182,9 @@ public:
 
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreview() const;
-    WEBCORE_EXPORT void setSystemPreview(bool);
 
-    WEBCORE_EXPORT const IntRect& systemPreviewRect() const;
-    WEBCORE_EXPORT void setSystemPreviewRect(const IntRect&);
+    WEBCORE_EXPORT SystemPreviewInfo systemPreviewInfo() const;
+    WEBCORE_EXPORT void setSystemPreviewInfo(const SystemPreviewInfo&);
 #endif
 
 #if !PLATFORM(COCOA)
@@ -198,8 +201,13 @@ public:
 protected:
     // Used when ResourceRequest is initialized from a platform representation of the request
     ResourceRequestBase()
-        : m_platformRequestUpdated(true)
+        : m_allowCookies(false)
+        , m_resourceRequestUpdated(false)
+        , m_platformRequestUpdated(true)
+        , m_resourceRequestBodyUpdated(false)
         , m_platformRequestBodyUpdated(true)
+        , m_hiddenFromInspector(false)
+        , m_isTopSite(false)
     {
     }
 
@@ -210,7 +218,11 @@ protected:
         , m_cachePolicy(policy)
         , m_allowCookies(true)
         , m_resourceRequestUpdated(true)
+        , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)
+        , m_platformRequestBodyUpdated(false)
+        , m_hiddenFromInspector(false)
+        , m_isTopSite(false)
     {
     }
 
@@ -237,16 +249,15 @@ protected:
     ResourceLoadPriority m_priority { ResourceLoadPriority::Low };
     Requester m_requester { Requester::Unspecified };
     Optional<int> m_inspectorInitiatorNodeIdentifier;
-    bool m_allowCookies { false };
-    mutable bool m_resourceRequestUpdated { false };
-    mutable bool m_platformRequestUpdated { false };
-    mutable bool m_resourceRequestBodyUpdated { false };
-    mutable bool m_platformRequestBodyUpdated { false };
-    bool m_hiddenFromInspector { false };
-    bool m_isTopSite { false };
+    bool m_allowCookies : 1;
+    mutable bool m_resourceRequestUpdated : 1;
+    mutable bool m_platformRequestUpdated : 1;
+    mutable bool m_resourceRequestBodyUpdated : 1;
+    mutable bool m_platformRequestBodyUpdated : 1;
+    bool m_hiddenFromInspector : 1;
+    bool m_isTopSite : 1;
 #if USE(SYSTEM_PREVIEW)
-    bool m_isSystemPreview { false };
-    IntRect m_systemPreviewRect;
+    Optional<SystemPreviewInfo> m_systemPreviewInfo;
 #endif
 
 private:
@@ -256,24 +267,6 @@ private:
 };
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase&, const ResourceRequestBase&);
-
-// FIXME: Find a better place for these functions.
-inline String toRegistrableDomain(const URL& a)
-{
-    auto host = a.host().toString();
-    auto registrableDomain = ResourceRequestBase::partitionName(host);
-    // Fall back to the host if we cannot determine the registrable domain.
-    return registrableDomain.isEmpty() ? host : registrableDomain;
-}
-
-inline bool registrableDomainsAreEqual(const URL& a, const URL& b)
-{
-    return toRegistrableDomain(a) == toRegistrableDomain(b);
-}
-inline bool registrableDomainsAreEqual(const URL& a, const String& registrableDomain)
-{
-    return toRegistrableDomain(a) == registrableDomain;
-}
 
 inline bool operator==(const ResourceRequest& a, const ResourceRequest& b) { return ResourceRequestBase::equal(a, b); }
 inline bool operator!=(ResourceRequest& a, const ResourceRequest& b) { return !(a == b); }

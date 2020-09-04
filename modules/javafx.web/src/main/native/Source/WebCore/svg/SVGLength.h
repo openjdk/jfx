@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,53 +25,69 @@
 
 #pragma once
 
+#include "SVGLengthContext.h"
 #include "SVGLengthValue.h"
-#include "SVGPropertyTearOff.h"
+#include "SVGValueProperty.h"
 
 namespace WebCore {
 
-class SVGLength : public SVGPropertyTearOff<SVGLengthValue> {
+class SVGLength : public SVGValueProperty<SVGLengthValue> {
+    using Base = SVGValueProperty<SVGLengthValue>;
+    using Base::Base;
+    using Base::m_value;
+
 public:
     // Forward declare these enums in the w3c naming scheme, for IDL generation
     enum {
-        SVG_LENGTHTYPE_UNKNOWN = LengthTypeUnknown,
-        SVG_LENGTHTYPE_NUMBER = LengthTypeNumber,
-        SVG_LENGTHTYPE_PERCENTAGE = LengthTypePercentage,
-        SVG_LENGTHTYPE_EMS = LengthTypeEMS,
-        SVG_LENGTHTYPE_EXS = LengthTypeEXS,
-        SVG_LENGTHTYPE_PX = LengthTypePX,
-        SVG_LENGTHTYPE_CM = LengthTypeCM,
-        SVG_LENGTHTYPE_MM = LengthTypeMM,
-        SVG_LENGTHTYPE_IN = LengthTypeIN,
-        SVG_LENGTHTYPE_PT = LengthTypePT,
-        SVG_LENGTHTYPE_PC = LengthTypePC
+        SVG_LENGTHTYPE_UNKNOWN      = static_cast<unsigned>(SVGLengthType::Unknown),
+        SVG_LENGTHTYPE_NUMBER       = static_cast<unsigned>(SVGLengthType::Number),
+        SVG_LENGTHTYPE_PERCENTAGE   = static_cast<unsigned>(SVGLengthType::Percentage),
+        SVG_LENGTHTYPE_EMS          = static_cast<unsigned>(SVGLengthType::Ems),
+        SVG_LENGTHTYPE_EXS          = static_cast<unsigned>(SVGLengthType::Exs),
+        SVG_LENGTHTYPE_PX           = static_cast<unsigned>(SVGLengthType::Pixels),
+        SVG_LENGTHTYPE_CM           = static_cast<unsigned>(SVGLengthType::Centimeters),
+        SVG_LENGTHTYPE_MM           = static_cast<unsigned>(SVGLengthType::Millimeters),
+        SVG_LENGTHTYPE_IN           = static_cast<unsigned>(SVGLengthType::Inches),
+        SVG_LENGTHTYPE_PT           = static_cast<unsigned>(SVGLengthType::Points),
+        SVG_LENGTHTYPE_PC           = static_cast<unsigned>(SVGLengthType::Picas)
     };
 
-    static Ref<SVGLength> create(SVGAnimatedProperty& animatedProperty, SVGPropertyRole role, SVGLengthValue& value)
+    static Ref<SVGLength> create()
     {
-        return adoptRef(*new SVGLength(animatedProperty, role, value));
+        return adoptRef(*new SVGLength());
     }
 
-    static Ref<SVGLength> create(const SVGLengthValue& initialValue = { })
+    static Ref<SVGLength> create(const SVGLengthValue& value)
     {
-        return adoptRef(*new SVGLength(initialValue));
+        return adoptRef(*new SVGLength(value));
     }
 
-    template<typename T> static ExceptionOr<Ref<SVGLength>> create(ExceptionOr<T>&& initialValue)
+    static Ref<SVGLength> create(SVGPropertyOwner* owner, SVGPropertyAccess access, const SVGLengthValue& value = { })
     {
-        if (initialValue.hasException())
-            return initialValue.releaseException();
-        return create(initialValue.releaseReturnValue());
+        return adoptRef(*new SVGLength(owner, access, value));
     }
 
-    unsigned short unitType()
+    template<typename T>
+    static ExceptionOr<Ref<SVGLength>> create(ExceptionOr<T>&& value)
     {
-        return propertyReference().unitType();
+        if (value.hasException())
+            return value.releaseException();
+        return adoptRef(*new SVGLength(value.releaseReturnValue()));
+    }
+
+    Ref<SVGLength> clone() const
+    {
+        return SVGLength::create(m_value);
+    }
+
+    unsigned short unitType()  const
+    {
+        return static_cast<unsigned>(m_value.lengthType());
     }
 
     ExceptionOr<float> valueForBindings()
     {
-        return propertyReference().valueForBindings(SVGLengthContext { contextElement() });
+        return m_value.valueForBindings(SVGLengthContext { contextElement() });
     }
 
     ExceptionOr<void> setValueForBindings(float value)
@@ -79,7 +95,7 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        auto result = propertyReference().setValue(value, SVGLengthContext { contextElement() });
+        auto result = m_value.setValue(SVGLengthContext { contextElement() }, value);
         if (result.hasException())
             return result;
 
@@ -89,7 +105,7 @@ public:
 
     float valueInSpecifiedUnits()
     {
-        return propertyReference().valueInSpecifiedUnits();
+        return m_value.valueInSpecifiedUnits();
     }
 
     ExceptionOr<void> setValueInSpecifiedUnits(float valueInSpecifiedUnits)
@@ -97,15 +113,9 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        propertyReference().setValueInSpecifiedUnits(valueInSpecifiedUnits);
+        m_value.setValueInSpecifiedUnits(valueInSpecifiedUnits);
         commitChange();
-
         return { };
-    }
-
-    String valueAsString()
-    {
-        return propertyReference().valueAsString();
     }
 
     ExceptionOr<void> setValueAsString(const String& value)
@@ -113,7 +123,7 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        auto result = propertyReference().setValueAsString(value);
+        auto result = m_value.setValueAsString(value);
         if (result.hasException())
             return result;
 
@@ -126,12 +136,12 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        auto result = propertyReference().newValueSpecifiedUnits(unitType, valueInSpecifiedUnits);
-        if (result.hasException())
-            return result;
+        if (unitType == SVG_LENGTHTYPE_UNKNOWN || unitType > SVG_LENGTHTYPE_PC)
+            return Exception { NotSupportedError };
 
+        m_value = { valueInSpecifiedUnits, static_cast<SVGLengthType>(unitType), m_value.lengthMode() };
         commitChange();
-        return result;
+        return { };
     }
 
     ExceptionOr<void> convertToSpecifiedUnits(unsigned short unitType)
@@ -139,7 +149,10 @@ public:
         if (isReadOnly())
             return Exception { NoModificationAllowedError };
 
-        auto result = propertyReference().convertToSpecifiedUnits(unitType, SVGLengthContext { contextElement() });
+        if (unitType == SVG_LENGTHTYPE_UNKNOWN || unitType > SVG_LENGTHTYPE_PC)
+            return Exception { NotSupportedError };
+
+        auto result = m_value.convertToSpecifiedUnits(SVGLengthContext { contextElement() }, static_cast<SVGLengthType>(unitType));
         if (result.hasException())
             return result;
 
@@ -147,15 +160,9 @@ public:
         return result;
     }
 
-private:
-    SVGLength(SVGAnimatedProperty& animatedProperty, SVGPropertyRole role, SVGLengthValue& value)
-        : SVGPropertyTearOff<SVGLengthValue>(&animatedProperty, role, value)
+    String valueAsString() const override
     {
-    }
-
-    explicit SVGLength(const SVGLengthValue& initialValue)
-        : SVGPropertyTearOff<SVGLengthValue>(initialValue)
-    {
+        return m_value.valueAsString();
     }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,26 +31,25 @@
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
 #include "InspectorEnvironment.h"
+#include "JSBigInt.h"
 #include "JSCInlines.h"
 #include "VM.h"
 #include <wtf/Stopwatch.h>
 
-using namespace JSC;
-
 namespace Inspector {
+
+using namespace JSC;
 
 InspectorHeapAgent::InspectorHeapAgent(AgentContext& context)
     : InspectorAgentBase("Heap"_s)
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_frontendDispatcher(std::make_unique<HeapFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<HeapFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(HeapBackendDispatcher::create(context.backendDispatcher, this))
     , m_environment(context.environment)
 {
 }
 
-InspectorHeapAgent::~InspectorHeapAgent()
-{
-}
+InspectorHeapAgent::~InspectorHeapAgent() = default;
 
 void InspectorHeapAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
@@ -58,29 +57,31 @@ void InspectorHeapAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDis
 
 void InspectorHeapAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
-    // Stop tracking without taking a snapshot.
-    m_tracking = false;
-
     ErrorString ignored;
     disable(ignored);
 }
 
-void InspectorHeapAgent::enable(ErrorString&)
+void InspectorHeapAgent::enable(ErrorString& errorString)
 {
-    if (m_enabled)
+    if (m_enabled) {
+        errorString = "Heap domain already enabled"_s;
         return;
+    }
 
     m_enabled = true;
 
     m_environment.vm().heap.addObserver(this);
 }
 
-void InspectorHeapAgent::disable(ErrorString&)
+void InspectorHeapAgent::disable(ErrorString& errorString)
 {
-    if (!m_enabled)
+    if (!m_enabled) {
+        errorString = "Heap domain already disabled"_s;
         return;
+    }
 
     m_enabled = false;
+    m_tracking = false;
 
     m_environment.vm().heap.removeObserver(this);
 
@@ -91,7 +92,7 @@ void InspectorHeapAgent::gc(ErrorString&)
 {
     VM& vm = m_environment.vm();
     JSLockHolder lock(vm);
-    sanitizeStackForVM(&vm);
+    sanitizeStackForVM(vm);
     vm.heap.collectNow(Sync, CollectionScope::Full);
 }
 
@@ -107,7 +108,7 @@ void InspectorHeapAgent::snapshot(ErrorString&, double* timestamp, String* snaps
     *snapshotData = snapshotBuilder.json([&] (const HeapSnapshotNode& node) {
         if (Structure* structure = node.cell->structure(vm)) {
             if (JSGlobalObject* globalObject = structure->globalObject()) {
-                if (!m_environment.canAccessInspectedScriptState(globalObject->globalExec()))
+                if (!m_environment.canAccessInspectedScriptState(globalObject))
                     return false;
             }
         }
@@ -185,6 +186,12 @@ void InspectorHeapAgent::getPreview(ErrorString& errorString, int heapObjectId, 
         return;
     }
 
+    // BigInt preview.
+    if (cell->isBigInt()) {
+        resultString = JSBigInt::tryGetString(vm, asBigInt(cell), 10);
+        return;
+    }
+
     // FIXME: Provide preview information for Internal Objects? CodeBlock, Executable, etc.
 
     Structure* structure = cell->structure(vm);
@@ -199,7 +206,7 @@ void InspectorHeapAgent::getPreview(ErrorString& errorString, int heapObjectId, 
         return;
     }
 
-    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(globalObject->globalExec());
+    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(globalObject);
     if (injectedScript.hasNoValue()) {
         errorString = "Unable to get object details - InjectedScript"_s;
         return;
@@ -230,17 +237,17 @@ void InspectorHeapAgent::getRemoteObject(ErrorString& errorString, int heapObjec
     JSCell* cell = optionalNode->cell;
     Structure* structure = cell->structure(vm);
     if (!structure) {
-        errorString = "Unable to get object details"_s;
+        errorString = "Unable to get object details - Structure"_s;
         return;
     }
 
     JSGlobalObject* globalObject = structure->globalObject();
     if (!globalObject) {
-        errorString = "Unable to get object details"_s;
+        errorString = "Unable to get object details - GlobalObject"_s;
         return;
     }
 
-    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(globalObject->globalExec());
+    InjectedScript injectedScript = m_injectedScriptManager.injectedScriptFor(globalObject);
     if (injectedScript.hasNoValue()) {
         errorString = "Unable to get object details - InjectedScript"_s;
         return;

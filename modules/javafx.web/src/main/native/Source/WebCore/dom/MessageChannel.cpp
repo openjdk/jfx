@@ -29,6 +29,7 @@
 
 #include "MessagePort.h"
 #include "MessagePortChannelProvider.h"
+#include "ScriptExecutionContext.h"
 
 namespace WebCore {
 
@@ -48,7 +49,7 @@ MessageChannel::MessageChannel(ScriptExecutionContext& context)
     if (!context.activeDOMObjectsAreStopped()) {
         ASSERT(!m_port1->closed());
         ASSERT(!m_port2->closed());
-        MessagePortChannelProvider::singleton().createNewMessagePortChannel(id1, id2);
+        MessagePortChannelProvider::fromContext(context).createNewMessagePortChannel(id1, id2);
     } else {
         ASSERT(m_port1->closed());
         ASSERT(m_port2->closed());

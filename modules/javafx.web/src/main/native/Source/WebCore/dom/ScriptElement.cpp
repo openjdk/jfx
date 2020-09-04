@@ -66,6 +66,7 @@ ScriptElement::ScriptElement(Element& element, bool parserInserted, bool already
     , m_isExternalScript(false)
     , m_alreadyStarted(alreadyStarted)
     , m_haveFiredLoad(false)
+    , m_errorOccurred(false)
     , m_willBeParserExecuted(false)
     , m_readyToBeParserExecuted(false)
     , m_willExecuteWhenDocumentFinishedParsing(false)
@@ -284,11 +285,15 @@ bool ScriptElement::requestClassicScript(const String& sourceURL)
         auto script = LoadableClassicScript::create(
             m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr),
             m_element.document().settings().subresourceIntegrityEnabled() ? m_element.attributeWithoutSynchronization(HTMLNames::integrityAttr).string() : emptyString(),
+            referrerPolicy(),
             m_element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr),
             scriptCharset(),
             m_element.localName(),
             m_element.isInUserAgentShadowTree());
-        if (script->load(m_element.document(), m_element.document().completeURL(sourceURL))) {
+
+        auto scriptURL = m_element.document().completeURL(sourceURL);
+        m_element.document().willLoadScriptElement(scriptURL);
+        if (script->load(m_element.document(), scriptURL)) {
             m_loadableScript = WTFMove(script);
             m_isExternalScript = true;
         }
@@ -335,6 +340,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
         auto script = LoadableModuleScript::create(
             nonce,
             m_element.document().settings().subresourceIntegrityEnabled() ? m_element.attributeWithoutSynchronization(HTMLNames::integrityAttr).string() : emptyString(),
+            referrerPolicy(),
             crossOriginMode,
             scriptCharset(),
             m_element.localName(),
@@ -344,7 +350,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
         return true;
     }
 
-    auto script = LoadableModuleScript::create(nonce, emptyString(), crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
+    auto script = LoadableModuleScript::create(nonce, emptyString(), referrerPolicy(), crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
 
     TextPosition position = m_element.document().isInDocumentWrite() ? TextPosition() : scriptStartPosition;
     ScriptSourceCode sourceCode(scriptContent(), URL(m_element.document().url()), position, JSC::SourceProviderSourceType::Module, script.copyRef());
@@ -384,7 +390,7 @@ void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
     IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(m_isExternalScript ? &document : nullptr);
     CurrentScriptIncrementer currentScriptIncrementer(document, m_element);
 
-    frame->script().evaluate(sourceCode);
+    frame->script().evaluateIgnoringException(sourceCode);
 }
 
 void ScriptElement::executeModuleScript(LoadableModuleScript& loadableModuleScript)

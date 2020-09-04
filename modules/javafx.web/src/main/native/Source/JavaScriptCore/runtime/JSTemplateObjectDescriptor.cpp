@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,15 +36,16 @@ namespace JSC {
 const ClassInfo JSTemplateObjectDescriptor::s_info = { "TemplateObjectDescriptor", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSTemplateObjectDescriptor) };
 
 
-JSTemplateObjectDescriptor::JSTemplateObjectDescriptor(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor)
+JSTemplateObjectDescriptor::JSTemplateObjectDescriptor(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor, int endOffset)
     : Base(vm, vm.templateObjectDescriptorStructure.get())
     , m_descriptor(WTFMove(descriptor))
+    , m_endOffset(endOffset)
 {
 }
 
-JSTemplateObjectDescriptor* JSTemplateObjectDescriptor::create(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor)
+JSTemplateObjectDescriptor* JSTemplateObjectDescriptor::create(VM& vm, Ref<TemplateObjectDescriptor>&& descriptor, int endOffset)
 {
-    JSTemplateObjectDescriptor* result = new (NotNull, allocateCell<JSTemplateObjectDescriptor>(vm.heap)) JSTemplateObjectDescriptor(vm, WTFMove(descriptor));
+    JSTemplateObjectDescriptor* result = new (NotNull, allocateCell<JSTemplateObjectDescriptor>(vm.heap)) JSTemplateObjectDescriptor(vm, WTFMove(descriptor), endOffset);
     result->finishCreation(vm);
     return result;
 }
@@ -54,34 +55,34 @@ void JSTemplateObjectDescriptor::destroy(JSCell* cell)
     static_cast<JSTemplateObjectDescriptor*>(cell)->JSTemplateObjectDescriptor::~JSTemplateObjectDescriptor();
 }
 
-JSArray* JSTemplateObjectDescriptor::createTemplateObject(ExecState* exec)
+JSArray* JSTemplateObjectDescriptor::createTemplateObject(JSGlobalObject* globalObject)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     unsigned count = descriptor().cookedStrings().size();
-    JSArray* templateObject = constructEmptyArray(exec, nullptr, count);
+    JSArray* templateObject = constructEmptyArray(globalObject, nullptr, count);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    JSArray* rawObject = constructEmptyArray(exec, nullptr, count);
+    JSArray* rawObject = constructEmptyArray(globalObject, nullptr, count);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     for (unsigned index = 0; index < count; ++index) {
         auto cooked = descriptor().cookedStrings()[index];
         if (cooked)
-            templateObject->putDirectIndex(exec, index, jsString(exec, cooked.value()), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
+            templateObject->putDirectIndex(globalObject, index, jsString(vm, cooked.value()), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
         else
-            templateObject->putDirectIndex(exec, index, jsUndefined(), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
+            templateObject->putDirectIndex(globalObject, index, jsUndefined(), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
         RETURN_IF_EXCEPTION(scope, nullptr);
 
-        rawObject->putDirectIndex(exec, index, jsString(exec, descriptor().rawStrings()[index]), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
+        rawObject->putDirectIndex(globalObject, index, jsString(vm, descriptor().rawStrings()[index]), PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete, PutDirectIndexLikePutDirect);
         RETURN_IF_EXCEPTION(scope, nullptr);
     }
 
-    objectConstructorFreeze(exec, rawObject);
+    objectConstructorFreeze(globalObject, rawObject);
     scope.assertNoException();
 
     templateObject->putDirect(vm, vm.propertyNames->raw, rawObject, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
 
-    objectConstructorFreeze(exec, templateObject);
+    objectConstructorFreeze(globalObject, templateObject);
     scope.assertNoException();
 
     return templateObject;

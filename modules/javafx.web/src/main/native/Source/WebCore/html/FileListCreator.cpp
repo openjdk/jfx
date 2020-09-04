@@ -83,7 +83,7 @@ Ref<FileList> FileListCreator::createFileList(const Vector<FileChooserFileInfo>&
         if (shouldResolveDirectories == ShouldResolveDirectories::Yes && FileSystem::fileIsDirectory(info.path, FileSystem::ShouldFollowSymbolicLinks::No))
             appendDirectoryFiles(info.path, FileSystem::pathGetFileName(info.path), fileObjects);
         else
-            fileObjects.append(File::createWithName(info.path, info.displayName));
+            fileObjects.append(File::create(info.path, info.displayName));
     }
     return FileList::create(WTFMove(fileObjects));
 }

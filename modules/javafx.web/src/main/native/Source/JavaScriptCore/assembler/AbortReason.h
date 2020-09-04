@@ -43,8 +43,8 @@ enum AbortReason {
     AHIsNotNull                                       =  90,
     AHStackPointerMisaligned                          = 100,
     AHStructureIDIsValid                              = 110,
-    AHTagMaskNotInPlace                               = 120,
-    AHTagTypeNumberNotInPlace                         = 130,
+    AHNotCellMaskNotInPlace                           = 120,
+    AHNumberTagNotInPlace                             = 130,
     AHTypeInfoInlineTypeFlagsAreValid                 = 140,
     AHTypeInfoIsValid                                 = 150,
     B3Oops                                            = 155,
@@ -74,7 +74,6 @@ enum AbortReason {
     TGInvalidPointer                                  = 320,
     TGNotSupported                                    = 330,
     UncheckedOverflow                                 = 335,
-    YARRNoInputConsumed                               = 340,
 };
 
 // This enum is for CRASH_WITH_SECURITY_IMPLICATION_AND_INFO so we can easily identify which assertion

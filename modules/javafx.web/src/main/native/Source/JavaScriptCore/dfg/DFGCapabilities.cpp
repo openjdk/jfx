@@ -38,8 +38,7 @@ namespace JSC { namespace DFG {
 
 bool isSupported()
 {
-    return Options::useDFGJIT()
-        && MacroAssembler::supportsFloatingPoint();
+    return VM::canUseJIT() && Options::useDFGJIT() && MacroAssembler::supportsFloatingPoint();
 }
 
 bool isSupportedForInlining(CodeBlock* codeBlock)
@@ -50,41 +49,41 @@ bool isSupportedForInlining(CodeBlock* codeBlock)
 bool mightCompileEval(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->bytecodeCost() <= Options::maximumOptimizationCandidateBytecodeCost()
         && codeBlock->ownerExecutable()->isOkToOptimize();
 }
 bool mightCompileProgram(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->bytecodeCost() <= Options::maximumOptimizationCandidateBytecodeCost()
         && codeBlock->ownerExecutable()->isOkToOptimize();
 }
 bool mightCompileFunctionForCall(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->bytecodeCost() <= Options::maximumOptimizationCandidateBytecodeCost()
         && codeBlock->ownerExecutable()->isOkToOptimize();
 }
 bool mightCompileFunctionForConstruct(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->bytecodeCost() <= Options::maximumOptimizationCandidateBytecodeCost()
         && codeBlock->ownerExecutable()->isOkToOptimize();
 }
 
 bool mightInlineFunctionForCall(CodeBlock* codeBlock)
 {
-    return codeBlock->instructionCount() <= Options::maximumFunctionForCallInlineCandidateInstructionCount()
+    return codeBlock->bytecodeCost() <= Options::maximumFunctionForCallInlineCandidateBytecodeCost()
         && isSupportedForInlining(codeBlock);
 }
 bool mightInlineFunctionForClosureCall(CodeBlock* codeBlock)
 {
-    return codeBlock->instructionCount() <= Options::maximumFunctionForClosureCallInlineCandidateInstructionCount()
+    return codeBlock->bytecodeCost() <= Options::maximumFunctionForClosureCallInlineCandidateBytecodeCost()
         && isSupportedForInlining(codeBlock);
 }
 bool mightInlineFunctionForConstruct(CodeBlock* codeBlock)
 {
-    return codeBlock->instructionCount() <= Options::maximumFunctionForConstructInlineCandidateInstructionCount()
+    return codeBlock->bytecodeCost() <= Options::maximumFunctionForConstructInlineCandidateBytecoodeCost()
         && isSupportedForInlining(codeBlock);
 }
 bool canUseOSRExitFuzzing(CodeBlock* codeBlock)
@@ -109,13 +108,17 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     UNUSED_PARAM(pc);
 
     switch (opcodeID) {
-    case op_wide:
+    case op_wide16:
+    case op_wide32:
         RELEASE_ASSERT_NOT_REACHED();
     case op_enter:
     case op_to_this:
     case op_argument_count:
     case op_check_tdz:
     case op_create_this:
+    case op_create_promise:
+    case op_create_generator:
+    case op_create_async_generator:
     case op_bitnot:
     case op_bitand:
     case op_bitor:
@@ -188,6 +191,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_jfalse:
     case op_jeq_null:
     case op_jneq_null:
+    case op_jundefined_or_null:
+    case op_jnundefined_or_null:
     case op_jless:
     case op_jlesseq:
     case op_jgreater:
@@ -208,6 +213,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_ret:
     case op_end:
     case op_new_object:
+    case op_new_promise:
+    case op_new_generator:
     case op_new_array:
     case op_new_array_with_size:
     case op_new_array_buffer:
@@ -227,12 +234,14 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_create_direct_arguments:
     case op_create_scoped_arguments:
     case op_create_cloned_arguments:
+    case op_create_arguments_butterfly:
     case op_get_from_arguments:
     case op_put_to_arguments:
     case op_get_argument:
     case op_jneq_ptr:
     case op_typeof:
     case op_to_number:
+    case op_to_numeric:
     case op_to_string:
     case op_to_object:
     case op_switch_imm:
@@ -271,6 +280,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_resolve_scope:
     case op_resolve_scope_for_hoisting_func_decl_in_eval:
     case op_new_regexp:
+    case op_get_internal_field:
+    case op_put_internal_field:
+    case op_to_property_key:
     case op_unreachable:
     case op_super_sampler_begin:
     case op_super_sampler_end:
@@ -281,6 +293,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
         return CanCompile;
 
     case op_yield:
+    case op_create_generator_frame_environment:
     case llint_program_prologue:
     case llint_eval_prologue:
     case llint_module_program_prologue:
@@ -295,7 +308,19 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case llint_native_construct_trampoline:
     case llint_internal_function_call_trampoline:
     case llint_internal_function_construct_trampoline:
+    case checkpoint_osr_exit_from_inlined_call_trampoline:
+    case checkpoint_osr_exit_trampoline:
     case handleUncaughtException:
+    case op_call_return_location:
+    case op_construct_return_location:
+    case op_call_varargs_slow_return_location:
+    case op_construct_varargs_slow_return_location:
+    case op_get_by_id_return_location:
+    case op_get_by_val_return_location:
+    case op_put_by_id_return_location:
+    case op_put_by_val_return_location:
+    case wasm_function_prologue:
+    case wasm_function_prologue_no_tls:
         return CannotCompile;
     }
     return CannotCompile;

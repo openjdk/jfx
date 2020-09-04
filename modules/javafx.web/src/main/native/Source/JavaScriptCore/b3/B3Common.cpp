@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,10 +31,13 @@
 #include "DFGCommon.h"
 #include "FTLState.h"
 #include "Options.h"
+#include <wtf/Optional.h>
 
 namespace JSC { namespace B3 {
 
-bool shouldDumpIR(B3ComplitationMode mode)
+const char* const tierName = "b3  ";
+
+bool shouldDumpIR(B3CompilationMode mode)
 {
 #if ENABLE(FTL_JIT)
     return FTL::verboseCompilationEnabled() || FTL::shouldDumpDisassembly() || shouldDumpIRAtEachPhase(mode);
@@ -43,7 +46,7 @@ bool shouldDumpIR(B3ComplitationMode mode)
 #endif
 }
 
-bool shouldDumpIRAtEachPhase(B3ComplitationMode mode)
+bool shouldDumpIRAtEachPhase(B3CompilationMode mode)
 {
     if (mode == B3Mode)
         return Options::dumpGraphAtEachPhase() || Options::dumpB3GraphAtEachPhase();
@@ -68,7 +71,7 @@ bool shouldSaveIRBeforePhase()
 Optional<GPRReg> pinnedExtendedOffsetAddrRegister()
 {
 #if CPU(ARM64)
-    return static_cast<GPRReg>(+MacroAssembler::dataTempRegister);
+    return MacroAssembler::dataTempRegister;
 #elif CPU(X86_64)
     return WTF::nullopt;
 #else

@@ -1,7 +1,8 @@
 {
     "domain": "DOMDebugger",
     "description": "DOM debugging allows setting breakpoints on particular DOM operations and events. JavaScript execution will stop on these operations as if there was a regular breakpoint set.",
-    "availability": ["web"],
+    "debuggableTypes": ["page", "web-page"],
+    "targetTypes": ["page", "worker"],
     "types": [
         {
             "id": "DOMBreakpointType",
@@ -12,7 +13,7 @@
         {
             "id": "EventBreakpointType",
             "type": "string",
-            "enum": ["animation-frame", "listener", "timer"],
+            "enum": ["animation-frame", "interval", "listener", "timeout"],
             "description": "Event breakpoint type."
         }
     ],
@@ -38,7 +39,7 @@
             "description": "Sets breakpoint on particular event of given type.",
             "parameters": [
                 { "name": "breakpointType", "$ref": "EventBreakpointType" },
-                { "name": "eventName", "type": "string", "description": "The name of the event to stop on." }
+                { "name": "eventName", "type": "string", "optional": true, "description": "The name of the specific event to stop on." }
             ]
         },
         {
@@ -46,7 +47,7 @@
             "description": "Removes breakpoint on particular event of given type.",
             "parameters": [
                 { "name": "breakpointType", "$ref": "EventBreakpointType" },
-                { "name": "eventName", "type": "string", "description": "The name of the event to stop on." }
+                { "name": "eventName", "type": "string", "optional": true, "description": "The name of the specific event to stop on." }
             ]
         },
         {

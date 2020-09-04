@@ -27,6 +27,8 @@
 
 #if ENABLE(REMOTE_INSPECTOR)
 
+#include "RemoteControllableTarget.h"
+
 #include <utility>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -45,10 +47,20 @@ typedef RetainPtr<NSDictionary> TargetListing;
 
 #if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/SocketConnection.h>
 typedef GRefPtr<GVariant> TargetListing;
 typedef struct _GCancellable GCancellable;
-typedef struct _GDBusConnection GDBusConnection;
-typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
+#endif
+
+#if USE(INSPECTOR_SOCKET_SERVER)
+#include "RemoteConnectionToTarget.h"
+#include "RemoteInspectorConnectionClient.h"
+#include <wtf/JSONValues.h>
+#include <wtf/RefPtr.h>
+
+namespace Inspector {
+using TargetListing = RefPtr<JSON::Object>;
+}
 #endif
 
 namespace Inspector {
@@ -62,6 +74,8 @@ class RemoteInspectorClient;
 class JS_EXPORT_PRIVATE RemoteInspector final
 #if PLATFORM(COCOA)
     : public RemoteInspectorXPCConnection::Client
+#elif USE(INSPECTOR_SOCKET_SERVER)
+    : public RemoteInspectorConnectionClient
 #endif
 {
 public:
@@ -77,6 +91,15 @@ public:
             bool acceptInsecureCertificates { false };
 #if USE(GLIB)
             Vector<std::pair<String, String>> certificates;
+            struct Proxy {
+                String type;
+                Optional<String> ftpURL;
+                Optional<String> httpURL;
+                Optional<String> httpsURL;
+                Optional<String> socksURL;
+                Vector<String> ignoreAddressList;
+            };
+            Optional<Proxy> proxy;
 #endif
 #if PLATFORM(COCOA)
             Optional<bool> allowInsecureMediaCapture;
@@ -98,16 +121,16 @@ public:
     void registerTarget(RemoteControllableTarget*);
     void unregisterTarget(RemoteControllableTarget*);
     void updateTarget(RemoteControllableTarget*);
-    void sendMessageToRemote(unsigned targetIdentifier, const String& message);
+    void sendMessageToRemote(TargetID, const String& message);
 
     RemoteInspector::Client* client() const { return m_client; }
     void setClient(RemoteInspector::Client*);
     void clientCapabilitiesDidChange();
     Optional<RemoteInspector::Client::Capabilities> clientCapabilities() const { return m_clientCapabilities; }
 
-    void setupFailed(unsigned targetIdentifier);
-    void setupCompleted(unsigned targetIdentifier);
-    bool waitingForAutomaticInspection(unsigned targetIdentifier);
+    void setupFailed(TargetID);
+    void setupCompleted(TargetID);
+    bool waitingForAutomaticInspection(TargetID);
     void updateAutomaticInspectionCandidate(RemoteInspectionTarget*);
 
     bool enabled() const { return m_enabled; }
@@ -124,18 +147,28 @@ public:
     void setParentProcessInfomationIsDelayed();
 #endif
 
-    void updateTargetListing(unsigned targetIdentifier);
+    void updateTargetListing(TargetID);
 
 #if USE(GLIB)
     void requestAutomationSession(const char* sessionID, const Client::SessionCapabilities&);
-    void setup(unsigned targetIdentifier);
-    void sendMessageToTarget(unsigned targetIdentifier, const char* message);
+#endif
+#if USE(GLIB) || USE(INSPECTOR_SOCKET_SERVER)
+    void setup(TargetID);
+    void sendMessageToTarget(TargetID, const char* message);
+#endif
+#if USE(INSPECTOR_SOCKET_SERVER)
+    void requestAutomationSession(const String& sessionID, const Client::SessionCapabilities&);
+
+    bool isConnected() const { return !!m_clientConnection; }
+    void connect(ConnectionID);
+
+    void setBackendCommandsPath(const String& backendCommandsPath) { m_backendCommandsPath = backendCommandsPath; }
 #endif
 
 private:
     RemoteInspector();
 
-    unsigned nextAvailableTargetIdentifier();
+    TargetID nextAvailableTargetIdentifier();
 
     enum class StopSource { API, XPCMessage };
     void stopInternal(StopSource);
@@ -144,19 +177,21 @@ private:
     void setupXPCConnectionIfNeeded();
 #endif
 #if USE(GLIB)
-    void setupConnection(GRefPtr<GDBusConnection>&&);
-    static const GDBusInterfaceVTable s_interfaceVTable;
+    void setupConnection(Ref<SocketConnection>&&);
+    static const SocketConnection::MessageHandlers& messageHandlers();
 
     void receivedGetTargetListMessage();
-    void receivedSetupMessage(unsigned targetIdentifier);
-    void receivedDataMessage(unsigned targetIdentifier, const char* message);
-    void receivedCloseMessage(unsigned targetIdentifier);
+    void receivedSetupMessage(TargetID);
+    void receivedDataMessage(TargetID, const char* message);
+    void receivedCloseMessage(TargetID);
     void receivedAutomationSessionRequestMessage(const char* sessionID);
 #endif
 
     TargetListing listingForTarget(const RemoteControllableTarget&) const;
     TargetListing listingForInspectionTarget(const RemoteInspectionTarget&) const;
     TargetListing listingForAutomationTarget(const RemoteAutomationTarget&) const;
+
+    bool updateTargetMap(RemoteControllableTarget*);
 
     void pushListingsNow();
     void pushListingsSoon();
@@ -184,7 +219,22 @@ private:
     void receivedAutomaticInspectionRejectMessage(NSDictionary *userInfo);
     void receivedAutomationSessionRequestMessage(NSDictionary *userInfo);
 #endif
+#if USE(INSPECTOR_SOCKET_SERVER)
+    HashMap<String, CallHandler>& dispatchMap() override;
+    void didClose(ConnectionID) override;
 
+    void sendWebInspectorEvent(const String&);
+
+    void setupInspectorClient(const Event&);
+    void setupTarget(const Event&);
+    void frontendDidClose(const Event&);
+    void sendMessageToBackend(const Event&);
+    void startAutomationSession(const Event&);
+
+    void receivedAutomationSessionRequestMessage(const Event&);
+
+    String backendCommands() const;
+#endif
     static bool startEnabled;
 
     // Targets can be registered from any thread at any time.
@@ -193,16 +243,24 @@ private:
     // from any thread.
     Lock m_mutex;
 
-    HashMap<unsigned, RemoteControllableTarget*> m_targetMap;
-    HashMap<unsigned, RefPtr<RemoteConnectionToTarget>> m_targetConnectionMap;
-    HashMap<unsigned, TargetListing> m_targetListingMap;
+    HashMap<TargetID, RemoteControllableTarget*> m_targetMap;
+    HashMap<TargetID, RefPtr<RemoteConnectionToTarget>> m_targetConnectionMap;
+    HashMap<TargetID, TargetListing> m_targetListingMap;
 
 #if PLATFORM(COCOA)
     RefPtr<RemoteInspectorXPCConnection> m_relayConnection;
 #endif
 #if USE(GLIB)
-    GRefPtr<GDBusConnection> m_dbusConnection;
+    RefPtr<SocketConnection> m_socketConnection;
     GRefPtr<GCancellable> m_cancellable;
+#endif
+
+#if USE(INSPECTOR_SOCKET_SERVER)
+    // Connection from RemoteInspectorClient or WebDriver.
+    Optional<ConnectionID> m_clientConnection;
+    bool m_readyToPushListings { false };
+
+    String m_backendCommandsPath;
 #endif
 
     RemoteInspector::Client* m_client { nullptr };
@@ -211,7 +269,7 @@ private:
 #if PLATFORM(COCOA)
     dispatch_queue_t m_xpcQueue;
 #endif
-    unsigned m_nextAvailableTargetIdentifier { 1 };
+    TargetID m_nextAvailableTargetIdentifier { 1 };
     int m_notifyToken { 0 };
     bool m_enabled { false };
     bool m_hasActiveDebugSession { false };
@@ -224,7 +282,7 @@ private:
     bool m_shouldSendParentProcessInformation { false };
     bool m_automaticInspectionEnabled { false };
     bool m_automaticInspectionPaused { false };
-    unsigned m_automaticInspectionCandidateTargetIdentifier { 0 };
+    TargetID m_automaticInspectionCandidateTargetIdentifier { 0 };
 };
 
 } // namespace Inspector

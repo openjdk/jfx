@@ -32,6 +32,7 @@ namespace WebCore {
 class File;
 
 struct WebCorePasteboardFileReader final : PasteboardFileReader {
+    WebCorePasteboardFileReader() = default;
     ~WebCorePasteboardFileReader();
 
     void readFilename(const String&) final;

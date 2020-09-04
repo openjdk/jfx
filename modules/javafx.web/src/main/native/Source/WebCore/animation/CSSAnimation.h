@@ -35,25 +35,25 @@ class Element;
 class RenderStyle;
 
 class CSSAnimation final : public DeclarativeAnimation {
+    WTF_MAKE_ISO_ALLOCATED(CSSAnimation);
 public:
     static Ref<CSSAnimation> create(Element&, const Animation&, const RenderStyle* oldStyle, const RenderStyle& newStyle);
     ~CSSAnimation() = default;
 
     bool isCSSAnimation() const override { return true; }
     const String& animationName() const { return m_animationName; }
-    const RenderStyle& unanimatedStyle() const { return *m_unanimatedStyle; }
 
     ExceptionOr<void> bindingsPlay() final;
     ExceptionOr<void> bindingsPause() final;
 
 protected:
     void syncPropertiesWithBackingAnimation() final;
+    Ref<AnimationEventBase> createEvent(const AtomString& eventType, double elapsedTime, const String& pseudoId, Optional<Seconds> timelineTime) final;
 
 private:
-    CSSAnimation(Element&, const Animation&, const RenderStyle&);
+    CSSAnimation(Element&, const Animation&);
 
     String m_animationName;
-    std::unique_ptr<RenderStyle> m_unanimatedStyle;
     bool m_stickyPaused { false };
 };
 

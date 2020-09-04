@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,32 +33,31 @@ namespace JSC {
 
 const ClassInfo WeakMapPrototype::s_info = { "WeakMap", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WeakMapPrototype) };
 
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapDelete(ExecState*);
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapGet(ExecState*);
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapHas(ExecState*);
-static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapSet(ExecState*);
+static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapDelete(JSGlobalObject*, CallFrame*);
+static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapGet(JSGlobalObject*, CallFrame*);
+static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapHas(JSGlobalObject*, CallFrame*);
+static EncodedJSValue JSC_HOST_CALL protoFuncWeakMapSet(JSGlobalObject*, CallFrame*);
 
 void WeakMapPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->deleteKeyword, protoFuncWeakMapDelete, static_cast<unsigned>(PropertyAttribute::DontEnum), 1);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->get, protoFuncWeakMapGet, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakMapGetIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->has, protoFuncWeakMapHas, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, JSWeakMapHasIntrinsic);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->set, protoFuncWeakMapSet, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, JSWeakMapSetIntrinsic);
 
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "WeakMap"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "WeakMap"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
-ALWAYS_INLINE static JSWeakMap* getWeakMap(CallFrame* callFrame, JSValue value)
+ALWAYS_INLINE static JSWeakMap* getWeakMap(JSGlobalObject* globalObject, JSValue value)
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (UNLIKELY(!value.isObject())) {
-        throwTypeError(callFrame, scope, "Called WeakMap function on non-object"_s);
+        throwTypeError(globalObject, scope, "Called WeakMap function on non-object"_s);
         return nullptr;
     }
 
@@ -66,22 +65,22 @@ ALWAYS_INLINE static JSWeakMap* getWeakMap(CallFrame* callFrame, JSValue value)
     if (LIKELY(map))
         return map;
 
-    throwTypeError(callFrame, scope, "Called WeakMap function on a non-WeakMap object"_s);
+    throwTypeError(globalObject, scope, "Called WeakMap function on a non-WeakMap object"_s);
     return nullptr;
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakMapDelete(CallFrame* callFrame)
+EncodedJSValue JSC_HOST_CALL protoFuncWeakMapDelete(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    auto* map = getWeakMap(callFrame, callFrame->thisValue());
+    auto* map = getWeakMap(globalObject, callFrame->thisValue());
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     return JSValue::encode(jsBoolean(key.isObject() && map->remove(asObject(key))));
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakMapGet(CallFrame* callFrame)
+EncodedJSValue JSC_HOST_CALL protoFuncWeakMapGet(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    auto* map = getWeakMap(callFrame, callFrame->thisValue());
+    auto* map = getWeakMap(globalObject, callFrame->thisValue());
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
@@ -90,27 +89,27 @@ EncodedJSValue JSC_HOST_CALL protoFuncWeakMapGet(CallFrame* callFrame)
     return JSValue::encode(map->get(asObject(key)));
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakMapHas(CallFrame* callFrame)
+EncodedJSValue JSC_HOST_CALL protoFuncWeakMapHas(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    auto* map = getWeakMap(callFrame, callFrame->thisValue());
+    auto* map = getWeakMap(globalObject, callFrame->thisValue());
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     return JSValue::encode(jsBoolean(key.isObject() && map->has(asObject(key))));
 }
 
-EncodedJSValue JSC_HOST_CALL protoFuncWeakMapSet(CallFrame* callFrame)
+EncodedJSValue JSC_HOST_CALL protoFuncWeakMapSet(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = callFrame->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* map = getWeakMap(callFrame, callFrame->thisValue());
+    auto* map = getWeakMap(globalObject, callFrame->thisValue());
     EXCEPTION_ASSERT(!!scope.exception() == !map);
     if (!map)
         return JSValue::encode(jsUndefined());
     JSValue key = callFrame->argument(0);
     if (!key.isObject())
-        return JSValue::encode(throwTypeError(callFrame, scope, "Attempted to set a non-object key in a WeakMap"_s));
+        return JSValue::encode(throwTypeError(globalObject, scope, "Attempted to set a non-object key in a WeakMap"_s));
     map->set(vm, asObject(key), callFrame->argument(1));
     return JSValue::encode(callFrame->thisValue());
 }

@@ -25,96 +25,43 @@
 
 #pragma once
 
-#include "CanvasActivityRecord.h"
 #include "ResourceLoadStatistics.h"
-#include "Timer.h"
-#include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
-#include <wtf/NeverDestroyed.h>
-#include <wtf/text/WTFString.h>
-
-namespace WTF {
-class Lock;
-class WorkQueue;
-class WallTime;
-}
-
-namespace PAL {
-class SessionID;
-}
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
 class Document;
 class Frame;
-class Page;
 class ResourceRequest;
 class ResourceResponse;
-class ScriptExecutionContext;
-
-struct ResourceLoadStatistics;
 
 class ResourceLoadObserver {
-    friend class WTF::NeverDestroyed<ResourceLoadObserver>;
+    WTF_MAKE_FAST_ALLOCATED;
 public:
+    // https://fetch.spec.whatwg.org/#request-destination-script-like
+    enum class FetchDestinationIsScriptLike : bool { Yes, No };
+
     WEBCORE_EXPORT static ResourceLoadObserver& shared();
+    WEBCORE_EXPORT static ResourceLoadObserver* sharedIfExists();
+    WEBCORE_EXPORT static void setShared(ResourceLoadObserver&);
 
-    void logSubresourceLoading(const Frame*, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse);
-    void logWebSocketLoading(const URL& targetURL, const URL& mainFrameURL, PAL::SessionID);
-    void logUserInteractionWithReducedTimeResolution(const Document&);
+    virtual ~ResourceLoadObserver() { }
 
-    void logFontLoad(const Document&, const String& familyName, bool loadStatus);
-    void logCanvasRead(const Document&);
-    void logCanvasWriteOrMeasure(const Document&, const String& textWritten);
-    void logNavigatorAPIAccessed(const Document&, const ResourceLoadStatistics::NavigatorAPI);
-    void logScreenAPIAccessed(const Document&, const ResourceLoadStatistics::ScreenAPI);
+    virtual void logSubresourceLoading(const Frame*, const ResourceRequest& /* newRequest */, const ResourceResponse& /* redirectResponse */, FetchDestinationIsScriptLike) { }
+    virtual void logWebSocketLoading(const URL& /* targetURL */, const URL& /* mainFrameURL */) { }
+    virtual void logUserInteractionWithReducedTimeResolution(const Document&) { }
+    virtual void logFontLoad(const Document&, const String& /* familyName */, bool /* loadStatus */) { }
+    virtual void logCanvasRead(const Document&) { }
+    virtual void logCanvasWriteOrMeasure(const Document&, const String& /* textWritten */) { }
+    virtual void logNavigatorAPIAccessed(const Document&, const ResourceLoadStatistics::NavigatorAPI) { }
+    virtual void logScreenAPIAccessed(const Document&, const ResourceLoadStatistics::ScreenAPI) { }
+    virtual void logSubresourceLoadingForTesting(const RegistrableDomain& /* firstPartyDomain */, const RegistrableDomain& /* thirdPartyDomain */, bool /* shouldScheduleNotification */) { }
 
-    WEBCORE_EXPORT String statisticsForOrigin(const String&);
+    virtual String statisticsForURL(const URL&) { return { }; }
+    virtual void updateCentralStatisticsStore() { }
+    virtual void clearState() { }
 
-    WEBCORE_EXPORT void setNotificationCallback(WTF::Function<void (Vector<ResourceLoadStatistics>&&)>&&);
-    WEBCORE_EXPORT void setRequestStorageAccessUnderOpenerCallback(Function<void(const String&, uint64_t, const String&)>&&);
-    WEBCORE_EXPORT void setLogUserInteractionNotificationCallback(Function<void(PAL::SessionID, const String&)>&&);
-    WEBCORE_EXPORT void setLogWebSocketLoadingNotificationCallback(Function<void(PAL::SessionID, const String&, const String&, WallTime)>&&);
-    WEBCORE_EXPORT void setLogSubresourceLoadingNotificationCallback(Function<void(PAL::SessionID, const String&, const String&, WallTime)>&&);
-    WEBCORE_EXPORT void setLogSubresourceRedirectNotificationCallback(Function<void(PAL::SessionID, const String&, const String&)>&&);
-
-    WEBCORE_EXPORT void notifyObserver();
-    WEBCORE_EXPORT void clearState();
-
-#if ENABLE(RESOURCE_LOAD_STATISTICS) && !RELEASE_LOG_DISABLED
-    bool shouldLogUserInteraction() const { return m_shouldLogUserInteraction; }
-    void setShouldLogUserInteraction(bool shouldLogUserInteraction) { m_shouldLogUserInteraction = shouldLogUserInteraction; }
-#endif
-
-private:
-    ResourceLoadObserver();
-
-    bool shouldLog(bool usesEphemeralSession) const;
-    ResourceLoadStatistics& ensureResourceStatisticsForPrimaryDomain(const String&);
-
-    void scheduleNotificationIfNeeded();
-    Vector<ResourceLoadStatistics> takeStatistics();
-
-#if ENABLE(RESOURCE_LOAD_STATISTICS)
-    void requestStorageAccessUnderOpener(const String& domainInNeedOfStorageAccess, uint64_t openerPageID, Document& openerDocument);
-#endif
-
-    HashMap<String, ResourceLoadStatistics> m_resourceStatisticsMap;
-    HashMap<String, WTF::WallTime> m_lastReportedUserInteractionMap;
-    Function<void(Vector<ResourceLoadStatistics>&&)> m_notificationCallback;
-    Function<void(const String&, uint64_t, const String&)> m_requestStorageAccessUnderOpenerCallback;
-    Function<void(PAL::SessionID, const String&)> m_logUserInteractionNotificationCallback;
-    Function<void(PAL::SessionID, const String&, const String&, WallTime)> m_logWebSocketLoadingNotificationCallback;
-    Function<void(PAL::SessionID, const String&, const String&, WallTime)> m_logSubresourceLoadingNotificationCallback;
-    Function<void(PAL::SessionID, const String&, const String&)> m_logSubresourceRedirectNotificationCallback;
-
-    Timer m_notificationTimer;
-#if ENABLE(RESOURCE_LOAD_STATISTICS) && !RELEASE_LOG_DISABLED
-    uint64_t m_loggingCounter { 0 };
-    bool m_shouldLogUserInteraction { false };
-#endif
-
-    URL nonNullOwnerURL(const Document&) const;
+    virtual bool hasStatistics() const { return false; }
 };
 
 } // namespace WebCore

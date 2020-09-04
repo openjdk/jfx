@@ -25,39 +25,42 @@
 
 #pragma once
 
+#include "AnimationEventBase.h"
 #include "AnimationPlaybackEventInit.h"
-#include "Event.h"
 #include <wtf/Markable.h>
 
 namespace WebCore {
 
-class AnimationPlaybackEvent final : public Event {
+class AnimationPlaybackEvent final : public AnimationEventBase {
+    WTF_MAKE_ISO_ALLOCATED(AnimationPlaybackEvent);
 public:
-    static Ref<AnimationPlaybackEvent> create(const AtomicString& type, Optional<Seconds> currentTime, Optional<Seconds> timelineTime)
+    static Ref<AnimationPlaybackEvent> create(const AtomString& type, Optional<Seconds> currentTime, Optional<Seconds> timelineTime, WebAnimation* animation)
     {
-        return adoptRef(*new AnimationPlaybackEvent(type, currentTime, timelineTime));
+        return adoptRef(*new AnimationPlaybackEvent(type, currentTime, timelineTime, animation));
     }
 
-    static Ref<AnimationPlaybackEvent> create(const AtomicString& type, const AnimationPlaybackEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
+    static Ref<AnimationPlaybackEvent> create(const AtomString& type, const AnimationPlaybackEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
         return adoptRef(*new AnimationPlaybackEvent(type, initializer, isTrusted));
     }
 
     virtual ~AnimationPlaybackEvent();
 
+    bool isAnimationPlaybackEvent() const final { return true; }
+
     Optional<double> bindingsCurrentTime() const;
     Optional<Seconds> currentTime() const { return m_currentTime; }
     Optional<double> bindingsTimelineTime() const;
-    Optional<Seconds> timelineTime() const { return m_timelineTime; }
 
     EventInterface eventInterface() const override { return AnimationPlaybackEventInterfaceType; }
 
 private:
-    AnimationPlaybackEvent(const AtomicString&, Optional<Seconds>, Optional<Seconds>);
-    AnimationPlaybackEvent(const AtomicString&, const AnimationPlaybackEventInit&, IsTrusted);
+    AnimationPlaybackEvent(const AtomString&, Optional<Seconds>, Optional<Seconds>, WebAnimation*);
+    AnimationPlaybackEvent(const AtomString&, const AnimationPlaybackEventInit&, IsTrusted);
 
     Markable<Seconds, Seconds::MarkableTraits> m_currentTime;
-    Markable<Seconds, Seconds::MarkableTraits> m_timelineTime;
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_ANIMATION_EVENT_BASE(AnimationPlaybackEvent, isAnimationPlaybackEvent())

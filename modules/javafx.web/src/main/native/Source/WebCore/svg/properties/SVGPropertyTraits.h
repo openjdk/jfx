@@ -27,8 +27,6 @@
 #include "FloatRect.h"
 #include "QualifiedName.h"
 #include "SVGParserUtilities.h"
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -139,11 +137,7 @@ struct SVGPropertyTraits<FloatPoint> {
     }
     static String toString(const FloatPoint& type)
     {
-        StringBuilder builder;
-        builder.appendNumber(type.x());
-        builder.append(' ');
-        builder.appendNumber(type.y());
-        return builder.toString();
+        return makeString(type.x(), ' ', type.y());
     }
 };
 
@@ -166,15 +160,7 @@ struct SVGPropertyTraits<FloatRect> {
     }
     static String toString(const FloatRect& type)
     {
-        StringBuilder builder;
-        builder.appendNumber(type.x());
-        builder.append(' ');
-        builder.appendNumber(type.y());
-        builder.append(' ');
-        builder.appendNumber(type.width());
-        builder.append(' ');
-        builder.appendNumber(type.height());
-        return builder.toString();
+        return makeString(type.x(), ' ', type.y(), ' ', type.width(), ' ', type.height());
     }
 };
 

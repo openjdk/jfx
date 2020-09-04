@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,6 +69,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -195,12 +196,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         initializeTabListener();
+        updateSelectionModel();
 
-        registerChangeListener(control.getSelectionModel().selectedItemProperty(), e -> {
-            isSelectingTab = true;
-            selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-            getSkinnable().requestLayout();
-        });
+        registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.sideProperty(), e -> updateTabPosition());
         registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
         registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(getSkinnable().getHeight()));
@@ -257,8 +255,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     };
 
-
-
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -267,6 +263,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+            selectionModel = null;
+        }
+
         super.dispose();
 
         if (behavior != null) {
@@ -429,6 +430,25 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      *                                                                         *
      **************************************************************************/
 
+    private SelectionModel<Tab> selectionModel;
+    private InvalidationListener selectionChangeListener = observable -> {
+        isSelectingTab = true;
+        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
+        getSkinnable().requestLayout();
+    };
+    private WeakInvalidationListener weakSelectionChangeListener =
+            new WeakInvalidationListener(selectionChangeListener);
+
+    private void updateSelectionModel() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+        }
+        selectionModel = getSkinnable().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().addListener(weakSelectionChangeListener);
+        }
+    }
+
     private static int getRotation(Side pos) {
         switch (pos) {
             case TOP:
@@ -559,7 +579,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         getSkinnable().getTabs().addListener((ListChangeListener<Tab>) c -> {
             List<Tab> tabsToRemove = new ArrayList<>();
             List<Tab> tabsToAdd = new ArrayList<>();
-            int insertPos = -1;
 
             while (c.next()) {
                 if (c.wasPermutated()) {
@@ -599,7 +618,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 }
                 if (c.wasAdded()) {
                     tabsToAdd.addAll(c.getAddedSubList());
-                    insertPos = c.getFrom();
                 }
             }
 
@@ -627,7 +645,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                 }
 
-                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+                if (!tabsToAdd.isEmpty()) {
+                    addTabs(tabsToAdd, getSkinnable().getTabs().indexOf(tabsToAdd.get(0)));
+                }
                 for (Pair<Integer, TabHeaderSkin> move : headersToMove) {
                     tabHeaderArea.moveTab(move.getKey(), move.getValue());
                 }
@@ -971,8 +991,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
-            headersRegion.getChildren().remove(tabHeaderSkin);
-            headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            if (moveToIndex != headersRegion.getChildren().indexOf(tabHeaderSkin)) {
+                headersRegion.getChildren().remove(tabHeaderSkin);
+                headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
+            }
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {
@@ -1928,6 +1950,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private EventHandler<MouseEvent> headerMousePressedHandler = this::handleHeaderMousePressed;
     private EventHandler<MouseEvent> headerMouseReleasedHandler = this::handleHeaderMouseReleased;
 
+    private int dragTabHeaderStartIndex;
     private int dragTabHeaderIndex;
     private TabHeaderSkin dragTabHeader;
     private TabHeaderSkin dropTabHeader;
@@ -1943,7 +1966,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     // Reordering Animation
     private final double ANIM_DURATION = 120;
     private TabHeaderSkin dropAnimHeader;
-    private Tab swapTab;
     private double dropHeaderSourceX;
     private double dropHeaderTransitionX;
     private final Animation dropHeaderAnim = new Transition() {
@@ -1958,7 +1980,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             dropAnimHeader.setLayoutX(dropHeaderSourceX + dropHeaderTransitionX * frac);
         }
     };
-    private double dragHeaderStartX;
     private double dragHeaderDestX;
     private double dragHeaderSourceX;
     private double dragHeaderTransitionX;
@@ -1967,6 +1988,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             setInterpolator(Interpolator.EASE_OUT);
             setCycleDuration(Duration.millis(ANIM_DURATION));
             setOnFinished(event -> {
+                reorderTabs();
                 resetDrag();
             });
         }
@@ -2048,7 +2070,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private void handleHeaderDragged(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            perfromDrag(event);
+            performDrag(event);
         }
     }
 
@@ -2071,7 +2093,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         return MAX_TO_MIN;
     }
 
-    private void perfromDrag(MouseEvent event) {
+    private void performDrag(MouseEvent event) {
+        if (dragState == DragState.NONE) {
+            return;
+        }
         int dragDirection;
         double dragHeaderNewLayoutX;
         Bounds dragHeaderBounds;
@@ -2189,12 +2214,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         dragTabHeader = (TabHeaderSkin) event.getSource();
         if (dragTabHeader != null) {
             dragState = DragState.START;
-            swapTab = null;
             xLayoutDirection = deriveTabHeaderLayoutXDirection();
             dragEventPrevLoc = getHeaderRegionLocalX(event);
             dragTabHeaderIndex = headersRegion.getChildren().indexOf(dragTabHeader);
+            dragTabHeaderStartIndex = dragTabHeaderIndex;
             dragTabHeader.setViewOrder(0);
-            dragHeaderStartX = dragHeaderDestX = dragTabHeader.getLayoutX();
+            dragHeaderDestX = dragTabHeader.getLayoutX();
         }
     }
 
@@ -2210,17 +2235,19 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (dragState == DragState.START) {
             // No drag action was performed.
             resetDrag();
-            return;
+        } else if (dragState == DragState.REORDER) {
+            // Animate tab header being dragged to its final position.
+            dragHeaderSourceX = dragTabHeader.getLayoutX();
+            dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
+            dragHeaderAnim.playFromStart();
         }
-        // Animate tab header being dragged to its final position.
-        dragHeaderSourceX = dragTabHeader.getLayoutX();
-        dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
-        dragHeaderAnim.playFromStart();
+    }
 
-        // Reorder the tab list.
-        if (dragHeaderStartX != dragHeaderDestX) {
-            ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
-            swapTab = null;
+    private void reorderTabs() {
+        if (dragTabHeaderIndex != dragTabHeaderStartIndex) {
+            ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(
+                    getSkinnable().getTabs().get(dragTabHeaderStartIndex),
+                    getSkinnable().getTabs().get(dragTabHeaderIndex));
         }
     }
 
@@ -2235,7 +2262,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     // Animate tab header being dropped-on to its new position.
     private void startHeaderReorderingAnim() {
         dropAnimHeader = dropTabHeader;
-        swapTab = dropAnimHeader.tab;
         dropHeaderSourceX = dropAnimHeader.getLayoutX();
         dropHeaderAnim.playFromStart();
     }
@@ -2262,5 +2288,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     // For testing purpose.
     ContextMenu test_getTabsMenu() {
         return tabHeaderArea.controlButtons.popup;
+    }
+
+    void test_disableAnimations() {
+        closeTabAnimation.set(TabAnimation.NONE);
+        openTabAnimation.set(TabAnimation.NONE);
     }
 }

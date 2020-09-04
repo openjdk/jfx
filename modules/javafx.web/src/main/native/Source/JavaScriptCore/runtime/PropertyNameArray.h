@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006, 2008, 2012 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -20,7 +20,6 @@
 
 #pragma once
 
-#include "CallFrame.h"
 #include "Identifier.h"
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
@@ -47,7 +46,7 @@ private:
 // FIXME: Rename to PropertyNameArrayBuilder.
 class PropertyNameArray {
 public:
-    PropertyNameArray(VM* vm, PropertyNameMode propertyNameMode, PrivateSymbolMode privateSymbolMode)
+    PropertyNameArray(VM& vm, PropertyNameMode propertyNameMode, PrivateSymbolMode privateSymbolMode)
         : m_data(PropertyNameArrayData::create())
         , m_vm(vm)
         , m_propertyNameMode(propertyNameMode)
@@ -55,7 +54,7 @@ public:
     {
     }
 
-    VM* vm() { return m_vm; }
+    VM& vm() { return m_vm; }
 
     void add(uint32_t index)
     {
@@ -91,7 +90,7 @@ private:
 
     RefPtr<PropertyNameArrayData> m_data;
     HashSet<UniquedStringImpl*> m_set;
-    VM* m_vm;
+    VM& m_vm;
     PropertyNameMode m_propertyNameMode;
     PrivateSymbolMode m_privateSymbolMode;
 };
@@ -115,7 +114,7 @@ ALWAYS_INLINE void PropertyNameArray::addUnchecked(UniquedStringImpl* identifier
 
 ALWAYS_INLINE void PropertyNameArray::add(UniquedStringImpl* identifier)
 {
-    static const unsigned setThreshold = 20;
+    static constexpr unsigned setThreshold = 20;
 
     ASSERT(identifier);
 

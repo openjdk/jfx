@@ -34,7 +34,7 @@
 #include "JSWebAssemblyInstance.h"
 
 namespace JSC {
-static EncodedJSValue JSC_HOST_CALL webAssemblyInstanceProtoFuncExports(ExecState*);
+static EncodedJSValue JSC_HOST_CALL webAssemblyInstanceProtoFuncExports(JSGlobalObject*, CallFrame*);
 }
 
 #include "WebAssemblyInstancePrototype.lut.h"
@@ -45,28 +45,28 @@ const ClassInfo WebAssemblyInstancePrototype::s_info = { "WebAssembly.Instance",
 
 /* Source for WebAssemblyInstancePrototype.lut.h
  @begin prototypeTableWebAssemblyInstance
- exports webAssemblyInstanceProtoFuncExports DontEnum|Accessor 0
+ exports webAssemblyInstanceProtoFuncExports Accessor 0
  @end
  */
 
-static ALWAYS_INLINE JSWebAssemblyInstance* getInstance(ExecState* exec, VM& vm, JSValue v)
+static ALWAYS_INLINE JSWebAssemblyInstance* getInstance(JSGlobalObject* globalObject, VM& vm, JSValue v)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     JSWebAssemblyInstance* result = jsDynamicCast<JSWebAssemblyInstance*>(vm, v);
     if (!result) {
-        throwException(exec, throwScope,
-            createTypeError(exec, "expected |this| value to be an instance of WebAssembly.Instance"_s));
+        throwException(globalObject, throwScope,
+            createTypeError(globalObject, "expected |this| value to be an instance of WebAssembly.Instance"_s));
         return nullptr;
     }
     return result;
 }
 
-static EncodedJSValue JSC_HOST_CALL webAssemblyInstanceProtoFuncExports(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL webAssemblyInstanceProtoFuncExports(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSWebAssemblyInstance* instance = getInstance(exec, vm, exec->thisValue());
+    JSWebAssemblyInstance* instance = getInstance(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, { });
     return JSValue::encode(instance->moduleNamespaceObject());
 }

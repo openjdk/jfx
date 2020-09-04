@@ -28,12 +28,16 @@
 
 #include "OfflineAudioContext.h"
 
+#include "AudioBuffer.h"
 #include "Document.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
-inline OfflineAudioContext::OfflineAudioContext(Document& document, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate)
-    : AudioContext(document, numberOfChannels, numberOfFrames, sampleRate)
+WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioContext);
+
+inline OfflineAudioContext::OfflineAudioContext(Document& document, AudioBuffer* renderTarget)
+    : AudioContext(document, renderTarget)
 {
 }
 
@@ -44,9 +48,13 @@ ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutio
         return Exception { NotSupportedError };
     if (!numberOfChannels || numberOfChannels > 10 || !numberOfFrames || !isSampleRateRangeGood(sampleRate))
         return Exception { SyntaxError };
-    auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), numberOfChannels, numberOfFrames, sampleRate));
+    auto renderTarget = AudioBuffer::create(numberOfChannels, numberOfFrames, sampleRate);
+    if (!renderTarget)
+        return Exception { SyntaxError };
+
+    auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), renderTarget.get()));
     audioContext->suspendIfNeeded();
-    return WTFMove(audioContext);
+    return audioContext;
 }
 
 } // namespace WebCore

@@ -27,7 +27,9 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ClientOrigin.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
+#include "RegistrableDomain.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerData.h"
@@ -35,14 +37,13 @@
 #include "ServiceWorkerRegistrationKey.h"
 #include "ServiceWorkerTypes.h"
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-struct ClientOrigin;
 class SWServer;
 class SWServerRegistration;
 class SWServerToContextConnection;
-struct ServiceWorkerClientData;
 struct ServiceWorkerClientIdentifier;
 struct ServiceWorkerClientQueryOptions;
 struct ServiceWorkerContextData;
@@ -61,7 +62,7 @@ public:
 
     void terminate();
 
-    WEBCORE_EXPORT void whenActivated(WTF::Function<void(bool)>&&);
+    WEBCORE_EXPORT void whenActivated(CompletionHandler<void(bool)>&&);
 
     enum class State {
         Running,
@@ -72,7 +73,7 @@ public:
     bool isTerminating() const { return m_state == State::Terminating; }
     void setState(State);
 
-    SWServer& server() { return m_server; }
+    SWServer* server() { return m_server.get(); }
     const ServiceWorkerRegistrationKey& registrationKey() const { return m_registrationKey; }
     const URL& scriptURL() const { return m_data.scriptURL; }
     const String& script() const { return m_script; }
@@ -87,7 +88,7 @@ public:
     void setHasPendingEvents(bool);
 
     void scriptContextFailedToStart(const Optional<ServiceWorkerJobDataIdentifier>&, const String& message);
-    void scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>&);
+    void scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>&, bool doesHandleFetch);
     void didFinishInstall(const Optional<ServiceWorkerJobDataIdentifier>&, bool wasSuccessful);
     void didFinishActivation();
     void contextTerminated();
@@ -106,18 +107,27 @@ public:
     ServiceWorkerContextData contextData() const;
 
     const ClientOrigin& origin() const;
-    WEBCORE_EXPORT const SecurityOriginData& securityOrigin() const;
+    const RegistrableDomain& registrableDomain() const { return m_registrableDomain; }
 
     WEBCORE_EXPORT SWServerToContextConnection* contextConnection();
     String userAgent() const;
+
+    bool shouldSkipFetchEvent() const { return m_shouldSkipHandleFetch; }
+
+    SWServerRegistration* registration() const;
+
+    void setHasTimedOutAnyFetchTasks() { m_hasTimedOutAnyFetchTasks = true; }
+    bool hasTimedOutAnyFetchTasks() const { return m_hasTimedOutAnyFetchTasks; }
+    void didFailHeartBeatCheck();
 
 private:
     SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const String& script, const ContentSecurityPolicyResponseHeaders&, String&& referrerPolicy, WorkerType, ServiceWorkerIdentifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
 
     void callWhenActivatedHandler(bool success);
 
-    SWServer& m_server;
+    WeakPtr<SWServer> m_server;
     ServiceWorkerRegistrationKey m_registrationKey;
+    WeakPtr<SWServerRegistration> m_registration;
     ServiceWorkerData m_data;
     String m_script;
     ContentSecurityPolicyResponseHeaders m_contentSecurityPolicy;
@@ -125,9 +135,12 @@ private:
     bool m_hasPendingEvents { false };
     State m_state { State::NotRunning };
     mutable Optional<ClientOrigin> m_origin;
+    RegistrableDomain m_registrableDomain;
     bool m_isSkipWaitingFlagSet { false };
-    Vector<Function<void(bool)>> m_whenActivatedHandlers;
+    Vector<CompletionHandler<void(bool)>> m_whenActivatedHandlers;
     HashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;
+    bool m_shouldSkipHandleFetch;
+    bool m_hasTimedOutAnyFetchTasks { false };
 };
 
 } // namespace WebCore
