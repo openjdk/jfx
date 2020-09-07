@@ -123,3 +123,45 @@ Issue key|Summary|Subcomponent
 JDK-8245422 (not public) | Better Pisces rasterizing | graphics
 JDK-8241108 (not public) | Glib improvements | media
 JDK-8236798 (not public) | Enhance FX scripting support | web
+
+NOTE:
+
+JavaScript programs that are run in the context of a web page loaded by WebEngine can communicate with Java objects passed from the application to the JavaScript program. JavaScript programs that reference java.lang.Class objects are now limited to the following methods:
+
+```
+getCanonicalName
+getEnumConstants
+getFields
+getMethods
+getName
+getPackageName
+getSimpleName
+getSuperclass
+getTypeName
+getTypeParameters
+isAssignableFrom
+isArray
+isEnum
+isInstance
+isInterface
+isLocalClass
+isMemberClass
+isPrimitive
+isSynthetic
+toGenericString
+toString
+```
+
+No methods can be called on the following classes:
+```
+java.lang.ClassLoader
+java.lang.Module
+java.lang.Runtime
+java.lang.System
+
+java.lang.invoke.*
+java.lang.module.*
+java.lang.reflect.*
+java.security.*
+sun.misc.*
+```
