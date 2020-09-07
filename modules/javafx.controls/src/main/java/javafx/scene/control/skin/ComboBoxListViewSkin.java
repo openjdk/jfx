@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -185,10 +186,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateValue();
             control.fireEvent(new ActionEvent());
         });
-        registerChangeListener(control.editableProperty(), e -> {
-            updateEditable();
-            listView.getProperties().put("editableComboBoxEditor", getSkinnable().isEditable());
-        });
+        registerChangeListener(control.editableProperty(), e -> updateEditable());
 
         // Refer to JDK-8095306
         if (comboBox.isShowing()) {
@@ -507,8 +505,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);
-                getProperties().put("excludeKeyMappingsForComboBoxEditor", true);
-                getProperties().put("editableComboBoxEditor", getSkinnable().isEditable());
+                getProperties().put("editableComboBoxEditor", (Supplier<Boolean>) () -> getSkinnable().isEditable());
             }
 
             @Override protected double computeMinHeight(double width) {

@@ -26,8 +26,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.scene.control.skin.Utils;
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -48,6 +46,8 @@ import javafx.util.Callback;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 import static javafx.scene.input.KeyCode.*;
@@ -78,8 +78,21 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         // create a map for listView-specific mappings
         listViewInputMap = createInputMap();
+
         // add focus traversal mappings
+        Supplier<Boolean> isListViewOfComboBox =
+                (Supplier<Boolean>) control.getProperties().get("editableComboBoxEditor");
+        Predicate<KeyEvent> pIsInComboBox = e -> isListViewOfComboBox != null;
+        Predicate<KeyEvent> pIsInEditableComboBox =
+                e -> isListViewOfComboBox != null && isListViewOfComboBox.get();
+        if (isListViewOfComboBox == null) {
+            addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        }
         addDefaultMapping(listViewInputMap,
+            new KeyMapping(new KeyBinding(HOME), e -> selectFirstRow(), pIsInEditableComboBox),
+            new KeyMapping(new KeyBinding(END), e -> selectLastRow(), pIsInEditableComboBox),
+            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow(), pIsInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
 
@@ -94,6 +107,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
+            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow(), pIsInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
@@ -137,38 +153,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(UP).shortcut().shift(), e -> discontinuousSelectPreviousRow()),
             new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
-            new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown())
+            new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
+            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow(), pIsInComboBox)
         );
-
-        if (!control.getProperties().containsKey("excludeKeyMappingsForComboBoxEditor")) {
-            // This is not ComboBox's ListView
-            addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
-            addDefaultMapping(listViewInputMap,
-                    new KeyMapping(HOME, e -> selectFirstRow()),
-                    new KeyMapping(END, e -> selectLastRow()),
-                    new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
-                    new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
-                    new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
-                    new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
-                    new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll())
-            );
-
-            addDefaultMapping(verticalListInputMap,
-                    new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
-                    new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
-            );
-        } else {
-            // This is ComboBox's ListView
-            if (Boolean.FALSE.equals(control.getProperties().get("editableComboBoxEditor"))) {
-                // ComboBox is not editable
-                addDefaultMapping(listViewInputMap,
-                        new KeyMapping(HOME, e -> selectFirstRow()),
-                        new KeyMapping(END, e -> selectLastRow())
-                );
-            }
-        }
-        control.getProperties().addListener(weakPropertiesListener);
-
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 
         // --- horizontal listview
@@ -232,7 +220,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         ListView<T> control = getNode();
 
         ListCellBehavior.removeAnchor(control);
-        control.getProperties().removeListener(weakPropertiesListener);
         control.selectionModelProperty().removeListener(weakSelectionModelListener);
         if (control.getSelectionModel() != null) {
             control.getSelectionModel().getSelectedIndices().removeListener(weakSelectedIndicesListener);
@@ -354,22 +341,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     };
 
-    private final InvalidationListener propertiesListener = inv -> {
-        if (Boolean.FALSE.equals(getNode().getProperties().get("editableComboBoxEditor"))) {
-            // ListView's ComboBox is non editable
-            addDefaultMapping(getInputMap(),
-                    new KeyMapping(HOME, e -> selectFirstRow()),
-                    new KeyMapping(END, e -> selectLastRow())
-            );
-        } else if (Boolean.TRUE.equals(getNode().getProperties().get("editableComboBoxEditor"))) {
-            // ListView's ComboBox is editable
-            removeMapping(new KeyBinding(HOME));
-            removeMapping(new KeyBinding(END));
-        }
-    };
-
-    private final WeakInvalidationListener weakPropertiesListener =
-            new WeakInvalidationListener(propertiesListener);
     private final WeakChangeListener<ObservableList<T>> weakItemsListener =
             new WeakChangeListener<ObservableList<T>>(itemsListener);
     private final WeakListChangeListener<Integer> weakSelectedIndicesListener =

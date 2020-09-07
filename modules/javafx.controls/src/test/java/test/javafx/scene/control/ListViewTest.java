@@ -2063,28 +2063,24 @@ public class ListViewTest {
         }
 
         // Verify default InputMap
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.HOME), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.END), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.HOME).shift(), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.END).shift(), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut(), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.END).shortcut(), null)));
-        assertTrue(inputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.A).shortcut(), null)));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME)));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END)));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift()));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift()));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut()));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut()));
+        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut()));
 
         // Verify vertical child InputMap
-        assertTrue(verticalInputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.HOME).shortcut().shift(), null)));
-        assertTrue(verticalInputMappings.contains(
-                new KeyMapping(new KeyBinding(KeyCode.END).shortcut().shift(), null)));
+        assertFalse(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift()));
+        assertFalse(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift()));
 
         sl.dispose();
+    }
+
+    private boolean testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
+        int i = mappings.indexOf(new KeyMapping(binding, null));
+        return ((KeyMapping)mappings.get(i)).getInterceptor().test(null);
     }
 
     @Test
