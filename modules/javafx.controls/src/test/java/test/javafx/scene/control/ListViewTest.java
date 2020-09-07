@@ -2045,7 +2045,7 @@ public class ListViewTest {
         assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
     }
 
-    @Test public void testExcludeKeyMappingsForComboBoxEditor() {
+    @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
         ListView<String> listView = new ListView<>(FXCollections
                 .observableArrayList("Item1", "Item2"));
         StageLoader sl = new StageLoader(listView);

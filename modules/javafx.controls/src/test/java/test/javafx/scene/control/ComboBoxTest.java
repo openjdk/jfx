@@ -1455,7 +1455,7 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
-    @Test public void testExcludeKeyMappingsForComboBoxEditor() {
+    @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         StageLoader sl = new StageLoader(cb);
 
