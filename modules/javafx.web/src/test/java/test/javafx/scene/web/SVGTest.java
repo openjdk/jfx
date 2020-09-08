@@ -245,10 +245,47 @@ public class SVGTest extends TestBase {
             final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 200, 200);
             assertNotNull(img);
 
-            final Color pixelAt150x50 = new Color(img.getRGB(150, 50), true);
-            assertTrue("Color should be almost red:" + pixelAt150x50, isColorsSimilar(new Color(192, 32, 0), pixelAt150x50, 20));
+            final Color pixelAt50x150 = new Color(img.getRGB(50, 150), true);
+            assertTrue("Color should be almost green:" + pixelAt50x150, isColorsSimilar(new Color(65, 95, 0), pixelAt50x150, 20));
             final Color pixelAt150x150 = new Color(img.getRGB(150, 150), true);
             assertTrue("Color should be almost red:" + pixelAt150x150, isColorsSimilar(new Color(192, 32, 0), pixelAt150x150, 20));
+        });
+    }
+
+    @Test public void testSVGStrokeRenderingWithMask() {
+        loadContent(
+                    "<html>\n" +
+                    "  <body style='margin: 0px 0px;'>\n" +
+                    "    <svg width='200' height='200'>\n" +
+                    "      <defs>\n" +
+                    "        <linearGradient id='Gradient'>\n" +
+                    "          <stop offset='0' stop-color='white' stop-opacity='0' />\n" +
+                    "          <stop offset='1' stop-color='white' stop-opacity='1' />\n" +
+                    "        </linearGradient>\n" +
+                    "        <mask id='Mask'>\n" +
+                    "          <rect x='0' y='0' width='200' height='200' fill='url(#Gradient)' />\n" +
+                    "        </mask>\n" +
+                    "      </defs>\n" +
+                    "      <rect x='0' y='0' width='200' height='200' stroke='green' stroke-width='5' fill='transparent' />\n" +
+                    "      <rect x='0' y='0' width='200' height='200' stroke='red' stroke-width='5' fill='transparent' mask='url(#Mask)' />\n" +
+                    "    </svg>\n" +
+                    "  </body>\n" +
+                    "</html>\n"
+        );
+        submit(() -> {
+            final WebPage webPage = WebEngineShim.getPage(getEngine());
+            assertNotNull(webPage);
+            final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 200, 200);
+            assertNotNull(img);
+
+            final Color pixelAt1x1 = new Color(img.getRGB(1, 1), true);
+            assertTrue("Color should be almost green:" + pixelAt1x1, isColorsSimilar(new Color(0, 128, 0), pixelAt1x1, 10));
+            final Color pixelAt0x199 = new Color(img.getRGB(0, 199), true);
+            assertTrue("Color should be almost green:" + pixelAt0x199, isColorsSimilar(new Color(0, 128, 0), pixelAt0x199, 10));
+            final Color pixelAt199x0 = new Color(img.getRGB(199, 0), true);
+            assertTrue("Color should be almost red:" + pixelAt199x0, isColorsSimilar(new Color(255, 0, 0), pixelAt199x0, 10));
+            final Color pixelAt199x199 = new Color(img.getRGB(199, 199), true);
+            assertTrue("Color should be almost red:" + pixelAt199x199, isColorsSimilar(new Color(255, 0, 0), pixelAt199x199, 10));
         });
     }
 }
