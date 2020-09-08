@@ -38,6 +38,12 @@ import javafx.beans.property.SimpleBooleanProperty;
 public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<T> {
 
     /**
+     * Constructor for subclasses to call.
+     */
+    public TableSelectionModel() {
+    }
+
+    /**
      * Convenience function which tests whether the given row and column index
      * is currently selected in this table instance. If the table control is in its
      * 'cell selection' mode (where individual cells can be selected, rather than
