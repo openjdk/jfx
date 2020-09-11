@@ -65,6 +65,7 @@ public class SkinCleanupTest {
         cell.updateListView(listView);
         installDefaultSkin(cell);
         cell.updateListView(null);
+        // 8246745: updating the old listView must not throw NPE in skin
         listView.setFixedCellSize(100);
     }
 
