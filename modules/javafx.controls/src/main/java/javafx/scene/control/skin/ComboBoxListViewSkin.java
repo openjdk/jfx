@@ -505,7 +505,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);
-                getProperties().put("editableComboBoxEditor", (Supplier<Boolean>) () -> getSkinnable().isEditable());
+                // editableComboBox property is used to intercept few Key inputs from this ListView,
+                // so that those inputs get forwarded to editor of ComboBox .
+                getProperties().put("editableComboBox", (Supplier<Boolean>) () -> getSkinnable().isEditable());
             }
 
             @Override protected double computeMinHeight(double width) {

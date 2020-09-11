@@ -1455,6 +1455,68 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
+    @Test public void testKeyInputsOnNonEditableComboBox() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        // cb.setEditable(false); // by default ComboBox is not editable
+        StageLoader sl = new StageLoader(cb);
+        SingleSelectionModel<String> sm = cb.getSelectionModel();
+        sm.select(0);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+
+        // Show the popup
+        assertFalse(cb.isShowing());
+        cb.requestFocus();
+        keyboard.doDownArrowPress(KeyModifier.ALT);
+        // Sanity
+        assertTrue(cb.isShowing());
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test RIGHT key
+        keyboard.doRightArrowPress();
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test KP_RIGHT key
+        keyboard.doKeyPress(KeyCode.KP_RIGHT);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test DOWN key
+        keyboard.doDownArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+
+        // Test KP_DOWN key
+        keyboard.doKeyPress(KeyCode.KP_DOWN);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test LEFT key
+        keyboard.doLeftArrowPress();
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test KP_LEFT key
+        keyboard.doKeyPress(KeyCode.KP_LEFT);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test UP key
+        keyboard.doUpArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+
+        // Test KP_UP key
+        keyboard.doKeyPress(KeyCode.KP_UP);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test END key
+        keyboard.doKeyPress(KeyCode.END);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test HOME key
+        keyboard.doKeyPress(KeyCode.HOME);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Sanity
+        assertTrue(cb.isShowing());
+
+        sl.dispose();
+    }
+
     @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         StageLoader sl = new StageLoader(cb);
@@ -1479,13 +1541,13 @@ public class ComboBoxTest {
     }
 
     private void testKeyMappingsForEditableCB(ObservableList<?> inputMappings) {
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME)));
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.END)));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END), true);
     }
 
     private void testKeyMappingsForNonEditableCB(ObservableList<?> inputMappings) {
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME)));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END)));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME), false);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END), false);
     }
 
     private void testCommonKeyMappings(ObservableList<?> inputMappings,
@@ -1496,20 +1558,25 @@ public class ComboBoxTest {
         }
 
         // Verify default InputMap
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift()));
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift()));
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut()));
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut()));
-        assertTrue(testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut()));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut(), true);
 
         // Verify vertical child InputMap
-        assertTrue(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift()));
-        assertTrue(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift()));
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift(), true);
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift(), true);
     }
 
-    private boolean testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
+    private void testInterceptor(ObservableList<?> mappings, KeyBinding binding, boolean isIntercepted) {
         int i = mappings.indexOf(new KeyMapping(binding, null));
-        return ((KeyMapping)mappings.get(i)).getInterceptor().test(null);
+        if (((KeyMapping)mappings.get(i)).getInterceptor() != null) {
+            assertEquals(isIntercepted, ((KeyMapping) mappings.get(i)).getInterceptor().test(null));
+        } else {
+            // JDK-8209788 added interceptor for few KeyMappings
+            fail("Interceptor must not be null");
+        }
     }
 
     @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {

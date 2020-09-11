@@ -81,18 +81,18 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         // add focus traversal mappings
         Supplier<Boolean> isListViewOfComboBox =
-                (Supplier<Boolean>) control.getProperties().get("editableComboBoxEditor");
-        Predicate<KeyEvent> pIsInComboBox = e -> isListViewOfComboBox != null;
-        Predicate<KeyEvent> pIsInEditableComboBox =
+                (Supplier<Boolean>) control.getProperties().get("editableComboBox");
+        Predicate<KeyEvent> isInComboBox = e -> isListViewOfComboBox != null;
+        Predicate<KeyEvent> isInEditableComboBox =
                 e -> isListViewOfComboBox != null && isListViewOfComboBox.get();
         if (isListViewOfComboBox == null) {
             addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
         }
         addDefaultMapping(listViewInputMap,
-            new KeyMapping(new KeyBinding(HOME), e -> selectFirstRow(), pIsInEditableComboBox),
-            new KeyMapping(new KeyBinding(END), e -> selectLastRow(), pIsInEditableComboBox),
-            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow(), pIsInComboBox),
-            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(HOME), e -> selectFirstRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(END), e -> selectLastRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
 
@@ -107,9 +107,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
-            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll(), pIsInComboBox),
-            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow(), pIsInComboBox),
-            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow(), pIsInComboBox),
+            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll(), isInComboBox),
+            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
@@ -154,8 +154,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
-            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow(), pIsInComboBox),
-            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow(), pIsInComboBox)
+            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow(), isInComboBox)
         );
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 

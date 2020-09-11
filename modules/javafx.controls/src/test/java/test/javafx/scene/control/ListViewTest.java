@@ -2063,24 +2063,29 @@ public class ListViewTest {
         }
 
         // Verify default InputMap
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME)));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END)));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift()));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift()));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut()));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut()));
-        assertFalse(testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut()));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut());
 
         // Verify vertical child InputMap
-        assertFalse(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift()));
-        assertFalse(testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift()));
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift());
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift());
 
         sl.dispose();
     }
 
-    private boolean testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
+    private void testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
         int i = mappings.indexOf(new KeyMapping(binding, null));
-        return ((KeyMapping)mappings.get(i)).getInterceptor().test(null);
+        if (((KeyMapping)mappings.get(i)).getInterceptor() != null) {
+            assertFalse(((KeyMapping)mappings.get(i)).getInterceptor().test(null));
+        } else {
+            // JDK-8209788 added interceptor for few KeyMappings
+            fail("Interceptor must not be null");
+        }
     }
 
     @Test
