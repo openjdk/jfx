@@ -42,6 +42,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static javafx.scene.control.ControlShim.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -810,4 +811,28 @@ public class ListCellTest {
         ListCell cell = new ListCell();
         cell.setSkin(new ListCellSkin(cell));
     }
+
+    /**
+     * Test that min/max/pref height respect fixedCellSize.
+     * Sanity test when fixing JDK-8246745.
+     */
+    @Test
+    public void testListCellHeights() {
+        ListCell<Object> cell =  new ListCell<>();
+        ListView<Object> listView = new ListView<>();
+        cell.updateListView(listView);
+        installDefaultSkin(cell);
+        listView.setFixedCellSize(100);
+        assertEquals("pref height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+        assertEquals("min height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.minHeight(-1), 1);
+        assertEquals("max height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.maxHeight(-1), 1);
+    }
+
+
 }
