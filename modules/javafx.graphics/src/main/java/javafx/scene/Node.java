@@ -326,10 +326,10 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * The matrices that represent the transforms are multiplied in this order:
  * <ol>
  * <li> Layout ({@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}) and translate
- * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})
- * <li> Rotate ({@link #rotateProperty rotate})
- * <li> Scale ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ})
- * <li> Transforms list ({@link #getTransforms transforms}) starting from element 0
+ * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})</li>
+ * <li> Rotate ({@link #rotateProperty rotate})</li>
+ * <li> Scale ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ})</li>
+ * <li> Transforms list ({@link #getTransforms transforms}) starting from element 0</li>
  * </ol>
  * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
  * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bounds in the local
