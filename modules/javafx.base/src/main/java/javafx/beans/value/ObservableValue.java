@@ -39,11 +39,12 @@ import javafx.beans.Observable;
  * <p>
  * An implementation of {@code ObservableValue} may support lazy evaluation,
  * which means that the value is not immediately recomputed after changes, but
- * lazily the next time the value is requested (see note 1 in the "Implementation Requirements").
+ * lazily the next time the value is requested (see note 1 in "Implementation Requirements").
  * <p>
  * An {@code ObservableValue} generates two types of events: change events and
  * invalidation events. A change event indicates that the value has changed
- * (see note 2 in "Implementation Requirements"). An invalidation event is generated if the current value is not valid anymore.
+ * (see note 2 in "Implementation Requirements"). An
+ * invalidation event is generated if the current value is not valid anymore.
  * This distinction becomes important if the {@code ObservableValue} supports
  * lazy evaluation, because for a lazily evaluated value one does not know if an
  * invalid value really has changed until it is recomputed. For this reason,
@@ -68,9 +69,9 @@ import javafx.beans.Observable;
  *            The type of the wrapped value.
  *
  * @implSpec <ol>
- * <li> All bindings and properties in the JavaFX library support lazy evaluation.
+ * <li> All bindings and properties in the JavaFX library support lazy evaluation.</li>
  * <li> All implementing classes in the JavaFX library check for a change using reference
- * equality (and not object equality, {@code Object#equals(Object)}) of the value.
+ * equality (and not object equality, {@code Object#equals(Object)}) of the value.</li>
  * </ol>
  *
  * @see ObservableBooleanValue
