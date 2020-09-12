@@ -3399,7 +3399,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The rectangular bounds of this {@code Node} in the parent coordinate system.
      * {@code boundsInParent} is calculated by taking the {@linkplain #boundsInLocalProperty local bounds} and applying
-     * the node transforms as specified in the {@linkplain Node Transformations} section of the class doc.
+     * the node transforms as specified in the <a href="#Transformations">Transformations</a> section of the class doc.
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
      * {@code Node}'s parent, however, the node need not have a parent to calculate
