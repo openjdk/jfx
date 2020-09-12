@@ -225,7 +225,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * an UnsupportedOperationException being thrown.
  * </p>
  *
- * <h2>String ID</h2>
+ * <h2><a id="StringID">String ID</a></h2>
  * <p>
  * Each node in the scene graph can be given a unique {@link #idProperty id}. This id is
  * much like the "id" attribute of an HTML tag in that it is up to the designer
@@ -235,7 +235,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * scene graph. The id can also be used identify nodes for applying styles; see
  * the CSS section below.
  *
- * <h2>Coordinate System</h2>
+ * <h2><a id="CoordinateSystem">Coordinate System</a></h2>
  * <p>
  * The {@code Node} class defines a traditional computer graphics "local"
  * coordinate system in which the {@code x} axis increases to the right and the
@@ -268,7 +268,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * important context-specific information about coordinate mapping and how
  * it can affect rendering.
  *
- * <h2>Transformations</h2>
+ * <h2><a id="Transformations">Transformations</a></h2>
  * <p>
  * Any {@code Node} can have transformations applied to it. These include
  * translation, rotation, scaling, or shearing.
@@ -325,18 +325,18 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * {@link #getTransforms transforms} list. Predefined transforms are applied using the properties specified below.
  * The matrices that represent the transforms are multiplied in this order:
  * <ol>
- * <li> Layout ({@link #layoutXProperty layoutX}), {@link #layoutYProperty layoutY} and translate
+ * <li> Layout ({@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}) and translate
  * ({@link #translateXProperty translateX}, {@link #translateYProperty translateY}, {@link #translateZProperty translateZ})
  * <li> Rotate ({@link #rotateProperty rotate})
  * <li> Scale ({@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ})
  * <li> Transforms list ({@link #getTransforms transforms}) starting from element 0
  * </ol>
  * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
- * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bound in the local
+ * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bounds in the local
  * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the <b>Bounding Rectangles</b>
  * section).
  *
- * <h2>Bounding Rectangles</h2>
+ * <h2><a id="BoundingRectangles">Bounding Rectangles</a></h2>
  * <p>
  * Since every {@code Node} has transformations, every Node's geometric
  * bounding rectangle can be described differently depending on whether
@@ -351,7 +351,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p>
  * Each {@code Node} also has a read-only {@link #boundsInParentProperty boundsInParent} variable which
  * specifies the bounding rectangle of the {@code Node} after all transformations
- * have been applied as specified in the <b>Transformations</b> section.
+ * have been applied as specified in the <a href="#Transformations">Transformations</a> section.
  * It is called "boundsInParent" because the rectangle will be relative to the
  * parent's coordinate system.  This is the 'visual' bounds of the node.
  * <p>
@@ -389,8 +389,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * <p> <img src="doc-files/bounds.png" alt="The rectangles are enclosed by their
  * respective bounds"> </p>
  *
- *
- * <h2>CSS</h2>
+ * <h2><a id="CSS">CSS</a></h2>
  * <p>
  * The {@code Node} class contains {@code id}, {@code styleClass}, and
  * {@code style} variables that are used in styling this node from
@@ -402,6 +401,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * For further information about CSS and how to apply CSS styles
  * to nodes, see the <a href="doc-files/cssref.html">CSS Reference
  * Guide</a>.
+ *
  * @since JavaFX 2.0
  */
 @IDProperty("id")
@@ -3418,9 +3418,10 @@ public abstract class Node implements EventTarget, Styleable {
      * this variable. For example, the x or y variables of a shape, or
      * {@code translateX}, {@code translateY} should never be bound to
      * {@code boundsInParent} for the purpose of positioning the node.
+     * <p>
+     * See also the <a href="#BoundingRectangles">Bounding Rectangles</a> section.
      *
      * @return the {@code boundsInParent} property for this {@code Node}
-     * @see {@linkplain Node Bounding Rectangles} section in the class docs
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInParentProperty() {
         return getMiscProperties().boundsInParentProperty();
@@ -5522,8 +5523,9 @@ public abstract class Node implements EventTarget, Styleable {
      **************************************************************************/
     /**
      * The {@code ObservableList} of custom {@link javafx.scene.transform.Transform}s
-     * to be applied to this {@code Node}. These transforms are applied before the predefined transforms. See the
-     * {@linkplain Node Transformations} section of the class docs for more information about transformation types and order.
+     * to be applied to this {@code Node}. These transforms are applied before the predefined transforms.
+     * <p>
+     * See also the <a href="#Transformations">Transformations</a> section.
      *
      * @return the transforms for this {@code Node}
      * @defaultValue empty
