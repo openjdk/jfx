@@ -333,8 +333,8 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * </ol>
  * The transforms are applied in the reverse order of the matrix multiplication outlined above: last element of the transforms list
  * to 0th element, scale, rotate, and layout and translate. By applying the transforms in this order, the bounds in the local
- * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the <b>Bounding Rectangles</b>
- * section).
+ * coordinates of the node are transformed to the bounds in the parent coordinate of the node (see the
+ * <a href="#BoundingRectangles">Bounding Rectangles</a> section).
  *
  * <h2><a id="BoundingRectangles">Bounding Rectangles</a></h2>
  * <p>
