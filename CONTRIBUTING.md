@@ -1,12 +1,12 @@
 Contributing to OpenJFX
 =======================
 
-OpenJFX is an open source project and we love to receive contributions from our community &mdash; you! There are many ways to contribute, from improving the documentation, submitting bug reports and feature requests or writing code which can be incorporated into OpenJFX itself.
+OpenJFX is an open source project and we love to receive contributions from our community &mdash; you! There are many ways to contribute, from improving the documentation, submitting bug reports and feature requests, or writing code which can be incorporated into OpenJFX itself.
 
 Bug reports
 -----------
 
-If you think you have found a bug in OpenJFX, first make sure that you are testing against the latest version - your issue may already have been fixed. If not, search our [issues list](https://bugs.openjdk.java.net) in the Java Bug System (JBS) in case a similar issue has already been opened. More information on where and how to report a bug can be found at [bugreport.java.com](https://bugreport.java.com/).
+If you think you have found a bug in OpenJFX, first make sure that you are testing against the latest version - your issue may already have been fixed. If not, search our [issues list](https://bugs.openjdk.java.net/issues/?filter=39543) in the Java Bug System (JBS) in case a similar issue has already been opened. More information on where and how to report a bug can be found at [bugreport.java.com](https://bugreport.java.com/).
 
 It is very helpful if you can prepare a reproduction of the bug. In other words, provide a small test case which we can run to confirm your bug. It makes it easier to find the problem and to fix it.
 
@@ -15,13 +15,13 @@ Provide as much information as you can. The easier it is for us to recreate your
 Feature requests
 ----------------
 
-All new feature requests, including any API changes, need prior discussion on the [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list, even if there is already an open
+All new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
 [JBS issue](https://bugs.openjdk.java.net). See the [New features / API additions](#new-features--api-additions) section at the end of this guide for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
 
-If you have a bug fix or new feature that you would like to contribute to OpenJFX, please find or open an issue about it first. Talk about what you would like to do on the [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list. It may be that somebody is already working on it, or that there are particular issues that you should know about before implementing the change. Feature requests, in particular, must be discussed ahead of time and will require significant effort on your part.
+If you have a bug fix or new feature that you would like to contribute to OpenJFX, please find or open an issue about it first. Talk about what you would like to do on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list. It may be that somebody is already working on it, or that there are particular issues that you should know about before implementing the change. Feature requests, in particular, must be discussed ahead of time and will require significant effort on your part.
 
 We enjoy working with contributors to get their code accepted. There are many approaches to fixing a problem and it is important to find the best approach before writing too much code.
 
@@ -54,7 +54,7 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
 
-TIP: A GitHub pull request (PR) should not be the first time we hear about your proposed change to OpenJFX. Unless clearly identified as experimental or work-in-progress (WIP), we will usually close a pull request that isn't associated with an existing bug report. Reading the policies below will help you in getting your change approved.
+TIP: A GitHub pull request (PR) should not be the first time we hear about your proposed change to OpenJFX. Unless clearly identified as a Draft or work-in-progress (WIP), we will usually close a pull request that isn't associated with an existing bug report. Reading the policies below will help you in getting your change approved.
 
 ### Submitting your changes via a pull request
 
@@ -74,7 +74,9 @@ Once your changes and tests are ready to submit for review:
     [submit a pull request](https://help.github.com/articles/using-pull-requests).
     The title of the pull request must start with the 7-digit JBS bug id
     (without the `JDK-` prefix), followed by a colon (`:`), then a space,
-    and finally the bug title as taken from JBS. You should include
+    and finally the bug title as taken from JBS. This title should _exactly_ match
+    the JBS bug, else the Skara bot will warn about the mismatch.
+    You should include
     additional details about your change in the Description of the pull
     request. For example, the following is a valid pull request title:
 
@@ -85,15 +87,15 @@ Once your changes and tests are ready to submit for review:
     The Skara bot will then run `jcheck` on the server to verify the format
     of the PR title and check for whitespace errors. Once that passes,
     it will automatically send a Request For Review (RFR) email to the
-    [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list.
+    [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list.
     The Skara bot will also cross-link the JBS Issue and the pull request.
     See the
     [Skara project page](https://github.com/openjdk/skara#openjdk-project-skara)
     for information on `jcheck` and other Skara tools.
 
-    TIP: prefix the pull request title with `WIP:` if you aren't yet
+    TIP: Create a `Draft` pull request or prefix the pull request title with `WIP:` if you aren't yet
     ready for it to be reviewed. The Skara bot will not send an RFR
-    email unless the title starts with a 7-digit bug ID.
+    email unless the PR is out of the `Draft` state and the title starts with a 7-digit bug ID.
 
     Please adhere to the general guideline that you should never force push
     to a publicly shared branch. Once you have opened your pull request, you
@@ -106,6 +108,8 @@ Once your changes and tests are ready to submit for review:
     also not be done. The Skara bot will squash your commits into a
     single commit, and rebase it onto the target branch when the pull
     request is integrated.
+    See the [GitHub Help Documentation](https://docs.github.com/en/github)
+    for additional help on using Git and GitHub.
 
 4. Code review
 
@@ -179,7 +183,7 @@ It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). I
 The following formatting rules are enforced for source code files by
 `git jcheck`, which is run by the Skara bot:
 
-* Use Unix-style (LF) line endings not DOS-style (CRLF)
+* Use Unix-style (LF) line endings, not DOS-style (CRLF)
 * Do not use TAB characters (exception: Makefiles can have TABS)
 * No trailing spaces
 * No files with execute permission
@@ -189,8 +193,9 @@ Please also follow these formatting guidelines:
 * Java indent is 4 spaces
 * Line width is no more than 120 characters
 * The rest is left to Java coding standards
-* Disable &ldquo;auto-format on save&rdquo; to prevent unnecessary format changes. This makes reviews much harder as it generates unnecessary formatting changes. If your IDE supports formatting only modified chunks that is fine to do.
-* Wildcard imports (`import foo.bar.baz.*`) are forbidden and may cause the build to fail. Please attempt to tame your IDE so it doesn't make them and please send a PR against this document with instructions for your IDE if it doesn't contain them.
+* Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
+* Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
+* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't genearte wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
 * Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
 
 OpenJFX uses Gradle for its build. Before submitting your changes, run the test suite to make sure that nothing is broken, with:
@@ -205,6 +210,8 @@ If you are changing anything that might possibly affect rendering, you should ru
 bash ./gradlew -PFULL_TEST=true -PUSE_ROBOT=true all test
 ```
 
+If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](https://github.com/kevinrushforth/jfx/blob/master/WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
+
 Even more documentation on OpenJFX projects and its build system can be found on the
 [OpenJFX Wiki](https://wiki.openjdk.java.net/display/OpenJFX/).
 
@@ -215,7 +222,7 @@ Adding a new feature to OpenJFX requires us to consider what it means to support
 The main idea is to think in terms of "stewardship" when evolving the JavaFX API. With that in mind, here are the needed steps to
 get a new feature into JavaFX.
 
-1. Discuss the proposed feature on the [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list.
+1. Discuss the proposed feature on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list.
 You should start with _why_ you think
 adding the API to the core of JavaFX is a good and useful addition for multiple applications (not just your own)
 and for the evolution of the JavaFX UI Toolkit. Part of this is to see whether the Project Leads and Reviewers
@@ -230,7 +237,7 @@ proceed to the API.
 implementation, it is the public API itself that is important to nail down and get right. While we don't currently
 use the formal JEP process as is done for larger JDK features, the [JEP template](http://openjdk.java.net/jeps/2)
 provides some ideas to consider when proposing an API, such as a summary of the changes, goals, motivation, testing,
-dependencies, etc. A WIP pull request can be useful for illustrative purposes as long as the focus is on the public API.
+dependencies, etc. A Draft (or WIP) pull request can be useful for illustrative purposes as long as the focus is on the public API.
 If there are trade-offs to be made in the implementation, or different implementation approaches that you might take,
 this is a good time to discuss it. Once this step is far enough along that there is general agreement as to the API,
 then it's time to focus on the implementation.
