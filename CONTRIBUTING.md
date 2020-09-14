@@ -210,7 +210,7 @@ If you are changing anything that might possibly affect rendering, you should ru
 bash ./gradlew -PFULL_TEST=true -PUSE_ROBOT=true all test
 ```
 
-If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](https://github.com/kevinrushforth/jfx/blob/master/WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
+If you don't build WebKit (using the `-PCOMPILE_WEBKIT=true` option), you are likely to get test failures when running the web tests. See the [Web Testing](WEBKIT-MEDIA-STUBS.md) page for information on how to address this.
 
 Even more documentation on OpenJFX projects and its build system can be found on the
 [OpenJFX Wiki](https://wiki.openjdk.java.net/display/OpenJFX/).
