@@ -169,40 +169,36 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        beginChange();
-        BitSet bs = new BitSet(c.size());
-        for (int i = 0; i < size(); ++i) {
-            if (c.contains(get(i))) {
-                bs.set(i);
-            }
+        if (this.isEmpty() || c.isEmpty()) {
+            return false;
         }
-        if (!bs.isEmpty()) {
-            int cur = size();
-            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
-                remove(cur);
+        beginChange();
+        boolean removed = false;
+        for (int i = size()-1; i>=0; i--) {
+            if (c.contains(get(i))) {
+                remove(i);
+                removed = true;
             }
         }
         endChange();
-        return !bs.isEmpty();
+        return removed;
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        beginChange();
-        BitSet bs = new BitSet(c.size());
-        for (int i = 0; i < size(); ++i) {
-            if (!c.contains(get(i))) {
-                bs.set(i);
-            }
+        if (this.isEmpty() || c.isEmpty()) {
+            return false;
         }
-        if (!bs.isEmpty()) {
-            int cur = size();
-            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
-                remove(cur);
+        beginChange();
+        boolean retained = false;
+        for (int i = size()-1; i>=0; i--) {
+            if (!c.contains(get(i))) {
+                remove(i);
+                retained = true;
             }
         }
         endChange();
-        return !bs.isEmpty();
+        return retained;
     }
 
     private SortHelper helper;
