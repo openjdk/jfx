@@ -79,6 +79,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         DEDICATED
     }
 
+    private enum MaskedShapeDrawType {
+        FILL,
+        DRAW
+    }
+
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
     private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
@@ -328,6 +333,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             getGraphics(false), clip, path, type() == Type.DEDICATED);
 
         startNewLayer(layer);
+        state.setClipMaskImage(null);
 
         if (log.isLoggable(Level.FINE)) {
             log.fine("setClip(WCPath " + path.getID() + ")");
@@ -435,11 +441,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     public void setClip(int cx, int cy, int cw, int ch) {
         setClip(new Rectangle(cx, cy, cw, ch));
+        state.setClipMaskImage(null);
     }
 
     public void setClip(WCRectangle c) {
         setClip(new Rectangle((int)c.getX(), (int)c.getY(),
                               (int)c.getWidth(), (int)c.getHeight()));
+        state.setClipMaskImage(null);
     }
 
     public void setClip(int cx, int cy, int cw, int ch, WCImage maskImage) {
@@ -507,7 +515,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return false;
     }
 
-    private void fillOrDrawShapeMasked(Graphics g, Shape shape, Paint paint, BasicStroke stroke, boolean isFill) {
+    private void fillOrDrawShapeMasked(Graphics g, Shape shape, Paint paint, BasicStroke stroke, MaskedShapeDrawType drawType) {
 
         FilterContext filterContext = getFilterContext(g);
         Rectangle clipRectangle = getClipRectNoClone();
@@ -517,14 +525,30 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         Graphics g1 = imagePrDrawable.createGraphics();
         state.apply(g1);
         g1.setPaint(paint);
-        if(stroke != null) {
+        if (stroke != null) {
             g1.setStroke(stroke);
         }
-        if (isFill) {
-            g1.fill(shape);
-        } else {
-            g1.draw(shape);
+        switch(drawType) {
+            case FILL:
+                if (shape instanceof RoundRectangle2D) {
+                    RoundRectangle2D r = (RoundRectangle2D)shape;
+                    g1.fillRoundRect(r.x, r.y, r.width, r.height, r.arcWidth, r.arcHeight);
+                } else {
+                    g1.fill(shape);
+                }
+                break;
+            case DRAW:
+                if (shape instanceof RoundRectangle2D) {
+                    RoundRectangle2D r = (RoundRectangle2D)shape;
+                    g1.drawRoundRect(r.x, r.y, r.width, r.height, r.arcWidth, r.arcHeight);
+                } else {
+                    g1.draw(shape);
+                }
+                break;
+            default:
+                break;
         }
+
         RTImage maskImage = (RTImage) (state.getClipMaskImageNoClone());
         Image nativeMaskImage = Image.fromByteBgraPreData(maskImage.getPixelBuffer(),
                 maskImage.getWidth(), maskImage.getHeight(), 0, maskImage.getPixelScale());
@@ -574,7 +598,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     node.updateRectangle(x, y, w, h, 0, 0);
                     render(g, shadow, paint, null, node);
                 } else if (state.getClipMaskImageNoClone() != null) {
-                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, 0, 0), paint, null, true);
+                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, 0, 0), paint, null, MaskedShapeDrawType.FILL);
                 } else {
                     g.setPaint(paint);
                     g.fillRect(x, y, w, h);
@@ -613,7 +637,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     node.updateRectangle(x, y, w, h, arcW, arcH);
                     render(g, shadow, paint, null, node);
                 } else if (state.getClipMaskImageNoClone() != null) {
-                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, arcW, arcH), paint, null, true);
+                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, arcW, arcH), paint, null, MaskedShapeDrawType.FILL);
                 } else {
                     g.setPaint(paint);
                     g.fillRoundRect(x, y, w, h, arcW, arcH);
@@ -1804,7 +1828,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 }
 
                 if (state.getClipMaskImageNoClone() != null) {
-                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, 0, 0), paint, stroke, false);
+                    fillOrDrawShapeMasked(g, new RoundRectangle2D(x, y, w, h, 0, 0), paint, stroke, MaskedShapeDrawType.DRAW);
                 } else {
                     g.setPaint(paint);
                     g.drawRect(x, y, w, h);
@@ -1839,7 +1863,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                             paint = state.getPaintNoClone();
                         }
                         if (state.getClipMaskImageNoClone() != null) {
-                            fillOrDrawShapeMasked(g, p2d, paint, stroke, false);
+                            fillOrDrawShapeMasked(g, p2d, paint, stroke, MaskedShapeDrawType.DRAW);
                         } else {
                             g.setPaint(paint);
                             g.draw(p2d);
@@ -1869,7 +1893,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         node.updateWithPath2d(p2d);
                         render(g, shadow, paint, null, node);
                     } else if (state.getClipMaskImageNoClone() != null) {
-                        fillOrDrawShapeMasked(g, p2d, paint, null, true);
+                        fillOrDrawShapeMasked(g, p2d, paint, null, MaskedShapeDrawType.FILL);
                     } else {
                         g.setPaint(paint);
                         g.fill(p2d);

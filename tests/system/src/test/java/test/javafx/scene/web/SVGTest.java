@@ -44,6 +44,7 @@ import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class SVGTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -67,6 +68,29 @@ public class SVGTest {
             this.primaryStage = primaryStage;
             launchLatch.countDown();
         }
+    }
+
+    private static String colorToString(Color c) {
+        int r = (int)(c.getRed() * 255.0);
+        int g = (int)(c.getGreen() * 255.0);
+        int b = (int)(c.getBlue() * 255.0);
+        int a = (int)(c.getOpacity() * 255.0);
+        return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+    }
+
+    private void assertColorEquals(String msg, Color expected, Color actual, double delta) {
+        if (!testColorEquals(expected, actual, delta)) {
+            fail(msg + " expected:" + colorToString(expected)
+                    + " but was:" + colorToString(actual));
+        }
+    }
+
+    protected boolean testColorEquals(Color expected, Color actual, double delta) {
+        double deltaRed = Math.abs(expected.getRed() - actual.getRed());
+        double deltaGreen = Math.abs(expected.getGreen() - actual.getGreen());
+        double deltaBlue = Math.abs(expected.getBlue() - actual.getBlue());
+        double deltaOpacity = Math.abs(expected.getOpacity() - actual.getOpacity());
+        return (deltaRed <= delta && deltaGreen <= delta && deltaBlue <= delta && deltaOpacity <= delta);
     }
 
     @BeforeClass
@@ -144,4 +168,88 @@ public class SVGTest {
             assertEquals("Color should be opaque red:", redColor, pr.getColor(49, 49));
         });
     }
+
+    /**
+     * @test
+     * @bug 8218973
+     * summary Checks if svg draws correctly with mask
+     */
+    @Test public void testSVGRenderingWithMask() {
+        final CountDownLatch webViewStateLatch = new CountDownLatch(1);
+
+        Util.runAndWait(() -> {
+            assertNotNull(webView);
+            webView.getEngine().getLoadWorker().stateProperty().
+                    addListener((observable, oldValue, newValue) -> {
+                        if (newValue == SUCCEEDED) {
+                            webView.requestFocus();
+                        }
+                    });
+
+            webView.focusedProperty().
+                    addListener((observable, oldValue, newValue) -> {
+                        if (newValue) {
+                            webViewStateLatch.countDown();
+                        }
+                    });
+            final String urlString = SVGTest.class.getResource("svgMask.html").toExternalForm();
+            webView.getEngine().load(urlString);
+        });
+
+        assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        Util.sleep(1000);
+
+        Util.runAndWait(() -> {
+            WritableImage snapshot = svgTestApp.primaryStage.getScene().snapshot(null);
+            PixelReader pr = snapshot.getPixelReader();
+
+            final double delta = 0.07;
+            final Color greenColor = Color.rgb(0, 128, 0);
+            final Color cinnamonColor = Color.rgb(128, 64, 0);
+            final Color redColor = Color.rgb(255, 0, 0);
+
+            // Test path pixels
+            assertColorEquals("Color should be opaque green:",
+                    Color.rgb(65, 95, 0), pr.getColor(50, 150), delta);
+            assertColorEquals("Color should be opaque red:",
+                    Color.rgb(192, 32, 0), pr.getColor(150, 150), delta);
+
+            // Test Rect pixels
+            assertColorEquals("Color should be opaque green:",
+                    greenColor, pr.getColor(200, 0), delta);
+            assertColorEquals("Color should be opaque green:",
+                    greenColor, pr.getColor(200, 199), delta);
+            assertColorEquals("Color should be opaque Cinnamon:",
+                    cinnamonColor, pr.getColor(300, 0), delta);
+            assertColorEquals("Color should be opaque Cinnamon:",
+                    cinnamonColor, pr.getColor(300, 199), delta);
+            assertColorEquals("Color should be opaque red:",
+                    redColor, pr.getColor(399, 0), delta);
+            assertColorEquals("Color should be opaque red:",
+                    redColor, pr.getColor(399, 199), delta);
+
+            // Test RoundedRect pixels
+            assertColorEquals("Color should be opaque green:",
+                    Color.rgb(65, 95, 0), pr.getColor(50, 250), delta);
+            assertColorEquals("Color should be opaque green:",
+                    Color.rgb(65, 95, 0), pr.getColor(50, 350), delta);
+            assertColorEquals("Color should be opaque red:",
+                    Color.rgb(192, 32, 0), pr.getColor(150, 250), delta);
+            assertColorEquals("Color should be opaque red:",
+                    Color.rgb(192, 32, 0), pr.getColor(150, 350), delta);
+
+            // Test Stroke pixels
+            assertColorEquals("Color should be opaque green:",
+                    greenColor, pr.getColor(203, 203), delta);
+            assertColorEquals("Color should be opaque green:",
+                    greenColor, pr.getColor(203, 401), delta);
+            assertColorEquals("Color should be opaque red:",
+                    redColor, pr.getColor(401, 203), delta);
+            assertColorEquals("Color should be opaque red:",
+                    redColor, pr.getColor(401, 401), delta);
+
+        });
+    }
+
+
 }

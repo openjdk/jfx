@@ -214,6 +214,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
         super.setTransform(tm);
     }
 
+    @Override public void concatTransform(WCTransform tm) {
+        init();
+        super.concatTransform(tm);
+    }
+
     private void init() {
         if (!isInitialized) {
             BaseTransform t = PrismGraphicsManager.getPixelScaleTransform();

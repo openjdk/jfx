@@ -1,0 +1,36 @@
+<html>
+  <body style='margin: 0px 0px;'>
+      <svg width='410' height='410'>
+          <defs>
+              <linearGradient id='Gradient'>
+                  <stop offset='0' stop-color='white' stop-opacity='0' />
+                  <stop offset='1' stop-color='white' stop-opacity='1' />
+              </linearGradient>
+              <mask id='Mask1'>
+                  <rect x='0' y='0' width='200' height='200' fill='url(#Gradient)' />
+              </mask>
+              <mask id='Mask2'>
+                  <rect x='200' y='0' width='200' height='200' fill='url(#Gradient)' />
+              </mask>
+              <mask id='Mask3'>
+                  <rect x='0' y='200' width='200' height='200' fill='url(#Gradient)' />
+              </mask>
+              <mask id='Mask4'>
+                  <rect x='202' y='202' width='200' height='200' fill='url(#Gradient)' />
+              </mask>
+          </defs>
+
+          <path d='M 0 200 Q 100 0 200 200' fill='green' />
+          <path d='M 0 200 Q 100 0 200 200' fill='red' mask='url(#Mask1)' />
+
+          <rect x='200' y='0' width='200' height='200' fill='green' />
+          <rect x='200' y='0' width='200' height='200' fill='red' mask='url(#Mask2)' />
+
+          <rect x='0' y='200' width='200' height='200' rx='20' ry='20' fill='green' />
+          <rect x='0' y='200' width='200' height='200' rx='20' ry='20' fill='red' mask='url(#Mask3)' />
+
+          <rect x='202' y='202' width='200' height='200' stroke='green' stroke-width='4' fill='transparent' />
+          <rect x='202' y='202' width='200' height='200' stroke='red' stroke-width='4' fill='transparent' mask='url(#Mask4)' />
+      </svg>
+  </body>
+</html>
