@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control.skin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,6 +34,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.sun.javafx.scene.control.TabObservableList;
 import com.sun.javafx.tk.Toolkit;
 
 import static javafx.scene.control.skin.TabPaneSkinShim.*;
@@ -65,6 +67,149 @@ public class TabPaneHeaderScrollTest {
     private Stage stage;
     private Pane root;
     private TabPane tabPane;
+
+//-------- tests around JDK-8252236
+
+    @Test
+    public void testMoveBySetAll() {
+        showTabPane();
+        // select last for max scrolling
+        int last = tabPane.getTabs().size() - 1;
+        tabPane.getSelectionModel().select(last);
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        Toolkit.getToolkit().firePulse();
+        // move selected tab to first
+        List<Tab> tabs = new ArrayList<>(tabPane.getTabs());
+        tabs.remove(selectedTab);
+        tabs.add(0, selectedTab);
+        tabPane.getTabs().setAll(tabs);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("scrolled to leading edge", 0, getHeaderAreaScrollOffset(tabPane), 1);
+    }
+
+    /**
+     * This test passes without the fix, must pass after as well.
+     */
+    @Test
+    public void testMoveByTabObservableList() {
+        showTabPane();
+        // select last for max scrolling
+        int last = tabPane.getTabs().size() - 1;
+        tabPane.getSelectionModel().select(last);
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        Toolkit.getToolkit().firePulse();
+        // move selected tab to first
+        ((TabObservableList<Tab>) tabPane.getTabs()).reorder(selectedTab, tabPane.getTabs().get(0));
+        Toolkit.getToolkit().firePulse();
+        assertEquals("scrolled to leading edge", 0, getHeaderAreaScrollOffset(tabPane), 1);
+    }
+
+    /**
+     * Scroll to last (by selecting it) -> remove last.
+     *
+     * Without fix, fails by not scrolling at all: the gap is increasing every time the
+     * last selected (after removal that's the previous) is removed.
+     *
+     */
+    @Test
+    public void testRemoveSelectedAsLast() {
+        showTabPane();
+        int last = tabPane.getTabs().size() - 1;
+        Tab secondLastTab = tabPane.getTabs().get(last - 1);
+        Tab lastTab = tabPane.getTabs().get(last);
+        // select for max scroll
+        tabPane.getSelectionModel().select(last);
+        Toolkit.getToolkit().firePulse();
+
+        // at this point, the header is scrolled such that the last is at the very right
+        double scrollOffset = getHeaderAreaScrollOffset(tabPane);
+        double lastTabOffset = getTabHeaderOffset(tabPane, lastTab);
+        double secondLastTabOffset = getTabHeaderOffset(tabPane, secondLastTab);
+        // expected change in scroll offset
+        double expectedDelta = lastTabOffset - secondLastTabOffset;
+
+        // remove last (== selected)
+        tabPane.getTabs().remove(last);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("scrollOffset adjusted: ", scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1);
+    }
+
+    /**
+     * Scroll to last (by selecting it) -> select previous -> remove last.
+     *
+     * This test passes without the fix, must pass after as well.
+     */
+    @Test
+    public void testRemoveLastIfSelectedIsSecondLast() {
+        showTabPane();
+        int last = tabPane.getTabs().size() - 1;
+        Tab lastTab = tabPane.getTabs().get(last);
+        int secondLast = last - 1;
+        Tab secondLastTab = tabPane.getTabs().get(secondLast);
+
+        // select for max scroll
+        tabPane.getSelectionModel().select(last);
+        Toolkit.getToolkit().firePulse();
+
+        // at this point, the header is scrolled such that the last is at the very right
+        double scrollOffset = getHeaderAreaScrollOffset(tabPane);
+        double lastTabOffest = getTabHeaderOffset(tabPane, lastTab);
+        double secondeLastTabOffset = getTabHeaderOffset(tabPane, secondLastTab);
+        // expected change in scroll offset
+        double expectedDelta = lastTabOffest - secondeLastTabOffset;
+
+        // select previous tab
+        tabPane.getSelectionModel().select(secondLast);
+        Toolkit.getToolkit().firePulse();
+
+         // remove last
+        tabPane.getTabs().remove(last);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals("scrollOffset adjusted: ", scrollOffset + expectedDelta, getHeaderAreaScrollOffset(tabPane), 1);
+    }
+
+    @Test
+    public void testRemoveBefore() {
+        showTabPane();
+        int selected = 4;
+        tabPane.getSelectionModel().select(selected);
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        Toolkit.getToolkit().firePulse();
+        // state before tabs modification
+        double selectedTabOffset = getTabHeaderOffset(tabPane, selectedTab);
+        double scrollOffset = getHeaderAreaScrollOffset(tabPane);
+        assertEquals("sanity: tab visible but not scrolled", 0, scrollOffset, 1);
+
+        // scroll selected to leading edge
+        setHeaderAreaScrollOffset(tabPane, - selectedTabOffset);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("sanity: really scrolled", - selectedTabOffset, getHeaderAreaScrollOffset(tabPane), 1);
+        tabPane.getTabs().remove(0);
+        Toolkit.getToolkit().firePulse();
+        assertEquals("scroll offset", - getTabHeaderOffset(tabPane, selectedTab), getHeaderAreaScrollOffset(tabPane), 1);
+    }
+
+    @Test
+    public void testAddBefore() {
+        showTabPane();
+        int last = tabPane.getTabs().size() - 1;
+        tabPane.getSelectionModel().select(last);
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        Toolkit.getToolkit().firePulse();
+        // state before tabs modification
+        double selectedTabOffset = getTabHeaderOffset(tabPane, selectedTab);
+        double scrollOffset = getHeaderAreaScrollOffset(tabPane);
+
+        Tab added = new Tab("added", new Label("added"));
+        tabPane.getTabs().add(0, added);
+        Toolkit.getToolkit().firePulse();
+        Node addedHeader = getTabHeaderFor(tabPane, added);
+        double addedWidth = addedHeader.prefWidth(-1);
+        assertEquals("sanity", selectedTabOffset + addedWidth, getTabHeaderOffset(tabPane, selectedTab), 1);
+        assertEquals("scroll offset", scrollOffset - addedWidth, getHeaderAreaScrollOffset(tabPane), 1);
+    }
 
     /**
      * Test scroll on changing tabPane width.

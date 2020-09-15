@@ -851,8 +851,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                             ensureSelectedTabIsVisible();
                             scrollOffsetDirty = false;
                         } else {
-                            validateScrollOffset();
                         }
+                        validateScrollOffset();
                     }
 
                     Side tabPosition = getSkinnable().getSide();
@@ -986,6 +986,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private void addTab(Tab tab, int addToIndex) {
             TabHeaderSkin tabHeaderSkin = new TabHeaderSkin(tab);
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
+            invalidateScrollOffset();
         }
 
         private void removeTab(Tab tab) {
@@ -993,6 +994,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             if (tabHeaderSkin != null) {
                 headersRegion.getChildren().remove(tabHeaderSkin);
             }
+            invalidateScrollOffset();
         }
 
         private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
@@ -1000,6 +1002,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 headersRegion.getChildren().remove(tabHeaderSkin);
                 headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
             }
+            invalidateScrollOffset();
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {
@@ -2250,6 +2253,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
             dragHeaderAnim.playFromStart();
         }
+        tabHeaderArea.invalidateScrollOffset();
     }
 
     private void reorderTabs() {
@@ -2306,6 +2310,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     double test_getHeaderAreaScrollOffset() {
         return tabHeaderArea.getScrollOffset();
+    }
+
+    void test_setHeaderAreaScrollOffset(double offset) {
+        tabHeaderArea.setScrollOffset(offset);
     }
 
     boolean test_isTabsFit() {
