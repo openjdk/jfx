@@ -19,7 +19,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 audio {
@@ -542,11 +542,11 @@ audio::-webkit-media-controls-panel .hidden {
 
 /* Full Screen */
 
-/* 
+/*
     Page stylesheets are not allowed to override the style of media
     controls while in full screen mode, so many if not all the rules
     defined in this section will be marked as !important to enforce
-    this restriction 
+    this restriction
 */
 
 video:-webkit-full-screen::-webkit-media-controls-panel {
@@ -567,7 +567,7 @@ video:-webkit-full-screen::-webkit-media-controls-panel {
         rgba(12, 12, 12, .97) 100%
     ) !important;
 
-    box-shadow: 
+    box-shadow:
         inset 0 -1px 1px rgba(0, 0, 0, 0.5),
         inset 0  1px 0 0px   rgba(255, 255, 255, 0.15),
         inset 0 -1px 0 0px   rgba(202, 202, 202, 0.09),
@@ -619,7 +619,7 @@ video:-webkit-full-screen::-webkit-media-controls-volume-slider::-webkit-slider-
 
 video:-webkit-full-screen::-webkit-media-controls-play-button {
     position: absolute;
-    
+
     background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 22"><linearGradient id="gradient" x2="0" y2="100%" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="rgb(216, 216, 216)"/><stop offset="0.478" stop-color="rgb(216, 216, 216)"/><stop offset="0.478" stop-color="rgb(208, 208, 208)"/><stop offset="0.522" stop-color="rgb(208, 208, 208)"/><stop offset="0.522" stop-color="rgb(200, 200, 200)"/><stop offset="1" stop-color="rgb(208, 208, 208)"/></linearGradient><path d="M 0,0 0,22 8,22 8,0 z" fill="url(#gradient)"/><path d="M 13,0 13,22 21,22 21,0 z" fill="url(#gradient)"/></svg>');
 
     width: 22px;
