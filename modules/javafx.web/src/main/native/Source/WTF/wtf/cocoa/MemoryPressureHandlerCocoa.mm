@@ -54,7 +54,7 @@ static int notifyTokens[3];
 
 // Disable memory event reception for a minimum of s_minimumHoldOffTime
 // seconds after receiving an event. Don't let events fire any sooner than
-// s_holdOffMultiplier times the last cleanup processing time. Effectively 
+// s_holdOffMultiplier times the last cleanup processing time. Effectively
 // this is 1 / s_holdOffMultiplier percent of the time.
 // These value seems reasonable and testing verifies that it throttles frequent
 // low memory events, greatly reducing CPU usage.
