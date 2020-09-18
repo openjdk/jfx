@@ -21,7 +21,7 @@ All new feature requests, including any API changes, need prior discussion on th
 Contributing code and documentation changes
 -------------------------------------------
 
-If you have a bug fix or new feature that you would like to contribute to OpenJFX, please talk about what you would like to do on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list. It may be that somebody is already working on it, or that there are particular issues that you should know about before implementing the change. Feature requests, in particular, must be discussed ahead of time and will require significant effort on your part.
+If you have a bug fix or new feature that you would like to contribute to OpenJFX, please talk about what you would like to do on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list. It may be that somebody is already working on it, or that there are particular issues that you should know about before implementing the change.
 
 We enjoy working with contributors to get their code accepted. There are many approaches to fixing a problem and it is important to find the best approach before writing too much code.
 
@@ -219,8 +219,8 @@ New features / API additions
 ----------------------------
 
 Adding a new feature to OpenJFX requires us to consider what it means to support that API forever; we take compatibility seriously.
-The main idea is to think in terms of "stewardship" when evolving the JavaFX API. With that in mind, here are the needed steps to
-get a new feature into JavaFX.
+The main idea is to think in terms of "stewardship" when evolving the JavaFX API. This will require significant effort on your part.
+With that in mind, here are the needed steps to get a new feature into JavaFX.
 
 1. Discuss the proposed feature on the [openjfx-dev](https://mail.openjdk.java.net/mailman/listinfo/openjfx-dev) mailing list.
 You should start with _why_ you think
