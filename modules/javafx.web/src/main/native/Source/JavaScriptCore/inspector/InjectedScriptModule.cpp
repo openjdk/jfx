@@ -48,9 +48,9 @@ InjectedScriptModule::~InjectedScriptModule()
 {
 }
 
-void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptManager, JSC::ExecState* scriptState)
+void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptManager, JSC::JSGlobalObject* globalObject)
 {
-    InjectedScript injectedScript = injectedScriptManager->injectedScriptFor(scriptState);
+    InjectedScript injectedScript = injectedScriptManager->injectedScriptFor(globalObject);
     ensureInjected(injectedScriptManager, injectedScript);
 }
 
@@ -61,22 +61,39 @@ void InjectedScriptModule::ensureInjected(InjectedScriptManager* injectedScriptM
         return;
 
     // FIXME: Make the InjectedScript a module itself.
-    JSC::JSLockHolder locker(injectedScript.scriptState());
+    JSC::JSLockHolder locker(injectedScript.globalObject());
     Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "hasInjectedModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
     function.appendArgument(name());
-    bool hadException = false;
-    auto resultValue = injectedScript.callFunctionWithEvalEnabled(function, hadException);
-    ASSERT(!hadException);
-    if (hadException || !resultValue || !resultValue.isBoolean() || !resultValue.asBoolean()) {
+    auto hasInjectedModuleResult = injectedScript.callFunctionWithEvalEnabled(function);
+    ASSERT(hasInjectedModuleResult);
+    if (!hasInjectedModuleResult) {
+        auto& error = hasInjectedModuleResult.error();
+        ASSERT(error);
+        unsigned line = 0;
+        unsigned column = 0;
+        auto& stack = error->stack();
+        if (stack.size() > 0)
+            stack[0].computeLineAndColumn(line, column);
+        WTFLogAlways("Error when calling 'hasInjectedModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+        WTFLogAlways("%s\n", source().utf8().data());
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    if (!hasInjectedModuleResult.value().isBoolean() || !hasInjectedModuleResult.value().asBoolean()) {
         Deprecated::ScriptFunctionCall function(injectedScript.injectedScriptObject(), "injectModule"_s, injectedScriptManager->inspectorEnvironment().functionCallHandler());
         function.appendArgument(name());
         function.appendArgument(source());
-        function.appendArgument(host(injectedScriptManager, injectedScript.scriptState()));
-        hadException = false;
-        resultValue = injectedScript.callFunctionWithEvalEnabled(function, hadException);
-        if (hadException) {
-            WTFLogAlways("Failed to parse/execute %s!", name().ascii().data());
-            WTFLogAlways("%s\n", source().ascii().data());
+        function.appendArgument(host(injectedScriptManager, injectedScript.globalObject()));
+        auto injectModuleResult = injectedScript.callFunctionWithEvalEnabled(function);
+        if (!injectModuleResult) {
+            auto& error = injectModuleResult.error();
+            ASSERT(error);
+            unsigned line = 0;
+            unsigned column = 0;
+            auto& stack = error->stack();
+            if (stack.size() > 0)
+                stack[0].computeLineAndColumn(line, column);
+            WTFLogAlways("Error when calling 'injectModule' for '%s': %s (%d:%d)\n", name().utf8().data(), error->value().toWTFString(injectedScript.globalObject()).utf8().data(), line, column);
+            WTFLogAlways("%s\n", source().utf8().data());
             RELEASE_ASSERT_NOT_REACHED();
         }
     }

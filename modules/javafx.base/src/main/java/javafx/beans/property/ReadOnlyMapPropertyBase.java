@@ -42,6 +42,12 @@ public abstract class ReadOnlyMapPropertyBase<K, V> extends ReadOnlyMapProperty<
 
     private MapExpressionHelper<K, V> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyMapPropertyBase}.
+     */
+    public ReadOnlyMapPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = MapExpressionHelper.addListener(helper, this, listener);

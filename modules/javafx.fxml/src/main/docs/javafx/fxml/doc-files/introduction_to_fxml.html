@@ -2,7 +2,7 @@
 
 <!--
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@
 
 <html lang="en">
 <head>
-<link href="fxml.css" type="text/css" rel="stylesheet"/>    
+<link href="fxml.css" type="text/css" rel="stylesheet"/>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
 <title>Introduction to FXML | JavaFX @FXVERSION@</title>
 <meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX @FXVERSION@ applications."/>
@@ -597,13 +597,13 @@ myText = This is the text!
  <tr><th scope="row">- <br/>(unary operator)</th><td>Unary minus operator, applied on a number</td>
  <tr><th scope="row">! <br/>(unary operator)</th><td>Unary negation of a boolean</td></tr>
  <tr><th scope="row">+ - <br />
- 			* /
- 			%</th> <td>Numerical binary operators</td></tr>
+                        * /
+                        %</th> <td>Numerical binary operators</td></tr>
  <tr><th scope="row">&amp;&amp; ||</th><td>Boolean binary operators</td></tr>
  <tr><th scope="row">&gt; &gt;= <br />
- 		   &lt; &lt;= <br />
- 		   == !=</th>
- 		   <td>Binary operators of comparison.<br/> Both arguments must be of type Comparable</td></tr>
+                   &lt; &lt;= <br />
+                   == !=</th>
+                   <td>Binary operators of comparison.<br/> Both arguments must be of type Comparable</td></tr>
 </table>
 
 <h3><a id="static_property_attributes">Static Properties</a></h3>
@@ -640,6 +640,8 @@ myText = This is the text!
 </pre>
 
 <p>Note the use of the language processing instruction at the beginning of the code snippet. This PI tells the FXML loader which scripting language should be used to execute the event handler. A page language must be specified whenever inline script is used in an FXML document, and can only be specified once per document. However, this does not apply to external scripts, which may be implemented using any number of supported scripting languages. Scripting is discussed in more detail in the next section.</p>
+
+<p>Note: to turn off automatic compilation of script code place the processing instruction <span class="code">&lt;?compile false?&gt;</span> before the element that contains the script. To turn on compilation of script code again use the processing instruction <span class="code">&lt;?compile true?&gt;</span> (or short: <span class="code">&lt;?compile?&gt;</span>). The compile processing instruction can be used repeatedly to turn compilation of script code off and on.</p>
 
 <h4><a id="controller_method_event_handlers">Controller Method Event Handlers</a></h4>
 <p>A controller method event handler is a method defined by a document's "controller". A controller is an object that is associated with the deserialized contents of an FXML document and is responsible for coordinating the behaviors of the objects (often user interface elements) defined by the document.</p>
@@ -700,15 +702,15 @@ Previous example using an expression handler:
 </pre>
 
 <p> With the controller that contains a field like this </p>
-    
+
 <pre class="code">
 public class MyController {
-    
+
     &#64;FXML
     public EventHandler&lt;ActionEvent&gt; onActionHandler = new EventHandler&lt;&gt;() { ... }
 
     ...
-}  
+}
 </pre>
 
 <p> Note that other kinds of expressions, like <a href="#expression_binding">binding expressions</a>
@@ -718,7 +720,7 @@ public class MyController {
 <p> Collections and object properties cannot be listen to using <span class="code">setOn<span class="variable">Event</span>()</span> methods.
     For these reason, special handler methods need to be used.
 <span class="code">ObservableList</span>, <span class="code">ObservableMap</span> or <span class="code">ObservableSet</span>
- uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListner.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter respectively.
+ uses a special <span class="code">onChange</span> attribute that points to a handler method with a <span class="code">ListChangeListener.Change</span>, <span class="code">MapChangeListener.Change</span> or <span class="code">SetChangeListener.Change</span> parameter, respectively.
 </p>
 <pre class="code">
 &lt;VBox fx:controller="com.foo.MyController"
@@ -763,14 +765,18 @@ attribute must be used.</p>
 &lt;VBox fx:controller="com.foo.MyController"
     xmlns:fx="http://javafx.com/fxml" onParentChange="#handleParentChange"/&gt;
 </pre>
-    
+
 <p>Note that collections and properties do not currently support scripting handlers.</p>
 
 <h2><a id="scripting">Scripting</a></h2>
 <p>
 The <span class="code">&lt;fx:script&gt;</span> tag allows a caller to import scripting code into or embed script within a FXML file. Any JVM scripting language can be used, including JavaScript, Groovy, and Clojure, among others. Script code is often used to define event handlers directly in markup or in an associated source file, since event handlers can often be written more concisely in more loosely-typed scripting languages than they can in a statically-typed language such as Java.</p>
 
-<p>For example, the following markup defines a function called <span class="code">handleButtonAction()</span> that is called by the action handler attached to the <span class="code">Button</span> element:</p>
+<p>Scripts are compiled by default, when they are first loaded, if the <span class="code">ScriptEngine</span> implements the <span class="code">javax.script.Compilable</span> interface. If compilation fails, the <span class="code">FXMLLoader</span> will fall back to interpreted mode.</p>
+
+<p>Note: to turn off automatic compilation of script code place the processing instruction <span class="code">&lt;?compile false?&gt;</span> before the script element. To turn on compilation of script code again use the processing instruction <span class="code">&lt;?compile true?&gt;</span> (or short: <span class="code">&lt;?compile?&gt;</span>). The compile processing instruction can be used repeatedly to turn compilation of script code off and on.</p>
+
+<p>The following example markup defines a function called <span class="code">handleButtonAction()</span> that is called by the action handler attached to the <span class="code">Button</span> element:</p>
 
 <pre class="code">
 &lt;?language javascript?&gt;
@@ -798,6 +804,8 @@ The <span class="code">&lt;fx:script&gt;</span> tag allows a caller to import sc
 
 <div class="caption">example.fxml</div>
 <pre class="code">
+&lt;?language javascript?&gt;
+
 &lt;?import javafx.scene.control.*?&gt;
 &lt;?import javafx.scene.layout.*?&gt;
 
@@ -833,8 +841,7 @@ var myText = "This is the text of my label.";
 &lt;Label text="$myText"/&gt;
 </pre>
 
-
-<p><strong>Warning:</strong>As of JavaFX 8, <span class="code">importClass()</span> javascript function is no longer supported. You have to use fully qualified names as in the example above or load a nashorn compatibility script.</p>
+<p><strong>Warning:</strong> As of JavaFX 8, <span class="code">importClass()</span> javascript function is no longer supported. You have to use fully qualified names as in the example above or load a nashorn compatibility script.</p>
 
 <pre class="code">
 load("nashorn:mozilla_compat.js");
@@ -843,7 +850,7 @@ importClass(java.lang.System);
 function handleButtonAction(event) {
    System.out.println('You clicked me!');
 }
-</pre> 
+</pre>
 
 <h2><a id="controllers">Controllers</a></h2>
 <p>While it can be convenient to write simple event handlers in script, either inline or defined in external files, it is often preferable to define more complex application logic in a compiled, strongly-typed language such as Java. As discussed earlier, the <span class="code">fx:controller</span> attribute allows a caller to associate a "controller" class with an FXML document. A controller is a compiled class that implements the "code behind" the object hierarchy defined by the document.</p>

@@ -27,12 +27,15 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "DisplayRect.h"
-#include "InlineItem.h"
-#include "LayoutUnit.h"
+#include "DisplayInlineRect.h"
+#include "LayoutBox.h"
+#include "RenderStyle.h"
 #include "TextFlags.h"
 
 namespace WebCore {
+
+class CachedImage;
+
 namespace Display {
 
 struct Run {
@@ -40,71 +43,94 @@ struct Run {
     struct TextContext {
         WTF_MAKE_STRUCT_FAST_ALLOCATED;
     public:
-        TextContext(unsigned position, unsigned length);
+        struct ExpansionContext;
+        TextContext(unsigned position, unsigned length, const String&);
 
         unsigned start() const { return m_start; }
         unsigned end() const { return start() + length(); }
         unsigned length() const { return m_length; }
+        StringView content() const { return StringView(m_contentString).substring(m_start, m_length); }
 
-        void expand(unsigned length) { m_length += length; }
+        struct ExpansionContext {
+            ExpansionBehavior behavior { DefaultExpansion };
+            InlineLayoutUnit horizontalExpansion { 0 };
+        };
+        void setExpansion(ExpansionContext expansionContext) { m_expansionContext = expansionContext; }
+        Optional<ExpansionContext> expansion() const { return m_expansionContext; }
+
+        bool needsHyphen() const { return m_needsHyphen; }
+
+        void expand(unsigned delta) { m_length += delta; }
+        void setNeedsHyphen() { m_needsHyphen = true; }
 
     private:
-        unsigned m_start;
-        unsigned m_length;
+        unsigned m_start { 0 };
+        unsigned m_length { 0 };
+        bool m_needsHyphen { false };
+        String m_contentString;
+        Optional<ExpansionContext> m_expansionContext;
     };
 
-    Run(Rect logicalRect);
-    Run(Rect logicalRect, TextContext);
-    Run(const Run&);
+    Run(size_t lineIndex, const Layout::Box&, const InlineRect&, const InlineRect& inkOverflow, Optional<TextContext> = WTF::nullopt);
 
-    LayoutPoint logicalTopLeft() const { return m_logicalRect.topLeft(); }
-    LayoutUnit logicalLeft() const { return m_logicalRect.left(); }
-    LayoutUnit logicalRight() const { return m_logicalRect.right(); }
-    LayoutUnit logicalTop() const { return m_logicalRect.top(); }
-    LayoutUnit logicalBottom() const { return m_logicalRect.bottom(); }
+    size_t lineIndex() const { return m_lineIndex; }
 
-    LayoutUnit logicalWidth() const { return m_logicalRect.width(); }
-    LayoutUnit logicalHeight() const { return m_logicalRect.height(); }
+    const InlineRect& rect() const { return m_rect; }
+    const InlineRect& inkOverflow() const { return m_inkOverflow; }
 
-    void setLogicalWidth(LayoutUnit width) { m_logicalRect.setWidth(width); }
-    void setLogicalTop(LayoutUnit logicalTop) { m_logicalRect.setTop(logicalTop); }
-    void setLogicalLeft(LayoutUnit logicalLeft) { m_logicalRect.setLeft(logicalLeft); }
-    void setLogicalRight(LayoutUnit logicalRight) { m_logicalRect.shiftRightTo(logicalRight); }
-    void moveVertically(LayoutUnit delta) { m_logicalRect.moveVertically(delta); }
-    void moveHorizontally(LayoutUnit delta) { m_logicalRect.moveHorizontally(delta); }
-    void expandVertically(LayoutUnit delta) { m_logicalRect.expand(0, delta); }
-    void expandHorizontally(LayoutUnit delta) { m_logicalRect.expand(delta, 0); }
+    InlineLayoutPoint topLeft() const { return m_rect.topLeft(); }
+    InlineLayoutUnit left() const { return m_rect.left(); }
+    InlineLayoutUnit right() const { return m_rect.right(); }
+    InlineLayoutUnit top() const { return m_rect.top(); }
+    InlineLayoutUnit bottom() const { return m_rect.bottom(); }
 
-    void setTextContext(TextContext textContext) { m_textContext.emplace(textContext); }
+    InlineLayoutUnit width() const { return m_rect.width(); }
+    InlineLayoutUnit height() const { return m_rect.height(); }
+
+    void setWidth(InlineLayoutUnit width) { m_rect.setWidth(width); }
+    void setTop(InlineLayoutUnit top) { m_rect.setTop(top); }
+    void setlLeft(InlineLayoutUnit left) { m_rect.setLeft(left); }
+    void moveVertically(InlineLayoutUnit delta) { m_rect.moveVertically(delta); }
+    void moveHorizontally(InlineLayoutUnit delta) { m_rect.moveHorizontally(delta); }
+    void expandVertically(InlineLayoutUnit delta) { m_rect.expandVertically(delta); }
+    void expandHorizontally(InlineLayoutUnit delta) { m_rect.expandHorizontally(delta); }
+
+    void setTextContext(const TextContext&& textContext) { m_textContext.emplace(textContext); }
+    const Optional<TextContext>& textContext() const { return m_textContext; }
     Optional<TextContext>& textContext() { return m_textContext; }
-    Optional<TextContext> textContext() const { return m_textContext; }
+
+    void setImage(CachedImage& image) { m_cachedImage = &image; }
+    CachedImage* image() const { return m_cachedImage; }
+
+    bool isLineBreak() const { return layoutBox().isLineBreakBox() || (textContext() && textContext()->content() == "\n" && style().preserveNewline()); }
+
+    const Layout::Box& layoutBox() const { return *m_layoutBox; }
+    const RenderStyle& style() const { return m_layoutBox->style(); }
 
 private:
-    Rect m_logicalRect;
+    // FIXME: Find out the Display::Run <-> paint style setup.
+    const size_t m_lineIndex;
+    WeakPtr<const Layout::Box> m_layoutBox;
+    CachedImage* m_cachedImage { nullptr };
+    InlineRect m_rect;
+    InlineRect m_inkOverflow;
     Optional<TextContext> m_textContext;
 };
 
-inline Run::Run(Rect logicalRect)
-    : m_logicalRect(logicalRect)
-{
-}
-
-inline Run::Run(Rect logicalRect, TextContext textContext)
-    : m_logicalRect(logicalRect)
+inline Run::Run(size_t lineIndex, const Layout::Box& layoutBox, const InlineRect& rect, const InlineRect& inkOverflow, Optional<TextContext> textContext)
+    : m_lineIndex(lineIndex)
+    , m_layoutBox(makeWeakPtr(layoutBox))
+    , m_rect(rect)
+    , m_inkOverflow(inkOverflow)
     , m_textContext(textContext)
 {
 }
 
-inline Run::TextContext::TextContext(unsigned start, unsigned length)
+inline Run::TextContext::TextContext(unsigned start, unsigned length, const String& contentString)
     : m_start(start)
     , m_length(length)
+    , m_contentString(contentString)
 {
-}
-
-inline Run::Run(const Run& other)
-{
-    m_logicalRect = other.m_logicalRect;
-    m_textContext = other.m_textContext;
 }
 
 }

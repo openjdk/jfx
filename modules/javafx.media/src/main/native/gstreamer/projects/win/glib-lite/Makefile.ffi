@@ -29,10 +29,11 @@ CFLAGS = -DFFI_BUILDING \
 
 LIBFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo
 
+# Do not use -RTC1(-RTCs) in debug build. See JDK-8248365.
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -O1 -Oy -MD -Gy -GF
 else # debug
-    CFLAGS += -Od -Oy- -RTC1 -MDd -Zi -Fd$(PDB)
+    CFLAGS += -Od -Oy- -RTCu -MDd -Zi -Fd$(PDB)
 endif
 
 ifeq ($(ARCH), x32)

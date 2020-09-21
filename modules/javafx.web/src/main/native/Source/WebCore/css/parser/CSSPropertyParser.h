@@ -32,7 +32,10 @@ class CSSProperty;
 class CSSValue;
 class StylePropertyShorthand;
 class StyleSheetContents;
-class StyleResolver;
+
+namespace Style {
+class BuilderState;
+}
 
 // Inputs: PropertyID, isImportant bool, CSSParserTokenRange.
 // Outputs: Vector of CSSProperties
@@ -42,12 +45,12 @@ class CSSPropertyParser {
 public:
     static bool parseValue(CSSPropertyID, bool important,
         const CSSParserTokenRange&, const CSSParserContext&,
-        Vector<CSSProperty, 256>&, StyleRule::Type);
+        Vector<CSSProperty, 256>&, StyleRuleType);
 
     // Parses a non-shorthand CSS property
     static RefPtr<CSSValue> parseSingleValue(CSSPropertyID, const CSSParserTokenRange&, const CSSParserContext&);
     static bool canParseTypedCustomPropertyValue(const String& syntax, const CSSParserTokenRange&, const CSSParserContext&);
-    static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const CSSParserTokenRange&, const StyleResolver&, const CSSParserContext&);
+    static RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const CSSParserTokenRange&, const Style::BuilderState&, const CSSParserContext&);
     static void collectParsedCustomPropertyValueDependencies(const String& syntax, bool isRoot, HashSet<CSSPropertyID>& dependencies, const CSSParserTokenRange&, const CSSParserContext&);
 
 private:
@@ -58,7 +61,7 @@ private:
     bool consumeCSSWideKeyword(CSSPropertyID, bool important);
     RefPtr<CSSValue> parseSingleValue(CSSPropertyID, CSSPropertyID = CSSPropertyInvalid);
     bool canParseTypedCustomPropertyValue(const String& syntax);
-    RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const StyleResolver&);
+    RefPtr<CSSCustomPropertyValue> parseTypedCustomPropertyValue(const String& name, const String& syntax, const Style::BuilderState&);
     void collectParsedCustomPropertyValueDependencies(const String& syntax, bool isRoot, HashSet<CSSPropertyID>& dependencies);
 
     bool inQuirksMode() const { return m_context.mode == HTMLQuirksMode; }
@@ -79,6 +82,7 @@ private:
     // Legacy parsing allows <string>s for animation-name
     bool consumeAnimationShorthand(const StylePropertyShorthand&, bool important);
     bool consumeBackgroundShorthand(const StylePropertyShorthand&, bool important);
+    bool consumeOverflowShorthand(bool important);
 
     bool consumeColumns(bool important);
 
@@ -118,7 +122,7 @@ private:
 };
 
 CSSPropertyID cssPropertyID(StringView);
-CSSValueID cssValueKeywordID(StringView);
+WEBCORE_EXPORT CSSValueID cssValueKeywordID(StringView);
 bool isCustomPropertyName(const String&);
 
 #if PLATFORM(IOS_FAMILY)

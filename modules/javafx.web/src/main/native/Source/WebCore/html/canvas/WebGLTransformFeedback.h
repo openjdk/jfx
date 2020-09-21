@@ -40,7 +40,7 @@ public:
 protected:
     WebGLTransformFeedback(WebGLRenderingContextBase&);
 
-    void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
+    void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
 };
 
 } // namespace WebCore

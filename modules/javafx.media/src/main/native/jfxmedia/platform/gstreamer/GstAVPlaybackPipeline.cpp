@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -434,6 +434,7 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
     const gchar* pstrName = gst_structure_get_name(pStructure);
     GstPad *pPad = NULL;
     GstPadLinkReturn ret = GST_PAD_LINK_OK;
+    GstStateChangeReturn stateRet = GST_STATE_CHANGE_FAILURE;
 
     if (g_str_has_prefix(pstrName, "audio"))
     {
@@ -453,7 +454,20 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[AUDIO_BIN], "sink");
             gst_bin_add(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
-            gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_READY);
+            stateRet = gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_READY);
+            if (stateRet == GST_STATE_CHANGE_FAILURE)
+            {
+                gst_object_ref(pPipeline->m_Elements[AUDIO_BIN]);
+                gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
+                // Remove handles, so we do not receive any more notifications about pads being added or
+                // when we done adding new pads. Since we fail to switch bin state we got fatal error and
+                // bus callback will move pipeline into GST_STATE_NULL while holding dispose lock and
+                // demux (qtdemux) might deadlock since it will call on_pad_added or no_more_pads
+                // and these callback will hold dispose lock as well.
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(on_pad_added), pPipeline);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(no_more_pads), pPipeline);
+                goto Error;
+            }
             if (pPad != NULL)
             {
                 ret = gst_pad_link (pad, pPad);
@@ -462,6 +476,8 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
                     gst_element_set_state(pPipeline->m_Elements[AUDIO_BIN], GST_STATE_NULL);
                     gst_object_ref(pPipeline->m_Elements[AUDIO_BIN]);
                     gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[AUDIO_BIN]);
+                    // We might need to remove callbacks here as well, but it was not necessary before,
+                    // so to avoid any regression we will not do it here.
                     goto Error;
                 }
             }
@@ -476,7 +492,15 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[VIDEO_BIN], "sink");
             gst_bin_add (GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[VIDEO_BIN]);
-            gst_element_set_state(pPipeline->m_Elements[VIDEO_BIN], GST_STATE_READY);
+            stateRet = gst_element_set_state(pPipeline->m_Elements[VIDEO_BIN], GST_STATE_READY);
+            if (stateRet == GST_STATE_CHANGE_FAILURE)
+            {
+                gst_object_ref(pPipeline->m_Elements[VIDEO_BIN]);
+                gst_bin_remove(GST_BIN (pPipeline->m_Elements[PIPELINE]), pPipeline->m_Elements[VIDEO_BIN]);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(on_pad_added), pPipeline);
+                g_signal_handlers_disconnect_by_func(element, (void*)G_CALLBACK(no_more_pads), pPipeline);
+                goto Error;
+            }
             if (pPad != NULL)
             {
                 ret = gst_pad_link (pad, pPad);

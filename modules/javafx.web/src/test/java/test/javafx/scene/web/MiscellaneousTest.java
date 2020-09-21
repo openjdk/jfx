@@ -472,4 +472,18 @@ public class MiscellaneousTest extends TestBase {
             assertNull(getEngine().executeScript("window.xmlDoc.body"));
         });
     }
+
+    @Test public void jrtCssFileIsNotRejected() {
+        submit(() -> {
+            try {
+                getEngine().setUserStyleSheetLocation("jrt:/javafx.web/html/imported-styles.css");
+            } catch (IllegalArgumentException e) {
+                // A jrt file is supposed to be a valid argument
+                throw new AssertionError(e);
+            } catch (RuntimeException e) {
+                // The css file cannot be loaded in the tests (since they are not modularized).
+                // We thus simply ignore this exception here
+            }
+        });
+    }
 }

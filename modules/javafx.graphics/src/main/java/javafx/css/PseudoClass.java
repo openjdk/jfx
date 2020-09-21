@@ -75,6 +75,12 @@ import com.sun.javafx.css.PseudoClassState;
 public abstract class PseudoClass {
 
     /**
+     * Constructor for subclasses to call.
+     */
+    public PseudoClass() {
+    }
+
+    /**
      * There is only one PseudoClass instance for a given pseudoClass.
      * @param pseudoClass the pseudo-class
      * @return The PseudoClass for the given pseudoClass. Will not return null.

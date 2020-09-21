@@ -41,7 +41,7 @@ class JSFunction;
 class Structure;
 class CallLinkInfo;
 
-class CallLinkStatus {
+class CallLinkStatus final {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     CallLinkStatus()
@@ -66,10 +66,10 @@ public:
         ExitFlag takesSlowPath;
         ExitFlag badFunction;
     };
-    static ExitSiteData computeExitSiteData(CodeBlock*, unsigned bytecodeIndex);
+    static ExitSiteData computeExitSiteData(CodeBlock*, BytecodeIndex);
 
-    static CallLinkStatus computeFor(CodeBlock*, unsigned bytecodeIndex, const ICStatusMap&, ExitSiteData);
-    static CallLinkStatus computeFor(CodeBlock*, unsigned bytecodeIndex, const ICStatusMap&);
+    static CallLinkStatus computeFor(CodeBlock*, BytecodeIndex, const ICStatusMap&, ExitSiteData);
+    static CallLinkStatus computeFor(CodeBlock*, BytecodeIndex, const ICStatusMap&);
 
 #if ENABLE(JIT)
     // Computes the status assuming that we never took slow path and never previously
@@ -104,7 +104,7 @@ public:
 
     bool isClosureCall() const; // Returns true if any callee is a closure call.
 
-    unsigned maxNumArguments() const { return m_maxNumArguments; }
+    unsigned maxArgumentCountIncludingThis() const { return m_maxArgumentCountIncludingThis; }
 
     bool finalize(VM&);
 
@@ -117,7 +117,7 @@ public:
 private:
     void makeClosureCall();
 
-    static CallLinkStatus computeFromLLInt(const ConcurrentJSLocker&, CodeBlock*, unsigned bytecodeIndex);
+    static CallLinkStatus computeFromLLInt(const ConcurrentJSLocker&, CodeBlock*, BytecodeIndex);
 #if ENABLE(JIT)
     static CallLinkStatus computeFromCallLinkInfo(
         const ConcurrentJSLocker&, CallLinkInfo&);
@@ -129,7 +129,7 @@ private:
     bool m_couldTakeSlowPath { false };
     bool m_isProved { false };
     bool m_isBasedOnStub { false };
-    unsigned m_maxNumArguments { 0 };
+    unsigned m_maxArgumentCountIncludingThis { 0 };
 };
 
 } // namespace JSC

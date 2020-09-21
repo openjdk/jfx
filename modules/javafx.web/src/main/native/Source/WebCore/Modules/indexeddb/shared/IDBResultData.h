@@ -88,11 +88,12 @@ public:
     static IDBResultData iterateCursorSuccess(const IDBResourceIdentifier&, const IDBGetResult&);
 
     WEBCORE_EXPORT IDBResultData(const IDBResultData&);
+    IDBResultData(IDBResultData&&) = default;
     IDBResultData& operator=(IDBResultData&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBResultData(const IDBResultData&, IsolatedCopyTag);
-    IDBResultData isolatedCopy() const;
+    WEBCORE_EXPORT IDBResultData isolatedCopy() const;
 
     IDBResultType type() const { return m_type; }
     IDBResourceIdentifier requestIdentifier() const { return m_requestIdentifier; }

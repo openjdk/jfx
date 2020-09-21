@@ -28,9 +28,10 @@
 #include "config.h"
 #include "JSWorkerGlobalScopeBase.h"
 
-#include "ActiveDOMCallbackMicrotask.h"
 #include "DOMWrapperWorld.h"
+#include "EventLoop.h"
 #include "JSDOMGlobalObjectTask.h"
+#include "JSDOMGuardedObject.h"
 #include "JSDedicatedWorkerGlobalScope.h"
 #include "JSMicrotaskCallback.h"
 #include "JSWorkerGlobalScope.h"
@@ -56,7 +57,7 @@ const GlobalObjectMethodTable JSWorkerGlobalScopeBase::s_globalObjectMethodTable
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    &queueTaskToEventLoop,
+    &queueMicrotaskToEventLoop,
     &shouldInterruptScriptBeforeTimeout,
     nullptr, // moduleLoaderImportModule
     nullptr, // moduleLoaderResolve
@@ -129,25 +130,23 @@ RuntimeFlags JSWorkerGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObjec
     return thisObject->m_wrapped->thread().runtimeFlags();
 }
 
-void JSWorkerGlobalScopeBase::queueTaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
+void JSWorkerGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
 {
     JSWorkerGlobalScopeBase& thisObject = static_cast<JSWorkerGlobalScopeBase&>(object);
 
     auto callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto& context = thisObject.wrapped();
-    auto microtask = makeUnique<ActiveDOMCallbackMicrotask>(context.microtaskQueue(), context, [callback = WTFMove(callback)]() mutable {
+    context.eventLoop().queueMicrotask([callback = WTFMove(callback)]() mutable {
         callback->call();
     });
-
-    context.microtaskQueue().append(WTFMove(microtask));
 }
 
-JSValue toJS(ExecState* exec, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)
+JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkerGlobalScope& workerGlobalScope)
 {
-    return toJS(exec, workerGlobalScope);
+    return toJS(lexicalGlobalObject, workerGlobalScope);
 }
 
-JSValue toJS(ExecState*, WorkerGlobalScope& workerGlobalScope)
+JSValue toJS(JSGlobalObject*, WorkerGlobalScope& workerGlobalScope)
 {
     WorkerScriptController* script = workerGlobalScope.script();
     if (!script)

@@ -459,7 +459,7 @@ void EditorClientJava::respondToChangedSelection(Frame *frame)
         // committed text which will be ignored in
         // JWebPane.processInputMethodEvent().
         frame->editor().cancelComposition();
-        setInputMethodState(false);
+        setInputMethodState(nullptr);
     }
 }
 
@@ -596,7 +596,7 @@ bool EditorClientJava::shouldMoveRangeAfterDelete(Range*, Range*)
     return true;
 }
 
-void EditorClientJava::setInputMethodState(bool enabled)
+void EditorClientJava::setInputMethodState(Element* element)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -609,7 +609,7 @@ void EditorClientJava::setInputMethodState(bool enabled)
     env->CallVoidMethod(
         m_webPage,
         midSetInputMethodState,
-        bool_to_jbool(enabled));
+        bool_to_jbool(element && element->shouldUseInputMethod()));
     WTF::CheckAndClearException(env);
 }
 

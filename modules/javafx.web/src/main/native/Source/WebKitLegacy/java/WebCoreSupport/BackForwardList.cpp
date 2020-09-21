@@ -26,6 +26,7 @@
 
 #include "BackForwardList.h"
 
+#include <WebCore/BackForwardCache.h>
 #include <WebCore/BackForwardController.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
@@ -33,7 +34,6 @@
 #include <WebCore/HistoryItem.h>
 #include <WebCore/Logging.h>
 #include <WebCore/Page.h>
-#include <WebCore/PageCache.h>
 #include <WebCore/SerializedScriptValue.h>
 
 #include "BackForwardList.h"
@@ -373,7 +373,7 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
         while (m_entries.size() > targetSize) {
             Ref<HistoryItem> item = m_entries.takeLast();
             m_entryHash.remove(item.ptr());
-            PageCache::singleton().remove(item);
+            BackForwardCache::singleton().remove(item);
         }
     }
 
@@ -383,7 +383,7 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
         Ref<HistoryItem> item = WTFMove(m_entries[0]);
         m_entries.remove(0);
         m_entryHash.remove(item.ptr());
-        PageCache::singleton().remove(item);
+        BackForwardCache::singleton().remove(item);
         --m_current;
     }
 
@@ -483,7 +483,7 @@ void BackForwardList::setCapacity(int size)
     while (size < static_cast<int>(m_entries.size())) {
         Ref<HistoryItem> item = m_entries.takeLast();
         m_entryHash.remove(item.ptr());
-        PageCache::singleton().remove(item);
+        BackForwardCache::singleton().remove(item);
     }
 
     if (!size)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -124,13 +124,13 @@ void JITDivGenerator::generateFastPath(CCallHelpers& jit)
     jit.moveDoubleTo64(m_leftFPR, m_scratchGPR);
     CCallHelpers::Jump notDoubleZero = jit.branchTest64(CCallHelpers::NonZero, m_scratchGPR);
 
-    jit.move(GPRInfo::tagTypeNumberRegister, m_result.payloadGPR());
+    jit.move(GPRInfo::numberTagRegister, m_result.payloadGPR());
     m_endJumpList.append(jit.jump());
 
     notDoubleZero.link(&jit);
 #endif
     if (m_arithProfile)
-        jit.or32(CCallHelpers::TrustedImm32(ArithProfile::specialFastPathBit), CCallHelpers::AbsoluteAddress(m_arithProfile->addressOfBits()));
+        m_arithProfile->emitUnconditionalSet(jit, BinaryArithProfile::specialFastPathBit);
     jit.boxDouble(m_leftFPR, m_result);
 }
 

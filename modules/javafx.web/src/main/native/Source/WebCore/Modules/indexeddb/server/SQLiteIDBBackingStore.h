@@ -33,6 +33,7 @@
 #include "IDBResourceIdentifier.h"
 #include "SQLiteIDBTransaction.h"
 #include <JavaScriptCore/Strong.h>
+#include <pal/SessionID.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -43,13 +44,15 @@ class SQLiteStatement;
 
 namespace IDBServer {
 
+enum class IsSchemaUpgraded : bool { No, Yes };
+
 class IDBSerializationContext;
 class SQLiteIDBCursor;
 
 class SQLiteIDBBackingStore : public IDBBackingStore {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    SQLiteIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&, const String& databaseRootDirectory, IDBBackingStoreTemporaryFileHandler&);
+    SQLiteIDBBackingStore(PAL::SessionID, const IDBDatabaseIdentifier&, const String& databaseRootDirectory);
 
     ~SQLiteIDBBackingStore() final;
 
@@ -77,7 +80,6 @@ public:
     IDBError maybeUpdateKeyGeneratorNumber(const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, double newKeyNumber) final;
     IDBError openCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&, IDBGetResult& outResult) final;
     IDBError iterateCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&, IDBGetResult& outResult) final;
-    bool prefetchCursor(const IDBResourceIdentifier&, const IDBResourceIdentifier&) final;
 
     IDBObjectStoreInfo* infoForObjectStore(uint64_t objectStoreIdentifier) final;
     void deleteBackingStore() final;
@@ -85,9 +87,9 @@ public:
     bool supportsSimultaneousTransactions() final { return false; }
     bool isEphemeral() final { return false; }
 
-    void unregisterCursor(SQLiteIDBCursor&);
+    bool hasTransaction(const IDBResourceIdentifier&) const final;
 
-    IDBBackingStoreTemporaryFileHandler& temporaryFileHandler() const { return m_temporaryFileHandler; }
+    void unregisterCursor(SQLiteIDBCursor&);
 
     IDBError getBlobRecordsForObjectStoreRecord(int64_t objectStoreRecord, Vector<String>& blobURLs, Vector<String>& blobFilePaths);
 
@@ -97,8 +99,6 @@ public:
     String databaseDirectory() const { return m_databaseDirectory; };
     static String fullDatabasePathForDirectory(const String&);
     static String databaseNameFromFile(const String&);
-
-    bool hasTransaction(const IDBResourceIdentifier&) const final;
 
     PAL::SessionID sessionID() const { return m_sessionID; }
 
@@ -112,7 +112,9 @@ private:
     bool ensureValidRecordsTable();
     bool ensureValidIndexRecordsTable();
     bool ensureValidIndexRecordsIndex();
+    bool ensureValidIndexRecordsRecordIndex();
     bool ensureValidBlobTables();
+    Optional<IsSchemaUpgraded> ensureValidObjectStoreInfoTable();
     std::unique_ptr<IDBDatabaseInfo> createAndPopulateInitialDatabaseInfo();
     std::unique_ptr<IDBDatabaseInfo> extractExistingDatabaseInfo();
 
@@ -134,8 +136,6 @@ private:
 
     void closeSQLiteDB();
     void close() final;
-
-    uint64_t databaseSize() const final;
 
     enum class SQL : size_t {
         CreateObjectStoreInfo,
@@ -159,7 +159,7 @@ private:
         KeyExistsInObjectStore,
         GetUnusedBlobFilenames,
         DeleteUnusedBlobs,
-        GetObjectStoreRecordID,
+        GetObjectStoreRecord,
         DeleteBlobRecord,
         DeleteObjectStoreRecord,
         DeleteObjectStoreIndexRecord,
@@ -182,13 +182,21 @@ private:
         GetKeyRecordsLowerOpenUpperClosed,
         GetKeyRecordsLowerClosedUpperOpen,
         GetKeyRecordsLowerClosedUpperClosed,
-        Count
+        CountRecordsLowerOpenUpperOpen,
+        CountRecordsLowerOpenUpperClosed,
+        CountRecordsLowerClosedUpperOpen,
+        CountRecordsLowerClosedUpperClosed,
+        CountIndexRecordsLowerOpenUpperOpen,
+        CountIndexRecordsLowerOpenUpperClosed,
+        CountIndexRecordsLowerClosedUpperOpen,
+        CountIndexRecordsLowerClosedUpperClosed,
+        Invalid,
     };
 
     SQLiteStatement* cachedStatement(SQL, const char*);
     SQLiteStatement* cachedStatementForGetAllObjectStoreRecords(const IDBGetAllRecordsData&);
 
-    std::unique_ptr<SQLiteStatement> m_cachedStatements[static_cast<int>(SQL::Count)];
+    std::unique_ptr<SQLiteStatement> m_cachedStatements[static_cast<int>(SQL::Invalid)];
 
     PAL::SessionID m_sessionID;
     IDBDatabaseIdentifier m_identifier;
@@ -202,8 +210,6 @@ private:
 
     String m_databaseRootDirectory;
     String m_databaseDirectory;
-
-    IDBBackingStoreTemporaryFileHandler& m_temporaryFileHandler;
 
     Ref<IDBSerializationContext> m_serializationContext;
 };

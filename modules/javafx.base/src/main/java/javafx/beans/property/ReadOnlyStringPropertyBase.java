@@ -41,6 +41,12 @@ public abstract class ReadOnlyStringPropertyBase extends ReadOnlyStringProperty 
 
     ExpressionHelper<String> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyStringPropertyBase}.
+     */
+    public ReadOnlyStringPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

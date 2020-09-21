@@ -471,7 +471,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             rotationX = (jdouble)[theEvent deltaX];
             rotationY = (jdouble)[theEvent deltaY];
         }
-        
+
         //XXX: check for equality for doubles???
         if (rotationX == 0.0 && rotationY == 0.0)
         {
@@ -1133,7 +1133,7 @@ static jstring convertNSStringToJString(id aString, int length)
     if ([NSThread isMainThread] == YES)
     {
         GET_MAIN_JENV;
-        
+
         jstring jStr = convertNSStringToJString(aString, length);
         if (jStr != NULL) {
             (*env)->CallVoidMethod(env, self->jView, jViewNotifyInputMethodMac, jStr, attr,

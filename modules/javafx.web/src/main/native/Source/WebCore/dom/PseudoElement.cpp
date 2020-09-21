@@ -35,7 +35,6 @@
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderQuote.h"
-#include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -91,7 +90,8 @@ void PseudoElement::clearHostElement()
     InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
 
     if (auto* timeline = document().existingTimeline())
-        timeline->removeAnimationsForElement(*this);
+        timeline->elementWasRemoved(*this);
+
     if (auto* frame = document().frame())
         frame->animation().cancelAnimations(*this);
 

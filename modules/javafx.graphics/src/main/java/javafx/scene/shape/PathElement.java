@@ -71,6 +71,12 @@ public abstract class PathElement {
      */
     WeakReferenceQueue nodes = new WeakReferenceQueue();
 
+    /**
+     * Constructor for subclasses to call.
+     */
+    public PathElement() {
+    }
+
     void addNode(final Node n) {
         nodes.add(n);
     }

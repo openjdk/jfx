@@ -35,8 +35,8 @@
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
 #include "Document.h"
+#include "LegacySchemeRegistry.h"
 #include "Page.h"
-#include "SchemeRegistry.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
@@ -130,14 +130,6 @@ void DatabaseContext::stop()
     stopDatabases();
 }
 
-bool DatabaseContext::canSuspendForDocumentSuspension() const
-{
-    if (!hasOpenDatabases() || !m_databaseThread)
-        return true;
-
-    return !m_databaseThread->hasPendingDatabaseActivity();
-}
-
 DatabaseThread* DatabaseContext::databaseThread()
 {
     if (!m_databaseThread && !m_hasOpenDatabases) {
@@ -189,7 +181,7 @@ bool DatabaseContext::allowDatabaseAccess() const
 {
     if (is<Document>(*m_scriptExecutionContext)) {
         Document& document = downcast<Document>(*m_scriptExecutionContext);
-        if (!document.page() || (document.page()->usesEphemeralSession() && !SchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document.securityOrigin().protocol())))
+        if (!document.page() || (document.page()->usesEphemeralSession() && !LegacySchemeRegistry::allowsDatabaseAccessInPrivateBrowsing(document.securityOrigin().protocol())))
             return false;
         return true;
     }

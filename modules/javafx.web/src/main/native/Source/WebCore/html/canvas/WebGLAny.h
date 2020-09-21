@@ -33,7 +33,7 @@
 #include <JavaScriptCore/Uint8Array.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSValue;
 }
 
@@ -44,7 +44,9 @@ class WebGLBuffer;
 class WebGLFramebuffer;
 class WebGLProgram;
 class WebGLRenderbuffer;
+class WebGLSampler;
 class WebGLTexture;
+class WebGLTransformFeedback;
 class WebGLVertexArrayObject;
 class WebGLVertexArrayObjectOES;
 
@@ -69,6 +71,8 @@ using WebGLAny = Variant<
     RefPtr<WebGLTexture>,
     RefPtr<WebGLVertexArrayObjectOES>
 #if ENABLE(WEBGL2)
+    , RefPtr<WebGLSampler>
+    , RefPtr<WebGLTransformFeedback>
     , RefPtr<WebGLVertexArrayObject>
 #endif
 >;

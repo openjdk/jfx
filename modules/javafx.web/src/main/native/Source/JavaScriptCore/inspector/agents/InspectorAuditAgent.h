@@ -43,7 +43,7 @@ class JS_EXPORT_PRIVATE InspectorAuditAgent : public InspectorAgentBase, public 
     WTF_MAKE_NONCOPYABLE(InspectorAuditAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~InspectorAuditAgent();
+    ~InspectorAuditAgent() override;
 
     // InspectorAgentBase
     void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
@@ -63,7 +63,7 @@ protected:
 
     virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) = 0;
 
-    virtual void populateAuditObject(JSC::ExecState*, JSC::Strong<JSC::JSObject>& auditObject);
+    virtual void populateAuditObject(JSC::JSGlobalObject*, JSC::Strong<JSC::JSObject>& auditObject);
 
     virtual void muteConsole() { };
     virtual void unmuteConsole() { };

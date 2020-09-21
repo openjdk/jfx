@@ -62,7 +62,7 @@ void Recorder::willAppendItem(const Item& item)
         if (changesFromLastState) {
             LOG_WITH_STREAM(DisplayLists, stream << "pre-drawing, saving state " << GraphicsContextStateChange(stateChanges.m_state, changesFromLastState));
             m_displayList.append(SetState::create(stateChanges.m_state, changesFromLastState));
-            stateChanges.m_changeFlags = 0;
+            stateChanges.m_changeFlags = { };
             currentState().lastDrawingState = stateChanges.m_state;
         }
         currentState().wasUsedForDrawing = true;
@@ -196,15 +196,16 @@ void Recorder::concatCTM(const AffineTransform& transform)
     appendItem(ConcatenateCTM::create(transform));
 }
 
-void Recorder::setCTM(const AffineTransform&)
+void Recorder::setCTM(const AffineTransform& transform)
 {
-    WTFLogAlways("GraphicsContext::setCTM() is not compatible with DisplayList::Recorder.");
+    currentState().setCTM(transform);
+    appendItem(SetCTM::create(transform));
 }
 
 AffineTransform Recorder::getCTM(GraphicsContext::IncludeDeviceScale)
 {
-    WTFLogAlways("GraphicsContext::getCTM() is not yet compatible with DisplayList::Recorder.");
-    return { };
+    // FIXME: Respect the given value of IncludeDeviceScale.
+    return currentState().ctm;
 }
 
 void Recorder::beginTransparencyLayer(float opacity)
@@ -481,6 +482,18 @@ void Recorder::ContextState::scale(const FloatSize& size)
 {
     ctm.scale(size);
     clipBounds.scale(1 / size.width(), 1 / size.height());
+}
+
+void Recorder::ContextState::setCTM(const AffineTransform& matrix)
+{
+    Optional<AffineTransform> inverseTransformForClipBounds;
+    if (auto originalCTMInverse = ctm.inverse())
+        inverseTransformForClipBounds = originalCTMInverse->multiply(matrix).inverse();
+
+    ctm = matrix;
+
+    if (inverseTransformForClipBounds)
+        clipBounds = inverseTransformForClipBounds->mapRect(clipBounds);
 }
 
 void Recorder::ContextState::concatCTM(const AffineTransform& matrix)

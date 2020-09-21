@@ -55,6 +55,7 @@
 #include "HTMLTitleElement.h"
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
+#include "Position.h"
 #include "RenderInline.h"
 #include "RenderText.h"
 #include "ScriptElement.h"
@@ -387,7 +388,7 @@ inline void ReplaceSelectionCommand::InsertedNodes::willRemoveNodePreservingChil
         m_firstNodeInserted = NodeTraversal::next(*node);
     if (m_lastNodeInserted == node) {
         m_lastNodeInserted = node->lastChild() ? node->lastChild() : NodeTraversal::nextSkippingChildren(*node);
-        if (!m_lastNodeInserted) {
+        if (!m_lastNodeInserted && m_firstNodeInserted) {
             // If the last inserted node is at the end of the document and doesn't have any children, look backwards for the
             // previous node as the last inserted node, clamping to the first inserted node if needed to ensure that the
             // document position of the last inserted node is not behind the first inserted node.
@@ -518,6 +519,82 @@ bool ReplaceSelectionCommand::shouldMerge(const VisiblePosition& source, const V
         // Don't merge to or from a position before or after a block because it would
         // be a no-op and cause infinite recursion.
         && !isBlock(sourceNode) && !isBlock(destinationNode);
+}
+
+static bool fragmentNeedsColorTransformed(ReplacementFragment& fragment, const Position& insertionPos)
+{
+    // Dark mode content that is inserted should have the inline styles inverse color
+    // transformed by the color filter to match the color filtered document contents.
+    // This applies to Mail and Notes when pasting from Xcode. <rdar://problem/40529867>
+
+    RefPtr<Element> editableRoot = insertionPos.rootEditableElement();
+    ASSERT(editableRoot);
+    if (!editableRoot)
+        return false;
+
+    auto* editableRootRenderer = editableRoot->renderer();
+    if (!editableRootRenderer || !editableRootRenderer->style().hasAppleColorFilter())
+        return false;
+
+    const auto& colorFilter = editableRootRenderer->style().appleColorFilter();
+    for (const auto& colorFilterOperation : colorFilter.operations()) {
+        if (colorFilterOperation->type() != FilterOperation::APPLE_INVERT_LIGHTNESS)
+            return false;
+    }
+
+    auto propertyLightness = [&](const StyleProperties& inlineStyle, CSSPropertyID propertyID) -> Optional<double> {
+        auto color = inlineStyle.propertyAsColor(propertyID);
+        if (!color || !color.value().isVisible() || color.value().isSemantic())
+            return { };
+
+        double hue, saturation, lightness;
+        color.value().getHSL(hue, saturation, lightness);
+        return lightness;
+    };
+
+    const double lightnessDarkEnoughForText = 0.4;
+    const double lightnessLightEnoughForBackground = 0.6;
+
+    for (RefPtr<Node> node = fragment.firstChild(); node; node = NodeTraversal::next(*node)) {
+        if (!is<StyledElement>(*node))
+            continue;
+
+        auto& element = downcast<StyledElement>(*node);
+        auto* inlineStyle = element.inlineStyle();
+        if (!inlineStyle)
+            continue;
+
+        auto textLightness = propertyLightness(*inlineStyle, CSSPropertyColor);
+        if (textLightness && *textLightness < lightnessDarkEnoughForText)
+            return false;
+
+        auto backgroundLightness = propertyLightness(*inlineStyle, CSSPropertyBackgroundColor);
+        if (backgroundLightness && *backgroundLightness > lightnessLightEnoughForBackground)
+            return false;
+    }
+
+    return true;
+}
+
+void ReplaceSelectionCommand::inverseTransformColor(InsertedNodes& insertedNodes)
+{
+    RefPtr<Node> pastEndNode = insertedNodes.pastLastLeaf();
+    for (RefPtr<Node> node = insertedNodes.firstNodeInserted(); node && node != pastEndNode; node = NodeTraversal::next(*node)) {
+        if (!is<StyledElement>(*node))
+            continue;
+
+        auto& element = downcast<StyledElement>(*node);
+        auto* inlineStyle = element.inlineStyle();
+        if (!inlineStyle)
+            continue;
+
+        auto editingStyle = EditingStyle::create(inlineStyle);
+        auto transformedStyle = editingStyle->inverseTransformColorIfNeeded(element);
+        if (editingStyle.ptr() == transformedStyle.ptr())
+            continue;
+
+        setNodeAttribute(element, styleAttr, transformedStyle->style()->asText());
+    }
 }
 
 // Style rules that match just inserted elements could change their appearance, like
@@ -1115,8 +1192,8 @@ void ReplaceSelectionCommand::doApply()
     insertionPos = positionOutsideTabSpan(insertionPos);
 
     bool hasBlankLinesBetweenParagraphs = hasBlankLineBetweenParagraphs(insertionPos);
-
     bool handledStyleSpans = handleStyleSpansBeforeInsertion(fragment, insertionPos);
+    bool needsColorTransformed = fragmentNeedsColorTransformed(fragment, insertionPos);
 
     // We're finished if there is nothing to add.
     if (fragment.isEmpty() || !fragment.firstChild())
@@ -1232,6 +1309,9 @@ void ReplaceSelectionCommand::doApply()
     if (insertedNodes.isEmpty())
         return;
 
+    if (needsColorTransformed)
+        inverseTransformColor(insertedNodes);
+
     removeRedundantStylesAndKeepStyleSpanInline(insertedNodes);
     if (insertedNodes.isEmpty())
         return;
@@ -1342,7 +1422,7 @@ RefPtr<DataTransfer> ReplaceSelectionCommand::inputEventDataTransfer() const
     if (isEditingTextAreaOrTextInput())
         return CompositeEditCommand::inputEventDataTransfer();
 
-    return DataTransfer::createForInputEvent(document(), m_documentFragmentPlainText, m_documentFragmentHTMLMarkup);
+    return DataTransfer::createForInputEvent(m_documentFragmentPlainText, m_documentFragmentHTMLMarkup);
 }
 
 bool ReplaceSelectionCommand::shouldRemoveEndBR(Node* endBR, const VisiblePosition& originalVisPosBeforeEndBR)
@@ -1689,6 +1769,14 @@ bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& f
     setEndingSelection(selectionAfterReplace);
 
     return true;
+}
+
+RefPtr<Range> ReplaceSelectionCommand::insertedContentRange() const
+{
+    if (auto document = makeRefPtr(m_startOfInsertedContent.document()))
+        return Range::create(*document, m_startOfInsertedContent, m_endOfInsertedContent);
+
+    return nullptr;
 }
 
 } // namespace WebCore

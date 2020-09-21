@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "Animation.h"
 #include "Color.h"
 #include "EventRegion.h"
 #include "FilterOperations.h"
@@ -38,6 +37,7 @@
 #include "PlatformLayer.h"
 #include "Region.h"
 #include "ScrollableArea.h"
+#include "TimingFunction.h"
 #include "TransformOperations.h"
 #include "WindRule.h"
 #include <wtf/Function.h>
@@ -53,6 +53,7 @@ class TextStream;
 
 namespace WebCore {
 
+class Animation;
 class GraphicsContext;
 class GraphicsLayerFactory;
 class Image;
@@ -268,6 +269,7 @@ public:
     // Layer name. Only used to identify layers in debug output
     const String& name() const { return m_name; }
     virtual void setName(const String& name) { m_name = name; }
+    virtual String debugName() const;
 
     GraphicsLayer* parent() const { return m_parent; };
     void setParent(GraphicsLayer*); // Internal use only.

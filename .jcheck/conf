@@ -1,5 +1,5 @@
 ;
-; Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+; Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
 ; DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 ;
 ; This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ version=0
 domain=openjdk.org
 
 [checks "whitespace"]
-files=.*\.java$|.*\.c$|.*\.h$|.*\.cpp$|.*\.hpp$
+files=.*\.java$|.*\.c$|.*\.h$|.*\.cpp$|.*\.hpp$|.*\.cc$|.*\.jsl$|.*\.fxml$|.*\.css$|.*\.m$|.*\.mm$|.*\.frag$|.*\.vert$|.*\.hlsl$|.*\.metal$|.*\.gradle$|.*\.groovy$|.*\.g4$|.*\.stg$
 
 [checks "reviewers"]
 minimum=1

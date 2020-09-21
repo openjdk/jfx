@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "DFGPromotedHeapLocation.h"
 #include "DFGSSACalculator.h"
 #include "DFGValidate.h"
+#include "JSArrayIterator.h"
 #include "JSCInlines.h"
 #include <wtf/StdList.h>
 
@@ -48,7 +49,7 @@ namespace JSC { namespace DFG {
 namespace {
 
 namespace DFGObjectAllocationSinkingPhaseInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 // In order to sink object cycles, we use a points-to analysis coupled
@@ -140,7 +141,7 @@ public:
     // once it is escaped if it still has pointers to it in order to
     // replace any use of those pointers by the corresponding
     // materialization
-    enum class Kind { Escaped, Object, Activation, Function, GeneratorFunction, AsyncFunction, AsyncGeneratorFunction, RegExpObject };
+    enum class Kind { Escaped, Object, Activation, Function, GeneratorFunction, AsyncFunction, AsyncGeneratorFunction, InternalFieldObject, RegExpObject };
 
     using Fields = HashMap<PromotedLocationDescriptor, Node*>;
 
@@ -245,6 +246,11 @@ public:
         return m_kind == Kind::Function || m_kind == Kind::GeneratorFunction || m_kind == Kind::AsyncFunction;
     }
 
+    bool isInternalFieldObjectAllocation() const
+    {
+        return m_kind == Kind::InternalFieldObject;
+    }
+
     bool isRegExpObjectAllocation() const
     {
         return m_kind == Kind::RegExpObject;
@@ -289,6 +295,10 @@ public:
 
         case Kind::AsyncFunction:
             out.print("AsyncFunction");
+            break;
+
+        case Kind::InternalFieldObject:
+            out.print("InternalFieldObject");
             break;
 
         case Kind::AsyncGeneratorFunction:
@@ -392,7 +402,7 @@ public:
     Node* follow(Node* node) const
     {
         auto iter = m_pointers.find(node);
-        ASSERT(iter == m_pointers.end() || m_allocations.contains(iter->value));
+        ASSERT(iter == m_pointers.end() || (!iter->value || m_allocations.contains(iter->value)));
         return iter == m_pointers.end() ? nullptr : iter->value;
     }
 
@@ -400,7 +410,6 @@ public:
     {
         const Allocation& base = m_allocations.find(location.base())->value;
         auto iter = base.fields().find(location.descriptor());
-
         if (iter == base.fields().end())
             return nullptr;
 
@@ -426,6 +435,12 @@ public:
             return nullptr;
 
         return &getAllocation(identifier);
+    }
+
+    bool isUnescapedAllocation(Node* identifier) const
+    {
+        auto iter = m_allocations.find(identifier);
+        return iter != m_allocations.end() && !iter->value.isEscapedAllocation();
     }
 
     // This allows us to store the escapees only when necessary. If
@@ -489,12 +504,75 @@ public:
             }
         }
 
-        mergePointerSets(m_pointers, other.m_pointers, toEscape);
+        {
+            // This works because we won't collect all pointers until all of our predecessors
+            // merge their pointer sets with ours. That allows us to see the full state of the
+            // world during our fixpoint analysis. Once we have the full set of pointers, we
+            // only mark pointers to TOP, so we will eventually converge.
+            for (auto entry : other.m_pointers) {
+                auto addResult = m_pointers.add(entry.key, entry.value);
+                if (addResult.iterator->value != entry.value) {
+                    if (addResult.iterator->value) {
+                        toEscape.addVoid(addResult.iterator->value);
+                        addResult.iterator->value = nullptr;
+                    }
+                    if (entry.value)
+                        toEscape.addVoid(entry.value);
+                }
+            }
+            // This allows us to rule out pointers for graphs like this:
+            // bb#0
+            // branch #1, #2
+            // #1:
+            // x = pointer A
+            // jump #3
+            // #2:
+            // y = pointer B
+            // jump #3
+            // #3:
+            // ...
+            //
+            // When we merge state at #3, we'll very likely prune away the x and y pointer,
+            // since they're not live. But if they do happen to make it to this merge function, when
+            // #3 merges with #2 and #1, it'll eventually rule out x and y as not existing
+            // in the other, and therefore not existing in #3, which is the desired behavior.
+            //
+            // This also is necessary for a graph like this:
+            // #0
+            // o = {}
+            // o2 = {}
+            // jump #1
+            //
+            // #1
+            // o.f = o2
+            // effects()
+            // x = o.f
+            // escape(o)
+            // branch #2, #1
+            //
+            // #2
+            // x cannot be o2 here, it has to be TOP
+            // ...
+            //
+            // On the first fixpoint iteration, we might think that x is o2 at the head
+            // of #2. However, when we fixpoint our analysis, we determine that o gets
+            // escaped. This means that when we fixpoint, x will eventually not be a pointer.
+            // When we merge again here, we'll notice and mark o2 as escaped.
+            for (auto& entry : m_pointers) {
+                if (!other.m_pointers.contains(entry.key)) {
+                    if (entry.value) {
+                        toEscape.addVoid(entry.value);
+                        entry.value = nullptr;
+                        ASSERT(!m_pointers.find(entry.key)->value);
+                    }
+                }
+            }
+        }
 
         for (Node* identifier : toEscape)
             escapeAllocation(identifier);
 
-        if (!ASSERT_DISABLED) {
+        if (ASSERT_ENABLED) {
             for (const auto& entry : m_allocations)
                 ASSERT_UNUSED(entry, entry.value.isEscapedAllocation() || other.m_allocations.contains(entry.key));
         }
@@ -519,13 +597,13 @@ public:
 
     void assertIsValid() const
     {
-        if (ASSERT_DISABLED)
+        if (!ASSERT_ENABLED)
             return;
 
         // Pointers should point to an actual allocation
         for (const auto& entry : m_pointers) {
-            ASSERT_UNUSED(entry, entry.value);
-            ASSERT(m_allocations.contains(entry.value));
+            if (entry.value)
+                ASSERT(m_allocations.contains(entry.value));
         }
 
         for (const auto& allocationEntry : m_allocations) {
@@ -555,19 +633,19 @@ public:
         return m_allocations;
     }
 
-    const HashMap<Node*, Node*>& pointers() const
-    {
-        return m_pointers;
-    }
-
     void dump(PrintStream& out) const
     {
         out.print("  Allocations:\n");
         for (const auto& entry : m_allocations)
             out.print("    #", entry.key, ": ", entry.value, "\n");
         out.print("  Pointers:\n");
-        for (const auto& entry : m_pointers)
-            out.print("    ", entry.key, " => #", entry.value, "\n");
+        for (const auto& entry : m_pointers) {
+            out.print("    ", entry.key, " => #");
+            if (entry.value)
+                out.print(entry.value, "\n");
+            else
+                out.print("TOP\n");
+        }
     }
 
     bool reached() const
@@ -661,8 +739,10 @@ private:
     void prune()
     {
         NodeSet reachable;
-        for (const auto& entry : m_pointers)
-            reachable.addVoid(entry.value);
+        for (const auto& entry : m_pointers) {
+            if (entry.value)
+                reachable.addVoid(entry.value);
+        }
 
         // Repeatedly mark as reachable allocations in fields of other
         // reachable allocations
@@ -732,7 +812,7 @@ private:
         m_combinedLiveness = CombinedLiveness(m_graph);
 
         CString graphBeforeSinking;
-        if (Options::verboseValidationFailure() && Options::validateGraphAtEachPhase()) {
+        if (UNLIKELY(Options::verboseValidationFailure() && Options::validateGraphAtEachPhase())) {
             StringPrintStream out;
             m_graph.dump(out);
             graphBeforeSinking = out.toCString();
@@ -800,7 +880,7 @@ private:
                 // live pointer, or (recursively) stored in a field of
                 // a live allocation.
                 //
-                // This means we can accidentaly leak non-dominating
+                // This means we can accidentally leak non-dominating
                 // nodes into the successor. However, due to the
                 // non-dominance property, we are guaranteed that the
                 // successor has at least one predecessor that is not
@@ -809,10 +889,32 @@ private:
                 // trigger an escape and get pruned during the merge.
                 m_heap.pruneByLiveness(m_combinedLiveness.liveAtTail[block]);
 
-                for (BasicBlock* successorBlock : block->successors())
+                for (BasicBlock* successorBlock : block->successors()) {
+                    // FIXME: Maybe we should:
+                    // 1. Store the liveness pruned heap as part of m_heapAtTail
+                    // 2. Move this code above where we make block merge with
+                    // its predecessors before walking the block forward.
+                    // https://bugs.webkit.org/show_bug.cgi?id=206041
+                    LocalHeap heap = m_heapAtHead[successorBlock];
                     m_heapAtHead[successorBlock].merge(m_heap);
+                    if (heap != m_heapAtHead[successorBlock])
+                        changed = true;
+                }
             }
         } while (changed);
+    }
+
+    template<typename InternalFieldClass>
+    Allocation* handleInternalFieldClass(Node* node, HashMap<PromotedLocationDescriptor, LazyNode>& writes)
+    {
+        Allocation* result = &m_heap.newAllocation(node, Allocation::Kind::InternalFieldObject);
+        writes.add(StructurePLoc, LazyNode(m_graph.freeze(node->structure().get())));
+        auto initialValues = InternalFieldClass::initialValues();
+        static_assert(initialValues.size() == InternalFieldClass::numberOfInternalFields);
+        for (unsigned index = 0; index < initialValues.size(); ++index)
+            writes.add(PromotedLocationDescriptor(InternalFieldObjectPLoc, index), LazyNode(m_graph.freeze(initialValues[index])));
+
+        return result;
     }
 
     template<typename WriteFunctor, typename ResolveFunctor>
@@ -856,6 +958,11 @@ private:
 
             writes.add(FunctionExecutablePLoc, LazyNode(node->cellOperand()));
             writes.add(FunctionActivationPLoc, LazyNode(node->child1().node()));
+            break;
+        }
+
+        case NewArrayIterator: {
+            target = handleInternalFieldClass<JSArrayIterator>(node, writes);
             break;
         }
 
@@ -1069,6 +1176,26 @@ private:
             }
             break;
 
+        case GetInternalField: {
+            target = m_heap.onlyLocalAllocation(node->child1().node());
+            if (target && target->isInternalFieldObjectAllocation())
+                exactRead = PromotedLocationDescriptor(InternalFieldObjectPLoc, node->internalFieldIndex());
+            else
+                m_heap.escape(node->child1().node());
+            break;
+        }
+
+        case PutInternalField: {
+            target = m_heap.onlyLocalAllocation(node->child1().node());
+            if (target && target->isInternalFieldObjectAllocation())
+                writes.add(PromotedLocationDescriptor(InternalFieldObjectPLoc, node->internalFieldIndex()), LazyNode(node->child2().node()));
+            else {
+                m_heap.escape(node->child1().node());
+                m_heap.escape(node->child2().node());
+            }
+            break;
+        }
+
         case Check:
         case CheckVarargs:
             m_graph.doToChildren(
@@ -1090,7 +1217,7 @@ private:
             break;
 
         case FilterCallLinkStatus:
-        case FilterGetByIdStatus:
+        case FilterGetByStatus:
         case FilterPutByIdStatus:
         case FilterInByIdStatus:
             break;
@@ -1561,6 +1688,15 @@ private:
                 OpInfo(executable));
         }
 
+        case Allocation::Kind::InternalFieldObject: {
+            ObjectMaterializationData* data = m_graph.m_objectMaterializationData.add();
+            return m_graph.addNode(
+                allocation.identifier()->prediction(), Node::VarArg, MaterializeNewInternalFieldObject,
+                where->origin.withSemantic(
+                    allocation.identifier()->origin.semantic),
+                OpInfo(allocation.identifier()->structure()), OpInfo(data), 0, 0);
+        }
+
         case Allocation::Kind::Activation: {
             ObjectMaterializationData* data = m_graph.m_objectMaterializationData.add();
             FrozenValue* symbolTable = allocation.identifier()->cellOperand();
@@ -1815,7 +1951,7 @@ private:
                     availabilityCalculator.m_availability, identifier, phiDef->value());
 
                 for (PromotedHeapLocation location : hintsForPhi[variable->index()]) {
-                    if (m_heap.onlyLocalAllocation(location.base())) {
+                    if (m_heap.isUnescapedAllocation(location.base())) {
                         m_insertionSet.insert(0,
                             location.createHint(m_graph, block->at(0)->origin.withInvalidExit(), phiDef->value()));
                         m_localMapping.set(location, phiDef->value());
@@ -1946,6 +2082,10 @@ private:
 
                     case NewAsyncFunction:
                         node->convertToPhantomNewAsyncFunction();
+                        break;
+
+                    case NewArrayIterator:
+                        node->convertToPhantomNewArrayIterator();
                         break;
 
                     case CreateActivation:
@@ -2107,7 +2247,7 @@ private:
             if (m_heap.follow(availability.m_locals[i].node()) != escapee)
                 continue;
 
-            int operand = availability.m_locals.operandForIndex(i);
+            Operand operand = availability.m_locals.operandForIndex(i);
             m_insertionSet.insertNode(
                 nodeIndex, SpecNone, MovHint, origin.takeValidExit(canExit), OpInfo(operand),
                 materialization->defaultEdge());
@@ -2221,6 +2361,46 @@ private:
             ASSERT(locations.contains(activation));
 
             node->child1() = Edge(resolve(block, activation), KnownCellUse);
+            break;
+        }
+
+        case MaterializeNewInternalFieldObject: {
+            ObjectMaterializationData& data = node->objectMaterializationData();
+
+            unsigned firstChild = m_graph.m_varArgChildren.size();
+
+            Vector<PromotedHeapLocation> locations = m_locationsForAllocation.get(escapee);
+
+            PromotedHeapLocation structure(StructurePLoc, allocation.identifier());
+            ASSERT(locations.contains(structure));
+            m_graph.m_varArgChildren.append(Edge(resolve(block, structure), KnownCellUse));
+
+            for (PromotedHeapLocation location : locations) {
+                switch (location.kind()) {
+                case StructurePLoc: {
+                    ASSERT(location == structure);
+                    break;
+                }
+
+                case InternalFieldObjectPLoc: {
+                    ASSERT(location.base() == allocation.identifier());
+                    data.m_properties.append(location.descriptor());
+                    Node* value = resolve(block, location);
+                    if (m_sinkCandidates.contains(value))
+                        m_graph.m_varArgChildren.append(m_bottom);
+                    else
+                        m_graph.m_varArgChildren.append(value);
+                    break;
+                }
+
+                default:
+                    DFG_CRASH(m_graph, node, "Bad location kind");
+                }
+            }
+
+            node->children = AdjacencyList(
+                AdjacencyList::Variable,
+                firstChild, m_graph.m_varArgChildren.size() - firstChild);
             break;
         }
 
@@ -2355,6 +2535,15 @@ private:
                 value->defaultEdge());
         }
 
+        case InternalFieldObjectPLoc: {
+            return m_graph.addNode(
+                PutInternalField,
+                origin.takeValidExit(canExit),
+                OpInfo(location.info()),
+                Edge(base, KnownCellUse),
+                value->defaultEdge());
+        }
+
         case RegExpObjectLastIndexPLoc: {
             return m_graph.addNode(
                 SetRegExpObjectLastIndex,
@@ -2378,7 +2567,7 @@ private:
             for (Node* node : *block) {
                 switch (node->op()) {
                 case FilterCallLinkStatus:
-                case FilterGetByIdStatus:
+                case FilterGetByStatus:
                 case FilterPutByIdStatus:
                 case FilterInByIdStatus:
                     if (node->child1()->isPhantomAllocation())

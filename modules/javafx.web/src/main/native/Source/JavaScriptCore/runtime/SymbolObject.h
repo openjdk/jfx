@@ -30,6 +30,12 @@ class SymbolObject final : public JSWrapperObject {
 public:
     using Base = JSWrapperObject;
 
+    template<typename, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.symbolObjectSpace<mode>();
+    }
+
     static SymbolObject* create(VM& vm, Structure* structure)
     {
         Symbol* symbol = Symbol::create(vm);
@@ -54,9 +60,9 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
 
-    static String toStringName(const JSObject*, ExecState*);
+    static String toStringName(const JSObject*, JSGlobalObject*);
 
 protected:
     JS_EXPORT_PRIVATE void finishCreation(VM&, Symbol*);

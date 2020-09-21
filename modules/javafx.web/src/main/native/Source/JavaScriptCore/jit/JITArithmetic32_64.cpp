@@ -48,8 +48,8 @@ void JIT::emit_compareAndJump(const Instruction* instruction, RelationalConditio
     JumpList notInt32Op2;
 
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     // Character less.
@@ -102,8 +102,8 @@ template <typename Op>
 void JIT::emit_compareUnsignedAndJump(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     if (isOperandConstantInt(op1)) {
@@ -122,9 +122,9 @@ template <typename Op>
 void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalCondition condition)
 {
     auto bytecode = instruction->as<Op>();
-    int dst = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
     if (isOperandConstantInt(op1)) {
         emitLoad(op2, regT3, regT2);
@@ -140,26 +140,26 @@ void JIT::emit_compareUnsigned(const Instruction* instruction, RelationalConditi
 }
 
 template <typename Op>
-void JIT::emit_compareAndJumpSlow(const Instruction *instruction, DoubleCondition, size_t (JIT_OPERATION *operation)(ExecState*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator& iter)
+void JIT::emit_compareAndJumpSlow(const Instruction *instruction, DoubleCondition, size_t (JIT_OPERATION *operation)(JSGlobalObject*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator& iter)
 {
     auto bytecode = instruction->as<Op>();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
     unsigned target = jumpTarget(instruction, bytecode.m_targetLabel);
 
     linkAllSlowCases(iter);
 
     emitLoad(op1, regT1, regT0);
     emitLoad(op2, regT3, regT2);
-    callOperation(operation, JSValueRegs(regT1, regT0), JSValueRegs(regT3, regT2));
+    callOperation(operation, m_codeBlock->globalObject(), JSValueRegs(regT1, regT0), JSValueRegs(regT3, regT2));
     emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
 }
 
 void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpUnsigned>();
-    int result = bytecode.m_dst.offset();
-    int op1 = bytecode.m_operand.offset();
+    VirtualRegister result = bytecode.m_dst;
+    VirtualRegister op1 = bytecode.m_operand;
 
     emitLoad(op1, regT1, regT0);
 
@@ -171,7 +171,7 @@ void JIT::emit_op_unsigned(const Instruction* currentInstruction)
 void JIT::emit_op_inc(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpInc>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitLoad(srcDst, regT1, regT0);
 
@@ -183,7 +183,7 @@ void JIT::emit_op_inc(const Instruction* currentInstruction)
 void JIT::emit_op_dec(const Instruction* currentInstruction)
 {
     auto bytecode = currentInstruction->as<OpDec>();
-    int srcDst = bytecode.m_srcDst.offset();
+    VirtualRegister srcDst = bytecode.m_srcDst;
 
     emitLoad(srcDst, regT1, regT0);
 
@@ -200,8 +200,8 @@ void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types,
     auto bytecode = instruction->as<Op>();
     int opcodeID = Op::opcodeID;
     int target = jumpTarget(instruction, bytecode.m_targetLabel);
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
+    VirtualRegister op1 = bytecode.m_lhs;
+    VirtualRegister op2 = bytecode.m_rhs;
 
     if (!notInt32Op1.empty()) {
         // Double case 1: Op1 is not int32; Op2 is unknown.
@@ -334,53 +334,15 @@ void JIT::emitBinaryDoubleOp(const Instruction *instruction, OperandTypes types,
 
 void JIT::emit_op_mod(const Instruction* currentInstruction)
 {
-#if CPU(X86)
-    auto bytecode = instruction->as<OpMod>();
-    int dst = bytecode.m_dst.offset();
-    int op1 = bytecode.m_lhs.offset();
-    int op2 = bytecode.m_rhs.offset();
-
-    // Make sure registers are correct for x86 IDIV instructions.
-    ASSERT(regT0 == X86Registers::eax);
-    ASSERT(regT1 == X86Registers::edx);
-    ASSERT(regT2 == X86Registers::ecx);
-    ASSERT(regT3 == X86Registers::ebx);
-
-    emitLoad2(op1, regT0, regT3, op2, regT1, regT2);
-    addSlowCase(branchIfNotInt32(regT1));
-    addSlowCase(branchIfNotInt32(regT0));
-
-    move(regT3, regT0);
-    addSlowCase(branchTest32(Zero, regT2));
-    Jump denominatorNotNeg1 = branch32(NotEqual, regT2, TrustedImm32(-1));
-    addSlowCase(branch32(Equal, regT0, TrustedImm32(-2147483647-1)));
-    denominatorNotNeg1.link(this);
-    x86ConvertToDoubleWord32();
-    x86Div32(regT2);
-    Jump numeratorPositive = branch32(GreaterThanOrEqual, regT3, TrustedImm32(0));
-    addSlowCase(branchTest32(Zero, regT1));
-    numeratorPositive.link(this);
-    emitStoreInt32(dst, regT1, (op1 == dst || op2 == dst));
-#else
     JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_mod);
     slowPathCall.call();
-#endif
 }
 
-void JIT::emitSlow_op_mod(const Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+void JIT::emitSlow_op_mod(const Instruction*, Vector<SlowCaseEntry>::iterator&)
 {
-#if CPU(X86)
-    linkAllSlowCases(iter);
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_mod);
-    slowPathCall.call();
-#else
-    UNUSED_PARAM(currentInstruction);
-    UNUSED_PARAM(iter);
     // We would have really useful assertions here if it wasn't for the compiler's
     // insistence on attribute noreturn.
     // RELEASE_ASSERT_NOT_REACHED();
-#endif
 }
 
 /* ------------------------------ END: OP_MOD ------------------------------ */

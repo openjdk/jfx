@@ -25,31 +25,44 @@
 
 #pragma once
 
+#include "BytecodeLivenessAnalysis.h"
+#include "Operands.h"
 #include <wtf/FastBitVector.h>
 
 namespace JSC {
 
 class BytecodeLivenessAnalysis;
+class CodeBlock;
 
-typedef HashMap<unsigned, FastBitVector, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> BytecodeToBitmapMap;
-
+// Note: Full bytecode liveness does not track any information about the liveness of temps.
+// If you want tmp liveness for a checkpoint ask tmpLivenessForCheckpoint.
 class FullBytecodeLiveness {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    const FastBitVector& getLiveness(unsigned bytecodeIndex) const
+    const FastBitVector& getLiveness(BytecodeIndex bytecodeIndex, LivenessCalculationPoint point) const
     {
-        return m_map[bytecodeIndex];
+        // FIXME: What should this do when we have checkpoints?
+        switch (point) {
+        case LivenessCalculationPoint::BeforeUse:
+            return m_beforeUseVector[bytecodeIndex.offset()];
+        case LivenessCalculationPoint::AfterUse:
+            return m_afterUseVector[bytecodeIndex.offset()];
+        }
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
-    bool operandIsLive(int operand, unsigned bytecodeIndex) const
+    bool virtualRegisterIsLive(VirtualRegister reg, BytecodeIndex bytecodeIndex, LivenessCalculationPoint point) const
     {
-        return operandIsAlwaysLive(operand) || operandThatIsNotAlwaysLiveIsLive(getLiveness(bytecodeIndex), operand);
+        return virtualRegisterIsAlwaysLive(reg) || virtualRegisterThatIsNotAlwaysLiveIsLive(getLiveness(bytecodeIndex, point), reg);
     }
 
 private:
     friend class BytecodeLivenessAnalysis;
 
-    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_map;
+    // FIXME: Use FastBitVector's view mechanism to make them compact.
+    // https://bugs.webkit.org/show_bug.cgi?id=204427<Paste>
+    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_beforeUseVector;
+    Vector<FastBitVector, 0, UnsafeVectorOverflow> m_afterUseVector;
 };
 
 } // namespace JSC

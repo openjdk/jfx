@@ -34,6 +34,7 @@
     [CEReactions, Reflect=class] attribute DOMString className;
     [PutForwards=value] readonly attribute DOMTokenList classList; // FIXME: Should be [SameObject].
     [CEReactions, EnabledAtRuntime=ShadowDOM, Reflect, Unscopable] attribute DOMString slot;
+    [EnabledAtRuntime=CSSShadowParts, SameObject, PutForwards=value] readonly attribute DOMTokenList part;
 
     [DOMJIT=ReadDOM] boolean hasAttributes();
     readonly attribute NamedNodeMap attributes; // FIXME: Should be [SameObject].
@@ -55,7 +56,7 @@
     [CEReactions, MayThrowException] Attr removeAttributeNode(Attr attr);
 
     [EnabledAtRuntime=ShadowDOM, MayThrowException] ShadowRoot attachShadow(ShadowRootInit init);
-    [EnabledAtRuntime=ShadowDOM, ImplementedAs=shadowRootForBindings, CallWith=ExecState] readonly attribute ShadowRoot? shadowRoot;
+    [EnabledAtRuntime=ShadowDOM, ImplementedAs=shadowRootForBindings, CallWith=GlobalObject] readonly attribute ShadowRoot? shadowRoot;
 
     [MayThrowException] Element? closest(DOMString selectors);
     [MayThrowException] boolean matches(DOMString selectors);
@@ -95,8 +96,8 @@
 
     // Extensions from Full Screen API (https://fullscreen.spec.whatwg.org/#api).
     // FIXME: Should we add unprefixed versions?
-    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, ImplementedAs=webkitRequestFullscreen] void webkitRequestFullScreen(); // Prefixed Mozilla version.
-    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] void webkitRequestFullscreen(); // Prefixed W3C version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, ImplementedAs=webkitRequestFullscreen, DisabledByQuirk=shouldDisableElementFullscreen] void webkitRequestFullScreen(); // Prefixed Mozilla version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, DisabledByQuirk=shouldDisableElementFullscreen] void webkitRequestFullscreen(); // Prefixed W3C version.
 
     // Extensions from Pointer Events API (https://w3c.github.io/pointerevents/#extensions-to-the-element-interface).
     [Conditional=POINTER_EVENTS, EnabledAtRuntime=PointerEvents, MayThrowException] void setPointerCapture(long pointerId);
@@ -125,8 +126,8 @@
     [NotEnumerable, ImplementedAs=onwebkitTransitionEnd] attribute EventHandler onwebkittransitionend;
 
     // FIXME: These event handlers should only be on Document (https://fullscreen.spec.whatwg.org/#api).
-    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenchange;
-    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenerror;
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, DisabledByQuirk=shouldDisableElementFullscreen] attribute EventHandler onwebkitfullscreenchange;
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, DisabledByQuirk=shouldDisableElementFullscreen] attribute EventHandler onwebkitfullscreenerror;
 
     // FIXME: Cannot find those EventHandlers in the latest specification (https://w3c.github.io/uievents/#events-focus-types).
     [NotEnumerable] attribute EventHandler onfocusin;
@@ -150,6 +151,7 @@
 
 dictionary ShadowRootInit {
     required ShadowRootMode mode;
+    boolean delegatesFocus = false;
 };
 
 Element implements AccessibilityRole;

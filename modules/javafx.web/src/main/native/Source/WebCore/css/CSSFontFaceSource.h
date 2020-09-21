@@ -70,8 +70,9 @@ public:
     void opportunisticallyStartFontDataURLLoading(CSSFontSelector&);
 
     void load(CSSFontSelector*);
-    RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings&, const FontVariantSettings&, FontSelectionSpecifiedCapabilities);
+    RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings&, FontSelectionSpecifiedCapabilities);
 
+    CachedFont* cachedFont() const { return m_font.get(); }
     bool requiresExternalResource() const { return m_font; }
 
 #if ENABLE(SVG_FONTS)

@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class DoubleStringConverter extends StringConverter<Double> {
+
+    /**
+     * Creates a default {@code DoubleStringConverter}.
+     */
+    public DoubleStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Double fromString(String value) {
         // If the specified value is null or zero-length, return null

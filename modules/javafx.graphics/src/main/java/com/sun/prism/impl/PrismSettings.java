@@ -87,8 +87,6 @@ public final class PrismSettings {
     public static final boolean forceNonAntialiasedShape;
 
     public static enum RasterizerType {
-        JavaPisces("Java-based Pisces Rasterizer"),
-        NativePisces("Native-based Pisces Rasterizer"),
         FloatMarlin("Float Precision Marlin Rasterizer"),
         DoubleMarlin("Double Precision Marlin Rasterizer");
 
@@ -231,17 +229,6 @@ public final class PrismSettings {
         if (rOrder != null) {
             for (String s : split(rOrder.toLowerCase(), ",")) {
                 switch (s) {
-                    case "pisces":
-                        rSpec = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux()
-                                ? RasterizerType.NativePisces
-                                : RasterizerType.JavaPisces;
-                        break;
-                    case "nativepisces":
-                        rSpec = RasterizerType.NativePisces;
-                        break;
-                    case "javapisces":
-                        rSpec = RasterizerType.JavaPisces;
-                        break;
                     case "marlin":
                     case "doublemarlin":
                         rSpec = RasterizerType.DoubleMarlin;
@@ -256,25 +243,11 @@ public final class PrismSettings {
             }
         }
         if (rSpec == null) {
-            boolean useMarlinRasterizer, useMarlinRasterizerDP;
-            useMarlinRasterizer   = getBoolean(systemProperties, "prism.marlinrasterizer", true);
+            boolean useMarlinRasterizerDP;
             useMarlinRasterizerDP = getBoolean(systemProperties, "prism.marlin.double", true);
-            if (useMarlinRasterizer) {
-                rSpec = useMarlinRasterizerDP
-                        ? RasterizerType.DoubleMarlin
-                        : RasterizerType.FloatMarlin;
-            } else {
-                boolean doNativePisces;
-                String npprop = systemProperties.getProperty("prism.nativepisces");
-                if (npprop == null) {
-                    doNativePisces = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux();
-                } else {
-                    doNativePisces = Boolean.parseBoolean(npprop);
-                }
-                rSpec = doNativePisces
-                        ? RasterizerType.NativePisces
-                        : RasterizerType.JavaPisces;
-            }
+            rSpec = useMarlinRasterizerDP
+                    ? RasterizerType.DoubleMarlin
+                    : RasterizerType.FloatMarlin;
         }
         rasterizerSpec = rSpec;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputControlShim;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -52,6 +53,25 @@ public class TextAreaTest {
     @Before public void setup() {
         txtArea = new TextArea();
         dummyTxtArea = new TextArea("dummy");
+        setUncaughtExceptionHandler();
+    }
+
+    @After public void cleanup() {
+        removeUncaughtExceptionHandler();
+    }
+
+    private void setUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    private void removeUncaughtExceptionHandler() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************

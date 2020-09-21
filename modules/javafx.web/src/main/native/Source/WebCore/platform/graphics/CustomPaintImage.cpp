@@ -37,6 +37,7 @@
 #include "ImageBitmap.h"
 #include "ImageBuffer.h"
 #include "JSCSSPaintCallback.h"
+#include "JSDOMExceptionHandling.h"
 #include "PaintRenderingContext2D.h"
 #include "RenderElement.h"
 #include "StylePropertyMap.h"
@@ -152,12 +153,12 @@ ImageDrawResult CustomPaintImage::doCustomPaint(GraphicsContext& destContext, co
     auto scope = DECLARE_THROW_SCOPE(vm);
     auto& globalObject = *paintConstructor.getObject()->globalObject();
 
-    auto& state = *globalObject.globalExec();
+    auto& lexicalGlobalObject = globalObject;
     JSC::ArgList noArgs;
-    JSC::JSValue thisObject = { JSC::construct(&state, paintConstructor, noArgs, "Failed to construct paint class") };
+    JSC::JSValue thisObject = { JSC::construct(&lexicalGlobalObject, paintConstructor, noArgs, "Failed to construct paint class") };
 
     if (UNLIKELY(scope.exception())) {
-        reportException(&state, scope.exception());
+        reportException(&lexicalGlobalObject, scope.exception());
         return ImageDrawResult::DidNothing;
     }
 
@@ -197,7 +198,7 @@ void CustomPaintImage::drawPattern(GraphicsContext& destContext, const FloatRect
     adjustedPatternCTM.scale(1.0 / xScale, 1.0 / yScale);
     adjustedSrcRect.scale(xScale, yScale);
 
-    auto buffer = ImageBuffer::createCompatibleBuffer(adjustedSize, ColorSpaceSRGB, destContext);
+    auto buffer = ImageBuffer::createCompatibleBuffer(adjustedSize, ColorSpace::SRGB, destContext);
     if (!buffer)
         return;
     doCustomPaint(buffer->context(), adjustedSize);

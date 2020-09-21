@@ -34,6 +34,7 @@ namespace WebCore {
     };
 
     // this class represents a selector for a StyleRule
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
     class CSSSelector {
         WTF_MAKE_FAST_ALLOCATED;
     public:
@@ -110,6 +111,7 @@ namespace WebCore {
             PseudoClassAutofillStrongPassword,
             PseudoClassAutofillStrongPasswordViewable,
             PseudoClassHover,
+            PseudoClassDirectFocus,
             PseudoClassDrag,
             PseudoClassFocus,
             PseudoClassFocusWithin,
@@ -151,6 +153,9 @@ namespace WebCore {
             PseudoClassAnimatingFullScreenTransition,
             PseudoClassFullScreenControlsHidden,
 #endif
+#if ENABLE(PICTURE_IN_PICTURE_API)
+            PseudoClassPictureInPicture,
+#endif
             PseudoClassInRange,
             PseudoClassOutOfRange,
 #if ENABLE(VIDEO_TRACK)
@@ -177,7 +182,9 @@ namespace WebCore {
 #endif
             PseudoElementFirstLetter,
             PseudoElementFirstLine,
+            PseudoElementHighlight,
             PseudoElementMarker,
+            PseudoElementPart,
             PseudoElementResizer,
             PseudoElementScrollbar,
             PseudoElementScrollbarButton,
@@ -240,7 +247,7 @@ namespace WebCore {
         const AtomString& attributeCanonicalLocalName() const;
         const AtomString& argument() const { return m_hasRareData ? m_data.m_rareData->m_argument : nullAtom(); }
         bool attributeValueMatchingIsCaseInsensitive() const;
-        const Vector<AtomString>* langArgumentList() const { return m_hasRareData ? m_data.m_rareData->m_langArgumentList.get() : nullptr; }
+        const Vector<AtomString>* argumentList() const { return m_hasRareData ? m_data.m_rareData->m_argumentList.get() : nullptr; }
         const CSSSelectorList* selectorList() const { return m_hasRareData ? m_data.m_rareData->m_selectorList.get() : nullptr; }
 
         void setValue(const AtomString&, bool matchLowerCase = false);
@@ -248,7 +255,7 @@ namespace WebCore {
         void setAttribute(const QualifiedName&, bool convertToLowercase, AttributeMatchType);
         void setNth(int a, int b);
         void setArgument(const AtomString&);
-        void setLangArgumentList(std::unique_ptr<Vector<AtomString>>);
+        void setArgumentList(std::unique_ptr<Vector<AtomString>>);
         void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
         bool matchNth(int count) const;
@@ -342,6 +349,7 @@ namespace WebCore {
         CSSSelector& operator=(const CSSSelector&);
 
         struct RareData : public RefCounted<RareData> {
+            WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSSelectorRareData);
             static Ref<RareData> create(AtomString&& value) { return adoptRef(*new RareData(WTFMove(value))); }
             ~RareData();
 
@@ -358,7 +366,7 @@ namespace WebCore {
             QualifiedName m_attribute; // used for attribute selector
             AtomString m_attributeCanonicalLocalName;
             AtomString m_argument; // Used for :contains and :nth-*
-            std::unique_ptr<Vector<AtomString>> m_langArgumentList; // Used for :lang arguments.
+            std::unique_ptr<Vector<AtomString>> m_argumentList; // Used for :lang and ::part arguments.
             std::unique_ptr<CSSSelectorList> m_selectorList; // Used for :matches() and :not().
 
         private:
@@ -436,6 +444,11 @@ static inline bool pseudoClassIsRelativeToSiblings(CSSSelector::PseudoClassType 
         || type == CSSSelector::PseudoClassNthOfType
         || type == CSSSelector::PseudoClassNthLastChild
         || type == CSSSelector::PseudoClassNthLastOfType;
+}
+
+static inline bool isTreeStructuralPseudoClass(CSSSelector::PseudoClassType type)
+{
+    return pseudoClassIsRelativeToSiblings(type) || type == CSSSelector::PseudoClassRoot;
 }
 
 inline bool CSSSelector::isSiblingSelector() const

@@ -1,6 +1,6 @@
 package test.javafx.fxml;
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,11 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.LoadListener;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptEngine;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class FXMLLoader_ScriptTest {
     @Test
@@ -130,6 +133,10 @@ public class FXMLLoader_ScriptTest {
     @Test
     public void testScriptHandler() throws IOException {
 
+        // This test needs Nashorn script engine.
+        // Test will be rewritten under - JDK-8245568
+        assumeTrue(isNashornEngineAvailable());
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("script_handler.fxml"));
         loader.load();
 
@@ -143,6 +150,10 @@ public class FXMLLoader_ScriptTest {
     @Test
     public void testExternalScriptHandler() throws IOException {
 
+        // This test needs Nashorn script engine.
+        // Test will be rewritten under - JDK-8245568
+        assumeTrue(isNashornEngineAvailable());
+
         FXMLLoader loader = new FXMLLoader(getClass().getResource("script_handler_external.fxml"));
         loader.load();
 
@@ -151,5 +162,12 @@ public class FXMLLoader_ScriptTest {
         loader.getNamespace().put("actionDone", new AtomicBoolean(false));
         w.fire();
         assertTrue(((AtomicBoolean)loader.getNamespace().get("actionDone")).get());
+    }
+
+    private boolean isNashornEngineAvailable() {
+        ScriptEngineManager factory = new ScriptEngineManager();
+        ScriptEngine engine = factory.getEngineByName("nashorn");
+
+        return (engine != null);
     }
 }

@@ -57,5 +57,5 @@ varying vec2 oTexCoords;
 
 vec4 apply_diffuse() {
     vec4 dTexColor = texture2D(diffuseTexture, oTexCoords);
-    return dTexColor * diffuseColor; 
+    return dTexColor * diffuseColor;
 }

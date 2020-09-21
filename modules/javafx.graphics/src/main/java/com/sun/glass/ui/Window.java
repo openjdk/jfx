@@ -738,16 +738,6 @@ public abstract class Window {
         return (this.styleMask & Window.TRANSPARENT) != 0;
     }
 
-    private static volatile Window focusedWindow = null;
-    public static Window getFocusedWindow() {
-        Application.checkEventThread();
-        return Window.focusedWindow;
-    }
-
-    private static void setFocusedWindow(final Window window) {
-        Window.focusedWindow = window;
-    }
-
     public boolean isFocused() {
         Application.checkEventThread();
         return this.isFocused;
@@ -1322,11 +1312,6 @@ public abstract class Window {
 
         if (this.isFocused != focused) {
             this.isFocused = focused;
-            if (this.isFocused) {
-                setFocusedWindow(this);
-            } else {
-                setFocusedWindow(null);
-            }
             handleWindowEvent(System.nanoTime(), event);
         }
     }

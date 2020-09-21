@@ -39,7 +39,6 @@ platform/java/ContextMenuJava.cpp
 platform/java/CursorJava.cpp
 platform/java/DragImageJava.cpp
 platform/java/DragDataJava.cpp
-platform/java/EventLoopJava.cpp
 platform/java/IDNJava.cpp
 platform/java/KeyboardEventJava.cpp
 platform/java/KeyedCodingJava.cpp

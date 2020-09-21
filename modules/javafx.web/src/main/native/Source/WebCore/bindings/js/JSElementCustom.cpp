@@ -36,8 +36,10 @@
 #include "JSAttr.h"
 #include "JSDOMBinding.h"
 #include "JSHTMLElementWrapperFactory.h"
+#include "JSMathMLElementWrapperFactory.h"
 #include "JSNodeList.h"
 #include "JSSVGElementWrapperFactory.h"
+#include "MathMLElement.h"
 #include "NodeList.h"
 #include "SVGElement.h"
 
@@ -53,17 +55,21 @@ static JSValue createNewElementWrapper(JSDOMGlobalObject* globalObject, Ref<Elem
         return createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(element)));
     if (is<SVGElement>(element))
         return createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(element)));
+#if ENABLE(MATHML)
+    if (is<MathMLElement>(element))
+        return createJSMathMLWrapper(globalObject, static_reference_cast<MathMLElement>(WTFMove(element)));
+#endif
     return createWrapper<Element>(globalObject, WTFMove(element));
 }
 
-JSValue toJS(ExecState*, JSDOMGlobalObject* globalObject, Element& element)
+JSValue toJS(JSGlobalObject*, JSDOMGlobalObject* globalObject, Element& element)
 {
     if (auto* wrapper = getCachedWrapper(globalObject->world(), element))
         return wrapper;
     return createNewElementWrapper(globalObject, element);
 }
 
-JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<Element>&& element)
+JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<Element>&& element)
 {
     if (element->isDefinedCustomElement())
         return getCachedWrapper(globalObject->world(), element);

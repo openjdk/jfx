@@ -40,29 +40,14 @@ static SWServerToContextConnectionIdentifier generateServerToContextConnectionId
     return SWServerToContextConnectionIdentifier::generate();
 }
 
-static HashMap<RegistrableDomain, SWServerToContextConnection*>& allConnectionsByRegistrableDomain()
-{
-    static NeverDestroyed<HashMap<RegistrableDomain, SWServerToContextConnection*>> connectionsByOrigin;
-    return connectionsByOrigin;
-}
-
-SWServerToContextConnection::SWServerToContextConnection(const RegistrableDomain& registrableDomain)
+SWServerToContextConnection::SWServerToContextConnection(RegistrableDomain&& registrableDomain)
     : m_identifier(generateServerToContextConnectionIdentifier())
-    , m_registrableDomain(registrableDomain)
+    , m_registrableDomain(WTFMove(registrableDomain))
 {
-    auto result = allConnectionsByRegistrableDomain().add(m_registrableDomain, this);
-    ASSERT_UNUSED(result, result.isNewEntry);
 }
 
 SWServerToContextConnection::~SWServerToContextConnection()
 {
-    auto result = allConnectionsByRegistrableDomain().remove(m_registrableDomain);
-    ASSERT_UNUSED(result, result);
-}
-
-SWServerToContextConnection* SWServerToContextConnection::connectionForRegistrableDomain(const RegistrableDomain& registrableDomain)
-{
-    return allConnectionsByRegistrableDomain().get(registrableDomain);
 }
 
 void SWServerToContextConnection::scriptContextFailedToStart(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const String& message)
@@ -71,10 +56,10 @@ void SWServerToContextConnection::scriptContextFailedToStart(const Optional<Serv
         worker->scriptContextFailedToStart(jobDataIdentifier, message);
 }
 
-void SWServerToContextConnection::scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier)
+void SWServerToContextConnection::scriptContextStarted(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, bool doesHandleFetch)
 {
     if (auto* worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier))
-        worker->scriptContextStarted(jobDataIdentifier);
+        worker->scriptContextStarted(jobDataIdentifier, doesHandleFetch);
 }
 
 void SWServerToContextConnection::didFinishInstall(const Optional<ServiceWorkerJobDataIdentifier>& jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, bool wasSuccessful)
@@ -124,18 +109,24 @@ void SWServerToContextConnection::claim(uint64_t requestIdentifier, ServiceWorke
     }
 }
 
-void SWServerToContextConnection::skipWaiting(ServiceWorkerIdentifier serviceWorkerIdentifier, uint64_t callbackID)
+void SWServerToContextConnection::skipWaiting(ServiceWorkerIdentifier serviceWorkerIdentifier, CompletionHandler<void()>&& completionHandler)
 {
     if (auto* worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier))
         worker->skipWaiting();
 
-    didFinishSkipWaiting(callbackID);
+    completionHandler();
 }
 
 void SWServerToContextConnection::setScriptResource(ServiceWorkerIdentifier serviceWorkerIdentifier, URL&& scriptURL, String&& script, URL&& responseURL, String&& mimeType)
 {
     if (auto* worker = SWServerWorker::existingWorkerForIdentifier(serviceWorkerIdentifier))
         worker->setScriptResource(WTFMove(scriptURL), ServiceWorkerContextData::ImportedScript { WTFMove(script), WTFMove(responseURL), WTFMove(mimeType) });
+}
+
+void SWServerToContextConnection::didFailHeartBeatCheck(ServiceWorkerIdentifier identifier)
+{
+    if (auto* worker = SWServerWorker::existingWorkerForIdentifier(identifier))
+        worker->didFailHeartBeatCheck();
 }
 
 } // namespace WebCore

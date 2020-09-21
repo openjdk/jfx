@@ -1870,13 +1870,13 @@ struct __visitor_table{
         return __visitor(get<_Type>(__v));
     }
 
-    static const __func_type __trampoline[sizeof...(_Types)];
+    static constexpr __func_type __trampoline[sizeof...(_Types)]={
+        &__trampoline_func<_Types>...
+    };
 };
 
 template<typename _Visitor,typename ... _Types>
-const typename __visitor_table<_Visitor,_Types...>::__func_type __visitor_table<_Visitor,_Types...>::__trampoline[sizeof...(_Types)]={
-        &__trampoline_func<_Types>...
-    };
+constexpr typename __visitor_table<_Visitor,_Types...>::__func_type __visitor_table<_Visitor,_Types...>::__trampoline[sizeof...(_Types)];
 
 template<typename _Visitor,typename ... _Types>
 constexpr typename __visitor_return_type<_Visitor,_Types...>::__type

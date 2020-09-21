@@ -118,7 +118,7 @@ public:
     void willIterateCursor(IDBCursor&);
     void didOpenOrIterateCursor(const IDBResultData&);
 
-    const IDBCursor* pendingCursor() const { return m_pendingCursor.get(); }
+    IDBCursor* pendingCursor() const { return m_pendingCursor ? m_pendingCursor.get() : nullptr; }
 
     void setSource(IDBCursor&);
     void setVersionChangeTransaction(IDBTransaction&);
@@ -126,6 +126,8 @@ public:
     IndexedDB::RequestType requestType() const { return m_requestType; }
 
     bool hasPendingActivity() const final;
+
+    void setTransactionOperationID(uint64_t transactionOperationID) { m_currentTransactionOperationID = transactionOperationID; }
 
 protected:
     IDBRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&);
@@ -157,7 +159,6 @@ private:
     EventTargetInterface eventTargetInterface() const override;
 
     const char* activeDOMObjectName() const final;
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
     virtual void cancelForStop();
 
@@ -192,6 +193,8 @@ private:
 
     bool m_dispatchingEvent { false };
     bool m_hasUncaughtException { false };
+
+    uint64_t m_currentTransactionOperationID { 0 };
 };
 
 } // namespace WebCore

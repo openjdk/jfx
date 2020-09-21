@@ -18,11 +18,15 @@
  */
 
 #include "config.h"
+
+#include "JSNodeCustom.h"
 #include "JSCanvasRenderingContext2D.h"
 
 #include "JSNodeCustom.h"
 
 namespace WebCore {
+
+using namespace JSC;
 
 bool JSCanvasRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::SlotVisitor& visitor, const char** reason)
 {

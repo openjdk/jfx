@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,18 @@
 
 package javafx.collections;
 
-
 import java.util.Set;
 
 import javafx.beans.Observable;
 
 /**
- * A set that allows observers to track changes when they occur.
+ * A set that allows observers to track changes when they occur. Implementations can be created using methods in {@link FXCollections}
+ * such as {@link FXCollections#observableSet(Object...) observableSet}, or with a
+ * {@link javafx.beans.property.SimpleSetProperty SimpleSetProperty}.
  *
  * @see SetChangeListener
  * @see SetChangeListener.Change
+ * @param <E> the set element type
  * @since JavaFX 2.1
  */
 public interface ObservableSet<E> extends Set<E>, Observable {

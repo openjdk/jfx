@@ -85,7 +85,7 @@ public class SSE$peerName$Peer extends SSEEffectPeer$genericsDecl$ $interfaceDec
         setDestNativeBounds(dst.getPhysicalWidth(), dst.getPhysicalHeight());
         int dstscan = dst.getScanlineStride();
         int[] dstPixels = dst.getPixelArray();
-        
+
         $constants$
 
         filter(dstPixels, dstx, dsty, dstw, dsth, dstscan$params$);

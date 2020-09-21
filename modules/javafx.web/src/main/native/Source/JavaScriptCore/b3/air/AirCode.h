@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,17 +34,23 @@
 #include "AirStackSlot.h"
 #include "AirTmp.h"
 #include "B3SparseCollection.h"
-#include "CCallHelpers.h"
+#include "GPRInfo.h"
+#include "MacroAssembler.h"
 #include "RegisterAtOffsetList.h"
 #include "StackAlignment.h"
+#include <wtf/HashSet.h>
 #include <wtf/IndexMap.h>
 #include <wtf/WeakRandom.h>
 
-namespace JSC { namespace B3 {
+namespace JSC {
+
+class CCallHelpers;
+
+namespace B3 {
 
 class Procedure;
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_BEGIN
 #endif
 
@@ -62,6 +68,8 @@ typedef SharedTask<WasmBoundsCheckGeneratorFunction> WasmBoundsCheckGenerator;
 
 typedef void PrologueGeneratorFunction(CCallHelpers&, Code&);
 typedef SharedTask<PrologueGeneratorFunction> PrologueGenerator;
+
+extern const char* const tierName;
 
 // This is an IR that is very close to the bare metal. It requires about 40x more bytes than the
 // generated machine code - for example if you're generating 1MB of machine code, you need about
@@ -194,7 +202,7 @@ public:
         RELEASE_ASSERT(m_entrypoints.size() == m_prologueGenerators.size());
     }
 
-    CCallHelpers::Label entrypointLabel(unsigned index) const
+    MacroAssembler::Label entrypointLabel(unsigned index) const
     {
         return m_entrypointLabels[index];
     }
@@ -224,7 +232,7 @@ public:
     RegisterSet calleeSaveRegisters() const { return m_calleeSaveRegisters; }
 
     // Recomputes predecessors and deletes unreachable blocks.
-    void resetReachability();
+    JS_EXPORT_PRIVATE void resetReachability();
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
@@ -381,7 +389,7 @@ private:
     RegisterSet m_calleeSaveRegisters;
     StackSlot* m_calleeSaveStackSlot { nullptr };
     Vector<FrequentedBlock> m_entrypoints; // This is empty until after lowerEntrySwitch().
-    Vector<CCallHelpers::Label> m_entrypointLabels; // This is empty until code generation.
+    Vector<MacroAssembler::Label> m_entrypointLabels; // This is empty until code generation.
     Vector<Ref<PrologueGenerator>, 1> m_prologueGenerators;
     RefPtr<WasmBoundsCheckGenerator> m_wasmBoundsCheckGenerator;
     const char* m_lastPhaseName;
@@ -392,7 +400,7 @@ private:
 
 } } } // namespace JSC::B3::Air
 
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
 IGNORE_RETURN_TYPE_WARNINGS_END
 #endif
 

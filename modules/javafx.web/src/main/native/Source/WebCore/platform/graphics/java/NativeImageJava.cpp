@@ -87,7 +87,7 @@ void drawNativeImage(const NativeImagePtr& image,
     GraphicsContext& context,
     const FloatRect& destRect,
     const FloatRect& srcRect,
-    const IntSize& size,
+    const IntSize&,
     const ImagePaintingOptions& options)
 {
     if (!image) {
@@ -96,8 +96,8 @@ void drawNativeImage(const NativeImagePtr& image,
     context.save();
 
     // Set the compositing operation.
-    if (options.compositeOperator() == CompositeSourceOver && options.blendMode() == BlendMode::Normal && !nativeImageHasAlpha(image))
-        context.setCompositeOperation(CompositeCopy);
+    if (options.compositeOperator() == CompositeOperator::SourceOver && options.blendMode() == BlendMode::Normal && !nativeImageHasAlpha(image))
+        context.setCompositeOperation(CompositeOperator::Copy);
     else
         context.setCompositeOperation(options.compositeOperator(), options.blendMode());
 
@@ -142,7 +142,7 @@ void drawNativeImage(const NativeImagePtr& image,
 
 //     // Set the compositing operation.
 //     if (op == CompositeSourceOver && mode == BlendMode::Normal && !nativeImageHasAlpha(image))
-//         context.setCompositeOperation(CompositeCopy);
+//         context.setCompositeOperation(CompositeOperator::Copy);
 //     else
 //         context.setCompositeOperation(op, mode);
 

@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class CharacterStringConverter extends StringConverter<Character> {
+
+    /**
+     * Creates a default {@code CharacterStringConverter}.
+     */
+    public CharacterStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Character fromString(String value) {
         // If the specified value is null or zero-length, return null

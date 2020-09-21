@@ -58,7 +58,7 @@ public class PPS$peerName$Peer extends $superClass$$genericsDecl$ $interfaceDecl
     }
 
     $usercode$
-     
+
     @Override
     protected boolean isSamplerLinear(int i) {
         switch (i) {

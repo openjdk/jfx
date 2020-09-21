@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,20 +34,21 @@ namespace JSC {
 
 class WEBCORE_EXPORT RuntimeMethod : public InternalFunction {
 public:
-    typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetCallData;
+    using Base = InternalFunction;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetCallData;
 
     template<typename CellType, JSC::SubspaceAccess>
-    static IsoSubspace* subspaceFor(VM& vm)
+    static IsoSubspace* subspaceFor(JSC::VM& vm)
     {
         static_assert(sizeof(CellType) == sizeof(RuntimeMethod), "RuntimeMethod subclasses that add fields need to override subspaceFor<>()");
+        static_assert(CellType::destroy == JSC::JSCell::destroy);
         return subspaceForImpl(vm);
     }
 
-    static RuntimeMethod* create(ExecState*, JSGlobalObject* globalObject, Structure* structure, const String& name, Bindings::Method* method)
+    static RuntimeMethod* create(JSGlobalObject*, JSGlobalObject* globalObject, Structure* structure, const String& name, Bindings::Method* method)
     {
         VM& vm = globalObject->vm();
-        RuntimeMethod* runtimeMethod = new (NotNull, allocateCell<RuntimeMethod>(vm.heap)) RuntimeMethod(globalObject, structure, method);
+        RuntimeMethod* runtimeMethod = new (NotNull, allocateCell<RuntimeMethod>(vm.heap)) RuntimeMethod(vm, structure, method);
         runtimeMethod->finishCreation(vm, name);
         return runtimeMethod;
     }
@@ -67,13 +68,13 @@ public:
     }
 
 protected:
-    RuntimeMethod(JSGlobalObject*, Structure*, Bindings::Method*);
+    RuntimeMethod(VM&, Structure*, Bindings::Method*);
     void finishCreation(VM&, const String&);
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
 
 private:
-    static EncodedJSValue lengthGetter(ExecState*, EncodedJSValue, PropertyName);
+    static EncodedJSValue lengthGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
 
     static IsoSubspace* subspaceForImpl(VM&);
 

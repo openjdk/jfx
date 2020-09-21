@@ -48,9 +48,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGUseElement);
 
 inline SVGUseElement::SVGUseElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
     , SVGURIReference(this)
-    , m_svgLoadEventTimer(*this, &SVGElement::svgLoadEventTimerFired)
+    , m_loadEventTimer(*this, &SVGElement::loadEventTimerFired)
 {
     ASSERT(hasCustomStyleResolveCallbacks());
     ASSERT(hasTagName(SVGNames::useTag));
@@ -80,17 +79,16 @@ void SVGUseElement::parseAttribute(const QualifiedName& name, const AtomString& 
     SVGParsingError parseError = NoError;
 
     if (name == SVGNames::xAttr)
-        m_x->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError));
+        m_x->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError));
     else if (name == SVGNames::yAttr)
-        m_y->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError));
+        m_y->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError));
     else if (name == SVGNames::widthAttr)
-        m_width->setBaseValInternal(SVGLengthValue::construct(LengthModeWidth, value, parseError, ForbidNegativeLengths));
+        m_width->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Width, value, parseError, SVGLengthNegativeValuesMode::Forbid));
     else if (name == SVGNames::heightAttr)
-        m_height->setBaseValInternal(SVGLengthValue::construct(LengthModeHeight, value, parseError, ForbidNegativeLengths));
+        m_height->setBaseValInternal(SVGLengthValue::construct(SVGLengthMode::Height, value, parseError, SVGLengthNegativeValuesMode::Forbid));
 
     reportAttributeParsingError(parseError, name, value);
 
-    SVGExternalResourcesRequired::parseAttribute(name, value);
     SVGGraphicsElement::parseAttribute(name, value);
     SVGURIReference::parseAttribute(name, value);
 }
@@ -101,7 +99,6 @@ Node::InsertedIntoAncestorResult SVGUseElement::insertedIntoAncestor(InsertionTy
     if (insertionType.connectedToDocument) {
         if (m_shadowTreeNeedsUpdate)
             document().addSVGUseElement(*this);
-        SVGExternalResourcesRequired::insertedIntoDocument();
         invalidateShadowTree();
         // FIXME: Move back the call to updateExternalDocument() here once notifyFinished is made always async.
         return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
@@ -177,11 +174,7 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
     }
 
-    if (SVGLangSpace::isKnownAttribute(attrName) || SVGExternalResourcesRequired::isKnownAttribute(attrName))
-        invalidateShadowTree();
-
     SVGGraphicsElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 static HashSet<AtomString> createAllowedElementSet()
@@ -554,16 +547,11 @@ void SVGUseElement::notifyFinished(CachedResource& resource)
 {
     ASSERT(ScriptDisallowedScope::InMainThread::isScriptAllowed());
     invalidateShadowTree();
-    if (resource.errorOccurred())
+    if (resource.errorOccurred()) {
+        setErrorOccurred(true);
         dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
-    else if (!resource.wasCanceled())
-        SVGExternalResourcesRequired::dispatchLoadEvent();
-}
-
-void SVGUseElement::finishParsingChildren()
-{
-    SVGGraphicsElement::finishParsingChildren();
-    SVGExternalResourcesRequired::finishParsingChildren();
+    } else if (!resource.wasCanceled())
+        SVGURIReference::dispatchLoadEvent();
 }
 
 void SVGUseElement::updateExternalDocument()
@@ -595,31 +583,6 @@ void SVGUseElement::updateExternalDocument()
     }
 
     invalidateShadowTree();
-}
-
-bool SVGUseElement::isValid() const
-{
-    return SVGTests::isValid();
-}
-
-bool SVGUseElement::haveLoadedRequiredResources()
-{
-    return SVGExternalResourcesRequired::haveLoadedRequiredResources();
-}
-
-void SVGUseElement::setHaveFiredLoadEvent(bool haveFiredLoadEvent)
-{
-    m_haveFiredLoadEvent = haveFiredLoadEvent;
-}
-
-bool SVGUseElement::haveFiredLoadEvent() const
-{
-    return m_haveFiredLoadEvent;
-}
-
-Timer* SVGUseElement::svgLoadEventTimer()
-{
-    return &m_svgLoadEventTimer;
 }
 
 }

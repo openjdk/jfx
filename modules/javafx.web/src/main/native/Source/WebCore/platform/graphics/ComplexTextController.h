@@ -70,7 +70,7 @@ public:
     // Returns the width of everything we've consumed so far.
     float runWidthSoFar() const { return m_runWidthSoFar; }
 
-    float totalWidth() const { return m_totalWidth; }
+    FloatSize totalAdvance() const { return m_totalAdvance; }
 
     float minGlyphBoundingBoxX() const { return m_minGlyphBoundingBoxX; }
     float maxGlyphBoundingBoxX() const { return m_maxGlyphBoundingBoxX; }
@@ -230,7 +230,7 @@ private:
     unsigned m_currentCharacter { 0 };
     unsigned m_end { 0 };
 
-    float m_totalWidth { 0 };
+    FloatSize m_totalAdvance;
     float m_runWidthSoFar { 0 };
     unsigned m_numGlyphsSoFar { 0 };
     unsigned m_currentRun { 0 };

@@ -28,6 +28,7 @@
 #include "Worker.h"
 
 #include "ContentSecurityPolicy.h"
+#include "ErrorEvent.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "InspectorInstrumentation.h"
@@ -39,6 +40,7 @@
 #include "WorkerScriptLoader.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/IdentifiersFactory.h>
+#include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/HashSet.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
@@ -125,10 +127,10 @@ Worker::~Worker()
     m_contextProxy.workerObjectDestroyed();
 }
 
-ExceptionOr<void> Worker::postMessage(JSC::ExecState& state, JSC::JSValue messageValue, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+ExceptionOr<void> Worker::postMessage(JSC::JSGlobalObject& state, JSC::JSValue messageValue, PostMessageOptions&& options)
 {
     Vector<RefPtr<MessagePort>> ports;
-    auto message = SerializedScriptValue::create(state, messageValue, WTFMove(transfer), ports, SerializationContext::WorkerPostMessage);
+    auto message = SerializedScriptValue::create(state, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
     if (message.hasException())
         return message.releaseException();
 
@@ -144,12 +146,7 @@ ExceptionOr<void> Worker::postMessage(JSC::ExecState& state, JSC::JSValue messag
 void Worker::terminate()
 {
     m_contextProxy.terminateWorkerGlobalScope();
-}
-
-bool Worker::canSuspendForDocumentSuspension() const
-{
-    // FIXME: It is not currently possible to suspend a worker, so pages with workers can not go into page cache.
-    return false;
+    m_wasTerminated = true;
 }
 
 const char* Worker::activeDOMObjectName() const
@@ -160,6 +157,22 @@ const char* Worker::activeDOMObjectName() const
 void Worker::stop()
 {
     terminate();
+}
+
+void Worker::suspend(ReasonForSuspension reason)
+{
+    if (reason == ReasonForSuspension::BackForwardCache) {
+        m_contextProxy.suspendForBackForwardCache();
+        m_isSuspendedForBackForwardCache = true;
+    }
+}
+
+void Worker::resume()
+{
+    if (m_isSuspendedForBackForwardCache) {
+        m_contextProxy.resumeForBackForwardCache();
+        m_isSuspendedForBackForwardCache = false;
+    }
 }
 
 bool Worker::hasPendingActivity() const
@@ -192,14 +205,29 @@ void Worker::notifyFinished()
         return;
 
     if (m_scriptLoader->failed()) {
-        dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
+        queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
         return;
     }
 
     bool isOnline = platformStrategies()->loaderStrategy()->isOnLine();
     const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : context->contentSecurityPolicy()->responseHeaders();
-    m_contextProxy.startWorkerGlobalScope(m_scriptLoader->url(), m_name, context->userAgent(m_scriptLoader->url()), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_workerCreationTime, m_runtimeFlags, context->sessionID());
+    ReferrerPolicy referrerPolicy = ReferrerPolicy::EmptyString;
+    if (auto policy = parseReferrerPolicy(m_scriptLoader->referrerPolicy(), ReferrerPolicySource::HTTPHeader))
+        referrerPolicy = *policy;
+    m_contextProxy.startWorkerGlobalScope(m_scriptLoader->url(), m_name, context->userAgent(m_scriptLoader->url()), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_workerCreationTime, referrerPolicy, m_runtimeFlags);
     InspectorInstrumentation::scriptImported(*context, m_scriptLoader->identifier(), m_scriptLoader->script());
+}
+
+void Worker::dispatchEvent(Event& event)
+{
+    if (m_wasTerminated)
+        return;
+
+    AbstractWorker::dispatchEvent(event);
+    if (is<ErrorEvent>(event) && !event.defaultPrevented() && event.isTrusted() && scriptExecutionContext()) {
+        auto& errorEvent = downcast<ErrorEvent>(event);
+        scriptExecutionContext()->reportException(errorEvent.message(), errorEvent.lineno(), errorEvent.colno(), errorEvent.filename(), nullptr, nullptr);
+    }
 }
 
 } // namespace WebCore

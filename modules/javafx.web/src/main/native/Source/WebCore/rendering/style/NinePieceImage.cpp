@@ -40,12 +40,22 @@ inline DataRef<NinePieceImage::Data>& NinePieceImage::defaultData()
     return data.get();
 }
 
-NinePieceImage::NinePieceImage()
-    : m_data(defaultData())
+inline DataRef<NinePieceImage::Data>& NinePieceImage::defaultMaskData()
+{
+    static NeverDestroyed<DataRef<Data>> maskData { Data::create() };
+    auto& data = maskData.get().access();
+    data.imageSlices = LengthBox(0);
+    data.fill = true;
+    data.borderSlices = LengthBox();
+    return maskData.get();
+}
+
+NinePieceImage::NinePieceImage(Type imageType)
+    : m_data(imageType == Type::Normal ? defaultData() : defaultMaskData())
 {
 }
 
-NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+NinePieceImage::NinePieceImage(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
     : m_data(Data::create(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule))
 {
 }
@@ -150,7 +160,7 @@ FloatSize NinePieceImage::computeSideTileScale(ImagePiece piece, const Vector<Fl
     return FloatSize(scale, scale);
 }
 
-FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule)
+FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales, const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule)
 {
     FloatSize scale(1, 1);
     if (isEmptyPieceRect(MiddlePiece, destinationRects, sourceRects))
@@ -158,14 +168,14 @@ FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales
 
     // Unlike the side pieces, the middle piece can have "stretch" specified in one axis but not the other.
     // In fact the side pieces don't even use the scale factor unless they have a rule other than "stretch".
-    if (hRule == StretchImageRule)
+    if (hRule == NinePieceImageRule::Stretch)
         scale.setWidth(destinationRects[MiddlePiece].width() / sourceRects[MiddlePiece].width());
     else if (!isEmptyPieceRect(TopPiece, destinationRects, sourceRects))
         scale.setWidth(scales[TopPiece].width());
     else if (!isEmptyPieceRect(BottomPiece, destinationRects, sourceRects))
         scale.setWidth(scales[BottomPiece].width());
 
-    if (vRule == StretchImageRule)
+    if (vRule == NinePieceImageRule::Stretch)
         scale.setHeight(destinationRects[MiddlePiece].height() / sourceRects[MiddlePiece].height());
     else if (!isEmptyPieceRect(LeftPiece, destinationRects, sourceRects))
         scale.setHeight(scales[LeftPiece].height());
@@ -175,7 +185,7 @@ FloatSize NinePieceImage::computeMiddleTileScale(const Vector<FloatSize>& scales
     return scale;
 }
 
-Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, ENinePieceImageRule hRule, ENinePieceImageRule vRule)
+Vector<FloatSize> NinePieceImage::computeTileScales(const Vector<FloatRect>& destinationRects, const Vector<FloatRect>& sourceRects, NinePieceImageRule hRule, NinePieceImageRule vRule)
 {
     Vector<FloatSize> scales(MaxPiece, FloatSize(1, 1));
 
@@ -213,24 +223,19 @@ void NinePieceImage::paint(GraphicsContext& graphicsContext, RenderElement* rend
             continue;
 
         if (isCornerPiece(piece)) {
-            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], op);
+            graphicsContext.drawImage(*image, destinationRects[piece], sourceRects[piece], { op, ImageOrientation::FromImage });
             continue;
         }
 
         Image::TileRule hRule = isHorizontalPiece(piece) ? static_cast<Image::TileRule>(horizontalRule()) : Image::StretchTile;
         Image::TileRule vRule = isVerticalPiece(piece) ? static_cast<Image::TileRule>(verticalRule()) : Image::StretchTile;
-        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, op);
+        graphicsContext.drawTiledImage(*image, destinationRects[piece], sourceRects[piece], tileScales[piece], hRule, vRule, { op, ImageOrientation::FromImage });
     }
 }
 
-inline NinePieceImage::Data::Data()
-    : fill(false)
-    , horizontalRule(StretchImageRule)
-    , verticalRule(StretchImageRule)
-{
-}
+inline NinePieceImage::Data::Data() = default;
 
-inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+inline NinePieceImage::Data::Data(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
     : fill(fill)
     , horizontalRule(horizontalRule)
     , verticalRule(verticalRule)
@@ -258,7 +263,7 @@ inline Ref<NinePieceImage::Data> NinePieceImage::Data::create()
     return adoptRef(*new Data);
 }
 
-inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+inline Ref<NinePieceImage::Data> NinePieceImage::Data::create(RefPtr<StyleImage>&& image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, NinePieceImageRule horizontalRule, NinePieceImageRule verticalRule)
 {
     return adoptRef(*new Data(WTFMove(image), imageSlices, fill, borderSlices, outset, horizontalRule, verticalRule));
 }

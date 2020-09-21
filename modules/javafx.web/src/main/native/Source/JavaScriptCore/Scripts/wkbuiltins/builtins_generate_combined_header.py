@@ -78,7 +78,8 @@ class BuiltinsCombinedHeaderGenerator(BuiltinsGenerator):
 class FunctionExecutable;
 class VM;
 
-enum class ConstructAbility : unsigned;
+enum class ConstructAbility : uint8_t;
+enum class ConstructorKind : uint8_t;
 }"""
 
     def generate_section_for_object(self, object):
@@ -99,7 +100,8 @@ enum class ConstructAbility : unsigned;
 
             lines.append("""extern const char* const s_%(codeName)s;
 extern const int s_%(codeName)sLength;
-extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;""" % function_args)
+extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
+extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;""" % function_args)
 
         return lines
 
@@ -170,11 +172,10 @@ extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;""" % function
         functions.sort(key=lambda x: x.function_name)
         for function in functions:
             function_args = {
-                'varName': get_var_name(function),
                 'funcName': function.function_name,
                 'codeName': BuiltinsGenerator.mangledNameForFunction(function),
             }
 
-            lines.append("    macro(%(varName)s, %(funcName)s, %(codeName)s) \\" % function_args)
+            lines.append("    macro(%(funcName)s, %(codeName)s) \\" % function_args)
 
         return '\n'.join(lines)

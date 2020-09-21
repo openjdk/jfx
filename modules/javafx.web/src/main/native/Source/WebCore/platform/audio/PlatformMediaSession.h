@@ -41,6 +41,7 @@ namespace WebCore {
 class Document;
 class MediaPlaybackTarget;
 class PlatformMediaSessionClient;
+enum class DelayCallingUpdateNowPlaying { No, Yes };
 
 class PlatformMediaSession
     : public CanMakeWeakPtr<PlatformMediaSession>
@@ -113,6 +114,8 @@ public:
     virtual bool clientWillBeginPlayback();
     virtual bool clientWillPausePlayback();
 
+    void clientWillBeDOMSuspended();
+
     void pauseSession();
     void stopSession();
 
@@ -166,6 +169,7 @@ public:
     void setPlaybackTarget(Ref<MediaPlaybackTarget>&&) override { }
     void externalOutputDeviceAvailableDidChange(bool) override { }
     void setShouldPlayToPlaybackTarget(bool) override { }
+    void playbackTargetPickerWasDismissed() override { }
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -198,6 +202,8 @@ protected:
     PlatformMediaSessionClient& client() const { return m_client; }
 
 private:
+    bool processClientWillPausePlayback(DelayCallingUpdateNowPlaying);
+
     PlatformMediaSessionClient& m_client;
     State m_state;
     State m_stateToRestore;
@@ -250,6 +256,7 @@ public:
     virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
     virtual bool isPlayingToWirelessPlaybackTarget() const { return false; }
     virtual void setShouldPlayToPlaybackTarget(bool) { }
+    virtual void playbackTargetPickerWasDismissed() { }
 
     virtual bool isPlayingOnSecondScreen() const { return false; }
 

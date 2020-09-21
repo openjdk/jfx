@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,27 +39,27 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * {@link javafx.beans.property.Property JavaFX Properties}.
  * <p>
  * A {@code Timeline}, defined by one or more {@link KeyFrame}s, processes
- * individual {@code KeyFrame} sequentially, in the order specified by
+ * individual {@code KeyFrame}s sequentially, in the order specified by
  * {@code KeyFrame.time}. The animated properties, defined as key values in
  * {@code KeyFrame.values}, are interpolated
  * to/from the targeted key values at the specified time of the {@code KeyFrame}
  * to {@code Timeline}'s initial position, depends on {@code Timeline}'s
  * direction.
  * <p>
- * {@code Timeline} processes individual {@code KeyFrame} at or after specified
- * time interval elapsed, it does not guarantee the timing when {@code KeyFrame}
+ * {@code Timeline} processes an individual {@code KeyFrame} at or after the specified
+ * time interval elapsed, it does not guarantee the exact time when a {@code KeyFrame}
  * is processed.
- * <p>
- * The {@link #cycleDurationProperty()} will be set to the largest time value
- * of Timeline's keyFrames.
  * <p>
  * If a {@code KeyFrame} is not provided for the {@code time==0s} instant, one
  * will be synthesized using the target values that are current at the time
- * {@link #play()} or {@link #playFromStart()} is called.
+ * {@link #play()} or {@link #playFromStart()} are called.
  * <p>
  * It is not possible to change the {@code keyFrames} of a running {@code Timeline}.
  * If the value of {@code keyFrames} is changed for a running {@code Timeline}, it
  * has to be stopped and started again to pick up the new value.
+ * <p>
+ * The {@link #cycleDurationProperty()} will be set to the largest time value
+ * of Timeline's keyFrames.
  * <p>
  * A simple Timeline can be created like this:
  * <pre> {@code final Timeline timeline = new Timeline();
@@ -116,14 +116,13 @@ public final class Timeline extends Animation {
     };
 
     /**
-     * The constructor of {@code Timeline}.
-     *
-     * This constructor allows to define a {@link Animation#targetFramerate}.
+     * Creates a {@code Timeline} with the provided key frames and a {@linkplain Animation#getTargetFramerate() target framerate}.
+     * The key frames do not need to be ordered.
      *
      * @param targetFramerate
-     *            The custom target frame rate for this {@code Timeline}
+     *            the custom target frame rate for this {@code Timeline}
      * @param keyFrames
-     *            The keyframes of this {@code Timeline}
+     *            the keyframes of this {@code Timeline}
      */
     public Timeline(double targetFramerate, KeyFrame... keyFrames) {
         super(targetFramerate);
@@ -132,10 +131,10 @@ public final class Timeline extends Animation {
     }
 
     /**
-     * The constructor of {@code Timeline}.
+     * Creates a {@code Timeline} with the provided key frames. The key frames do not need to be ordered.
      *
      * @param keyFrames
-     *            The keyframes of this {@code Timeline}
+     *            the keyframes of this {@code Timeline}
      */
     public Timeline(KeyFrame... keyFrames) {
         super();
@@ -144,12 +143,10 @@ public final class Timeline extends Animation {
     }
 
     /**
-     * The constructor of {@code Timeline}.
-     *
-     * This constructor allows to define a {@link Animation#targetFramerate}.
+     * Creates a {@code Timeline} with no key frames and a {@linkplain Animation#getTargetFramerate() target framerate}.
      *
      * @param targetFramerate
-     *            The custom target frame rate for this {@code Timeline}
+     *            the custom target frame rate for this {@code Timeline}
      */
     public Timeline(double targetFramerate) {
         super(targetFramerate);
@@ -157,7 +154,7 @@ public final class Timeline extends Animation {
     }
 
     /**
-     * The constructor of {@code Timeline}.
+     * Creates a {@code Timeline} with no key frames.
      */
     public Timeline() {
         super();

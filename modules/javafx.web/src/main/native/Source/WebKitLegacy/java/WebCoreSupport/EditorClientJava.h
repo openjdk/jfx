@@ -98,6 +98,7 @@ public:
     void textWillBeDeletedInTextField(Element*) override;
     void textDidChangeInTextArea(Element*) override;
     void overflowScrollPositionChanged() override;
+    void subFrameScrollPositionChanged() final { }
 
 #if USE(APPKIT)
     void uppercaseWord() override;
@@ -132,7 +133,7 @@ public:
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
     void willSetInputMethodState() override;
-    void setInputMethodState(bool enabled) override;
+    void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions
     bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const override;

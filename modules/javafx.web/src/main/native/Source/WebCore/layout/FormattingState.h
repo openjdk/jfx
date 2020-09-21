@@ -27,26 +27,21 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
-#include "FloatingState.h"
 #include "FormattingContext.h"
-#include "LayoutBox.h"
 #include "LayoutState.h"
-#include "LayoutUnit.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
-
 namespace Layout {
 
 class Box;
+class FloatingState;
 enum class StyleDiff;
 
 class FormattingState {
     WTF_MAKE_ISO_ALLOCATED(FormattingState);
 public:
-    virtual ~FormattingState();
-
     FloatingState& floatingState() const { return m_floatingState; }
 
     void markNeedsLayout(const Box&, StyleDiff);
@@ -65,6 +60,7 @@ public:
 
     LayoutState& layoutState() const { return m_layoutState; }
 
+    Display::Box& displayBox(const Box& layoutBox);
     // Since we layout the out-of-flow boxes at the end of the formatting context layout, it's okay to store them in the formatting state -as opposed to the containing block level.
     using OutOfFlowBoxList = Vector<WeakPtr<const Box>>;
     void addOutOfFlowBox(const Box& outOfFlowBox) { m_outOfFlowBoxes.append(makeWeakPtr(outOfFlowBox)); }
@@ -74,6 +70,7 @@ public:
 protected:
     enum class Type { Block, Inline, Table };
     FormattingState(Ref<FloatingState>&&, Type, LayoutState&);
+    ~FormattingState();
 
 private:
     LayoutState& m_layoutState;

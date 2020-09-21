@@ -73,8 +73,8 @@
 #include <glib/grefcount.h>
 #ifndef GSTREAMER_LITE
 #include <glib/grefstring.h>
-#endif // GSTREAMER_LITE
 #include <glib/gregex.h>
+#endif // GSTREAMER_LITE
 #include <glib/gscanner.h>
 #include <glib/gsequence.h>
 #include <glib/gshell.h>

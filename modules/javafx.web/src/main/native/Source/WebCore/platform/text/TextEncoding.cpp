@@ -35,6 +35,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringView.h>
 
+#if USE(JAVA_UNICODE)
+#include "TextNormalizerJava.h"
+#endif
+
 namespace WebCore {
 
 static const TextEncoding& UTF7Encoding()
@@ -44,7 +48,7 @@ static const TextEncoding& UTF7Encoding()
 }
 
 TextEncoding::TextEncoding(const char* name)
-    : m_name(atomicCanonicalTextEncodingName(name))
+    : m_name(atomCanonicalTextEncodingName(name))
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
     // Aliases are valid, but not "replacement" itself.
@@ -53,7 +57,7 @@ TextEncoding::TextEncoding(const char* name)
 }
 
 TextEncoding::TextEncoding(const String& name)
-    : m_name(atomicCanonicalTextEncodingName(name))
+    : m_name(atomCanonicalTextEncodingName(name))
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
     // Aliases are valid, but not "replacement" itself.
@@ -77,8 +81,13 @@ Vector<uint8_t> TextEncoding::encode(StringView string, UnencodableHandling hand
     // FIXME: What's the right place to do normalization?
     // It's a little strange to do it inside the encode function.
     // Perhaps normalization should be an explicit step done before calling encode.
+#if !USE(JAVA_UNICODE)
     auto normalizedString = normalizedNFC(string);
     return newTextCodec(*this)->encode(normalizedString.view, handling);
+#else
+    String normalized = TextNormalizer::normalize(text.upconvertedCharacters(), text.length(), TextNormalizer::NFC);
+    return newTextCodec(*this)->encode(StringView { normalized.characters16(), normalized.length() }, handling);
+#endif
 }
 
 const char* TextEncoding::domName() const
@@ -93,7 +102,7 @@ const char* TextEncoding::domName() const
     // FIXME: This is not thread-safe. At the moment, this function is
     // only accessed in a single thread, but eventually has to be made
     // thread-safe along with usesVisualOrdering().
-    static const char* const a = atomicCanonicalTextEncodingName("windows-949");
+    static const char* const a = atomCanonicalTextEncodingName("windows-949");
     if (m_name == a)
         return "EUC-KR";
     return m_name;
@@ -104,7 +113,7 @@ bool TextEncoding::usesVisualOrdering() const
     if (noExtendedTextEncodingNameUsed())
         return false;
 
-    static const char* const a = atomicCanonicalTextEncodingName("ISO-8859-8");
+    static const char* const a = atomCanonicalTextEncodingName("ISO-8859-8");
     return m_name == a;
 }
 

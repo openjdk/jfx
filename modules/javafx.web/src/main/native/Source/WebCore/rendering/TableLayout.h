@@ -28,8 +28,10 @@ namespace WebCore {
 
 class RenderTable;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(TableLayout);
 class TableLayout {
-    WTF_MAKE_NONCOPYABLE(TableLayout); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(TableLayout);
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TableLayout);
 public:
     explicit TableLayout(RenderTable* table)
         : m_table(table)
@@ -46,7 +48,7 @@ public:
 protected:
     // FIXME: Once we enable SATURATED_LAYOUT_ARITHMETHIC, this should just be LayoutUnit::nearlyMax().
     // Until then though, using nearlyMax causes overflow in some tests, so we just pick a large number.
-    const static int tableMaxWidth = 1000000;
+    static constexpr int tableMaxWidth = 1000000;
 
     RenderTable* m_table;
 };

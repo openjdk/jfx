@@ -33,6 +33,11 @@ class TextStream;
 
 namespace WebCore {
 
+enum class DumpStyleValues {
+    All,
+    NonInitial,
+};
+
 static const size_t PrintColorAdjustBits = 1;
 enum class PrintColorAdjust : uint8_t {
     Economy,
@@ -77,13 +82,14 @@ enum class StyleDifferenceContextSensitiveProperty {
 };
 
 // Static pseudo styles. Dynamic ones are produced on the fly.
-enum class PseudoId : uint8_t {
+enum class PseudoId : uint16_t {
     // The order must be None, public IDs, and then internal IDs.
     None,
 
     // Public:
     FirstLine,
     FirstLetter,
+    Highlight,
     Marker,
     Before,
     After,
@@ -134,6 +140,12 @@ public:
     {
         ASSERT((sizeof(m_data) * 8) > static_cast<unsigned>(pseudoId));
         m_data |= (1U << static_cast<unsigned>(pseudoId));
+    }
+
+    void remove(PseudoId pseudoId)
+    {
+        ASSERT((sizeof(m_data) * 8) > static_cast<unsigned>(pseudoId));
+        m_data &= ~(1U << static_cast<unsigned>(pseudoId));
     }
 
     void merge(PseudoIdSet source)
@@ -663,6 +675,13 @@ enum class WhiteSpace : uint8_t {
     BreakSpaces
 };
 
+enum class ReflectionDirection : uint8_t {
+    Below,
+    Above,
+    Left,
+    Right
+};
+
 // The order of this enum must match the order of the text align values in CSSValueKeywords.in.
 enum class TextAlignMode : uint8_t {
     Left,
@@ -797,8 +816,6 @@ enum class Visibility : uint8_t {
     Collapse
 };
 
-WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
-
 enum class CursorType : uint8_t {
     // The following must match the order in CSSValueKeywords.in.
     Auto,
@@ -855,7 +872,6 @@ enum class DisplayType : uint8_t {
     Inline,
     Block,
     ListItem,
-    Compact,
     InlineBlock,
     Table,
     InlineTable,
@@ -896,6 +912,7 @@ enum class PointerEvents : uint8_t {
     VisibleStroke,
     VisibleFill,
     VisiblePainted,
+    BoundingBox,
     All
 };
 
@@ -910,6 +927,8 @@ enum class BackfaceVisibility : uint8_t {
 };
 
 enum class TransformBox : uint8_t {
+    StrokeBox,
+    ContentBox,
     BorderBox,
     FillBox,
     ViewBox
@@ -975,8 +994,6 @@ enum class ImageRendering : uint8_t {
     CrispEdges,
     Pixelated
 };
-
-WTF::TextStream& operator<<(WTF::TextStream&, ImageRendering);
 
 enum class ImageResolutionSource : uint8_t {
     Specified = 0,
@@ -1138,13 +1155,6 @@ enum class ApplePayButtonType : uint8_t {
 };
 #endif
 
-WTF::TextStream& operator<<(WTF::TextStream&, FillSizeType);
-WTF::TextStream& operator<<(WTF::TextStream&, FillAttachment);
-WTF::TextStream& operator<<(WTF::TextStream&, FillBox);
-WTF::TextStream& operator<<(WTF::TextStream&, FillRepeat);
-WTF::TextStream& operator<<(WTF::TextStream&, MaskSourceType);
-WTF::TextStream& operator<<(WTF::TextStream&, Edge);
-
 // These are all minimized combinations of paint-order.
 enum class PaintOrder : uint8_t {
     Normal,
@@ -1171,5 +1181,116 @@ enum class FontLoadingBehavior : uint8_t {
 };
 
 extern const float defaultMiterLimit;
+
+WTF::TextStream& operator<<(WTF::TextStream&, AnimationFillMode);
+WTF::TextStream& operator<<(WTF::TextStream&, AnimationPlayState);
+#if ENABLE(APPLE_PAY)
+WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, ApplePayButtonType);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, AspectRatioType);
+WTF::TextStream& operator<<(WTF::TextStream&, AutoRepeatType);
+WTF::TextStream& operator<<(WTF::TextStream&, BackfaceVisibility);
+WTF::TextStream& operator<<(WTF::TextStream&, BorderCollapse);
+WTF::TextStream& operator<<(WTF::TextStream&, BorderFit);
+WTF::TextStream& operator<<(WTF::TextStream&, BorderStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxAlignment);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxDecorationBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxLines);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxOrient);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxPack);
+WTF::TextStream& operator<<(WTF::TextStream&, BoxSizing);
+WTF::TextStream& operator<<(WTF::TextStream&, BreakBetween);
+WTF::TextStream& operator<<(WTF::TextStream&, BreakInside);
+WTF::TextStream& operator<<(WTF::TextStream&, CSSBoxType);
+WTF::TextStream& operator<<(WTF::TextStream&, CaptionSide);
+WTF::TextStream& operator<<(WTF::TextStream&, Clear);
+#if ENABLE(DARK_MODE_CSS)
+WTF::TextStream& operator<<(WTF::TextStream&, ColorScheme);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnAxis);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnFill);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnProgression);
+WTF::TextStream& operator<<(WTF::TextStream&, ColumnSpan);
+WTF::TextStream& operator<<(WTF::TextStream&, ContentDistribution);
+WTF::TextStream& operator<<(WTF::TextStream&, ContentPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, CursorType);
+#if ENABLE(CURSOR_VISIBILITY)
+WTF::TextStream& operator<<(WTF::TextStream&, CursorVisibility);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, DisplayType);
+WTF::TextStream& operator<<(WTF::TextStream&, Edge);
+WTF::TextStream& operator<<(WTF::TextStream&, EmptyCell);
+WTF::TextStream& operator<<(WTF::TextStream&, FillAttachment);
+WTF::TextStream& operator<<(WTF::TextStream&, FillBox);
+WTF::TextStream& operator<<(WTF::TextStream&, FillRepeat);
+WTF::TextStream& operator<<(WTF::TextStream&, FillSizeType);
+WTF::TextStream& operator<<(WTF::TextStream&, FlexDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, FlexWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, Float);
+WTF::TextStream& operator<<(WTF::TextStream&, GridAutoFlow);
+WTF::TextStream& operator<<(WTF::TextStream&, HangingPunctuation);
+WTF::TextStream& operator<<(WTF::TextStream&, Hyphens);
+WTF::TextStream& operator<<(WTF::TextStream&, ImageRendering);
+WTF::TextStream& operator<<(WTF::TextStream&, InsideLink);
+WTF::TextStream& operator<<(WTF::TextStream&, Isolation);
+WTF::TextStream& operator<<(WTF::TextStream&, ItemPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ItemPositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, LineAlign);
+WTF::TextStream& operator<<(WTF::TextStream&, LineBreak);
+WTF::TextStream& operator<<(WTF::TextStream&, LineSnap);
+WTF::TextStream& operator<<(WTF::TextStream&, ListStylePosition);
+WTF::TextStream& operator<<(WTF::TextStream&, ListStyleType);
+WTF::TextStream& operator<<(WTF::TextStream&, MarginCollapse);
+WTF::TextStream& operator<<(WTF::TextStream&, MarqueeBehavior);
+WTF::TextStream& operator<<(WTF::TextStream&, MarqueeDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, MaskSourceType);
+WTF::TextStream& operator<<(WTF::TextStream&, NBSPMode);
+WTF::TextStream& operator<<(WTF::TextStream&, ObjectFit);
+WTF::TextStream& operator<<(WTF::TextStream&, Order);
+WTF::TextStream& operator<<(WTF::TextStream&, WebCore::Overflow);
+WTF::TextStream& operator<<(WTF::TextStream&, OverflowAlignment);
+WTF::TextStream& operator<<(WTF::TextStream&, OverflowWrap);
+WTF::TextStream& operator<<(WTF::TextStream&, PaintOrder);
+WTF::TextStream& operator<<(WTF::TextStream&, PointerEvents);
+WTF::TextStream& operator<<(WTF::TextStream&, PositionType);
+WTF::TextStream& operator<<(WTF::TextStream&, PrintColorAdjust);
+WTF::TextStream& operator<<(WTF::TextStream&, PseudoId);
+WTF::TextStream& operator<<(WTF::TextStream&, QuoteType);
+WTF::TextStream& operator<<(WTF::TextStream&, ReflectionDirection);
+WTF::TextStream& operator<<(WTF::TextStream&, Resize);
+WTF::TextStream& operator<<(WTF::TextStream&, RubyPosition);
+#if ENABLE(CSS_SCROLL_SNAP)
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxis);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapAxisAlignType);
+WTF::TextStream& operator<<(WTF::TextStream&, ScrollSnapStrictness);
+#endif
+WTF::TextStream& operator<<(WTF::TextStream&, SpeakAs);
+WTF::TextStream& operator<<(WTF::TextStream&, StyleDifference);
+WTF::TextStream& operator<<(WTF::TextStream&, TableLayoutType);
+WTF::TextStream& operator<<(WTF::TextStream&, TextAlignMode);
+WTF::TextStream& operator<<(WTF::TextStream&, TextCombine);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecoration);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationSkip);
+WTF::TextStream& operator<<(WTF::TextStream&, TextDecorationStyle);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisFill);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisMark);
+WTF::TextStream& operator<<(WTF::TextStream&, TextEmphasisPosition);
+WTF::TextStream& operator<<(WTF::TextStream&, TextOrientation);
+WTF::TextStream& operator<<(WTF::TextStream&, TextOverflow);
+WTF::TextStream& operator<<(WTF::TextStream&, TextSecurity);
+WTF::TextStream& operator<<(WTF::TextStream&, TextTransform);
+WTF::TextStream& operator<<(WTF::TextStream&, TextUnderlinePosition);
+WTF::TextStream& operator<<(WTF::TextStream&, TextZoom);
+WTF::TextStream& operator<<(WTF::TextStream&, TransformBox);
+WTF::TextStream& operator<<(WTF::TextStream&, TransformStyle3D);
+WTF::TextStream& operator<<(WTF::TextStream&, UserDrag);
+WTF::TextStream& operator<<(WTF::TextStream&, UserModify);
+WTF::TextStream& operator<<(WTF::TextStream&, UserSelect);
+WTF::TextStream& operator<<(WTF::TextStream&, VerticalAlign);
+WTF::TextStream& operator<<(WTF::TextStream&, Visibility);
+WTF::TextStream& operator<<(WTF::TextStream&, WhiteSpace);
+WTF::TextStream& operator<<(WTF::TextStream&, WordBreak);
 
 } // namespace WebCore

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 #include "ArgList.h"
 #include "CallFrame.h"
 #include "CommonIdentifiers.h"
+#include "GetVM.h"
 #include "Identifier.h"
 #include "PropertyDescriptor.h"
 #include "PropertySlot.h"
@@ -88,15 +89,18 @@ public:
     friend class SmallStrings;
 
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | StructureIsImmortal | OverridesToThis;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | StructureIsImmortal | OverridesToThis;
 
-    static const bool needsDestruction = true;
-    static void destroy(JSCell*);
+    static constexpr bool needsDestruction = true;
+    static ALWAYS_INLINE void destroy(JSCell* cell)
+    {
+        static_cast<JSString*>(cell)->JSString::~JSString();
+    }
 
     // We specialize the string subspace to get the fastest possible sweep. This wouldn't be
     // necessary if JSString didn't have a destructor.
     template<typename, SubspaceAccess>
-    static CompleteSubspace* subspaceFor(VM& vm)
+    static IsoSubspace* subspaceFor(VM& vm)
     {
         return &vm.stringSpace;
     }
@@ -176,30 +180,31 @@ protected:
 public:
     ~JSString();
 
-    Identifier toIdentifier(ExecState*) const;
-    AtomString toAtomString(ExecState*) const;
-    RefPtr<AtomStringImpl> toExistingAtomString(ExecState*) const;
+    Identifier toIdentifier(JSGlobalObject*) const;
+    AtomString toAtomString(JSGlobalObject*) const;
+    RefPtr<AtomStringImpl> toExistingAtomString(JSGlobalObject*) const;
 
-    StringViewWithUnderlyingString viewWithUnderlyingString(ExecState*) const;
+    StringViewWithUnderlyingString viewWithUnderlyingString(JSGlobalObject*) const;
 
-    inline bool equal(ExecState*, JSString* other) const;
-    const String& value(ExecState*) const;
+    inline bool equal(JSGlobalObject*, JSString* other) const;
+    const String& value(JSGlobalObject*) const;
     inline const String& tryGetValue(bool allocationAllowed = true) const;
+    const StringImpl* getValueImpl() const;
     const StringImpl* tryGetValueImpl() const;
     ALWAYS_INLINE unsigned length() const;
 
-    JSValue toPrimitive(ExecState*, PreferredPrimitiveType) const;
+    JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;
     bool toBoolean() const { return !!length(); }
-    bool getPrimitiveNumber(ExecState*, double& number, JSValue&) const;
-    JSObject* toObject(ExecState*, JSGlobalObject*) const;
-    double toNumber(ExecState*) const;
+    bool getPrimitiveNumber(JSGlobalObject*, double& number, JSValue&) const;
+    JSObject* toObject(JSGlobalObject*) const;
+    double toNumber(JSGlobalObject*) const;
 
-    bool getStringPropertySlot(ExecState*, PropertyName, PropertySlot&);
-    bool getStringPropertySlot(ExecState*, unsigned propertyName, PropertySlot&);
-    bool getStringPropertyDescriptor(ExecState*, PropertyName, PropertyDescriptor&);
+    bool getStringPropertySlot(JSGlobalObject*, PropertyName, PropertySlot&);
+    bool getStringPropertySlot(JSGlobalObject*, unsigned propertyName, PropertySlot&);
+    bool getStringPropertyDescriptor(JSGlobalObject*, PropertyName, PropertyDescriptor&);
 
     bool canGetIndex(unsigned i) { return i < length(); }
-    JSString* getIndex(ExecState*, unsigned);
+    JSString* getIndex(JSGlobalObject*, unsigned);
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
@@ -221,7 +226,7 @@ public:
 protected:
     friend class JSValue;
 
-    JS_EXPORT_PRIVATE bool equalSlowCase(ExecState*, JSString* other) const;
+    JS_EXPORT_PRIVATE bool equalSlowCase(JSGlobalObject*, JSString* other) const;
     bool isSubstring() const;
 
     mutable uintptr_t m_fiber;
@@ -229,22 +234,22 @@ protected:
 private:
     friend class LLIntOffsetsExtractor;
 
-    static JSValue toThis(JSCell*, ExecState*, ECMAMode);
+    static JSValue toThis(JSCell*, JSGlobalObject*, ECMAMode);
 
-    StringView unsafeView(ExecState*) const;
+    StringView unsafeView(JSGlobalObject*) const;
 
     friend JSString* jsString(VM&, const String&);
-    friend JSString* jsString(ExecState*, JSString*, JSString*);
-    friend JSString* jsString(ExecState*, const String&, JSString*);
-    friend JSString* jsString(ExecState*, JSString*, const String&);
-    friend JSString* jsString(ExecState*, const String&, const String&);
-    friend JSString* jsString(ExecState*, JSString*, JSString*, JSString*);
-    friend JSString* jsString(ExecState*, const String&, const String&, const String&);
+    friend JSString* jsString(JSGlobalObject*, JSString*, JSString*);
+    friend JSString* jsString(JSGlobalObject*, const String&, JSString*);
+    friend JSString* jsString(JSGlobalObject*, JSString*, const String&);
+    friend JSString* jsString(JSGlobalObject*, const String&, const String&);
+    friend JSString* jsString(JSGlobalObject*, JSString*, JSString*, JSString*);
+    friend JSString* jsString(JSGlobalObject*, const String&, const String&, const String&);
     friend JSString* jsSingleCharacterString(VM&, UChar);
     friend JSString* jsNontrivialString(VM&, const String&);
     friend JSString* jsNontrivialString(VM&, String&&);
     friend JSString* jsSubstring(VM&, const String&, unsigned, unsigned);
-    friend JSString* jsSubstring(VM&, ExecState*, JSString*, unsigned, unsigned);
+    friend JSString* jsSubstring(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
     friend JSString* jsSubstringOfResolved(VM&, GCDeferralContext*, JSString*, unsigned, unsigned);
     friend JSString* jsOwnedString(VM&, const String&);
 };
@@ -254,6 +259,12 @@ private:
 class JSRopeString final : public JSString {
     friend class JSString;
 public:
+    template<typename, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.ropeStringSpace;
+    }
+
     // We use lower 3bits of fiber0 for flags. These bits are usable due to alignment, and it is OK even in 32bit architecture.
     static constexpr uintptr_t is8BitInPointer = static_cast<uintptr_t>(StringImpl::flagIs8Bit());
     static constexpr uintptr_t isSubstringInPointer = 0x2;
@@ -265,7 +276,7 @@ public:
     static_assert(sizeof(uintptr_t) == sizeof(uint64_t), "");
     class CompactFibers {
     public:
-        static constexpr uintptr_t addressMask = (1ULL << WTF_CPU_EFFECTIVE_ADDRESS_WIDTH) - 1;
+        static constexpr uintptr_t addressMask = (1ULL << OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH)) - 1;
         JSString* fiber1() const
         {
 #if CPU(LITTLE_ENDIAN)
@@ -285,10 +296,7 @@ public:
         JSString* fiber2() const
         {
 #if CPU(LITTLE_ENDIAN)
-            // This access exceeds the sizeof(JSRopeString). But this is OK because JSRopeString is always allocated in MarkedBlock,
-            // and the last JSRopeString cell in the block has some subsequent bytes which are used for MarkedBlock::Footer.
-            // So the following access does not step over the page boundary in which the latter page does not have read permission.
-            return bitwise_cast<JSString*>(WTF::unalignedLoad<uintptr_t>(&m_fiber2Lower) & addressMask);
+            return bitwise_cast<JSString*>(WTF::unalignedLoad<uintptr_t>(&m_fiber1Upper) >> 16);
 #else
             return bitwise_cast<JSString*>(static_cast<uintptr_t>(m_fiber2Lower) | (static_cast<uintptr_t>(m_fiber2Upper) << 16));
 #endif
@@ -576,24 +584,21 @@ private:
         return newString;
     }
 
-    friend JSValue jsStringFromRegisterArray(ExecState*, Register*, unsigned);
-    friend JSValue jsStringFromArguments(ExecState*, JSValue);
+    friend JSValue jsStringFromRegisterArray(JSGlobalObject*, Register*, unsigned);
 
     // If nullOrExecForOOM is null, resolveRope() will be do nothing in the event of an OOM error.
     // The rope value will remain a null string in that case.
-    JS_EXPORT_PRIVATE const String& resolveRope(ExecState* nullOrExecForOOM) const;
-    template<typename Function> const String& resolveRopeWithFunction(ExecState* nullOrExecForOOM, Function&&) const;
-    JS_EXPORT_PRIVATE AtomString resolveRopeToAtomString(ExecState*) const;
-    JS_EXPORT_PRIVATE RefPtr<AtomStringImpl> resolveRopeToExistingAtomString(ExecState*) const;
-    void resolveRopeSlowCase8(LChar*) const;
-    void resolveRopeSlowCase(UChar*) const;
-    void outOfMemory(ExecState* nullOrExecForOOM) const;
+    JS_EXPORT_PRIVATE const String& resolveRope(JSGlobalObject* nullOrGlobalObjectForOOM) const;
+    template<typename Function> const String& resolveRopeWithFunction(JSGlobalObject* nullOrGlobalObjectForOOM, Function&&) const;
+    JS_EXPORT_PRIVATE AtomString resolveRopeToAtomString(JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE RefPtr<AtomStringImpl> resolveRopeToExistingAtomString(JSGlobalObject*) const;
+    template<typename CharacterType> NEVER_INLINE void resolveRopeSlowCase(CharacterType*) const;
+    template<typename CharacterType> void resolveRopeInternalNoSubstring(CharacterType*) const;
+    void outOfMemory(JSGlobalObject* nullOrGlobalObjectForOOM) const;
     void resolveRopeInternal8(LChar*) const;
-    void resolveRopeInternal8NoSubstring(LChar*) const;
     void resolveRopeInternal16(UChar*) const;
-    void resolveRopeInternal16NoSubstring(UChar*) const;
-    StringView unsafeView(ExecState*) const;
-    StringViewWithUnderlyingString viewWithUnderlyingString(ExecState*) const;
+    StringView unsafeView(JSGlobalObject*) const;
+    StringViewWithUnderlyingString viewWithUnderlyingString(JSGlobalObject*) const;
 
     JSString* fiber0() const
     {
@@ -663,14 +668,14 @@ private:
     static_assert(s_maxInternalRopeLength >= 2, "");
     mutable CompactFibers m_compactFibers;
 
-    friend JSString* jsString(ExecState*, JSString*, JSString*);
-    friend JSString* jsString(ExecState*, const String&, JSString*);
-    friend JSString* jsString(ExecState*, JSString*, const String&);
-    friend JSString* jsString(ExecState*, const String&, const String&);
-    friend JSString* jsString(ExecState*, JSString*, JSString*, JSString*);
-    friend JSString* jsString(ExecState*, const String&, const String&, const String&);
+    friend JSString* jsString(JSGlobalObject*, JSString*, JSString*);
+    friend JSString* jsString(JSGlobalObject*, const String&, JSString*);
+    friend JSString* jsString(JSGlobalObject*, JSString*, const String&);
+    friend JSString* jsString(JSGlobalObject*, const String&, const String&);
+    friend JSString* jsString(JSGlobalObject*, JSString*, JSString*, JSString*);
+    friend JSString* jsString(JSGlobalObject*, const String&, const String&, const String&);
     friend JSString* jsSubstringOfResolved(VM&, GCDeferralContext*, JSString*, unsigned, unsigned);
-    friend JSString* jsSubstring(VM&, ExecState*, JSString*, unsigned, unsigned);
+    friend JSString* jsSubstring(VM&, JSGlobalObject*, JSString*, unsigned, unsigned);
 };
 
 JS_EXPORT_PRIVATE JSString* jsStringWithCacheSlowCase(VM&, StringImpl&);
@@ -697,6 +702,12 @@ ALWAYS_INLINE unsigned JSString::length() const
     if (pointer & isRopeInPointer)
         return jsCast<const JSRopeString*>(this)->length();
     return bitwise_cast<StringImpl*>(pointer)->length();
+}
+
+inline const StringImpl* JSString::getValueImpl() const
+{
+    ASSERT(!isRope());
+    return bitwise_cast<StringImpl*>(m_fiber);
 }
 
 inline const StringImpl* JSString::tryGetValueImpl() const
@@ -740,41 +751,41 @@ inline JSString* jsNontrivialString(VM& vm, String&& s)
     return JSString::create(vm, s.releaseImpl().releaseNonNull());
 }
 
-ALWAYS_INLINE Identifier JSString::toIdentifier(ExecState* exec) const
+ALWAYS_INLINE Identifier JSString::toIdentifier(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    AtomString atomString = toAtomString(exec);
+    AtomString atomString = toAtomString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     return Identifier::fromString(vm, atomString);
 }
 
-ALWAYS_INLINE AtomString JSString::toAtomString(ExecState* exec) const
+ALWAYS_INLINE AtomString JSString::toAtomString(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
     if (isRope())
-        return static_cast<const JSRopeString*>(this)->resolveRopeToAtomString(exec);
+        return static_cast<const JSRopeString*>(this)->resolveRopeToAtomString(globalObject);
     return AtomString(valueInternal());
 }
 
-ALWAYS_INLINE RefPtr<AtomStringImpl> JSString::toExistingAtomString(ExecState* exec) const
+ALWAYS_INLINE RefPtr<AtomStringImpl> JSString::toExistingAtomString(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
     if (isRope())
-        return static_cast<const JSRopeString*>(this)->resolveRopeToExistingAtomString(exec);
+        return static_cast<const JSRopeString*>(this)->resolveRopeToExistingAtomString(globalObject);
     if (valueInternal().impl()->isAtom())
         return static_cast<AtomStringImpl*>(valueInternal().impl());
     return AtomStringImpl::lookUp(valueInternal().impl());
 }
 
-inline const String& JSString::value(ExecState* exec) const
+inline const String& JSString::value(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
     if (isRope())
-        return static_cast<const JSRopeString*>(this)->resolveRope(exec);
+        return static_cast<const JSRopeString*>(this)->resolveRope(globalObject);
     return valueInternal();
 }
 
@@ -784,7 +795,7 @@ inline const String& JSString::tryGetValue(bool allocationAllowed) const
         if (validateDFGDoesGC)
             RELEASE_ASSERT(vm().heap.expectDoesGC());
         if (isRope()) {
-            // Pass nullptr for the ExecState so that resolveRope does not throw in the event of an OOM error.
+            // Pass nullptr for the JSGlobalObject so that resolveRope does not throw in the event of an OOM error.
             return static_cast<const JSRopeString*>(this)->resolveRope(nullptr);
         }
     } else
@@ -792,12 +803,12 @@ inline const String& JSString::tryGetValue(bool allocationAllowed) const
     return valueInternal();
 }
 
-inline JSString* JSString::getIndex(ExecState* exec, unsigned i)
+inline JSString* JSString::getIndex(JSGlobalObject* globalObject, unsigned i)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
     ASSERT(canGetIndex(i));
-    StringView view = unsafeView(exec);
+    StringView view = unsafeView(globalObject);
     RETURN_IF_EXCEPTION(scope, nullptr);
     return jsSingleCharacterString(vm, view[i]);
 }
@@ -815,7 +826,7 @@ inline JSString* jsString(VM& vm, const String& s)
     return JSString::create(vm, *s.impl());
 }
 
-inline JSString* jsSubstring(VM& vm, ExecState* exec, JSString* base, unsigned offset, unsigned length)
+inline JSString* jsSubstring(VM& vm, JSGlobalObject* globalObject, JSString* base, unsigned offset, unsigned length)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -836,7 +847,7 @@ inline JSString* jsSubstring(VM& vm, ExecState* exec, JSString* base, unsigned o
         offset = baseRope->substringOffset() + offset;
         ASSERT(!base->isRope());
     } else if (base->isRope()) {
-        jsCast<JSRopeString*>(base)->resolveRope(exec);
+        jsCast<JSRopeString*>(base)->resolveRope(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
     }
     return jsSubstringOfResolved(vm, nullptr, base, offset, length);
@@ -866,9 +877,9 @@ inline JSString* jsSubstringOfResolved(VM& vm, JSString* s, unsigned offset, uns
     return jsSubstringOfResolved(vm, nullptr, s, offset, length);
 }
 
-inline JSString* jsSubstring(ExecState* exec, JSString* s, unsigned offset, unsigned length)
+inline JSString* jsSubstring(JSGlobalObject* globalObject, JSString* s, unsigned offset, unsigned length)
 {
-    return jsSubstring(exec->vm(), exec, s, offset, length);
+    return jsSubstring(getVM(globalObject), globalObject, s, offset, length);
 }
 
 inline JSString* jsSubstring(VM& vm, const String& s, unsigned offset, unsigned length)
@@ -902,9 +913,9 @@ inline JSString* jsOwnedString(VM& vm, const String& s)
     return JSString::createHasOtherOwner(vm, *s.impl());
 }
 
-ALWAYS_INLINE JSString* jsStringWithCache(ExecState* exec, const String& s)
+ALWAYS_INLINE JSString* jsStringWithCache(JSGlobalObject* globalObject, const String& s)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     StringImpl* stringImpl = s.impl();
     if (!stringImpl || !stringImpl->length())
         return jsEmptyString(vm);
@@ -923,9 +934,9 @@ ALWAYS_INLINE JSString* jsStringWithCache(ExecState* exec, const String& s)
     return jsStringWithCacheSlowCase(vm, *stringImpl);
 }
 
-ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+ALWAYS_INLINE bool JSString::getStringPropertySlot(JSGlobalObject* globalObject, PropertyName propertyName, PropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (propertyName == vm.propertyNames->length) {
@@ -935,7 +946,7 @@ ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, PropertyName
 
     Optional<uint32_t> index = parseIndex(propertyName);
     if (index && index.value() < length()) {
-        JSValue value = getIndex(exec, index.value());
+        JSValue value = getIndex(globalObject, index.value());
         RETURN_IF_EXCEPTION(scope, false);
         slot.setValue(this, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, value);
         return true;
@@ -944,13 +955,13 @@ ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, PropertyName
     return false;
 }
 
-ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, unsigned propertyName, PropertySlot& slot)
+ALWAYS_INLINE bool JSString::getStringPropertySlot(JSGlobalObject* globalObject, unsigned propertyName, PropertySlot& slot)
 {
-    VM& vm = exec->vm();
+    VM& vm = getVM(globalObject);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (propertyName < length()) {
-        JSValue value = getIndex(exec, propertyName);
+        JSValue value = getIndex(globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, false);
         slot.setValue(this, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, value);
         return true;
@@ -969,7 +980,7 @@ inline bool isJSString(JSValue v)
     return v.isCell() && isJSString(v.asCell());
 }
 
-ALWAYS_INLINE StringView JSRopeString::unsafeView(ExecState* exec) const
+ALWAYS_INLINE StringView JSRopeString::unsafeView(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
@@ -979,10 +990,10 @@ ALWAYS_INLINE StringView JSRopeString::unsafeView(ExecState* exec) const
             return StringView(base.characters8() + substringOffset(), length());
         return StringView(base.characters16() + substringOffset(), length());
     }
-    return resolveRope(exec);
+    return resolveRope(globalObject);
 }
 
-ALWAYS_INLINE StringViewWithUnderlyingString JSRopeString::viewWithUnderlyingString(ExecState* exec) const
+ALWAYS_INLINE StringViewWithUnderlyingString JSRopeString::viewWithUnderlyingString(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
@@ -992,23 +1003,23 @@ ALWAYS_INLINE StringViewWithUnderlyingString JSRopeString::viewWithUnderlyingStr
             return { { base.characters8() + substringOffset(), length() }, base };
         return { { base.characters16() + substringOffset(), length() }, base };
     }
-    auto& string = resolveRope(exec);
+    auto& string = resolveRope(globalObject);
     return { string, string };
 }
 
-ALWAYS_INLINE StringView JSString::unsafeView(ExecState* exec) const
+ALWAYS_INLINE StringView JSString::unsafeView(JSGlobalObject* globalObject) const
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(vm().heap.expectDoesGC());
     if (isRope())
-        return static_cast<const JSRopeString*>(this)->unsafeView(exec);
+        return static_cast<const JSRopeString*>(this)->unsafeView(globalObject);
     return valueInternal();
 }
 
-ALWAYS_INLINE StringViewWithUnderlyingString JSString::viewWithUnderlyingString(ExecState* exec) const
+ALWAYS_INLINE StringViewWithUnderlyingString JSString::viewWithUnderlyingString(JSGlobalObject* globalObject) const
 {
     if (isRope())
-        return static_cast<const JSRopeString&>(*this).viewWithUnderlyingString(exec);
+        return static_cast<const JSRopeString&>(*this).viewWithUnderlyingString(globalObject);
     return { valueInternal(), valueInternal() };
 }
 
@@ -1019,38 +1030,38 @@ inline bool JSString::isSubstring() const
 
 // --- JSValue inlines ----------------------------
 
-inline bool JSValue::toBoolean(ExecState* exec) const
+inline bool JSValue::toBoolean(JSGlobalObject* globalObject) const
 {
     if (isInt32())
         return asInt32();
     if (isDouble())
         return asDouble() > 0.0 || asDouble() < 0.0; // false for NaN
     if (isCell())
-        return asCell()->toBoolean(exec);
+        return asCell()->toBoolean(globalObject);
     return isTrue(); // false, null, and undefined all convert to false.
 }
 
-inline JSString* JSValue::toString(ExecState* exec) const
+inline JSString* JSValue::toString(JSGlobalObject* globalObject) const
 {
     if (isString())
         return asString(asCell());
     bool returnEmptyStringOnError = true;
-    return toStringSlowCase(exec, returnEmptyStringOnError);
+    return toStringSlowCase(globalObject, returnEmptyStringOnError);
 }
 
-inline JSString* JSValue::toStringOrNull(ExecState* exec) const
+inline JSString* JSValue::toStringOrNull(JSGlobalObject* globalObject) const
 {
     if (isString())
         return asString(asCell());
     bool returnEmptyStringOnError = false;
-    return toStringSlowCase(exec, returnEmptyStringOnError);
+    return toStringSlowCase(globalObject, returnEmptyStringOnError);
 }
 
-inline String JSValue::toWTFString(ExecState* exec) const
+inline String JSValue::toWTFString(JSGlobalObject* globalObject) const
 {
     if (isString())
-        return static_cast<JSString*>(asCell())->value(exec);
-    return toWTFStringSlowCase(exec);
+        return static_cast<JSString*>(asCell())->value(globalObject);
+    return toWTFStringSlowCase(globalObject);
 }
 
 } // namespace JSC

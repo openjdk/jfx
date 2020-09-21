@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -3952,8 +3952,10 @@ public:
         m_formatter.oneByteOp(OP_NOP);
     }
 
-    template <typename CopyFunction>
-    static void fillNops(void* base, size_t size, CopyFunction copy)
+    using CopyFunction = void*(&)(void*, const void*, size_t);
+
+    template <CopyFunction copy>
+    static void fillNops(void* base, size_t size)
     {
         UNUSED_PARAM(copy);
 #if CPU(X86_64)
@@ -4027,7 +4029,7 @@ private:
     }
 
     class X86InstructionFormatter {
-        static const int maxInstructionSize = 16;
+        static constexpr int maxInstructionSize = 16;
 
     public:
         enum ModRmMode {

@@ -65,23 +65,54 @@ public:
     {
     }
 
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<GlyphBufferAdvance> decode(Decoder&);
+
     void setWidth(CGFloat width) { this->CGSize::width = width; }
     void setHeight(CGFloat height) { this->CGSize::height = height; }
     CGFloat width() const { return this->CGSize::width; }
     CGFloat height() const { return this->CGSize::height; }
 };
+
+template<class Encoder>
+void GlyphBufferAdvance::encode(Encoder& encoder) const
+{
+    encoder << width();
+    encoder << height();
+}
+
+template<class Decoder>
+Optional<GlyphBufferAdvance> GlyphBufferAdvance::decode(Decoder& decoder)
+{
+    Optional<CGFloat> width;
+    decoder >> width;
+    if (!width)
+        return WTF::nullopt;
+
+    Optional<CGFloat> height;
+    decoder >> height;
+    if (!height)
+        return WTF::nullopt;
+
+    return GlyphBufferAdvance(CGSizeMake(*width, *height));
+}
 #else
 typedef FloatSize GlyphBufferAdvance;
 #endif
 
+inline FloatSize toFloatSize(const GlyphBufferAdvance& a)
+{
+    return FloatSize(a.width(), a.height());
+}
+
 class GlyphBuffer {
 public:
-    bool isEmpty() const { return m_font.isEmpty(); }
-    unsigned size() const { return m_font.size(); }
+    bool isEmpty() const { return m_fonts.isEmpty(); }
+    unsigned size() const { return m_fonts.size(); }
 
     void clear()
     {
-        m_font.clear();
+        m_fonts.clear();
         m_glyphs.clear();
         m_advances.clear();
         if (m_offsetsInString)
@@ -92,9 +123,8 @@ public:
     GlyphBufferAdvance* advances(unsigned from) { return m_advances.data() + from; }
     const GlyphBufferGlyph* glyphs(unsigned from) const { return m_glyphs.data() + from; }
     const GlyphBufferAdvance* advances(unsigned from) const { return m_advances.data() + from; }
-    size_t advancesCount() const { return m_advances.size(); }
 
-    const Font* fontAt(unsigned index) const { return m_font[index]; }
+    const Font* fontAt(unsigned index) const { return m_fonts[index]; }
 
     void setInitialAdvance(GlyphBufferAdvance initialAdvance) { m_initialAdvance = initialAdvance; }
     const GlyphBufferAdvance& initialAdvance() const { return m_initialAdvance; }
@@ -121,13 +151,33 @@ public:
 
     void add(Glyph glyph, const Font* font, GlyphBufferAdvance advance, unsigned offsetInString)
     {
-        m_font.append(font);
+        m_fonts.append(font);
         m_glyphs.append(glyph);
 
         m_advances.append(advance);
 
         if (offsetInString != noOffset && m_offsetsInString)
             m_offsetsInString->append(offsetInString);
+    }
+
+    void remove(unsigned location, unsigned length)
+    {
+        m_fonts.remove(location, length);
+        m_glyphs.remove(location, length);
+        m_advances.remove(location, length);
+        if (m_offsetsInString)
+            m_offsetsInString->remove(location, length);
+    }
+
+    void makeHole(unsigned location, unsigned length, const Font* font)
+    {
+        ASSERT(location <= size());
+
+        m_fonts.insertVector(location, Vector<const Font*>(length, font));
+        m_glyphs.insertVector(location, Vector<GlyphBufferGlyph>(length, 0xFFFF));
+        m_advances.insertVector(location, Vector<GlyphBufferAdvance>(length, GlyphBufferAdvance(0, 0)));
+        if (m_offsetsInString)
+            m_offsetsInString->insertVector(location, Vector<unsigned>(length, 0));
     }
 
     void reverse(unsigned from, unsigned length)
@@ -164,7 +214,7 @@ public:
 
     void shrink(unsigned truncationPoint)
     {
-        m_font.shrink(truncationPoint);
+        m_fonts.shrink(truncationPoint);
         m_glyphs.shrink(truncationPoint);
         m_advances.shrink(truncationPoint);
         if (m_offsetsInString)
@@ -174,9 +224,9 @@ public:
 private:
     void swap(unsigned index1, unsigned index2)
     {
-        const Font* f = m_font[index1];
-        m_font[index1] = m_font[index2];
-        m_font[index2] = f;
+        const Font* f = m_fonts[index1];
+        m_fonts[index1] = m_fonts[index2];
+        m_fonts[index2] = f;
 
         GlyphBufferGlyph g = m_glyphs[index1];
         m_glyphs[index1] = m_glyphs[index2];
@@ -187,7 +237,7 @@ private:
         m_advances[index2] = s;
     }
 
-    Vector<const Font*, 2048> m_font;
+    Vector<const Font*, 2048> m_fonts;
     Vector<GlyphBufferGlyph, 2048> m_glyphs;
     Vector<GlyphBufferAdvance, 2048> m_advances;
     GlyphBufferAdvance m_initialAdvance;

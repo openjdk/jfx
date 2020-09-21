@@ -40,7 +40,7 @@
 namespace JSC {
 
 namespace CallLinkStatusInternal {
-static const bool verbose = false;
+static constexpr bool verbose = false;
 }
 
 CallLinkStatus::CallLinkStatus(JSValue value)
@@ -55,7 +55,7 @@ CallLinkStatus::CallLinkStatus(JSValue value)
     m_variants.append(CallVariant(value.asCell()));
 }
 
-CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeBlock* profiledBlock, unsigned bytecodeIndex)
+CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex)
 {
     UNUSED_PARAM(profiledBlock);
     UNUSED_PARAM(bytecodeIndex);
@@ -67,7 +67,7 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeB
     }
 #endif
 
-    auto instruction = profiledBlock->instructions().at(bytecodeIndex);
+    auto instruction = profiledBlock->instructions().at(bytecodeIndex.offset());
     OpcodeID op = instruction->opcodeID();
 
     LLIntCallLinkInfo* callLinkInfo;
@@ -90,7 +90,7 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeB
 }
 
 CallLinkStatus CallLinkStatus::computeFor(
-    CodeBlock* profiledBlock, unsigned bytecodeIndex, const ICStatusMap& map,
+    CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex, const ICStatusMap& map,
     ExitSiteData exitSiteData)
 {
     ConcurrentJSLocker locker(profiledBlock->m_lock);
@@ -114,12 +114,12 @@ CallLinkStatus CallLinkStatus::computeFor(
 }
 
 CallLinkStatus CallLinkStatus::computeFor(
-    CodeBlock* profiledBlock, unsigned bytecodeIndex, const ICStatusMap& map)
+    CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex, const ICStatusMap& map)
 {
     return computeFor(profiledBlock, bytecodeIndex, map, computeExitSiteData(profiledBlock, bytecodeIndex));
 }
 
-CallLinkStatus::ExitSiteData CallLinkStatus::computeExitSiteData(CodeBlock* profiledBlock, unsigned bytecodeIndex)
+CallLinkStatus::ExitSiteData CallLinkStatus::computeExitSiteData(CodeBlock* profiledBlock, BytecodeIndex bytecodeIndex)
 {
     ExitSiteData exitSiteData;
 #if ENABLE(DFG_JIT)
@@ -157,7 +157,7 @@ CallLinkStatus CallLinkStatus::computeFor(
     UNUSED_PARAM(profiledBlock);
 
     CallLinkStatus result = computeFromCallLinkInfo(locker, callLinkInfo);
-    result.m_maxNumArguments = callLinkInfo.maxNumArguments();
+    result.m_maxArgumentCountIncludingThis = callLinkInfo.maxArgumentCountIncludingThis();
     return result;
 }
 
@@ -474,8 +474,8 @@ void CallLinkStatus::dump(PrintStream& out) const
     if (!m_variants.isEmpty())
         out.print(comma, listDump(m_variants));
 
-    if (m_maxNumArguments)
-        out.print(comma, "maxNumArguments = ", m_maxNumArguments);
+    if (m_maxArgumentCountIncludingThis)
+        out.print(comma, "maxArgumentCountIncludingThis = ", m_maxArgumentCountIncludingThis);
 }
 
 } // namespace JSC

@@ -29,6 +29,7 @@
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
 #include "Document.h"
+#include "EventLoop.h"
 #include "EventNames.h"
 #include "Page.h"
 #include "SecurityOriginData.h"
@@ -54,7 +55,6 @@ WebKitMediaKeySession::WebKitMediaKeySession(ScriptExecutionContext& context, We
     : ActiveDOMObject(&context)
     , m_keys(&keys)
     , m_keySystem(keySystem)
-    , m_asyncEventQueue(*this)
     , m_session(keys.cdm().createSession(*this))
     , m_keyRequestTimer(*this, &WebKitMediaKeySession::keyRequestTimerFired)
     , m_addKeyTimer(*this, &WebKitMediaKeySession::addKeyTimerFired)
@@ -67,8 +67,6 @@ WebKitMediaKeySession::~WebKitMediaKeySession()
 {
     if (m_session)
         m_session->setClient(nullptr);
-
-    m_asyncEventQueue.cancelAllEvents();
 }
 
 void WebKitMediaKeySession::close()
@@ -183,7 +181,7 @@ void WebKitMediaKeySession::addKeyTimerFired()
         if (didStoreKey) {
             auto keyaddedEvent = Event::create(eventNames().webkitkeyaddedEvent, Event::CanBubble::No, Event::IsCancelable::No);
             keyaddedEvent->setTarget(this);
-            m_asyncEventQueue.enqueueEvent(WTFMove(keyaddedEvent));
+            queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(keyaddedEvent));
 
             ASSERT(m_keys);
             m_keys->keyAdded();
@@ -207,7 +205,7 @@ void WebKitMediaKeySession::sendMessage(Uint8Array* message, String destinationU
 {
     auto event = WebKitMediaKeyMessageEvent::create(eventNames().webkitkeymessageEvent, message, destinationURL);
     event->setTarget(this);
-    m_asyncEventQueue.enqueueEvent(WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(event));
 }
 
 void WebKitMediaKeySession::sendError(MediaKeyErrorCode errorCode, uint32_t systemCode)
@@ -216,7 +214,7 @@ void WebKitMediaKeySession::sendError(MediaKeyErrorCode errorCode, uint32_t syst
 
     auto keyerrorEvent = Event::create(eventNames().webkitkeyerrorEvent, Event::CanBubble::No, Event::IsCancelable::No);
     keyerrorEvent->setTarget(this);
-    m_asyncEventQueue.enqueueEvent(WTFMove(keyerrorEvent));
+    queueTaskToDispatchEvent(*this, TaskSource::Networking, WTFMove(keyerrorEvent));
 }
 
 String WebKitMediaKeySession::mediaKeysStorageDirectory() const
@@ -238,34 +236,17 @@ String WebKitMediaKeySession::mediaKeysStorageDirectory() const
 
 bool WebKitMediaKeySession::hasPendingActivity() const
 {
-    return (m_keys && m_session) || m_asyncEventQueue.hasPendingEvents();
-}
-
-void WebKitMediaKeySession::suspend(ReasonForSuspension)
-{
-    ASSERT_NOT_REACHED();
-}
-
-void WebKitMediaKeySession::resume()
-{
-    ASSERT_NOT_REACHED();
+    return (m_keys && m_session) || ActiveDOMObject::hasPendingActivity();
 }
 
 void WebKitMediaKeySession::stop()
 {
-    m_asyncEventQueue.close();
     close();
 }
 
 const char* WebKitMediaKeySession::activeDOMObjectName() const
 {
     return "WebKitMediaKeySession";
-}
-
-bool WebKitMediaKeySession::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We should try and do better here.
-    return false;
 }
 
 }

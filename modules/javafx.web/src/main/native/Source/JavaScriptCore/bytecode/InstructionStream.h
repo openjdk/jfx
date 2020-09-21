@@ -26,17 +26,18 @@
 
 #pragma once
 
+#include "BytecodeIndex.h"
 #include "Instruction.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
 
-struct Instruction;
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(InstructionStream);
 
 class InstructionStream {
     WTF_MAKE_FAST_ALLOCATED;
 
-    using InstructionBuffer = Vector<uint8_t, 0, UnsafeVectorOverflow>;
+    using InstructionBuffer = Vector<uint8_t, 0, UnsafeVectorOverflow, 16, InstructionStreamMalloc>;
 
     friend class InstructionStreamWriter;
     friend class CachedInstructionStream;
@@ -77,10 +78,8 @@ private:
             return BaseRef { m_instructions, m_index + ptr()->size() };
         }
 
-        inline Offset offset() const
-        {
-            return m_index;
-        }
+        inline Offset offset() const { return m_index; }
+        inline BytecodeIndex index() const { return BytecodeIndex(offset()); }
 
         bool isValid() const
         {
@@ -112,7 +111,9 @@ public:
     public:
         Ref freeze() const  { return Ref { m_instructions, m_index }; }
         inline Instruction* operator->() { return unwrap(); }
+        inline const Instruction* operator->() const { return unwrap(); }
         inline Instruction* ptr() { return unwrap(); }
+        inline const Instruction* ptr() const { return unwrap(); }
         inline operator Ref()
         {
             return Ref { m_instructions, m_index };
@@ -120,6 +121,7 @@ public:
 
     private:
         inline Instruction* unwrap() { return reinterpret_cast<Instruction*>(&m_instructions[m_index]); }
+        inline const Instruction* unwrap() const { return reinterpret_cast<const Instruction*>(&m_instructions[m_index]); }
     };
 
 private:
@@ -134,10 +136,15 @@ private:
             return *this;
         }
 
-        iterator operator++()
+        iterator& operator+=(size_t size)
         {
-            m_index += ptr()->size();
+            m_index += size;
             return *this;
+        }
+
+        iterator& operator++()
+        {
+            return *this += ptr()->size();
         }
     };
 
@@ -152,6 +159,7 @@ public:
         return iterator { m_instructions, m_instructions.size() };
     }
 
+    inline const Ref at(BytecodeIndex index) const { return at(index.offset()); }
     inline const Ref at(Offset offset) const
     {
         ASSERT(offset < m_instructions.size());
@@ -278,10 +286,15 @@ private:
             return *this;
         }
 
-        iterator operator++()
+        iterator& operator+=(size_t size)
         {
-            m_index += ptr()->size();
+            m_index += size;
             return *this;
+        }
+
+        iterator& operator++()
+        {
+            return *this += ptr()->size();
         }
     };
 
