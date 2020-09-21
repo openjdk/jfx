@@ -81,7 +81,7 @@ public class PointLightAttenuationTest {
             stage.show();
         }
     }
-    
+
     @Test
     public void testAttenuation() {
         Util.runAndWait(() -> {
