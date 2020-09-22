@@ -64,26 +64,21 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
         return;
     }
     float3 l = normalize(L);
-    float spotlightFactor = 1;
-    if (gLightType[i].x > 1.5) {
-        float cosA = dot(gLightNormDirection[i].xyz, l);
-        float cosHalfOuter = gSpotLightFactors[i].y;
-        if (cosA <= cosHalfOuter) {
-            return; // spotlightFactor = 0
-        }
-        float cosHalfInner = gSpotLightFactors[i].x;
-        if (cosA < cosHalfInner) {
-            float falloff = gSpotLightFactors[i].z;
-            spotlightFactor = pow((cosA - cosHalfOuter) / (cosHalfInner - cosHalfOuter), falloff);
-        } // else cosA >= cosHalfInner --> spotlightFactor = 1
-    }
+
+    float cosA = dot(gLightNormDirection[i].xyz, l);
+    float cosHalfInner = gSpotLightFactors[i].x;
+    float denom = gSpotLightFactors[i].y;
+    float falloff = gSpotLightFactors[i].z;
+    float spotlightFactor = pow((cosA - cosHalfOuter) / denom, falloff);
+
     float ca = gLightAttenuation[i].x;
     float la = gLightAttenuation[i].y;
     float qa = gLightAttenuation[i].z;
-    float attn = 1.0 / (ca + la * dist + qa * dist * dist);
+    float invAttnFactor = ca + la * dist + qa * dist * dist;
+    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
 
-    d += saturate(dot(n, l)) * gLightColor[i].xyz * attn * spotlightFactor;
-    s += pow(saturate(dot(-refl, l)), power) * gLightColor[i].xyz * attn * spotlightFactor;
+    d += saturate(dot(n, l)) * attenuatedColor;
+    s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
 }
 
 void phong(float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
