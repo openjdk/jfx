@@ -169,7 +169,8 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        if (this.isEmpty() || c.isEmpty()) {
+        // Throw NullPointerException if c is null
+        if (c.isEmpty() || this.isEmpty()) {
             return false;
         }
         beginChange();
@@ -186,11 +187,19 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        if (this.isEmpty() || c.isEmpty()) {
+        // Throw NullPointerException if c is null
+        if (c.isEmpty()) {
+            boolean retained = !this.isEmpty();
+            if (retained) {
+                clear();
+            }
+            return retained;
+        }
+        if (this.isEmpty()) {
             return false;
         }
-        beginChange();
         boolean retained = false;
+        beginChange();
         for (int i = size()-1; i>=0; i--) {
             if (!c.contains(get(i))) {
                 remove(i);
