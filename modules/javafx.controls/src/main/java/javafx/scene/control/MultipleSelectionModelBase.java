@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -860,7 +860,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         /** Returns number of true bits in BitSet */
         @Override public int size() {
-            if(size>=0){
+            if (size >= 0) {
                 return size;
             }
             size = bitset.cardinality();
@@ -878,21 +878,21 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             }
             Number n = (Number) obj;
             int index = n.intValue();
-            if(!bitset.get(index)) {
+            if (!bitset.get(index)) {
                 return -1;
             }
             // is left most bit
-            if(index==0) {
+            if (index == 0) {
                 return 0;
             }
 
             // is right most bit
-            if( index == bitset.length()-1 ){
+            if (index == bitset.length()-1) {
                 return size()-1;
             }
 
             // count right bit
-            if( index > bitset.length()/2 ) {
+            if (index > bitset.length()/2) {
                 int count = 1;
                 for (;;) {
                     index = bitset.nextSetBit(index + 1);
@@ -907,9 +907,9 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // count left bit
             // return (int)bitset.stream().takeWhile(i->i<index).count();
             int count = 0;
-            for(;;){
+            for (;;) {
                 index = bitset.previousSetBit(index-1);
-                if(index<0){
+                if (index < 0) {
                     break;
                 }
                 count++;
