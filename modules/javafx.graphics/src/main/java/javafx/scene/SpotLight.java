@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,9 +45,7 @@ import javafx.scene.paint.PhongMaterial;
  * unless it belongs to a {@code Shape3D} outside of its {@code scope}.
  * <p>
  * The light's intensity can be set to decrease over distance by attenuating it. The attenuation formula
- * <p>
- * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
- * <p>
+ * <pre>attn = 1 / (ca + la * dist + qa * dist^2)</pre>
  * defines 3 coefficients: {@code ca}, {@code la}, and {@code qa}, which control the constant, linear, and
  * quadratic behaviors of intensity falloff over distance, respectively. The effective color of the light
  * at a given point in space is {@code color * attn}. It is possible, albeit unrealistic, to specify negative
@@ -59,16 +57,14 @@ import javafx.scene.paint.PhongMaterial;
  * as this will give a soft cutoff.
  * <p>
  * The light cone is defined by 3 factors: an inner angle, an outer angle, and a falloff factor. For a point whose
- * angle to the light is {@code a}, if {@code a < inner angle} then that point receives maximum illumination, if
- * {@code a > outer angle} then that point receives no illumination, and if {@code inner angle < a < outer angle}
+ * angle to the light is {@code a}, if {@code a < innerAngle} then that point receives maximum illumination, if
+ * {@code a > outerAngle} then that point receives no illumination, and if {@code innerAngle < a < outerAngle}
  * then the illumination is determined by the formula
- * <p>
- * {@code I = pow((cos(a) - cos(outer/2)) / (cos(inner/2) - cos(outer/2)), falloff)
- * <p>
+ * <pre>I = pow((cos(a) - cos(outer/2)) / (cos(inner/2) - cos(outer/2)), falloff)</pre>
  * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
  * behavior of the drop.
  *
- * @since 14
+ * @since 16
  * @see PhongMaterial
  */
 public class SpotLight extends LightBase {
@@ -121,7 +117,6 @@ public class SpotLight extends LightBase {
      * outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
-     * @since 13
      */
     private DoubleProperty maxRange;
     
@@ -144,13 +139,10 @@ public class SpotLight extends LightBase {
 
     /**
      * The constant attenuation coefficient. This is the term {@code ca} in the attenuation formula:
-     * <p>
-     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
-     * <p>
+     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 1
-     * @since 13
      */
     private DoubleProperty constantAttenuation;
     
@@ -173,13 +165,10 @@ public class SpotLight extends LightBase {
 
     /**
      * The linear attenuation coefficient. This is the term {@code la} in the attenuation formula:
-     * <p>
-     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
-     * <p>
+     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 0
-     * @since 13
      */
     private DoubleProperty linearAttenuation;
     
@@ -202,13 +191,10 @@ public class SpotLight extends LightBase {
 
     /**
      * The quadratic attenuation coefficient. This is the term {@code qa} in the attenuation formula:
-     * <p>
-     * {@code attn = 1 / (ca + la * dist + qa * dist^2)}
-     * <p>
+     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
      * where {@code dist} is the distance between the light source and the pixel.
      *
      * @defaultValue 0
-     * @since 13
      */
     private DoubleProperty quadraticAttenuation;
     
@@ -230,10 +216,9 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * The direction the spotlight is facing.
+     * The direction the spotlight is facing. The vector need not be normalized.
      *
      * @defaultValue {@code Point3D(0, 0, -1)}
-     * @since 14
      */
     private ObjectProperty<Point3D> direction;
     
@@ -260,11 +245,10 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle receive
-     * the full light's intensity. Beyond this angle, the light intensity starts to drop.
+     * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle
+     * receive the full light's intensity. Beyond this angle, the light intensity starts to drop.
      *
      * @defaultValue 0
-     * @since 14
      */
     private DoubleProperty innerAngle;
     
@@ -286,11 +270,10 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle receive
-     * no light. Before this angle, the light intensity starts to increase.
+     * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle
+     * receive no light. Before this angle, the light intensity starts to increase.
      *
      * @defaultValue 90
-     * @since 14
      */
     private DoubleProperty outerAngle;
     
@@ -312,13 +295,13 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * The intensity falloff factor of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than the
-     * inner angle but less than the outer angle receive partial intensity governed by this factor. The larger the falloff, the sharper
-     * the drop in intensity from the inner cone. A falloff factor of 1 gives a linear drop in intensity, values greater than 1
-     * give a convex drop, and values smaller than 1 give a concave drop. Negative values are allowed, but give unrealistic lighting.
+     * The intensity falloff factor of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater
+     * than the inner angle but less than the outer angle receive partial intensity governed by this factor. The larger
+     * the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a linear drop in
+     * intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave drop. Negative
+     * values are allowed, but give unrealistic lighting.
      *
      * @defaultValue 1
-     * @since 14
      */
     private DoubleProperty falloff;
     
