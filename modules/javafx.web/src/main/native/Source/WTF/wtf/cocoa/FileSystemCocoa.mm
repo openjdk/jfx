@@ -65,26 +65,26 @@ namespace FileSystemImpl {
 String createTemporaryZipArchive(const String& path)
 {
     String temporaryFile;
-    
+
     RetainPtr<NSFileCoordinator> coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
     [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:[&](NSURL *newURL) mutable {
         CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
         if (mkstemp(archivePath.mutableData()) == -1)
             return;
-        
+
         NSDictionary *options = @{
             (__bridge id)kBOMCopierOptionCreatePKZipKey : @YES,
             (__bridge id)kBOMCopierOptionSequesterResourcesKey : @YES,
             (__bridge id)kBOMCopierOptionKeepParentKey : @YES,
             (__bridge id)kBOMCopierOptionCopyResourcesKey : @YES,
         };
-        
+
         BOMCopier copier = BOMCopierNew();
         if (!BOMCopierCopyWithOptions(copier, newURL.path.fileSystemRepresentation, archivePath.data(), (__bridge CFDictionaryRef)options))
             temporaryFile = String::fromUTF8(archivePath);
         BOMCopierFree(copier);
     }];
-    
+
     return temporaryFile;
 }
 
@@ -199,7 +199,7 @@ void makeSafeToUseMemoryMapForPath(const String& path)
 {
     if (isSafeToUseMemoryMapForPath(path))
         return;
-    
+
     NSError *error = nil;
     BOOL success = [[NSFileManager defaultManager] setAttributes:@{ NSFileProtectionKey: NSFileProtectionCompleteUnlessOpen } ofItemAtPath:path error:&error];
     ASSERT(!error);
