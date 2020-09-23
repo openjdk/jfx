@@ -850,8 +850,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                         if (scrollOffsetDirty) {
                             ensureSelectedTabIsVisible();
                             scrollOffsetDirty = false;
-                        } else {
                         }
+                        // ensure there's no gap between last visible tab and trailing edge
                         validateScrollOffset();
                     }
 
