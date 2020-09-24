@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,14 +69,14 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
     float cosHalfInner = gSpotLightFactors[i].x;
     float denom = gSpotLightFactors[i].y;
     float falloff = gSpotLightFactors[i].z;
-    float spotlightFactor = pow((cosA - cosHalfOuter) / denom, falloff);
+    float spotlightFactor = pow((cosA - cosHalfInner) / denom, falloff); // needed?
 
     float ca = gLightAttenuation[i].x;
     float la = gLightAttenuation[i].y;
     float qa = gLightAttenuation[i].z;
     float invAttnFactor = ca + la * dist + qa * dist * dist;
-    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
 
+    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
     d += saturate(dot(n, l)) * attenuatedColor;
     s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
 }

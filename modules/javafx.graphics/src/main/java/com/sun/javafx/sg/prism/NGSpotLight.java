@@ -25,6 +25,8 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.util.Utils;
+
 import javafx.geometry.Point3D;
 
 /**
@@ -43,7 +45,7 @@ public class NGSpotLight extends NGLightBase {
     /** Max range default value */
     private static final double DEFAULT_MAX_RANGE = Double.POSITIVE_INFINITY;
     /** Direction default value */
-    private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, -1);
+    private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, 1);
     /** Inner angle default value */
     private static final double DEFAULT_INNER_ANGLE = 0;
     /** Outer angle default value */
@@ -149,8 +151,7 @@ public class NGSpotLight extends NGLightBase {
     }
 
     public void setInnerAngle(double innerAngle) {
-        System.out.println(innerAngle > outerAngle);
-        this.innerAngle = innerAngle < 0 ? 0 : innerAngle > outerAngle ? outerAngle : innerAngle;
+        this.innerAngle = Utils.clamp(0, innerAngle, outerAngle);
         visualsChanged();
     }
 

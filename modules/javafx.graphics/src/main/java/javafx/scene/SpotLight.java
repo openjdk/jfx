@@ -218,7 +218,7 @@ public class SpotLight extends LightBase {
     /**
      * The direction the spotlight is facing. The vector need not be normalized.
      *
-     * @defaultValue {@code Point3D(0, 0, -1)}
+     * @defaultValue {@code Point3D(0, 0, 1)}
      */
     private ObjectProperty<Point3D> direction;
     
