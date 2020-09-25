@@ -29,7 +29,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Objects;
 
 /**
  * Abstract class that serves as a base class for {@link ObservableList} implementations that are modifiable.
@@ -93,8 +92,8 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
         beginChange();
         try {
             clear();
-            addAll(col);
-            return true;
+            boolean res = super.addAll(col);
+            return res;
         } finally {
             endChange();
         }
