@@ -263,6 +263,9 @@ public class ObservableListTest  {
 
         r = list.setAll("one", "four", "five");
         assertTrue(r);
+
+        r = list.setAll();
+        assertTrue(r);
     }
 
     @Test

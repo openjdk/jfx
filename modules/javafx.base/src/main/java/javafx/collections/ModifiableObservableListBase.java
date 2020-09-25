@@ -92,8 +92,8 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
         beginChange();
         try {
             clear();
-            boolean res = super.addAll(col);
-            return res;
+            addAll(col);
+            return true;
         } finally {
             endChange();
         }
