@@ -87,6 +87,12 @@ import java.util.WeakHashMap;
 public class StyleConverter<F, T> {
 
     /**
+     * Creates a {@code StyleConverter}.
+     */
+    public StyleConverter() {
+    }
+
+    /**
      * Convert from the parsed CSS value to the target property type.
      *
      * @param value        The {@link ParsedValue} to convert
@@ -531,6 +537,12 @@ public class StyleConverter<F, T> {
     public static class StringStore {
         private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
         public final List<String> strings = new ArrayList<String>();
+
+        /**
+         * Creates a {@code StringStore}.
+         */
+        public StringStore() {
+        }
 
         public int addString(String s) {
             Integer index = stringMap.get(s);

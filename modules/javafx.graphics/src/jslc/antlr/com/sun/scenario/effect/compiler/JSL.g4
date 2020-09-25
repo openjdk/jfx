@@ -462,7 +462,7 @@ INTCONSTANT : ('0' | '1'..'9' DIGIT*) ;
 FLOATCONSTANT
         : DIGIT+ '.' DIGIT*
         |  '.' DIGIT+
-	;
+    ;
 
 fragment
 DIGIT   : '0'..'9' ;

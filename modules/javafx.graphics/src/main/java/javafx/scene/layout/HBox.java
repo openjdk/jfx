@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,8 +47,6 @@ import javafx.css.converter.SizeConverter;
 import javafx.css.Styleable;
 import javafx.geometry.HPos;
 import javafx.util.Callback;
-
-
 
 /**
  * HBox lays out its children in a single horizontal row.
@@ -168,13 +166,14 @@ public class HBox extends Pane {
 
     /**
      * Sets the horizontal grow priority for the child when contained by an hbox.
-     * If set, the hbox will use the priority to allocate additional space if the
-     * hbox is resized larger than it's preferred width.
+     * If set, the hbox will use the priority value to allocate additional space if the
+     * hbox is resized larger than its preferred width.
      * If multiple hbox children have the same horizontal grow priority, then the
      * extra space will be split evenly between them.
      * If no horizontal grow priority is set on a child, the hbox will never
-     * allocate it additional horizontal space if available.
-     * Setting the value to null will remove the constraint.
+     * allocate any additional horizontal space for that child.
+     * <p>
+     * Setting the value to {@code null} will remove the constraint.
      * @param child the child of an hbox
      * @param value the horizontal grow priority for the child
      */
@@ -227,14 +226,14 @@ public class HBox extends Pane {
      ********************************************************************/
 
     /**
-     * Creates an HBox layout with spacing = 0.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
      */
     public HBox() {
         super();
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
      */
     public HBox(double spacing) {
@@ -243,8 +242,8 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with spacing = 0.
-     * @param children The initial set of children for this pane.
+     * Creates an {@code HBox} layout with {@code spacing = 0}.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(Node... children) {
@@ -253,9 +252,9 @@ public class HBox extends Pane {
     }
 
     /**
-     * Creates an HBox layout with the specified spacing between children.
+     * Creates an {@code HBox} layout with the specified spacing between children.
      * @param spacing the amount of horizontal space between each child
-     * @param children The initial set of children for this pane.
+     * @param children the initial set of children for this pane
      * @since JavaFX 8.0
      */
     public HBox(double spacing, Node... children) {

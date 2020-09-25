@@ -57,10 +57,6 @@ namespace JSC { namespace Yarr {
 class RegularExpression;
 } }
 
-namespace PAL {
-class SessionID;
-}
-
 namespace WebCore {
 
 class CSSAnimationController;
@@ -121,6 +117,7 @@ enum {
     LayerTreeFlagsIncludeBackingStoreAttached   = 1 << 8,
     LayerTreeFlagsIncludeRootLayerProperties    = 1 << 9,
     LayerTreeFlagsIncludeEventRegion            = 1 << 10,
+    LayerTreeFlagsIncludeDeepColor              = 1 << 11,
 };
 typedef unsigned LayerTreeFlags;
 
@@ -225,6 +222,7 @@ public:
     WEBCORE_EXPORT Node* deepestNodeAtLocation(const FloatPoint& viewportLocation);
     WEBCORE_EXPORT Node* nodeRespondingToClickEvents(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, SecurityOrigin* = nullptr);
     WEBCORE_EXPORT Node* nodeRespondingToDoubleClickEvent(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
+    WEBCORE_EXPORT Node* nodeRespondingToInteraction(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
     WEBCORE_EXPORT Node* nodeRespondingToScrollWheelEvents(const FloatPoint& viewportLocation);
     WEBCORE_EXPORT Node* approximateNodeAtViewportLocationLegacy(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
 
@@ -301,8 +299,6 @@ public:
     void selfOnlyRef();
     void selfOnlyDeref();
 
-    PAL::SessionID sessionID() const;
-
 private:
     friend class NavigationDisabler;
 
@@ -339,7 +335,10 @@ private:
 #if PLATFORM(IOS_FAMILY)
     void betterApproximateNode(const IntPoint& testPoint, const NodeQualifier&, Node*& best, Node* failedNode, IntPoint& bestPoint, IntRect& bestRect, const IntRect& testRect);
     bool hitTestResultAtViewportLocation(const FloatPoint& viewportLocation, HitTestResult&, IntPoint& center);
-    Node* qualifyingNodeAtViewportLocation(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, const NodeQualifier&, bool shouldApproximate);
+
+    enum class ShouldApproximate : bool { No, Yes };
+    enum class ShouldFindRootEditableElement : bool { No, Yes };
+    Node* qualifyingNodeAtViewportLocation(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, const NodeQualifier&, ShouldApproximate, ShouldFindRootEditableElement = ShouldFindRootEditableElement::Yes);
 
     void setTimersPausedInternal(bool);
 

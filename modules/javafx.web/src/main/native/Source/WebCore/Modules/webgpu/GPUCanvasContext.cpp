@@ -41,9 +41,6 @@ std::unique_ptr<GPUCanvasContext> GPUCanvasContext::create(CanvasBase& canvas)
 {
     auto context = std::unique_ptr<GPUCanvasContext>(new GPUCanvasContext(canvas));
     context->suspendIfNeeded();
-
-    InspectorInstrumentation::didCreateCanvasRenderingContext(*context);
-
     return context;
 }
 
@@ -68,7 +65,10 @@ Ref<WebGPUSwapChain> GPUCanvasContext::configureSwapChain(const WebGPUSwapChainD
         if (m_swapChain)
             m_swapChain->destroy();
 
+        InspectorInstrumentation::willConfigureSwapChain(*this, newSwapChain.get());
+
         m_swapChain = newSwapChain.copyRef();
+
         notifyCanvasContentChanged();
     }
 

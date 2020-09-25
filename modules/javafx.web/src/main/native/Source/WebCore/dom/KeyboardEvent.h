@@ -35,6 +35,7 @@ class Node;
 class PlatformKeyboardEvent;
 
 class KeyboardEvent final : public UIEventWithKeyState {
+    WTF_MAKE_ISO_ALLOCATED(KeyboardEvent);
 public:
     enum KeyLocationCode {
         DOM_KEY_LOCATION_STANDARD = 0x00,
@@ -69,13 +70,8 @@ public:
         const String& keyIdentifier, unsigned location,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
 
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     const String& key() const { return m_key; }
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
     const String& code() const { return m_code; }
-#endif
-
     const String& keyIdentifier() const { return m_keyIdentifier; }
     unsigned location() const { return m_location; }
     bool repeat() const { return m_repeat; }
@@ -104,12 +100,8 @@ private:
     KeyboardEvent(const AtomString&, const Init&);
 
     std::unique_ptr<PlatformKeyboardEvent> m_underlyingPlatformEvent;
-#if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     String m_key;
-#endif
-#if ENABLE(KEYBOARD_CODE_ATTRIBUTE)
     String m_code;
-#endif
     String m_keyIdentifier;
     unsigned m_location { DOM_KEY_LOCATION_STANDARD };
     bool m_repeat { false };

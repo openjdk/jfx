@@ -26,19 +26,25 @@
 #include "config.h"
 #include "AnimationEvent.h"
 
+#include <wtf/IsoMallocInlines.h>
+
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(AnimationEvent);
+
 AnimationEvent::AnimationEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : AnimationEventBase(type, initializer, isTrusted)
     , m_animationName(initializer.animationName)
     , m_elapsedTime(initializer.elapsedTime)
+    , m_pseudoElement(initializer.pseudoElement)
 {
 }
 
-AnimationEvent::AnimationEvent(const AtomString& type, const String& animationName, double elapsedTime)
-    : Event(type, CanBubble::Yes, IsCancelable::No)
+AnimationEvent::AnimationEvent(const AtomString& type, const String& animationName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation* animation)
+    : AnimationEventBase(type, animation, timelineTime)
     , m_animationName(animationName)
     , m_elapsedTime(elapsedTime)
+    , m_pseudoElement(pseudoElement)
 {
 }
 
@@ -52,6 +58,11 @@ const String& AnimationEvent::animationName() const
 double AnimationEvent::elapsedTime() const
 {
     return m_elapsedTime;
+}
+
+const String& AnimationEvent::pseudoElement() const
+{
+    return m_pseudoElement;
 }
 
 EventInterface AnimationEvent::eventInterface() const

@@ -42,6 +42,7 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include "HTTPHeaderValues.h"
 #include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
 #include "NetworkLoadMetrics.h"
@@ -97,7 +98,7 @@ void PingLoader::loadImage(Frame& frame, const URL& url)
 
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
 
-    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
+    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
@@ -129,8 +130,7 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
     request.setHTTPMethod("POST");
     request.setHTTPContentType("text/ping");
     request.setHTTPBody(FormData::create("PING"));
-    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
-    request.setPriority(ResourceLoadPriority::VeryLow);
+    request.setHTTPHeaderField(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
 
     HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
 
@@ -139,16 +139,10 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
     auto& sourceOrigin = document.securityOrigin();
     FrameLoader::addHTTPOriginIfNeeded(request, sourceOrigin.toString());
     request.setHTTPHeaderField(HTTPHeaderName::PingTo, destinationURL);
-    if (!SecurityPolicy::shouldHideReferrer(pingURL, frame.loader().outgoingReferrer())) {
+    if (!SecurityPolicy::shouldHideReferrer(pingURL, frame.loader().outgoingReferrer()))
         request.setHTTPHeaderField(HTTPHeaderName::PingFrom, document.url());
-        if (!sourceOrigin.isSameSchemeHostPort(SecurityOrigin::create(pingURL).get())) {
-            String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), pingURL, frame.loader().outgoingReferrer());
-            if (!referrer.isEmpty())
-                request.setHTTPReferrer(referrer);
-        }
-    }
 
-    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, request.httpReferrer().isEmpty() ? ReferrerPolicy::NoReferrer : ReferrerPolicy::UnsafeUrl);
+    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes, ContentSecurityPolicyImposition::DoPolicyCheck, ReferrerPolicy::NoReferrer);
 }
 
 void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<FormData>&& report, ViolationReportType reportType)

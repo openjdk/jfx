@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1478,6 +1478,62 @@ public final class QuantumToolkit extends Toolkit {
 
             }
 
+            private void renderTile(int x, int xOffset, int y, int yOffset, int w, int h,
+                                    IntBuffer buffer, ResourceFactory rf, QuantumImage tileImg, QuantumImage targetImg) {
+                RTTexture rt = tileImg.getRT(w, h, rf);
+                if (rt == null) {
+                    return;
+                }
+                Graphics g = rt.createGraphics();
+                draw(g, x + xOffset, y + yOffset, w, h);
+                int[] pixels = rt.getPixels();
+                if (pixels != null) {
+                    buffer.put(pixels);
+                } else {
+                    rt.readPixels(buffer, rt.getContentX(), rt.getContentY(), w, h);
+                }
+                //Copy tile's pixels into the target image
+                targetImg.image.setPixels(xOffset, yOffset, w, h,
+                        javafx.scene.image.PixelFormat.getIntArgbPreInstance(), buffer, w);
+                rt.unlock();
+            }
+
+            private void renderWholeImage(int x, int y, int w, int h, ResourceFactory rf, QuantumImage pImage) {
+                RTTexture rt = pImage.getRT(w, h, rf);
+                if (rt == null) {
+                    return;
+                }
+                Graphics g = rt.createGraphics();
+                draw(g, x, y, w, h);
+                int[] pixels = rt.getPixels();
+                if (pixels != null) {
+                    pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
+                } else {
+                    IntBuffer ib = IntBuffer.allocate(w * h);
+                    if (rt.readPixels(ib, rt.getContentX(), rt.getContentY(), w, h)) {
+                        pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(ib, w, h));
+                    } else {
+                        pImage.dispose();
+                        pImage = null;
+                    }
+                }
+                rt.unlock();
+            }
+
+
+            private int computeTileSize(int size, int maxSize) {
+                // If 'size' divided by either 2 or 3 produce an exact result
+                // and is lesser that the specified maxSize, then use this value
+                // as the tile size, as this makes the tiling process more efficient.
+                for (int n = 1; n <= 3; n++) {
+                    int optimumSize = size / n;
+                    if (optimumSize <= maxSize && optimumSize * n == size) {
+                        return optimumSize;
+                    }
+                }
+                return maxSize;
+            }
+
             @Override
             public void run() {
 
@@ -1497,44 +1553,87 @@ public final class QuantumToolkit extends Toolkit {
                 }
 
                 boolean errored = false;
+                // A temp QuantumImage used only as a RTT cache for rendering tiles.
+                QuantumImage tileRttCache = null;
                 try {
                     QuantumImage pImage = (params.platformImage instanceof QuantumImage) ?
-                            (QuantumImage)params.platformImage : new QuantumImage((com.sun.prism.Image)null);
+                            (QuantumImage) params.platformImage : new QuantumImage((com.sun.prism.Image) null);
 
-                    com.sun.prism.RTTexture rt = pImage.getRT(w, h, rf);
+                    int maxTextureSize = rf.getMaximumTextureSize();
+                    if (h > maxTextureSize || w > maxTextureSize) {
+                        tileRttCache = new QuantumImage((com.sun.prism.Image) null);
+                        // The requested size for the snapshot is too big to fit a single texture,
+                        // so we need to take several snapshot tiles and merge them into pImage
+                        if (pImage.image == null) {
+                            pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(IntBuffer.allocate(w * h), w, h));
+                        }
 
-                    if (rt == null) {
-                        return;
-                    }
-
-                    Graphics g = rt.createGraphics();
-
-                    draw(g, x, y, w, h);
-
-                    int[] pixels = pImage.rt.getPixels();
-
-                    if (pixels != null) {
-                        pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
-                    } else {
-                        IntBuffer ib = IntBuffer.allocate(w*h);
-                        if (pImage.rt.readPixels(ib, pImage.rt.getContentX(),
-                                pImage.rt.getContentY(), w, h))
-                        {
-                            pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(ib, w, h));
-                        } else {
-                            pImage.dispose();
-                            pImage = null;
+                        // M represents the middle set of tiles each with a size of tileW x tileH.
+                        // R is the right hand column of tiles,
+                        // B is the bottom row,
+                        // C is the corner:
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        // |           |           |  .  |       |
+                        // |     M     |     M     |  .  |   R   |
+                        // |           |           |  .  |       |
+                        // +-----------+-----------+  .  +-------+
+                        //       .           .        .      .
+                        // +-----------+-----------+  .  +-------+
+                        // |     B     |     B     |  .  |   C   |
+                        // +-----------+-----------+  .  +-------+
+                        final int mTileWidth = computeTileSize(w, maxTextureSize);
+                        final int mTileHeight = computeTileSize(h, maxTextureSize);
+                        IntBuffer buffer = IntBuffer.allocate(mTileWidth * mTileHeight);
+                        // Walk through all same-size "M" tiles
+                        int mTileXOffset = 0;
+                        int mTileYOffset = 0;
+                        for (mTileXOffset = 0; (mTileXOffset + mTileWidth) <= w; mTileXOffset += mTileWidth) {
+                            for (mTileYOffset = 0; (mTileYOffset + mTileHeight) <= h; mTileYOffset += mTileHeight) {
+                                renderTile(x, mTileXOffset, y, mTileYOffset, mTileWidth, mTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Walk through remaining same-height "R" tiles, if any
+                        final int rTileXOffset = mTileXOffset;
+                        final int rTileWidth = w - rTileXOffset;
+                        if (rTileWidth > 0) {
+                            for (int rTileYOffset = 0; (rTileYOffset + mTileHeight) <= h; rTileYOffset += mTileHeight) {
+                                renderTile(x, rTileXOffset, y, rTileYOffset, rTileWidth, mTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Walk through remaining same-width "B" tiles, if any
+                        final int bTileYOffset = mTileYOffset;
+                        final int bTileHeight = h - bTileYOffset;
+                        if (bTileHeight > 0) {
+                            for (int bTileXOffset = 0; (bTileXOffset + mTileWidth) <= w; bTileXOffset += mTileWidth) {
+                                renderTile(x, bTileXOffset, y, bTileYOffset, mTileWidth, bTileHeight,
+                                        buffer, rf, tileRttCache, pImage);
+                            }
+                        }
+                        // Render corner "C" tile if needed
+                        if (rTileWidth > 0 &&  bTileHeight > 0) {
+                            renderTile(x, rTileXOffset, y, bTileYOffset, rTileWidth, bTileHeight,
+                                    buffer, rf, tileRttCache, pImage);
                         }
                     }
-
-                    rt.unlock();
-
+                    else {
+                        // The requested size for the snapshot fits max texture size,
+                        // so we can directly render it in the target image.
+                        renderWholeImage(x, y, w, h, rf, pImage);
+                    }
                     params.platformImage = pImage;
-
                 } catch (Throwable t) {
                     errored = true;
                     t.printStackTrace(System.err);
                 } finally {
+                    if (tileRttCache != null) {
+                        tileRttCache.dispose();
+                    }
                     Disposer.cleanUp();
                     rf.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
                 }

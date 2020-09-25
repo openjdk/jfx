@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,7 @@ namespace JSC {
 class JSONObject final : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static JSONObject* create(VM& vm, Structure* structure)
     {
@@ -55,8 +55,8 @@ private:
     JSONObject(VM&, Structure*);
 };
 
-JS_EXPORT_PRIVATE JSValue JSONParse(ExecState*, const String&);
-JS_EXPORT_PRIVATE String JSONStringify(ExecState*, JSValue, JSValue space);
-JS_EXPORT_PRIVATE String JSONStringify(ExecState*, JSValue, unsigned indent);
+JS_EXPORT_PRIVATE JSValue JSONParse(JSGlobalObject*, const String&);
+JS_EXPORT_PRIVATE String JSONStringify(JSGlobalObject*, JSValue, JSValue space);
+JS_EXPORT_PRIVATE String JSONStringify(JSGlobalObject*, JSValue, unsigned indent);
 
 } // namespace JSC

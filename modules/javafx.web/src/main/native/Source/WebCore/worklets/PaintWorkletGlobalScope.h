@@ -44,7 +44,7 @@ class PaintWorkletGlobalScope : public WorkletGlobalScope {
 public:
     static Ref<PaintWorkletGlobalScope> create(Document&, ScriptSourceCode&&);
 
-    ExceptionOr<void> registerPaint(JSC::ExecState&, JSDOMGlobalObject&, const String& name, JSC::Strong<JSC::JSObject> paintConstructor);
+    ExceptionOr<void> registerPaint(JSC::JSGlobalObject&, const String& name, JSC::Strong<JSC::JSObject> paintConstructor);
     double devicePixelRatio() const;
 
     // All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
@@ -76,7 +76,7 @@ private:
 
     ~PaintWorkletGlobalScope()
     {
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
         auto locker = holdLock(paintDefinitionLock());
         ASSERT(paintDefinitionMap().isEmpty());
 #endif

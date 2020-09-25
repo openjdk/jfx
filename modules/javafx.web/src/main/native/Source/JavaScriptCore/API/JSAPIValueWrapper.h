@@ -30,10 +30,16 @@
 namespace JSC {
 
 class JSAPIValueWrapper final : public JSCell {
-    friend JSValue jsAPIValueWrapper(ExecState*, JSValue);
+    friend JSValue jsAPIValueWrapper(JSGlobalObject*, JSValue);
 public:
-    typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    using Base = JSCell;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.apiValueWrapperSpace<mode>();
+    }
 
     JSValue value() const { return m_value.get(); }
 

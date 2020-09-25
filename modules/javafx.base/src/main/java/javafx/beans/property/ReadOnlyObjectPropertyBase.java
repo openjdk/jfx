@@ -43,6 +43,12 @@ public abstract class ReadOnlyObjectPropertyBase<T> extends ReadOnlyObjectProper
 
     ExpressionHelper<T> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyObjectPropertyBase}.
+     */
+    public ReadOnlyObjectPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ExpressionHelper.addListener(helper, this, listener);

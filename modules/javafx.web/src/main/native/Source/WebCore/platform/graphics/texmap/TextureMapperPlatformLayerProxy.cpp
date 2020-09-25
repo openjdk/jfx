@@ -110,9 +110,15 @@ bool TextureMapperPlatformLayerProxy::isActive()
     return !!m_targetLayer && !!m_compositor;
 }
 
-void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<TextureMapperPlatformLayerBuffer> newBuffer)
+void TextureMapperPlatformLayerProxy::pushNextBuffer(std::unique_ptr<TextureMapperPlatformLayerBuffer>&& newBuffer)
 {
     ASSERT(m_lock.isHeld());
+#if USE(ANGLE)
+    // When the newBuffer overwrites m_pendingBuffer that is not swapped yet,
+    // the layer related to m_pendingBuffer is flickering since its texture is destroyed.
+    if (m_pendingBuffer && m_pendingBuffer->hasManagedTexture())
+        return;
+#endif
     m_pendingBuffer = WTFMove(newBuffer);
     m_wasBufferDropped = false;
 

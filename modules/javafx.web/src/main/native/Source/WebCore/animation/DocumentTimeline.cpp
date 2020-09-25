@@ -26,22 +26,25 @@
 #include "config.h"
 #include "DocumentTimeline.h"
 
-#include "AnimationPlaybackEvent.h"
+#include "AnimationEventBase.h"
 #include "CSSAnimation.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSTransition.h"
 #include "DOMWindow.h"
 #include "DeclarativeAnimation.h"
 #include "Document.h"
+#include "EventLoop.h"
+#include "EventNames.h"
 #include "GraphicsLayer.h"
 #include "KeyframeEffect.h"
-#include "Microtasks.h"
+#include "KeyframeEffectStack.h"
 #include "Node.h"
 #include "Page.h"
 #include "PseudoElement.h"
 #include "RenderElement.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "Settings.h"
+#include <JavaScriptCore/VM.h>
 
 static const Seconds defaultAnimationInterval { 15_ms };
 static const Seconds throttledAnimationInterval { 30_ms };
@@ -61,17 +64,29 @@ Ref<DocumentTimeline> DocumentTimeline::create(Document& document, DocumentTimel
 DocumentTimeline::DocumentTimeline(Document& document, Seconds originTime)
     : AnimationTimeline()
     , m_tickScheduleTimer(*this, &DocumentTimeline::scheduleAnimationResolution)
-    , m_document(&document)
+    , m_document(makeWeakPtr(document))
     , m_originTime(originTime)
 {
-    if (m_document && m_document->page() && !m_document->page()->isVisible())
-        suspendAnimations();
+    document.addTimeline(*this);
+    if (auto* page = document.page()) {
+        if (page->settings().hiddenPageCSSAnimationSuspensionEnabled() && !page->isVisible())
+            suspendAnimations();
+    }
 }
 
-DocumentTimeline::~DocumentTimeline() = default;
+DocumentTimeline::~DocumentTimeline()
+{
+    if (m_document)
+        m_document->removeTimeline(*this);
+}
 
 void DocumentTimeline::detachFromDocument()
 {
+    Ref<DocumentTimeline> protectedThis(*this);
+    if (m_document)
+        m_document->removeTimeline(*this);
+
+    m_pendingAnimationEvents.clear();
     m_currentTimeClearingTaskQueue.close();
     m_elementsWithRunningAcceleratedAnimations.clear();
 
@@ -79,7 +94,7 @@ void DocumentTimeline::detachFromDocument()
     while (!animationsToRemove.isEmpty())
         animationsToRemove.first()->remove();
 
-    unscheduleAnimationResolution();
+    clearTickScheduleTimer();
     m_document = nullptr;
 }
 
@@ -127,7 +142,7 @@ Vector<RefPtr<WebAnimation>> DocumentTimeline::getAnimations() const
     Vector<RefPtr<WebAnimation>> webAnimations;
 
     // First, let's get all qualifying animations in their right group.
-    for (const auto& animation : m_allAnimations) {
+    for (const auto& animation : m_animations) {
         if (!animation || !animation->isRelevant() || animation->timeline() != this || !is<KeyframeEffect>(animation->effect()))
             continue;
 
@@ -136,15 +151,15 @@ Vector<RefPtr<WebAnimation>> DocumentTimeline::getAnimations() const
             continue;
 
         if (is<CSSTransition>(animation.get()) && downcast<CSSTransition>(animation.get())->owningElement())
-            cssTransitions.append(animation.get());
+            cssTransitions.append(animation);
         else if (is<CSSAnimation>(animation.get()) && downcast<CSSAnimation>(animation.get())->owningElement())
-            cssAnimations.append(animation.get());
+            cssAnimations.append(animation);
         else
-            webAnimations.append(animation.get());
+            webAnimations.append(animation);
     }
 
     // Now sort CSS Transitions by their composite order.
-    std::sort(cssTransitions.begin(), cssTransitions.end(), [](auto& lhs, auto& rhs) {
+    std::stable_sort(cssTransitions.begin(), cssTransitions.end(), [](auto& lhs, auto& rhs) {
         // https://drafts.csswg.org/css-transitions-2/#animation-composite-order
         auto* lhsTransition = downcast<CSSTransition>(lhs.get());
         auto* rhsTransition = downcast<CSSTransition>(rhs.get());
@@ -166,7 +181,7 @@ Vector<RefPtr<WebAnimation>> DocumentTimeline::getAnimations() const
     });
 
     // Now sort CSS Animations by their composite order.
-    std::sort(cssAnimations.begin(), cssAnimations.end(), [](auto& lhs, auto& rhs) {
+    std::stable_sort(cssAnimations.begin(), cssAnimations.end(), [](auto& lhs, auto& rhs) {
         // https://drafts.csswg.org/css-animations-2/#animation-composite-order
         auto* lhsOwningElement = downcast<CSSAnimation>(lhs.get())->owningElement();
         auto* rhsOwningElement = downcast<CSSAnimation>(rhs.get())->owningElement();
@@ -176,8 +191,11 @@ Vector<RefPtr<WebAnimation>> DocumentTimeline::getAnimations() const
             return compareDeclarativeAnimationOwningElementPositionsInDocumentTreeOrder(lhsOwningElement, rhsOwningElement);
 
         // Otherwise, sort A and B based on their position in the computed value of the animation-name property of the (common) owning element.
-        // In our case, this matches the time at which the animations were created and thus their relative position in m_allAnimations.
-        return false;
+        return compareAnimationsByCompositeOrder(*lhs, *rhs, lhsOwningElement->ensureKeyframeEffectStack().cssAnimationList());
+    });
+
+    std::stable_sort(webAnimations.begin(), webAnimations.end(), [](auto& lhs, auto& rhs) {
+        return lhs->globalPosition() < rhs->globalPosition();
     });
 
     // Finally, we can concatenate the sorted CSS Transitions, CSS Animations and Web Animations in their relative composite order.
@@ -215,7 +233,7 @@ void DocumentTimeline::suspendAnimations()
 
     applyPendingAcceleratedAnimations();
 
-    unscheduleAnimationResolution();
+    clearTickScheduleTimer();
 }
 
 void DocumentTimeline::resumeAnimations()
@@ -273,6 +291,8 @@ Optional<Seconds> DocumentTimeline::currentTime()
 
 void DocumentTimeline::cacheCurrentTime(DOMHighResTimeStamp newCurrentTime)
 {
+    ASSERT(m_document);
+
     m_cachedCurrentTime = Seconds(newCurrentTime);
     // We want to be sure to keep this time cached until we've both finished running JS and finished updating
     // animations, so we schedule the invalidation task and register a whenIdle callback on the VM, which will
@@ -307,48 +327,69 @@ void DocumentTimeline::removeAnimation(WebAnimation& animation)
     AnimationTimeline::removeAnimation(animation);
 
     if (m_animations.isEmpty())
-        unscheduleAnimationResolution();
+        clearTickScheduleTimer();
 }
 
 void DocumentTimeline::scheduleAnimationResolution()
 {
-    if (m_isSuspended || m_animations.isEmpty() || m_animationResolutionScheduled)
+    if (m_isSuspended || m_animationResolutionScheduled || !m_document || !m_document->page())
         return;
 
-    if (!m_document || !m_document->page())
+    // We need some relevant animations or pending events to proceed.
+    if (!shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         return;
 
     m_document->page()->renderingUpdateScheduler().scheduleTimedRenderingUpdate();
     m_animationResolutionScheduled = true;
 }
 
-void DocumentTimeline::unscheduleAnimationResolution()
+void DocumentTimeline::clearTickScheduleTimer()
 {
     m_tickScheduleTimer.stop();
-    m_animationResolutionScheduled = false;
 }
 
-void DocumentTimeline::updateAnimationsAndSendEvents(DOMHighResTimeStamp timestamp)
+bool DocumentTimeline::shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState() const
+{
+    return !m_animations.isEmpty() || !m_pendingAnimationEvents.isEmpty() || !m_acceleratedAnimationsPendingRunningStateChange.isEmpty();
+}
+
+void DocumentTimeline::updateCurrentTime(DOMHighResTimeStamp timestamp)
 {
     // We need to freeze the current time even if no animation is running.
     // document.timeline.currentTime may be called from a rAF callback and
     // it has to match the rAF timestamp.
-    if (!m_isSuspended)
+    if (!m_isSuspended || !shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         cacheCurrentTime(timestamp);
+}
 
-    if (m_isSuspended || m_animations.isEmpty() || !m_animationResolutionScheduled)
+void DocumentTimeline::updateAnimationsAndSendEvents()
+{
+
+    // Updating animations and sending events may invalidate the timing of some animations, so we must set the m_animationResolutionScheduled
+    // flag to false prior to running that procedure to allow animation with timing model updates to schedule updates.
+    m_animationResolutionScheduled = false;
+
+    if (m_isSuspended)
+        return;
+
+    if (!shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
         return;
 
     internalUpdateAnimationsAndSendEvents();
     applyPendingAcceleratedAnimations();
 
-    m_animationResolutionScheduled = false;
-    scheduleNextTick();
+    if (!m_animationResolutionScheduled)
+        scheduleNextTick();
 }
 
 void DocumentTimeline::internalUpdateAnimationsAndSendEvents()
 {
     m_numberOfAnimationTimelineInvalidationsForTesting++;
+
+    // enqueueAnimationEvent() calls scheduleAnimationResolution() to ensure that the "update animations and send events"
+    // procedure is run and enqueued events are dispatched in the next frame. However, events that are enqueued while
+    // this procedure is running should not schedule animation resolution until the event queue has been cleared.
+    m_shouldScheduleAnimationResolutionForNewPendingEvents = false;
 
     // https://drafts.csswg.org/web-animations/#update-animations-and-send-events
 
@@ -378,15 +419,20 @@ void DocumentTimeline::internalUpdateAnimationsAndSendEvents()
         }
     }
 
-    // 2. Perform a microtask checkpoint.
-    MicrotaskQueue::mainThreadQueue().performMicrotaskCheckpoint();
+    // 2. Remove replaced animations for doc.
+    removeReplacedAnimations();
 
-    // 3. Let events to dispatch be a copy of doc's pending animation event queue.
-    // 4. Clear doc's pending animation event queue.
+    // 3. Perform a microtask checkpoint.
+    if (auto document = makeRefPtr(this->document()))
+        document->eventLoop().performMicrotaskCheckpoint();
+
+    // 4. Let events to dispatch be a copy of doc's pending animation event queue.
+    // 5. Clear doc's pending animation event queue.
     auto pendingAnimationEvents = WTFMove(m_pendingAnimationEvents);
+    m_shouldScheduleAnimationResolutionForNewPendingEvents = true;
 
-    // 5. Perform a stable sort of the animation events in events to dispatch as follows.
-    std::stable_sort(pendingAnimationEvents.begin(), pendingAnimationEvents.end(), [] (const Ref<AnimationPlaybackEvent>& lhs, const Ref<AnimationPlaybackEvent>& rhs) {
+    // 6. Perform a stable sort of the animation events in events to dispatch as follows.
+    std::stable_sort(pendingAnimationEvents.begin(), pendingAnimationEvents.end(), [] (const Ref<AnimationEventBase>& lhs, const Ref<AnimationEventBase>& rhs) {
         // 1. Sort the events by their scheduled event time such that events that were scheduled to occur earlier, sort before events scheduled to occur later
         // and events whose scheduled event time is unresolved sort before events with a resolved scheduled event time.
         // 2. Within events with equal scheduled event times, sort by their composite order. FIXME: We don't do this.
@@ -399,19 +445,100 @@ void DocumentTimeline::internalUpdateAnimationsAndSendEvents()
         return lhs->timelineTime().value() < rhs->timelineTime().value();
     });
 
-    // 6. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
-    for (auto& pendingEvent : pendingAnimationEvents)
-        pendingEvent->target()->dispatchEvent(pendingEvent);
+    // 7. Dispatch each of the events in events to dispatch at their corresponding target using the order established in the previous step.
+    for (auto& pendingAnimationEvent : pendingAnimationEvents)
+        pendingAnimationEvent->target()->dispatchEvent(pendingAnimationEvent);
 
     // This will cancel any scheduled invalidation if we end up removing all animations.
-    for (auto& animation : animationsToRemove)
-        removeAnimation(*animation);
+    for (auto& animation : animationsToRemove) {
+        // An animation that was initially marked as irrelevant may have changed while we were sending events, so we run the same
+        // check that we ran to add it to animationsToRemove in the first place.
+        if (!animation->isRelevant() && !animation->needsTick())
+            removeAnimation(*animation);
+    }
 
     // Now that animations that needed removal have been removed, let's update the list of completed transitions.
     // This needs to happen after dealing with the list of animations to remove as the animation may have been
     // removed from the list of completed transitions otherwise.
     for (auto& completedTransition : completedTransitions)
         transitionDidComplete(completedTransition);
+}
+
+bool DocumentTimeline::animationCanBeRemoved(WebAnimation& animation)
+{
+    // https://drafts.csswg.org/web-animations/#removing-replaced-animations
+
+    ASSERT(m_document);
+
+    // - is replaceable, and
+    if (!animation.isReplaceable())
+        return false;
+
+    // - has a replace state of active, and
+    if (animation.replaceState() != WebAnimation::ReplaceState::Active)
+        return false;
+
+    // - has an associated animation effect whose target element is a descendant of doc, and
+    auto* effect = animation.effect();
+    if (!is<KeyframeEffect>(effect))
+        return false;
+
+    auto* keyframeEffect = downcast<KeyframeEffect>(effect);
+    auto* target = keyframeEffect->target();
+    if (!target || !target->isDescendantOf(*m_document))
+        return false;
+
+    HashSet<CSSPropertyID> propertiesToMatch = keyframeEffect->animatedProperties();
+    auto animations = animationsForElement(*target, AnimationTimeline::Ordering::Sorted);
+    for (auto& animationWithHigherCompositeOrder : WTF::makeReversedRange(animations)) {
+        if (&animation == animationWithHigherCompositeOrder)
+            break;
+
+        if (animationWithHigherCompositeOrder && animationWithHigherCompositeOrder->isReplaceable()) {
+            auto* effectWithHigherCompositeOrder = animationWithHigherCompositeOrder->effect();
+            if (is<KeyframeEffect>(effectWithHigherCompositeOrder)) {
+                auto* keyframeEffectWithHigherCompositeOrder = downcast<KeyframeEffect>(effectWithHigherCompositeOrder);
+                for (auto cssPropertyId : keyframeEffectWithHigherCompositeOrder->animatedProperties()) {
+                    if (propertiesToMatch.remove(cssPropertyId) && propertiesToMatch.isEmpty())
+                        break;
+                }
+            }
+        }
+    }
+
+    return propertiesToMatch.isEmpty();
+}
+
+void DocumentTimeline::removeReplacedAnimations()
+{
+    // https://drafts.csswg.org/web-animations/#removing-replaced-animations
+
+    Vector<RefPtr<WebAnimation>> animationsToRemove;
+
+    // When asked to remove replaced animations for a Document, doc, then for every animation, animation
+    for (auto& animation : m_allAnimations) {
+        if (animation && animationCanBeRemoved(*animation)) {
+            // perform the following steps:
+            // 1. Set animation's replace state to removed.
+            animation->setReplaceState(WebAnimation::ReplaceState::Removed);
+            // 2. Create an AnimationPlaybackEvent, removeEvent.
+            // 3. Set removeEvent's type attribute to remove.
+            // 4. Set removeEvent's currentTime attribute to the current time of animation.
+            // 5. Set removeEvent's timelineTime attribute to the current time of the timeline with which animation is associated.
+            // 6. If animation has a document for timing, then append removeEvent to its document for timing's pending animation
+            //    event queue along with its target, animation. For the scheduled event time, use the result of applying the procedure
+            //    to convert timeline time to origin-relative time to the current time of the timeline with which animation is associated.
+            //    Otherwise, queue a task to dispatch removeEvent at animation. The task source for this task is the DOM manipulation task source.
+            animation->enqueueAnimationPlaybackEvent(eventNames().removeEvent, animation->currentTime(), currentTime());
+
+            animationsToRemove.append(animation.get());
+        }
+    }
+
+    for (auto& animation : animationsToRemove) {
+        if (auto* timeline = animation->timeline())
+            timeline->removeAnimation(*animation);
+    }
 }
 
 void DocumentTimeline::transitionDidComplete(RefPtr<CSSTransition> transition)
@@ -429,20 +556,19 @@ void DocumentTimeline::transitionDidComplete(RefPtr<CSSTransition> transition)
 
 void DocumentTimeline::scheduleNextTick()
 {
+    // If we have pending animation events, we need to schedule an update right away.
+    if (!m_pendingAnimationEvents.isEmpty())
+        scheduleAnimationResolution();
+
     // There is no tick to schedule if we don't have any relevant animations.
     if (m_animations.isEmpty())
         return;
 
-    for (const auto& animation : m_animations) {
-        if (!animation->isRunningAccelerated()) {
-            scheduleAnimationResolution();
-            return;
-        }
-    }
-
     Seconds scheduleDelay = Seconds::infinity();
 
     for (const auto& animation : m_animations) {
+        if (!animation->isRelevant())
+            continue;
         auto animationTimeToNextRequiredTick = animation->timeToNextTick();
         if (animationTimeToNextRequiredTick < animationInterval()) {
             scheduleAnimationResolution();
@@ -505,7 +631,7 @@ bool DocumentTimeline::isRunningAcceleratedAnimationOnRenderer(RenderElement& re
         auto* effect = animation->effect();
         if (is<KeyframeEffect>(effect)) {
             auto* keyframeEffect = downcast<KeyframeEffect>(effect);
-            if (keyframeEffect->isRunningAccelerated() && keyframeEffect->animatedProperties().contains(property))
+            if (keyframeEffect->isCurrentlyAffectingProperty(property, KeyframeEffect::Accelerated::Yes))
                 return true;
         }
     }
@@ -550,6 +676,11 @@ void DocumentTimeline::animationAcceleratedRunningStateDidChange(WebAnimation& a
         if (auto* target = downcast<KeyframeEffect>(animation.effect())->target())
             updateListOfElementsWithRunningAcceleratedAnimationsForElement(*target);
     }
+
+    if (shouldRunUpdateAnimationsAndSendEventsIgnoringSuspensionState())
+        scheduleAnimationResolution();
+    else
+        clearTickScheduleTimer();
 }
 
 void DocumentTimeline::updateListOfElementsWithRunningAcceleratedAnimationsForElement(Element& element)
@@ -587,40 +718,16 @@ void DocumentTimeline::applyPendingAcceleratedAnimations()
     }
 }
 
-bool DocumentTimeline::resolveAnimationsForElement(Element& element, RenderStyle& targetStyle)
-{
-    bool hasNonAcceleratedAnimationProperty = false;
-
-    for (const auto& animation : animationsForElement(element)) {
-        animation->resolve(targetStyle);
-
-        if (hasNonAcceleratedAnimationProperty)
-            continue;
-
-        auto* effect = animation->effect();
-        if (!effect || !is<KeyframeEffect>(effect))
-            continue;
-
-        auto* keyframeEffect = downcast<KeyframeEffect>(effect);
-        for (auto cssPropertyId : keyframeEffect->animatedProperties()) {
-            if (!CSSPropertyAnimation::animationOfPropertyIsAccelerated(cssPropertyId)) {
-                hasNonAcceleratedAnimationProperty = true;
-                break;
-            }
-        }
-    }
-
-    return !hasNonAcceleratedAnimationProperty;
-}
-
 bool DocumentTimeline::runningAnimationsForElementAreAllAccelerated(Element& element) const
 {
     return m_elementsWithRunningAcceleratedAnimations.contains(&element);
 }
 
-void DocumentTimeline::enqueueAnimationPlaybackEvent(AnimationPlaybackEvent& event)
+void DocumentTimeline::enqueueAnimationEvent(AnimationEventBase& event)
 {
     m_pendingAnimationEvents.append(event);
+    if (m_shouldScheduleAnimationResolutionForNewPendingEvents)
+        scheduleAnimationResolution();
 }
 
 Vector<std::pair<String, double>> DocumentTimeline::acceleratedAnimationsForElement(Element& element) const

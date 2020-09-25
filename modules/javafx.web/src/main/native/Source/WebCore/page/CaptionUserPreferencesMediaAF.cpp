@@ -351,7 +351,7 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    appendCSS(builder, CSSPropertyBorderRadius, makeString(FormattedNumber::fixedWidth(radius, 2), "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
+    appendCSS(builder, CSSPropertyBorderRadius, makeString(radius, "px"), behavior == kMACaptionAppearanceBehaviorUseValue);
     return builder.toString();
 }
 
@@ -587,7 +587,7 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
     String windowCornerRadius = windowRoundedCornerRadiusCSS();
     if (!windowColor.isEmpty() || !windowCornerRadius.isEmpty()) {
         captionsOverrideStyleSheet.appendLiteral(" ::");
-        captionsOverrideStyleSheet.append(VTTCue::cueBackdropShadowPseudoId());
+        captionsOverrideStyleSheet.append(TextTrackCue::cueBackdropShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
 
         if (!windowColor.isEmpty())
@@ -841,7 +841,12 @@ static bool textTrackCompare(const RefPtr<TextTrack>& a, const RefPtr<TextTrack>
     }
 
     // ... and tracks of the same type and language sort by the menu item text.
-    return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+    auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get()));
+    if (trackDisplayComparison)
+        return trackDisplayComparison < 0;
+
+    // ... and if the menu item text is the same, compare the unique IDs
+    return a->uniqueId() < b->uniqueId();
 }
 
 Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu(AudioTrackList* trackList)
@@ -857,7 +862,11 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferencesMediaAF::sortedTrackListForMenu
     }
 
     std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
-        return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+        auto trackDisplayComparison = codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get()));
+        if (trackDisplayComparison)
+            return trackDisplayComparison < 0;
+
+        return a->uniqueId() < b->uniqueId();
     });
 
     return tracksForMenu;

@@ -110,7 +110,6 @@ public class SkinMemoryLeakTest {
                 ColorPicker.class,
                 ComboBox.class,
                 DatePicker.class,
-                ListCell.class,
                 MenuBar.class,
                 MenuButton.class,
                 Pagination.class,

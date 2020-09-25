@@ -57,7 +57,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathExpressionImpl_evaluateImpl
     , jlong inResult)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(static_cast<Node*>(jlong_to_ptr(contextNode))
+    return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(*static_cast<Node*>(jlong_to_ptr(contextNode))
             , type
             , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));
 }

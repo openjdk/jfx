@@ -74,16 +74,12 @@ $dedicatedWorkerGlobalScopeConstructorsFile = CygwinPathIfNeeded($dedicatedWorke
 $serviceWorkerGlobalScopeConstructorsFile = CygwinPathIfNeeded($serviceWorkerGlobalScopeConstructorsFile);
 $workletGlobalScopeConstructorsFile = CygwinPathIfNeeded($workletGlobalScopeConstructorsFile);
 $paintWorkletGlobalScopeConstructorsFile = CygwinPathIfNeeded($paintWorkletGlobalScopeConstructorsFile);
-$supplementalMakefileDeps = CygwinPathIfNeeded($supplementalMakefileDeps);
+$supplementalMakefileDeps = CygwinPathIfNeeded($supplementalMakefileDeps) if defined($supplementalMakefileDeps);
 
-open FH, "< $idlFilesList" or die "Cannot open $idlFilesList\n";
-my @idlFilesIn = <FH>;
-chomp(@idlFilesIn);
-my @idlFiles = ();
-foreach (@idlFilesIn) {
-    push @idlFiles, CygwinPathIfNeeded($_);
-}
-close FH;
+my @idlFiles;
+open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
+@idlFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+close($fh) or die;
 
 my %interfaceNameToIdlFile;
 my %idlFileToInterfaceName;
@@ -102,6 +98,7 @@ my %idlFileHash = map { $_, 1 } @idlFiles;
 
 # Populate $idlFileToInterfaceName and $interfaceNameToIdlFile.
 foreach my $idlFile (sort keys %idlFileHash) {
+    $idlFile =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFile);
     my $interfaceName = fileparse(basename($idlFile), ".idl");
     $idlFileToInterfaceName{$fullPath} = $interfaceName;
@@ -110,6 +107,7 @@ foreach my $idlFile (sort keys %idlFileHash) {
 
 # Parse all IDL files.
 foreach my $idlFile (sort keys %idlFileHash) {
+    $idlFile =~ s/\s*$//g;
     my $fullPath = Cwd::realpath($idlFile);
     my $idlFileContents = getFileContents($fullPath);
     # Handle partial names.
@@ -228,18 +226,10 @@ if ($supplementalMakefileDeps) {
     WriteFileIfChanged($supplementalMakefileDeps, $makefileDeps);
 }
 
-my $cygwinPathAdded;
 sub CygwinPathIfNeeded
 {
     my $path = shift;
-    if ($path && $Config{osname} eq "cygwin") {
-        if (not $cygwinPathAdded) {
-            $ENV{PATH} = "$ENV{PATH}:/cygdrive/c/cygwin/bin";
-            $cygwinPathAdded = 1; 
-        }
-        chomp($path = `cygpath -u '$path'`);
-        $path =~ s/[\r\n]//;
-    }
+    return Cygwin::win_to_posix_path($path) if ($^O eq 'cygwin');
     return $path;
 }
 
@@ -283,7 +273,8 @@ sub GenerateConstructorAttributes
     foreach my $attributeName (sort keys %{$extendedAttributes}) {
       next unless ($attributeName eq "Conditional" || $attributeName eq "EnabledAtRuntime" || $attributeName eq "EnabledForWorld"
         || $attributeName eq "EnabledBySetting" || $attributeName eq "SecureContext" || $attributeName eq "PrivateIdentifier"
-        || $attributeName eq "PublicIdentifier" || $attributeName eq "DisabledByQuirk" || $attributeName eq "EnabledByQuirk" || $attributeName eq "EnabledForContext" || $attributeName eq "CustomEnabled");
+        || $attributeName eq "PublicIdentifier" || $attributeName eq "DisabledByQuirk" || $attributeName eq "EnabledByQuirk"
+        || $attributeName eq "EnabledForContext" || $attributeName eq "CustomEnabled") || $attributeName eq "ConstructorEnabledBySetting";
       my $extendedAttribute = $attributeName;
       $extendedAttribute .= "=" . $extendedAttributes->{$attributeName} unless $extendedAttributes->{$attributeName} eq "VALUE_IS_MISSING";
       push(@extendedAttributesList, $extendedAttribute);

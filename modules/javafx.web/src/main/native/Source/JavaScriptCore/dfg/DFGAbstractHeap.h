@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DOMJITHeapRange.h"
+#include "OperandsInlines.h"
 #include "VirtualRegister.h"
 #include <wtf/HashMap.h>
 #include <wtf/PrintStream.h>
@@ -56,7 +57,6 @@ namespace JSC { namespace DFG {
     macro(JSCell_indexingType) \
     macro(JSCell_structureID) \
     macro(JSCell_typeInfoFlags) \
-    macro(JSCell_typeInfoType) \
     macro(JSObject_butterfly) \
     macro(JSPropertyNameEnumerator_cachedPropertyNames) \
     macro(RegExpObject_lastIndex) \
@@ -65,17 +65,18 @@ namespace JSC { namespace DFG {
     macro(IndexedDoubleProperties) \
     macro(IndexedContiguousProperties) \
     macro(IndexedArrayStorageProperties) \
-    macro(ArrayStorageProperties) \
     macro(DirectArgumentsProperties) \
     macro(ScopeProperties) \
     macro(TypedArrayProperties) \
     macro(HeapObjectCount) /* Used to reflect the fact that some allocations reveal object identity */\
     macro(RegExpState) \
     macro(MathDotRandomState) \
+    macro(JSDateFields) \
     macro(JSMapFields) \
     macro(JSSetFields) \
     macro(JSWeakMapFields) \
     macro(JSWeakSetFields) \
+    macro(JSInternalFields) \
     macro(InternalState) \
     macro(CatchLocals) \
     macro(Absolute) \
@@ -123,9 +124,14 @@ public:
         {
         }
 
-        Payload(VirtualRegister operand)
+        Payload(Operand operand)
             : m_isTop(false)
-            , m_value(operand.offset())
+            , m_value(operand.asBits())
+        {
+        }
+
+        Payload(VirtualRegister operand)
+            : Payload(Operand(operand))
         {
         }
 
@@ -182,6 +188,7 @@ public:
         }
 
         void dump(PrintStream&) const;
+        void dumpAsOperand(PrintStream&) const;
 
     private:
         bool m_isTop;
@@ -203,6 +210,7 @@ public:
     {
         ASSERT(kind != InvalidAbstractHeap && kind != World && kind != Heap && kind != SideState);
         m_value = encode(kind, payload);
+        ASSERT(this->kind() == kind && this->payload() == payload);
     }
 
     AbstractHeap(WTF::HashTableDeletedValueType)
@@ -217,6 +225,11 @@ public:
     {
         ASSERT(kind() != World && kind() != InvalidAbstractHeap);
         return payloadImpl();
+    }
+    Operand operand() const
+    {
+        ASSERT(kind() == Stack && !payload().isTop());
+        return Operand::fromBits(payload().value());
     }
 
     AbstractHeap supertype() const
@@ -303,8 +316,9 @@ public:
     void dump(PrintStream& out) const;
 
 private:
-    static const unsigned valueShift = 15;
-    static const unsigned topShift = 14;
+    static constexpr unsigned valueShift = 15;
+    static constexpr unsigned topShift = 14;
+    static_assert((64 - valueShift) >= Operand::maxBits, "Operand should fit in Payload's encoded format");
 
     Payload payloadImpl() const
     {
@@ -328,7 +342,7 @@ private:
 struct AbstractHeapHash {
     static unsigned hash(const AbstractHeap& key) { return key.hash(); }
     static bool equal(const AbstractHeap& a, const AbstractHeap& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } } // namespace JSC::DFG

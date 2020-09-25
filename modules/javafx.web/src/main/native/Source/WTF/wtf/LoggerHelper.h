@@ -58,18 +58,18 @@ public:
 
     const void* childLogIdentifier(uint64_t identifier) const
     {
-        static const uint64_t parentMask = 0xffffffffffff0000ull;
-        static const uint64_t maskLowerWord = 0xffffull;
+        static constexpr uint64_t parentMask = 0xffffffffffff0000ull;
+        static constexpr uint64_t maskLowerWord = 0xffffull;
         return reinterpret_cast<const void*>((reinterpret_cast<uint64_t>(logIdentifier()) & parentMask) | (identifier & maskLowerWord));
     }
 
     static const void* uniqueLogIdentifier()
     {
-        static uint64_t highWord = cryptographicallyRandomNumber();
-        static uint64_t lowWord = cryptographicallyRandomNumber();
+        uint64_t highWord = cryptographicallyRandomNumber();
+        uint64_t lowWord = cryptographicallyRandomNumber();
         return reinterpret_cast<const void*>((highWord << 32) + lowWord);
     }
-#else
+#else // RELEASE_LOG_DISABLED
 
 #define LOGIDENTIFIER (WTF::nullopt)
 
@@ -88,7 +88,7 @@ public:
 #define INFO_LOG_IF(condition, ...)       ((void)0)
 #define DEBUG_LOG_IF(condition, ...)      ((void)0)
 
-#endif
+#endif // RELEASE_LOG_DISABLED
 
 };
 

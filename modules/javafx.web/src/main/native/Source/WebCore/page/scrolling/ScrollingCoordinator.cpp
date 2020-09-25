@@ -38,7 +38,6 @@
 #include "Region.h"
 #include "RenderLayerCompositor.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "ScrollAnimator.h"
 #include "Settings.h"
 #include <wtf/MainThread.h>
@@ -76,7 +75,7 @@ bool ScrollingCoordinator::coordinatesScrollingForFrameView(const FrameView& fra
     ASSERT(m_page);
 
     if (!frameView.frame().isMainFrame() && !m_page->settings().scrollingTreeIncludesFrames()
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || USE(NICOSIA)
         && !m_page->settings().asyncFrameScrollingEnabled()
 #endif
     )
@@ -495,15 +494,6 @@ TextStream& operator<<(TextStream& ts, ViewportRectStability stability)
     case ViewportRectStability::ChangingObscuredInsetsInteractively:
         ts << "changing obscured insets interactively";
         break;
-    }
-    return ts;
-}
-
-TextStream& operator<<(TextStream& ts, ScrollType scrollType)
-{
-    switch (scrollType) {
-    case ScrollType::User: ts << "user"; break;
-    case ScrollType::Programmatic: ts << "programmatic"; break;
     }
     return ts;
 }

@@ -43,9 +43,9 @@ IDBObjectStoreInfo::IDBObjectStoreInfo(uint64_t identifier, const String& name, 
 {
 }
 
-IDBIndexInfo IDBObjectStoreInfo::createNewIndex(const String& name, IDBKeyPath&& keyPath, bool unique, bool multiEntry)
+IDBIndexInfo IDBObjectStoreInfo::createNewIndex(uint64_t indexID, const String& name, IDBKeyPath&& keyPath, bool unique, bool multiEntry)
 {
-    IDBIndexInfo info(++m_maxIndexID, m_identifier, name, WTFMove(keyPath), unique, multiEntry);
+    IDBIndexInfo info(indexID, m_identifier, name, WTFMove(keyPath), unique, multiEntry);
     m_indexMap.set(info.identifier(), info);
     return info;
 }
@@ -53,9 +53,6 @@ IDBIndexInfo IDBObjectStoreInfo::createNewIndex(const String& name, IDBKeyPath&&
 void IDBObjectStoreInfo::addExistingIndex(const IDBIndexInfo& info)
 {
     ASSERT(!m_indexMap.contains(info.identifier()));
-
-    if (info.identifier() > m_maxIndexID)
-        m_maxIndexID = info.identifier();
 
     m_indexMap.set(info.identifier(), info);
 }
@@ -98,13 +95,8 @@ IDBObjectStoreInfo IDBObjectStoreInfo::isolatedCopy() const
 {
     IDBObjectStoreInfo result = { m_identifier, m_name.isolatedCopy(), WebCore::isolatedCopy(m_keyPath), m_autoIncrement };
 
-    for (auto& iterator : m_indexMap) {
+    for (auto& iterator : m_indexMap)
         result.m_indexMap.set(iterator.key, iterator.value.isolatedCopy());
-        if (iterator.key > result.m_maxIndexID)
-            result.m_maxIndexID = iterator.key;
-    }
-
-    ASSERT(result.m_maxIndexID == m_maxIndexID);
 
     return result;
 }

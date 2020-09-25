@@ -37,6 +37,7 @@
 #include "HTMLNames.h"
 #include "HitTestLocation.h"
 #include "HitTestResult.h"
+#include "ImageBuffer.h"
 #include "InlineElementBox.h"
 #include "InlineIterator.h"
 #include "InlineTextBox.h"
@@ -52,7 +53,7 @@
 #include "RenderCombineText.h"
 #include "RenderDeprecatedFlexibleBox.h"
 #include "RenderFlexibleBox.h"
-#include "RenderFragmentContainer.h"
+#include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -821,6 +822,17 @@ void RenderBlock::dirtyForLayoutFromPercentageHeightDescendants()
 
     for (auto it = descendants->begin(), end = descendants->end(); it != end; ++it) {
         auto* box = *it;
+        // Let's not dirty the height perecentage descendant when it has an absolutely positioned containing block ancestor. We should be able to dirty such boxes through the regular invalidation logic.
+        bool descendantNeedsLayout = true;
+        for (auto* ancestor = box->containingBlock(); ancestor && ancestor != this; ancestor = ancestor->containingBlock()) {
+            if (ancestor->isOutOfFlowPositioned()) {
+                descendantNeedsLayout = false;
+                break;
+            }
+        }
+        if (!descendantNeedsLayout)
+            continue;
+
         while (box != this) {
             if (box->normalChildNeedsLayout())
                 break;
@@ -1857,7 +1869,7 @@ LayoutUnit RenderBlock::textIndentOffset() const
 {
     LayoutUnit cw;
     if (style().textIndent().isPercentOrCalculated())
-        cw = containingBlock()->availableLogicalWidth();
+        cw = availableLogicalWidth();
     return minimumValueForLength(style().textIndent(), cw);
 }
 
@@ -2013,19 +2025,17 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
             case CSSBoxType::MarginBox:
                 referenceBoxRect = marginBoxRect();
                 break;
-            case CSSBoxType::BorderBox:
-                referenceBoxRect = borderBoxRect();
-                break;
             case CSSBoxType::PaddingBox:
                 referenceBoxRect = paddingBoxRect();
                 break;
+            case CSSBoxType::FillBox:
             case CSSBoxType::ContentBox:
                 referenceBoxRect = contentBoxRect();
                 break;
-            case CSSBoxType::BoxMissing:
-            case CSSBoxType::FillBox:
             case CSSBoxType::StrokeBox:
             case CSSBoxType::ViewBox:
+            case CSSBoxType::BorderBox:
+            case CSSBoxType::BoxMissing:
                 referenceBoxRect = borderBoxRect();
             }
             if (!clipPath.pathForReferenceRect(referenceBoxRect).contains(locationInContainer.point() - localOffset, clipPath.windRule()))
@@ -2514,7 +2524,7 @@ LayoutUnit RenderBlock::minLineHeightForReplacedRenderer(bool isFirstLine, Layou
         return replacedHeight;
 
     const RenderStyle& style = isFirstLine ? firstLineStyle() : this->style();
-    if (!(style.lineBoxContain() & LineBoxContainBlock))
+    if (!(style.lineBoxContain().contains(LineBoxContain::Block)))
         return 0;
 
     return std::max<LayoutUnit>(replacedHeight, lineHeight(isFirstLine, isHorizontalWritingMode() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes));
@@ -2772,21 +2782,24 @@ void RenderBlock::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accum
 
 void RenderBlock::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
+    if (!continuation()) {
+        absoluteQuadsIgnoringContinuation({ { }, size() }, quads, wasFixed);
+        return;
+    }
     // For blocks inside inlines, we include margins so that we run right up to the inline boxes
     // above and below us (thus getting merged with them to form a single irregular shape).
-    auto* continuation = this->continuation();
-    FloatRect localRect = continuation
-        ? FloatRect(0, -collapsedMarginBefore(), width(), height() + collapsedMarginBefore() + collapsedMarginAfter())
-        : FloatRect(0, 0, width(), height());
+    auto logicalRect = FloatRect { 0, -collapsedMarginBefore(), width(), height() + collapsedMarginBefore() + collapsedMarginAfter() };
+    absoluteQuadsIgnoringContinuation(logicalRect, quads, wasFixed);
+    collectAbsoluteQuadsForContinuation(quads, wasFixed);
+}
 
+void RenderBlock::absoluteQuadsIgnoringContinuation(const FloatRect& logicalRect, Vector<FloatQuad>& quads, bool* wasFixed) const
+{
     // FIXME: This is wrong for block-flows that are horizontal.
     // https://bugs.webkit.org/show_bug.cgi?id=46781
-    RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
-    if (!fragmentedFlow || !fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, this, localRect.y(), localRect.maxY()))
-        quads.append(localToAbsoluteQuad(localRect, UseTransforms, wasFixed));
-
-    if (continuation)
-        continuation->absoluteQuads(quads, wasFixed);
+    auto* fragmentedFlow = enclosingFragmentedFlow();
+    if (!fragmentedFlow || !fragmentedFlow->absoluteQuadsForBox(quads, wasFixed, this, logicalRect.y(), logicalRect.maxY()))
+        quads.append(localToAbsoluteQuad(logicalRect, UseTransforms, wasFixed));
 }
 
 LayoutRect RenderBlock::rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const
@@ -3156,7 +3169,7 @@ TextRun RenderBlock::constructTextRun(const UChar* characters, unsigned length, 
     return constructTextRun(StringView(characters, length), style, expansion);
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 void RenderBlock::checkPositionedObjectsNeedLayout()
 {
     auto* positionedDescendants = positionedObjects();
@@ -3166,8 +3179,7 @@ void RenderBlock::checkPositionedObjectsNeedLayout()
     for (auto* renderer : *positionedDescendants)
         ASSERT(!renderer->needsLayout());
 }
-
-#endif
+#endif // ASSERT_ENABLED
 
 bool RenderBlock::hasDefiniteLogicalHeight() const
 {

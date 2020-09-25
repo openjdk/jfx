@@ -25,12 +25,14 @@
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "IntersectionObserver.h"
+#include "KeyframeEffectStack.h"
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
 #include "PseudoElement.h"
 #include "RenderElement.h"
 #include "ResizeObserver.h"
 #include "ShadowRoot.h"
+#include "SpaceSplitString.h"
 #include "StylePropertyMap.h"
 
 namespace WebCore {
@@ -99,8 +101,17 @@ public:
     bool hasCSSAnimation() const { return m_hasCSSAnimation; }
     void setHasCSSAnimation(bool value) { m_hasCSSAnimation = value; }
 
+    KeyframeEffectStack* keyframeEffectStack() { return m_keyframeEffectStack.get(); }
+    void setKeyframeEffectStack(std::unique_ptr<KeyframeEffectStack>&& keyframeEffectStack) { m_keyframeEffectStack = WTFMove(keyframeEffectStack); }
+
     bool hasElementIdentifier() const { return m_hasElementIdentifier; }
     void setHasElementIdentifier(bool value) { m_hasElementIdentifier = value; }
+
+    DOMTokenList* partList() const { return m_partList.get(); }
+    void setPartList(std::unique_ptr<DOMTokenList> partList) { m_partList = WTFMove(partList); }
+
+    const SpaceSplitString& partNames() const { return m_partNames; }
+    void setPartNames(SpaceSplitString&& partNames) { m_partNames = WTFMove(partNames); }
 
 #if ENABLE(INTERSECTION_OBSERVER)
     IntersectionObserverData* intersectionObserverData() { return m_intersectionObserverData.get(); }
@@ -179,12 +190,17 @@ private:
     std::unique_ptr<ResizeObserverData> m_resizeObserverData;
 #endif
 
+    std::unique_ptr<KeyframeEffectStack> m_keyframeEffectStack;
+
     RefPtr<PseudoElement> m_beforePseudoElement;
     RefPtr<PseudoElement> m_afterPseudoElement;
 
 #if ENABLE(CSS_TYPED_OM)
     RefPtr<StylePropertyMap> m_attributeStyleMap;
 #endif
+
+    std::unique_ptr<DOMTokenList> m_partList;
+    SpaceSplitString m_partNames;
 
     void releasePseudoElement(PseudoElement*);
 };

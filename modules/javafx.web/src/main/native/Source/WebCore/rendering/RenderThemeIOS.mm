@@ -146,7 +146,7 @@ static CGFunctionRef getSharedFunctionRef(IOSGradientRef gradient, Interpolation
             linearFunctionRefs = new HashMap<IOSGradientRef, CGFunctionRef>;
         else
             function = linearFunctionRefs->get(gradient);
-    
+
         if (!function) {
             static struct CGFunctionCallbacks linearFunctionCallbacks =  { 0, interpolateLinearGradient, 0 };
             linearFunctionRefs->set(gradient, function = CGFunctionCreate(gradient, 1, nullptr, 4, nullptr, &linearFunctionCallbacks));
@@ -370,7 +370,7 @@ static void drawJoinedLines(CGContextRef context, const Vector<CGPoint>& points,
     CGContextBeginPath(context);
     CGContextSetLineCap(context, lineCap);
     CGContextMoveToPoint(context, points[0].x, points[0].y);
-    
+
     for (unsigned i = 1; i < points.size(); ++i)
         CGContextAddLineToPoint(context, points[i].x, points[i].y);
 
@@ -488,7 +488,7 @@ bool RenderThemeIOS::paintRadioDecorations(const RenderObject& box, const PaintI
         auto clip = addRoundedBorderClip(box, paintInfo.context(), rect);
         drawAxialGradient(cgContext, gradientWithName(ConcaveGradient), clip.location(), FloatPoint(clip.x(), clip.maxY()), LinearInterpolation);
 
-        // The inner circle is 6 / 14 the size of the surrounding circle, 
+        // The inner circle is 6 / 14 the size of the surrounding circle,
         // leaving 8 / 14 around it. (8 / 14) / 2 = 2 / 7.
 
         static const float InnerInverseRatio = 2 / 7.0;
@@ -574,7 +574,7 @@ static void adjustSelectListButtonStyle(RenderStyle& style, const Element& eleme
     // Enforce "line-height: normal".
     style.setLineHeight(Length(-100.0, Percent));
 }
-    
+
 class RenderThemeMeasureTextClient : public MeasureTextClient {
 public:
     RenderThemeMeasureTextClient(const FontCascade& font, const RenderStyle& style)
@@ -608,7 +608,7 @@ static void adjustInputElementButtonStyle(RenderStyle& style, const HTMLInputEle
 
     // Enforce the width and set the box-sizing to content-box to not conflict with the padding.
     FontCascade font = style.fontCascade();
-    
+
     float maximumWidth = localizedDateCache().maximumWidthForDateType(dateType, font, RenderThemeMeasureTextClient(font, style));
 
     ASSERT(maximumWidth >= 0);

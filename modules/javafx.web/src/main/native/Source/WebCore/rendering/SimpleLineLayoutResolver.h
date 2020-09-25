@@ -58,11 +58,13 @@ public:
         float expansion() const;
         ExpansionBehavior expansionBehavior() const;
         int baselinePosition() const;
+        int baselineOffset() const { return m_iterator.resolver().m_baseline; }
         StringView text() const;
         String textWithHyphen() const;
         const RenderObject& renderer() const;
         bool isEndOfLine() const;
         bool hasHyphen() const { return m_iterator.simpleRun().hasHyphen; }
+        bool isLineBreak() const { return m_iterator.simpleRun().isLineBreak; }
         const SimpleLineLayout::Run& simpleRun() const { return m_iterator.simpleRun(); }
 
         unsigned lineIndex() const;
@@ -89,15 +91,18 @@ public:
 
         Run operator*() const;
 
+        bool atBegin() const;
+
     private:
         const SimpleLineLayout::Run& simpleRun() const;
         unsigned lineIndex() const { return m_lineIndex; }
         Iterator& advance();
         Iterator& advanceLines(unsigned);
-        const RunResolver& resolver() const { return m_resolver; }
-        bool inQuirksMode() const { return m_resolver.m_inQuirksMode; }
+        const RunResolver& resolver() const { return *m_resolver; }
+        const Layout& layout() const { return *m_layout; }
 
-        const RunResolver& m_resolver;
+        RefPtr<const Layout> m_layout;
+        const RunResolver* m_resolver;
         unsigned m_runIndex;
         unsigned m_lineIndex;
     };
@@ -129,7 +134,6 @@ private:
     const float m_ascent;
     const float m_descent;
     const float m_visualOverflowOffset;
-    const bool m_inQuirksMode;
 };
 
 class LineResolver {
@@ -218,7 +222,7 @@ inline float RunResolver::Run::computeBaselinePosition() const
 {
     auto& resolver = m_iterator.resolver();
     auto offset = resolver.m_borderAndPaddingBefore + resolver.m_lineHeight * lineIndex();
-    if (!resolver.m_layout.hasLineStruts())
+    if (!m_iterator.layout().hasLineStruts())
         return offset + resolver.m_baseline;
     for (auto& strutEntry : resolver.m_layout.struts()) {
         if (strutEntry.lineBreak > lineIndex())
@@ -238,7 +242,7 @@ inline RunResolver::Iterator& RunResolver::Iterator::operator--()
 
 inline bool RunResolver::Iterator::operator==(const Iterator& other) const
 {
-    ASSERT(&m_resolver == &other.m_resolver);
+    ASSERT(m_resolver == other.m_resolver);
     return m_runIndex == other.m_runIndex;
 }
 
@@ -252,9 +256,14 @@ inline RunResolver::Run RunResolver::Iterator::operator*() const
     return Run(*this);
 }
 
+inline bool RunResolver::Iterator::atBegin() const
+{
+    return *this == resolver().begin();
+}
+
 inline const SimpleLineLayout::Run& RunResolver::Iterator::simpleRun() const
 {
-    return m_resolver.m_layout.runAt(m_runIndex);
+    return layout().runAt(m_runIndex);
 }
 
 inline RunResolver::Iterator RunResolver::begin() const
@@ -297,11 +306,6 @@ inline WTF::IteratorRange<LineResolver::Iterator> LineResolver::rangeForRect(con
 {
     auto runRange = m_runResolver.rangeForRect(rect);
     return { Iterator(runRange.begin()), Iterator(runRange.end()) };
-}
-
-inline RunResolver runResolver(const RenderBlockFlow& flow, const Layout& layout)
-{
-    return RunResolver(flow, layout);
 }
 
 inline LineResolver lineResolver(const RunResolver& runResolver)

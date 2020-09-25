@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009, 2015-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,7 +53,7 @@ class VM;
 class JSString;
 class SlotVisitor;
 
-static const unsigned maxSingleCharacterString = 0xFF;
+static constexpr unsigned maxSingleCharacterString = 0xFF;
 
 class SmallStrings {
     WTF_MAKE_NONCOPYABLE(SmallStrings);
@@ -116,6 +116,7 @@ public:
     JSString* objectStringStart() const { return m_objectStringStart; }
     JSString* nullObjectString() const { return m_nullObjectString; }
     JSString* undefinedObjectString() const { return m_undefinedObjectString; }
+    JSString* boundPrefixString() const { return m_boundPrefixString; }
 
     bool needsToBeVisited(CollectionScope scope) const
     {
@@ -125,7 +126,7 @@ public:
     }
 
 private:
-    static const unsigned singleCharacterStringCount = maxSingleCharacterString + 1;
+    static constexpr unsigned singleCharacterStringCount = maxSingleCharacterString + 1;
 
     void initialize(VM*, JSString*&, const char* value);
 
@@ -136,6 +137,7 @@ private:
     JSString* m_objectStringStart { nullptr };
     JSString* m_nullObjectString { nullptr };
     JSString* m_undefinedObjectString { nullptr };
+    JSString* m_boundPrefixString { nullptr };
     JSString* m_singleCharacterStrings[singleCharacterStringCount] { nullptr };
     bool m_needsToBeVisited { true };
     bool m_isInitialized { false };

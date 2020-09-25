@@ -49,15 +49,15 @@ class IDBRequestData {
 public:
     IDBRequestData(const IDBClient::IDBConnectionProxy&, const IDBOpenDBRequest&);
     explicit IDBRequestData(IDBClient::TransactionOperation&);
-    IDBRequestData(const IDBRequestData&);
+    WEBCORE_EXPORT IDBRequestData(const IDBRequestData&);
     IDBRequestData(IDBRequestData&&) = default;
     IDBRequestData& operator=(IDBRequestData&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBRequestData(const IDBRequestData&, IsolatedCopyTag);
-    IDBRequestData isolatedCopy() const;
+    WEBCORE_EXPORT IDBRequestData isolatedCopy() const;
 
-    uint64_t serverConnectionIdentifier() const;
+    IDBConnectionIdentifier serverConnectionIdentifier() const;
     IDBResourceIdentifier requestIdentifier() const;
     IDBResourceIdentifier transactionIdentifier() const;
     uint64_t objectStoreIdentifier() const;
@@ -81,7 +81,7 @@ public:
 private:
     static void isolatedCopy(const IDBRequestData& source, IDBRequestData& destination);
 
-    uint64_t m_serverConnectionIdentifier { 0 };
+    IDBConnectionIdentifier m_serverConnectionIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_requestIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_transactionIdentifier;
     std::unique_ptr<IDBResourceIdentifier> m_cursorIdentifier;

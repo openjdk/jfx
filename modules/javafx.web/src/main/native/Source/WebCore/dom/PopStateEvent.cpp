@@ -30,8 +30,11 @@
 #include "EventNames.h"
 #include "History.h"
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PopStateEvent);
 
 PopStateEvent::PopStateEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
@@ -63,7 +66,7 @@ Ref<PopStateEvent> PopStateEvent::createForBindings()
     return adoptRef(*new PopStateEvent);
 }
 
-RefPtr<SerializedScriptValue> PopStateEvent::trySerializeState(JSC::ExecState& executionState)
+RefPtr<SerializedScriptValue> PopStateEvent::trySerializeState(JSC::JSGlobalObject& executionState)
 {
     ASSERT(m_state);
 

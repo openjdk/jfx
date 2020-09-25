@@ -112,6 +112,8 @@
                _JSValueToObject
                _JSValueToStringCopy
                _JSValueUnprotect
+               __ZN3JSC6Config23enableRestrictedOptionsEv
+               __ZN3JSC6Config25disableFreezingForTestingEv
                __ZN3JSC16slowValidateCellEPNS_6JSCellE
                __ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue
@@ -1754,6 +1756,7 @@
                _Java_com_sun_webkit_WebPage_twkStop
                _Java_com_sun_webkit_WebPage_twkStopAll
                _Java_com_sun_webkit_WebPage_twkUpdateContent
+               _Java_com_sun_webkit_WebPage_twkUpdateRendering
                _Java_com_sun_webkit_WebPage_twkWorkerThreadCount
                _Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
                _Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer

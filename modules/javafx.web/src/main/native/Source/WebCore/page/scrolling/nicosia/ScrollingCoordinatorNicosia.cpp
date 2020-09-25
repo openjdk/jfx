@@ -58,7 +58,9 @@ void ScrollingCoordinatorNicosia::pageDestroyed()
 
     m_scrollingStateTreeCommitterTimer.stop();
 
-    releaseScrollingTree();
+    // Invalidating the scrolling tree will break the reference cycle between the ScrollingCoordinator and ScrollingTree objects.
+    RefPtr<ThreadedScrollingTree> scrollingTree = static_pointer_cast<ThreadedScrollingTree>(releaseScrollingTree());
+    ScrollingThread::dispatch([scrollingTree] { scrollingTree->invalidate(); });
 }
 
 void ScrollingCoordinatorNicosia::commitTreeStateIfNeeded()
@@ -67,9 +69,16 @@ void ScrollingCoordinatorNicosia::commitTreeStateIfNeeded()
     m_scrollingStateTreeCommitterTimer.stop();
 }
 
-ScrollingEventResult ScrollingCoordinatorNicosia::handleWheelEvent(FrameView&, const PlatformWheelEvent&)
+ScrollingEventResult ScrollingCoordinatorNicosia::handleWheelEvent(FrameView&, const PlatformWheelEvent& wheelEvent)
 {
-    return ScrollingEventResult::DidNotHandleEvent;
+    ASSERT(isMainThread());
+    ASSERT(m_page);
+    ASSERT(scrollingTree());
+
+    ScrollingThread::dispatch([threadedScrollingTree = makeRef(downcast<ThreadedScrollingTree>(*scrollingTree())), wheelEvent] {
+        threadedScrollingTree->handleWheelEvent(wheelEvent);
+    });
+    return ScrollingEventResult::DidHandleEvent;
 }
 
 void ScrollingCoordinatorNicosia::scheduleTreeStateCommit()
@@ -80,10 +89,13 @@ void ScrollingCoordinatorNicosia::scheduleTreeStateCommit()
 
 void ScrollingCoordinatorNicosia::commitTreeState()
 {
+    willCommitTree();
+
     if (!scrollingStateTree()->hasChangedProperties())
         return;
 
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
+    threadedScrollingTree->incrementPendingCommitCount();
 
     auto treeState = scrollingStateTree()->commit(LayerRepresentation::PlatformLayerRepresentation);
     ScrollingThread::dispatch([threadedScrollingTree, treeState = WTFMove(treeState)]() mutable {

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #import "config.h"
@@ -33,7 +33,7 @@ void ReportBlockedObjCException(NSException *exception)
     // FIXME: This is probably going to be confusing when JavaScriptCore is used standalone. JSC
     // will call this code as part of default locale detection.
     // https://bugs.webkit.org/show_bug.cgi?id=157804
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
     NSLog(@"*** WebKit discarding exception: <%@> %@", [exception name], [exception reason]);
 #else
     ASSERT_WITH_MESSAGE(0, "Uncaught exception - %@", exception);

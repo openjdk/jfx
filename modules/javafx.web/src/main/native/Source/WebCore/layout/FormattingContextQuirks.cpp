@@ -28,17 +28,17 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "DisplayBox.h"
 #include "LayoutBox.h"
-#include "LayoutContainer.h"
-#include "LayoutState.h"
 
 namespace WebCore {
 namespace Layout {
 
-LayoutUnit FormattingContext::Quirks::heightValueOfNearestContainingBlockWithFixedHeight(const LayoutState& layoutState, const Box& layoutBox)
+LayoutUnit FormattingContext::Quirks::heightValueOfNearestContainingBlockWithFixedHeight(const Box& layoutBox)
 {
     // In quirks mode, we go and travers the containing block chain to find a block level box with fixed height value, even if it means leaving
     // the current formatting context. FIXME: surely we need to do some tricks here when block direction support is added.
+    auto& formattingContext = this->formattingContext();
     auto* containingBlock = layoutBox.containingBlock();
     LayoutUnit bodyAndDocumentVerticalMarginPaddingAndBorder;
     while (containingBlock) {
@@ -49,19 +49,20 @@ LayoutUnit FormattingContext::Quirks::heightValueOfNearestContainingBlockWithFix
         // If the only fixed value box we find is the ICB, then ignore the body and the document (vertical) margin, padding and border. So much quirkiness.
         // -and it's totally insane because now we freely travel across formatting context boundaries and computed margins are nonexistent.
         if (containingBlock->isBodyBox() || containingBlock->isDocumentBox()) {
-            auto& displayBox = layoutState.displayBoxForLayoutBox(*containingBlock);
+            auto& boxGeometry = formattingContext.geometryForBox(*containingBlock, FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk);
 
-            auto usedValues = UsedHorizontalValues { layoutState.displayBoxForLayoutBox(*containingBlock->containingBlock()).contentBoxWidth() };
-            auto verticalMargin = Geometry::computedVerticalMargin(*containingBlock, usedValues);
-            auto verticalPadding = displayBox.paddingTop().valueOr(0) + displayBox.paddingBottom().valueOr(0);
-            auto verticalBorder = displayBox.borderTop() + displayBox.borderBottom();
+            auto& containingBlockDisplayBox = formattingContext.geometryForBox(*containingBlock->containingBlock(), FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk);
+            auto horizontalConstraints = Geometry::horizontalConstraintsForInFlow(containingBlockDisplayBox);
+            auto verticalMargin = formattingContext.geometry().computedVerticalMargin(*containingBlock, horizontalConstraints);
+            auto verticalPadding = boxGeometry.paddingTop().valueOr(0) + boxGeometry.paddingBottom().valueOr(0);
+            auto verticalBorder = boxGeometry.borderTop() + boxGeometry.borderBottom();
             bodyAndDocumentVerticalMarginPaddingAndBorder += verticalMargin.before.valueOr(0) + verticalMargin.after.valueOr(0) + verticalPadding + verticalBorder;
         }
 
         containingBlock = containingBlock->containingBlock();
     }
     // Initial containing block has to have a height.
-    return layoutState.displayBoxForLayoutBox(layoutBox.initialContainingBlock()).contentBox().height() - bodyAndDocumentVerticalMarginPaddingAndBorder;
+    return formattingContext.geometryForBox(layoutBox.initialContainingBlock(), FormattingContext::EscapeReason::FindFixedHeightAncestorQuirk).contentBox().height() - bodyAndDocumentVerticalMarginPaddingAndBorder;
 }
 
 }

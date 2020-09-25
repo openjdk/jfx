@@ -64,11 +64,6 @@ void JSRopeString::RopeBuilder<RecordOverflow>::expand()
     m_strings.append(string);
 }
 
-void JSString::destroy(JSCell* cell)
-{
-    static_cast<JSString*>(cell)->JSString::~JSString();
-}
-
 void JSString::dumpToStream(const JSCell* cell, PrintStream& out)
 {
     VM& vm = cell->vm();
@@ -91,13 +86,13 @@ void JSString::dumpToStream(const JSCell* cell, PrintStream& out)
     out.printf(">");
 }
 
-bool JSString::equalSlowCase(ExecState* exec, JSString* other) const
+bool JSString::equalSlowCase(JSGlobalObject* globalObject, JSString* other) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    String str1 = value(exec);
+    String str1 = value(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
-    String str2 = other->value(exec);
+    String str2 = other->value(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
     return WTF::equal(*str1.impl(), *str2.impl());
 }
@@ -149,7 +144,7 @@ void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
         visitor.reportExtraMemoryVisited(impl->costDuringGC());
 }
 
-static const unsigned maxLengthForOnStackResolve = 2048;
+static constexpr unsigned maxLengthForOnStackResolve = 2048;
 
 void JSRopeString::resolveRopeInternal8(LChar* buffer) const
 {
@@ -158,26 +153,7 @@ void JSRopeString::resolveRopeInternal8(LChar* buffer) const
         return;
     }
 
-    resolveRopeInternal8NoSubstring(buffer);
-}
-
-void JSRopeString::resolveRopeInternal8NoSubstring(LChar* buffer) const
-{
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
-        if (fiber(i)->isRope()) {
-            resolveRopeSlowCase8(buffer);
-            return;
-        }
-    }
-
-    LChar* position = buffer;
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
-        const StringImpl& fiberString = *fiber(i)->valueInternal().impl();
-        unsigned length = fiberString.length();
-        StringImpl::copyCharacters(position, fiberString.characters8(), length);
-        position += length;
-    }
-    ASSERT((buffer + length()) == position);
+    resolveRopeInternalNoSubstring(buffer);
 }
 
 void JSRopeString::resolveRopeInternal16(UChar* buffer) const
@@ -188,10 +164,11 @@ void JSRopeString::resolveRopeInternal16(UChar* buffer) const
         return;
     }
 
-    resolveRopeInternal16NoSubstring(buffer);
+    resolveRopeInternalNoSubstring(buffer);
 }
 
-void JSRopeString::resolveRopeInternal16NoSubstring(UChar* buffer) const
+template<typename CharacterType>
+void JSRopeString::resolveRopeInternalNoSubstring(CharacterType* buffer) const
 {
     for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
         if (fiber(i)->isRope()) {
@@ -200,7 +177,7 @@ void JSRopeString::resolveRopeInternal16NoSubstring(UChar* buffer) const
         }
     }
 
-    UChar* position = buffer;
+    CharacterType* position = buffer;
     for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i) {
         const StringImpl& fiberString = *fiber(i)->valueInternal().impl();
         unsigned length = fiberString.length();
@@ -213,14 +190,14 @@ void JSRopeString::resolveRopeInternal16NoSubstring(UChar* buffer) const
     ASSERT((buffer + length()) == position);
 }
 
-AtomString JSRopeString::resolveRopeToAtomString(ExecState* exec) const
+AtomString JSRopeString::resolveRopeToAtomString(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (length() > maxLengthForOnStackResolve) {
         scope.release();
-        return resolveRopeWithFunction(exec, [&] (Ref<StringImpl>&& newImpl) {
+        return resolveRopeWithFunction(globalObject, [&] (Ref<StringImpl>&& newImpl) {
             return AtomStringImpl::add(newImpl.ptr());
         });
     }
@@ -253,14 +230,14 @@ inline void JSRopeString::convertToNonRope(String&& string) const
     ASSERT(!JSString::isRope());
 }
 
-RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(ExecState* exec) const
+RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (length() > maxLengthForOnStackResolve) {
         RefPtr<AtomStringImpl> existingAtomString;
-        resolveRopeWithFunction(exec, [&] (Ref<StringImpl>&& newImpl) -> Ref<StringImpl> {
+        resolveRopeWithFunction(globalObject, [&] (Ref<StringImpl>&& newImpl) -> Ref<StringImpl> {
             existingAtomString = AtomStringImpl::lookUp(newImpl.ptr());
             if (existingAtomString)
                 return makeRef(*existingAtomString);
@@ -290,7 +267,7 @@ RefPtr<AtomStringImpl> JSRopeString::resolveRopeToExistingAtomString(ExecState* 
 }
 
 template<typename Function>
-const String& JSRopeString::resolveRopeWithFunction(ExecState* nullOrExecForOOM, Function&& function) const
+const String& JSRopeString::resolveRopeWithFunction(JSGlobalObject* nullOrGlobalObjectForOOM, Function&& function) const
 {
     ASSERT(isRope());
 
@@ -306,12 +283,12 @@ const String& JSRopeString::resolveRopeWithFunction(ExecState* nullOrExecForOOM,
         LChar* buffer;
         auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer);
         if (!newImpl) {
-            outOfMemory(nullOrExecForOOM);
+            outOfMemory(nullOrGlobalObjectForOOM);
             return nullString();
         }
         vm.heap.reportExtraMemoryAllocated(newImpl->cost());
 
-        resolveRopeInternal8NoSubstring(buffer);
+        resolveRopeInternalNoSubstring(buffer);
         convertToNonRope(function(newImpl.releaseNonNull()));
         return valueInternal();
     }
@@ -319,19 +296,19 @@ const String& JSRopeString::resolveRopeWithFunction(ExecState* nullOrExecForOOM,
     UChar* buffer;
     auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer);
     if (!newImpl) {
-        outOfMemory(nullOrExecForOOM);
+        outOfMemory(nullOrGlobalObjectForOOM);
         return nullString();
     }
     vm.heap.reportExtraMemoryAllocated(newImpl->cost());
 
-    resolveRopeInternal16NoSubstring(buffer);
+    resolveRopeInternalNoSubstring(buffer);
     convertToNonRope(function(newImpl.releaseNonNull()));
     return valueInternal();
 }
 
-const String& JSRopeString::resolveRope(ExecState* nullOrExecForOOM) const
+const String& JSRopeString::resolveRope(JSGlobalObject* nullOrGlobalObjectForOOM) const
 {
-    return resolveRopeWithFunction(nullOrExecForOOM, [] (Ref<StringImpl>&& newImpl) {
+    return resolveRopeWithFunction(nullOrGlobalObjectForOOM, [] (Ref<StringImpl>&& newImpl) {
         return WTFMove(newImpl);
     });
 }
@@ -346,45 +323,10 @@ const String& JSRopeString::resolveRope(ExecState* nullOrExecForOOM) const
 // Vector before performing any concatenation, but by working backwards we likely
 // only fill the queue with the number of substrings at any given level in a
 // rope-of-ropes.)
-void JSRopeString::resolveRopeSlowCase8(LChar* buffer) const
+template<typename CharacterType>
+void JSRopeString::resolveRopeSlowCase(CharacterType* buffer) const
 {
-    LChar* position = buffer + length(); // We will be working backwards over the rope.
-    Vector<JSString*, 32, UnsafeVectorOverflow> workQueue; // Putting strings into a Vector is only OK because there are no GC points in this method.
-
-    for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i)
-        workQueue.append(fiber(i));
-
-    while (!workQueue.isEmpty()) {
-        JSString* currentFiber = workQueue.last();
-        workQueue.removeLast();
-
-        const LChar* characters;
-
-        if (currentFiber->isRope()) {
-            JSRopeString* currentFiberAsRope = static_cast<JSRopeString*>(currentFiber);
-            if (!currentFiberAsRope->isSubstring()) {
-                for (size_t i = 0; i < s_maxInternalRopeLength && currentFiberAsRope->fiber(i); ++i)
-                    workQueue.append(currentFiberAsRope->fiber(i));
-                continue;
-            }
-            ASSERT(!currentFiberAsRope->substringBase()->isRope());
-            characters =
-                currentFiberAsRope->substringBase()->valueInternal().characters8() +
-                currentFiberAsRope->substringOffset();
-        } else
-            characters = currentFiber->valueInternal().characters8();
-
-        unsigned length = currentFiber->length();
-        position -= length;
-        StringImpl::copyCharacters(position, characters, length);
-    }
-
-    ASSERT(buffer == position);
-}
-
-void JSRopeString::resolveRopeSlowCase(UChar* buffer) const
-{
-    UChar* position = buffer + length(); // We will be working backwards over the rope.
+    CharacterType* position = buffer + length(); // We will be working backwards over the rope.
     Vector<JSString*, 32, UnsafeVectorOverflow> workQueue; // These strings are kept alive by the parent rope, so using a Vector is OK.
 
     for (size_t i = 0; i < s_maxInternalRopeLength && fiber(i); ++i)
@@ -426,37 +368,37 @@ void JSRopeString::resolveRopeSlowCase(UChar* buffer) const
     ASSERT(buffer == position);
 }
 
-void JSRopeString::outOfMemory(ExecState* nullOrExecForOOM) const
+void JSRopeString::outOfMemory(JSGlobalObject* nullOrGlobalObjectForOOM) const
 {
     ASSERT(isRope());
-    if (nullOrExecForOOM) {
-        VM& vm = nullOrExecForOOM->vm();
+    if (nullOrGlobalObjectForOOM) {
+        VM& vm = nullOrGlobalObjectForOOM->vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
-        throwOutOfMemoryError(nullOrExecForOOM, scope);
+        throwOutOfMemoryError(nullOrGlobalObjectForOOM, scope);
     }
 }
 
-JSValue JSString::toPrimitive(ExecState*, PreferredPrimitiveType) const
+JSValue JSString::toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const
 {
     return const_cast<JSString*>(this);
 }
 
-bool JSString::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
+bool JSString::getPrimitiveNumber(JSGlobalObject* globalObject, double& number, JSValue& result) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    StringView view = unsafeView(exec);
+    StringView view = unsafeView(globalObject);
     RETURN_IF_EXCEPTION(scope, false);
     result = this;
     number = jsToNumber(view);
     return false;
 }
 
-double JSString::toNumber(ExecState* exec) const
+double JSString::toNumber(JSGlobalObject* globalObject) const
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    StringView view = unsafeView(exec);
+    StringView view = unsafeView(globalObject);
     RETURN_IF_EXCEPTION(scope, 0);
     return jsToNumber(view);
 }
@@ -468,21 +410,21 @@ inline StringObject* StringObject::create(VM& vm, JSGlobalObject* globalObject, 
     return object;
 }
 
-JSObject* JSString::toObject(ExecState* exec, JSGlobalObject* globalObject) const
+JSObject* JSString::toObject(JSGlobalObject* globalObject) const
 {
-    return StringObject::create(exec->vm(), globalObject, const_cast<JSString*>(this));
+    return StringObject::create(globalObject->vm(), globalObject, const_cast<JSString*>(this));
 }
 
-JSValue JSString::toThis(JSCell* cell, ExecState* exec, ECMAMode ecmaMode)
+JSValue JSString::toThis(JSCell* cell, JSGlobalObject* globalObject, ECMAMode ecmaMode)
 {
     if (ecmaMode == StrictMode)
         return cell;
-    return StringObject::create(exec->vm(), exec->lexicalGlobalObject(), asString(cell));
+    return StringObject::create(globalObject->vm(), globalObject, asString(cell));
 }
 
-bool JSString::getStringPropertyDescriptor(ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
+bool JSString::getStringPropertyDescriptor(JSGlobalObject* globalObject, PropertyName propertyName, PropertyDescriptor& descriptor)
 {
-    VM& vm = exec->vm();
+    VM& vm = globalObject->vm();
     if (propertyName == vm.propertyNames->length) {
         descriptor.setDescriptor(jsNumber(length()), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
         return true;
@@ -490,7 +432,7 @@ bool JSString::getStringPropertyDescriptor(ExecState* exec, PropertyName propert
 
     Optional<uint32_t> index = parseIndex(propertyName);
     if (index && index.value() < length()) {
-        descriptor.setDescriptor(getIndex(exec, index.value()), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+        descriptor.setDescriptor(getIndex(globalObject, index.value()), PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
         return true;
     }
 

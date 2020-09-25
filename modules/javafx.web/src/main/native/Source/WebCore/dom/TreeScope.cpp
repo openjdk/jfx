@@ -44,8 +44,8 @@
 #include "Page.h"
 #include "PointerLockController.h"
 #include "PseudoElement.h"
+#include "RadioButtonGroups.h"
 #include "RenderView.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include <wtf/text/CString.h>
@@ -53,7 +53,7 @@
 namespace WebCore {
 
 struct SameSizeAsTreeScope {
-    void* pointers[9];
+    void* pointers[10];
 };
 
 COMPILE_ASSERT(sizeof(TreeScope) == sizeof(SameSizeAsTreeScope), treescope_should_stay_small);
@@ -112,8 +112,8 @@ Element* TreeScope::getElementById(const String& elementId) const
     if (!m_elementsById)
         return nullptr;
 
-    if (RefPtr<AtomStringImpl> atomicElementId = AtomStringImpl::lookUp(elementId.impl()))
-        return m_elementsById->getElementById(*atomicElementId, *this);
+    if (auto atomElementId = AtomStringImpl::lookUp(elementId.impl()))
+        return m_elementsById->getElementById(*atomElementId, *this);
 
     return nullptr;
 }
@@ -123,8 +123,8 @@ Element* TreeScope::getElementById(StringView elementId) const
     if (!m_elementsById)
         return nullptr;
 
-    if (auto atomicElementId = elementId.toExistingAtomString())
-        return m_elementsById->getElementById(*atomicElementId, *this);
+    if (auto atomElementId = elementId.toExistingAtomString())
+        return m_elementsById->getElementById(*atomElementId, *this);
 
     return nullptr;
 }
@@ -537,6 +537,13 @@ TreeScope* commonTreeScope(Node* nodeA, Node* nodeB)
         return nullptr;
 
     return treeScopesA[indexA] == treeScopesB[indexB] ? treeScopesA[indexA] : nullptr;
+}
+
+RadioButtonGroups& TreeScope::radioButtonGroups()
+{
+    if (!m_radioButtonGroups)
+        m_radioButtonGroups = makeUnique<RadioButtonGroups>();
+    return *m_radioButtonGroups;
 }
 
 } // namespace WebCore

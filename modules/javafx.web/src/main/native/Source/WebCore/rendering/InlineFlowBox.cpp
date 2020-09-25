@@ -96,7 +96,7 @@ void InlineFlowBox::addToLine(InlineBox* child)
 {
     ASSERT(!child->parent());
     ASSERT(!child->nextOnLine());
-    ASSERT(!child->prevOnLine());
+    ASSERT(!child->previousOnLine());
     checkConsistency();
 
     child->setParent(this);
@@ -105,7 +105,7 @@ void InlineFlowBox::addToLine(InlineBox* child)
         m_lastChild = child;
     } else {
         m_lastChild->setNextOnLine(child);
-        child->setPrevOnLine(m_lastChild);
+        child->setPreviousOnLine(m_lastChild);
         m_lastChild = child;
     }
     child->setIsFirstLine(isFirstLine());
@@ -195,11 +195,11 @@ void InlineFlowBox::removeChild(InlineBox* child)
     if (child == m_firstChild)
         m_firstChild = child->nextOnLine();
     if (child == m_lastChild)
-        m_lastChild = child->prevOnLine();
+        m_lastChild = child->previousOnLine();
     if (child->nextOnLine())
-        child->nextOnLine()->setPrevOnLine(child->prevOnLine());
-    if (child->prevOnLine())
-        child->prevOnLine()->setNextOnLine(child->nextOnLine());
+        child->nextOnLine()->setPreviousOnLine(child->previousOnLine());
+    if (child->previousOnLine())
+        child->previousOnLine()->setNextOnLine(child->nextOnLine());
 
     child->setParent(nullptr);
 
@@ -392,7 +392,7 @@ float InlineFlowBox::placeBoxRangeInInlineDirection(InlineBox* firstChild, Inlin
             if (renderText.text().length()) {
                 if (needsWordSpacing && isSpaceOrNewline(renderText.characterAt(textBox.start())))
                     logicalLeft += textBox.lineStyle().fontCascade().wordSpacing();
-                needsWordSpacing = !isSpaceOrNewline(renderText.characterAt(textBox.end()));
+                needsWordSpacing = !isSpaceOrNewline(renderText.characterAt(textBox.end() - 1));
             }
             textBox.setLogicalLeft(logicalLeft);
             if (knownToHaveNoOverflow())
@@ -1068,7 +1068,7 @@ bool InlineFlowBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
     // Check children first.
     // We need to account for culled inline parents of the hit-tested nodes, so that they may also get included in area-based hit-tests.
     RenderElement* culledParent = nullptr;
-    for (InlineBox* child = lastChild(); child; child = child->prevOnLine()) {
+    for (InlineBox* child = lastChild(); child; child = child->previousOnLine()) {
         if (is<RenderText>(child->renderer()) || !child->boxModelObject()->hasSelfPaintingLayer()) {
             RenderElement* newParent = nullptr;
             // Culled parents are only relevant for area-based hit-tests, so ignore it in point-based ones.
@@ -1367,7 +1367,7 @@ void InlineFlowBox::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&
     LayoutRect paintRect = LayoutRect(adjustedPaintoffset, frameRect.size());
     // Shadow comes first and is behind the background and border.
     if (!renderer().boxShadowShouldBeAppliedToBackground(adjustedPaintoffset, BackgroundBleedNone, this))
-        paintBoxShadow(paintInfo, lineStyle, Normal, paintRect);
+        paintBoxShadow(paintInfo, lineStyle, ShadowStyle::Normal, paintRect);
 
     auto color = lineStyle.visitedDependentColor(CSSPropertyBackgroundColor);
     auto compositeOp = renderer().document().compositeOperatorForBackgroundColor(color, renderer());
@@ -1375,7 +1375,7 @@ void InlineFlowBox::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&
     color = lineStyle.colorByApplyingColorFilter(color);
 
     paintFillLayers(paintInfo, color, lineStyle.backgroundLayers(), paintRect, compositeOp);
-    paintBoxShadow(paintInfo, lineStyle, Inset, paintRect);
+    paintBoxShadow(paintInfo, lineStyle, ShadowStyle::Inset, paintRect);
 
     // :first-line cannot be used to put borders on a line. Always paint borders with our
     // non-first-line style.
@@ -1438,16 +1438,16 @@ void InlineFlowBox::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     bool pushTransparencyLayer = false;
     bool compositedMask = renderer().hasLayer() && renderer().layer()->hasCompositedMask();
     bool flattenCompositingLayers = renderer().view().frameView().paintBehavior().contains(PaintBehavior::FlattenCompositingLayers);
-    CompositeOperator compositeOp = CompositeSourceOver;
+    CompositeOperator compositeOp = CompositeOperator::SourceOver;
     if (!compositedMask || flattenCompositingLayers) {
         if ((maskBoxImage && renderer().style().maskLayers().hasImage()) || renderer().style().maskLayers().next())
             pushTransparencyLayer = true;
 
-        compositeOp = CompositeDestinationIn;
+        compositeOp = CompositeOperator::DestinationIn;
         if (pushTransparencyLayer) {
-            paintInfo.context().setCompositeOperation(CompositeDestinationIn);
+            paintInfo.context().setCompositeOperation(CompositeOperator::DestinationIn);
             paintInfo.context().beginTransparencyLayer(1.0f);
-            compositeOp = CompositeSourceOver;
+            compositeOp = CompositeOperator::SourceOver;
         }
     }
 
@@ -1489,19 +1489,19 @@ void InlineFlowBox::paintMask(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         paintInfo.context().endTransparencyLayer();
 }
 
-InlineBox* InlineFlowBox::firstLeafChild() const
+InlineBox* InlineFlowBox::firstLeafDescendant() const
 {
     InlineBox* leaf = nullptr;
     for (InlineBox* child = firstChild(); child && !leaf; child = child->nextOnLine())
-        leaf = child->isLeaf() ? child : downcast<InlineFlowBox>(*child).firstLeafChild();
+        leaf = child->isLeaf() ? child : downcast<InlineFlowBox>(*child).firstLeafDescendant();
     return leaf;
 }
 
-InlineBox* InlineFlowBox::lastLeafChild() const
+InlineBox* InlineFlowBox::lastLeafDescendant() const
 {
     InlineBox* leaf = nullptr;
-    for (InlineBox* child = lastChild(); child && !leaf; child = child->prevOnLine())
-        leaf = child->isLeaf() ? child : downcast<InlineFlowBox>(*child).lastLeafChild();
+    for (InlineBox* child = lastChild(); child && !leaf; child = child->previousOnLine())
+        leaf = child->isLeaf() ? child : downcast<InlineFlowBox>(*child).lastLeafDescendant();
     return leaf;
 }
 
@@ -1543,7 +1543,7 @@ float InlineFlowBox::placeEllipsisBox(bool ltr, float blockLeftEdge, float block
         }
         else {
             visibleRightEdge -= box->logicalWidth();
-            box = box->prevOnLine();
+            box = box->previousOnLine();
         }
     }
     return result;
@@ -1653,7 +1653,7 @@ LayoutUnit InlineFlowBox::computeUnderAnnotationAdjustment(LayoutUnit allowedPos
 
 void InlineFlowBox::collectLeafBoxesInLogicalOrder(Vector<InlineBox*>& leafBoxesInLogicalOrder, CustomInlineBoxRangeReverse customReverseImplementation, void* userData) const
 {
-    InlineBox* leaf = firstLeafChild();
+    InlineBox* leaf = firstLeafDescendant();
 
     // FIXME: The reordering code is a copy of parts from BidiResolver::createBidiRunsForLine, operating directly on InlineBoxes, instead of BidiRuns.
     // Investigate on how this code could possibly be shared.
@@ -1661,7 +1661,7 @@ void InlineFlowBox::collectLeafBoxesInLogicalOrder(Vector<InlineBox*>& leafBoxes
     unsigned char maxLevel = 0;
 
     // First find highest and lowest levels, and initialize leafBoxesInLogicalOrder with the leaf boxes in visual order.
-    for (; leaf; leaf = leaf->nextLeafChild()) {
+    for (; leaf; leaf = leaf->nextLeafOnLine()) {
         minLevel = std::min(minLevel, leaf->bidiLevel());
         maxLevel = std::max(maxLevel, leaf->bidiLevel());
         leafBoxesInLogicalOrder.append(leaf);
@@ -1744,7 +1744,7 @@ void InlineFlowBox::checkConsistency() const
     const InlineBox* previousChild = nullptr;
     for (const InlineBox* child = firstChild(); child; child = child->nextOnLine()) {
         ASSERT(child->parent() == this);
-        ASSERT(child->prevOnLine() == previousChild);
+        ASSERT(child->previousOnLine() == previousChild);
         previousChild = child;
     }
     ASSERT(previousChild == m_lastChild);

@@ -27,7 +27,6 @@
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
 
-#include "AXIsolatedTreeNode.h"
 #include "PageIdentifier.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -37,7 +36,7 @@ namespace WebCore {
 
 class Page;
 
-class AXIsolatedTree : public ThreadSafeRefCounted<AXIsolatedTree>, public CanMakeWeakPtr<AXIsolatedTree> {
+class AXIsolatedTree : public ThreadSafeRefCounted<AXIsolatedTree> {
     WTF_MAKE_NONCOPYABLE(AXIsolatedTree); WTF_MAKE_FAST_ALLOCATED;
 
 public:
@@ -45,26 +44,28 @@ public:
     virtual ~AXIsolatedTree();
 
     static Ref<AXIsolatedTree> createTreeForPageID(PageIdentifier);
-    WEBCORE_EXPORT static Ref<AXIsolatedTree> initializePageTreeForID(PageIdentifier, AXObjectCache&);
+    static void removeTreeForPageID(PageIdentifier);
+
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForPageID(PageIdentifier);
     WEBCORE_EXPORT static RefPtr<AXIsolatedTree> treeForID(AXIsolatedTreeID);
+    AXObjectCache* axObjectCache() const { return m_axObjectCache; }
+    void setAXObjectCache(AXObjectCache* axObjectCache) { m_axObjectCache = axObjectCache; }
 
-    WEBCORE_EXPORT RefPtr<AXIsolatedTreeNode> rootNode();
-    WEBCORE_EXPORT RefPtr<AXIsolatedTreeNode> focusedUIElement();
-    RefPtr<AXIsolatedTreeNode> nodeForID(AXID) const;
-    static RefPtr<AXIsolatedTreeNode> nodeInTreeForID(AXIsolatedTreeID, AXID);
+    WEBCORE_EXPORT RefPtr<AXIsolatedObject> rootNode();
+    WEBCORE_EXPORT RefPtr<AXIsolatedObject> focusedUIElement();
+    RefPtr<AXIsolatedObject> nodeForID(AXID) const;
+    static RefPtr<AXIsolatedObject> nodeInTreeForID(AXIsolatedTreeID, AXID);
 
     // Call on main thread
-    void appendNodeChanges(Vector<Ref<AXIsolatedTreeNode>>&);
+    void appendNodeChanges(Vector<Ref<AXIsolatedObject>>&);
     void removeNode(AXID);
 
-    void setRootNodeID(AXID);
+    void setRootNode(Ref<AXIsolatedObject>&);
     void setFocusedNodeID(AXID);
 
     // Call on AX thread
-    WEBCORE_EXPORT void applyPendingChanges();
+    void applyPendingChanges();
 
-    WEBCORE_EXPORT void setInitialRequestInProgress(bool);
     AXIsolatedTreeID treeIdentifier() const { return m_treeID; }
 
 private:
@@ -73,20 +74,20 @@ private:
     static HashMap<AXIsolatedTreeID, Ref<AXIsolatedTree>>& treeIDCache();
     static HashMap<PageIdentifier, Ref<AXIsolatedTree>>& treePageCache();
 
+    AXObjectCache* m_axObjectCache { nullptr };
+
     // Only access on AX thread requesting data.
-    HashMap<AXID, Ref<AXIsolatedTreeNode>> m_readerThreadNodeMap;
+    HashMap<AXID, Ref<AXIsolatedObject>> m_readerThreadNodeMap;
 
     // Written to by main thread under lock, accessed and applied by AX thread.
-    Vector<Ref<AXIsolatedTreeNode>> m_pendingAppends;
+    Vector<Ref<AXIsolatedObject>> m_pendingAppends;
     Vector<AXID> m_pendingRemovals;
     AXID m_pendingFocusedNodeID;
-    AXID m_pendingRootNodeID;
     Lock m_changeLogLock;
 
     AXIsolatedTreeID m_treeID;
     AXID m_rootNodeID { InvalidAXID };
     AXID m_focusedNodeID { InvalidAXID };
-    bool m_initialRequestInProgress;
 };
 
 } // namespace WebCore

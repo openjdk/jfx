@@ -69,7 +69,7 @@ public:
 
     WEBCORE_EXPORT RefPtr<IDBKey> maybeCreateIDBKey() const;
 
-    IDBKeyData isolatedCopy() const;
+    WEBCORE_EXPORT IDBKeyData isolatedCopy() const;
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
     WEBCORE_EXPORT static bool decode(KeyedDecoder&, IDBKeyData&);
@@ -186,6 +186,8 @@ public:
         ASSERT(m_type == IndexedDB::KeyType::Array);
         return WTF::get<Vector<IDBKeyData>>(m_value);
     }
+
+    size_t size() const;
 
 private:
     static void isolatedCopy(const IDBKeyData& source, IDBKeyData& destination);

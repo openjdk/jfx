@@ -39,6 +39,12 @@ import javafx.scene.Node;
 public class Popup extends PopupWindow {
 
     /**
+     * Creates a {@code Popup}.
+     */
+    public Popup() {
+    }
+
+    /**
      * The ObservableList of {@code Node}s to be rendered on this
      * {@code Popup}. The content forms the complete visual representation of
      * the Popup. Popups have no intrinsic visuals.

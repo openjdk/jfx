@@ -57,6 +57,13 @@ import javafx.collections.ObservableSet;
  */
 public abstract class SetProperty<E> extends ReadOnlySetProperty<E> implements
         Property<ObservableSet<E>>, WritableSetValue<E> {
+
+    /**
+     * Creates a default {@code SetProperty}.
+     */
+    public SetProperty() {
+    }
+
     /**
      * {@inheritDoc}
      */

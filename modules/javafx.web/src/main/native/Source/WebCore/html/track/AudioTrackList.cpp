@@ -30,10 +30,11 @@
 #include "AudioTrackList.h"
 
 #include "AudioTrack.h"
+#include "HTMLMediaElement.h"
 
 namespace WebCore {
 
-AudioTrackList::AudioTrackList(HTMLMediaElement* element, ScriptExecutionContext* context)
+AudioTrackList::AudioTrackList(WeakPtr<HTMLMediaElement> element, ScriptExecutionContext* context)
     : TrackListBase(element, context)
 {
 }
@@ -79,11 +80,6 @@ AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
 EventTargetInterface AudioTrackList::eventTargetInterface() const
 {
     return AudioTrackListEventTargetInterfaceType;
-}
-
-const char* AudioTrackList::activeDOMObjectName() const
-{
-    return "AudioTrackList";
 }
 
 } // namespace WebCore

@@ -122,7 +122,7 @@ namespace WebCore {
 
 JSGlobalContextRef getGlobalContext(WebCore::ScriptController* scriptController)
 {
-    return toGlobalRef(scriptController->globalObject(WebCore::mainThreadNormalWorld())->globalExec());
+    return toGlobalRef(scriptController->globalObject(WebCore::mainThreadNormalWorld()));
 }
 
 JSStringRef asJSStringRef(JNIEnv *env, jstring str)
@@ -143,8 +143,8 @@ JSValueRef Java_Object_to_JSValue(
 {
     if (val == nullptr)
         return JSValueMakeNull(ctx);
-    JSC::ExecState* exec = toJS(ctx);
-    JSC::JSLockHolder lock(exec);
+    JSC::JSGlobalObject* lexicalGlobalObject = toJS(ctx);
+    JSC::JSLockHolder lock(lexicalGlobalObject);
 
     jclass clJSObject = getJSObjectClass(env);
     if (env->IsInstanceOf(val, clJSObject)) {
@@ -162,11 +162,11 @@ JSValueRef Java_Object_to_JSValue(
                     ((peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
                         ? *static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
                         : static_cast<Node*>(jlong_to_ptr(peer))->document()),
-                    normalWorld(exec->vm()));
-                return toRef(exec,
+                    normalWorld(lexicalGlobalObject->vm()));
+                return toRef(lexicalGlobalObject,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                        ? WebCore::toJS(exec, globalObject, static_cast<DOMWindow*>(jlong_to_ptr(peer)))
-                        : WebCore::toJS(exec, globalObject, static_cast<Node*>(jlong_to_ptr(peer))));
+                        ? WebCore::toJS(lexicalGlobalObject, globalObject, static_cast<DOMWindow*>(jlong_to_ptr(peer)))
+                        : WebCore::toJS(lexicalGlobalObject, globalObject, static_cast<Node*>(jlong_to_ptr(peer))));
             }
         }
     }
@@ -194,14 +194,14 @@ JSValueRef Java_Object_to_JSValue(
     if (JSC::Bindings::callJNIMethod<jboolean>(valClass, "isArray", "()Z")) {
         JLString className((jstring)JSC::Bindings::callJNIMethod<jobject>(valClass, "getName", "()Ljava/lang/String;"));
         const char* classNameC = JSC::Bindings::getCharactersFromJString(className);
-        JSC::JSValue arr = JSC::Bindings::JavaArray::convertJObjectToArray(exec, val, classNameC, rootObject, accessControlContext);
+        JSC::JSValue arr = JSC::Bindings::JavaArray::convertJObjectToArray(lexicalGlobalObject, val, classNameC, rootObject, accessControlContext);
         JSC::Bindings::releaseCharactersForJString(className, classNameC);
-        return toRef(exec, arr);
+        return toRef(lexicalGlobalObject, arr);
     }
     else {
         // All other Java Object types including java.lang.Character will be wrapped inside JavaInstance.
         RefPtr<JSC::Bindings::JavaInstance> jinstance = JSC::Bindings::JavaInstance::create(val, rootObject, accessControlContext);
-        return toRef(jinstance->createRuntimeObject(exec));
+        return toRef(jinstance->createRuntimeObject(lexicalGlobalObject));
     }
 }
 
@@ -221,8 +221,8 @@ jobject JSValue_to_Java_Object(
     JSContextRef ctx,
     JSC::Bindings::RootObject* rootObject)
 {
-    JSC::ExecState* exec = toJS(ctx);
-    return convertValueToJValue(exec, rootObject, toJS(exec, value),
+    JSC::JSGlobalObject* globalObject = toJS(ctx);
+    return convertValueToJValue(globalObject, rootObject, toJS(globalObject, value),
         JSC::Bindings::JavaTypeObject, "java.lang.Object").l;
 }
 
@@ -282,7 +282,7 @@ RefPtr<JSC::Bindings::RootObject> checkJSPeer(
             object = static_cast<JSObjectRef>(jlong_to_ptr(peer));
             rootObject = JSC::Bindings::findProtectingRootObject(reinterpret_cast<JSC::JSObject*>(object));
             if (rootObject) {
-                context = toRef(rootObject->globalObject()->globalExec());
+                context = toRef(rootObject->globalObject());
             }
         }
         break;
@@ -299,13 +299,13 @@ RefPtr<JSC::Bindings::RootObject> checkJSPeer(
             rootObject = &(frame->script().createRootObject(frame).leakRef());
             if (rootObject) {
                 context = WebCore::getGlobalContext(&frame->script());
-                JSC::ExecState* exec = toJS(context);
-                JSC::JSLockHolder lock(exec);
+                JSC::JSGlobalObject* JSGlobalObject = toJS(context);
+                JSC::JSLockHolder lock(JSGlobalObject);
 
-                object = const_cast<JSObjectRef>(toRef(exec,
+                object = const_cast<JSObjectRef>(toRef(JSGlobalObject,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                    ? WebCore::toJS(exec, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer)))
-                    : WebCore::toJS(exec, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::Node*>(jlong_to_ptr(peer)))));
+                    ? WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer)))
+                    : WebCore::toJS(JSGlobalObject, static_cast<WebCore::JSDOMGlobalObject *>(rootObject->globalObject()), static_cast<WebCore::Node*>(jlong_to_ptr(peer)))));
 
             }
         }
@@ -440,10 +440,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
         return nullptr;
     }
 
-    JSC::ExecState* exec = toJS(ctx);
-    JSC::JSLockHolder lock(exec);
+    JSC::JSGlobalObject* JSGlobalObject = toJS(ctx);
+    JSC::JSLockHolder lock(JSGlobalObject);
 
-    return toJS(object)->toString(exec)->value(exec)
+    return toJS(object)->toString(JSGlobalObject)->value(JSGlobalObject)
         .toJavaString(env).releaseLocal();
 }
 

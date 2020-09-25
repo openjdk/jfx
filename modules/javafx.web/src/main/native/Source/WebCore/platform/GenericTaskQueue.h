@@ -39,15 +39,15 @@ namespace WebCore {
 template <typename T>
 class TaskDispatcher {
 public:
-    TaskDispatcher(T* context)
+    explicit TaskDispatcher(T* context)
         : m_context(context)
     {
     }
 
-    void postTask(WTF::Function<void()>&& f)
+    void postTask(Function<void()>&& function)
     {
         ASSERT(m_context);
-        m_context->postTask(WTFMove(f));
+        m_context->enqueueTaskForDispatcher(WTFMove(function));
     }
 
 private:
@@ -58,7 +58,7 @@ template<>
 class TaskDispatcher<Timer> : public CanMakeWeakPtr<TaskDispatcher<Timer>> {
 public:
     TaskDispatcher();
-    void postTask(WTF::Function<void()>&&);
+    void postTask(Function<void()>&&);
 
 private:
     static Timer& sharedTimer();
@@ -68,23 +68,24 @@ private:
 
     void dispatchOneTask();
 
-    Deque<WTF::Function<void()>> m_pendingTasks;
+    Deque<Function<void()>> m_pendingTasks;
 };
 
 template <typename T>
 class GenericTaskQueue : public CanMakeWeakPtr<GenericTaskQueue<T>> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     GenericTaskQueue()
         : m_dispatcher()
     {
     }
 
-    GenericTaskQueue(T& t)
+    explicit GenericTaskQueue(T& t)
         : m_dispatcher(&t)
     {
     }
 
-    GenericTaskQueue(T* t)
+    explicit GenericTaskQueue(T* t)
         : m_dispatcher(t)
         , m_isClosed(!t)
     {

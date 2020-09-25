@@ -60,8 +60,10 @@ public:
     FloatSize scrollDeltaSinceLastCommit() const { return m_currentScrollPosition - m_lastCommittedScrollPosition; }
 
     // These are imperative; they adjust the scrolling layers.
-    void scrollTo(const FloatPoint&, ScrollType = ScrollType::User, ScrollPositionClamp = ScrollPositionClamp::ToContentEdges);
-    void scrollBy(const FloatSize&, ScrollPositionClamp = ScrollPositionClamp::ToContentEdges);
+    void scrollTo(const FloatPoint&, ScrollType = ScrollType::User, ScrollClamping = ScrollClamping::Clamped);
+    void scrollBy(const FloatSize&, ScrollClamping = ScrollClamping::Clamped);
+
+    virtual void stopScrollAnimations() { };
 
     void wasScrolledByDelegatedScrolling(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport = { }, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync);
 
@@ -70,6 +72,8 @@ public:
 
     bool horizontalScrollbarHiddenByStyle() const { return m_scrollableAreaParameters.horizontalScrollbarHiddenByStyle; }
     bool verticalScrollbarHiddenByStyle() const { return m_scrollableAreaParameters.verticalScrollbarHiddenByStyle; }
+    bool canHaveHorizontalScrollbar() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarAlwaysOff; }
+    bool canHaveVerticalScrollbar() const { return m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
     bool canHaveScrollbars() const { return m_scrollableAreaParameters.horizontalScrollbarMode != ScrollbarAlwaysOff || m_scrollableAreaParameters.verticalScrollbarMode != ScrollbarAlwaysOff; }
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -88,10 +92,8 @@ public:
     bool scrollLimitReached(const PlatformWheelEvent&) const;
     ScrollingTreeScrollingNode* scrollingNodeForPoint(LayoutPoint) const override;
 
-#if PLATFORM(COCOA)
-    CALayer *scrollContainerLayer() const { return m_scrollContainerLayer.get(); }
-    CALayer *scrolledContentsLayer() const { return m_scrolledContentsLayer.get(); }
-#endif
+    const LayerRepresentation& scrollContainerLayer() const { return m_scrollContainerLayer; }
+    const LayerRepresentation& scrolledContentsLayer() const { return m_scrolledContentsLayer; }
 
 protected:
     ScrollingTreeScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
@@ -101,7 +103,7 @@ protected:
 
     FloatPoint clampScrollPosition(const FloatPoint&) const;
 
-    virtual FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollPositionClamp = ScrollPositionClamp::ToContentEdges) const;
+    virtual FloatPoint adjustedScrollPosition(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped) const;
 
     virtual void currentScrollPositionChanged();
     virtual void updateViewportForCurrentScrollPosition(Optional<FloatRect> = { }) { }
@@ -128,8 +130,6 @@ protected:
     bool hasEnabledHorizontalScrollbar() const { return m_scrollableAreaParameters.hasEnabledHorizontalScrollbar; }
     bool hasEnabledVerticalScrollbar() const { return m_scrollableAreaParameters.hasEnabledVerticalScrollbar; }
 
-    bool expectsWheelEventTestTrigger() const { return m_expectsWheelEventTestTrigger; }
-
     LayoutPoint parentToLocalPoint(LayoutPoint) const override;
     LayoutPoint localToContentsPoint(LayoutPoint) const override;
 
@@ -150,12 +150,10 @@ private:
     unsigned m_currentVerticalSnapPointIndex { 0 };
 #endif
     ScrollableAreaParameters m_scrollableAreaParameters;
-    bool m_expectsWheelEventTestTrigger { false };
+    bool m_isFirstCommit { true };
 
-#if PLATFORM(COCOA)
-    RetainPtr<CALayer> m_scrollContainerLayer;
-    RetainPtr<CALayer> m_scrolledContentsLayer;
-#endif
+    LayerRepresentation m_scrollContainerLayer;
+    LayerRepresentation m_scrolledContentsLayer;
 };
 
 } // namespace WebCore

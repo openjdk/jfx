@@ -32,11 +32,14 @@
 #include "CSSKeyframeRule.h"
 #include "CSSParserFastPaths.h"
 #include "CSSParserImpl.h"
+#include "CSSParserTokenRange.h"
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserHelpers.h"
 #include "CSSSelectorParser.h"
 #include "CSSSupportsParser.h"
 #include "CSSTokenizer.h"
+#include "CSSValuePool.h"
 #include "CSSVariableData.h"
 #include "CSSVariableReferenceValue.h"
 #include "Document.h"
@@ -44,8 +47,8 @@
 #include "Page.h"
 #include "RenderStyle.h"
 #include "RenderTheme.h"
-#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
+#include "StyleBuilder.h"
 #include "StyleColor.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
@@ -100,11 +103,32 @@ Color CSSParser::parseColor(const String& string, bool strict)
         return namedColor;
 
     // Try the fast path to parse hex and rgb.
-    RefPtr<CSSValue> value = CSSParserFastPaths::parseColor(string, strict ? HTMLStandardMode : HTMLQuirksMode);
+    RefPtr<CSSValue> value = CSSParserFastPaths::parseColor(string, strict ? HTMLStandardMode : HTMLQuirksMode, CSSValuePool::singleton());
 
     // If that fails, try the full parser.
     if (!value)
         value = parseSingleValue(CSSPropertyColor, string, strictCSSParserContext());
+    if (!value || !value->isPrimitiveValue())
+        return Color();
+    const auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
+    if (!primitiveValue.isRGBColor())
+        return Color();
+    return primitiveValue.color();
+}
+
+Color CSSParser::parseColorWorkerSafe(const String& string, CSSValuePool& valuePool, bool strict)
+{
+    if (string.isEmpty())
+        return Color();
+
+    // Try named colors first.
+    Color namedColor { string };
+    if (namedColor.isValid())
+        return namedColor;
+
+    // Try the fast path to parse hex and rgb.
+    RefPtr<CSSValue> value = CSSParserFastPaths::parseColor(string, strict ? HTMLStandardMode : HTMLQuirksMode, valuePool);
+
     if (!value || !value->isPrimitiveValue())
         return Color();
     const auto& primitiveValue = downcast<CSSPrimitiveValue>(*value);
@@ -177,10 +201,10 @@ void CSSParser::parseDeclarationForInspector(const CSSParserContext& context, co
     CSSParserImpl::parseDeclarationListForInspector(string, context, observer);
 }
 
-RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propID, const CSSValue& value, ApplyCascadedPropertyState& state)
+RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propID, const CSSValue& value, Style::BuilderState& builderState)
 {
     ASSERT((propID == CSSPropertyCustom && value.isCustomPropertyValue()) || (propID != CSSPropertyCustom && !value.isCustomPropertyValue()));
-    auto& style = *state.styleResolver->style();
+    auto& style = builderState.style();
     auto direction = style.direction();
     auto writingMode = style.writingMode();
 
@@ -193,13 +217,13 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
             shorthandID = CSSProperty::resolveDirectionAwareProperty(shorthandID, direction, writingMode);
         CSSVariableReferenceValue* shorthandValue = pendingSubstitution.shorthandValue();
 
-        auto resolvedData = shorthandValue->resolveVariableReferences(state);
+        auto resolvedData = shorthandValue->resolveVariableReferences(builderState);
         if (!resolvedData)
             return nullptr;
         Vector<CSSParserToken> resolvedTokens = resolvedData->tokens();
 
         ParsedPropertyVector parsedProperties;
-        if (!CSSPropertyParser::parseValue(shorthandID, false, resolvedTokens, m_context, parsedProperties, StyleRule::Style))
+        if (!CSSPropertyParser::parseValue(shorthandID, false, resolvedTokens, m_context, parsedProperties, StyleRuleType::Style))
             return nullptr;
 
         for (auto& property : parsedProperties) {
@@ -212,7 +236,7 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
 
     if (value.isVariableReferenceValue()) {
         const CSSVariableReferenceValue& valueWithReferences = downcast<CSSVariableReferenceValue>(value);
-        auto resolvedData = valueWithReferences.resolveVariableReferences(state);
+        auto resolvedData = valueWithReferences.resolveVariableReferences(builderState);
         if (!resolvedData)
             return nullptr;
         return CSSPropertyParser::parseSingleValue(propID, resolvedData->tokens(), m_context);
@@ -222,9 +246,9 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
     const auto& valueWithReferences = WTF::get<Ref<CSSVariableReferenceValue>>(customPropValue.value()).get();
 
     auto& name = downcast<CSSCustomPropertyValue>(value).name();
-    auto* registered = state.styleResolver->document().getCSSRegisteredCustomPropertySet().get(name);
+    auto* registered = builderState.document().getCSSRegisteredCustomPropertySet().get(name);
     auto& syntax = registered ? registered->syntax : "*";
-    auto resolvedData = valueWithReferences.resolveVariableReferences(state);
+    auto resolvedData = valueWithReferences.resolveVariableReferences(builderState);
 
     if (!resolvedData)
         return nullptr;
@@ -234,9 +258,9 @@ RefPtr<CSSValue> CSSParser::parseValueWithVariableReferences(CSSPropertyID propI
     CSSPropertyParser::collectParsedCustomPropertyValueDependencies(syntax, false, dependencies, resolvedData->tokens(), m_context);
 
     for (auto id : dependencies)
-        state.styleResolver->applyCascadedProperties(id, id, state);
+        builderState.builder().applyProperty(id);
 
-    return CSSPropertyParser::parseTypedCustomPropertyValue(name, syntax, resolvedData->tokens(), *state.styleResolver, m_context);
+    return CSSPropertyParser::parseTypedCustomPropertyValue(name, syntax, resolvedData->tokens(), builderState, m_context);
 }
 
 std::unique_ptr<Vector<double>> CSSParser::parseKeyframeKeyList(const String& selector)

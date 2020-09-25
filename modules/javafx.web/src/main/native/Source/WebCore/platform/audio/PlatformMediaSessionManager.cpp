@@ -166,10 +166,7 @@ void PlatformMediaSessionManager::removeSession(PlatformMediaSession& session)
         m_remoteCommandListener = nullptr;
         m_audioHardwareListener = nullptr;
 #if USE(AUDIO_SESSION)
-        if (m_becameActive && shouldDeactivateAudioSession()) {
-            AudioSession::sharedSession().tryToSetActive(false);
-            m_becameActive = false;
-        }
+        maybeDeactivateAudioSession();
 #endif
     }
 
@@ -238,7 +235,7 @@ bool PlatformMediaSessionManager::sessionWillBeginPlayback(PlatformMediaSession&
     return true;
 }
 
-void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSession& session)
+void PlatformMediaSessionManager::sessionWillEndPlayback(PlatformMediaSession& session, DelayCallingUpdateNowPlaying)
 {
     ALWAYS_LOG(LOGIDENTIFIER, session.logIdentifier());
 
@@ -363,16 +360,14 @@ void PlatformMediaSessionManager::processWillSuspend()
         return;
     m_processIsSuspended = true;
 
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     forEachSession([&] (auto& session) {
         session.client().processIsSuspendedChanged();
     });
 
 #if USE(AUDIO_SESSION)
-    if (m_becameActive && shouldDeactivateAudioSession()) {
-        AudioSession::sharedSession().tryToSetActive(false);
-        ALWAYS_LOG(LOGIDENTIFIER, "tried to set inactive AudioSession");
-        m_becameActive = false;
-    }
+    maybeDeactivateAudioSession();
 #endif
 }
 
@@ -412,7 +407,7 @@ void PlatformMediaSessionManager::sessionIsPlayingToWirelessPlaybackTargetChange
         session.beginInterruption(PlatformMediaSession::EnteringBackground);
 }
 
-void PlatformMediaSessionManager::sessionCanProduceAudioChanged(PlatformMediaSession&)
+void PlatformMediaSessionManager::sessionCanProduceAudioChanged()
 {
     updateSessionState();
 }
@@ -544,6 +539,18 @@ bool PlatformMediaSessionManager::anyOfSessions(const Function<bool(const Platfo
         return predicate(*session);
     });
 }
+
+#if USE(AUDIO_SESSION)
+void PlatformMediaSessionManager::maybeDeactivateAudioSession()
+{
+    if (!m_becameActive || !shouldDeactivateAudioSession())
+        return;
+
+    ALWAYS_LOG(LOGIDENTIFIER, "tried to set inactive AudioSession");
+    AudioSession::sharedSession().tryToSetActive(false);
+    m_becameActive = false;
+}
+#endif
 
 static bool& deactivateAudioSession()
 {

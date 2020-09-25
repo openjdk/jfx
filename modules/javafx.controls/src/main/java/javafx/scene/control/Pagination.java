@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,14 +57,15 @@ import javafx.scene.control.skin.PaginationSkin;
  * setting the style class {@link #STYLE_CLASS_BULLET}.  The
  * {@link #maxPageIndicatorCountProperty() maxPageIndicatorCountProperty} can be used to change
  * the maximum number of page indicators.  The property value can also be changed
- * via CSS using -fx-max-page-indicator-count.
+ * via CSS using {@code -fx-max-page-indicator-count}. By default, page indicator numbering starts from 1 (corresponding to
+ * page index 0).
  *</p>
  *
  * <h2>Page count</h2>
  * <p>
  * The {@link #pageCountProperty() pageCountProperty} controls the number of
  * pages this pagination control has.  If the page count is
- * not known {@link #INDETERMINATE} should be used as the page count.
+ * not known, {@link #INDETERMINATE} should be used as the page count.
  * </p>
  *
  * <h2>Page factory</h2>
@@ -73,7 +74,7 @@ import javafx.scene.control.skin.PaginationSkin;
  * that is called when a page has been selected by the application or
  * the user.  The function is required for the functionality of the pagination
  * control.  The callback function should load and return the contents of the selected page.
- * Null should be returned if the selected page index does not exist.
+ * {@code null} should be returned if the selected page index does not exist.
  * </p>
  *
  * <h2>Creating a Pagination control:</h2>
@@ -86,12 +87,20 @@ import javafx.scene.control.skin.PaginationSkin;
  * pagination.setPageFactory(new Callback&lt;Integer, Node&gt;() {
  *     &#064;Override
  *     public Node call(Integer pageIndex) {
- *         return new Label(pageIndex+1 + ". Lorem ipsum dolor sit amet,\n"
+ *         return new Label(pageIndex + 1 + ". Lorem ipsum dolor sit amet,\n"
  *                      + "consectetur adipiscing elit,\n"
  *                      + "sed do eiusmod tempor incididunt ut\n"
  *                      + "labore et dolore magna aliqua.");
  *     }
  * });</code></pre>
+ * or using lambdas
+ * <pre><code> Pagination pagination = new Pagination(10, 0);
+ * pagination.setPageFactory(pageIndex -&gt;
+ *         new Label(pageIndex + 1 + ". Lorem ipsum dolor sit amet,\n"
+ *                      + "consectetur adipiscing elit,\n"
+ *                      + "sed do eiusmod tempor incididunt ut\n"
+ *                      + "labore et dolore magna aliqua.");
+ * );</code></pre>
  *
  * <img src="doc-files/Pagination.png" alt="Image of the Pagination control">
  *

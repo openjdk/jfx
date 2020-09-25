@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -175,9 +175,7 @@ public:
 #endif
 
     void scheduleHoverStateUpdate();
-#if ENABLE(CURSOR_SUPPORT)
     void scheduleCursorUpdate();
-#endif
 
     void setResizingFrameSet(HTMLFrameSetElement*);
 
@@ -222,6 +220,7 @@ public:
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
     using TouchArray = Vector<RefPtr<Touch>>;
     using EventTargetTouchMap = HashMap<EventTarget*, TouchArray*>;
+    using EventTargetTouchArrayMap = HashMap<Ref<EventTarget>, std::unique_ptr<TouchArray>>;
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS) || ENABLE(MAC_GESTURE_EVENTS)
@@ -230,6 +229,7 @@ public:
 
 #if ENABLE(IOS_TOUCH_EVENTS)
     bool dispatchTouchEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetTouchMap&, float, float);
+    bool dispatchTouchEvent(const PlatformTouchEvent&, const AtomString&, const EventTargetTouchArrayMap&, float, float);
     bool dispatchSimulatedTouchEvent(IntPoint location);
     Frame* touchEventTargetSubframe() const { return m_touchEventTargetSubframe.get(); }
     const TouchArray& touches() const { return m_touches; }
@@ -248,7 +248,7 @@ public:
     WEBCORE_EXPORT void dispatchSyntheticMouseMove(const PlatformMouseEvent&);
 #endif
 
-#if ENABLE(CONTEXT_MENUS)
+#if ENABLE(CONTEXT_MENU_EVENT)
     WEBCORE_EXPORT bool sendContextMenuEvent(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool sendContextMenuEventForKey();
 #endif
@@ -341,9 +341,9 @@ public:
 #if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void startSelectionAutoscroll(RenderObject* renderer, const FloatPoint& positionInWindow);
     WEBCORE_EXPORT void cancelSelectionAutoscroll();
-    IntPoint m_targetAutoscrollPositionInWindow;
-    bool m_isAutoscrolling { false };
 #endif
+
+    WEBCORE_EXPORT Optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
 
 private:
 #if ENABLE(DRAG_SUPPORT)
@@ -375,14 +375,10 @@ private:
 
     bool internalKeyEvent(const PlatformKeyboardEvent&);
 
-    Optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
     void updateCursor(FrameView&, const HitTestResult&, bool shiftKey);
 
     void hoverTimerFired();
-
-#if ENABLE(CURSOR_SUPPORT)
     void cursorUpdateTimerFired();
-#endif
 
     bool logicalScrollOverflow(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = nullptr);
 
@@ -430,7 +426,8 @@ private:
 #if ENABLE(DRAG_SUPPORT)
     void clearDragState();
 
-    void dispatchDragSrcEvent(const AtomString& eventType, const PlatformMouseEvent&);
+    static bool shouldDispatchEventsToDragSourceElement();
+    void dispatchEventToDragSourceElement(const AtomString& eventType, const PlatformMouseEvent&);
     bool dispatchDragStartEventOnSourceElement(DataTransfer&);
 
     bool dragHysteresisExceeded(const FloatPoint&) const;
@@ -503,6 +500,8 @@ private:
 
     bool shouldSendMouseEventsToInactiveWindows() const;
 
+    bool canMouseDownStartSelect(const MouseEventWithHitTestResults&);
+
     Frame& m_frame;
 
     bool m_mousePressed { false };
@@ -525,10 +524,7 @@ private:
 #endif
 
     Timer m_hoverTimer;
-
-#if ENABLE(CURSOR_SUPPORT)
     Timer m_cursorUpdateTimer;
-#endif
 
 #if PLATFORM(MAC)
     Timer m_pendingMomentumWheelEventsTimer;
@@ -630,6 +626,8 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_shouldAllowMouseDownToStartDrag { false };
+    IntPoint m_targetAutoscrollPositionInWindow;
+    bool m_isAutoscrolling { false };
 #endif
 
 #if ENABLE(CURSOR_VISIBILITY)

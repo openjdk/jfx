@@ -58,7 +58,7 @@ JITCode* JITCode::dfg()
     return this;
 }
 
-void JITCode::shrinkToFit()
+void JITCode::shrinkToFit(const ConcurrentJSLocker&)
 {
     common.shrinkToFit();
     osrEntry.shrinkToFit();
@@ -76,16 +76,14 @@ void JITCode::reconstruct(
         codeBlock, codeOrigin, minifiedDFG, streamIndex, result);
 }
 
-void JITCode::reconstruct(
-    ExecState* exec, CodeBlock* codeBlock, CodeOrigin codeOrigin, unsigned streamIndex,
-    Operands<Optional<JSValue>>& result)
+void JITCode::reconstruct(CallFrame* callFrame, CodeBlock* codeBlock, CodeOrigin codeOrigin, unsigned streamIndex, Operands<Optional<JSValue>>& result)
 {
     Operands<ValueRecovery> recoveries;
     reconstruct(codeBlock, codeOrigin, streamIndex, recoveries);
 
     result = Operands<Optional<JSValue>>(OperandsLike, recoveries);
     for (size_t i = result.size(); i--;)
-        result[i] = recoveries[i].recover(exec);
+        result[i] = recoveries[i].recover(callFrame);
 }
 
 RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock* codeBlock, CallSiteIndex callSiteIndex)
@@ -130,24 +128,21 @@ bool JITCode::checkIfOptimizationThresholdReached(CodeBlock* codeBlock)
 void JITCode::optimizeNextInvocation(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
-    if (Options::verboseOSR())
-        dataLog(*codeBlock, ": FTL-optimizing next invocation.\n");
+    dataLogLnIf(Options::verboseOSR(), *codeBlock, ": FTL-optimizing next invocation.");
     tierUpCounter.setNewThreshold(0, codeBlock);
 }
 
 void JITCode::dontOptimizeAnytimeSoon(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
-    if (Options::verboseOSR())
-        dataLog(*codeBlock, ": Not FTL-optimizing anytime soon.\n");
+    dataLogLnIf(Options::verboseOSR(), *codeBlock, ": Not FTL-optimizing anytime soon.");
     tierUpCounter.deferIndefinitely();
 }
 
 void JITCode::optimizeAfterWarmUp(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
-    if (Options::verboseOSR())
-        dataLog(*codeBlock, ": FTL-optimizing after warm-up.\n");
+    dataLogLnIf(Options::verboseOSR(), *codeBlock, ": FTL-optimizing after warm-up.");
     CodeBlock* baseline = codeBlock->baselineVersion();
     tierUpCounter.setNewThreshold(
         baseline->adjustedCounterValue(Options::thresholdForFTLOptimizeAfterWarmUp()),
@@ -157,8 +152,7 @@ void JITCode::optimizeAfterWarmUp(CodeBlock* codeBlock)
 void JITCode::optimizeSoon(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
-    if (Options::verboseOSR())
-        dataLog(*codeBlock, ": FTL-optimizing soon.\n");
+    dataLogLnIf(Options::verboseOSR(), *codeBlock, ": FTL-optimizing soon.");
     CodeBlock* baseline = codeBlock->baselineVersion();
     tierUpCounter.setNewThreshold(
         baseline->adjustedCounterValue(Options::thresholdForFTLOptimizeSoon()),
@@ -168,8 +162,7 @@ void JITCode::optimizeSoon(CodeBlock* codeBlock)
 void JITCode::forceOptimizationSlowPathConcurrently(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITType::DFGJIT);
-    if (Options::verboseOSR())
-        dataLog(*codeBlock, ": Forcing slow path concurrently for FTL entry.\n");
+    dataLogLnIf(Options::verboseOSR(), *codeBlock, ": Forcing slow path concurrently for FTL entry.");
     tierUpCounter.forceSlowPathConcurrently();
 }
 
@@ -206,8 +199,8 @@ void JITCode::setOptimizationThresholdBasedOnCompilationResult(
 void JITCode::setOSREntryBlock(VM& vm, const JSCell* owner, CodeBlock* osrEntryBlock)
 {
     if (Options::verboseOSR()) {
-        dataLog(RawPointer(this), ": Setting OSR entry block to ", RawPointer(osrEntryBlock), "\n");
-        dataLog("OSR entries will go to ", osrEntryBlock->jitCode()->ftlForOSREntry()->addressForCall(ArityCheckNotRequired), "\n");
+        dataLogLn(RawPointer(this), ": Setting OSR entry block to ", RawPointer(osrEntryBlock));
+        dataLogLn("OSR entries will go to ", osrEntryBlock->jitCode()->ftlForOSREntry()->addressForCall(ArityCheckNotRequired));
     }
     m_osrEntryBlock.set(vm, owner, osrEntryBlock);
 }
@@ -216,7 +209,7 @@ void JITCode::clearOSREntryBlockAndResetThresholds(CodeBlock *dfgCodeBlock)
 {
     ASSERT(m_osrEntryBlock);
 
-    unsigned osrEntryBytecode = m_osrEntryBlock->jitCode()->ftlForOSREntry()->bytecodeIndex();
+    BytecodeIndex osrEntryBytecode = m_osrEntryBlock->jitCode()->ftlForOSREntry()->bytecodeIndex();
     m_osrEntryBlock.clear();
     osrEntryRetry = 0;
     tierUpEntryTriggers.set(osrEntryBytecode, JITCode::TriggerReason::DontTrigger);
@@ -255,7 +248,7 @@ void JITCode::finalizeOSREntrypoints()
     };
     std::sort(osrEntry.begin(), osrEntry.end(), comparator);
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     auto verifyIsSorted = [&] (auto& osrVector) {
         for (unsigned i = 0; i + 1 < osrVector.size(); ++i)
             ASSERT(osrVector[i].m_bytecodeIndex <= osrVector[i + 1].m_bytecodeIndex);

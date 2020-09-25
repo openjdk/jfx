@@ -218,6 +218,12 @@ void RunLoop::wakeUp()
     wakeUp(locker);
 }
 
+RunLoop::CycleResult RunLoop::cycle(RunLoopMode)
+{
+    iterate();
+    return CycleResult::Continue;
+}
+
 void RunLoop::schedule(const AbstractLocker&, Ref<TimerBase::ScheduledTask>&& task)
 {
     m_schedules.append(task.ptr());

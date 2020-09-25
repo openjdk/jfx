@@ -795,13 +795,11 @@ public class Text extends Shape {
 
     /**
      * Specifies a requested font smoothing type: gray or LCD.
-     *
-     * The width of the bounding box is defined by the widest row.
-     *
+     * <p>
      * Note: LCD mode doesn't apply in numerous cases, such as various
      * compositing modes, where effects are applied and very large glyphs.
      *
-     * @defaultValue FontSmoothingType.GRAY
+     * @defaultValue {@code FontSmoothingType.GRAY}
      * @since JavaFX 2.1
      */
     private ObjectProperty<FontSmoothingType> fontSmoothingType;

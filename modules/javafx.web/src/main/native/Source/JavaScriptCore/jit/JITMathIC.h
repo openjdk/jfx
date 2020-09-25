@@ -52,11 +52,11 @@ struct MathICGenerationState {
 
 #define ENABLE_MATH_IC_STATS 0
 
-template <typename GeneratorType, bool(*isProfileEmpty)(ArithProfile&)>
+template <typename GeneratorType, typename ArithProfileType>
 class JITMathIC {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    JITMathIC(ArithProfile* arithProfile)
+    JITMathIC(ArithProfileType* arithProfile)
         : m_arithProfile(arithProfile)
     {
     }
@@ -70,21 +70,19 @@ public:
         state.fastPathStart = jit.label();
         size_t startSize = jit.m_assembler.buffer().codeSize();
 
-        if (m_arithProfile) {
-            if (isProfileEmpty(*m_arithProfile)) {
-                // It looks like the MathIC has yet to execute. We don't want to emit code in this
-                // case for a couple reasons. First, the operation may never execute, so if we don't emit
-                // code, it's a win. Second, if the operation does execute, we can emit better code
-                // once we have an idea about the types.
-                state.slowPathJumps.append(jit.patchableJump());
-                size_t inlineSize = jit.m_assembler.buffer().codeSize() - startSize;
-                ASSERT_UNUSED(inlineSize, static_cast<ptrdiff_t>(inlineSize) <= MacroAssembler::patchableJumpSize());
-                state.shouldSlowPathRepatch = true;
-                state.fastPathEnd = jit.label();
-                ASSERT(!m_generateFastPathOnRepatch); // We should have gathered some observed type info about the types before trying to regenerate again.
-                m_generateFastPathOnRepatch = true;
-                return true;
-            }
+        if (m_arithProfile && m_arithProfile->isObservedTypeEmpty()) {
+            // It looks like the MathIC has yet to execute. We don't want to emit code in this
+            // case for a couple reasons. First, the operation may never execute, so if we don't emit
+            // code, it's a win. Second, if the operation does execute, we can emit better code
+            // once we have an idea about the types.
+            state.slowPathJumps.append(jit.patchableJump());
+            size_t inlineSize = jit.m_assembler.buffer().codeSize() - startSize;
+            ASSERT_UNUSED(inlineSize, static_cast<ptrdiff_t>(inlineSize) <= MacroAssembler::patchableJumpSize());
+            state.shouldSlowPathRepatch = true;
+            state.fastPathEnd = jit.label();
+            ASSERT(!m_generateFastPathOnRepatch); // We should have gathered some observed type info about the types before trying to regenerate again.
+            m_generateFastPathOnRepatch = true;
+            return true;
         }
 
         JITMathICInlineResult result = m_generator.generateInline(jit, state, m_arithProfile);
@@ -223,7 +221,7 @@ public:
         m_slowPathStartLocation = linkBuffer.locationOf<JSInternalPtrTag>(state.slowPathStart);
     }
 
-    ArithProfile* arithProfile() const { return m_arithProfile; }
+    ArithProfileType* arithProfile() const { return m_arithProfile; }
 
 #if ENABLE(MATH_IC_STATS)
     size_t m_generatedCodeSize { 0 };
@@ -236,7 +234,7 @@ public:
     }
 #endif
 
-    ArithProfile* m_arithProfile;
+    ArithProfileType* m_arithProfile;
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> m_code;
     CodeLocationLabel<JSInternalPtrTag> m_inlineStart;
     CodeLocationLabel<JSInternalPtrTag> m_inlineEnd;
@@ -246,15 +244,11 @@ public:
     GeneratorType m_generator;
 };
 
-inline bool isBinaryProfileEmpty(ArithProfile& arithProfile)
-{
-    return arithProfile.lhsObservedType().isEmpty() || arithProfile.rhsObservedType().isEmpty();
-}
 template <typename GeneratorType>
-class JITBinaryMathIC : public JITMathIC<GeneratorType, isBinaryProfileEmpty> {
+class JITBinaryMathIC : public JITMathIC<GeneratorType, BinaryArithProfile> {
 public:
-    JITBinaryMathIC(ArithProfile* arithProfile)
-        : JITMathIC<GeneratorType, isBinaryProfileEmpty>(arithProfile)
+    JITBinaryMathIC(BinaryArithProfile* arithProfile)
+        : JITMathIC<GeneratorType, BinaryArithProfile>(arithProfile)
     {
     }
 };
@@ -263,16 +257,11 @@ typedef JITBinaryMathIC<JITAddGenerator> JITAddIC;
 typedef JITBinaryMathIC<JITMulGenerator> JITMulIC;
 typedef JITBinaryMathIC<JITSubGenerator> JITSubIC;
 
-
-inline bool isUnaryProfileEmpty(ArithProfile& arithProfile)
-{
-    return arithProfile.lhsObservedType().isEmpty();
-}
 template <typename GeneratorType>
-class JITUnaryMathIC : public JITMathIC<GeneratorType, isUnaryProfileEmpty> {
+class JITUnaryMathIC : public JITMathIC<GeneratorType, UnaryArithProfile> {
 public:
-    JITUnaryMathIC(ArithProfile* arithProfile)
-        : JITMathIC<GeneratorType, isUnaryProfileEmpty>(arithProfile)
+    JITUnaryMathIC(UnaryArithProfile* arithProfile)
+        : JITMathIC<GeneratorType, UnaryArithProfile>(arithProfile)
     {
     }
 };

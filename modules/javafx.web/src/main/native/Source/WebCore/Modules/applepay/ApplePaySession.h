@@ -36,7 +36,8 @@
 #include <wtf/RefCounted.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class JSValue;
 }
 
@@ -79,7 +80,7 @@ public:
 
     ExceptionOr<void> begin(Document&);
     ExceptionOr<void> abort();
-    ExceptionOr<void> completeMerchantValidation(JSC::ExecState&, JSC::JSValue merchantSession);
+    ExceptionOr<void> completeMerchantValidation(JSC::JSGlobalObject&, JSC::JSValue merchantSession);
     ExceptionOr<void> completeShippingMethodSelection(ApplePayShippingMethodUpdate&&);
     ExceptionOr<void> completeShippingContactSelection(ApplePayShippingContactUpdate&&);
     ExceptionOr<void> completePaymentMethodSelection(ApplePayPaymentMethodUpdate&&);
@@ -101,8 +102,8 @@ private:
 
     // ActiveDOMObject.
     const char* activeDOMObjectName() const override;
-    bool canSuspendForDocumentSuspension() const override;
     void stop() override;
+    void suspend(ReasonForSuspension) override;
 
     // EventTargetWithInlineData.
     EventTargetInterface eventTargetInterface() const override { return ApplePaySessionEventTargetInterfaceType; }
@@ -117,7 +118,7 @@ private:
     void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) override;
     void didSelectShippingContact(const PaymentContact&) override;
     void didSelectPaymentMethod(const PaymentMethod&) override;
-    void didCancelPaymentSession() override;
+    void didCancelPaymentSession(PaymentSessionError&&) override;
 
     PaymentCoordinator& paymentCoordinator() const;
 
@@ -129,6 +130,7 @@ private:
     bool canCompleteShippingContactSelection() const;
     bool canCompletePaymentMethodSelection() const;
     bool canCompletePayment() const;
+    bool canSuspendWithoutCanceling() const;
 
     bool isFinalState() const;
     void didReachFinalState();

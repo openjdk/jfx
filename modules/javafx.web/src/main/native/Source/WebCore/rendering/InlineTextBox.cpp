@@ -24,14 +24,18 @@
 #include "InlineTextBox.h"
 
 #include "BreakLines.h"
+#include "CompositionHighlight.h"
 #include "DashArray.h"
 #include "Document.h"
 #include "DocumentMarkerController.h"
 #include "Editor.h"
+#include "ElementRuleCollector.h"
 #include "EllipsisBox.h"
 #include "EventRegion.h"
+#include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
+#include "HighlightMap.h"
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
 #include "InlineTextBoxStyle.h"
@@ -46,6 +50,8 @@
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
+#include "RuntimeEnabledFeatures.h"
+#include "SelectionRangeData.h"
 #include "Text.h"
 #include "TextDecorationPainter.h"
 #include "TextPaintStyle.h"
@@ -152,30 +158,12 @@ bool InlineTextBox::isSelected(unsigned startPosition, unsigned endPosition) con
 
 RenderObject::SelectionState InlineTextBox::selectionState()
 {
-    RenderObject::SelectionState state = renderer().selectionState();
-    if (state == RenderObject::SelectionStart || state == RenderObject::SelectionEnd || state == RenderObject::SelectionBoth) {
-        auto& selection = renderer().view().selection();
-        auto startPos = selection.startPosition();
-        auto endPos = selection.endPosition();
-        // The position after a hard line break is considered to be past its end.
-        ASSERT(start() + len() >= (isLineBreak() ? 1 : 0));
-        unsigned lastSelectable = start() + len() - (isLineBreak() ? 1 : 0);
+    auto state = verifySelectionState(renderer().selectionState(), renderer().view().selection());
 
-        bool start = (state != RenderObject::SelectionEnd && startPos >= m_start && startPos < m_start + m_len);
-        bool end = (state != RenderObject::SelectionStart && endPos > m_start && endPos <= lastSelectable);
-        if (start && end)
-            state = RenderObject::SelectionBoth;
-        else if (start)
-            state = RenderObject::SelectionStart;
-        else if (end)
-            state = RenderObject::SelectionEnd;
-        else if ((state == RenderObject::SelectionEnd || startPos < m_start) &&
-                 (state == RenderObject::SelectionStart || endPos > lastSelectable))
-            state = RenderObject::SelectionInside;
-        else if (state == RenderObject::SelectionBoth)
-            state = RenderObject::SelectionNone;
-    }
-
+    // FIXME: this code mutates selection state, but it's used at a simple getter elsewhere
+    // in this file. This code should likely live in SelectionRangeData, or somewhere else.
+    // <rdar://problem/58125978>
+    // https://bugs.webkit.org/show_bug.cgi?id=205528
     // If there are ellipsis following, make sure their selection is updated.
     if (m_truncation != cNoTruncation && root().ellipsisBox()) {
         EllipsisBox* ellipsis = root().ellipsisBox();
@@ -194,9 +182,60 @@ RenderObject::SelectionState InlineTextBox::selectionState()
     return state;
 }
 
+RenderObject::SelectionState InlineTextBox::verifySelectionState(RenderObject::SelectionState state, SelectionRangeData& selection) const
+{
+    if (state == RenderObject::SelectionStart || state == RenderObject::SelectionEnd || state == RenderObject::SelectionBoth) {
+        auto startOffset = selection.startOffset();
+        auto endOffset = selection.endOffset();
+        // The position after a hard line break is considered to be past its end.
+        ASSERT(start() + len() >= (isLineBreak() ? 1 : 0));
+        unsigned lastSelectable = start() + len() - (isLineBreak() ? 1 : 0);
+
+        bool start = (state != RenderObject::SelectionEnd && startOffset >= m_start && startOffset < m_start + m_len);
+        bool end = (state != RenderObject::SelectionStart && endOffset > m_start && endOffset <= lastSelectable);
+        if (start && end)
+            state = RenderObject::SelectionBoth;
+        else if (start)
+            state = RenderObject::SelectionStart;
+        else if (end)
+            state = RenderObject::SelectionEnd;
+        else if ((state == RenderObject::SelectionEnd || startOffset < m_start)
+            && (state == RenderObject::SelectionStart || endOffset > lastSelectable))
+            state = RenderObject::SelectionInside;
+        else if (state == RenderObject::SelectionBoth)
+            state = RenderObject::SelectionNone;
+    }
+
+    return state;
+}
+
 inline const FontCascade& InlineTextBox::lineFont() const
 {
     return combinedText() ? combinedText()->textCombineFont() : lineStyle().fontCascade();
+}
+
+LayoutRect snappedSelectionRect(const LayoutRect& selectionRect, float logicalRight, float selectionTop, float selectionHeight, bool isHorizontal)
+{
+    auto snappedSelectionRect = enclosingIntRect(selectionRect);
+    LayoutUnit logicalWidth = snappedSelectionRect.width();
+    if (snappedSelectionRect.x() > logicalRight)
+        logicalWidth = 0;
+    else if (snappedSelectionRect.maxX() > logicalRight)
+        logicalWidth = logicalRight - snappedSelectionRect.x();
+
+    LayoutPoint topPoint;
+    LayoutUnit width;
+    LayoutUnit height;
+    if (isHorizontal) {
+        topPoint = LayoutPoint { snappedSelectionRect.x(), selectionTop };
+        width = logicalWidth;
+        height = selectionHeight;
+    } else {
+        topPoint = LayoutPoint { selectionTop, snappedSelectionRect.x() };
+        width = selectionHeight;
+        height = logicalWidth;
+    }
+    return LayoutRect { topPoint, LayoutSize { width, height } };
 }
 
 // FIXME: Share more code with paintMarkedTextBackground().
@@ -219,18 +258,7 @@ LayoutRect InlineTextBox::localSelectionRect(unsigned startPos, unsigned endPos)
         lineFont().adjustSelectionRectForText(textRun, selectionRect, sPos, ePos);
     // FIXME: The computation of the snapped selection rect differs from the computation of this rect
     // in paintMarkedTextBackground(). See <https://bugs.webkit.org/show_bug.cgi?id=138913>.
-    IntRect snappedSelectionRect = enclosingIntRect(selectionRect);
-    LayoutUnit logicalWidth = snappedSelectionRect.width();
-    if (snappedSelectionRect.x() > logicalRight())
-        logicalWidth  = 0;
-    else if (snappedSelectionRect.maxX() > logicalRight())
-        logicalWidth = logicalRight() - snappedSelectionRect.x();
-
-    LayoutPoint topPoint = isHorizontal() ? LayoutPoint(snappedSelectionRect.x(), selectionTop) : LayoutPoint(selectionTop, snappedSelectionRect.x());
-    LayoutUnit width = isHorizontal() ? logicalWidth : selectionHeight;
-    LayoutUnit height = isHorizontal() ? selectionHeight : logicalWidth;
-
-    return LayoutRect(topPoint, LayoutSize(width, height));
+    return snappedSelectionRect(selectionRect, logicalRight(), selectionTop, selectionHeight, isHorizontal());
 }
 
 void InlineTextBox::deleteLine()
@@ -524,6 +552,9 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
             paintCompositionBackground(paintInfo, boxOrigin);
 
         Vector<MarkedText> markedTexts = collectMarkedTextsForDocumentMarkers(TextPaintPhase::Background);
+        auto highlightMarkedTexts = collectMarkedTextsForHighlights(TextPaintPhase::Background);
+        if (!highlightMarkedTexts.isEmpty())
+            markedTexts.appendVector(WTFMove(highlightMarkedTexts));
 #if ENABLE(TEXT_SELECTION)
         if (haveSelection && !useCustomUnderlines && !context.paintingDisabled()) {
             auto selectionMarkedText = createMarkedTextFromSelectionInBox(*this);
@@ -554,9 +585,12 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     Vector<MarkedText> markedTexts;
     if (paintInfo.phase != PaintPhase::Selection) {
         // The marked texts for the gaps between document markers and selection are implicitly created by subdividing the entire line.
-        markedTexts.append({ clampedOffset(m_start), clampedOffset(end() + 1), MarkedText::Unmarked });
+        markedTexts.append({ clampedOffset(m_start), clampedOffset(end()), MarkedText::Unmarked });
         if (!isPrinting) {
             markedTexts.appendVector(collectMarkedTextsForDocumentMarkers(TextPaintPhase::Foreground));
+            auto highlightMarkedTexts = collectMarkedTextsForHighlights(TextPaintPhase::Foreground);
+            if (!highlightMarkedTexts.isEmpty())
+                markedTexts.appendVector(WTFMove(highlightMarkedTexts));
 
             bool shouldPaintDraggedContent = !(paintInfo.paintBehavior.contains(PaintBehavior::ExcludeSelection));
             if (shouldPaintDraggedContent) {
@@ -652,19 +686,34 @@ unsigned InlineTextBox::clampedOffset(unsigned x) const
     return offset;
 }
 
-std::pair<unsigned, unsigned> InlineTextBox::selectionStartEnd() const
+std::pair<unsigned, unsigned> InlineTextBox::clampedStartEndForState(unsigned start, unsigned end, RenderObject::SelectionState selectionState) const
 {
-    auto selectionState = renderer().selectionState();
     if (selectionState == RenderObject::SelectionInside)
         return { 0, clampedOffset(m_start + m_len) };
 
-    auto start = renderer().view().selection().startPosition();
-    auto end = renderer().view().selection().endPosition();
     if (selectionState == RenderObject::SelectionStart)
         end = renderer().text().length();
     else if (selectionState == RenderObject::SelectionEnd)
         start = 0;
     return { clampedOffset(start), clampedOffset(end) };
+}
+
+std::pair<unsigned, unsigned> InlineTextBox::selectionStartEnd() const
+{
+    auto selectionState = renderer().selectionState();
+
+    return clampedStartEndForState(renderer().view().selection().startOffset(), renderer().view().selection().endOffset(), selectionState);
+}
+
+std::pair<unsigned, unsigned> InlineTextBox::highlightStartEnd(SelectionRangeData &rangeData) const
+{
+    auto state = rangeData.selectionStateForRenderer(renderer());
+    state = verifySelectionState(state, rangeData);
+
+    if (state == RenderObject::SelectionNone)
+        return {0, 0};
+
+    return clampedStartEndForState(rangeData.startOffset(), rangeData.endOffset(), state);
 }
 
 bool InlineTextBox::hasMarkers() const
@@ -697,7 +746,7 @@ FloatRect InlineTextBox::calculateDocumentMarkerBounds(const MarkedText& markedT
     auto height = 0.13247 * fontSize;
 
     // Avoid measuring the text when the entire line box is selected as an optimization.
-    if (markedText.startOffset || markedText.endOffset != clampedOffset(end() + 1)) {
+    if (markedText.startOffset || markedText.endOffset != clampedOffset(end())) {
         TextRun run = createTextRun();
         LayoutRect selectionRect = LayoutRect(0, y, 0, height);
         lineFont().adjustSelectionRectForText(run, selectionRect, markedText.startOffset, markedText.endOffset);
@@ -769,6 +818,22 @@ auto InlineTextBox::resolveStyleForMarkedText(const MarkedText& markedText, cons
     case MarkedText::GrammarError:
     case MarkedText::SpellingError:
     case MarkedText::Unmarked:
+        break;
+    case MarkedText::Highlight:
+        if (auto renderStyle = parent()->renderer().getUncachedPseudoStyle({ PseudoId::Highlight, markedText.highlightName }, &parent()->renderer().style())) {
+            style.backgroundColor = renderStyle->backgroundColor();
+            style.textStyles.fillColor = renderStyle->computedStrokeColor();
+            style.textStyles.strokeColor = renderStyle->computedStrokeColor();
+
+            auto color = renderStyle->visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
+            auto decorationStyle = renderStyle->textDecorationStyle();
+            auto decorations = renderStyle->textDecorationsInEffect();
+
+            if (decorations.containsAny({ TextDecoration::Underline, TextDecoration::Overline, TextDecoration::LineThrough })) {
+                style.textDecorationStyles.underlineColor = color;
+                style.textDecorationStyles.underlineStyle = decorationStyle;
+            }
+        }
         break;
     case MarkedText::DraggedContent:
         style.alpha = 0.25;
@@ -932,7 +997,7 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
             continue;
         }
 
-        if (marker->startOffset() > end()) {
+        if (marker->startOffset() >= end()) {
             // Marker is completely after this run, bail. A later run will paint it.
             break;
         }
@@ -958,6 +1023,45 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
 #endif
         default:
             ASSERT_NOT_REACHED();
+        }
+    }
+    return markedTexts;
+}
+
+
+Vector<MarkedText> InlineTextBox::collectMarkedTextsForHighlights(TextPaintPhase phase) const
+{
+    if (!RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled())
+        return { };
+    ASSERT_ARG(phase, phase == TextPaintPhase::Background || phase == TextPaintPhase::Foreground || phase == TextPaintPhase::Decoration);
+    UNUSED_PARAM(phase);
+    if (!renderer().textNode())
+        return { };
+
+    Vector<MarkedText> markedTexts;
+    auto& parentRenderer = parent()->renderer();
+    auto& parentStyle = parentRenderer.style();
+    for (auto& highlight : renderer().document().highlightMap().map()) {
+        auto renderStyle = parentRenderer.getUncachedPseudoStyle({ PseudoId::Highlight, highlight.key }, &parentStyle);
+        if (!renderStyle)
+            continue;
+        for (auto& rangeData : highlight.value->rangesData()) {
+            if (rangeData->startPosition && rangeData->endPosition) {
+                Position startPos = rangeData->startPosition.value();
+                Position endPos = rangeData->endPosition.value();
+                RenderObject* startRenderer = startPos.deprecatedNode()->renderer();
+                int startOffset = startPos.deprecatedEditingOffset();
+                RenderObject* endRenderer = endPos.deprecatedNode()->renderer();
+                int endOffset = endPos.deprecatedEditingOffset();
+                ASSERT(startOffset >= 0 && endOffset >= 0);
+                if (!startRenderer || !endRenderer)
+                    continue;
+                auto highlightData = SelectionRangeData(renderer().view());
+                highlightData.setContext({startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset)});
+                auto [highlightStart, highlightEnd] = highlightStartEnd(highlightData);
+                if (highlightStart < highlightEnd)
+                    markedTexts.append({ highlightStart, highlightEnd, MarkedText::Highlight, nullptr, highlight.key });
+            }
         }
     }
     return markedTexts;
@@ -1122,7 +1226,23 @@ void InlineTextBox::paintMarkedTextDecoration(PaintInfo& paintInfo, const FloatR
 
 void InlineTextBox::paintCompositionBackground(PaintInfo& paintInfo, const FloatPoint& boxOrigin)
 {
-    paintMarkedTextBackground(paintInfo, boxOrigin, Color::compositionFill, clampedOffset(renderer().frame().editor().compositionStart()), clampedOffset(renderer().frame().editor().compositionEnd()));
+    if (!renderer().frame().editor().compositionUsesCustomHighlights()) {
+        paintMarkedTextBackground(paintInfo, boxOrigin, Color::compositionFill, clampedOffset(renderer().frame().editor().compositionStart()), clampedOffset(renderer().frame().editor().compositionEnd()));
+        return;
+    }
+
+    for (auto& highlight : renderer().frame().editor().customCompositionHighlights()) {
+        if (highlight.endOffset <= m_start)
+            continue;
+
+        if (highlight.startOffset >= end())
+            break;
+
+        paintMarkedTextBackground(paintInfo, boxOrigin, highlight.color, clampedOffset(highlight.startOffset), clampedOffset(highlight.endOffset));
+
+        if (highlight.endOffset > end())
+            break;
+    }
 }
 
 void InlineTextBox::paintCompositionUnderlines(PaintInfo& paintInfo, const FloatPoint& boxOrigin) const
@@ -1138,13 +1258,13 @@ void InlineTextBox::paintCompositionUnderlines(PaintInfo& paintInfo, const Float
             continue;
         }
 
-        if (underline.startOffset > end())
+        if (underline.startOffset >= end())
             break; // Underline is completely after this run, bail. A later run will paint it.
 
         // Underline intersects this run. Paint it.
         paintCompositionUnderline(paintInfo, boxOrigin, underline);
 
-        if (underline.endOffset > end() + 1)
+        if (underline.endOffset > end())
             break; // Underline also runs into the next run. Bail now, no more marker advancement.
     }
 }
@@ -1165,7 +1285,7 @@ void InlineTextBox::paintCompositionUnderline(PaintInfo& paintInfo, const FloatP
     float width = logicalWidth(); // how much line to draw
     bool useWholeWidth = true;
     unsigned paintStart = m_start;
-    unsigned paintEnd = end() + 1; // end points at the last char, not past it
+    unsigned paintEnd = end();
     if (paintStart <= underline.startOffset) {
         paintStart = underline.startOffset;
         useWholeWidth = false;
@@ -1304,7 +1424,7 @@ ExpansionBehavior InlineTextBox::expansionBehavior() const
     ExpansionBehavior trailingBehavior;
     if (forceTrailingExpansion())
         trailingBehavior = ForceTrailingExpansion;
-    else if (expansion() && nextLeafChild() && !nextLeafChild()->isLineBreak())
+    else if (expansion() && nextLeafOnLine() && !nextLeafOnLine()->isLineBreak())
         trailingBehavior = AllowTrailingExpansion;
     else
         trailingBehavior = ForbidTrailingExpansion;

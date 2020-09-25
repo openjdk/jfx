@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2018 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -33,7 +33,7 @@ class GetterSetter;
 class RegExpConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype, GetterSetter* species)
     {
@@ -55,26 +55,26 @@ protected:
 private:
     RegExpConstructor(VM&, Structure*);
 };
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RegExpConstructor, InternalFunction);
 
-static_assert(sizeof(RegExpConstructor) == sizeof(InternalFunction), "");
+JSObject* constructRegExp(JSGlobalObject*, const ArgList&, JSObject* callee = nullptr, JSValue newTarget = jsUndefined());
 
-JSObject* constructRegExp(ExecState*, JSGlobalObject*, const ArgList&, JSObject* callee = nullptr, JSValue newTarget = jsUndefined());
-
-ALWAYS_INLINE bool isRegExp(VM& vm, ExecState* exec, JSValue value)
+ALWAYS_INLINE bool isRegExp(VM& vm, JSGlobalObject* globalObject, JSValue value)
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (!value.isObject())
         return false;
 
     JSObject* object = asObject(value);
-    JSValue matchValue = object->get(exec, vm.propertyNames->matchSymbol);
+    JSValue matchValue = object->get(globalObject, vm.propertyNames->matchSymbol);
     RETURN_IF_EXCEPTION(scope, false);
     if (!matchValue.isUndefined())
-        return matchValue.toBoolean(exec);
+        return matchValue.toBoolean(globalObject);
 
     return object->inherits<RegExpObject>(vm);
 }
 
-EncodedJSValue JSC_HOST_CALL esSpecRegExpCreate(ExecState*);
+EncodedJSValue JSC_HOST_CALL esSpecRegExpCreate(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL esSpecIsRegExp(JSGlobalObject*, CallFrame*);
 
 } // namespace JSC

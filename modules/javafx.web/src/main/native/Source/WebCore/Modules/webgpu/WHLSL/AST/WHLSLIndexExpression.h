@@ -45,6 +45,9 @@ public:
         : PropertyAccessExpression(location, Kind::Index, WTFMove(base))
         , m_index(WTFMove(index))
     {
+#if CPU(ADDRESS32)
+        UNUSED_PARAM(m_padding);
+#endif
     }
 
     ~IndexExpression() = default;
@@ -52,26 +55,16 @@ public:
     IndexExpression(const IndexExpression&) = delete;
     IndexExpression(IndexExpression&&) = default;
 
-    String getterFunctionName() const
-    {
-        return "operator[]"_str;
-    }
-
-    String setterFunctionName() const
-    {
-        return "operator[]="_str;
-    }
-
-    String anderFunctionName() const
-    {
-        return "operator&[]"_str;
-    }
-
     Expression& indexExpression() { return m_index; }
+    UniqueRef<Expression>& indexReference() { return m_index; }
     UniqueRef<Expression> takeIndex() { return WTFMove(m_index); }
 
 private:
     UniqueRef<Expression> m_index;
+#if CPU(ADDRESS32)
+    // This is used to allow for replaceWith into a bigger type.
+    char m_padding[4];
+#endif
 };
 
 } // namespace AST

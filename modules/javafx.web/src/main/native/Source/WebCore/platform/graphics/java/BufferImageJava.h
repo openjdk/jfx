@@ -52,7 +52,7 @@ public:
     //utatodo: callback to Java
     bool currentFrameKnownToBeOpaque() const override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
 
-    FloatSize size() const override { return FloatSize(m_width, m_height); }
+    FloatSize size(ImageOrientation = ImageOrientation::FromImage) const override { return FloatSize(m_width, m_height); }
 
     // ImageDrawResult draw(GraphicsContext& gc, const FloatRect& dstRect,
     //           const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;

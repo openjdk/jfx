@@ -29,6 +29,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Optional.h>
+#include <wtf/RunLoop.h>
 #include <wtf/SynchronizedFixedQueue.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/WorkQueue.h>
@@ -39,8 +40,9 @@ namespace WebCore {
 class BitmapImage;
 class GraphicsContext;
 class ImageDecoder;
+class SharedBuffer;
 
-class ImageSource : public ThreadSafeRefCounted<ImageSource, WTF::DestructionThread::Main>, public CanMakeWeakPtr<ImageSource> {
+class ImageSource : public ThreadSafeRefCounted<ImageSource>, public CanMakeWeakPtr<ImageSource> {
     friend class BitmapImage;
 public:
     ~ImageSource();
@@ -93,9 +95,10 @@ public:
     String uti();
     String filenameExtension();
     Optional<IntPoint> hotSpot();
+    ImageOrientation orientation();
 
     // Image metadata which is calculated from the first ImageFrame.
-    WEBCORE_EXPORT IntSize size();
+    WEBCORE_EXPORT IntSize size(ImageOrientation = ImageOrientation::FromImage);
     IntSize sizeRespectingOrientation();
     Color singlePixelSolidColor();
     SubsamplingLevel maximumSubsamplingLevel();
@@ -196,9 +199,11 @@ private:
 
     // Image metadata which is calculated from the first ImageFrame.
     Optional<IntSize> m_size;
-    Optional<IntSize> m_sizeRespectingOrientation;
+    Optional<ImageOrientation> m_orientation;
     Optional<Color> m_singlePixelSolidColor;
     Optional<SubsamplingLevel> m_maximumSubsamplingLevel;
+
+    RunLoop& m_runLoop;
 };
 
 }

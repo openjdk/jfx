@@ -27,6 +27,15 @@ class JSDOMBuiltinConstructorBase : public JSDOMConstructorBase {
 public:
     using Base = JSDOMConstructorBase;
 
+    template<typename CellType, JSC::SubspaceAccess>
+    static JSC::IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        static_assert(sizeof(CellType) == sizeof(JSDOMBuiltinConstructorBase));
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(CellType, JSDOMBuiltinConstructorBase);
+        static_assert(CellType::destroy == JSC::JSCell::destroy, "JSDOMBuiltinConstructor<JSClass> is not destructible actually");
+        return subspaceForImpl(vm);
+    }
+
 protected:
     JSDOMBuiltinConstructorBase(JSC::Structure* structure, JSDOMGlobalObject& globalObject)
         : JSDOMConstructorBase(structure, globalObject)
@@ -38,9 +47,11 @@ protected:
     JSC::JSFunction* initializeFunction();
     void setInitializeFunction(JSC::VM&, JSC::JSFunction&);
 
-    static void callFunctionWithCurrentArguments(JSC::ExecState&, JSC::JSObject& thisObject, JSC::JSFunction&);
+    static void callFunctionWithCurrentArguments(JSC::JSGlobalObject&, JSC::CallFrame&, JSC::JSObject& thisObject, JSC::JSFunction&);
 
 private:
+    static JSC::IsoSubspace* subspaceForImpl(JSC::VM&);
+
     JSC::WriteBarrier<JSC::JSFunction> m_initializeFunction;
 };
 

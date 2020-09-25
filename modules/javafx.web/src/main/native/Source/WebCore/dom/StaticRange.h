@@ -28,7 +28,6 @@
 #include "ExceptionOr.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -56,6 +55,8 @@ public:
     Node* startContainer() const;
     Node* endContainer() const;
     bool collapsed() const;
+
+    bool operator==(const StaticRange&) const;
 
 private:
     StaticRange(Ref<Node>&& startContainer, unsigned startOffset, Ref<Node>&& endContainer, unsigned endOffset);

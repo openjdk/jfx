@@ -102,11 +102,11 @@ RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
 
 struct SameSizeAsRenderObject {
     virtual ~SameSizeAsRenderObject() = default; // Allocate vtable pointer.
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     bool weakPtrFactorWasConstructedOnMainThread;
 #endif
     void* pointers[5];
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     unsigned m_debugBitfields : 2;
 #endif
     unsigned m_bitfields;
@@ -127,7 +127,7 @@ RenderObject::RenderObject(Node& node)
     , m_parent(nullptr)
     , m_previous(nullptr)
     , m_next(nullptr)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     , m_hasAXObject(false)
     , m_setNeedsLayoutForbidden(false)
 #endif
@@ -143,8 +143,8 @@ RenderObject::RenderObject(Node& node)
 RenderObject::~RenderObject()
 {
     view().didDestroyRenderer();
-#ifndef NDEBUG
     ASSERT(!m_hasAXObject);
+#ifndef NDEBUG
     renderObjectCounter.decrement();
 #endif
     ASSERT(!hasRareData());
@@ -494,7 +494,7 @@ void RenderObject::clearNeedsLayout()
     setNeedsPositionedMovementLayoutBit(false);
     if (is<RenderElement>(*this))
         downcast<RenderElement>(*this).setAncestorLineBoxDirty(false);
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     checkBlockPositionedObjectsNeedLayout();
 #endif
 }
@@ -567,7 +567,7 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
         scheduleRelayoutForSubtree(*ancestor);
 }
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 void RenderObject::checkBlockPositionedObjectsNeedLayout()
 {
     ASSERT(!needsLayout());
@@ -575,7 +575,7 @@ void RenderObject::checkBlockPositionedObjectsNeedLayout()
     if (is<RenderBlock>(*this))
         downcast<RenderBlock>(*this).checkPositionedObjectsNeedLayout();
 }
-#endif
+#endif // ASSERT_ENABLED
 
 void RenderObject::setPreferredLogicalWidthsDirty(bool shouldBeDirty, MarkingBehavior markParents)
 {
@@ -1837,9 +1837,11 @@ RenderFragmentedFlow* RenderObject::locateEnclosingFragmentedFlow() const
 void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const BoxSide& side, Color& color)
 {
     ASSERT(style == BorderStyle::Inset || style == BorderStyle::Outset);
+
     // This values were derived empirically.
-    const RGBA32 baseDarkColor = 0xFF202020;
-    const RGBA32 baseLightColor = 0xFFEBEBEB;
+    constexpr SimpleColor baseDarkColor { 0xFF202020 };
+    constexpr SimpleColor baseLightColor { 0xFFEBEBEB };
+
     enum Operation { Darken, Lighten };
 
     Operation operation = (side == BSTop || side == BSLeft) == (style == BorderStyle::Inset) ? Darken : Lighten;
@@ -1900,6 +1902,28 @@ void RenderObject::removeRareData()
 {
     rareDataMap().remove(this);
     setHasRareData(false);
+}
+
+bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
+{
+    auto enclosingFrameRenderer = [] (const RenderObject& renderer) {
+        auto* ownerElement = renderer.document().ownerElement();
+        return ownerElement ? ownerElement->renderer() : nullptr;
+    };
+
+    auto hasEmptyVisibleRect = [] (const RenderObject& renderer) {
+        VisibleRectContext context { false, false, { VisibleRectContextOption::UseEdgeInclusiveIntersection, VisibleRectContextOption::ApplyCompositedClips }};
+        auto& box = renderer.enclosingBoxModelObject();
+        auto clippedBounds = box.computeVisibleRectInContainer(box.borderBoundingBox(), &box.view(), context);
+        return !clippedBounds || clippedBounds->isEmpty();
+    };
+
+    for (auto* renderer = this; renderer; renderer = enclosingFrameRenderer(*renderer)) {
+        if (hasEmptyVisibleRect(*renderer))
+            return true;
+    }
+
+    return false;
 }
 
 #if ENABLE(TREE_DEBUGGING)

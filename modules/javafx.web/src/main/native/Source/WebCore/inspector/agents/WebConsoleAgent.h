@@ -33,7 +33,6 @@ namespace WebCore {
 class DOMWindow;
 class ResourceError;
 class ResourceResponse;
-struct WebAgentContext;
 typedef String ErrorString;
 
 class WebConsoleAgent : public Inspector::InspectorConsoleAgent {
@@ -41,7 +40,7 @@ class WebConsoleAgent : public Inspector::InspectorConsoleAgent {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WebConsoleAgent(WebAgentContext&);
-    virtual ~WebConsoleAgent();
+    ~WebConsoleAgent() override;
 
     // InspectorInstrumentation
     void frameWindowDiscarded(DOMWindow*);

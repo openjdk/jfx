@@ -233,7 +233,7 @@ void PaymentCoordinator::didSelectShippingContact(const PaymentContact& shipping
     m_activeSession->didSelectShippingContact(shippingContact);
 }
 
-void PaymentCoordinator::didCancelPaymentSession()
+void PaymentCoordinator::didCancelPaymentSession(PaymentSessionError&& error)
 {
     if (!m_activeSession) {
         // It's possible that the payment has been aborted already.
@@ -241,7 +241,7 @@ void PaymentCoordinator::didCancelPaymentSession()
     }
 
     RELEASE_LOG_IF_ALLOWED("didCancelPaymentSession()");
-    m_activeSession->didCancelPaymentSession();
+    m_activeSession->didCancelPaymentSession(WTFMove(error));
     m_activeSession = nullptr;
 }
 
@@ -289,15 +289,15 @@ bool PaymentCoordinator::setApplePayIsActiveIfAllowed(Document& document) const
     return true;
 }
 
-bool PaymentCoordinator::shouldAllowUserAgentScripts(Document& document) const
+Expected<void, ExceptionDetails> PaymentCoordinator::shouldAllowUserAgentScripts(Document& document) const
 {
     if (m_client.supportsUnrestrictedApplePay() || !document.isApplePayActive())
-        return true;
+        return { };
 
     ASSERT(!document.hasEvaluatedUserAgentScripts());
     ASSERT(!document.isRunningUserScripts());
     RELEASE_LOG_ERROR_IF_ALLOWED("shouldAllowUserAgentScripts() -> false (active session)");
-    return false;
+    return makeUnexpected(ExceptionDetails { m_client.userAgentScriptsBlockedErrorMessage() });
 }
 
 } // namespace WebCore

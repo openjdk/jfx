@@ -26,29 +26,57 @@
 package javafx.scene.control.skin;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WeakChangeListener;
+import javafx.event.EventHandler;
 import javafx.scene.control.TextField;
-
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import javafx.scene.control.skin.TextFieldSkin;
+import javafx.scene.input.MouseEvent;
 
 public class TextFieldSkinAndroid extends TextFieldSkin {
+
+    /**************************************************************************
+     *
+     * Private fields
+     *
+     **************************************************************************/
+
+    private final EventHandler<MouseEvent> mouseEventListener = e -> {
+        if (getSkinnable().isEditable() && getSkinnable().isFocused()) {
+            showSoftwareKeyboard();
+        }
+    };
+
+    private final ChangeListener<Boolean> focusChangeListener = (observable, wasFocused, isFocused) -> {
+        if (wasFocused && !isFocused) {
+            hideSoftwareKeyboard();
+        }
+    };
+    private final WeakChangeListener<Boolean> weakFocusChangeListener = new WeakChangeListener<>(focusChangeListener);
+
+    /**************************************************************************
+     *
+     * Constructors
+     *
+     **************************************************************************/
 
     public TextFieldSkinAndroid(final TextField textField) {
         super(textField);
 
-        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> observable,
-                    Boolean wasFocused, Boolean isFocused) {
-                if (textField.isEditable()) {
-                    if (isFocused) {
-                        showSoftwareKeyboard();
-                    } else {
-                        hideSoftwareKeyboard();
-                    }
-                }
-            }
-        });
+        textField.addEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
+        textField.focusedProperty().addListener(weakFocusChangeListener);
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Public API                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        getSkinnable().removeEventHandler(MouseEvent.MOUSE_CLICKED, mouseEventListener);
+        getSkinnable().focusedProperty().removeListener(weakFocusChangeListener);
+        super.dispose();
     }
 
     native void showSoftwareKeyboard();

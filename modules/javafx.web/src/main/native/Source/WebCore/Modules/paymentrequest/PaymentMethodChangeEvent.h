@@ -40,13 +40,14 @@ class JSObject;
 namespace WebCore {
 
 class PaymentMethodChangeEvent final : public PaymentRequestUpdateEvent {
+    WTF_MAKE_ISO_ALLOCATED(PaymentMethodChangeEvent);
 public:
     template<typename... Args> static Ref<PaymentMethodChangeEvent> create(Args&&... args)
     {
         return adoptRef(*new PaymentMethodChangeEvent(std::forward<Args>(args)...));
     }
 
-    using MethodDetailsFunction = std::function<JSC::Strong<JSC::JSObject>(JSC::ExecState&)>;
+    using MethodDetailsFunction = std::function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
     using MethodDetailsType = Variant<JSValueInWrappedObject, MethodDetailsFunction>;
 
     const String& methodName() const { return m_methodName; }

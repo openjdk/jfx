@@ -33,6 +33,13 @@ import javafx.util.StringConverter;
  * @since JavaFX 2.1
  */
 public class IntegerStringConverter extends StringConverter<Integer> {
+
+    /**
+     * Creates a default {@code IntegerStringConverter}.
+     */
+    public IntegerStringConverter() {
+    }
+
     /** {@inheritDoc} */
     @Override public Integer fromString(String value) {
         // If the specified value is null or zero-length, return null

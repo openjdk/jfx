@@ -41,7 +41,7 @@ public:
     static Ref<AccessibilityTableColumn> create();
     virtual ~AccessibilityTableColumn();
 
-    AccessibilityObject* headerObject();
+    AXCoreObject* headerObject();
 
     AccessibilityRole roleValue() const override { return AccessibilityRole::Column; }
 

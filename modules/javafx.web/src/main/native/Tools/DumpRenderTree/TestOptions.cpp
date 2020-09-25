@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,8 @@
 #include "TestOptions.h"
 
 #include <fstream>
+#include <string>
+#include <wtf/text/WTFString.h>
 
 static bool parseBooleanTestHeaderValue(const std::string& value)
 {
@@ -39,11 +41,30 @@ static bool parseBooleanTestHeaderValue(const std::string& value)
     return false;
 }
 
+static bool pathContains(const std::string& pathOrURL, const char* substring)
+{
+    String path(pathOrURL.c_str());
+    return path.contains(substring);
+}
+
+static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "localhost:8800/beacon") || pathContains(pathOrURL, "localhost:9443/beacon")
+        || pathContains(pathOrURL, "localhost:8800/cors") || pathContains(pathOrURL, "localhost:9443/cors")
+        || pathContains(pathOrURL, "localhost:8800/fetch") || pathContains(pathOrURL, "localhost:9443/fetch")
+        || pathContains(pathOrURL, "localhost:8800/service-workers") || pathContains(pathOrURL, "localhost:9443/service-workers")
+        || pathContains(pathOrURL, "localhost:8800/xhr") || pathContains(pathOrURL, "localhost:9443/xhr")
+        || pathContains(pathOrURL, "localhost:8800/webrtc") || pathContains(pathOrURL, "localhost:9443/webrtc")
+        || pathContains(pathOrURL, "localhost:8800/websockets") || pathContains(pathOrURL, "localhost:9443/websockets");
+}
+
 TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolutePath)
 {
     const auto& path = absolutePath.empty() ? pathOrURL : absolutePath;
     if (path.empty())
         return;
+
+    dumpJSConsoleLogInStdErr = shouldDumpJSConsoleLogInStdErr(pathOrURL);
 
     std::string options;
     std::ifstream testFile(path.data());
@@ -79,6 +100,10 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             useAcceleratedDrawing = parseBooleanTestHeaderValue(value);
         else if (key == "enableIntersectionObserver")
             enableIntersectionObserver = parseBooleanTestHeaderValue(value);
+        else if (key == "useEphemeralSession")
+            useEphemeralSession = parseBooleanTestHeaderValue(value);
+        else if (key == "enableBackForwardCache")
+            enableBackForwardCache = parseBooleanTestHeaderValue(value);
         else if (key == "enableMenuItemElement")
             enableMenuItemElement = parseBooleanTestHeaderValue(value);
         else if (key == "enableKeygenElement")
@@ -117,10 +142,20 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:ResizeObserverEnabled")
             enableResizeObserver = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:CSSOMViewSmoothScrollingEnabled")
+            enableCSSOMViewSmoothScrolling = parseBooleanTestHeaderValue(value);
         else if (key == "experimental:CoreMathMLEnabled")
             enableCoreMathML = parseBooleanTestHeaderValue(value);
-        else if (key == "experimental:LazyImageLoadingEnabled")
-            enableLazyImageLoading = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:RequestIdleCallbackEnabled")
+            enableRequestIdleCallback = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:AsyncClipboardAPIEnabled")
+            enableAsyncClipboardAPI = parseBooleanTestHeaderValue(value);
+        else if (key == "internal:LayoutFormattingContextIntegrationEnabled")
+            layoutFormattingContextIntegrationEnabled = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:AspectRatioOfImgFromWidthAndHeightEnabled")
+            enableAspectRatioOfImgFromWidthAndHeight = parseBooleanTestHeaderValue(value);
+        else if (key == "allowTopNavigationToDataURLs")
+            allowTopNavigationToDataURLs = parseBooleanTestHeaderValue(value);
         pairStart = pairEnd + 1;
     }
 }

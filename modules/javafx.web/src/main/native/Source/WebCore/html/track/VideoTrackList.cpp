@@ -29,11 +29,12 @@
 
 #include "VideoTrackList.h"
 
+#include "HTMLMediaElement.h"
 #include "VideoTrack.h"
 
 namespace WebCore {
 
-VideoTrackList::VideoTrackList(HTMLMediaElement* element, ScriptExecutionContext* context)
+VideoTrackList::VideoTrackList(WeakPtr<HTMLMediaElement> element, ScriptExecutionContext* context)
     : TrackListBase(element, context)
 {
 }
@@ -92,11 +93,6 @@ int VideoTrackList::selectedIndex() const
 EventTargetInterface VideoTrackList::eventTargetInterface() const
 {
     return VideoTrackListEventTargetInterfaceType;
-}
-
-const char* VideoTrackList::activeDOMObjectName() const
-{
-    return "VideoTrackList";
 }
 
 } // namespace WebCore

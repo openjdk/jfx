@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@ import java.util.concurrent.TimeUnit;
  * Monocle implementation class for Timer.
  */
 final class MonocleTimer extends Timer {
+    private static final String THREAD_NAME = "Monocle Timer";
+
     private static ScheduledThreadPoolExecutor scheduler;
     private ScheduledFuture<?> task;
 
@@ -51,7 +53,11 @@ final class MonocleTimer extends Timer {
 
     @Override protected long _start(final Runnable runnable, int period) {
         if (scheduler == null) {
-            scheduler = new ScheduledThreadPoolExecutor(1);
+            scheduler = new ScheduledThreadPoolExecutor(1, target -> {
+                Thread thread = new Thread(target, THREAD_NAME);
+                thread.setDaemon(true);
+                return thread;
+            });
         }
 
         task = scheduler.scheduleAtFixedRate(runnable, 0, period, TimeUnit.MILLISECONDS);

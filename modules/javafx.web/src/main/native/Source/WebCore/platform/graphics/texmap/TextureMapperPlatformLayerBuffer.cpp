@@ -35,18 +35,27 @@ namespace WebCore {
 
 TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&& texture, TextureMapperGL::Flags flags)
     : m_texture(WTFMove(texture))
-    , m_textureID(0)
+    , m_variant(RGBTexture { 0 })
     , m_extraFlags(flags)
     , m_hasManagedTexture(true)
 {
 }
 
 TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(GLuint textureID, const IntSize& size, TextureMapperGL::Flags flags, GLint internalFormat)
-    : m_textureID(textureID)
+    : TextureMapperPlatformLayerBuffer({ RGBTexture { textureID } }, size, flags, internalFormat)
+{
+}
+
+TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(TextureVariant&& variant, const IntSize& size, TextureMapperGL::Flags flags, GLint internalFormat)
+    : m_variant(WTFMove(variant))
     , m_size(size)
     , m_internalFormat(internalFormat)
     , m_extraFlags(flags)
     , m_hasManagedTexture(false)
+{
+}
+
+TextureMapperPlatformLayerBuffer::~TextureMapperPlatformLayerBuffer()
 {
 }
 
@@ -57,14 +66,33 @@ bool TextureMapperPlatformLayerBuffer::canReuseWithoutReset(const IntSize& size,
 
 std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuffer::clone()
 {
-    if (m_hasManagedTexture || !m_textureID) {
+    if (m_hasManagedTexture) {
         notImplemented();
         return nullptr;
     }
-    auto texture = BitmapTextureGL::create(TextureMapperContextAttributes::get(), m_internalFormat);
-    texture->reset(m_size);
-    static_cast<BitmapTextureGL&>(texture.get()).copyFromExternalTexture(m_textureID);
-    return makeUnique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), m_extraFlags);
+
+    return WTF::switchOn(m_variant,
+        [&](const RGBTexture& texture) mutable -> std::unique_ptr<TextureMapperPlatformLayerBuffer> {
+            if (!texture.id) {
+                notImplemented();
+                return nullptr;
+            }
+
+            auto clonedTexture = BitmapTextureGL::create(TextureMapperContextAttributes::get(), m_internalFormat);
+            clonedTexture->reset(m_size);
+            static_cast<BitmapTextureGL&>(clonedTexture.get()).copyFromExternalTexture(texture.id);
+            return makeUnique<TextureMapperPlatformLayerBuffer>(WTFMove(clonedTexture), m_extraFlags);
+        },
+        [](const YUVTexture&)
+        {
+            notImplemented();
+            return nullptr;
+        },
+        [](const ExternalOESTexture&)
+        {
+            notImplemented();
+            return nullptr;
+        });
 }
 
 void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
@@ -74,6 +102,9 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
     if (m_hasManagedTexture) {
         ASSERT(m_texture);
         BitmapTextureGL* textureGL = static_cast<BitmapTextureGL*>(m_texture.get());
+#if USE(ANGLE)
+        textureGL->updatePendingContents(IntRect(IntPoint(), textureGL->contentSize()), IntPoint());
+#endif
         texmapGL.drawTexture(textureGL->id(), m_extraFlags | textureGL->colorConvertFlags(), textureGL->size(), targetRect, modelViewMatrix, opacity);
         return;
     }
@@ -86,8 +117,40 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
         return;
     }
 
-    ASSERT(m_textureID);
-    texmapGL.drawTexture(m_textureID, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+#if USE(GSTREAMER_GL)
+    if (m_unmanagedBufferDataHolder)
+        m_unmanagedBufferDataHolder->waitForCPUSync();
+#endif // USE(GSTREAMER_GL)
+
+    WTF::switchOn(m_variant,
+        [&](const RGBTexture& texture) {
+            ASSERT(texture.id);
+            texmapGL.drawTexture(texture.id, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+        },
+        [&](const YUVTexture& texture) {
+            switch (texture.numberOfPlanes) {
+            case 1:
+                ASSERT(texture.yuvPlane[0] == texture.yuvPlane[1] && texture.yuvPlane[1] == texture.yuvPlane[2]);
+                ASSERT(texture.yuvPlaneOffset[0] == 2 && texture.yuvPlaneOffset[1] == 1 && !texture.yuvPlaneOffset[2]);
+                texmapGL.drawTexturePackedYUV(texture.planes[texture.yuvPlane[0]],
+                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+                break;
+            case 2:
+                ASSERT(!texture.yuvPlaneOffset[0]);
+                texmapGL.drawTextureSemiPlanarYUV(std::array<GLuint, 2> { texture.planes[texture.yuvPlane[0]], texture.planes[texture.yuvPlane[1]] }, !!texture.yuvPlaneOffset[1],
+                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+                break;
+            case 3:
+                ASSERT(!texture.yuvPlaneOffset[0] && !texture.yuvPlaneOffset[1] && !texture.yuvPlaneOffset[2]);
+                texmapGL.drawTexturePlanarYUV(std::array<GLuint, 3> { texture.planes[texture.yuvPlane[0]], texture.planes[texture.yuvPlane[1]], texture.planes[texture.yuvPlane[2]] },
+                    texture.yuvToRgbMatrix, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+                break;
+            }
+        },
+        [&](const ExternalOESTexture& texture) {
+            ASSERT(texture.id);
+            texmapGL.drawTextureExternalOES(texture.id, m_extraFlags, m_size, targetRect, modelViewMatrix, opacity);
+        });
 }
 
 } // namespace WebCore

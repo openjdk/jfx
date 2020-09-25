@@ -49,13 +49,15 @@ public:
     public:
         virtual ~Connection() { }
 
-        virtual void postMessageToServiceWorkerClient(const ServiceWorkerClientIdentifier& destinationIdentifier, MessageWithMessagePorts&&, ServiceWorkerIdentifier source, const String& sourceOrigin) = 0;
-        virtual void serviceWorkerStartedWithMessage(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage) = 0;
+        virtual void establishConnection(CompletionHandler<void()>&&) = 0;
+        virtual void postMessageToServiceWorkerClient(const ServiceWorkerClientIdentifier& destinationIdentifier, const MessageWithMessagePorts&, ServiceWorkerIdentifier source, const String& sourceOrigin) = 0;
+        virtual void serviceWorkerStarted(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool doesHandleFetch) = 0;
+        virtual void serviceWorkerFailedToStart(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& message) = 0;
         virtual void didFinishInstall(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, bool wasSuccessful) = 0;
         virtual void didFinishActivation(ServiceWorkerIdentifier) = 0;
         virtual void setServiceWorkerHasPendingEvents(ServiceWorkerIdentifier, bool) = 0;
         virtual void workerTerminated(ServiceWorkerIdentifier) = 0;
-        virtual void skipWaiting(ServiceWorkerIdentifier, Function<void()>&&) = 0;
+        virtual void skipWaiting(ServiceWorkerIdentifier, CompletionHandler<void()>&&) = 0;
         virtual void setScriptResource(ServiceWorkerIdentifier, const URL&, const ServiceWorkerContextData::ImportedScript&) = 0;
 
         using FindClientByIdentifierCallback = CompletionHandler<void(ExceptionOr<Optional<ServiceWorkerClientData>>&&)>;
@@ -63,7 +65,20 @@ public:
         virtual void matchAll(ServiceWorkerIdentifier, const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&) = 0;
         virtual void claim(ServiceWorkerIdentifier, CompletionHandler<void()>&&) = 0;
 
+        virtual void didFailHeartBeatCheck(ServiceWorkerIdentifier) = 0;
+
         virtual bool isThrottleable() const = 0;
+
+        bool isClosed() const { return m_isClosed; }
+        bool shouldUseShortTimeout() const { return m_shouldUseShortTimeout; }
+
+    protected:
+        void setAsClosed() { m_isClosed = true; }
+        void setShouldUseShortTimeout(bool value) { m_shouldUseShortTimeout = value; }
+
+    private:
+        bool m_isClosed { false };
+        bool m_shouldUseShortTimeout { false };
     };
 
     WEBCORE_EXPORT void setConnection(std::unique_ptr<Connection>&&);
@@ -85,13 +100,20 @@ public:
 
     ServiceWorkerThreadProxy* workerByID(ServiceWorkerIdentifier identifier) { return m_workerMap.get(identifier); }
 
+    WEBCORE_EXPORT void stopAllServiceWorkers();
+
+    static constexpr Seconds workerTerminationTimeout { 10_s };
+    static constexpr Seconds syncWorkerTerminationTimeout { 100_ms }; // Only used by layout tests.
+
 private:
     SWContextManager() = default;
 
-    void startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage);
+    void startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage, bool doesHandleFetch);
     NO_RETURN_DUE_TO_CRASH void serviceWorkerFailedToTerminate(ServiceWorkerIdentifier);
 
-    HashMap<ServiceWorkerIdentifier, RefPtr<ServiceWorkerThreadProxy>> m_workerMap;
+    void stopWorker(ServiceWorkerThreadProxy&, Seconds, Function<void()>&&);
+
+    HashMap<ServiceWorkerIdentifier, Ref<ServiceWorkerThreadProxy>> m_workerMap;
     std::unique_ptr<Connection> m_connection;
     ServiceWorkerCreationCallback* m_serviceWorkerCreationCallback { nullptr };
 

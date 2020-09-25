@@ -31,10 +31,6 @@
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakHashSet.h>
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
-#include "Autocapitalize.h"
-#endif
-
 namespace WebCore {
 
 class Event;
@@ -67,7 +63,7 @@ public:
     WEBCORE_EXPORT void setAutocomplete(const AtomString&);
     WEBCORE_EXPORT const AtomString& autocomplete() const;
 
-#if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
+#if ENABLE(AUTOCORRECT)
     WEBCORE_EXPORT bool shouldAutocorrect() const final;
 #endif
 
@@ -181,6 +177,7 @@ private:
     Vector<FormAssociatedElement*> m_associatedElements;
     Vector<WeakPtr<HTMLImageElement>> m_imageElements;
     WeakHashSet<HTMLFormControlElement> m_invalidAssociatedFormControls;
+    WeakPtr<FormSubmission> m_plannedFormSubmission;
 
     bool m_wasUserSubmitted { false };
     bool m_isSubmittingOrPreparingForSubmission { false };

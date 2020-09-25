@@ -35,20 +35,31 @@ class CommonIdentifiers;
 class BytecodeGenerator;
 class BytecodeIntrinsicNode;
 class RegisterID;
+enum class LinkTimeConstant : int32_t;
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_FUNCTIONS_EACH_NAME(macro) \
     macro(argument) \
     macro(argumentCount) \
     macro(getByIdDirect) \
     macro(getByIdDirectPrivate) \
+    macro(getPromiseInternalField) \
+    macro(getGeneratorInternalField) \
+    macro(getAsyncGeneratorInternalField) \
+    macro(getArrayIteratorInternalField) \
+    macro(getStringIteratorInternalField) \
     macro(idWithProfile) \
     macro(isObject) \
     macro(isJSArray) \
     macro(isProxyObject) \
     macro(isDerivedArray) \
+    macro(isGenerator) \
+    macro(isAsyncGenerator) \
+    macro(isPromise) \
     macro(isRegExpObject) \
     macro(isMap) \
     macro(isSet) \
+    macro(isStringIterator) \
+    macro(isArrayIterator) \
     macro(isUndefinedOrNull) \
     macro(tailCallForwardArguments) \
     macro(throwTypeError) \
@@ -58,10 +69,18 @@ class RegisterID;
     macro(putByIdDirect) \
     macro(putByIdDirectPrivate) \
     macro(putByValDirect) \
+    macro(putPromiseInternalField) \
+    macro(putGeneratorInternalField) \
+    macro(putAsyncGeneratorInternalField) \
+    macro(putArrayIteratorInternalField) \
+    macro(putStringIteratorInternalField) \
     macro(toNumber) \
     macro(toString) \
     macro(toObject) \
     macro(newArrayWithSize) \
+    macro(newPromise) \
+    macro(createPromise) \
+    macro(createArgumentsButterfly) \
     macro(defineEnumerableWritableConfigurableDataProperty) \
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
@@ -73,7 +92,7 @@ class RegisterID;
     macro(Infinity) \
     macro(iterationKindKey) \
     macro(iterationKindValue) \
-    macro(iterationKindKeyValue) \
+    macro(iterationKindEntries) \
     macro(MAX_ARRAY_INDEX) \
     macro(MAX_STRING_LENGTH) \
     macro(MAX_SAFE_INTEGER) \
@@ -88,11 +107,29 @@ class RegisterID;
     macro(promiseStatePending) \
     macro(promiseStateFulfilled) \
     macro(promiseStateRejected) \
+    macro(promiseStateMask) \
+    macro(promiseFlagsIsHandled) \
+    macro(promiseFlagsIsFirstResolvingFunctionCalled) \
+    macro(promiseFieldFlags) \
+    macro(promiseFieldReactionsOrResult) \
+    macro(generatorFieldState) \
+    macro(generatorFieldNext) \
+    macro(generatorFieldThis) \
+    macro(generatorFieldFrame) \
     macro(GeneratorResumeModeNormal) \
     macro(GeneratorResumeModeThrow) \
     macro(GeneratorResumeModeReturn) \
     macro(GeneratorStateCompleted) \
     macro(GeneratorStateExecuting) \
+    macro(arrayIteratorFieldIndex) \
+    macro(arrayIteratorFieldIsDone) \
+    macro(arrayIteratorFieldIteratedObject) \
+    macro(arrayIteratorFieldKind) \
+    macro(stringIteratorFieldIndex) \
+    macro(stringIteratorFieldIteratedString) \
+    macro(asyncGeneratorFieldSuspendReason) \
+    macro(asyncGeneratorFieldQueueFirst) \
+    macro(asyncGeneratorFieldQueueLast) \
     macro(AsyncGeneratorStateCompleted) \
     macro(AsyncGeneratorStateExecuting) \
     macro(AsyncGeneratorStateAwaitingReturn) \
@@ -114,7 +151,44 @@ public:
 
     typedef RegisterID* (BytecodeIntrinsicNode::* EmitterType)(BytecodeGenerator&, RegisterID*);
 
-    EmitterType lookup(const Identifier&) const;
+    enum class Type : uint8_t {
+        Emitter = 0,
+        LinkTimeConstant = 1,
+    };
+
+    class Entry {
+    public:
+        Entry()
+            : m_type(Type::Emitter)
+        {
+            m_emitter = nullptr;
+        }
+
+        Entry(EmitterType emitter)
+            : m_type(Type::Emitter)
+        {
+            m_emitter = emitter;
+        }
+
+        Entry(LinkTimeConstant linkTimeConstant)
+            : m_type(Type::LinkTimeConstant)
+        {
+            m_linkTimeConstant = linkTimeConstant;
+        }
+
+        Type type() const { return m_type; }
+        LinkTimeConstant linkTimeConstant() const { return m_linkTimeConstant; }
+        EmitterType emitter() const { return m_emitter; }
+
+    private:
+        union {
+            EmitterType m_emitter;
+            LinkTimeConstant m_linkTimeConstant;
+        };
+        Type m_type;
+    };
+
+    Optional<Entry> lookup(const Identifier&) const;
 
 #define JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS(name) JSValue name##Value(BytecodeGenerator&);
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS)
@@ -122,7 +196,7 @@ public:
 
 private:
     VM& m_vm;
-    HashMap<RefPtr<UniquedStringImpl>, EmitterType, IdentifierRepHash> m_bytecodeIntrinsicMap;
+    HashMap<RefPtr<UniquedStringImpl>, Entry, IdentifierRepHash> m_bytecodeIntrinsicMap;
 
 #define JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS(name) Strong<Unknown> m_##name;
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_SIMPLE_EACH_NAME(JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS)

@@ -86,11 +86,12 @@ public:
     {
         const CSSParserToken& token = range.peek();
         auto functionId = token.functionId();
-        if (functionId == CSSValueCalc || functionId == CSSValueWebkitCalc || functionId == CSSValueMin || functionId == CSSValueMax)
+        if (CSSCalcValue::isCalcFunction(functionId))
             m_calcValue = CSSCalcValue::create(functionId, consumeFunction(m_range), destinationCategory, valueRange);
     }
 
     const CSSCalcValue* value() const { return m_calcValue.get(); }
+
     RefPtr<CSSPrimitiveValue> consumeValue()
     {
         if (!m_calcValue)
@@ -98,12 +99,23 @@ public:
         m_sourceRange = m_range;
         return CSSValuePool::singleton().createValue(WTFMove(m_calcValue));
     }
+
+    RefPtr<CSSPrimitiveValue> consumeInteger(double minimumValue)
+    {
+        if (!m_calcValue)
+            return nullptr;
+        m_sourceRange = m_range;
+        double value = std::max(m_calcValue->doubleValue(), minimumValue);
+        value = std::round(value);
+        return CSSValuePool::singleton().createValue(value, CSSUnitType::CSS_NUMBER);
+    }
+
     RefPtr<CSSPrimitiveValue> consumeNumber()
     {
         if (!m_calcValue)
             return nullptr;
         m_sourceRange = m_range;
-        return CSSValuePool::singleton().createValue(m_calcValue->doubleValue(), CSSPrimitiveValue::UnitType::CSS_NUMBER);
+        return CSSValuePool::singleton().createValue(m_calcValue->doubleValue(), CSSUnitType::CSS_NUMBER);
     }
 
     bool consumeNumberRaw(double& result)
@@ -112,17 +124,6 @@ public:
             return false;
         m_sourceRange = m_range;
         result = m_calcValue->doubleValue();
-        return true;
-    }
-
-    bool consumePositiveIntegerRaw(int& result)
-    {
-        if (!m_calcValue || m_calcValue->category() != CalculationCategory::Number || !m_calcValue->isInt())
-            return false;
-        result = static_cast<int>(m_calcValue->doubleValue());
-        if (result < 1)
-            return false;
-        m_sourceRange = m_range;
         return true;
     }
 
@@ -138,7 +139,7 @@ RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange& range, double mini
     if (token.type() == NumberToken) {
         if (token.numericValueType() == NumberValueType || token.numericValue() < minimumValue)
             return nullptr;
-        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSPrimitiveValue::UnitType::CSS_NUMBER);
+        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_NUMBER);
     }
 
     if (token.type() != FunctionToken)
@@ -146,12 +147,9 @@ RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange& range, double mini
 
     CalcParser calcParser(range, CalculationCategory::Number);
     if (const CSSCalcValue* calculation = calcParser.value()) {
-        if (calculation->category() != CalculationCategory::Number || !calculation->isInt())
+        if (calculation->category() != CalculationCategory::Number)
             return nullptr;
-        double value = calculation->doubleValue();
-        if (value < minimumValue)
-            return nullptr;
-        return calcParser.consumeNumber();
+        return calcParser.consumeInteger(minimumValue);
     }
 
     return nullptr;
@@ -160,23 +158,6 @@ RefPtr<CSSPrimitiveValue> consumeInteger(CSSParserTokenRange& range, double mini
 RefPtr<CSSPrimitiveValue> consumePositiveInteger(CSSParserTokenRange& range)
 {
     return consumeInteger(range, 1);
-}
-
-bool consumePositiveIntegerRaw(CSSParserTokenRange& range, int& result)
-{
-    const CSSParserToken& token = range.peek();
-    if (token.type() == NumberToken) {
-        if (token.numericValueType() == NumberValueType || token.numericValue() < 1)
-            return false;
-        result = range.consumeIncludingWhitespace().numericValue();
-        return true;
-    }
-
-    if (token.type() != FunctionToken)
-        return false;
-
-    CalcParser calcParser(range, CalculationCategory::Number);
-    return calcParser.consumePositiveIntegerRaw(result);
 }
 
 bool consumeNumberRaw(CSSParserTokenRange& range, double& result)
@@ -207,13 +188,11 @@ RefPtr<CSSPrimitiveValue> consumeNumber(CSSParserTokenRange& range, ValueRange v
     if (token.type() != FunctionToken)
         return nullptr;
 
-    CalcParser calcParser(range, CalculationCategory::Number, ValueRangeAll);
-    if (const CSSCalcValue* calculation = calcParser.value()) {
-        // FIXME: Calcs should not be subject to parse time range checks.
-        // spec: https://drafts.csswg.org/css-values-3/#calc-range
-        if (calculation->category() != CalculationCategory::Number || (valueRange == ValueRangeNonNegative && calculation->isNegative()))
+    CalcParser calcParser(range, CalculationCategory::Number, valueRange);
+    if (const CSSCalcValue* calcValue = calcParser.value()) {
+        if (calcValue->category() != CalculationCategory::Number)
             return nullptr;
-        return calcParser.consumeNumber();
+        return calcParser.consumeValue();
     }
 
     return nullptr;
@@ -249,7 +228,7 @@ RefPtr<CSSPrimitiveValue> consumeFontWeightNumber(CSSParserTokenRange& range)
 #endif
     ) {
         result = std::min(std::max(result, std::nextafter(0., 1.)), std::nextafter(1000., 0.));
-        return CSSValuePool::singleton().createValue(result, CSSPrimitiveValue::UnitType::CSS_NUMBER);
+        return CSSValuePool::singleton().createValue(result, CSSUnitType::CSS_NUMBER);
     }
 
     return nullptr;
@@ -268,24 +247,25 @@ RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange& range, CSSParserMod
     const CSSParserToken& token = range.peek();
     if (token.type() == DimensionToken) {
         switch (token.unitType()) {
-        case CSSPrimitiveValue::UnitType::CSS_QUIRKY_EMS:
+        case CSSUnitType::CSS_QUIRKY_EMS:
             if (cssParserMode != UASheetMode)
                 return nullptr;
             FALLTHROUGH;
-        case CSSPrimitiveValue::UnitType::CSS_EMS:
-        case CSSPrimitiveValue::UnitType::CSS_REMS:
-        case CSSPrimitiveValue::UnitType::CSS_CHS:
-        case CSSPrimitiveValue::UnitType::CSS_EXS:
-        case CSSPrimitiveValue::UnitType::CSS_PX:
-        case CSSPrimitiveValue::UnitType::CSS_CM:
-        case CSSPrimitiveValue::UnitType::CSS_MM:
-        case CSSPrimitiveValue::UnitType::CSS_IN:
-        case CSSPrimitiveValue::UnitType::CSS_PT:
-        case CSSPrimitiveValue::UnitType::CSS_PC:
-        case CSSPrimitiveValue::UnitType::CSS_VW:
-        case CSSPrimitiveValue::UnitType::CSS_VH:
-        case CSSPrimitiveValue::UnitType::CSS_VMIN:
-        case CSSPrimitiveValue::UnitType::CSS_VMAX:
+        case CSSUnitType::CSS_EMS:
+        case CSSUnitType::CSS_REMS:
+        case CSSUnitType::CSS_CHS:
+        case CSSUnitType::CSS_EXS:
+        case CSSUnitType::CSS_PX:
+        case CSSUnitType::CSS_CM:
+        case CSSUnitType::CSS_MM:
+        case CSSUnitType::CSS_IN:
+        case CSSUnitType::CSS_PT:
+        case CSSUnitType::CSS_PC:
+        case CSSUnitType::CSS_VW:
+        case CSSUnitType::CSS_VH:
+        case CSSUnitType::CSS_VMIN:
+        case CSSUnitType::CSS_VMAX:
+        case CSSUnitType::CSS_Q:
             break;
         default:
             return nullptr;
@@ -300,7 +280,7 @@ RefPtr<CSSPrimitiveValue> consumeLength(CSSParserTokenRange& range, CSSParserMod
             return nullptr;
         if (std::isinf(token.numericValue()))
             return nullptr;
-        CSSPrimitiveValue::UnitType unitType = CSSPrimitiveValue::UnitType::CSS_PX;
+        CSSUnitType unitType = CSSUnitType::CSS_PX;
         return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), unitType);
     }
 
@@ -320,7 +300,7 @@ RefPtr<CSSPrimitiveValue> consumePercent(CSSParserTokenRange& range, ValueRange 
     if (token.type() == PercentageToken) {
         if ((valueRange == ValueRangeNonNegative && token.numericValue() < 0) || std::isinf(token.numericValue()))
             return nullptr;
-        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_PERCENTAGE);
     }
 
     if (token.type() != FunctionToken)
@@ -372,10 +352,10 @@ RefPtr<CSSPrimitiveValue> consumeAngle(CSSParserTokenRange& range, CSSParserMode
     const CSSParserToken& token = range.peek();
     if (token.type() == DimensionToken) {
         switch (token.unitType()) {
-        case CSSPrimitiveValue::UnitType::CSS_DEG:
-        case CSSPrimitiveValue::UnitType::CSS_RAD:
-        case CSSPrimitiveValue::UnitType::CSS_GRAD:
-        case CSSPrimitiveValue::UnitType::CSS_TURN:
+        case CSSUnitType::CSS_DEG:
+        case CSSUnitType::CSS_RAD:
+        case CSSUnitType::CSS_GRAD:
+        case CSSUnitType::CSS_TURN:
             return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), token.unitType());
         default:
             return nullptr;
@@ -383,7 +363,7 @@ RefPtr<CSSPrimitiveValue> consumeAngle(CSSParserTokenRange& range, CSSParserMode
     }
 
     if (token.type() == NumberToken && shouldAcceptUnitlessValue(token.numericValue(), cssParserMode, unitless))
-        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSPrimitiveValue::UnitType::CSS_DEG);
+        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_DEG);
 
     if (token.type() != FunctionToken)
         return nullptr;
@@ -401,17 +381,17 @@ static RefPtr<CSSPrimitiveValue> consumeAngleOrPercent(CSSParserTokenRange& rang
     const CSSParserToken& token = range.peek();
     if (token.type() == DimensionToken) {
         switch (token.unitType()) {
-        case CSSPrimitiveValue::UnitType::CSS_DEG:
-        case CSSPrimitiveValue::UnitType::CSS_RAD:
-        case CSSPrimitiveValue::UnitType::CSS_GRAD:
-        case CSSPrimitiveValue::UnitType::CSS_TURN:
+        case CSSUnitType::CSS_DEG:
+        case CSSUnitType::CSS_RAD:
+        case CSSUnitType::CSS_GRAD:
+        case CSSUnitType::CSS_TURN:
             return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), token.unitType());
         default:
             return nullptr;
         }
     }
     if (token.type() == NumberToken && shouldAcceptUnitlessValue(token.numericValue(), cssParserMode, unitless))
-        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSPrimitiveValue::UnitType::CSS_DEG);
+        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_DEG);
 
     if (token.type() == PercentageToken)
         return consumePercent(range, valueRange);
@@ -436,14 +416,14 @@ static RefPtr<CSSPrimitiveValue> consumeAngleOrPercent(CSSParserTokenRange& rang
 RefPtr<CSSPrimitiveValue> consumeTime(CSSParserTokenRange& range, CSSParserMode cssParserMode, ValueRange valueRange, UnitlessQuirk unitless)
 {
     const CSSParserToken& token = range.peek();
-    CSSPrimitiveValue::UnitType unit = token.unitType();
-    bool acceptUnitless = token.type() == NumberToken && shouldAcceptUnitlessValue(token.numericValue(), cssParserMode, unitless);
+    CSSUnitType unit = token.unitType();
+    bool acceptUnitless = token.type() == NumberToken && unitless == UnitlessQuirk::Allow && shouldAcceptUnitlessValue(token.numericValue(), cssParserMode, unitless);
     if (acceptUnitless)
-        unit = CSSPrimitiveValue::UnitType::CSS_MS;
+        unit = CSSUnitType::CSS_MS;
     if (token.type() == DimensionToken || acceptUnitless) {
         if (valueRange == ValueRangeNonNegative && token.numericValue() < 0)
             return nullptr;
-        if (unit == CSSPrimitiveValue::UnitType::CSS_MS || unit == CSSPrimitiveValue::UnitType::CSS_S)
+        if (unit == CSSUnitType::CSS_MS || unit == CSSUnitType::CSS_S)
             return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), unit);
         return nullptr;
     }
@@ -459,15 +439,18 @@ RefPtr<CSSPrimitiveValue> consumeTime(CSSParserTokenRange& range, CSSParserMode 
     return nullptr;
 }
 
-RefPtr<CSSPrimitiveValue> consumeResolution(CSSParserTokenRange& range)
+RefPtr<CSSPrimitiveValue> consumeResolution(CSSParserTokenRange& range, AllowXResolutionUnit allowX)
 {
     const CSSParserToken& token = range.peek();
     // Unlike the other types, calc() does not work with <resolution>.
     if (token.type() != DimensionToken)
         return nullptr;
-    CSSPrimitiveValue::UnitType unit = token.unitType();
-    if (unit == CSSPrimitiveValue::UnitType::CSS_DPPX || unit == CSSPrimitiveValue::UnitType::CSS_DPI || unit == CSSPrimitiveValue::UnitType::CSS_DPCM)
+    CSSUnitType unit = token.unitType();
+    if (unit == CSSUnitType::CSS_DPPX || unit == CSSUnitType::CSS_DPI || unit == CSSUnitType::CSS_DPCM)
         return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), unit);
+    if (allowX == AllowXResolutionUnit::Allow && token.value() == "x")
+        return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().numericValue(), CSSUnitType::CSS_DPPX);
+
     return nullptr;
 }
 
@@ -492,14 +475,14 @@ RefPtr<CSSPrimitiveValue> consumeCustomIdent(CSSParserTokenRange& range)
 {
     if (range.peek().type() != IdentToken || isCSSWideKeyword(range.peek().id()))
         return nullptr;
-    return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().value().toString(), CSSPrimitiveValue::UnitType::CSS_STRING);
+    return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().value().toString(), CSSUnitType::CSS_STRING);
 }
 
 RefPtr<CSSPrimitiveValue> consumeString(CSSParserTokenRange& range)
 {
     if (range.peek().type() != StringToken)
         return nullptr;
-    return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().value().toString(), CSSPrimitiveValue::UnitType::CSS_STRING);
+    return CSSValuePool::singleton().createValue(range.consumeIncludingWhitespace().value().toString(), CSSUnitType::CSS_STRING);
 }
 
 StringView consumeUrlAsStringView(CSSParserTokenRange& range)
@@ -529,7 +512,7 @@ RefPtr<CSSPrimitiveValue> consumeUrl(CSSParserTokenRange& range)
     StringView url = consumeUrlAsStringView(range);
     if (url.isNull())
         return nullptr;
-    return CSSValuePool::singleton().createValue(url.toString(), CSSPrimitiveValue::UnitType::CSS_URI);
+    return CSSValuePool::singleton().createValue(url.toString(), CSSUnitType::CSS_URI);
 }
 
 static int clampRGBComponent(const CSSPrimitiveValue& value)
@@ -599,9 +582,8 @@ static Color parseRGBParameters(CSSParserTokenRange& range)
             alpha = alphaPercent->doubleValue() / 100.0;
         }
 
-        // Convert the floating pointer number of alpha to an integer in the range [0, 256),
-        // with an equal distribution across all 256 values.
-        alphaComponent = static_cast<int>(clampTo<double>(alpha, 0.0, 1.0) * nextafter(256.0, 0.0));
+        // W3 standard stipulates a 2.55 alpha value multiplication factor.
+        alphaComponent = static_cast<int>(lroundf(clampTo<double>(alpha, 0.0, 1.0) * 255.0f));
     };
 
     result = Color(makeRGBA(colorArray[0], colorArray[1], colorArray[2], alphaComponent));
@@ -625,9 +607,9 @@ static Color parseHSLParameters(CSSParserTokenRange& range, CSSParserMode cssPar
         angleInDegrees = hslValue->doubleValue();
     } else
         angleInDegrees = hslValue->computeDegrees();
+
     double colorArray[3];
-    // The hue needs to be in the range [0.0, 6.0) for calcHue()
-    colorArray[0] = fmod(fmod(angleInDegrees, 360.0) + 360.0, 360.0) / 60.0;
+    colorArray[0] = fmod(fmod(angleInDegrees, 360.0) + 360.0, 360.0) / 360.0;
     bool requiresCommas = false;
     for (int i = 1; i < 3; i++) {
         if (consumeCommaIncludingWhitespace(args)) {
@@ -661,7 +643,7 @@ static Color parseHSLParameters(CSSParserTokenRange& range, CSSParserMode cssPar
     if (!args.atEnd())
         return Color();
 
-    return Color(makeRGBAFromHSLA(colorArray[0], colorArray[1], colorArray[2], alpha));
+    return Color(makeRGBAFromHSLA(static_cast<float>(colorArray[0]), static_cast<float>(colorArray[1]), static_cast<float>(colorArray[2]), static_cast<float>(alpha)));
 }
 
 static Color parseColorFunctionParameters(CSSParserTokenRange& range)
@@ -672,10 +654,10 @@ static Color parseColorFunctionParameters(CSSParserTokenRange& range)
     ColorSpace colorSpace;
     switch (args.peek().id()) {
     case CSSValueSRGB:
-        colorSpace = ColorSpaceSRGB;
+        colorSpace = ColorSpace::SRGB;
         break;
     case CSSValueDisplayP3:
-        colorSpace = ColorSpaceDisplayP3;
+        colorSpace = ColorSpace::DisplayP3;
         break;
     default:
         return Color();
@@ -833,15 +815,25 @@ static Ref<CSSPrimitiveValue> createPrimitiveValuePair(Args&&... args)
 }
 }
 
-static bool positionFromThreeOrFourValues(CSSPrimitiveValue** values, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY)
+// https://drafts.csswg.org/css-backgrounds-3/#propdef-background-position
+// background-position has special parsing rules, allowing a 3-value syntax:
+// <bg-position> =  [ left | center | right | top | bottom | <length-percentage> ]
+// |
+//   [ left | center | right | <length-percentage> ]
+//   [ top | center | bottom | <length-percentage> ]
+// |
+//   [ center | [ left | right ] <length-percentage>? ] &&
+//   [ center | [ top | bottom ] <length-percentage>? ]
+//
+static bool backgroundPositionFromThreeValues(const std::array<CSSPrimitiveValue*, 5>& values, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY)
 {
     CSSPrimitiveValue* center = nullptr;
     for (int i = 0; values[i]; i++) {
         CSSPrimitiveValue* currentValue = values[i];
         if (!currentValue->isValueID())
             return false;
-        CSSValueID id = currentValue->valueID();
 
+        CSSValueID id = currentValue->valueID();
         if (id == CSSValueCenter) {
             if (center)
                 return false;
@@ -881,9 +873,52 @@ static bool positionFromThreeOrFourValues(CSSPrimitiveValue** values, RefPtr<CSS
     return true;
 }
 
+// https://drafts.csswg.org/css-values-4/#typedef-position
+// <position> = [
+//   [ left | center | right ] || [ top | center | bottom ]
+// |
+//   [ left | center | right | <length-percentage> ]
+//   [ top | center | bottom | <length-percentage> ]?
+// |
+//   [ [ left | right ] <length-percentage> ] &&
+//   [ [ top | bottom ] <length-percentage> ]
+//
+static bool positionFromFourValues(const std::array<CSSPrimitiveValue*, 5>& values, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY)
+{
+    for (int i = 0; values[i]; i++) {
+        CSSPrimitiveValue* currentValue = values[i];
+        if (!currentValue->isValueID())
+            return false;
+
+        CSSValueID id = currentValue->valueID();
+        if (id == CSSValueCenter)
+            return false;
+
+        RefPtr<CSSPrimitiveValue> result;
+        if (values[i + 1] && !values[i + 1]->isValueID())
+            result = CSSPropertyParserHelpersInternal::createPrimitiveValuePair(currentValue, values[++i]);
+        else
+            result = currentValue;
+
+        if (id == CSSValueLeft || id == CSSValueRight) {
+            if (resultX)
+                return false;
+            resultX = result;
+        } else {
+            ASSERT(id == CSSValueTop || id == CSSValueBottom);
+            if (resultY)
+                return false;
+            resultY = result;
+        }
+    }
+
+    ASSERT(resultX && resultY);
+    return true;
+}
+
 // FIXME: This may consume from the range upon failure. The background
 // shorthand works around it, but we should just fix it here.
-bool consumePosition(CSSParserTokenRange& range, CSSParserMode cssParserMode, UnitlessQuirk unitless, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY)
+bool consumePosition(CSSParserTokenRange& range, CSSParserMode cssParserMode, UnitlessQuirk unitless, PositionSyntax positionSyntax, RefPtr<CSSPrimitiveValue>& resultX, RefPtr<CSSPrimitiveValue>& resultY)
 {
     RefPtr<CSSPrimitiveValue> value1 = consumePositionComponent(range, cssParserMode, unitless);
     if (!value1)
@@ -900,20 +935,28 @@ bool consumePosition(CSSParserTokenRange& range, CSSParserMode cssParserMode, Un
         return positionFromTwoValues(*value1, *value2, resultX, resultY);
 
     RefPtr<CSSPrimitiveValue> value4 = consumePositionComponent(range, cssParserMode, unitless);
-    CSSPrimitiveValue* values[5];
+
+    std::array<CSSPrimitiveValue*, 5> values;
     values[0] = value1.get();
     values[1] = value2.get();
     values[2] = value3.get();
     values[3] = value4.get();
     values[4] = nullptr;
-    return positionFromThreeOrFourValues(values, resultX, resultY);
+
+    if (value4)
+        return positionFromFourValues(values, resultX, resultY);
+
+    if (positionSyntax != PositionSyntax::BackgroundPosition)
+        return false;
+
+    return backgroundPositionFromThreeValues(values, resultX, resultY);
 }
 
-RefPtr<CSSPrimitiveValue> consumePosition(CSSParserTokenRange& range, CSSParserMode cssParserMode, UnitlessQuirk unitless)
+RefPtr<CSSPrimitiveValue> consumePosition(CSSParserTokenRange& range, CSSParserMode cssParserMode, UnitlessQuirk unitless, PositionSyntax positionSyntax)
 {
     RefPtr<CSSPrimitiveValue> resultX;
     RefPtr<CSSPrimitiveValue> resultY;
-    if (consumePosition(range, cssParserMode, unitless, resultX, resultY))
+    if (consumePosition(range, cssParserMode, unitless, positionSyntax, resultX, resultY))
         return CSSPropertyParserHelpersInternal::createPrimitiveValuePair(resultX.releaseNonNull(), resultY.releaseNonNull());
     return nullptr;
 }
@@ -936,11 +979,11 @@ static RefPtr<CSSPrimitiveValue> consumeDeprecatedGradientPoint(CSSParserTokenRa
 {
     if (args.peek().type() == IdentToken) {
         if ((horizontal && consumeIdent<CSSValueLeft>(args)) || (!horizontal && consumeIdent<CSSValueTop>(args)))
-            return CSSValuePool::singleton().createValue(0., CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+            return CSSValuePool::singleton().createValue(0., CSSUnitType::CSS_PERCENTAGE);
         if ((horizontal && consumeIdent<CSSValueRight>(args)) || (!horizontal && consumeIdent<CSSValueBottom>(args)))
-            return CSSValuePool::singleton().createValue(100., CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+            return CSSValuePool::singleton().createValue(100., CSSUnitType::CSS_PERCENTAGE);
         if (consumeIdent<CSSValueCenter>(args))
-            return CSSValuePool::singleton().createValue(50., CSSPrimitiveValue::UnitType::CSS_PERCENTAGE);
+            return CSSValuePool::singleton().createValue(50., CSSUnitType::CSS_PERCENTAGE);
         return nullptr;
     }
     RefPtr<CSSPrimitiveValue> result = consumePercent(args, ValueRangeAll);
@@ -978,7 +1021,7 @@ static bool consumeDeprecatedGradientColorStop(CSSParserTokenRange& range, CSSGr
             return false;
     }
 
-    stop.m_position = CSSValuePool::singleton().createValue(position, CSSPrimitiveValue::UnitType::CSS_NUMBER);
+    stop.m_position = CSSValuePool::singleton().createValue(position, CSSUnitType::CSS_NUMBER);
     stop.m_color = consumeDeprecatedGradientStopColor(args, cssParserMode);
     return stop.m_color && args.atEnd();
 }
@@ -995,7 +1038,7 @@ static RefPtr<CSSValue> consumeDeprecatedGradient(CSSParserTokenRange& args, CSS
     if (!result || !consumeCommaIncludingWhitespace(args))
         return nullptr;
 
-    RefPtr<CSSPrimitiveValue> point = consumeDeprecatedGradientPoint(args, true);
+    auto point = consumeDeprecatedGradientPoint(args, true);
     if (!point)
         return nullptr;
     result->setFirstX(point.copyRef());
@@ -1009,7 +1052,7 @@ static RefPtr<CSSValue> consumeDeprecatedGradient(CSSParserTokenRange& args, CSS
 
     // For radial gradients only, we now expect a numeric radius.
     if (isDeprecatedRadialGradient) {
-        RefPtr<CSSPrimitiveValue> radius = consumeNumber(args, ValueRangeAll);
+        auto radius = consumeNumber(args, ValueRangeNonNegative);
         if (!radius || !consumeCommaIncludingWhitespace(args))
             return nullptr;
         downcast<CSSRadialGradientValue>(result.get())->setFirstRadius(radius.copyRef());
@@ -1028,7 +1071,7 @@ static RefPtr<CSSValue> consumeDeprecatedGradient(CSSParserTokenRange& args, CSS
     if (isDeprecatedRadialGradient) {
         if (!consumeCommaIncludingWhitespace(args))
             return nullptr;
-        RefPtr<CSSPrimitiveValue> radius = consumeNumber(args, ValueRangeAll);
+        auto radius = consumeNumber(args, ValueRangeNonNegative);
         if (!radius)
             return nullptr;
         downcast<CSSRadialGradientValue>(result.get())->setSecondRadius(radius.copyRef());
@@ -1072,19 +1115,20 @@ static bool consumeGradientColorStops(CSSParserTokenRange& range, CSSParserMode 
 
         if (!stop.m_color && !stop.m_position)
             return false;
+
         gradient.addStop(stop);
 
-        // See if there is a second color hint, which is optional.
+        if (!stop.m_color || !stop.m_position)
+            continue;
+
         CSSGradientColorStop secondStop;
         if (isConicGradient)
             secondStop.m_position = consumeAngleOrPercent(range, cssParserMode, ValueRangeAll, UnitlessQuirk::Forbid);
         else
             secondStop.m_position = consumeLengthOrPercent(range, cssParserMode, ValueRangeAll);
 
-        if (secondStop.m_position) {
-            secondStop.m_color = stop.m_color;
+        if (secondStop.m_position)
             gradient.addStop(secondStop);
-        }
 
     } while (consumeCommaIncludingWhitespace(range));
 
@@ -1112,8 +1156,8 @@ static RefPtr<CSSValue> consumeDeprecatedRadialGradient(CSSParserTokenRange& arg
     result->setSecondX(centerX.copyRef());
     result->setSecondY(centerY.copyRef());
 
-    RefPtr<CSSPrimitiveValue> shape = consumeIdent<CSSValueCircle, CSSValueEllipse>(args);
-    RefPtr<CSSPrimitiveValue> sizeKeyword = consumeIdent<CSSValueClosestSide, CSSValueClosestCorner, CSSValueFarthestSide, CSSValueFarthestCorner, CSSValueContain, CSSValueCover>(args);
+    auto shape = consumeIdent<CSSValueCircle, CSSValueEllipse>(args);
+    auto sizeKeyword = consumeIdent<CSSValueClosestSide, CSSValueClosestCorner, CSSValueFarthestSide, CSSValueFarthestCorner, CSSValueContain, CSSValueCover>(args);
     if (!shape)
         shape = consumeIdent<CSSValueCircle, CSSValueEllipse>(args);
     result->setShape(shape.copyRef());
@@ -1121,10 +1165,10 @@ static RefPtr<CSSValue> consumeDeprecatedRadialGradient(CSSParserTokenRange& arg
 
     // Or, two lengths or percentages
     if (!shape && !sizeKeyword) {
-        RefPtr<CSSPrimitiveValue> horizontalSize = consumeLengthOrPercent(args, cssParserMode, ValueRangeAll);
+        auto horizontalSize = consumeLengthOrPercent(args, cssParserMode, ValueRangeNonNegative);
         RefPtr<CSSPrimitiveValue> verticalSize;
         if (horizontalSize) {
-            verticalSize = consumeLengthOrPercent(args, cssParserMode, ValueRangeAll);
+            verticalSize = consumeLengthOrPercent(args, cssParserMode, ValueRangeNonNegative);
             if (!verticalSize)
                 return nullptr;
             consumeCommaIncludingWhitespace(args);
@@ -1168,13 +1212,13 @@ static RefPtr<CSSValue> consumeRadialGradient(CSSParserTokenRange& args, CSSPars
                 break;
             }
         } else {
-            RefPtr<CSSPrimitiveValue> center = consumeLengthOrPercent(args, cssParserMode, ValueRangeAll);
+            auto center = consumeLengthOrPercent(args, cssParserMode, ValueRangeNonNegative);
             if (!center)
                 break;
             if (horizontalSize)
                 return nullptr;
             horizontalSize = center;
-            center = consumeLengthOrPercent(args, cssParserMode, ValueRangeAll);
+            center = consumeLengthOrPercent(args, cssParserMode, ValueRangeNonNegative);
             if (center) {
                 verticalSize = center;
                 ++i;
@@ -1207,7 +1251,7 @@ static RefPtr<CSSValue> consumeRadialGradient(CSSParserTokenRange& args, CSSPars
     RefPtr<CSSPrimitiveValue> centerY;
     if (args.peek().id() == CSSValueAt) {
         args.consumeIncludingWhitespace();
-        consumePosition(args, cssParserMode, UnitlessQuirk::Forbid, centerX, centerY);
+        consumePosition(args, cssParserMode, UnitlessQuirk::Forbid, PositionSyntax::Position, centerX, centerY);
         if (!(centerX && centerY))
             return nullptr;
 
@@ -1277,7 +1321,7 @@ static RefPtr<CSSValue> consumeConicGradient(CSSParserTokenRange& args, CSSParse
         if (consumeIdent<CSSValueAt>(args)) {
             RefPtr<CSSPrimitiveValue> centerX;
             RefPtr<CSSPrimitiveValue> centerY;
-            consumePosition(args, context.mode, UnitlessQuirk::Forbid, centerX, centerY);
+            consumePosition(args, context.mode, UnitlessQuirk::Forbid, PositionSyntax::Position, centerX, centerY);
             if (!(centerX && centerY))
                 return nullptr;
 
@@ -1323,9 +1367,9 @@ static RefPtr<CSSValue> consumeCrossFade(CSSParserTokenRange& args, CSSParserCon
 
     RefPtr<CSSPrimitiveValue> percentage;
     if (auto percentValue = consumePercent(args, ValueRangeAll))
-        percentage = CSSValuePool::singleton().createValue(clampTo<double>(percentValue->doubleValue() / 100.0, 0, 1), CSSPrimitiveValue::UnitType::CSS_NUMBER);
+        percentage = CSSValuePool::singleton().createValue(clampTo<double>(percentValue->doubleValue() / 100.0, 0, 1), CSSUnitType::CSS_NUMBER);
     else if (auto numberValue = consumeNumber(args, ValueRangeAll))
-        percentage = CSSValuePool::singleton().createValue(clampTo<double>(numberValue->doubleValue(), 0, 1), CSSPrimitiveValue::UnitType::CSS_NUMBER);
+        percentage = CSSValuePool::singleton().createValue(clampTo<double>(numberValue->doubleValue(), 0, 1), CSSUnitType::CSS_NUMBER);
 
     if (!percentage)
         return nullptr;
@@ -1438,29 +1482,23 @@ static RefPtr<CSSValue> consumeGeneratedImage(CSSParserTokenRange& range, CSSPar
     return result;
 }
 
-static RefPtr<CSSValue> consumeImageSet(CSSParserTokenRange& range, const CSSParserContext& context)
+static RefPtr<CSSValue> consumeImageSet(CSSParserTokenRange& range, const CSSParserContext& context, OptionSet<AllowedImageType> allowedImageTypes)
 {
     CSSParserTokenRange rangeCopy = range;
     CSSParserTokenRange args = consumeFunction(rangeCopy);
-    RefPtr<CSSImageSetValue> imageSet = CSSImageSetValue::create(context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    RefPtr<CSSImageSetValue> imageSet = CSSImageSetValue::create();
     do {
-        AtomString urlValue = consumeUrlAsStringView(args).toAtomString();
-        if (urlValue.isNull())
+        auto image = consumeImage(args, context, allowedImageTypes);
+        if (!image)
             return nullptr;
 
-        RefPtr<CSSValue> image = CSSImageValue::create(completeURL(context, urlValue), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
         imageSet->append(image.releaseNonNull());
 
-        const CSSParserToken& token = args.consumeIncludingWhitespace();
-        if (token.type() != DimensionToken)
+        auto resolution = consumeResolution(args, AllowXResolutionUnit::Allow);
+        if (!resolution || resolution->floatValue() <= 0)
             return nullptr;
-        if (token.value() != "x")
-            return nullptr;
-        ASSERT(token.unitType() == CSSPrimitiveValue::UnitType::CSS_UNKNOWN);
-        double imageScaleFactor = token.numericValue();
-        if (imageScaleFactor <= 0)
-            return nullptr;
-        imageSet->append(CSSValuePool::singleton().createValue(imageScaleFactor, CSSPrimitiveValue::UnitType::CSS_NUMBER));
+
+        imageSet->append(resolution.releaseNonNull());
     } while (consumeCommaIncludingWhitespace(args));
     if (!args.atEnd())
         return nullptr;
@@ -1584,7 +1622,7 @@ static RefPtr<CSSFunctionValue> consumeFilterFunction(CSSParserTokenRange& range
                 bool isPercentage = downcast<CSSPrimitiveValue>(*parsedValue).isPercentage();
                 double maxAllowed = isPercentage ? 100.0 : 1.0;
                 if (downcast<CSSPrimitiveValue>(*parsedValue).doubleValue() > maxAllowed)
-                    parsedValue = CSSPrimitiveValue::create(maxAllowed, isPercentage ? CSSPrimitiveValue::UnitType::CSS_PERCENTAGE : CSSPrimitiveValue::UnitType::CSS_NUMBER);
+                    parsedValue = CSSPrimitiveValue::create(maxAllowed, isPercentage ? CSSUnitType::CSS_PERCENTAGE : CSSUnitType::CSS_NUMBER);
             }
         }
     }
@@ -1636,15 +1674,19 @@ RefPtr<CSSShadowValue> consumeSingleShadow(CSSParserTokenRange& range, CSSParser
     if (!verticalOffset)
         return nullptr;
 
-    auto blurRadius = consumeLength(range, cssParserMode, ValueRangeAll);
+    RefPtr<CSSPrimitiveValue> blurRadius;
     RefPtr<CSSPrimitiveValue> spreadDistance;
-    if (blurRadius) {
-        // Blur radius must be non-negative.
-        if (blurRadius->doubleValue() < 0)
+
+    const CSSParserToken& token = range.peek();
+    // The explicit check for calc() is unfortunate. This is ensuring that we only fail parsing if there is a length, but it fails the range check.
+    if (token.type() == DimensionToken || token.type() == NumberToken || (token.type() == FunctionToken && CSSCalcValue::isCalcFunction(token.functionId()))) {
+        blurRadius = consumeLength(range, cssParserMode, ValueRangeNonNegative);
+        if (!blurRadius)
             return nullptr;
-        if (allowSpread)
-            spreadDistance = consumeLength(range, cssParserMode, ValueRangeAll);
     }
+
+    if (blurRadius && allowSpread)
+        spreadDistance = consumeLength(range, cssParserMode, ValueRangeAll);
 
     if (!range.atEnd()) {
         if (!color)
@@ -1659,19 +1701,32 @@ RefPtr<CSSShadowValue> consumeSingleShadow(CSSParserTokenRange& range, CSSParser
     return CSSShadowValue::create(WTFMove(horizontalOffset), WTFMove(verticalOffset), WTFMove(blurRadius), WTFMove(spreadDistance), WTFMove(style), WTFMove(color));
 }
 
-RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSSParserContext context, ConsumeGeneratedImage generatedImage)
+RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSSParserContext context, OptionSet<AllowedImageType> allowedImageTypes)
 {
-    AtomString uri = consumeUrlAsStringView(range).toAtomString();
-    if (!uri.isNull())
-        return CSSImageValue::create(completeURL(context, uri), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    if ((range.peek().type() == StringToken) && (allowedImageTypes.contains(AllowedImageType::RawStringAsURL))) {
+        auto urlStringView = range.consumeIncludingWhitespace().value();
+        return CSSImageValue::create(completeURL(context, urlStringView.toAtomString()), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    }
 
     if (range.peek().type() == FunctionToken) {
-        CSSValueID id = range.peek().functionId();
-        if (id == CSSValueWebkitImageSet || id == CSSValueImageSet)
-            return consumeImageSet(range, context);
-        if (generatedImage == ConsumeGeneratedImage::Allow && isGeneratedImage(id))
+        CSSValueID functionId = range.peek().functionId();
+        if ((allowedImageTypes.contains(AllowedImageType::GeneratedImage)) && isGeneratedImage(functionId))
             return consumeGeneratedImage(range, context);
+
+        if (allowedImageTypes.contains(AllowedImageType::ImageSet)) {
+            if (functionId == CSSValueImageSet)
+                return consumeImageSet(range, context, (allowedImageTypes | AllowedImageType::RawStringAsURL) - AllowedImageType::ImageSet);
+            if (functionId == CSSValueWebkitImageSet)
+                return consumeImageSet(range, context, AllowedImageType::URLFunction);
+        }
     }
+
+    if (allowedImageTypes.contains(AllowedImageType::URLFunction)) {
+        auto uri = consumeUrlAsStringView(range);
+        if (!uri.isNull())
+            return CSSImageValue::create(completeURL(context, uri.toAtomString()), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    }
+
     return nullptr;
 }
 

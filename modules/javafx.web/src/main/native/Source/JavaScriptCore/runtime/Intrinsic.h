@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "IterationKind.h"
+
 namespace JSC {
 
 enum Intrinsic : uint8_t {
@@ -52,8 +54,30 @@ enum Intrinsic : uint8_t {
     ArrayPopIntrinsic,
     ArraySliceIntrinsic,
     ArrayIndexOfIntrinsic,
+    ArrayValuesIntrinsic,
+    ArrayKeysIntrinsic,
+    ArrayEntriesIntrinsic,
     CharCodeAtIntrinsic,
     CharAtIntrinsic,
+    DatePrototypeGetTimeIntrinsic,
+    DatePrototypeGetFullYearIntrinsic,
+    DatePrototypeGetUTCFullYearIntrinsic,
+    DatePrototypeGetMonthIntrinsic,
+    DatePrototypeGetUTCMonthIntrinsic,
+    DatePrototypeGetDateIntrinsic,
+    DatePrototypeGetUTCDateIntrinsic,
+    DatePrototypeGetDayIntrinsic,
+    DatePrototypeGetUTCDayIntrinsic,
+    DatePrototypeGetHoursIntrinsic,
+    DatePrototypeGetUTCHoursIntrinsic,
+    DatePrototypeGetMinutesIntrinsic,
+    DatePrototypeGetUTCMinutesIntrinsic,
+    DatePrototypeGetSecondsIntrinsic,
+    DatePrototypeGetUTCSecondsIntrinsic,
+    DatePrototypeGetMillisecondsIntrinsic,
+    DatePrototypeGetUTCMillisecondsIntrinsic,
+    DatePrototypeGetTimezoneOffsetIntrinsic,
+    DatePrototypeGetYearIntrinsic,
     FromCharCodeIntrinsic,
     PowIntrinsic,
     FloorIntrinsic,
@@ -74,6 +98,7 @@ enum Intrinsic : uint8_t {
     ObjectIsIntrinsic,
     ObjectKeysIntrinsic,
     ReflectGetPrototypeOfIntrinsic,
+    StringPrototypeCodePointAtIntrinsic,
     StringPrototypeValueOfIntrinsic,
     StringPrototypeReplaceIntrinsic,
     StringPrototypeReplaceRegExpIntrinsic,
@@ -85,8 +110,11 @@ enum Intrinsic : uint8_t {
     RandomIntrinsic,
     FRoundIntrinsic,
     TruncIntrinsic,
+    TypedArrayValuesIntrinsic,
+    TypedArrayKeysIntrinsic,
+    TypedArrayEntriesIntrinsic,
     IsTypedArrayViewIntrinsic,
-    BoundThisNoArgsFunctionCallIntrinsic,
+    BoundFunctionCallIntrinsic,
     JSMapGetIntrinsic,
     JSMapHasIntrinsic,
     JSMapSetIntrinsic,

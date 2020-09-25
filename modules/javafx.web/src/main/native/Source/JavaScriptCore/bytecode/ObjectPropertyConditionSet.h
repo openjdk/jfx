@@ -111,6 +111,14 @@ public:
     bool structuresEnsureValidityAssumingImpurePropertyWatchpoint() const;
 
     bool needImpurePropertyWatchpoint() const;
+
+    template<typename Functor>
+    void forEachDependentCell(const Functor& functor) const
+    {
+        for (const ObjectPropertyCondition& condition : *this)
+            condition.forEachDependentCell(functor);
+    }
+
     bool areStillLive(VM&) const;
 
     void dumpInContext(PrintStream&, DumpContext*) const;
@@ -160,18 +168,18 @@ ObjectPropertyCondition generateConditionForSelfEquivalence(
     VM&, JSCell* owner, JSObject* object, UniquedStringImpl* uid);
 
 ObjectPropertyConditionSet generateConditionsForPropertyMiss(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, UniquedStringImpl* uid);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPropertySetterMiss(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, UniquedStringImpl* uid);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype,
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
     UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype,
-    UniquedStringImpl* uid);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
+    UniquedStringImpl* uid, unsigned attributes);
 
 ObjectPropertyConditionSet generateConditionsForInstanceOf(
-    VM&, JSCell* owner, ExecState*, Structure* headStructure, JSObject* prototype, bool shouldHit);
+    VM&, JSCell* owner, JSGlobalObject*, Structure* headStructure, JSObject* prototype, bool shouldHit);
 
 ObjectPropertyConditionSet generateConditionsForPrototypeEquivalenceConcurrently(
     VM&, JSGlobalObject*, Structure* headStructure, JSObject* prototype,
@@ -180,5 +188,14 @@ ObjectPropertyConditionSet generateConditionsForPropertyMissConcurrently(
     VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
 ObjectPropertyConditionSet generateConditionsForPropertySetterMissConcurrently(
     VM&, JSGlobalObject*, Structure* headStructure, UniquedStringImpl* uid);
+
+struct PrototypeChainCachingStatus {
+    bool usesPolyProto;
+    bool flattenedDictionary;
+};
+
+Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, const PropertySlot&);
+Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, JSCell* base, JSObject* target);
+Optional<PrototypeChainCachingStatus> prepareChainForCaching(JSGlobalObject*, Structure* base, JSObject* target);
 
 } // namespace JSC

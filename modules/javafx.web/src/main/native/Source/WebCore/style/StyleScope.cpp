@@ -88,7 +88,7 @@ bool Scope::shouldUseSharedUserAgentShadowTreeStyleResolver() const
     return true;
 }
 
-StyleResolver& Scope::resolver()
+Resolver& Scope::resolver()
 {
     if (shouldUseSharedUserAgentShadowTreeStyleResolver())
         return m_document.userAgentShadowTreeStyleResolver();
@@ -96,7 +96,7 @@ StyleResolver& Scope::resolver()
     if (!m_resolver) {
         SetForScope<bool> isUpdatingStyleResolver { m_isUpdatingStyleResolver, true };
 
-        m_resolver = makeUnique<StyleResolver>(m_document);
+        m_resolver = makeUnique<Resolver>(m_document);
 
         if (!m_shadowRoot) {
             m_document.fontSelector().buildStarted();
@@ -117,7 +117,7 @@ StyleResolver& Scope::resolver()
     return *m_resolver;
 }
 
-StyleResolver* Scope::resolverIfExists()
+Resolver* Scope::resolverIfExists()
 {
     if (shouldUseSharedUserAgentShadowTreeStyleResolver())
         return &m_document.userAgentShadowTreeStyleResolver();
@@ -381,32 +381,29 @@ void Scope::collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>& sheets)
     }
 }
 
-Scope::StyleResolverUpdateType Scope::analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets, bool& requiresFullStyleRecalc)
+Scope::StyleSheetChange Scope::analyzeStyleSheetChange(const Vector<RefPtr<CSSStyleSheet>>& newStylesheets)
 {
-    requiresFullStyleRecalc = true;
-
     unsigned newStylesheetCount = newStylesheets.size();
 
     if (!resolverIfExists())
-        return Reconstruct;
-
-    auto& styleResolver = *resolverIfExists();
+        return { ResolverUpdateType::Reconstruct };
 
     // Find out which stylesheets are new.
     unsigned oldStylesheetCount = m_activeStyleSheets.size();
     if (newStylesheetCount < oldStylesheetCount)
-        return Reconstruct;
+        return { ResolverUpdateType::Reconstruct };
 
     Vector<StyleSheetContents*> addedSheets;
     unsigned newIndex = 0;
     for (unsigned oldIndex = 0; oldIndex < oldStylesheetCount; ++oldIndex) {
         if (newIndex >= newStylesheetCount)
-            return Reconstruct;
+            return { ResolverUpdateType::Reconstruct };
+
         while (m_activeStyleSheets[oldIndex] != newStylesheets[newIndex]) {
             addedSheets.append(&newStylesheets[newIndex]->contents());
             ++newIndex;
             if (newIndex == newStylesheetCount)
-                return Reconstruct;
+                return { ResolverUpdateType::Reconstruct };
         }
         ++newIndex;
     }
@@ -415,26 +412,10 @@ Scope::StyleResolverUpdateType Scope::analyzeStyleSheetChange(const Vector<RefPt
         addedSheets.append(&newStylesheets[newIndex]->contents());
         ++newIndex;
     }
-    // If all new sheets were added at the end of the list we can just add them to existing StyleResolver.
+
+    // If all new sheets were added at the end of the list we can just add them to existing Resolver.
     // If there were insertions we need to re-add all the stylesheets so rules are ordered correctly.
-    auto styleResolverUpdateType = hasInsertions ? Reset : Additive;
-
-    // If we are already parsing the body and so may have significant amount of elements, put some effort into trying to avoid style recalcs.
-    if (!m_document.bodyOrFrameset() || m_document.hasNodesWithNonFinalStyle() || m_document.hasNodesWithMissingStyle())
-        return styleResolverUpdateType;
-
-    Invalidator invalidator(addedSheets, styleResolver.mediaQueryEvaluator());
-    if (invalidator.dirtiesAllStyle())
-        return styleResolverUpdateType;
-
-    if (m_shadowRoot)
-        invalidator.invalidateStyle(*m_shadowRoot);
-    else
-        invalidator.invalidateStyle(m_document);
-
-    requiresFullStyleRecalc = false;
-
-    return styleResolverUpdateType;
+    return { hasInsertions ? ResolverUpdateType::Reset : ResolverUpdateType::Additive, WTFMove(addedSheets) };
 }
 
 static void filterEnabledNonemptyCSSStyleSheets(Vector<RefPtr<CSSStyleSheet>>& result, const Vector<RefPtr<StyleSheet>>& sheets)
@@ -450,18 +431,6 @@ static void filterEnabledNonemptyCSSStyleSheets(Vector<RefPtr<CSSStyleSheet>>& r
         if (!styleSheet.length())
             continue;
         result.append(&styleSheet);
-    }
-}
-
-static void invalidateHostAndSlottedStyleIfNeeded(ShadowRoot& shadowRoot, StyleResolver& resolver)
-{
-    auto& host = *shadowRoot.host();
-    if (!resolver.ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
-        host.invalidateStyle();
-
-    if (!resolver.ruleSets().authorStyle().slottedPseudoElementRules().isEmpty()) {
-        for (auto& shadowChild : childrenOfType<Element>(host))
-            shadowChild.invalidateStyle();
     }
 }
 
@@ -489,12 +458,11 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
     activeCSSStyleSheets.appendVector(m_document.extensionStyleSheets().authorStyleSheetsForTesting());
     filterEnabledNonemptyCSSStyleSheets(activeCSSStyleSheets, activeStyleSheets);
 
-    bool requiresFullStyleRecalc = true;
-    StyleResolverUpdateType styleResolverUpdateType = Reconstruct;
+    auto styleSheetChange = StyleSheetChange { ResolverUpdateType::Reconstruct };
     if (updateType == UpdateType::ActiveSet)
-        styleResolverUpdateType = analyzeStyleSheetChange(activeCSSStyleSheets, requiresFullStyleRecalc);
+        styleSheetChange = analyzeStyleSheetChange(activeCSSStyleSheets);
 
-    updateStyleResolver(activeCSSStyleSheets, styleResolverUpdateType);
+    updateResolver(activeCSSStyleSheets, styleSheetChange.resolverUpdateType);
 
     m_weakCopyOfActiveStyleSheetListForFastLookup = nullptr;
     m_activeStyleSheets.swap(activeCSSStyleSheets);
@@ -507,31 +475,37 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
             m_usesStyleBasedEditability = true;
     }
 
-    // FIXME: Move this code somewhere else.
-    if (requiresFullStyleRecalc) {
-        if (m_shadowRoot) {
-            for (auto& shadowChild : childrenOfType<Element>(*m_shadowRoot))
-                shadowChild.invalidateStyleForSubtree();
-            invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, resolver());
-        } else
-            m_document.scheduleFullStyleRebuild();
-    }
+    invalidateStyleAfterStyleSheetChange(styleSheetChange);
 }
 
-void Scope::updateStyleResolver(Vector<RefPtr<CSSStyleSheet>>& activeStyleSheets, StyleResolverUpdateType updateType)
+void Scope::invalidateStyleAfterStyleSheetChange(const StyleSheetChange& styleSheetChange)
 {
-    if (updateType == Reconstruct) {
+    // If we are already parsing the body and so may have significant amount of elements, put some effort into trying to avoid style recalcs.
+    bool invalidateAll = !m_document.bodyOrFrameset() || m_document.hasNodesWithNonFinalStyle() || m_document.hasNodesWithMissingStyle();
+
+    if (styleSheetChange.resolverUpdateType == ResolverUpdateType::Reconstruct || invalidateAll) {
+        Invalidator::invalidateAllStyle(*this);
+        return;
+    }
+
+    Invalidator invalidator(styleSheetChange.addedSheets, m_resolver->mediaQueryEvaluator());
+    invalidator.invalidateStyle(*this);
+}
+
+void Scope::updateResolver(Vector<RefPtr<CSSStyleSheet>>& activeStyleSheets, ResolverUpdateType updateType)
+{
+    if (updateType == ResolverUpdateType::Reconstruct) {
         clearResolver();
         return;
     }
     auto& styleResolver = resolver();
 
     SetForScope<bool> isUpdatingStyleResolver { m_isUpdatingStyleResolver, true };
-    if (updateType == Reset) {
+    if (updateType == ResolverUpdateType::Reset) {
         styleResolver.ruleSets().resetAuthorStyle();
         styleResolver.appendAuthorStyleSheets(activeStyleSheets);
     } else {
-        ASSERT(updateType == Additive);
+        ASSERT(updateType == ResolverUpdateType::Additive);
         unsigned firstNewIndex = m_activeStyleSheets.size();
         Vector<RefPtr<CSSStyleSheet>> newStyleSheets;
         newStyleSheets.appendRange(activeStyleSheets.begin() + firstNewIndex, activeStyleSheets.end());
@@ -543,6 +517,10 @@ const Vector<RefPtr<CSSStyleSheet>> Scope::activeStyleSheetsForInspector()
 {
     Vector<RefPtr<CSSStyleSheet>> result;
 
+    if (auto* pageUserSheet = m_document.extensionStyleSheets().pageUserSheet())
+        result.append(pageUserSheet);
+    result.appendVector(m_document.extensionStyleSheets().documentUserStyleSheets());
+    result.appendVector(m_document.extensionStyleSheets().injectedUserStyleSheets());
     result.appendVector(m_document.extensionStyleSheets().injectedAuthorStyleSheets());
     result.appendVector(m_document.extensionStyleSheets().authorStyleSheetsForTesting());
 
@@ -599,11 +577,11 @@ void Scope::scheduleUpdate(UpdateType update)
 {
     if (update == UpdateType::ContentsOrInterpretation) {
         // :host and ::slotted rules might go away.
-        if (m_shadowRoot && m_resolver)
-            invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, *m_resolver);
+        if (m_shadowRoot)
+            Invalidator::invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot);
         // FIXME: Animation code may trigger resource load in middle of style recalc and that can add a rule to a content extension stylesheet.
         //        Fix and remove isResolvingTreeStyle() test below, see https://bugs.webkit.org/show_bug.cgi?id=194335
-        // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from StyleResolver::appendAuthorStyleSheets.
+        // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from Resolver::appendAuthorStyleSheets.
         if (!m_isUpdatingStyleResolver && !m_document.isResolvingTreeStyle())
             clearResolver();
     }
@@ -621,39 +599,52 @@ void Scope::scheduleUpdate(UpdateType update)
 
 void Scope::evaluateMediaQueriesForViewportChange()
 {
-    evaluateMediaQueries([] (StyleResolver& resolver) {
-        return resolver.hasMediaQueriesAffectedByViewportChange();
+    evaluateMediaQueries([] (Resolver& resolver) {
+        return resolver.evaluateDynamicMediaQueries();
     });
 }
 
 void Scope::evaluateMediaQueriesForAccessibilitySettingsChange()
 {
-    evaluateMediaQueries([] (StyleResolver& resolver) {
-        return resolver.hasMediaQueriesAffectedByAccessibilitySettingsChange();
+    evaluateMediaQueries([] (Resolver& resolver) {
+        return resolver.evaluateDynamicMediaQueries();
     });
 }
 
 void Scope::evaluateMediaQueriesForAppearanceChange()
 {
-    evaluateMediaQueries([] (StyleResolver& resolver) {
-        return resolver.hasMediaQueriesAffectedByAppearanceChange();
+    evaluateMediaQueries([] (Resolver& resolver) {
+        return resolver.evaluateDynamicMediaQueries();
     });
 }
 
 template <typename TestFunction>
 void Scope::evaluateMediaQueries(TestFunction&& testFunction)
 {
+    auto* resolver = resolverIfExists();
+    if (!resolver)
+        return;
+
+    auto evaluationChanges = testFunction(*resolver);
+    if (evaluationChanges) {
+        switch (evaluationChanges->type) {
+        case DynamicMediaQueryEvaluationChanges::Type::InvalidateStyle: {
+            Invalidator invalidator(evaluationChanges->invalidationRuleSets);
+            invalidator.invalidateStyle(*this);
+            break;
+        }
+        case DynamicMediaQueryEvaluationChanges::Type::ResetStyle:
+            scheduleUpdate(UpdateType::ContentsOrInterpretation);
+            break;
+        }
+
+        InspectorInstrumentation::mediaQueryResultChanged(m_document);
+    }
+
     if (!m_shadowRoot) {
         for (auto* descendantShadowRoot : m_document.inDocumentShadowRoots())
             descendantShadowRoot->styleScope().evaluateMediaQueries(testFunction);
     }
-    auto* resolver = resolverIfExists();
-    if (!resolver)
-        return;
-    if (!testFunction(*resolver))
-        return;
-    scheduleUpdate(UpdateType::ContentsOrInterpretation);
-    InspectorInstrumentation::mediaQueryResultChanged(m_document);
 }
 
 void Scope::didChangeActiveStyleSheetCandidates()
@@ -677,6 +668,18 @@ void Scope::didChangeStyleSheetEnvironment()
     }
     scheduleUpdate(UpdateType::ContentsOrInterpretation);
 }
+
+void Scope::invalidateMatchedDeclarationsCache()
+{
+    if (!m_shadowRoot) {
+        for (auto* descendantShadowRoot : m_document.inDocumentShadowRoots())
+            descendantShadowRoot->styleScope().invalidateMatchedDeclarationsCache();
+    }
+
+    if (auto* resolver = resolverIfExists())
+        resolver->invalidateMatchedDeclarationsCache();
+}
+
 
 void Scope::pendingUpdateTimerFired()
 {

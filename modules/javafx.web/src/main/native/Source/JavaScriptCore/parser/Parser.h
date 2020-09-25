@@ -181,6 +181,7 @@ public:
         , m_hasArguments(false)
         , m_isEvalContext(false)
         , m_hasNonSimpleParameterList(false)
+        , m_isClassScope(false)
         , m_evalContextType(EvalContextType::None)
         , m_constructorKind(static_cast<unsigned>(ConstructorKind::None))
         , m_expectedSuperBinding(static_cast<unsigned>(SuperBinding::NotNeeded))
@@ -258,6 +259,7 @@ public:
         case SourceParseMode::GetterMode:
         case SourceParseMode::SetterMode:
         case SourceParseMode::MethodMode:
+        case SourceParseMode::InstanceFieldInitializerMode:
             setIsFunction();
             break;
 
@@ -287,6 +289,7 @@ public:
     bool isGeneratorBoundary() const { return m_isGeneratorBoundary; }
     bool isAsyncFunction() const { return m_isAsyncFunction; }
     bool isAsyncFunctionBoundary() const { return m_isAsyncFunctionBoundary; }
+    bool isClassScope() const { return m_isClassScope; }
 
     bool hasArguments() const { return m_hasArguments; }
 
@@ -301,6 +304,12 @@ public:
         m_isLexicalScope = true;
         m_allowsLexicalDeclarations = true;
     }
+
+    void setIsClassScope()
+    {
+        m_isClassScope = true;
+    }
+
     bool isLexicalScope() { return m_isLexicalScope; }
     bool usesEval() { return m_usesEval; }
 
@@ -330,7 +339,7 @@ public:
 
         // We can now purge values from the captured candidates because they're captured in this scope.
         {
-            for (auto entry : m_lexicalVariables) {
+            for (const auto& entry : m_lexicalVariables) {
                 if (entry.value.isCaptured())
                     m_closedVariableCandidates.remove(entry.key.get());
             }
@@ -582,6 +591,12 @@ public:
         m_closedVariableCandidates.add(impl);
     }
 
+    void markLastUsedVariablesSetAsCaptured()
+    {
+        for (UniquedStringImpl* impl : m_usedVariables.last())
+            m_closedVariableCandidates.add(impl);
+    }
+
     void collectFreeVariables(Scope* nestedScope, bool shouldTrackClosedVariables)
     {
         if (nestedScope->m_usesEval)
@@ -709,7 +724,7 @@ public:
         m_needsSuperBinding = info->needsSuperBinding;
         UniquedStringImplPtrSet& destSet = m_usedVariables.last();
         for (unsigned i = 0; i < info->usedVariablesCount; ++i)
-            destSet.add(info->usedVariables()[i]);
+            destSet.add(info->usedVariables()[i].get());
     }
 
     class MaybeParseAsGeneratorForScope;
@@ -819,6 +834,7 @@ private:
     bool m_hasArguments;
     bool m_isEvalContext;
     bool m_hasNonSimpleParameterList;
+    bool m_isClassScope;
     EvalContextType m_evalContextType;
     unsigned m_constructorKind;
     unsigned m_expectedSuperBinding;
@@ -885,11 +901,11 @@ class Parser {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    Parser(VM&, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, JSParserScriptMode, SourceParseMode, SuperBinding, ConstructorKind defaultConstructorKind = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr);
+    Parser(VM&, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, JSParserScriptMode, SourceParseMode, SuperBinding, ConstructorKind defaultConstructorKindForTopLevelFunction = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr);
     ~Parser();
 
     template <class ParsedNode>
-    std::unique_ptr<ParsedNode> parse(ParserError&, const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt);
+    std::unique_ptr<ParsedNode> parse(ParserError&, const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt, const Vector<JSTextPosition>* = nullptr);
 
     JSTextPosition positionBeforeLastNewline() const { return m_lexer->positionBeforeLastNewline(); }
     JSTokenLocation locationBeforeLastToken() const { return m_lexer->lastTokenLocation(); }
@@ -1172,6 +1188,15 @@ private:
         return ScopeRef(&m_scopeStack, i);
     }
 
+    ScopeRef closestClassScopeOrTopLevelScope()
+    {
+        unsigned i = m_scopeStack.size() - 1;
+        ASSERT(i < m_scopeStack.size());
+        while (i && !m_scopeStack[i].isClassScope())
+            i--;
+        return ScopeRef(&m_scopeStack, i);
+    }
+
     ScopeRef pushScope()
     {
         bool isFunction = false;
@@ -1347,15 +1372,22 @@ private:
 
     Parser();
 
-    String parseInner(const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt);
-
-    void didFinishParsing(SourceElements*, DeclarationStacks::FunctionStack&&, VariableEnvironment&, UniquedStringImplPtrSet&&, CodeFeatures, int);
+    struct ParseInnerResult {
+        FunctionParameters* parameters;
+        SourceElements* sourceElements;
+        DeclarationStacks::FunctionStack functionDeclarations;
+        VariableEnvironment varDeclarations;
+        UniquedStringImplPtrSet sloppyModeHoistedFunctions;
+        CodeFeatures features;
+        int numConstants;
+    };
+    Expected<ParseInnerResult, String> parseInner(const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt, const Vector<JSTextPosition>* = nullptr);
 
     // Used to determine type of error to report.
     bool isFunctionMetadataNode(ScopeNode*) { return false; }
     bool isFunctionMetadataNode(FunctionMetadataNode*) { return true; }
 
-    ALWAYS_INLINE void next(unsigned lexerFlags = 0)
+    ALWAYS_INLINE void next(OptionSet<LexerFlags> lexerFlags = { })
     {
         int lastLine = m_token.m_location.line;
         int lastTokenEnd = m_token.m_location.endOffset;
@@ -1365,7 +1397,7 @@ private:
         m_token.m_type = m_lexer->lex(&m_token, lexerFlags, strictMode());
     }
 
-    ALWAYS_INLINE void nextWithoutClearingLineTerminator(unsigned lexerFlags = 0)
+    ALWAYS_INLINE void nextWithoutClearingLineTerminator(OptionSet<LexerFlags> lexerFlags = { })
     {
         int lastLine = m_token.m_location.line;
         int lastTokenEnd = m_token.m_location.endOffset;
@@ -1375,7 +1407,7 @@ private:
         m_token.m_type = m_lexer->lexWithoutClearingLineTerminator(&m_token, lexerFlags, strictMode());
     }
 
-    ALWAYS_INLINE void nextExpectIdentifier(unsigned lexerFlags = 0)
+    ALWAYS_INLINE void nextExpectIdentifier(OptionSet<LexerFlags> lexerFlags = { })
     {
         int lastLine = m_token.m_location.line;
         int lastTokenEnd = m_token.m_location.endOffset;
@@ -1385,10 +1417,11 @@ private:
         m_token.m_type = m_lexer->lexExpectIdentifier(&m_token, lexerFlags, strictMode());
     }
 
-    ALWAYS_INLINE void lexCurrentTokenAgainUnderCurrentContext()
+    template <class TreeBuilder>
+    ALWAYS_INLINE void lexCurrentTokenAgainUnderCurrentContext(TreeBuilder& context)
     {
-        auto savePoint = createSavePoint();
-        restoreSavePoint(savePoint);
+        auto savePoint = createSavePoint(context);
+        restoreSavePoint(context, savePoint);
     }
 
     ALWAYS_INLINE bool nextTokenIsColon()
@@ -1396,7 +1429,7 @@ private:
         return m_lexer->nextTokenIsColon();
     }
 
-    ALWAYS_INLINE bool consume(JSTokenType expected, unsigned flags = 0)
+    ALWAYS_INLINE bool consume(JSTokenType expected, OptionSet<LexerFlags> flags = { })
     {
         bool result = m_token.m_type == expected;
         if (result)
@@ -1576,6 +1609,7 @@ private:
     template <class TreeBuilder> TreeSourceElements parseAsyncFunctionSourceElements(TreeBuilder&, SourceParseMode, bool isArrowFunctionBodyExpression, SourceElementsMode);
     template <class TreeBuilder> TreeSourceElements parseAsyncGeneratorFunctionSourceElements(TreeBuilder&, SourceParseMode, bool isArrowFunctionBodyExpression, SourceElementsMode);
     template <class TreeBuilder> TreeSourceElements parseSingleFunction(TreeBuilder&, Optional<int> functionConstructorParametersEndPosition);
+    template <class TreeBuilder> TreeSourceElements parseInstanceFieldInitializerSourceElements(TreeBuilder&, const Vector<JSTextPosition>&);
     template <class TreeBuilder> TreeStatement parseStatementListItem(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength);
     template <class TreeBuilder> TreeStatement parseStatement(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength = 0);
     enum class ExportType { Exported, NotExported };
@@ -1615,7 +1649,6 @@ private:
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parsePrimaryExpression(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseArrayLiteral(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseObjectLiteral(TreeBuilder&);
-    template <class TreeBuilder> NEVER_INLINE TreeExpression parseStrictObjectLiteral(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeClassExpression parseClassExpression(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseFunctionExpression(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseAsyncFunctionExpression(TreeBuilder&);
@@ -1630,7 +1663,7 @@ private:
     template <class TreeBuilder> TreeExpression parseVariableDeclarationList(TreeBuilder&, int& declarations, TreeDestructuringPattern& lastPattern, TreeExpression& lastInitializer, JSTextPosition& identStart, JSTextPosition& initStart, JSTextPosition& initEnd, VarDeclarationListContext, DeclarationType, ExportType, bool& forLoopConstDoesNotHaveInitializer);
     template <class TreeBuilder> TreeSourceElements parseArrowFunctionSingleExpressionBodySourceElements(TreeBuilder&);
     template <class TreeBuilder> TreeExpression parseArrowFunctionExpression(TreeBuilder&, bool isAsync);
-    template <class TreeBuilder> NEVER_INLINE TreeDestructuringPattern createBindingPattern(TreeBuilder&, DestructuringKind, ExportType, const Identifier&, JSToken, AssignmentContext, const Identifier** duplicateIdentifier);
+    template <class TreeBuilder> NEVER_INLINE TreeDestructuringPattern createBindingPattern(TreeBuilder&, DestructuringKind, ExportType, const Identifier&, const JSToken&, AssignmentContext, const Identifier** duplicateIdentifier);
     template <class TreeBuilder> NEVER_INLINE TreeDestructuringPattern createAssignmentElement(TreeBuilder&, TreeExpression&, const JSTextPosition&, const JSTextPosition&);
     template <class TreeBuilder> NEVER_INLINE TreeDestructuringPattern parseObjectRestBindingOrAssignmentElement(TreeBuilder& context, DestructuringKind, ExportType, const Identifier** duplicateIdentifier, AssignmentContext bindingContext);
     template <class TreeBuilder> NEVER_INLINE TreeDestructuringPattern parseBindingOrAssignmentElement(TreeBuilder& context, DestructuringKind, ExportType, const Identifier** duplicateIdentifier, bool* hasDestructuringPattern, AssignmentContext bindingContext, int depth);
@@ -1653,7 +1686,7 @@ private:
     enum class FunctionDefinitionType { Expression, Declaration, Method };
     template <class TreeBuilder> NEVER_INLINE bool parseFunctionInfo(TreeBuilder&, FunctionNameRequirements, SourceParseMode, bool nameIsInContainingScope, ConstructorKind, SuperBinding, int functionKeywordStart, ParserFunctionInfo<TreeBuilder>&, FunctionDefinitionType, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt);
 
-    ALWAYS_INLINE bool isArrowFunctionParameters();
+    template <class TreeBuilder> ALWAYS_INLINE bool isArrowFunctionParameters(TreeBuilder&);
 
     template <class TreeBuilder, class FunctionInfoType> NEVER_INLINE typename TreeBuilder::FormalParameterList parseFunctionParameters(TreeBuilder&, SourceParseMode, FunctionInfoType&);
     template <class TreeBuilder> NEVER_INLINE typename TreeBuilder::FormalParameterList createGeneratorParameters(TreeBuilder&, unsigned& parameterCount);
@@ -1759,22 +1792,29 @@ private:
         int assignmentCount { 0 };
         int nonLHSCount { 0 };
         int nonTrivialExpressionCount { 0 };
+        int unaryTokenStackDepth { 0 };
         FunctionParsePhase functionParsePhase { FunctionParsePhase::Body };
         const Identifier* lastIdentifier { nullptr };
         const Identifier* lastFunctionName { nullptr };
         bool allowAwait { true };
+        bool isParsingClassFieldInitializer { false };
     };
 
     // If you're using this directly, you probably should be using
     // createSavePoint() instead.
-    ALWAYS_INLINE ParserState internalSaveParserState()
+    template <class TreeBuilder>
+    ALWAYS_INLINE ParserState internalSaveParserState(TreeBuilder& context)
     {
-        return m_parserState;
+        auto parserState = m_parserState;
+        parserState.unaryTokenStackDepth = context.unaryTokenStackDepth();
+        return parserState;
     }
 
-    ALWAYS_INLINE void restoreParserState(const ParserState& state)
+    template <class TreeBuilder>
+    ALWAYS_INLINE void restoreParserState(TreeBuilder& context, const ParserState& state)
     {
         m_parserState = state;
+        context.setUnaryTokenStackDepth(m_parserState.unaryTokenStackDepth);
     }
 
     struct LexerState {
@@ -1822,47 +1862,56 @@ private:
         String parserErrorMessage;
     };
 
-    ALWAYS_INLINE void internalSaveState(SavePoint& savePoint)
+    template <class TreeBuilder>
+    ALWAYS_INLINE void internalSaveState(TreeBuilder& context, SavePoint& savePoint)
     {
-        savePoint.parserState = internalSaveParserState();
+        savePoint.parserState = internalSaveParserState(context);
         savePoint.lexerState = internalSaveLexerState();
     }
 
-    ALWAYS_INLINE SavePointWithError createSavePointForError()
+    template <class TreeBuilder>
+    ALWAYS_INLINE SavePointWithError swapSavePointForError(TreeBuilder& context, SavePoint& oldSavePoint)
     {
         SavePointWithError savePoint;
-        internalSaveState(savePoint);
+        internalSaveState(context, savePoint);
         savePoint.lexerError = m_lexer->sawError();
         savePoint.lexerErrorMessage = m_lexer->getErrorMessage();
         savePoint.parserErrorMessage = m_errorMessage;
+        // Make sure we set our new savepoints unary stack to what oldSavePoint had as it currently may contain stale info.
+        savePoint.parserState.unaryTokenStackDepth = oldSavePoint.parserState.unaryTokenStackDepth;
+        restoreSavePoint(context, oldSavePoint);
         return savePoint;
     }
 
-    ALWAYS_INLINE SavePoint createSavePoint()
+    template <class TreeBuilder>
+    ALWAYS_INLINE SavePoint createSavePoint(TreeBuilder& context)
     {
         ASSERT(!hasError());
         SavePoint savePoint;
-        internalSaveState(savePoint);
+        internalSaveState(context, savePoint);
         return savePoint;
     }
 
-    ALWAYS_INLINE void internalRestoreState(const SavePoint& savePoint)
+    template <class TreeBuilder>
+    ALWAYS_INLINE void internalRestoreState(TreeBuilder& context, const SavePoint& savePoint)
     {
         restoreLexerState(savePoint.lexerState);
-        restoreParserState(savePoint.parserState);
+        restoreParserState(context, savePoint.parserState);
     }
 
-    ALWAYS_INLINE void restoreSavePointWithError(const SavePointWithError& savePoint)
+    template <class TreeBuilder>
+    ALWAYS_INLINE void restoreSavePointWithError(TreeBuilder& context, const SavePointWithError& savePoint)
     {
-        internalRestoreState(savePoint);
+        internalRestoreState(context, savePoint);
         m_lexer->setSawError(savePoint.lexerError);
         m_lexer->setErrorMessage(savePoint.lexerErrorMessage);
         m_errorMessage = savePoint.parserErrorMessage;
     }
 
-    ALWAYS_INLINE void restoreSavePoint(const SavePoint& savePoint)
+    template <class TreeBuilder>
+    ALWAYS_INLINE void restoreSavePoint(TreeBuilder& context, const SavePoint& savePoint)
     {
-        internalRestoreState(savePoint);
+        internalRestoreState(context, savePoint);
         m_errorMessage = String();
     }
 
@@ -1870,7 +1919,6 @@ private:
     const SourceCode* m_source;
     ParserArena m_parserArena;
     std::unique_ptr<LexerType> m_lexer;
-    FunctionParameters* m_parameters { nullptr };
 
     ParserState m_parserState;
 
@@ -1881,16 +1929,10 @@ private:
     JSTextPosition m_lastTokenEndPosition;
     int m_statementDepth;
     RefPtr<SourceProviderCache> m_functionCache;
-    SourceElements* m_sourceElements;
     bool m_parsingBuiltin;
     JSParserScriptMode m_scriptMode;
     SuperBinding m_superBinding;
-    ConstructorKind m_defaultConstructorKind;
-    VariableEnvironment m_varDeclarations;
-    DeclarationStacks::FunctionStack m_funcDeclarations;
-    UniquedStringImplPtrSet m_sloppyModeHoistedFunctions;
-    CodeFeatures m_features;
-    int m_numConstants;
+    ConstructorKind m_defaultConstructorKindForTopLevelFunction;
     ExpressionErrorClassifier* m_expressionErrorClassifier;
     bool m_isEvalContext;
     bool m_immediateParentAllowsFunctionDeclarationInStatement;
@@ -1903,15 +1945,13 @@ private:
 
 template <typename LexerType>
 template <class ParsedNode>
-std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const Identifier& calleeName, SourceParseMode parseMode, ParsingContext parsingContext, Optional<int> functionConstructorParametersEndPosition)
+std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const Identifier& calleeName, SourceParseMode parseMode, ParsingContext parsingContext, Optional<int> functionConstructorParametersEndPosition, const Vector<JSTextPosition>* instanceFieldLocations)
 {
     int errLine;
     String errMsg;
 
     if (ParsedNode::scopeIsFunction)
         m_lexer->setIsReparsingFunction();
-
-    m_sourceElements = 0;
 
     errLine = -1;
     errMsg = String();
@@ -1920,7 +1960,7 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
     ASSERT(m_source->startColumn() > OrdinalNumber::beforeFirst());
     unsigned startColumn = m_source->startColumn().zeroBasedInt();
 
-    String parseError = parseInner(calleeName, parseMode, parsingContext, functionConstructorParametersEndPosition);
+    auto parseResult = parseInner(calleeName, parseMode, parsingContext, functionConstructorParametersEndPosition, instanceFieldLocations);
 
     int lineNumber = m_lexer->lineNumber();
     bool lexError = m_lexer->sawError();
@@ -1928,14 +1968,13 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
     ASSERT(lexErrorMessage.isNull() != lexError);
     m_lexer->clear();
 
-    if (!parseError.isNull() || lexError) {
+    if (!parseResult || lexError) {
         errLine = lineNumber;
-        errMsg = !lexErrorMessage.isNull() ? lexErrorMessage : parseError;
-        m_sourceElements = 0;
+        errMsg = !lexErrorMessage.isNull() ? lexErrorMessage : parseResult.error();
     }
 
     std::unique_ptr<ParsedNode> result;
-    if (m_sourceElements) {
+    if (parseResult) {
         JSTokenLocation endLocation;
         endLocation.line = m_lexer->lineNumber();
         endLocation.lineStartOffset = m_lexer->currentLineStartOffset();
@@ -1946,16 +1985,16 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
                                     endLocation,
                                     startColumn,
                                     endColumn,
-                                    m_sourceElements,
-                                    m_varDeclarations,
-                                    WTFMove(m_funcDeclarations),
+                                    parseResult.value().sourceElements,
+                                    parseResult.value().varDeclarations,
+                                    WTFMove(parseResult.value().functionDeclarations),
                                     currentScope()->finalizeLexicalEnvironment(),
-                                    WTFMove(m_sloppyModeHoistedFunctions),
-                                    m_parameters,
+                                    WTFMove(parseResult.value().sloppyModeHoistedFunctions),
+                                    parseResult.value().parameters,
                                     *m_source,
-                                    m_features,
+                                    parseResult.value().features,
                                     currentScope()->innerArrowFunctionFeatures(),
-                                    m_numConstants,
+                                    parseResult.value().numConstants,
                                     WTFMove(m_moduleScopeData));
         result->setLoc(m_source->firstLine().oneBasedInt(), m_lexer->lineNumber(), m_lexer->currentOffset(), m_lexer->currentLineStartOffset());
         result->setEndOffset(m_lexer->currentOffset());
@@ -2001,10 +2040,11 @@ std::unique_ptr<ParsedNode> parse(
     const Identifier& name, JSParserBuiltinMode builtinMode,
     JSParserStrictMode strictMode, JSParserScriptMode scriptMode, SourceParseMode parseMode, SuperBinding superBinding,
     ParserError& error, JSTextPosition* positionBeforeLastNewline = nullptr,
-    ConstructorKind defaultConstructorKind = ConstructorKind::None,
+    ConstructorKind defaultConstructorKindForTopLevelFunction = ConstructorKind::None,
     DerivedContextType derivedContextType = DerivedContextType::None,
     EvalContextType evalContextType = EvalContextType::None,
-    DebuggerParseData* debuggerParseData = nullptr)
+    DebuggerParseData* debuggerParseData = nullptr,
+    const Vector<JSTextPosition>* instanceFieldLocations = nullptr)
 {
     ASSERT(!source.provider()->source().isNull());
 
@@ -2014,8 +2054,8 @@ std::unique_ptr<ParsedNode> parse(
 
     std::unique_ptr<ParsedNode> result;
     if (source.provider()->source().is8Bit()) {
-        Parser<Lexer<LChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program);
+        Parser<Lexer<LChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
+        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, instanceFieldLocations);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
         if (builtinMode == JSParserBuiltinMode::Builtin) {
@@ -2026,9 +2066,9 @@ std::unique_ptr<ParsedNode> parse(
             }
         }
     } else {
-        ASSERT_WITH_MESSAGE(defaultConstructorKind == ConstructorKind::None, "BuiltinExecutables::createDefaultConstructor should always use a 8-bit string");
-        Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program);
+        ASSERT_WITH_MESSAGE(defaultConstructorKindForTopLevelFunction == ConstructorKind::None, "BuiltinExecutables's special constructors should always use a 8-bit string");
+        Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
+        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, instanceFieldLocations);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     }

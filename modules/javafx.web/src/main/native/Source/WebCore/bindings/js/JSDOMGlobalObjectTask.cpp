@@ -38,7 +38,7 @@ using namespace JSC;
 
 class JSGlobalObjectCallback final : public RefCounted<JSGlobalObjectCallback>, private ActiveDOMCallback {
 public:
-    static Ref<JSGlobalObjectCallback> create(JSDOMGlobalObject& globalObject, Ref<Microtask>&& task)
+    static Ref<JSGlobalObjectCallback> create(JSDOMGlobalObject& globalObject, Ref<JSC::Microtask>&& task)
     {
         return adoptRef(*new JSGlobalObjectCallback(globalObject, WTFMove(task)));
     }
@@ -53,18 +53,18 @@ public:
         JSLockHolder lock(vm);
         auto scope = DECLARE_THROW_SCOPE(vm);
 
-        ExecState* exec = m_globalObject->globalExec();
+        JSGlobalObject* lexicalGlobalObject = m_globalObject.get();
 
         ScriptExecutionContext* context = m_globalObject->scriptExecutionContext();
         // We will fail to get the context if the frame has been detached.
         if (!context)
             return;
-        JSExecState::runTask(exec, m_task);
+        JSExecState::runTask(lexicalGlobalObject, m_task);
         scope.assertNoException();
     }
 
 private:
-    JSGlobalObjectCallback(JSDOMGlobalObject& globalObject, Ref<Microtask>&& task)
+    JSGlobalObjectCallback(JSDOMGlobalObject& globalObject, Ref<JSC::Microtask>&& task)
         : ActiveDOMCallback { globalObject.scriptExecutionContext() }
         , m_globalObject { globalObject.vm(), &globalObject }
         , m_task { WTFMove(task) }
@@ -72,10 +72,10 @@ private:
     }
 
     Strong<JSDOMGlobalObject> m_globalObject;
-    Ref<Microtask> m_task;
+    Ref<JSC::Microtask> m_task;
 };
 
-JSGlobalObjectTask::JSGlobalObjectTask(JSDOMGlobalObject& globalObject, Ref<Microtask>&& task)
+JSGlobalObjectTask::JSGlobalObjectTask(JSDOMGlobalObject& globalObject, Ref<JSC::Microtask>&& task)
     : ScriptExecutionContext::Task({ })
 {
     auto callback = JSGlobalObjectCallback::create(globalObject, WTFMove(task));

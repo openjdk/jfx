@@ -35,11 +35,21 @@
 
 namespace WebCore {
 
+class EventRegionContext;
 class KeyframeList;
 class PaintedContentsInfo;
 class RenderLayerCompositor;
 class TiledBacking;
 class TransformationMatrix;
+
+
+#if __WORDSIZE == 64
+#define USE_OWNING_LAYER_BEAR_TRAP 1
+#define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
+#else
+#define USE_OWNING_LAYER_BEAR_TRAP 0
+#endif
+
 
 enum CompositingLayerType {
     NormalCompositingLayer, // non-tiled layer with backing store
@@ -81,10 +91,10 @@ public:
     void updateConfigurationAfterStyleChange();
 
     // Returns true if layer configuration changed.
-    bool updateConfiguration();
+    bool updateConfiguration(const RenderLayer* compositingAncestor);
 
     // Update graphics layer position and bounds.
-    void updateGeometry();
+    void updateGeometry(const RenderLayer* compositingAncestor);
 
     // Update state the requires that descendant layers have been updated.
     void updateAfterDescendants();
@@ -230,7 +240,7 @@ public:
     void notifyFlushRequired(const GraphicsLayer*) override;
     void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) override;
 
-    void paintContents(const GraphicsLayer*, GraphicsContext&, OptionSet<GraphicsLayerPaintingPhase>, const FloatRect& clip, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, const FloatRect& clip, GraphicsLayerPaintBehavior) override;
 
     float deviceScaleFactor() const override;
     float contentsScaleMultiplierForNewTiles(const GraphicsLayer*) const override;
@@ -376,7 +386,8 @@ private:
     bool hasTiledBackingFlatteningLayer() const { return (m_childContainmentLayer && m_isFrameLayerWithTiledBacking); }
     GraphicsLayer* tileCacheFlatteningLayer() const { return m_isFrameLayerWithTiledBacking ? m_childContainmentLayer.get() : nullptr; }
 
-    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, OptionSet<GraphicsLayerPaintingPhase>);
+    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, OptionSet<PaintBehavior>, EventRegionContext* = nullptr);
+    OptionSet<RenderLayer::PaintLayerFlag> paintFlagsForLayer(const GraphicsLayer&) const;
 
     void paintDebugOverlays(const GraphicsLayer*, GraphicsContext&);
 
@@ -385,8 +396,11 @@ private:
 
     bool canIssueSetNeedsDisplay() const { return !paintsIntoWindow() && !paintsIntoCompositedAncestor(); }
     LayoutRect computeParentGraphicsLayerRect(const RenderLayer* compositedAncestor) const;
-    LayoutRect computePrimaryGraphicsLayerRect(const LayoutRect& parentGraphicsLayerRect) const;
+    LayoutRect computePrimaryGraphicsLayerRect(const RenderLayer* compositedAncestor, const LayoutRect& parentGraphicsLayerRect) const;
 
+#if USE(OWNING_LAYER_BEAR_TRAP)
+    uintptr_t m_owningLayerBearTrap { BEAR_TRAP_VALUE }; // webkit.org/b.206915
+#endif
     RenderLayer& m_owningLayer;
 
     // A list other layers that paint into this backing store, later than m_owningLayer in paint order.

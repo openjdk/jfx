@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +45,7 @@ class IntlPluralRulesPrototype;
 class IntlObject final : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
     static IntlObject* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
@@ -55,15 +56,19 @@ private:
     IntlObject(VM&, Structure*);
 };
 
-String defaultLocale(ExecState&);
-String convertICULocaleToBCP47LanguageTag(const char* localeID);
-bool intlBooleanOption(ExecState&, JSValue options, PropertyName, bool& usesFallback);
-String intlStringOption(ExecState&, JSValue options, PropertyName, std::initializer_list<const char*> values, const char* notFound, const char* fallback);
-unsigned intlNumberOption(ExecState&, JSValue options, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
-unsigned intlDefaultNumberOption(ExecState&, JSValue, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
-Vector<String> canonicalizeLocaleList(ExecState&, JSValue locales);
-HashMap<String, String> resolveLocale(ExecState&, const HashSet<String>& availableLocales, const Vector<String>& requestedLocales, const HashMap<String, String>& options, const char* const relevantExtensionKeys[], size_t relevantExtensionKeyCount, Vector<String> (*localeData)(const String&, size_t));
-JSValue supportedLocales(ExecState&, const HashSet<String>& availableLocales, const Vector<String>& requestedLocales, JSValue options);
+String defaultLocale(JSGlobalObject*);
+const HashSet<String>& intlCollatorAvailableLocales();
+const HashSet<String>& intlDateTimeFormatAvailableLocales();
+const HashSet<String>& intlNumberFormatAvailableLocales();
+inline const HashSet<String>& intlPluralRulesAvailableLocales() { return intlNumberFormatAvailableLocales(); }
+
+bool intlBooleanOption(JSGlobalObject*, JSValue options, PropertyName, bool& usesFallback);
+String intlStringOption(JSGlobalObject*, JSValue options, PropertyName, std::initializer_list<const char*> values, const char* notFound, const char* fallback);
+unsigned intlNumberOption(JSGlobalObject*, JSValue options, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
+unsigned intlDefaultNumberOption(JSGlobalObject*, JSValue, PropertyName, unsigned minimum, unsigned maximum, unsigned fallback);
+Vector<String> canonicalizeLocaleList(JSGlobalObject*, JSValue locales);
+HashMap<String, String> resolveLocale(JSGlobalObject*, const HashSet<String>& availableLocales, const Vector<String>& requestedLocales, const HashMap<String, String>& options, const char* const relevantExtensionKeys[], size_t relevantExtensionKeyCount, Vector<String> (*localeData)(const String&, size_t));
+JSValue supportedLocales(JSGlobalObject*, const HashSet<String>& availableLocales, const Vector<String>& requestedLocales, JSValue options);
 String removeUnicodeLocaleExtension(const String& locale);
 String bestAvailableLocale(const HashSet<String>& availableLocales, const String& requestedLocale);
 Vector<String> numberingSystemsForLocale(const String& locale);

@@ -43,6 +43,12 @@ public abstract class ReadOnlyListPropertyBase<E> extends ReadOnlyListProperty<E
 
     private ListExpressionHelper<E> helper;
 
+    /**
+     * Creates a default {@code ReadOnlyListPropertyBase}.
+     */
+    public ReadOnlyListPropertyBase() {
+    }
+
     @Override
     public void addListener(InvalidationListener listener) {
         helper = ListExpressionHelper.addListener(helper, this, listener);

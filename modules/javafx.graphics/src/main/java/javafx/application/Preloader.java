@@ -115,6 +115,12 @@ public abstract class Preloader extends Application {
     }
 
     /**
+     * Constructor for subclasses to call.
+     */
+    public Preloader() {
+    }
+
+    /**
      * Indicates download progress.
      * This method is called by the FX runtime to indicate progress while
      * application resources are being loaded. It will not be called to deliver

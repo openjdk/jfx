@@ -108,15 +108,13 @@ public final class Screen {
             if (newScreen != null) {
                 if (canKeepOld) {
                     canKeepOld = false;
-                    newScreens.clear();
-                    newScreens.addAll(Screen.screens.subList(0, i));
+                    newScreens.setAll(Screen.screens.subList(0, i));
                 }
                 newScreens.add(newScreen);
             }
         }
         if (!canKeepOld) {
-            Screen.screens.clear();
-            Screen.screens.addAll(newScreens);
+            Screen.screens.setAll(newScreens);
         }
 
         configurationDirty.set(false);
