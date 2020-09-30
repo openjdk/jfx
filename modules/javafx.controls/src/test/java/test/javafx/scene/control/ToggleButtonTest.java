@@ -30,7 +30,6 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.tk.Toolkit;
-import java.lang.ref.WeakReference;
 import javafx.event.ActionEvent;
 import javafx.event.EventType;
 import javafx.geometry.Pos;
@@ -42,7 +41,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
-import de.sandec.jmemorybuddy.JMemoryBuddy;
+import test.util.memory.JMemoryBuddy;
 
 /**
  *

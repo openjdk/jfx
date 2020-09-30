@@ -56,7 +56,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.stage.Stage;
 import test.util.Util;
-import de.sandec.jmemorybuddy.JMemoryBuddy;
+import test.util.memory.JMemoryBuddy;
 
 public class VirtualFlowMemoryLeakTest {
 
