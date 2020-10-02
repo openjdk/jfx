@@ -867,13 +867,15 @@ final class URLLoader extends URLLoaderBase implements Runnable {
      */
     private static String extractHeaders(URLConnection c) {
         StringBuilder sb = new StringBuilder();
-        Map<String, List<String>> headers = c.getHeaderFields();
-        for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
-            String key = entry.getKey();
-            List<String> values = entry.getValue();
-            for (String value : values) {
-                sb.append(key != null ? key : "");
-                sb.append(':').append(value).append('\n');
+        if (c instanceof HttpURLConnection) {
+            Map<String, List<String>> headers = c.getHeaderFields();
+            for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
+                String key = entry.getKey();
+                List<String> values = entry.getValue();
+                for (String value : values) {
+                    sb.append(key != null ? key : "");
+                    sb.append(':').append(value).append('\n');
+                }
             }
         }
         return sb.toString();
