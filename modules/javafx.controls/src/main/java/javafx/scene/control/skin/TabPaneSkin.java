@@ -152,7 +152,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private Rectangle clipRect;
     private Rectangle tabHeaderAreaClipRect;
     private Tab selectedTab;
-    private boolean isSelectingTab;
 
     private final TabPaneBehavior behavior;
 
@@ -200,8 +199,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.sideProperty(), e -> updateTabPosition());
-        registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
-        registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(getSkinnable().getHeight()));
+        registerChangeListener(control.widthProperty(), e -> {
+            tabHeaderArea.invalidateScrollOffset();
+            clipRect.setWidth(getSkinnable().getWidth());
+        });
+        registerChangeListener(control.heightProperty(), e -> {
+            tabHeaderArea.invalidateScrollOffset();
+            clipRect.setHeight(getSkinnable().getHeight());
+        });
 
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
         // Could not find the selected tab try and get the selected tab using the selected index
@@ -214,7 +219,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             getSkinnable().getSelectionModel().selectFirst();
         }
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-        isSelectingTab = false;
 
         initializeSwipeHandlers();
     }
@@ -432,7 +436,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private SelectionModel<Tab> selectionModel;
     private InvalidationListener selectionChangeListener = observable -> {
-        isSelectingTab = true;
+        tabHeaderArea.invalidateScrollOffset();
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
         getSkinnable().requestLayout();
     };
@@ -678,7 +682,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private void updateTabPosition() {
-        tabHeaderArea.setScrollOffset(0.0F);
+        tabHeaderArea.invalidateScrollOffset();
         getSkinnable().applyCss();
         getSkinnable().requestLayout();
     }
@@ -809,6 +813,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private boolean measureClosingTabs = false;
 
         private double scrollOffset;
+        private boolean scrollOffsetDirty = true;
 
         public TabHeaderArea() {
             getStyleClass().setAll("tab-header-area");
@@ -842,13 +847,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     if (tabsFit()) {
                         setScrollOffset(0.0);
                     } else {
-                        if (isSelectingTab) {
+                        if (scrollOffsetDirty) {
                             ensureSelectedTabIsVisible();
-                        } else {
-                            validateScrollOffset();
+                            scrollOffsetDirty = false;
                         }
+                        // ensure there's no gap between last visible tab and trailing edge
+                        validateScrollOffset();
                     }
-                    isSelectingTab = false;
 
                     Side tabPosition = getSkinnable().getSide();
                     double tabBackgroundHeight = snapSize(prefHeight(-1));
@@ -981,6 +986,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         private void addTab(Tab tab, int addToIndex) {
             TabHeaderSkin tabHeaderSkin = new TabHeaderSkin(tab);
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
+            invalidateScrollOffset();
         }
 
         private void removeTab(Tab tab) {
@@ -988,6 +994,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             if (tabHeaderSkin != null) {
                 headersRegion.getChildren().remove(tabHeaderSkin);
             }
+            invalidateScrollOffset();
         }
 
         private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
@@ -995,6 +1002,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 headersRegion.getChildren().remove(tabHeaderSkin);
                 headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
             }
+            invalidateScrollOffset();
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {
@@ -1051,6 +1059,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
         public double getScrollOffset() {
             return scrollOffset;
+        }
+
+        public void invalidateScrollOffset() {
+            scrollOffsetDirty = true;
         }
 
         private void validateScrollOffset() {
@@ -2241,6 +2253,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
             dragHeaderAnim.playFromStart();
         }
+        tabHeaderArea.invalidateScrollOffset();
     }
 
     private void reorderTabs() {
@@ -2293,5 +2306,17 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     void test_disableAnimations() {
         closeTabAnimation.set(TabAnimation.NONE);
         openTabAnimation.set(TabAnimation.NONE);
+    }
+
+    double test_getHeaderAreaScrollOffset() {
+        return tabHeaderArea.getScrollOffset();
+    }
+
+    void test_setHeaderAreaScrollOffset(double offset) {
+        tabHeaderArea.setScrollOffset(offset);
+    }
+
+    boolean test_isTabsFit() {
+        return tabHeaderArea.tabsFit();
     }
 }
