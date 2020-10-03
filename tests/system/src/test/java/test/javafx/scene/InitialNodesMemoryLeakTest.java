@@ -38,6 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
 import static org.junit.Assert.fail;
+import test.util.memory.JMemoryBuddy;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
@@ -85,7 +86,7 @@ public class InitialNodesMemoryLeakTest {
 
     @Test
     public void testRootNodeMemoryLeak() throws Exception {
-        JMemoryBuddy.assertCollectable("groupWRef");
+        JMemoryBuddy.assertCollectable(groupWRef);
     }
 
     @AfterClass
