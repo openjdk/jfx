@@ -192,6 +192,16 @@ public class LoadTest extends TestBase {
         assertNotNull("Document is null", webEngine.getDocument());
     }
 
+    @Test public void testLoadLocalCSS() {
+        load(new File("src/test/resources/test/html/dom.html"));
+        submit(() -> {
+            assertEquals("Font weight should be bold", "bold", (String) getEngine().executeScript(
+                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-weight')"));
+            assertEquals("font style should be italic", "italic", (String) getEngine().executeScript(
+                "window.getComputedStyle(document.getElementById('p3')).getPropertyValue('font-style')"));
+        });
+    }
+
     /**
      * @test
      * @bug 8140501
