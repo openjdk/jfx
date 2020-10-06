@@ -46,7 +46,7 @@ class MonocleGLFactory extends GLFactory {
     // Entries must be in lowercase and null string is a wild card
     // For Linux Beta release we will limit es2 pipe qualification check to NVidia GPUs only
     private GLGPUInfo preQualificationFilter[] = null;
-    private GLGPUInfo blackList[] = null;
+    private GLGPUInfo rejectList[] = null;
 
     private AcceleratedScreen accScreen = null;
 
@@ -56,8 +56,8 @@ class MonocleGLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override

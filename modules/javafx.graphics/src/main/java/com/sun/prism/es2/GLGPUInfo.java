@@ -40,10 +40,10 @@ class GLGPUInfo {
     }
 
     /**
-     * Check this GPU information against an entry stored in the whiteList and
-     * blackList of ES2Qualifier
+     * Check this GPU information against an entry stored in the preQualificationFilter and
+     * rejectList of ES2Qualifier
      *
-     * @param gi entry stored in the whiteList or blackList of ES2Qualifier
+     * @param gi entry stored in the preQualificationFilter or rejectList of ES2Qualifier
      * @return true if sub-string matches otherwise false
      */
     boolean matches(GLGPUInfo gi) {
