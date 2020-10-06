@@ -46,6 +46,8 @@ import javafx.util.Callback;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static com.sun.javafx.scene.control.inputmap.InputMap.*;
 import static javafx.scene.input.KeyCode.*;
@@ -78,12 +80,19 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         listViewInputMap = createInputMap();
 
         // add focus traversal mappings
-        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        Supplier<Boolean> isListViewOfComboBox =
+                (Supplier<Boolean>) control.getProperties().get("editableComboBox");
+        Predicate<KeyEvent> isInComboBox = e -> isListViewOfComboBox != null;
+        Predicate<KeyEvent> isInEditableComboBox =
+                e -> isListViewOfComboBox != null && isListViewOfComboBox.get();
+        if (isListViewOfComboBox == null) {
+            addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        }
         addDefaultMapping(listViewInputMap,
-            new KeyMapping(HOME, e -> selectFirstRow()),
-            new KeyMapping(END, e -> selectLastRow()),
-            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow()),
+            new KeyMapping(new KeyBinding(HOME), e -> selectFirstRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(END), e -> selectLastRow(), isInEditableComboBox),
+            new KeyMapping(new KeyBinding(HOME).shift(), e -> selectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shift(), e -> selectAllToLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shift(), e -> selectAllPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shift(), e -> selectAllPageDown()),
 
@@ -98,9 +107,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
-            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
-            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
+            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll(), isInComboBox),
+            new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow(), isInComboBox),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut(), e -> focusPageDown()),
 
@@ -145,10 +154,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
             new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
-            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
-            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow())
+            new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow(), isInComboBox),
+            new KeyMapping(new KeyBinding(END).shortcut().shift(), e -> discontinuousSelectAllToLastRow(), isInComboBox)
         );
-
         addDefaultChildMap(listViewInputMap, verticalListInputMap);
 
         // --- horizontal listview
@@ -196,7 +204,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             tlFocus = new TwoLevelFocusListBehavior(control); // needs to be last.
         }
     }
-
 
 
     /***************************************************************************

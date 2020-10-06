@@ -26,7 +26,12 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.VirtualScrollBar;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -75,6 +80,8 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -169,6 +176,40 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
         listView.setSelectionModel(sm);
         assertSame(sm, sm);
+    }
+
+    @Test public void testCtrlAWhenSwitchingSelectionModel() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm;
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        MultipleSelectionModel<String> smMultiple = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smMultiple.setSelectionMode(SelectionMode.MULTIPLE);
+        MultipleSelectionModel<String> smSingle = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smSingle.setSelectionMode(SelectionMode.SINGLE);
+
+        listView.setSelectionModel(smMultiple);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        listView.setSelectionModel(smSingle);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
@@ -1465,6 +1506,33 @@ public class ListViewTest {
         sl.dispose();
     }
 
+    @Test public void testCtrlAWhenSwitchingSelectionMode() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
         // select and then remove the 'a' item, selection and focus should both
         // stay at the first row, now 'b'
@@ -1975,6 +2043,49 @@ public class ListViewTest {
         assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
         assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
         assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+    }
+
+    @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
+        ListView<String> listView = new ListView<>(FXCollections
+                .observableArrayList("Item1", "Item2"));
+        StageLoader sl = new StageLoader(listView);
+
+        ListViewBehavior lvBehavior = (ListViewBehavior) ControlSkinFactory.getBehavior(listView.getSkin());
+        InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        ObservableList<?> inputMappings = lvInputMap.getMappings();
+        // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
+        InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+        ObservableList<?> verticalInputMappings = verticalInputMap.getMappings();
+
+        // Verify FocusTraversalInputMap
+        for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
+            assertTrue(inputMappings.contains(mapping));
+        }
+
+        // Verify default InputMap
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END));
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut());
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut());
+
+        // Verify vertical child InputMap
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift());
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift());
+
+        sl.dispose();
+    }
+
+    private void testInterceptor(ObservableList<?> mappings, KeyBinding binding) {
+        int i = mappings.indexOf(new KeyMapping(binding, null));
+        if (((KeyMapping)mappings.get(i)).getInterceptor() != null) {
+            assertFalse(((KeyMapping)mappings.get(i)).getInterceptor().test(null));
+        } else {
+            // JDK-8209788 added interceptor for few KeyMappings
+            fail("Interceptor must not be null");
+        }
     }
 
     @Test
