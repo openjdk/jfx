@@ -71,41 +71,90 @@ public class ObservableListWrapperTest {
 
     @Test
     public void testRemoveAll_Args() {
-        ObservableList<Integer> list = new ObservableListWrapper<>(new ArrayList<>(Arrays.asList(1, 2, 3)));
-        assertFalse(list.removeAll(0));
-        assertEquals(3, list.size());
-        assertTrue(list.removeAll(1));
-        assertEquals(2, list.size());
-        assertFalse(list.removeAll(1));
-        assertEquals(2, list.size());
-        assertTrue(list.removeAll(1, 2));
-        assertEquals(1, list.size());
-        assertTrue(list.removeAll(3));
-        assertEquals(0, list.size());
-        assertFalse(list.removeAll(Collections.EMPTY_SET));
-        assertFalse(list.removeAll(1));
-        assertFalse(list.removeAll(1, 2));
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(1, 2, 3)));
+            assertFalse(list.removeAll(0));
+            assertEquals(Arrays.asList(1, 2, 3), list);
+            assertTrue(list.removeAll(1));
+            assertEquals(Arrays.asList(2, 3), list);
+            assertFalse(list.removeAll(1));
+            assertEquals(Arrays.asList(2, 3), list);
+            assertTrue(list.removeAll(1, 2));
+            assertEquals(Arrays.asList(3), list);
+            assertTrue(list.removeAll(3));
+            assertEquals(0, list.size());
+            assertFalse(list.removeAll(Collections.EMPTY_SET));
+            assertFalse(list.removeAll(1));
+            assertFalse(list.removeAll(1, 2));
+        }
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5)));
+            assertTrue(list.removeAll(2, 4));
+            assertEquals(Arrays.asList(1, 3, 5), list);
+            assertTrue(list.removeAll(1, 5));
+            assertEquals(Arrays.asList(3), list);
+        }
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(11, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)));
+            assertTrue(list.removeAll(11));
+            assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), list);
+            assertTrue(list.removeAll(1, 2, 9, 10));
+            assertEquals(Arrays.asList(3, 4, 5, 6, 7, 8), list);
+            assertTrue(list.removeAll(5, 6));
+            assertEquals(Arrays.asList(3, 4, 7, 8), list);
+            assertTrue(list.removeAll(8, 7, 4, 3));
+            assertEquals(0, list.size());
+        }
     }
 
     @Test
     public void testRetainAll_Args() {
-        ObservableList<Integer> list = new ObservableListWrapper<>(new ArrayList<>(Arrays.asList(1, 2, 3)));
-        assertFalse(list.retainAll(0, 1, 2, 3));
-        assertEquals(3, list.size());
-        assertFalse(list.retainAll(1, 2, 3));
-        assertEquals(3, list.size());
-        assertTrue(list.retainAll(2, 3));
-        assertEquals(2, list.size());
-        assertTrue(list.retainAll(3));
-        assertEquals(1, list.size());
-        assertTrue(list.retainAll(1,2));
-        assertEquals(0, list.size());
-        assertFalse(list.retainAll(Collections.EMPTY_SET));
-        assertFalse(list.retainAll(2,3));
-        assertFalse(list.retainAll(3));
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(1, 2, 3)));
+            assertFalse(list.retainAll(0, 1, 2, 3));
+            assertEquals(Arrays.asList(1, 2, 3), list);
+            assertFalse(list.retainAll(1, 2, 3));
+            assertEquals(Arrays.asList(1, 2, 3), list);
+            assertTrue(list.retainAll(2, 3));
+            assertEquals(Arrays.asList(2, 3), list);
+            assertTrue(list.retainAll(3));
+            assertEquals(Arrays.asList(3), list);
+            assertTrue(list.retainAll(1,2));
+            assertEquals(0, list.size());
+            assertFalse(list.retainAll(Collections.EMPTY_SET));
+            assertFalse(list.retainAll(2,3));
+            assertFalse(list.retainAll(3));
 
-        list = new ObservableListWrapper<>(new ArrayList<>(Arrays.asList(1, 2, 3)));
-        assertTrue(list.retainAll(Collections.EMPTY_SET));
-        assertEquals(0, list.size());
+            list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(1, 2, 3)));
+            assertTrue(list.retainAll(Collections.EMPTY_SET));
+            assertEquals(0, list.size());
+        }
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(1, 2, 3, 4, 5)));
+            assertTrue(list.retainAll(1, 3, 5));
+            assertEquals(Arrays.asList(1, 3, 5), list);
+            assertTrue(list.retainAll(3));
+            assertEquals(Arrays.asList(3), list);
+        }
+        {
+            ObservableList<Integer> list = new ObservableListWrapper<>(
+                new ArrayList<>(Arrays.asList(11, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)));
+            assertTrue(list.retainAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
+            assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10), list);
+            assertTrue(list.retainAll(3, 4, 5, 6, 7, 8));
+            assertEquals(Arrays.asList(3, 4, 5, 6, 7, 8), list);
+            assertTrue(list.retainAll(3, 4, 7, 8));
+            assertEquals(Arrays.asList(3, 4, 7, 8), list);
+            assertFalse(list.retainAll(3, 4, 7, 8));
+            assertEquals(Arrays.asList(3, 4, 7, 8), list);
+            assertTrue(list.retainAll(0));
+            assertEquals(0, list.size());
+        }
     }
 }

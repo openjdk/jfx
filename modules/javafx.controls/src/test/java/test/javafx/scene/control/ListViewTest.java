@@ -837,6 +837,22 @@ public class ListViewTest {
         assertEquals("C", fxList.get(1));
     }
 
+    @Test public void test_rt35857Back() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final ListView<String> listView = new ListView<String>(fxList);
+
+        listView.getSelectionModel().select(2);
+
+        ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("C", selectedItems.get(0));
+
+        listView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("A", fxList.get(0));
+        assertEquals("B", fxList.get(1));
+    }
+
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
         final ListView<String> textFieldListView = new ListView<String>();

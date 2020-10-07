@@ -28,7 +28,7 @@ package com.sun.javafx.collections;
 import javafx.collections.ModifiableObservableListBase;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 
-import java.util.BitSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -173,16 +173,7 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
         if (c.isEmpty() || this.isEmpty()) {
             return false;
         }
-        beginChange();
-        boolean removed = false;
-        for (int i = size()-1; i>=0; i--) {
-            if (c.contains(get(i))) {
-                remove(i);
-                removed = true;
-            }
-        }
-        endChange();
-        return removed;
+        return remove(c, true);
     }
 
     @Override
@@ -198,16 +189,47 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
         if (this.isEmpty()) {
             return false;
         }
-        boolean retained = false;
-        beginChange();
-        for (int i = size()-1; i>=0; i--) {
-            if (!c.contains(get(i))) {
-                remove(i);
-                retained = true;
+        return remove(c, false);
+    }
+
+    private boolean remove(Collection<?> c, boolean isRemoveAll) {
+        List<Integer> runLengths = new ArrayList<>();
+        {
+            int run = 0;
+            boolean flag = isRemoveAll;
+            for (int i = size() - 1; i >= 0; i--) {
+                if (c.contains(get(i)) == flag) {
+                    run++;
+                } else {
+                    runLengths.add(run);
+                    run = 1;
+                    flag = !flag;
+                }
+            }
+            if (run > 0 && flag == isRemoveAll) {
+                runLengths.add(run);
             }
         }
-        endChange();
-        return retained;
+        boolean flag = true;
+        boolean removed = false;
+        if (!runLengths.isEmpty()) {
+            beginChange();
+            int cur = size() - 1;
+            for (int run:runLengths) {
+                if (flag) {
+                    for (int to = cur-run; cur > to; cur--) {
+                        remove(cur);
+                        removed = true;
+                    }
+                } else {
+                    cur -= run;
+                }
+                flag = !flag;
+            }
+            endChange();
+            return removed;
+        }
+        return false;
     }
 
     private SortHelper helper;
