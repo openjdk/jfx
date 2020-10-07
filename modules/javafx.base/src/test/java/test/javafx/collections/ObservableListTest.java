@@ -256,6 +256,29 @@ public class ObservableListTest  {
     }
 
     @Test
+    public void testSetAll() {
+        useListData("one", "two", "three");
+        boolean r = list.setAll("one");
+        assertTrue(r);
+
+        r = list.setAll("one", "four", "five");
+        assertTrue(r);
+
+        r = list.setAll();
+        assertTrue(r);
+
+        r = list.setAll("one");
+        assertTrue(r);
+    }
+
+    @Test
+    public void testSetAllNoUpdate() {
+        useListData();
+        boolean r = list.setAll();
+        assertFalse(r);
+    }
+
+    @Test
     public void testObserverCanRemoveObservers() {
         final ListChangeListener<String> listObserver = change -> {
             change.getList().removeListener(mlo);
