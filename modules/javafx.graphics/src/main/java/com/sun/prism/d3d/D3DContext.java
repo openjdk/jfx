@@ -35,6 +35,7 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MeshView;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
@@ -45,6 +46,7 @@ import com.sun.prism.ps.Shader;
 
 class D3DContext extends BaseShaderContext {
 
+    public static final int D3DERR_DEVICEREMOVED    = 0x88760870;
     public static final int D3DERR_DEVICENOTRESET   = 0x88760869;
     public static final int D3DERR_DEVICELOST       = 0x88760868;
     public static final int E_FAIL                  = 0x80004005;
@@ -150,6 +152,12 @@ class D3DContext extends BaseShaderContext {
 
         if (hr == D3DERR_DEVICELOST) {
             setLost();
+        }
+        
+        if (hr == D3DERR_DEVICEREMOVED) {
+            setLost();
+            GraphicsPipeline.getPipeline().dispose();
+            GraphicsPipeline.getPipeline().createPipeline();
         }
 
         if (hr == D3DERR_DEVICENOTRESET) {
@@ -458,6 +466,8 @@ class D3DContext extends BaseShaderContext {
                 return "D3DERR_DEVICELOST";
             case (int)D3DERR_OUTOFVIDEOMEMORY:
                 return "D3DERR_OUTOFVIDEOMEMORY";
+            case (int)D3DERR_DEVICEREMOVED:
+                return "D3DERR_DEVICEREMOVED";
             case (int)D3D_OK:
                 return "D3D_OK";
             default:

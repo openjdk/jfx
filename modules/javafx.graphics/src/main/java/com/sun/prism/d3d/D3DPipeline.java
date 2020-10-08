@@ -77,6 +77,14 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static D3DResourceFactory factories[];
 
     public static D3DPipeline getInstance() {
+        if(theInstance == null){
+            if (d3dEnabled) {
+                // device was removed, reinitialize
+                nInit(PrismSettings.class);
+                theInstance = new D3DPipeline();
+                factories = new D3DResourceFactory[nGetAdapterCount()];
+            }
+        }
         return theInstance;
     }
 
@@ -166,6 +174,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         for (int i=0; i!=factories.length; ++i) {
             factories[i] = null;
         }
+        theInstance = null;
         super.dispose();
     }
 
