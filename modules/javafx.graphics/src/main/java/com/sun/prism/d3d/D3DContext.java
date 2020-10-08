@@ -153,7 +153,7 @@ class D3DContext extends BaseShaderContext {
         if (hr == D3DERR_DEVICELOST) {
             setLost();
         }
-        
+
         if (hr == D3DERR_DEVICEREMOVED) {
             setLost();
             GraphicsPipeline.getPipeline().dispose();
