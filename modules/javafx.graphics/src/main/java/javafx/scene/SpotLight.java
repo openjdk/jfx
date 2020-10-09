@@ -88,14 +88,14 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * Creates a new instance of {@code PointLight} class with a default {@code Color.WHITE} light source.
+     * Creates a new instance of {@code SpotLight} class with a default {@code Color.WHITE} light source.
      */
     public SpotLight() {
         super();
     }
 
     /**
-     * Creates a new instance of {@code PointLight} class using the specified color.
+     * Creates a new instance of {@code SpotLight} class using the specified color.
      *
      * @param color the color of the light source
      */
@@ -104,7 +104,7 @@ public class SpotLight extends LightBase {
     }
 
     /**
-     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to
+     * The maximum range of this {@code SpotLight}. For a pixel to be affected by this light, its distance to
      * the light source must be less than or equal to the light's maximum range. Any negative value will treated
      * as 0.
      * <p>
