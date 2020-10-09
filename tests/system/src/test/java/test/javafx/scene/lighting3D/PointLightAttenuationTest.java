@@ -33,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -66,10 +67,14 @@ public class PointLightAttenuationTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
-        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
         assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+    }
+
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
     public static class TestApp extends Application {
