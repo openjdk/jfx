@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -504,6 +505,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
             {
                 getProperties().put("selectFirstRowByDefault", false);
+                // editableComboBox property is used to intercept few Key inputs from this ListView,
+                // so that those inputs get forwarded to editor of ComboBox .
+                getProperties().put("editableComboBox", (Supplier<Boolean>) () -> getSkinnable().isEditable());
             }
 
             @Override protected double computeMinHeight(double width) {

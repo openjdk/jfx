@@ -25,9 +25,16 @@
 
 package test.javafx.scene.control;
 
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
+import com.sun.javafx.scene.control.behavior.ListViewBehavior;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.tk.Toolkit;
+
+import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -1332,6 +1339,244 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
 
         sl.dispose();
+    }
+
+    @Test public void testEditorKeyInputsWhenPopupIsShowing() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        StageLoader sl = new StageLoader(cb);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+
+        // Show the popup
+        assertFalse(cb.isShowing());
+        cb.requestFocus();
+        cb.getEditor().setText("ABC DEF");
+        assertEquals("ABC DEF", cb.getEditor().getText());
+        keyboard.doDownArrowPress(KeyModifier.ALT);
+        // Sanity
+        assertTrue(cb.isShowing());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // LEFT, RIGHT keys with CTRL, SHIFT modifiers
+        // Test RIGHT key
+        keyboard.doRightArrowPress();
+        assertEquals(1, cb.getEditor().getCaretPosition());
+
+        // Test KP_RIGHT key
+        keyboard.doKeyPress(KeyCode.KP_RIGHT);
+        assertEquals(2, cb.getEditor().getCaretPosition());
+
+        // Test LEFT key
+        keyboard.doLeftArrowPress();
+        assertEquals(1, cb.getEditor().getCaretPosition());
+
+        // Test KP_LEFT key
+        keyboard.doKeyPress(KeyCode.KP_LEFT);
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);
+        assertEquals("A", cb.getEditor().getSelectedText());
+        assertEquals(1, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(4, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("ABC ", cb.getEditor().getSelectedText());
+        assertEquals(4, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // HOME, END keys with CTRL, SHIFT modifiers
+        // Test END key
+        keyboard.doKeyPress(KeyCode.END);
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test HOME key
+        keyboard.doKeyPress(KeyCode.HOME);
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+        assertEquals(7, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL, KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // Test CTRL + A key
+        keyboard.doLeftArrowPress();
+        assertEquals("", cb.getEditor().getSelectedText());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
+
+        // Sanity
+        assertTrue(cb.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void testKeyInputsOnNonEditableComboBox() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        // cb.setEditable(false); // by default ComboBox is not editable
+        StageLoader sl = new StageLoader(cb);
+        SingleSelectionModel<String> sm = cb.getSelectionModel();
+        sm.select(0);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+
+        // Show the popup
+        assertFalse(cb.isShowing());
+        cb.requestFocus();
+        keyboard.doDownArrowPress(KeyModifier.ALT);
+        // Sanity
+        assertTrue(cb.isShowing());
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test RIGHT key
+        keyboard.doRightArrowPress();
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test KP_RIGHT key
+        keyboard.doKeyPress(KeyCode.KP_RIGHT);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test DOWN key
+        keyboard.doDownArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+
+        // Test KP_DOWN key
+        keyboard.doKeyPress(KeyCode.KP_DOWN);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test LEFT key
+        keyboard.doLeftArrowPress();
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test KP_LEFT key
+        keyboard.doKeyPress(KeyCode.KP_LEFT);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test UP key
+        keyboard.doUpArrowPress();
+        assertEquals(1, sm.getSelectedIndex());
+
+        // Test KP_UP key
+        keyboard.doKeyPress(KeyCode.KP_UP);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Test END key
+        keyboard.doKeyPress(KeyCode.END);
+        assertEquals(2, sm.getSelectedIndex());
+
+        // Test HOME key
+        keyboard.doKeyPress(KeyCode.HOME);
+        assertEquals(0, sm.getSelectedIndex());
+
+        // Sanity
+        assertTrue(cb.isShowing());
+
+        sl.dispose();
+    }
+
+    @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        StageLoader sl = new StageLoader(cb);
+
+        ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
+        ListViewBehavior lvBehavior = (ListViewBehavior)ControlSkinFactory.getBehavior(listView.getSkin());
+        InputMap<ListView<?>> lvInputMap = lvBehavior.getInputMap();
+        ObservableList<?> inputMappings = lvInputMap.getMappings();
+        // In ListViewBehavior KeyMappings for vertical orientation are added under 3rd child InputMap
+        InputMap<ListView<?>> verticalInputMap = lvInputMap.getChildInputMaps().get(2);
+        ObservableList<?> verticalInputMappings = verticalInputMap.getMappings();
+
+        cb.setEditable(true);
+        testKeyMappingsForEditableCB(inputMappings);
+        testCommonKeyMappings(inputMappings, verticalInputMappings);
+
+        cb.setEditable(false);
+        testKeyMappingsForNonEditableCB(inputMappings);
+        testCommonKeyMappings(inputMappings, verticalInputMappings);
+
+        sl.dispose();
+    }
+
+    private void testKeyMappingsForEditableCB(ObservableList<?> inputMappings) {
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END), true);
+    }
+
+    private void testKeyMappingsForNonEditableCB(ObservableList<?> inputMappings) {
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME), false);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END), false);
+    }
+
+    private void testCommonKeyMappings(ObservableList<?> inputMappings,
+                                       ObservableList<?> verticalInputMappings) {
+        // Verify FocusTraversalInputMap
+        for(InputMap.Mapping<?> mapping : FocusTraversalInputMap.getFocusTraversalMappings()) {
+            assertFalse(inputMappings.contains(mapping));
+        }
+
+        // Verify default InputMap
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shift(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shift(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.HOME).shortcut(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.END).shortcut(), true);
+        testInterceptor(inputMappings, new KeyBinding(KeyCode.A).shortcut(), true);
+
+        // Verify vertical child InputMap
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.HOME).shortcut().shift(), true);
+        testInterceptor(verticalInputMappings, new KeyBinding(KeyCode.END).shortcut().shift(), true);
+    }
+
+    private void testInterceptor(ObservableList<?> mappings, KeyBinding binding, boolean isIntercepted) {
+        int i = mappings.indexOf(new KeyMapping(binding, null));
+        if (((KeyMapping)mappings.get(i)).getInterceptor() != null) {
+            assertEquals(isIntercepted, ((KeyMapping) mappings.get(i)).getInterceptor().test(null));
+        } else {
+            // JDK-8209788 added interceptor for few KeyMappings
+            fail("Interceptor must not be null");
+        }
     }
 
     @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {
