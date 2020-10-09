@@ -26,6 +26,7 @@
 package test.javafx.scene.lighting3D;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +37,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javafx.application.Application;
+import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.PointLight;
@@ -48,7 +50,8 @@ import test.util.Util;
 
 public class PointLightAttenuationTest {
 
-    private static final double DELTA = 1d/255; // smallest color resolution
+    // 1d/255 is the smallest color resolution, but we use 10d/255 to avoid precision problems
+    private static final double DELTA = 10d/255;
     private static final int LIGTH_DIST = 60;
     private static final int SAMPLE_DIST = 60;
 
@@ -63,6 +66,7 @@ public class PointLightAttenuationTest {
 
     @BeforeClass
     public static void initFX() throws Exception {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
         assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
@@ -85,9 +89,9 @@ public class PointLightAttenuationTest {
     @Test
     public void testAttenuation() {
         Util.runAndWait(() -> {
-            // Since there appears to be a bug in snapshot with subscene, are taking a snapshot of the scene and not
-            // the box, the center of the box will be at the top left, (0, 0), of the image, and the light is straight
-            // in front. Without attentuation, at (0, 0) it will give its full color. At (SAMPLE_DIST, 0) and
+            // Since there appears to be a bug in snapshot with subscene, we are taking a snapshot of the scene and not
+            // the box, so the center of the box will be at the top left, (0, 0), of the image, and the light is
+            // straight in front. Without attenuation, at (0, 0) it will give its full color. At (SAMPLE_DIST, 0) and
             // LIGTH_DIST == SAMPLE_DIST, it will give cos(45) = 1/sqrt(2) of its color.
             var snapshot = box.getScene().snapshot(null);
             double nonAttenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
@@ -95,14 +99,34 @@ public class PointLightAttenuationTest {
             assertEquals("Wrong color value", 1, nonAttenBlueCenter, DELTA);
             assertEquals("Wrong color value", 1/Math.sqrt(2), nonAttenBlueDiag, DELTA);
 
+            double diagDist = Math.sqrt(LIGTH_DIST * LIGTH_DIST + SAMPLE_DIST * SAMPLE_DIST);
+
             light.setLinearAttenuation(0.01);
-            double attnCenter = 1/(1 + 0.01 * LIGTH_DIST);
-            double attnDiag = 1/(1 + 0.01 * Math.sqrt(LIGTH_DIST * LIGTH_DIST + SAMPLE_DIST * SAMPLE_DIST));
+            double attnCenter = 1 / (1 + 0.01 * LIGTH_DIST);
+            double attnDiag = 1 / (1 + 0.01 * diagDist);
             snapshot = box.getScene().snapshot(null);
             double attenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
             double attenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
             assertEquals("Wrong color value", nonAttenBlueCenter * attnCenter, attenBlueCenter, DELTA);
             assertEquals("Wrong color value", nonAttenBlueDiag * attnDiag, attenBlueDiag, DELTA);
+
+            light.setLinearAttenuation(0);
+            light.setQuadraticAttenuation(0.01);
+            attnCenter = 1 / (1 + 0.01 * LIGTH_DIST * LIGTH_DIST);
+            attnDiag = 1 / (1 + 0.01 * diagDist * diagDist);
+            snapshot = box.getScene().snapshot(null);
+            attenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
+            attenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
+            assertEquals("Wrong color value", nonAttenBlueCenter * attnCenter, attenBlueCenter, DELTA);
+            assertEquals("Wrong color value", nonAttenBlueDiag * attnDiag, attenBlueDiag, DELTA);
+
+            light.setQuadraticAttenuation(0);
+            light.setMaxRange((LIGTH_DIST + diagDist) / 2);
+            snapshot = box.getScene().snapshot(null);
+            nonAttenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
+            nonAttenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
+            assertEquals("Wrong color value, should be in range", 1, nonAttenBlueCenter, DELTA);
+            assertEquals("Wrong color value, should be out of range", 0, nonAttenBlueDiag, DELTA);
         });
     }
 

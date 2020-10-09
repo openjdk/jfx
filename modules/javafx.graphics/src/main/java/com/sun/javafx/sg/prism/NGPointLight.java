@@ -112,6 +112,7 @@ public class NGPointLight extends NGLightBase {
     public void setMaxRange(float maxRange) {
         maxRange = maxRange < 0 ? 0 : maxRange;
         if (this.maxRange != maxRange) {
+            this.maxRange = maxRange;
             visualsChanged();
         }
     }
