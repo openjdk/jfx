@@ -256,7 +256,7 @@ public final class MouseEventFirer {
     /**
      * Fires a mouseEvent with the given configuration options onto the target.
      * Hot-fix for JDK-8253769.
-     * The mouseEvent is created such that coordiate transformation constraints seem to be respected.
+     * The mouseEvent is created such that coordinate transformation constraints seem to be respected.
      */
     private void fireMouseEventAlternative(EventType<MouseEvent> evtType, MouseButton button, int clickCount, double deltaX, double deltaY, KeyModifier... modifiers) {
 
