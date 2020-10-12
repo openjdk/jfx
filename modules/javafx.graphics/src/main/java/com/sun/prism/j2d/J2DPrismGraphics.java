@@ -736,10 +736,9 @@ public class J2DPrismGraphics
                 tmpAT.setTransform(at);
                 try {
                     tmpAT.invert();
+                    g2d.fill(tmpAT.createTransformedShape(shape));
                 } catch (NoninvertibleTransformException e) {
                 }
-
-                g2d.fill(tmpAT.createTransformedShape(shape));
                 setTransform(transform);
                 setClipRect(clipRect);
                 return;

@@ -787,7 +787,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     double m[] = patternTransform.getMatrix();
                     Affine3D at = new Affine3D();
                     at.translate(phase.getX(), phase.getY());
-                    at.concatenate(m[0], -m[1], m[4], -m[2], m[3], m[5]);
+                    at.concatenate(m[0], m[2], m[4], m[1], m[3], m[5]);
 
                     g.setPaint(new ImagePattern(
                                img,
