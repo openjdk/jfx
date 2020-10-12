@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -1357,7 +1358,7 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // LEFT, RIGHT keys with CTRL, SHIFT modifiers
+        // LEFT, RIGHT keys with CTRL/META, SHIFT modifiers
         // Test RIGHT key
         keyboard.doRightArrowPress();
         assertEquals(1, cb.getEditor().getCaretPosition());
@@ -1384,27 +1385,46 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + RIGHT key
-        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL);
+        if (Utils.isMac()) {
+            // Test ALT + RIGHT key
+            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT);
+        } else {
+            // Test CTRL + RIGHT key
+            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey());
+        }
         assertEquals("", cb.getEditor().getSelectedText());
-        assertEquals(4, cb.getEditor().getCaretPosition());
+        if (Utils.isWindows()) {
+            assertEquals(4, cb.getEditor().getCaretPosition());
+        } else {
+            assertEquals(3, cb.getEditor().getCaretPosition());
+        }
 
-        // Test CTRL + LEFT key
-        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL);
+        // Test CTRL/META + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + SHIFT + RIGHT key
-        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT);
-        assertEquals("ABC ", cb.getEditor().getSelectedText());
-        assertEquals(4, cb.getEditor().getCaretPosition());
+        if (Utils.isMac()) {
+            // Test ALT + SHIFT + RIGHT key
+            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT, KeyModifier.SHIFT);
+        } else {
+            // Test CTRL + SHIFT + RIGHT key
+            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        }
+        if (Utils.isWindows()) {
+            assertEquals("ABC ", cb.getEditor().getSelectedText());
+            assertEquals(4, cb.getEditor().getCaretPosition());
+        } else {
+            assertEquals("ABC", cb.getEditor().getSelectedText());
+            assertEquals(3, cb.getEditor().getCaretPosition());
+        }
 
-        // Test CTRL + SHIFT + LEFT key
-        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // HOME, END keys with CTRL, SHIFT modifiers
+        // HOME, END keys with CTRL/META, SHIFT modifiers
         // Test END key
         keyboard.doKeyPress(KeyCode.END);
         assertEquals(7, cb.getEditor().getCaretPosition());
@@ -1423,27 +1443,27 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + END key
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL);
+        // Test CTRL/META + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(7, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + HOME key
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL);
+        // Test CTRL/META + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + SHIFT + END key
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
         assertEquals(7, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + SHIFT + HOME key
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + A key
+        // Test CTRL/META + A key
         keyboard.doLeftArrowPress();
         assertEquals("", cb.getEditor().getSelectedText());
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
