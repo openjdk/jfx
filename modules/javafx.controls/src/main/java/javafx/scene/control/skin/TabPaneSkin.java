@@ -267,6 +267,16 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+
+        getSkinnable().getTabs().removeListener(weakTabsListener);
+
+        getChildren().remove(tabHeaderArea);
+        tabHeaderArea.removeListeners();
+
+        for (TabContentRegion contentRegion : tabContentRegions) {
+            contentRegion.dispose();
+        }
         if (selectionModel != null) {
             selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
             selectionModel = null;
@@ -579,8 +589,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     }
 
+    ListChangeListener<Tab> tabsListener;
+    WeakListChangeListener<Tab> weakTabsListener;
     private void initializeTabListener() {
-        getSkinnable().getTabs().addListener((ListChangeListener<Tab>) c -> {
+        tabsListener = c -> {
             List<Tab> tabsToRemove = new ArrayList<>();
             List<Tab> tabsToAdd = new ArrayList<>();
 
@@ -659,7 +671,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
             // Fix for RT-34692
             getSkinnable().requestLayout();
-        });
+        };
+        weakTabsListener = new WeakListChangeListener<>(tabsListener);
+        getSkinnable().getTabs().addListener(weakTabsListener);
     }
 
     private void addTabContent(Tab tab) {
@@ -673,8 +687,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private void removeTabContent(Tab tab) {
         for (TabContentRegion contentRegion : tabContentRegions) {
             if (contentRegion.getTab().equals(tab)) {
-                contentRegion.removeListeners(tab);
-                getChildren().remove(contentRegion);
+                contentRegion.dispose();
                 tabContentRegions.remove(contentRegion);
                 break;
             }
@@ -700,7 +713,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private boolean isHorizontal() {
-        Side tabPosition = getSkinnable().getSide();
+        Side tabPosition = getSkinnable() != null ? getSkinnable().getSide() : Side.TOP;
         return Side.TOP.equals(tabPosition) || Side.BOTTOM.equals(tabPosition);
     }
 
@@ -1208,6 +1221,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             positionInArea(controlButtons, controlStartX, controlStartY, btnWidth, btnHeight,
                         /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
         }
+
+        void removeListeners() {
+            for(Node child : headersRegion.getChildren()) {
+                TabHeaderSkin header = (TabHeaderSkin) child;
+                header.removeListeners(header.getTab());
+            }
+            controlButtons.removeListeners();
+        }
     } /* End TabHeaderArea */
 
 
@@ -1542,6 +1563,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         };
 
         private void removeListeners(Tab tab) {
+            tab.getStyleClass().removeListener(weakStyleClassListener);
             listener.dispose();
             inner.getChildren().clear();
             getChildren().clear();
@@ -1693,9 +1715,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
         }
 
-        private void removeListeners(Tab tab) {
+        private void removeListeners() {
             tab.selectedProperty().removeListener(weakTabSelectedListener);
             tab.contentProperty().removeListener(weakTabContentListener);
+        }
+
+        public void dispose() {
+            getChildren().clear();
+            removeListeners();
         }
 
     } /* End TabContentRegion */
@@ -1785,17 +1812,29 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
             getChildren().add(inner);
 
-            tabPane.sideProperty().addListener(valueModel -> {
-                Side tabPosition = getSkinnable().getSide();
-                downArrow.setRotate(tabPosition.equals(Side.BOTTOM)? 180.0F : 0.0F);
-            });
-            tabPane.getTabs().addListener((ListChangeListener<Tab>) c -> setupPopupMenu());
+            tabPane.sideProperty().addListener(weakSidePropListener);
+            tabPane.getTabs().addListener(weakTabsListenerForPopup);
             showControlButtons = false;
             if (isShowTabsMenu()) {
                 showControlButtons = true;
                 requestLayout();
             }
             getProperties().put(ContextMenu.class, popup);
+        }
+
+        InvalidationListener sidePropListener =  e -> {
+            Side tabPosition = getSkinnable().getSide();
+            downArrow.setRotate(tabPosition.equals(Side.BOTTOM)? 180.0F : 0.0F);
+        };
+        ListChangeListener<Tab> tabsListenerForPopup = e -> setupPopupMenu();
+        WeakInvalidationListener weakSidePropListener =
+                new WeakInvalidationListener(sidePropListener);
+        WeakListChangeListener weakTabsListenerForPopup =
+                new WeakListChangeListener<>(tabsListenerForPopup);
+
+        void removeListeners() {
+            getSkinnable().sideProperty().removeListener(weakSidePropListener);
+            getSkinnable().getTabs().removeListener(weakTabsListenerForPopup);
         }
 
         private boolean showTabsMenu = false;
@@ -2058,11 +2097,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         dragState = DragState.NONE;
         this.headersRegion = headersRegion;
         updateListeners();
-        getSkinnable().tabDragPolicyProperty().addListener((observable, oldValue, newValue) -> {
-            if (oldValue != newValue) {
-                updateListeners();
-            }
-        });
+        registerChangeListener(getSkinnable().tabDragPolicyProperty(), inv -> updateListeners());
     }
 
     private void handleHeaderMousePressed(MouseEvent event) {
