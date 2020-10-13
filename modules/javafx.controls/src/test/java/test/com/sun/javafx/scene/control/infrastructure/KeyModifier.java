@@ -64,6 +64,6 @@ public enum KeyModifier {
     }
 
     public static KeyModifier getWordTraversalKey() {
-        return Utils.isMac() ? ALT : CTRL;
+        return Utils.isMac() ? ALT : getShortcutKey();
     }
 }
