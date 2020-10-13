@@ -3486,6 +3486,68 @@ public class TreeTableViewTest {
 
         assertTrue(treeView.getSortOrder().isEmpty());
     }
+    //--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    /**
+     * Note: 8093144 is not an issue for the current implementation of TreeTableView/SelectionModel
+     * because selectedItems.getModelItem delegates to TreeTableView.getRow which is implemented
+     * to look into its cached items.
+     * <p>
+     * These regression tests guard agains potential future changes in implementation.
+     */
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        treeView.getSelectionModel().select(treeView.getRoot().getChildren().size());
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        TreeTableView<String> treeView = new TreeTableView<String>(createTreeItem());
+        treeView.getSelectionModel().select(1);
+
+        assert_rt35857(treeView.getRoot().getChildren(), treeView.getSelectionModel(), true);
+    }
+
+    /**
+     * Creates and returns an expanded TreeItem with 3 children.
+     */
+    protected TreeItem<String> createTreeItem() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(new TreeItem("A"), new TreeItem("B"), new TreeItem("C"));
+        return root;
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
 
     @Test public void test_rt35857() {
         TreeItem<String> root = new TreeItem<>("Root");
@@ -3508,6 +3570,7 @@ public class TreeTableViewTest {
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
     }
+    //--------- end regression testing of JDK-8093144 (was: RT-35857)
 
     private int rt36452_instanceCount = 0;
     @Test public void test_rt36452() {

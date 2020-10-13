@@ -80,6 +80,7 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.collections.FXCollections.*;
 
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -862,6 +863,52 @@ public class ListViewTest {
         sl.dispose();
     }
 
+//--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(0);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        assertNotNull("sanity: ", selectedItem);
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
         final ListView<String> listView = new ListView<String>(fxList);
@@ -877,6 +924,8 @@ public class ListViewTest {
         assertEquals("B", fxList.get(0));
         assertEquals("C", fxList.get(1));
     }
+
+//-------- end regression testing of JDK-8093144
 
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
