@@ -1385,39 +1385,24 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        if (Utils.isMac()) {
-            // Test ALT + RIGHT key
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT);
-        } else {
-            // Test CTRL + RIGHT key
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey());
-        }
-        assertEquals("", cb.getEditor().getSelectedText());
+        // Test ALT/CTRL + RIGHT key
+        int expectedCaretPosition = 3;
         if (Utils.isWindows()) {
-            assertEquals(4, cb.getEditor().getCaretPosition());
-        } else {
-            assertEquals(3, cb.getEditor().getCaretPosition());
+            expectedCaretPosition = 4;
         }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getWordTraversalKey());
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(expectedCaretPosition, cb.getEditor().getCaretPosition());
 
         // Test CTRL/META + LEFT key
         keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        if (Utils.isMac()) {
-            // Test ALT + SHIFT + RIGHT key
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT, KeyModifier.SHIFT);
-        } else {
-            // Test CTRL + SHIFT + RIGHT key
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
-        }
-        if (Utils.isWindows()) {
-            assertEquals("ABC ", cb.getEditor().getSelectedText());
-            assertEquals(4, cb.getEditor().getCaretPosition());
-        } else {
-            assertEquals("ABC", cb.getEditor().getSelectedText());
-            assertEquals(3, cb.getEditor().getCaretPosition());
-        }
+        // Test ALT/CTRL + SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getWordTraversalKey(), KeyModifier.SHIFT);
+        assertEquals(expectedCaretPosition, cb.getEditor().getCaretPosition());
+        assertEquals(cb.getEditor().getText().substring(0, expectedCaretPosition), cb.getEditor().getSelectedText());
 
         // Test CTRL/META + SHIFT + LEFT key
         keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
