@@ -111,7 +111,6 @@ public class SkinCleanupTest {
 //-------- choiceBox, toolBar
 
     /**
-     * FIXME: Left-over from ChoiceBox fix.
      * NPE on sequence setItems -> modify items after skin is replaced.
      */
     @Test
