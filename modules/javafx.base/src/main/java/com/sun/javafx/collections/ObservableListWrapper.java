@@ -28,7 +28,7 @@ package com.sun.javafx.collections;
 import javafx.collections.ModifiableObservableListBase;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 
-import java.util.BitSet;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -169,40 +169,67 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
 
     @Override
     public boolean removeAll(Collection<?> c) {
-        beginChange();
-        BitSet bs = new BitSet(c.size());
-        for (int i = 0; i < size(); ++i) {
-            if (c.contains(get(i))) {
-                bs.set(i);
-            }
+        // Throw NullPointerException if c is null
+        if (c.isEmpty() || this.isEmpty()) {
+            return false;
         }
-        if (!bs.isEmpty()) {
-            int cur = size();
-            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
-                remove(cur);
-            }
-        }
-        endChange();
-        return !bs.isEmpty();
+        return remove(c, true);
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        beginChange();
-        BitSet bs = new BitSet(c.size());
-        for (int i = 0; i < size(); ++i) {
-            if (!c.contains(get(i))) {
-                bs.set(i);
+        // Throw NullPointerException if c is null
+        if (c.isEmpty()) {
+            boolean retained = !this.isEmpty();
+            if (retained) {
+                clear();
+            }
+            return retained;
+        }
+        if (this.isEmpty()) {
+            return false;
+        }
+        return remove(c, false);
+    }
+
+    private boolean remove(Collection<?> c, boolean isRemoveAll) {
+        List<Integer> runLengths = new ArrayList<>();
+        {
+            int run = 0;
+            boolean flag = isRemoveAll;
+            for (int i = size() - 1; i >= 0; i--) {
+                if (c.contains(get(i)) == flag) {
+                    run++;
+                } else {
+                    runLengths.add(run);
+                    run = 1;
+                    flag = !flag;
+                }
+            }
+            if (run > 0 && flag == isRemoveAll) {
+                runLengths.add(run);
             }
         }
-        if (!bs.isEmpty()) {
-            int cur = size();
-            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
-                remove(cur);
+        boolean flag = true;
+        boolean removed = false;
+        if (!runLengths.isEmpty()) {
+            beginChange();
+            int cur = size() - 1;
+            for (int run:runLengths) {
+                if (flag) {
+                    for (int to = cur-run; cur > to; cur--) {
+                        remove(cur);
+                        removed = true;
+                    }
+                } else {
+                    cur -= run;
+                }
+                flag = !flag;
             }
+            endChange();
+            return removed;
         }
-        endChange();
-        return !bs.isEmpty();
+        return false;
     }
 
     private SortHelper helper;
