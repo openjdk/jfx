@@ -291,7 +291,7 @@ public interface MediaPlayer {
     public void setBalance(float balance);
 
     /**
-     * Gets the master audio equalizer for the player.
+     * Gets the audio equalizer for the player.
      *
      * @return AudioEqualizer object
      */

@@ -29,10 +29,10 @@ import java.util.HashSet;
 import java.util.Set;
 import com.sun.javafx.animation.TickCalculation;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
-public class AbstractMasterTimerMock extends AbstractMasterTimer {
+public class AbstractPrimaryTimerMock extends AbstractPrimaryTimer {
 
     private final Set<PulseReceiver> targets = new HashSet<PulseReceiver>();
 

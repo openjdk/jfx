@@ -40,7 +40,7 @@ import javafx.util.Duration;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -297,7 +297,7 @@ public final class ParallelTransition extends Transition {
     }
 
     // For testing purposes
-    ParallelTransition(AbstractMasterTimer timer) {
+    ParallelTransition(AbstractPrimaryTimer timer) {
         super(timer);
         setInterpolator(Interpolator.LINEAR);
     }

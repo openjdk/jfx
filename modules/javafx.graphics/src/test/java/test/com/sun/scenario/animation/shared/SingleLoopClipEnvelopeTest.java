@@ -48,7 +48,7 @@ public class SingleLoopClipEnvelopeTest {
 
     @Before
     public void setUp() {
-        animation = new AnimationMock(Toolkit.getToolkit().getMasterTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 1, AnimationMock.DEFAULT_AUTOREVERSE);
+        animation = new AnimationMock(Toolkit.getToolkit().getPrimaryTimer(), AnimationMock.DEFAULT_DURATION, AnimationMock.DEFAULT_RATE, 1, AnimationMock.DEFAULT_AUTOREVERSE);
         clip = new SingleLoopClipEnvelopeShim(animation);
     }
 

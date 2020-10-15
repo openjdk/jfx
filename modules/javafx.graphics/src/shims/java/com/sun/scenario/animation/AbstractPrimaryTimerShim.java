@@ -25,17 +25,17 @@
 
 package com.sun.scenario.animation;
 
-public class AbstractMasterTimerShim {
+public class AbstractPrimaryTimerShim {
 
-    public static boolean isPaused(AbstractMasterTimer amt) {
+    public static boolean isPaused(AbstractPrimaryTimer amt) {
         return amt.isPaused();
     }
 
-    public static long getTotalPausedTime(AbstractMasterTimer amt) {
+    public static long getTotalPausedTime(AbstractPrimaryTimer amt) {
         return amt.getTotalPausedTime();
     }
 
-    public static long getStartPauseTime(AbstractMasterTimer amt) {
+    public static long getStartPauseTime(AbstractPrimaryTimer amt) {
         return amt.getStartPauseTime();
     }
 

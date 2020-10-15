@@ -26,7 +26,7 @@
 package com.sun.scenario.animation.shared;
 
 /**
- * A TimerReceiver receives per-frame pulses from the MasterTimer.
+ * A TimerReceiver receives per-frame pulses from the PrimaryTimer.
  */
 public interface TimerReceiver {
     /**

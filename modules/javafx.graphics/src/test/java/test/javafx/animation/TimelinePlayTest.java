@@ -43,7 +43,7 @@ import static org.junit.Assert.*;
 
 public class TimelinePlayTest {
 
-    private AbstractMasterTimerMock amt;
+    private AbstractPrimaryTimerMock amt;
     private Timeline timeline;
     private LongProperty property = new SimpleLongProperty();
 
@@ -53,7 +53,7 @@ public class TimelinePlayTest {
 
     @Before
     public void setUp() {
-        amt = new AbstractMasterTimerMock();
+        amt = new AbstractPrimaryTimerMock();
         timeline = TimelineShim.getTimeline(amt);
     }
 

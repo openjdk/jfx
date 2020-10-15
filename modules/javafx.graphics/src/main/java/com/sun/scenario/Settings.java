@@ -52,10 +52,10 @@ public class Settings {
     static {
         SETTINGS_KEY = new StringBuilder("SettingsKey");
 
-        // It seems no longer necessary to force loading of MasterTimer to pick
+        // It seems no longer necessary to force loading of PrimaryTimer to pick
         // up the hi-res timer workaround. Also, this is causing some init
         // order problems (RT-5572), so it's being commented out.
-        // Object obj = ToolkitAccessor.getMasterTimer();
+        // Object obj = ToolkitAccessor.getPrimaryTimer();
     }
 
     private static synchronized Settings getInstance() {
