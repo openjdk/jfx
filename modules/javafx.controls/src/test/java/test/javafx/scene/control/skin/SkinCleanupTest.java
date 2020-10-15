@@ -111,10 +111,9 @@ public class SkinCleanupTest {
 //-------- choiceBox, toolBar
 
     /**
-     * FIXME: Left-over from ChoiceBox fix.
      * NPE on sequence setItems -> modify items after skin is replaced.
      */
-    @Test @Ignore("8246202")
+    @Test
     public void testChoiceBoxSetItems() {
         ChoiceBox<String> box = new ChoiceBox<>();
         installDefaultSkin(box);
