@@ -69,9 +69,9 @@ public class PublicSuffixesTest {
      */
     @Test
     public void testWildcardRule() {
-        test("ar", true);
-        test("foo.ar", true);
-        test("bar.foo.ar", false);
+        test("mm", true);
+        test("foo.mm", true);
+        test("bar.foo.mm", false);
     }
 
     /**
