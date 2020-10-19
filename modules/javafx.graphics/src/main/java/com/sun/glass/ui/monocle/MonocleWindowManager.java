@@ -121,7 +121,7 @@ final class MonocleWindowManager {
 
     boolean requestFocus(MonocleWindow window) {
         int index = getWindowIndex(window);
-        if (index != -1 && window.isVisible()) {
+        if (index != -1) {
             focusedWindow = window;
             window.notifyFocus(WindowEvent.FOCUS_GAINED);
             return true;
