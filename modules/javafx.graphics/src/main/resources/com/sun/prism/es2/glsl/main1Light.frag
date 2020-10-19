@@ -58,6 +58,8 @@ vec4 apply_selfIllum();
 struct Light {
     vec4 pos;
     vec3 color;
+    vec3 attn;
+    float range;
 };
 
 uniform vec3 ambientColor;
@@ -68,26 +70,30 @@ varying vec4 lightTangentSpacePositions[3];
 
 void main()
 {
-    gl_FragColor = vec4(0.0,0.0,0.0,1.0);
     vec4 diffuse = apply_diffuse();
 
     if (diffuse.a == 0.0) discard;
 
-    vec3 n = apply_normal();
-
     vec3 d = vec3(0.0);
     vec3 s = vec3(0.0);
 
-    vec3 refl = reflect(normalize(eyePos), n);
     vec4 specular = apply_specular();
-    float power = specular.a;
 
-    vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-    d = clamp(dot(n,l), 0.0, 1.0)*(lights[0].color).rgb;
-    s = pow(clamp(dot(-refl, l), 0.0, 1.0), power)*lights[0].color.rgb;
+    float maxRange = lights[0].range;
+    float dist = length(lightTangentSpacePositions[0].xyz);
+    if (dist <= maxRange) {
+        vec3 n = apply_normal();
+        vec3 refl = reflect(normalize(eyePos), n);
+        vec3 l = normalize(lightTangentSpacePositions[0].xyz);
 
-    vec3 rez = (ambientColor+d) * diffuse.xyz + s*specular.rgb;
+        float power = specular.a;
+
+        vec3 attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
+        d = clamp(dot(n, l), 0.0, 1.0) * attenuatedColor;
+        s = pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
+    }
+    vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
     rez += apply_selfIllum().xyz;
 
-    gl_FragColor = vec4(clamp(rez, 0.0, 1.0) , diffuse.a);
+    gl_FragColor = vec4(clamp(rez, 0.0, 1.0), diffuse.a);
 }

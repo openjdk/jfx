@@ -56,6 +56,24 @@ public class FilteredListTest {
         filteredList.addListener(mlo);
     }
 
+    @Test
+    public void test_rt35857_removeFiltered() {
+        ObservableList<String> copyList = FXCollections.observableArrayList(list);
+        // no relation, but use a different method to remove just to be on the super safe side
+        filteredList.forEach(e -> copyList.remove(e));
+        // list has duplicates!
+        list.removeAll(filteredList);
+        assertEquals(copyList, list);
+    }
+
+    @Test
+    public void test_rt35857_retainFiltered() {
+        ObservableList<String> copyFiltered = FXCollections.observableArrayList(filteredList);
+        list.retainAll(filteredList);
+        assertEquals("sanity: filteredList unchanged", copyFiltered, filteredList);
+        assertEquals(filteredList, list);
+    }
+
     private <E> void compareIndices(FilteredList<E> filtered) {
         ObservableList<? extends E> source = filtered.getSource();
         for (int i = 0; i < filtered.size(); i++) {

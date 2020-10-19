@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,7 +120,8 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
         if (column == treeColumn) {
             final Node disclosureNode = getNode().getTreeTableRow().getDisclosureNode();
-            if (disclosureNode != null) {
+          // fix JDK-8253597: check disclosure node for visibility along with existence
+          if (disclosureNode != null && disclosureNode.isVisible()) {
                 double startX = 0;
                 for (TreeTableColumn<S,?> tc : treeTableView.getVisibleLeafColumns()) {
                     if (tc == treeColumn) break;

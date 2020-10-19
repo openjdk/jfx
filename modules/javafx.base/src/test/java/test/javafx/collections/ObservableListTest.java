@@ -28,6 +28,7 @@ package test.javafx.collections;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -238,6 +239,16 @@ public class ObservableListTest  {
         assertEquals(2, mlo.calls.size());
         mlo.checkAddRemove(0, list, Arrays.asList("one"), 0, 0);
         mlo.checkAddRemove(1, list, Arrays.asList("three", "four"), 1, 1);
+    }
+
+    @Test
+    public void testRetainAllEmptySource() {
+        // grab default data
+        List<String> data = new ArrayList<>(list);
+        // retain none == remove all
+        list.retainAll();
+        assertTrue(list.isEmpty());
+        mlo.check1AddRemove(list, data, 0, 0);
     }
 
     @Test
