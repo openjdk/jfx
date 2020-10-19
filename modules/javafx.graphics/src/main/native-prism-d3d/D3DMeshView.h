@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,8 @@ public:
     void setWireframe(bool wf);
     void setAmbientLight(float r, float g, float b);
     void setPointLight(int index, float x, float y, float z,
-    float r, float g, float b, float w);
+        float r, float g, float b, float w,
+        float ca, float la, float qa, float maxRange);
     void computeNumLights();
     void render();
 
@@ -50,7 +51,7 @@ private:
     D3DPhongMaterial *material;
     D3DLight lights[3];
     float ambientLightColor[3];
-    int  numLights;
+    int numLights;
     bool lightsDirty;
     int cullMode;
     bool wireframe;
