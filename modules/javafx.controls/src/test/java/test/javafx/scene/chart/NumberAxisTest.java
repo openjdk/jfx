@@ -149,7 +149,7 @@ public class NumberAxisTest {
      * CSS related Tests                                                 *
      ********************************************************************/
 
-    @Test public void whenTickUnitIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenTickUnitIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -157,7 +157,7 @@ public class NumberAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenTickUnitIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.tickUnitProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }

@@ -213,7 +213,7 @@ public class MenuButtonTest {
     }
 
     //TODO: test show()/isShowing() for disabled=true
-    //TODO: test MenuButton.impl_getPsuedoClassState
+    //TODO: test MenuButton.getPsuedoClassState
 
     @Test
     public void test_RT_21894() {
