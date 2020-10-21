@@ -70,7 +70,7 @@ import static org.junit.Assert.*;
  *     - Default style-class has what you expect
  *     - (2nd order) CssMetaData_isSettable returns true for thing in their default state
  *     - (2nd order) CssMetaData_isSettable returns false for things manually specified
- *     - (3rd order) impl_cssKeys includes all the public properties
+ *     - (3rd order) getCssMetaData includes all the public properties
  *  - Methods
  *     - For all methods, calling the method mutates the state appropriately
  */
