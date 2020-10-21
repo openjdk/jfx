@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,8 @@ void D3DMeshView::setAmbientLight(float r, float g, float b) {
 }
 
 void D3DMeshView::setPointLight(int index, float x, float y, float z,
-    float r, float g, float b, float w) {
+        float r, float g, float b, float w,
+        float ca, float la, float qa, float maxRange) {
     // NOTE: We only support up to 3 point lights at the present
     if (index >= 0 && index <= 2) {
         lights[index].position[0] = x;
@@ -83,6 +84,10 @@ void D3DMeshView::setPointLight(int index, float x, float y, float z,
         lights[index].color[1] = g;
         lights[index].color[2] = b;
         lights[index].w = w;
+        lights[index].attenuation[0] = ca;
+        lights[index].attenuation[1] = la;
+        lights[index].attenuation[2] = qa;
+        lights[index].maxRange = maxRange;
         lightsDirty = TRUE;
     }
 }
@@ -154,17 +159,39 @@ void D3DMeshView::render() {
         return;
     }
 
-    float lightsColor[12];
-    for (int i = 0, j = 0; i < 3; i++) {
+    float lightsColor[12];       // 3 lights x (3 color + 1 padding)
+    float lightsAttenuation[12]; // 3 lights x (3 attenuation factors + 1 padding)
+    float lightsRange[12];       // 3 lights x (1 maxRange + 3 padding)
+    for (int i = 0, c = 0, a = 0, r = 0; i < 3; i++) {
         float w = lights[i].w;
-        lightsColor[j++] = lights[i].color[0] * w;
-        lightsColor[j++] = lights[i].color[1] * w;
-        lightsColor[j++] = lights[i].color[2] * w;
-        lightsColor[j++] = 1;
+        lightsColor[c++] = lights[i].color[0] * w;
+        lightsColor[c++] = lights[i].color[1] * w;
+        lightsColor[c++] = lights[i].color[2] * w;
+        lightsColor[c++] = 1;
+
+        lightsAttenuation[a++] = lights[i].attenuation[0];
+        lightsAttenuation[a++] = lights[i].attenuation[1];
+        lightsAttenuation[a++] = lights[i].attenuation[2];
+        lightsAttenuation[a++] = 0;
+
+        lightsRange[r++] = lights[i].maxRange;
+        lightsRange[r++] = 0;
+        lightsRange[r++] = 0;
+        lightsRange[r++] = 0;
     }
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, 3));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHTCOLOR) failed !!!" << endl;
+        return;
+    }
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, lightsAttenuation, 3));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_ATTENUATION) failed !!!" << endl;
+        return;
+    }
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_RANGE, lightsRange, 3));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_RANGE) failed !!!" << endl;
         return;
     }
 

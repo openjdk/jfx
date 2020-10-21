@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,14 +109,18 @@ public abstract class NGShape3D extends NGNode {
         int pointLightIdx = 0;
         if (g.getLights() == null || g.getLights()[0] == null) {
             // If no lights are in scene apply default light. Default light
-            // is a single point white point light at camera eye position.
+            // is a single white point light at camera eye position.
             meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
             Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
             meshView.setPointLight(pointLightIdx++,
                                    (float)cameraPos.x,
                                    (float)cameraPos.y,
                                    (float)cameraPos.z,
-                                   1.0f, 1.0f, 1.0f, 1.0f);
+                                   1.0f, 1.0f, 1.0f, 1.0f,
+                                   NGPointLight.getDefaultCa(),
+                                   NGPointLight.getDefaultLa(),
+                                   NGPointLight.getDefaultQa(),
+                                   NGPointLight.getDefaultMaxRange());
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
@@ -132,7 +136,7 @@ public abstract class NGShape3D extends NGNode {
                     float gL = lightBase.getColor().getGreen();
                     float bL = lightBase.getColor().getBlue();
                     /* TODO: 3D
-                     * There is a limit on the number of lights that can affect
+                     * There is a limit on the number of point lights that can affect
                      * a 3D shape. (Currently we simply select the first 3)
                      * Thus it is important to select the most relevant lights.
                      *
@@ -155,7 +159,11 @@ public abstract class NGShape3D extends NGNode {
                                     (float)lightWT.getMxt(),
                                     (float)lightWT.getMyt(),
                                     (float)lightWT.getMzt(),
-                                    rL, gL, bL, 1.0f);
+                                    rL, gL, bL, 1.0f,
+                                    light.getCa(),
+                                    light.getLa(),
+                                    light.getQa(),
+                                    light.getMaxRange());
                         }
                     } else if (lightBase instanceof NGAmbientLight) {
                         // Accumulate ambient lights
@@ -173,7 +181,10 @@ public abstract class NGShape3D extends NGNode {
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
         while (pointLightIdx < 3) {
                 // Reset any previously set lights
-                meshView.setPointLight(pointLightIdx++, 0, 0, 0, 0, 0, 0, 0);
+                meshView.setPointLight(pointLightIdx++,
+                        0, 0, 0, // x y z
+                        0, 0, 0, 0, // r g b w
+                        1, 0, 0, 0); // ca la qa maxRange
         }
 
         meshView.render(g);

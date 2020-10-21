@@ -81,10 +81,11 @@ class D3DMeshView extends BaseMeshView {
     }
 
     @Override
-    public void setPointLight(int index, float x, float y, float z, float r, float g, float b, float w) {
+    public void setPointLight(int index, float x, float y, float z, float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange) {
         // NOTE: We only support up to 3 point lights at the present
         if (index >= 0 && index <= 2) {
-            context.setPointLight(nativeHandle, index, x, y, z, r, g, b, w);
+            context.setPointLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, maxRange);
         }
     }
 
