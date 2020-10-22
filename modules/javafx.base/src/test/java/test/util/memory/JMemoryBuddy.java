@@ -47,8 +47,8 @@ import java.util.function.Function;
 public class JMemoryBuddy {
 
     private static int steps = 10;
-    private static int overallTime = 1000;
-    private static int sleepTime = overallTime / steps;
+    private static int testDuration = 1000;
+    private static int sleepDuration = testDuration / steps;
     private static boolean createHeapdump = false;
     private static int garbageAmount = 999999;
     private static String MX_BEAN_PROXY_TYPE = "com.sun.management:type=HotSpotDiagnostic";
@@ -56,7 +56,7 @@ public class JMemoryBuddy {
 
     static {
         outputFolderString = System.getProperty("jmemorybuddy.output", getDefaultOutputFolder());
-        overallTime = Integer.parseInt(System.getProperty("jmemorybuddy.checktime","1000"));
+        testDuration = Integer.parseInt(System.getProperty("jmemorybuddy.testDuration","1000"));
         steps = Integer.parseInt(System.getProperty("jmemorybuddy.steps", "10"));
         createHeapdump = Boolean.parseBoolean(System.getProperty("jmemorybuddy.createHeapdump", "false"));
         garbageAmount = Integer.parseInt(System.getProperty("jmemorybuddy.garbageAmount", "10"));
@@ -112,7 +112,7 @@ public class JMemoryBuddy {
 
         while(counter > 0 && weakReference.get() != null) {
             try {
-                Thread.sleep(sleepTime);
+                Thread.sleep(sleepDuration);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
