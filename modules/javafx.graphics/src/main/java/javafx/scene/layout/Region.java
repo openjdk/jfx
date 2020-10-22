@@ -213,6 +213,8 @@ public class Region extends Parent {
 
     static Vec2d TEMP_VEC2D = new Vec2d();
 
+    private static final double EPSILON = 1e-14;
+
     /***************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
@@ -299,7 +301,7 @@ public class Region extends Parent {
     }
 
     private static double scaledCeil(double value, double scale) {
-        return Math.ceil(value * scale) / scale;
+        return Math.ceil(value * scale - EPSILON) / scale;
     }
 
     /**
