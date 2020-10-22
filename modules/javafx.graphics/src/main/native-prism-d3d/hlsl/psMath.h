@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,22 +58,33 @@ float4 retNormal(float3 n) { return float4( n*0.5+0.5,1); }
 
 float4 retr(float x) { return float4(x.xxx,1); }
 
-void phong(
-    float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
-    in out float3 d, in out float3 s, int _s, int _e)
-{
+void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out float3 d, in out float3 s) {
+    float dist = length(L);
+    if (dist > gLightRange[i].x) {
+        return;
+    }
+    float3 l = normalize(L);
+
+    float cosA = dot(gLightNormDirection[i].xyz, l);
+    float cosHalfInner = gSpotLightFactors[i].x;
+    float denom = gSpotLightFactors[i].y;
+    float falloff = gSpotLightFactors[i].z;
+    float spotlightFactor = pow((cosA - cosHalfInner) / denom, falloff); // possible optimization: falloff == 0 ? 1 : pow(...)
+
+    float ca = gLightAttenuation[i].x;
+    float la = gLightAttenuation[i].y;
+    float qa = gLightAttenuation[i].z;
+    float invAttnFactor = ca + la * dist + qa * dist * dist;
+
+    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
+    d += saturate(dot(n, l)) * attenuatedColor;
+    s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
+}
+
+void phong(float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
+        in out float3 d, in out float3 s, int _s, int _e) {
     float3 refl = reflect(e, n);
     for (int i = _s; i < _e; i++) {
-        float dist = length(L[i].xyz);
-        if (dist <= gLightRange[i].x) {
-            float ca = gLightAttenuation[i].x;
-            float la = gLightAttenuation[i].y;
-            float qa = gLightAttenuation[i].z;
-            float3 attenuatedColor = gLightColor[i].xyz / (ca + la * dist + qa * dist * dist);
-
-            float3 l = normalize(L[i].xyz);
-            d += saturate(dot(n, l)) * attenuatedColor;
-            s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
-        }
+        computeLight(i, n, refl, power, L[i].xyz, d, s);
     }
 }

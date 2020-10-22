@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,9 +42,12 @@
 // we have 224 float constants for ps 3.0
 #define PSR_DIFFUSECOLOR 0
 #define PSR_SPECULARCOLOR 1
-#define PSR_LIGHTCOLOR 4        // 3 lights + 2 reserve
-#define PSR_LIGHT_ATTENUATION 9 // 3 lights + 2 reserve
-#define PSR_LIGHT_RANGE 14      // 3 lights + 2 reserve
+#define PSR_LIGHTCOLOR 4         // 3 lights + 2 reserve
+#define PSR_LIGHT_ATTENUATION 9  // 3 lights + 2 reserve
+#define PSR_LIGHT_RANGE 14       // 3 lights + 2 reserve
+#define PSR_LIGHT_DIRECTION 19
+#define PSR_SPOTLIGHT_FACTORS 24 // 3 lights + 2 reserve
+#define PSR_LIGHT_TYPE 29        // 3 lights + 2 reserve
 
 // SR implies Sampler Registers
 #define SR_DIFFUSEMAP 0
@@ -109,4 +112,3 @@ private:
 };
 
 #endif  /* D3DPHONGSHADER_H */
-

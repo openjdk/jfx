@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@
 #include "D3DMesh.h"
 #include "D3DPhongMaterial.h"
 
+#define MAX_NUM_LIGHTS 3
+
 class D3DMeshView {
 public:
     D3DMeshView(D3DContext *pCtx, D3DMesh *pMesh);
@@ -42,6 +44,14 @@ public:
     void setPointLight(int index, float x, float y, float z,
         float r, float g, float b, float w,
         float ca, float la, float qa, float maxRange);
+    void setSpotLight(int index, float x, float y, float z,
+        float r, float g, float b, float w,
+        float ca, float la, float qa, float maxRange,
+        float dirX, float dirY, float firZ,
+        float innerAngle, float outerAngle, float falloff);
+    void setPointLightParams(D3DLight& light, float x, float y, float z,
+        float r, float g, float b, float w,
+        float ca, float la, float qa, float maxRange);
     void computeNumLights();
     void render();
 
@@ -49,7 +59,7 @@ private:
     D3DContext *context;
     D3DMesh *mesh;
     D3DPhongMaterial *material;
-    D3DLight lights[3];
+    D3DLight lights[MAX_NUM_LIGHTS];
     float ambientLightColor[3];
     int numLights;
     bool lightsDirty;
@@ -58,4 +68,3 @@ private:
 };
 
 #endif  /* D3DMESHVIEW_H */
-
