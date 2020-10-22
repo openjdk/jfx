@@ -34,11 +34,14 @@ import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 
 /**
+ * JMemoryBuddy provides various methods to test for memory leaks.
+ * It makes it easy to verify the memory behavior in a unit test ensuring the stability and quality of your code.
  * Checkout <a href="https://github.com/Sandec/JMemoryBuddy">https://github.com/Sandec/JMemoryBuddy</a> for more documentation.
  */
 public class JMemoryBuddy {
@@ -52,11 +55,20 @@ public class JMemoryBuddy {
     private static String outputFolderString = ".";
 
     static {
-        outputFolderString = System.getProperty("jmemorybuddy.output",".");
+        outputFolderString = System.getProperty("jmemorybuddy.output", getDefaultOutputFolder());
         overallTime = Integer.parseInt(System.getProperty("jmemorybuddy.checktime","1000"));
         steps = Integer.parseInt(System.getProperty("jmemorybuddy.steps", "10"));
         createHeapdump = Boolean.parseBoolean(System.getProperty("jmemorybuddy.createHeapdump", "false"));
         garbageAmount = Integer.parseInt(System.getProperty("jmemorybuddy.garbageAmount", "10"));
+    }
+
+    private static String getDefaultOutputFolder() {
+        File folder1 = new File("target");
+        File folder2 = new File("build");
+
+        if(folder1.exists()) return folder1.getAbsolutePath();
+        if(folder2.exists()) return folder2.getAbsolutePath();
+        return ".";
     }
 
     static void createGarbage() {
@@ -73,7 +85,7 @@ public class JMemoryBuddy {
      * @param weakReference The WeakReference to check.
      */
     public static void assertCollectable(WeakReference weakReference) {
-        if(!checkCollectable(weakReference)) {
+        if (!checkCollectable(weakReference)) {
             AssertCollectable assertCollectable = new AssertCollectable(weakReference);
             createHeapDump();
             throw new AssertionError("Content of WeakReference was not collected. content: " + weakReference.get());
@@ -92,7 +104,7 @@ public class JMemoryBuddy {
     private static int checkCollectable(int stepsLeft, WeakReference weakReference) {
         int counter = stepsLeft;
 
-        if(weakReference.get() != null) {
+        if (weakReference.get() != null) {
             createGarbage();
             System.gc();
             System.runFinalization();
@@ -101,14 +113,16 @@ public class JMemoryBuddy {
         while(counter > 0 && weakReference.get() != null) {
             try {
                 Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {}
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             counter = counter - 1;
             createGarbage();
             System.gc();
             System.runFinalization();
         }
 
-        if(weakReference.get() == null && counter < steps / 3) {
+        if (weakReference.get() == null && counter < steps / 3) {
             int percentageUsed = (int) ((steps - counter) / steps * 100);
             System.out.println("Warning test seems to be unstable. time used: " + percentageUsed + "%");
         }
@@ -121,7 +135,7 @@ public class JMemoryBuddy {
      * @param weakReference The WeakReference to check.
      */
     public static void assertNotCollectable(WeakReference weakReference) {
-        if(!checkNotCollectable(weakReference)) {
+        if (!checkNotCollectable(weakReference)) {
             throw new AssertionError("Content of WeakReference was collected!");
         }
     }
@@ -129,7 +143,7 @@ public class JMemoryBuddy {
     /**
      * Checks whether the content of the WeakReference can not be collected.
      * @param weakReference The WeakReference to check.
-     * @return Returns true, when the provided WeakReference can be collected.
+     * @return Returns true, when the provided WeakReference can not be collected.
      */
     public static boolean checkNotCollectable(WeakReference weakReference) {
         createGarbage();
@@ -149,15 +163,15 @@ public class JMemoryBuddy {
 
         f.accept(new MemoryTestAPI() {
             public void assertCollectable(Object ref) {
-                if(ref == null) throw new NullPointerException();
+                Objects.requireNonNull(ref);
                 toBeCollected.add(new WeakReference<Object>(ref));
             }
             public void assertNotCollectable(Object ref) {
-                if(ref == null) throw new NullPointerException();
+                Objects.requireNonNull(ref);
                 toBeNotCollected.add(new AssertNotCollectable(ref));
             }
             public void setAsReferenced(Object ref) {
-                if(ref == null) throw new NullPointerException();
+                Objects.requireNonNull(ref);
                 toBeReferenced.add(new SetAsReferenced(ref));
             }
         });
@@ -168,31 +182,31 @@ public class JMemoryBuddy {
         for(WeakReference wRef: toBeCollected) {
             stepsLeft = checkCollectable(stepsLeft, wRef);
         }
-        if(stepsLeft == 0) {
+        if (stepsLeft == 0) {
             failed = true;
         }
         for(AssertNotCollectable wRef: toBeNotCollected) {
-            if(!checkNotCollectable(wRef.getWeakReference())) {
+            if (!checkNotCollectable(wRef.getWeakReference())) {
                 failed = true;
             };
         }
 
-        if(failed) {
+        if (failed) {
             LinkedList<AssertCollectable> toBeCollectedMarked = new LinkedList<AssertCollectable>();
             LinkedList<AssertNotCollectable> toBeNotCollectedMarked = new LinkedList<AssertNotCollectable>();
 
             for(WeakReference wRef: toBeCollected) {
-                if(wRef.get() != null) {
+                if (wRef.get() != null) {
                     toBeCollectedMarked.add(new AssertCollectable(wRef));
                 }
             }
             for(AssertNotCollectable wRef: toBeNotCollected) {
-                if(wRef.getWeakReference().get() == null) {
+                if (wRef.getWeakReference().get() == null) {
                     toBeNotCollectedMarked.add(wRef);
                 }
             }
             createHeapDump();
-            if(toBeNotCollectedMarked.isEmpty()) {
+            if (toBeNotCollectedMarked.isEmpty()) {
                 throw new AssertionError("The following references should be collected: " + toBeCollectedMarked);
             } else {
                 throw new AssertionError("The following references should be collected: " + toBeCollectedMarked + " and " + toBeNotCollected.size() + " should not be collected: " + toBeNotCollectedMarked);
@@ -204,7 +218,7 @@ public class JMemoryBuddy {
 
 
     static void createHeapDump() {
-        if(createHeapdump) {
+        if (createHeapdump) {
             try {
                 String dateString = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
                 String fileName = "heapdump_jmemb_" + dateString + ".hprof";
@@ -232,6 +246,10 @@ public class JMemoryBuddy {
         return bean;
     }
 
+    /**
+     * This class provides different methods, which can be used to declare memory-constraints.
+     * You can get an instance through the lambda of the method JMemoryBuddy.memoryTest.
+     */
     public static interface MemoryTestAPI {
         /**
          * After executing the lambda, the provided ref must be collectable. Otherwise an Exception is thrown.
