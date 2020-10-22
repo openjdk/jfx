@@ -652,7 +652,7 @@ public class ComboBoxTest {
         assertEquals(null, sc.toString(null));
     }
 
-    @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
+    @Test public void ensure_getPseudoClassStateReturnsValidValue() {
         Stage stage = new Stage();
         Scene scene = new Scene(comboBox);
         stage.setScene(scene);

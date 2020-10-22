@@ -837,21 +837,6 @@ public class VirtualFlowTest {
         assertTrue("The cells didn't get created", VirtualFlowShim.cells_size(flow.cells) > 0);
     }
 
-//    /**
-//     * During layout the order and contents of cells will change. We need
-//     * to make sure that CSS for cells is applied at this time. To test this,
-//     * I just set the position and perform a new pulse. Since layout happens
-//     * after the CSS updates are applied, if the test fails, then there will
-//     * be cells left in a state where they need their CSS applied.
-//     */
-//    @Test public void testCellLifeCycle_CSSUpdatesHappenDuringLayout() {
-//        flow.setPosition(.35);
-//        pulse();
-//        for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
-//            IndexedCell cell = VirtualFlowShim.<T>cells_get(flow.cells, i);
-//            assertEquals(CssFlags.CLEAN, cell.impl_getCSSFlags());
-//        }
-//    }
 
     ////////////////////////////////////////////////////////////////////////////
     //

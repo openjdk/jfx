@@ -62,7 +62,7 @@ public class MiscellaneousTests {
         Scene scene = new Scene(new Group(container, new Button("button")));
 
         //
-        // Gotta put this in a window for the pulse listener to get hooked up (see Scene#impl_initPeer().
+        // Gotta put this in a window for the pulse listener to get hooked up (see Scene#initPeer().
         // Need the pulse listener since we want to enter root via Scene#doCSSPass()
         //
         Stage stage = new Stage();
