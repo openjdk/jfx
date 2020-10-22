@@ -15,3 +15,7 @@ Issue key|Summary|Subcomponent
 [JDK-8255063](https://bugs.openjdk.java.net/browse/JDK-8255063) | Cherry pick GTK WebKit 2.28.3 changes | web          
 [JDK-8255062](https://bugs.openjdk.java.net/browse/JDK-8255062) | Update to 610.1 version of WebKit     | web      
 
+## List of Security fixes
+Issue key|Summary|Subcomponent
+---------|-------|------------
+[JDK-8248177](not public) | Improve XML support | web          
