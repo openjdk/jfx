@@ -30,45 +30,45 @@ import com.sun.javafx.util.Utils;
 import javafx.geometry.Point3D;
 
 /**
- * The peer of the {@code PointLight} class. Holds the default values of {@code PointLight}'s
+ * The peer of the {@code SpotLight} class. Holds the default values of {@code SpotLight}'s
  * properties and updates the visuals via {@link NGNode#visualsChanged} when one of the current
- * values changes. The peer receives its changes by {@code PointLight.doUpdatePeer} calls.
+ * values changes. The peer receives its changes by {@code SpotLight.doUpdatePeer} calls.
  */
 public class NGSpotLight extends NGLightBase {
 
     /** Constant attenuation factor default value */
-    private static final double DEFAULT_CA = 1;
+    private static final float DEFAULT_CA = 1;
     /** Linear attenuation factor default value */
-    private static final double DEFAULT_LA = 0;
+    private static final float DEFAULT_LA = 0;
     /** Quadratic attenuation factor default value */
-    private static final double DEFAULT_QA = 0;
+    private static final float DEFAULT_QA = 0;
     /** Max range default value */
-    private static final double DEFAULT_MAX_RANGE = Double.POSITIVE_INFINITY;
+    private static final float DEFAULT_MAX_RANGE = Float.POSITIVE_INFINITY;
     /** Direction default value */
     private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, 1);
     /** Inner angle default value */
-    private static final double DEFAULT_INNER_ANGLE = 0;
+    private static final float DEFAULT_INNER_ANGLE = 0;
     /** Outer angle default value */
-    private static final double DEFAULT_OUTER_ANGLE = 90;
+    private static final float DEFAULT_OUTER_ANGLE = 90;
     /** Falloff default value */
-    private static final double DEFAULT_FALLOFF = 1;
+    private static final float DEFAULT_FALLOFF = 1;
 
     public NGSpotLight() {
     }
 
-    public static double getDefaultCa() {
+    public static float getDefaultCa() {
         return DEFAULT_CA;
     }
 
-    public static double getDefaultLa() {
+    public static float getDefaultLa() {
         return DEFAULT_LA;
     }
 
-    public static double getDefaultQa() {
+    public static float getDefaultQa() {
         return DEFAULT_QA;
     }
 
-    public static double getDefaultMaxRange() {
+    public static float getDefaultMaxRange() {
         return DEFAULT_MAX_RANGE;
     }
 
@@ -76,62 +76,75 @@ public class NGSpotLight extends NGLightBase {
         return DEFAULT_DIRECTION;
     }
 
-    public static double getDefaultInnerAngle() {
+    public static float getDefaultInnerAngle() {
         return DEFAULT_INNER_ANGLE;
     }
     
-    public static double getDefaultOuterAngle() {
+    public static float getDefaultOuterAngle() {
         return DEFAULT_OUTER_ANGLE;
     }
 
-    public static double getDefaultFalloff() {
+    public static float getDefaultFalloff() {
         return DEFAULT_FALLOFF;
     }
 
 
-    private double ca = DEFAULT_CA;
+    private float ca = DEFAULT_CA;
 
-    public double getCa() {
+    public float getCa() {
         return ca;
     }
 
-    public void setCa(double ca) {
-        this.ca = ca;
-        visualsChanged();
+    public void setCa(float ca) {
+        if (this.ca != ca) {
+            this.ca = ca;
+            visualsChanged();
+        }
     }
 
-    private double la = DEFAULT_LA;
 
-    public double getLa() {
+    private float la = DEFAULT_LA;
+
+    public float getLa() {
         return la;
     }
 
-    public void setLa(double la) {
-        this.la = la;
-        visualsChanged();
+    public void setLa(float la) {
+        if (this.la != la) {
+            this.la = la;
+            visualsChanged();
+        }
     }
 
-    private double qa = DEFAULT_QA;
 
-    public double getQa() {
+    private float qa = DEFAULT_QA;
+
+    public float getQa() {
         return qa;
     }
 
-    public void setQa(double qa) {
-        this.qa = qa;
-        visualsChanged();
+    public void setQa(float qa) {
+        if (this.qa != qa) {
+            this.qa = qa;
+            visualsChanged();
+        }
     }
 
-    private double maxRange = DEFAULT_MAX_RANGE;
 
-    public double getMaxRange() {
+    private float maxRange = DEFAULT_MAX_RANGE;
+
+    public float getMaxRange() {
         return maxRange;
     }
 
-    public void setMaxRange(double maxRange) {
-        this.maxRange = maxRange < 0 ? 0 : maxRange;
-        visualsChanged();
+    public void setMaxRange(float maxRange) {
+        maxRange = maxRange < 0 ? 0 : maxRange;
+        if (this.maxRange != maxRange) {
+            this.maxRange = maxRange;
+            visualsChanged();
+        }
     }
+
 
     private Point3D direction = DEFAULT_DIRECTION;
 
@@ -140,40 +153,45 @@ public class NGSpotLight extends NGLightBase {
     }
 
     public void setDirection(Point3D direction) {
-        this.direction = direction;
-        visualsChanged();
+        if (!this.direction.equals(direction)) {
+            this.direction = direction;
+            visualsChanged();
+        }
     }
 
-    private double innerAngle = DEFAULT_INNER_ANGLE;
+    private float innerAngle = DEFAULT_INNER_ANGLE;
 
-    public double getInnerAngle() {
+    public float getInnerAngle() {
         return innerAngle;
     }
 
-    public void setInnerAngle(double innerAngle) {
+    public void setInnerAngle(float innerAngle) {
+        innerAngle = innerAngle < 0 ? 0 : innerAngle;
         this.innerAngle = Utils.clamp(0, innerAngle, outerAngle);
         visualsChanged();
     }
 
-    private double outerAngle = DEFAULT_OUTER_ANGLE;
+    private float outerAngle = DEFAULT_OUTER_ANGLE;
 
-    public double getOuterAngle() {
+    public float getOuterAngle() {
         return outerAngle;
     }
 
-    public void setOuterAngle(double outerAngle) {
+    public void setOuterAngle(float outerAngle) {
         this.outerAngle = outerAngle < innerAngle ? innerAngle : outerAngle; // limit to 360?
         visualsChanged();
     }
 
-    private double falloff = DEFAULT_FALLOFF;
+    private float falloff = DEFAULT_FALLOFF;
 
-    public double getFalloff() {
+    public float getFalloff() {
         return falloff;
     }
 
-    public void setFalloff(double falloff) {
-        this.falloff = falloff;
-        visualsChanged();
+    public void setFalloff(float falloff) {
+        if (this.falloff != falloff) {
+            this.falloff = falloff;
+            visualsChanged();
+        }
     }
 }

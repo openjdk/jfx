@@ -93,23 +93,22 @@ public class PointLight extends LightBase {
     }
 
     /**
-     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to
-     * the light source must be less than or equal to the light's maximum range. Any negative value will treated
-     * as 0.
+     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to the
+     * light source must be less than or equal to the light's maximum range. Any negative value will be treated as 0.
      * <p>
      * Lower {@code maxRange} values can give better performance as pixels outside the range of the light
      * will not require complex calculation. The attenuation formula can be used to calculate a realistic
-     * {@code maxRange} value by finding the where the attenuation is close enough to 0.
+     * {@code maxRange} value by finding the distance where the attenuation is close enough to 0.
      * <p>
-     * Nodes that are inside the light's range can still be excluded from the light's effect
-     * by removing them from its {@link #getScope() scope}. If a node is known to always be
-     * outside of the light's range, it is more performant to exclude it from its scope.
+     * Nodes that are inside the light's range can still be excluded from the light's effect by removing them from
+     * its {@link #getScope() scope} (or including them in its {@link #getExclusionScope() exclusion scope}). If a
+     * node is known to always be outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
-     * @since 13
+     * @since 16
      */
     private DoubleProperty maxRange;
-    
+
     public final void setMaxRange(double value) {
         maxRangeProperty().set(value);
     }
@@ -134,11 +133,11 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 1}
-     * @since 13
+     * @defaultValue 1
+     * @since 16
      */
     private DoubleProperty constantAttenuation;
-    
+
     public final void setConstantAttenuation(double value) {
         constantAttenuationProperty().set(value);
     }
@@ -163,24 +162,24 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 0}
-     * @since 13
+     * @defaultValue 0
+     * @since 16
      */
     private DoubleProperty linearAttenuation;
-    
+
     public final void setLinearAttenuation(double value) {
         linearAttenuationProperty().set(value);
     }
 
-    private static final double DEFAULT_LINEAR_CONSTANT = NGPointLight.getDefaultLa();
+    private static final double DEFAULT_LINEAR_ATTENUATION = NGPointLight.getDefaultLa();
 
     public final double getLinearAttenuation() {
-        return linearAttenuation == null ? DEFAULT_LINEAR_CONSTANT : linearAttenuation.get();
+        return linearAttenuation == null ? DEFAULT_LINEAR_ATTENUATION : linearAttenuation.get();
     }
 
     public final DoubleProperty linearAttenuationProperty() {
         if (linearAttenuation == null) {
-            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_CONSTANT);
+            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_ATTENUATION);
         }
         return linearAttenuation;
     }
@@ -192,24 +191,24 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 0}
-     * @since 13
+     * @defaultValue 0
+     * @since 16
      */
     private DoubleProperty quadraticAttenuation;
-    
+
     public final void setQuadraticAttenuation(double value) {
         quadraticAttenuationProperty().set(value);
     }
 
-    private static final double DEFAULT_QUADRATIC_CONSTANT = NGPointLight.getDefaultQa();
+    private static final double DEFAULT_QUADRATIC_ATTENUATION = NGPointLight.getDefaultQa();
 
     public final double getQuadraticAttenuation() {
-        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_CONSTANT : quadraticAttenuation.get();
+        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_ATTENUATION : quadraticAttenuation.get();
     }
 
     public final DoubleProperty quadraticAttenuationProperty() {
         if (quadraticAttenuation == null) {
-            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_CONSTANT);
+            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_ATTENUATION);
         }
         return quadraticAttenuation;
     }
@@ -224,10 +223,10 @@ public class PointLight extends LightBase {
     private void doUpdatePeer() {
         if (isDirty(DirtyBits.NODE_LIGHT)) {
             NGPointLight peer = getPeer();
-            peer.setCa(getConstantAttenuation());
-            peer.setLa(getLinearAttenuation());
-            peer.setQa(getQuadraticAttenuation());
-            peer.setMaxRange(getMaxRange());
+            peer.setCa((float) getConstantAttenuation());
+            peer.setLa((float) getLinearAttenuation());
+            peer.setQa((float) getQuadraticAttenuation());
+            peer.setMaxRange((float) getMaxRange());
         }
     }
 }

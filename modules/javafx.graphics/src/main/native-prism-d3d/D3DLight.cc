@@ -58,7 +58,3 @@ void D3DLight::setPosition(float x, float y, float z) {
     position[1] = y;
     position[2] = z;
 }
-
-/*void D3DLight::setRange(float r) {
-    maxRange = r;
-}*/

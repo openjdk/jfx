@@ -69,7 +69,7 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
     float cosHalfInner = gSpotLightFactors[i].x;
     float denom = gSpotLightFactors[i].y;
     float falloff = gSpotLightFactors[i].z;
-    float spotlightFactor = pow((cosA - cosHalfInner) / denom, falloff); // needed?
+    float spotlightFactor = pow((cosA - cosHalfInner) / denom, falloff); // possible optimization: falloff == 0 ? 1 : pow(...)
 
     float ca = gLightAttenuation[i].x;
     float la = gLightAttenuation[i].y;

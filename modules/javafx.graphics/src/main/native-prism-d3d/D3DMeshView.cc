@@ -219,8 +219,6 @@ void D3DMeshView::render() {
             lighsNormDirection[d++] = 0;
         }
 
-        // I = pow((cos(a) - cos(outer/2)) / (cos(inner/2) - cos(outer/2)), falloff)
-
         if (lights[i].type == D3DLight::Spot) {
             float cosInner = cos(lights[i].innerAngle * M_PI / 180 / 2);
             float cosOuter = cos(lights[i].outerAngle * M_PI / 180 / 2);
@@ -240,31 +238,6 @@ void D3DMeshView::render() {
         lightType[t++] = 0;
         lightType[t++] = 0;
     }
-
-//    for (int i = 0; i < 12; i++) {
-//        cout << "lightsColor " << lightsColor[i] << endl;
-//    }
-//
-//    for (int i = 0; i < 12; i++) {
-//        cout << "lightsAttenuation " << lightsAttenuation[i] << endl;
-//    }
-//
-//    for (int i = 0; i < 12; i++) {
-//        cout << "lightsRange " << lightsRange[i] << endl;
-//    }
-//
-//    for (int i = 0; i < 4; i++) {
-//        cout << "lighsNormDirection " << lighsNormDirection[i] << endl;
-//    }
-//
-//    for (int i = 0; i < 4; i++) {
-//        cout << "spotLightsFactors " << spotLightsFactors[i] << endl;
-//    }
-//
-//    for (int i = 0; i < 4; i++) {
-//        cout << "lightType " << lightType[i] << endl;
-//    }
-//    cout << "---------" << endl;
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, MAX_NUM_LIGHTS));
     if (!status) {

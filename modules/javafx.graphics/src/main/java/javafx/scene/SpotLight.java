@@ -332,14 +332,14 @@ public class SpotLight extends LightBase {
     private void doUpdatePeer() {
         if (isDirty(DirtyBits.NODE_LIGHT)) {
             NGSpotLight peer = getPeer();
-            peer.setCa(getConstantAttenuation());
-            peer.setLa(getLinearAttenuation());
-            peer.setQa(getQuadraticAttenuation());
-            peer.setMaxRange(getMaxRange());
+            peer.setCa((float) getConstantAttenuation());
+            peer.setLa((float) getLinearAttenuation());
+            peer.setQa((float) getQuadraticAttenuation());
+            peer.setMaxRange((float) getMaxRange());
             peer.setDirection(getDirection());
-            peer.setInnerAngle(getInnerAngle());
-            peer.setOuterAngle(getOuterAngle());
-            peer.setFalloff(getFalloff());
+            peer.setInnerAngle((float) getInnerAngle());
+            peer.setOuterAngle((float) getOuterAngle());
+            peer.setFalloff((float) getFalloff());
         }
     }
 }

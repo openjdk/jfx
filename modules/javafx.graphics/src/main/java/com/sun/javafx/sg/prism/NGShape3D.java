@@ -114,17 +114,20 @@ public abstract class NGShape3D extends NGNode {
             meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
             Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
             meshView.setPointLight(lightIndex++,
-                    (float) cameraPos.x, (float) cameraPos.y, (float) cameraPos.z,
-                    1.0f, 1.0f, 1.0f, 1.0f,
-                    (float) NGPointLight.getDefaultCa(), (float) NGPointLight.getDefaultLa(), (float) NGPointLight.getDefaultQa(),
-                    (float) NGPointLight.getDefaultMaxRange());
+                                   (float) cameraPos.x,
+                                   (float) cameraPos.y,
+                                   (float) cameraPos.z,
+                                   1.0f, 1.0f, 1.0f, 1.0f,
+                                   NGPointLight.getDefaultCa(),
+                                   NGPointLight.getDefaultLa(),
+                                   NGPointLight.getDefaultQa(),
+                                   NGPointLight.getDefaultMaxRange());
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
             float ambientGreen = 0.0f;
 
-            for (int i = 0; i < g.getLights().length; i++) {
-                NGLightBase lightBase = g.getLights()[i];
+            for (NGLightBase lightBase : g.getLights()) {
                 if (lightBase == null) {
                     // The array of lights can have nulls
                     break;
@@ -160,22 +163,32 @@ public abstract class NGShape3D extends NGNode {
                     NGPointLight light = (NGPointLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
                     meshView.setPointLight(lightIndex++,
-                            (float) lightWT.getMxt(), (float) lightWT.getMyt(), (float) lightWT.getMzt(),
-                            rL, gL, bL, 1.0f,
-                            (float) light.getCa(), (float) light.getLa(), (float) light.getQa(),
-                            (float) light.getMaxRange());
+                                           (float) lightWT.getMxt(),
+                                           (float) lightWT.getMyt(),
+                                           (float) lightWT.getMzt(),
+                                           rL, gL, bL, 1.0f,
+                                           light.getCa(),
+                                           light.getLa(),
+                                           light.getQa(),
+                                           light.getMaxRange());
                 } else if (lightBase instanceof NGSpotLight) {
                     var light = (NGSpotLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
                     meshView.setSpotLight(lightIndex++,
-                            (float) lightWT.getMxt(), (float) lightWT.getMyt(), (float) lightWT.getMzt(),
-                            rL, gL, bL, 1.0f,
-                            (float) light.getCa(), (float) light.getLa(), (float) light.getQa(),
-                            (float) light.getMaxRange(),
-                            (float) light.getDirection().getX(), (float) light.getDirection().getY(), (float) light.getDirection().getZ(),
-                            (float) light.getInnerAngle(),
-                            (float) light.getOuterAngle(),
-                            (float) light.getFalloff());
+                                          (float) lightWT.getMxt(),
+                                          (float) lightWT.getMyt(),
+                                          (float) lightWT.getMzt(),
+                                          rL, gL, bL, 1.0f,
+                                          light.getCa(),
+                                          light.getLa(),
+                                          light.getQa(),
+                                          light.getMaxRange(),
+                                          (float) light.getDirection().getX(),
+                                          (float) light.getDirection().getY(),
+                                          (float) light.getDirection().getZ(),
+                                          light.getInnerAngle(),
+                                          light.getOuterAngle(),
+                                          light.getFalloff());
                 } else if (lightBase instanceof NGAmbientLight) {
                     // Accumulate ambient lights
                     ambientRed   += rL;
@@ -191,12 +204,10 @@ public abstract class NGShape3D extends NGNode {
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
 
         while (lightIndex < 3) { // Reset any previously set lights
-            meshView.setSpotLight(lightIndex++,
+            meshView.setPointLight(lightIndex++,
                     0, 0, 0, // x y z
                     0, 0, 0, 0, // r g b w
-                    1, 0, 0, 0, // ca la qa maxRange
-                    0, 0, 0, // dir
-                    0, 0, 0); // inner, outer, falloff
+                    1, 0, 0, 0); // ca la qa maxRange
         }
 
         meshView.render(g);

@@ -38,7 +38,6 @@ public:
     virtual ~D3DLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
-//  void setRange(float r);
 
     Type type;
     float position[3];
