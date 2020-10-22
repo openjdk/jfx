@@ -119,7 +119,7 @@ public class SpotLight extends LightBase {
      * @defaultValue {@code Double.POSITIVE_INFINITY}
      */
     private DoubleProperty maxRange;
-    
+
     public final void setMaxRange(double value) {
         maxRangeProperty().set(value);
     }
@@ -145,7 +145,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 1
      */
     private DoubleProperty constantAttenuation;
-    
+
     public final void setConstantAttenuation(double value) {
         constantAttenuationProperty().set(value);
     }
@@ -171,7 +171,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 0
      */
     private DoubleProperty linearAttenuation;
-    
+
     public final void setLinearAttenuation(double value) {
         linearAttenuationProperty().set(value);
     }
@@ -197,7 +197,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 0
      */
     private DoubleProperty quadraticAttenuation;
-    
+
     public final void setQuadraticAttenuation(double value) {
         quadraticAttenuationProperty().set(value);
     }
@@ -221,7 +221,7 @@ public class SpotLight extends LightBase {
      * @defaultValue {@code Point3D(0, 0, 1)}
      */
     private ObjectProperty<Point3D> direction;
-    
+
     public final void setDirection(Point3D value) {
         directionProperty().set(value);
     }
@@ -231,7 +231,7 @@ public class SpotLight extends LightBase {
     public final Point3D getDirection() {
         return direction == null ? DEFAULT_DIRECTION : direction.get();
     }
-    
+
     public final ObjectProperty<Point3D> directionProperty() {
         if (direction == null) {
             direction = new SimpleObjectProperty<>(this, "direction", DEFAULT_DIRECTION) {
@@ -251,7 +251,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 0
      */
     private DoubleProperty innerAngle;
-    
+
     public final void setInnerAngle(double value) {
         innerAngleProperty().set(value);
     }
@@ -276,7 +276,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 90
      */
     private DoubleProperty outerAngle;
-    
+
     public final void setOuterAngle(double value) {
         outerAngleProperty().set(value);
     }
@@ -304,7 +304,7 @@ public class SpotLight extends LightBase {
      * @defaultValue 1
      */
     private DoubleProperty falloff;
-    
+
     public final void setFalloff(double value) {
         falloffProperty().set(value);
     }

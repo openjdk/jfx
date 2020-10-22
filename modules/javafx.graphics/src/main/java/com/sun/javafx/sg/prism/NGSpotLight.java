@@ -79,7 +79,7 @@ public class NGSpotLight extends NGLightBase {
     public static float getDefaultInnerAngle() {
         return DEFAULT_INNER_ANGLE;
     }
-    
+
     public static float getDefaultOuterAngle() {
         return DEFAULT_OUTER_ANGLE;
     }
