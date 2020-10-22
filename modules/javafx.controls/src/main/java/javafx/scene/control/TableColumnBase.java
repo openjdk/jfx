@@ -117,7 +117,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    // NOTE: If these numbers change, update the copy of this value in TableColumnHeader
+    // NOTE: If these numbers change, update the copy of this value in 
+    // TableColumnHeader and in TableColumnShim
     static final double DEFAULT_WIDTH = 80.0F;
     static final double DEFAULT_MIN_WIDTH = 10.0F;
     static final double DEFAULT_MAX_WIDTH = 5000.0F;

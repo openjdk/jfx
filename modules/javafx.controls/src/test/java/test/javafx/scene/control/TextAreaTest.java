@@ -36,7 +36,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputControlShim;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
@@ -193,7 +192,6 @@ public class TextAreaTest {
         assertTrue("PromptText cannot be bound", txtArea.getPromptText().equals("newvalue"));
     }
 
-    @Ignore("TODO: Please remove ignore annotation after RT-15799 is fixed.")
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtArea.textProperty().bind(strPr);

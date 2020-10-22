@@ -30,5 +30,9 @@ public class TableColumnShim {
         tc.setTableView(tv);
     }
 
+    // NOTE: These constants are direct copy of TableColumnBase
+    public static final double DEFAULT_WIDTH = 80.0F;
+    public static final double DEFAULT_MIN_WIDTH = 10.0F;
+    public static final double DEFAULT_MAX_WIDTH = 5000.0F;
 
 }
