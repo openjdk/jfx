@@ -51,7 +51,7 @@ public class JMemoryBuddy {
     private static int sleepDuration = testDuration / steps;
     private static boolean createHeapdump = false;
     private static int garbageAmount = 999999;
-    private static String MX_BEAN_PROXY_TYPE = "com.sun.management:type=HotSpotDiagnostic";
+    private static String mxBeanProxyName = "com.sun.management:type=HotSpotDiagnostic";
     private static String outputFolderString = ".";
 
     static {
@@ -235,14 +235,14 @@ public class JMemoryBuddy {
     }
 
     private static void setMxBeanProxyName(String mxBeanName) {
-        MX_BEAN_PROXY_TYPE = mxBeanName;
+        mxBeanProxyName = mxBeanName;
     }
 
     private static HotSpotDiagnosticMXBean getHotspotMBean() throws IOException {
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
         HotSpotDiagnosticMXBean bean =
                 ManagementFactory.newPlatformMXBeanProxy(server,
-                        MX_BEAN_PROXY_TYPE, HotSpotDiagnosticMXBean.class);
+                        mxBeanProxyName, HotSpotDiagnosticMXBean.class);
         return bean;
     }
 
