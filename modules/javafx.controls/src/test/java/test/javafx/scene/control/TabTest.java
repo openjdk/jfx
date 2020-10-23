@@ -53,7 +53,6 @@ import static org.junit.Assert.*;
 
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -442,11 +441,6 @@ public class TabTest {
         Tooltip tt = new Tooltip();
         tab.setTooltip(tt);
         assertSame(tab.getTooltip(), tt);
-    }
-    @Ignore("The following test is incomplete with no proper sense.")
-    @Test public void checkEventDispatcherChain() {
-        EventDispatchChain chain = new EventDispatchChainImpl();
-        tab.buildEventDispatchChain(chain);
     }
 
     @Test public void setDisableAndSeeValue() {

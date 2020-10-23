@@ -567,7 +567,6 @@ public class LabeledTest {
         assertEquals(r, labeled.getGraphic());
     }
 
-    @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void whenGraphicIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
@@ -577,7 +576,6 @@ public class LabeledTest {
         assertFalse(styleable.isSettable(labeled));
     }
 
-    @Ignore ("CSS Graphic must be a URL, and then it will try to load the image. Not sure how to test.")
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)labeled.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(labeled));
