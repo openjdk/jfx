@@ -43,7 +43,7 @@ import test.util.Util;
 public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch;
     static Robot robot;
-    private static int delayTime = 1;
+    private static int DELAY_TIME = 1;
 
     public static class TestApp extends Application {
 
@@ -135,7 +135,7 @@ public class MouseLocationOnScreenTest {
         for (int x = x1; x <= x2; x++) {
             for (int y = y1; y <= y2; y++) {
                 robot.mouseMove(x, y);
-                delay(delayTime);
+                Util.sleep(DELAY_TIME);
                 validate(robot, x, y);
             }
         }
@@ -147,23 +147,15 @@ public class MouseLocationOnScreenTest {
         double dy = (y1 - y0) / dmax;
 
         robot.mouseMove(x0, y0);
-        delay(delayTime);
+        Util.sleep(DELAY_TIME);
         validate(robot, x0, y0);
 
         for (int i = 1; i <= dmax; i++) {
             int x = (int) (x0 + dx * i);
             int y = (int) (y0 + dy * i);
             robot.mouseMove(x, y);
-            delay(delayTime);
+            Util.sleep(DELAY_TIME);
             validate(robot, x, y);
-        }
-    }
-
-    private static void delay(int time) {
-        try {
-            Thread.sleep(time);
-        } catch (InterruptedException e) {
-
         }
     }
 }
