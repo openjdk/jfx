@@ -43,6 +43,7 @@ import test.util.Util;
 public class MouseLocationOnScreenTest {
     static CountDownLatch startupLatch;
     static Robot robot;
+    private static int delayTime = 1;
 
     public static class TestApp extends Application {
 
@@ -68,7 +69,7 @@ public class MouseLocationOnScreenTest {
         }
     }
 
-    @Test(timeout = 60000)
+    @Test(timeout = 120000)
     public void testMouseLocation() throws Exception {
 
         Screen screen = Screen.getPrimary();
@@ -81,27 +82,37 @@ public class MouseLocationOnScreenTest {
         // Check all edge (two pixels in a width)
         Util.runAndWait(() -> {
             edge(robot, x1, y1, x2, y1);         // top
+        });
+        Util.runAndWait(() -> {
             edge(robot, x1, y1 + 1, x2, y1 + 1); // top
         });
 
         Util.runAndWait(() -> {
             edge(robot, x2, y1, x2, y2);         // right
+        });
+        Util.runAndWait(() -> {
             edge(robot, x2 - 1, y1, x2 - 1, y2); // right
         });
 
         Util.runAndWait(() -> {
             edge(robot, x1, y1, x1, y2);         // left
+        });
+        Util.runAndWait(() -> {
             edge(robot, x1 + 1, y1, x1 + 1, y2); // left
         });
 
         Util.runAndWait(() -> {
             edge(robot, x1, y2, x2, y2);         // bottom
+        });
+        Util.runAndWait(() -> {
             edge(robot, x1, y2 - 1, x2, y2 - 1); // bottom
         });
 
         // Check crossing of diagonals
         Util.runAndWait(() -> {
             cross(robot, x1, y1, x2, y2); // cross left-bottom
+        });
+        Util.runAndWait(() -> {
             cross(robot, x1, y2, x2, y1); // cross left-top
         });
     }
@@ -124,7 +135,7 @@ public class MouseLocationOnScreenTest {
         for (int x = x1; x <= x2; x++) {
             for (int y = y1; y <= y2; y++) {
                 robot.mouseMove(x, y);
-                delay(2);
+                delay(delayTime);
                 validate(robot, x, y);
             }
         }
@@ -136,14 +147,14 @@ public class MouseLocationOnScreenTest {
         double dy = (y1 - y0) / dmax;
 
         robot.mouseMove(x0, y0);
-        delay(2);
+        delay(delayTime);
         validate(robot, x0, y0);
 
         for (int i = 1; i <= dmax; i++) {
             int x = (int) (x0 + dx * i);
             int y = (int) (y0 + dy * i);
             robot.mouseMove(x, y);
-            delay(2);
+            delay(delayTime);
             validate(robot, x, y);
         }
     }
