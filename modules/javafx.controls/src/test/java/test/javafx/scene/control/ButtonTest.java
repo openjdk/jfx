@@ -64,8 +64,6 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-//import com.sun.javafx.test.MouseEventGenerator;
-
 /**
  * action (which can be bound, and can be null),
  * and that action is called when the button is fired.
@@ -76,7 +74,6 @@ public class ButtonTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
-    private MouseEventFirer mouse;
 
     @Before public void setup() {
         btn = new Button();
@@ -85,12 +82,10 @@ public class ButtonTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        mouse = new MouseEventFirer(btn);
     }
 
     @After public void after() {
         stage.hide();
-        mouse.dispose();
     }
 
     /*********************************************************************
@@ -420,9 +415,13 @@ public class ButtonTest {
         btn.fireEvent(new ActionEvent());
         btn.fire();
 
+        MouseEventFirer mouse = new MouseEventFirer(btn);
+
         mouse.fireMousePressed();
         mouse.fireMouseReleased();
         mouse.fireMouseClicked();
+
+        mouse.dispose();
     }
 
     private int count = 0;
@@ -446,6 +445,8 @@ public class ButtonTest {
 
         assertEquals(0, count);
 
+        MouseEventFirer mouse = new MouseEventFirer(btn);
+
         /* Note that right-mouse press events don't force the popup open */
         mouse.fireMousePressed(MouseButton.SECONDARY);
         assertEquals(0, count);
@@ -459,6 +460,8 @@ public class ButtonTest {
         /* Only context menu events force it to appear */
         ContextMenuEventFirer.fireContextMenuEvent(btn);
         assertEquals(1, count);
+
+        mouse.dispose();
     }
 
     static class MyButton extends Button {

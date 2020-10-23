@@ -653,9 +653,8 @@ public class ComboBoxTest {
     }
 
     @Test public void ensure_getPseudoClassStateReturnsValidValue() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
+
 
         Set<PseudoClass> pseudoClassStates = comboBox.getPseudoClassStates();
         assertFalse(comboBox.isEditable());
@@ -676,6 +675,7 @@ public class ComboBoxTest {
         comboBox.arm();
         assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("armed")));
 
+        sl.dispose();
     }
 
     /*********************************************************************
@@ -726,20 +726,18 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanToggleShowing() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
 
         comboBox.show();
         assertTrue(comboBox.isShowing());
         comboBox.hide();
         assertFalse(comboBox.isShowing());
+
+        sl.dispose();
     }
 
     @Test public void ensureCanNotToggleShowingWhenDisabled() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
 
         comboBox.setDisable(true);
         comboBox.show();
@@ -747,6 +745,8 @@ public class ComboBoxTest {
         comboBox.setDisable(false);
         comboBox.show();
         assertTrue(comboBox.isShowing());
+
+        sl.dispose();
     }
 
     @Test public void ensureCanSetPromptText() {
@@ -954,9 +954,8 @@ public class ComboBoxTest {
     @Test public void test_rt20189() {
         comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
 
@@ -974,6 +973,8 @@ public class ComboBoxTest {
         item = sm.getSelectedItem();
         assertEquals("2", item);
         assertEquals(2, sm.getSelectedIndex());
+
+        sl.dispose();
     }
 
     @Test public void test_rt27654() {
@@ -981,9 +982,8 @@ public class ComboBoxTest {
 
         SingleSelectionModel sm = comboBox.getSelectionModel();
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
@@ -1005,14 +1005,15 @@ public class ComboBoxTest {
         assertEquals("2", comboBox.getValue());
         assertEquals("2", buttonCell.getText());
         assertEquals(2, sm.getSelectedIndex());
+
+        sl.dispose();
     }
 
     @Test public void test_rt24412() {
         SingleSelectionModel sm = comboBox.getSelectionModel();
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        StageLoader sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
@@ -1036,6 +1037,8 @@ public class ComboBoxTest {
         assertEquals("2", comboBox.getValue());
         assertEquals("2", buttonCell.getText());
         assertEquals(2, sm.getSelectedIndex());
+
+        sl.dispose();
     }
 
     @Test public void test_rt28245() {
@@ -2292,15 +2295,12 @@ public class ComboBoxTest {
 
         Toolkit tk = Toolkit.getToolkit();
 
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.setWidth(500);
-        stage.setHeight(400);
-
-        stage.show();
+        StageLoader sl = new StageLoader(scene);
 
         tk.firePulse();
 
         assertEquals("ComboBox skinProperty changed more than once, which is not expected.", 1, skinChangedCount);
+
+        sl.dispose();
     }
 }
