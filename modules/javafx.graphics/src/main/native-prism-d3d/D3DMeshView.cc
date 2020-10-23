@@ -220,10 +220,10 @@ void D3DMeshView::render() {
         }
 
         if (lights[i].type == D3DLight::Spot) {
-            float cosInner = cos(lights[i].innerAngle * M_PI / 180 / 2);
-            float cosOuter = cos(lights[i].outerAngle * M_PI / 180 / 2);
-            spotLightsFactors[s++] = cosInner;
-            spotLightsFactors[s++] = cosInner - cosOuter;
+            float cosHalfInner = cos(lights[i].innerAngle * M_PI / 180 / 2);
+            float cosHalfOuter = cos(lights[i].outerAngle * M_PI / 180 / 2);
+            spotLightsFactors[s++] = cosHalfOuter;
+            spotLightsFactors[s++] = cosHalfInner - cosHalfOuter;
             spotLightsFactors[s++] = lights[i].falloff;
             spotLightsFactors[s++] = 0;
         } else {
