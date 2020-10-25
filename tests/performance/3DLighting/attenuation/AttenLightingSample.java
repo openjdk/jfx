@@ -27,6 +27,7 @@ package attenuation;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.PointLight;
+import javafx.scene.SpotLight;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
@@ -40,17 +41,31 @@ import javafx.util.converter.NumberStringConverter;
 public class AttenLightingSample extends LightingSample {
 
     @Override
-    protected VBox addLightControls(PointLight light) {
+    protected VBox addPointLightControls(PointLight light) {
         var vbox = super.addLightControls(light);
-        var range = createSliderControl("range", light.maxRangeProperty(), 0, 100, light.getMaxRange());
+        var range = createSliderControl("range", light.maxRangeProperty(), 0, 150, light.getMaxRange());
         var c = createSliderControl("constant", light.constantAttenuationProperty(), -1, 1, light.getConstantAttenuation());
-        var lc = createSliderControl("linear", light.linearAttenuationProperty(), -1, 1, light.getLinearAttenuation());
-        var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -1, 1, light.getQuadraticAttenuation());
+        var lc = createSliderControl("linear", light.linearAttenuationProperty(), -0.1, 0.1, light.getLinearAttenuation());
+        var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -0.01, 0.01, light.getQuadraticAttenuation());
         vbox.getChildren().addAll(range, c, lc, qc);
         return vbox;
     }
 
-    private HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
+    @Override
+    protected VBox addSpotLightControls(SpotLight light) {
+        var vbox = super.addLightControls(light);
+        var range = createSliderControl("range", light.maxRangeProperty(), 0, 150, light.getMaxRange());
+        var c = createSliderControl("constant", light.constantAttenuationProperty(), -1, 1, light.getConstantAttenuation());
+        var lc = createSliderControl("linear", light.linearAttenuationProperty(), -0.1, 0.1, light.getLinearAttenuation());
+        var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -0.01, 0.01, light.getQuadraticAttenuation());
+        var ia = createSliderControl("inner", light.innerAngleProperty(), 0, 180, light.getInnerAngle());
+        var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
+        var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
+        vbox.getChildren().addAll(range, c, lc, qc, ia, oa, fo);
+        return vbox;
+    }
+
+    protected HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
         var slider = new Slider(min, max, start);
         slider.setShowTickMarks(true);
         slider.setShowTickLabels(true);

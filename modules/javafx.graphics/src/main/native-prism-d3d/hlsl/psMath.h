@@ -67,12 +67,12 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
 
     float spotlightFactor = 1;
     float falloff = gSpotLightFactors[i].z;
-    if (falloff == 0) {  // possible optimization
+    if (falloff != 0) {  // possible optimization
         float cosA = dot(gLightNormDirection[i].xyz, l);
         float cosHalfOuter = gSpotLightFactors[i].x;
         float denom = gSpotLightFactors[i].y;
         float base = saturate((cosA - cosHalfOuter) / denom);
-        float spotlightFactor = pow(base, falloff);
+        spotlightFactor = pow(base, falloff);
     }
 
     float ca = gLightAttenuation[i].x;

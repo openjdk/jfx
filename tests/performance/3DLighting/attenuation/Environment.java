@@ -29,22 +29,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.AmbientLight;
+import javafx.scene.Group;
+import javafx.scene.LightBase;
+import javafx.scene.Node;
 import javafx.scene.PointLight;
+import javafx.scene.SpotLight;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.scene.shape.MeshView;
-import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 
 class Environment extends CameraScene3D {
 
-    private final PointLight light1 = new PointLight(Color.RED);
-    private final PointLight light2 = new PointLight(Color.BLUE);
-    private final PointLight light3 = new PointLight(Color.MAGENTA);
-    final PointLight[] lights = {light1, light2, light3};
+    private final static double LIGHT_Z_DIST = 50;
+    private final static double LIGHT_X_DIST = 50;
 
-    private Shape3D currentShape;
+    private final PointLight pointLight1 = new PointLight(Color.RED);
+    private final PointLight pointLight2 = new PointLight(Color.BLUE);
+    private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
+
+    private final SpotLight spotLight1 = new SpotLight(Color.RED);
+    private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
+    private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
+    final LightBase[] lights = { pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
+
+    private Node currentShape;
 
     private final AmbientLight worldLight = new AmbientLight();
 
@@ -53,7 +64,7 @@ class Environment extends CameraScene3D {
         zoom.set(-350);
 
         for (var light : lights) {
-            light.setTranslateZ(-50);
+            light.setTranslateZ(-LIGHT_Z_DIST);
             var lightRep = new Sphere(2);
             lightRep.setMaterial(new PhongMaterial(light.getColor()));
             lightRep.translateXProperty().bind(light.translateXProperty());
@@ -61,14 +72,28 @@ class Environment extends CameraScene3D {
             lightRep.translateZProperty().bind(light.translateZProperty());
             rootGroup.getChildren().addAll(light, lightRep);
         }
-        light1.setTranslateX(40);
-        light2.setTranslateX(-40);
-        light1.setUserData("RED");
-        light2.setUserData("BLUE");
-        light3.setUserData("MAGENTA");
+
+        pointLight1.setTranslateX(LIGHT_X_DIST);
+        spotLight1.setTranslateX(LIGHT_X_DIST);
+        pointLight2.setTranslateX(-LIGHT_X_DIST);
+        spotLight2.setTranslateX(-LIGHT_X_DIST);
+
+        pointLight1.setUserData("RED");
+        pointLight2.setUserData("BLUE");
+        pointLight3.setUserData("MAGENTA");
+        spotLight1.setUserData("RED");
+        spotLight2.setUserData("BLUE");
+        spotLight3.setUserData("MAGENTA");
 
         rootGroup.getChildren().add(worldLight);
         rootGroup.setMouseTransparent(true);
+    }
+
+    public Group createBoxes() {
+        var front = new Box(200, 200, 1);
+        var back = new Box(200, 200, 1);
+        back.setTranslateZ(-LIGHT_Z_DIST * 2);
+        return new Group(front, back);
     }
 
     Sphere createSphere(int subdivisions) {
@@ -112,7 +137,7 @@ class Environment extends CameraScene3D {
         return mv;
     }
 
-    void switchTo(Shape3D node) {
+    void switchTo(Node node) {
         worldLight.getExclusionScope().remove(currentShape);
         worldLight.getExclusionScope().add(node);
         rootGroup.getChildren().remove(currentShape);

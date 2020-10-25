@@ -28,17 +28,20 @@ package attenuation;
 import javafx.animation.Animation;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
+import javafx.scene.LightBase;
+import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
+import javafx.scene.SpotLight;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Shape3D;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.converter.NumberStringConverter;
@@ -59,8 +62,8 @@ public class LightingSample extends Application {
     public void start(Stage stage) throws Exception {
         environment.setStyle("-fx-background-color: teal");
 
-        var subdivisionSlider = new Slider(10, 200, 60);
-        subdivisionSlider.setMajorTickUnit(10);
+        var subdivisionSlider = new Slider(10, 1000, 60);
+        subdivisionSlider.setMajorTickUnit(50);
         setupSlier(subdivisionSlider);
 
         var subdivisionLabel = new Label();
@@ -69,8 +72,11 @@ public class LightingSample extends Application {
         var sphere = new Button("Sphere");
         sphere.setOnAction(e -> switchTo(environment.createSphere((int) subdivisionSlider.getValue())));
 
-        var quadSlider = new Slider(500, 10_000, 1000);
-        quadSlider.setMajorTickUnit(500);
+        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
+
+
+        var quadSlider = new Slider(100, 5000, 1000);
+        quadSlider.setMajorTickUnit(200);
         setupSlier(quadSlider);
 
         var quadLabel = new Label();
@@ -79,15 +85,31 @@ public class LightingSample extends Application {
         var mesh = new Button("Mesh");
         mesh.setOnAction(e -> switchTo(environment.createMeshView((int) quadSlider.getValue())));
 
-        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
         var meshBox = new HBox(mesh, quadSlider, quadLabel);
 
-        var controls = new VBox(sphereBox, meshBox);
+
+        var box = new Button("Boxes (static)");
+        box.setOnAction(e -> switchTo(environment.createBoxes()));
+
+
+        var playButton = new Button("Start");
+        playButton.setOnAction(e -> startMeasurement());
+        
+        var stopButton = new Button("Stop");
+        stopButton.setOnAction(e -> stopMeasurement());
+
+        var controls = new VBox(3, sphereBox, meshBox, box, new HBox(5, playButton, stopButton));
         for (var light : environment.lights) {
-            controls.getChildren().add(addLightControls(light));
+            VBox vBox = null;
+            if (light instanceof PointLight) {
+                vBox = addPointLightControls((PointLight) light);
+            } else if (light instanceof SpotLight) {
+                vBox = addSpotLightControls((SpotLight) light);
+            }
+            controls.getChildren().add(new TitledPane(light.getUserData() + " " + light.getClass().getSimpleName(), vBox));
         }
 
-        var hBox = new HBox(controls, environment);
+        var hBox = new HBox(new ScrollPane(controls), environment);
         HBox.setHgrow(environment, Priority.ALWAYS);
         stage.setScene(new Scene(hBox));
         stage.setWidth(1100);
@@ -102,11 +124,19 @@ public class LightingSample extends Application {
         slider.setSnapToTicks(true);
     }
 
-    protected VBox addLightControls(PointLight light) {
+    protected VBox addPointLightControls(PointLight light) {
+        return addLightControls(light);
+    }
+    
+    protected VBox addSpotLightControls(SpotLight light) {
+        return addLightControls(light);
+    }
+
+    protected VBox addLightControls(LightBase light) {
         var lightOn = new CheckBox("On/Off");
         lightOn.setSelected(true);
         light.lightOnProperty().bind(lightOn.selectedProperty());
-        return new VBox(new Separator(), new Label(light.getUserData() + " light"), lightOn);
+        return new VBox(lightOn);
     }
 
    private TranslateTransition createAnimation() {
@@ -118,13 +148,21 @@ public class LightingSample extends Application {
         return anim;
     }
 
-    private void switchTo(Shape3D node) {
-        fpsCouner.stop();
-        fpsCouner.reset();
+    private void switchTo(Node node) {
+        stopMeasurement();
         environment.switchTo(node);
         animation.setNode(node);
+    }
+
+    private void startMeasurement() {
         animation.playFromStart();
         fpsCouner.start();
+    }
+
+    private void stopMeasurement() {
+        fpsCouner.stop();
+        fpsCouner.reset();
+        animation.stop();
     }
 
     public static void main(String[] args) {
