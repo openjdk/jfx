@@ -66,15 +66,15 @@ public class JMemoryBuddy {
         File folder1 = new File("target");
         File folder2 = new File("build");
 
-        if(folder1.exists()) return folder1.getAbsolutePath();
-        if(folder2.exists()) return folder2.getAbsolutePath();
+        if (folder1.exists()) return folder1.getAbsolutePath();
+        if (folder2.exists()) return folder2.getAbsolutePath();
         return ".";
     }
 
     static void createGarbage() {
         LinkedList list = new LinkedList<Integer>();
         int counter = 0;
-        while(counter < garbageAmount) {
+        while (counter < garbageAmount) {
             counter += 1;
             list.add(1);
         }
@@ -110,7 +110,7 @@ public class JMemoryBuddy {
             System.runFinalization();
         }
 
-        while(counter > 0 && weakReference.get() != null) {
+        while (counter > 0 && weakReference.get() != null) {
             try {
                 Thread.sleep(sleepDuration);
             } catch (InterruptedException e) {
@@ -179,13 +179,13 @@ public class JMemoryBuddy {
         int stepsLeft = steps;
         boolean failed = false;
 
-        for(WeakReference wRef: toBeCollected) {
+        for (WeakReference wRef: toBeCollected) {
             stepsLeft = checkCollectable(stepsLeft, wRef);
         }
         if (stepsLeft == 0) {
             failed = true;
         }
-        for(AssertNotCollectable wRef: toBeNotCollected) {
+        for (AssertNotCollectable wRef: toBeNotCollected) {
             if (!checkNotCollectable(wRef.getWeakReference())) {
                 failed = true;
             };
@@ -195,12 +195,12 @@ public class JMemoryBuddy {
             LinkedList<AssertCollectable> toBeCollectedMarked = new LinkedList<AssertCollectable>();
             LinkedList<AssertNotCollectable> toBeNotCollectedMarked = new LinkedList<AssertNotCollectable>();
 
-            for(WeakReference wRef: toBeCollected) {
+            for (WeakReference wRef: toBeCollected) {
                 if (wRef.get() != null) {
                     toBeCollectedMarked.add(new AssertCollectable(wRef));
                 }
             }
-            for(AssertNotCollectable wRef: toBeNotCollected) {
+            for (AssertNotCollectable wRef: toBeNotCollected) {
                 if (wRef.getWeakReference().get() == null) {
                     toBeNotCollectedMarked.add(wRef);
                 }
