@@ -62,43 +62,19 @@ public class LightingSample extends Application {
     public void start(Stage stage) throws Exception {
         environment.setStyle("-fx-background-color: teal");
 
-        var subdivisionSlider = new Slider(10, 1000, 60);
-        subdivisionSlider.setMajorTickUnit(50);
-        setupSlier(subdivisionSlider);
-
-        var subdivisionLabel = new Label();
-        subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
-
-        var sphere = new Button("Sphere");
-        sphere.setOnAction(e -> switchTo(environment.createSphere((int) subdivisionSlider.getValue())));
-
-        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
-
-
-        var quadSlider = new Slider(100, 5000, 1000);
-        quadSlider.setMajorTickUnit(200);
-        setupSlier(quadSlider);
-
-        var quadLabel = new Label();
-        quadLabel.textProperty().bindBidirectional(quadSlider.valueProperty(), new NumberStringConverter("#"));
-
-        var mesh = new Button("Mesh");
-        mesh.setOnAction(e -> switchTo(environment.createMeshView((int) quadSlider.getValue())));
-
-        var meshBox = new HBox(mesh, quadSlider, quadLabel);
-
+        var sphereControls = createSphereControls();
+        var meshControls = createMeshControls();
 
         var box = new Button("Boxes (static)");
         box.setOnAction(e -> switchTo(environment.createBoxes()));
 
-
         var playButton = new Button("Start");
         playButton.setOnAction(e -> startMeasurement());
-        
+
         var stopButton = new Button("Stop");
         stopButton.setOnAction(e -> stopMeasurement());
 
-        var controls = new VBox(3, sphereBox, meshBox, box, new HBox(5, playButton, stopButton));
+        var controls = new VBox(3, sphereControls, meshControls, box, new HBox(5, playButton, stopButton));
         for (var light : environment.lights) {
             VBox vBox = null;
             if (light instanceof PointLight) {
@@ -117,6 +93,36 @@ public class LightingSample extends Application {
         stage.show();
     }
 
+    private HBox createMeshControls() {
+        var quadSlider = new Slider(100, 5000, 1000);
+        quadSlider.setMajorTickUnit(200);
+        setupSlier(quadSlider);
+
+        var quadLabel = new Label();
+        quadLabel.textProperty().bindBidirectional(quadSlider.valueProperty(), new NumberStringConverter("#"));
+
+        var mesh = new Button("Mesh");
+        mesh.setOnAction(e -> switchTo(environment.createMeshView((int) quadSlider.getValue())));
+
+        var meshBox = new HBox(mesh, quadSlider, quadLabel);
+        return meshBox;
+    }
+
+    private HBox createSphereControls() {
+        var subdivisionSlider = new Slider(10, 1000, 60);
+        subdivisionSlider.setMajorTickUnit(50);
+        setupSlier(subdivisionSlider);
+
+        var subdivisionLabel = new Label();
+        subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
+
+        var sphere = new Button("Sphere");
+        sphere.setOnAction(e -> switchTo(environment.createSphere((int) subdivisionSlider.getValue())));
+
+        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
+        return sphereBox;
+    }
+
     private void setupSlier(Slider slider) {
         slider.setMinorTickCount(0);
         slider.setShowTickLabels(true);
@@ -127,7 +133,7 @@ public class LightingSample extends Application {
     protected VBox addPointLightControls(PointLight light) {
         return addLightControls(light);
     }
-    
+
     protected VBox addSpotLightControls(SpotLight light) {
         return addLightControls(light);
     }
