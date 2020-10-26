@@ -23,12 +23,28 @@
 # questions.
 #
 
+#
+# This GitHub actions YAML file runs a build and test on each of the three primary platforms:
+# Linux, macOS, Windows. The jobs are run using the default (latest) OS platform for each OS.
+# We download a specific version the boot JDK and gradle. We use the default versions
+# of all other build tools (e.g., compilers and ant) that are available on each platform.
+#
+# The build step is run in the default mode without building the native media or webkit libraries.
+# The test is run with web tests excluded. As a follow-up enhancement, we might consider optionally
+# building the media and webkit libraries.
+#
+
 name: JavaFX pre-submit tests
 
 on:
+  # Run GitHub actions on every push to all branches except the main production branches, also
+  # exclude any branch starting with "WIP".
   push:
     branches-ignore:
       - master
+      - main
+      - 'jfx[0-9]+'
+      - 'WIP*'
 
 jobs:
   linux_x64_build:
@@ -37,12 +53,11 @@ jobs:
     if: 'true'
 
     env:
-# FIXME: read this information from a property file
-#      JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).DEFAULT_VERSION_FEATURE }}"
-#      BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
-#      BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
-#      BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
-#      BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
       BOOT_JDK_VERSION: "15"
       BOOT_JDK_FILENAME: "openjdk-15_linux-x64_bin.tar.gz"
       BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_linux-x64_bin.tar.gz"
@@ -81,6 +96,7 @@ jobs:
           export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}"
           echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
           export PATH="$JAVA_HOME/bin:$PATH"
+          env | sort
           which java
           java -version
           ant -version
@@ -91,7 +107,6 @@ jobs:
         run: |
           set -x
           export PATH="$JAVA_HOME/bin:$PATH"
-          env | sort
           bash gradlew -version
           bash gradlew --info all
 
@@ -100,7 +115,6 @@ jobs:
         run: |
           set -x
           export PATH="$JAVA_HOME/bin:$PATH"
-          env | sort
           bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
 
 
@@ -110,12 +124,11 @@ jobs:
     if: 'true'
 
     env:
-# FIXME: read this information from a property file
-#      JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).DEFAULT_VERSION_FEATURE }}"
-#      BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
-#      BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
-#      BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
-#      BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
       BOOT_JDK_VERSION: "15"
       BOOT_JDK_FILENAME: "openjdk-15_osx-x64_bin.tar.gz"
       BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_osx-x64_bin.tar.gz"
@@ -154,6 +167,7 @@ jobs:
           export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}.jdk/Contents/Home"
           echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
           export PATH="$JAVA_HOME/bin:$PATH"
+          env | sort
           which java
           java -version
           ant -version
@@ -164,7 +178,6 @@ jobs:
         run: |
           set -x
           export PATH="$JAVA_HOME/bin:$PATH"
-          env | sort
           bash gradlew -version
           bash gradlew --info all
 
@@ -173,7 +186,6 @@ jobs:
         run: |
           set -x
           export PATH="$JAVA_HOME/bin:$PATH"
-          env | sort
           bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
 
 
@@ -183,12 +195,11 @@ jobs:
     if: 'true'
 
     env:
-# FIXME: read this information from a property file
-#      JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).DEFAULT_VERSION_FEATURE }}"
-#      BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
-#      BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
-#      BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
-#      BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
       BOOT_JDK_VERSION: "15"
       BOOT_JDK_FILENAME: "openjdk-15_windows-x64_bin.zip"
       BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_windows-x64_bin.zip"
