@@ -150,6 +150,14 @@ public class RegionShim extends Region {
         r.addImageListener(image);
     }
 
+    public static double snapPortionX(Region r, double value) {
+        return r.snapPortionX(value);
+    }
+
+    public static double snapPortionY(Region r, double value) {
+        return r.snapPortionY(value);
+    }
+
     //----------------------------------------------------------
 
         @Override public void addImageListener(Image image) {

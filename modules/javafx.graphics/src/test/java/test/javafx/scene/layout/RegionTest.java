@@ -1260,6 +1260,9 @@ public class RegionTest {
         stage.setScene(scene);
 
         double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997};
+
+        // test snapSizeX/snapSizeY methods
+
         for (double scale : scales) {
             stage.setRenderScaleX(scale);
             for (int j = 0; j < 1000; j++) {
@@ -1276,6 +1279,28 @@ public class RegionTest {
                 double value = new Random().nextDouble() * 100 - 50;
                 double snappedValue = region.snapSizeY(value);
                 double snapOfSnappedValue = region.snapSizeY(snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
+
+        // test snapPortionX/snapPortionY methods
+
+        for (double scale : scales) {
+            stage.setRenderScaleX(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = RegionShim.snapPortionX(region, value);
+                double snapOfSnappedValue = RegionShim.snapPortionX(region, snappedValue);
+                assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
+            }
+        }
+
+        for (double scale : scales) {
+            stage.setRenderScaleY(scale);
+            for (int j = 0; j < 1000; j++) {
+                double value = new Random().nextDouble() * 100 - 50;
+                double snappedValue = RegionShim.snapPortionY(region, value);
+                double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
                 assertEquals(snappedValue, snapOfSnappedValue, 1.0e-14);
             }
         }

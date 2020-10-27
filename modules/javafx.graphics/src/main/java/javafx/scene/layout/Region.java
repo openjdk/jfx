@@ -385,25 +385,46 @@ public class Region extends Parent {
         return snapToPixel ? scaledRound(value, snapScale) : value;
     }
 
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionX(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleX();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
+
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionY(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleY();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
