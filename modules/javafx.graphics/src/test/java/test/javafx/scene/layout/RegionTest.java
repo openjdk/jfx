@@ -1252,7 +1252,7 @@ public class RegionTest {
         assertFalse(peer.isClean());
     }
 
-    // Test for JDK-8199592
+    // Test for JDK-8255415
     @Test public void snappingASnappedValueGivesTheSameValueTest() {
         Stage stage = new Stage();
         Region region = new Region();
