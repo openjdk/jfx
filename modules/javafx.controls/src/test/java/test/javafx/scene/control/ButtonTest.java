@@ -74,6 +74,8 @@ public class ButtonTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+    private MouseEventFirer mouse; //Note : It is created and used by individual tests that need it
+
 
     @Before public void setup() {
         btn = new Button();
@@ -86,6 +88,10 @@ public class ButtonTest {
 
     @After public void after() {
         stage.hide();
+
+        if (mouse != null) {
+            mouse.dispose();
+        }
     }
 
     /*********************************************************************
@@ -415,13 +421,11 @@ public class ButtonTest {
         btn.fireEvent(new ActionEvent());
         btn.fire();
 
-        MouseEventFirer mouse = new MouseEventFirer(btn);
+        mouse = new MouseEventFirer(btn);
 
         mouse.fireMousePressed();
         mouse.fireMouseReleased();
         mouse.fireMouseClicked();
-
-        mouse.dispose();
     }
 
     private int count = 0;
@@ -445,7 +449,7 @@ public class ButtonTest {
 
         assertEquals(0, count);
 
-        MouseEventFirer mouse = new MouseEventFirer(btn);
+        mouse = new MouseEventFirer(btn);
 
         /* Note that right-mouse press events don't force the popup open */
         mouse.fireMousePressed(MouseButton.SECONDARY);
@@ -460,8 +464,6 @@ public class ButtonTest {
         /* Only context menu events force it to appear */
         ContextMenuEventFirer.fireContextMenuEvent(btn);
         assertEquals(1, count);
-
-        mouse.dispose();
     }
 
     static class MyButton extends Button {
