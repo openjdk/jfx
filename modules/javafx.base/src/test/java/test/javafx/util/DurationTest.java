@@ -41,6 +41,9 @@ public class DurationTest {
 
     @Test public void millis_withZeroResultsIn_ZERO() {
         assertSame(Duration.ZERO, Duration.millis(0));
+        final boolean isMac
+                = System.getProperty("os.name").startsWith("Mac");
+        assertFalse("KCR: inject test failure", isMac);
     }
 
     @Test public void millis_withOneResultsIn_ONE() {

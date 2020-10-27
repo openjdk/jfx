@@ -57,6 +57,8 @@ static jmethodID midNotifyResize;
 static jmethodID midNotifyScaleChanged;
 static jmethodID midNotifyMoveToAnotherScreen;
 
+int failure = KCR__inject_build_failure;
+
 unsigned int GlassWindow::sm_instanceCounter = 0;
 HHOOK GlassWindow::sm_hCBTFilter = NULL;
 HWND GlassWindow::sm_grabWindow = NULL;
