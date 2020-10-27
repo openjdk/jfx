@@ -300,6 +300,16 @@ public class Region extends Parent {
         return Math.floor(value * scale) / scale;
     }
 
+    /**
+     * The value is ceiled with a given scale using Math.ceil.
+     * This method guarantees that:
+     *
+     * scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)
+     *
+     * @param value The value that needs to be ceiled
+     * @param scale The scale that will be used
+     * @return value ceiled with scale
+     */
     private static double scaledCeil(double value, double scale) {
         return Math.ceil(value * scale - EPSILON) / scale;
     }
