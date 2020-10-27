@@ -27,6 +27,7 @@ package com.sun.prism.d3d;
 
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
@@ -216,7 +217,14 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
-        for (int adapter = 0, n = nGetAdapterCount(); adapter != n; ++adapter) {
+        int adapterCount = nGetAdapterCount();
+        if(adapterCount == 0){
+            // adapters lost, recreate
+            GraphicsPipeline.getPipeline().dispose();
+            GraphicsPipeline.getPipeline().createPipeline();
+            return null;
+        }
+        for (int adapter = 0, n = adapterCount; adapter != n; ++adapter) {
             D3DResourceFactory rf =
                     getD3DResourceFactory(adapter, getScreenForAdapter(screens, adapter));
 
