@@ -460,7 +460,9 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
                 cur = cur.next;
             }
         }
-        throw new IllegalStateException("unmanaged resource freed from pool "+this);
+        if(PrismSettings.verbose) {
+            System.err.println("unmanaged resource freed from pool " + this);
+        }
     }
 
     @Override
