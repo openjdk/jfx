@@ -296,8 +296,18 @@ public class Region extends Parent {
         return Math.round(value * scale) / scale;
     }
 
+    /**
+     * The value is floored for a given scale using Math.floor.
+     * This method guarantees that:
+     *
+     * scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)
+     *
+     * @param value The value that needs to be floored
+     * @param scale The scale that will be used
+     * @return value floored with scale
+     */
     private static double scaledFloor(double value, double scale) {
-        return Math.floor(value * scale) / scale;
+        return Math.floor(value * scale + EPSILON) / scale;
     }
 
     /**
