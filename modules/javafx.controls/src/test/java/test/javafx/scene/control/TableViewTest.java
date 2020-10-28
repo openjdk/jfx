@@ -4650,17 +4650,14 @@ public class TableViewTest {
         assertEquals(0, listOne.size());
         assertEquals(0, listTwo.size());
 
-        System.out.println("Test One:");
         listTwo.setAll("a", "b", "c", "d");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Two:");
         listTwo.setAll("e", "f", "g", "h");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Three:");
         listTwo.setAll("i", "j", "k", "l");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
@@ -4678,7 +4675,8 @@ public class TableViewTest {
         TableView.TableViewSelectionModel<String> sm = stringTableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -4688,7 +4686,7 @@ public class TableViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -4705,7 +4703,6 @@ public class TableViewTest {
                                          TableView.TableViewSelectionModel<String> sm,
                                          int rowToSelect,
                                          TableColumn<String,String> columnToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedCells().size());
         assertEquals(4, sm.getSelectedIndices().size());
@@ -5207,7 +5204,7 @@ public class TableViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };

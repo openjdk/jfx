@@ -5191,7 +5191,6 @@ public class TreeTableViewTest {
                                          TreeTableView.TreeTableViewSelectionModel<String> sm,
                                          int rowToSelect,
                                          TreeTableColumn<String,String> columnToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedCells().size());
         assertEquals(4, sm.getSelectedIndices().size());
@@ -6058,7 +6057,7 @@ public class TreeTableViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -6375,7 +6374,6 @@ public class TreeTableViewTest {
         assertEquals(1, itemsEventCount.get());
 
         step.set(1);
-        System.out.println("about to collapse now");
         childNode1.setExpanded(false); // collapse Child Node 1 and expect both children to be deselected
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
@@ -6413,8 +6411,8 @@ public class TreeTableViewTest {
 
         view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
             if (childNode1.isExpanded()) return;
-            System.out.println(sm.getSelectedIndices());
-            System.out.println(sm.getSelectedItems());
+            //System.out.println(sm.getSelectedIndices());
+            //System.out.println(sm.getSelectedItems());
             assertTrue(sm.isSelected(1));
             assertFalse(sm.isSelected(2));
             assertFalse(sm.isSelected(3));

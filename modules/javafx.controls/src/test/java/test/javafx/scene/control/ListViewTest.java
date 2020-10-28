@@ -935,7 +935,7 @@ public class ListViewTest {
         textFieldListView.setCellFactory(TextFieldListCell.forListView());
         textFieldListView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
-            System.out.println("On Edit Cancel: " + t);
+            //System.out.println("On Edit Cancel: " + t);
         });
 
         ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
@@ -1474,7 +1474,8 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -1484,7 +1485,7 @@ public class ListViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -1500,7 +1501,6 @@ public class ListViewTest {
     private void test_rt_39482_selectRow(String expectedString,
                                          MultipleSelectionModel<String> sm,
                                          int rowToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
@@ -1908,7 +1908,7 @@ public class ListViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
