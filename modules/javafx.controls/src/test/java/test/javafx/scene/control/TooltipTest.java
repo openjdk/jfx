@@ -115,7 +115,7 @@ public class TooltipTest {
     }
 
     @Test public void defaultFontIsnotNull() {
-        System.out.println("toolTip.getFont() " + toolTip.getFont());
+        //System.out.println("toolTip.getFont() " + toolTip.getFont());
         assertNotNull(toolTip.getFont());
     }
 

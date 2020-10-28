@@ -939,13 +939,10 @@ public class ComboBoxTest {
 
         assertEquals("2", listView.getSelectionModel().getSelectedItem());
 
-        System.out.println(listView.getSkin());
-
         VirtualFlow flow = (VirtualFlow)listView.lookup("#virtual-flow");
         assertNotNull(flow);
 
         IndexedCell cell = flow.getVisibleCell(2);
-        System.out.println("cell: " + cell);
         assertEquals("TO_STRING", cell.getText());
     }
 
