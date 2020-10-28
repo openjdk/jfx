@@ -131,7 +131,7 @@ public class JMemoryBuddy {
     }
 
     /**
-     * Checks whether the content of the WeakReference can not be collected.
+     * Checks whether the content of the WeakReference cannot be collected.
      * @param weakReference The WeakReference to check.
      */
     public static void assertNotCollectable(WeakReference weakReference) {
@@ -141,11 +141,14 @@ public class JMemoryBuddy {
     }
 
     /**
-     * Checks whether the content of the WeakReference can not be collected.
+     * Checks whether the content of the WeakReference cannot be collected.
      * @param weakReference The WeakReference to check.
-     * @return Returns true, when the provided WeakReference can not be collected.
+     * @return Returns true, when the provided WeakReference cannot be collected.
      */
     public static boolean checkNotCollectable(WeakReference weakReference) {
+        createGarbage();
+        System.gc();
+        System.runFinalization();
         createGarbage();
         System.gc();
         return weakReference.get() != null;
@@ -212,10 +215,7 @@ public class JMemoryBuddy {
                 throw new AssertionError("The following references should be collected: " + toBeCollectedMarked + " and " + toBeNotCollected.size() + " should not be collected: " + toBeNotCollectedMarked);
             }
         }
-
-
     }
-
 
     static void createHeapDump() {
         if (createHeapdump) {
