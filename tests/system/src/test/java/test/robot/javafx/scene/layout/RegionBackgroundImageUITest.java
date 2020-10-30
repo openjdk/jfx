@@ -30,9 +30,6 @@ import javafx.scene.paint.Color;
 import org.junit.Ignore;
 import org.junit.Test;
 
-/**
- */
-@Ignore("RT-33741")
 public class RegionBackgroundImageUITest extends RegionUITestBase {
     /**************************************************************************
      *                                                                        *
