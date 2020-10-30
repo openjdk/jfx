@@ -31,9 +31,9 @@ import javafx.scene.SpotLight;
 import javafx.scene.Node;
 
 /**
- * Used to access internal methods of PointLight.
+ * Used to access internal methods of SpotLight.
  */
-public class SpotLightHelper extends LightBaseHelper {
+public class SpotLightHelper extends PointLightHelper {
 
     private static final SpotLightHelper theInstance;
     private static SpotLightAccessor spotLightAccessor;

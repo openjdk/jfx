@@ -29,7 +29,6 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SpotLightHelper;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGPointLight;
 import com.sun.javafx.sg.prism.NGSpotLight;
 
 import javafx.beans.property.DoubleProperty;
@@ -40,34 +39,24 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A light source that radiates light in a cone in a specific direction. The location of the light
- * source is a single point in space. Any pixel within the range of the light will be illuminated by it,
- * unless it belongs to a {@code Shape3D} outside of its {@code scope}.
+ * A {@code PointLight} that radiates light in a cone in a specific direction. The direction of the {@code SpotLight} is
+ * defined by the {@link #directionProperty() direction} property.
  * <p>
- * The light's intensity can be set to decrease over distance by attenuating it. The attenuation formula
- * <pre>attn = 1 / (ca + la * dist + qa * dist^2)</pre>
- * defines 3 coefficients: {@code ca}, {@code la}, and {@code qa}, which control the constant, linear, and
- * quadratic behaviors of intensity falloff over distance, respectively. The effective color of the light
- * at a given point in space is {@code color * attn}. It is possible, albeit unrealistic, to specify negative
- * values to attenuation coefficients. This allows the resulting attenuation factor to be negative, which
- * results in the light's color being subtracted from the material instead of added to it, thus creating a
- * "shadow caster".
- * <p>
- * For a realistic effect, {@code maxRange} should be set to a distance at which the attenuation is close to 0
- * as this will give a soft cutoff.
- * <p>
- * The light cone is defined by 3 factors: an inner angle, an outer angle, and a falloff factor. For a point whose
- * angle to the light is {@code a}, if {@code a < innerAngle} then that point receives maximum illumination, if
- * {@code a > outerAngle} then that point receives no illumination, and if {@code innerAngle < a < outerAngle}
- * then the illumination is determined by the formula
- * <pre>I = pow((cos(a) - cos(outer/2)) / (cos(inner/2) - cos(outer/2)), falloff)</pre>
+ * The light cone is defined by 3 factors: an {@link #innerAngleProperty() inner angle}, an {@link #outerAngleProperty()
+ * outer angle}, and a {@link #falloffProperty() falloff} factor. For a point whose angle to the light is {@code a}, if
+ * {@code a < innerAngle} then that point receives maximum illumination, if {@code a > outerAngle} then that point
+ * receives no illumination, and if {@code innerAngle < a < outerAngle} then the illumination is determined by the
+ * formula
+ * <pre>I = pow((cos(a) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
  * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
  * behavior of the drop.
+ * <p>
+ * <img src="doc-files/Spotlight.png" alt="Image of the Spotlight">
  *
  * @since 16
  * @see PhongMaterial
  */
-public class SpotLight extends LightBase {
+public class SpotLight extends PointLight {
     static {
         SpotLightHelper.setSpotLightAccessor(new SpotLightHelper.SpotLightAccessor() {
             @Override
@@ -103,122 +92,11 @@ public class SpotLight extends LightBase {
         super(color);
     }
 
-    /**
-     * The maximum range of this {@code SpotLight}. For a pixel to be affected by this light, its distance to
-     * the light source must be less than or equal to the light's maximum range. Any negative value will treated
-     * as 0.
-     * <p>
-     * Lower {@code maxRange} values can give better performance as pixels outside the range of the light
-     * will not require complex calculation. The attenuation formula can be used to calculate a realistic
-     * {@code maxRange} value by finding the where the attenuation is close enough to 0.
-     * <p>
-     * Nodes that are inside the light's range can still be excluded from the light's effect
-     * by removing them from its {@link #getScope() scope}. If a node is known to always be
-     * outside of the light's range, it is more performant to exclude it from its scope.
-     *
-     * @defaultValue {@code Double.POSITIVE_INFINITY}
-     */
-    private DoubleProperty maxRange;
-
-    public final void setMaxRange(double value) {
-        maxRangeProperty().set(value);
-    }
-
-    private static final double DEFAULT_MAX_RANGE = NGPointLight.getDefaultMaxRange();
-
-    public final double getMaxRange() {
-        return maxRange == null ? DEFAULT_MAX_RANGE : maxRange.get();
-    }
-
-    public final DoubleProperty maxRangeProperty() {
-        if (maxRange == null) {
-            maxRange = getLightDoubleProperty("maxRange", DEFAULT_MAX_RANGE);
-        }
-        return maxRange;
-    }
-
-    /**
-     * The constant attenuation coefficient. This is the term {@code ca} in the attenuation formula:
-     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
-     * where {@code dist} is the distance between the light source and the pixel.
-     *
-     * @defaultValue 1
-     */
-    private DoubleProperty constantAttenuation;
-
-    public final void setConstantAttenuation(double value) {
-        constantAttenuationProperty().set(value);
-    }
-
-    private static final double DEFAULT_CONSTANT_ATTENUATION = NGPointLight.getDefaultCa();
-
-    public final double getConstantAttenuation() {
-        return constantAttenuation == null ? DEFAULT_CONSTANT_ATTENUATION : constantAttenuation.get();
-    }
-
-    public final DoubleProperty constantAttenuationProperty() {
-        if (constantAttenuation == null) {
-            constantAttenuation = getLightDoubleProperty("constantAttenuation", DEFAULT_CONSTANT_ATTENUATION);
-        }
-        return constantAttenuation;
-    }
-
-    /**
-     * The linear attenuation coefficient. This is the term {@code la} in the attenuation formula:
-     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
-     * where {@code dist} is the distance between the light source and the pixel.
-     *
-     * @defaultValue 0
-     */
-    private DoubleProperty linearAttenuation;
-
-    public final void setLinearAttenuation(double value) {
-        linearAttenuationProperty().set(value);
-    }
-
-    private static final double DEFAULT_LINEAR_CONSTANT = NGPointLight.getDefaultLa();
-
-    public final double getLinearAttenuation() {
-        return linearAttenuation == null ? DEFAULT_LINEAR_CONSTANT : linearAttenuation.get();
-    }
-
-    public final DoubleProperty linearAttenuationProperty() {
-        if (linearAttenuation == null) {
-            linearAttenuation = getLightDoubleProperty("linearAttenuation", DEFAULT_LINEAR_CONSTANT);
-        }
-        return linearAttenuation;
-    }
-
-    /**
-     * The quadratic attenuation coefficient. This is the term {@code qa} in the attenuation formula:
-     * <pre>attn = 1 / (ca + la * dist + qa * dist^2)}</pre>
-     * where {@code dist} is the distance between the light source and the pixel.
-     *
-     * @defaultValue 0
-     */
-    private DoubleProperty quadraticAttenuation;
-
-    public final void setQuadraticAttenuation(double value) {
-        quadraticAttenuationProperty().set(value);
-    }
-
-    private static final double DEFAULT_QUADRATIC_CONSTANT = NGPointLight.getDefaultQa();
-
-    public final double getQuadraticAttenuation() {
-        return quadraticAttenuation == null ? DEFAULT_QUADRATIC_CONSTANT : quadraticAttenuation.get();
-    }
-
-    public final DoubleProperty quadraticAttenuationProperty() {
-        if (quadraticAttenuation == null) {
-            quadraticAttenuation = getLightDoubleProperty("quadraticAttenuation", DEFAULT_QUADRATIC_CONSTANT);
-        }
-        return quadraticAttenuation;
-    }
 
     /**
      * The direction the spotlight is facing. The vector need not be normalized.
      *
-     * @defaultValue {@code Point3D(0, 0, 1)}
+     * @defaultValue {@code Point3D(0, 0, -1)}
      */
     private ObjectProperty<Point3D> direction;
 
@@ -243,6 +121,7 @@ public class SpotLight extends LightBase {
         }
         return direction;
     }
+
 
     /**
      * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle
@@ -269,6 +148,7 @@ public class SpotLight extends LightBase {
         return innerAngle;
     }
 
+
     /**
      * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle
      * receive no light. Before this angle, the light intensity starts to increase.
@@ -293,6 +173,7 @@ public class SpotLight extends LightBase {
         }
         return outerAngle;
     }
+
 
     /**
      * The intensity falloff factor of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater
@@ -332,10 +213,6 @@ public class SpotLight extends LightBase {
     private void doUpdatePeer() {
         if (isDirty(DirtyBits.NODE_LIGHT)) {
             NGSpotLight peer = getPeer();
-            peer.setCa((float) getConstantAttenuation());
-            peer.setLa((float) getLinearAttenuation());
-            peer.setQa((float) getQuadraticAttenuation());
-            peer.setMaxRange((float) getMaxRange());
             peer.setDirection(getDirection());
             peer.setInnerAngle((float) getInnerAngle());
             peer.setOuterAngle((float) getOuterAngle());
