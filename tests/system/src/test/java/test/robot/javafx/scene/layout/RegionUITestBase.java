@@ -107,7 +107,12 @@ public abstract class RegionUITestBase extends VisualTestBase {
         try {
             assertColorEquals(expected, actual, tolerance);
         } catch (AssertionError error) {
-            throw new AssertionError(error.getMessage() + " at position x=" + x + ", y=" + y);
+            actual = getColorThreadSafe(x, y);
+            try {
+                assertColorEquals(expected, actual, tolerance);
+            } catch (AssertionError ex) {
+                throw new AssertionError(ex.getMessage() + " at position x=" + x + ", y=" + y);
+            }
         }
     }
 

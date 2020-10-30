@@ -667,6 +667,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     // TODO should test that cover causes other properties to be ignored
 
+    @Ignore("JDK-8255679")
     @Test(timeout = 20000)
     public void unalignedImage_Cover() {
         setStyle("-fx-background-color: black;" +
