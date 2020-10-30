@@ -10,7 +10,7 @@ extern jlong doEglCreateWindowSurface (jlong eglDisplay, jlong config,
 
 extern jlong doEglCreateContext (jlong eglDisplay, jlong config);
 
-extern jboolean doEglMakeCurrent (jlong eglDisplay, jlong drawSurface, 
+extern jboolean doEglMakeCurrent (jlong eglDisplay, jlong drawSurface,
      jlong readSurface, jlong eglContext);
 
 extern jboolean doEglSwapBuffers(jlong eglDisplay, jlong eglSurface);

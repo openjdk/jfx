@@ -108,6 +108,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MonocleGLFactory_nPopulateNativeC
 
     // from the eglWrapper.c
     void *handle = asPtr(libraryHandle);
+    if (libraryHandle == 0) {
+         handle = RTLD_DEFAULT;
+    }
 
     /* set function pointers */
     ctxInfo->glActiveTexture = (PFNGLACTIVETEXTUREPROC)
