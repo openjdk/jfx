@@ -58,9 +58,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "15"
-      BOOT_JDK_FILENAME: "openjdk-15_linux-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_linux-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "15.0.1"
+      BOOT_JDK_FILENAME: "openjdk-15.0.1_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.1/51f4f36ad4ef43e39d0dfdbaf6549e32/9/GPL/openjdk-15.0.1_linux-x64_bin.tar.gz"
 
     steps:
       - name: Checkout the source
@@ -129,9 +129,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "15"
-      BOOT_JDK_FILENAME: "openjdk-15_osx-x64_bin.tar.gz"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_osx-x64_bin.tar.gz"
+      BOOT_JDK_VERSION: "15.0.1"
+      BOOT_JDK_FILENAME: "openjdk-15.0.1_osx-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.1/51f4f36ad4ef43e39d0dfdbaf6549e32/9/GPL/openjdk-15.0.1_osx-x64_bin.tar.gz"
 
     steps:
       - name: Checkout the source
@@ -200,9 +200,9 @@ jobs:
       # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
       # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
       # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
-      BOOT_JDK_VERSION: "15"
-      BOOT_JDK_FILENAME: "openjdk-15_windows-x64_bin.zip"
-      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15/779bf45e88a44cbd9ea6621d33e33db1/36/GPL/openjdk-15_windows-x64_bin.zip"
+      BOOT_JDK_VERSION: "15.0.1"
+      BOOT_JDK_FILENAME: "openjdk-15.0.1_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.1/51f4f36ad4ef43e39d0dfdbaf6549e32/9/GPL/openjdk-15.0.1_windows-x64_bin.zip"
       # FIXME: hard-code the location and version of VS 2019 for now
       VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build"
       MSVC_VER: "14.27.29110"
