@@ -125,7 +125,9 @@ public class SpotLight extends PointLight {
 
     /**
      * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle
-     * receive the full light's intensity. Beyond this angle, the light intensity starts to drop.
+     * receive the full light's intensity. At larger angles, the light intensity starts to drop.
+     * <p>
+     * The angle is clamped between 0 and {@code outerAngle}.
      *
      * @defaultValue 0
      */
@@ -151,7 +153,9 @@ public class SpotLight extends PointLight {
 
     /**
      * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle
-     * receive no light. Before this angle, the light intensity starts to increase.
+     * receive no light. At smaller angles, the light intensity starts to increase.
+     * <p>
+     * The angle is clamped between {@code innerAngle} and 180.
      *
      * @defaultValue 90
      */
