@@ -42,6 +42,8 @@ import javafx.scene.control.Control;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -55,6 +57,32 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+// ------------------ TreeCell
+
+    @Test
+    public void testTreeCellReplaceTreeViewWithNull() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        TreeView<Object> treeView = new TreeView<>();
+        cell.updateTreeView(treeView);
+        installDefaultSkin(cell);
+        cell.updateTreeView(null);
+        // 8253634: updating the old treeView must not throw NPE in skin
+        treeView.setFixedCellSize(100);
+    }
+
+    @Test
+    public void testTreeCellPrefHeightOnReplaceTreeView() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        cell.updateTreeView(new TreeView<>());
+        installDefaultSkin(cell);
+        TreeView<Object> treeView = new TreeView<>();
+        treeView.setFixedCellSize(100);
+        cell.updateTreeView(treeView);
+        assertEquals("fixed cell set to value of new treeView",
+                cell.getTreeView().getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+    }
 
 // ------------------ ListCell
 
