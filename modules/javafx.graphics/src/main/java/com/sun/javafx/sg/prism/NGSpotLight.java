@@ -86,9 +86,11 @@ public class NGSpotLight extends NGPointLight {
     }
 
     public void setInnerAngle(float innerAngle) {
-        innerAngle = innerAngle < 0 ? 0 : innerAngle;
-        this.innerAngle = Utils.clamp(0, innerAngle, outerAngle);
-        visualsChanged();
+        innerAngle = Utils.clamp(0, innerAngle, 180);
+        if (this.innerAngle != innerAngle) {
+            this.innerAngle = innerAngle;
+            visualsChanged();
+        }
     }
 
 
@@ -99,8 +101,11 @@ public class NGSpotLight extends NGPointLight {
     }
 
     public void setOuterAngle(float outerAngle) {
-        this.outerAngle = outerAngle < innerAngle ? innerAngle : outerAngle; // limit to 360?
-        visualsChanged();
+        outerAngle = Utils.clamp(0, outerAngle, 180);
+        if (this.outerAngle != outerAngle) {
+            this.outerAngle = outerAngle;
+            visualsChanged();
+        }
     }
 
 

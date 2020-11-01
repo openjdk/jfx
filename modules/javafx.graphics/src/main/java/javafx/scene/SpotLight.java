@@ -51,7 +51,12 @@ import javafx.scene.paint.PhongMaterial;
  * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
  * behavior of the drop.
  * <p>
- * <img src="doc-files/Spotlight.png" alt="Image of the Spotlight">
+ * <img src="doc-files/spotlight.png" alt="Image of the Spotlight">
+ * <p>
+ * While {@code innerAngle} should normally be smaller than {@code outerAngle}, it's possible to create a ring light
+ * effect by setting {@code innerAngle} to be larger than {@code outerAngle} and lowering {@code maxRange}.
+ * <p>
+ * <img src="doc-files/spotlightRing.png" alt="Image of the ring light effect">
  *
  * @since 16
  * @see PhongMaterial
@@ -127,7 +132,7 @@ public class SpotLight extends PointLight {
      * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle
      * receive the full light's intensity. At larger angles, the light intensity starts to drop.
      * <p>
-     * The angle is clamped between 0 and {@code outerAngle}.
+     * The angle is clamped between 0 and 180.
      *
      * @defaultValue 0
      */
@@ -155,7 +160,7 @@ public class SpotLight extends PointLight {
      * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle
      * receive no light. At smaller angles, the light intensity starts to increase.
      * <p>
-     * The angle is clamped between {@code innerAngle} and 180.
+     * The angle is clamped between 0 and 180.
      *
      * @defaultValue 90
      */
