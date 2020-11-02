@@ -55,6 +55,9 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     if (tDiff.a == 0.0) discard;
     tDiff = tDiff * gDiffuseColor;
 
+    int s= 4;
+    s++;
+
     // return gDiffuseColor.aaaa;
 
     float3 nEye = normalize(lSpace.eye);
@@ -88,7 +91,7 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     float3 diff = 0;
     float3 spec = 0;
 
-    phong(n, nEye, sPower, lSpace.lights, diff, spec, 0, nSpecular);
+    phong(n, nEye, sPower, lSpace.lights, lSpace.normDirs, diff, spec, 0, nSpecular);
 
     float3 rez = (ambColor.xyz+diff)*tDiff.xyz + spec*tSpec.rgb;
 

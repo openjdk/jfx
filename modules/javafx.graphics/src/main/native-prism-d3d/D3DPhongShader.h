@@ -33,10 +33,12 @@
 // 5 lights (3 in use, 2 reserved)
 // with 2 registers = 10 registers
 #define VSR_LIGHTS 10
+// 5 light directions
+#define VSR_DIRS 20
 // 8 ambient points + 2 coords : 10 registers
-#define VSR_AMBIENTCOLOR 20
+#define VSR_AMBIENTCOLOR 25
 // world
-#define VSR_WORLDMATRIX 30
+#define VSR_WORLDMATRIX 35
 
 // PSR implies Pixel Shader Registers
 // we have 224 float constants for ps 3.0
@@ -45,9 +47,7 @@
 #define PSR_LIGHTCOLOR 4         // 3 lights + 2 reserve
 #define PSR_LIGHT_ATTENUATION 9  // 3 lights + 2 reserve
 #define PSR_LIGHT_RANGE 14       // 3 lights + 2 reserve
-#define PSR_LIGHT_DIRECTION 19
-#define PSR_SPOTLIGHT_FACTORS 24 // 3 lights + 2 reserve
-#define PSR_LIGHT_TYPE 29        // 3 lights + 2 reserve
+#define PSR_SPOTLIGHT_FACTORS 19 // 3 lights + 2 reserve
 
 // SR implies Sampler Registers
 #define SR_DIFFUSEMAP 0

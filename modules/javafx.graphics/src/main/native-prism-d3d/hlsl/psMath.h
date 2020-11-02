@@ -58,7 +58,7 @@ float4 retNormal(float3 n) { return float4( n*0.5+0.5,1); }
 
 float4 retr(float x) { return float4(x.xxx,1); }
 
-void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out float3 d, in out float3 s) {
+void computeLight(float i, float3 n, float3 refl, float power, float3 L, float3 normDir, in out float3 d, in out float3 s) {
     float dist = length(L);
     if (dist > gLightRange[i].x) {
         return;
@@ -68,11 +68,11 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
     float spotlightFactor = 1;
     float falloff = gSpotLightFactors[i].z;
     if (falloff != 0) {  // possible optimization
-        float cosA = dot(gLightNormDirection[i].xyz, l);
-        float cosHalfOuter = gSpotLightFactors[i].x;
-        float denom = gSpotLightFactors[i].y;
-        float base = saturate((cosA - cosHalfOuter) / denom);
-        spotlightFactor = pow(base, falloff);
+        float cosAngle = dot(normDir, l);
+        float cosOuter = gSpotLightFactors[i].x;
+        float denom = gSpotLightFactors[i].y; // cosHalfInner - cosHalfOuter
+        float base = (cosAngle - cosOuter) / denom;
+        spotlightFactor = pow(saturate(base), falloff);
     }
 
     float ca = gLightAttenuation[i].x;
@@ -85,10 +85,10 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, in out 
     s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
 }
 
-void phong(float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
+void phong(float3 n, float3 e, float power, in float4 L[LocalBump::nLights], in float4 normDirs[LocalBump::nLights],
         in out float3 d, in out float3 s, int _s, int _e) {
     float3 refl = reflect(e, n);
     for (int i = _s; i < _e; i++) {
-        computeLight(i, n, refl, power, L[i].xyz, d, s);
+        computeLight(i, n, refl, power, L[i].xyz, normDirs[i].xyz, d, s);
     }
 }

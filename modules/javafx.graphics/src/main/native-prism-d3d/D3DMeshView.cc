@@ -39,7 +39,6 @@ D3DMeshView::~D3DMeshView() {
     // The freeing of native resources is handled by its Java layer.
     mesh = NULL;
     material = NULL;
-
 }
 
 D3DMeshView::D3DMeshView(D3DContext *ctx, D3DMesh *pMesh) {
@@ -166,6 +165,27 @@ void D3DMeshView::render() {
         status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[i].position, 1));
     }
 
+    float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 coords + 1 padding)
+    for (int i = 0, d = 0; i < MAX_NUM_LIGHTS; i++) {
+        if (lights[i].type == D3DLight::Spot) {
+            float dirX = lights[i].direction[0];
+            float dirY = lights[i].direction[1];
+            float dirZ = lights[i].direction[2];
+            float length = sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+            lighsNormDirection[d++] = dirX / length;
+            lighsNormDirection[d++] = dirY / length;
+            lighsNormDirection[d++] = dirZ / length;
+            lighsNormDirection[d++] = 0;
+        }
+    }
+
+    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_DIRS, lighsNormDirection, 1));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_DIRS) failed !!!" << endl;
+        return;
+    }
+
     status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_AMBIENTCOLOR, ambientLightColor, 1));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_AMBIENTCOLOR) failed !!!" << endl;
@@ -187,10 +207,8 @@ void D3DMeshView::render() {
     float lightsColor[MAX_NUM_LIGHTS * 4];        // 3 lights x (3 color + 1 padding)
     float lightsAttenuation[MAX_NUM_LIGHTS * 4];  // 3 lights x (3 attenuation factors + 1 padding)
     float lightsRange[MAX_NUM_LIGHTS * 4];        // 3 lights x (1 maxRange + 3 padding)
-    float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 direction + 1 padding)
     float spotLightsFactors[MAX_NUM_LIGHTS * 4];  // 3 lights x (2 angles + 1 falloff + 1 padding)
-    float lightType[MAX_NUM_LIGHTS * 4];            // 3 lights x (1 type + 3 padding)
-    for (int i = 0, c = 0, a = 0, r = 0, d = 0, s = 0, t = 0; i < MAX_NUM_LIGHTS; i++) {
+    for (int i = 0, c = 0, a = 0, r = 0, s = 0, t = 0; i < MAX_NUM_LIGHTS; i++) {
         float w = lights[i].w;
         lightsColor[c++] = lights[i].color[0] * w;
         lightsColor[c++] = lights[i].color[1] * w;
@@ -207,66 +225,47 @@ void D3DMeshView::render() {
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
 
+        // I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
         if (lights[i].type == D3DLight::Spot) {
-            float dirX = lights[i].direction[0];
-            float dirY = lights[i].direction[1];
-            float dirZ = lights[i].direction[2];
-            float length = sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-
-            lighsNormDirection[d++] = dirX / length;
-            lighsNormDirection[d++] = dirY / length;
-            lighsNormDirection[d++] = dirZ / length;
-            lighsNormDirection[d++] = 0;
-        }
-
-        if (lights[i].type == D3DLight::Spot) {
-            float cosHalfInner = cos(lights[i].innerAngle * M_PI / 180 / 2);
-            float cosHalfOuter = cos(lights[i].outerAngle * M_PI / 180 / 2);
-            spotLightsFactors[s++] = cosHalfOuter;
-            spotLightsFactors[s++] = cosHalfInner - cosHalfOuter;
+            float cosInner = cos(lights[i].innerAngle * M_PI / 180);
+            float cosOuter = cos(lights[i].outerAngle * M_PI / 180);
+            spotLightsFactors[s++] = cosOuter;
+            spotLightsFactors[s++] = cosInner - cosOuter;
             spotLightsFactors[s++] = lights[i].falloff;
             spotLightsFactors[s++] = 0;
         } else {
-            spotLightsFactors[s++] = 1;
             spotLightsFactors[s++] = 0;
+            spotLightsFactors[s++] = 1;
             spotLightsFactors[s++] = 0;
             spotLightsFactors[s++] = 0;
         }
 
-        lightType[t++] = lights[i].type;
-        lightType[t++] = 0;
-        lightType[t++] = 0;
-        lightType[t++] = 0;
+        cout << lights[i].type << " : " << lights[i].color[0] << ", " << lights[i].color[1] << ", " << lights[i].color[2] << endl;
+
     }
+    cout << "--------------------" << endl;
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHTCOLOR) failed !!!" << endl;
         return;
     }
+
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, lightsAttenuation, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION) failed !!!" << endl;
         return;
     }
+
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_RANGE, lightsRange, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_RANGE) failed !!!" << endl;
         return;
     }
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_DIRECTION, lighsNormDirection, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_DIRECTION) failed !!!" << endl;
-        return;
-    }
+
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS, spotLightsFactors, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS) failed !!!" << endl;
-        return;
-    }
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_TYPE, lightType, MAX_NUM_LIGHTS));
-    if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_TYPE) failed !!!" << status << endl;
         return;
     }
 
