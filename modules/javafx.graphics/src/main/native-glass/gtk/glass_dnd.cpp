@@ -837,11 +837,7 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
 
     is_dnd_owner = TRUE;
 
-#if GTK_CHECK_VERSION(3, 10, 0)
-    context = gtk_drag_begin_with_coordinates(drag_widget, tlist, actions, 1, NULL, x, y);
-#else
     context = gtk_drag_begin(drag_widget, tlist, actions, 1, NULL);
-#endif
 
     gtk_target_list_unref(tlist);
 }
