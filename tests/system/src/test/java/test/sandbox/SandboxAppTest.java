@@ -28,6 +28,7 @@ package test.sandbox;
 import com.sun.javafx.PlatformUtil;
 import java.util.ArrayList;
 import junit.framework.AssertionFailedError;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -95,6 +96,13 @@ public class SandboxAppTest {
            default:
                 throw new AssertionFailedError(testAppName
                         + ": Unexpected error exit: " + retVal);
+        }
+    }
+
+    @Before
+    public void setupEach() {
+        if (PlatformUtil.isWindows()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8255486
         }
     }
 

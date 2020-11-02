@@ -568,13 +568,15 @@ public class Spinner<T> extends Control {
      * {@link SpinnerValueFactory#setValue(Object)} method. If the value
      * is valid, it will remain as the value. If it is invalid, the value factory
      * will need to react accordingly and back out this change.
+     *
+     * @defaultValue {@code false}
      */
     private BooleanProperty editable;
     public final void setEditable(boolean value) {
         editableProperty().set(value);
     }
     public final boolean isEditable() {
-        return editable == null ? true : editable.get();
+        return editable == null ? false : editable.get();
     }
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -611,6 +613,7 @@ public class Spinner<T> extends Control {
      * {@code null} if no prompt text is displayed.
      * @return the prompt text property
      * @since 9
+     * @defaultValue Empty string
      */
     public final StringProperty promptTextProperty() { return getEditor().promptTextProperty(); }
     public final String getPromptText() { return getEditor().getPromptText(); }
@@ -625,7 +628,7 @@ public class Spinner<T> extends Control {
      * before the next value steps. Successive step duration is set using
      * {@link #repeatDelayProperty() repeat delay}.
      *
-     * @return inital delay property
+     * @return initial delay property
      * @since 11
      * @defaultValue 300ms
      */

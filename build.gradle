@@ -1936,8 +1936,8 @@ allprojects {
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
-        scanForTestClasses = false;
-        include("**/*Test.*");
+        scanForTestClasses = true;
+        include("**/*.*");
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -2447,8 +2447,8 @@ project(":graphics") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
-        scanForTestClasses = false
-        include "**/*Test.*"
+        scanForTestClasses = true
+        include "**/*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }

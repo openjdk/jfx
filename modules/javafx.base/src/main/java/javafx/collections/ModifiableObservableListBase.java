@@ -88,14 +88,15 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
 
     @Override
     public boolean setAll(Collection<? extends E> col) {
+        if (isEmpty() && col.isEmpty()) return false;
         beginChange();
         try {
             clear();
             addAll(col);
+            return true;
         } finally {
             endChange();
         }
-        return true;
     }
 
     @Override

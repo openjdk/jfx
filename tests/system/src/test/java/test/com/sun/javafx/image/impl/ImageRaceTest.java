@@ -65,7 +65,11 @@ public class ImageRaceTest {
         public void run() {
             if (verbose) System.err.println(getName()+" started");
             running = true;
-            while (!ready) { yield(); }
+            while (!ready) {
+                try {
+                    sleep(1);
+                } catch (InterruptedException ex) {}
+            }
             init.get();
             if (verbose) System.err.println(getName()+" done");
         }
@@ -76,7 +80,9 @@ public class ImageRaceTest {
         for (Initializer i : initalizers) {
             i.start();
             while (!i.isRunning() && System.currentTimeMillis() < limit) {
-                Thread.yield();
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {}
             }
             if (!i.isRunning()) {
                 throw new RuntimeException("Initializer "+i+" never started");

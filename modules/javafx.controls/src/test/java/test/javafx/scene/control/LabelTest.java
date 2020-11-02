@@ -147,7 +147,7 @@ public class LabelTest {
         assertNull(label.getLabelFor());
     }
 
-    @Test public void impl_cssSettable_AlwaysReturnsFalseForLabelFor() {
+    @Test public void CssMetaData_isSettable_AlwaysReturnsFalseForLabelFor() {
         try {
             CssMetaData styleable = ((StyleableProperty)label.labelForProperty()).getCssMetaData();
             assertNull(styleable);

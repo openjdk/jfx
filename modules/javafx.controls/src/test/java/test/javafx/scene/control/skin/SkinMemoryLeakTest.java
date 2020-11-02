@@ -42,13 +42,10 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactor
 
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ButtonBar;
-import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.DatePicker;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.Pagination;
@@ -63,8 +60,6 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToolBar;
-import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeView;
@@ -128,7 +123,6 @@ public class SkinMemoryLeakTest {
                 TextArea.class,
                 // @Ignore("8240506")
                 TextField.class,
-                TreeCell.class,
                 TreeTableRow.class,
                 TreeTableView.class,
                 TreeView.class

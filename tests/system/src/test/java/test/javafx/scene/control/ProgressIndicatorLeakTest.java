@@ -43,6 +43,7 @@ import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.util.memory.JMemoryBuddy;
 
 public class ProgressIndicatorLeakTest {
 
@@ -81,23 +82,7 @@ public class ProgressIndicatorLeakTest {
 
     @Test
     public void memoryTest() throws Exception {
-        assertCollectable(detIndicator);
-    }
-
-    public static void assertCollectable(WeakReference weakReference) throws Exception {
-        int counter = 0;
-
-        System.gc();
-        System.runFinalization();
-
-        while (counter < 10 && weakReference.get() != null) {
-            Thread.sleep(100);
-            counter = counter + 1;
-            System.gc();
-            System.runFinalization();
-        }
-
-        Assert.assertNull(weakReference.get());
+        JMemoryBuddy.assertCollectable(detIndicator);
     }
 
     @AfterClass
