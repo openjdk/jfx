@@ -213,6 +213,8 @@ public class Region extends Parent {
 
     static Vec2d TEMP_VEC2D = new Vec2d();
 
+    private static final double EPSILON = 1e-14;
+
     /***************************************************************************
      *                                                                         *
      * Static convenience methods for layout                                   *
@@ -294,12 +296,32 @@ public class Region extends Parent {
         return Math.round(value * scale) / scale;
     }
 
+    /**
+     * The value is floored for a given scale using Math.floor.
+     * This method guarantees that:
+     *
+     * scaledFloor(scaledFloor(value, scale), scale) == scaledFloor(value, scale)
+     *
+     * @param value The value that needs to be floored
+     * @param scale The scale that will be used
+     * @return value floored with scale
+     */
     private static double scaledFloor(double value, double scale) {
-        return Math.floor(value * scale) / scale;
+        return Math.floor(value * scale + EPSILON) / scale;
     }
 
+    /**
+     * The value is ceiled with a given scale using Math.ceil.
+     * This method guarantees that:
+     *
+     * scaledCeil(scaledCeil(value, scale), scale) == scaledCeil(value, scale)
+     *
+     * @param value The value that needs to be ceiled
+     * @param scale The scale that will be used
+     * @return value ceiled with scale
+     */
     private static double scaledCeil(double value, double scale) {
-        return Math.ceil(value * scale) / scale;
+        return Math.ceil(value * scale - EPSILON) / scale;
     }
 
     /**
@@ -363,25 +385,46 @@ public class Region extends Parent {
         return snapToPixel ? scaledRound(value, snapScale) : value;
     }
 
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionX(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleX();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
+
+    /**
+     * If snapToPixel is true, then the value is either floored (positive values) or
+     * ceiled (negative values) with a scale. This method guarantees that:
+     *
+     * snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)
+     *
+     * @param value The value that needs to be snapped
+     * @param snapToPixel Whether to snap to pixel
+     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
+     */
     private double snapPortionY(double value, boolean snapToPixel) {
         if (!snapToPixel || value == 0) return value;
         double s = getSnapScaleY();
         value *= s;
         if (value > 0) {
-            value = Math.max(1, Math.floor(value));
+            value = Math.max(1, Math.floor(value + EPSILON));
         } else {
-            value = Math.min(-1, Math.ceil(value));
+            value = Math.min(-1, Math.ceil(value - EPSILON));
         }
         return value / s;
     }
