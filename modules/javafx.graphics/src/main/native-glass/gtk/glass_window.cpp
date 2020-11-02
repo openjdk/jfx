@@ -1344,6 +1344,10 @@ void WindowContextTop::set_minimized(bool minimize) {
 void WindowContextTop::set_maximized(bool maximize) {
     is_maximized = maximize;
     if (maximize) {
+        // enable the functionality
+        GdkWMFunction wmf = (GdkWMFunction)(gdk_windowManagerFunctions | GDK_FUNC_MAXIMIZE);
+        gdk_window_set_functions(gdk_window, wmf);
+
         ensure_window_size();
         gtk_window_maximize(GTK_WINDOW(gtk_widget));
     } else {
