@@ -71,6 +71,7 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
         }
     }
 
+    @Override
     public boolean swapBuffers() {
         boolean result = false;
         synchronized (NativeScreen.framebufferSwapLock) {
