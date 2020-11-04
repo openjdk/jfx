@@ -61,6 +61,7 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
         return nPlatformGetNativeWindow(displayID);
     }
 
+    @Override
     public void enableRendering(boolean flag) {
         if (flag) {
             nEglMakeCurrent(eglDisplay, eglSurface, eglSurface,
@@ -72,7 +73,7 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
 
     public boolean swapBuffers() {
         boolean result = false;
-        synchronized(NativeScreen.framebufferSwapLock) {
+        synchronized (NativeScreen.framebufferSwapLock) {
             result = nEglSwapBuffers(eglDisplay, eglSurface);
         }
         return result;
