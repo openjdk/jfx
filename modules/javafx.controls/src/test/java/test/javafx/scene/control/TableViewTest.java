@@ -32,6 +32,8 @@ import static javafx.collections.FXCollections.*;
 import static org.junit.Assert.*;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
@@ -40,6 +42,9 @@ import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.InvalidationListener;
+import javafx.collections.ObservableSet;
+import javafx.collections.SetChangeListener;
+import javafx.css.PseudoClass;
 import javafx.scene.Node;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -5469,6 +5474,57 @@ public class TableViewTest {
 
         // for the child header, we expect [column-header table-column child]
         assertArrayEquals(new String[] {"column-header", "table-column", "child"}, childHeader.getStyleClass().toArray());
+
+        sl.dispose();
+    }
+
+    @Test
+    // see JDK-8177945
+    public void test_addingNewItemsDoesNotChangePseudoClassSelectedState() {
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(personTestData);
+        table.getColumns().add(firstNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(table);
+
+        table.scrollTo(3);
+        sm.select(3);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(1, sm.getSelectedCells().size());
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(table, 3, 0);
+        assertTrue(cell.isSelected());
+
+        ObservableSet<PseudoClass> pseudoClassStates = cell.getPseudoClassStates();
+        String selectedState = "selected";
+        assertTrue(pseudoClassStates.stream().anyMatch(p -> selectedState.equals(p.getPseudoClassName())));
+
+        AtomicInteger counter = new AtomicInteger();
+        AtomicBoolean selected = new AtomicBoolean(true);
+        pseudoClassStates.addListener((SetChangeListener<PseudoClass>) change -> {
+            if (selected.get() && pseudoClassStates.stream().noneMatch(p -> selectedState.equals(p.getPseudoClassName()))) {
+                counter.incrementAndGet(); // deselected
+                selected.set(false);
+            } else if (!selected.get() && pseudoClassStates.stream().anyMatch(p -> selectedState.equals(p.getPseudoClassName()))) {
+                counter.incrementAndGet(); // selected
+                selected.set(true);
+            }
+        });
+
+        Toolkit.getToolkit().firePulse();
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add(new Person("Test", i));
+            Toolkit.getToolkit().firePulse();
+            assertEquals(0, counter.get());
+        }
 
         sl.dispose();
     }
