@@ -48,6 +48,9 @@ public class EGLAcceleratedScreen extends AcceleratedScreen {
         nEglInitialize(eglDisplay);
         nEglBindApi(EGL.EGL_OPENGL_ES_API);
         long eglConfig = nEglChooseConfig(eglDisplay, attributes);
+        if (eglConfig == -1) {
+            throw new IllegalArgumentException("Could not create an EGLChooseConfig");
+        }
         eglSurface = nEglCreateWindowSurface(eglDisplay, eglConfig, eglWindowHandle);
         eglContext = nEglCreateContext(eglDisplay, eglConfig);
     }

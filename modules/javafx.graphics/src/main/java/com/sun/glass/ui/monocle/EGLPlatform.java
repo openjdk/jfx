@@ -34,13 +34,20 @@ public class EGLPlatform extends LinuxPlatform {
     public EGLPlatform() {
         String lib = System.getProperty("monocle.egl.lib");
         if (lib != null) {
-            LinuxSystem.getLinuxSystem().dlopen(lib, LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            long handle = LinuxSystem.getLinuxSystem().dlopen(lib, LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            if (handle == 0) {
+                throw new UnsatisfiedLinkError("EGLPlatform failed to load the requested library " + lib);
+            }
         }
     }
 
     @Override
     public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes) throws GLException {
-        return new EGLAcceleratedScreen(attributes);
+        if (accScreen == null) {
+            accScreen = new EGLAcceleratedScreen(attributes);
+        }
+        return accScreen;
+
     }
 
 }

@@ -54,6 +54,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nE
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglChooseConfig
     (JNIEnv *env, jclass clazz, jlong eglDisplay, jintArray attribs) {
     jint *attrArray = (*env)->GetIntArrayElements(env, attribs, JNI_FALSE);
+    if (attrArray == 0) {
+        fprintf(stderr, "Fatal error getting int* from int[]\n");
+        return -1;
+    }
     jlong answer = doEglChooseConfig(eglDisplay, attrArray);
     (*env)->ReleaseIntArrayElements(env, attribs, attrArray, JNI_ABORT);
     return answer;
