@@ -24,6 +24,7 @@
  */
 package test.javafx.stage;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
@@ -41,12 +42,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.*;
 
 public class MaximizeUndecorated {
     static CountDownLatch startupLatch;
     static Stage stage;
-    // might be offscreen and that's ok
-    static final int POS = 1000;
+    static final int POS = 500;
 
     public static class TestApp extends Application {
         @Override
@@ -78,6 +79,8 @@ public class MaximizeUndecorated {
 
     @Test
     public void testMaximize() throws Exception {
+        // temporary until JDK-8255835 is fixed
+        assumeTrue(!PlatformUtil.isMac());
         Util.sleep(200);
 
         boolean movedToTopCorner = stage.getY() != POS && stage.getX() != POS;
