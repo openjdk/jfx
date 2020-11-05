@@ -35,7 +35,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nPlat
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nGetEglDisplayHandle
     (JNIEnv *env, jobject obj) {
-    long answer = getEGLDisplayHandle();
+    long answer = getEglDisplayHandle();
     return (jlong)answer;
 }
 
