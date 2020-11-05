@@ -25,18 +25,18 @@
 #ifndef __EGL_EXT__
 #define __EGL_EXT__
 #include <jni.h>
-extern long getNativeWindowHandle(const char *v);
-extern long getEGLDisplayHandle();
+extern jlong getNativeWindowHandle(const char *v);
+extern jlong getEglDisplayHandle();
 extern jboolean doEglInitialize(void* handle);
 extern jboolean doEglBindApi(int api);
-extern jlong doEglChooseConfig (long eglDisplay, int* attribs);
+extern jlong doEglChooseConfig (jlong eglDisplay, int* attribs);
 
-extern jlong doEglCreateWindowSurface (jlong eglDisplay, jlong config,
+extern jlong doEglCreateWindowSurface(jlong eglDisplay, jlong config,
      jlong nativeWindow);
 
-extern jlong doEglCreateContext (jlong eglDisplay, jlong config);
+extern jlong doEglCreateContext(jlong eglDisplay, jlong config);
 
-extern jboolean doEglMakeCurrent (jlong eglDisplay, jlong drawSurface,
+extern jboolean doEglMakeCurrent(jlong eglDisplay, jlong drawSurface,
      jlong readSurface, jlong eglContext);
 
 extern jboolean doEglSwapBuffers(jlong eglDisplay, jlong eglSurface);
