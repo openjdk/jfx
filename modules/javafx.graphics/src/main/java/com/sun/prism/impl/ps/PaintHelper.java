@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -750,6 +750,11 @@ class PaintHelper {
         Affine3D at = scratchXform3D;
         g.getPaintShaderTransform(at);
 
+        BaseTransform paintXform = paint.getPatternTransformNoClone();
+        if (paintXform != null) {
+            at.concatenate(paintXform);
+        }
+
         at.translate(x1, y1);
         at.scale(x2 - x1, y2 - y1);
         // Adjustment for case when WrapMode.REPEAT is simulated
@@ -849,7 +854,8 @@ class PaintHelper {
 
         // calculate plane equation constants
         AffineBase ret;
-        if (renderTx.isIdentity()) {
+        BaseTransform paintXform = paint.getPatternTransformNoClone();
+        if (paintXform.isIdentity() && renderTx.isIdentity()) {
             Affine2D at = scratchXform2D;
 
             at.setToTranslation(px, py);
@@ -858,6 +864,7 @@ class PaintHelper {
         } else {
             Affine3D at = scratchXform3D;
             at.setTransform(renderTx);
+            at.concatenate(paintXform);
 
             at.translate(px, py);
             at.scale(pw, ph);
