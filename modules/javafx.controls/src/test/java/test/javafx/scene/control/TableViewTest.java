@@ -5478,8 +5478,8 @@ public class TableViewTest {
         sl.dispose();
     }
 
-    @Test
     // see JDK-8177945
+    @Test
     public void test_addingNewItemsDoesNotChangePseudoClassSelectedState() {
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
