@@ -192,11 +192,12 @@ WindowContext::WindowContext(jobject _jwindow, WindowContext *_owner, long _scre
 
     gtk_widget = gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
 
-// Not useful, see: https://developer.gnome.org/gtk3/stable/GtkWindow.html#gtk-window-set-wmclass
-//    if (gchar * app_name = get_application_name()) {
-//        gtk_window_set_wmclass(GTK_WINDOW(gtk_widget), app_name, app_name);
-//        g_free(app_name);
-//    }
+    // This allows to group Windows (based on WM_CLASS). Use the fully qualified
+    // JavaFX Application class as StartupWMClass on the .desktop launcher
+    if (gchar * app_name = get_application_name()) {
+        gtk_window_set_wmclass(GTK_WINDOW(gtk_widget), app_name, app_name);
+        g_free(app_name);
+    }
 
     if (owner) {
         owner->add_child(this);
