@@ -1893,9 +1893,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void positionCell(T cell, double position) {
         if (isVertical()) {
             cell.setLayoutX(0);
-            cell.setLayoutY(snapSizeY(position));
+            cell.setLayoutY(snapSpaceY(position));
         } else {
-            cell.setLayoutX(snapSizeX(position));
+            cell.setLayoutX(snapSpaceX(position));
             cell.setLayoutY(0);
         }
     }

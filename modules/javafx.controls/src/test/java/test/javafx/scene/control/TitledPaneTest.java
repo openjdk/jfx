@@ -211,7 +211,7 @@ public class TitledPaneTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenAnimatedIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenAnimatedIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)titledPane.animatedProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
@@ -219,12 +219,12 @@ public class TitledPaneTest {
         assertFalse(styleable.isSettable(titledPane));
     }
 
-    @Test public void whenAnimatedIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenAnimatedIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)titledPane.animatedProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(titledPane));
     }
 
-    @Test public void whenCollapsibleIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenCollapsibleIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)titledPane.collapsibleProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(titledPane));
         BooleanProperty other = new SimpleBooleanProperty();
@@ -232,7 +232,7 @@ public class TitledPaneTest {
         assertFalse(styleable.isSettable(titledPane));
     }
 
-    @Test public void whenCollapsibleIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenCollapsibleIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)titledPane.collapsibleProperty()).getCssMetaData();
         ((StyleableProperty)titledPane.collapsibleProperty()).applyStyle(null, Boolean.FALSE);
         assertTrue(styleable.isSettable(titledPane));

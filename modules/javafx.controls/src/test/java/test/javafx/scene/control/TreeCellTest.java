@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static javafx.scene.control.ControlShim.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -730,4 +731,27 @@ public class TreeCellTest {
         TreeCell cell = new TreeCell();
         cell.setSkin(new TreeCellSkin(cell));
     }
+
+    /**
+     * Test that min/max/pref height respect fixedCellSize.
+     * Sanity test when fixing JDK-8253634.
+     */
+    @Test
+    public void testTreeCellHeights() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        TreeView<Object> treeView = new TreeView<>();
+        cell.updateTreeView(treeView);
+        installDefaultSkin(cell);
+        treeView.setFixedCellSize(100);
+        assertEquals("pref height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+        assertEquals("min height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.minHeight(-1), 1);
+        assertEquals("max height must be fixedCellSize",
+                treeView.getFixedCellSize(),
+                cell.maxHeight(-1), 1);
+    }
+
 }

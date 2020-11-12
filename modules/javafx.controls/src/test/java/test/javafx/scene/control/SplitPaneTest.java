@@ -212,7 +212,7 @@ public class SplitPaneTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)splitPane.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(splitPane));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
@@ -220,7 +220,7 @@ public class SplitPaneTest {
         assertFalse(styleable.isSettable(splitPane));
     }
 
-    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)splitPane.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(splitPane));
     }

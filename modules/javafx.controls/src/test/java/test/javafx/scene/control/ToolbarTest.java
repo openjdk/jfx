@@ -126,7 +126,7 @@ public class ToolbarTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolBar));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
@@ -134,7 +134,7 @@ public class ToolbarTest {
         assertFalse(styleable.isSettable(toolBar));
     }
 
-    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolBar.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolBar));
     }

@@ -28,6 +28,7 @@ package test.javafx.stage;
 import javafx.application.Platform;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
@@ -42,6 +43,7 @@ public class FocusedWindowMonocleTest extends FocusedWindowTestBase {
         initFXBase();
     }
 
+    @Ignore("JDK-8254956")
     @Test
     public void testClosedFocusedStageLeak() throws Exception {
         testClosedFocusedStageLeakBase();

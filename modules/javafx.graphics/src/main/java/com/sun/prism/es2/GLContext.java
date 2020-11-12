@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -252,7 +252,8 @@ abstract class GLContext {
     private static native void nSetAmbientLight(long nativeCtxInfo, long nativeMeshViewInfo,
             float r, float g, float b);
     private static native void nSetPointLight(long nativeCtxInfo, long nativeMeshViewInfo,
-            int index, float x, float y, float z, float r, float g, float b, float w);
+            int index, float x, float y, float z, float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange);
     private static native void nRenderMeshView(long nativeCtxInfo, long nativeMeshViewInfo);
     private static native void nBlit(long nativeCtxInfo, int srcFBO, int dstFBO,
             int srcX0, int srcY0, int srcX1, int srcY1,
@@ -808,8 +809,9 @@ abstract class GLContext {
         nSetAmbientLight(nativeCtxInfo, nativeMeshViewInfo, r, g, b);
     }
 
-    void setPointLight(long nativeMeshViewInfo, int index, float x, float y, float z, float r, float g, float b, float w) {
-        nSetPointLight(nativeCtxInfo, nativeMeshViewInfo, index, x, y, z, r, g, b, w);
+    void setPointLight(long nativeMeshViewInfo, int index, float x, float y, float z, float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange) {
+        nSetPointLight(nativeCtxInfo, nativeMeshViewInfo, index, x, y, z, r, g, b, w, ca, la, qa, maxRange);
     }
 
     void renderMeshView(long nativeMeshViewInfo) {

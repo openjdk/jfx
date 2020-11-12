@@ -74,7 +74,7 @@ public class XYChartTest extends ChartTestBase {
         startApp();
         pulse();
         yaxis.getTickMarks().toString();
-        System.out.println(" --- "+yaxis.getTickMarks().toString());
+        //System.out.println(" --- "+yaxis.getTickMarks().toString());
     }
 
     // RT-22166

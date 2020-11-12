@@ -106,8 +106,8 @@ public class SeparatorTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - is HORIZONTAL by default                                                  *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -137,7 +137,7 @@ public class SeparatorTest {
         assertSame(Orientation.VERTICAL, separator.getOrientation());
     }
 
-    @Test public void whenOrientationIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenOrientationIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<Orientation> other = new SimpleObjectProperty<Orientation>(Orientation.VERTICAL);
@@ -145,7 +145,7 @@ public class SeparatorTest {
         assertFalse(styleable.isSettable(separator));
     }
 
-    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenOrientationIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
     }
@@ -158,7 +158,7 @@ public class SeparatorTest {
     @Ignore("This is an unreliable test because it uses the string version " +
             "of the function instead of the other, and no check is made " +
             "for bits set")
-    @Test public void whenSettingOrientationToItsExistingValue_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenSettingOrientationToItsExistingValue_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
         separator.setOrientation(Orientation.HORIZONTAL);
@@ -183,8 +183,8 @@ public class SeparatorTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - is CENTER by default                                                      *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -214,7 +214,7 @@ public class SeparatorTest {
         assertSame(HPos.RIGHT, separator.getHalignment());
     }
 
-    @Test public void whenHalignmentIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenHalignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)separator.halignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<HPos> other = new SimpleObjectProperty<HPos>(HPos.RIGHT);
@@ -222,7 +222,7 @@ public class SeparatorTest {
         assertFalse(styleable.isSettable(separator));
     }
 
-    @Test public void whenHalignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenHalignmentIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.halignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
     }
@@ -240,8 +240,8 @@ public class SeparatorTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - is CENTER by default                                                      *
-     *  - if bound, impl_cssSettable returns false                                  *
-     *  - if specified via CSS and not bound, impl_cssSettable returns true         *
+     *  - if bound, CssMetaData_isSettable returns false                                  *
+     *  - if specified via CSS and not bound, CssMetaData_isSettable returns true         *
      *                                                                              *
      *******************************************************************************/
 
@@ -271,7 +271,7 @@ public class SeparatorTest {
         assertSame(VPos.BASELINE, separator.getValignment());
     }
 
-    @Test public void whenValignmentIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenValignmentIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)separator.valignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
         ObjectProperty<VPos> other = new SimpleObjectProperty<VPos>(VPos.BASELINE);
@@ -279,7 +279,7 @@ public class SeparatorTest {
         assertFalse(styleable.isSettable(separator));
     }
 
-    @Test public void whenValignmentIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenValignmentIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)separator.valignmentProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));
     }

@@ -159,7 +159,7 @@ public class CategoryAxisTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenStartMarginIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenStartMarginIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -167,7 +167,7 @@ public class CategoryAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenStartMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenStartMarginIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.startMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }
@@ -177,7 +177,7 @@ public class CategoryAxisTest {
         assertEquals(10.34, axis.getStartMargin(), 0.0);
     }
 
-    @Test public void whenEndMarginIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenEndMarginIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         DoubleProperty other = new SimpleDoubleProperty();
@@ -185,7 +185,7 @@ public class CategoryAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenEndMarginIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenEndMarginIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.endMarginProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }
@@ -196,7 +196,7 @@ public class CategoryAxisTest {
     }
 
 
-    @Test public void whenGapStartAndEndIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenGapStartAndEndIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
         BooleanProperty other = new SimpleBooleanProperty();
@@ -204,7 +204,7 @@ public class CategoryAxisTest {
         assertFalse(styleable.isSettable(axis));
     }
 
-    @Test public void whenGapStartAndEndIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenGapStartAndEndIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)axis.gapStartAndEndProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(axis));
     }

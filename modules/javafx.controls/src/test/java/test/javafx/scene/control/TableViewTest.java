@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TableColumn.SortType.DESCENDING;
+import static javafx.collections.FXCollections.*;
 import static org.junit.Assert.*;
 
 import java.util.*;
@@ -2738,6 +2739,52 @@ public class TableViewTest {
         selectedCellsSeq.subList(from, to);
     }
 
+  //--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(tableView.getItems().size() - 1);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(tableView.getItems().size() - 1);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        TableView<String> tableView = new TableView<String>(observableArrayList("A", "B", "C"));
+        tableView.getSelectionModel().select(0);
+
+        assert_rt35857(tableView.getItems(), tableView.getSelectionModel(), true);
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
+
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
         final TableView<String> tableView = new TableView<String>(fxList);
@@ -2753,6 +2800,8 @@ public class TableViewTest {
         assertEquals("B", fxList.get(0));
         assertEquals("C", fxList.get(1));
     }
+
+//--------- end regression testing of JDK-8093144 (was: RT-35857)
 
     @Test public void test_getColumnHeaderForColumn() {
         TableView<Person> table = new TableView<>();
@@ -4601,17 +4650,14 @@ public class TableViewTest {
         assertEquals(0, listOne.size());
         assertEquals(0, listTwo.size());
 
-        System.out.println("Test One:");
         listTwo.setAll("a", "b", "c", "d");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Two:");
         listTwo.setAll("e", "f", "g", "h");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
 
-        System.out.println("\nTest Three:");
         listTwo.setAll("i", "j", "k", "l");
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
@@ -4629,7 +4675,8 @@ public class TableViewTest {
         TableView.TableViewSelectionModel<String> sm = stringTableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -4639,7 +4686,7 @@ public class TableViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -4656,7 +4703,6 @@ public class TableViewTest {
                                          TableView.TableViewSelectionModel<String> sm,
                                          int rowToSelect,
                                          TableColumn<String,String> columnToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedCells().size());
         assertEquals(4, sm.getSelectedIndices().size());
@@ -5158,7 +5204,7 @@ public class TableViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };

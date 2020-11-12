@@ -2197,7 +2197,7 @@ xmlNodeDump(xmlBufferPtr buf, xmlDocPtr doc, xmlNodePtr cur, int level,
             int format)
 {
     xmlBufPtr buffer;
-    int ret;
+    size_t ret;
 
     if ((buf == NULL) || (cur == NULL))
         return(-1);

@@ -221,7 +221,6 @@ public class TextFieldTest {
         assertTrue("PromptText cannot be bound", txtField.getPromptText().equals("newvalue"));
     }
 
-    @Ignore("TODO: Please remove ignore annotation after RT-15799 is fixed.")
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtField.textProperty().bind(strPr);
