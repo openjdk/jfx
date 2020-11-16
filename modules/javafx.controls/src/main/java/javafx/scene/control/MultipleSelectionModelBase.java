@@ -790,7 +790,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                         // special case for when we get to the point where the loop is about to end
                         // and we have uncommitted changes to fire.
                         if (pos == size) {
-                            _nextAdd(start, start + pos);
+                            _nextAdd(start, end);
                         }
                     }
 
