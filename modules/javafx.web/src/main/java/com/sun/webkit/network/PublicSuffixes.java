@@ -64,9 +64,21 @@ final class PublicSuffixes {
 
 
     /**
-     * The mapping from domain names to public suffix list rules.
+     * The mapping from top-level domain names to public suffix list rules.
      */
     private static final Map<String, Rules> rulesCache = new ConcurrentHashMap<>();
+
+
+    /*
+     * Determines whether the public suffix list file is available.
+     */
+    private static final boolean pslFileExists = AccessController.doPrivileged(
+        (PrivilegedAction<Boolean>) () -> {
+            String javaHome = System.getProperty("java.home");
+            String resourceName = "lib/security/public_suffix_list.dat";
+            File f = new File(javaHome, resourceName);
+            return f.exists();
+        });
 
 
     /**
@@ -78,12 +90,23 @@ final class PublicSuffixes {
 
 
     /**
+     * Returns whether the public suffix list file is available.
+     */
+    static boolean pslFileExists() {
+        return pslFileExists;
+    }
+
+
+    /**
      * Determines if a domain is a public suffix.
      */
     static boolean isPublicSuffix(String domain) {
         if (domain.length() == 0) {
             return false;
         }
+
+        if (!pslFileExists())
+            return false;
 
         Rules rules = Rules.getRules(domain);
         return rules == null ? false : rules.match(domain);
