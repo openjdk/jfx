@@ -45,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 public class UIRenderSceneTest {
@@ -74,18 +75,13 @@ public class UIRenderSceneTest {
     }
 
     @BeforeClass
-    public static void setupOnce() {
+    public static void setupOnce() throws Exception {
         System.setProperty("glass.win.uiScale", String.valueOf(scale));
         System.setProperty("glass.gtk.uiScale", String.valueOf(scale));
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        assertTrue("Timeout waiting for FX runtime to start",
+                startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
