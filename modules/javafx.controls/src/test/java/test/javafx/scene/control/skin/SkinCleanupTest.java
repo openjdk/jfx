@@ -25,9 +25,10 @@
 
 package test.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
+
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.collections.FXCollections.*;
@@ -43,6 +44,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -57,6 +59,77 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+  //---------------- TreeView
+
+    /**
+     * Sanity: replacing the root has no side-effect, listener to rootProperty
+     * is registered with skin api
+     */
+    @Test
+    public void testTreeViewSetRoot() {
+        TreeView<String> listView = new TreeView<>(createRoot());
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.setRoot(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewAddRootChild() {
+        TreeView<String> listView = new TreeView<>(createRoot());
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.getRoot().getChildren().add(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewReplaceRootChildren() {
+        TreeView<String> listView = new TreeView<>(createRoot());
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.getRoot().getChildren().setAll(createRoot().getChildren());
+    }
+
+    /**
+     * NPE due to properties listener not removed
+     */
+    @Test
+    public void testTreeViewRefresh() {
+        TreeView<String> listView = new TreeView<>();
+        installDefaultSkin(listView);
+        replaceSkin(listView);
+        listView.refresh();
+    }
+
+    /**
+     * Sanity: guard against potential memory leak from root property listener.
+     */
+    @Test
+    public void testMemoryLeakAlternativeSkinWithRoot() {
+        TreeView<String> control = new TreeView<>(createRoot());
+        installDefaultSkin(control);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(control));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * Creates and returns an expanded treeItem with two children
+     */
+    private TreeItem<String> createRoot() {
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("child one"), new TreeItem<>("child two"));
+        return root;
+    }
+
 
 // ------------------ TreeCell
 

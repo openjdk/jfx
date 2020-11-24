@@ -61,7 +61,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeView;
 
 /**
  * Test memory leaks in Skin implementations.
@@ -123,8 +122,7 @@ public class SkinMemoryLeakTest {
                 // @Ignore("8240506")
                 TextField.class,
                 TreeTableRow.class,
-                TreeTableView.class,
-                TreeView.class
+                TreeTableView.class
         );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);

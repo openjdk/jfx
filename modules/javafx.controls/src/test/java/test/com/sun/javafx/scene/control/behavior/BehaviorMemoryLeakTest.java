@@ -46,7 +46,6 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeView;
 
 /**
  * Test for memory leaks in Behavior implementations.
@@ -86,8 +85,7 @@ public class BehaviorMemoryLeakTest {
                 TableView.class,
                 TextArea.class,
                 TextField.class,
-                TreeTableView.class,
-                TreeView.class
+                TreeTableView.class
          );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
