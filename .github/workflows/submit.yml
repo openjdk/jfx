@@ -71,7 +71,7 @@ jobs:
       - name: Install dependencies
         run: |
           set -x
-          sudo apt-get install libgl1-mesa-dev libx11-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev libudev-dev
+          sudo apt-get install libgl1-mesa-dev libx11-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev
 
 # FIXME: enable cache for boot JDK
 #      - name: Restore boot JDK from cache
