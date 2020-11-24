@@ -1,0 +1,23 @@
+plugins {
+    id "application"
+}
+
+apply plugin: "java"
+
+
+application {
+    mainClassName = "dataurl.module.DataUrlWithModuleLayerLauncher"
+}
+
+compileJava {
+    doFirst {
+        options.compilerArgs = [
+            '--module-path', classpath.asPath
+        ]
+        classpath = files()
+    }
+}
+
+dependencies {
+    compileOnly fileTree('../../../../build/publications') { include '*.jar' }
+}
