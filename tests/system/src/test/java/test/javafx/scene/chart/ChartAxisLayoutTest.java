@@ -97,8 +97,15 @@ public class ChartAxisLayoutTest {
     }
 
     @Test
-    public void ensureThatLabelsAreAutoRotated() {
+    public void ensureThatLabelsAreRotatedWhenLackingSpace() {
+        Util.runAndWait(() -> stage.setWidth(600));
         Util.runAndWait(() -> assertEquals(90.0, xAxis.getTickLabelRotation(), 0.0001));
+    }
+
+    @Test
+    public void ensureThatLabelsAreNotRotatedWhenEnoughSpace() {
+        Util.runAndWait(() -> stage.setWidth(2000));
+        Util.runAndWait(() -> assertEquals(0.0, xAxis.getTickLabelRotation(), 0.0001));
     }
 
     @AfterClass

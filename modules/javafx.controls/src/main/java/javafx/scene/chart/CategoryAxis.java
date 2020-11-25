@@ -45,6 +45,7 @@ import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 
+import com.sun.javafx.binding.Logging;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 
 import javafx.css.StyleableBooleanProperty;
@@ -365,15 +366,19 @@ public final class CategoryAxis extends Axis<String> {
                 // try to rotate the text to increase the density
                 if (side.isHorizontal() && tickLabelRotation != 90) {
                     tickLabelRotation = 90;
-                    // If setRange is not called the tickLabelRotation should still have been updated
-                    if (!isAutoRanging()) setTickLabelRotation(tickLabelRotation);
                 }
                 if (side.isVertical() && tickLabelRotation != 0) {
                     tickLabelRotation = 0;
-                    // If setRange is not called the tickLabelRotation should still have been updated
-                    if (!isAutoRanging()) setTickLabelRotation(tickLabelRotation);
+                }
+            } else {
+                if (side.isHorizontal() && tickLabelRotation == 90) {
+                    tickLabelRotation = 0;
+                }
+                if (side.isVertical() && tickLabelRotation == 0) {
+                    tickLabelRotation = 90;
                 }
             }
+            if (!isAutoRanging()) setTickLabelRotation(tickLabelRotation);
         }
         return new Object[]{allDataCategories, newCategorySpacing, newFirstPos, tickLabelRotation};
     }
