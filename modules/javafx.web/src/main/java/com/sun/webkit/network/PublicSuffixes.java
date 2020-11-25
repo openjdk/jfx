@@ -69,15 +69,24 @@ final class PublicSuffixes {
     private static final Map<String, Rules> rulesCache = new ConcurrentHashMap<>();
 
 
+    /**
+     * The public suffix list file.
+     */
+    private static final File pslFile = new File(
+        System.getProperty("java.home"), "lib/security/public_suffix_list.dat");
+
+
     /*
      * Determines whether the public suffix list file is available.
      */
     private static final boolean pslFileExists = AccessController.doPrivileged(
         (PrivilegedAction<Boolean>) () -> {
-            String javaHome = System.getProperty("java.home");
-            String resourceName = "lib/security/public_suffix_list.dat";
-            File f = new File(javaHome, resourceName);
-            return f.exists();
+            if (!pslFile.exists()) {
+                logger.warning("Resource not found: ",
+                    "lib/security/public_suffix_list.dat");
+                return false;
+            }
+            return true;
         });
 
 
@@ -105,8 +114,9 @@ final class PublicSuffixes {
             return false;
         }
 
-        if (!pslFileExists())
+        if (!pslFileExists()) {
             return false;
+        }
 
         Rules rules = Rules.getRules(domain);
         return rules == null ? false : rules.match(domain);
@@ -187,14 +197,11 @@ final class PublicSuffixes {
         private static InputStream getPubSuffixStream() {
             InputStream is = AccessController.doPrivileged(
                 (PrivilegedAction<InputStream>) () -> {
-                    String javaHome = System.getProperty("java.home");
-                    String resourceName = "lib/security/public_suffix_list.dat";
-                    File f = new File(javaHome, resourceName);
                     try {
-                        return new FileInputStream(f);
+                        return new FileInputStream(pslFile);
                     } catch (FileNotFoundException ex) {
                         logger.warning("Resource not found: ",
-                                resourceName);
+                                "lib/security/public_suffix_list.dat");
                         return null;
                     }
                 }
