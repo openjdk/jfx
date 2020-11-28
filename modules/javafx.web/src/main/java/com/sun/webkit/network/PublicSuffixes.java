@@ -72,8 +72,8 @@ final class PublicSuffixes {
     /**
      * The public suffix list file.
      */
-    private static final File pslFile = new File(
-        System.getProperty("java.home"), "lib/security/public_suffix_list.dat");
+    private static final File pslFile = AccessController.doPrivileged((PrivilegedAction<File>)
+        () -> new File(System.getProperty("java.home"), "lib/security/public_suffix_list.dat"));
 
 
     /*
