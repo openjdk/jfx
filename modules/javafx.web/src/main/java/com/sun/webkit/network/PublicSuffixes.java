@@ -82,7 +82,7 @@ final class PublicSuffixes {
     private static final boolean pslFileExists = AccessController.doPrivileged(
         (PrivilegedAction<Boolean>) () -> {
             if (!pslFile.exists()) {
-                logger.warning("Resource not found: ",
+                logger.warning("Resource not found: " +
                     "lib/security/public_suffix_list.dat");
                 return false;
             }
@@ -200,7 +200,7 @@ final class PublicSuffixes {
                     try {
                         return new FileInputStream(pslFile);
                     } catch (FileNotFoundException ex) {
-                        logger.warning("Resource not found: ",
+                        logger.warning("Resource not found: " +
                                 "lib/security/public_suffix_list.dat");
                         return null;
                     }
