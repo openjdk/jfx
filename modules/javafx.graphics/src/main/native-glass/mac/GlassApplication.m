@@ -40,7 +40,7 @@
 #import "ProcessInfo.h"
 #import <Security/SecRequirement.h>
 
-//#define VERBOSE
+#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
 #else

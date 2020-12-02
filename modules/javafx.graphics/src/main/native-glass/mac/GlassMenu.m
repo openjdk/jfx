@@ -33,7 +33,7 @@
 #import "GlassHelper.h"
 #import "GlassKey.h"
 
-//#define VERBOSE
+#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
 #else

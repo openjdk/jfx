@@ -221,6 +221,7 @@ public abstract class Application {
     // Overridden methods need to call super.
 
     protected void notifyWillFinishLaunching() {
+        System.err.println("Application::notifyWillFinishLaunching");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillFinishLaunchingAction(this, System.nanoTime());
@@ -228,6 +229,7 @@ public abstract class Application {
     }
 
     protected void notifyDidFinishLaunching() {
+        System.err.println("Application::notifyDidFinishLaunching");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleDidFinishLaunchingAction(this, System.nanoTime());
@@ -235,6 +237,7 @@ public abstract class Application {
     }
 
     protected void notifyWillBecomeActive() {
+        System.err.println("Application::notifyWillBecomeActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillBecomeActiveAction(this, System.nanoTime());
@@ -242,6 +245,7 @@ public abstract class Application {
     }
 
     protected void notifyDidBecomeActive() {
+        System.err.println("Application::notifyDidBecomeActive");
         this.initialActiveEventReceived = true;
         EventHandler handler = getEventHandler();
         if (handler != null) {
@@ -250,6 +254,7 @@ public abstract class Application {
     }
 
     protected void notifyWillResignActive() {
+        System.err.println("Application::notifyWillResignActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleWillResignActiveAction(this, System.nanoTime());
@@ -265,6 +270,7 @@ public abstract class Application {
     }
 
     protected void notifyDidResignActive() {
+        System.err.println("Application::notifyDidResignActive");
         EventHandler handler = getEventHandler();
         if (handler != null) {
             handler.handleDidResignActiveAction(this, System.nanoTime());
@@ -591,6 +597,7 @@ public abstract class Application {
     protected abstract Size staticCursor_getBestSize(int width, int height);
 
     public final Menu createMenu(String title) {
+        System.err.println("Application::createMenu title:" + title);
         return new Menu(title);
     }
 
