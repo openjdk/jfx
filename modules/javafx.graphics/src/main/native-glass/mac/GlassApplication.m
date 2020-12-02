@@ -55,6 +55,8 @@ static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
 static BOOL disableSyncRendering = NO;
+static BOOL firstActivation = YES;
+static BOOL shouldReactivate = NO;
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -271,6 +273,13 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (firstActivation) {
+        LOG("-> deactivate (hide)  app");
+        firstActivation = NO;
+        shouldReactivate = YES;
+        [NSApp hide:NSApp];
+    }
 }
 
 - (void)applicationWillResignActive:(NSNotification *)aNotification
@@ -297,6 +306,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (shouldReactivate) {
+        LOG("-> reactivate  app");
+        shouldReactivate = NO;
+        [NSApp activateIgnoringOtherApps:YES];
+    }
 }
 
 - (void)applicationWillHide:(NSNotification *)aNotification

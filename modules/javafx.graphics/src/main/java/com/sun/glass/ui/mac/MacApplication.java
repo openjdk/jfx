@@ -35,6 +35,7 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.CountDownLatch;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -73,6 +74,14 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                          boolean isTaskbarApplication);
     @Override
     protected void runLoop(final Runnable launchable) {
+        // The masOS activation init code will deactivate and then reactivate
+        // the application to allow the system menubar to work properly.
+        // We need to spin up a nested event loop and wait for the reactivation
+        // to finish prior to allowing the rest of the initialization to run.
+        final Runnable wrappedRunnable = () -> {
+            waitForReactivation();
+            launchable.run();
+        };
         isTaskbarApplication =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 String taskbarAppProp = System.getProperty("glass.taskbarApplication");
@@ -80,7 +89,28 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             });
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
-        _runLoop(classLoader, launchable, isTaskbarApplication);
+        _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
+    }
+
+    private final CountDownLatch reactivationLatch = new CountDownLatch(1);
+
+    // Spin up a nested even loop waiting for the app reactivation event
+    void waitForReactivation() {
+        final EventLoop eventLoop = createEventLoop();
+        Thread thr = new Thread(() -> {
+            try {
+                reactivationLatch.await();
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+            Application.invokeLater(() -> {
+                eventLoop.leave(null);
+            });
+        });
+        thr.setDaemon(true);
+        thr.start();
+
+        eventLoop.enter();
     }
 
     native private void _finishTerminating();
@@ -93,6 +123,22 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private void notifyApplicationDidTerminate() {
         setEventThread(null);
+    }
+
+    private boolean firstDidResignActive = false;
+
+    @Override
+    protected void notifyDidResignActive() {
+        super.notifyDidResignActive();
+        firstDidResignActive = true;
+    }
+
+    @Override
+    protected void notifyDidBecomeActive() {
+        super.notifyDidBecomeActive();
+        if (firstDidResignActive) {
+            reactivationLatch.countDown();
+        }
     }
 
     // Called from the native code
