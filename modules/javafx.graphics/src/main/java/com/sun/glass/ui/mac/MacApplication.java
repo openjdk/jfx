@@ -74,14 +74,20 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                          boolean isTaskbarApplication);
     @Override
     protected void runLoop(final Runnable launchable) {
-        // The masOS activation init code will deactivate and then reactivate
-        // the application to allow the system menubar to work properly.
+        // For normal (not embedded) taskbar applications the masOS activation
+        // init code will deactivate and then reactivate the application to
+        // allow the system menubar to work properly.
         // We need to spin up a nested event loop and wait for the reactivation
         // to finish prior to allowing the rest of the initialization to run.
         final Runnable wrappedRunnable = () -> {
-            waitForReactivation();
+            if (isNormalTaskbarApp()) {
+                waitForReactivation();
+            } else {
+                System.err.println("KCR: no reactivation needed");
+            }
             launchable.run();
         };
+
         isTaskbarApplication =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 String taskbarAppProp = System.getProperty("glass.taskbarApplication");
@@ -362,6 +368,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override native protected boolean _supportsSystemMenu();
+
+    native private boolean _isNormalTaskbarApp();
+    boolean isNormalTaskbarApp() {
+        return _isNormalTaskbarApp();
+    }
 
     native protected String _getRemoteLayerServerName();
     public String getRemoteLayerServerName() {

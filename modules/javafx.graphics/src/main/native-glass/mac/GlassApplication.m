@@ -54,6 +54,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
+static BOOL isNormalTaskbarApp = NO;
 static BOOL disableSyncRendering = NO;
 static BOOL firstActivation = YES;
 static BOOL shouldReactivate = NO;
@@ -274,7 +275,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (firstActivation) {
+    if (isNormalTaskbarApp && firstActivation) {
         LOG("-> deactivate (hide)  app");
         firstActivation = NO;
         shouldReactivate = YES;
@@ -307,7 +308,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
 
-    if (shouldReactivate) {
+    if (isNormalTaskbarApp && shouldReactivate) {
         LOG("-> reactivate  app");
         shouldReactivate = NO;
         [NSApp activateIgnoringOtherApps:YES];
@@ -532,6 +533,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         {
             if (self->jTaskBarApp == JNI_TRUE)
             {
+                isNormalTaskbarApp = YES;
                 // move process from background only to full on app with visible Dock icon
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
@@ -1063,6 +1065,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 (JNIEnv *env, jobject japplication)
 {
     return !isEmbedded;
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _isNormalTaskbarApp
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp
+(JNIEnv *env, jobject japplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp");
+    return isNormalTaskbarApp;
 }
 
 /*
