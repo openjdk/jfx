@@ -28,6 +28,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.util.Logging;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -36,6 +37,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -103,9 +105,11 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         final EventLoop eventLoop = createEventLoop();
         Thread thr = new Thread(() -> {
             try {
-                reactivationLatch.await();
+                if (!reactivationLatch.await(5, TimeUnit.SECONDS)) {
+                    Logging.getJavaFXLogger().warning("Timeout while waiting for app reactivation");
+                }
             } catch (InterruptedException ex) {
-                ex.printStackTrace();
+                Logging.getJavaFXLogger().warning("Exception while waiting for app reactivation: " + ex);
             }
             Application.invokeLater(() -> {
                 eventLoop.leave(null);
@@ -133,16 +137,16 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void notifyDidResignActive() {
-        super.notifyDidResignActive();
         firstDidResignActive = true;
+        super.notifyDidResignActive();
     }
 
     @Override
     protected void notifyDidBecomeActive() {
-        super.notifyDidBecomeActive();
         if (firstDidResignActive) {
             reactivationLatch.countDown();
         }
+        super.notifyDidBecomeActive();
     }
 
     // Called from the native code
@@ -363,6 +367,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsSystemMenu();
 
+    // NOTE: this will not return a valid result unil the native _runloop
+    // method has been executed and called the Runnable passed to that method.
     native private boolean _isNormalTaskbarApp();
     boolean isNormalTaskbarApp() {
         return _isNormalTaskbarApp();
