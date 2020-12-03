@@ -82,8 +82,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         final Runnable wrappedRunnable = () -> {
             if (isNormalTaskbarApp()) {
                 waitForReactivation();
-            } else {
-                System.err.println("KCR: no reactivation needed");
             }
             launchable.run();
         };
@@ -102,7 +100,6 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     // Spin up a nested even loop waiting for the app reactivation event
     void waitForReactivation() {
-        System.err.println("KCR: waitForReactivation");
         final EventLoop eventLoop = createEventLoop();
         Thread thr = new Thread(() -> {
             try {
@@ -111,16 +108,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                 ex.printStackTrace();
             }
             Application.invokeLater(() -> {
-                System.err.println("KCR: exit nested event loop");
                 eventLoop.leave(null);
             });
         });
         thr.setDaemon(true);
         thr.start();
 
-        System.err.println("KCR: enter nested event loop");
         eventLoop.enter();
-        System.err.println("KCR: nested event loop returns");
     }
 
     native private void _finishTerminating();
