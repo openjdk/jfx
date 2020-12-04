@@ -1080,12 +1080,6 @@ public class Window implements EventTarget {
                     // Register pulse listener
                     tk.addStageTkPulseListener(peerBoundsConfigurator);
 
-                    if (getScene() != null) {
-                        SceneHelper.initPeer(getScene());
-                        peer.setScene(SceneHelper.getPeer(getScene()));
-                        SceneHelper.preferredSize(getScene());
-                    }
-
                     updateOutputScales(peer.getOutputScaleX(), peer.getOutputScaleY());
                     // updateOutputScales may cause an update to the render
                     // scales in many cases, but if the scale has not changed
@@ -1097,6 +1091,12 @@ public class Window implements EventTarget {
                     // forced setSize and setLocation down below.
                     peerBoundsConfigurator.setRenderScaleX(getRenderScaleX());
                     peerBoundsConfigurator.setRenderScaleY(getRenderScaleY());
+
+                    if (getScene() != null) {
+                        SceneHelper.initPeer(getScene());
+                        peer.setScene(SceneHelper.getPeer(getScene()));
+                        SceneHelper.preferredSize(getScene());
+                    }
 
                     // Set peer bounds
                     if ((getScene() != null) && (!widthExplicit || !heightExplicit)) {
