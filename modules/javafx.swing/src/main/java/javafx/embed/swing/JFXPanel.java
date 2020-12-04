@@ -300,8 +300,11 @@ public class JFXPanel extends JComponent {
                             .getDefaultToolkit()::getSystemEventQueue);
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
             Platform.runLater(() -> {
-                setSceneImpl(newScene);
-                secondaryLoop.exit();
+                try {
+                    setSceneImpl(newScene);
+                } finally {
+                    secondaryLoop.exit();
+                }
             });
             secondaryLoop.enter();
         }
