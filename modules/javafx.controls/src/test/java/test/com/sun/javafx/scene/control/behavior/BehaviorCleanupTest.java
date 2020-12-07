@@ -39,6 +39,8 @@ import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
 import javafx.scene.control.ListView;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 
 /**
  * Test for misbehavior of individual implementations that turned
@@ -46,6 +48,51 @@ import javafx.scene.control.ListView;
  *
  */
 public class BehaviorCleanupTest {
+
+//----------- TreeView
+
+    /**
+     * Test cleanup of selection listeners in TreeViewBehavior.
+     */
+    @Test
+    public void testTreeViewBehaviorDisposeSelect() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(treeView));
+        treeView.getSelectionModel().select(1);
+        weakRef.get().dispose();
+        treeView.getSelectionModel().select(0);
+        assertNull("anchor must remain cleared on selecting when disposed",
+                treeView.getProperties().get("anchor"));
+    }
+
+    @Test
+    public void testTreeViewBehaviorSelect() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        createBehavior(treeView);
+        int last = 1;
+        treeView.getSelectionModel().select(last);
+        assertEquals("anchor must be set", last, treeView.getProperties().get("anchor"));
+    }
+
+    @Test
+    public void testTreeViewBehaviorDispose() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(treeView));
+        treeView.getSelectionModel().select(1);
+        weakRef.get().dispose();
+        assertNull("anchor must be cleared after dispose", treeView.getProperties().get("anchor"));
+    }
+
+    /**
+     * Creates and returns an expanded treeItem with two children.
+     */
+    private TreeItem<String> createRoot() {
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("child one"), new TreeItem<>("child two"));
+        return root;
+    }
+
 
 // ---------- ListView
 
