@@ -68,10 +68,10 @@ public class SkinCleanupTest {
      */
     @Test
     public void testTreeViewSetRoot() {
-        TreeView<String> listView = new TreeView<>(createRoot());
-        installDefaultSkin(listView);
-        replaceSkin(listView);
-        listView.setRoot(createRoot());
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.setRoot(createRoot());
     }
 
     /**
@@ -79,10 +79,10 @@ public class SkinCleanupTest {
      */
     @Test
     public void testTreeViewAddRootChild() {
-        TreeView<String> listView = new TreeView<>(createRoot());
-        installDefaultSkin(listView);
-        replaceSkin(listView);
-        listView.getRoot().getChildren().add(createRoot());
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().add(createRoot());
     }
 
     /**
@@ -90,10 +90,10 @@ public class SkinCleanupTest {
      */
     @Test
     public void testTreeViewReplaceRootChildren() {
-        TreeView<String> listView = new TreeView<>(createRoot());
-        installDefaultSkin(listView);
-        replaceSkin(listView);
-        listView.getRoot().getChildren().setAll(createRoot().getChildren());
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().setAll(createRoot().getChildren());
     }
 
     /**
@@ -101,10 +101,10 @@ public class SkinCleanupTest {
      */
     @Test
     public void testTreeViewRefresh() {
-        TreeView<String> listView = new TreeView<>();
-        installDefaultSkin(listView);
-        replaceSkin(listView);
-        listView.refresh();
+        TreeView<String> treeView = new TreeView<>();
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.refresh();
     }
 
     /**
