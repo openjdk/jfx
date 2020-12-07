@@ -112,9 +112,9 @@ public class SkinCleanupTest {
      */
     @Test
     public void testMemoryLeakAlternativeSkinWithRoot() {
-        TreeView<String> control = new TreeView<>(createRoot());
-        installDefaultSkin(control);
-        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(control));
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(treeView));
         assertNotNull(weakRef.get());
         attemptGC(weakRef);
         assertEquals("Skin must be gc'ed", null, weakRef.get());
