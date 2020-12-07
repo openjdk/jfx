@@ -100,7 +100,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private final CountDownLatch reactivationLatch = new CountDownLatch(1);
 
-    // Spin up a nested even loop waiting for the app reactivation event
+    // Spin up a nested event loop waiting for the app reactivation event
     void waitForReactivation() {
         final EventLoop eventLoop = createEventLoop();
         Thread thr = new Thread(() -> {
@@ -367,7 +367,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsSystemMenu();
 
-    // NOTE: this will not return a valid result unil the native _runloop
+    // NOTE: this will not return a valid result until the native _runloop
     // method has been executed and called the Runnable passed to that method.
     native private boolean _isNormalTaskbarApp();
     boolean isNormalTaskbarApp() {
