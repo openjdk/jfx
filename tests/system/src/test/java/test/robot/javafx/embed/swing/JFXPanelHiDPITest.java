@@ -65,6 +65,10 @@ public class JFXPanelHiDPITest {
     private static Timer t;
     private static MyApp myApp;
 
+    // Any scale value greater than 1.0 can be used to run this test.
+    // Since this value is applied via system properties in setupOnce()
+    // the test can be run only once.
+    // If needed, change it manually and run again.
     private static final double SCALE = 1.25; // 1.25, 1.5, 1.75
     private static final int PANEL_WIDTH = 500;
     private static final int PANEL_HEIGHT = 400;
