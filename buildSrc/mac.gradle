@@ -29,8 +29,8 @@ MAC.canBuild = IS_MAC && IS_64
 if (!MAC.canBuild) return;
 
 def TARGET_ARCH = "x86_64"
-if (hasProperty('targetArch')) {
-    TARGET_ARCH = ext.targetArch
+if (hasProperty('TARGET_ARCH')) {
+    TARGET_ARCH = ext.TARGET_ARCH
 }
 
 // All desktop related packages should be built
@@ -126,8 +126,8 @@ def commonParams = [
         "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
         "-arch", "$TARGET_ARCH"]
 
-if (hasProperty('targetArch')) {
-    commonParams = ["-target", "$TARGET_ARCH-apple-macos-11", commonParams]
+if (hasProperty('TARGET_ARCH')) {
+    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams]
 }
 
 def ccBaseFlags = [
