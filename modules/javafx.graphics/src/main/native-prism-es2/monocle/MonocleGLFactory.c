@@ -23,9 +23,6 @@
  * questions.
  */
 
-#ifndef ANDROID_NDK
-#define _GNU_SOURCE
-#endif
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
@@ -35,7 +32,13 @@
 #include <EGL/egl.h>
 #include "eglUtils.h"
 
+#include "../PrismES2Defs.h"
+
 #include "com_sun_prism_es2_MonocleGLContext.h"
+#ifndef ANDROID
+#define __USE_GNU
+#include <dlfcn.h>
+#endif
 
 extern void *get_dlsym(void *handle, const char *symbol, int warn);
 
