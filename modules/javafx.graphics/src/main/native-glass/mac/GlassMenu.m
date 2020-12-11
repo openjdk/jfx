@@ -324,6 +324,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuBarDelegate__1insert
 
         if ([[glassmenu->item title] compare:@"Apple"] == NSOrderedSame)
         {
+            LOG("calling setAppleMenu");
             [NSApp performSelector:@selector(setAppleMenu:) withObject:glassmenu->item];
         }
 

@@ -356,10 +356,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         flow.setCellCount(newCount);
 
         updatePlaceholderRegionVisibility();
-        if (newCount != oldCount) {
-            requestRebuildCells();
-        } else {
+        if (newCount == oldCount) {
             needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            requestRebuildCells();
         }
     }
 

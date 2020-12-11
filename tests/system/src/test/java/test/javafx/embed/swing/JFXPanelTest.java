@@ -28,6 +28,7 @@ import com.sun.javafx.PlatformUtil;
 import org.junit.Assume;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Test;
 import junit.framework.AssertionFailedError;
@@ -53,6 +54,8 @@ import java.util.concurrent.TimeUnit;
 public class JFXPanelTest {
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
+
+    JFrame jframe;
 
     // Application class. An instance is created and initialized before running
     // the first test, and it lives through the execution of all tests.
@@ -84,6 +87,13 @@ public class JFXPanelTest {
         Platform.exit();
     }
 
+    @After
+    public void doCleanup() {
+        if (jframe != null) {
+            SwingUtilities.invokeLater(() -> jframe.dispose());
+        }
+    }
+
     static class TestFXPanel extends JFXPanel {
         protected void processMouseEventPublic(MouseEvent e) {
             processMouseEvent(e);
@@ -103,7 +113,7 @@ public class JFXPanelTest {
             dummyFXPanel.setPreferredSize(new Dimension(100, 100));
             TestFXPanel fxPnl = new TestFXPanel();
             fxPnl.setPreferredSize(new Dimension(100, 100));
-            JFrame jframe = new JFrame();
+            jframe = new JFrame();
             JPanel jpanel = new JPanel();
             jpanel.add(dummyFXPanel);
             jpanel.add(fxPnl);
@@ -155,5 +165,58 @@ public class JFXPanelTest {
 
         Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
     }
-}
 
+    @Test
+    public void setSceneOnFXThread() throws Exception {
+
+        CountDownLatch completionLatch = new CountDownLatch(1);
+
+        SwingUtilities.invokeLater(() -> {
+            JFXPanel fxPanel = new JFXPanel();
+            fxPanel.setPreferredSize(new Dimension(100, 100));
+            jframe = new JFrame();
+            JPanel jpanel = new JPanel();
+            jpanel.add(fxPanel);
+            jframe.add(jpanel);
+            jframe.pack();
+            jframe.setVisible(true);
+
+            Platform.runLater(() -> {
+                Scene scene = new Scene(new Group());
+                fxPanel.setScene(scene);
+                completionLatch.countDown();
+            });
+        });
+
+        Assert.assertTrue("Timeout waiting for setScene to complete",
+                completionLatch.await(5000, TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void setSceneOnSwingThread() throws Exception {
+
+        CountDownLatch completionLatch = new CountDownLatch(1);
+
+        SwingUtilities.invokeLater(() -> {
+            JFXPanel fxPanel = new JFXPanel();
+            fxPanel.setPreferredSize(new Dimension(100, 100));
+            jframe = new JFrame();
+            JPanel jpanel = new JPanel();
+            jpanel.add(fxPanel);
+            jframe.add(jpanel);
+            jframe.pack();
+            jframe.setVisible(true);
+
+            Platform.runLater(() -> {
+                Scene scene = new Scene(new Group());
+                SwingUtilities.invokeLater(() -> {
+                    fxPanel.setScene(scene);
+                    completionLatch.countDown();
+                });
+            });
+        });
+
+        Assert.assertTrue("Timeout waiting for setScene to complete",
+                completionLatch.await(5000, TimeUnit.MILLISECONDS));
+    }
+}

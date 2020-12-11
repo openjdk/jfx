@@ -36,7 +36,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/com.sun.javafx=ALL-UNNAMED"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx=ALL-UNNAMED:javafx.base/test.util.memory=ALL-UNNAMED"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/controls">
