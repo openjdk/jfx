@@ -28,7 +28,6 @@ package test.javafx.scene.control.skin;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
@@ -62,8 +61,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeView;
-import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 
 /**
  * Test memory leaks in Skin implementations.
@@ -73,6 +70,7 @@ import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 @RunWith(Parameterized.class)
 public class SkinMemoryLeakTest {
 
+    private Class<Control> controlClass;
     private Control control;
 
 //--------- tests
@@ -124,20 +122,15 @@ public class SkinMemoryLeakTest {
                 // @Ignore("8240506")
                 TextField.class,
                 TreeTableRow.class,
-                TreeTableView.class,
-                TreeView.class
+                TreeTableView.class
         );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
-        // instantiate controls
-        List<Control> controls = controlClasses.stream()
-                .map(ControlSkinFactory::createControl)
-                .collect(Collectors.toList());
-        return asArrays(controls);
+        return asArrays(controlClasses);
     }
 
-    public SkinMemoryLeakTest(Control control) {
-        this.control = control;
+    public SkinMemoryLeakTest(Class<Control> controlClass) {
+        this.controlClass = controlClass;
     }
 
 //------------ setup
@@ -151,6 +144,7 @@ public class SkinMemoryLeakTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
+        this.control = createControl(controlClass);
         assertNotNull(control);
     }
 

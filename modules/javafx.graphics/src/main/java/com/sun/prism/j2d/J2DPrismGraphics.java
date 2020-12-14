@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -724,6 +724,24 @@ public class J2DPrismGraphics
                 g2d.setPaint(toJ2DPaint(paint, nodeBounds));
             } else {
                 g2d.setPaint(toJ2DPaint(paint, shape.getBounds2D()));
+            }
+        }
+        if (this.paint.getType() == Paint.Type.IMAGE_PATTERN) {
+            ImagePattern imgpat = (ImagePattern) this.paint;
+            java.awt.geom.AffineTransform at = toJ2DTransform(imgpat.getPatternTransformNoClone());
+
+            if (!at.isIdentity()) {
+                g2d.setClip(shape);
+                g2d.transform(at);
+                tmpAT.setTransform(at);
+                try {
+                    tmpAT.invert();
+                    g2d.fill(tmpAT.createTransformedShape(shape));
+                } catch (NoninvertibleTransformException e) {
+                }
+                setTransform(transform);
+                setClipRect(clipRect);
+                return;
             }
         }
         g2d.fill(shape);

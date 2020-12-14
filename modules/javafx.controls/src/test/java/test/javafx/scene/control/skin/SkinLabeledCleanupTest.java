@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.com.sun.javafx.scene.control.behavior;
+package test.javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
 import java.util.Collection;
@@ -35,68 +35,82 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
-
+import static javafx.scene.control.ControlShim.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
-import javafx.scene.control.Control;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.Labeled;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.shape.Rectangle;
 
 /**
- * Test for memory leaks in Behavior implementations.
+ * Test skin cleanup for Labeled JDK-8247576
  * <p>
- * This test is parameterized on control type.
+ * This test is parameterized on class of Labeled.
+ *
  */
 @RunWith(Parameterized.class)
-public class BehaviorMemoryLeakTest {
+public class SkinLabeledCleanupTest {
 
-    private Class<Control> controlClass;
-    private Control control;
+    private Class<Labeled> labeledClass;
+    private Labeled labeled;
 
     /**
-     * Create behavior -> dispose behavior -> gc
+     * First step was cleanup of graphicListener: removed guard against null skinnable.
      */
     @Test
-    public void testMemoryLeakDisposeBehavior() {
-        WeakReference<BehaviorBase<?>> weakRef = new WeakReference<>(createBehavior(control));
+    public void testLabeledGraphicDispose() {
+        Rectangle graphic = (Rectangle) labeled.getGraphic();
+        installDefaultSkin(labeled);
+        labeled.getSkin().dispose();
+        graphic.setWidth(500);
+    }
+
+    @Test
+    public void testMemoryLeakAlternativeSkin() {
+        installDefaultSkin(labeled);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(labeled));
         assertNotNull(weakRef.get());
-        weakRef.get().dispose();
         attemptGC(weakRef);
-        assertNull("behavior must be gc'ed", weakRef.get());
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
     }
 
-    //---------------- parameterized
+//----------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    @Parameterized.Parameters // (name = "{index}: {0} ")
+    @Parameterized.Parameters //(name = "{index}: {0} ")
     public static Collection<Object[]> data() {
-        List<Class<Control>> controlClasses = getControlClassesWithBehavior();
-        // FIXME as part of JDK-8241364
-        // The behaviors of these controls are leaking
-        // step 1: file issues (where not yet done), add informal ignore to entry
-        // step 2: fix and remove from list
-        List<Class<? extends Control>> leakingClasses = List.of(
-                PasswordField.class,
-                TableView.class,
-                TextArea.class,
-                TextField.class,
-                TreeTableView.class
-         );
-        // remove the known issues to make the test pass
-        controlClasses.removeAll(leakingClasses);
-        return asArrays(controlClasses);
+        List<Class> labeledClasses = List.of(
+               Button.class,
+               CheckBox.class,
+               Hyperlink.class,
+               Label.class,
+               // MenuButton is-a Labeled but its skin is-not-a LabeledSkinBase
+               // leaking has different reason/s
+               // MenuButton.class,
+               ToggleButton.class,
+               RadioButton.class,
+               TitledPane.class
+                );
+        return asArrays(labeledClasses);
     }
 
-    public BehaviorMemoryLeakTest(Class<Control> controlClass) {
-        this.controlClass = controlClass;
+    public SkinLabeledCleanupTest(Class<Labeled> labeledClass) {
+        this.labeledClass = labeledClass;
     }
 
-//------------------- setup
+//---------------- setup/cleanup
+
+    @Test
+    public void testSetupState() {
+        assertNotNull(labeled);
+        assertNotNull(labeled.getGraphic());
+    }
 
     @After
     public void cleanup() {
@@ -112,8 +126,9 @@ public class BehaviorMemoryLeakTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
-        control = createControl(controlClass);
-        assertNotNull(control);
+
+        labeled = createControl(labeledClass);
+        labeled.setGraphic(new Rectangle());
     }
 
 }

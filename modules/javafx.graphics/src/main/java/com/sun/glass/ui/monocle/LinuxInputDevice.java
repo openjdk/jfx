@@ -83,12 +83,12 @@ class LinuxInputDevice implements Runnable, InputDevice {
         this.sysPath = sysPath;
         this.udevManifest = udevManifest;
         this.capabilities = SysFS.readCapabilities(sysPath);
-        this.absCaps = LinuxAbsoluteInputCapabilities.getCapabilities(
-                devNode, capabilities.get("abs"));
         fd = system.open(devNode.getPath(), LinuxSystem.O_RDONLY);
         if (fd == -1) {
             throw new IOException(system.getErrorMessage() + " on " + devNode);
         }
+        this.absCaps = LinuxAbsoluteInputCapabilities.getCapabilities(
+                devNode, capabilities.get("abs"));
         // attempt to grab the device. If the grab fails, keep going.
         int EVIOCGRAB = system.IOW('E', 0x90, 4);
         system.ioctl(fd, EVIOCGRAB, 1);
