@@ -37,7 +37,7 @@ import org.junit.Test;
  * @summary Check if webkit main thread <-> java integration works correctly
  */
 public class MainThreadTest {
-    @Test
+    @Test (timeout = 15000)
     public void testMainThreadDoesNotSegfault() throws Exception {
         // This is an indirect test of the webkit main thread <-> java
         // integration. It was observed, that using a data-url caused the
@@ -57,7 +57,7 @@ public class MainThreadTest {
 
         final List<String> cmd = asList(
             workerJavaCmd,
-            "-cp",appModulePath + "/mymod",
+            "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
             "myapp7.DataUrlWithModuleLayerLauncher"

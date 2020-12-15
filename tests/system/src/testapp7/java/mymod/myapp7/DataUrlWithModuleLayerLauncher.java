@@ -38,6 +38,19 @@ import java.util.Set;
 public class DataUrlWithModuleLayerLauncher {
 
     public static void main(String[] args) throws Exception {
+        // Install safeguard to ensure this application is terminated
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(15000);
+                } catch (InterruptedException ex) {
+                    // Ok, lets exit early
+                }
+                System.exit(DataUrlWithModuleLayer.ERROR_TIMEOUT);
+            }
+        }.start();
+
         /*
          * Setup a module layer for OpenJFX and the test class
          */

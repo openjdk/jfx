@@ -29,13 +29,19 @@ import java.lang.module.ModuleDescriptor;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javafx.application.Application;
-import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker.State;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
 public class DataUrlWithModuleLayer extends Application {
+    public static final int ERROR_OK = 0;
+    public static final int ERROR_ASSUMPTION_VIOLATED = 1;
+    public static final int ERROR_TIMEOUT = 2;
+    public static final int ERROR_TITLE_NOT_UPDATED = 3;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -43,24 +49,24 @@ public class DataUrlWithModuleLayer extends Application {
 
         if (module == null) {
             System.err.println("Failure: Module for Application not found");
-            System.exit(1);
+            System.exit(ERROR_ASSUMPTION_VIOLATED);
         }
 
         if (! module.isNamed()) {
             System.err.println("Failure: Expected named module");
-            System.exit(1);
+            System.exit(ERROR_ASSUMPTION_VIOLATED);
         }
 
         ModuleDescriptor moduleDesc = module.getDescriptor();
 
         if (moduleDesc.isAutomatic()) {
             System.err.println("Failure: Automatic module found");
-            System.exit(1);
+            System.exit(ERROR_ASSUMPTION_VIOLATED);
         }
 
         if (moduleDesc.isOpen()) {
             System.err.println("Failure: Open module found");
-            System.exit(1);
+            System.exit(ERROR_ASSUMPTION_VIOLATED);
         }
 
         BorderPane root = new BorderPane();
@@ -85,31 +91,24 @@ public class DataUrlWithModuleLayer extends Application {
             + "<script src=\"data:application/javascript;base64," + checkJSEncoded + "\"></script>"
             + "</body>"
             + "</html>";
-
+        webview.getEngine().getLoadWorker().stateProperty().addListener(
+                new ChangeListener<State>() {
+                    public void changed(ObservableValue ov, State oldState, State newState) {
+                        String title = webview.getEngine().getTitle();
+                        if (newState == State.SUCCEEDED) {
+                            if ("Executed".equals(title)) {
+                                System.exit(ERROR_OK);
+                            } else {
+                                System.exit(ERROR_TITLE_NOT_UPDATED);
+                            }
+                        }
+                    }
+                });
         webview.getEngine().loadContent(script);
 
         primaryStage.setScene(scene);
         primaryStage.setWidth(1024);
         primaryStage.setHeight(768);
         primaryStage.show();
-
-        new Thread() {
-            @Override
-            public void run() {
-                while (true) {
-                    Platform.runLater(() -> {
-                        String title = webview.getEngine().getTitle();
-                        if("Executed".equals(title)) {
-                            System.exit(0);
-                        }
-                    });
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException ex) {
-                        break;
-                    }
-                }
-            }
-        }.start();
     }
 }

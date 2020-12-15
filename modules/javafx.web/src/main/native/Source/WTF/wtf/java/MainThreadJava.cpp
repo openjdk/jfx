@@ -48,7 +48,7 @@ void initializeMainThreadPlatform()
     // Initialize the class reference and methodids for the MainThread. The
     // initilization has to be done from a context where the class
     // com.sun.webkit.MainThread is accessible. When
-    // scheduleDispatchFunctionsOnMainThread is invoced, the system class loader
+    // scheduleDispatchFunctionsOnMainThread is invoked, the system class loader
     // would be used to locate the class, which fails if the JavaFX modules are
     // not loaded from the boot module layer.
     //
@@ -62,6 +62,7 @@ void initializeMainThreadPlatform()
     // WebPage will be used by FindClass.
     //
     // WTF::initializeMainThread has a guard, so that initialization is only run
+    // once
 
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
