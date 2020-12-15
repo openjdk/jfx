@@ -61,41 +61,63 @@ struct WindowFrameExtents {
 
 static const guint MOUSE_BUTTONS_MASK = (guint) (GDK_BUTTON1_MASK | GDK_BUTTON2_MASK | GDK_BUTTON3_MASK);
 
-enum BoundsType {
-    BOUNDSTYPE_CONTENT,
-    BOUNDSTYPE_WINDOW
-};
 
 struct WindowGeometry {
-    WindowGeometry(): final_width(), final_height(),
-    refx(), refy(), gravity_x(), gravity_y(), current_width(), current_height(), extents() {}
-    // estimate of the final width the window will get after all pending
-    // configure requests are processed by the window manager
-    struct {
-        int value;
-        BoundsType type;
-    } final_width;
+    WindowGeometry() : current_x(0),
+                       current_y(0),
+                       current_w(0),
+                       current_h(0),
+                       current_cw(0),
+                       current_ch(0),
+                       last_cw(0),
+                       last_ch(0),
+                       extents({0, 0, 0, 0}),
+                       frame_extents_supported(false),
+                       frame_extents_received(false),
+                       enabled(true),
+                       resizable(true),
+                       minw(-1),
+                       minh(-1),
+                       maxw(-1),
+                       maxh(-1),
+                       needs_frame_extents(false),
+                       content_size(true),
+                       size_assigned(false) {}
 
-    struct {
-        int value;
-        BoundsType type;
-    } final_height;
+    int current_x; // current position X
+    int current_y; // current position Y
+    int current_w; // current window width, adjusted (see adjust_w)
+    int current_h; // current window height, adjusted (see adjust_h)
+    int current_cw; // current content (view) width
+    int current_ch; // current content (view) height
+    int last_cw; // not subjected to fullscreen / maximize
+    int last_ch;
 
-    float refx;
-    float refy;
-    float gravity_x;
-    float gravity_y;
-
-    // the last width which was configured or obtained from configure
-    // notification
-    int current_width;
-
-    // the last height which was configured or obtained from configure
-    // notification
-    int current_height;
-
+    // Window decoration sizes
     WindowFrameExtents extents;
 
+    // If _NET_REQUEST_FRAME_EXTENTS is supported by the window manager
+    bool frame_extents_supported;
+
+    // If _NET_REQUEST_FRAME_EXTENTS was received
+    bool frame_extents_received;
+
+    bool enabled;
+    bool resizable;
+
+    int minw;
+    int minh;
+
+    int maxw;
+    int maxh;
+
+    // Frame extents are the window frame (decorations)
+    bool needs_frame_extents;
+
+    // If size is by content or window size
+    bool content_size;
+
+    bool size_assigned;
 };
 
 class WindowContextChild;
@@ -109,7 +131,7 @@ public:
     virtual void enableOrResetIME() = 0;
     virtual void disableIME() = 0;
     virtual void paint(void* data, jint width, jint height) = 0;
-    virtual WindowFrameExtents get_frame_extents() = 0;
+    virtual WindowGeometry get_geometry() = 0;
 
     virtual void enter_fullscreen() = 0;
     virtual void exit_fullscreen() = 0;
@@ -167,7 +189,6 @@ public:
 
     virtual int getEmbeddedX() = 0;
     virtual int getEmbeddedY() = 0;
-
 
     virtual void increment_events_counter() = 0;
     virtual void decrement_events_counter() = 0;
@@ -276,8 +297,7 @@ class WindowContextPlug: public WindowContextBase {
 public:
     bool set_view(jobject);
     void set_bounds(int, int, bool, bool, int, int, int, int);
-    //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
-    WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}
+    WindowGeometry get_geometry() { return WindowGeometry(); }
 
     void enter_fullscreen() {}
     void exit_fullscreen() {}
@@ -323,8 +343,7 @@ public:
     void process_mouse_button(GdkEventButton*);
     bool set_view(jobject);
     void set_bounds(int, int, bool, bool, int, int, int, int);
-    //WindowFrameExtents get_frame_extents() { return WindowFrameExtents{0, 0, 0, 0}; };
-    WindowFrameExtents get_frame_extents() { WindowFrameExtents ext = {0, 0, 0, 0}; return ext;}
+    WindowGeometry get_geometry() { return WindowGeometry(); }
 
     void enter_fullscreen();
     void exit_fullscreen();
@@ -368,31 +387,11 @@ class WindowContextTop: public WindowContextBase {
     WindowType window_type;
     struct WindowContext *owner;
     WindowGeometry geometry;
-    struct _Resizable{// we can't use set/get gtk_window_resizable function
-        _Resizable(): request(REQUEST_NONE), value(true), prev(false),
-                minw(-1), minh(-1), maxw(-1), maxh(-1){}
-        request_type request; //request for future setResizable
-        bool value; //actual value of resizable for a window
-        bool prev; //former resizable value (used in setEnabled for parents of modal window)
-        int minw, minh, maxw, maxh; //minimum and maximum window width/height;
-    } resizable;
-
-    bool frame_extents_initialized;
     bool map_received;
-    bool location_assigned;
-    bool size_assigned;
+    bool visible_received;
     bool on_top;
-
-    struct _Size {
-        int width, height;
-        int client_width, client_height;
-    } requested_bounds;
-
-    bool is_null_extents() { return is_null_extents(geometry.extents); }
-
-    bool is_null_extents(WindowFrameExtents ex) {
-        return !ex.top && !ex.left && !ex.bottom && !ex.right;
-    }
+    bool is_maximized;
+    bool is_fullscreen;
 
     static WindowFrameExtents normal_extents;
     static WindowFrameExtents utility_extents;
@@ -404,7 +403,7 @@ public:
     void process_destroy();
     void process_net_wm_property();
 
-    WindowFrameExtents get_frame_extents();
+    WindowGeometry get_geometry();
 
     void set_minimized(bool);
     void set_maximized(bool);
@@ -435,15 +434,13 @@ public:
 protected:
     void applyShapeMask(void*, uint width, uint height);
 private:
+    void size_position_notify(bool, bool);
+    void apply_geometry();
     bool get_frame_extents_property(int *, int *, int *, int *);
     void request_frame_extents();
     void activate_window();
-    bool update_frame_extents();
     void set_cached_extents(WindowFrameExtents ex);
     WindowFrameExtents get_cached_extents();
-    void window_configure(XWindowChanges *, unsigned int);
-    void update_window_constraints();
-    void set_window_resizable(bool);
     void update_ontop_tree(bool);
     bool on_top_inherited();
     bool effective_on_top();

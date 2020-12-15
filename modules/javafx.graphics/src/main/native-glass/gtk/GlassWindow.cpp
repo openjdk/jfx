@@ -599,14 +599,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_getFrameExtents
     (JNIEnv * env, jobject obj, jlong ptr, jintArray extarr)
 {
     (void)obj;
-
-    WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
-    WindowFrameExtents extents = ctx->get_frame_extents();
-
-    env->SetIntArrayRegion(extarr, 0, 1, &extents.left);
-    env->SetIntArrayRegion(extarr, 1, 1, &extents.right);
-    env->SetIntArrayRegion(extarr, 2, 1, &extents.top);
-    env->SetIntArrayRegion(extarr, 3, 1, &extents.bottom);
 }
 
 /*

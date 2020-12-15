@@ -200,21 +200,7 @@ class GtkWindow extends Window {
     protected void _setBounds(long ptr, int x, int y, boolean xSet, boolean ySet, int w, int h, int cw, int ch, float xGravity, float yGravity) {
         _setGravity(ptr, xGravity, yGravity);
         setBoundsImpl(ptr, x, y, xSet, ySet, w, h, cw, ch);
-
-        if ((w <= 0) && (cw > 0) || (h <= 0) && (ch > 0)) {
-            final int[] extarr = new int[4];
-            getFrameExtents(ptr, extarr);
-
-            // TODO: ((w <= 0) && (cw <= 0)) || ((h <= 0) && (ch <= 0))
-            notifyResize(WindowEvent.RESIZE,
-                         ((w <= 0) && (cw > 0)) ? cw + extarr[0] + extarr[1]
-                                                : w,
-                         ((h <= 0) && (ch > 0)) ? ch + extarr[2] + extarr[3]
-                                                : h);
-        }
     }
-
-    private native void getFrameExtents(long ptr, int[] extarr);
 
     @Override
     protected void _requestInput(long ptr, String text, int type, double width, double height,
