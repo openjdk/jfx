@@ -39,9 +39,9 @@ import javafx.stage.Stage;
 
 public class DataUrlWithModuleLayer extends Application {
     public static final int ERROR_OK = 0;
-    public static final int ERROR_ASSUMPTION_VIOLATED = 1;
-    public static final int ERROR_TIMEOUT = 2;
-    public static final int ERROR_TITLE_NOT_UPDATED = 3;
+    public static final int ERROR_ASSUMPTION_VIOLATED = 2;
+    public static final int ERROR_TIMEOUT = 3;
+    public static final int ERROR_TITLE_NOT_UPDATED = 4;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -94,8 +94,8 @@ public class DataUrlWithModuleLayer extends Application {
         webview.getEngine().getLoadWorker().stateProperty().addListener(
                 new ChangeListener<State>() {
                     public void changed(ObservableValue ov, State oldState, State newState) {
-                        String title = webview.getEngine().getTitle();
                         if (newState == State.SUCCEEDED) {
+                            String title = webview.getEngine().getTitle();
                             if ("Executed".equals(title)) {
                                 System.exit(ERROR_OK);
                             } else {

@@ -46,7 +46,7 @@ void scheduleDispatchFunctionsOnMainThread()
 void initializeMainThreadPlatform()
 {
     // Initialize the class reference and methodids for the MainThread. The
-    // initilization has to be done from a context where the class
+    // initialization has to be done from a context where the class
     // com.sun.webkit.MainThread is accessible. When
     // scheduleDispatchFunctionsOnMainThread is invoked, the system class loader
     // would be used to locate the class, which fails if the JavaFX modules are
