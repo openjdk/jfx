@@ -626,8 +626,8 @@ public class CacheFilter {
             }
             renderNodeToScreen(g);
         } else {
-            double mxt = Math.round(xform.getMxt());
-            double myt = Math.round(xform.getMyt());
+            double mxt = xform.getMxt();
+            double myt = xform.getMyt();
             renderCacheToScreen(g, implImage, mxt, myt);
             implImage.unlock();
         }
