@@ -40,6 +40,10 @@ public class DataUrlWithModuleLayerLauncher {
     public static void main(String[] args) throws Exception {
         // Install safeguard to ensure this application is terminated
         new Thread() {
+            {
+                setDaemon(true);
+            }
+
             @Override
             public void run() {
                 try {
