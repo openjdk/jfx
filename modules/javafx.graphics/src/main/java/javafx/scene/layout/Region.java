@@ -946,17 +946,11 @@ public class Region extends Parent {
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
         final Insets insets = getInsets();
-        if (_snapToPixel) {
-            snappedTopInset = Math.ceil(insets.getTop());
-            snappedRightInset = Math.ceil(insets.getRight());
-            snappedBottomInset = Math.ceil(insets.getBottom());
-            snappedLeftInset = Math.ceil(insets.getLeft());
-        } else {
-            snappedTopInset = insets.getTop();
-            snappedRightInset = insets.getRight();
-            snappedBottomInset = insets.getBottom();
-            snappedLeftInset = insets.getLeft();
-        }
+        final boolean snap = isSnapToPixel();
+        snappedTopInset = snapSpaceY(insets.getTop(), snap);
+        snappedRightInset = snapSpaceX(insets.getRight(), snap);
+        snappedBottomInset = snapSpaceY(insets.getBottom(), snap);
+        snappedLeftInset = snapSpaceX(insets.getLeft(), snap);
     }
 
     /**
