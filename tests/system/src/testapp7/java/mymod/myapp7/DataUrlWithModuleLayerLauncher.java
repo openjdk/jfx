@@ -78,5 +78,6 @@ public class DataUrlWithModuleLayerLauncher {
         Class testClass = moduleClassLoader.loadClass("myapp7.DataUrlWithModuleLayer");
         Method launchMethod = appClass.getMethod("launch", Class.class, String[].class);
         launchMethod.invoke(null, new Object[]{testClass, args});
+        System.exit(DataUrlWithModuleLayer.ERROR_UNEXPECTED_EXIT);
     }
 }

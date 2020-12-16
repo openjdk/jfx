@@ -42,6 +42,7 @@ public class DataUrlWithModuleLayer extends Application {
     public static final int ERROR_ASSUMPTION_VIOLATED = 2;
     public static final int ERROR_TIMEOUT = 3;
     public static final int ERROR_TITLE_NOT_UPDATED = 4;
+    public static final int ERROR_UNEXPECTED_EXIT = 5;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
