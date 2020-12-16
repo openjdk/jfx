@@ -28,7 +28,6 @@ package com.sun.scenario.animation.shared;
 import com.sun.javafx.util.Utils;
 
 import javafx.animation.Animation;
-import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
 /**
@@ -41,6 +40,8 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
 
     protected FiniteClipEnvelope(Animation animation) {
         super(animation);
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("FiniteClipEnvelope");
         if (animation != null) {
             autoReverse = animation.isAutoReverse();
             cycleCount = animation.getCycleCount();
@@ -68,126 +69,23 @@ public class FiniteClipEnvelope extends MultiLoopClipEnvelope {
         return this;
     }
 
-    @Override
-    public void setRate(double newRate) {
-        final boolean toggled = isDirectionChanged(newRate);
-        final long newTicks = toggled ? totalTicks - ticks : ticks;
-        final Status status = animation.getStatus();
-        if (status != Status.STOPPED) {
-            setInternalCurrentRate((Math.abs(currentRate - rate) < EPSILON) ? newRate : -newRate);
-            deltaTicks = newTicks - ticksRateChange(newRate);
-            abortCurrentPulse();
-        }
-        ticks = newTicks;
-        rate = newRate;
-    }
-
-    @Override
-    protected double calculateCurrentRate() {
-        return !autoReverse ? rate
-                : isDuringEvenCycle() == (rate > 0) ? rate : -rate;
-    }
-
     private void updateTotalTicks() {
         totalTicks = cycleCount * cycleTicks;
     }
 
     @Override
-    public void timePulse(long currentTick) {
-        if (cycleTicks == 0L) {
-            return;
-        }
-        aborted = false;
-        inTimePulse = true;
-
-        try {
-            final long oldTicks = ticks;
-            long ticksChange = Math.round(currentTick * Math.abs(rate));
-            ticks = Utils.clamp(0, deltaTicks + ticksChange, totalTicks);
-
-            final boolean reachedEnd = ticks >= totalTicks;
-
-            long overallDelta = ticks - oldTicks; // overall delta between current position and new position
-            if (overallDelta == 0) {
-                return;
-            }
-
-            long cycleDelta = (currentRate > 0) ? cycleTicks - cyclePos : cyclePos; // delta to reach end of cycle
-
-            while (overallDelta >= cycleDelta) {
-                if (cycleDelta > 0) {
-                    cyclePos = (currentRate > 0)? cycleTicks : 0;
-                    overallDelta -= cycleDelta;
-                    AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-                    if (aborted) {
-                        return;
-                    }
-                }
-
-                if (!reachedEnd || (overallDelta > 0)) {
-                    if (autoReverse) {
-                        setCurrentRate(-currentRate);
-                    } else {
-                        cyclePos = (currentRate > 0)? 0 : cycleTicks;
-                        AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
-                    }
-                }
-                cycleDelta = cycleTicks;
-            }
-
-            if (overallDelta > 0 && !reachedEnd) {
-                cyclePos += (currentRate > 0) ? overallDelta : -overallDelta;
-                AnimationAccessor.getDefault().playTo(animation, cyclePos, cycleTicks);
-            }
-
-            if(reachedEnd && !aborted) {
-                AnimationAccessor.getDefault().finished(animation);
-            }
-
-        } finally {
-            inTimePulse = false;
-        }
+    public int getCycleNum() {
+        long effectiveTicks = startedPositive ? ticks : totalTicks - ticks;
+        return (int) (effectiveTicks / cycleTicks);
     }
 
     @Override
-    public void jumpTo(long newTicks) {
-        if (cycleTicks == 0L) {
-            return;
-        }
+    protected boolean hasReachedEnd() {
+        return rate > 0 ? ticks == totalTicks : ticks == 0;
+    }
 
-        final long oldTicks = ticks;
-        if (rate < 0) {
-            newTicks = totalTicks - newTicks;
-        }
-        ticks = Utils.clamp(0, newTicks, totalTicks);
-        final long delta = ticks - oldTicks;
-        if (delta != 0) {
-            deltaTicks += delta;
-            if (autoReverse) {
-                final boolean forward = ticks % (2 * cycleTicks) < cycleTicks;
-                if (forward == (rate > 0)) {
-                    cyclePos = ticks % cycleTicks;
-                    if (animation.getStatus() == Status.RUNNING) {
-                        setCurrentRate(Math.abs(rate));
-                    }
-                } else {
-                    cyclePos = cycleTicks - (ticks % cycleTicks);
-                    if (animation.getStatus() == Status.RUNNING) {
-                        setCurrentRate(-Math.abs(rate));
-                    }
-                }
-            } else {
-                cyclePos = ticks % cycleTicks;
-                if (rate < 0) {
-                    cyclePos = cycleTicks - cyclePos;
-                }
-                if ((cyclePos == 0) && (ticks > 0)) {
-                    cyclePos = cycleTicks;
-                }
-            }
-
-            AnimationAccessor.getDefault().jumpTo(animation, cyclePos, cycleTicks, false);
-            abortCurrentPulse();
-        }
+    @Override
+    protected long calculateNewTicks(long newDest) {
+        return Utils.clamp(0, deltaTicks + newDest, totalTicks);
     }
 }

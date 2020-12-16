@@ -25,9 +25,11 @@
 
 package com.sun.scenario.animation.shared;
 
-import javafx.animation.Animation;
-import javafx.util.Duration;
 import com.sun.javafx.animation.TickCalculation;
+
+import javafx.animation.Animation;
+import javafx.animation.Animation.Status;
+import javafx.util.Duration;
 
 /**
  * An instance of ClipEnvelope handles the loop-part of a clip.
@@ -64,17 +66,17 @@ public abstract class ClipEnvelope {
     protected long deltaTicks = 0;
 
     /**
-     * The current position of the play head. 0 <= ticks <= totalTicks
+     * The current position of the play head. 0 <= ticks <= totalTicks for finite cycles, any value for infinite cycles.
      */
     protected long ticks = 0;
-    protected double currentRate = rate;
+
     protected boolean inTimePulse = false;
     protected boolean aborted = false;
 
     protected ClipEnvelope(Animation animation) {
         this.animation = animation;
         if (animation != null) {
-            cycleTicks = TickCalculation.fromDuration(animation.getCycleDuration());
+            updateCycleTicks(animation.getCycleDuration());
             rate = animation.getRate();
         }
     }
@@ -89,31 +91,64 @@ public abstract class ClipEnvelope {
         }
     }
 
+    /**
+     * Called by the Animation to updates its ClipEnvelope's autoReverse value.
+     * @see Animation#autoReverseProperty()
+     */
     public abstract void setAutoReverse(boolean autoReverse);
+
+    /**
+     * Called by the Animation to updates its ClipEnvelope's cycleDuration value.
+     * @see Animation#cycleDurationProperty()
+     */
     public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
+
+    /**
+     * Called by the Animation to updates its ClipEnvelope's cycleCount value.
+     * @see Animation#cycleCountProperty()
+     */
     public abstract ClipEnvelope setCycleCount(int cycleCount);
-    public abstract void setRate(double rate);
 
-    protected abstract double calculateCurrentRate();
+    /**
+     * Calculates the cycle number the animation is currently at. The number is relative to the starting position of the
+     * animation; if the animation if played from the end, ticks == totalTicks will be at cycle 0, if played from the start,
+     * it will be at the value of cycleCount.
+     */
+    public abstract int getCycleNum();
 
-    protected void setInternalCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
+    /**
+     * Called by the Animation to updates its ClipEnvelope's rate value. Animation guarantees that newRate != 0.
+     * @see Animation#rateProperty()
+     */
+    public void setRate(double newRate) {
+        if (animation.getStatus() != Status.STOPPED) {
+            deltaTicks = ticks - Math.round((ticks - deltaTicks) * newRate / rate);
+            abortCurrentPulse();
+        }
+        rate = newRate;
     }
 
-    protected void setCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
+    /**
+     * Calculates the {@link Animation#currentRateProperty() currentRate} for a running animation. An Animation can call
+     * this method to get its current running rate.
+     * <p>
+     * If the animation is not running, this value represents the rate at which the animation will run once it's played.
+     * The value is always +rate or -rate (since STOPPED and PAUSED states are ignored). The sign is determined by the
+     * position of the play head and by the values of autoReverse and startPositive:<br>
+     * If autoReverse == false then currentRate = +rate. Otherwise, if {@link #getCycleNum()} is even then currentRate = +rate,
+     * and if odd then currentRate = -rate.
+     */
+    public abstract double calculateCurrentRunningRate();
+
+    /**
+     * Sets the current rate of the Animation by its ClipEnvelope. Called when a cycle ended with autoReverse and the
+     * current rate should be flipped.
+     */
+    protected final void setAnimationCurrentRate(double currentRate) {
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
     }
 
-    public double getCurrentRate() {
-        return currentRate;
-    }
-
-    protected long ticksRateChange(double newRate) {
-        return Math.round((ticks - deltaTicks) * newRate / rate);
-     }
-
-    protected void updateCycleTicks(Duration cycleDuration) {
+    protected final void updateCycleTicks(Duration cycleDuration) {
         cycleTicks = TickCalculation.fromDuration(cycleDuration);
     }
 
@@ -122,13 +157,104 @@ public abstract class ClipEnvelope {
     }
 
     public void start() {
-        setCurrentRate(calculateCurrentRate());
-        deltaTicks = ticks;
+        deltaTicks = ticks; // after stopping, ticks is always 0, so this is relevant only if jumpedTo after stop, then start
     }
 
-    public abstract void timePulse(long currentTick);
+    public void timePulse(long newDest) {
+        if (cycleTicks == 0L) {
+            return;
+        }
+        aborted = false;
+        inTimePulse = true;
 
-    public abstract void jumpTo(long ticks);
+        try {
+            doTimePulse(newDest);
+        } finally {
+            inTimePulse = false;
+        }
+    }
+
+    private void doTimePulse(long newDest) {
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("dest = " + newDest);
+
+        double currentRate = calculateCurrentRunningRate();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("rate, curRate = " + rate + ", " + currentRate);
+
+        newDest = Math.round(newDest * rate);
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("new dest = " + newDest);
+
+        final long oldTicks = ticks;
+        ticks = calculateNewTicks(newDest);
+        long ticksChange = Math.abs(ticks - oldTicks);
+        if (!animation.getCuePoints().isEmpty()) {
+            System.out.println("deltaTicks = " + deltaTicks);
+            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + ticksChange);
+        }
+
+        if (ticksChange == 0) {
+            if (!animation.getCuePoints().isEmpty())
+                System.out.println("delta = 0");
+            return;
+        }
+
+        final boolean reachedEnd = hasReachedEnd();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("reachedEnd = " + reachedEnd);
+
+        playTo(currentRate, ticksChange, reachedEnd);
+
+        if (reachedEnd && !aborted) {
+            if (!animation.getCuePoints().isEmpty())
+                System.out.println("finished");
+            AnimationAccessor.getDefault().finished(animation);
+        }
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println();
+    }
+
+    protected abstract long calculateNewTicks(long newDest);
+    protected abstract boolean hasReachedEnd();
+    protected abstract void playTo(double currentRate, long ticksChange, boolean reachedEnd);
+
+    public void jumpTo(long newDest) {
+        if (cycleTicks == 0L) {
+            return;
+        }
+        doJumpTo(newDest);
+        jump();
+        abortCurrentPulse();
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println();
+    }
+
+    private void doJumpTo(long newDest) {
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump newDest = " + newDest);
+        final long oldTicks = ticks;
+        ticks = newDest;
+        final long ticksChange = ticks - oldTicks;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("ticks: " + oldTicks + " -> " + ticks + " = " + ticksChange);
+        if (ticksChange == 0) {
+            if (!animation.getCuePoints().isEmpty()) {
+                System.out.println("jump ticksChange = 0");
+            }
+//            return;
+        }
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump old deltaTicks = " + deltaTicks);
+        deltaTicks += ticksChange;
+        if (!animation.getCuePoints().isEmpty())
+            System.out.println("jump new deltaTicks = " + deltaTicks);
+
+        calculateCyclePosition();
+    }
+
+    protected abstract void calculateCyclePosition();
+    protected abstract void jump();
 
     public final void abortCurrentPulse() {
         if (inTimePulse) {

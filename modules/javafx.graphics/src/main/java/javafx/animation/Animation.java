@@ -25,10 +25,17 @@
 
 package javafx.animation;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Objects;
 
+import com.sun.javafx.animation.TickCalculation;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.util.Utils;
+import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.shared.ClipEnvelope;
+import com.sun.scenario.animation.shared.PulseReceiver;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -47,14 +54,6 @@ import javafx.collections.ObservableMap;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-import com.sun.javafx.animation.TickCalculation;
-import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.animation.shared.ClipEnvelope;
-import com.sun.scenario.animation.shared.PulseReceiver;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * The class {@code Animation} provides the core functionality of all animations
@@ -272,6 +271,9 @@ public abstract class Animation {
     Animation parent = null;
 
     /**
+     * The ClipEnvelope is responsible for calculating the playing head position (ticks) for operations like playing and
+     * jumping. It can also be used to calculate the currentRate for a running (or an about-to-run) animation.
+     * <p> 
      * The type of ClipEnvelope for the animation is determined by its cycleCount and cycleDuration
      * and is updated when these values change.
      * <p>
@@ -281,7 +283,6 @@ public abstract class Animation {
 
     private boolean lastPlayedFinished = true;
 
-    private boolean lastPlayedForward = true;
     /**
      * Defines the direction/speed at which the {@code Animation} is expected to
      * be played.
@@ -312,7 +313,7 @@ public abstract class Animation {
     }
 
     public final double getRate() {
-        return (rate == null)? DEFAULT_RATE : rate.get();
+        return (rate == null) ? DEFAULT_RATE : rate.get();
     }
 
     public final DoubleProperty rateProperty() {
@@ -321,7 +322,6 @@ public abstract class Animation {
 
                 @Override
                 public void invalidated() {
-                    final double newRate = getRate();
                     if (isRunningEmbedded()) {
                         if (isBound()) {
                             unbind();
@@ -329,26 +329,20 @@ public abstract class Animation {
                         set(oldRate);
                         throw new IllegalArgumentException("Cannot set rate of embedded animation while running.");
                     }
+
+                    final double newRate = getRate();
+                    // none 0 -> 0
                     if (isNearZero(newRate)) {
-                        if (isRunning()) {
-                            lastPlayedForward = areNearEqual(getCurrentRate(), oldRate);
-                        }
-                        doSetCurrentRate(0.0);
                         pauseReceiver();
+                        doSetCurrentRate(0.0);
+                    // anything -> none 0
                     } else {
-                        if (isRunning()) {
-                            final double currentRate = getCurrentRate();
-                            if (isNearZero(currentRate)) {
-                                doSetCurrentRate(lastPlayedForward ? newRate : -newRate);
-                                resumeReceiver();
-                            } else {
-                                final boolean playingForward = areNearEqual(currentRate, oldRate);
-                                doSetCurrentRate(playingForward ? newRate : -newRate);
-                            }
+                        clipEnvelope.setRate(newRate);
+                        // 0 -> none 0
+                        if (isNearZero(getCurrentRate()) && isRunning()) {
+                            resumeReceiver();
                         }
-                        oldRate = newRate;
                     }
-                    clipEnvelope.setRate(newRate);
                 }
 
                 @Override
@@ -398,11 +392,13 @@ public abstract class Animation {
         return currentRate;
     }
 
+    /**
+     * Sets the current rate by the clip envelope through the animation accessor. Called when a cycle is alternated and
+     * autoReverse is on. 
+     */
     void setCurrentRate(double currentRate) {
-//      if (getStatus() == Status.RUNNING) {
-          doSetCurrentRate(currentRate);
-//      }
-  }
+        doSetCurrentRate(currentRate);
+    }
 
     /**
      * The current rate changes in 3 cases:
@@ -412,9 +408,9 @@ public abstract class Animation {
      * <li> When switching between a forwards and backwards cycle.
      * </ol>
      *
-     * 1 happens when the user changes the rate of the animation or its root parent.
-     * 2 happens when the user changes the status or when the animation is finished.
-     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor
+     * 1 happens when the user changes the rate of the animation or its root parent.<br>
+     * 2 happens when the user changes the status or when the animation is finished.<br>
+     * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor.
      *
      * @param value the value of the new current rate
      */
@@ -985,7 +981,7 @@ public abstract class Animation {
             throw new IllegalStateException("Cannot start when embedded in another animation");
         }
         switch (getStatus()) {
-            case STOPPED:
+            case STOPPED: // TODO: what if started with rate = 0 ?
                 if (startable(true)) {
                     final double rate = getRate();
                     if (lastPlayedFinished) {
@@ -996,7 +992,7 @@ public abstract class Animation {
                     if (isNearZero(rate)) {
                         pauseReceiver();
                     } else {
-
+                        setCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                     }
                 } else {
                     runHandler(getOnFinished());
@@ -1006,6 +1002,7 @@ public abstract class Animation {
                 doResume();
                 if (!isNearZero(getRate())) {
                     resumeReceiver();
+                    setCurrentRate(clipEnvelope.calculateCurrentRunningRate());
                 }
                 break;
             case RUNNING: // no-op
@@ -1014,15 +1011,13 @@ public abstract class Animation {
 
     void doStart(boolean forceSync) {
         sync(forceSync);
-        setStatus(Status.RUNNING);
         clipEnvelope.start();
-        doSetCurrentRate(clipEnvelope.getCurrentRate());
         lastPulse = 0;
+        setStatus(Status.RUNNING);
     }
 
     void doResume() {
         setStatus(Status.RUNNING);
-        doSetCurrentRate(lastPlayedForward ? getRate() : -getRate());
     }
 
     /**
@@ -1052,8 +1047,8 @@ public abstract class Animation {
         if (!paused) {
             timer.removePulseReceiver(pulseReceiver);
         }
-        setStatus(Status.STOPPED);
         doSetCurrentRate(0.0);
+        setStatus(Status.STOPPED);
     }
 
     /**
@@ -1071,18 +1066,14 @@ public abstract class Animation {
         if (parent != null) {
             throw new IllegalStateException("Cannot pause when embedded in another animation");
         }
-        if (isRunning()) {
-            clipEnvelope.abortCurrentPulse();
+        if (isRunning()) { // TODO: cannot pause a stopped animation?
+            clipEnvelope.abortCurrentPulse(); // why abort current pulse?
             pauseReceiver();
             doPause();
         }
     }
 
     void doPause() {
-        final double currentRate = getCurrentRate();
-        if (!isNearZero(currentRate)) {
-            lastPlayedForward = areNearEqual(getCurrentRate(), getRate());
-        }
         doSetCurrentRate(0.0);
         setStatus(Status.PAUSED);
     }
