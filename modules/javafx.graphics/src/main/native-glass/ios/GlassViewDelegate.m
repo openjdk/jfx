@@ -741,7 +741,7 @@ static BOOL isTouchEnded(int phase)
                                           unicode:(char)13
                                         modifiers:0];
 
-    [[GlassWindow getMasterWindow] resignFocusOwner];
+    [[GlassWindow getMainWindow] resignFocusOwner];
 
     return YES;
 }

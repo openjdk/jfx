@@ -26,8 +26,8 @@
 package com.sun.scenario.animation.shared;
 
 /**
- * A PulseReceiver can receive regular pulses from the MasterTimer. Removing
- * receivers from the MasterTimer needs to be in-sync with the
+ * A PulseReceiver can receive regular pulses from the PrimaryTimer. Removing
+ * receivers from the PrimaryTimer needs to be in-sync with the
  * timePulse-iteration. The receiver is removed if timePulse returns true.
  * The reason we do not use Callback or some other pre-existing interface
  * is that we want an interface that takes a primitive long, whereas Callback
@@ -39,7 +39,7 @@ public interface PulseReceiver {
      *
      * @param now
      *            Timestamp of the pulse.
-     * @return true if PulseReceiver should be removed from the MasterTimer.
+     * @return true if PulseReceiver should be removed from the PrimaryTimer.
      */
     void timePulse(long now);
 }

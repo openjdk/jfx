@@ -42,7 +42,7 @@ class EGLX11GLFactory extends GLFactory {
 
     // Entries must be in lowercase and null string is a wild card
     private GLGPUInfo preQualificationFilter[] = null;
-    private GLGPUInfo blackList[] = null;
+    private GLGPUInfo rejectList[] = null;
 
     @Override
     GLGPUInfo[] getPreQualificationFilter() {
@@ -50,8 +50,8 @@ class EGLX11GLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override

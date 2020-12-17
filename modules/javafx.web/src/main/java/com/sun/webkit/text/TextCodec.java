@@ -78,7 +78,7 @@ final class TextCodec {
             encodings.add(e);
             Charset c = entry.getValue();
             for (String a : c.aliases()) {
-                // 8859_1 is blacklisted in TextEncodingRegistry.cpp:isUndesiredAlias()
+                // 8859_1 is rejected in TextEncodingRegistry.cpp:isUndesiredAlias()
                 // See also https://bugs.webkit.org/show_bug.cgi?id=43554
                 if (a.equals("8859_1")) continue;
 

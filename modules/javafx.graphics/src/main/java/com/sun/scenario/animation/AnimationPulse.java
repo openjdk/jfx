@@ -54,7 +54,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         private long endNanos = Long.MIN_VALUE;
 
         PulseData(long shiftNanos) {
-            startNanos = Toolkit.getToolkit().getMasterTimer().nanos();
+            startNanos = Toolkit.getToolkit().getPrimaryTimer().nanos();
             scheduledNanos = startNanos + shiftNanos;
         }
 
@@ -64,7 +64,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
 
         void recordAnimationEnd() {
-            animationEndNanos = Toolkit.getToolkit().getMasterTimer().nanos();
+            animationEndNanos = Toolkit.getToolkit().getPrimaryTimer().nanos();
         }
 
         long getAnimationDuration(TimeUnit unit) {
@@ -92,7 +92,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
 
         void recordEnd() {
-            endNanos = Toolkit.getToolkit().getMasterTimer().nanos();
+            endNanos = Toolkit.getToolkit().getPrimaryTimer().nanos();
         }
 
         long getPulseDuration(TimeUnit unit) {
@@ -106,7 +106,7 @@ public class AnimationPulse implements AnimationPulseMBean {
         }
 
         long getPulseStartFromNow(TimeUnit unit) {
-            return unit.convert(Toolkit.getToolkit().getMasterTimer().nanos() - startNanos,
+            return unit.convert(Toolkit.getToolkit().getPrimaryTimer().nanos() - startNanos,
                     TimeUnit.NANOSECONDS);
         }
 
@@ -172,7 +172,7 @@ public class AnimationPulse implements AnimationPulseMBean {
 
     @Override
     public long getPULSE_DURATION() {
-        return Toolkit.getToolkit().getMasterTimer().getPulseDuration(1000);
+        return Toolkit.getToolkit().getPrimaryTimer().getPulseDuration(1000);
     }
 
 

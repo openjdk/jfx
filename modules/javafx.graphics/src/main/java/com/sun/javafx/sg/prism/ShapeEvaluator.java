@@ -103,9 +103,9 @@ class ShapeEvaluator {
         geom1 = new Geometry(v1);
         float tvals0[] = geom0.getTvals();
         float tvals1[] = geom1.getTvals();
-        float masterTvals[] = mergeTvals(tvals0, tvals1);
-        geom0.setTvals(masterTvals);
-        geom1.setTvals(masterTvals);
+        float combinedTvals[] = mergeTvals(tvals0, tvals1);
+        geom0.setTvals(combinedTvals);
+        geom1.setTvals(combinedTvals);
     }
 
     private Shape getShape(float fraction) {

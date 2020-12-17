@@ -46,7 +46,7 @@ public class ParallelTransitionPlayTest {
     LongProperty xProperty = new SimpleLongProperty();
     LongProperty yProperty = new SimpleLongProperty();
 
-    AbstractMasterTimerMock amt;
+    AbstractPrimaryTimerMock amt;
     ParallelTransition pt;
 
     Transition child1X;
@@ -56,7 +56,7 @@ public class ParallelTransitionPlayTest {
 
     @Before
     public void setUp() {
-        amt = new AbstractMasterTimerMock();
+        amt = new AbstractPrimaryTimerMock();
         pt = ParallelTransitionShim.getParallelTransition(amt);
         child1X = new TransitionShim() {
 

@@ -56,7 +56,7 @@ static BOOL          dragging = NO;// Are we inside drag and drop session?
 
 static UIImageView * dragImage = nil;// Image(s) shown during drag and drop
 
-static UIView      * dragViewParent;// parental UIView of all GlassWindows (aka masterHostView); do not retain
+static UIView      * dragViewParent;// parental UIView of all GlassWindows (aka mainHostView); do not retain
 static UIView *      dragSourceView;// GlassView where drag operation started
 
 static jobject lastJavaViewDragTarget = NULL; // last view where mouse occured during dragging session

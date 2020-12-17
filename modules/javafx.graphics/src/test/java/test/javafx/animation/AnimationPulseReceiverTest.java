@@ -40,14 +40,14 @@ import javafx.util.Duration;
 
 public class AnimationPulseReceiverTest {
 
-    private static final int DEFAULT_RESOLUTION = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
+    private static final int DEFAULT_RESOLUTION = Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution();
     private static final double TICKS_2_NANOS = 1.0 / 6e-6;
-    private AbstractMasterTimerMock timer;
+    private AbstractPrimaryTimerMock timer;
     private AnimationMock animation;
 
     @Before
     public void setUp() {
-        timer = new AbstractMasterTimerMock();
+        timer = new AbstractPrimaryTimerMock();
         animation = new AnimationMock(timer, Duration.INDEFINITE, 1.0, 1, false);
     }
 

@@ -26,7 +26,7 @@
 package com.sun.media.jfxmedia.effects;
 
 /**
- * Provides a master audio equalizer with up to 15 bands.  Each band can have the center frequency,
+ * Provides an audio equalizer with up to 15 bands.  Each band can have the center frequency,
  * bandwidth, and gain set.
  */
 public interface AudioEqualizer
