@@ -109,6 +109,9 @@ public class UIRenderDialogTest {
         Assert.assertEquals("Wrong render scale", scale,
                 stage.getRenderScaleY(), 0.0001);
 
+        Assert.assertNotNull(alert);
+        assertTrue(alert.isShowing());
+
         for (Node node : ((HBox) alert.getDialogPane().getContent()).getChildrenUnmodifiable()) {
             CheckBox box = (CheckBox) node;
             Assert.assertEquals("Wrong text", "Check", ((Text) box.lookup(".text")).getText());
@@ -118,7 +121,9 @@ public class UIRenderDialogTest {
     @AfterClass
     public static void teardown() {
         Platform.runLater(() -> {
-            alert.hide();
+            if (alert != null) {
+                alert.hide();
+            }
             stage.hide();
         });
         Platform.exit();
