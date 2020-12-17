@@ -943,8 +943,17 @@ public class Region extends Parent {
     private double snappedBottomInset = 0;
     private double snappedLeftInset = 0;
 
+    /**
+     * Cached snapScale values, used for to determine if snapped cached insets values
+     * should be invalidated because screen scale has changed.
+     */
+    private double lastUsedSnapScaleY = 0;
+    private double lastUsedSnapScaleX = 0;
+
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
+        lastUsedSnapScaleX = getSnapScaleX();
+        lastUsedSnapScaleY = getSnapScaleY();
         final Insets insets = getInsets();
         final boolean snap = isSnapToPixel();
         snappedTopInset = snapSpaceY(insets.getTop(), snap);
@@ -1812,6 +1821,11 @@ public class Region extends Parent {
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedTopInset;
     }
 
@@ -1823,6 +1837,9 @@ public class Region extends Parent {
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedBottomInset;
     }
 
@@ -1834,6 +1851,9 @@ public class Region extends Parent {
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedLeftInset;
     }
 
@@ -1845,6 +1865,9 @@ public class Region extends Parent {
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedRightInset;
     }
 
