@@ -269,17 +269,20 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     @Override public void dispose() {
         if (getSkinnable() == null) return;
 
-        getSkinnable().getTabs().removeListener(weakTabsListener);
-
-        getChildren().remove(tabHeaderArea);
-        tabHeaderArea.removeListeners();
-
-        for (TabContentRegion contentRegion : tabContentRegions) {
-            contentRegion.dispose();
-        }
         if (selectionModel != null) {
             selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
             selectionModel = null;
+        }
+        getSkinnable().getTabs().removeListener(weakTabsListener);
+        tabHeaderArea.removeListeners();
+
+
+        // Control and Skin share the list of children, so children that are
+        // added by Skin are actually added to control's list of children,
+        // so a skin should remove the children that it adds.
+        getChildren().remove(tabHeaderArea);
+        for (Tab tab : getSkinnable().getTabs()) {
+            removeTabContent(tab);
         }
 
         super.dispose();
@@ -687,11 +690,16 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     private void removeTabContent(Tab tab) {
         for (TabContentRegion contentRegion : tabContentRegions) {
             if (contentRegion.getTab().equals(tab)) {
-                contentRegion.dispose();
-                tabContentRegions.remove(contentRegion);
+                removeTabContent(contentRegion);
                 break;
             }
         }
+    }
+
+    private void removeTabContent(TabContentRegion contentRegion) {
+        contentRegion.dispose();
+        tabContentRegions.remove(contentRegion);
+        getChildren().remove(contentRegion);
     }
 
     private void updateTabPosition() {
@@ -713,7 +721,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private boolean isHorizontal() {
-        Side tabPosition = getSkinnable() != null ? getSkinnable().getSide() : Side.TOP;
+        Side tabPosition = getSkinnable().getSide();
         return Side.TOP.equals(tabPosition) || Side.BOTTOM.equals(tabPosition);
     }
 
@@ -1223,7 +1231,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         void removeListeners() {
-            for(Node child : headersRegion.getChildren()) {
+            for (Node child : headersRegion.getChildren()) {
                 TabHeaderSkin header = (TabHeaderSkin) child;
                 header.removeListeners(header.getTab());
             }
