@@ -179,13 +179,17 @@ public final class CookieManager extends CookieHandler {
         }
         host = canonicalize(host);
 
-        if (PublicSuffixes.isPublicSuffix(cookie.getDomain())) {
-            if (cookie.getDomain().equals(host)) {
-                cookie.setDomain("");
-            } else {
-                logger.finest("Domain is public suffix, "
-                        + "ignoring cookie");
-                return;
+        if (!PublicSuffixes.pslFileExists()) {
+            cookie.setDomain("");
+        } else {
+            if (PublicSuffixes.isPublicSuffix(cookie.getDomain())) {
+                if (cookie.getDomain().equals(host)) {
+                    cookie.setDomain("");
+                } else {
+                    logger.finest("Domain is public suffix, "
+                            + "ignoring cookie");
+                    return;
+                }
             }
         }
 

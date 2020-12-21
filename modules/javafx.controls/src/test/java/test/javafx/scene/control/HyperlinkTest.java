@@ -139,7 +139,7 @@ public class HyperlinkTest {
      *  - set is honored                                                            *
      *  - can be bound                                                              *
      *  - is false by default                                                       *
-     *  - impl_cssSettable returns false                                            *
+     *  - CssMetaData_isSettable returns false                                            *
      *                                                                              *
      *******************************************************************************/
 

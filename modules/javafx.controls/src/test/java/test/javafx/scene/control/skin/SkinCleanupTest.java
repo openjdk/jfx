@@ -25,9 +25,10 @@
 
 package test.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
+
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.collections.FXCollections.*;
@@ -42,6 +43,9 @@ import javafx.scene.control.Control;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -55,6 +59,103 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+  //---------------- TreeView
+
+    /**
+     * Sanity: replacing the root has no side-effect, listener to rootProperty
+     * is registered with skin api
+     */
+    @Test
+    public void testTreeViewSetRoot() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.setRoot(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewAddRootChild() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().add(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewReplaceRootChildren() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().setAll(createRoot().getChildren());
+    }
+
+    /**
+     * NPE due to properties listener not removed
+     */
+    @Test
+    public void testTreeViewRefresh() {
+        TreeView<String> treeView = new TreeView<>();
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.refresh();
+    }
+
+    /**
+     * Sanity: guard against potential memory leak from root property listener.
+     */
+    @Test
+    public void testMemoryLeakAlternativeSkinWithRoot() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(treeView));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * Creates and returns an expanded treeItem with two children
+     */
+    private TreeItem<String> createRoot() {
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("child one"), new TreeItem<>("child two"));
+        return root;
+    }
+
+
+// ------------------ TreeCell
+
+    @Test
+    public void testTreeCellReplaceTreeViewWithNull() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        TreeView<Object> treeView = new TreeView<>();
+        cell.updateTreeView(treeView);
+        installDefaultSkin(cell);
+        cell.updateTreeView(null);
+        // 8253634: updating the old treeView must not throw NPE in skin
+        treeView.setFixedCellSize(100);
+    }
+
+    @Test
+    public void testTreeCellPrefHeightOnReplaceTreeView() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        cell.updateTreeView(new TreeView<>());
+        installDefaultSkin(cell);
+        TreeView<Object> treeView = new TreeView<>();
+        treeView.setFixedCellSize(100);
+        cell.updateTreeView(treeView);
+        assertEquals("fixed cell set to value of new treeView",
+                cell.getTreeView().getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+    }
 
 // ------------------ ListCell
 
@@ -111,10 +212,9 @@ public class SkinCleanupTest {
 //-------- choiceBox, toolBar
 
     /**
-     * FIXME: Left-over from ChoiceBox fix.
      * NPE on sequence setItems -> modify items after skin is replaced.
      */
-    @Test @Ignore("8246202")
+    @Test
     public void testChoiceBoxSetItems() {
         ChoiceBox<String> box = new ChoiceBox<>();
         installDefaultSkin(box);

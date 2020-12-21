@@ -90,7 +90,7 @@ abstract class PerformanceTrackerHelper {
     public abstract boolean isPerfLoggingEnabled();
 
     public final long nanoTime() {
-        return Toolkit.getToolkit().getMasterTimer().nanos();
+        return Toolkit.getToolkit().getPrimaryTimer().nanos();
     }
 
     private static final class PerformanceTrackerDefaultImpl

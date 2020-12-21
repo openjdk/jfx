@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import javafx.scene.Node;
 
 public abstract class TransitionShim extends Transition {
@@ -38,7 +38,7 @@ public abstract class TransitionShim extends Transition {
         super(targetFramerate);
     }
 
-    protected TransitionShim(AbstractMasterTimer timer) {
+    protected TransitionShim(AbstractPrimaryTimer timer) {
         super(timer);
     }
 

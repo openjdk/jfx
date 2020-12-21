@@ -133,7 +133,7 @@ public class PaginationTest {
     /*********************************************************************
      * CSS related Tests                                                 *
      ********************************************************************/
-    @Test public void whenMaxPageIndicatorCountIsBound_impl_cssSettable_ReturnsFalse() {
+    @Test public void whenMaxPageIndicatorCountIsBound_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
         IntegerProperty intPr = new SimpleIntegerProperty(10);
@@ -141,7 +141,7 @@ public class PaginationTest {
         assertFalse(styleable.isSettable(pagination));
     }
 
-    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+    @Test public void whenMaxPageIndicatorCountIsSpecifiedViaCSSAndIsNotBound_CssMetaData_isSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)pagination.maxPageIndicatorCountProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(pagination));
     }

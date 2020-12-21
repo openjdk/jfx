@@ -47,7 +47,7 @@ public class SequentialTransitionPlayTest {
 
     LongProperty xProperty = new SimpleLongProperty();
     LongProperty yProperty = new SimpleLongProperty();
-    AbstractMasterTimerMock amt;
+    AbstractPrimaryTimerMock amt;
     SequentialTransition st;
     Transition child1X;
     Transition child1Y;
@@ -56,7 +56,7 @@ public class SequentialTransitionPlayTest {
 
     @Before
     public void setUp() {
-        amt = new AbstractMasterTimerMock();
+        amt = new AbstractPrimaryTimerMock();
         st = SequentialTransitionShim.getSequentialTransition(amt);
         child1X = new TransitionShim() {
             {

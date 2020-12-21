@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -867,13 +867,15 @@ final class URLLoader extends URLLoaderBase implements Runnable {
      */
     private static String extractHeaders(URLConnection c) {
         StringBuilder sb = new StringBuilder();
-        Map<String, List<String>> headers = c.getHeaderFields();
-        for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
-            String key = entry.getKey();
-            List<String> values = entry.getValue();
-            for (String value : values) {
-                sb.append(key != null ? key : "");
-                sb.append(':').append(value).append('\n');
+        if (c instanceof HttpURLConnection) {
+            Map<String, List<String>> headers = c.getHeaderFields();
+            for (Map.Entry<String, List<String>> entry: headers.entrySet()) {
+                String key = entry.getKey();
+                List<String> values = entry.getValue();
+                for (String value : values) {
+                    sb.append(key != null ? key : "");
+                    sb.append(':').append(value).append('\n');
+                }
             }
         }
         return sb.toString();

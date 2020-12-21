@@ -109,7 +109,7 @@ public class ControlSkinTest {
     /*
      * Binding a skin is honored
      * Be sure to check that "dispose" is called on the old skin
-     * Test that if skin is bound, then impl_cssSettable returns false
+     * Test that if skin is bound, then CssMetaData_isSettable returns false
      */
 //    @Test public void skinCanBeBound() {
 //        ObjectProperty<SkinStub<ControlStub>> skin = new SimpleObjectProperty<SkinStub<ControlStub>>();
@@ -122,7 +122,7 @@ public class ControlSkinTest {
         assertTrue(c.getSkin() instanceof MySkinStub);
     }
 
-    @Test public void impl_cssSetCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
+    @Test public void applyStyleCalledTwiceWithTheSameValueHasNoEffectTheSecondTime() {
         StringProperty skinClassName = ControlShim.skinClassNameProperty(c);
         skinClassName.addListener(new InvalidationListener() {
             boolean calledOnce = false;

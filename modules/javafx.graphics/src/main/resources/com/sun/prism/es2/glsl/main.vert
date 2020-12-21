@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ attribute vec4 tangent;
 struct Light {
     vec4 pos;
     vec3 color;
+    vec3 attn;
+    float range;
 };
 
 //3 lights used
@@ -95,7 +97,7 @@ void main()
     L = lights[2].pos.xyz - worldPos.xyz;
     lightTangentSpacePositions[2] = vec4( getLocalVector(L,tangentFrame)*lights[2].pos.w, 1.0);
 
-     mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
+    mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
 
     //Send texcoords to Pixel Shader and calculate vertex position.
     oTexCoords = texCoords;

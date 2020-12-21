@@ -39,7 +39,7 @@ class MacGLFactory extends GLFactory {
 
     // These are older GPUs that users have reported problem in using the es2 pipe.
     // We don't have these units in-house to verify or maintain.
-    private GLGPUInfo blackList[] = {
+    private GLGPUInfo rejectList[] = {
         new GLGPUInfo("ati", "radeon x1600 opengl engine"),
         new GLGPUInfo("ati", "radeon x1900 opengl engine"),
         new GLGPUInfo("intel", "gma x3100 opengl engine")
@@ -51,8 +51,8 @@ class MacGLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override

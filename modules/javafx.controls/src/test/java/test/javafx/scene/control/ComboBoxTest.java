@@ -31,6 +31,7 @@ import com.sun.javafx.scene.control.inputmap.InputMap;
 import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -92,6 +93,7 @@ import org.junit.Test;
 public class ComboBoxTest {
     private ComboBox<String> comboBox;
     private SingleSelectionModel<String> sm;
+    private StageLoader sl; //Note : It is created and used by individual tests that need it
 
     /*********************************************************************
      *                                                                   *
@@ -130,6 +132,9 @@ public class ComboBoxTest {
     }
 
     @After public void cleanup() {
+        if (sl != null) {
+            sl.dispose();
+        }
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
@@ -651,10 +656,9 @@ public class ComboBoxTest {
         assertEquals(null, sc.toString(null));
     }
 
-    @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+    @Test public void ensure_getPseudoClassStateReturnsValidValue() {
+        sl = new StageLoader(comboBox);
+
 
         Set<PseudoClass> pseudoClassStates = comboBox.getPseudoClassStates();
         assertFalse(comboBox.isEditable());
@@ -674,7 +678,6 @@ public class ComboBoxTest {
 
         comboBox.arm();
         assertTrue(pseudoClassStates.contains(PseudoClass.getPseudoClass("armed")));
-
     }
 
     /*********************************************************************
@@ -725,9 +728,7 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanToggleShowing() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        sl = new StageLoader(comboBox);
 
         comboBox.show();
         assertTrue(comboBox.isShowing());
@@ -736,9 +737,7 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanNotToggleShowingWhenDisabled() {
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        sl = new StageLoader(comboBox);
 
         comboBox.setDisable(true);
         comboBox.show();
@@ -940,22 +939,18 @@ public class ComboBoxTest {
 
         assertEquals("2", listView.getSelectionModel().getSelectedItem());
 
-        System.out.println(listView.getSkin());
-
         VirtualFlow flow = (VirtualFlow)listView.lookup("#virtual-flow");
         assertNotNull(flow);
 
         IndexedCell cell = flow.getVisibleCell(2);
-        System.out.println("cell: " + cell);
         assertEquals("TO_STRING", cell.getText());
     }
 
     @Test public void test_rt20189() {
         comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
 
@@ -980,9 +975,8 @@ public class ComboBoxTest {
 
         SingleSelectionModel sm = comboBox.getSelectionModel();
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
@@ -1009,9 +1003,8 @@ public class ComboBoxTest {
     @Test public void test_rt24412() {
         SingleSelectionModel sm = comboBox.getSelectionModel();
 
-        Stage stage = new Stage();
-        Scene scene = new Scene(comboBox);
-        stage.setScene(scene);
+        sl = new StageLoader(comboBox);
+
         comboBox.applyCss();
         comboBox.show();
         ListCell<String> buttonCell = (ListCell<String>) getDisplayNode();
@@ -1051,7 +1044,7 @@ public class ComboBoxTest {
             }
         });
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         assertNull(comboBox.getValue());
         assertTrue(comboBox.getEditor().getText().isEmpty());
@@ -1059,14 +1052,12 @@ public class ComboBoxTest {
         comboBox.requestFocus();
 
         new KeyEventFirer(comboBox).doKeyPress(KeyCode.ENTER);
-
-        sl.dispose();
     }
 
     @Test public void test_rt31479() {
         ComboBox<String> comboBox = new ComboBox<String>();
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         final double widthBefore = comboBox.getWidth();
 
@@ -1088,8 +1079,6 @@ public class ComboBoxTest {
 
         // test size
         assertEquals(widthBefore, comboBox.getWidth(), 0.00);
-
-        sl.dispose();
     }
 
     @Test public void test_rt32139() {
@@ -1105,22 +1094,20 @@ public class ComboBoxTest {
             }
         });
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         try {
             comboBox.getSelectionModel().select(1);
         } catch (StackOverflowError e) {
             fail("Stack overflow should not happen here");
         }
-
-        sl.dispose();
     }
 
     @Test public void test_rt21186() {
         final ComboBox<String> comboBox = new ComboBox<>();
         comboBox.setEditable(true);
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         assertNull(comboBox.getTooltip());
         assertNull(comboBox.getEditor().getTooltip());
@@ -1133,8 +1120,6 @@ public class ComboBoxTest {
         comboBox.setTooltip(null);
         assertNull(comboBox.getTooltip());
         assertNull(comboBox.getEditor().getTooltip());
-
-        sl.dispose();
     }
 
     @Test public void test_rt34573() {
@@ -1148,7 +1133,7 @@ public class ComboBoxTest {
         };
         comboBox.setButtonCell(customCell);
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         comboBox.setItems(FXCollections.observableArrayList("A","B","C","D"));
         comboBox.setValue("B");
@@ -1158,8 +1143,6 @@ public class ComboBoxTest {
         comboBox.setItems(FXCollections.observableArrayList("1","2","3","4"));
         assertNull(comboBox.getButtonCell().getText());
         assertEquals(-1, comboBox.getButtonCell().getIndex());
-
-        sl.dispose();
     }
 
     @Test public void test_rt34566() {
@@ -1173,7 +1156,7 @@ public class ComboBoxTest {
         };
         comboBox.setButtonCell(customCell);
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         comboBox.setItems(FXCollections.observableArrayList("A","B","C","D"));
 
@@ -1194,8 +1177,6 @@ public class ComboBoxTest {
         assertEquals("A", comboBox.getButtonCell().getText());
         assertEquals(0, comboBox.getButtonCell().getIndex());
         assertFalse(customCell.getPseudoClassStates().contains(empty));
-
-        sl.dispose();
     }
 
     private int test_rt34603_count = 0;
@@ -1217,15 +1198,13 @@ public class ComboBoxTest {
 
         hbox.getChildren().addAll(box, defaultButton);
 
-        StageLoader sl = new StageLoader(hbox);
+        sl = new StageLoader(hbox);
 
         box.getEditor().requestFocus();
         KeyEventFirer keyboard = new KeyEventFirer(box);
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertEquals(1, test_rt34603_count);
-
-        sl.dispose();
     }
 
     private int test_rt35586_count = 0;
@@ -1239,7 +1218,7 @@ public class ComboBoxTest {
             assertEquals("Test", cb.getEditor().getText());
         });
 
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         cb.requestFocus();
         cb.getEditor().setText("Test");
@@ -1247,8 +1226,6 @@ public class ComboBoxTest {
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertEquals(1, test_rt35586_count);
-
-        sl.dispose();
     }
 
     @Test public void test_rt35039() {
@@ -1260,7 +1237,7 @@ public class ComboBoxTest {
         combo.setEditable(true);
         combo.setItems(FXCollections.observableArrayList(data));
 
-        StageLoader sl = new StageLoader(combo);
+        sl = new StageLoader(combo);
 
         // everything should be null to start with
         assertNull(combo.getValue());
@@ -1279,14 +1256,12 @@ public class ComboBoxTest {
         assertEquals("bbc", combo.getValue());
         assertEquals("bbc", combo.getEditor().getText());
         assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
-
-        sl.dispose();
     }
 
     @Test public void test_rt35840() {
         final ComboBox<String> cb = new ComboBox<String>();
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         cb.requestFocus();
 
         KeyEventFirer keyboard = new KeyEventFirer(cb);
@@ -1299,37 +1274,31 @@ public class ComboBoxTest {
         assertNull(cb.getValue());
         keyboard.doKeyPress(KeyCode.ENTER);
         assertEquals("TEST", cb.getValue());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_F4ShowsPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_altUpShowsPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.UP, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_altDownShowsPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         new StageLoader(cb);
@@ -1337,14 +1306,12 @@ public class ComboBoxTest {
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void testEditorKeyInputsWhenPopupIsShowing() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer keyboard = new KeyEventFirer(cb);
 
         // Show the popup
@@ -1357,7 +1324,7 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // LEFT, RIGHT keys with CTRL, SHIFT modifiers
+        // LEFT, RIGHT keys with CTRL/META, SHIFT modifiers
         // Test RIGHT key
         keyboard.doRightArrowPress();
         assertEquals(1, cb.getEditor().getCaretPosition());
@@ -1384,27 +1351,31 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + RIGHT key
-        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL);
+        // Test ALT/CTRL + RIGHT key
+        int expectedCaretPosition = 3;
+        if (Utils.isWindows()) {
+            expectedCaretPosition = 4;
+        }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getWordTraversalKey());
         assertEquals("", cb.getEditor().getSelectedText());
-        assertEquals(4, cb.getEditor().getCaretPosition());
+        assertEquals(expectedCaretPosition, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + LEFT key
-        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL);
-        assertEquals("", cb.getEditor().getSelectedText());
-        assertEquals(0, cb.getEditor().getCaretPosition());
-
-        // Test CTRL + SHIFT + RIGHT key
-        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.CTRL, KeyModifier.SHIFT);
-        assertEquals("ABC ", cb.getEditor().getSelectedText());
-        assertEquals(4, cb.getEditor().getCaretPosition());
-
-        // Test CTRL + SHIFT + LEFT key
-        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // HOME, END keys with CTRL, SHIFT modifiers
+        // Test ALT/CTRL + SHIFT + RIGHT key
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getWordTraversalKey(), KeyModifier.SHIFT);
+        assertEquals(expectedCaretPosition, cb.getEditor().getCaretPosition());
+        assertEquals(cb.getEditor().getText().substring(0, expectedCaretPosition), cb.getEditor().getSelectedText());
+
+        // Test CTRL/META + SHIFT + LEFT key
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        assertEquals("", cb.getEditor().getSelectedText());
+        assertEquals(0, cb.getEditor().getCaretPosition());
+
+        // HOME, END keys with CTRL/META, SHIFT modifiers
         // Test END key
         keyboard.doKeyPress(KeyCode.END);
         assertEquals(7, cb.getEditor().getCaretPosition());
@@ -1423,27 +1394,27 @@ public class ComboBoxTest {
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + END key
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL);
+        // Test CTRL/META + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(7, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + HOME key
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL);
+        // Test CTRL/META + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey());
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + SHIFT + END key
-        keyboard.doKeyPress(KeyCode.END, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + SHIFT + END key
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertEquals(cb.getEditor().getText(), cb.getEditor().getSelectedText());
         assertEquals(7, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + SHIFT + HOME key
-        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.CTRL, KeyModifier.SHIFT);
+        // Test CTRL/META + SHIFT + HOME key
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         assertEquals("", cb.getEditor().getSelectedText());
         assertEquals(0, cb.getEditor().getCaretPosition());
 
-        // Test CTRL + A key
+        // Test CTRL/META + A key
         keyboard.doLeftArrowPress();
         assertEquals("", cb.getEditor().getSelectedText());
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
@@ -1451,14 +1422,12 @@ public class ComboBoxTest {
 
         // Sanity
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void testKeyInputsOnNonEditableComboBox() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         // cb.setEditable(false); // by default ComboBox is not editable
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         SingleSelectionModel<String> sm = cb.getSelectionModel();
         sm.select(0);
         KeyEventFirer keyboard = new KeyEventFirer(cb);
@@ -1513,13 +1482,11 @@ public class ComboBoxTest {
 
         // Sanity
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void testInterceptedKeyMappingsForComboBoxEditor() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
         ListViewBehavior lvBehavior = (ListViewBehavior)ControlSkinFactory.getBehavior(listView.getSkin());
@@ -1536,8 +1503,6 @@ public class ComboBoxTest {
         cb.setEditable(false);
         testKeyMappingsForNonEditableCB(inputMappings);
         testCommonKeyMappings(inputMappings, verticalInputMappings);
-
-        sl.dispose();
     }
 
     private void testKeyMappingsForEditableCB(ObservableList<?> inputMappings) {
@@ -1581,7 +1546,7 @@ public class ComboBoxTest {
 
     @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1594,13 +1559,11 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.ENTER);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_spaceHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1613,13 +1576,11 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.SPACE);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_escapeHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1632,13 +1593,11 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.ESCAPE);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_F4HidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
@@ -1646,13 +1605,11 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.F4);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_nonEditable_arrowKeysChangeSelection() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
@@ -1669,40 +1626,34 @@ public class ComboBoxTest {
 
         cbKeyboard.doUpArrowPress();
         assertEquals("a", cb.getSelectionModel().getSelectedItem());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_F4ShowsPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_altUpShowsPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.UP, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_altDownShowsPopup_onComboBox() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
@@ -1710,14 +1661,12 @@ public class ComboBoxTest {
         cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
         assertTrue(cb.getEditor().getText().isEmpty());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_altDownShowsPopup_onTextField() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         KeyEventFirer tfKeyboard = new KeyEventFirer(cb.getEditor());
         assertFalse(cb.isShowing());
@@ -1725,14 +1674,12 @@ public class ComboBoxTest {
         tfKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
         assertTrue(cb.isShowing());
         assertTrue(cb.getEditor().getText().isEmpty());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_enterHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1745,14 +1692,12 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.ENTER);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_spaceHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1765,14 +1710,12 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.SPACE);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_escapeHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         ListView listView = (ListView) ((ComboBoxListViewSkin)cb.getSkin()).getPopupContent();
@@ -1785,14 +1728,12 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         lvKeyboard.doKeyPress(KeyCode.ESCAPE);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_F4HidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
@@ -1800,14 +1741,12 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         cbKeyboard.doKeyPress(KeyCode.F4);  // hide the popup
         assertFalse(cb.isShowing());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36280_editable_arrowKeysChangeSelection() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
         KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
 
         assertFalse(cb.isShowing());
@@ -1824,14 +1763,12 @@ public class ComboBoxTest {
 
         cbKeyboard.doUpArrowPress();
         assertEquals("a", cb.getSelectionModel().getSelectedItem());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36651() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         cb.setEditable(true);
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         assertNull(cb.getValue());
         assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
@@ -1845,13 +1782,11 @@ public class ComboBoxTest {
         assertNull(cb.getValue());
         assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
         assertNull(cb.getSelectionModel().getSelectedItem());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36717() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         // the stack overflow only occurs when a ComboBox changes from non-editable to editable
         cb.setEditable(false);
@@ -1859,8 +1794,6 @@ public class ComboBoxTest {
         assertNotNull(cb.getEditor());
         KeyEventFirer tfKeyboard = new KeyEventFirer(cb.getEditor());
         tfKeyboard.doKeyPress(KeyCode.ENTER);   // Stack overflow here
-
-        sl.dispose();
     }
 
     @Test public void test_rt36827() {
@@ -1868,7 +1801,7 @@ public class ComboBoxTest {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         VBox vbox = new VBox(btn, cb);
 
-        StageLoader sl = new StageLoader(vbox);
+        sl = new StageLoader(vbox);
         sl.getStage().requestFocus();
         btn.requestFocus();
         Toolkit.getToolkit().firePulse();
@@ -1883,8 +1816,6 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         assertTrue(cb.isFocused());
         assertEquals(cb, scene.getFocusOwner());
-
-        sl.dispose();
     }
 
     @Test public void test_rt36902() {
@@ -1898,7 +1829,7 @@ public class ComboBoxTest {
         KeyEventFirer cb1Keyboard = new KeyEventFirer(cb1);
         KeyEventFirer cb2Keyboard = new KeyEventFirer(cb2);
 
-        StageLoader sl = new StageLoader(vbox);
+        sl = new StageLoader(vbox);
         sl.getStage().requestFocus();
         cb1.requestFocus();
         Toolkit.getToolkit().firePulse();
@@ -1937,8 +1868,6 @@ public class ComboBoxTest {
         cb2Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
         assertTrue(cb1.isFocused());
         assertEquals(cb1, scene.getFocusOwner());
-
-        sl.dispose();
     }
 
     private int rt_38901_counter;
@@ -2010,7 +1939,7 @@ public class ComboBoxTest {
             cb.getItems().setAll("DUMMY " + (rt_22572_counter++));
         });
 
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
         assertNull(cb.getSelectionModel().getSelectedItem());
@@ -2040,8 +1969,6 @@ public class ComboBoxTest {
         assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
         assertNull(cb.getSelectionModel().getSelectedItem());
         assertEquals("DUMMY 0", cb.getValue());
-
-        sl.dispose();
     }
 
     private int rt_22937_counter;
@@ -2057,7 +1984,7 @@ public class ComboBoxTest {
         cb.setEditable(true);
         cb.setValue("Tata");
 
-        StageLoader sl = new StageLoader(cb);
+        sl = new StageLoader(cb);
 
         assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
         assertEquals("Tata", cb.getSelectionModel().getSelectedItem());
@@ -2073,15 +2000,13 @@ public class ComboBoxTest {
         assertEquals(0, cb.getSelectionModel().getSelectedIndex());
         assertEquals("DUMMY 0", cb.getSelectionModel().getSelectedItem());
         assertEquals("DUMMY 0", cb.getValue());
-
-        sl.dispose();
     }
 
     @Test public void test_rt_39809() {
         ComboBox<String> comboBox = new ComboBox<>();
         comboBox.getItems().setAll(null, "1", "2", "3");
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         comboBox.getSelectionModel().clearAndSelect(1);
         assertEquals("1", comboBox.getSelectionModel().getSelectedItem());
@@ -2090,15 +2015,13 @@ public class ComboBoxTest {
         comboBox.getSelectionModel().clearAndSelect(0);
         assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
         assertEquals(0, comboBox.getSelectionModel().getSelectedIndex());
-
-        sl.dispose();
     }
 
     @Test public void test_rt_39908() {
         ObservableList<String> model = FXCollections.observableArrayList("0", "1", "2", "3");
         ComboBox<String> comboBox = new ComboBox<>(model);
 
-        StageLoader sl = new StageLoader(comboBox);
+        sl = new StageLoader(comboBox);
 
         comboBox.getSelectionModel().clearAndSelect(1);
         assertEquals("1", comboBox.getSelectionModel().getSelectedItem());
@@ -2107,8 +2030,6 @@ public class ComboBoxTest {
         model.set(0, "a");
         assertEquals("1", comboBox.getSelectionModel().getSelectedItem());
         assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
-
-        sl.dispose();
     }
 
     /**
@@ -2287,12 +2208,7 @@ public class ComboBoxTest {
 
         Toolkit tk = Toolkit.getToolkit();
 
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.setWidth(500);
-        stage.setHeight(400);
-
-        stage.show();
+        sl = new StageLoader(scene);
 
         tk.firePulse();
 

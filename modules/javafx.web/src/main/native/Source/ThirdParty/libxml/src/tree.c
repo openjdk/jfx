@@ -7417,12 +7417,17 @@ xmlBufferResize(xmlBufferPtr buf, unsigned int size)
     if (size < buf->size)
         return 1;
 
+    if (size > UINT_MAX - 10) {
+        xmlTreeErrMemory("growing buffer");
+        return 0;
+    }
+
     /* figure out new size */
     switch (buf->alloc){
     case XML_BUFFER_ALLOC_IO:
     case XML_BUFFER_ALLOC_DOUBLEIT:
         /*take care of empty case*/
-        newSize = (buf->size ? buf->size*2 : size + 10);
+        newSize = (buf->size ? buf->size : size + 10);
         while (size > newSize) {
             if (newSize > UINT_MAX / 2) {
                 xmlTreeErrMemory("growing buffer");
@@ -7438,7 +7443,7 @@ xmlBufferResize(xmlBufferPtr buf, unsigned int size)
             if (buf->use < BASE_BUFFER_SIZE)
                 newSize = size;
             else {
-                newSize = buf->size * 2;
+                newSize = buf->size;
                 while (size > newSize) {
                     if (newSize > UINT_MAX / 2) {
                         xmlTreeErrMemory("growing buffer");

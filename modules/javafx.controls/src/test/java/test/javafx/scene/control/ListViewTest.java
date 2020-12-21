@@ -80,6 +80,7 @@ import static org.junit.Assert.fail;
 import org.junit.Before;
 import org.junit.Test;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+import static javafx.collections.FXCollections.*;
 
 import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -862,6 +863,52 @@ public class ListViewTest {
         sl.dispose();
     }
 
+//--------- regression testing of JDK-8093144 (was: RT-35857)
+
+    @Test
+    public void test_rt35857_selectLast_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    @Test
+    public void test_rt35857_selectLast_removeAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(listView.getItems().size() - 1);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), false);
+    }
+
+    @Test
+    public void test_rt35857_selectFirst_retainAllSelected() {
+        final ListView<String> listView = new ListView<String>(observableArrayList("A", "B", "C"));
+        listView.getSelectionModel().select(0);
+
+        assert_rt35857(listView.getItems(), listView.getSelectionModel(), true);
+    }
+
+    /**
+     * Modifies the items by retain/removeAll (depending on the given flag) selectedItems
+     * of the selectionModels and asserts the state of the items.
+     */
+    protected <T> void assert_rt35857(ObservableList<T> items, MultipleSelectionModel<T> sm, boolean retain) {
+        T selectedItem = sm.getSelectedItem();
+        assertNotNull("sanity: ", selectedItem);
+        ObservableList<T> expected;
+        if (retain) {
+            expected = FXCollections.observableArrayList(selectedItem);
+            items.retainAll(sm.getSelectedItems());
+        } else {
+            expected = FXCollections.observableArrayList(items);
+            expected.remove(selectedItem);
+            items.removeAll(sm.getSelectedItems());
+        }
+        String modified = (retain ? " retainAll " : " removeAll ") + " selectedItems ";
+        assertEquals("expected list after" + modified, expected, items);
+    }
+
     @Test public void test_rt35857() {
         ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
         final ListView<String> listView = new ListView<String>(fxList);
@@ -878,6 +925,8 @@ public class ListViewTest {
         assertEquals("C", fxList.get(1));
     }
 
+//-------- end regression testing of JDK-8093144
+
     private int rt_35889_cancel_count = 0;
     @Test public void test_rt35889() {
         final ListView<String> textFieldListView = new ListView<String>();
@@ -886,7 +935,7 @@ public class ListViewTest {
         textFieldListView.setCellFactory(TextFieldListCell.forListView());
         textFieldListView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
-            System.out.println("On Edit Cancel: " + t);
+            //System.out.println("On Edit Cancel: " + t);
         });
 
         ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
@@ -1062,12 +1111,12 @@ public class ListViewTest {
                     items.remove(12);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 39 : 45, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
                         rt_35395_counter = 0;
                         items.add(12, "yellow");
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
-                            assertEquals(useFixedCellSize ? 39 : 45, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 5 : 7, rt_35395_counter);
                             rt_35395_counter = 0;
                             listView.scrollTo(5);
                             Platform.runLater(() -> {
@@ -1425,7 +1474,8 @@ public class ListViewTest {
         MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+        // Enable below prints for debug if needed
+        /*sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
             while (change.next()) {
                 System.out.println("sm.getSelectedItems(): " + change.getList());
             }
@@ -1435,7 +1485,7 @@ public class ListViewTest {
             while (change.next()) {
                 System.out.println("rt_39482_list: " + change.getList());
             }
-        });
+        });*/
 
         Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
 
@@ -1451,7 +1501,6 @@ public class ListViewTest {
     private void test_rt_39482_selectRow(String expectedString,
                                          MultipleSelectionModel<String> sm,
                                          int rowToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
@@ -1859,7 +1908,7 @@ public class ListViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
+            //System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };

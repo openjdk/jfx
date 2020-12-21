@@ -58,7 +58,7 @@ public class TransitionTest {
         // emtpy ctor
         Transition t0 = new TransitionImpl(Duration.millis(1000));
         assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
 
         // setting targetFramerate
         Transition t1 = new TransitionImpl(Duration.millis(1000), 10);

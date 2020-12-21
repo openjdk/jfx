@@ -60,7 +60,6 @@ import javafx.scene.control.TableView;
 
 import test.com.sun.javafx.scene.control.test.Person;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -462,10 +461,9 @@ public class TableColumnTest {
      * minWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 10")
-    @Test public void minWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getMinWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.minWidthProperty().get(), 0);
+    @Test public void minWidthIs_DEFAULT_MIN_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_MIN_WIDTH, column.getMinWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_MIN_WIDTH, column.minWidthProperty().get(), 0);
     }
 
     @Test public void minWidthCanBeSet() {
@@ -494,10 +492,9 @@ public class TableColumnTest {
      * maxWidth Tests                                                           *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 5000")
-    @Test public void maxWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getMaxWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.maxWidthProperty().get(), 0);
+    @Test public void maxWidthIs_DEFAULT_MAX_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_MAX_WIDTH, column.getMaxWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_MAX_WIDTH, column.maxWidthProperty().get(), 0);
     }
 
     @Test public void maxWidthCanBeSet() {
@@ -526,10 +523,9 @@ public class TableColumnTest {
      * prefWidth Tests                                                          *
      ***************************************************************************/
 
-    @Ignore ("Fails with hardcoded value of 80")
-    @Test public void prefWidthIs_USE_COMPUTED_SIZE_ByDefault() {
-        assertEquals(Control.USE_COMPUTED_SIZE, column.getPrefWidth(), 0);
-        assertEquals(Control.USE_COMPUTED_SIZE, column.prefWidthProperty().get(), 0);
+    @Test public void prefWidthIs_DEFAULT_WIDTH_ByDefault() {
+        assertEquals(TableColumnShim.DEFAULT_WIDTH, column.getPrefWidth(), 0);
+        assertEquals(TableColumnShim.DEFAULT_WIDTH, column.prefWidthProperty().get(), 0);
     }
 
     @Test public void prefWidthCanBeSet() {
@@ -1123,7 +1119,6 @@ public class TableColumnTest {
         assertSame(wilma, items.get(2));
     }
 
-    @Ignore("This started failing when I upgraded to Java 7")
     @Test public void sortingMixOfComparableAndNonComparable() {
         Person fred = new Person("Fred", 36);
         Person wilma = new Person("Wilma", 34);

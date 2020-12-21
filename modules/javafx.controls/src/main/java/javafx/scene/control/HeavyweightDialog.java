@@ -312,6 +312,8 @@ class HeavyweightDialog extends FXDialog {
         if (oldOwner != null && oldOwner instanceof Stage) {
             Stage oldStage = (Stage) oldOwner;
             Bindings.unbindContent(stage.getIcons(), oldStage.getIcons());
+            stage.renderScaleXProperty().unbind();
+            stage.renderScaleYProperty().unbind();
 
             Scene oldScene = oldStage.getScene();
             if (scene != null && dialogScene != null) {
@@ -323,6 +325,8 @@ class HeavyweightDialog extends FXDialog {
         if (newOwner instanceof Stage) {
             Stage newStage = (Stage) newOwner;
             Bindings.bindContent(stage.getIcons(), newStage.getIcons());
+            stage.renderScaleXProperty().bind(newStage.renderScaleXProperty());
+            stage.renderScaleYProperty().bind(newStage.renderScaleYProperty());
 
             Scene newScene = newStage.getScene();
             if (scene != null && dialogScene != null) {

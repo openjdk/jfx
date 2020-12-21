@@ -1936,8 +1936,8 @@ allprojects {
         executable = JAVA;
         enableAssertions = true;
         testLogging.exceptionFormat = "full";
-        scanForTestClasses = false;
-        include("**/*Test.*");
+        scanForTestClasses = true;
+        include("**/*.*");
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -2447,8 +2447,8 @@ project(":graphics") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
-        scanForTestClasses = false
-        include "**/*Test.*"
+        scanForTestClasses = true
+        include "**/*.*"
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
@@ -3600,6 +3600,7 @@ project(":systemTests") {
         testapp4
         testapp5
         testapp6
+        testapp7
         testscriptapp1
         testscriptapp2
     }
@@ -3615,6 +3616,7 @@ project(":systemTests") {
         sourceSets.testapp4,
         sourceSets.testapp5,
         sourceSets.testapp6,
+        sourceSets.testapp7,
         sourceSets.testscriptapp1,
         sourceSets.testscriptapp2
     ]
@@ -3716,7 +3718,7 @@ project(":systemTests") {
     }
     test.dependsOn(createTestApps);
 
-    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6", "testscriptapp1", "testscriptapp2" ]
+    def modtestapps = [ "testapp2", "testapp3", "testapp4", "testapp5", "testapp6", "testapp7", "testscriptapp1", "testscriptapp2" ]
     modtestapps.each { testapp ->
         def testappCapital = testapp.capitalize()
         def copyTestAppTask = task("copy${testappCapital}", type: Copy) {

@@ -113,8 +113,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
         onProposedChange(Collections.unmodifiableList(new ArrayList(col)), 0, size());
         try {
             modCount++;
-            list.setAll(col);
-            return true;
+            return list.setAll(col);
         } catch(Exception e) {
             modCount--;
             throw e;

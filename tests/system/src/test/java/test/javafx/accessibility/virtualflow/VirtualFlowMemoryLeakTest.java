@@ -56,6 +56,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.stage.Stage;
 import test.util.Util;
+import test.util.memory.JMemoryBuddy;
 
 public class VirtualFlowMemoryLeakTest {
 
@@ -175,15 +176,7 @@ public class VirtualFlowMemoryLeakTest {
         }
         runAndWait(() -> items.clear());
 
-        for (int j = 0; j < 5; ++j) {
-            System.gc();
-            System.runFinalization();
-            if (firstRowRef.get() == null) {
-                break;
-            }
-            MILLISECONDS.sleep(100);
-        }
-        assertEquals(null, firstRowRef.get());
+        JMemoryBuddy.assertCollectable(firstRowRef);
     }
 
     private void runAndWait(final Runnable runnable) {

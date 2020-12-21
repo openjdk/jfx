@@ -55,13 +55,13 @@ public class AnimationTest {
 
     private static final double EPSILON = 1e-12;
 
-    private AbstractMasterTimerMock timer;
+    private AbstractPrimaryTimerMock timer;
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
     @Before
     public void setUp() {
-        timer = new AbstractMasterTimerMock();
+        timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
         animation = new AnimationImpl(timer, clipEnvelope, 1);
         animation.shim_setCycleDuration(ONE_SEC);
@@ -84,7 +84,7 @@ public class AnimationTest {
         assertEquals(DEFAULT_REPEAT_COUNT, animation0.getCycleCount());
         assertEquals(DEFAULT_AUTO_REVERSE, animation0.isAutoReverse());
         assertEquals(Status.STOPPED, animation0.getStatus());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), animation0.getTargetFramerate(), EPSILON);
         assertEquals(null, animation0.getOnFinished());
         assertEquals(0, animation0.getCuePoints().size());
 
@@ -586,7 +586,7 @@ public class AnimationTest {
 
     @Test
     public void testFullSpeedResolution() {
-        final int resolution = Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
+        final int resolution = Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution();
 
         // send pulse
         animation.doTimePulse(4 * resolution);

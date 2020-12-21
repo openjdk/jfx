@@ -140,7 +140,7 @@ def iioCFlags = [extraCFlags,
          ].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
-def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX", "-D_GNU_SOURCE"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
 def es2MonocleCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2MonocleLFlags = [extraLFlags].flatten()

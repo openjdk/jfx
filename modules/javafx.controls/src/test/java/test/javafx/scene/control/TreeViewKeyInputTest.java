@@ -1537,7 +1537,7 @@ public class TreeViewKeyInputTest {
 
         treeView.editingItemProperty().addListener(observable -> {
             assertNotNull(treeView.getEditingItem());
-            System.out.println("editing item: " + treeView.getEditingItem());
+            //System.out.println("editing item: " + treeView.getEditingItem());
             rt32783_count++;
         });
 
