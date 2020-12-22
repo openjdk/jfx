@@ -35,7 +35,7 @@ class ES2Light {
     float ca, la, qa, maxRange;
     float dirX, dirY, dirZ;
     float innerAngle, outerAngle, falloff;
-    
+
     ES2Light(float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
             float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
         this.x = x;
