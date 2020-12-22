@@ -45,7 +45,6 @@ import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 
-import com.sun.javafx.binding.Logging;
 import com.sun.javafx.charts.ChartLayoutAnimator;
 
 import javafx.css.StyleableBooleanProperty;
