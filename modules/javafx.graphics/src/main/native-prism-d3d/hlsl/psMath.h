@@ -70,7 +70,7 @@ void computeLight(float i, float3 n, float3 refl, float power, float3 L, float3 
     if (falloff != 0) {  // possible optimization
         float cosAngle = dot(normDir, l);
         float cosOuter = gSpotLightFactors[i].x;
-        float denom = gSpotLightFactors[i].y; // cosHalfInner - cosHalfOuter
+        float denom = gSpotLightFactors[i].y; // cosInner - cosOuter
         float base = (cosAngle - cosOuter) / denom;
         spotlightFactor = pow(saturate(base), falloff);
     }

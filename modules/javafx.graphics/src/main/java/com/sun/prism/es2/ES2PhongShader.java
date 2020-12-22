@@ -146,7 +146,7 @@ class ES2PhongShader {
         }
 
         int numLights = 0;
-        for (ES2Light light : meshView.getPointLights()) {
+        for (ES2Light light : meshView.getLights()) {
             if (light != null && light.w > 0) { numLights++; }
         }
 
@@ -203,15 +203,29 @@ class ES2PhongShader {
         shader.setConstant("ambientColor", meshView.getAmbientLightRed(),
                 meshView.getAmbientLightGreen(), meshView.getAmbientLightBlue());
 
-        int i = 0;
-        for (ES2Light light : meshView.getPointLights()) {
+        for (int i = 0; i < meshView.getLights().length; i++) {
+            ES2Light light = meshView.getLights()[i];
             if (light != null && light.w > 0) {
-                shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
-                shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
-                shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
-                shader.setConstant("lights[" + i + "].range", light.maxRange);
-                i++;
+                setLightConstants(i, shader, light);
             }
         }
+    }
+
+    private static void setLightConstants(int i, ES2Shader shader, ES2Light light) {
+        float length = 1, cosOuter = 0, cosInner = 1;
+        if (light.falloff != 0) {
+            // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
+            length = (float) Math.sqrt(light.dirX * light.dirX + light.dirY * light.dirY + light.dirZ * light.dirZ);
+            cosOuter = (float) Math.cos(Math.toRadians(light.outerAngle));
+            cosInner = (float) Math.cos(Math.toRadians(light.innerAngle));
+        }
+        shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
+        shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
+        shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
+        shader.setConstant("lights[" + i + "].range", light.maxRange);
+        shader.setConstant("lights[" + i + "].normDir", light.dirX / length, light.dirY / length, light.dirZ / length);
+        shader.setConstant("lights[" + i + "].cosOuter", cosOuter);
+        shader.setConstant("lights[" + i + "].denom", cosInner - cosOuter);
+        shader.setConstant("lights[" + i + "].falloff", light.falloff);
     }
 }

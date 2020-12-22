@@ -41,17 +41,11 @@ public:
     void setMaterial(D3DPhongMaterial *pMaterial);
     void setWireframe(bool wf);
     void setAmbientLight(float r, float g, float b);
-    void setPointLight(int index, float x, float y, float z,
-        float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange);
-    void setSpotLight(int index, float x, float y, float z,
+    void setLight(int index, float x, float y, float z,
         float r, float g, float b, float w,
         float ca, float la, float qa, float maxRange,
         float dirX, float dirY, float firZ,
         float innerAngle, float outerAngle, float falloff);
-    void setPointLightParams(D3DLight& light, float x, float y, float z,
-        float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange);
     void computeNumLights();
     void render();
 

@@ -60,6 +60,10 @@ struct Light {
     vec3 color;
     vec3 attn;
     float range;
+    vec3 normDir;
+    float cosOuter;
+    float denom; // cosInner - cosOuter
+    float falloff;
 };
 
 uniform vec3 ambientColor;
@@ -67,6 +71,29 @@ uniform Light lights[3];
 
 varying vec3 eyePos;
 varying vec4 lightTangentSpacePositions[3];
+varying vec4 lightTangentSpaceDirections[3];
+
+void addContribution(int i, out vec3 d, out vec3 s, float power, vec3 n, vec3 refl) {
+    Light light = lights[i];
+    vec3 pos = lightTangentSpacePositions[i].xyz;
+    float dist = length(pos);
+    if (dist > light.range) {
+        return;
+    }
+    vec3 l = normalize(pos);
+    float spotlightFactor = 1;
+    float falloff = light.falloff;
+    if (falloff != 0) {  // possible optimization
+        vec3 dir = lightTangentSpaceDirections[i].xyz;
+        float cosAngle = dot(dir, l);
+        float base = (cosAngle - light.cosOuter) / light.denom;
+        spotlightFactor = pow(clamp(base, 0.0, 1.0), falloff);
+    }
+    float invAttnFactor = light.attn.x + light.attn.y * dist + light.attn.z * dist * dist;
+    vec3 attenuatedColor = light.color.rgb * spotlightFactor / invAttnFactor;
+    d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
+    s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
+}
 
 void main()
 {
@@ -83,32 +110,9 @@ void main()
     vec4 specular = apply_specular();
     float power = specular.a;
 
-    float maxRange = lights[0].range;
-    float dist = length(lightTangentSpacePositions[0].xyz);
-    if (dist <= maxRange) {
-        vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-        vec3 attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
-    }
-
-    maxRange = lights[1].range;
-    dist = length(lightTangentSpacePositions[1].xyz);
-    if (dist <= maxRange) {
-        vec3 l = normalize(lightTangentSpacePositions[1].xyz);
-        vec3 attenuatedColor = (lights[1].color).rgb / (lights[1].attn.x + lights[1].attn.y * dist + lights[1].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
-    }
-
-    maxRange = lights[2].range;
-    dist = length(lightTangentSpacePositions[2].xyz);
-    if (dist <= maxRange) {
-        vec3 l = normalize(lightTangentSpacePositions[2].xyz);
-        vec3 attenuatedColor = (lights[2].color).rgb / (lights[2].attn.x + lights[2].attn.y * dist + lights[2].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
-    }
+    addContribution(0, d, s, power, n, refl);
+    addContribution(1, d, s, power, n, refl);
+    addContribution(2, d, s, power, n, refl);
 
     vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
     rez += apply_selfIllum().xyz;

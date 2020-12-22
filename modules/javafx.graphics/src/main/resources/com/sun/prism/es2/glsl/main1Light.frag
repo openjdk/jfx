@@ -60,6 +60,10 @@ struct Light {
     vec3 color;
     vec3 attn;
     float range;
+    vec3 normDir;
+    float cosOuter;
+    float denom; // cosInner - cosOuter
+    float falloff;
 };
 
 uniform vec3 ambientColor;
@@ -67,6 +71,7 @@ uniform Light lights[3];
 
 varying vec3 eyePos;
 varying vec4 lightTangentSpacePositions[3];
+varying vec4 lightTangentSpaceDirections[3];
 
 void main()
 {
@@ -81,17 +86,28 @@ void main()
 
     float maxRange = lights[0].range;
     float dist = length(lightTangentSpacePositions[0].xyz);
-    if (dist <= maxRange) {
-        vec3 n = apply_normal();
-        vec3 refl = reflect(normalize(eyePos), n);
-        vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-
-        float power = specular.a;
-
-        vec3 attenuatedColor = (lights[0].color).rgb / (lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist);
-        d = clamp(dot(n, l), 0.0, 1.0) * attenuatedColor;
-        s = pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
+    if (dist > maxRange) {
+        gl_FragColor = vec4(0, 0, 0, 1);
+        return;
     }
+
+    vec3 n = apply_normal();
+    vec3 refl = reflect(normalize(eyePos), n);
+    vec3 l = normalize(lightTangentSpacePositions[0].xyz);
+
+    float spotlightFactor = 1;
+    if (lights[0].falloff != 0) {  // possible optimization
+        float cosAngle = dot(lightTangentSpaceDirections[0].xyz, l);
+        float base = (cosAngle - lights[0].cosOuter) / lights[0].denom;
+        spotlightFactor = pow(clamp(base, 0.0, 1.0), lights[0].falloff);
+    }
+
+    float power = specular.a;
+    float invAttnFactor = lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist;
+    vec3 attenuatedColor = lights[0].color.rgb * spotlightFactor / invAttnFactor;
+    d = clamp(dot(n, l), 0.0, 1.0) * attenuatedColor;
+    s = pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
+
     vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
     rez += apply_selfIllum().xyz;
 

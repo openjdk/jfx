@@ -113,7 +113,7 @@ public abstract class NGShape3D extends NGNode {
             // is a single white point light at camera eye position.
             meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
             Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
-            meshView.setPointLight(lightIndex++,
+            meshView.setLight(lightIndex++,
                     (float) cameraPos.x,
                     (float) cameraPos.y,
                     (float) cameraPos.z,
@@ -121,7 +121,8 @@ public abstract class NGShape3D extends NGNode {
                     NGPointLight.getDefaultCa(),
                     NGPointLight.getDefaultLa(),
                     NGPointLight.getDefaultQa(),
-                    NGPointLight.getDefaultMaxRange());
+                    NGPointLight.getDefaultMaxRange(),
+                    0, 0, -1, 0, 180, 0); // simulating point light);
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
@@ -162,7 +163,7 @@ public abstract class NGShape3D extends NGNode {
                 if (lightBase instanceof NGSpotLight) {
                     var light = (NGSpotLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
-                    meshView.setSpotLight(lightIndex++,
+                    meshView.setLight(lightIndex++,
                             (float) lightWT.getMxt(),
                             (float) lightWT.getMyt(),
                             (float) lightWT.getMzt(),
@@ -180,7 +181,7 @@ public abstract class NGShape3D extends NGNode {
                 } else if (lightBase instanceof NGPointLight) {
                     NGPointLight light = (NGPointLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
-                    meshView.setPointLight(lightIndex++,
+                    meshView.setLight(lightIndex++,
                             (float) lightWT.getMxt(),
                             (float) lightWT.getMyt(),
                             (float) lightWT.getMzt(),
@@ -188,7 +189,8 @@ public abstract class NGShape3D extends NGNode {
                             light.getCa(),
                             light.getLa(),
                             light.getQa(),
-                            light.getMaxRange());
+                            light.getMaxRange(),
+                            0, 0, -1, 0, 180, 0); // simulating point light
                 } else if (lightBase instanceof NGAmbientLight) {
                     // Accumulate ambient lights
                     ambientRed   += rL;
@@ -204,10 +206,12 @@ public abstract class NGShape3D extends NGNode {
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
 
         while (lightIndex < 3) { // Reset any previously set lights
-            meshView.setPointLight(lightIndex++,
-                    0, 0, 0, // x y z
+            meshView.setLight(lightIndex++,
+                    0, 0, 0,    // x y z
                     0, 0, 0, 0, // r g b w
-                    1, 0, 0, 0); // ca la qa maxRange
+                    1, 0, 0, 0, // ca la qa maxRange
+                    0, 0, 0,    // dirX Y Z
+                    0, 0, 0);   // inner outer falloff
         }
 
         meshView.render(g);

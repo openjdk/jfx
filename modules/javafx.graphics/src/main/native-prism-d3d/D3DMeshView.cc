@@ -73,47 +73,31 @@ void D3DMeshView::setAmbientLight(float r, float g, float b) {
     ambientLightColor[2] = b;
 }
 
-void D3DMeshView::setPointLight(int index, float x, float y, float z,
-        float r, float g, float b, float w,
-        float ca, float la, float qa, float maxRange) {
-    // NOTE: We only support up to 3 point lights at the present
-    if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
-        lights[index].type = D3DLight::Point;
-        setPointLightParams(lights[index], x, y, z, r, g, b, w, ca, la, qa, maxRange);
-        lightsDirty = TRUE;
-    }
-}
-
-void D3DMeshView::setSpotLight(int index, float x, float y, float z, float r, float g, float b, float w,
+void D3DMeshView::setLight(int index, float x, float y, float z, float r, float g, float b, float w,
         float ca, float la, float qa, float maxRange,
         float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
     // NOTE: We only support up to 3 point lights at the present
     if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
-        lights[index].type = D3DLight::Spot;
-        setPointLightParams(lights[index], x, y, z, r, g, b, w, ca, la, qa, maxRange);
-        lights[index].direction[0] = dirX;
-        lights[index].direction[1] = dirY;
-        lights[index].direction[2] = dirZ;
-        lights[index].innerAngle = innerAngle;
-        lights[index].outerAngle = outerAngle;
-        lights[index].falloff = falloff;
+        D3DLight light = lights[index]
+        light.position[0] = x;
+        light.position[1] = y;
+        light.position[2] = z;
+        light.color[0] = r;
+        light.color[1] = g;
+        light.color[2] = b;
+        light.w = w;
+        light.attenuation[0] = ca;
+        light.attenuation[1] = la;
+        light.attenuation[2] = qa;
+        light.maxRange = maxRange;
+        light.direction[0] = dirX;
+        light.direction[1] = dirY;
+        light.direction[2] = dirZ;
+        light.innerAngle = innerAngle;
+        light.outerAngle = outerAngle;
+        light.falloff = falloff;
         lightsDirty = TRUE;
     }
-}
-
-void D3DMeshView::setPointLightParams(D3DLight &light, float x, float y, float z,
-        float r, float g, float b, float w, float ca, float la, float qa, float maxRange) {
-    light.position[0] = x;
-    light.position[1] = y;
-    light.position[2] = z;
-    light.color[0] = r;
-    light.color[1] = g;
-    light.color[2] = b;
-    light.w = w;
-    light.attenuation[0] = ca;
-    light.attenuation[1] = la;
-    light.attenuation[2] = qa;
-    light.maxRange = maxRange;
 }
 
 void D3DMeshView::computeNumLights() {
@@ -167,7 +151,7 @@ void D3DMeshView::render() {
 
     float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 coords + 1 padding)
     for (int i = 0, d = 0; i < MAX_NUM_LIGHTS; i++) {
-        if (lights[i].type == D3DLight::Spot) {
+        if (lights[i].falloff != 0) {
             float dirX = lights[i].direction[0];
             float dirY = lights[i].direction[1];
             float dirZ = lights[i].direction[2];
@@ -225,8 +209,8 @@ void D3DMeshView::render() {
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
 
-        // I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
-        if (lights[i].type == D3DLight::Spot) {
+        // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
+        if (lights[i].falloff != 0) {
             float cosInner = cos(lights[i].innerAngle * M_PI / 180);
             float cosOuter = cos(lights[i].outerAngle * M_PI / 180);
             spotLightsFactors[s++] = cosOuter;
