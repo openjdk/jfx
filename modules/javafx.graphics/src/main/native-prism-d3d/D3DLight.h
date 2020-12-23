@@ -32,14 +32,11 @@
 
 class D3DLight {
 public:
-    enum Type { Directional, Point, Spot };
-
     D3DLight();
     virtual ~D3DLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
 
-    Type type;
     float position[3];
     float color[3];
     float w;

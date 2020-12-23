@@ -35,7 +35,6 @@ D3DLight::~D3DLight() {
 }
 
 D3DLight::D3DLight() :
-    type(D3DLight::Point),
     color(),
     position(),
     w(0),

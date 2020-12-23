@@ -78,7 +78,7 @@ void D3DMeshView::setLight(int index, float x, float y, float z, float r, float 
         float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
     // NOTE: We only support up to 3 point lights at the present
     if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
-        D3DLight light = lights[index]
+        D3DLight& light = lights[index];
         light.position[0] = x;
         light.position[1] = y;
         light.position[2] = z;
@@ -223,11 +223,7 @@ void D3DMeshView::render() {
             spotLightsFactors[s++] = 0;
             spotLightsFactors[s++] = 0;
         }
-
-        cout << lights[i].type << " : " << lights[i].color[0] << ", " << lights[i].color[1] << ", " << lights[i].color[2] << endl;
-
     }
-    cout << "--------------------" << endl;
 
     status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, MAX_NUM_LIGHTS));
     if (!status) {

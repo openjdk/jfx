@@ -523,7 +523,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetLight
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetSpotLight");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
     RETURN_IF_NULL(meshView);
-    meshView->setSpotLight(index, x, y, z, r, g, b, w, ca, la, qa, range, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
+    meshView->setLight(index, x, y, z, r, g, b, w, ca, la, qa, range, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
 }
 
 /*

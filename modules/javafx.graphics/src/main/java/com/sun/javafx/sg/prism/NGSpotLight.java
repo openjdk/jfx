@@ -25,8 +25,6 @@
 
 package com.sun.javafx.sg.prism;
 
-import com.sun.javafx.util.Utils;
-
 import javafx.geometry.Point3D;
 
 /**
@@ -86,7 +84,6 @@ public class NGSpotLight extends NGPointLight {
     }
 
     public void setInnerAngle(float innerAngle) {
-        innerAngle = Utils.clamp(0, innerAngle, 180);
         if (this.innerAngle != innerAngle) {
             this.innerAngle = innerAngle;
             visualsChanged();
@@ -101,7 +98,6 @@ public class NGSpotLight extends NGPointLight {
     }
 
     public void setOuterAngle(float outerAngle) {
-        outerAngle = Utils.clamp(0, outerAngle, 180);
         if (this.outerAngle != outerAngle) {
             this.outerAngle = outerAngle;
             visualsChanged();

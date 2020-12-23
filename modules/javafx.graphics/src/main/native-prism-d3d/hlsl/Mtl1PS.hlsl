@@ -55,9 +55,6 @@ float4 main(ObjectPsIn objAttr, LocalBump  lSpace) : color {
     if (tDiff.a == 0.0) discard;
     tDiff = tDiff * gDiffuseColor;
 
-    int s= 4;
-    s++;
-
     // return gDiffuseColor.aaaa;
 
     float3 nEye = normalize(lSpace.eye);
