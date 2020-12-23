@@ -49,6 +49,7 @@ public class UIRenderSnapToPixelTest {
     private static final double scale = 1.25;
     private static CountDownLatch startupLatch;
     private static volatile Stage stage;
+    private static final double epsilon = 0.00001;
 
     @BeforeClass
     public static void setupOnce() throws Exception {
@@ -74,10 +75,10 @@ public class UIRenderSnapToPixelTest {
         for (Node node : stage.getScene().getRoot().getChildrenUnmodifiable()) {
             if (node instanceof ScrollPane) {
                 var sp = (ScrollPane) node;
-                Assert.assertEquals("Top inset not snapped to pixel", 0, (sp.snappedTopInset() * scale) % 1, 0.0001);
-                Assert.assertEquals("Bottom inset not snapped to pixel", 0, (sp.snappedBottomInset() * scale) % 1, 0.0001);
-                Assert.assertEquals("Left inset not snapped to pixel", 0, (sp.snappedLeftInset() * scale) % 1, 0.0001);
-                Assert.assertEquals("Right inset not snapped to pixel", 0, (sp.snappedLeftInset() * scale) % 1, 0.0001);
+                Assert.assertEquals("Top inset not snapped to pixel", 0, ((sp.snappedTopInset() * scale) + epsilon) % 1, 0.0001);
+                Assert.assertEquals("Bottom inset not snapped to pixel", 0, ((sp.snappedBottomInset() * scale) + epsilon) % 1, 0.0001);
+                Assert.assertEquals("Left inset not snapped to pixel", 0, ((sp.snappedLeftInset() * scale) + epsilon) % 1, 0.0001);
+                Assert.assertEquals("Right inset not snapped to pixel", 0, ((sp.snappedRightInset() * scale) + epsilon) % 1, 0.0001);
             }
         }
     }

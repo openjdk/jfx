@@ -944,7 +944,7 @@ public class Region extends Parent {
     private double snappedLeftInset = 0;
 
     /**
-     * Cached snapScale values, used for to determine if snapped cached insets values
+     * Cached snapScale values, used to determine if snapped cached insets values
      * should be invalidated because screen scale has changed.
      */
     private double lastUsedSnapScaleY = 0;
@@ -1837,6 +1837,8 @@ public class Region extends Parent {
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
         if (lastUsedSnapScaleY != getSnapScaleY()) {
             updateSnappedInsets();
         }
@@ -1851,6 +1853,8 @@ public class Region extends Parent {
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
         if (lastUsedSnapScaleX != getSnapScaleX()) {
             updateSnappedInsets();
         }
@@ -1865,6 +1869,8 @@ public class Region extends Parent {
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
         if (lastUsedSnapScaleX != getSnapScaleX()) {
             updateSnappedInsets();
         }
