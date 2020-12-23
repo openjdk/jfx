@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,8 @@ package test.com.sun.scenario.animation;
 
 import javafx.animation.AnimationTimer;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
-import com.sun.scenario.animation.AbstractMasterTimerShim;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimerShim;
 import com.sun.scenario.animation.shared.PulseReceiver;
 import com.sun.scenario.animation.shared.TimerReceiver;
 import org.junit.Before;
@@ -36,14 +36,14 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class AbstractMasterTimerTest {
+public class AbstractPrimaryTimerTest {
 
-    private AbstractMasterTimerStub timer;
+    private AbstractPrimaryTimerStub timer;
 
 
     @Before
     public void setUp() {
-        timer = new AbstractMasterTimerStub();
+        timer = new AbstractPrimaryTimerStub();
     }
 
     @Test
@@ -153,7 +153,7 @@ public class AbstractMasterTimerTest {
         }
     }
 
-    private static class AbstractMasterTimerStub extends AbstractMasterTimer {
+    private static class AbstractPrimaryTimerStub extends AbstractPrimaryTimer {
 
         private long nanos;
         private DelayedRunnable animationRunnable;
@@ -169,9 +169,9 @@ public class AbstractMasterTimerTest {
         }
 
         @Override public long nanos() {
-            return AbstractMasterTimerShim.isPaused(this) ?
-                    AbstractMasterTimerShim.getStartPauseTime(this) :
-                    nanos - AbstractMasterTimerShim.getTotalPausedTime(this);
+            return AbstractPrimaryTimerShim.isPaused(this) ?
+                    AbstractPrimaryTimerShim.getStartPauseTime(this) :
+                    nanos - AbstractPrimaryTimerShim.getTotalPausedTime(this);
         }
 
         @Override

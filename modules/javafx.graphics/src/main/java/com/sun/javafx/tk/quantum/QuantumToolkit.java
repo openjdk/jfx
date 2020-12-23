@@ -125,7 +125,7 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
@@ -365,7 +365,7 @@ public final class QuantumToolkit extends Toolkit {
         try {
             Application.invokeAndWait(this.userRunnable);
 
-            if (getMasterTimer().isFullspeed()) {
+            if (getPrimaryTimer().isFullspeed()) {
                 /*
                  * FULLSPEED_INTVERVAL workaround
                  *
@@ -1129,8 +1129,8 @@ public final class QuantumToolkit extends Toolkit {
         return PrFilterContext.getInstance(screen);
     }
 
-    @Override public AbstractMasterTimer getMasterTimer() {
-        return MasterTimer.getInstance();
+    @Override public AbstractPrimaryTimer getPrimaryTimer() {
+        return PrimaryTimer.getInstance();
     }
 
     @Override public FontLoader getFontLoader() {

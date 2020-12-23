@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,8 +133,8 @@ abstract class GLFactory {
     // A null preQualificationFilter implies we may consider any GPU
     abstract GLGPUInfo[] getPreQualificationFilter();
 
-    // Consists of a list of GPUs that we will block from using the es2 pipe.
-    abstract GLGPUInfo[] getBlackList();
+    // Consists of a list of GPUs that we will not use for the es2 pipe.
+    abstract GLGPUInfo[] getRejectList();
 
     private static GLGPUInfo readGPUInfo(long nativeCtxInfo) {
         String glVendor = nGetGLVendor(nativeCtxInfo);
@@ -163,14 +163,13 @@ abstract class GLFactory {
         return matches(gpuInfo, preQualificationFilter);
     }
 
-    private boolean inBlackList(GLGPUInfo gpuInfo) {
-        return matches(gpuInfo, getBlackList());
+    private boolean inRejectList(GLGPUInfo gpuInfo) {
+        return matches(gpuInfo, getRejectList());
     }
 
     boolean isQualified(long nativeCtxInfo) {
         // Read the GPU (graphics hardware) information and qualifying it by
-        // checking against the preQualificationFilter and the "blocking"
-        // blackLis.
+        // checking against the preQualificationFilter and the rejectList.
         GLGPUInfo gpuInfo = readGPUInfo(nativeCtxInfo);
 
         if (gpuInfo.vendor == null || gpuInfo.model == null
@@ -181,7 +180,7 @@ abstract class GLFactory {
             return false;
         }
 
-        return inPreQualificationFilter(gpuInfo) && !inBlackList(gpuInfo);
+        return inPreQualificationFilter(gpuInfo) && !inRejectList(gpuInfo);
     }
 
     abstract GLContext createGLContext(long nativeCtxInfo);

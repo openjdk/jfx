@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ import com.sun.scenario.Settings;
 import com.sun.scenario.animation.shared.PulseReceiver;
 import com.sun.scenario.animation.shared.TimerReceiver;
 
-public abstract class AbstractMasterTimer {
+public abstract class AbstractPrimaryTimer {
 
     protected final static String FULLSPEED_PROP = "javafx.animation.fullspeed";
     private static boolean fullspeed = Settings.getBoolean(FULLSPEED_PROP);
@@ -105,7 +105,7 @@ public abstract class AbstractMasterTimer {
     private final long fixedPulseLength = Boolean.getBoolean(FIXED_PULSE_LENGTH_PROP) ? PULSE_DURATION_NS : 0;
     private long debugNanos = 0;
 
-    private final MainLoop theMaster = new MainLoop();
+    private final MainLoop theMainLoop = new MainLoop();
 
 
     static {
@@ -148,8 +148,7 @@ public abstract class AbstractMasterTimer {
         return fullspeed;
     }
 
-    /** Prevent external instantiation of MasterTimer. */
-    protected AbstractMasterTimer() {
+    protected AbstractPrimaryTimer() {
     }
 
     /**
@@ -158,7 +157,7 @@ public abstract class AbstractMasterTimer {
      * recorded in it and that time will be used to start the clip at the
      * appropriate wall clock time as defined by milliTime().
      *
-     * Note that pulseReceiver cannot be removed from the MasterTimer directly.
+     * Note that pulseReceiver cannot be removed from the PrimaryTimer directly.
      * It is removed automatically in the timePulse-iteration if timePulse
      * returns true.
      *
@@ -173,7 +172,7 @@ public abstract class AbstractMasterTimer {
         }
         receivers[receiversLength++] = target;
         if (receiversLength == 1) {
-            theMaster.updateAnimationRunnable();
+            theMainLoop.updateAnimationRunnable();
         }
     }
 
@@ -195,7 +194,7 @@ public abstract class AbstractMasterTimer {
             }
         }
         if (receiversLength == 0) {
-            theMaster.updateAnimationRunnable();
+            theMainLoop.updateAnimationRunnable();
         }
     }
 
@@ -207,7 +206,7 @@ public abstract class AbstractMasterTimer {
         }
         animationTimers[animationTimersLength++] = timer;
         if (animationTimersLength == 1) {
-            theMaster.updateAnimationRunnable();
+            theMainLoop.updateAnimationRunnable();
         }
     }
 
@@ -229,13 +228,13 @@ public abstract class AbstractMasterTimer {
             }
         }
         if (animationTimersLength == 0) {
-            theMaster.updateAnimationRunnable();
+            theMainLoop.updateAnimationRunnable();
         }
     }
 
     /*
      * methods to record times for different stages of a pulse overriden in
-     * MasterTimer to collect data for AnimationPulse Mbean
+     * PrimaryTimer to collect data for AnimationPulse Mbean
      */
     protected void recordStart(long shiftMillis) {
     }

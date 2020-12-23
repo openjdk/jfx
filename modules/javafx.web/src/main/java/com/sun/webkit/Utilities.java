@@ -58,8 +58,8 @@ public abstract class Utilities {
         return new HashSet(Arrays.asList(items));
     }
 
-    // Whitelist of Class methods to allow
-    private static final Set<String> classMethodsWhitelist = asSet(
+    // List of Class methods to allow
+    private static final Set<String> classMethodsAllowList = asSet(
         "getCanonicalName",
         "getEnumConstants",
         "getFields",
@@ -83,16 +83,16 @@ public abstract class Utilities {
         "toString"
     );
 
-    // Blacklist of classes to disallow
-    private static final Set<String> classesBlacklist = asSet(
+    // List of classes to reject
+    private static final Set<String> classesRejectList = asSet(
         "java.lang.ClassLoader",
         "java.lang.Module",
         "java.lang.Runtime",
         "java.lang.System"
     );
 
-    // Blacklist of packages to disallow
-    private static final List<String> packagesBlacklist = Arrays.asList(
+    // List of packages to reject
+    private static final List<String> packagesRejectList = Arrays.asList(
         "java.lang.invoke",
         "java.lang.module",
         "java.lang.reflect",
@@ -108,18 +108,18 @@ public abstract class Utilities {
 
         final Class<?> clazz = method.getDeclaringClass();
         if (clazz.equals(java.lang.Class.class)) {
-            // check whitelist of allowable Class methods
-            if (!classMethodsWhitelist.contains(method.getName())) {
+            // check list of allowed Class methods
+            if (!classMethodsAllowList.contains(method.getName())) {
                 throw new UnsupportedOperationException("invocation not supported");
             }
         } else {
-            // check blacklist of class names
+            // check list of rejected class names
             final String className = clazz.getName();
-            if (classesBlacklist.contains(className)) {
+            if (classesRejectList.contains(className)) {
                 throw new UnsupportedOperationException("invocation not supported");
             }
-            // check blacklist of packages
-            packagesBlacklist.forEach(packageName -> {
+            // check list of rejected packages
+            packagesRejectList.forEach(packageName -> {
                 if (className.startsWith(packageName + ".")) {
                     throw new UnsupportedOperationException("invocation not supported");
                 }

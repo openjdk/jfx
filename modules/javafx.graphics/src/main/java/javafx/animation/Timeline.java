@@ -30,7 +30,7 @@ import javafx.collections.ObservableList;
 import javafx.util.Duration;
 
 import com.sun.javafx.collections.TrackableObservableList;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimelineClipCore;
 
 /**
@@ -162,7 +162,7 @@ public final class Timeline extends Animation {
     }
 
     // This constructor is only for testing purposes
-    Timeline(final AbstractMasterTimer timer) {
+    Timeline(final AbstractPrimaryTimer timer) {
         super(timer);
         clipCore = new TimelineClipCore(this);
     }

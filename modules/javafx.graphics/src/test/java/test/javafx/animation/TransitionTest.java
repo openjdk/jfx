@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public class TransitionTest {
         // emtpy ctor
         Transition t0 = new TransitionImpl(Duration.millis(1000));
         assertEquals(DEFAULT_INTERPOLATOR, t0.getInterpolator());
-        assertEquals(6000.0 / Toolkit.getToolkit().getMasterTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
+        assertEquals(6000.0 / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution(), t0.getTargetFramerate(), EPSILON);
 
         // setting targetFramerate
         Transition t1 = new TransitionImpl(Duration.millis(1000), 10);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,42 @@
  * questions.
  */
 
-package com.sun.scenario.animation;
+package test.com.sun.javafx.pgstub;
 
-public class AbstractMasterTimerShim {
+import com.sun.javafx.tk.Toolkit;
+import com.sun.scenario.DelayedRunnable;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 
-    public static boolean isPaused(AbstractMasterTimer amt) {
-        return amt.isPaused();
+/**
+ * Stubbed implementation of AbstractPrimaryTimer. An instance
+ * of this is returned by Toolkit.getPrimaryTimer().
+ */
+public class StubPrimaryTimer extends AbstractPrimaryTimer {
+    private long currentTimeMillis;
+
+    protected StubPrimaryTimer() {
     }
 
-    public static long getTotalPausedTime(AbstractMasterTimer amt) {
-        return amt.getTotalPausedTime();
+    protected int getPulseDuration(int precision) {
+        return precision / 60;
     }
 
-    public static long getStartPauseTime(AbstractMasterTimer amt) {
-        return amt.getStartPauseTime();
+    protected void postUpdateAnimationRunnable(DelayedRunnable animationRunnable) {
+        Toolkit.getToolkit().setAnimationRunnable(animationRunnable);
     }
 
+    public void setCurrentTime(long millis) {
+        currentTimeMillis = millis;
+    }
+
+    @Override
+    public long nanos() {
+        return currentTimeMillis * 1000000;
+    }
+
+    @Override
+    public void pause() { }
+
+    @Override
+    public void resume() { }
 }
