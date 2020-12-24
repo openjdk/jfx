@@ -192,7 +192,7 @@ void D3DMeshView::render() {
     float lightsAttenuation[MAX_NUM_LIGHTS * 4];  // 3 lights x (3 attenuation factors + 1 padding)
     float lightsRange[MAX_NUM_LIGHTS * 4];        // 3 lights x (1 maxRange + 3 padding)
     float spotLightsFactors[MAX_NUM_LIGHTS * 4];  // 3 lights x (2 angles + 1 falloff + 1 padding)
-    for (int i = 0, c = 0, a = 0, r = 0, s = 0, t = 0; i < MAX_NUM_LIGHTS; i++) {
+    for (int i = 0, c = 0, a = 0, r = 0, s = 0; i < MAX_NUM_LIGHTS; i++) {
         float w = lights[i].w;
         lightsColor[c++] = lights[i].color[0] * w;
         lightsColor[c++] = lights[i].color[1] * w;
