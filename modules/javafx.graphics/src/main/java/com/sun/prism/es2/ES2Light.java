@@ -56,4 +56,8 @@ class ES2Light {
         this.outerAngle = outerAngle;
         this.falloff = falloff;
     }
+
+    boolean isPointLight() {
+        return falloff == 0 && outerAngle == 180;
+    }
 }
