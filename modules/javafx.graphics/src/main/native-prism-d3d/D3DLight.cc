@@ -42,9 +42,13 @@ D3DLight::D3DLight() :
     maxRange(0),
     direction(),
     innerAngle(0),
-    outerAngle(90),
+    outerAngle(0),
     falloff(0)
     {}
+
+bool D3DLight::isPointLight() {
+    return falloff == 0 && outerAngle == 180;
+}
 
 void D3DLight::setColor(float r, float g, float b) {
     color[0] = r;

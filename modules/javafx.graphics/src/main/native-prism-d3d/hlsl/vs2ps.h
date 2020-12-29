@@ -34,7 +34,7 @@ struct LocalBump {
 
     float3 eye               : texcoord2;
     float4 lights[nLights]   : texcoord3; // 3, 4, 5 [6]
-    float4 normDirs[nLights] : texcoord7; // 7, 8, 9 [10]
+    float4 lightDirs[nLights] : texcoord7; // 7, 8, 9 [10]
 //    float3 debug             : texcoord11;
 };
 

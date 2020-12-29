@@ -151,12 +151,16 @@ void D3DMeshView::render() {
 
     float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 coords + 1 padding)
     for (int i = 0, d = 0; i < MAX_NUM_LIGHTS; i++) {
-        if (lights[i].falloff != 0) {
+        if (lights[i].isPointLight()) {
+            lighsNormDirection[d++] = 0;
+            lighsNormDirection[d++] = 0;
+            lighsNormDirection[d++] = 1;
+            lighsNormDirection[d++] = 0;
+        } else {
             float dirX = lights[i].direction[0];
             float dirY = lights[i].direction[1];
             float dirZ = lights[i].direction[2];
             float length = sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-
             lighsNormDirection[d++] = dirX / length;
             lighsNormDirection[d++] = dirY / length;
             lighsNormDirection[d++] = dirZ / length;
@@ -164,7 +168,7 @@ void D3DMeshView::render() {
         }
     }
 
-    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_DIRS, lighsNormDirection, 1));
+    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_DIRS, lighsNormDirection, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_DIRS) failed !!!" << endl;
         return;
@@ -209,18 +213,18 @@ void D3DMeshView::render() {
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
 
-        // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
-        if (lights[i].falloff != 0) {
+        if (lights[i].isPointLight()) {
+            spotLightsFactors[s++] = -1; // cos(180)
+            spotLightsFactors[s++] = 2;  // cos(0) - cos(180)
+            spotLightsFactors[s++] = 0;
+            spotLightsFactors[s++] = 0;
+        } else {
+            // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff)
             float cosInner = cos(lights[i].innerAngle * M_PI / 180);
             float cosOuter = cos(lights[i].outerAngle * M_PI / 180);
             spotLightsFactors[s++] = cosOuter;
             spotLightsFactors[s++] = cosInner - cosOuter;
             spotLightsFactors[s++] = lights[i].falloff;
-            spotLightsFactors[s++] = 0;
-        } else {
-            spotLightsFactors[s++] = 0;
-            spotLightsFactors[s++] = 1;
-            spotLightsFactors[s++] = 0;
             spotLightsFactors[s++] = 0;
         }
     }

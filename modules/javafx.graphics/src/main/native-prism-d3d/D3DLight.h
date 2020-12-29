@@ -34,6 +34,7 @@ class D3DLight {
 public:
     D3DLight();
     virtual ~D3DLight();
+    bool isPointLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
 
