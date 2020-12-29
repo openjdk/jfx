@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenuation;
+package attenTest;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +40,7 @@ import javafx.scene.shape.Box;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
+import javafx.scene.transform.Rotate;
 
 class Environment extends CameraScene3D {
 
@@ -49,11 +50,10 @@ class Environment extends CameraScene3D {
     private final PointLight pointLight1 = new PointLight(Color.RED);
     private final PointLight pointLight2 = new PointLight(Color.BLUE);
     private final PointLight pointLight3 = new PointLight(Color.MAGENTA);
-
     private final SpotLight spotLight1 = new SpotLight(Color.RED);
     private final SpotLight spotLight2 = new SpotLight(Color.BLUE);
     private final SpotLight spotLight3 = new SpotLight(Color.MAGENTA);
-    final LightBase[] lights = { pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
+    final LightBase[] lights = {pointLight1, pointLight2, pointLight3, spotLight1, spotLight2, spotLight3};
 
     private Node currentShape;
 
@@ -70,7 +70,7 @@ class Environment extends CameraScene3D {
             lightRep.translateXProperty().bind(light.translateXProperty());
             lightRep.translateYProperty().bind(light.translateYProperty());
             lightRep.translateZProperty().bind(light.translateZProperty());
-            rootGroup.getChildren().addAll(light, lightRep);
+            rootGroup.getChildren().addAll(light , lightRep);
         }
 
         pointLight1.setTranslateX(LIGHT_X_DIST);
@@ -89,11 +89,17 @@ class Environment extends CameraScene3D {
         rootGroup.setMouseTransparent(true);
     }
 
-    public Group createBoxes() {
+    Group createBoxes() {
         var front = new Box(200, 200, 1);
         var back = new Box(200, 200, 1);
-        back.setTranslateZ(-LIGHT_Z_DIST * 2);
-        return new Group(front, back);
+        var side = new Box(200, 200, 1);
+        side.setRotationAxis(Rotate.Y_AXIS);
+        side.setRotate(90);
+        side.setTranslateX(LIGHT_Z_DIST * 2);
+        side.setTranslateZ(-LIGHT_Z_DIST);
+        front.setTranslateZ(LIGHT_Z_DIST);
+        back.setTranslateZ(-LIGHT_Z_DIST * 3);
+        return new Group(front, back, side);
     }
 
     Sphere createSphere(int subdivisions) {

@@ -23,11 +23,13 @@
  * questions.
  */
 
-package attenuation;
+package attenTest;
 
 import javafx.animation.Animation;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
+import javafx.beans.binding.When;
+import javafx.scene.Group;
 import javafx.scene.LightBase;
 import javafx.scene.Node;
 import javafx.scene.PointLight;
@@ -42,6 +44,9 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.converter.NumberStringConverter;
@@ -64,9 +69,7 @@ public class LightingSample extends Application {
 
         var sphereControls = createSphereControls();
         var meshControls = createMeshControls();
-
-        var box = new Button("Boxes (static)");
-        box.setOnAction(e -> switchTo(environment.createBoxes()));
+        var boxesControls = createBoxesControls();
 
         var playButton = new Button("Start");
         playButton.setOnAction(e -> startMeasurement());
@@ -74,13 +77,13 @@ public class LightingSample extends Application {
         var stopButton = new Button("Stop");
         stopButton.setOnAction(e -> stopMeasurement());
 
-        var controls = new VBox(3, sphereControls, meshControls, box, new HBox(5, playButton, stopButton));
+        var controls = new VBox(3, sphereControls, meshControls, boxesControls, new HBox(5, playButton, stopButton));
         for (var light : environment.lights) {
             VBox vBox = null;
-            if (light instanceof PointLight) {
-                vBox = addPointLightControls((PointLight) light);
-            } else if (light instanceof SpotLight) {
+            if (light instanceof SpotLight) {
                 vBox = addSpotLightControls((SpotLight) light);
+            } else if (light instanceof PointLight) {
+                vBox = addPointLightControls((PointLight) light);
             }
             controls.getChildren().add(new TitledPane(light.getUserData() + " " + light.getClass().getSimpleName(), vBox));
         }
@@ -95,7 +98,7 @@ public class LightingSample extends Application {
 
     private HBox createMeshControls() {
         var quadSlider = new Slider(100, 5000, 1000);
-        quadSlider.setMajorTickUnit(200);
+        quadSlider.setMajorTickUnit(100);
         setupSlier(quadSlider);
 
         var quadLabel = new Label();
@@ -123,6 +126,20 @@ public class LightingSample extends Application {
         return sphereBox;
     }
 
+    private HBox createBoxesControls() {
+        var box = new Button("Boxes (static)");
+        var specular = new CheckBox("Specular");
+        var specularBinding = new When(specular.selectedProperty()).then(Color.WHITE).otherwise(Color.BLACK);
+        var mat = new PhongMaterial(Color.WHITE);
+        mat.specularColorProperty().bind(specularBinding);
+        box.setOnAction(e -> {
+            Group boxes = environment.createBoxes();
+            boxes.getChildren().forEach(n -> ((Box) n).setMaterial(mat));
+            switchTo(boxes);
+        });
+        return new HBox(5, box, specular);
+    }
+
     private void setupSlier(Slider slider) {
         slider.setMinorTickCount(0);
         slider.setShowTickLabels(true);
@@ -140,7 +157,6 @@ public class LightingSample extends Application {
 
     protected VBox addLightControls(LightBase light) {
         var lightOn = new CheckBox("On/Off");
-        lightOn.setSelected(true);
         light.lightOnProperty().bind(lightOn.selectedProperty());
         return new VBox(lightOn);
     }

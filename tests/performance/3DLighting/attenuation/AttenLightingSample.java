@@ -25,7 +25,9 @@
 
 package attenuation;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
+import javafx.geometry.Point3D;
 import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
 import javafx.scene.control.Label;
@@ -43,7 +45,7 @@ public class AttenLightingSample extends LightingSample {
     @Override
     protected VBox addPointLightControls(PointLight light) {
         var vbox = super.addLightControls(light);
-        var range = createSliderControl("range", light.maxRangeProperty(), 0, 150, light.getMaxRange());
+        var range = createSliderControl("range", light.maxRangeProperty(), 0, 500, 150);
         var c = createSliderControl("constant", light.constantAttenuationProperty(), -1, 1, light.getConstantAttenuation());
         var lc = createSliderControl("linear", light.linearAttenuationProperty(), -0.1, 0.1, light.getLinearAttenuation());
         var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -0.01, 0.01, light.getQuadraticAttenuation());
@@ -53,27 +55,48 @@ public class AttenLightingSample extends LightingSample {
 
     @Override
     protected VBox addSpotLightControls(SpotLight light) {
-        var vbox = super.addLightControls(light);
-        var range = createSliderControl("range", light.maxRangeProperty(), 0, 150, light.getMaxRange());
-        var c = createSliderControl("constant", light.constantAttenuationProperty(), -1, 1, light.getConstantAttenuation());
-        var lc = createSliderControl("linear", light.linearAttenuationProperty(), -0.1, 0.1, light.getLinearAttenuation());
-        var qc = createSliderControl("quadratic", light.quadraticAttenuationProperty(), -0.01, 0.01, light.getQuadraticAttenuation());
+        var vbox = addPointLightControls(light);
         var ia = createSliderControl("inner", light.innerAngleProperty(), 0, 180, light.getInnerAngle());
         var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
         var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
-        vbox.getChildren().addAll(range, c, lc, qc, ia, oa, fo);
+
+        var sliderX = createSlider(-5, 5, 0);
+        var sliderY = createSlider(-5, 5, 0);
+        var sliderZ = createSlider(-5, 5, 1);
+        light.directionProperty().bind(Bindings.createObjectBinding(() ->
+            new Point3D(sliderX.getValue(), sliderY.getValue(), sliderZ.getValue()),
+            sliderX.valueProperty(), sliderY.valueProperty(), sliderZ.valueProperty()));
+
+        var x = createSliderControl("dir x", sliderX);
+        var y = createSliderControl("dir y", sliderY);
+        var z = createSliderControl("dir z", sliderZ);
+        vbox.getChildren().addAll(ia, oa, fo , x, y, z);
         return vbox;
     }
 
-    protected HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
-        var slider = new Slider(min, max, start);
-        slider.setShowTickMarks(true);
-        slider.setShowTickLabels(true);
-        property.bindBidirectional(slider.valueProperty());
+    private HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {
+        var slider = createSlider(min, max, start);
+        property.bind(slider.valueProperty());
+        return createSliderControl(name, slider);
+    }
+
+    private HBox createSliderControl(String name, Slider slider) {
+        var tf = createTextField(slider);
+        return new HBox(5, new Label(name), slider, tf);
+    }
+
+    private TextField createTextField(Slider slider) {
         var tf = new TextField();
         tf.textProperty().bindBidirectional(slider.valueProperty(), new NumberStringConverter());
         tf.setMaxWidth(50);
-        return new HBox(5, new Label(name), slider, tf);
+        return tf;
+    }
+
+    private Slider createSlider(double min, double max, double start) {
+        var slider = new Slider(min, max, start);
+        slider.setShowTickMarks(true);
+        slider.setShowTickLabels(true);
+        return slider;
     }
 
     public static void main(String[] args) {
