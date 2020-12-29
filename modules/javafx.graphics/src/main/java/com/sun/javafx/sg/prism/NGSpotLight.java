@@ -30,16 +30,16 @@ import javafx.geometry.Point3D;
 /**
  * The peer of the {@code SpotLight} class. Holds the default values of {@code SpotLight}'s
  * properties and updates the visuals via {@link NGNode#visualsChanged} when one of the current
- * values changes. The peer receives its changes by {@code SpotLight.doUpdatePeer} calls.
+ * values changes. The peer receives its changes by {@link javafx.scene.SpotLight#doUpdatePeer} calls.
  */
 public class NGSpotLight extends NGPointLight {
 
     /** Direction default value */
-    private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, -1);
+    private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, 1);
     /** Inner angle default value */
     private static final float DEFAULT_INNER_ANGLE = 0;
     /** Outer angle default value */
-    private static final float DEFAULT_OUTER_ANGLE = 90;
+    private static final float DEFAULT_OUTER_ANGLE = 30;
     /** Falloff default value */
     private static final float DEFAULT_FALLOFF = 1;
 
@@ -65,6 +65,7 @@ public class NGSpotLight extends NGPointLight {
 
     private Point3D direction = DEFAULT_DIRECTION;
 
+    @Override
     public Point3D getDirection() {
         return direction;
     }
@@ -79,6 +80,7 @@ public class NGSpotLight extends NGPointLight {
 
     private float innerAngle = DEFAULT_INNER_ANGLE;
 
+    @Override
     public float getInnerAngle() {
         return innerAngle;
     }
@@ -93,6 +95,7 @@ public class NGSpotLight extends NGPointLight {
 
     private float outerAngle = DEFAULT_OUTER_ANGLE;
 
+    @Override
     public float getOuterAngle() {
         return outerAngle;
     }
@@ -107,6 +110,7 @@ public class NGSpotLight extends NGPointLight {
 
     private float falloff = DEFAULT_FALLOFF;
 
+    @Override
     public float getFalloff() {
         return falloff;
     }

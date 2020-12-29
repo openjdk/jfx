@@ -97,7 +97,7 @@ public class SpotLight extends PointLight {
     /**
      * The direction the spotlight is facing. The vector need not be normalized.
      *
-     * @defaultValue {@code Point3D(0, 0, -1)}
+     * @defaultValue {@code Point3D(0, 0, 1)}
      */
     private ObjectProperty<Point3D> direction;
 
@@ -156,7 +156,7 @@ public class SpotLight extends PointLight {
      * receive no light. At smaller angles, the light intensity starts to increase. The expected values are between
      * {@code innerAngle} and 180; values outside this range give unexpected results.
      *
-     * @defaultValue 90
+     * @defaultValue 30
      */
     private DoubleProperty outerAngle;
 
@@ -183,7 +183,7 @@ public class SpotLight extends PointLight {
      * than the inner angle but less than the outer angle receive partial intensity governed by this factor. The larger
      * the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a linear drop in
      * intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave drop. Negative
-     * values giver unexpected results.
+     * values give unexpected results.
      *
      * @defaultValue 1
      */

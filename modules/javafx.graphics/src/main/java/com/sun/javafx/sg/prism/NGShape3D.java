@@ -122,7 +122,7 @@ public abstract class NGShape3D extends NGNode {
                     NGPointLight.getDefaultLa(),
                     NGPointLight.getDefaultQa(),
                     NGPointLight.getDefaultMaxRange(),
-                    0, 0, -1, 0, 180, 0); // simulating point light);
+                    0, 0, 1, 0, 180, 0); // simulating point light);
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
@@ -160,8 +160,8 @@ public abstract class NGShape3D extends NGNode {
 //                float attenuationFactor = 1/(c + cL * d + cQ * d * d);
 //                float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
 //                intensity *= attenuationFactor;
-                if (lightBase instanceof NGSpotLight) {
-                    var light = (NGSpotLight) lightBase;
+                if (lightBase instanceof NGPointLight) {
+                    var light = (NGPointLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
                     meshView.setLight(lightIndex++,
                             (float) lightWT.getMxt(),
@@ -178,19 +178,6 @@ public abstract class NGShape3D extends NGNode {
                             light.getInnerAngle(),
                             light.getOuterAngle(),
                             light.getFalloff());
-                } else if (lightBase instanceof NGPointLight) {
-                    NGPointLight light = (NGPointLight) lightBase;
-                    Affine3D lightWT = light.getWorldTransform();
-                    meshView.setLight(lightIndex++,
-                            (float) lightWT.getMxt(),
-                            (float) lightWT.getMyt(),
-                            (float) lightWT.getMzt(),
-                            rL, gL, bL, 1.0f,
-                            light.getCa(),
-                            light.getLa(),
-                            light.getQa(),
-                            light.getMaxRange(),
-                            0, 0, -1, 0, 180, 0); // simulating point light
                 } else if (lightBase instanceof NGAmbientLight) {
                     // Accumulate ambient lights
                     ambientRed   += rL;
