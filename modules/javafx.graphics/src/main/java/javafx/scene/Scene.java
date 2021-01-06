@@ -3785,7 +3785,7 @@ public class Scene implements EventTarget {
                             backButtonDown || forwardButtonDown)) {
                         //old gesture ended and new one started
                         gestureStarted = true;
-                        if (!PLATFORM_DRAG_GESTURE_INITIATION) {
+                        if (!PLATFORM_DRAG_GESTURE_INITIATION && Scene.this.dndGesture == null) {
                             Scene.this.dndGesture = new DnDGesture();
                         }
                         clearPDREventTargets();
