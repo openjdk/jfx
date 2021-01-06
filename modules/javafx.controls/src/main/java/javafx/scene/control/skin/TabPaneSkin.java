@@ -274,8 +274,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             selectionModel = null;
         }
         getSkinnable().getTabs().removeListener(weakTabsListener);
-        tabHeaderArea.removeListeners();
-
+        tabHeaderArea.dispose();
 
         // Control and Skin share the list of children, so children that are
         // added by Skin are actually added to control's list of children,
@@ -512,7 +511,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             if (tabRegion != null) {
                 tabRegion.isClosing = true;
 
-                tabRegion.removeListeners(tab);
+                tabRegion.dispose();
                 removeTabContent(tab);
 
                 EventHandler<ActionEvent> cleanup = ae -> {
@@ -1230,12 +1229,12 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                         /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
         }
 
-        void removeListeners() {
+        void dispose() {
             for (Node child : headersRegion.getChildren()) {
                 TabHeaderSkin header = (TabHeaderSkin) child;
-                header.removeListeners(header.getTab());
+                header.dispose();
             }
-            controlButtons.removeListeners();
+            controlButtons.dispose();
         }
     } /* End TabHeaderArea */
 
@@ -1524,7 +1523,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
                         if (showCloseButton()) {
                             if (behavior.canCloseTab(tab)) {
-                                removeListeners(tab);
+                                dispose();
                                 behavior.closeTab(tab);
                             }
                         }
@@ -1570,11 +1569,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
         };
 
-        private void removeListeners(Tab tab) {
+        private void dispose() {
             tab.getStyleClass().removeListener(weakStyleClassListener);
             listener.dispose();
-            inner.getChildren().clear();
-            getChildren().clear();
             setOnContextMenuRequested(null);
             setOnMousePressed(null);
         }
@@ -1723,14 +1720,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             }
         }
 
-        private void removeListeners() {
+        public void dispose() {
             tab.selectedProperty().removeListener(weakTabSelectedListener);
             tab.contentProperty().removeListener(weakTabContentListener);
-        }
-
-        public void dispose() {
-            getChildren().clear();
-            removeListeners();
         }
 
     } /* End TabContentRegion */
@@ -1840,7 +1832,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         WeakListChangeListener weakTabsListenerForPopup =
                 new WeakListChangeListener<>(tabsListenerForPopup);
 
-        void removeListeners() {
+        void dispose() {
             getSkinnable().sideProperty().removeListener(weakSidePropListener);
             getSkinnable().getTabs().removeListener(weakTabsListenerForPopup);
         }
