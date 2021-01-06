@@ -263,58 +263,58 @@ public class SkinCleanupTest {
 //-------- TabPane
     @Test
     public void testChildrenCountAfterSkinIsReplaced() {
-      TabPane tabPane = new TabPane();
-      tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
-      installDefaultSkin(tabPane);
-      int childrenCount = tabPane.getChildrenUnmodifiable().size();
-      replaceSkin(tabPane);
-      assertEquals(childrenCount, tabPane.getChildrenUnmodifiable().size());
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        int childrenCount = tabPane.getChildrenUnmodifiable().size();
+        replaceSkin(tabPane);
+        assertEquals(childrenCount, tabPane.getChildrenUnmodifiable().size());
     }
 
     @Test
     public void testChildrenCountAfterSkinIsRemoved() {
-      TabPane tabPane = new TabPane();
-      assertEquals(0, tabPane.getChildrenUnmodifiable().size());
-      tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
-      installDefaultSkin(tabPane);
-      assertEquals(3, tabPane.getChildrenUnmodifiable().size());
-      tabPane.setSkin(null);
-      assertNull(tabPane.getSkin());
-      assertEquals(0, tabPane.getChildrenUnmodifiable().size());
+        TabPane tabPane = new TabPane();
+        assertEquals(0, tabPane.getChildrenUnmodifiable().size());
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        assertEquals(3, tabPane.getChildrenUnmodifiable().size());
+        tabPane.setSkin(null);
+        assertNull(tabPane.getSkin());
+        assertEquals(0, tabPane.getChildrenUnmodifiable().size());
     }
 
     @Test
     public void testNPEWhenTabsAddedAfterSkinIsReplaced() {
-      TabPane tabPane = new TabPane();
-      tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
-      installDefaultSkin(tabPane);
-      replaceSkin(tabPane);
-      tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        replaceSkin(tabPane);
+        tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
     }
 
     @Test
     public void testNPEWhenTabRemovedAfterSkinIsReplaced() {
-      TabPane tabPane = new TabPane();
-      tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
-      installDefaultSkin(tabPane);
-      replaceSkin(tabPane);
-      tabPane.getTabs().remove(0);
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        replaceSkin(tabPane);
+        tabPane.getTabs().remove(0);
     }
 
     @Test
     public void testAddRemoveTabsAfterSkinIsReplaced() {
-      TabPane tabPane = new TabPane();
-      tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
-      installDefaultSkin(tabPane);
-      assertEquals(2, tabPane.getTabs().size());
-      assertEquals(3, tabPane.getChildrenUnmodifiable().size());
-      replaceSkin(tabPane);
-      tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
-      assertEquals(4, tabPane.getTabs().size());
-      assertEquals(5, tabPane.getChildrenUnmodifiable().size());
-      tabPane.getTabs().clear();
-      assertEquals(0, tabPane.getTabs().size());
-      assertEquals(1, tabPane.getChildrenUnmodifiable().size());
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        assertEquals(2, tabPane.getTabs().size());
+        assertEquals(3, tabPane.getChildrenUnmodifiable().size());
+        replaceSkin(tabPane);
+        tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
+        assertEquals(4, tabPane.getTabs().size());
+        assertEquals(5, tabPane.getChildrenUnmodifiable().size());
+        tabPane.getTabs().clear();
+        assertEquals(0, tabPane.getTabs().size());
+        assertEquals(1, tabPane.getChildrenUnmodifiable().size());
     }
 
 //---------------- setup and initial
