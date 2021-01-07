@@ -115,8 +115,6 @@ public class SkinMemoryLeakTest {
                 SplitPane.class,
                 TableRow.class,
                 TableView.class,
-                // @Ignore("8242621")
-                TabPane.class,
                 // @Ignore("8244419")
                 TextArea.class,
                 // @Ignore("8240506")
