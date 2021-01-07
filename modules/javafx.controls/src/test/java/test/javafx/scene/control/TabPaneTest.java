@@ -1213,10 +1213,8 @@ public class TabPaneTest {
         }
     }
 
-    @Ignore("JDK-8242621")
     @Test
     public void testNPEOnSwitchSkinAndChangeSelection() {
-        // Because of JDK-8242621, this test fails with NPE.
         tabPane.getTabs().addAll(tab1, tab2);
         root.getChildren().add(tabPane);
         stage.show();
