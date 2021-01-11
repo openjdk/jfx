@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "FastJITPermissions.h"
 #include "JITCompilationEffort.h"
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
@@ -46,9 +47,6 @@
 #include <sys/cachectl.h>
 #endif
 
-#if ENABLE(FAST_JIT_PERMISSIONS)
-#include <os/thread_self_restrict.h>
-#endif
 #define JIT_ALLOCATOR_LARGE_ALLOC_SIZE (pageSize() * 4)
 
 #define EXECUTABLE_POOL_WRITABLE true
@@ -71,7 +69,7 @@ public:
 
     static void dumpProfile() { }
 
-    RefPtr<ExecutableMemoryHandle> allocate(size_t, void*, JITCompilationEffort) { return nullptr; }
+    RefPtr<ExecutableMemoryHandle> allocate(size_t, JITCompilationEffort) { return nullptr; }
 
     static void setJITEnabled(bool) { };
 
@@ -121,22 +119,18 @@ static ALWAYS_INLINE void* performJITMemcpy(void *dst, const void *src, size_t n
     RELEASE_ASSERT(roundUpToMultipleOf<instructionSize>(src) == src);
 #endif
     if (isJITPC(dst)) {
+        RELEASE_ASSERT(!Gigacage::contains(src));
         RELEASE_ASSERT(reinterpret_cast<uint8_t*>(dst) + n <= endOfFixedExecutableMemoryPool());
 
         if (UNLIKELY(Options::dumpJITMemoryPath()))
             dumpJITMemory(dst, src, n);
-#if ENABLE(FAST_JIT_PERMISSIONS)
-#if ENABLE(SEPARATED_WX_HEAP)
-        if (g_jscConfig.useFastPermisionsJITCopy)
-#endif
-        {
-            os_thread_self_restrict_rwx_to_rw();
+
+        if (useFastJITPermissions()) {
+            threadSelfRestrictRWXToRW();
             memcpy(dst, src, n);
-            RELEASE_ASSERT(!Gigacage::contains(src));
-            os_thread_self_restrict_rwx_to_rx();
+            threadSelfRestrictRWXToRX();
             return dst;
         }
-#endif // ENABLE(FAST_JIT_PERMISSIONS)
 
 #if ENABLE(SEPARATED_WX_HEAP)
         if (g_jscConfig.jitWriteSeparateHeaps) {
@@ -158,7 +152,7 @@ class ExecutableAllocator : private ExecutableAllocatorBase {
 public:
     using Base = ExecutableAllocatorBase;
 
-    static ExecutableAllocator& singleton();
+    JS_EXPORT_PRIVATE static ExecutableAllocator& singleton();
     static void initialize();
     static void initializeUnderlyingAllocator();
 
@@ -176,13 +170,18 @@ public:
 
     JS_EXPORT_PRIVATE static void setJITEnabled(bool);
 
-    RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes, void* ownerUID, JITCompilationEffort);
+    RefPtr<ExecutableMemoryHandle> allocate(size_t sizeInBytes, JITCompilationEffort);
 
     bool isValidExecutableMemory(const AbstractLocker&, void* address);
 
     static size_t committedByteCount();
 
     Lock& getLock() const;
+
+#if USE(JUMP_ISLANDS)
+    JS_EXPORT_PRIVATE void* getJumpIslandTo(void* from, void* newDestination);
+    JS_EXPORT_PRIVATE void* getJumpIslandToConcurrently(void* from, void* newDestination);
+#endif
 
 private:
     ExecutableAllocator() = default;

@@ -723,10 +723,6 @@
 #define ENABLE_DFG_REGISTER_ALLOCATION_VALIDATION 1
 #endif
 
-#if !defined(ENABLE_SEPARATED_WX_HEAP) && PLATFORM(IOS_FAMILY) && CPU(ARM64) && (!ENABLE(FAST_JIT_PERMISSIONS) || !CPU(ARM64E))
-#define ENABLE_SEPARATED_WX_HEAP 1
-#endif
-
 /* Determine if we need to enable Computed Goto Opcodes or not: */
 #if HAVE(COMPUTED_GOTO) || !ENABLE(C_LOOP)
 #define ENABLE_COMPUTED_GOTO_OPCODES 1
@@ -868,4 +864,8 @@
 
 #if ENABLE(WEBGL2) && !ENABLE(WEBGL)
 #error "ENABLE(WEBGL2) requires ENABLE(WEBGL)"
+#endif
+
+#if CPU(ARM64) && CPU(ADDRESS64)
+#define USE_JUMP_ISLANDS 1
 #endif
