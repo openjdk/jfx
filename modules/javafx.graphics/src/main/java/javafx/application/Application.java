@@ -80,6 +80,12 @@ import com.sun.javafx.css.StyleManager;
  * {@link #stop} method returns or {@link System#exit} is called.
  * </p>
  *
+ * <p><b>Note:</b> The JavaFX classes must be loaded from a set of
+ * named {@code javafx.*} modules on the <em>module path</em>.
+ * Loading the JavaFX classes from the classpath is not supported.
+ * See {@link Platform#startup(Runnable) Platform.startup}
+ * for more information.
+ *
  * <p><b>Deploying an Application as a Module</b></p>
  * <p>
  * If the {@code Application} subclass is in a named module then that class

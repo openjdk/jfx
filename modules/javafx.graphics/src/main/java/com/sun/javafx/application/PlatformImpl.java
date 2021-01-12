@@ -31,8 +31,10 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.ModuleHelper;
 
+import java.lang.module.ModuleDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
@@ -185,6 +187,23 @@ public class PlatformImpl {
             // If we've already initialized, just put the runnable on the queue.
             runLater(r);
             return;
+        }
+
+        final Module module = PlatformImpl.class.getModule();
+        final ModuleDescriptor moduleDesc = module.getDescriptor();
+        if (!module.isNamed()
+                || !"javafx.graphics".equals(module.getName())
+                || moduleDesc == null
+                || moduleDesc.isAutomatic()
+                || moduleDesc.isOpen()) {
+
+            String warningStr = "Unsupported JavaFX configuration: "
+                + "classes were loaded from '" + module + "'";
+            if (moduleDesc != null) {
+                warningStr += ", isAutomatic: " + moduleDesc.isAutomatic();
+                warningStr += ", isOpen: " + moduleDesc.isOpen();
+            }
+            Logging.getJavaFXLogger().warning(warningStr);
         }
 
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {

@@ -90,6 +90,14 @@ public final class Platform {
      * that the JavaFX runtime be started once.
      * </p>
      *
+     * <p><b>Note:</b> The JavaFX classes must be loaded from a set of
+     * named {@code javafx.*} modules on the <em>module path</em>.
+     * Loading the JavaFX classes from the classpath is not supported.
+     * A warning is logged when the JavaFX runtime is started if the JavaFX
+     * classes are not loaded from the expected named module.
+     * This warning is logged regardless of whether the JavaFX runtime was
+     * started by calling this method or automatically as described above.
+     *
      * @throws IllegalStateException if the JavaFX runtime is already running
      *
      * @param runnable the Runnable whose run method will be executed on the

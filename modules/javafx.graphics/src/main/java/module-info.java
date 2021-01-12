@@ -30,6 +30,12 @@
  * as well as APIs for animation, css, concurrency, geometry, printing, and
  * windowing.
  *
+ * <p><b>Note:</b> The JavaFX classes must be loaded from a set of
+ * named {@code javafx.*} modules on the <em>module path</em>.
+ * Loading the JavaFX classes from the classpath is not supported.
+ * See {@link javafx.application.Platform#startup(Runnable) Platform.startup}
+ * for more information.
+ *
  * @moduleGraph
  * @since 9
  */
