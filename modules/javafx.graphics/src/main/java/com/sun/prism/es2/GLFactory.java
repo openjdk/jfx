@@ -63,11 +63,7 @@ abstract class GLFactory {
 
         final String factoryClassName;
         if (PlatformUtil.isUnix()) {
-            if ("eglx11".equals(PlatformUtil.getEmbeddedType()))
-                factoryClassName = "com.sun.prism.es2.EGLX11GLFactory";
-            else if ("eglfb".equals(PlatformUtil.getEmbeddedType()))
-                factoryClassName = "com.sun.prism.es2.EGLFBGLFactory";
-            else if ("monocle".equals(PlatformUtil.getEmbeddedType()))
+            if ("monocle".equals(PlatformUtil.getEmbeddedType()))
                 factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
             else
                 factoryClassName = "com.sun.prism.es2.X11GLFactory";
