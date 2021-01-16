@@ -60,7 +60,7 @@ struct Light {
     vec3 color;
     vec3 attn;
     float range;
-    vec3 normDir;
+    vec3 dir;
     float cosOuter;
     float denom; // cosInner - cosOuter
     float falloff;
@@ -73,40 +73,78 @@ varying vec3 eyePos;
 varying vec4 lightTangentSpacePositions[3];
 varying vec4 lightTangentSpaceDirections[3];
 
+// Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
+// we need special treatment for falloff == 0 cases
+float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
+    if (falloff == 0 && cosOuter == -1) { // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1;
+    }
+    float cosAngle = dot(normalize(lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    if (falloff != 0) {
+        return pow(clamp(cutoff / denom, 0, 1), falloff);
+    }
+    return cutoff >= 0 ? 1 : 0;
+}
+
+float computeSpotlightFactor2(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
+    if (falloff != 0) {
+        float cosAngle = dot(normalize(lightDir), l);
+        float cutoff = cosAngle - cosOuter;
+        return pow(clamp(cutoff / denom, 0, 1), falloff);
+    }
+    if (cosOuter == -1) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1;
+    }
+    float cosAngle = dot(normalize(lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    return cutoff >= 0 ? 1 : 0;
+}
+
+float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
+    float cosAngle = dot(normalize(lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    if (falloff != 0) {
+        return pow(clamp(cutoff / denom, 0, 1), falloff);
+    }
+    return cutoff >= 0 ? 1 : 0;
+}
+
+void computeLight(int i, vec3 n, vec3 refl, float specPower, out vec3 d, out vec3 s) {
+    Light light = lights[i];
+    vec3 pos = lightTangentSpacePositions[i].xyz;
+    float dist = length(pos);
+    if (dist > light.range) {
+        return;
+    }
+    vec3 l = normalize(pos);
+
+    vec3 lightDir = lightTangentSpaceDirections[i].xyz;
+    float spotlightFactor = computeSpotlightFactor3(l, lightDir, light.cosOuter, light.denom, light.falloff);
+
+    float invAttnFactor = light.attn.x + light.attn.y * dist + light.attn.z * dist * dist;
+
+    vec3 attenuatedColor = light.color.rgb * spotlightFactor / invAttnFactor;
+    d += clamp(dot(n,l), 0.0, 1.0) * attenuatedColor;
+    s += pow(clamp(dot(-refl, l), 0.0, 1.0), specPower) * attenuatedColor;
+}
+
 void main()
 {
     vec4 diffuse = apply_diffuse();
 
     if (diffuse.a == 0.0) discard;
 
+    vec3 n = apply_normal();
+    vec3 refl = reflect(normalize(eyePos), n);
+
     vec3 d = vec3(0.0);
     vec3 s = vec3(0.0);
 
     vec4 specular = apply_specular();
-
-    float maxRange = lights[0].range;
-    float dist = length(lightTangentSpacePositions[0].xyz);
-    if (dist > maxRange) {
-        gl_FragColor = vec4(0, 0, 0, 1);
-        return;
-    }
-
-    vec3 n = apply_normal();
-    vec3 refl = reflect(normalize(eyePos), n);
-    vec3 l = normalize(lightTangentSpacePositions[0].xyz);
-
-    float spotlightFactor = 1;
-    if (lights[0].falloff != 0) {  // possible optimization
-        float cosAngle = dot(lightTangentSpaceDirections[0].xyz, l);
-        float base = (cosAngle - lights[0].cosOuter) / lights[0].denom;
-        spotlightFactor = pow(clamp(base, 0.0, 1.0), lights[0].falloff);
-    }
-
     float power = specular.a;
-    float invAttnFactor = lights[0].attn.x + lights[0].attn.y * dist + lights[0].attn.z * dist * dist;
-    vec3 attenuatedColor = lights[0].color.rgb * spotlightFactor / invAttnFactor;
-    d = clamp(dot(n, l), 0.0, 1.0) * attenuatedColor;
-    s = pow(clamp(dot(-refl, l), 0.0, 1.0), power) * attenuatedColor;
+
+    computeLight(0, n, refl, power, d, s);
 
     vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
     rez += apply_selfIllum().xyz;
