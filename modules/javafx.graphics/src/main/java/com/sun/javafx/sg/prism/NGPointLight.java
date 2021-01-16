@@ -74,6 +74,21 @@ public class NGPointLight extends NGLightBase {
         return DEFAULT_MAX_RANGE;
     }
 
+    public static Point3D getSimulatedDirection() {
+        return SIMULATED_DIRECTION;
+    }
+
+    public static float getSimulatedInnerAngle() {
+        return SIMULATED_INNER_ANGLE;
+    }
+
+    public static float getSimulatedOuterAngle() {
+        return SIMULATED_OUTER_ANGLE;
+    }
+
+    public static float getSimulatedFalloff() {
+        return SIMULATED_FALLOFF;
+    }
 
     public Point3D getDirection() {
         return SIMULATED_DIRECTION;

@@ -49,12 +49,12 @@ import javafx.scene.paint.PhongMaterial;
  * formula
  * <pre>I = pow((cos(a) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
  * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
- * behavior of the drop. The expect values are {@code 0 <= innerAngle <= outerAngle <= 180} and {@code falloff >= 0};
- * values outside this range give unexpected results.
+ * behavior of the drop. The valid ranges for these properties are {@code 0 <= innerAngle <= outerAngle <= 180} and
+ * {@code falloff >= 0}; values outside either of these ranges can produce unexpected results.
  * <p>
  * <img src="doc-files/spotlight.png" alt="Image of the Spotlight">
  *
- * @since 16
+ * @since 17
  * @see PhongMaterial
  */
 public class SpotLight extends PointLight {
@@ -126,8 +126,8 @@ public class SpotLight extends PointLight {
 
     /**
      * The angle of the spotlight's inner cone. Surfaces whose angle to the light's origin is less than this angle
-     * receive the full light's intensity. At larger angles, the light intensity starts to drop. The expected values are
-     * between 0 and {@code outerAngle}; values outside this range give unexpected results.
+     * receive the full light's intensity. At larger angles, the light intensity starts to drop. The valid range is
+     * {@code 0 <= innerAngle <= outerAngle}; values outside of this range can produce unexpected results.
      *
      * @defaultValue 0
      */
@@ -153,8 +153,8 @@ public class SpotLight extends PointLight {
 
     /**
      * The angle of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater than this angle
-     * receive no light. At smaller angles, the light intensity starts to increase. The expected values are between
-     * {@code innerAngle} and 180; values outside this range give unexpected results.
+     * receive no light. At smaller angles, the light intensity starts to increase. The valid range is
+     * {@code innerAngle <= outerAngle <= 180}; values outside of this range can produce unexpected results.
      *
      * @defaultValue 30
      */
@@ -182,8 +182,8 @@ public class SpotLight extends PointLight {
      * The intensity falloff factor of the spotlight's outer cone. Surfaces whose angle to the light's origin is greater
      * than the inner angle but less than the outer angle receive partial intensity governed by this factor. The larger
      * the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a linear drop in
-     * intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave drop. Negative
-     * values give unexpected results.
+     * intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave drop. The valid
+     * range is {@code 0 <= falloff}; values outside of this range can produce unexpected results.
      *
      * @defaultValue 1
      */
