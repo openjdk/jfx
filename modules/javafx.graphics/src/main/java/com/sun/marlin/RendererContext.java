@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,9 +78,9 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     // flag indicating if the path is closed or not (in advance) to handle properly caps
     boolean closedPath = false;
     // clip rectangle (ymin, ymax, xmin, xmax):
-    public final float[] clipRect = new float[4];
+    public final double[] clipRect = new double[4];
     // clip inverse scale (mean) to adjust length checks
-    public float clipInvScale = 0.0f;
+    public double clipInvScale = 0.0d;
     // CurveBasicMonotonizer instance
     public final CurveBasicMonotonizer monotonizer;
     // CurveClipSplitter instance
@@ -100,8 +100,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     private final IntArrayCache cleanIntCache = new IntArrayCache(true, 5);
     /* dirty int[] cache = 5 refs */
     private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 5);
-    /* dirty float[] cache = 4 refs (2 polystack) */
-    private final FloatArrayCache dirtyFloatCache = new FloatArrayCache(false, 4);
+    /* dirty double[] cache = 4 refs (2 polystack) */
+    private final DoubleArrayCache dirtyDoubleCache = new DoubleArrayCache(false, 4);
     /* dirty byte[] cache = 2 ref (2 polystack) */
     private final ByteArrayCache dirtyByteCache = new ByteArrayCache(false, 2);
 
@@ -124,7 +124,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
             stats = RendererStats.createInstance(cleanerObj, name);
             // push cache stats:
             stats.cacheStats = new CacheStats[] { cleanIntCache.stats,
-                dirtyIntCache.stats, dirtyFloatCache.stats, dirtyByteCache.stats
+                dirtyIntCache.stats, dirtyDoubleCache.stats, dirtyByteCache.stats
             };
         } else {
             stats = null;
@@ -161,7 +161,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         stroking   = 0;
         doClip     = false;
         closedPath = false;
-        clipInvScale = 0.0f;
+        clipInvScale = 0.0d;
 
         // if context is maked as DIRTY:
         if (dirty) {
@@ -216,8 +216,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         return dirtyIntCache.createRef(initialSize);
     }
 
-    FloatArrayCache.Reference newDirtyFloatArrayRef(final int initialSize) {
-        return dirtyFloatCache.createRef(initialSize);
+    DoubleArrayCache.Reference newDirtyDoubleArrayRef(final int initialSize) {
+        return dirtyDoubleCache.createRef(initialSize);
     }
 
     ByteArrayCache.Reference newDirtyByteArrayRef(final int initialSize) {
