@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -470,6 +470,20 @@ public class MiscellaneousTest extends TestBase {
             // WebKit injects error message into body incase of encoding error, otherwise
             // body should be null.
             assertNull(getEngine().executeScript("window.xmlDoc.body"));
+        });
+    }
+
+    @Test public void jrtCssFileIsNotRejected() {
+        submit(() -> {
+            try {
+                getEngine().setUserStyleSheetLocation("jrt:/javafx.web/html/imported-styles.css");
+            } catch (IllegalArgumentException e) {
+                // A jrt file is supposed to be a valid argument
+                throw new AssertionError(e);
+            } catch (RuntimeException e) {
+                // The css file cannot be loaded in the tests (since they are not modularized).
+                // We thus simply ignore this exception here
+            }
         });
     }
 }

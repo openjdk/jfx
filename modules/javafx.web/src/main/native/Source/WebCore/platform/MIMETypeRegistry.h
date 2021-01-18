@@ -31,6 +31,30 @@
 
 namespace WebCore {
 
+WEBCORE_EXPORT Optional<HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>>& overriddenMimeTypesMap();
+WEBCORE_EXPORT const HashMap<String, Vector<String>, ASCIICaseInsensitiveHash>& commonMimeTypesMap();
+
+struct TypeExtensionPair {
+    ASCIILiteral type;
+    ASCIILiteral extension;
+};
+
+WEBCORE_EXPORT const std::initializer_list<TypeExtensionPair>& commonMediaTypes();
+
+struct MIMETypeRegistryThreadGlobalData {
+    WTF_MAKE_NONCOPYABLE(MIMETypeRegistryThreadGlobalData);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    MIMETypeRegistryThreadGlobalData(HashSet<String, ASCIICaseInsensitiveHash>&& supportedImageMIMETypesForEncoding)
+        : m_supportedImageMIMETypesForEncoding(supportedImageMIMETypesForEncoding)
+    { }
+
+    const HashSet<String, ASCIICaseInsensitiveHash>& supportedImageMIMETypesForEncoding() const { return m_supportedImageMIMETypesForEncoding; }
+
+private:
+    HashSet<String, ASCIICaseInsensitiveHash> m_supportedImageMIMETypesForEncoding;
+};
+
 class MIMETypeRegistry {
 public:
     WEBCORE_EXPORT static String getMIMETypeForExtension(const String& extension);
@@ -38,10 +62,12 @@ public:
     // FIXME: WebKit coding style says we should not have the word "get" in the names of these functions.
     static Vector<String> getExtensionsForMIMEType(const String& type);
     WEBCORE_EXPORT static String getPreferredExtensionForMIMEType(const String& type);
-    static String getMediaMIMETypeForExtension(const String& extension);
+    WEBCORE_EXPORT static String getMediaMIMETypeForExtension(const String& extension);
     static Vector<String> getMediaMIMETypesForExtension(const String& extension);
 
     static String getMIMETypeForPath(const String& path);
+
+    static std::unique_ptr<MIMETypeRegistryThreadGlobalData> createMIMETypeRegistryThreadGlobalData();
 
     // Check to see if a MIME type is suitable for being loaded inline as an
     // image (e.g., <img> tags).
@@ -99,6 +125,9 @@ public:
     // Check to see if a MIME type is one where an XML document should be created
     // rather than an HTML document.
     WEBCORE_EXPORT static bool isXMLMIMEType(const String& mimeType);
+
+    // Check to see if a MIME type is for an XML external entity resource.
+    WEBCORE_EXPORT static bool isXMLEntityMIMEType(StringView mimeType);
 
     // Used in page load algorithm to decide whether to display as a text
     // document in a frame. Not a good idea to use elsewhere, because that code

@@ -88,7 +88,6 @@ public:
     WEBCORE_EXPORT static String isReloadIgnoringCacheDataKey();
     static String loadingKey();
     static String isLoadingKey();
-    static String mainDocumentErrorKey();
     static String mainResourceKey();
     static String mediaLoadedKey();
     static String mediaLoadingFailedKey();
@@ -115,8 +114,9 @@ public:
     static String notInMemoryCacheKey();
     WEBCORE_EXPORT static String occurredKey();
     WEBCORE_EXPORT static String otherKey();
-    static String pageCacheKey();
-    static String pageCacheFailureKey();
+    static String backForwardCacheKey();
+    static String backForwardCacheFailureKey();
+    static String visuallyEmptyKey();
     static String pageContainsAtLeastOneMediaEngineKey();
     static String pageContainsAtLeastOnePluginKey();
     static String pageContainsMediaEngineKey();
@@ -149,6 +149,7 @@ public:
     static String sameLoadKey();
     static String scriptKey();
     static String serviceWorkerKey();
+    static String siteSpecificQuirkKey();
     WEBCORE_EXPORT static String streamingMedia();
     static String styleSheetKey();
     WEBCORE_EXPORT static String succeededLessThan2SecondsKey();

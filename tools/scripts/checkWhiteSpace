@@ -10,7 +10,6 @@ Usage: $0 [-avSF] [-r <spec>]
   -v           : verbose
   -V           : very verbose (debug)
   -S           : read file list from stdin
-  -E           : extra extensions check
   -F           : fix files
   -r <spec>    : mercurial revision spec
   -x           : check for the executable bit (not on windows)
@@ -28,7 +27,6 @@ fixfiles=''
 readstdin=''
 revisionspec=''
 executablecheck=''
-extraextlist=''
 
 tofixargs="-F"
 
@@ -50,7 +48,7 @@ do
         veryverbose='true'
         ;;
     E)
-        extraextlist='true'
+        echo "ignoring obsolete '-E' option"
         ;;
     F)
         fixfiles='true'
@@ -73,26 +71,12 @@ do
     esac
 done
 
-# this is a preferred extension list, but jcheck needs an extension to honor it
-#*.java|*.cc|*.c|*.h|*.cpp|*.hpp|*.jsl|*.fxml|*.css|*.m|*.mm|.*frag|.vert|*.hlsl|*.gradle|*.groovy
-# until then, just use the jcheck built in extension list
-
-extensions_to_check='*.java|*.c|*.h|*.cpp|*.hpp'
 match_extension() {
-    if [ ! -z "$extraextlist" ]
-    then
-        case "$1" in
-        *.java|*.cc|*.c|*.h|*.cpp|*.hpp|*.jsl|*.fxml|*.css|*.m|*.mm|.*frag|.vert|*.hlsl|*.gradle|*.groovy)
-            return 0
-            ;;
-        esac
-    else
-        case "$1" in
-        *.java|*.c|*.h|*.cpp|*.hpp)
-            return 0
-            ;;
-        esac
-    fi
+    case "$1" in
+    *.java|*.cc|*.c|*.h|*.cpp|*.hpp|*.jsl|*.fxml|*.css|*.m|*.mm|*.frag|*.vert|*.hlsl|*.metal|*.gradle|*.groovy|*.g4|*.stg)
+        return 0
+        ;;
+    esac
     return 1
 }
 

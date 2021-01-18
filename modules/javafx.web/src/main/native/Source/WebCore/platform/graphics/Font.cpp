@@ -33,10 +33,13 @@
 #if PLATFORM(COCOA)
 #include <pal/spi/cocoa/CoreTextSPI.h>
 #endif
+#include "CachedFont.h"
 #include "CharacterProperties.h"
 #include "FontCache.h"
 #include "FontCascade.h"
+#include "FontCustomPlatformData.h"
 #include "OpenTypeMathData.h"
+#include "SharedBuffer.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
@@ -52,6 +55,8 @@ unsigned GlyphPage::s_count = 0;
 const float smallCapsFontSizeMultiplier = 0.7f;
 const float emphasisMarkFontSizeMultiplier = 0.5f;
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(Font);
+
 Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial interstitial, Visibility visibility, OrientationFallback orientationFallback)
     : m_platformData(platformData)
     , m_origin(origin)
@@ -62,6 +67,7 @@ Font::Font(const FontPlatformData& platformData, Origin origin, Interstitial int
     , m_isBrokenIdeographFallback(false)
     , m_hasVerticalGlyphs(false)
     , m_isUsedInSystemFallbackCache(false)
+    , m_allowsAntialiasing(true)
 #if PLATFORM(IOS_FAMILY)
     , m_shouldNotBeUsedForArabic(false)
 #endif
@@ -119,19 +125,20 @@ void Font::platformGlyphInit()
     // every character and the space are the same width. Otherwise we round.
     if (glyphPageSpace)
         m_spaceGlyph = glyphPageSpace->glyphDataForCharacter(space).glyph;
-    float width = widthForGlyph(m_spaceGlyph);
-    m_spaceWidth = width;
     if (glyphPageCharacterZero)
         m_zeroGlyph = glyphPageCharacterZero->glyphDataForCharacter('0').glyph;
-    m_fontMetrics.setZeroWidth(widthForGlyph(m_zeroGlyph));
-    determinePitch();
-    m_adjustedSpaceWidth = m_treatAsFixedPitch ? ceilf(width) : roundf(width);
 
     // Force the glyph for ZERO WIDTH SPACE to have zero width, unless it is shared with SPACE.
     // Helvetica is an example of a non-zero width ZERO WIDTH SPACE glyph.
     // See <http://bugs.webkit.org/show_bug.cgi?id=13178> and Font::isZeroWidthSpaceGlyph()
     if (m_zeroWidthSpaceGlyph == m_spaceGlyph)
         m_zeroWidthSpaceGlyph = 0;
+
+    float width = widthForGlyph(m_spaceGlyph);
+    m_spaceWidth = width;
+    m_fontMetrics.setZeroWidth(widthForGlyph(m_zeroGlyph));
+    determinePitch();
+    m_adjustedSpaceWidth = m_treatAsFixedPitch ? ceilf(width) : roundf(width);
 }
 
 Font::~Font()
@@ -492,20 +499,11 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
     return platformCreateScaledFont(fontDescription, scaleFactor);
 }
 
-bool Font::applyTransforms(GlyphBufferGlyph* glyphs, GlyphBufferAdvance* advances, size_t glyphCount, bool enableKerning, bool requiresShaping) const
+#if !PLATFORM(COCOA)
+void Font::applyTransforms(GlyphBuffer&, unsigned, bool, bool, const AtomString&) const
 {
-#if PLATFORM(COCOA)
-    CTFontTransformOptions options = (enableKerning ? kCTFontTransformApplyPositioning : 0) | (requiresShaping ? kCTFontTransformApplyShaping : 0);
-    return CTFontTransformGlyphs(m_platformData.ctFont(), glyphs, reinterpret_cast<CGSize*>(advances), glyphCount, options);
-#else
-    UNUSED_PARAM(glyphs);
-    UNUSED_PARAM(advances);
-    UNUSED_PARAM(glyphCount);
-    UNUSED_PARAM(enableKerning);
-    UNUSED_PARAM(requiresShaping);
-    return false;
-#endif
 }
+#endif
 
 class CharacterFallbackMapKey {
 public:
@@ -699,6 +697,20 @@ const Path& Font::pathForGlyph(Glyph glyph) const
     auto path = platformPathForGlyph(glyph);
     m_glyphPathMap.setMetricsForGlyph(glyph, path);
     return *m_glyphPathMap.existingMetricsForGlyph(glyph);
+}
+
+void Font::setFontFaceData(RefPtr<SharedBuffer>&& fontFaceData)
+{
+    m_fontFaceData = WTFMove(fontFaceData);
+}
+
+FontHandle::FontHandle(Ref<SharedBuffer>&& fontFaceData, Font::Origin origin, float fontSize, bool syntheticBold, bool syntheticItalic)
+{
+    bool wrapping;
+    auto customFontData = CachedFont::createCustomFontData(fontFaceData.get(), { }, wrapping);
+    FontDescription description;
+    description.setComputedSize(fontSize);
+    font = Font::create(CachedFont::platformDataFromCustomData(*customFontData, description, syntheticBold, syntheticItalic, { }, { }), origin);
 }
 
 } // namespace WebCore

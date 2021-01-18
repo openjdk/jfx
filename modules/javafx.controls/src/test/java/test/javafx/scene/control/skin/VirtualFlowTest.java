@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -837,21 +837,6 @@ public class VirtualFlowTest {
         assertTrue("The cells didn't get created", VirtualFlowShim.cells_size(flow.cells) > 0);
     }
 
-//    /**
-//     * During layout the order and contents of cells will change. We need
-//     * to make sure that CSS for cells is applied at this time. To test this,
-//     * I just set the position and perform a new pulse. Since layout happens
-//     * after the CSS updates are applied, if the test fails, then there will
-//     * be cells left in a state where they need their CSS applied.
-//     */
-//    @Test public void testCellLifeCycle_CSSUpdatesHappenDuringLayout() {
-//        flow.setPosition(.35);
-//        pulse();
-//        for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
-//            IndexedCell cell = VirtualFlowShim.<T>cells_get(flow.cells, i);
-//            assertEquals(CssFlags.CLEAN, cell.impl_getCSSFlags());
-//        }
-//    }
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -1168,6 +1153,60 @@ public class VirtualFlowTest {
     public void testScrollOneCellHorizontal() {
         assertLastCellInsideViewport(false);
     }
+
+    @Test
+    // see JDK-8178297
+    public void testPositionCellRemainsConstant() {
+        flow.setVertical(true);
+        flow.setCellCount(20);
+        flow.resize(300, 300);
+        flow.scrollPixels(10);
+        pulse();
+
+        IndexedCell vc = flow.getCell(0);
+        double cellPosition = flow.getCellPosition(vc);
+        assertEquals("Wrong first cell position", -10d, cellPosition, 0d);
+
+        for (int i = 1; i < 10; i++) {
+            flow.setCellCount(20 + i);
+            pulse();
+            vc = flow.getCell(0);
+            cellPosition = flow.getCellPosition(vc);
+            assertEquals("Wrong first cell position after inserting " + i + " cells", -10d, cellPosition, 0d);
+        }
+    }
+
+    @Test
+    // see JDK-8252811
+    public void testSheetChildrenRemainsConstant() {
+        flow.setVertical(true);
+        flow.setCellCount(20);
+        flow.resize(300, 300);
+        pulse();
+
+        int sheetChildrenSize = flow.sheetChildren.size();
+        assertEquals("Wrong number of sheet children", 12, sheetChildrenSize);
+
+        for (int i = 1; i < 50; i++) {
+            flow.setCellCount(20 + i);
+            pulse();
+            sheetChildrenSize = flow.sheetChildren.size();
+            assertEquals("Wrong number of sheet children after inserting " + i + " items", 12, sheetChildrenSize);
+        }
+
+        for (int i = 1; i < 50; i++) {
+            flow.setCellCount(70 - i);
+            pulse();
+            sheetChildrenSize = flow.sheetChildren.size();
+            assertEquals("Wrong number of sheet children after removing " + i + " items", 12, sheetChildrenSize);
+        }
+
+        flow.setCellCount(0);
+        pulse();
+        sheetChildrenSize = flow.sheetChildren.size();
+        assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
+    }
+
 }
 
 class CellStub extends IndexedCellShim {

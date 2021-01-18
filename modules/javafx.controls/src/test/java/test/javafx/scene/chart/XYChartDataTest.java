@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -49,7 +48,6 @@ public class XYChartDataTest {
         assertEquals(20, XYChartShim.Data_getCurrentY(data).longValue());
     }
 
-    @Ignore("Waiting on fix for RT-13478")
     @Test public void updatingValuesBeforeAddingToASeriesShouldUpdateValuesAndCurrentValues() {
         XYChart.Data<Number,Number> data = new XYChart.Data<Number,Number>(10, 20);
         data.setXValue(100);

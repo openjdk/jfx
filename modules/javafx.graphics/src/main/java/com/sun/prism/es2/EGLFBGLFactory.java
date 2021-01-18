@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ class EGLFBGLFactory extends GLFactory {
     // Entries must be in lowercase and null string is a wild card
     // For Linux Beta release we will limit es2 pipe qualification check to NVidia GPUs only
     private GLGPUInfo preQualificationFilter[] = null;
-    private GLGPUInfo blackList[] = null;
+    private GLGPUInfo rejectList[] = null;
 
     @Override
     GLGPUInfo[] getPreQualificationFilter() {
@@ -50,8 +50,8 @@ class EGLFBGLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override

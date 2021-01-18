@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,25 +31,59 @@
 #include <wtf/RunLoop.h>
 
 namespace WTF {
+static JGClass jMainThreadCls;
+static jmethodID fwkIsMainThread;
+static jmethodID fwkScheduleDispatchFunctions;
+
 void scheduleDispatchFunctionsOnMainThread()
 {
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
-    static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
-
-    static jmethodID mid = env->GetStaticMethodID(
-            jMainThreadCls,
-            "fwkScheduleDispatchFunctions",
-            "()V");
-
-    ASSERT(mid);
-
-    env->CallStaticVoidMethod(jMainThreadCls, mid);
+    env->CallStaticVoidMethod(jMainThreadCls, fwkScheduleDispatchFunctions);
     WTF::CheckAndClearException(env);
 }
 
 void initializeMainThreadPlatform()
 {
+    // Initialize the class reference and methodids for the MainThread. The
+    // initialization has to be done from a context where the class
+    // com.sun.webkit.MainThread is accessible. When
+    // scheduleDispatchFunctionsOnMainThread is invoked, the system class loader
+    // would be used to locate the class, which fails if the JavaFX modules are
+    // not loaded from the boot module layer.
+    //
+    // initializeMainThreadPlatform is called through the chain:
+    // - com.sun.webkit.WebPage.WebPage
+    // - com.sun.webkit.WebPage.twkCreatePage
+    // - WTF::initializeMainThread
+    // - WTF::initializeMainThreadPlatform
+    //
+    // As we are invoked through JNI from java, the class loader, that loaded
+    // WebPage will be used by FindClass.
+    //
+    // WTF::initializeMainThread has a guard, so that initialization is only run
+    // once
+
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
+
+    static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
+    jMainThreadCls = jMainThreadRef;
+
+    fwkIsMainThread = env->GetStaticMethodID(
+            jMainThreadCls,
+            "fwkIsMainThread",
+            "()Z");
+
+    ASSERT(fwkIsMainThread);
+
+    fwkScheduleDispatchFunctions = env->GetStaticMethodID(
+            jMainThreadCls,
+            "fwkScheduleDispatchFunctions",
+            "()V");
+
+    ASSERT(fwkScheduleDispatchFunctions);
+
 #if OS(WINDOWS)
     RunLoop::registerRunLoopMessageWindowClass();
 #endif
@@ -64,16 +98,7 @@ bool isMainThread()
 {
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
-    static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
-
-    static jmethodID mid = env->GetStaticMethodID(
-            jMainThreadCls,
-            "fwkIsMainThread",
-            "()Z");
-
-    ASSERT(mid);
-
-    jboolean isMainThread = env->CallStaticBooleanMethod(jMainThreadCls, mid);
+    jboolean isMainThread = env->CallStaticBooleanMethod(jMainThreadCls, fwkIsMainThread);
     WTF::CheckAndClearException(env);
     return isMainThread == JNI_TRUE;
 }

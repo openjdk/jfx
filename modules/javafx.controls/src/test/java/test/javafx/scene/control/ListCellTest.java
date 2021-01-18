@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,9 +39,9 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
+import static javafx.scene.control.ControlShim.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 import static org.junit.Assert.*;
 
@@ -277,6 +277,93 @@ public class ListCellTest {
         assertEquals("Water", cell.getItem());
     }
 
+//---------- tests around JDK-8251941: broken cleanup with null item
+
+    /**
+     * Transition not-empty -> empty by items modification
+     */
+    @Test
+    public void testNullItemRemoveAsLast() {
+        model.add(null);
+        cell.updateListView(list);
+        int last = model.size() - 1;
+        cell.updateIndex(last);
+        model.remove(last);
+        assertOffRangeState(last);
+    }
+
+    /**
+     * Sanity: transition not-empty -> not empty by items modification
+     */
+    @Test
+    public void testNullItemRemoveAsFirst() {
+        int first = 0;
+        model.add(first, null);
+        cell.updateListView(list);
+        cell.updateIndex(first);
+        model.remove(first);
+        assertInRangeState(first);
+    }
+
+    /**
+     * Transition not-empty -> empty by updateIndex
+     */
+    @Test
+    public void testNullItemUpdateIndexOffRange() {
+        model.add(0, null);
+        cell.updateListView(list);
+        cell.updateIndex(0);
+        // update to off range > max
+        cell.updateIndex(model.size());
+        assertOffRangeState(model.size());
+    }
+
+    /**
+     * Transition not-empty -> empty by updateIndex
+     */
+    @Test
+    public void testNullItemUpdateIndexNegative() {
+        model.add(0, null);
+        cell.updateListView(list);
+        cell.updateIndex(0);
+        // update to off range < 0
+        cell.updateIndex(-1);
+        assertOffRangeState(-1);
+    }
+
+    /**
+     * Sanity: in-range null item.
+     */
+    @Test
+    public void testNullItem() {
+        // null item in range, verify state
+        model.add(0, null);
+        cell.updateListView(list);
+        cell.updateIndex(0);
+        assertInRangeState(0);
+    }
+
+    /**
+     * Asserts state for the given off-range index.
+     * @param index
+     */
+    protected void assertOffRangeState(int index) {
+        assertEquals("off range index", index, cell.getIndex());
+        assertNull("off range cell item must be null", cell.getItem());
+        assertTrue("off range cell must be empty", cell.isEmpty());
+    }
+
+    /**
+     * Asserts state for the given in-range index.
+     * @param index
+     */
+    protected void assertInRangeState(int index) {
+        assertEquals("in range index", index, cell.getIndex());
+        assertEquals("in range cell item must be same as model item", model.get(index), cell.getItem());
+        assertFalse("in range cell must not be empty", cell.isEmpty());
+    }
+
+
     /*********************************************************************
      * Tests for the selection listener                                  *
      ********************************************************************/
@@ -402,7 +489,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
+    @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
         MultipleSelectionModel<String> sm = list.getSelectionModel();
@@ -723,4 +810,28 @@ public class ListCellTest {
         ListCell cell = new ListCell();
         cell.setSkin(new ListCellSkin(cell));
     }
+
+    /**
+     * Test that min/max/pref height respect fixedCellSize.
+     * Sanity test when fixing JDK-8246745.
+     */
+    @Test
+    public void testListCellHeights() {
+        ListCell<Object> cell =  new ListCell<>();
+        ListView<Object> listView = new ListView<>();
+        cell.updateListView(listView);
+        installDefaultSkin(cell);
+        listView.setFixedCellSize(100);
+        assertEquals("pref height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+        assertEquals("min height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.minHeight(-1), 1);
+        assertEquals("max height must be fixedCellSize",
+                listView.getFixedCellSize(),
+                cell.maxHeight(-1), 1);
+    }
+
+
 }

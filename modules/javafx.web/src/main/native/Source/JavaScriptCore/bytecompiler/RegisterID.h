@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ namespace JSC {
         RegisterID()
             : m_refCount(0)
             , m_isTemporary(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             , m_didSetIndex(false)
 #endif
         {
@@ -53,7 +53,7 @@ namespace JSC {
             : m_refCount(0)
             , m_virtualRegister(virtualRegister)
             , m_isTemporary(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             , m_didSetIndex(true)
 #endif
         {
@@ -63,18 +63,18 @@ namespace JSC {
             : m_refCount(0)
             , m_virtualRegister(VirtualRegister(index))
             , m_isTemporary(false)
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             , m_didSetIndex(true)
 #endif
         {
         }
 
-        void setIndex(int index)
+        void setIndex(VirtualRegister index)
         {
-#ifndef NDEBUG
+#if ASSERT_ENABLED
             m_didSetIndex = true;
 #endif
-            m_virtualRegister = VirtualRegister(index);
+            m_virtualRegister = index;
         }
 
         void setTemporary()
@@ -120,7 +120,7 @@ namespace JSC {
         int m_refCount;
         VirtualRegister m_virtualRegister;
         bool m_isTemporary;
-#ifndef NDEBUG
+#if ASSERT_ENABLED
         bool m_didSetIndex;
 #endif
     };
@@ -129,8 +129,8 @@ namespace JSC {
 namespace WTF {
 
     template<> struct VectorTraits<JSC::RegisterID> : VectorTraitsBase<true, JSC::RegisterID> {
-        static const bool needsInitialization = true;
-        static const bool canInitializeWithMemset = true; // Default initialization just sets everything to 0 or false, so this is safe.
+        static constexpr bool needsInitialization = true;
+        static constexpr bool canInitializeWithMemset = true; // Default initialization just sets everything to 0 or false, so this is safe.
     };
 
 } // namespace WTF

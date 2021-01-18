@@ -139,7 +139,7 @@ void SVGAnimateMotionElement::updateAnimationPath()
     updateAnimationMode();
 }
 
-void SVGAnimateMotionElement::resetAnimatedType()
+void SVGAnimateMotionElement::startAnimation()
 {
     if (!hasValidAttributeType())
         return;
@@ -150,12 +150,13 @@ void SVGAnimateMotionElement::resetAnimatedType()
         transform->makeIdentity();
 }
 
-void SVGAnimateMotionElement::clearAnimatedType(SVGElement* targetElement)
+void SVGAnimateMotionElement::stopAnimation(SVGElement* targetElement)
 {
     if (!targetElement)
         return;
     if (AffineTransform* transform = targetElement->supplementalTransform())
         transform->makeIdentity();
+    applyResultsToTarget();
 }
 
 bool SVGAnimateMotionElement::calculateToAtEndOfDurationValue(const String& toAtEndOfDurationString)
@@ -189,10 +190,9 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
 {
     ASSERT(!m_animationPath.isEmpty());
 
-    bool success = false;
     float positionOnPath = m_animationPath.length() * percentage;
-    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath, success));
-    if (!success)
+    auto traversalState(m_animationPath.traversalStateAtLength(positionOnPath));
+    if (!traversalState.success())
         return;
 
     FloatPoint position = traversalState.current();
@@ -207,17 +207,15 @@ void SVGAnimateMotionElement::buildTransformForProgress(AffineTransform* transfo
     transform->rotate(angle);
 }
 
-void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount, SVGSMILElement*)
+void SVGAnimateMotionElement::calculateAnimatedValue(float percentage, unsigned repeatCount)
 {
     auto targetElement = makeRefPtr(this->targetElement());
     if (!targetElement)
         return;
+
     AffineTransform* transform = targetElement->supplementalTransform();
     if (!transform)
         return;
-
-    if (RenderObject* targetRenderer = targetElement->renderer())
-        targetRenderer->setNeedsTransformUpdate();
 
     if (!isAdditive())
         transform->makeIdentity();
@@ -253,8 +251,10 @@ void SVGAnimateMotionElement::applyResultsToTarget()
     if (!targetElement)
         return;
 
-    if (RenderElement* renderer = targetElement->renderer())
+    if (RenderElement* renderer = targetElement->renderer()) {
+        renderer->setNeedsTransformUpdate();
         RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+    }
 
     AffineTransform* targetSupplementalTransform = targetElement->supplementalTransform();
     if (!targetSupplementalTransform)
@@ -282,7 +282,7 @@ Optional<float> SVGAnimateMotionElement::calculateDistance(const String& fromStr
     if (!parsePoint(toString, to))
         return { };
     FloatSize diff = to - from;
-    return sqrtf(diff.width() * diff.width() + diff.height() * diff.height());
+    return std::hypot(diff.width(), diff.height());
 }
 
 void SVGAnimateMotionElement::updateAnimationMode()

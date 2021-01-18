@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,28 +42,6 @@
 #endif
 
 namespace WebCore {
-
-#if PLATFORM(WIN)
-
-class TextLayout {
-};
-
-void TextLayoutDeleter::operator()(TextLayout*) const
-{
-}
-
-std::unique_ptr<TextLayout, TextLayoutDeleter> FontCascade::createLayout(RenderText&, float, bool) const
-{
-    return nullptr;
-}
-
-float FontCascade::width(TextLayout&, unsigned, unsigned, HashSet<const Font*>*)
-{
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-#else
 
 class TextLayout {
     WTF_MAKE_FAST_ALLOCATED;
@@ -146,10 +124,6 @@ ComplexTextController::ComplexTextController(const FontCascade& font, const Text
     , m_mayUseNaturalWritingDirection(mayUseNaturalWritingDirection)
     , m_forTextEmphasis(forTextEmphasis)
 {
-#if PLATFORM(WIN)
-    ASSERT_NOT_REACHED();
-#endif
-
     computeExpansionOpportunity();
 
     collectComplexTextRuns();
@@ -189,7 +163,7 @@ void ComplexTextController::finishConstruction()
 
 unsigned ComplexTextController::offsetForPosition(float h, bool includePartialGlyphs)
 {
-    if (h >= m_totalWidth)
+    if (h >= m_totalAdvance.width())
         return m_run.ltr() ? m_end : 0;
 
     if (h < 0)
@@ -759,7 +733,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             FloatSize advance = treatAsSpace ? FloatSize(spaceWidth, advances[i].height()) : advances[i];
 
             if (ch == '\t' && m_run.allowTabs())
-                advance.setWidth(m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalWidth));
+                advance.setWidth(m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalAdvance.width()));
             else if (FontCascade::treatAsZeroWidthSpace(ch) && !treatAsSpace) {
                 advance.setWidth(0);
                 glyph = font.spaceGlyph();
@@ -796,7 +770,8 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 if (runForbidsTrailingExpansion)
                     forbidTrailingExpansion = m_run.ltr() ? isLastCharacter : isFirstCharacter;
                 // Handle justification and word-spacing.
-                bool ideograph = FontCascade::isCJKIdeographOrSymbol(ch);
+                static bool expandAroundIdeographs = FontCascade::canExpandAroundIdeographsInComplexText();
+                bool ideograph = expandAroundIdeographs && FontCascade::isCJKIdeographOrSymbol(ch);
                 if (treatAsSpace || ideograph || forceLeadingExpansion || forceTrailingExpansion) {
                     // Distribute the run's total expansion evenly over all expansion opportunities in the run.
                     if (m_expansion) {
@@ -809,7 +784,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                                 complexTextRun.growInitialAdvanceHorizontally(m_expansionPerOpportunity);
                             } else {
                                 m_adjustedBaseAdvances.last().expand(m_expansionPerOpportunity, 0);
-                                m_totalWidth += m_expansionPerOpportunity;
+                                m_totalAdvance.expand(m_expansionPerOpportunity, 0);
                             }
                         }
                         if (expandRight) {
@@ -827,7 +802,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                     afterExpansion = false;
             }
 
-            m_totalWidth += advance.width();
+            m_totalAdvance += advance;
 
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
             if (m_forTextEmphasis && (!FontCascade::canReceiveTextEmphasis(ch) || (U_GET_GC_MASK(ch) & U_GC_M_MASK)))
@@ -903,7 +878,5 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(const Vector<FloatSize>& a
     , m_isLTR(ltr)
 {
 }
-
-#endif
 
 } // namespace WebCore

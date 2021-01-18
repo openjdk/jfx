@@ -44,15 +44,17 @@ using JSDOMConstructorMap = HashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC
 using DOMGuardedObjectSet = HashSet<DOMGuardedObject*>;
 
 class WEBCORE_EXPORT JSDOMGlobalObject : public JSC::JSGlobalObject {
-    using Base = JSC::JSGlobalObject;
-protected:
+public:
     struct JSDOMGlobalObjectData;
 
-    JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);
-    static void destroy(JSC::JSCell*);
-    void finishCreation(JSC::VM&);
-    void finishCreation(JSC::VM&, JSC::JSObject*);
+    using Base = JSC::JSGlobalObject;
 
+    static const JSC::ClassInfo s_info;
+
+    template<typename, JSC::SubspaceAccess>
+    static void subspaceFor(JSC::VM&) { RELEASE_ASSERT_NOT_REACHED(); }
+
+    static void destroy(JSC::JSCell*);
 public:
     Lock& gcLock() { return m_gcLock; }
 
@@ -77,8 +79,6 @@ public:
 
     JSBuiltinInternalFunctions& builtinInternalFunctions() { return m_builtinInternalFunctions; }
 
-protected:
-    static const JSC::ClassInfo s_info;
 
 public:
     ~JSDOMGlobalObject();
@@ -91,7 +91,11 @@ public:
     }
 
 protected:
-    static void promiseRejectionTracker(JSC::JSGlobalObject*, JSC::ExecState*, JSC::JSPromise*, JSC::JSPromiseRejectionOperation);
+    JSDOMGlobalObject(JSC::VM&, JSC::Structure*, Ref<DOMWrapperWorld>&&, const JSC::GlobalObjectMethodTable* = nullptr);
+    void finishCreation(JSC::VM&);
+    void finishCreation(JSC::VM&, JSC::JSObject*);
+
+    static void promiseRejectionTracker(JSC::JSGlobalObject*, JSC::JSPromise*, JSC::JSPromiseRejectionOperation);
 
     JSDOMStructureMap m_structures;
     JSDOMConstructorMap m_constructors;
@@ -124,7 +128,7 @@ inline JSC::JSObject* getDOMConstructor(JSC::VM& vm, const JSDOMGlobalObject& gl
     return constructor;
 }
 
-WEBCORE_EXPORT JSDOMGlobalObject& callerGlobalObject(JSC::ExecState&);
+WEBCORE_EXPORT JSDOMGlobalObject& callerGlobalObject(JSC::JSGlobalObject&, JSC::CallFrame&);
 
 JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext&, DOMWrapperWorld&);
 

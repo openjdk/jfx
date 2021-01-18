@@ -22,7 +22,6 @@
 
 #include "Error.h"
 #include "InternalFunction.h"
-#include "JSGlobalObject.h"
 #include "NativeErrorPrototype.h"
 
 namespace JSC {
@@ -61,10 +60,10 @@ public:
         return constructor;
     }
 
-    Structure* errorStructure(VM& vm) { return globalObject(vm)->errorStructure(errorType); }
+    Structure* errorStructure(VM&) { return globalObject()->errorStructure(errorType); }
 private:
-    static EncodedJSValue JSC_HOST_CALL callNativeErrorConstructor(ExecState*);
-    static EncodedJSValue JSC_HOST_CALL constructNativeErrorConstructor(ExecState*);
+    static EncodedJSValue JSC_HOST_CALL callNativeErrorConstructor(JSGlobalObject*, CallFrame*);
+    static EncodedJSValue JSC_HOST_CALL constructNativeErrorConstructor(JSGlobalObject*, CallFrame*);
 
     NativeErrorConstructor(VM&, Structure*);
 };
@@ -76,11 +75,11 @@ using SyntaxErrorConstructor = NativeErrorConstructor<ErrorType::SyntaxError>;
 using TypeErrorConstructor = NativeErrorConstructor<ErrorType::TypeError>;
 using URIErrorConstructor = NativeErrorConstructor<ErrorType::URIError>;
 
-static_assert(sizeof(EvalErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(RangeErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(ReferenceErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(SyntaxErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(TypeErrorConstructor) == sizeof(InternalFunction), "");
-static_assert(sizeof(URIErrorConstructor) == sizeof(InternalFunction), "");
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(EvalErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RangeErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ReferenceErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(SyntaxErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(TypeErrorConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(URIErrorConstructor, InternalFunction);
 
 } // namespace JSC

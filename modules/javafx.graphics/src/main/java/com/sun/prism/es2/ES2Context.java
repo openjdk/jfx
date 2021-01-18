@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -449,8 +449,9 @@ class ES2Context extends BaseShaderContext {
         glContext.setAmbientLight(nativeHandle, r, g, b);
     }
 
-    void setPointLight(long nativeHandle, int index, float x, float y, float z, float r, float g, float b, float w) {
-        glContext.setPointLight(nativeHandle, index, x, y, z, r, g, b, w);
+    void setPointLight(long nativeHandle, int index, float x, float y, float z, float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange) {
+        glContext.setPointLight(nativeHandle, index, x, y, z, r, g, b, w, ca, la, qa, maxRange);
     }
 
     @Override

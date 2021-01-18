@@ -36,16 +36,16 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(AsyncGeneratorFunctionConstructor);
 
 const ClassInfo AsyncGeneratorFunctionConstructor::s_info = { "AsyncGeneratorFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AsyncGeneratorFunctionConstructor) };
 
-static EncodedJSValue JSC_HOST_CALL callAsyncGeneratorFunctionConstructor(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL callAsyncGeneratorFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm()), args, FunctionConstructionMode::AsyncGenerator));
+    ArgList args(callFrame);
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::AsyncGenerator));
 }
 
-static EncodedJSValue JSC_HOST_CALL constructAsyncGeneratorFunctionConstructor(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL constructAsyncGeneratorFunctionConstructor(JSGlobalObject* globalObject, CallFrame* callFrame)
 {
-    ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, jsCast<InternalFunction*>(exec->jsCallee())->globalObject(exec->vm()), args, FunctionConstructionMode::AsyncGenerator));
+    ArgList args(callFrame);
+    return JSValue::encode(constructFunction(globalObject, callFrame, args, FunctionConstructionMode::AsyncGenerator));
 }
 
 AsyncGeneratorFunctionConstructor::AsyncGeneratorFunctionConstructor(VM& vm, Structure* structure)
@@ -55,7 +55,7 @@ AsyncGeneratorFunctionConstructor::AsyncGeneratorFunctionConstructor(VM& vm, Str
 
 void AsyncGeneratorFunctionConstructor::finishCreation(VM& vm, AsyncGeneratorFunctionPrototype* prototype)
 {
-    Base::finishCreation(vm, "AsyncGeneratorFunction"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
+    Base::finishCreation(vm, "AsyncGeneratorFunction"_s, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
     // Number of arguments for constructor

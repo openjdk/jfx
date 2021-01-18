@@ -27,24 +27,45 @@
 
 #if ENABLE(WEBGPU)
 
-#include "GPURenderPipeline.h"
-#include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
+#include "WebGPUPipeline.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
-class WebGPURenderPipeline : public RefCounted<WebGPURenderPipeline> {
-public:
-    static Ref<WebGPURenderPipeline> create(RefPtr<GPURenderPipeline>&&);
+class GPUPipeline;
+class GPURenderPipeline;
+class GPUErrorScopes;
+class WebGPUDevice;
+class WebGPUShaderModule;
 
+class WebGPURenderPipeline final : public WebGPUPipeline {
+public:
+    virtual ~WebGPURenderPipeline();
+
+    static Ref<WebGPURenderPipeline> create(WebGPUDevice&, RefPtr<GPURenderPipeline>&&, GPUErrorScopes&, WebGPUPipeline::ShaderData&& vertexShader, WebGPUPipeline::ShaderData&& fragmentShader);
+
+    bool isRenderPipeline() const { return true; }
+
+    bool isValid() const { return renderPipeline(); }
     const GPURenderPipeline* renderPipeline() const { return m_renderPipeline.get(); }
+    RefPtr<WebGPUShaderModule> vertexShader() const { return m_vertexShader.module; }
+    RefPtr<WebGPUShaderModule> fragmentShader() const { return m_fragmentShader.module; }
+
+    bool cloneShaderModules(const WebGPUDevice&);
+    bool recompile(const WebGPUDevice&);
 
 private:
-    WebGPURenderPipeline(RefPtr<GPURenderPipeline>&&);
+    WebGPURenderPipeline(WebGPUDevice&, RefPtr<GPURenderPipeline>&&, GPUErrorScopes&, WebGPUPipeline::ShaderData&& vertexShader, WebGPUPipeline::ShaderData&& fragmentShader);
 
     RefPtr<GPURenderPipeline> m_renderPipeline;
+
+    // Preserved for Web Inspector recompilation.
+    WebGPUPipeline::ShaderData m_vertexShader;
+    WebGPUPipeline::ShaderData m_fragmentShader;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_WEBGPUPIPELINE(WebCore::WebGPURenderPipeline, isRenderPipeline())
 
 #endif // ENABLE(WEBGPU)

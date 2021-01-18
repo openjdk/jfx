@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
 import static org.junit.Assert.fail;
+import test.util.memory.JMemoryBuddy;
 
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
@@ -85,17 +86,7 @@ public class InitialNodesMemoryLeakTest {
 
     @Test
     public void testRootNodeMemoryLeak() throws Exception {
-        for (int j = 0; j < 10; j++) {
-            System.gc();
-            System.runFinalization();
-
-            if (groupWRef.get() == null) {
-                break;
-            }
-
-            Util.sleep(500);
-        }
-        Assert.assertNull("Couldn't collect Node", groupWRef.get());
+        JMemoryBuddy.assertCollectable(groupWRef);
     }
 
     @AfterClass

@@ -89,7 +89,7 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
     // FIXME Currently no pseudo class is supported.
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
 
-    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSPrimitiveValue::CSS_PT);
+    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSUnitType::CSS_PT);
     return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
         style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
         style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
@@ -230,6 +230,9 @@ void PrintContext::spoolPage(GraphicsContext& ctx, int pageNumber, float width)
         return;
 
     auto& frame = *this->frame();
+    if (!frame.view())
+        return;
+
     // FIXME: Not correct for vertical text.
     IntRect pageRect = m_pageRects[pageNumber];
     float scale = width / pageRect.width();
@@ -249,6 +252,9 @@ void PrintContext::spoolRect(GraphicsContext& ctx, const IntRect& rect)
         return;
 
     auto& frame = *this->frame();
+    if (!frame.view())
+        return;
+
     // FIXME: Not correct for vertical text.
     ctx.save();
     ctx.translate(-rect.x(), -rect.y());

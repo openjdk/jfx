@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ConcurrentJSLock.h"
+#include "Operands.h"
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
 #include <wtf/HashMap.h>
@@ -39,19 +40,18 @@ class ScriptExecutable;
 class LazyOperandValueProfileKey {
 public:
     LazyOperandValueProfileKey()
-        : m_bytecodeOffset(0) // 0 = empty value
-        , m_operand(VirtualRegister()) // not a valid operand index in our current scheme
+        : m_operand(VirtualRegister()) // not a valid operand index in our current scheme
     {
     }
 
     LazyOperandValueProfileKey(WTF::HashTableDeletedValueType)
-        : m_bytecodeOffset(1) // 1 = deleted value
+        : m_bytecodeIndex(WTF::HashTableDeletedValue)
         , m_operand(VirtualRegister()) // not a valid operand index in our current scheme
     {
     }
 
-    LazyOperandValueProfileKey(unsigned bytecodeOffset, VirtualRegister operand)
-        : m_bytecodeOffset(bytecodeOffset)
+    LazyOperandValueProfileKey(BytecodeIndex bytecodeIndex, Operand operand)
+        : m_bytecodeIndex(bytecodeIndex)
         , m_operand(operand)
     {
         ASSERT(m_operand.isValid());
@@ -64,22 +64,22 @@ public:
 
     bool operator==(const LazyOperandValueProfileKey& other) const
     {
-        return m_bytecodeOffset == other.m_bytecodeOffset
+        return m_bytecodeIndex == other.m_bytecodeIndex
             && m_operand == other.m_operand;
     }
 
     unsigned hash() const
     {
-        return WTF::intHash(m_bytecodeOffset) + m_operand.offset();
+        return m_bytecodeIndex.hash() + m_operand.value() + static_cast<unsigned>(m_operand.kind());
     }
 
-    unsigned bytecodeOffset() const
+    BytecodeIndex bytecodeIndex() const
     {
         ASSERT(!!*this);
-        return m_bytecodeOffset;
+        return m_bytecodeIndex;
     }
 
-    VirtualRegister operand() const
+    Operand operand() const
     {
         ASSERT(!!*this);
         return m_operand;
@@ -87,11 +87,11 @@ public:
 
     bool isHashTableDeletedValue() const
     {
-        return !m_operand.isValid() && m_bytecodeOffset;
+        return !m_operand.isValid() && m_bytecodeIndex.isHashTableDeletedValue();
     }
 private:
-    unsigned m_bytecodeOffset;
-    VirtualRegister m_operand;
+    BytecodeIndex m_bytecodeIndex;
+    Operand m_operand;
 };
 
 struct LazyOperandValueProfileKeyHash {
@@ -99,7 +99,7 @@ struct LazyOperandValueProfileKeyHash {
     static bool equal(
         const LazyOperandValueProfileKey& a,
         const LazyOperandValueProfileKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 } // namespace JSC

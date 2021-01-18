@@ -60,6 +60,12 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
         Property<Number>, WritableFloatValue {
 
     /**
+     * Creates a default {@code FloatProperty}.
+     */
+    public FloatProperty() {
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,8 +113,7 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
         onProposedChange(Collections.unmodifiableList(new ArrayList(col)), 0, size());
         try {
             modCount++;
-            list.setAll(col);
-            return true;
+            return list.setAll(col);
         } catch(Exception e) {
             modCount--;
             throw e;

@@ -35,6 +35,7 @@
 #include "PageConsoleClient.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
+#include "WorkerEventLoop.h"
 #include "WorkletScriptController.h"
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSLock.h>
@@ -48,10 +49,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(WorkletGlobalScope);
 
 WorkletGlobalScope::WorkletGlobalScope(Document& document, ScriptSourceCode&& code)
     : m_document(makeWeakPtr(document))
-    , m_sessionID(m_document->sessionID())
     , m_script(makeUnique<WorkletScriptController>(this))
     , m_topOrigin(SecurityOrigin::createUnique())
-    , m_eventQueue(*this)
     , m_code(WTFMove(code))
 {
     auto addResult = allWorkletGlobalScopesSet().add(this);
@@ -77,9 +76,13 @@ void WorkletGlobalScope::prepareForDestruction()
 {
     if (!m_script)
         return;
+    if (m_defaultTaskGroup)
+        m_defaultTaskGroup->stopAndDiscardAllTasks();
     stopActiveDOMObjects();
-    removeRejectedPromiseTracker();
     removeAllEventListeners();
+    if (m_eventLoop)
+        m_eventLoop->clearMicrotaskQueue();
+    removeRejectedPromiseTracker();
     m_script->vm().notifyNeedTermination();
     m_script = nullptr;
 }
@@ -90,9 +93,15 @@ auto WorkletGlobalScope::allWorkletGlobalScopesSet() -> WorkletGlobalScopesSet&
     return scopes;
 }
 
-String WorkletGlobalScope::origin() const
+EventLoopTaskGroup& WorkletGlobalScope::eventLoop()
 {
-    return m_topOrigin->toString();
+    if (UNLIKELY(!m_defaultTaskGroup)) {
+        m_eventLoop = WorkerEventLoop::create(*this);
+        m_defaultTaskGroup = makeUnique<EventLoopTaskGroup>(*m_eventLoop);
+        if (activeDOMObjectsAreStopped())
+            m_defaultTaskGroup->stopAndDiscardAllTasks();
+    }
+    return *m_defaultTaskGroup;
 }
 
 String WorkletGlobalScope::userAgent(const URL& url) const
@@ -122,7 +131,7 @@ void WorkletGlobalScope::disableWebAssembly(const String& errorMessage)
     m_script->disableWebAssembly(errorMessage);
 }
 
-URL WorkletGlobalScope::completeURL(const String& url) const
+URL WorkletGlobalScope::completeURL(const String& url, ForceUTF8) const
 {
     if (url.isNull())
         return URL();
@@ -150,11 +159,16 @@ void WorkletGlobalScope::addConsoleMessage(MessageSource source, MessageLevel le
     m_document->addConsoleMessage(source, level, message, requestIdentifier);
 }
 
-void WorkletGlobalScope::addMessage(MessageSource source, MessageLevel level, const String& messageText, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<ScriptCallStack>&& callStack, JSC::ExecState*, unsigned long requestIdentifier)
+void WorkletGlobalScope::addMessage(MessageSource source, MessageLevel level, const String& messageText, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<ScriptCallStack>&& callStack, JSC::JSGlobalObject*, unsigned long requestIdentifier)
 {
     if (!m_document || isJSExecutionForbidden())
         return;
     m_document->addMessage(source, level, messageText, sourceURL, lineNumber, columnNumber, WTFMove(callStack), nullptr, requestIdentifier);
+}
+
+ReferrerPolicy WorkletGlobalScope::referrerPolicy() const
+{
+    return ReferrerPolicy::NoReferrer;
 }
 
 } // namespace WebCore

@@ -77,6 +77,7 @@
 #include "WheelEvent.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <JavaScriptCore/HeapInlines.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/SHA1.h>
@@ -363,7 +364,7 @@ Node::~Node()
 
     document().decrementReferencingNodeCount();
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (!ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS))
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS))
     for (auto* document : Document::allDocuments()) {
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventListenersContain(*this));
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventHandlersContain(*this));
@@ -669,8 +670,13 @@ void Node::normalize()
 
             // Both non-empty text nodes. Merge them.
             unsigned offset = text->length();
-            text->appendData(nextText->data());
+
+            // Update start/end for any affected Ranges before appendData since modifying contents might trigger mutation events that modify ordering.
             document().textNodesMerged(nextText, offset);
+
+            // FIXME: DOM spec requires contents to be replaced all at once (see https://dom.spec.whatwg.org/#dom-node-normalize).
+            // Appending once per sibling may trigger mutation events too many times.
+            text->appendData(nextText->data());
             nextText->remove();
         }
 
@@ -1129,7 +1135,7 @@ ShadowRoot* Node::containingShadowRoot() const
     return is<ShadowRoot>(root) ? downcast<ShadowRoot>(&root) : nullptr;
 }
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
 // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
 static bool isClosedShadowHiddenUsingSpecDefinition(const Node& A, const Node& B)
 {
@@ -1609,6 +1615,14 @@ static inline unsigned short compareDetachedElementsPosition(Node& firstNode, No
     return Node::DOCUMENT_POSITION_DISCONNECTED | Node::DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC | direction;
 }
 
+bool areNodesConnectedInSameTreeScope(const Node* a, const Node* b)
+{
+    if (!a || !b)
+        return false;
+    // Note that we avoid comparing Attr nodes here, since they return false from isConnected() all the time (which seems like a bug).
+    return a->isConnected() == b->isConnected() && &a->treeScope() == &b->treeScope();
+}
+
 unsigned short Node::compareDocumentPosition(Node& otherNode)
 {
     if (&otherNode == this)
@@ -1653,9 +1667,8 @@ unsigned short Node::compareDocumentPosition(Node& otherNode)
     }
 
     // If one node is in the document and the other is not, we must be disconnected.
-    // If the nodes have different owning documents, they must be disconnected.  Note that we avoid
-    // comparing Attr nodes here, since they return false from isConnected() all the time (which seems like a bug).
-    if (start1->isConnected() != start2->isConnected() || &start1->treeScope() != &start2->treeScope())
+    // If the nodes have different owning documents, they must be disconnected.
+    if (!areNodesConnectedInSameTreeScope(start1, start2))
         return compareDetachedElementsPosition(*this, otherNode);
 
     // We need to find a common ancestor container, and then compare the indices of the two immediate children.
@@ -1906,8 +1919,8 @@ void Node::showTreeForThisAcrossFrame() const
 
 void NodeListsNodeData::invalidateCaches()
 {
-    for (auto& atomicName : m_atomicNameCaches)
-        atomicName.value->invalidateCache();
+    for (auto& atomName : m_atomNameCaches)
+        atomName.value->invalidateCache();
 
     for (auto& collection : m_cachedCollections)
         collection.value->invalidateCache();
@@ -1918,8 +1931,8 @@ void NodeListsNodeData::invalidateCaches()
 
 void NodeListsNodeData::invalidateCachesForAttribute(const QualifiedName& attrName)
 {
-    for (auto& atomicName : m_atomicNameCaches)
-        atomicName.value->invalidateCacheForAttribute(attrName);
+    for (auto& atomName : m_atomNameCaches)
+        atomName.value->invalidateCacheForAttribute(attrName);
 
     for (auto& collection : m_cachedCollections)
         collection.value->invalidateCacheForAttribute(attrName);
@@ -2037,6 +2050,9 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
 
     oldDocument.moveNodeIteratorsToNewDocument(*this, newDocument);
 
+    if (!parentNode())
+        oldDocument.parentlessNodeMovedToNewDocument(*this);
+
     if (AXObjectCache::accessibilityEnabled()) {
         if (auto* cache = oldDocument.existingAXObjectCache())
             cache->remove(*this);
@@ -2088,7 +2104,7 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
 #endif
     }
 
-#if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
+#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     ASSERT_WITH_SECURITY_IMPLICATION(!oldDocument.touchEventListenersContain(*this));
     ASSERT_WITH_SECURITY_IMPLICATION(!oldDocument.touchEventHandlersContain(*this));
@@ -2114,8 +2130,10 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomString& event
         targetNode->document().didAddTouchEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent)
-        targetNode->document().domWindow()->incrementScrollEventListenersCount();
+    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent) {
+        if (auto* window = targetNode->document().domWindow())
+            window->incrementScrollEventListenersCount();
+    }
 
 #if ENABLE(TOUCH_EVENTS)
     if (eventNames().isTouchRelatedEventType(targetNode->document(), eventType))
@@ -2149,8 +2167,10 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomString& ev
         targetNode->document().didRemoveTouchEventHandler(*targetNode);
 
 #if PLATFORM(IOS_FAMILY)
-    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent)
-        targetNode->document().domWindow()->decrementScrollEventListenersCount();
+    if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent) {
+        if (auto* window = targetNode->document().domWindow())
+            window->decrementScrollEventListenersCount();
+    }
 
 #if ENABLE(TOUCH_EVENTS)
     if (eventNames().isTouchRelatedEventType(targetNode->document(), eventType))
@@ -2428,6 +2448,12 @@ void Node::defaultEventHandler(Event& event)
             if (enclosingLinkEventParentOrSelf())
                 return;
 
+            // Avoid that canBeScrolledAndHasScrollableArea changes render tree
+            // structure.
+            // FIXME: We should avoid synchronous layout if possible. We can
+            // remove this synchronous layout if we avoid synchronous layout in
+            // RenderTextControlSingleLine::scrollHeight
+            document().updateLayoutIgnorePendingStylesheets();
             RenderObject* renderer = this->renderer();
             while (renderer && (!is<RenderBox>(*renderer) || !downcast<RenderBox>(*renderer).canBeScrolledAndHasScrollableArea()))
                 renderer = renderer->parent();
@@ -2523,7 +2549,7 @@ void Node::removedLastRef()
     if (is<SVGElement>(*this))
         downcast<SVGElement>(*this).detachAllProperties();
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
     m_deletionHasBegun = true;
 #endif
     delete this;

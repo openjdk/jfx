@@ -55,6 +55,7 @@ enum UseKind {
     ArrayUse,
     FunctionUse,
     FinalObjectUse,
+    PromiseObjectUse,
     RegExpObjectUse,
     ProxyObjectUse,
     DerivedArrayUse,
@@ -66,6 +67,7 @@ enum UseKind {
     KnownPrimitiveUse, // This bizarre type arises for op_strcat, which has a bytecode guarantee that it will only see primitives (i.e. not objects).
     SymbolUse,
     BigIntUse,
+    DateObjectUse,
     MapObjectUse,
     SetObjectUse,
     WeakMapObjectUse,
@@ -152,6 +154,10 @@ inline SpeculatedType typeFilterFor(UseKind useKind)
         return SpecSymbol;
     case BigIntUse:
         return SpecBigInt;
+    case PromiseObjectUse:
+        return SpecPromiseObject;
+    case DateObjectUse:
+        return SpecDateObject;
     case MapObjectUse:
         return SpecMapObject;
     case SetObjectUse:
@@ -248,6 +254,7 @@ inline bool isCell(UseKind kind)
     case FunctionUse:
     case FinalObjectUse:
     case RegExpObjectUse:
+    case PromiseObjectUse:
     case ProxyObjectUse:
     case DerivedArrayUse:
     case StringIdentUse:
@@ -257,6 +264,7 @@ inline bool isCell(UseKind kind)
     case BigIntUse:
     case StringObjectUse:
     case StringOrStringObjectUse:
+    case DateObjectUse:
     case MapObjectUse:
     case SetObjectUse:
     case WeakMapObjectUse:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,9 +68,9 @@ import static org.junit.Assert.*;
  *  - CSS
  *     - Change state, watch the pseudo class state change
  *     - Default style-class has what you expect
- *     - (2nd order) impl_cssSettable returns true for thing in their default state
- *     - (2nd order) impl_cssSettable returns false for things manually specified
- *     - (3rd order) impl_cssKeys includes all the public properties
+ *     - (2nd order) CssMetaData_isSettable returns true for thing in their default state
+ *     - (2nd order) CssMetaData_isSettable returns false for things manually specified
+ *     - (3rd order) getCssMetaData includes all the public properties
  *  - Methods
  *     - For all methods, calling the method mutates the state appropriately
  */

@@ -42,6 +42,7 @@ class PaymentCoordinator;
 
 class ApplePayPaymentHandler final : public PaymentHandler, public PaymentSession, private ContextDestructionObserver {
 public:
+    static ExceptionOr<void> validateData(Document&, JSC::JSValue);
     static bool handlesIdentifier(const PaymentRequest::MethodIdentifier&);
     static bool hasActiveSession(Document&);
 
@@ -64,7 +65,7 @@ private:
     ExceptionOr<void> paymentMethodUpdated();
 
     // PaymentHandler
-    ExceptionOr<void> convertData(JSC::JSValue&&) final;
+    ExceptionOr<void> convertData(JSC::JSValue) final;
     ExceptionOr<void> show(Document&) final;
     void hide() final;
     void canMakePayment(Document&, WTF::Function<void(bool)>&& completionHandler) final;
@@ -80,7 +81,7 @@ private:
     void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) final;
     void didSelectShippingContact(const PaymentContact&) final;
     void didSelectPaymentMethod(const PaymentMethod&) final;
-    void didCancelPaymentSession() final;
+    void didCancelPaymentSession(PaymentSessionError&&) final;
 
     PaymentRequest::MethodIdentifier m_identifier;
     Ref<PaymentRequest> m_paymentRequest;

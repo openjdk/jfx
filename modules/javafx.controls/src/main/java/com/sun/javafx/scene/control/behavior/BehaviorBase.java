@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ public abstract class BehaviorBase<N extends Node> {
 
         for (Mapping<?> mapping : newMapping) {
             // check if a mapping already exists, and if so, do not add this mapping
-            // TODO this is insufficient as we need to check entire InputMap hierarchy
+            // TODO: JDK-8250807: this is insufficient as we need to check entire InputMap hierarchy
 //            for (Mapping<?> existingMapping : existingMappings) {
 //                if (existingMapping != null && existingMapping.equals(mapping)) {
 //                    return;
@@ -116,6 +116,7 @@ public abstract class BehaviorBase<N extends Node> {
     }
 
     protected void removeMapping(Object key) {
+        // TODO: JDK-8250807: Traverse the child maps of getInputMap() and remove the mapping from them.
         InputMap<?> inputMap = getInputMap();
         inputMap.lookupMapping(key).ifPresent(mapping -> {
             inputMap.getMappings().remove(mapping);

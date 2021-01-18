@@ -28,8 +28,10 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "DisplayBox.h"
 #include "LayoutContainer.h"
 #include "LayoutPhase.h"
+#include "LayoutState.h"
 #include "RenderStyle.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -38,9 +40,10 @@ namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(Box);
 
-Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
+Box::Box(Optional<ElementAttributes> attributes, Optional<TextContext> textContext, RenderStyle&& style, BaseTypeFlags baseTypeFlags)
     : m_style(WTFMove(style))
     , m_elementAttributes(attributes)
+    , m_textContext(textContext)
     , m_baseTypeFlags(baseTypeFlags)
     , m_hasRareData(false)
     , m_isAnonymous(false)
@@ -50,26 +53,32 @@ Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style, BaseTypeFl
 }
 
 Box::Box(Optional<ElementAttributes> attributes, RenderStyle&& style)
-    : Box(attributes, WTFMove(style), BaseTypeFlag::BoxFlag)
+    : Box(attributes, { }, WTFMove(style), BaseTypeFlag::BoxFlag)
 {
 }
 
-Box::Box(String textContent, RenderStyle&& style)
-    : Box({ }, WTFMove(style), BaseTypeFlag::BoxFlag)
+Box::Box(TextContext&& textContext, RenderStyle&& style)
+    : Box({ }, WTFMove(textContext), WTFMove(style), BaseTypeFlag::BoxFlag)
 {
-    setTextContent(textContent);
+    ASSERT(isInlineLevelBox());
 }
 
 Box::~Box()
 {
-    removeRareData();
+    if (UNLIKELY(m_hasRareData))
+        removeRareData();
+}
+
+void Box::updateStyle(const RenderStyle& newStyle)
+{
+    m_style = RenderStyle::clone(newStyle);
 }
 
 bool Box::establishesFormattingContext() const
 {
     // We need the final tree structure to tell whether a box establishes a certain formatting context.
     ASSERT(!Phase::isInTreeBuilding());
-    return establishesBlockFormattingContext() || establishesInlineFormattingContext() || establishesTableFormattingContext();
+    return establishesBlockFormattingContext() || establishesInlineFormattingContext() || establishesTableFormattingContext() || establishesIndependentFormattingContext();
 }
 
 bool Box::establishesBlockFormattingContext() const
@@ -89,6 +98,9 @@ bool Box::establishesBlockFormattingContext() const
         return true;
 
     if (isBlockLevelBox() && !isOverflowVisible())
+        return true;
+
+    if (isTableWrapperBox())
         return true;
 
     return false;
@@ -112,19 +124,15 @@ bool Box::establishesInlineFormattingContext() const
     return downcast<Container>(*this).firstInFlowChild()->isInlineLevelBox();
 }
 
-bool Box::establishesInlineFormattingContextOnly() const
-{
-    return establishesInlineFormattingContext() && !establishesBlockFormattingContext();
-}
-
 bool Box::establishesTableFormattingContext() const
 {
     return isTableBox();
 }
 
-bool Box::establishesBlockFormattingContextOnly() const
+bool Box::establishesIndependentFormattingContext() const
 {
-    return establishesBlockFormattingContext() && !establishesInlineFormattingContext();
+    // FIXME: This is where we would check for 'contain' property.
+    return isAbsolutelyPositioned();
 }
 
 bool Box::isRelativelyPositioned() const
@@ -176,7 +184,8 @@ bool Box::hasFloatClear() const
 
 bool Box::isFloatAvoider() const
 {
-    return establishesBlockFormattingContext() || isFloatingPositioned();
+    return (establishesBlockFormattingContext() && !establishesInlineFormattingContext())
+        || establishesTableFormattingContext() || establishesIndependentFormattingContext() || hasFloatClear();
 }
 
 const Container* Box::containingBlock() const
@@ -185,7 +194,7 @@ const Container* Box::containingBlock() const
     ASSERT(!Phase::isInTreeBuilding());
     // The containing block in which the root element lives is a rectangle called the initial containing block.
     // For other elements, if the element's position is 'relative' or 'static', the containing block is formed by the
-    // content edge of the nearest block container ancestor box.
+    // content edge of the nearest block container ancestor box or which establishes a formatting context.
     // If the element has 'position: fixed', the containing block is established by the viewport
     // If the element has 'position: absolute', the containing block is established by the nearest ancestor with a
     // 'position' of 'absolute', 'relative' or 'fixed'.
@@ -193,9 +202,13 @@ const Container* Box::containingBlock() const
         return nullptr;
 
     if (!isPositioned() || isInFlowPositioned()) {
-        auto* nearestBlockContainer = parent();
-        for (; nearestBlockContainer->parent() && !nearestBlockContainer->isBlockContainerBox(); nearestBlockContainer = nearestBlockContainer->parent()) { }
-        return nearestBlockContainer;
+        for (auto* nearestBlockContainerOrFormattingContextRoot = parent(); nearestBlockContainerOrFormattingContextRoot; nearestBlockContainerOrFormattingContextRoot = nearestBlockContainerOrFormattingContextRoot->parent()) {
+            if (nearestBlockContainerOrFormattingContextRoot->isBlockContainerBox() || nearestBlockContainerOrFormattingContextRoot->establishesFormattingContext())
+                return nearestBlockContainerOrFormattingContextRoot;
+        }
+        // We should always manage to find the ICB.
+        ASSERT_NOT_REACHED();
+        return nullptr;
     }
 
     if (isFixedPositioned()) {
@@ -272,18 +285,37 @@ bool Box::isInlineBlockBox() const
     return m_style.display() == DisplayType::InlineBlock;
 }
 
+bool Box::isInlineTableBox() const
+{
+    return m_style.display() == DisplayType::InlineTable;
+}
+
 bool Box::isBlockLevelBox() const
 {
     // Block level elements generate block level boxes.
     auto display = m_style.display();
-    return display == DisplayType::Block || display == DisplayType::ListItem || (display == DisplayType::Table && !isTableWrapperBox());
+    return display == DisplayType::Block || display == DisplayType::ListItem || display == DisplayType::Table;
 }
 
 bool Box::isInlineLevelBox() const
 {
     // Inline level elements generate inline level boxes.
     auto display = m_style.display();
-    return display == DisplayType::Inline || isInlineBlockBox() || display == DisplayType::InlineTable;
+    return display == DisplayType::Inline || isInlineBlockBox() || isInlineTableBox();
+}
+
+bool Box::isInlineBox() const
+{
+    // An inline box is one that is both inline-level and whose contents participate in its containing inline formatting context.
+    // A non-replaced element with a 'display' value of 'inline' generates an inline box.
+    return m_style.display() == DisplayType::Inline && !isReplaced();
+}
+
+bool Box::isAtomicInlineLevelBox() const
+{
+    // Inline-level boxes that are not inline boxes (such as replaced inline-level elements, inline-block elements, and inline-table elements)
+    // are called atomic inline-level boxes because they participate in their inline formatting context as a single opaque box.
+    return isInlineLevelBox() && !isInlineBox();
 }
 
 bool Box::isBlockContainerBox() const
@@ -366,32 +398,12 @@ bool Box::isPaddingApplicable() const
     if (isAnonymous())
         return false;
 
-    auto elementType = m_elementAttributes.value().elementType;
-    return elementType != ElementType::TableHeaderGroup
-        && elementType != ElementType::TableBodyGroup
-        && elementType != ElementType::TableFooterGroup
-        && elementType != ElementType::TableRow
-        && elementType != ElementType::TableColumnGroup
-        && elementType != ElementType::TableColumn;
-}
-
-void Box::setTextContent(String textContent)
-{
-    ASSERT(isInlineLevelBox());
-    ensureRareData().textContent = textContent;
-}
-
-bool Box::hasTextContent() const
-{
-    ASSERT(isInlineLevelBox());
-    return hasRareData() && !rareData().textContent.isNull();
-}
-
-String Box::textContent() const
-{
-    ASSERT(hasRareData());
-    ASSERT(isInlineLevelBox());
-    return rareData().textContent;
+    return !isTableHeader()
+        && !isTableBody()
+        && !isTableFooter()
+        && !isTableRow()
+        && !isTableColumnGroup()
+        && !isTableColumn();
 }
 
 const Replaced* Box::replaced() const
@@ -431,6 +443,25 @@ unsigned Box::columnSpan() const
     if (!hasRareData())
         return 1;
     return rareData().columnSpan;
+}
+
+void Box::setColumnWidth(LayoutUnit columnWidth)
+{
+    ensureRareData().columnWidth = columnWidth;
+}
+
+Optional<LayoutUnit> Box::columnWidth() const
+{
+    if (!hasRareData())
+        return { };
+    return rareData().columnWidth;
+}
+
+void Box::setCachedDisplayBoxForLayoutState(LayoutState& layoutState, std::unique_ptr<Display::Box> box) const
+{
+    ASSERT(!m_cachedLayoutState);
+    m_cachedLayoutState = makeWeakPtr(layoutState);
+    m_cachedDisplayBoxForLayoutState = WTFMove(box);
 }
 
 Box::RareDataMap& Box::rareDataMap()

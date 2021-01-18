@@ -28,6 +28,7 @@
 
 #include "Cookie.h"
 #include "CookieRequestHeaderFieldProxy.h"
+#include "HTTPCookieAcceptPolicy.h"
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandle.h"
@@ -92,7 +93,7 @@ NetworkStorageSession::~NetworkStorageSession()
 {
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, const String& value) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, const String& value) const
 {
     using namespace CookieInternalJava;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -106,13 +107,13 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const S
     WTF::CheckAndClearException(env);
 }
 
-std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP) const
 {
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
     return { CookieInternalJava::getCookies(url, false), false };
 }
 
-std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies, ShouldAskITP) const
 {
     return { CookieInternalJava::getCookies(url, true), true };
 }
@@ -122,15 +123,15 @@ std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(con
     return { CookieInternalJava::getCookies(headerFieldProxy.firstParty, true), true };
 }
 
-bool NetworkStorageSession::cookiesEnabled() const
-{
-    return true;
-}
-
-bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, Vector<Cookie>&) const
+bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, ShouldAskITP, Vector<Cookie>&) const
 {
     notImplemented();
     return false;
+}
+
+HTTPCookieAcceptPolicy NetworkStorageSession::cookieAcceptPolicy() const
+{
+    return HTTPCookieAcceptPolicy::AlwaysAccept;
 }
 
 void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const URL&)

@@ -98,7 +98,7 @@ public:
     // Methods to set labels for the disassembler.
     void setStartOfCode()
     {
-        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(0, nullptr));
+        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(BytecodeIndex(0)));
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
@@ -135,7 +135,7 @@ public:
 
     void emitStoreCallSiteIndex(CallSiteIndex callSite)
     {
-        store32(TrustedImm32(callSite.bits()), tagFor(static_cast<VirtualRegister>(CallFrameSlot::argumentCount)));
+        store32(TrustedImm32(callSite.bits()), tagFor(CallFrameSlot::argumentCountIncludingThis));
     }
 
     // Add a call out from JIT code, without an exception check.
@@ -180,6 +180,11 @@ public:
     void addGetByIdWithThis(const JITGetByIdWithThisGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_getByIdsWithThis.append(InlineCacheWrapper<JITGetByIdWithThisGenerator>(gen, slowPath));
+    }
+
+    void addGetByVal(const JITGetByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_getByVals.append(InlineCacheWrapper<JITGetByValGenerator>(gen, slowPath));
     }
 
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
@@ -341,6 +346,7 @@ private:
 
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
     Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
+    Vector<InlineCacheWrapper<JITGetByValGenerator>, 4> m_getByVals;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
     Vector<InlineCacheWrapper<JITInByIdGenerator>, 4> m_inByIds;
     Vector<InlineCacheWrapper<JITInstanceOfGenerator>, 4> m_instanceOfs;

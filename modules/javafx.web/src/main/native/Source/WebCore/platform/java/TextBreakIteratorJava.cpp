@@ -145,7 +145,7 @@ TextBreakIterator* cursorMovementIterator(const UChar* string, int length)
 
 //TextBreakIterator* lineBreakIterator(const UChar* string, int length)
 //UTATODO: need to recycle staticLineBreakIterator
-TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomString& locale, const UChar* priorContext, unsigned priorContextLength)
+TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, const AtomicString& locale, const UChar* priorContext, unsigned priorContextLength)
 {
     return setUpIterator(JNI_EXPAND(LINE_ITERATOR), string, length);
 }

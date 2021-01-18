@@ -53,7 +53,7 @@ float Path::length() const
 }
 #endif
 
-PathTraversalState Path::traversalStateAtLength(float length, bool& success) const
+PathTraversalState Path::traversalStateAtLength(float length) const
 {
     PathTraversalState traversalState(PathTraversalState::Action::VectorAtLength, length);
 
@@ -61,18 +61,12 @@ PathTraversalState Path::traversalStateAtLength(float length, bool& success) con
         traversalState.processPathElement(element);
     });
 
-    success = traversalState.success();
     return traversalState;
 }
 
-FloatPoint Path::pointAtLength(float length, bool& success) const
+FloatPoint Path::pointAtLength(float length) const
 {
-    return traversalStateAtLength(length, success).current();
-}
-
-float Path::normalAngleAtLength(float length, bool& success) const
-{
-    return traversalStateAtLength(length, success).normalAngle();
+    return traversalStateAtLength(length).current();
 }
 
 void Path::addRoundedRect(const FloatRect& rect, const FloatSize& roundingRadii, RoundedRectStrategy strategy)
@@ -117,7 +111,7 @@ void Path::addRoundedRect(const FloatRoundedRect& r, RoundedRectStrategy strateg
         return;
     }
 
-    if (strategy == PreferNativeRoundedRect) {
+    if (strategy == RoundedRectStrategy::PreferNative) {
 #if USE(CG) || USE(DIRECT2D)
         platformAddPathForRoundedRect(rect, radii.topLeft(), radii.topRight(), radii.bottomLeft(), radii.bottomRight());
         return;
@@ -198,19 +192,19 @@ TextStream& operator<<(TextStream& stream, const Path& path)
             stream << ", ";
         isFirst = false;
         switch (element.type) {
-        case PathElementMoveToPoint: // The points member will contain 1 value.
+        case PathElement::Type::MoveToPoint: // The points member will contain 1 value.
             stream << "move to " << element.points[0];
             break;
-        case PathElementAddLineToPoint: // The points member will contain 1 value.
+        case PathElement::Type::AddLineToPoint: // The points member will contain 1 value.
             stream << "add line to " << element.points[0];
             break;
-        case PathElementAddQuadCurveToPoint: // The points member will contain 2 values.
+        case PathElement::Type::AddQuadCurveToPoint: // The points member will contain 2 values.
             stream << "add quad curve to " << element.points[0] << " " << element.points[1];
             break;
-        case PathElementAddCurveToPoint: // The points member will contain 3 values.
+        case PathElement::Type::AddCurveToPoint: // The points member will contain 3 values.
             stream << "add curve to " << element.points[0] << " " << element.points[1] << " " << element.points[2];
             break;
-        case PathElementCloseSubpath: // The points member will contain no values.
+        case PathElement::Type::CloseSubpath: // The points member will contain no values.
             stream << "close subpath";
             break;
         }

@@ -29,21 +29,23 @@
 
 #include "DisplayBox.h"
 #include "LayoutBox.h"
-#include "LayoutUnit.h"
+#include "LayoutPoint.h"
+#include "LayoutUnits.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-namespace Layout {
+namespace Display {
+class Rect;
+}
 
-class FloatingState;
-class LayoutState;
+namespace Layout {
 
 class FloatAvoider {
     WTF_MAKE_ISO_ALLOCATED(FloatAvoider);
 public:
-    FloatAvoider(const Box&, const FloatingState&, const LayoutState&);
+    FloatAvoider(const Box&, Display::Box absoluteDisplayBox, LayoutPoint containingBlockAbsoluteTopLeft, HorizontalEdges containingBlockAbsoluteContentBox);
     virtual ~FloatAvoider() = default;
 
     virtual Display::Rect rect() const { return m_absoluteDisplayBox.rect(); }
@@ -75,16 +77,16 @@ protected:
 
     LayoutUnit marginBoxWidth() const { return marginStart() + displayBox().width() + marginEnd(); }
 
-    const FloatingState& floatingState() const { return m_floatingState; }
     const Box& layoutBox() const { return *m_layoutBox; }
     const Display::Box& displayBox() const { return m_absoluteDisplayBox; }
     Display::Box& displayBox() { return m_absoluteDisplayBox; }
 
 private:
     WeakPtr<const Box> m_layoutBox;
-    const FloatingState& m_floatingState;
+    // These coordinate values are relative to the formatting root's border box.
     Display::Box m_absoluteDisplayBox;
-    Display::Box m_containingBlockAbsoluteDisplayBox;
+    LayoutPoint m_containingBlockAbsoluteTopLeft;
+    HorizontalEdges m_containingBlockAbsoluteContentBox;
 };
 
 }

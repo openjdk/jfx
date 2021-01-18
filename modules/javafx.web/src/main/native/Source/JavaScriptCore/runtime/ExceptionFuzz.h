@@ -29,18 +29,19 @@
 
 namespace JSC {
 
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 class ThrowScope;
 
 // Call this only if you know that exception fuzzing is enabled.
-void doExceptionFuzzing(ExecState*, ThrowScope&, const char* where, const void* returnPC);
+void doExceptionFuzzing(JSGlobalObject*, ThrowScope&, const char* where, const void* returnPC);
 
 // This is what you should call if you don't know if fuzzing is enabled.
-ALWAYS_INLINE void doExceptionFuzzingIfEnabled(ExecState* exec, ThrowScope& scope, const char* where, const void* returnPC)
+ALWAYS_INLINE void doExceptionFuzzingIfEnabled(JSGlobalObject* globalObject, ThrowScope& scope, const char* where, const void* returnPC)
 {
     if (LIKELY(!Options::useExceptionFuzz()))
         return;
-    doExceptionFuzzing(exec, scope, where, returnPC);
+    doExceptionFuzzing(globalObject, scope, where, returnPC);
 }
 
 } // namespace JSC

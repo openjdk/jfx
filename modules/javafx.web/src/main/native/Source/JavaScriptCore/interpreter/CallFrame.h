@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -29,11 +29,12 @@
 #include "StackVisitor.h"
 #include "VM.h"
 #include "VMEntryRecord.h"
+#include <wtf/EnumClassOperatorOverloads.h>
 
 namespace JSC  {
 
     class Arguments;
-    class ExecState;
+    class CallFrame;
     class Interpreter;
     class JSCallee;
     class JSScope;
@@ -41,28 +42,29 @@ namespace JSC  {
 
     struct Instruction;
 
-    typedef ExecState CallFrame;
-
     class CallSiteIndex {
     public:
         CallSiteIndex() = default;
 
+        explicit CallSiteIndex(BytecodeIndex bytecodeIndex)
+            : m_bits(bytecodeIndex.offset())
+        {
+            ASSERT(!bytecodeIndex.checkpoint());
+        }
         explicit CallSiteIndex(uint32_t bits)
             : m_bits(bits)
         { }
-#if USE(JSVALUE32_64)
-        explicit CallSiteIndex(const Instruction* instruction)
-            : m_bits(bitwise_cast<uint32_t>(instruction))
-        { }
-#endif
 
-        explicit operator bool() const { return m_bits != UINT_MAX; }
+        explicit operator bool() const { return !!m_bits; }
         bool operator==(const CallSiteIndex& other) const { return m_bits == other.m_bits; }
 
-        inline uint32_t bits() const { return m_bits; }
+        uint32_t bits() const { return m_bits; }
+        static CallSiteIndex fromBits(uint32_t bits) { return CallSiteIndex(bits); }
+
+        BytecodeIndex bytecodeIndex() const { return BytecodeIndex(bits()); }
 
     private:
-        uint32_t m_bits { UINT_MAX };
+        uint32_t m_bits { BytecodeIndex().offset() };
     };
 
     class DisposableCallSiteIndex : public CallSiteIndex {
@@ -83,24 +85,27 @@ namespace JSC  {
     // arm64_32 expects caller frame and return pc to use 8 bytes
     struct CallerFrameAndPC {
         alignas(CPURegister) CallFrame* callerFrame;
-        alignas(CPURegister) const Instruction* returnPC;
-        static const int sizeInRegisters = 2 * sizeof(CPURegister) / sizeof(Register);
+        alignas(CPURegister) void* returnPC;
+        static constexpr int sizeInRegisters = 2 * sizeof(CPURegister) / sizeof(Register);
     };
     static_assert(CallerFrameAndPC::sizeInRegisters == sizeof(CallerFrameAndPC) / sizeof(Register), "CallerFrameAndPC::sizeInRegisters is incorrect.");
 
-    struct CallFrameSlot {
-        static const int codeBlock = CallerFrameAndPC::sizeInRegisters;
-        static const int callee = codeBlock + 1;
-        static const int argumentCount = callee + 1;
-        static const int thisArgument = argumentCount + 1;
-        static const int firstArgument = thisArgument + 1;
+    enum class CallFrameSlot : int {
+        codeBlock = CallerFrameAndPC::sizeInRegisters,
+        callee = codeBlock + 1,
+        argumentCountIncludingThis = callee + 1,
+        thisArgument = argumentCountIncludingThis + 1,
+        firstArgument = thisArgument + 1,
     };
+
+    OVERLOAD_MATH_OPERATORS_FOR_ENUM_CLASS_WITH_INTEGRALS(CallFrameSlot)
+    OVERLOAD_RELATIONAL_OPERATORS_FOR_ENUM_CLASS_WITH_INTEGRALS(CallFrameSlot)
 
     // Represents the current state of script execution.
     // Passed as the first argument to most functions.
-    class ExecState : private Register {
+    class CallFrame : private Register {
     public:
-        static const int headerSizeInRegisters = CallFrameSlot::argumentCount + 1;
+        static constexpr int headerSizeInRegisters = static_cast<int>(CallFrameSlot::argumentCountIncludingThis) + 1;
 
         // This function should only be called in very specific circumstances
         // when you've guaranteed the callee can't be a Wasm callee, and can
@@ -109,40 +114,24 @@ namespace JSC  {
         // yet sure if the callee is a cell. In general, a JS callee is guaranteed
         // to be a cell, however, there is a brief window where we need to check
         // to see if it's a cell, and if it's not, we throw an exception.
-        JSValue guaranteedJSValueCallee() const
-        {
-            ASSERT(!callee().isWasm());
-            return this[CallFrameSlot::callee].jsValue();
-        }
-        JSObject* jsCallee() const
-        {
-            ASSERT(!callee().isWasm());
-            return this[CallFrameSlot::callee].object();
-        }
-        CalleeBits callee() const { return CalleeBits(this[CallFrameSlot::callee].pointer()); }
-        SUPPRESS_ASAN CalleeBits unsafeCallee() const { return CalleeBits(this[CallFrameSlot::callee].asanUnsafePointer()); }
-        CodeBlock* codeBlock() const { return this[CallFrameSlot::codeBlock].Register::codeBlock(); }
-        CodeBlock** addressOfCodeBlock() const { return bitwise_cast<CodeBlock**>(this + CallFrameSlot::codeBlock); }
-        SUPPRESS_ASAN CodeBlock* unsafeCodeBlock() const { return this[CallFrameSlot::codeBlock].Register::asanUnsafeCodeBlock(); }
-        JSScope* scope(int scopeRegisterOffset) const
-        {
-            ASSERT(this[scopeRegisterOffset].Register::scope());
-            return this[scopeRegisterOffset].Register::scope();
-        }
+        inline JSValue guaranteedJSValueCallee() const;
+        inline JSObject* jsCallee() const;
+        CalleeBits callee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].pointer()); }
+        SUPPRESS_ASAN CalleeBits unsafeCallee() const { return CalleeBits(this[static_cast<int>(CallFrameSlot::callee)].asanUnsafePointer()); }
+        CodeBlock* codeBlock() const;
+        CodeBlock** addressOfCodeBlock() const { return bitwise_cast<CodeBlock**>(this + static_cast<int>(CallFrameSlot::codeBlock)); }
+        inline SUPPRESS_ASAN CodeBlock* unsafeCodeBlock() const;
+        inline JSScope* scope(int scopeRegisterOffset) const;
 
-        JSGlobalObject* wasmAwareLexicalGlobalObject(VM&);
-
-        bool isAnyWasmCallee();
+        JS_EXPORT_PRIVATE bool isAnyWasmCallee();
 
         // Global object in which the currently executing code was defined.
-        // Differs from VM::vmEntryGlobalObject() during function calls across web browser frames.
-        JSGlobalObject* lexicalGlobalObject() const;
+        // Differs from VM::deprecatedVMEntryGlobalObject() during function calls across web browser frames.
+        JSGlobalObject* lexicalGlobalObject(VM&) const;
 
-        // Differs from lexicalGlobalObject because this will have DOM window shell rather than
-        // the actual DOM window, which can't be "this" for security reasons.
-        JSObject* globalThisValue() const;
-
-        VM& vm() const;
+        // FIXME: Remove this function
+        // https://bugs.webkit.org/show_bug.cgi?id=203272
+        VM& deprecatedVM() const;
 
         static CallFrame* create(Register* callFrameBase) { return static_cast<CallFrame*>(callFrameBase); }
         Register* registers() { return this; }
@@ -157,7 +146,7 @@ namespace JSC  {
         CallFrame* unsafeCallerFrame(EntryFrame*&) const;
         JS_EXPORT_PRIVATE CallFrame* callerFrame(EntryFrame*&) const;
 
-        JS_EXPORT_PRIVATE SourceOrigin callerSourceOrigin();
+        JS_EXPORT_PRIVATE SourceOrigin callerSourceOrigin(VM&);
 
         static ptrdiff_t callerFrameOffset() { return OBJECT_OFFSETOF(CallerFrameAndPC, callerFrame); }
 
@@ -176,6 +165,9 @@ namespace JSC  {
         CallSiteIndex unsafeCallSiteIndex() const;
     private:
         unsigned callSiteBitsAsBytecodeOffset() const;
+#if ENABLE(WEBASSEMBLY)
+        JS_EXPORT_PRIVATE JSGlobalObject* lexicalGlobalObjectFromWasmCallee(VM&) const;
+#endif
     public:
 
         // This will try to get you the bytecode offset, but you should be aware that
@@ -183,37 +175,30 @@ namespace JSC  {
         // also return 0 if the call frame has no notion of bytecode offsets (for
         // example if it's native code).
         // https://bugs.webkit.org/show_bug.cgi?id=121754
-        unsigned bytecodeOffset();
+        BytecodeIndex bytecodeIndex();
 
         // This will get you a CodeOrigin. It will always succeed. May return
-        // CodeOrigin(0) if we're in native code.
+        // CodeOrigin(BytecodeIndex(0)) if we're in native code.
         JS_EXPORT_PRIVATE CodeOrigin codeOrigin();
 
-        Register* topOfFrame()
-        {
-            if (!codeBlock())
-                return registers();
-            return topOfFrameInternal();
-        }
+        inline Register* topOfFrame();
 
         const Instruction* currentVPC() const; // This only makes sense in the LLInt and baseline.
         void setCurrentVPC(const Instruction*);
 
         void setCallerFrame(CallFrame* frame) { callerFrameAndPC().callerFrame = frame; }
-        void setScope(int scopeRegisterOffset, JSScope* scope) { static_cast<Register*>(this)[scopeRegisterOffset] = scope; }
+        inline void setScope(int scopeRegisterOffset, JSScope*);
 
-        static void initGlobalExec(ExecState* globalExec, JSCallee* globalCallee);
+        static void initDeprecatedCallFrameForDebugger(CallFrame* globalExec, JSCallee* globalCallee);
 
         // Read a register from the codeframe (or constant from the CodeBlock).
-        Register& r(int);
         Register& r(VirtualRegister);
-        // Read a register for a non-constant
-        Register& uncheckedR(int);
+        // Read a register for a known non-constant
         Register& uncheckedR(VirtualRegister);
 
         // Access to arguments as passed. (After capture, arguments may move to a different location.)
         size_t argumentCount() const { return argumentCountIncludingThis() - 1; }
-        size_t argumentCountIncludingThis() const { return this[CallFrameSlot::argumentCount].payload(); }
+        size_t argumentCountIncludingThis() const { return this[static_cast<int>(CallFrameSlot::argumentCountIncludingThis)].payload(); }
         static int argumentOffset(int argument) { return (CallFrameSlot::firstArgument + argument); }
         static int argumentOffsetIncludingThis(int argument) { return (CallFrameSlot::thisArgument + argument); }
 
@@ -262,10 +247,10 @@ namespace JSC  {
 
         JSValue argumentAfterCapture(size_t argument);
 
-        static int offsetFor(size_t argumentCountIncludingThis) { return argumentCountIncludingThis + CallFrameSlot::thisArgument - 1; }
+        static int offsetFor(size_t argumentCountIncludingThis) { return CallFrameSlot::thisArgument + argumentCountIncludingThis - 1; }
 
         static CallFrame* noCaller() { return nullptr; }
-        bool isGlobalExec() const
+        bool isDeprecatedCallFrameForDebugger() const
         {
             return callerFrameAndPC().callerFrame == noCaller() && callerFrameAndPC().returnPC == nullptr;
         }
@@ -274,10 +259,10 @@ namespace JSC  {
         bool isStackOverflowFrame() const;
         bool isWasmFrame() const;
 
-        void setArgumentCountIncludingThis(int count) { static_cast<Register*>(this)[CallFrameSlot::argumentCount].payload() = count; }
-        void setCallee(JSObject* callee) { static_cast<Register*>(this)[CallFrameSlot::callee] = callee; }
-        void setCodeBlock(CodeBlock* codeBlock) { static_cast<Register*>(this)[CallFrameSlot::codeBlock] = codeBlock; }
-        void setReturnPC(void* value) { callerFrameAndPC().returnPC = reinterpret_cast<const Instruction*>(value); }
+        void setArgumentCountIncludingThis(int count) { static_cast<Register*>(this)[static_cast<int>(CallFrameSlot::argumentCountIncludingThis)].payload() = count; }
+        inline void setCallee(JSObject*);
+        inline void setCodeBlock(CodeBlock*);
+        void setReturnPC(void* value) { callerFrameAndPC().returnPC = value; }
 
         String friendlyFunctionName();
 
@@ -286,15 +271,11 @@ namespace JSC  {
         // FIXME: This method is improper. We rely on the fact that we can call it with a null
         // receiver. We should always be using StackVisitor directly.
         // It's only valid to call this from a non-wasm top frame.
-        template <StackVisitor::EmptyEntryFrameAction action = StackVisitor::ContinueIfTopEntryFrameIsEmpty, typename Functor> void iterate(const Functor& functor)
+        template <StackVisitor::EmptyEntryFrameAction action = StackVisitor::ContinueIfTopEntryFrameIsEmpty, typename Functor> void iterate(VM& vm, const Functor& functor)
         {
-            VM* vm;
             void* rawThis = this;
-            if (!!rawThis) {
+            if (!!rawThis)
                 RELEASE_ASSERT(callee().isCell());
-                vm = &this->vm();
-            } else
-                vm = nullptr;
             StackVisitor::visit<action, Functor>(this, vm, functor);
         }
 
@@ -303,8 +284,8 @@ namespace JSC  {
 
     private:
 
-        ExecState();
-        ~ExecState();
+        CallFrame();
+        ~CallFrame();
 
         Register* topOfFrameInternal();
 
@@ -332,5 +313,18 @@ namespace JSC  {
         const CallerFrameAndPC& callerFrameAndPC() const { return *reinterpret_cast<const CallerFrameAndPC*>(this); }
         SUPPRESS_ASAN const CallerFrameAndPC& unsafeCallerFrameAndPC() const { return *reinterpret_cast<const CallerFrameAndPC*>(this); }
     };
+
+JS_EXPORT_PRIVATE bool isFromJSCode(void* returnAddress);
+
+#if USE(BUILTIN_FRAME_ADDRESS)
+#define DECLARE_CALL_FRAME(vm) \
+    ({ \
+        ASSERT(JSC::isFromJSCode(removeCodePtrTag<void*>(__builtin_return_address(0)))); \
+        bitwise_cast<JSC::CallFrame*>(__builtin_frame_address(1)); \
+    })
+#else
+#define DECLARE_CALL_FRAME(vm) ((vm).topCallFrame)
+#endif
+
 
 } // namespace JSC

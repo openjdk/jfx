@@ -28,6 +28,7 @@
 
 #if ENABLE(PAYMENT_REQUEST)
 
+#include "JSDOMPromiseDeferred.h"
 #include "NotImplemented.h"
 #include "PaymentRequest.h"
 #include <wtf/IsoMallocInlines.h>
@@ -103,7 +104,7 @@ void PaymentResponse::retry(PaymentValidationErrors&& errors, DOMPromiseDeferred
         return;
     }
 
-    m_retryPromise = WTFMove(promise);
+    m_retryPromise = WTF::makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
 }
 
 void PaymentResponse::abortWithException(Exception&& exception)
@@ -120,13 +121,8 @@ void PaymentResponse::settleRetryPromise(ExceptionOr<void>&& result)
 
     ASSERT(hasPendingActivity());
     ASSERT(m_state == State::Created);
-    std::exchange(m_retryPromise, WTF::nullopt)->settle(WTFMove(result));
-}
-
-bool PaymentResponse::canSuspendForDocumentSuspension() const
-{
-    ASSERT(m_state != State::Stopped);
-    return !hasPendingActivity();
+    m_retryPromise->settle(WTFMove(result));
+    m_retryPromise = nullptr;
 }
 
 void PaymentResponse::stop()
@@ -134,6 +130,20 @@ void PaymentResponse::stop()
     settleRetryPromise(Exception { AbortError });
     m_pendingActivity = nullptr;
     m_state = State::Stopped;
+}
+
+void PaymentResponse::suspend(ReasonForSuspension reason)
+{
+    if (reason != ReasonForSuspension::BackForwardCache)
+        return;
+
+    if (m_state != State::Created) {
+        ASSERT(!hasPendingActivity());
+        ASSERT(!m_retryPromise);
+        return;
+    }
+
+    stop();
 }
 
 } // namespace WebCore

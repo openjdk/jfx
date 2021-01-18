@@ -59,14 +59,16 @@
 #endif
 
 #if USE(QUICK_LOOK)
+#include "LegacyPreviewLoader.h"
 #include "PreviewConverter.h"
-#include "PreviewLoader.h"
 #endif
 
 #undef RELEASE_LOG_IF_ALLOWED
 #define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), Network, "%p - ResourceLoader::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
+
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
 
 ResourceLoader::ResourceLoader(Frame& frame, ResourceLoaderOptions options)
     : m_frame { &frame }
@@ -285,7 +287,7 @@ void ResourceLoader::loadDataURL()
         dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
         dataResponse.setSource(ResourceResponse::Source::Network);
         this->didReceiveResponse(dataResponse, [this, protectedThis = WTFMove(protectedThis), dataSize, data = result.data.releaseNonNull()]() mutable {
-            if (!this->reachedTerminalState() && dataSize)
+            if (!this->reachedTerminalState() && dataSize && m_request.httpMethod() != "HEAD")
                 this->didReceiveBuffer(WTFMove(data), dataSize, DataPayloadWholeResource);
 
             if (!this->reachedTerminalState()) {
@@ -457,7 +459,9 @@ static void logResourceResponseSource(Frame* frame, ResourceResponse::Source sou
         break;
     case ResourceResponse::Source::MemoryCache:
     case ResourceResponse::Source::MemoryCacheAfterValidation:
+    case ResourceResponse::Source::DOMCache:
     case ResourceResponse::Source::ApplicationCache:
+    case ResourceResponse::Source::InspectorOverride:
     case ResourceResponse::Source::Unknown:
         return;
     }

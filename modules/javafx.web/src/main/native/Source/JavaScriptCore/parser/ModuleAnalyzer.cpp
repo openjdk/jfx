@@ -35,9 +35,9 @@
 namespace JSC {
 
 
-ModuleAnalyzer::ModuleAnalyzer(ExecState* exec, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
-    : m_vm(exec->vm())
-    , m_moduleRecord(m_vm, JSModuleRecord::create(exec, m_vm, exec->lexicalGlobalObject()->moduleRecordStructure(), moduleKey, sourceCode, declaredVariables, lexicalVariables))
+ModuleAnalyzer::ModuleAnalyzer(JSGlobalObject* globalObject, const Identifier& moduleKey, const SourceCode& sourceCode, const VariableEnvironment& declaredVariables, const VariableEnvironment& lexicalVariables)
+    : m_vm(globalObject->vm())
+    , m_moduleRecord(m_vm, JSModuleRecord::create(globalObject, m_vm, globalObject->moduleRecordStructure(), moduleKey, sourceCode, declaredVariables, lexicalVariables))
 {
 }
 
@@ -140,7 +140,7 @@ JSModuleRecord* ModuleAnalyzer::analyze(ModuleProgramNode& moduleProgramNode)
     for (const auto& pair : m_moduleRecord->lexicalVariables())
         exportVariable(moduleProgramNode, pair.key, pair.value);
 
-    if (Options::dumpModuleRecord())
+    if (UNLIKELY(Options::dumpModuleRecord()))
         m_moduleRecord->dump();
 
     return m_moduleRecord.get();

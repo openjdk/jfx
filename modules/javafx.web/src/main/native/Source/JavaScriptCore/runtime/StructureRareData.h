@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ class ObjectToStringAdaptiveStructureWatchpoint;
 class StructureRareData final : public JSCell {
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -51,7 +51,7 @@ public:
 
     static StructureRareData* create(VM&, Structure*);
 
-    static const bool needsDestruction = true;
+    static constexpr bool needsDestruction = true;
     static void destroy(JSCell*);
 
     static void visitChildren(JSCell*, SlotVisitor&);
@@ -66,7 +66,10 @@ public:
     void clearPreviousID();
 
     JSString* objectToStringValue() const;
-    void setObjectToStringValue(ExecState*, VM&, Structure* baseStructure, JSString* value, PropertySlot toStringTagSymbolSlot);
+    void setObjectToStringValue(JSGlobalObject*, VM&, Structure* baseStructure, JSString* value, PropertySlot toStringTagSymbolSlot);
+    void giveUpOnObjectToStringValueCache() { m_objectToStringValue.setWithoutWriteBarrier(objectToStringCacheGiveUpMarker()); }
+    bool canCacheObjectToStringValue() { return m_objectToStringValue.unvalidatedGet() == objectToStringCacheGiveUpMarker(); }
+    static JSString* objectToStringCacheGiveUpMarker() { return bitwise_cast<JSString*>(static_cast<uintptr_t>(1)); }
 
     JSPropertyNameEnumerator* cachedPropertyNameEnumerator() const;
     void setCachedPropertyNameEnumerator(VM&, JSPropertyNameEnumerator*);
@@ -113,7 +116,9 @@ private:
     Bag<ObjectToStringAdaptiveStructureWatchpoint> m_objectToStringAdaptiveWatchpointSet;
     std::unique_ptr<ObjectToStringAdaptiveInferredPropertyValueWatchpoint> m_objectToStringAdaptiveInferredValueWatchpoint;
     Box<InlineWatchpointSet> m_polyProtoWatchpoint;
-    bool m_giveUpOnObjectToStringValueCache;
+
+    PropertyOffset m_maxOffset;
+    PropertyOffset m_transitionOffset;
 };
 
 } // namespace JSC

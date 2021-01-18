@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,10 +204,12 @@ class ES2PhongShader {
                 meshView.getAmbientLightGreen(), meshView.getAmbientLightBlue());
 
         int i = 0;
-        for(ES2Light light : meshView.getPointLights()) {
+        for (ES2Light light : meshView.getPointLights()) {
             if (light != null && light.w > 0) {
                 shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
                 shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
+                shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
+                shader.setConstant("lights[" + i + "].range", light.maxRange);
                 i++;
             }
         }

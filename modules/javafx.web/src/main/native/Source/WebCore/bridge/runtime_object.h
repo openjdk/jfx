@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,10 +32,19 @@
 namespace JSC {
 namespace Bindings {
 
-class WEBCORE_EXPORT RuntimeObject : public JSDestructibleObject {
+class WEBCORE_EXPORT RuntimeObject : public JSNonFinalObject {
 public:
-    typedef JSDestructibleObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | OverridesGetCallData;
+    using Base = JSNonFinalObject;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | OverridesGetCallData;
+    static constexpr bool needsDestruction = true;
+
+    template<typename CellType, JSC::SubspaceAccess>
+    static IsoSubspace* subspaceFor(JSC::VM& vm)
+    {
+        static_assert(sizeof(CellType) == sizeof(RuntimeObject), "RuntimeObject subclasses that add fields need to override subspaceFor<>()");
+        static_assert(CellType::destroy == RuntimeObject::destroy);
+        return subspaceForImpl(vm);
+    }
 
     static RuntimeObject* create(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     {
@@ -46,20 +55,20 @@ public:
 
     static void destroy(JSCell*);
 
-    static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
-    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, ExecState*, PropertyName);
-    static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
+    static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
+    static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static JSValue defaultValue(const JSObject*, JSGlobalObject*, PreferredPrimitiveType);
     static CallType getCallData(JSCell*, CallData&);
     static ConstructType getConstructData(JSCell*, ConstructData&);
 
-    static void getOwnPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
 
     void invalidate();
 
     Instance* getInternalInstance() const { return m_instance.get(); }
 
-    static Exception* throwInvalidAccessError(ExecState*, ThrowScope&);
+    static Exception* throwInvalidAccessError(JSGlobalObject*, ThrowScope&);
 
     DECLARE_INFO;
 
@@ -78,9 +87,11 @@ protected:
     void finishCreation(VM&);
 
 private:
-    static EncodedJSValue fallbackObjectGetter(ExecState*, EncodedJSValue, PropertyName);
-    static EncodedJSValue fieldGetter(ExecState*, EncodedJSValue, PropertyName);
-    static EncodedJSValue methodGetter(ExecState*, EncodedJSValue, PropertyName);
+    static EncodedJSValue fallbackObjectGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue fieldGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue methodGetter(JSGlobalObject*, EncodedJSValue, PropertyName);
+
+    static IsoSubspace* subspaceForImpl(VM&);
 
     RefPtr<Instance> m_instance;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,34 +40,31 @@ DEFINE_STATIC_PER_PROCESS_STORAGE(DebugHeap);
 
 #if BOS(DARWIN)
 
-DebugHeap::DebugHeap(std::lock_guard<Mutex>&)
+DebugHeap::DebugHeap(const LockHolder&)
     : m_zone(malloc_create_zone(0, 0))
     , m_pageSize(vmPageSize())
 {
     malloc_set_zone_name(m_zone, "WebKit Using System Malloc");
 }
 
-void* DebugHeap::malloc(size_t size, bool crashOnFailure)
+void* DebugHeap::malloc(size_t size, FailureAction action)
 {
     void* result = malloc_zone_malloc(m_zone, size);
-    if (!result && crashOnFailure)
-        BCRASH();
+    RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
-void* DebugHeap::memalign(size_t alignment, size_t size, bool crashOnFailure)
+void* DebugHeap::memalign(size_t alignment, size_t size, FailureAction action)
 {
     void* result = malloc_zone_memalign(m_zone, alignment, size);
-    if (!result && crashOnFailure)
-        BCRASH();
+    RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
-void* DebugHeap::realloc(void* object, size_t size, bool crashOnFailure)
+void* DebugHeap::realloc(void* object, size_t size, FailureAction action)
 {
     void* result = malloc_zone_realloc(m_zone, object, size);
-    if (!result && crashOnFailure)
-        BCRASH();
+    RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
@@ -91,35 +88,30 @@ void DebugHeap::dump()
 
 #else
 
-DebugHeap::DebugHeap(std::lock_guard<Mutex>&)
+DebugHeap::DebugHeap(const LockHolder&)
     : m_pageSize(vmPageSize())
 {
 }
 
-void* DebugHeap::malloc(size_t size, bool crashOnFailure)
+void* DebugHeap::malloc(size_t size, FailureAction action)
 {
     void* result = ::malloc(size);
-    if (!result && crashOnFailure)
-        BCRASH();
+    RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
-void* DebugHeap::memalign(size_t alignment, size_t size, bool crashOnFailure)
+void* DebugHeap::memalign(size_t alignment, size_t size, FailureAction action)
 {
     void* result;
-    if (posix_memalign(&result, alignment, size)) {
-        if (crashOnFailure)
-            BCRASH();
-        return nullptr;
-    }
+    if (posix_memalign(&result, alignment, size))
+        RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
-void* DebugHeap::realloc(void* object, size_t size, bool crashOnFailure)
+void* DebugHeap::realloc(void* object, size_t size, FailureAction action)
 {
     void* result = ::realloc(object, size);
-    if (!result && crashOnFailure)
-        BCRASH();
+    RELEASE_BASSERT(action == FailureAction::ReturnNull || result);
     return result;
 }
 
@@ -149,7 +141,7 @@ void* DebugHeap::memalignLarge(size_t alignment, size_t size)
     if (!result)
         return nullptr;
     {
-        std::lock_guard<Mutex> locker(mutex());
+        LockHolder locker(mutex());
         m_sizeMap[result] = size;
     }
     return result;
@@ -162,7 +154,7 @@ void DebugHeap::freeLarge(void* base)
 
     size_t size;
     {
-        std::lock_guard<Mutex> locker(mutex());
+        LockHolder locker(mutex());
         size = m_sizeMap[base];
         size_t numErased = m_sizeMap.erase(base);
         RELEASE_BASSERT(numErased == 1);

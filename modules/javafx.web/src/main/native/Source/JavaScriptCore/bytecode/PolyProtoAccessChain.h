@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "StructureIDTable.h"
+#include "VM.h"
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -42,15 +44,15 @@ public:
     PolyProtoAccessChain(PolyProtoAccessChain&) = default;
 
     // Returns nullptr when invalid.
-    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, const PropertySlot&, bool& usesPolyProto);
-    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, JSObject* target, bool& usesPolyProto);
+    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, const PropertySlot&);
+    static std::unique_ptr<PolyProtoAccessChain> create(JSGlobalObject*, JSCell* base, JSObject* target);
 
     std::unique_ptr<PolyProtoAccessChain> clone()
     {
         return makeUnique<PolyProtoAccessChain>(*this);
     }
 
-    const Vector<Structure*>& chain() const { return m_chain; }
+    const Vector<StructureID>& chain() const { return m_chain; }
 
     void dump(Structure* baseStructure, PrintStream& out) const;
 
@@ -60,17 +62,24 @@ public:
         return !(*this == other);
     }
 
-    bool needImpurePropertyWatchpoint() const;
+    bool needImpurePropertyWatchpoint(VM&) const;
 
     template <typename Func>
-    void forEach(Structure* baseStructure, const Func& func) const
+    void forEach(VM& vm, Structure* baseStructure, const Func& func) const
     {
         bool atEnd = !m_chain.size();
         func(baseStructure, atEnd);
         for (unsigned i = 0; i < m_chain.size(); ++i) {
             atEnd = i + 1 == m_chain.size();
-            func(m_chain[i], atEnd);
+            func(vm.getStructure(m_chain[i]), atEnd);
         }
+    }
+
+    Structure* slotBaseStructure(VM& vm, Structure* baseStructure) const
+    {
+        if (m_chain.size())
+            return vm.getStructure(m_chain.last());
+        return baseStructure;
     }
 
 private:
@@ -78,7 +87,7 @@ private:
 
     // This does not include the base. We rely on AccessCase providing it for us. That said, this data
     // structure is tied to the base that it was created with.
-    Vector<Structure*> m_chain;
+    Vector<StructureID> m_chain;
 };
 
 }

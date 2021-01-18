@@ -60,7 +60,7 @@ JITCompiler::JITCompiler(Graph& dfg)
         m_disassembler = makeUnique<Disassembler>(dfg);
 #if ENABLE(FTL_JIT)
     m_jitCode->tierUpInLoopHierarchy = WTFMove(m_graph.m_plan.tierUpInLoopHierarchy());
-    for (unsigned tierUpBytecode : m_graph.m_plan.tierUpAndOSREnterBytecodes())
+    for (BytecodeIndex tierUpBytecode : m_graph.m_plan.tierUpAndOSREnterBytecodes())
         m_jitCode->tierUpEntryTriggers.add(tierUpBytecode, JITCode::TriggerReason::DontTrigger);
 #endif
 }
@@ -85,8 +85,6 @@ void JITCompiler::linkOSRExits()
         }
     }
 
-    MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunk = vm().getCTIStub(osrExitThunkGenerator);
-    auto osrExitThunkLabel = CodeLocationLabel<JITThunkPtrTag>(osrExitThunk.code());
     for (unsigned i = 0; i < m_jitCode->osrExit.size(); ++i) {
         OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
         JumpList& failureJumps = info.m_failureJumps;
@@ -97,13 +95,7 @@ void JITCompiler::linkOSRExits()
 
         jitAssertHasValidCallFrame();
         store32(TrustedImm32(i), &vm().osrExitIndex);
-        if (Options::useProbeOSRExit()) {
-            Jump target = jump();
-            addLinkTask([target, osrExitThunkLabel] (LinkBuffer& linkBuffer) {
-                linkBuffer.link(target, osrExitThunkLabel);
-            });
-        } else
-            info.m_patchableJump = patchableJump();
+        info.m_patchableJump = patchableJump();
     }
 }
 
@@ -149,17 +141,12 @@ void JITCompiler::compileExceptionHandlers()
 
         copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
 
-        // lookupExceptionHandlerFromCallerFrame is passed two arguments, the VM and the exec (the CallFrame*).
+        // operationLookupExceptionHandlerFromCallerFrame is passed one argument, the VM*.
         move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
-        move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
+        prepareCallOperation(vm());
         addPtr(TrustedImm32(m_graph.stackPointerOffset() * sizeof(Register)), GPRInfo::callFrameRegister, stackPointerRegister);
 
-#if CPU(X86)
-        // FIXME: should use the call abstraction, but this is currently in the SpeculativeJIT layer!
-        poke(GPRInfo::argumentGPR0);
-        poke(GPRInfo::argumentGPR1, 1);
-#endif
-        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(lookupExceptionHandlerFromCallerFrame)));
+        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandlerFromCallerFrame)));
 
         jumpToExceptionHandler(vm());
     }
@@ -169,16 +156,11 @@ void JITCompiler::compileExceptionHandlers()
 
         copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm().topEntryFrame);
 
-        // lookupExceptionHandler is passed two arguments, the VM and the exec (the CallFrame*).
+        // operationLookupExceptionHandler is passed one argument, the VM*.
         move(TrustedImmPtr(&vm()), GPRInfo::argumentGPR0);
-        move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
+        prepareCallOperation(vm());
 
-#if CPU(X86)
-        // FIXME: should use the call abstraction, but this is currently in the SpeculativeJIT layer!
-        poke(GPRInfo::argumentGPR0);
-        poke(GPRInfo::argumentGPR1, 1);
-#endif
-        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(lookupExceptionHandler)));
+        m_calls.append(CallLinkRecord(call(OperationPtrTag), FunctionPtr<OperationPtrTag>(operationLookupExceptionHandler)));
 
         jumpToExceptionHandler(vm());
     }
@@ -262,6 +244,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 
     finalizeInlineCaches(m_getByIds, linkBuffer);
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
+    finalizeInlineCaches(m_getByVals, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
     finalizeInlineCaches(m_inByIds, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
@@ -370,8 +353,6 @@ void JITCompiler::compile()
     emitStackOverflowCheck(*this, stackOverflow);
 
     addPtr(TrustedImm32(-(m_graph.frameRegisterCount() * sizeof(Register))), GPRInfo::callFrameRegister, stackPointerRegister);
-    if (Options::zeroStackFrame())
-        clearStackFrame(GPRInfo::callFrameRegister, stackPointerRegister, GPRInfo::regT0, m_graph.frameRegisterCount() * sizeof(Register));
     checkStackPointerAlignment();
     compileSetupRegistersForEntry();
     compileEntryExecutionFlag();
@@ -384,7 +365,7 @@ void JITCompiler::compile()
     // we need to call out to a helper function to throw the StackOverflowError.
     stackOverflow.link(this);
 
-    emitStoreCodeOrigin(CodeOrigin(0));
+    emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
 
     if (maxFrameExtentForSlowPathCall)
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
@@ -410,9 +391,6 @@ void JITCompiler::compile()
 
     link(*linkBuffer);
     m_speculative->linkOSREntries(*linkBuffer);
-
-    m_jitCode->shrinkToFit();
-    codeBlock()->shrinkToFit(CodeBlock::LateShrink);
 
     disassemble(*linkBuffer);
 
@@ -439,8 +417,6 @@ void JITCompiler::compileFunction()
 
     // Move the stack pointer down to accommodate locals
     addPtr(TrustedImm32(-(m_graph.frameRegisterCount() * sizeof(Register))), GPRInfo::callFrameRegister, stackPointerRegister);
-    if (Options::zeroStackFrame())
-        clearStackFrame(GPRInfo::callFrameRegister, stackPointerRegister, GPRInfo::regT0, m_graph.frameRegisterCount() * sizeof(Register));
     checkStackPointerAlignment();
 
     compileSetupRegistersForEntry();
@@ -460,7 +436,7 @@ void JITCompiler::compileFunction()
     // we need to call out to a helper function to throw the StackOverflowError.
     stackOverflow.link(this);
 
-    emitStoreCodeOrigin(CodeOrigin(0));
+    emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
 
     if (maxFrameExtentForSlowPathCall)
         addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
@@ -479,16 +455,16 @@ void JITCompiler::compileFunction()
         arityCheck = label();
         compileEntry();
 
-        load32(AssemblyHelpers::payloadFor((VirtualRegister)CallFrameSlot::argumentCount), GPRInfo::regT1);
+        load32(AssemblyHelpers::payloadFor((VirtualRegister)CallFrameSlot::argumentCountIncludingThis), GPRInfo::regT1);
         branch32(AboveOrEqual, GPRInfo::regT1, TrustedImm32(m_codeBlock->numParameters())).linkTo(fromArityCheck, this);
-        emitStoreCodeOrigin(CodeOrigin(0));
+        emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
         if (maxFrameExtentForSlowPathCall)
             addPtr(TrustedImm32(-static_cast<int32_t>(maxFrameExtentForSlowPathCall)), stackPointerRegister);
-        m_speculative->callOperationWithCallFrameRollbackOnException(m_codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck, GPRInfo::regT0);
+        m_speculative->callOperationWithCallFrameRollbackOnException(m_codeBlock->isConstructor() ? operationConstructArityCheck : operationCallArityCheck, GPRInfo::regT0, m_codeBlock->globalObject());
         if (maxFrameExtentForSlowPathCall)
             addPtr(TrustedImm32(maxFrameExtentForSlowPathCall), stackPointerRegister);
         branchTest32(Zero, GPRInfo::returnValueGPR).linkTo(fromArityCheck, this);
-        emitStoreCodeOrigin(CodeOrigin(0));
+        emitStoreCodeOrigin(CodeOrigin(BytecodeIndex(0)));
         move(GPRInfo::returnValueGPR, GPRInfo::argumentGPR0);
         callArityFixup = nearCall();
         jump(fromArityCheck);
@@ -514,9 +490,6 @@ void JITCompiler::compileFunction()
     }
     link(*linkBuffer);
     m_speculative->linkOSREntries(*linkBuffer);
-
-    m_jitCode->shrinkToFit();
-    codeBlock()->shrinkToFit(CodeBlock::LateShrink);
 
     if (requiresArityFixup)
         linkBuffer->link(callArityFixup, FunctionPtr<JITThunkPtrTag>(vm().getCTIStub(arityFixupGenerator).code()));
@@ -605,10 +578,11 @@ void JITCompiler::noticeOSREntry(BasicBlock& basicBlock, JITCompiler::Label bloc
                 break;
             }
 
-            if (variable->local() != variable->machineLocal()) {
+            ASSERT(!variable->operand().isTmp());
+            if (variable->operand().virtualRegister() != variable->machineLocal()) {
                 entry->m_reshufflings.append(
                     OSREntryReshuffling(
-                        variable->local().offset(), variable->machineLocal().offset()));
+                        variable->operand().virtualRegister().offset(), variable->machineLocal().offset()));
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -89,11 +89,18 @@ namespace JSC {
      it uses the 'with' keyword instead of the 'override' keyword.
  */
 
+struct FunctionOverridesAssertScope {
+    FunctionOverridesAssertScope() { RELEASE_ASSERT(g_jscConfig.restrictedOptionsEnabled); }
+    ~FunctionOverridesAssertScope() { RELEASE_ASSERT(g_jscConfig.restrictedOptionsEnabled); }
+};
+
 FunctionOverrides& FunctionOverrides::overrides()
 {
+    FunctionOverridesAssertScope assertScope;
     static LazyNeverDestroyed<FunctionOverrides> overrides;
     static std::once_flag initializeListFlag;
     std::call_once(initializeListFlag, [] {
+        FunctionOverridesAssertScope assertScope;
         const char* overridesFileName = Options::functionOverrides();
         overrides.construct(overridesFileName);
     });
@@ -102,19 +109,23 @@ FunctionOverrides& FunctionOverrides::overrides()
 
 FunctionOverrides::FunctionOverrides(const char* overridesFileName)
 {
-    parseOverridesInFile(overridesFileName);
+    FunctionOverridesAssertScope assertScope;
+    parseOverridesInFile(holdLock(m_lock), overridesFileName);
 }
 
 void FunctionOverrides::reinstallOverrides()
 {
+    FunctionOverridesAssertScope assertScope;
     FunctionOverrides& overrides = FunctionOverrides::overrides();
+    auto locker = holdLock(overrides.m_lock);
     const char* overridesFileName = Options::functionOverrides();
-    overrides.clear();
-    overrides.parseOverridesInFile(overridesFileName);
+    overrides.clear(locker);
+    overrides.parseOverridesInFile(locker, overridesFileName);
 }
 
 static void initializeOverrideInfo(const SourceCode& origCode, const String& newBody, FunctionOverrides::OverrideInfo& info)
 {
+    FunctionOverridesAssertScope assertScope;
     String origProviderStr = origCode.provider()->source().toString();
     unsigned origStart = origCode.startOffset();
     unsigned origFunctionStart = origProviderStr.reverseFind("function", origStart);
@@ -142,7 +153,8 @@ static void initializeOverrideInfo(const SourceCode& origCode, const String& new
 
 bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, FunctionOverrides::OverrideInfo& result)
 {
-    ASSERT(Options::functionOverrides());
+    FunctionOverridesAssertScope assertScope;
+    RELEASE_ASSERT(Options::functionOverrides());
     FunctionOverrides& overrides = FunctionOverrides::overrides();
 
     String sourceString = origCode.view().toString();
@@ -151,11 +163,17 @@ bool FunctionOverrides::initializeOverrideFor(const SourceCode& origCode, Functi
         return false;
     String sourceBodyString = sourceString.substring(sourceBodyStart);
 
-    auto it = overrides.m_entries.find(sourceBodyString);
-    if (it == overrides.m_entries.end())
-        return false;
+    String newBody;
+    {
+        auto locker = holdLock(overrides.m_lock);
+        auto it = overrides.m_entries.find(sourceBodyString.isolatedCopy());
+        if (it == overrides.m_entries.end())
+            return false;
+        newBody = it->value.isolatedCopy();
+    }
 
-    initializeOverrideInfo(origCode, it->value, result);
+    initializeOverrideInfo(origCode, newBody, result);
+    RELEASE_ASSERT(Options::functionOverrides());
     return true;
 }
 
@@ -183,6 +201,7 @@ static bool hasDisallowedCharacters(const char* str, size_t length)
 
 static String parseClause(const char* keyword, size_t keywordLength, FILE* file, const char* line, char* buffer, size_t bufferSize)
 {
+    FunctionOverridesAssertScope assertScope;
     const char* keywordPos = strstr(line, keyword);
     if (!keywordPos)
         FAIL_WITH_ERROR(SYNTAX_ERROR, ("Expecting '", keyword, "' clause:\n", line, "\n"));
@@ -227,8 +246,9 @@ static String parseClause(const char* keyword, size_t keywordLength, FILE* file,
     FAIL_WITH_ERROR(SYNTAX_ERROR, ("'", keyword, "' clause end delimiter '", delimiter, "' not found:\n", builder.toString(), "\n", "Are you missing a '}' before the delimiter?\n"));
 }
 
-void FunctionOverrides::parseOverridesInFile(const char* fileName)
+void FunctionOverrides::parseOverridesInFile(const AbstractLocker&, const char* fileName)
 {
+    FunctionOverridesAssertScope assertScope;
     if (!fileName)
         return;
 

@@ -43,13 +43,17 @@ struct CCECCryptorRefDeleter {
 typedef std::unique_ptr<typename std::remove_pointer<CCECCryptorRef>::type, WebCore::CCECCryptorRefDeleter> PlatformECKeyContainer;
 #endif
 
-#if PLATFORM(GTK) || PLATFORM(WPE)
+#if USE(GCRYPT)
 #include <pal/crypto/gcrypt/Handle.h>
 
 typedef gcry_sexp_t PlatformECKey;
 typedef std::unique_ptr<typename std::remove_pointer<gcry_sexp_t>::type, PAL::GCrypt::HandleDeleter<gcry_sexp_t>> PlatformECKeyContainer;
 #endif
 
+#if USE(OPENSSL)
+typedef void* PlatformECKey;
+typedef std::unique_ptr<PlatformECKey> PlatformECKeyContainer;
+#endif
 
 namespace WebCore {
 
@@ -69,13 +73,13 @@ public:
     }
     virtual ~CryptoKeyEC() = default;
 
-    static ExceptionOr<CryptoKeyPair> generatePair(CryptoAlgorithmIdentifier, const String& curve, bool extractable, CryptoKeyUsageBitmap);
-    static RefPtr<CryptoKeyEC> importRaw(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
+    WEBCORE_EXPORT static ExceptionOr<CryptoKeyPair> generatePair(CryptoAlgorithmIdentifier, const String& curve, bool extractable, CryptoKeyUsageBitmap);
+    WEBCORE_EXPORT static RefPtr<CryptoKeyEC> importRaw(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> importJwk(CryptoAlgorithmIdentifier, const String& curve, JsonWebKey&&, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> importSpki(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
     static RefPtr<CryptoKeyEC> importPkcs8(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
 
-    ExceptionOr<Vector<uint8_t>> exportRaw() const;
+    WEBCORE_EXPORT ExceptionOr<Vector<uint8_t>> exportRaw() const;
     ExceptionOr<JsonWebKey> exportJwk() const;
     ExceptionOr<Vector<uint8_t>> exportSpki() const;
     ExceptionOr<Vector<uint8_t>> exportPkcs8() const;

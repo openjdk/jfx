@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Apple Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -91,7 +91,7 @@ RetainPtr<TextureCacheCV::TextureType> TextureCacheCV::textureFromImage(CVPixelB
     dispatch_async(dispatch_get_main_queue(), [weakThis] {
         if (!weakThis)
             return;
-        
+
         if (auto cache = weakThis->m_cache.get())
 #if USE(OPENGL_ES)
             CVOpenGLESTextureCacheFlush(cache, 0);

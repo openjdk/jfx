@@ -312,7 +312,7 @@ SuccessOr<MediaPlaybackDenialReason> MediaElementSession::playbackPermitted() co
 bool MediaElementSession::autoplayPermitted() const
 {
     const Document& document = m_element.document();
-    if (document.pageCacheState() != Document::NotInPageCache)
+    if (document.backForwardCacheState() != Document::NotInBackForwardCache)
         return false;
     if (document.activeDOMObjectsAreSuspended())
         return false;
@@ -436,7 +436,7 @@ bool MediaElementSession::canShowControlsManager(PlaybackControlsPurpose purpose
         return true;
     }
 
-    if (client().presentationType() == Audio) {
+    if (client().presentationType() == Audio && purpose == PlaybackControlsPurpose::ControlsManager) {
         if (!hasBehaviorRestriction(RequireUserGestureToControlControlsManager) || m_element.document().processingUserGestureForMedia()) {
             INFO_LOG(LOGIDENTIFIER, "returning TRUE: audio element with user gesture");
             return true;
@@ -600,6 +600,11 @@ bool MediaElementSession::wirelessVideoPlaybackDisabled() const
     }
 #endif
 
+    if (m_element.document().settings().remotePlaybackEnabled() && m_element.hasAttributeWithoutSynchronization(HTMLNames::disableremoteplaybackAttr)) {
+        LOG(Media, "MediaElementSession::wirelessVideoPlaybackDisabled - returning TRUE because of RemotePlayback attribute");
+        return true;
+    }
+
     auto player = m_element.player();
     if (!player)
         return true;
@@ -678,6 +683,12 @@ void MediaElementSession::setShouldPlayToPlaybackTarget(bool shouldPlay)
     client().setShouldPlayToPlaybackTarget(shouldPlay);
 }
 
+void MediaElementSession::playbackTargetPickerWasDismissed()
+{
+    INFO_LOG(LOGIDENTIFIER);
+    client().playbackTargetPickerWasDismissed();
+}
+
 void MediaElementSession::mediaStateDidChange(MediaProducer::MediaStateFlags state)
 {
     m_element.document().playbackTargetPickerClientStateDidChange(*this, state);
@@ -692,8 +703,8 @@ MediaPlayer::Preload MediaElementSession::effectivePreloadForElement() const
         return preload;
 
     if (m_restrictions & AutoPreloadingNotPermitted) {
-        if (preload > MediaPlayer::MetaData)
-            return MediaPlayer::MetaData;
+        if (preload > MediaPlayer::Preload::MetaData)
+            return MediaPlayer::Preload::MetaData;
     }
 
     return preload;

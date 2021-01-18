@@ -96,7 +96,6 @@ enum FontLoadTimingOverride { "Block", "Swap", "Failure" };
     void setIndexedDBWorkersEnabled(boolean enabled);
     void setWebGL2Enabled(boolean enabled);
     void setWebGPUEnabled(boolean enabled);
-    void setWebVREnabled(boolean enabled);
     void setScreenCaptureEnabled(boolean enabled);
 
     [MayThrowException] DOMString userInterfaceDirectionPolicy();
@@ -112,6 +111,7 @@ enum FontLoadTimingOverride { "Block", "Swap", "Failure" };
     attribute ForcedAccessibilityValue forcedColorsAreInvertedAccessibilityValue;
     attribute ForcedAccessibilityValue forcedDisplayIsMonochromeAccessibilityValue;
     attribute ForcedAccessibilityValue forcedPrefersReducedMotionAccessibilityValue;
+    attribute ForcedAccessibilityValue forcedSupportsHighDynamicRangeValue;
 
     [MayThrowException] void setShouldManageAudioSessionCategory(boolean should);
     [MayThrowException] void setCustomPasteboardDataEnabled(boolean enabled);

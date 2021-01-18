@@ -68,9 +68,9 @@ enum GeneratedOperandType { GeneratedOperandTypeUnknown, GeneratedOperandInteger
 // a speculative check has failed. This allows the SpeculativeJIT
 // to propagate type information (including information that has
 // only speculatively been asserted) through the dataflow.
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
 class SpeculativeJIT {
-    WTF_MAKE_FAST_ALLOCATED;
-
+    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SpeculativeJIT);
     friend struct OSRExit;
 private:
     typedef JITCompiler::TrustedImm32 TrustedImm32;
@@ -538,7 +538,7 @@ public:
             // We need to box int32 and cell values ...
             // but on JSVALUE64 boxing a cell is a no-op!
             if (spillFormat == DataFormatInt32)
-                m_jit.or64(GPRInfo::tagTypeNumberRegister, reg);
+                m_jit.or64(GPRInfo::numberTagRegister, reg);
 
             // Spill the value, and record it as spilled in its boxed form.
             m_jit.store64(reg, JITCompiler::addressFor(spillMe));
@@ -660,7 +660,7 @@ public:
     void shiftOp(NodeType op, GPRReg op1, int32_t shiftAmount, GPRReg result)
     {
         switch (op) {
-        case BitRShift:
+        case ArithBitRShift:
             m_jit.rshift32(op1, Imm32(shiftAmount), result);
             break;
         case ArithBitLShift:
@@ -676,7 +676,7 @@ public:
     void shiftOp(NodeType op, GPRReg op1, GPRReg shiftAmount, GPRReg result)
     {
         switch (op) {
-        case BitRShift:
+        case ArithBitRShift:
             m_jit.rshift32(op1, shiftAmount, result);
             break;
         case ArithBitLShift:
@@ -714,8 +714,11 @@ public:
     void compileMovHint(Node*);
     void compileMovHintAndCheck(Node*);
 
+    void compileCheckNeutered(Node*);
+
     void cachedGetById(CodeOrigin, JSValueRegs base, JSValueRegs result, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
     void cachedPutById(CodeOrigin, GPRReg baseGPR, JSValueRegs valueRegs, GPRReg scratchGPR, unsigned identifierNumber, PutKind, JITCompiler::Jump slowPathTarget = JITCompiler::Jump(), SpillRegistersMode = NeedToSpill);
+    void cachedGetByVal(CodeOrigin, JSValueRegs base, JSValueRegs property, JSValueRegs result, JITCompiler::Jump slowPathTarget);
 
 #if USE(JSVALUE64)
     void cachedGetById(CodeOrigin, GPRReg baseGPR, GPRReg resultGPR, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode, AccessType);
@@ -736,8 +739,8 @@ public:
     void nonSpeculativeNonPeepholeCompareNullOrUndefined(Edge operand);
     void nonSpeculativePeepholeBranchNullOrUndefined(Edge operand, Node* branchNode);
 
-    void nonSpeculativePeepholeBranch(Node*, Node* branchNode, MacroAssembler::RelationalCondition, S_JITOperation_EJJ helperFunction);
-    void nonSpeculativeNonPeepholeCompare(Node*, MacroAssembler::RelationalCondition, S_JITOperation_EJJ helperFunction);
+    void nonSpeculativePeepholeBranch(Node*, Node* branchNode, MacroAssembler::RelationalCondition, S_JITOperation_GJJ helperFunction);
+    void nonSpeculativeNonPeepholeCompare(Node*, MacroAssembler::RelationalCondition, S_JITOperation_GJJ helperFunction);
 
     void nonSpeculativePeepholeStrictEq(Node*, Node* branchNode, bool invert = false);
     void nonSpeculativeNonPeepholeStrictEq(Node*, bool invert = false);
@@ -921,8 +924,6 @@ public:
         generationInfo(node).initConstant(node, node->refCount());
     }
 
-#define FIRST_ARGUMENT_TYPE typename FunctionTraits<OperationType>::template ArgumentType<0>
-
     template<typename OperationType, typename ResultRegType, typename... Args>
     std::enable_if_t<
         FunctionTraits<OperationType>::hasResult,
@@ -933,56 +934,34 @@ public:
         return appendCallSetResult(operation, result);
     }
 
-    template<typename OperationType, typename Arg, typename... Args>
-    std::enable_if_t<
-        !FunctionTraits<OperationType>::hasResult
-        && !std::is_same<Arg, NoResultTag>::value,
-    JITCompiler::Call>
-    callOperation(OperationType operation, Arg arg, Args... args)
-    {
-        m_jit.setupArguments<OperationType>(arg, args...);
-        return appendCall(operation);
-    }
-
     template<typename OperationType, typename... Args>
     std::enable_if_t<
         !FunctionTraits<OperationType>::hasResult,
     JITCompiler::Call>
-    callOperation(OperationType operation, NoResultTag, Args... args)
+    callOperation(OperationType operation, Args... args)
     {
         m_jit.setupArguments<OperationType>(args...);
         return appendCall(operation);
     }
 
-    template<typename OperationType>
-    std::enable_if_t<
-        !FunctionTraits<OperationType>::hasResult,
-    JITCompiler::Call>
-    callOperation(OperationType operation)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_Cb operation, CodeBlock* codeBlock)
     {
-        m_jit.setupArguments<OperationType>();
-        return appendCall(operation);
-    }
-
-#undef FIRST_ARGUMENT_TYPE
-
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_ECb operation, void* pointer)
-    {
-        m_jit.setupArguments<V_JITOperation_ECb>(TrustedImmPtr(pointer));
+        // Do not register CodeBlock* as a weak-pointer.
+        m_jit.setupArguments<V_JITOperation_Cb>(TrustedImmPtr(static_cast<void*>(codeBlock)));
         return appendCallWithCallFrameRollbackOnException(operation);
     }
 
-    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_E operation, GPRReg result)
+    JITCompiler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_G operation, GPRReg result, JSGlobalObject* globalObject)
     {
-        m_jit.setupArguments<Z_JITOperation_E>();
+        m_jit.setupArguments<Z_JITOperation_G>(TrustedImmPtr::weakPointer(m_graph, globalObject));
         return appendCallWithCallFrameRollbackOnExceptionSetResult(operation, result);
     }
 
-#if !defined(NDEBUG) && !CPU(ARM_THUMB2) && !CPU(MIPS)
     void prepareForExternalCall()
     {
+#if !defined(NDEBUG) && !CPU(ARM_THUMB2) && !CPU(MIPS)
         // We're about to call out to a "native" helper function. The helper
-        // function is expected to set topCallFrame itself with the ExecState
+        // function is expected to set topCallFrame itself with the CallFrame
         // that is passed to it.
         //
         // We explicitly trash topCallFrame here so that we'll know if some of
@@ -992,10 +971,9 @@ public:
 
         for (unsigned i = 0; i < sizeof(void*) / 4; i++)
             m_jit.store32(TrustedImm32(0xbadbeef), reinterpret_cast<char*>(&vm().topCallFrame) + i * 4);
-    }
-#else
-    void prepareForExternalCall() { }
 #endif
+        m_jit.prepareCallOperation(vm());
+    }
 
     // These methods add call instructions, optionally setting results, and optionally rolling back the call frame on an exception.
     JITCompiler::Call appendCall(const FunctionPtr<CFunctionPtrTag> function)
@@ -1044,17 +1022,7 @@ public:
 #endif
     }
 
-#if CPU(X86)
-    JITCompiler::Call appendCallSetResult(const FunctionPtr<CFunctionPtrTag> function, FPRReg result)
-    {
-        JITCompiler::Call call = appendCall(function);
-        if (result != InvalidFPRReg) {
-            m_jit.assembler().fstpl(0, JITCompiler::stackPointerRegister);
-            m_jit.loadDouble(JITCompiler::stackPointerRegister, result);
-        }
-        return call;
-    }
-#elif CPU(ARM_THUMB2) && !CPU(ARM_HARDFP)
+#if CPU(ARM_THUMB2) && !CPU(ARM_HARDFP)
     JITCompiler::Call appendCallSetResult(const FunctionPtr<CFunctionPtrTag> function, FPRReg result)
     {
         JITCompiler::Call call = appendCall(function);
@@ -1175,9 +1143,9 @@ public:
         return betterUseStrictInt52(edge.node());
     }
 
-    bool compare(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_EJJ);
+    bool compare(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_GJJ);
     void compileCompareUnsigned(Node*, MacroAssembler::RelationalCondition);
-    bool compilePeepHoleBranch(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_EJJ);
+    bool compilePeepHoleBranch(Node*, MacroAssembler::RelationalCondition, MacroAssembler::DoubleCondition, S_JITOperation_GJJ);
     void compilePeepHoleInt32Branch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
     void compilePeepHoleInt52Branch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
     void compilePeepHoleBooleanBranch(Node*, Node* branchNode, JITCompiler::RelationalCondition);
@@ -1233,13 +1201,13 @@ public:
 
     void emitSwitchIntJump(SwitchData*, GPRReg value, GPRReg scratch);
     void emitSwitchImm(Node*, SwitchData*);
-    void emitSwitchCharStringJump(SwitchData*, GPRReg value, GPRReg scratch);
+    void emitSwitchCharStringJump(Node*, SwitchData*, GPRReg value, GPRReg scratch);
     void emitSwitchChar(Node*, SwitchData*);
     void emitBinarySwitchStringRecurse(
         SwitchData*, const Vector<StringSwitchCase>&, unsigned numChecked,
         unsigned begin, unsigned end, GPRReg buffer, GPRReg length, GPRReg temp,
         unsigned alreadyCheckedLength, bool checkedExactLength);
-    void emitSwitchStringOnString(SwitchData*, GPRReg string);
+    void emitSwitchStringOnString(Node*, SwitchData*, GPRReg string);
     void emitSwitchString(Node*, SwitchData*);
     void emitSwitch(Node*);
 
@@ -1314,7 +1282,7 @@ public:
     void compileGetArrayLength(Node*);
 
     void compileCheckTypeInfoFlags(Node*);
-    void compileCheckStringIdent(Node*);
+    void compileCheckIdent(Node*);
 
     void compileParseInt(Node*);
 
@@ -1328,13 +1296,14 @@ public:
     void compileValueBitNot(Node*);
     void compileBitwiseNot(Node*);
 
-    template<typename SnippetGenerator, J_JITOperation_EJJ slowPathFunction>
+    template<typename SnippetGenerator, J_JITOperation_GJJ slowPathFunction>
     void emitUntypedBitOp(Node*);
     void compileBitwiseOp(Node*);
     void compileValueBitwiseOp(Node*);
 
     void emitUntypedRightShiftBitOp(Node*);
     void compileValueLShiftOp(Node*);
+    void compileValueBitRShift(Node*);
     void compileShiftOp(Node*);
 
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>
@@ -1342,7 +1311,7 @@ public:
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>
     void compileMathIC(Node*, JITUnaryMathIC<Generator>*, bool needsScratchGPRReg, RepatchingFunction, NonRepatchingFunction);
 
-    void compileArithDoubleUnaryOp(Node*, double (*doubleFunction)(double), double (*operation)(ExecState*, EncodedJSValue));
+    void compileArithDoubleUnaryOp(Node*, double (*doubleFunction)(double), double (*operation)(JSGlobalObject*, EncodedJSValue));
     void compileValueAdd(Node*);
     void compileValueSub(Node*);
     void compileArithAdd(Node*);
@@ -1350,6 +1319,7 @@ public:
     void compileArithAbs(Node*);
     void compileArithClz32(Node*);
     void compileArithSub(Node*);
+    void compileIncOrDec(Node*);
     void compileValueNegate(Node*);
     void compileArithNegate(Node*);
     void compileValueMul(Node*);
@@ -1400,6 +1370,7 @@ public:
     void compileSetFunctionName(Node*);
     void compileNewRegexp(Node*);
     void compileForwardVarargs(Node*);
+    void compileVarargsLength(Node*);
     void compileLoadVarargs(Node*);
     void compileCreateActivation(Node*);
     void compileCreateDirectArguments(Node*);
@@ -1408,6 +1379,7 @@ public:
     void compileGetArgument(Node*);
     void compileCreateScopedArguments(Node*);
     void compileCreateClonedArguments(Node*);
+    void compileCreateArgumentsButterfly(Node*);
     void compileCreateRest(Node*);
     void compileSpread(Node*);
     void compileNewArray(Node*);
@@ -1448,6 +1420,8 @@ public:
     void compilePutDynamicVar(Node*);
     void compileGetClosureVar(Node*);
     void compilePutClosureVar(Node*);
+    void compileGetInternalField(Node*);
+    void compilePutInternalField(Node*);
     void compileCompareEqPtr(Node*);
     void compileDefineDataProperty(Node*);
     void compileDefineAccessorProperty(Node*);
@@ -1481,14 +1455,30 @@ public:
     void compileObjectKeys(Node*);
     void compileObjectCreate(Node*);
     void compileCreateThis(Node*);
+    void compileCreatePromise(Node*);
+    void compileCreateGenerator(Node*);
+    void compileCreateAsyncGenerator(Node*);
     void compileNewObject(Node*);
+    void compileNewPromise(Node*);
+    void compileNewGenerator(Node*);
+    void compileNewAsyncGenerator(Node*);
+    void compileNewArrayIterator(Node*);
     void compileToPrimitive(Node*);
+    void compileToPropertyKey(Node*);
+    void compileToNumeric(Node*);
     void compileLogShadowChickenPrologue(Node*);
     void compileLogShadowChickenTail(Node*);
     void compileHasIndexedProperty(Node*);
     void compileExtractCatchLocal(Node*);
     void compileClearCatchLocals(Node*);
     void compileProfileType(Node*);
+    void compileStringCodePointAt(Node*);
+    void compileDateGet(Node*);
+
+    template<typename JSClass, typename Operation>
+    void compileCreateInternalFieldObject(Node*, Operation);
+    template<typename JSClass, typename Operation>
+    void compileNewInternalFieldObject(Node*, Operation);
 
     void moveTrueTo(GPRReg);
     void moveFalseTo(GPRReg);
@@ -1605,10 +1595,14 @@ public:
     void speculateFinalObject(Edge);
     void speculateRegExpObject(Edge, GPRReg cell);
     void speculateRegExpObject(Edge);
+    void speculatePromiseObject(Edge);
+    void speculatePromiseObject(Edge, GPRReg cell);
     void speculateProxyObject(Edge, GPRReg cell);
     void speculateProxyObject(Edge);
     void speculateDerivedArray(Edge, GPRReg cell);
     void speculateDerivedArray(Edge);
+    void speculateDateObject(Edge);
+    void speculateDateObject(Edge, GPRReg cell);
     void speculateMapObject(Edge);
     void speculateMapObject(Edge, GPRReg cell);
     void speculateSetObject(Edge);
@@ -1656,15 +1650,16 @@ public:
     void cageTypedArrayStorage(GPRReg, GPRReg);
 
     void recordSetLocal(
-        VirtualRegister bytecodeReg, VirtualRegister machineReg, DataFormat format)
+        Operand bytecodeReg, VirtualRegister machineReg, DataFormat format)
     {
+        ASSERT(!bytecodeReg.isArgument() || bytecodeReg.virtualRegister().toArgument() >= 0);
         m_stream->appendAndLog(VariableEvent::setLocal(bytecodeReg, machineReg, format));
     }
 
     void recordSetLocal(DataFormat format)
     {
         VariableAccessData* variable = m_currentNode->variableAccessData();
-        recordSetLocal(variable->local(), variable->machineLocal(), format);
+        recordSetLocal(variable->operand(), variable->machineLocal(), format);
     }
 
     GenerationInfo& generationInfoFromVirtualRegister(VirtualRegister virtualRegister)

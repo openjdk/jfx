@@ -40,6 +40,7 @@
 namespace WebCore {
 
 class ErrorEvent final : public Event {
+    WTF_MAKE_ISO_ALLOCATED(ErrorEvent);
 public:
     static Ref<ErrorEvent> create(const String& message, const String& fileName, unsigned lineNumber, unsigned columnNumber, JSC::Strong<JSC::Unknown> error)
     {
@@ -65,14 +66,14 @@ public:
     const String& filename() const { return m_fileName; }
     unsigned lineno() const { return m_lineNumber; }
     unsigned colno() const { return m_columnNumber; }
-    JSC::JSValue error(JSC::ExecState&, JSC::JSGlobalObject&);
+    JSC::JSValue error(JSC::JSGlobalObject&);
 
     const JSValueInWrappedObject& originalError() const { return m_error; }
     SerializedScriptValue* serializedError() const { return m_serializedError.get(); }
 
     EventInterface eventInterface() const override;
 
-    RefPtr<SerializedScriptValue> trySerializeError(JSC::ExecState&);
+    RefPtr<SerializedScriptValue> trySerializeError(JSC::JSGlobalObject&);
 
 private:
     ErrorEvent(const String& message, const String& fileName, unsigned lineNumber, unsigned columnNumber, JSC::Strong<JSC::Unknown> error);

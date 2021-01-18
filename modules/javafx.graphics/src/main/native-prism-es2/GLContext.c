@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2122,6 +2122,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_GLContext_nCreateES2MeshView
     meshViewInfo->pointLightPosition[1] = 0;
     meshViewInfo->pointLightPosition[2] = 0;
     meshViewInfo->pointLightWeight = 0;
+    meshViewInfo->pointLightAttenuation[0] = 1;
+    meshViewInfo->pointLightAttenuation[1] = 0;
+    meshViewInfo->pointLightAttenuation[2] = 0;
+    meshViewInfo->pointLightMaxRange = 0;
 
     return ptr_to_jlong(meshViewInfo);
 }
@@ -2265,7 +2269,8 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetAmbientLight
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshViewInfo,
-        jint index, jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w)
+        jint index, jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
+        jfloat ca, jfloat la, jfloat qa, jfloat maxRange)
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     MeshViewInfo *meshViewInfo = (MeshViewInfo *) jlong_to_ptr(nativeMeshViewInfo);
@@ -2281,6 +2286,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
     meshViewInfo->pointLightColor[1] = g;
     meshViewInfo->pointLightColor[2] = b;
     meshViewInfo->pointLightWeight = w;
+    meshViewInfo->pointLightAttenuation[0] = ca;
+    meshViewInfo->pointLightAttenuation[1] = la;
+    meshViewInfo->pointLightAttenuation[2] = qa;
+    meshViewInfo->pointLightMaxRange = maxRange;
 }
 
 /*

@@ -50,6 +50,7 @@
 #include <WebCore/NodeList.h>
 #include <WebCore/ProcessingInstruction.h>
 #include <WebCore/Range.h>
+#include <WebCore/SecurityOrigin.h>
 #include <WebCore/ScrollIntoViewOptions.h>
 #include <WebCore/StyleSheetList.h>
 #include <WebCore/Text.h>
@@ -387,7 +388,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCurrentScriptImp
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getOriginImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->origin());
+    return JavaReturn<String>(env, IMPL->securityOrigin().toString());
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getScrollingElementImpl(JNIEnv* env, jclass, jlong peer)
@@ -1416,7 +1417,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createNSResolverImp
     , jlong nodeResolver)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
+    if (!nodeResolver)
+        return 0;
+
+    return JavaReturn<XPathNSResolver>(env, WTF::getPtr(IMPL->createNSResolver(*static_cast<Node*>(jlong_to_ptr(nodeResolver)))));
 }
 
 // - (DOMXPathResult *)evaluate:(NSString *)expression
@@ -1434,7 +1438,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_evaluateImpl(JNIEnv
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<XPathResult>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->evaluate(String(env, expression)
-            , static_cast<Node*>(jlong_to_ptr(contextNode))
+            , *static_cast<Node*>(jlong_to_ptr(contextNode))
             , static_cast<XPathNSResolver*>(jlong_to_ptr(resolver))
             , type
             , static_cast<XPathResult*>(jlong_to_ptr(inResult))))));

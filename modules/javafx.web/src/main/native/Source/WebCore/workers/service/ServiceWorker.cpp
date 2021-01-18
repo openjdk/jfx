@@ -40,6 +40,7 @@
 #include "ServiceWorkerGlobalScope.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerThread.h"
+#include "WorkerSWClientConnection.h"
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
@@ -90,21 +91,21 @@ void ServiceWorker::updateState(State state)
     updatePendingActivityForEventDispatch();
 }
 
-ExceptionOr<void> ServiceWorker::postMessage(ScriptExecutionContext& context, JSC::JSValue messageValue, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
+SWClientConnection& ServiceWorker::swConnection()
 {
-    if (m_isStopped || !context.sessionID().isValid())
+    ASSERT(scriptExecutionContext());
+    if (is<WorkerGlobalScope>(scriptExecutionContext()))
+        return downcast<WorkerGlobalScope>(scriptExecutionContext())->swClientConnection();
+    return ServiceWorkerProvider::singleton().serviceWorkerConnection();
+}
+
+ExceptionOr<void> ServiceWorker::postMessage(JSC::JSGlobalObject& globalObject, JSC::JSValue messageValue, PostMessageOptions&& options)
+{
+    if (m_isStopped)
         return Exception { InvalidStateError };
 
-    if (state() == State::Redundant)
-        return Exception { InvalidStateError, "Service Worker state is redundant"_s };
-
-    // FIXME: Invoke Run Service Worker algorithm with serviceWorker as the argument.
-
-    auto* execState = context.execState();
-    ASSERT(execState);
-
     Vector<RefPtr<MessagePort>> ports;
-    auto messageData = SerializedScriptValue::create(*execState, messageValue, WTFMove(transfer), ports, SerializationContext::WorkerPostMessage);
+    auto messageData = SerializedScriptValue::create(globalObject, messageValue, WTFMove(options.transfer), ports, SerializationContext::WorkerPostMessage);
     if (messageData.hasException())
         return messageData.releaseException();
 
@@ -113,19 +114,17 @@ ExceptionOr<void> ServiceWorker::postMessage(ScriptExecutionContext& context, JS
     if (portsOrException.hasException())
         return portsOrException.releaseException();
 
+    auto& context = *scriptExecutionContext();
     ServiceWorkerOrClientIdentifier sourceIdentifier;
     if (is<ServiceWorkerGlobalScope>(context))
         sourceIdentifier = downcast<ServiceWorkerGlobalScope>(context).thread().identifier();
     else {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnectionForSession(context.sessionID());
+        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
         sourceIdentifier = ServiceWorkerClientIdentifier { connection.serverConnectionIdentifier(), downcast<Document>(context).identifier() };
     }
 
-    MessageWithMessagePorts message = { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
-    callOnMainThread([sessionID = context.sessionID(), destinationIdentifier = identifier(), message = WTFMove(message), sourceIdentifier = WTFMove(sourceIdentifier)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnectionForSession(sessionID);
-        connection.postMessageToServiceWorker(destinationIdentifier, WTFMove(message), sourceIdentifier);
-    });
+    MessageWithMessagePorts message { messageData.releaseReturnValue(), portsOrException.releaseReturnValue() };
+    swConnection().postMessageToServiceWorker(identifier(), WTFMove(message), sourceIdentifier);
     return { };
 }
 
@@ -142,12 +141,6 @@ ScriptExecutionContext* ServiceWorker::scriptExecutionContext() const
 const char* ServiceWorker::activeDOMObjectName() const
 {
     return "ServiceWorker";
-}
-
-bool ServiceWorker::canSuspendForDocumentSuspension() const
-{
-    // FIXME: We should do better as this prevents the page from entering PageCache when there is a Service Worker.
-    return !hasPendingActivity();
 }
 
 void ServiceWorker::stop()

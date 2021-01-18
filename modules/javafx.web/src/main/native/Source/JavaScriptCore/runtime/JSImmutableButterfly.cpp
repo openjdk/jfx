@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSImmutableButterfly.h"
 
+#include "ButterflyInlines.h"
 #include "CodeBlock.h"
 
 namespace JSC {
@@ -45,13 +46,13 @@ void JSImmutableButterfly::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.appendValuesHidden(butterfly->contiguous().data(), butterfly->publicLength());
 }
 
-void JSImmutableButterfly::copyToArguments(ExecState* exec, VirtualRegister firstElementDest, unsigned offset, unsigned length)
+void JSImmutableButterfly::copyToArguments(JSGlobalObject*, JSValue* firstElementDest, unsigned offset, unsigned length)
 {
     for (unsigned i = 0; i < length; ++i) {
         if ((i + offset) < publicLength())
-            exec->r(firstElementDest + i) = get(i + offset);
+            firstElementDest[i] = get(i + offset);
         else
-            exec->r(firstElementDest + i) = jsUndefined();
+            firstElementDest[i] = jsUndefined();
     }
 }
 

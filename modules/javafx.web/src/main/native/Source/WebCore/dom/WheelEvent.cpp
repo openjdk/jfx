@@ -26,9 +26,12 @@
 
 #include "DataTransfer.h"
 #include "EventNames.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WheelEvent);
 
 inline static unsigned determineDeltaMode(const PlatformWheelEvent& event)
 {
@@ -49,7 +52,7 @@ inline WheelEvent::WheelEvent(const AtomString& type, const Init& initializer)
 
 inline WheelEvent::WheelEvent(const PlatformWheelEvent& event, RefPtr<WindowProxy>&& view)
     : MouseEvent(eventNames().wheelEvent, CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes, event.timestamp().approximateMonotonicTime(), WTFMove(view), 0,
-        event.globalPosition(), event.position() , { }, event.modifiers(), 0, 0, nullptr, 0, 0, nullptr, IsSimulated::No, IsTrusted::Yes)
+        event.globalPosition(), event.position() , { }, event.modifiers(), 0, 0, nullptr, 0, 0, IsSimulated::No, IsTrusted::Yes)
     , m_wheelDelta(event.wheelTicksX() * TickMultiplier, event.wheelTicksY() * TickMultiplier)
     , m_deltaX(-event.deltaX())
     , m_deltaY(-event.deltaY())

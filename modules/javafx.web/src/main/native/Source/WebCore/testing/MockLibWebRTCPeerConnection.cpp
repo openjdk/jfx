@@ -29,7 +29,7 @@
 
 #include "LibWebRTCProvider.h"
 #include <sstream>
-#include <webrtc/pc/mediastream.h>
+#include <webrtc/pc/media_stream.h>
 #include <wtf/Function.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
@@ -78,7 +78,8 @@ MockLibWebRTCPeerConnection::~MockLibWebRTCPeerConnection()
 std::vector<rtc::scoped_refptr<webrtc::RtpTransceiverInterface>> MockLibWebRTCPeerConnection::GetTransceivers() const
 {
     std::vector<rtc::scoped_refptr<webrtc::RtpTransceiverInterface>> transceivers;
-    for (auto transceiver : m_transceivers)
+    transceivers.reserve(m_transceivers.size());
+    for (const auto& transceiver : m_transceivers)
         transceivers.push_back(transceiver);
     return transceivers;
 }

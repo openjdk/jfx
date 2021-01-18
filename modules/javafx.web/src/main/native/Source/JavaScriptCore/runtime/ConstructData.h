@@ -35,7 +35,7 @@
 namespace JSC {
 
 class ArgList;
-class ExecState;
+class CallFrame;
 class FunctionExecutable;
 class JSObject;
 class JSScope;
@@ -59,19 +59,21 @@ struct ConstructData {
 };
 
 // Convenience wrapper so you don't need to deal with CallData and CallType unless you are going to use them.
-JS_EXPORT_PRIVATE JSObject* construct(ExecState*, JSValue functionObject, const ArgList&, const char* errorMessage);
-JS_EXPORT_PRIVATE JSObject* construct(ExecState*, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
+JS_EXPORT_PRIVATE JSObject* construct(JSGlobalObject*, JSValue functionObject, const ArgList&, const char* errorMessage);
+JS_EXPORT_PRIVATE JSObject* construct(JSGlobalObject*, JSValue functionObject, JSValue newTarget, const ArgList&, const char* errorMessage);
 
-ALWAYS_INLINE JSObject* construct(ExecState* exec, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
+JS_EXPORT_PRIVATE JSObject* construct(JSGlobalObject*, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
+
+ALWAYS_INLINE JSObject* construct(JSGlobalObject* globalObject, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
 {
-    return construct(exec, constructorObject, constructType, constructData, args, constructorObject);
+    return construct(globalObject, constructorObject, constructType, constructData, args, constructorObject);
 }
 
-JS_EXPORT_PRIVATE JSObject* profiledConstruct(ExecState*, ProfilingReason, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
+JS_EXPORT_PRIVATE JSObject* profiledConstruct(JSGlobalObject*, ProfilingReason, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
 
-ALWAYS_INLINE JSObject* profiledConstruct(ExecState* exec, ProfilingReason reason, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
+ALWAYS_INLINE JSObject* profiledConstruct(JSGlobalObject* globalObject, ProfilingReason reason, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
 {
-    return profiledConstruct(exec, reason, constructorObject, constructType, constructData, args, constructorObject);
+    return profiledConstruct(globalObject, reason, constructorObject, constructType, constructData, args, constructorObject);
 }
 
 } // namespace JSC

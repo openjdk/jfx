@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,11 @@ ext.MAC = [:]
 MAC.canBuild = IS_MAC && IS_64
 if (!MAC.canBuild) return;
 
+def TARGET_ARCH = "x86_64"
+if (hasProperty('TARGET_ARCH')) {
+    TARGET_ARCH = ext.TARGET_ARCH
+}
+
 // All desktop related packages should be built
 MAC.compileSwing = true;
 MAC.compileSWT = true;
@@ -45,7 +50,7 @@ MAC.libDest = "lib"
  * In extreme cases you can provide your own properties in your home dir to
  * override these settings or pass them on the command line.
  */
-def prefSdkVersion = "10.11"
+def prefSdkVersion = "10.15"
 def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${prefSdkVersion}.sdk";
 
 // Set the minimum API version that we require (developers do not need to override this)
@@ -119,7 +124,11 @@ def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
         "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
-        "-arch", "x86_64"]
+        "-arch", "$TARGET_ARCH"]
+
+if (hasProperty('TARGET_ARCH')) {
+    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams]
+}
 
 def ccBaseFlags = [
         commonParams,

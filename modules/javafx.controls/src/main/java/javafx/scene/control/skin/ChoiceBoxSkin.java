@@ -147,7 +147,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         initialize();
 
         itemsObserver = observable -> updateChoiceBoxItems();
-        control.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
+        control.itemsProperty().addListener(itemsObserver);
 
         control.requestLayout();
         registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
@@ -206,6 +206,9 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable() == null) return;
+        // removing itemsObserver fixes NP on setting items
+        getSkinnable().itemsProperty().removeListener(itemsObserver);
          // removing the content listener fixes NPE from listener
         if (choiceBoxItems != null) {
             choiceBoxItems.removeListener(weakChoiceBoxItemsListener);

@@ -113,11 +113,12 @@ public:
     virtual void resetRestrictions();
 
     virtual bool sessionWillBeginPlayback(PlatformMediaSession&);
-    virtual void sessionWillEndPlayback(PlatformMediaSession&);
+
+    virtual void sessionWillEndPlayback(PlatformMediaSession&, DelayCallingUpdateNowPlaying);
     virtual void sessionStateChanged(PlatformMediaSession&);
     virtual void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) { };
     virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
-    virtual void sessionCanProduceAudioChanged(PlatformMediaSession&);
+    virtual void sessionCanProduceAudioChanged();
 
 #if PLATFORM(IOS_FAMILY)
     virtual void configureWireLessTargetMonitoring() { }
@@ -148,6 +149,11 @@ protected:
     bool anyOfSessions(const Function<bool(const PlatformMediaSession&)>&) const;
 
     AudioHardwareListener* audioHardwareListener() { return m_audioHardwareListener.get(); }
+
+    bool isApplicationInBackground() const { return m_isApplicationInBackground; }
+#if USE(AUDIO_SESSION)
+    void maybeDeactivateAudioSession();
+#endif
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger; }

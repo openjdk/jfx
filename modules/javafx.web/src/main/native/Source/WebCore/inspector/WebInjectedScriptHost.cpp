@@ -32,6 +32,8 @@
 #include "JSHTMLCollection.h"
 #include "JSNode.h"
 #include "JSNodeList.h"
+#include "JSWorker.h"
+#include "Worker.h"
 
 #if ENABLE(PAYMENT_REQUEST)
 #include "JSPaymentRequest.h"
@@ -44,7 +46,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-JSValue WebInjectedScriptHost::subtype(ExecState* exec, JSValue value)
+JSValue WebInjectedScriptHost::subtype(JSGlobalObject* exec, JSValue value)
 {
     VM& vm = exec->vm();
     if (value.inherits<JSNode>(vm))
@@ -59,8 +61,7 @@ JSValue WebInjectedScriptHost::subtype(ExecState* exec, JSValue value)
     return jsUndefined();
 }
 
-#if ENABLE(PAYMENT_REQUEST)
-static JSObject* constructInternalProperty(VM& vm, ExecState* exec, const String& name, JSValue value)
+static JSObject* constructInternalProperty(VM& vm, JSGlobalObject* exec, const String& name, JSValue value)
 {
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(vm, "name"), jsString(vm, name));
@@ -68,7 +69,8 @@ static JSObject* constructInternalProperty(VM& vm, ExecState* exec, const String
     return object;
 }
 
-static JSObject* objectForPaymentOptions(VM& vm, ExecState* exec, const PaymentOptions& paymentOptions)
+#if ENABLE(PAYMENT_REQUEST)
+static JSObject* objectForPaymentOptions(VM& vm, JSGlobalObject* exec, const PaymentOptions& paymentOptions)
 {
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(vm, "requestPayerName"), jsBoolean(paymentOptions.requestPayerName));
@@ -79,7 +81,7 @@ static JSObject* objectForPaymentOptions(VM& vm, ExecState* exec, const PaymentO
     return object;
 }
 
-static JSObject* objectForPaymentCurrencyAmount(VM& vm, ExecState* exec, const PaymentCurrencyAmount& paymentCurrencyAmount)
+static JSObject* objectForPaymentCurrencyAmount(VM& vm, JSGlobalObject* exec, const PaymentCurrencyAmount& paymentCurrencyAmount)
 {
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(vm, "currency"), jsString(vm, paymentCurrencyAmount.currency));
@@ -87,7 +89,7 @@ static JSObject* objectForPaymentCurrencyAmount(VM& vm, ExecState* exec, const P
     return object;
 }
 
-static JSObject* objectForPaymentItem(VM& vm, ExecState* exec, const PaymentItem& paymentItem)
+static JSObject* objectForPaymentItem(VM& vm, JSGlobalObject* exec, const PaymentItem& paymentItem)
 {
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(vm, "label"), jsString(vm, paymentItem.label));
@@ -96,7 +98,7 @@ static JSObject* objectForPaymentItem(VM& vm, ExecState* exec, const PaymentItem
     return object;
 }
 
-static JSObject* objectForPaymentShippingOption(VM& vm, ExecState* exec, const PaymentShippingOption& paymentShippingOption)
+static JSObject* objectForPaymentShippingOption(VM& vm, JSGlobalObject* exec, const PaymentShippingOption& paymentShippingOption)
 {
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(vm, "id"), jsString(vm, paymentShippingOption.id));
@@ -106,7 +108,7 @@ static JSObject* objectForPaymentShippingOption(VM& vm, ExecState* exec, const P
     return object;
 }
 
-static JSObject* objectForPaymentDetailsModifier(VM& vm, ExecState* exec, const PaymentDetailsModifier& modifier)
+static JSObject* objectForPaymentDetailsModifier(VM& vm, JSGlobalObject* exec, const PaymentDetailsModifier& modifier)
 {
     auto* additionalDisplayItems = constructEmptyArray(exec, nullptr);
     for (unsigned i = 0; i < modifier.additionalDisplayItems.size(); ++i)
@@ -120,7 +122,7 @@ static JSObject* objectForPaymentDetailsModifier(VM& vm, ExecState* exec, const 
     return object;
 }
 
-static JSObject* objectForPaymentDetails(VM& vm, ExecState* exec, const PaymentDetailsInit& paymentDetails)
+static JSObject* objectForPaymentDetails(VM& vm, JSGlobalObject* exec, const PaymentDetailsInit& paymentDetails)
 {
     auto* displayItems = constructEmptyArray(exec, nullptr);
     for (unsigned i = 0; i < paymentDetails.displayItems.size(); ++i)
@@ -159,11 +161,19 @@ static JSString* jsStringForPaymentRequestState(VM& vm, PaymentRequest::State st
 }
 #endif
 
-JSValue WebInjectedScriptHost::getInternalProperties(VM& vm, ExecState* exec, JSC::JSValue value)
+JSValue WebInjectedScriptHost::getInternalProperties(VM& vm, JSGlobalObject* exec, JSC::JSValue value)
 {
-#if ENABLE(PAYMENT_REQUEST)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    if (auto* worker = JSWorker::toWrapped(vm, value)) {
+        unsigned index = 0;
+        auto* array = constructEmptyArray(exec, nullptr);
+        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, "terminated"_s, jsBoolean(worker->wasTerminated())));
+        RETURN_IF_EXCEPTION(scope, { });
+        return array;
+    }
+
+#if ENABLE(PAYMENT_REQUEST)
     if (PaymentRequest* paymentRequest = JSPaymentRequest::toWrapped(vm, value)) {
         unsigned index = 0;
         auto* array = constructEmptyArray(exec, nullptr);
@@ -173,10 +183,6 @@ JSValue WebInjectedScriptHost::getInternalProperties(VM& vm, ExecState* exec, JS
         RETURN_IF_EXCEPTION(scope, { });
         return array;
     }
-#else
-    UNUSED_PARAM(vm);
-    UNUSED_PARAM(exec);
-    UNUSED_PARAM(value);
 #endif
 
     return { };

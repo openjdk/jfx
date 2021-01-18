@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import javafx.animation.AnimationShim;
 
 public class AnimationImpl extends AnimationShim {
 
-    public AnimationImpl(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
+    public AnimationImpl(AbstractPrimaryTimer timer, ClipEnvelope clipEnvelope, int resolution) {
         super(timer, clipEnvelope, resolution);
     }
 
@@ -39,7 +39,7 @@ public class AnimationImpl extends AnimationShim {
         super();
     }
 
-    public AnimationImpl(AbstractMasterTimer timer) {
+    public AnimationImpl(AbstractPrimaryTimer timer) {
         super(timer);
     }
 

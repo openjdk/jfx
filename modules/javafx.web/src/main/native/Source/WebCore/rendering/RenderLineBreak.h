@@ -46,9 +46,9 @@ public:
     void deleteInlineBoxWrapper();
     void replaceInlineBoxWrapper(InlineElementBox&);
     void dirtyLineBoxes(bool fullLayout);
-    void deleteLineBoxesBeforeSimpleLineLayout();
 
     IntRect linesBoundingBox() const;
+    IntRect boundingBoxForRenderTreeDump() const;
 
     void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const override;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const override;

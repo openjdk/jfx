@@ -32,7 +32,7 @@
 #include "ServiceWorkerTypes.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
@@ -53,24 +53,23 @@ struct ServiceWorkerData;
 struct ServiceWorkerFetchResult;
 struct ServiceWorkerRegistrationData;
 
-class SWClientConnection : public ThreadSafeRefCounted<SWClientConnection> {
+class SWClientConnection : public RefCounted<SWClientConnection> {
 public:
     WEBCORE_EXPORT virtual ~SWClientConnection();
 
-    using RegistrationCallback = WTF::CompletionHandler<void(Optional<ServiceWorkerRegistrationData>&&)>;
+    using RegistrationCallback = CompletionHandler<void(Optional<ServiceWorkerRegistrationData>&&)>;
     virtual void matchRegistration(SecurityOriginData&& topOrigin, const URL& clientURL, RegistrationCallback&&) = 0;
 
-    using GetRegistrationsCallback = WTF::CompletionHandler<void(Vector<ServiceWorkerRegistrationData>&&)>;
+    using GetRegistrationsCallback = CompletionHandler<void(Vector<ServiceWorkerRegistrationData>&&)>;
     virtual void getRegistrations(SecurityOriginData&& topOrigin, const URL& clientURL, GetRegistrationsCallback&&) = 0;
 
-    using WhenRegistrationReadyCallback = WTF::Function<void(ServiceWorkerRegistrationData&&)>;
-    virtual void whenRegistrationReady(const SecurityOrigin& topOrigin, const URL& clientURL, WhenRegistrationReadyCallback&&) = 0;
+    using WhenRegistrationReadyCallback = Function<void(ServiceWorkerRegistrationData&&)>;
+    virtual void whenRegistrationReady(const SecurityOriginData& topOrigin, const URL& clientURL, WhenRegistrationReadyCallback&&) = 0;
 
     virtual void addServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier) = 0;
     virtual void removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier) = 0;
 
-    void scheduleJob(DocumentOrWorkerIdentifier, const ServiceWorkerJobData&);
-    void failedFetchingScript(ServiceWorkerJobIdentifier, const ServiceWorkerRegistrationKey&, const ResourceError&);
+    WEBCORE_EXPORT virtual void scheduleJob(DocumentOrWorkerIdentifier, const ServiceWorkerJobData&);
 
     virtual void didResolveRegistrationPromise(const ServiceWorkerRegistrationKey&) = 0;
 
@@ -85,10 +84,10 @@ public:
 
     virtual void finishFetchingScriptInServer(const ServiceWorkerFetchResult&) = 0;
 
-    virtual bool isThrottleable() const = 0;
-    virtual void updateThrottleState() = 0;
-
     virtual void storeRegistrationsOnDiskForTesting(CompletionHandler<void()>&& callback) { callback(); }
+    virtual void isServiceWorkerRunning(ServiceWorkerIdentifier, CompletionHandler<void(bool)>&& callback) { callback(false); }
+
+    WEBCORE_EXPORT void registerServiceWorkerClients();
 
 protected:
     WEBCORE_EXPORT SWClientConnection();
@@ -111,7 +110,7 @@ private:
     virtual void scheduleJobInServer(const ServiceWorkerJobData&) = 0;
 
     enum class IsJobComplete { No, Yes };
-    bool postTaskForJob(ServiceWorkerJobIdentifier, IsJobComplete, WTF::Function<void(ServiceWorkerJob&)>&&);
+    bool postTaskForJob(ServiceWorkerJobIdentifier, IsJobComplete, Function<void(ServiceWorkerJob&)>&&);
 
     HashMap<ServiceWorkerJobIdentifier, DocumentOrWorkerIdentifier> m_scheduledJobSources;
 };

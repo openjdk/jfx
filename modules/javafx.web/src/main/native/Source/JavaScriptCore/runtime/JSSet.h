@@ -36,26 +36,32 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    template<typename CellType, SubspaceAccess mode>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return vm.setSpace<mode>();
+    }
+
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetType, StructureFlags), info());
     }
 
-    static JSSet* create(ExecState* exec, VM& vm, Structure* structure)
+    static JSSet* create(JSGlobalObject* globalObject, VM& vm, Structure* structure)
     {
-        return create(exec, vm, structure, 0);
+        return create(globalObject, vm, structure, 0);
     }
 
-    static JSSet* create(ExecState* exec, VM& vm, Structure* structure, uint32_t size)
+    static JSSet* create(JSGlobalObject* globalObject, VM& vm, Structure* structure, uint32_t size)
     {
         JSSet* instance = new (NotNull, allocateCell<JSSet>(vm.heap)) JSSet(vm, structure, size);
-        instance->finishCreation(exec, vm);
+        instance->finishCreation(globalObject, vm);
         return instance;
     }
 
     bool isIteratorProtocolFastAndNonObservable();
     bool canCloneFastAndNonObservable(Structure*);
-    JSSet* clone(ExecState*, VM&, Structure*);
+    JSSet* clone(JSGlobalObject*, VM&, Structure*);
 
 private:
     JSSet(VM& vm, Structure* structure)
@@ -68,7 +74,7 @@ private:
     {
     }
 
-    static String toStringName(const JSObject*, ExecState*);
+    static String toStringName(const JSObject*, JSGlobalObject*);
 };
 
 static_assert(std::is_final<JSSet>::value, "Required for JSType based casting");

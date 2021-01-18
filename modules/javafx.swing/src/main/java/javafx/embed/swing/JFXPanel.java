@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -299,12 +299,14 @@ public class JFXPanel extends JComponent {
                     (PrivilegedAction<EventQueue>) java.awt.Toolkit
                             .getDefaultToolkit()::getSystemEventQueue);
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
-            if (secondaryLoop.enter()) {
-                Platform.runLater(() -> {
+            Platform.runLater(() -> {
+                try {
                     setSceneImpl(newScene);
-                });
-                secondaryLoop.exit();
-            }
+                } finally {
+                    secondaryLoop.exit();
+                }
+            });
+            secondaryLoop.enter();
         }
     }
 
@@ -449,8 +451,10 @@ public class JFXPanel extends JComponent {
                 // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
-                int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
-                stagePeer.setFocused(true, focusCause);
+                if (stagePeer != null) {
+                    int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
+                    stagePeer.setFocused(true, focusCause);
+                }
             }
         }
 
@@ -685,8 +689,8 @@ public class JFXPanel extends JComponent {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;
                 // Transform old size to the new coordinate space.
-                int oldW = (int)Math.round(oldIm.getWidth() * ratioX);
-                int oldH = (int)Math.round(oldIm.getHeight() * ratioY);
+                int oldW = (int)Math.ceil(oldIm.getWidth() * ratioX);
+                int oldH = (int)Math.ceil(oldIm.getHeight() * ratioY);
 
                 Graphics g = pixelsIm.getGraphics();
                 try {
@@ -928,6 +932,11 @@ public class JFXPanel extends JComponent {
 
     private void invokeOnClientEDT(Runnable r) {
         jfxPanelIOP.postEvent(this, new InvocationEvent(this, r));
+    }
+
+    // Package scope method for testing
+    final BufferedImage test_getPixelsIm() {
+        return pixelsIm;
     }
 
     private class HostContainer implements HostInterface {

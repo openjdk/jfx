@@ -30,6 +30,7 @@
 
 #include "WHLSLCallExpression.h"
 #include "WHLSLParser.h"
+#include "WHLSLProgram.h"
 #include "WHLSLStandardLibrary.h"
 #include "WHLSLStandardLibraryFunctionMap.h"
 #include "WHLSLVisitor.h"
@@ -64,14 +65,6 @@ private:
     {
         m_functionNames.add(callExpression.name());
         Visitor::visit(callExpression);
-    }
-
-    void visit(AST::PropertyAccessExpression& propertyAccessExpression) override
-    {
-        m_functionNames.add(propertyAccessExpression.getterFunctionName());
-        m_functionNames.add(propertyAccessExpression.setterFunctionName());
-        m_functionNames.add(propertyAccessExpression.anderFunctionName());
-        Visitor::visit(propertyAccessExpression);
     }
 
     HashSet<String> m_functionNames;

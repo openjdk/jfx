@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,12 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
      * Public API                                                          *
      *                                                                     *
      **********************************************************************/
+
+    /**
+     * Constructor for subclasses to call.
+     */
+    public TableFocusModel() {
+    }
 
     /**
      * Causes the item at the given index to receive the focus.

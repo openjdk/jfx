@@ -25,20 +25,22 @@
 
 #pragma once
 
-#include "Event.h"
+#include "AnimationEventBase.h"
 
 namespace WebCore {
 
-class AnimationEvent final : public Event {
+class AnimationEvent final : public AnimationEventBase {
+    WTF_MAKE_ISO_ALLOCATED(AnimationEvent);
 public:
-    static Ref<AnimationEvent> create(const AtomString& type, const String& animationName, double elapsedTime)
+    static Ref<AnimationEvent> create(const AtomString& type, const String& animationName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation* animation)
     {
-        return adoptRef(*new AnimationEvent(type, animationName, elapsedTime));
+        return adoptRef(*new AnimationEvent(type, animationName, elapsedTime, pseudoElement, timelineTime, animation));
     }
 
     struct Init : EventInit {
         String animationName;
         double elapsedTime { 0 };
+        String pseudoElement;
     };
 
     static Ref<AnimationEvent> create(const AtomString& type, const Init& initializer, IsTrusted isTrusted = IsTrusted::No)
@@ -48,17 +50,23 @@ public:
 
     virtual ~AnimationEvent();
 
+    bool isAnimationEvent() const final { return true; }
+
     const String& animationName() const;
     double elapsedTime() const;
+    const String& pseudoElement() const;
 
     EventInterface eventInterface() const override;
 
 private:
-    AnimationEvent(const AtomString& type, const String& animationName, double elapsedTime);
+    AnimationEvent(const AtomString& type, const String& animationName, double elapsedTime, const String& pseudoElement, Optional<Seconds> timelineTime, WebAnimation*);
     AnimationEvent(const AtomString&, const Init&, IsTrusted);
 
     String m_animationName;
     double m_elapsedTime;
+    String m_pseudoElement;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_ANIMATION_EVENT_BASE(AnimationEvent, isAnimationEvent())

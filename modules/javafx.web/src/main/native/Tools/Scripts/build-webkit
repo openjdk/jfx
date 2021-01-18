@@ -44,6 +44,7 @@ use webkitdirs;
 use List::Util qw(first);
 use webkitperl::FeatureList qw(getFeatureOptionList);
 use POSIX;
+use Text::ParseWords;
 
 sub writeCongrats();
 
@@ -82,7 +83,7 @@ my $useCCache = -1;
 my @features = getFeatureOptionList();
 
 # Additional environment parameters
-push @ARGV, split(/ /, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
+push @ARGV, parse_line('\s+', 0, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
 
 # Initialize values from defaults
 foreach (@ARGV) {
@@ -119,6 +120,7 @@ Usage: $programName [options] [options to pass to build system]
   --[no-]xcbuild                    Force the use of XCBuild or not
 
   --java                            Build the Open JavaFX port
+  --ftw                             Build the FTW Windows port
   --gtk                             Build the GTK+ port
   --wpe                             Build the WPE port
   --wincairo                        Build using Cairo (rather than CoreGraphics) on Windows
@@ -190,7 +192,7 @@ my $productDir = productDir();
 my @projects = ("Source/JavaScriptCore", "Source/WebCore", "Source/WebKitLegacy");
 
 # Build WTF as a separate static library on ports which support it.
-splice @projects, 0, 0, "Source/WTF" if isAppleWebKit() or isWinCairo();
+splice @projects, 0, 0, "Source/WTF" if isAppleWebKit() or isWinCairo() or isFTW();
 
 splice @projects, 0, 0, "Source/bmalloc" if isAppleCocoaWebKit();
 
@@ -203,7 +205,7 @@ if (!isCMakeBuild()) {
     }
 }
 
-if ((isAppleWebKit() || isWinCairo() || isPlayStation()) && !-d "WebKitLibraries") {
+if ((isAppleWebKit() || isWinCairo() || isPlayStation() || isFTW()) && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
 }
 
@@ -262,6 +264,10 @@ if (isAppleCocoaWebKit()) {
         (system(@copyLibrariesArgs) == 0) or die;
     }
 
+    if (isAppleMacWebKit()) {
+        push @projects, ("Tools/lldb/lldbWebKitTester");
+    }
+
     # Build Tools needed for Apple ports
     push @projects, ("Tools/DumpRenderTree", "Tools/WebKitTestRunner", "Source/ThirdParty/gtest", "Tools/TestWebKitAPI");
 
@@ -307,7 +313,7 @@ if (isCMakeBuild()) {
 }
 
 my $baseProductDir = baseProductDir();
-if (isAppleWinWebKit() || isWinCairo() || isPlayStation()) {
+if (isAppleWinWebKit() || isWinCairo() || isPlayStation() || isFTW()) {
     my @featureArgs = cmakeArgsFromFeatures(@features, !$noExperimentalFeatures);
     removeCMakeCache(@featureArgs);
 
@@ -327,7 +333,7 @@ if (isAppleWinWebKit() || isWinCairo() || isPlayStation()) {
     }
     if (exitStatus($result)) {
         my $scriptDir = relativeScriptsDir();
-        if (isAppleWinWebKit() || isWinCairo()) {
+        if (isAppleWinWebKit() || isWinCairo() || isFTW()) {
             print "\n\n===== BUILD FAILED ======\n\n";
             print "Please ensure you have run $scriptDir/update-webkit to install dependencies.\n\n";
             print "You can view build errors by checking the BuildLog.htm files located at:\n$baseProductDir/obj/<project>/<config>.\n";

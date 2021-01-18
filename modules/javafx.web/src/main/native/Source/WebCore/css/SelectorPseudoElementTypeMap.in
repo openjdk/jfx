@@ -5,7 +5,9 @@ cue
 #endif
 first-letter
 first-line
+highlight
 marker
+part
 placeholder, PseudoElementWebKitCustom
 -webkit-input-placeholder, PseudoElementWebKitCustomLegacyPrefixed
 -webkit-resizer
@@ -16,3 +18,4 @@ placeholder, PseudoElementWebKitCustom
 -webkit-scrollbar-track
 -webkit-scrollbar-track-piece
 selection
+slotted

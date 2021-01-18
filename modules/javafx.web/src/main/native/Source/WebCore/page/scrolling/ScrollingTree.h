@@ -30,7 +30,7 @@
 #include "PlatformWheelEvent.h"
 #include "Region.h"
 #include "ScrollingCoordinator.h"
-#include "WheelEventTestTrigger.h"
+#include "WheelEventTestMonitor.h"
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -83,7 +83,7 @@ public:
     virtual void scrollingTreeNodeDidScroll(ScrollingTreeScrollingNode&, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) = 0;
 
     // Called for requested scroll position updates.
-    virtual void scrollingTreeNodeRequestsScroll(ScrollingNodeID, const FloatPoint& /*scrollPosition*/, bool /*representsProgrammaticScroll*/) { }
+    virtual void scrollingTreeNodeRequestsScroll(ScrollingNodeID, const FloatPoint& /*scrollPosition*/, ScrollType, ScrollClamping) { }
 
     // Delegated scrolling/zooming has caused the viewport to change, so update viewport-constrained layers
     WEBCORE_EXPORT void mainFrameViewportChangedViaDelegatedScrolling(const FloatPoint& scrollPosition, const WebCore::FloatRect& layoutViewport, double scale);
@@ -106,8 +106,9 @@ public:
 #if PLATFORM(MAC)
     virtual void handleWheelEventPhase(PlatformWheelEventPhase) = 0;
     virtual void setActiveScrollSnapIndices(ScrollingNodeID, unsigned /*horizontalIndex*/, unsigned /*verticalIndex*/) { }
-    virtual void deferTestsForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) { }
-    virtual void removeTestDeferralForReason(WheelEventTestTrigger::ScrollableAreaIdentifier, WheelEventTestTrigger::DeferTestTriggerReason) { }
+
+    virtual void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) { }
+    virtual void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) { }
 #endif
 
 #if PLATFORM(COCOA)
@@ -156,6 +157,9 @@ public:
     HashSet<Ref<ScrollingTreePositionedNode>>& activePositionedNodes() { return m_activePositionedNodes; }
 
     WEBCORE_EXPORT String scrollingTreeAsText(ScrollingStateTreeAsTextBehavior = ScrollingStateTreeAsTextBehaviorNormal);
+
+    bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
+    bool inCommitTreeState() const { return m_inCommitTreeState; }
 
 protected:
     void setMainFrameScrollPosition(FloatPoint);
@@ -210,9 +214,11 @@ private:
 
     unsigned m_fixedOrStickyNodeCount { 0 };
     bool m_isHandlingProgrammaticScroll { false };
+    bool m_isMonitoringWheelEvents { false };
     bool m_scrollingPerformanceLoggingEnabled { false };
     bool m_asyncFrameOrOverflowScrollingEnabled { false };
     bool m_wasScrolledByDelegatedScrollingSincePreviousCommit { false };
+    bool m_inCommitTreeState { false };
 };
 
 } // namespace WebCore

@@ -110,12 +110,11 @@ void LocalAllocator::stopAllocatingForGood()
     reset();
 }
 
-void* LocalAllocator::allocateSlowCase(GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
+void* LocalAllocator::allocateSlowCase(Heap& heap, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     SuperSamplerScope superSamplerScope(false);
-    Heap& heap = *m_directory->m_heap;
     ASSERT(heap.vm().currentThreadIsHoldingAPILock());
-    doTestCollectionsIfNeeded(deferralContext);
+    doTestCollectionsIfNeeded(heap, deferralContext);
 
     ASSERT(!m_directory->markedSpace().isIterating());
     heap.didAllocate(m_freeList.originalSize());
@@ -129,14 +128,20 @@ void* LocalAllocator::allocateSlowCase(GCDeferralContext* deferralContext, Alloc
     // Goofy corner case: the GC called a callback and now this directory has a currentBlock. This only
     // happens when running WebKit tests, which inject a callback into the GC's finalization.
     if (UNLIKELY(m_currentBlock))
-        return allocate(deferralContext, failureMode);
+        return allocate(heap, deferralContext, failureMode);
 
     void* result = tryAllocateWithoutCollecting();
 
-    if (LIKELY(result != 0))
+    if (LIKELY(result != nullptr))
         return result;
 
-    MarkedBlock::Handle* block = m_directory->tryAllocateBlock();
+    Subspace* subspace = m_directory->m_subspace;
+    if (subspace->isIsoSubspace()) {
+        if (void* result = static_cast<IsoSubspace*>(subspace)->tryAllocateFromLowerTier())
+            return result;
+    }
+
+    MarkedBlock::Handle* block = m_directory->tryAllocateBlock(heap);
     if (!block) {
         if (failureMode == AllocationFailureMode::Assert)
             RELEASE_ASSERT_NOT_REACHED();
@@ -243,18 +248,18 @@ void* LocalAllocator::tryAllocateIn(MarkedBlock::Handle* block)
     return result;
 }
 
-void LocalAllocator::doTestCollectionsIfNeeded(GCDeferralContext* deferralContext)
+void LocalAllocator::doTestCollectionsIfNeeded(Heap& heap, GCDeferralContext* deferralContext)
 {
     if (!Options::slowPathAllocsBetweenGCs())
         return;
 
     static unsigned allocationCount = 0;
     if (!allocationCount) {
-        if (!m_directory->m_heap->isDeferred()) {
+        if (!heap.isDeferred()) {
             if (deferralContext)
                 deferralContext->m_shouldGC = true;
             else
-                m_directory->m_heap->collectNow(Sync, CollectionScope::Full);
+                heap.collectNow(Sync, CollectionScope::Full);
         }
     }
     if (++allocationCount >= Options::slowPathAllocsBetweenGCs())

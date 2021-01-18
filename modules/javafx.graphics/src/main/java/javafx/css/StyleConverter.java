@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,12 @@ import java.util.WeakHashMap;
  * @since JavaFX 8.0
  */
 public class StyleConverter<F, T> {
+
+    /**
+     * Creates a {@code StyleConverter}.
+     */
+    public StyleConverter() {
+    }
 
     /**
      * Convert from the parsed CSS value to the target property type.
@@ -531,6 +537,12 @@ public class StyleConverter<F, T> {
     public static class StringStore {
         private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
         public final List<String> strings = new ArrayList<String>();
+
+        /**
+         * Creates a {@code StringStore}.
+         */
+        public StringStore() {
+        }
 
         public int addString(String s) {
             Integer index = stringMap.get(s);

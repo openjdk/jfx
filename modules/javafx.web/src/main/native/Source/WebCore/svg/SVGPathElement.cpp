@@ -37,7 +37,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(SVGPathElement);
 
 inline SVGPathElement::SVGPathElement(const QualifiedName& tagName, Document& document)
     : SVGGeometryElement(tagName, document)
-    , SVGExternalResourcesRequired(this)
 {
     ASSERT(hasTagName(SVGNames::pathTag));
 
@@ -61,7 +60,6 @@ void SVGPathElement::parseAttribute(const QualifiedName& name, const AtomString&
     }
 
     SVGGeometryElement::parseAttribute(name, value);
-    SVGExternalResourcesRequired::parseAttribute(name, value);
 }
 
 void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -79,7 +77,6 @@ void SVGPathElement::svgAttributeChanged(const QualifiedName& attrName)
     }
 
     SVGGeometryElement::svgAttributeChanged(attrName);
-    SVGExternalResourcesRequired::svgAttributeChanged(attrName);
 }
 
 void SVGPathElement::invalidateMPathDependencies()
@@ -109,23 +106,21 @@ void SVGPathElement::removedFromAncestor(RemovalType removalType, ContainerNode&
 
 float SVGPathElement::getTotalLength() const
 {
-    float totalLength = 0;
-    getTotalLengthOfSVGPathByteStream(pathByteStream(), totalLength);
-    return totalLength;
+    return getTotalLengthOfSVGPathByteStream(pathByteStream());
 }
 
-Ref<SVGPoint> SVGPathElement::getPointAtLength(float length) const
+ExceptionOr<Ref<SVGPoint>> SVGPathElement::getPointAtLength(float distance) const
 {
-    FloatPoint point;
-    getPointAtLengthOfSVGPathByteStream(pathByteStream(), length, point);
-    return SVGPoint::create(point);
+    // Spec: Clamp distance to [0, length].
+    distance = clampTo<float>(distance, 0, getTotalLength());
+
+    // Spec: Return a newly created, detached SVGPoint object.
+    return SVGPoint::create(getPointAtLengthOfSVGPathByteStream(pathByteStream(), distance));
 }
 
 unsigned SVGPathElement::getPathSegAtLength(float length) const
 {
-    unsigned pathSeg = 0;
-    getSVGPathSegAtLengthFromSVGPathByteStream(pathByteStream(), length, pathSeg);
-    return pathSeg;
+    return getSVGPathSegAtLengthFromSVGPathByteStream(pathByteStream(), length);
 }
 
 FloatRect SVGPathElement::getBBox(StyleUpdateStrategy styleUpdateStrategy)

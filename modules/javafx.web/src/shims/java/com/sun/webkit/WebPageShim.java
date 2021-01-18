@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.webkit;
 
 import com.sun.javafx.webkit.prism.WCBufferedContextShim;
+import com.sun.javafx.webkit.prism.PrismInvokerShim;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.graphics.WCGraphicsContext;
@@ -50,7 +51,9 @@ public class WebPageShim {
 
     public static BufferedImage paint(WebPage page, int x, int y, int w, int h) {
         final WCGraphicsContext gc = setupPageWithGraphics(page, x, y, w, h);
-        page.paint(gc, x, y, w, h);
+        PrismInvokerShim.runOnRenderThread(() -> {
+            page.paint(gc, x, y, w, h);
+        });
         return gc.getImage().toBufferedImage();
     }
 

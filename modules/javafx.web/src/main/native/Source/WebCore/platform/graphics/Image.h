@@ -111,11 +111,12 @@ public:
     virtual bool hasRelativeHeight() const { return false; }
     virtual void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio);
 
-    virtual FloatSize size() const = 0;
+    virtual FloatSize size(ImageOrientation = ImageOrientation::FromImage) const = 0;
     FloatRect rect() const { return FloatRect(FloatPoint(), size()); }
     float width() const { return size().width(); }
     float height() const { return size().height(); }
     virtual Optional<IntPoint> hotSpot() const { return WTF::nullopt; }
+    virtual ImageOrientation orientation() const { return ImageOrientation::FromImage; }
 
     WEBCORE_EXPORT EncodedDataStatus setData(RefPtr<SharedBuffer>&& data, bool allDataReceived);
     virtual EncodedDataStatus dataChanged(bool /*allDataReceived*/) { return EncodedDataStatus::Unknown; }
@@ -147,8 +148,9 @@ public:
     enum TileRule { StretchTile, RoundTile, SpaceTile, RepeatTile };
 
     virtual NativeImagePtr nativeImage(const GraphicsContext* = nullptr) { return nullptr; }
-    virtual NativeImagePtr nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) { return nullptr; }
     virtual NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) { return nullptr; }
+    virtual NativeImagePtr nativeImageForCurrentFrameRespectingOrientation(const GraphicsContext* = nullptr) { return nullptr; }
+    virtual NativeImagePtr nativeImageOfSize(const IntSize&, const GraphicsContext* = nullptr) { return nullptr; }
 
     // Accessors for native image formats.
 
@@ -177,7 +179,7 @@ public:
 
     virtual void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
 
-#if !ASSERT_DISABLED
+#if ASSERT_ENABLED
     virtual bool notSolidColor() { return true; }
 #endif
 
@@ -202,6 +204,11 @@ private:
     RefPtr<SharedBuffer> m_encodedImageData;
     ImageObserver* m_imageObserver;
     std::unique_ptr<Timer> m_animationStartTimer;
+};
+
+class ImageHandle {
+public:
+    RefPtr<Image> image;
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const Image&);

@@ -50,9 +50,11 @@
 #include "FrameNetworkingContext.h"
 #include "HTMLFormElement.h"
 #include "HistoryItem.h"
-#include "InProcessIDBServer.h"
+#include "IDBConnectionToServer.h"
 #include "InspectorClient.h"
 #include "LibWebRTCProvider.h"
+#include "MediaRecorderPrivate.h"
+#include "MediaRecorderProvider.h"
 #include "NetworkStorageSession.h"
 #include "Page.h"
 #include "PageConfiguration.h"
@@ -70,6 +72,7 @@
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
 #include <JavaScriptCore/HeapInlines.h>
+#include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -77,7 +80,7 @@
 #endif
 
 #if USE(QUICK_LOOK)
-#include "PreviewLoaderClient.h"
+#include "LegacyPreviewLoaderClient.h"
 #endif
 
 namespace WebCore {
@@ -122,10 +125,42 @@ class EmptyContextMenuClient final : public ContextMenuClient {
 
 class EmptyDatabaseProvider final : public DatabaseProvider {
 #if ENABLE(INDEXED_DATABASE)
-    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const PAL::SessionID& sessionID) final
+    struct EmptyIDBConnectionToServerDeletegate final : public IDBClient::IDBConnectionToServerDelegate {
+        IDBConnectionIdentifier identifier() const final { return { }; }
+        void deleteDatabase(const IDBRequestData&) final { }
+        void openDatabase(const IDBRequestData&) final { }
+        void abortTransaction(const IDBResourceIdentifier&) final { }
+        void commitTransaction(const IDBResourceIdentifier&) final { }
+        void didFinishHandlingVersionChangeTransaction(uint64_t, const IDBResourceIdentifier&) final { }
+        void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&) final { }
+        void deleteObjectStore(const IDBRequestData&, const String&) final { }
+        void renameObjectStore(const IDBRequestData&, uint64_t, const String&) final { }
+        void clearObjectStore(const IDBRequestData&, uint64_t) final { }
+        void createIndex(const IDBRequestData&, const IDBIndexInfo&) final { }
+        void deleteIndex(const IDBRequestData&, uint64_t, const String&) final { }
+        void renameIndex(const IDBRequestData&, uint64_t, uint64_t, const String&) final { }
+        void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode) final { }
+        void getRecord(const IDBRequestData&, const IDBGetRecordData&) final { }
+        void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&) final { }
+        void getCount(const IDBRequestData&, const IDBKeyRangeData&) final { }
+        void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&) final { }
+        void openCursor(const IDBRequestData&, const IDBCursorInfo&) final { }
+        void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&) final { }
+        void establishTransaction(uint64_t, const IDBTransactionInfo&) final { }
+        void databaseConnectionPendingClose(uint64_t) final { }
+        void databaseConnectionClosed(uint64_t) final { }
+        void abortOpenAndUpgradeNeeded(uint64_t, const IDBResourceIdentifier&) final { }
+        void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
+        void openDBRequestCancelled(const IDBRequestData&) final { }
+        void getAllDatabaseNames(const SecurityOriginData&, const SecurityOriginData&, uint64_t) final { }
+        ~EmptyIDBConnectionToServerDeletegate() { }
+    };
+
+    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const PAL::SessionID&) final
     {
-        static auto& sharedConnection = InProcessIDBServer::create(sessionID).leakRef();
-        return sharedConnection.connectionToServer();
+        static NeverDestroyed<EmptyIDBConnectionToServerDeletegate> emptyDelegate;
+        static auto& emptyConnection = IDBClient::IDBConnectionToServer::create(emptyDelegate.get()).leakRef();
+        return emptyConnection;
     }
 #endif
 };
@@ -145,7 +180,6 @@ class EmptyDragClient final : public DragClient {
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) final { }
     DragSourceAction dragSourceActionMaskForPoint(const IntPoint&) final { return DragSourceActionNone; }
     void startDrag(DragItem, DataTransfer&, Frame&) final { }
-    void dragControllerDestroyed() final { }
 };
 
 #endif // ENABLE(DRAG_SUPPORT)
@@ -215,6 +249,7 @@ private:
     void textWillBeDeletedInTextField(Element*) final { }
     void textDidChangeInTextArea(Element*) final { }
     void overflowScrollPositionChanged() final { }
+    void subFrameScrollPositionChanged() final { }
 
 #if PLATFORM(IOS_FAMILY)
     void startDelayingAndCoalescingContentChangeNotifications() final { }
@@ -266,7 +301,7 @@ private:
     bool spellingUIIsShowing() final { return false; }
 
     void willSetInputMethodState() final { }
-    void setInputMethodState(bool) final { }
+    void setInputMethodState(Element*) final { }
 
     bool canShowFontPanel() const final { return false; }
 
@@ -399,7 +434,7 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         }
     private:
         Ref<StorageArea> storageArea(const SecurityOriginData&) final { return adoptRef(*new EmptyStorageArea); }
-        Ref<StorageNamespace> copy(Page*) final { return adoptRef(*new EmptyStorageNamespace { m_sessionID }); }
+        Ref<StorageNamespace> copy(Page&) final { return adoptRef(*new EmptyStorageNamespace { m_sessionID }); }
         PAL::SessionID sessionID() const final { return m_sessionID; }
         void setSessionIDForTesting(PAL::SessionID sessionID) final { m_sessionID = sessionID; };
 
@@ -462,11 +497,6 @@ void EmptyChromeClient::runOpenPanel(Frame&, FileChooser&)
 
 void EmptyChromeClient::showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&)
 {
-}
-
-PAL::SessionID EmptyFrameLoaderClient::sessionID() const
-{
-    return PAL::SessionID::defaultSessionID();
 }
 
 void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, PolicyCheckIdentifier, FramePolicyFunction&&)
@@ -543,19 +573,31 @@ Ref<StorageNamespace> EmptyStorageNamespaceProvider::createTransientLocalStorage
     return adoptRef(*new EmptyStorageNamespace { sessionID });
 }
 
-class EmptyStorageSessionProvider : public StorageSessionProvider {
+class EmptyStorageSessionProvider final : public StorageSessionProvider {
     NetworkStorageSession* storageSession() const final { return nullptr; }
 };
 
-PageConfiguration pageConfigurationWithEmptyClients()
+class EmptyMediaRecorderProvider final : public MediaRecorderProvider {
+public:
+    EmptyMediaRecorderProvider() = default;
+private:
+#if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
+    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(const MediaStreamPrivate&) final { return nullptr; }
+#endif
+};
+
+PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
 {
     PageConfiguration pageConfiguration {
+        sessionID,
         makeUniqueRef<EmptyEditorClient>(),
         SocketProvider::create(),
         LibWebRTCProvider::create(),
         CacheStorageProvider::create(),
         adoptRef(*new EmptyBackForwardClient),
-        CookieJar::create(adoptRef(*new EmptyStorageSessionProvider))
+        CookieJar::create(adoptRef(*new EmptyStorageSessionProvider)),
+        makeUniqueRef<EmptyProgressTrackerClient>(),
+        makeUniqueRef<EmptyMediaRecorderProvider>()
     };
 
     static NeverDestroyed<EmptyChromeClient> dummyChromeClient;
@@ -572,8 +614,7 @@ PageConfiguration pageConfigurationWithEmptyClients()
 #endif
 
 #if ENABLE(DRAG_SUPPORT)
-    static NeverDestroyed<EmptyDragClient> dummyDragClient;
-    pageConfiguration.dragClient = &dummyDragClient.get();
+    pageConfiguration.dragClient = makeUnique<EmptyDragClient>();
 #endif
 
     static NeverDestroyed<EmptyInspectorClient> dummyInspectorClient;
@@ -581,9 +622,6 @@ PageConfiguration pageConfigurationWithEmptyClients()
 
     static NeverDestroyed<EmptyFrameLoaderClient> dummyFrameLoaderClient;
     pageConfiguration.loaderClientForMainFrame = &dummyFrameLoaderClient.get();
-
-    static NeverDestroyed<EmptyProgressTrackerClient> dummyProgressTrackerClient;
-    pageConfiguration.progressTrackerClient = &dummyProgressTrackerClient.get();
 
     pageConfiguration.diagnosticLoggingClient = makeUnique<EmptyDiagnosticLoggingClient>();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,9 @@ class ES2Light {
 
     float x, y, z = 0;
     float r, g, b, w = 1;
+    float ca, la, qa, maxRange;
 
-    ES2Light(float ix, float iy, float iz, float ir, float ig, float ib, float iw) {
+    ES2Light(float ix, float iy, float iz, float ir, float ig, float ib, float iw, float ca, float la, float qa, float maxRange) {
         x = ix;
         y = iy;
         z = iz;
@@ -41,5 +42,9 @@ class ES2Light {
         g = ig;
         b = ib;
         w = iw;
+        this.ca = ca;
+        this.la = la;
+        this.qa = qa;
+        this.maxRange = maxRange;
     }
 }

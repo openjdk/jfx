@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,12 @@ import javafx.beans.property.SimpleBooleanProperty;
  * @since JavaFX 8.0
  */
 public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<T> {
+
+    /**
+     * Constructor for subclasses to call.
+     */
+    public TableSelectionModel() {
+    }
 
     /**
      * Convenience function which tests whether the given row and column index

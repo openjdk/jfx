@@ -42,7 +42,7 @@ protected:
     JSGenericArrayBufferConstructor(VM&, Structure*);
     void finishCreation(VM&, JSArrayBufferPrototype*, GetterSetter* speciesSymbol);
 
-    static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState*);
+    static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(JSGlobalObject*, CallFrame*);
 
 public:
     static JSGenericArrayBufferConstructor* create(VM& vm, Structure* structure, JSArrayBufferPrototype* prototype, GetterSetter* speciesSymbol)
@@ -61,7 +61,7 @@ public:
 
 using JSArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferSharingMode::Default>;
 using JSSharedArrayBufferConstructor = JSGenericArrayBufferConstructor<ArrayBufferSharingMode::Shared>;
-static_assert(sizeof(JSArrayBufferConstructor::Base) == sizeof(JSArrayBufferConstructor), "");
-static_assert(sizeof(JSSharedArrayBufferConstructor::Base) == sizeof(JSSharedArrayBufferConstructor), "");
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSArrayBufferConstructor, InternalFunction);
+STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSSharedArrayBufferConstructor, InternalFunction);
 
 } // namespace JSC

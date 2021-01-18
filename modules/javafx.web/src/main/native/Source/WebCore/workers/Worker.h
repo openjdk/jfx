@@ -30,6 +30,7 @@
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
 #include "MessagePort.h"
+#include "PostMessageOptions.h"
 #include "WorkerScriptLoaderClient.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <wtf/MonotonicTime.h>
@@ -37,7 +38,7 @@
 #include <wtf/text/AtomStringHash.h>
 
 namespace JSC {
-class ExecState;
+class CallFrame;
 class JSObject;
 class JSValue;
 }
@@ -57,15 +58,18 @@ public:
     static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, const Options&);
     virtual ~Worker();
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, JSC::JSValue message, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, PostMessageOptions&&);
 
     void terminate();
+    bool wasTerminated() const { return m_wasTerminated; }
 
     bool hasPendingActivity() const final;
 
     String identifier() const { return m_identifier; }
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+
+    void dispatchEvent(Event&) final;
 
 private:
     explicit Worker(ScriptExecutionContext&, JSC::RuntimeFlags, const Options&);
@@ -77,8 +81,9 @@ private:
     void didReceiveResponse(unsigned long identifier, const ResourceResponse&) final;
     void notifyFinished() final;
 
-    bool canSuspendForDocumentSuspension() const final;
     void stop() final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
     const char* activeDOMObjectName() const final;
 
     static void networkStateChanged(bool isOnLine);
@@ -90,7 +95,10 @@ private:
     Optional<ContentSecurityPolicyResponseHeaders> m_contentSecurityPolicyResponseHeaders;
     MonotonicTime m_workerCreationTime;
     bool m_shouldBypassMainWorldContentSecurityPolicy { false };
+    bool m_isSuspendedForBackForwardCache { false };
     JSC::RuntimeFlags m_runtimeFlags;
+    Deque<RefPtr<Event>> m_pendingEvents;
+    bool m_wasTerminated { false };
 };
 
 } // namespace WebCore

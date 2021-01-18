@@ -21,6 +21,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <wtf/Platform.h>
 
 namespace WTF {
 
@@ -47,6 +48,11 @@ class URL;
 class WallTime;
 
 struct FastMalloc;
+#if ENABLE(MALLOC_HEAP_BREAKDOWN)
+struct VectorMalloc;
+#else
+using VectorMalloc = FastMalloc;
+#endif
 
 template<typename> class CompletionHandler;
 template<typename T> struct DumbPtrTraits;
@@ -56,6 +62,8 @@ template<typename> class LazyNeverDestroyed;
 template<typename> class NeverDestroyed;
 template<typename> class OptionSet;
 template<typename> class Optional;
+template<typename T> class Packed;
+template<typename T, size_t = alignof(T)> class PackedAlignedPtr;
 template<typename T, typename = DumbPtrTraits<T>> class Ref;
 template<typename T, typename = DumbPtrTraits<T>> class RefPtr;
 template<typename> class StringBuffer;
@@ -69,7 +77,7 @@ template<typename> struct EnumTraits;
 template<typename E, E...> struct EnumValues;
 
 template<typename...> class Variant;
-template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16> class Vector;
+template<typename, size_t = 0, typename = CrashOnOverflow, size_t = 16, typename Malloc = VectorMalloc> class Vector;
 template<typename Value, typename = typename DefaultHash<Value>::Hash, typename = HashTraits<Value>> class HashCountedSet;
 template<typename KeyArg, typename MappedArg, typename = typename DefaultHash<KeyArg>::Hash, typename = HashTraits<KeyArg>, typename = HashTraits<MappedArg>> class HashMap;
 template<typename ValueArg, typename = typename DefaultHash<ValueArg>::Hash, typename = HashTraits<ValueArg>> class HashSet;

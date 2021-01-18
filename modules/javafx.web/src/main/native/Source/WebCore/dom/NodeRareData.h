@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008 David Smith <catfish.man@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -23,35 +23,27 @@
 
 #include "ChildNodeList.h"
 #include "HTMLCollection.h"
-#include "HTMLNames.h"
-#include "LiveNodeList.h"
 #include "MutationObserverRegistration.h"
 #include "QualifiedName.h"
 #include "TagCollection.h"
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class LabelsNodeList;
+class LiveNodeList;
 class NameNodeList;
 class RadioNodeList;
-class TreeScope;
 
-template <class ListType> struct NodeListTypeIdentifier;
-template <> struct NodeListTypeIdentifier<NameNodeList> { static int value() { return 0; } };
-template <> struct NodeListTypeIdentifier<RadioNodeList> { static int value() { return 1; } };
-template <> struct NodeListTypeIdentifier<LabelsNodeList> { static int value() { return 2; } };
+template<typename ListType> struct NodeListTypeIdentifier;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 class NodeListsNodeData {
-    WTF_MAKE_NONCOPYABLE(NodeListsNodeData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(NodeListsNodeData);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 public:
-    NodeListsNodeData()
-        : m_childNodeList(nullptr)
-        , m_emptyChildNodeList(nullptr)
-    {
-    }
+    NodeListsNodeData() = default;
 
     void clearChildNodeListCache()
     {
@@ -104,14 +96,14 @@ public:
         static const bool safeToCompareToEmptyOrDeleted = DefaultHash<AtomString>::Hash::safeToCompareToEmptyOrDeleted;
     };
 
-    typedef HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash> NodeListAtomicNameCacheMap;
-    typedef HashMap<std::pair<unsigned char, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash> CollectionCacheMap;
-    typedef HashMap<QualifiedName, TagCollectionNS*> TagCollectionNSCache;
+    using NodeListCacheMap = HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash>;
+    using CollectionCacheMap = HashMap<std::pair<unsigned char, AtomString>, HTMLCollection*, NodeListCacheMapEntryHash>;
+    using TagCollectionNSCache = HashMap<QualifiedName, TagCollectionNS*>;
 
     template<typename T, typename ContainerType>
-    ALWAYS_INLINE Ref<T> addCacheWithAtomicName(ContainerType& container, const AtomString& name)
+    ALWAYS_INLINE Ref<T> addCacheWithAtomName(ContainerType& container, const AtomString& name)
     {
-        NodeListAtomicNameCacheMap::AddResult result = m_atomicNameCaches.fastAdd(namedNodeListKey<T>(name), nullptr);
+        auto result = m_atomNameCaches.fastAdd(namedNodeListKey<T>(name), nullptr);
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
@@ -122,8 +114,7 @@ public:
 
     ALWAYS_INLINE Ref<TagCollectionNS> addCachedTagCollectionNS(ContainerNode& node, const AtomString& namespaceURI, const AtomString& localName)
     {
-        QualifiedName name(nullAtom(), localName, namespaceURI);
-        TagCollectionNSCache::AddResult result = m_tagCollectionNSCache.fastAdd(name, nullptr);
+        auto result = m_tagCollectionNSCache.fastAdd(QualifiedName { nullAtom(), localName, namespaceURI }, nullptr);
         if (!result.isNewEntry)
             return *result.iterator->value;
 
@@ -135,7 +126,7 @@ public:
     template<typename T, typename ContainerType>
     ALWAYS_INLINE Ref<T> addCachedCollection(ContainerType& container, CollectionType collectionType, const AtomString& name)
     {
-        CollectionCacheMap::AddResult result = m_cachedCollections.fastAdd(namedCollectionKey(collectionType, name), nullptr);
+        auto result = m_cachedCollections.fastAdd(namedCollectionKey(collectionType, name), nullptr);
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
@@ -147,7 +138,7 @@ public:
     template<typename T, typename ContainerType>
     ALWAYS_INLINE Ref<T> addCachedCollection(ContainerType& container, CollectionType collectionType)
     {
-        CollectionCacheMap::AddResult result = m_cachedCollections.fastAdd(namedCollectionKey(collectionType, starAtom()), nullptr);
+        auto result = m_cachedCollections.fastAdd(namedCollectionKey(collectionType, starAtom()), nullptr);
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
@@ -162,13 +153,13 @@ public:
         return static_cast<T*>(m_cachedCollections.get(namedCollectionKey(collectionType, starAtom())));
     }
 
-    template <class NodeListType>
-    void removeCacheWithAtomicName(NodeListType* list, const AtomString& name = starAtom())
+    template<typename NodeListType>
+    void removeCacheWithAtomName(NodeListType& list, const AtomString& name)
     {
-        ASSERT(list == m_atomicNameCaches.get(namedNodeListKey<NodeListType>(name)));
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list->ownerNode()))
+        ASSERT(&list == m_atomNameCaches.get(namedNodeListKey<NodeListType>(name)));
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list.ownerNode()))
             return;
-        m_atomicNameCaches.remove(namedNodeListKey<NodeListType>(name));
+        m_atomNameCaches.remove(namedNodeListKey<NodeListType>(name));
     }
 
     void removeCachedTagCollectionNS(HTMLCollection& collection, const AtomString& namespaceURI, const AtomString& localName)
@@ -203,7 +194,7 @@ public:
             return;
         }
 
-        for (auto& cache : m_atomicNameCaches.values())
+        for (auto& cache : m_atomNameCaches.values())
             cache->invalidateCacheForDocument(oldDocument);
 
         for (auto& list : m_tagCollectionNSCache.values()) {
@@ -221,7 +212,7 @@ private:
         return std::pair<unsigned char, AtomString>(type, name);
     }
 
-    template <class NodeListType>
+    template<typename NodeListType>
     std::pair<unsigned char, AtomString> namedNodeListKey(const AtomString& name)
     {
         return std::pair<unsigned char, AtomString>(NodeListTypeIdentifier<NodeListType>::value(), name);
@@ -230,10 +221,10 @@ private:
     bool deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(Node&);
 
     // These two are currently mutually exclusive and could be unioned. Not very important as this class is large anyway.
-    ChildNodeList* m_childNodeList;
-    EmptyNodeList* m_emptyChildNodeList;
+    ChildNodeList* m_childNodeList { nullptr };
+    EmptyNodeList* m_emptyChildNodeList { nullptr };
 
-    NodeListAtomicNameCacheMap m_atomicNameCaches;
+    NodeListCacheMap m_atomNameCaches;
     TagCollectionNSCache m_tagCollectionNSCache;
     CollectionCacheMap m_cachedCollections;
 };
@@ -247,8 +238,10 @@ public:
     NodeMutationObserverData() { }
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
 class NodeRareData {
-    WTF_MAKE_NONCOPYABLE(NodeRareData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(NodeRareData);
+    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
     enum class UseType : uint16_t {
@@ -331,11 +324,27 @@ private:
     std::unique_ptr<NodeMutationObserverData> m_mutationObserverData;
 };
 
+template<> struct NodeListTypeIdentifier<NameNodeList> {
+    static constexpr unsigned char value() { return 0; }
+};
+
+template<> struct NodeListTypeIdentifier<RadioNodeList> {
+    static constexpr unsigned char value() { return 1; }
+};
+
+template<> struct NodeListTypeIdentifier<LabelsNodeList> {
+    static constexpr unsigned char value() { return 2; }
+};
+
 inline bool NodeListsNodeData::deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(Node& ownerNode)
 {
     ASSERT(ownerNode.nodeLists() == this);
-    if ((m_childNodeList ? 1 : 0) + (m_emptyChildNodeList ? 1 : 0) + m_atomicNameCaches.size()
-        + m_tagCollectionNSCache.size() + m_cachedCollections.size() != 1)
+    size_t listsCount = (m_childNodeList ? 1 : 0)
+        + (m_emptyChildNodeList ? 1 : 0)
+        + m_atomNameCaches.size()
+        + m_tagCollectionNSCache.size()
+        + m_cachedCollections.size();
+    if (listsCount != 1)
         return false;
     ownerNode.clearNodeLists();
     return true;

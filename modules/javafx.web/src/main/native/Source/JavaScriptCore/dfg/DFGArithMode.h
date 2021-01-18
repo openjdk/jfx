@@ -29,7 +29,8 @@
 
 namespace JSC {
 
-class ExecState;
+class CallFrame;
+class JSGlobalObject;
 using EncodedJSValue = int64_t;
 
 namespace DFG {
@@ -82,7 +83,7 @@ enum class UnaryType : uint32_t {
 };
 
 typedef double (*UnaryFunction)(double);
-typedef double (*UnaryOperation)(ExecState*, EncodedJSValue);
+typedef double (*UnaryOperation)(JSGlobalObject*, EncodedJSValue);
 
 } // namespace Arith
 
@@ -91,7 +92,7 @@ inline bool doesOverflow(Arith::Mode mode)
     switch (mode) {
     case Arith::NotSet:
         ASSERT_NOT_REACHED();
-#if ASSERT_DISABLED
+#if !ASSERT_ENABLED
         FALLTHROUGH;
 #endif
     case Arith::Unchecked:

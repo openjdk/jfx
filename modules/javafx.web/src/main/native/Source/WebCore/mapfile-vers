@@ -117,6 +117,8 @@ SUNWprivate_1.0 {
                JSValueToObject;
                JSValueToStringCopy;
                JSValueUnprotect;
+               _ZN3JSC6Config23enableRestrictedOptionsEv;
+               _ZN3JSC6Config25disableFreezingForTestingEv;
                _ZN3JSC16slowValidateCellEPNS_6JSCellE;
                _ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue;
                _ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue;
@@ -1949,6 +1951,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkStop;
                Java_com_sun_webkit_WebPage_twkStopAll;
                Java_com_sun_webkit_WebPage_twkUpdateContent;
+               Java_com_sun_webkit_WebPage_twkUpdateRendering;
                Java_com_sun_webkit_WebPage_twkWorkerThreadCount;
                Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection;
                Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer;

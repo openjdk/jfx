@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,10 @@ D3DLight::D3DLight() {
     position[2] = 0;
     position[3] = 0; // padding since SetPixelShaderConstantF only takes vec4f; position[3] is unused
     w = 0;
+    attenuation[0] = 1;
+    attenuation[1] = 0;
+    attenuation[2] = 0;
+    maxRange = 0;
 }
 
 void D3DLight::setColor(float r, float g, float b) {

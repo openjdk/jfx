@@ -25,9 +25,10 @@
 
 package test.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
+
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.collections.FXCollections.*;
@@ -36,11 +37,18 @@ import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
 import javafx.scene.Scene;
+import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.ToolBar;
+import javafx.scene.control.TreeCell;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -54,6 +62,129 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+  //---------------- TreeView
+
+    /**
+     * Sanity: replacing the root has no side-effect, listener to rootProperty
+     * is registered with skin api
+     */
+    @Test
+    public void testTreeViewSetRoot() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.setRoot(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewAddRootChild() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().add(createRoot());
+    }
+
+    /**
+     * NPE from event handler to treeModification of root.
+     */
+    @Test
+    public void testTreeViewReplaceRootChildren() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.getRoot().getChildren().setAll(createRoot().getChildren());
+    }
+
+    /**
+     * NPE due to properties listener not removed
+     */
+    @Test
+    public void testTreeViewRefresh() {
+        TreeView<String> treeView = new TreeView<>();
+        installDefaultSkin(treeView);
+        replaceSkin(treeView);
+        treeView.refresh();
+    }
+
+    /**
+     * Sanity: guard against potential memory leak from root property listener.
+     */
+    @Test
+    public void testMemoryLeakAlternativeSkinWithRoot() {
+        TreeView<String> treeView = new TreeView<>(createRoot());
+        installDefaultSkin(treeView);
+        WeakReference<?> weakRef = new WeakReference<>(replaceSkin(treeView));
+        assertNotNull(weakRef.get());
+        attemptGC(weakRef);
+        assertEquals("Skin must be gc'ed", null, weakRef.get());
+    }
+
+    /**
+     * Creates and returns an expanded treeItem with two children
+     */
+    private TreeItem<String> createRoot() {
+        TreeItem<String> root = new TreeItem<>("root");
+        root.setExpanded(true);
+        root.getChildren().addAll(new TreeItem<>("child one"), new TreeItem<>("child two"));
+        return root;
+    }
+
+
+// ------------------ TreeCell
+
+    @Test
+    public void testTreeCellReplaceTreeViewWithNull() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        TreeView<Object> treeView = new TreeView<>();
+        cell.updateTreeView(treeView);
+        installDefaultSkin(cell);
+        cell.updateTreeView(null);
+        // 8253634: updating the old treeView must not throw NPE in skin
+        treeView.setFixedCellSize(100);
+    }
+
+    @Test
+    public void testTreeCellPrefHeightOnReplaceTreeView() {
+        TreeCell<Object> cell =  new TreeCell<>();
+        cell.updateTreeView(new TreeView<>());
+        installDefaultSkin(cell);
+        TreeView<Object> treeView = new TreeView<>();
+        treeView.setFixedCellSize(100);
+        cell.updateTreeView(treeView);
+        assertEquals("fixed cell set to value of new treeView",
+                cell.getTreeView().getFixedCellSize(),
+                cell.prefHeight(-1), 1);
+    }
+
+// ------------------ ListCell
+
+    @Test
+    public void testListCellReplaceListViewWithNull() {
+        ListCell<Object> cell =  new ListCell<>();
+        ListView<Object> listView = new ListView<>();
+        cell.updateListView(listView);
+        installDefaultSkin(cell);
+        cell.updateListView(null);
+        // 8246745: updating the old listView must not throw NPE in skin
+        listView.setFixedCellSize(100);
+    }
+
+   @Test
+   public void testListCellPrefHeightOnReplaceListView() {
+       ListCell<Object> cell =  new ListCell<>();
+       cell.updateListView(new ListView<>());
+       installDefaultSkin(cell);
+       ListView<Object> listView = new ListView<>();
+       listView.setFixedCellSize(100);
+       cell.updateListView(listView);
+       assertEquals("fixed cell set to value of new listView",
+               cell.getListView().getFixedCellSize(),
+               cell.prefHeight(-1), 1);
+   }
 
   //-------------- listView
 
@@ -84,10 +215,9 @@ public class SkinCleanupTest {
 //-------- choiceBox, toolBar
 
     /**
-     * FIXME: Left-over from ChoiceBox fix.
      * NPE on sequence setItems -> modify items after skin is replaced.
      */
-    @Test @Ignore("8246202")
+    @Test
     public void testChoiceBoxSetItems() {
         ChoiceBox<String> box = new ChoiceBox<>();
         installDefaultSkin(box);
@@ -128,6 +258,63 @@ public class SkinCleanupTest {
         showControl(outside, true);
         bar.requestFocus();
         assertEquals("first item in toolbar must be focused", bar.getItems().get(0), scene.getFocusOwner());
+    }
+
+//-------- TabPane
+    @Test
+    public void testChildrenCountAfterSkinIsReplaced() {
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        int childrenCount = tabPane.getChildrenUnmodifiable().size();
+        replaceSkin(tabPane);
+        assertEquals(childrenCount, tabPane.getChildrenUnmodifiable().size());
+    }
+
+    @Test
+    public void testChildrenCountAfterSkinIsRemoved() {
+        TabPane tabPane = new TabPane();
+        assertEquals(0, tabPane.getChildrenUnmodifiable().size());
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        assertEquals(3, tabPane.getChildrenUnmodifiable().size());
+        tabPane.setSkin(null);
+        assertNull(tabPane.getSkin());
+        assertEquals(0, tabPane.getChildrenUnmodifiable().size());
+    }
+
+    @Test
+    public void testNPEWhenTabsAddedAfterSkinIsReplaced() {
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        replaceSkin(tabPane);
+        tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
+    }
+
+    @Test
+    public void testNPEWhenTabRemovedAfterSkinIsReplaced() {
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        replaceSkin(tabPane);
+        tabPane.getTabs().remove(0);
+    }
+
+    @Test
+    public void testAddRemoveTabsAfterSkinIsReplaced() {
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(new Tab("0"), new Tab("1"));
+        installDefaultSkin(tabPane);
+        assertEquals(2, tabPane.getTabs().size());
+        assertEquals(3, tabPane.getChildrenUnmodifiable().size());
+        replaceSkin(tabPane);
+        tabPane.getTabs().addAll(new Tab("2"), new Tab("3"));
+        assertEquals(4, tabPane.getTabs().size());
+        assertEquals(5, tabPane.getChildrenUnmodifiable().size());
+        tabPane.getTabs().clear();
+        assertEquals(0, tabPane.getTabs().size());
+        assertEquals(1, tabPane.getChildrenUnmodifiable().size());
     }
 
 //---------------- setup and initial

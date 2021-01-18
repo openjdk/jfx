@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,7 +89,7 @@ import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
@@ -715,7 +715,7 @@ public abstract class Toolkit {
     public abstract boolean isForwardTraversalKey(KeyEvent e);
     public abstract boolean isBackwardTraversalKey(KeyEvent e);
 
-    public abstract AbstractMasterTimer getMasterTimer();
+    public abstract AbstractPrimaryTimer getPrimaryTimer();
 
     public abstract FontLoader getFontLoader();
     public abstract TextLayoutFactory getTextLayoutFactory();

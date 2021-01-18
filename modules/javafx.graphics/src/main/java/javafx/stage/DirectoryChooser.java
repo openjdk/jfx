@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,12 @@ public final class DirectoryChooser {
      * The title of the displayed dialog.
      */
     private StringProperty title;
+
+    /**
+     * Creates a {@code DirectoryChooser}.
+     */
+    public DirectoryChooser() {
+    }
 
     public final void setTitle(final String value) {
         titleProperty().set(value);
