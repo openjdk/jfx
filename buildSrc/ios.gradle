@@ -74,8 +74,6 @@ IOS.jfxrtJarExcludes = [
     "com/sun/glass/ui/gtk",
 
     "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
     "com/sun/prism/es2/gl/x11",
 
     "com/sun/glass/ui/swt", // SWT glass

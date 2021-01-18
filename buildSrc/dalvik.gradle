@@ -489,7 +489,6 @@ android.javax.xml.stream.XMLInputFactory=com.sun.xml.stream.ZephyrParserFactory
 android.javax.xml.stream.XMLOutputFactory=com.sun.xml.stream.ZephyrWriterFactory
 android.javax.xml.stream.XMLEventFactory=com.sun.xml.stream.events.ZephyrEventFactory
 android.glass.platform=Monocle
-android.glass.lens=eglfb
 android.log.lens=FINEST
 android.prism.verbose=true
 DALVIK.prism.verbose=true
@@ -571,7 +570,6 @@ DALVIK.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 DALVIK.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 DALVIK.glass = [:]
-// DALVIK.glass.variants = ["eglfb", "lensport"]
 DALVIK.glass.variants = []
 DALVIK.glass.variants = ["monocle"]
 DALVIK.glass.javahSource = files("${project("graphics").buildDir}/classes/dalvik",
@@ -620,12 +618,9 @@ DALVIK.glass.monocle.linkFlags =  [linkFlags, "-ldl", "-llog", "-landroid", "-lG
 
 DALVIK.glass.monocle.lib = "glass_monocle"
 
-DALVIK.javafxPlatformDefault="eglfb"
-
 def monoclePlatformAdditions = """
 monocle.glass.platform=Monocle
 monocle.prism.order=es2,sw
-monocle.prism.eglfb=true
 monocle.prism.lcdtext=false
 monocle.prism.maxvram=128m
 monocle.prism.targetvram=112m
@@ -641,20 +636,6 @@ monocle.com.sun.javafx.gestures.rotate=true
 monocle.com.sun.javafx.gestures.scroll=true"""
 
 
-
-DALVIK.glass.eglfb = [:]
-DALVIK.glass.eglfb.nativeSource = [
-    file("${project("graphics").projectDir}/src/main/native-glass/lens"),
-    file("${project("graphics").projectDir}/src/main/native-glass/lens/wm"),
-    file("${project("graphics").projectDir}/src/main/native-glass/lens/cursor/nullCursor"),
-    file("${project("graphics").projectDir}/src/main/native-glass/lens/dalvik")
-]
-DALVIK.glass.eglfb.compiler = compiler
-DALVIK.glass.eglfb.linker = linker
-DALVIK.glass.eglfb.lib = "glass_lens_eglfb"
-DALVIK.glass.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
-    ccDebugFlags, ccDefaultIncludeFlags].flatten()
-DALVIK.glass.eglfb.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
 
 DALVIK.prism = [:]
 DALVIK.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
@@ -713,19 +694,6 @@ DALVIK.prismES2.monocle.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags
 DALVIK.prismES2.monocle.linker = linker
 DALVIK.prismES2.monocle.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
 DALVIK.prismES2.monocle.lib = "prism_es2_monocle"
-
-DALVIK.prismES2.eglfb = [:]
-DALVIK.prismES2.eglfb.nativeSource = [
-    file("${project("graphics").projectDir}/src/main/native-prism-es2"),
-    file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
-    file("${project("graphics").projectDir}/src/main/native-prism-es2/wrapped"),
-    file("${project("graphics").projectDir}/src/main/native-prism-es2/eglfb")]
-DALVIK.prismES2.eglfb.compiler = compiler
-DALVIK.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
-    ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
-DALVIK.prismES2.eglfb.linker = linker
-DALVIK.prismES2.eglfb.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
-DALVIK.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 DALVIK.font = [:]
 DALVIK.font.javahInclude = [
