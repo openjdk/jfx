@@ -33,11 +33,11 @@ import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.marlin.MarlinConst;
 import com.sun.marlin.MarlinProperties;
-import com.sun.marlin.DMarlinRenderer;
+import com.sun.marlin.MarlinRenderer;
 import com.sun.marlin.DPathConsumer2D;
-import com.sun.marlin.DRendererContext;
-import com.sun.marlin.DStroker;
-import com.sun.marlin.DTransformingPathConsumer2D;
+import com.sun.marlin.RendererContext;
+import com.sun.marlin.Stroker;
+import com.sun.marlin.TransformingPathConsumer2D;
 import com.sun.marlin.MarlinUtils;
 import com.sun.prism.BasicStroke;
 import java.util.Arrays;
@@ -65,7 +65,7 @@ public final class DMarlinPrismUtils {
     }
 
     private static DPathConsumer2D initStroker(
-            final DRendererContext rdrCtx,
+            final RendererContext rdrCtx,
             final BasicStroke stroke,
             final float lineWidth,
             BaseTransform tx,
@@ -151,7 +151,7 @@ public final class DMarlinPrismUtils {
         // Prepare the pipeline:
         DPathConsumer2D pc = out;
 
-        final DTransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
+        final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
 
         if (DO_TRACE_PATH) {
             // trace Stroker:
@@ -187,7 +187,7 @@ public final class DMarlinPrismUtils {
                 rdrCtx.stroker.disableClipping();
             }
 
-        } else if (rdrCtx.doClip && (stroke.getEndCap() != DStroker.CAP_BUTT)) {
+        } else if (rdrCtx.doClip && (stroke.getEndCap() != Stroker.CAP_BUTT)) {
             if (DO_TRACE_PATH) {
                 pc = transformerPC2D.traceClosedPathDetector(pc);
             }
@@ -222,12 +222,12 @@ public final class DMarlinPrismUtils {
     }
 
     private static DPathConsumer2D initRenderer(
-            final DRendererContext rdrCtx,
+            final RendererContext rdrCtx,
             final BasicStroke stroke,
             final BaseTransform tx,
             final Rectangle clip,
             final int piRule,
-            final DMarlinRenderer renderer)
+            final MarlinRenderer renderer)
     {
         if (DO_CLIP || (DO_CLIP_RUNTIME_ENABLE && MarlinProperties.isDoClipAtRuntime())) {
             // Define the initial clip bounds:
@@ -272,7 +272,7 @@ public final class DMarlinPrismUtils {
 
             DPathConsumer2D pc = renderer;
 
-            final DTransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
+            final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
 
             if (DO_CLIP_FILL && rdrCtx.doClip) {
                 if (DO_TRACE_PATH) {
@@ -290,8 +290,8 @@ public final class DMarlinPrismUtils {
         }
     }
 
-    public static DMarlinRenderer setupRenderer(
-            final DRendererContext rdrCtx,
+    public static MarlinRenderer setupRenderer(
+            final RendererContext rdrCtx,
             final Shape shape,
             final BasicStroke stroke,
             final BaseTransform xform,
@@ -301,7 +301,7 @@ public final class DMarlinPrismUtils {
         // Test if transform is identity:
         final BaseTransform tf = ((xform != null) && !xform.isIdentity()) ? xform : null;
 
-        final DMarlinRenderer r =  (!FORCE_NO_AA && antialiasedShape) ?
+        final MarlinRenderer r =  (!FORCE_NO_AA && antialiasedShape) ?
                 rdrCtx.renderer : rdrCtx.getRendererNoAA();
 
         if (shape instanceof Path2D) {
@@ -317,7 +317,7 @@ public final class DMarlinPrismUtils {
     }
 
     public static void strokeTo(
-            final DRendererContext rdrCtx,
+            final RendererContext rdrCtx,
             final Shape shape,
             final BasicStroke stroke,
             final float lineWidth,
@@ -332,7 +332,7 @@ public final class DMarlinPrismUtils {
         }
     }
 
-    private static void feedConsumer(final DRendererContext rdrCtx, final PathIterator pi,
+    private static void feedConsumer(final RendererContext rdrCtx, final PathIterator pi,
                                      DPathConsumer2D pc2d)
     {
         if (MarlinConst.USE_PATH_SIMPLIFIER) {
@@ -457,7 +457,7 @@ public final class DMarlinPrismUtils {
         rdrCtx.dirty = false;
     }
 
-    private static void feedConsumer(final DRendererContext rdrCtx,
+    private static void feedConsumer(final RendererContext rdrCtx,
                                      final Path2D p2d,
                                      final BaseTransform xform,
                                      DPathConsumer2D pc2d)
