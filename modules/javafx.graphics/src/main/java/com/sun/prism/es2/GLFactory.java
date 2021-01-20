@@ -63,11 +63,7 @@ abstract class GLFactory {
 
         final String factoryClassName;
         if (PlatformUtil.isUnix()) {
-            if ("eglx11".equals(PlatformUtil.getEmbeddedType()))
-                factoryClassName = "com.sun.prism.es2.EGLX11GLFactory";
-            else if ("eglfb".equals(PlatformUtil.getEmbeddedType()))
-                factoryClassName = "com.sun.prism.es2.EGLFBGLFactory";
-            else if ("monocle".equals(PlatformUtil.getEmbeddedType()))
+            if ("monocle".equals(PlatformUtil.getEmbeddedType()))
                 factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
             else
                 factoryClassName = "com.sun.prism.es2.X11GLFactory";
@@ -78,14 +74,7 @@ abstract class GLFactory {
         } else if (PlatformUtil.isIOS()) {
             factoryClassName = "com.sun.prism.es2.IOSGLFactory";
         } else if (PlatformUtil.isAndroid()) {
-            if ("eglfb".equals(PlatformUtil.getEmbeddedType())) {
-                factoryClassName = "com.sun.prism.es2.EGLFBGLFactory";
-            } else if ("monocle".equals(PlatformUtil.getEmbeddedType()))
-                 factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
-            else {
-                factoryClassName = null;
-                System.err.println("GLFactory.static - Only eglfb supported for Android!");
-            }
+            factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
         } else {
             factoryClassName = null;
             System.err.println("GLFactory.static - No Platform Factory for: " + System.getProperty("os.name"));

@@ -172,7 +172,6 @@ gtkLFlags.addAll(gtkLFlags_pkgconfig.split(" "))
 def monoclePlatformAdditions = """
 monocle.glass.platform=Monocle
 monocle.prism.order=es2,sw
-monocle.prism.eglfb=true
 monocle.prism.lcdtext=false
 monocle.prism.maxvram=128m
 monocle.prism.targetvram=112m
@@ -398,6 +397,5 @@ ARMV6HF.deploy.publicLibraryFilter = [
   "libjfxwebkit.so",
   "libgstplugins-lite.so",
   "libgstreamer-lite.so",
-  "libprism_es2_eglx11.so",
 ]
 ARMV6HF.deploy.compressBigJar=true
