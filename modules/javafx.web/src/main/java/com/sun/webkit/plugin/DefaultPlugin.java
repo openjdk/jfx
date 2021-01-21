@@ -52,7 +52,7 @@ final class DefaultPlugin implements Plugin {
         //if(g instanceof  WCGraphics2DContext){
             //nullComp.paint( ((WCGraphics2DContext)g).getImageGraphics() );
         //}
-        g.fillRect(x, y, w, h, new Color(0.33f, 1.0f, 1.0f, 0.1f));
+        g.fillRect(x, y, w, h, new Color(2 / 3.0f, 1.0f, 1.0f, 1 / 15.0f));
     }
 
     public void activate(Object nativeContainer, PluginListener pl) {}
