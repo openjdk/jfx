@@ -43,7 +43,7 @@ class TiledBacking;
 class TransformationMatrix;
 
 
-#if __WORDSIZE == 64
+#if __WORDSIZE == 64 && PLATFORM(COCOA)
 #define USE_OWNING_LAYER_BEAR_TRAP 1
 #define BEAR_TRAP_VALUE 0xEEEEEEEEEEEEEEEE
 #else
@@ -120,6 +120,8 @@ public:
     GraphicsLayer* backgroundLayer() const { return m_backgroundLayer.get(); }
     bool backgroundLayerPaintsFixedRootBackground() const { return m_backgroundLayerPaintsFixedRootBackground; }
 
+    bool needsRepaintOnCompositedScroll() const;
+
     bool requiresBackgroundLayer() const { return m_requiresBackgroundLayer; }
     void setRequiresBackgroundLayer(bool);
 
@@ -148,27 +150,7 @@ public:
         return 0;
     }
 
-    void setScrollingNodeIDForRole(ScrollingNodeID nodeID, ScrollCoordinationRole role)
-    {
-        switch (role) {
-        case ScrollCoordinationRole::Scrolling:
-            m_scrollingNodeID = nodeID;
-            break;
-        case ScrollCoordinationRole::ScrollingProxy:
-            // These nodeIDs are stored in m_ancestorClippingStack.
-            ASSERT_NOT_REACHED();
-            break;
-        case ScrollCoordinationRole::FrameHosting:
-            m_frameHostingNodeID = nodeID;
-            break;
-        case ScrollCoordinationRole::ViewportConstrained:
-            m_viewportConstrainedNodeID = nodeID;
-            break;
-        case ScrollCoordinationRole::Positioning:
-            m_positioningNodeID = nodeID;
-            break;
-        }
-    }
+    void setScrollingNodeIDForRole(ScrollingNodeID, ScrollCoordinationRole);
 
     ScrollingNodeID scrollingNodeIDForChildren() const;
 
@@ -206,7 +188,6 @@ public:
 
     bool startAnimation(double timeOffset, const Animation&, const KeyframeList&);
     void animationPaused(double timeOffset, const String& name);
-    void animationSeeked(double timeOffset, const String& name);
     void animationFinished(const String& name);
 
     void suspendAnimations(MonotonicTime = MonotonicTime());
@@ -220,7 +201,13 @@ public:
 
     void updateAllowsBackingStoreDetaching(const LayoutRect& absoluteBounds);
 
+#if ENABLE(ASYNC_SCROLLING)
+    bool maintainsEventRegion() const;
     void updateEventRegion();
+
+    bool needsEventRegionUpdate() const { return m_needsEventRegionUpdate; }
+    void setNeedsEventRegionUpdate(bool needsUpdate = true) { m_needsEventRegionUpdate = needsUpdate; }
+#endif
 
     void updateAfterWidgetResize();
     void positionOverflowControlsLayers();
@@ -281,6 +268,7 @@ public:
     GraphicsLayer* layerForHorizontalScrollbar() const { return m_layerForHorizontalScrollbar.get(); }
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
+    GraphicsLayer* overflowControlsContainer() const { return m_overflowControlsContainer.get(); }
 
     bool canCompositeFilters() const { return m_canCompositeFilters; }
 #if ENABLE(FILTERS_LEVEL_2)
@@ -322,6 +310,8 @@ private:
     bool updateForegroundLayer(bool needsForegroundLayer);
     bool updateBackgroundLayer(bool needsBackgroundLayer);
     bool updateMaskingLayer(bool hasMask, bool hasClipPath);
+
+    bool requiresLayerForScrollbar(Scrollbar*) const;
     bool requiresHorizontalScrollbarLayer() const;
     bool requiresVerticalScrollbarLayer() const;
     bool requiresScrollCornerLayer() const;
@@ -343,6 +333,7 @@ private:
 
     void updateOpacity(const RenderStyle&);
     void updateTransform(const RenderStyle&);
+    void updateChildrenTransformAndAnchorPoint(const LayoutRect& primaryGraphicsLayerRect, LayoutSize offsetFromParentGraphicsLayer);
     void updateFilters(const RenderStyle&);
 #if ENABLE(FILTERS_LEVEL_2)
     void updateBackdropFilters(const RenderStyle&);
@@ -377,6 +368,7 @@ private:
     void updateDirectlyCompositedBackgroundImage(PaintedContentsInfo&, bool& didUpdateContentsRect);
 
     void resetContentsRect();
+    void updateContentsRects();
 
     bool isPaintDestinationForDescendantLayers(RenderLayer::PaintedContentRequest&) const;
     bool hasVisibleNonCompositedDescendants() const;
@@ -419,6 +411,7 @@ private:
     RefPtr<GraphicsLayer> m_layerForHorizontalScrollbar;
     RefPtr<GraphicsLayer> m_layerForVerticalScrollbar;
     RefPtr<GraphicsLayer> m_layerForScrollCorner;
+    RefPtr<GraphicsLayer> m_overflowControlsContainer;
 
     RefPtr<GraphicsLayer> m_scrollContainerLayer; // Only used if the layer is using composited scrolling.
     RefPtr<GraphicsLayer> m_scrolledContentsLayer; // Only used if the layer is using composited scrolling.
@@ -444,6 +437,9 @@ private:
     bool m_requiresBackgroundLayer { false };
     bool m_hasSubpixelRounding { false };
     bool m_paintsSubpixelAntialiasedText { false }; // This is for logging only.
+#if ENABLE(ASYNC_SCROLLING)
+    bool m_needsEventRegionUpdate { true };
+#endif
 };
 
 enum CanvasCompositingStrategy {

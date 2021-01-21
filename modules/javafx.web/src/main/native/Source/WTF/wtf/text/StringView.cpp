@@ -27,14 +27,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "config.h"
 #include <wtf/text/StringView.h>
 
-#include <mutex>
 #include <unicode/ubrk.h>
 #include <unicode/unorm2.h>
+#include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/Optional.h>
+#include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/text/TextBreakIterator.h>
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace WTF {
 
@@ -71,6 +72,11 @@ bool StringView::startsWith(const StringView& prefix) const
 bool StringView::startsWithIgnoringASCIICase(const StringView& prefix) const
 {
     return ::WTF::startsWithIgnoringASCIICase(*this, prefix);
+}
+
+bool StringView::endsWith(UChar character) const
+{
+    return m_length && (*this)[m_length - 1] == character;
 }
 
 bool StringView::endsWith(const StringView& suffix) const
@@ -242,6 +248,32 @@ String StringView::convertToASCIIUppercase() const
     return convertASCIICase<ASCIICase::Upper>(static_cast<const UChar*>(m_characters), m_length);
 }
 
+template<typename DestinationCharacterType, typename SourceCharacterType>
+void getCharactersWithASCIICaseInternal(StringView::CaseConvertType type, DestinationCharacterType* destination, const SourceCharacterType* source, unsigned length)
+{
+    static_assert(std::is_same<SourceCharacterType, LChar>::value || std::is_same<SourceCharacterType, UChar>::value);
+    static_assert(std::is_same<DestinationCharacterType, LChar>::value || std::is_same<DestinationCharacterType, UChar>::value);
+    static_assert(sizeof(DestinationCharacterType) >= sizeof(SourceCharacterType));
+    auto caseConvert = (type == StringView::CaseConvertType::Lower) ? toASCIILower<SourceCharacterType> : toASCIIUpper<SourceCharacterType>;
+    for (unsigned i = 0; i < length; ++i)
+        destination[i] = caseConvert(source[i]);
+}
+
+void StringView::getCharactersWithASCIICase(CaseConvertType type, LChar* destination) const
+{
+    ASSERT(is8Bit());
+    getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+}
+
+void StringView::getCharactersWithASCIICase(CaseConvertType type, UChar* destination) const
+{
+    if (is8Bit()) {
+        getCharactersWithASCIICaseInternal(type, destination, characters8(), m_length);
+        return;
+    }
+    getCharactersWithASCIICaseInternal(type, destination, characters16(), m_length);
+}
+
 StringViewWithUnderlyingString normalizedNFC(StringView string)
 {
     // Latin-1 characters are unaffected by normalization.
@@ -258,7 +290,7 @@ StringViewWithUnderlyingString normalizedNFC(StringView string)
         return { string, { } };
 
     unsigned normalizedLength = unorm2_normalize(normalizer, string.characters16(), string.length(), nullptr, 0, &status);
-    ASSERT(status == U_BUFFER_OVERFLOW_ERROR);
+    ASSERT(needsToGrowToProduceBuffer(status));
 
     UChar* characters;
     String result = String::createUninitialized(normalizedLength, characters);
@@ -277,6 +309,49 @@ String normalizedNFC(const String& string)
     if (result.underlyingString.isNull())
         return string;
     return result.underlyingString;
+}
+
+// FIXME: Should this be named parseNumber<uint16_t> instead?
+// FIXME: Should we replace the toInt family of functions with this style?
+Optional<uint16_t> parseUInt16(StringView string)
+{
+    bool ok = false;
+    auto number = toIntegralType<uint16_t>(string, &ok);
+    if (!ok)
+        return WTF::nullopt;
+    return number;
+}
+
+bool equalRespectingNullity(StringView a, StringView b)
+{
+    if (a.m_characters == b.m_characters) {
+        ASSERT(a.is8Bit() == b.is8Bit());
+        return a.length() == b.length();
+    }
+
+    if (a.isEmpty() && b.isEmpty())
+        return a.isNull() == b.isNull();
+
+    return equalCommon(a, b);
+}
+
+bool StringView::contains(const char* string) const
+{
+    return find(string) != notFound;
+}
+
+int codePointCompare(StringView lhs, StringView rhs)
+{
+    bool lhsIs8Bit = lhs.is8Bit();
+    bool rhsIs8Bit = rhs.is8Bit();
+    if (lhsIs8Bit) {
+        if (rhsIs8Bit)
+            return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters8(), rhs.length());
+        return codePointCompare(lhs.characters8(), lhs.length(), rhs.characters16(), rhs.length());
+    }
+    if (rhsIs8Bit)
+        return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters8(), rhs.length());
+    return codePointCompare(lhs.characters16(), lhs.length(), rhs.characters16(), rhs.length());
 }
 
 #if CHECK_STRINGVIEW_LIFETIME
@@ -308,7 +383,7 @@ void StringView::invalidate(const StringImpl& stringToBeDestroyed)
 {
     UnderlyingString* underlyingString;
     {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         underlyingString = underlyingStrings().take(&stringToBeDestroyed);
         if (!underlyingString)
             return;
@@ -325,7 +400,7 @@ bool StringView::underlyingStringIsValid() const
 void StringView::adoptUnderlyingString(UnderlyingString* underlyingString)
 {
     if (m_underlyingString) {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         if (!--m_underlyingString->refCount) {
             if (m_underlyingString->isValid) {
                 underlyingStrings().remove(&m_underlyingString->string);
@@ -342,7 +417,7 @@ void StringView::setUnderlyingString(const StringImpl* string)
     if (!string)
         underlyingString = nullptr;
     else {
-        std::lock_guard<Lock> lock(underlyingStringsMutex);
+        auto locker = holdLock(underlyingStringsMutex);
         auto result = underlyingStrings().add(string, nullptr);
         if (result.isNewEntry)
             result.iterator->value = new UnderlyingString(*string);
@@ -356,8 +431,14 @@ void StringView::setUnderlyingString(const StringImpl* string)
 void StringView::setUnderlyingString(const StringView& otherString)
 {
     UnderlyingString* underlyingString = otherString.m_underlyingString;
-    if (underlyingString)
+    if (underlyingString) {
+        // It's safe to inc the refCount here without locking underlyingStringsMutex
+        // because UnderlyingString::refCount is a std::atomic_uint, and we're
+        // guaranteed that the StringView we're copying it from will at least
+        // have 1 ref on it, thereby keeping it alive regardless of what other
+        // threads may be doing.
         ++underlyingString->refCount;
+    }
     adoptUnderlyingString(underlyingString);
 }
 

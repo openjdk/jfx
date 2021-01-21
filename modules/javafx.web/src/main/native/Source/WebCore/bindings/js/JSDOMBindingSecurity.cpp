@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2011, 2013, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -44,9 +44,6 @@ void printErrorMessageForFrame(Frame* frame, const String& message)
 
 static inline bool canAccessDocument(JSC::JSGlobalObject* lexicalGlobalObject, Document* targetDocument, SecurityReportingOption reportingOption)
 {
-    VM& vm = lexicalGlobalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
     if (!targetDocument)
         return false;
 
@@ -59,9 +56,12 @@ static inline bool canAccessDocument(JSC::JSGlobalObject* lexicalGlobalObject, D
         return true;
 
     switch (reportingOption) {
-    case ThrowSecurityError:
+    case ThrowSecurityError: {
+        VM& vm = lexicalGlobalObject->vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
         throwSecurityError(*lexicalGlobalObject, scope, targetDocument->domWindow()->crossDomainAccessErrorMessage(active, IncludeTargetOrigin::No));
         break;
+    }
     case LogSecurityError:
         printErrorMessageForFrame(targetDocument->frame(), targetDocument->domWindow()->crossDomainAccessErrorMessage(active, IncludeTargetOrigin::Yes));
         break;
@@ -87,7 +87,12 @@ bool BindingSecurity::shouldAllowAccessToDOMWindow(JSGlobalObject& lexicalGlobal
 
 bool BindingSecurity::shouldAllowAccessToDOMWindow(JSGlobalObject& lexicalGlobalObject, DOMWindow& globalObject, String& message)
 {
-    if (BindingSecurity::shouldAllowAccessToDOMWindow(&lexicalGlobalObject, globalObject, DoNotReportSecurityError))
+    VM& vm = lexicalGlobalObject.vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    bool shouldAllowAccess = BindingSecurity::shouldAllowAccessToDOMWindow(&lexicalGlobalObject, globalObject, DoNotReportSecurityError);
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
+    if (shouldAllowAccess)
         return true;
     message = globalObject.crossDomainAccessErrorMessage(activeDOMWindow(lexicalGlobalObject), IncludeTargetOrigin::No);
     return false;

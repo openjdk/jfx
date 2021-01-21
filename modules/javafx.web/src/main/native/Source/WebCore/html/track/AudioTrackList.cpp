@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "AudioTrackList.h"
 
@@ -80,6 +80,11 @@ AudioTrack* AudioTrackList::getTrackById(const AtomString& id) const
 EventTargetInterface AudioTrackList::eventTargetInterface() const
 {
     return AudioTrackListEventTargetInterfaceType;
+}
+
+const char* AudioTrackList::activeDOMObjectName() const
+{
+    return "AudioTrackList";
 }
 
 } // namespace WebCore

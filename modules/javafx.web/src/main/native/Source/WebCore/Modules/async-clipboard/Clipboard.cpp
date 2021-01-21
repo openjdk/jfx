@@ -26,8 +26,10 @@
 #include "config.h"
 #include "Clipboard.h"
 
+#include "ClipboardImageReader.h"
 #include "ClipboardItem.h"
 #include "Document.h"
+#include "Editor.h"
 #include "Frame.h"
 #include "JSBlob.h"
 #include "JSClipboardItem.h"
@@ -48,7 +50,7 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(Clipboard);
 static bool shouldProceedWithClipboardWrite(const Frame& frame)
 {
     auto& settings = frame.settings();
-    if (settings.javaScriptCanAccessClipboard())
+    if (settings.javaScriptCanAccessClipboard() || frame.editor().isCopyingFromMenuOrKeyBinding())
         return true;
 
     switch (settings.clipboardAccessPolicy()) {
@@ -214,6 +216,17 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         return;
     }
 
+    if (type == "image/png"_s) {
+        ClipboardImageReader imageReader { type };
+        activePasteboard().read(imageReader, itemIndex);
+        auto imageBlob = imageReader.takeResult();
+        if (updateSessionValidity() == SessionIsValid::Yes && imageBlob)
+            promise->resolve<IDLInterface<Blob>>(imageBlob.releaseNonNull());
+        else
+            promise->reject(NotAllowedError);
+        return;
+    }
+
     String resultAsString;
 
     if (type == "text/uri-list"_s) {
@@ -233,19 +246,26 @@ void Clipboard::getType(ClipboardItem& item, const String& type, Ref<DeferredPro
         resultAsString = WTFMove(markupReader.markup);
     }
 
-    // FIXME: Support reading "image/png" as well as custom data.
-    // FIXME: Instead of checking changeCount here, we should send the changeCount over to the UI process to be vetted
-    // when attempting to read the data in the first place.
-    if (m_activeSession->changeCount != activePasteboard().changeCount()) {
-        m_activeSession = WTF::nullopt;
+    // FIXME: Support reading custom data.
+    if (updateSessionValidity() == SessionIsValid::No || resultAsString.isNull()) {
         promise->reject(NotAllowedError);
         return;
     }
 
-    if (!resultAsString.isNull())
-        promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(resultAsString, type));
-    else
-        promise->reject(NotAllowedError);
+    promise->resolve<IDLInterface<Blob>>(ClipboardItem::blobFromString(resultAsString, type));
+}
+
+Clipboard::SessionIsValid Clipboard::updateSessionValidity()
+{
+    if (!m_activeSession)
+        return SessionIsValid::No;
+
+    if (m_activeSession->changeCount != activePasteboard().changeCount()) {
+        m_activeSession = WTF::nullopt;
+        return SessionIsValid::No;
+    }
+
+    return SessionIsValid::Yes;
 }
 
 void Clipboard::write(const Vector<RefPtr<ClipboardItem>>& items, Ref<DeferredPromise>&& promise)

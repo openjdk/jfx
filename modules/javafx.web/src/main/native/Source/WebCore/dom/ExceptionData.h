@@ -37,7 +37,7 @@ struct ExceptionData {
     WEBCORE_EXPORT ExceptionData isolatedCopy() const;
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, ExceptionData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, ExceptionData&);
 
     Exception toException() const
     {
@@ -48,14 +48,14 @@ struct ExceptionData {
 template<class Encoder>
 void ExceptionData::encode(Encoder& encoder) const
 {
-    encoder.encodeEnum(code);
+    encoder << code;
     encoder << message;
 }
 
 template<class Decoder>
 bool ExceptionData::decode(Decoder& decoder, ExceptionData& data)
 {
-    if (!decoder.decodeEnum(data.code))
+    if (!decoder.decode(data.code))
         return false;
 
     if (!decoder.decode(data.message))

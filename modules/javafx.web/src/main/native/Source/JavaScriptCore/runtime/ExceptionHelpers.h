@@ -53,17 +53,27 @@ JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlo
 JSObject* createNotAConstructorError(JSGlobalObject*, JSValue);
 JSObject* createNotAFunctionError(JSGlobalObject*, JSValue);
 JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject*, const String&);
+JSObject* createInvalidPrivateNameError(JSGlobalObject*);
+JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
 String errorDescriptionForValue(JSGlobalObject*, JSValue);
 
 JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&);
+JS_EXPORT_PRIVATE Exception* throwOutOfMemoryError(JSGlobalObject*, ThrowScope&, const String&);
 JS_EXPORT_PRIVATE Exception* throwStackOverflowError(JSGlobalObject*, ThrowScope&);
 JS_EXPORT_PRIVATE Exception* throwTerminatedExecutionException(JSGlobalObject*, ThrowScope&);
 
 
 class TerminatedExecutionError final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(TerminatedExecutionError, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static TerminatedExecutionError* create(VM& vm)
     {

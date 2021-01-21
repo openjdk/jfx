@@ -403,6 +403,8 @@ public:
 
     void addFloatsToNewParent(RenderBlockFlow& toBlockFlow) const;
 
+    LayoutUnit endPaddingWidthForCaret() const;
+
 protected:
     bool shouldResetLogicalHeightBeforeLayout() const override { return true; }
 
@@ -559,7 +561,7 @@ private:
     int m_widthForTextAutosizing;
     unsigned m_lineCountForTextAutosizing : 2;
 #endif
-    void setSelectionState(SelectionState) final;
+    void setSelectionState(HighlightState) final;
 
 public:
     // FIXME-BLOCKFLOW: These can be made protected again once all callers have been moved here.
@@ -653,6 +655,13 @@ inline LayoutIntegration::LineLayout* RenderBlockFlow::layoutFormattingContextLi
     return hasLayoutFormattingContextLineLayout() ? WTF::get<std::unique_ptr<LayoutIntegration::LineLayout>>(m_lineLayout).get() : nullptr;
 }
 #endif
+
+inline LayoutUnit RenderBlockFlow::endPaddingWidthForCaret() const
+{
+    if (element() && element()->isRootEditableElement() && hasOverflowClip() && style().isLeftToRightDirection() && !paddingEnd())
+        return caretWidth;
+    return { };
+}
 
 } // namespace WebCore
 

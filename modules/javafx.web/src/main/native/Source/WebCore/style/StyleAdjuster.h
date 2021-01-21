@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include "RenderStyleConstants.h"
 #include <wtf/OptionSet.h>
 
 namespace WebCore {
 
 class Document;
 class Element;
+class EventTarget;
 class RenderStyle;
 class SVGElement;
 class Settings;
@@ -48,13 +50,24 @@ public:
     static void adjustSVGElementStyle(RenderStyle&, const SVGElement&);
     static void adjustAnimatedStyle(RenderStyle&, const RenderStyle* parentBoxStyle, OptionSet<AnimationImpact>);
 
+    static void adjustEventListenerRegionTypesForRootStyle(RenderStyle&, const Document&);
+
 #if ENABLE(TEXT_AUTOSIZING)
+    struct AdjustmentForTextAutosizing {
+        Optional<float> newFontSize;
+        Optional<float> newLineHeight;
+        Optional<AutosizeStatus> newStatus;
+        explicit operator bool() const { return newFontSize || newLineHeight || newStatus; }
+    };
+    static AdjustmentForTextAutosizing adjustmentForTextAutosizing(const RenderStyle&, const Element&);
+    static bool adjustForTextAutosizing(RenderStyle&, const Element&, AdjustmentForTextAutosizing);
     static bool adjustForTextAutosizing(RenderStyle&, const Element&);
 #endif
 
 private:
     void adjustDisplayContentsStyle(RenderStyle&) const;
     void adjustForSiteSpecificQuirks(RenderStyle&) const;
+    static OptionSet<EventListenerRegionType> computeEventListenerRegionTypes(const EventTarget&, OptionSet<EventListenerRegionType>);
 
     const Document& m_document;
     const RenderStyle& m_parentStyle;

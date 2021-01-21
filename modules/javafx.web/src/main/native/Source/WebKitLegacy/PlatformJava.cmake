@@ -135,7 +135,7 @@ list(APPEND WebKitLegacy_SOURCES
 
 # for DRT
 list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
-    WebCoreTestSupport${DEBUG_SUFFIX}
+    WebKit::WebCoreTestSupport
     ${ICU_I18N_LIBRARIES}
     ${ICU_DATA_LIBRARIES}
     ${ICU_LIBRARIES}
@@ -143,6 +143,11 @@ list(APPEND WebKitLegacy_PRIVATE_LIBRARIES
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
+
+list(APPEND WebKitLegacy_PRIVATE_DEFINITIONS
+    STATICALLY_LINKED_WITH_PAL
+    STATICALLY_LINKED_WITH_WebCore
+)
 
 set(WebKitLegacy_OUTPUT_NAME "jfxwebkit")
 

@@ -38,7 +38,7 @@ class IsoCellSet;
 class IsoSubspace : public Subspace {
 public:
     JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, HeapCellType*, size_t size, uint8_t numberOfLowerTierCells);
-    JS_EXPORT_PRIVATE ~IsoSubspace();
+    JS_EXPORT_PRIVATE ~IsoSubspace() override;
 
     size_t cellSize() { return m_directory.cellSize(); }
 
@@ -55,6 +55,8 @@ public:
     void destroyLowerTierFreeList();
 
     void sweep();
+
+    template<typename Func> void forEachLowerTierFreeListedPreciseAllocation(const Func&);
 
 private:
     friend class IsoCellSet;

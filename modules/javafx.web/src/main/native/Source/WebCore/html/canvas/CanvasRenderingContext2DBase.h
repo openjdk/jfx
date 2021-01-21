@@ -219,12 +219,6 @@ public:
     bool usesDisplayListDrawing() const { return m_usesDisplayListDrawing; };
     void setUsesDisplayListDrawing(bool flag) { m_usesDisplayListDrawing = flag; };
 
-    bool tracksDisplayListReplay() const { return m_tracksDisplayListReplay; }
-    void setTracksDisplayListReplay(bool);
-
-    String displayListAsText(DisplayList::AsTextFlags) const;
-    String replayDisplayListAsText(DisplayList::AsTextFlags) const;
-
     using Direction = CanvasDirection;
 
     class FontProxy : public FontSelectorClient {
@@ -339,7 +333,7 @@ protected:
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect);
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
     ExceptionOr<void> drawImage(CanvasBase&, const FloatRect& srcRect, const FloatRect& dstRect);
-    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
+    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&, ImageOrientation = ImageOrientation::FromImage);
 #if ENABLE(VIDEO)
     ExceptionOr<void> drawImage(HTMLVideoElement&, const FloatRect& srcRect, const FloatRect& dstRect);
 #endif
@@ -371,9 +365,6 @@ protected:
 
     template<class T> void fullCanvasCompositedDrawImage(T&, const FloatRect&, const FloatRect&, CompositeOperator);
 
-    ExceptionOr<RefPtr<ImageData>> getImageData(ImageBuffer::CoordinateSystem, float sx, float sy, float sw, float sh) const;
-    void putImageData(ImageData&, ImageBuffer::CoordinateSystem, float dx, float dy, float dirtyX, float dirtyY, float dirtyWidth, float dirtyHeight);
-
     bool isAccelerated() const override;
 
     bool hasInvertibleTransform() const override { return state().hasInvertibleTransform; }
@@ -387,8 +378,7 @@ protected:
     unsigned m_unrealizedSaveCount { 0 };
     bool m_usesCSSCompatibilityParseMode;
     bool m_usesDisplayListDrawing { false };
-    bool m_tracksDisplayListReplay { false };
-    mutable std::unique_ptr<struct DisplayListDrawingContext> m_recordingContext;
+    mutable std::unique_ptr<DisplayList::DrawingContext> m_recordingContext;
 };
 
 } // namespace WebCore

@@ -21,7 +21,6 @@
 #include "config.h"
 #include "FunctionConstructor.h"
 
-#include "Completion.h"
 #include "ExceptionHelpers.h"
 #include "FunctionPrototype.h"
 #include "JSAsyncFunction.h"
@@ -118,11 +117,15 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
         StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
         builder.append(prefix, functionName.string(), '(');
 
-        auto viewWithString = args.at(0).toString(globalObject)->viewWithUnderlyingString(globalObject);
+        auto* jsString = args.at(0).toString(globalObject);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
         builder.append(viewWithString.view);
         for (size_t i = 1; !builder.hasOverflowed() && i < args.size() - 1; i++) {
-            auto viewWithString = args.at(i).toString(globalObject)->viewWithUnderlyingString(globalObject);
+            auto* jsString = args.at(i).toString(globalObject);
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            auto viewWithString = jsString->viewWithUnderlyingString(globalObject);
             RETURN_IF_EXCEPTION(scope, nullptr);
             builder.append(", ", viewWithString.view);
         }
@@ -133,7 +136,9 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
 
         functionConstructorParametersEndPosition = builder.length() + 1;
 
-        auto body = args.at(args.size() - 1).toString(globalObject)->viewWithUnderlyingString(globalObject);
+        auto* bodyString = args.at(args.size() - 1).toString(globalObject);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        auto body = bodyString->viewWithUnderlyingString(globalObject);
         RETURN_IF_EXCEPTION(scope, nullptr);
         builder.append(") {\n", body.view, "\n}");
         if (UNLIKELY(builder.hasOverflowed())) {
@@ -143,7 +148,7 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
         program = builder.toString();
     }
 
-    SourceCode source = makeSource(program, sourceOrigin, URL({ }, sourceURL), position);
+    SourceCode source = makeSource(program, sourceOrigin, sourceURL, position);
     JSObject* exception = nullptr;
     FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, globalObject, source, exception, overrideLineNumber, functionConstructorParametersEndPosition);
     if (UNLIKELY(!function)) {
@@ -152,34 +157,38 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
         return nullptr;
     }
 
+    bool needsSubclassStructure = newTarget && newTarget != globalObject->functionConstructor();
+    JSGlobalObject* structureGlobalObject = needsSubclassStructure ? getFunctionRealm(vm, asObject(newTarget)) : globalObject;
     Structure* structure = nullptr;
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        structure = JSFunction::selectStructureForNewFuncExp(globalObject, function);
+        structure = JSFunction::selectStructureForNewFuncExp(structureGlobalObject, function);
         break;
     case FunctionConstructionMode::Generator:
-        structure = globalObject->generatorFunctionStructure();
+        structure = structureGlobalObject->generatorFunctionStructure();
         break;
     case FunctionConstructionMode::Async:
-        structure = globalObject->asyncFunctionStructure();
+        structure = structureGlobalObject->asyncFunctionStructure();
         break;
     case FunctionConstructionMode::AsyncGenerator:
-        structure = globalObject->asyncGeneratorFunctionStructure();
+        structure = structureGlobalObject->asyncGeneratorFunctionStructure();
         break;
     }
 
-    Structure* subclassStructure = InternalFunction::createSubclassStructure(globalObject, globalObject->functionConstructor(), newTarget, structure);
-    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (needsSubclassStructure) {
+        structure = InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), structure);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
 
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        return JSFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
+        return JSFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::Generator:
-        return JSGeneratorFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
+        return JSGeneratorFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::Async:
-        return JSAsyncFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
+        return JSAsyncFunction::create(vm, function, globalObject->globalScope(), structure);
     case FunctionConstructionMode::AsyncGenerator:
-        return JSAsyncGeneratorFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
+        return JSAsyncGeneratorFunction::create(vm, function, globalObject->globalScope(), structure);
     }
 
     ASSERT_NOT_REACHED();

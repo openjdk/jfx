@@ -34,6 +34,7 @@
 namespace WebCore {
 
 class SecurityOrigin;
+class UserContentURLPattern;
 
 class SecurityPolicy {
 public:
@@ -50,6 +51,8 @@ public:
     // referrer header should be omitted.
     WEBCORE_EXPORT static String generateReferrerHeader(ReferrerPolicy, const URL&, const String& referrer);
 
+    static String generateOriginHeader(ReferrerPolicy, const URL&, const SecurityOrigin&);
+
     static bool shouldInheritSecurityOriginFromOwner(const URL&);
 
     static bool isBaseURLSchemeAllowed(const URL&);
@@ -64,12 +67,13 @@ public:
     static bool restrictAccessToLocal();
     static bool allowSubstituteDataAccessToLocal();
 
-    WEBCORE_EXPORT static void addOriginAccessWhitelistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains);
-    WEBCORE_EXPORT static void removeOriginAccessWhitelistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains);
-    WEBCORE_EXPORT static void resetOriginAccessWhitelists();
+    WEBCORE_EXPORT static void allowAccessTo(const UserContentURLPattern&);
+    WEBCORE_EXPORT static void addOriginAccessAllowlistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains);
+    WEBCORE_EXPORT static void removeOriginAccessAllowlistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains);
+    WEBCORE_EXPORT static void resetOriginAccessAllowlists();
 
-    static bool isAccessWhiteListed(const SecurityOrigin* activeOrigin, const SecurityOrigin* targetOrigin);
-    static bool isAccessToURLWhiteListed(const SecurityOrigin* activeOrigin, const URL&);
+    static bool isAccessAllowed(const SecurityOrigin& activeOrigin, const SecurityOrigin& targetOrigin, const URL& targetURL);
+    static bool isAccessAllowed(const SecurityOrigin& activeOrigin, const URL& targetURL);
 };
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2003 Peter Kelly (pmk@post.com)
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
@@ -24,11 +24,6 @@
 #include "JSArray.h"
 
 #include "ArrayPrototype.h"
-#include "ButterflyInlines.h"
-#include "CodeBlock.h"
-#include "Error.h"
-#include "GetterSetter.h"
-#include "IndexingHeaderInlines.h"
 #include "JSArrayInlines.h"
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"
@@ -101,8 +96,7 @@ JSArray* JSArray::tryCreateUninitializedRestricted(ObjectInitializationScope& sc
 
     JSArray* result = createWithButterfly(vm, deferralContext, structure, butterfly);
 
-    const bool createUninitialized = true;
-    scope.notifyAllocated(result, createUninitialized);
+    scope.notifyAllocated(result);
     return result;
 }
 
@@ -306,7 +300,7 @@ bool JSArray::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName prope
     RELEASE_AND_RETURN(scope, JSObject::put(thisObject, globalObject, propertyName, value, slot));
 }
 
-bool JSArray::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+bool JSArray::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     VM& vm = globalObject->vm();
     JSArray* thisObject = jsCast<JSArray*>(cell);
@@ -314,7 +308,7 @@ bool JSArray::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Propert
     if (propertyName == vm.propertyNames->length)
         return false;
 
-    return JSObject::deleteProperty(thisObject, globalObject, propertyName);
+    return JSObject::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
 static int compareKeysForQSort(const void* a, const void* b)
@@ -1177,7 +1171,7 @@ void JSArray::fillArgList(JSGlobalObject* globalObject, MarkedArgumentBuffer& ar
         return;
 
     case ArrayWithUndecided: {
-        vector = 0;
+        vector = nullptr;
         vectorEnd = 0;
         break;
     }
@@ -1190,7 +1184,7 @@ void JSArray::fillArgList(JSGlobalObject* globalObject, MarkedArgumentBuffer& ar
     }
 
     case ArrayWithDouble: {
-        vector = 0;
+        vector = nullptr;
         vectorEnd = 0;
         for (; i < butterfly->publicLength(); ++i) {
             double v = butterfly->contiguousDouble().at(this, i);
@@ -1249,7 +1243,7 @@ void JSArray::copyToArguments(JSGlobalObject* globalObject, JSValue* firstElemen
         return;
 
     case ArrayWithUndecided: {
-        vector = 0;
+        vector = nullptr;
         vectorEnd = 0;
         break;
     }
@@ -1262,7 +1256,7 @@ void JSArray::copyToArguments(JSGlobalObject* globalObject, JSValue* firstElemen
     }
 
     case ArrayWithDouble: {
-        vector = 0;
+        vector = nullptr;
         vectorEnd = 0;
         for (; i < butterfly->publicLength(); ++i) {
             ASSERT(i < butterfly->vectorLength());

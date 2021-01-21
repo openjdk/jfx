@@ -28,8 +28,10 @@
 #include <WebCore/NotImplemented.h>
 #include "WebKitLegacy/WebCoreSupport/WebResourceLoadScheduler.h"
 #include <wtf/NeverDestroyed.h>
+#include <WebCore/AudioDestination.h>
 #include <WebCore/BlobRegistry.h>
 #include <WebCore/BlobRegistryImpl.h>
+#include <WebCore/MediaStrategy.h>
 
 namespace WebCore {
 void PlatformStrategiesJava::initialize()
@@ -54,9 +56,25 @@ PasteboardStrategy* PlatformStrategiesJava::createPasteboardStrategy()
     return 0;
 }
 
+class WebMediaStrategy final : public MediaStrategy {
+private:
+#if ENABLE(WEB_AUDIO)
+    std::unique_ptr<AudioDestination> createAudioDestination(AudioIOCallback& callback, const String& inputDeviceId,
+        unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate) override
+    {
+        return AudioDestination::create(callback, inputDeviceId, numberOfInputChannels, numberOfOutputChannels, sampleRate);
+    }
+#endif
+};
+
+MediaStrategy* PlatformStrategiesJava::createMediaStrategy()
+{
+    return new WebMediaStrategy;
+}
+
 class WebBlobRegistry final : public BlobRegistry {
 private:
-    void registerFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerFileBlobURL(url, WTFMove(reference), contentType); }
+    void registerFileBlobURL(const URL& url, Ref<BlobDataFileReference>&& reference, const String&, const String& contentType) final { m_blobRegistry.registerFileBlobURL(url, WTFMove(reference), contentType); }
     void registerBlobURL(const URL& url, Vector<BlobPart>&& parts, const String& contentType) final { m_blobRegistry.registerBlobURL(url, WTFMove(parts), contentType); }
     void registerBlobURL(const URL& url, const URL& srcURL) final { m_blobRegistry.registerBlobURL(url, srcURL); }
     void registerBlobURLOptionallyFileBacked(const URL& url, const URL& srcURL, RefPtr<BlobDataFileReference>&& reference, const String& contentType) final { m_blobRegistry.registerBlobURLOptionallyFileBacked(url, srcURL, WTFMove(reference), contentType); }

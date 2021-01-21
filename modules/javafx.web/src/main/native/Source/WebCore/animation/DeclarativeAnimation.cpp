@@ -34,8 +34,10 @@
 #include "Element.h"
 #include "EventNames.h"
 #include "KeyframeEffect.h"
+#include "Logging.h"
 #include "PseudoElement.h"
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -59,6 +61,8 @@ Element* DeclarativeAnimation::owningElement() const
 
 void DeclarativeAnimation::tick()
 {
+    LOG_WITH_STREAM(Animations, stream << "DeclarativeAnimation::tick for element " << m_owningElement);
+
     bool wasRelevant = isRelevant();
 
     WebAnimation::tick();
@@ -108,7 +112,12 @@ void DeclarativeAnimation::initialize(const RenderStyle* oldStyle, const RenderS
 
     ASSERT(m_owningElement);
 
-    setEffect(KeyframeEffect::create(*m_owningElement));
+    if (is<PseudoElement>(m_owningElement.get())) {
+        auto& pseudoOwningElement = downcast<PseudoElement>(*m_owningElement);
+        ASSERT(pseudoOwningElement.hostElement());
+        setEffect(KeyframeEffect::create(*pseudoOwningElement.hostElement(), pseudoOwningElement.pseudoId()));
+    } else
+        setEffect(KeyframeEffect::create(*m_owningElement, m_owningElement->pseudoId()));
     setTimeline(&m_owningElement->document().timeline());
     downcast<KeyframeEffect>(effect())->computeDeclarativeAnimationBlendingKeyframes(oldStyle, newStyle);
     syncPropertiesWithBackingAnimation();
@@ -124,16 +133,16 @@ void DeclarativeAnimation::syncPropertiesWithBackingAnimation()
 {
 }
 
-Optional<double> DeclarativeAnimation::startTime() const
+Optional<double> DeclarativeAnimation::bindingsStartTime() const
 {
     flushPendingStyleChanges();
-    return WebAnimation::startTime();
+    return WebAnimation::bindingsStartTime();
 }
 
-void DeclarativeAnimation::setStartTime(Optional<double> startTime)
+void DeclarativeAnimation::setBindingsStartTime(Optional<double> startTime)
 {
     flushPendingStyleChanges();
-    return WebAnimation::setStartTime(startTime);
+    return WebAnimation::setBindingsStartTime(startTime);
 }
 
 Optional<double> DeclarativeAnimation::bindingsCurrentTime() const
@@ -208,7 +217,7 @@ void DeclarativeAnimation::setTimeline(RefPtr<AnimationTimeline>&& newTimeline)
     WebAnimation::setTimeline(WTFMove(newTimeline));
 }
 
-void DeclarativeAnimation::cancel()
+void DeclarativeAnimation::cancel(Silently silently)
 {
     auto cancelationTime = 0_s;
     if (auto* animationEffect = effect()) {
@@ -216,7 +225,7 @@ void DeclarativeAnimation::cancel()
             cancelationTime = *activeTime;
     }
 
-    WebAnimation::cancel();
+    WebAnimation::cancel(silently);
 
     invalidateDOMEvents(cancelationTime);
 }

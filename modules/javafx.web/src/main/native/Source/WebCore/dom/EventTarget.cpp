@@ -34,11 +34,13 @@
 
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
+#include "EventTargetConcrete.h"
 #include "HTMLBodyElement.h"
 #include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
 #include "JSEventListener.h"
 #include "JSLazyEventListener.h"
+#include "Logging.h"
 #include "Quirks.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
@@ -57,6 +59,11 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
 WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetWithInlineData);
+
+Ref<EventTarget> EventTarget::create(ScriptExecutionContext& context)
+{
+    return EventTargetConcrete::create(context);
+}
 
 bool EventTarget::isNode() const
 {
@@ -88,6 +95,10 @@ bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListene
     if (listenerCreatedFromScript)
         InspectorInstrumentation::didAddEventListener(*this, eventType, listenerRef.get(), options.capture);
 
+    if (eventNames().isWheelEventType(eventType))
+        invalidateEventListenerRegions();
+
+    eventListenersDidChange();
     return true;
 }
 
@@ -127,7 +138,14 @@ bool EventTarget::removeEventListener(const AtomString& eventType, EventListener
 
     InspectorInstrumentation::willRemoveEventListener(*this, eventType, listener, options.capture);
 
-    return data->eventListenerMap.remove(eventType, listener, options.capture);
+    if (data->eventListenerMap.remove(eventType, listener, options.capture)) {
+        if (eventNames().isWheelEventType(eventType))
+            invalidateEventListenerRegions();
+
+        eventListenersDidChange();
+        return true;
+    }
+    return false;
 }
 
 bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<EventListener>&& listener, DOMWrapperWorld& isolatedWorld)
@@ -240,6 +258,15 @@ void EventTarget::fireEventListeners(Event& event, EventInvokePhase phase)
     if (!data)
         return;
 
+    // FIXME: Remove once <rdar://problem/62344280> is fixed.
+    if (is<Document>(scriptExecutionContext())) {
+        auto* page = downcast<Document>(*scriptExecutionContext()).page();
+        if (page && !page->shouldFireEvents()) {
+            RELEASE_LOG_IF(page->isAlwaysOnLoggingAllowed(), Events, "%p - EventTarget::fireEventListeners: Not firing %{public}s event because events are temporarily disabled for this page", this, event.type().string().utf8().data());
+            return;
+        }
+    }
+
     SetForScope<bool> firingEventListenersScope(data->isFiringEventListeners, true);
 
     if (auto* listenersVector = data->eventListenerMap.find(event.type())) {
@@ -293,6 +320,12 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         if (event.immediatePropagationStopped())
             break;
 
+        // Make sure the JS wrapper and function stay alive until the end of this scope. Otherwise,
+        // event listeners with 'once' flag may get collected as soon as they get unregistered below,
+        // before we call the js function.
+        JSC::EnsureStillAliveScope wrapperProtector(registeredListener->callback().wrapper());
+        JSC::EnsureStillAliveScope jsFunctionProtector(registeredListener->callback().jsFunction());
+
         // Do this before invocation to avoid reentrancy issues.
         if (registeredListener->isOnce())
             removeEventListener(event.type(), registeredListener->callback(), ListenerOptions(registeredListener->useCapture()));
@@ -339,8 +372,13 @@ void EventTarget::removeAllEventListeners()
     threadData.setIsInRemoveAllEventListeners(true);
 
     auto* data = eventTargetData();
-    if (data)
+    if (data && !data->eventListenerMap.isEmpty()) {
+        if (data->eventListenerMap.contains(eventNames().wheelEvent) || data->eventListenerMap.contains(eventNames().mousewheelEvent))
+            invalidateEventListenerRegions();
+
         data->eventListenerMap.clear();
+        eventListenersDidChange();
+    }
 
     threadData.setIsInRemoveAllEventListeners(false);
 }
@@ -355,6 +393,25 @@ void EventTarget::visitJSEventListeners(JSC::SlotVisitor& visitor)
     EventListenerIterator iterator(&data->eventListenerMap);
     while (auto* listener = iterator.nextListener())
         listener->visitJSFunction(visitor);
+}
+
+void EventTarget::invalidateEventListenerRegions()
+{
+    if (is<Element>(*this)) {
+        downcast<Element>(*this).invalidateEventListenerRegions();
+        return;
+    }
+
+    auto* document = [&]() -> Document* {
+        if (is<Document>(*this))
+            return &downcast<Document>(*this);
+        if (is<DOMWindow>(*this))
+            return downcast<DOMWindow>(*this).document();
+        return nullptr;
+    }();
+
+    if (document)
+        document->invalidateEventListenerRegions();
 }
 
 } // namespace WebCore

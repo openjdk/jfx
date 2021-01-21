@@ -33,6 +33,7 @@
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "IDLTypes.h"
+#include "ImageBuffer.h"
 #include "IntSize.h"
 #include "ScriptWrappable.h"
 #include <wtf/Forward.h>
@@ -63,6 +64,13 @@ public:
     std::unique_ptr<ImageBuffer> takeImageBuffer();
     const IntSize& size() const { return m_size; }
     bool originClean() const { return m_originClean; }
+    size_t memoryCost() const
+    {
+        auto* buffer = m_buffer.get();
+        if (buffer)
+            return buffer->memoryCost();
+        return 0;
+    }
 
 private:
     std::unique_ptr<ImageBuffer> m_buffer;
@@ -101,7 +109,7 @@ public:
 
     void didDraw(const FloatRect&) final;
 
-    Image* copiedImage() const final { return nullptr; }
+    Image* copiedImage() const final;
     bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
 
     SecurityOrigin* securityOrigin() const final;
@@ -136,12 +144,16 @@ private:
 
     void reset();
 
+    void clearCopiedImage() const;
+
     std::unique_ptr<CanvasRenderingContext> m_context;
 
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
 
     bool m_detached { false };
+
+    mutable RefPtr<Image> m_copiedImage;
 };
 
 }

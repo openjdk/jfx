@@ -25,7 +25,9 @@
 
 #include "Chrome.h"
 #include "CookieJar.h"
+#include "DOMMimeType.h"
 #include "DOMMimeTypeArray.h"
+#include "DOMPlugin.h"
 #include "DOMPluginArray.h"
 #include "Document.h"
 #include "Frame.h"
@@ -42,6 +44,9 @@
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "ShareData.h"
+#include "ShareDataReader.h"
+#include "SharedBuffer.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Language.h>
 #include <wtf/StdLibExtras.h>
@@ -105,31 +110,45 @@ bool Navigator::onLine() const
     return platformStrategies()->loaderStrategy()->isOnLine();
 }
 
-void Navigator::share(ScriptExecutionContext& context, ShareData data, Ref<DeferredPromise>&& promise)
+bool Navigator::canShare(ScriptExecutionContext& context, const ShareData& data)
 {
     auto* frame = this->frame();
-    if (!frame || !frame->page()) {
-        promise->reject(TypeError);
-        return;
+    if (!frame || !frame->page())
+        return false;
+    if (data.title.isNull() && data.url.isNull() && data.text.isNull()) {
+        if (!data.files.isEmpty()) {
+#if ENABLE(FILE_SHARE)
+            return true;
+#else
+            return false;
+#endif
+        }
+        return false;
     }
 
-    if (data.title.isEmpty() && data.url.isEmpty() && data.text.isEmpty()) {
+    Optional<URL> url;
+    if (!data.url.isNull()) {
+        url = context.completeURL(data.url);
+        if (!url->isValid())
+            return false;
+    }
+    return true;
+}
+
+void Navigator::share(ScriptExecutionContext& context, const ShareData& data, Ref<DeferredPromise>&& promise)
+{
+    if (!canShare(context, data)) {
         promise->reject(TypeError);
         return;
     }
 
     Optional<URL> url;
-    if (!data.url.isEmpty()) {
+    if (!data.url.isEmpty())
         url = context.completeURL(data.url);
-        if (!url->isValid()) {
-            promise->reject(TypeError);
-            return;
-        }
-    }
 
     auto* window = this->window();
     // Note that the specification does not indicate we should consume user activation. We are intentionally stricter here.
-    if (!window || !window->consumeTransientActivation()) {
+    if (!window || !window->consumeTransientActivation() || m_hasPendingShare) {
         promise->reject(NotAllowedError);
         return;
     }
@@ -137,9 +156,39 @@ void Navigator::share(ScriptExecutionContext& context, ShareData data, Ref<Defer
     ShareDataWithParsedURL shareData = {
         data,
         url,
+        { },
     };
+#if ENABLE(FILE_SHARE)
+    if (!data.files.isEmpty()) {
+        if (m_loader)
+            m_loader->cancel();
 
-    frame->page()->chrome().showShareSheet(shareData, [promise = WTFMove(promise)] (bool completed) {
+        m_loader = ShareDataReader::create([this, promise = WTFMove(promise)] (ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
+            showShareData(readData, WTFMove(promise));
+        });
+        m_loader->start(frame()->document(), WTFMove(shareData));
+        return;
+    }
+#endif
+    this->showShareData(shareData, WTFMove(promise));
+}
+
+void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref<DeferredPromise>&& promise)
+{
+    if (readData.hasException()) {
+        promise->reject(readData.releaseException());
+        return;
+    }
+
+    auto* frame = this->frame();
+    if (!frame || !frame->page())
+        return;
+
+    m_hasPendingShare = true;
+    auto shareData = readData.returnValue();
+
+    frame->page()->chrome().showShareSheet(shareData, [promise = WTFMove(promise), this] (bool completed) {
+        m_hasPendingShare = false;
         if (completed) {
             promise->resolve();
             return;
@@ -148,14 +197,64 @@ void Navigator::share(ScriptExecutionContext& context, ShareData data, Ref<Defer
     });
 }
 
+void Navigator::initializePluginAndMimeTypeArrays()
+{
+    if (m_plugins)
+        return;
+
+    auto* frame = this->frame();
+    if (!frame || !frame->page()) {
+        m_plugins = DOMPluginArray::create(*this);
+        m_mimeTypes = DOMMimeTypeArray::create(*this);
+        return;
+    }
+
+    auto [publiclyVisiblePlugins, additionalWebVisiblePlugins] = frame->page()->pluginData().publiclyVisiblePluginsAndAdditionalWebVisiblePlugins();
+
+    Vector<Ref<DOMPlugin>> publiclyVisibleDOMPlugins;
+    Vector<Ref<DOMPlugin>> additionalWebVisibleDOMPlugins;
+    Vector<Ref<DOMMimeType>> webVisibleDOMMimeTypes;
+
+    publiclyVisibleDOMPlugins.reserveInitialCapacity(publiclyVisiblePlugins.size());
+    for (auto& plugin : publiclyVisiblePlugins) {
+        auto wrapper = DOMPlugin::create(*this, plugin);
+        webVisibleDOMMimeTypes.appendVector(wrapper->mimeTypes());
+        publiclyVisibleDOMPlugins.uncheckedAppend(WTFMove(wrapper));
+    }
+
+    additionalWebVisibleDOMPlugins.reserveInitialCapacity(additionalWebVisiblePlugins.size());
+    for (auto& plugin : additionalWebVisiblePlugins) {
+        auto wrapper = DOMPlugin::create(*this, plugin);
+        webVisibleDOMMimeTypes.appendVector(wrapper->mimeTypes());
+        additionalWebVisibleDOMPlugins.uncheckedAppend(WTFMove(wrapper));
+    }
+
+    std::sort(publiclyVisibleDOMPlugins.begin(), publiclyVisibleDOMPlugins.end(), [](const Ref<DOMPlugin>& a, const Ref<DOMPlugin>& b) {
+        if (auto nameComparison = codePointCompare(a->info().name, b->info().name))
+            return nameComparison < 0;
+        return codePointCompareLessThan(a->info().bundleIdentifier, b->info().bundleIdentifier);
+    });
+
+    std::sort(webVisibleDOMMimeTypes.begin(), webVisibleDOMMimeTypes.end(), [](const Ref<DOMMimeType>& a, const Ref<DOMMimeType>& b) {
+        if (auto typeComparison = codePointCompare(a->type(), b->type()))
+            return typeComparison < 0;
+        return codePointCompareLessThan(a->enabledPlugin()->info().bundleIdentifier, b->enabledPlugin()->info().bundleIdentifier);
+    });
+
+    // NOTE: It is not necessary to sort additionalWebVisibleDOMPlugins, as they are only accessible via
+    // named property look up, so their order is not exposed.
+
+    m_plugins = DOMPluginArray::create(*this, WTFMove(publiclyVisibleDOMPlugins), WTFMove(additionalWebVisibleDOMPlugins));
+    m_mimeTypes = DOMMimeTypeArray::create(*this, WTFMove(webVisibleDOMMimeTypes));
+}
+
 DOMPluginArray& Navigator::plugins()
 {
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
         if (auto* frame = this->frame())
             ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::Plugins);
     }
-    if (!m_plugins)
-        m_plugins = DOMPluginArray::create(*this);
+    initializePluginAndMimeTypeArrays();
     return *m_plugins;
 }
 
@@ -165,8 +264,7 @@ DOMMimeTypeArray& Navigator::mimeTypes()
         if (auto* frame = this->frame())
             ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::MimeTypes);
     }
-    if (!m_mimeTypes)
-        m_mimeTypes = DOMMimeTypeArray::create(*this);
+    initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
 }
 

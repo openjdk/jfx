@@ -100,17 +100,61 @@ enum CompositingPolicy {
     "Interrupted"
 };
 
+enum ContentSizeCategory {
+    "L",
+    "XXXL"
+};
+
 [
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
     Conditional=VIDEO,
     JSGenerateToJSObject,
 ] dictionary NowPlayingState {
-    boolean hasActiveSession;
-    boolean registeredAsNowPlayingApplication;
     DOMString title;
     unrestricted double duration;
     unrestricted double elapsedTime;
     unsigned long long uniqueIdentifier;
+    boolean hasActiveSession;
+    boolean registeredAsNowPlayingApplication;
+    boolean haveEverRegisteredAsNowPlayingApplication;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    Conditional=VIDEO,
+    JSGenerateToJSObject,
+] dictionary MediaUsageState {
+    DOMString mediaURL;
+    boolean isPlaying;
+    boolean canShowControlsManager;
+    boolean canShowNowPlayingControls;
+    boolean isSuspended;
+    boolean isInActiveDocument;
+    boolean isFullscreen;
+    boolean isMuted;
+    boolean isMediaDocumentInMainFrame;
+    boolean isVideo;
+    boolean isAudio;
+    boolean hasVideo;
+    boolean hasAudio;
+    boolean hasRenderer;
+    boolean audioElementWithUserGesture;
+    boolean userHasPlayedAudioBefore;
+    boolean isElementRectMostlyInMainFrame;
+    boolean playbackPermitted;
+    boolean pageMediaPlaybackSuspended;
+    boolean isMediaDocumentAndNotOwnerElement;
+    boolean pageExplicitlyAllowsElementToAutoplayInline;
+    boolean requiresFullscreenForVideoPlaybackAndFullscreenNotPermitted;
+    boolean hasHadUserInteractionAndQuirksContainsShouldAutoplayForArbitraryUserGesture;
+    boolean isVideoAndRequiresUserGestureForVideoRateChange;
+    boolean isAudioAndRequiresUserGestureForAudioRateChange;
+    boolean isVideoAndRequiresUserGestureForVideoDueToLowPowerMode;
+    boolean noUserGestureRequired;
+    boolean requiresPlaybackAndIsNotPlaying;
+    boolean hasEverNotifiedAboutPlaying;
+    boolean outsideOfFullscreen;
+    boolean isLargeEnoughForMainContent;
 };
 
 [
@@ -143,6 +187,21 @@ enum CompositingPolicy {
     DOMString codecName;
     unsigned short bitstreamProfileID;
     unsigned short bitstreamLevelID;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary VPCodecConfigurationRecord {
+    DOMString codecName;
+    octet profile;
+    octet level;
+    octet bitDepth;
+    octet chromaSubsampling;
+    octet videoFullRangeFlag;
+    octet colorPrimaries;
+    octet transferCharacteristics;
+    octet matrixCoefficients;
 };
 
 [
@@ -239,7 +298,10 @@ enum CompositingPolicy {
     // Spatial Navigation testing
     [MayThrowException] unsigned long lastSpatialNavigationCandidateCount();
 
+    readonly attribute unsigned long inflightBeaconsCount;
+
     // CSS Animation testing.
+    boolean animationWithIdExists(DOMString id);
     unsigned long numberOfActiveAnimations();
     [MayThrowException] void suspendAnimations();
     [MayThrowException] void resumeAnimations();
@@ -255,6 +317,7 @@ enum CompositingPolicy {
     // Web Animations testing.
     sequence<AcceleratedAnimation> acceleratedAnimationsForElement(Element element);
     unsigned long numberOfAnimationTimelineInvalidations();
+    double timeToNextAnimationTick(WebAnimation animation);
 
     // For animations testing, we need a way to get at pseudo elements.
     [MayThrowException] Element? pseudoElement(Element element, DOMString pseudoId);
@@ -275,7 +338,6 @@ enum CompositingPolicy {
     [MayThrowException] Range? markerRangeForNode(Node node, DOMString markerType, unsigned long index);
     [MayThrowException] DOMString markerDescriptionForNode(Node node, DOMString markerType, unsigned long index);
     [MayThrowException] DOMString dumpMarkerRects(DOMString markerType);
-    void addTextMatchMarker(Range range, boolean isActive);
     [MayThrowException] void setMarkedTextMatchesAreHighlighted(boolean flag);
 
     void invalidateFontCache();
@@ -285,6 +347,9 @@ enum CompositingPolicy {
 
     // Like Element.scrollTo(), but without constaints, for testing rubber-banding.
     [MayThrowException] void unconstrainedScrollTo(Element element, unrestricted double x, unrestricted double y);
+
+    // Scrolls the element by the given delta, approximating the async wheel event handling code path where available.
+    [MayThrowException] void scrollBySimulatingWheelEvent(Element element, unrestricted double deltaX, unrestricted double deltaY);
 
     [MayThrowException] DOMRect layoutViewportRect();
     [MayThrowException] DOMRect visualViewportRect();
@@ -309,6 +374,9 @@ enum CompositingPolicy {
 
     void setCanShowPlaceholder(Element element, boolean canShowPlaceholder);
 
+    Element insertTextPlaceholder(long width, long height);
+    void removeTextPlaceholder(Element element);
+
     [MayThrowException] Range? rangeOfString(DOMString text, Range? referenceRange, sequence<DOMString> findOptions);
     [MayThrowException] unsigned long countMatchesForText(DOMString text, sequence<DOMString> findOptions, DOMString markMatches);
     [MayThrowException] unsigned long countFindMatches(DOMString text, sequence<DOMString> findOptions);
@@ -319,19 +387,20 @@ enum CompositingPolicy {
 
     [MayThrowException] void scrollElementToRect(Element element, long x, long y, long w, long h);
 
-    Range? rangeFromLocationAndLength(Element scope, long rangeLocation, long rangeLength);
+    Range? rangeFromLocationAndLength(Element scope, unsigned long rangeLocation, unsigned long rangeLength);
     unsigned long locationFromRange(Element scope, Range range);
     unsigned long lengthFromRange(Element scope, Range range);
     DOMString rangeAsText(Range range);
     DOMString rangeAsTextUsingBackwardsTextIterator(Range range);
-    Range subrange(Range range, long rangeLocation, long rangeLength);
+    Range subrange(Range range, unsigned long rangeLocation, unsigned long rangeLength);
     [MayThrowException] Range? rangeForDictionaryLookupAtLocation(long x, long y);
     Range? rangeOfStringNearLocation(Range range, DOMString text, long targetOffset);
 
     [MayThrowException] void setDelegatesScrolling(boolean enabled);
 
-    [MayThrowException] long lastSpellCheckRequestSequence();
-    [MayThrowException] long lastSpellCheckProcessedSequence();
+    [MayThrowException] unsigned long long lastSpellCheckRequestSequence();
+    [MayThrowException] unsigned long long lastSpellCheckProcessedSequence();
+    void advanceToNextMisspelling();
 
     sequence<DOMString> userPreferredLanguages();
     void setUserPreferredLanguages(sequence<DOMString> languages);
@@ -358,6 +427,7 @@ enum CompositingPolicy {
     boolean hasSpellingMarker(long from, long length);
     boolean hasGrammarMarker(long from, long length);
     boolean hasAutocorrectedMarker(long from, long length);
+    boolean hasDictationAlternativesMarker(long from, long length);
     void setContinuousSpellCheckingEnabled(boolean enabled);
     void setAutomaticQuoteSubstitutionEnabled(boolean enabled);
     void setAutomaticLinkDetectionEnabled(boolean enabled);
@@ -416,8 +486,11 @@ enum CompositingPolicy {
 
     [MayThrowException] DOMString scrollbarOverlayStyle(optional Node? node = null);
     [MayThrowException] boolean scrollbarUsingDarkAppearance(optional Node? node = null);
+    [MayThrowException] DOMString horizontalScrollbarState(optional Node? node = null);
+    [MayThrowException] DOMString verticalScrollbarState(optional Node? node = null);
 
     [MayThrowException] DOMString scrollingStateTreeAsText();
+    [MayThrowException] DOMString scrollingTreeAsText();
     [MayThrowException] DOMString mainThreadScrollingReasons(); // FIXME: rename to synchronousScrollingReasons().
     [MayThrowException] DOMRectList nonFastScrollableRects();
 
@@ -487,6 +560,8 @@ enum CompositingPolicy {
     void setFullscreenAutoHideDuration(double duration);
     void setFullscreenControlsHidden(boolean hidden);
 
+    [Conditional=VIDEO_PRESENTATION_MODE] void setMockVideoPresentationModeEnabled(boolean enabled);
+
     void setApplicationCacheOriginQuota(unsigned long long quota);
 
     void registerURLSchemeAsBypassingContentSecurityPolicy(DOMString scheme);
@@ -511,10 +586,11 @@ enum CompositingPolicy {
     // Query if a timer is currently throttled, to debug timer throttling.
     [MayThrowException] boolean isTimerThrottled(long timerHandle);
 
-    boolean isRequestAnimationFrameThrottled();
+    DOMString requestAnimationFrameThrottlingReasons();
     boolean areTimersThrottled();
 
     [MayThrowException] void setLowPowerModeEnabled(boolean enabled);
+    [MayThrowException] void setOutsideViewportThrottlingEnabled(boolean enabled);
     readonly attribute double requestAnimationFrameInterval;
     readonly attribute boolean scriptedAnimationsAreSuspended;
 
@@ -528,7 +604,12 @@ enum CompositingPolicy {
     [MayThrowException] void startTrackingCompositingUpdates();
     [MayThrowException] unsigned long compositingUpdateCount();
 
+    [MayThrowException] void startTrackingRenderingUpdates();
+    [MayThrowException] unsigned long renderingUpdateCount();
+
     attribute CompositingPolicy? compositingPolicyOverride;
+
+    void updateLayoutAndStyleForAllFrames();
 
     // |node| should be Document, HTMLIFrameElement, or unspecified.
     // If |node| is an HTMLIFrameElement, it assumes node.contentDocument is
@@ -556,7 +637,8 @@ enum CompositingPolicy {
     void forceReload(boolean endToEnd);
     void reloadExpiredOnly();
 
-    void enableAutoSizeMode(boolean enabled, long width, long height);
+    void enableFixedWidthAutoSizeMode(boolean enabled, long width, long height);
+    void enableSizeToContentAutoSizeMode(boolean enabled, long width, long height);
 
     [Conditional=VIDEO] sequence<DOMString> mediaResponseSources(HTMLMediaElement media);
     [Conditional=VIDEO] sequence<DOMString> mediaResponseContentRanges(HTMLMediaElement media);
@@ -577,11 +659,12 @@ enum CompositingPolicy {
 
     DOMString getImageSourceURL(Element element);
 
-    [Conditional=VIDEO_TRACK, MayThrowException] DOMString captionsStyleSheetOverride();
-    [Conditional=VIDEO_TRACK, MayThrowException] void setCaptionsStyleSheetOverride(DOMString override);
-    [Conditional=VIDEO_TRACK, MayThrowException] void setPrimaryAudioTrackLanguageOverride(DOMString language);
-    [Conditional=VIDEO_TRACK, MayThrowException] void setCaptionDisplayMode(DOMString mode);
-    [Conditional=VIDEO_TRACK] TextTrackCueGeneric createGenericCue(double startTime, double endTime, DOMString text);
+    [Conditional=VIDEO, MayThrowException] DOMString captionsStyleSheetOverride();
+    [Conditional=VIDEO, MayThrowException] void setCaptionsStyleSheetOverride(DOMString override);
+    [Conditional=VIDEO, MayThrowException] void setPrimaryAudioTrackLanguageOverride(DOMString language);
+    [Conditional=VIDEO, MayThrowException] void setCaptionDisplayMode(DOMString mode);
+    [Conditional=VIDEO] TextTrackCueGeneric createGenericCue(double startTime, double endTime, DOMString text);
+    [Conditional=VIDEO, MayThrowException] DOMString textTrackBCP47Language(TextTrack track);
 
     [Conditional=VIDEO] TimeRanges createTimeRanges(Float32Array startTimes, Float32Array
      endTimes);
@@ -618,7 +701,7 @@ enum CompositingPolicy {
     [Conditional=VIDEO, MayThrowException] void setMediaSessionRestrictions(DOMString mediaType, DOMString restrictions);
     [Conditional=VIDEO, MayThrowException] DOMString mediaSessionRestrictions(DOMString mediaType);
     [Conditional=VIDEO] void setMediaElementRestrictions(HTMLMediaElement element, DOMString restrictions);
-    [Conditional=WEB_AUDIO] void setAudioContextRestrictions(AudioContext context, DOMString restrictions);
+    [Conditional=WEB_AUDIO] void setAudioContextRestrictions((BaseAudioContext or WebKitAudioContext) context, DOMString restrictions);
     [Conditional=VIDEO, MayThrowException] void postRemoteControlCommand(DOMString command, optional unrestricted float argument = 0);
     [Conditional=WIRELESS_PLAYBACK_TARGET] void setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
     [Conditional=WIRELESS_PLAYBACK_TARGET, MayThrowException] void setMockMediaPlaybackTargetPickerState(DOMString deviceName, DOMString deviceState);
@@ -657,6 +740,7 @@ enum CompositingPolicy {
     [Conditional=CONTENT_FILTERING] readonly attribute MockContentFilterSettings mockContentFilterSettings;
 
     [Conditional=CSS_SCROLL_SNAP, MayThrowException] DOMString scrollSnapOffsets(Element element);
+    [Conditional=CSS_SCROLL_SNAP, MayThrowException] boolean isScrollSnapInProgress(Element element);
     [Conditional=CSS_SCROLL_SNAP] void setPlatformMomentumScrollingPredictionEnabled(boolean enabled);
 
     [MayThrowException] DOMString pathStringWithShrinkWrappedRects(sequence<double> rectComponents, double radius);
@@ -667,8 +751,8 @@ enum CompositingPolicy {
 
     void setShowAllPlugins(boolean showAll);
 
-    [Conditional=STREAMS_API, CallWith=GlobalObject] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
-    [Conditional=STREAMS_API, CallWith=GlobalObject] boolean isReadableStreamDisturbed(any stream);
+    [CallWith=GlobalObject] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
+    [CallWith=GlobalObject] boolean isReadableStreamDisturbed(any stream);
 
     DOMString resourceLoadStatisticsForURL(DOMURL url);
     void setResourceLoadStatisticsEnabled(boolean enable);
@@ -712,9 +796,13 @@ enum CompositingPolicy {
 
     void setPageVisibility(boolean isVisible);
     void setPageIsFocusedAndActive(boolean isFocused);
+    void setPageIsInWindow(boolean isInWindow);
+    boolean isPageActive();
 
     [Conditional=WEB_RTC] void setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] void applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
+    [Conditional=WEB_RTC] void setWebRTCH265Support(boolean allowed);
+    [Conditional=WEB_RTC] void setWebRTCVP9Support(boolean allowed);
 
     [Conditional=MEDIA_STREAM] void setMockAudioTrackChannelNumber(MediaStreamTrack track, unsigned short count);
     [Conditional=MEDIA_STREAM] void setShouldInterruptAudioOnPageVisibilityChange(boolean shouldInterrupt);
@@ -729,7 +817,10 @@ enum CompositingPolicy {
     [Conditional=MEDIA_STREAM] void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void setMediaStreamTrackIdentifier(MediaStreamTrack track, DOMString identifier);
     [Conditional=MEDIA_STREAM] void setMediaStreamSourceInterrupted(MediaStreamTrack track, boolean interrupted);
+    [Conditional=MEDIA_STREAM] boolean isMediaStreamSourceInterrupted(MediaStreamTrack track);
+    [Conditional=MEDIA_STREAM] boolean isMediaStreamSourceEnded(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] boolean isMockRealtimeMediaSourceCenterEnabled();
+    [Conditional=MEDIA_STREAM] boolean shouldAudioTrackPlay(AudioTrack track);
 
     unsigned long long documentIdentifier(Document document);
     boolean isDocumentAlive(unsigned long long documentIdentifier);
@@ -745,6 +836,7 @@ enum CompositingPolicy {
     readonly attribute long processIdentifier;
     DOMString serviceWorkerClientIdentifier(Document document);
     Promise<void> storeRegistrationsOnDisk();
+    Promise<double> sendH2Ping(DOMString url);
 
     Promise<void> clearCacheStorageMemoryRepresentation();
     Promise<DOMString> cacheStorageEngineRepresentation();
@@ -761,8 +853,8 @@ enum CompositingPolicy {
     boolean audioSessionActive();
 
     [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
-    [Conditional=SERVICE_WORKER] void terminateServiceWorker(ServiceWorker worker);
-    [Conditional=SERVICE_WORKER] Promise<boolean> isServiceWorkerRunning(ServiceWorker worker);
+    [Conditional=SERVICE_WORKER] Promise<void> terminateServiceWorker(ServiceWorker worker);
+    [Conditional=SERVICE_WORKER] Promise<void> whenServiceWorkerIsTerminated(ServiceWorker worker);
 
     [CallWith=Document, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
 
@@ -770,6 +862,7 @@ enum CompositingPolicy {
     boolean isSystemPreviewImage(Element element);
 
     boolean usingAppleInternalSDK();
+    boolean usingGStreamer();
 
     void postTask(VoidCallback callback);
     [CallWith=ScriptExecutionContext, MayThrowException] void queueTask(DOMString source, VoidCallback callback);
@@ -786,6 +879,9 @@ enum CompositingPolicy {
 
     [Conditional=VIDEO] HTMLMediaElement bestMediaElementForShowingPlaybackControlsManager(PlaybackControlsPurpose purpose);
     [Conditional=VIDEO] MediaSessionState mediaSessionState(HTMLMediaElement element);
+
+    [Conditional=VIDEO, MayThrowException] MediaUsageState mediaUsageState(HTMLMediaElement element);
+    [Conditional=VIDEO, MayThrowException] boolean elementShouldDisplayPosterImage(HTMLVideoElement element);
 
     DOMString ongoingLoadsDescriptions();
     void setCaptureExtraNetworkLoadMetricsEnabled(boolean value);
@@ -806,6 +902,7 @@ enum CompositingPolicy {
 
     HEVCParameterSet? parseHEVCCodecParameters(DOMString codecParameters);
     DoViParameterSet? parseDoViCodecParameters(DOMString codecParameters);
+    VPCodecConfigurationRecord? parseVPCodecParameters(DOMString codecParameters);
 
     sequence<CookieData> getCookies();
 
@@ -816,7 +913,7 @@ enum CompositingPolicy {
 
     void testDictionaryLogging();
 
-    void setXHRMaximumIntervalForUserGestureForwarding(XMLHttpRequest xhr, double interval);
+    void setMaximumIntervalForUserGestureForwardingForFetch(double interval);
     void setTransientActivationDuration(double seconds);
 
     void setIsPlayingToAutomotiveHeadUnit(boolean value);
@@ -827,8 +924,6 @@ enum CompositingPolicy {
 
     [Conditional=WEB_AUTHN] void setMockWebAuthenticationConfiguration(MockWebAuthenticationConfiguration configuration);
 
-    [Conditional=PICTURE_IN_PICTURE_API] void setPictureInPictureAPITestEnabled(HTMLVideoElement videoElement, boolean enabled);
-
     InternalsMapLike createInternalsMapLike();
     InternalsSetLike createInternalsSetLike();
 
@@ -836,11 +931,35 @@ enum CompositingPolicy {
 
     boolean hasSandboxMachLookupAccessToGlobalName(DOMString process, DOMString service);
     boolean hasSandboxMachLookupAccessToXPCServiceName(DOMString process, DOMString service);
+    boolean hasSandboxIOKitOpenAccessToClass(DOMString process, DOMString ioKitClass);
 
     DOMString systemColorForCSSValue(DOMString cssValue, boolean useDarkModeAppearance, boolean useElevatedUserInterfaceLevel);
     DOMString focusRingColor();
 
     boolean systemHasBattery();
 
-    DOMString mediaMIMETypeForExtension(DOMString extension);
+    void setSystemHasBatteryForTesting(boolean hasBattery);
+    void setSystemHasACForTesting(boolean hasAC);
+
+    void setHardwareVP9DecoderDisabledForTesting(boolean disabled);
+    void setVP9ScreenSizeAndScaleForTesting(double width, double height, double scale);
+
+    long readPreferenceInteger(DOMString domain, DOMString key);
+    DOMString encodedPreferenceValue(DOMString domain, DOMString key);
+
+    DOMString getUTIFromTag(DOMString tagClass, DOMString tag, DOMString conformingToUTI);
+
+    boolean supportsPictureInPicture();
+
+    boolean isRemoteUIAppForAccessibility();
+
+    unsigned long createSleepDisabler(DOMString reason, boolean display);
+    boolean destroySleepDisabler(unsigned long identifier);
+
+    [Conditional=WEBXR, MayThrowException] readonly attribute WebXRTest xrTest;
+
+    [Conditional=ENCRYPTED_MEDIA] unsigned long mediaKeysInternalInstanceObjectRefCount(MediaKeys mediaKeys);
+    [Conditional=ENCRYPTED_MEDIA] unsigned long mediaKeySessionInternalInstanceSessionObjectRefCount(MediaKeySession session);
+
+    void setContentSizeCategory(ContentSizeCategory category);
 };

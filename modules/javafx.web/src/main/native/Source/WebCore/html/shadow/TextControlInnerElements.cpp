@@ -121,9 +121,9 @@ Optional<Style::ElementStyle> TextControlInnerElement::resolveCustomStyle(const 
 
         // Set "flex-basis: 1em". Note that CSSPrimitiveValue::computeLengthInt() only needs the element's
         // style to calculate em lengths. Since the element might not be in a document, just pass nullptr
-        // for the root element style and the render view.
+        // for the root element style, the parent element style, and the render view.
         auto emSize = CSSPrimitiveValue::create(1, CSSUnitType::CSS_EMS);
-        int pixels = emSize->computeLength<int>(CSSToLengthConversionData { newStyle.get(), nullptr, nullptr, 1.0, false });
+        int pixels = emSize->computeLength<int>(CSSToLengthConversionData { newStyle.get(), nullptr, nullptr, nullptr, 1.0, WTF::nullopt });
         newStyle->setFlexBasis(Length { pixels, Fixed });
     }
 
@@ -182,7 +182,8 @@ Optional<Style::ElementStyle> TextControlInnerTextElement::resolveCustomStyle(co
 inline TextControlPlaceholderElement::TextControlPlaceholderElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomString("placeholder", AtomString::ConstructFromLiteral));
+    static MainThreadNeverDestroyed<const AtomString> placeholderName("placeholder", AtomString::ConstructFromLiteral);
+    setPseudo(placeholderName);
     setHasCustomStyleResolveCallbacks();
 }
 
@@ -225,6 +226,8 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
         input->focus();
         input->select();
 #if !PLATFORM(IOS_FAMILY)
+        document().updateStyleIfNeeded();
+
         if (auto* renderer = input->renderer()) {
             auto& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
             if (searchFieldRenderer.popupIsVisible())
@@ -252,16 +255,29 @@ bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& document)
     : HTMLDivElement(divTag, document)
 {
-    setPseudo(AtomString("-webkit-search-cancel-button", AtomString::ConstructFromLiteral));
+    static MainThreadNeverDestroyed<const AtomString> webkitSearchCancelButtonName("-webkit-search-cancel-button", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> buttonName("button", AtomString::ConstructFromLiteral);
+
+    setHasCustomStyleResolveCallbacks();
+
+    setPseudo(webkitSearchCancelButtonName);
 #if !PLATFORM(IOS_FAMILY)
     setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
 #endif
-    setAttributeWithoutSynchronization(roleAttr, AtomString("button", AtomString::ConstructFromLiteral));
+    setAttributeWithoutSynchronization(roleAttr, buttonName);
 }
 
 Ref<SearchFieldCancelButtonElement> SearchFieldCancelButtonElement::create(Document& document)
 {
     return adoptRef(*new SearchFieldCancelButtonElement(document));
+}
+
+Optional<Style::ElementStyle> SearchFieldCancelButtonElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+{
+    auto elementStyle = resolveStyle(&parentStyle);
+    auto& inputElement = downcast<HTMLInputElement>(*shadowHost());
+    elementStyle.renderStyle->setVisibility(elementStyle.renderStyle->visibility() == Visibility::Hidden || inputElement.value().isEmpty() ? Visibility::Hidden : Visibility::Visible);
+    return elementStyle;
 }
 
 void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)

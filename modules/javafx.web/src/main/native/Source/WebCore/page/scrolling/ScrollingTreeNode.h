@@ -31,7 +31,6 @@
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingStateNode.h"
-#include "TouchAction.h"
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
 
@@ -60,6 +59,9 @@ public:
 
     virtual void commitStateBeforeChildren(const ScrollingStateNode&) = 0;
     virtual void commitStateAfterChildren(const ScrollingStateNode&) { }
+    virtual void didCompleteCommitForNode() { }
+
+    virtual void willBeDestroyed() { }
 
     ScrollingTreeNode* parent() const { return m_parent; }
     void setParent(ScrollingTreeNode* parent) { m_parent = parent; }
@@ -77,10 +79,6 @@ public:
 
     WEBCORE_EXPORT void dump(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
 
-    virtual LayoutPoint parentToLocalPoint(LayoutPoint point) const { return point; }
-    virtual LayoutPoint localToContentsPoint(LayoutPoint point) const { return point; }
-    virtual ScrollingTreeScrollingNode* scrollingNodeForPoint(LayoutPoint) const;
-
 protected:
     ScrollingTreeNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingTree& scrollingTree() const { return m_scrollingTree; }
@@ -97,7 +95,7 @@ private:
     const ScrollingNodeType m_nodeType;
     const ScrollingNodeID m_nodeID;
 
-    ScrollingTreeNode* m_parent;
+    ScrollingTreeNode* m_parent { nullptr };
 };
 
 } // namespace WebCore

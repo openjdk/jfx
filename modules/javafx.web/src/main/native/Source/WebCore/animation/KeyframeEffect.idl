@@ -23,20 +23,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+typedef USVString CSSOMString;
+
 [
     EnabledAtRuntime=WebAnimations,
     Exposed=Window,
     JSGenerateToNativeObject,
-    ConstructorMayThrowException,
-    ConstructorCallWith=GlobalObject,
-    Constructor(Element? target, object? keyframes, optional (unrestricted double or KeyframeEffectOptions) options),
-    Constructor(KeyframeEffect source)
 ] interface KeyframeEffect : AnimationEffect {
+    [CallWith=GlobalObject, MayThrowException] constructor(Element? target, object? keyframes, optional (unrestricted double or KeyframeEffectOptions) options);
+    [CallWith=GlobalObject, MayThrowException] constructor(KeyframeEffect source);
+
     attribute Element? target;
+    [MayThrowException] attribute CSSOMString? pseudoElement;
     [EnabledAtRuntime=WebAnimationsCompositeOperations] attribute IterationCompositeOperation iterationComposite;
     [EnabledAtRuntime=WebAnimationsCompositeOperations] attribute CompositeOperation composite;
-    [CallWith=GlobalObject] sequence<object> getKeyframes();
-    [MayThrowException, CallWith=GlobalObject] void setKeyframes(object? keyframes);
+    [CallWith=GlobalObject, ImplementedAs=getBindingsKeyframes] sequence<object> getKeyframes();
+    [MayThrowException, CallWith=GlobalObject, ImplementedAs=setBindingsKeyframes] void setKeyframes(object? keyframes);
 };
 
 dictionary BasePropertyIndexedKeyframe {

@@ -152,7 +152,7 @@ class EmptyDatabaseProvider final : public DatabaseProvider {
         void abortOpenAndUpgradeNeeded(uint64_t, const IDBResourceIdentifier&) final { }
         void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
         void openDBRequestCancelled(const IDBRequestData&) final { }
-        void getAllDatabaseNames(const SecurityOriginData&, const SecurityOriginData&, uint64_t) final { }
+        void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) final { }
         ~EmptyIDBConnectionToServerDeletegate() { }
     };
 
@@ -178,7 +178,7 @@ class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
 class EmptyDragClient final : public DragClient {
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) final { }
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) final { }
-    DragSourceAction dragSourceActionMaskForPoint(const IntPoint&) final { return DragSourceActionNone; }
+    OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint&) final { return { }; }
     void startDrag(DragItem, DataTransfer&, Frame&) final { }
 };
 
@@ -191,7 +191,7 @@ public:
     EmptyEditorClient() = default;
 
 private:
-    bool shouldDeleteRange(Range*) final { return false; }
+    bool shouldDeleteRange(const Optional<SimpleRange>&) final { return false; }
     bool smartInsertDeleteEnabled() final { return false; }
     bool isSelectTrailingWhitespaceEnabled() const final { return false; }
     bool isContinuousSpellCheckingEnabled() final { return false; }
@@ -200,15 +200,15 @@ private:
     void toggleGrammarChecking() final { }
     int spellCheckerDocumentTag() final { return -1; }
 
-    bool shouldBeginEditing(Range*) final { return false; }
-    bool shouldEndEditing(Range*) final { return false; }
-    bool shouldInsertNode(Node*, Range*, EditorInsertAction) final { return false; }
-    bool shouldInsertText(const String&, Range*, EditorInsertAction) final { return false; }
-    bool shouldChangeSelectedRange(Range*, Range*, EAffinity, bool) final { return false; }
+    bool shouldBeginEditing(const SimpleRange&) final { return false; }
+    bool shouldEndEditing(const SimpleRange&) final { return false; }
+    bool shouldInsertNode(Node&, const Optional<SimpleRange>&, EditorInsertAction) final { return false; }
+    bool shouldInsertText(const String&, const Optional<SimpleRange>&, EditorInsertAction) final { return false; }
+    bool shouldChangeSelectedRange(const Optional<SimpleRange>&, const Optional<SimpleRange>&, EAffinity, bool) final { return false; }
 
-    bool shouldApplyStyle(StyleProperties*, Range*) final { return false; }
+    bool shouldApplyStyle(const StyleProperties&, const Optional<SimpleRange>&) final { return false; }
     void didApplyStyle() final { }
-    bool shouldMoveRangeAfterDelete(Range*, Range*) final { return false; }
+    bool shouldMoveRangeAfterDelete(const SimpleRange&, const SimpleRange&) final { return false; }
 
     void didBeginEditing() final { }
     void respondToChangedContents() final { }
@@ -219,9 +219,9 @@ private:
     void didUpdateComposition() final { }
     void didEndEditing() final { }
     void didEndUserTriggeredSelectionChanges() final { }
-    void willWriteSelectionToPasteboard(Range*) final { }
+    void willWriteSelectionToPasteboard(const Optional<SimpleRange>&) final { }
     void didWriteSelectionToPasteboard() final { }
-    void getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer>>&) final { }
+    void getClientPasteboardData(const Optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer>>&) final { }
     void requestCandidatesForSelection(const VisibleSelection&) final { }
     void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) final { }
 
@@ -261,7 +261,7 @@ private:
     void updateStringForFind(const String&) final { }
 #endif
 
-    bool performTwoStepDrop(DocumentFragment&, Range&, bool) final { return false; }
+    bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
 
 #if PLATFORM(COCOA)
     void setInsertionPasteboard(const String&) final { };
@@ -521,7 +521,7 @@ Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceR
     return DocumentLoader::create(request, substituteData);
 }
 
-RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const URL&, const String&, HTMLFrameOwnerElement&, const String&)
+RefPtr<Frame> EmptyFrameLoaderClient::createFrame(const String&, HTMLFrameOwnerElement&)
 {
     return nullptr;
 }
@@ -544,6 +544,12 @@ inline EmptyFrameNetworkingContext::EmptyFrameNetworkingContext()
 Ref<FrameNetworkingContext> EmptyFrameLoaderClient::createNetworkingContext()
 {
     return EmptyFrameNetworkingContext::create();
+}
+
+void EmptyFrameLoaderClient::sendH2Ping(const URL& url, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&& completionHandler)
+{
+    ASSERT_NOT_REACHED();
+    completionHandler(makeUnexpected(internalError(url)));
 }
 
 void EmptyEditorClient::EmptyTextCheckerClient::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
@@ -582,7 +588,7 @@ public:
     EmptyMediaRecorderProvider() = default;
 private:
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
-    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(const MediaStreamPrivate&) final { return nullptr; }
+    std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&) final { return nullptr; }
 #endif
 };
 
@@ -597,6 +603,7 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
         adoptRef(*new EmptyBackForwardClient),
         CookieJar::create(adoptRef(*new EmptyStorageSessionProvider)),
         makeUniqueRef<EmptyProgressTrackerClient>(),
+        makeUniqueRef<EmptyFrameLoaderClient>(),
         makeUniqueRef<EmptyMediaRecorderProvider>()
     };
 
@@ -619,9 +626,6 @@ PageConfiguration pageConfigurationWithEmptyClients(PAL::SessionID sessionID)
 
     static NeverDestroyed<EmptyInspectorClient> dummyInspectorClient;
     pageConfiguration.inspectorClient = &dummyInspectorClient.get();
-
-    static NeverDestroyed<EmptyFrameLoaderClient> dummyFrameLoaderClient;
-    pageConfiguration.loaderClientForMainFrame = &dummyFrameLoaderClient.get();
 
     pageConfiguration.diagnosticLoggingClient = makeUnique<EmptyDiagnosticLoggingClient>();
 

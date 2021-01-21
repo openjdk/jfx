@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGGraph.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC { namespace DFG {
 
@@ -341,9 +342,22 @@ bool StructureAbstractValue::isSubClassOf(const ClassInfo* classInfo) const
     if (isInfinite())
         return false;
 
-    // Note taht this function returns true if the structure set is empty.
+    // Note that this function returns true if the structure set is empty.
     for (const RegisteredStructure structure : m_set) {
         if (!structure->classInfo()->isSubClassOf(classInfo))
+            return false;
+    }
+    return true;
+}
+
+bool StructureAbstractValue::isNotSubClassOf(const ClassInfo* classInfo) const
+{
+    if (isInfinite())
+        return false;
+
+    // Note that this function returns true if the structure set is empty.
+    for (const RegisteredStructure structure : m_set) {
+        if (structure->classInfo()->isSubClassOf(classInfo))
             return false;
     }
     return true;
@@ -372,7 +386,7 @@ void StructureAbstractValue::dumpInContext(PrintStream& out, DumpContext* contex
 
 void StructureAbstractValue::dump(PrintStream& out) const
 {
-    dumpInContext(out, 0);
+    dumpInContext(out, nullptr);
 }
 
 void StructureAbstractValue::validateReferences(const TrackedReferences& trackedReferences) const

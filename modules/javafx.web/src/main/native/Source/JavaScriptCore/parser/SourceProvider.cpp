@@ -26,17 +26,16 @@
 #include "config.h"
 #include "SourceProvider.h"
 
-#include "JSCInlines.h"
 #include <wtf/Lock.h>
 
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSourceProvider);
 
-SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, URL&& url, const TextPosition& startPosition, SourceProviderSourceType sourceType)
+SourceProvider::SourceProvider(const SourceOrigin& sourceOrigin, String&& sourceURL, const TextPosition& startPosition, SourceProviderSourceType sourceType)
     : m_sourceType(sourceType)
-    , m_url(WTFMove(url))
     , m_sourceOrigin(sourceOrigin)
+    , m_sourceURL(WTFMove(sourceURL))
     , m_startPosition(startPosition)
 {
 }

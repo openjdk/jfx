@@ -33,8 +33,6 @@
 OBJC_CLASS NSImage;
 #elif PLATFORM(WIN)
 typedef struct HICON__* HICON;
-#elif PLATFORM(GTK)
-typedef struct _GdkPixbuf GdkPixbuf;
 #elif PLATFORM(JAVA)
 #include "jni.h"
 #include "RQRef.h"
@@ -77,9 +75,6 @@ private:
 #elif PLATFORM(WIN)
     Icon(HICON);
     HICON m_hIcon;
-#elif PLATFORM(GTK)
-    Icon();
-    GdkPixbuf* m_icon;
 #elif PLATFORM(JAVA)
     Icon(const JLObject &jicon);
     RefPtr<RQRef> m_jicon;

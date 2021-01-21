@@ -41,6 +41,7 @@
 #include "CachedImage.h"
 #include "CalculationValue.h"
 #include "ClipPathOperation.h"
+#include "ColorBlending.h"
 #include "FloatConversion.h"
 #include "FontCascade.h"
 #include "FontSelectionAlgorithm.h"
@@ -765,10 +766,10 @@ static inline size_t shadowListLength(const ShadowData* shadow)
 
 static inline const ShadowData* shadowForBlending(const ShadowData* srcShadow, const ShadowData* otherShadow)
 {
-    static NeverDestroyed<ShadowData> defaultShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, false, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultInsetShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, false, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, true, Color::transparent);
-    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, true, Color::transparent);
+    static NeverDestroyed<ShadowData> defaultShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, false, Color::transparentBlack);
+    static NeverDestroyed<ShadowData> defaultInsetShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, false, Color::transparentBlack);
+    static NeverDestroyed<ShadowData> defaultWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Normal, true, Color::transparentBlack);
+    static NeverDestroyed<ShadowData> defaultInsetWebKitBoxShadowData(LayoutPoint(), 0, 0, ShadowStyle::Inset, true, Color::transparentBlack);
 
     if (srcShadow)
         return srcShadow;
@@ -1587,7 +1588,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
         new PropertyWrapperVisitedAffectedColor(CSSPropertyColor, &RenderStyle::color, &RenderStyle::setColor, &RenderStyle::visitedLinkColor, &RenderStyle::setVisitedLinkColor),
 
-        new PropertyWrapperVisitedAffectedColor(CSSPropertyBackgroundColor, &RenderStyle::backgroundColor, &RenderStyle::setBackgroundColor, &RenderStyle::visitedLinkBackgroundColor, &RenderStyle::setVisitedLinkBackgroundColor),
+        new PropertyWrapperVisitedAffectedColor(CSSPropertyBackgroundColor, MaybeInvalidColor, &RenderStyle::backgroundColor, &RenderStyle::setBackgroundColor, &RenderStyle::visitedLinkBackgroundColor, &RenderStyle::setVisitedLinkBackgroundColor),
 
         new FillLayersPropertyWrapper(CSSPropertyBackgroundImage, &RenderStyle::backgroundLayers, &RenderStyle::ensureBackgroundLayers),
         new StyleImagePropertyWrapper(CSSPropertyListStyleImage, &RenderStyle::listStyleImage, &RenderStyle::setListStyleImage),
@@ -1761,15 +1762,14 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
     for (size_t i = 0; i < animatableShorthandPropertiesCount; ++i) {
         CSSPropertyID propertyID = animatableShorthandProperties[i];
-        StylePropertyShorthand shorthand = shorthandForProperty(propertyID);
+        auto shorthand = shorthandForProperty(propertyID);
         if (!shorthand.length())
             continue;
 
         Vector<AnimationPropertyWrapperBase*> longhandWrappers;
         longhandWrappers.reserveInitialCapacity(shorthand.length());
-        const CSSPropertyID* properties = shorthand.properties();
-        for (unsigned j = 0; j < shorthand.length(); ++j) {
-            unsigned wrapperIndex = indexFromPropertyID(properties[j]);
+        for (auto longhand : shorthand) {
+            unsigned wrapperIndex = indexFromPropertyID(longhand);
             if (wrapperIndex == cInvalidPropertyWrapperIndex)
                 continue;
             ASSERT(m_propertyWrappers[wrapperIndex]);

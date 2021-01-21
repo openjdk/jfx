@@ -60,41 +60,50 @@ RealtimeMediaSource::RealtimeMediaSource(Type type, String&& name, String&& devi
     m_hashedID = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(m_persistentID, m_idHashSalt);
 }
 
-void RealtimeMediaSource::addObserver(RealtimeMediaSource::Observer& observer)
+void RealtimeMediaSource::addAudioSampleObserver(AudioSampleObserver& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.add(&observer);
+    ASSERT(isMainThread());
+    auto locker = holdLock(m_audioSampleObserversLock);
+    m_audioSampleObservers.add(&observer);
 }
 
-void RealtimeMediaSource::removeObserver(RealtimeMediaSource::Observer& observer)
+void RealtimeMediaSource::removeAudioSampleObserver(AudioSampleObserver& observer)
 {
-    auto locker = holdLock(m_observersLock);
-    m_observers.remove(&observer);
-    if (m_observers.isEmpty())
+    ASSERT(isMainThread());
+    auto locker = holdLock(m_audioSampleObserversLock);
+    m_audioSampleObservers.remove(&observer);
+}
+
+void RealtimeMediaSource::addVideoSampleObserver(VideoSampleObserver& observer)
+{
+    ASSERT(isMainThread());
+    auto locker = holdLock(m_videoSampleObserversLock);
+    m_videoSampleObservers.add(&observer);
+}
+
+void RealtimeMediaSource::removeVideoSampleObserver(VideoSampleObserver& observer)
+{
+    ASSERT(isMainThread());
+    auto locker = holdLock(m_videoSampleObserversLock);
+    m_videoSampleObservers.remove(&observer);
+}
+
+void RealtimeMediaSource::addObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.add(observer);
+}
+
+void RealtimeMediaSource::removeObserver(Observer& observer)
+{
+    ASSERT(isMainThread());
+    m_observers.remove(observer);
+    if (m_observers.computesEmpty())
         stopBeingObserved();
-}
-
-void RealtimeMediaSource::setInterrupted(bool interrupted, bool pageMuted)
-{
-    if (interrupted == m_interrupted)
-        return;
-
-    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, interrupted, ", page muted : ", pageMuted);
-
-    m_interrupted = interrupted;
-    if (!interrupted && pageMuted)
-        return;
-
-    setMuted(interrupted);
 }
 
 void RealtimeMediaSource::setMuted(bool muted)
 {
-    if (!muted && interrupted()) {
-        ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, "ignoring unmute because of interruption");
-        return;
-    }
-
     ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER, muted);
 
     // Changed m_muted before calling start/stop so muted() will reflect the correct state.
@@ -125,23 +134,14 @@ void RealtimeMediaSource::setInterruptedForTesting(bool interrupted)
     notifyMutedChange(interrupted);
 }
 
-void RealtimeMediaSource::forEachObserver(const WTF::Function<void(Observer&)>& apply) const
+void RealtimeMediaSource::forEachObserver(const Function<void(Observer&)>& apply)
 {
-    Vector<Observer*> observersCopy;
-    {
-        auto locker = holdLock(m_observersLock);
-        observersCopy = copyToVector(m_observers);
-    }
-    for (auto* observer : observersCopy) {
-        auto locker = holdLock(m_observersLock);
-        // Make sure the observer has not been destroyed.
-        if (!m_observers.contains(observer))
-            continue;
-        apply(*observer);
-    }
+    ASSERT(isMainThread());
+    auto protectedThis = makeRef(*this);
+    m_observers.forEach(apply);
 }
 
-void RealtimeMediaSource::notifyMutedObservers() const
+void RealtimeMediaSource::notifyMutedObservers()
 {
     forEachObserver([](auto& observer) {
         observer.sourceMutedChanged();
@@ -168,6 +168,23 @@ void RealtimeMediaSource::notifySettingsDidChangeObservers(OptionSet<RealtimeMed
     });
 }
 
+void RealtimeMediaSource::updateHasStartedProducingData()
+{
+    if (m_hasStartedProducingData)
+        return;
+
+    callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+        if (!weakThis)
+            return;
+        if (m_hasStartedProducingData)
+            return;
+        m_hasStartedProducingData = true;
+        forEachObserver([&](auto& observer) {
+            observer.hasStartedProducingData();
+        });
+    });
+}
+
 void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample)
 {
 #if !RELEASE_LOG_DISABLED
@@ -184,16 +201,20 @@ void RealtimeMediaSource::videoSampleAvailable(MediaSample& mediaSample)
     }
 #endif
 
-    forEachObserver([&](auto& observer) {
-        observer.videoSampleAvailable(mediaSample);
-    });
+    updateHasStartedProducingData();
+
+    auto locker = holdLock(m_videoSampleObserversLock);
+    for (auto* observer : m_videoSampleObservers)
+        observer->videoSampleAvailable(mediaSample);
 }
 
 void RealtimeMediaSource::audioSamplesAvailable(const MediaTime& time, const PlatformAudioData& audioData, const AudioStreamDescription& description, size_t numberOfFrames)
 {
-    forEachObserver([&](auto& observer) {
-        observer.audioSamplesAvailable(time, audioData, description, numberOfFrames);
-    });
+    updateHasStartedProducingData();
+
+    auto locker = holdLock(m_audioSampleObserversLock);
+    for (auto* observer : m_audioSampleObservers)
+        observer->audioSamplesAvailable(time, audioData, description, numberOfFrames);
 }
 
 void RealtimeMediaSource::start()
@@ -227,9 +248,6 @@ void RealtimeMediaSource::stop()
 
 void RealtimeMediaSource::requestToEnd(Observer& callingObserver)
 {
-    if (!m_isProducingData)
-        return;
-
     bool hasObserverPreventingStopping = false;
     forEachObserver([&](auto& observer) {
         if (observer.preventSourceFromStopping())
@@ -238,14 +256,26 @@ void RealtimeMediaSource::requestToEnd(Observer& callingObserver)
     if (hasObserverPreventingStopping)
         return;
 
+    end(&callingObserver);
+}
+
+void RealtimeMediaSource::end(Observer* callingObserver)
+{
+    ALWAYS_LOG_IF(m_logger, LOGIDENTIFIER);
+
+    ASSERT(isMainThread());
+
+    if (m_isEnded)
+        return;
+
     auto protectedThis = makeRef(*this);
 
     stop();
     m_isEnded = true;
     hasEnded();
 
-    forEachObserver([callingObserver](auto& observer) {
-        if (&observer != &callingObserver)
+    forEachObserver([&callingObserver](auto& observer) {
+        if (&observer != callingObserver)
             observer.sourceStopped();
     });
 }
@@ -254,9 +284,9 @@ void RealtimeMediaSource::captureFailed()
 {
     ERROR_LOG_IF(m_logger, LOGIDENTIFIER);
 
-    m_isProducingData = false;
     m_captureDidFailed = true;
 
+    stop();
     forEachObserver([](auto& observer) {
         observer.sourceStopped();
     });
@@ -281,6 +311,8 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
     if (widthConstraint && capabilities.supportsWidth()) {
         double constraintDistance = fitnessDistance(*widthConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.width();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed width constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = widthConstraint->name();
             return false;
         }
@@ -296,6 +328,8 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
     if (heightConstraint && capabilities.supportsHeight()) {
         double constraintDistance = fitnessDistance(*heightConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.height();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed height constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = heightConstraint->name();
             return false;
         }
@@ -311,6 +345,8 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
     if (frameRateConstraint && capabilities.supportsFrameRate()) {
         double constraintDistance = fitnessDistance(*frameRateConstraint);
         if (std::isinf(constraintDistance)) {
+            auto range = capabilities.frameRate();
+            WTFLogAlways("RealtimeMediaSource::supportsSizeAndFrameRate failed frame rate constraint, capabilities are [%d, %d]", range.rangeMin().asInt, range.rangeMax().asInt);
             badConstraint = frameRateConstraint->name();
             return false;
         }
@@ -324,6 +360,10 @@ bool RealtimeMediaSource::supportsSizeAndFrameRate(Optional<IntConstraint> width
 
     // Each of the non-null values is supported individually, see if they all can be applied at the same time.
     if (!supportsSizeAndFrameRate(WTFMove(width), WTFMove(height), WTFMove(frameRate))) {
+        // Let's try without frame rate constraint if not mandatory.
+        if (frameRateConstraint && !frameRateConstraint->isMandatory() && supportsSizeAndFrameRate(WTFMove(width), WTFMove(height), { }))
+            return true;
+
         if (widthConstraint)
             badConstraint = widthConstraint->name();
         else if (heightConstraint)
@@ -631,7 +671,7 @@ bool RealtimeMediaSource::selectSettings(const MediaConstraints& constraints, Fl
     if (!supportsSizeAndFrameRate(constraints.mandatoryConstraints.width(), constraints.mandatoryConstraints.height(), constraints.mandatoryConstraints.frameRate(), failedConstraint, minimumDistance))
         return false;
 
-    constraints.mandatoryConstraints.filter([&](const MediaConstraint& constraint) {
+    constraints.mandatoryConstraints.filter([&](auto& constraint) {
         if (!supportsConstraint(constraint))
             return false;
 
@@ -642,6 +682,7 @@ bool RealtimeMediaSource::selectSettings(const MediaConstraints& constraints, Fl
 
         double constraintDistance = fitnessDistance(constraint);
         if (std::isinf(constraintDistance)) {
+            WTFLogAlways("RealtimeMediaSource::selectSettings failed constraint %d", static_cast<int>(constraint.constraintType()));
             failedConstraint = constraint.name();
             return true;
         }
@@ -943,8 +984,11 @@ void RealtimeMediaSource::setIntrinsicSize(const IntSize& size)
     auto currentSize = this->size();
     m_intrinsicSize = size;
 
-    if (currentSize != this->size())
-        notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+    if (currentSize != this->size()) {
+        scheduleDeferredTask([this] {
+            notifySettingsDidChangeObservers({ RealtimeMediaSourceSettings::Flag::Width, RealtimeMediaSourceSettings::Flag::Height });
+        });
+    }
 }
 
 const IntSize RealtimeMediaSource::intrinsicSize() const

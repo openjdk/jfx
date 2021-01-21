@@ -26,6 +26,8 @@
     Conditional=WEB_AUDIO,
     JSGenerateToJSObject,
 ] interface AnalyserNode : AudioNode {
+    [MayThrowException, EnabledBySetting=ModernUnprefixedWebAudio] constructor (BaseAudioContext context, optional AnalyserOptions options);
+
     attribute unsigned long fftSize;
     readonly attribute unsigned long frequencyBinCount;
 
@@ -38,9 +40,10 @@
 
     // Copies the current frequency data into the passed array.
     // If the array has fewer elements than the frequencyBinCount, the excess elements will be dropped.
-    void getFloatFrequencyData(Float32Array? array); // FIXME: The parameter should not be nullable.
-    void getByteFrequencyData(Uint8Array? array); // FIXME: The parameter should not be nullable.
+    void getFloatFrequencyData(Float32Array array);
+    void getByteFrequencyData(Uint8Array array);
 
     // Real-time waveform data
-    void getByteTimeDomainData(Uint8Array? array); // FIXME: The parameter should not be nullable.
+    [EnabledBySetting=ModernUnprefixedWebAudio] void getFloatTimeDomainData(Float32Array array);
+    void getByteTimeDomainData(Uint8Array array);
 };

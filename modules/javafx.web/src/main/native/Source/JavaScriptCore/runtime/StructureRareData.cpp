@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,14 @@
 
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
 #include "JSImmutableButterfly.h"
+#include "JSObjectInlines.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
-#include "JSCInlines.h"
 #include "ObjectPropertyConditionSet.h"
 #include "ObjectToStringAdaptiveStructureWatchpoint.h"
+#include "StructureChain.h"
+#include "StructureInlines.h"
+#include "StructureRareDataInlines.h"
 
 namespace JSC {
 
@@ -86,13 +89,13 @@ public:
     ObjectToStringAdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition&, StructureRareData*);
 
 private:
-    bool isValid() const override;
-    void handleFire(VM&, const FireDetail&) override;
+    bool isValid() const final;
+    void handleFire(VM&, const FireDetail&) final;
 
     StructureRareData* m_structureRareData;
 };
 
-void StructureRareData::setObjectToStringValue(JSGlobalObject* globalObject, VM& vm, Structure* ownStructure, JSString* value, PropertySlot toStringTagSymbolSlot)
+void StructureRareData::setObjectToStringValue(JSGlobalObject* globalObject, VM& vm, Structure* ownStructure, JSString* value, const PropertySlot& toStringTagSymbolSlot)
 {
     if (canCacheObjectToStringValue())
         return;

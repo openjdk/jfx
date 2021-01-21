@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008, 2010, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov
  *
  * Redistribution and use in source and binary forms, with or without
@@ -137,6 +137,9 @@ void Font::platformGlyphInit()
     float width = widthForGlyph(m_spaceGlyph);
     m_spaceWidth = width;
     m_fontMetrics.setZeroWidth(widthForGlyph(m_zeroGlyph));
+    auto amountToAdjustLineGap = std::min(m_fontMetrics.floatLineGap(), 0.0f);
+    m_fontMetrics.setLineGap(m_fontMetrics.floatLineGap() - amountToAdjustLineGap);
+    m_fontMetrics.setLineSpacing(m_fontMetrics.floatLineSpacing() - amountToAdjustLineGap);
     determinePitch();
     m_adjustedSpaceWidth = m_treatAsFixedPitch ? ceilf(width) : roundf(width);
 }
@@ -298,7 +301,6 @@ static void overrideControlCharacters(Vector<UChar>& buffer, unsigned start, uns
     overwriteCodePoint('\n', space);
     overwriteCodePoint('\t', space);
     overwriteCodePoint(noBreakSpace, space);
-    overwriteCodePoint(narrowNoBreakSpace, zeroWidthSpace);
     overwriteCodePoint(leftToRightMark, zeroWidthSpace);
     overwriteCodePoint(rightToLeftMark, zeroWidthSpace);
     overwriteCodePoint(leftToRightEmbed, zeroWidthSpace);
@@ -472,6 +474,16 @@ const Font& Font::brokenIdeographFont() const
     return *derivedFontData.brokenIdeographFont;
 }
 
+#if !PLATFORM(COCOA)
+
+bool Font::isProbablyOnlyUsedToRenderIcons() const
+{
+    // FIXME: Not implemented yet.
+    return false;
+}
+
+#endif
+
 #if !LOG_DISABLED
 String Font::description() const
 {
@@ -500,7 +512,7 @@ RefPtr<Font> Font::createScaledFont(const FontDescription& fontDescription, floa
 }
 
 #if !PLATFORM(COCOA)
-void Font::applyTransforms(GlyphBuffer&, unsigned, bool, bool, const AtomString&) const
+void Font::applyTransforms(GlyphBuffer&, unsigned, unsigned, bool, bool, const AtomString&, StringView, TextDirection) const
 {
 }
 #endif
@@ -578,7 +590,7 @@ RefPtr<Font> Font::systemFallbackFontForCharacter(UChar32 character, const FontD
         return FontCache::singleton().systemFallbackForCharacters(description, this, isForPlatformFont, FontCache::PreferColoredFont::No, &codeUnit, 1);
     }
 
-    auto key = CharacterFallbackMapKey(description.locale(), character, isForPlatformFont);
+    auto key = CharacterFallbackMapKey(description.computedLocale(), character, isForPlatformFont);
     auto characterAddResult = fontAddResult.iterator->value.add(WTFMove(key), nullptr);
 
     Font*& fallbackFont = characterAddResult.iterator->value;

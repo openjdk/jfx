@@ -34,68 +34,96 @@
 #include "CDM.h"
 #include "CDMClient.h"
 #include "CDMInstance.h"
+#include "Document.h"
 #include "EventLoop.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Logging.h"
 #include "MediaKeySession.h"
-#include "ScriptExecutionContext.h"
 #include "SharedBuffer.h"
+#include <wtf/Logger.h>
+#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
 
-MediaKeys::MediaKeys(bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>& supportedSessionTypes, Ref<CDM>&& implementation, Ref<CDMInstance>&& instance)
+#if !RELEASE_LOG_DISABLED
+static WTFLogChannel& logChannel() { return LogEME; }
+static const char* logClassName() { return "MediaKeys"; }
+#endif
+
+MediaKeys::MediaKeys(Document& document, bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>& supportedSessionTypes, Ref<CDM>&& implementation, Ref<CDMInstance>&& instance)
     : m_useDistinctiveIdentifier(useDistinctiveIdentifier)
     , m_persistentStateAllowed(persistentStateAllowed)
     , m_supportedSessionTypes(supportedSessionTypes)
     , m_implementation(WTFMove(implementation))
     , m_instance(WTFMove(instance))
+#if !RELEASE_LOG_DISABLED
+    , m_logger(document.logger())
+    , m_logIdentifier(LoggerHelper::uniqueLogIdentifier())
+#endif
 {
+#if !RELEASE_LOG_DISABLED
+    m_instance->setLogger(document.logger(), m_logIdentifier);
+#else
+    UNUSED_PARAM(document);
+#endif
+    m_instance->setClient(makeWeakPtr(this));
 }
 
 MediaKeys::~MediaKeys() = default;
 
-ExceptionOr<Ref<MediaKeySession>> MediaKeys::createSession(ScriptExecutionContext& context, MediaKeySessionType sessionType)
+ExceptionOr<Ref<MediaKeySession>> MediaKeys::createSession(Document& document, MediaKeySessionType sessionType)
 {
     // https://w3c.github.io/encrypted-media/#dom-mediakeys-setservercertificate
     // W3C Editor's Draft 09 November 2016
-    LOG(EME, "EME - check if a new session can be created");
+    auto identifier = LOGIDENTIFIER;
+    INFO_LOG(identifier, "EME - check if a new session can be created");
 
     // When this method is invoked, the user agent must run the following steps:
     // 1. If this object's supported session types value does not contain sessionType, throw [WebIDL] a NotSupportedError.
-    if (!m_supportedSessionTypes.contains(sessionType))
+    if (!m_supportedSessionTypes.contains(sessionType)) {
+        INFO_LOG(identifier, "Exception: unsupported sessionType: ", sessionType);
         return Exception(NotSupportedError);
+    }
 
     // 2. If the implementation does not support MediaKeySession operations in the current state, throw [WebIDL] an InvalidStateError.
-    if (!m_implementation->supportsSessions())
+    if (!m_implementation->supportsSessions()) {
+        INFO_LOG(identifier, "Exception: implementation does not support sessions");
         return Exception(InvalidStateError);
+    }
 
     auto instanceSession = m_instance->createSession();
-    if (!instanceSession)
+    if (!instanceSession) {
+        INFO_LOG(identifier, "Exception: could not create session");
         return Exception(InvalidStateError);
+    }
 
     // 3. Let session be a new MediaKeySession object, and initialize it as follows:
     // NOTE: Continued in MediaKeySession.
     // 4. Return session.
-    auto session = MediaKeySession::create(context, makeWeakPtr(*this), sessionType, m_useDistinctiveIdentifier, m_implementation.copyRef(), instanceSession.releaseNonNull());
+    auto session = MediaKeySession::create(document, makeWeakPtr(*this), sessionType, m_useDistinctiveIdentifier, m_implementation.copyRef(), instanceSession.releaseNonNull());
+    INFO_LOG(identifier, "Created session");
     m_sessions.append(session.copyRef());
     return session;
 }
 
-void MediaKeys::setServerCertificate(ScriptExecutionContext& context, const BufferSource& serverCertificate, Ref<DeferredPromise>&& promise)
+void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<DeferredPromise>&& promise)
 {
     // https://w3c.github.io/encrypted-media/#dom-mediakeys-setservercertificate
     // W3C Editor's Draft 09 November 2016
+    auto identifier = LOGIDENTIFIER;
 
     // When this method is invoked, the user agent must run the following steps:
     // 1. If the Key System implementation represented by this object's cdm implementation value does not support
     //    server certificates, return a promise resolved with false.
     if (!m_implementation->supportsServerCertificates()) {
+        INFO_LOG(identifier, "Rejected: !supportsServerCertificates()");
         promise->resolve<IDLBoolean>(false);
         return;
     }
 
     // 2. If serverCertificate is an empty array, return a promise rejected with a new a newly created TypeError.
     if (!serverCertificate.length()) {
+        INFO_LOG(identifier, "Rejected: empty serverCertificate");
         promise->reject(TypeError);
         return;
     }
@@ -106,15 +134,17 @@ void MediaKeys::setServerCertificate(ScriptExecutionContext& context, const Buff
     // 4. Let promise be a new promise.
     // 5. Run the following steps in parallel:
 
-    context.eventLoop().queueTask(TaskSource::Networking, [this, certificate = WTFMove(certificate), promise = WTFMove(promise)] () mutable {
-        // 5.1. Use this object's cdm instance to process certificate.
-        if (m_instance->setServerCertificate(WTFMove(certificate)) == CDMInstance::Failed) {
-            // 5.2. If the preceding step failed, resolve promise with a new DOMException whose name is the appropriate error name.
+    // 5.1. Use this object's cdm instance to process certificate.
+    m_instance->setServerCertificate(WTFMove(certificate), [this, protectedThis = makeRef(*this), promise = WTFMove(promise), identifier = WTFMove(identifier)] (auto success) {
+        // 5.2. If the preceding step failed, resolve promise with a new DOMException whose name is the appropriate error name.
+        // 5.1. [Else,] Resolve promise with true.
+        if (success == CDMInstance::Failed) {
+            INFO_LOG(identifier, "::task() - Rejected, setServerCertificate() failed");
             promise->reject(InvalidStateError);
             return;
         }
 
-        // 5.1. Resolve promise with true.
+        INFO_LOG(identifier, "::task() - Resolved");
         promise->resolve<IDLBoolean>(true);
     });
 
@@ -123,20 +153,20 @@ void MediaKeys::setServerCertificate(ScriptExecutionContext& context, const Buff
 
 void MediaKeys::attachCDMClient(CDMClient& client)
 {
-    ASSERT(!m_cdmClients.contains(&client));
-    m_cdmClients.append(&client);
+    ASSERT(!m_cdmClients.contains(client));
+    m_cdmClients.add(client);
 }
 
 void MediaKeys::detachCDMClient(CDMClient& client)
 {
-    ASSERT(m_cdmClients.contains(&client));
-    m_cdmClients.removeFirst(&client);
+    ASSERT(m_cdmClients.contains(client));
+    m_cdmClients.remove(client);
 }
 
 void MediaKeys::attemptToResumePlaybackOnClients()
 {
-    for (auto* cdmClient : m_cdmClients)
-        cdmClient->cdmClientAttemptToResumePlaybackIfNecessary();
+    for (auto& cdmClient : m_cdmClients)
+        cdmClient.cdmClientAttemptToResumePlaybackIfNecessary();
 }
 
 bool MediaKeys::hasOpenSessions() const
@@ -146,6 +176,19 @@ bool MediaKeys::hasOpenSessions() const
             return !session->isClosed();
         });
 }
+
+void MediaKeys::unrequestedInitializationDataReceived(const String& initDataType, Ref<SharedBuffer>&& initData)
+{
+    for (auto& cdmClient : m_cdmClients)
+        cdmClient.cdmClientUnrequestedInitializationDataReceived(initDataType, initData.copyRef());
+}
+
+#if !RELEASE_LOG_DISABLED
+const void* MediaKeys::nextChildIdentifier() const
+{
+    return LoggerHelper::childLogIdentifier(m_logIdentifier, ++m_childIdentifierSeed);
+}
+#endif
 
 } // namespace WebCore
 

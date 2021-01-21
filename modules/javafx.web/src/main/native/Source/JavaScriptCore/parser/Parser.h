@@ -176,6 +176,7 @@ public:
         , m_isLexicalScope(false)
         , m_isGlobalCodeScope(false)
         , m_isSimpleCatchParameterScope(false)
+        , m_isCatchBlockScope(false)
         , m_isFunctionBoundary(false)
         , m_isValidStrictMode(true)
         , m_hasArguments(false)
@@ -219,12 +220,12 @@ public:
     ScopeLabelInfo* getLabel(const Identifier* label)
     {
         if (!m_labels)
-            return 0;
+            return nullptr;
         for (int i = m_labels->size(); i > 0; i--) {
             if (m_labels->at(i - 1).uid == label->impl())
                 return &m_labels->at(i - 1);
         }
-        return 0;
+        return nullptr;
     }
 
     void setSourceParseMode(SourceParseMode mode)
@@ -289,6 +290,7 @@ public:
     bool isGeneratorBoundary() const { return m_isGeneratorBoundary; }
     bool isAsyncFunction() const { return m_isAsyncFunction; }
     bool isAsyncFunctionBoundary() const { return m_isAsyncFunctionBoundary; }
+    bool isPrivateNameScope() const { return m_isClassScope; }
     bool isClassScope() const { return m_isClassScope; }
 
     bool hasArguments() const { return m_hasArguments; }
@@ -299,10 +301,20 @@ public:
     void setIsSimpleCatchParameterScope() { m_isSimpleCatchParameterScope = true; }
     bool isSimpleCatchParameterScope() { return m_isSimpleCatchParameterScope; }
 
+    void setIsCatchBlockScope() { m_isCatchBlockScope = true; }
+    bool isCatchBlockScope() { return m_isCatchBlockScope; }
+
     void setIsLexicalScope()
     {
         m_isLexicalScope = true;
         m_allowsLexicalDeclarations = true;
+    }
+
+    void setIsPrivateNameScope()
+    {
+        // FIXME: Currently, isPrivateNameScope is an alias for isClassScope --- This is potentially misleading,
+        // particularly when parsing direct eval code which occurs within a class.
+        setIsClassScope();
     }
 
     void setIsClassScope()
@@ -470,6 +482,43 @@ public:
     bool hasLexicallyDeclaredVariable(const RefPtr<UniquedStringImpl>& ident) const
     {
         return m_lexicalVariables.contains(ident.get());
+    }
+
+    bool hasPrivateName(const Identifier& ident)
+    {
+        return m_lexicalVariables.hasPrivateName(ident);
+    }
+
+    void copyUndeclaredPrivateNamesTo(Scope& other)
+    {
+        m_lexicalVariables.copyUndeclaredPrivateNamesTo(other.m_lexicalVariables);
+    }
+
+    bool hasUsedButUndeclaredPrivateNames() const
+    {
+        if (m_lexicalVariables.privateNamesSize() > 0) {
+            for (auto entry : m_lexicalVariables.privateNames()) {
+                if (entry.value.isUsed() && !entry.value.isDeclared())
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    void usePrivateName(const Identifier& ident)
+    {
+        ASSERT(m_allowsLexicalDeclarations);
+        m_lexicalVariables.usePrivateName(ident);
+    }
+
+    DeclarationResultMask declarePrivateName(const Identifier& ident)
+    {
+        ASSERT(m_allowsLexicalDeclarations);
+        DeclarationResultMask result = DeclarationResult::Valid;
+        auto addResult = m_lexicalVariables.declarePrivateName(ident);
+        if (!addResult.isNewEntry)
+            result |= DeclarationResult::InvalidDuplicateDeclaration;
+        return result;
     }
 
     ALWAYS_INLINE bool hasDeclaredParameter(const Identifier& ident)
@@ -829,6 +878,7 @@ private:
     bool m_isLexicalScope;
     bool m_isGlobalCodeScope;
     bool m_isSimpleCatchParameterScope;
+    bool m_isCatchBlockScope;
     bool m_isFunctionBoundary;
     bool m_isValidStrictMode;
     bool m_hasArguments;
@@ -901,11 +951,11 @@ class Parser {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    Parser(VM&, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, JSParserScriptMode, SourceParseMode, SuperBinding, ConstructorKind defaultConstructorKindForTopLevelFunction = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr);
+    Parser(VM&, const SourceCode&, JSParserBuiltinMode, JSParserStrictMode, JSParserScriptMode, SourceParseMode, SuperBinding, ConstructorKind defaultConstructorKindForTopLevelFunction = ConstructorKind::None, DerivedContextType = DerivedContextType::None, bool isEvalContext = false, EvalContextType = EvalContextType::None, DebuggerParseData* = nullptr, bool isInsideOrdinaryFunction = false);
     ~Parser();
 
     template <class ParsedNode>
-    std::unique_ptr<ParsedNode> parse(ParserError&, const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt, const Vector<JSTextPosition>* = nullptr);
+    std::unique_ptr<ParsedNode> parse(ParserError&, const Identifier&, SourceParseMode, ParsingContext, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt, const VariableEnvironment* = nullptr, const Vector<JSTextPosition>* = nullptr);
 
     JSTextPosition positionBeforeLastNewline() const { return m_lexer->positionBeforeLastNewline(); }
     JSTokenLocation locationBeforeLastToken() const { return m_lexer->lastTokenLocation(); }
@@ -972,7 +1022,7 @@ private:
 
         void setPopped()
         {
-            m_parser = 0;
+            m_parser = nullptr;
         }
 
     private:
@@ -1178,6 +1228,44 @@ private:
         return ScopeRef(&m_scopeStack, i);
     }
 
+    Optional<ScopeRef> findPrivateNameScope()
+    {
+        ASSERT(m_scopeStack.size());
+        unsigned i = m_scopeStack.size() - 1;
+        while (i && !m_scopeStack[i].isPrivateNameScope())
+            i--;
+
+        if (m_scopeStack[i].isPrivateNameScope())
+            return ScopeRef(&m_scopeStack, i);
+
+        return WTF::nullopt;
+    }
+
+    ScopeRef privateNameScope()
+    {
+        ASSERT(m_scopeStack.size());
+        unsigned i = m_scopeStack.size() - 1;
+        while (i && !m_scopeStack[i].isPrivateNameScope())
+            i--;
+
+        ASSERT(m_scopeStack[i].isPrivateNameScope());
+        return ScopeRef(&m_scopeStack, i);
+    }
+
+    bool copyUndeclaredPrivateNamesToOuterScope()
+    {
+        ScopeRef current = privateNameScope();
+        unsigned i = current.index() - 1;
+        while (i && !m_scopeStack[i].isPrivateNameScope())
+            i--;
+
+        if (!i)
+            return !current->hasUsedButUndeclaredPrivateNames();
+
+        current->copyUndeclaredPrivateNamesTo(m_scopeStack[i]);
+        return true;
+    }
+
     ScopeRef closestParentOrdinaryFunctionNonLexicalScope()
     {
         unsigned i = m_scopeStack.size() - 1;
@@ -1280,7 +1368,11 @@ private:
         if (!m_lexer->isReparsingFunction() && m_statementDepth == 1 && (hasDeclaredParameter(*ident) || hasDeclaredVariable(*ident)))
             return DeclarationResult::InvalidDuplicateDeclaration;
 
-        return currentLexicalDeclarationScope()->declareLexicalVariable(ident, type == DeclarationType::ConstDeclaration, importType);
+        ScopeRef scope = currentLexicalDeclarationScope();
+        if (scope->isCatchBlockScope() && scope.containingScope()->hasLexicallyDeclaredVariable(*ident))
+            return DeclarationResult::InvalidDuplicateDeclaration;
+
+        return scope->declareLexicalVariable(ident, type == DeclarationType::ConstDeclaration, importType);
     }
 
     std::pair<DeclarationResultMask, ScopeRef> declareFunction(const Identifier* ident)
@@ -1295,6 +1387,11 @@ private:
             return std::make_pair(variableScope->declareFunction(ident, declareAsVar, isSloppyModeHoistingCandidate), variableScope);
         }
 
+        bool declareAsVar = false;
+        ScopeRef lexicalVariableScope = currentLexicalDeclarationScope();
+        if (lexicalVariableScope->isCatchBlockScope() && lexicalVariableScope.containingScope()->hasLexicallyDeclaredVariable(*ident))
+            return std::make_pair(DeclarationResult::InvalidDuplicateDeclaration, lexicalVariableScope);
+
         if (!strictMode()) {
             ASSERT(currentScope()->isFunction() || closestParentOrdinaryFunctionNonLexicalScope()->isEvalContext());
 
@@ -1306,18 +1403,14 @@ private:
             // there are is a let/class/const with the same name). Note that this mean we only do the "var" hoisting
             // binding if the block evaluates. For example, this means we wont won't perform the binding if it's inside
             // the untaken branch of an if statement.
-            bool declareAsVar = false;
             bool isSloppyModeHoistingCandidate = true;
-            ScopeRef lexicalVariableScope = currentLexicalDeclarationScope();
             ScopeRef varScope = currentVariableScope();
             varScope->addSloppyModeHoistableFunctionCandidate(ident);
             ASSERT(varScope != lexicalVariableScope);
             return std::make_pair(lexicalVariableScope->declareFunction(ident, declareAsVar, isSloppyModeHoistingCandidate), lexicalVariableScope);
         }
 
-        bool declareAsVar = false;
         bool isSloppyModeHoistingCandidate = false;
-        ScopeRef lexicalVariableScope = currentLexicalDeclarationScope();
         return std::make_pair(lexicalVariableScope->declareFunction(ident, declareAsVar, isSloppyModeHoistingCandidate), lexicalVariableScope);
     }
 
@@ -1367,7 +1460,7 @@ private:
 
     const SourceProviderCacheItem* findCachedFunctionInfo(int openBracePos)
     {
-        return m_functionCache ? m_functionCache->get(openBracePos) : 0;
+        return m_functionCache ? m_functionCache->get(openBracePos) : nullptr;
     }
 
     Parser();
@@ -1451,6 +1544,16 @@ private:
     ALWAYS_INLINE bool match(JSTokenType expected)
     {
         return m_token.m_type == expected;
+    }
+
+    ALWAYS_INLINE bool matchAndUpdate(JSTokenType expected, const JSToken& token)
+    {
+        if (match(expected)) {
+            m_token = token;
+            return true;
+        }
+
+        return false;
     }
 
     ALWAYS_INLINE bool matchContextualKeyword(const Identifier& identifier)
@@ -1572,10 +1675,10 @@ private:
     ScopeLabelInfo* getLabel(const Identifier* label)
     {
         ScopeRef current = currentScope();
-        ScopeLabelInfo* result = 0;
+        ScopeLabelInfo* result = nullptr;
         while (!(result = current->getLabel(label))) {
             if (!current.hasContainingScope())
-                return 0;
+                return nullptr;
             current = current.containingScope();
         }
         return result;
@@ -1611,7 +1714,7 @@ private:
     template <class TreeBuilder> TreeSourceElements parseSingleFunction(TreeBuilder&, Optional<int> functionConstructorParametersEndPosition);
     template <class TreeBuilder> TreeSourceElements parseInstanceFieldInitializerSourceElements(TreeBuilder&, const Vector<JSTextPosition>&);
     template <class TreeBuilder> TreeStatement parseStatementListItem(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength);
-    template <class TreeBuilder> TreeStatement parseStatement(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength = 0);
+    template <class TreeBuilder> TreeStatement parseStatement(TreeBuilder&, const Identifier*& directive, unsigned* directiveLiteralLength = nullptr);
     enum class ExportType { Exported, NotExported };
     template <class TreeBuilder> TreeStatement parseClassDeclaration(TreeBuilder&, ExportType = ExportType::NotExported, DeclarationDefaultContext = DeclarationDefaultContext::Standard);
     template <class TreeBuilder> TreeStatement parseFunctionDeclaration(TreeBuilder&, ExportType = ExportType::NotExported, DeclarationDefaultContext = DeclarationDefaultContext::Standard, Optional<int> functionConstructorParametersEndPosition = WTF::nullopt);
@@ -1635,8 +1738,11 @@ private:
     template <class TreeBuilder> TreeStatement parseExpressionStatement(TreeBuilder&);
     template <class TreeBuilder> TreeStatement parseExpressionOrLabelStatement(TreeBuilder&, bool allowFunctionDeclarationAsStatement);
     template <class TreeBuilder> TreeStatement parseIfStatement(TreeBuilder&);
-    template <class TreeBuilder> TreeStatement parseBlockStatement(TreeBuilder&);
-    template <class TreeBuilder> TreeExpression parseExpression(TreeBuilder&);
+    template <class TreeBuilder> TreeStatement parseBlockStatement(TreeBuilder&, bool isCatchBlock = false);
+
+    enum class IsOnlyChildOfStatement { Yes, No };
+    template <class TreeBuilder> TreeExpression parseExpression(TreeBuilder&, IsOnlyChildOfStatement = IsOnlyChildOfStatement::No);
+
     template <class TreeBuilder> TreeExpression parseAssignmentExpression(TreeBuilder&, ExpressionErrorClassifier&);
     template <class TreeBuilder> TreeExpression parseAssignmentExpression(TreeBuilder&);
     template <class TreeBuilder> TreeExpression parseAssignmentExpressionOrPropagateErrorClass(TreeBuilder&);
@@ -1701,6 +1807,8 @@ private:
     template <class TreeBuilder> NEVER_INLINE const char* metaPropertyName(TreeBuilder&, TreeExpression);
 
     template <class TreeBuilder> ALWAYS_INLINE bool isSimpleAssignmentTarget(TreeBuilder&, TreeExpression);
+
+    ALWAYS_INLINE bool usePrivateName(const Identifier*);
 
     ALWAYS_INLINE int isBinaryOperator(JSTokenType);
     bool allowAutomaticSemicolon();
@@ -1796,6 +1904,7 @@ private:
         FunctionParsePhase functionParsePhase { FunctionParsePhase::Body };
         const Identifier* lastIdentifier { nullptr };
         const Identifier* lastFunctionName { nullptr };
+        const Identifier* lastPrivateName { nullptr };
         bool allowAwait { true };
         bool isParsingClassFieldInitializer { false };
     };
@@ -1940,12 +2049,13 @@ private:
     DebuggerParseData* m_debuggerParseData;
     CallOrApplyDepthScope* m_callOrApplyDepthScope { nullptr };
     bool m_seenTaggedTemplate { false };
+    bool m_isInsideOrdinaryFunction;
 };
 
 
 template <typename LexerType>
 template <class ParsedNode>
-std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const Identifier& calleeName, SourceParseMode parseMode, ParsingContext parsingContext, Optional<int> functionConstructorParametersEndPosition, const Vector<JSTextPosition>* instanceFieldLocations)
+std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const Identifier& calleeName, SourceParseMode parseMode, ParsingContext parsingContext, Optional<int> functionConstructorParametersEndPosition, const VariableEnvironment* variablesUnderTDZ, const Vector<JSTextPosition>* instanceFieldLocations)
 {
     int errLine;
     String errMsg;
@@ -1959,6 +2069,11 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
     JSTokenLocation startLocation(tokenLocation());
     ASSERT(m_source->startColumn() > OrdinalNumber::beforeFirst());
     unsigned startColumn = m_source->startColumn().zeroBasedInt();
+
+    if (isEvalNode<ParsedNode>() && variablesUnderTDZ && variablesUnderTDZ->privateNamesSize()) {
+        currentScope()->setIsPrivateNameScope();
+        variablesUnderTDZ->copyPrivateNamesTo(currentScope()->lexicalVariables());
+    }
 
     auto parseResult = parseInner(calleeName, parseMode, parsingContext, functionConstructorParametersEndPosition, instanceFieldLocations);
 
@@ -2010,7 +2125,7 @@ std::unique_ptr<ParsedNode> Parser<LexerType>::parse(ParserError& error, const I
         // we ran out of stack while parsing. If we see an error while parsing eval or program
         // code we assume that it was a syntax error since running out of stack is much less
         // likely, and we are currently unable to distinguish between the two cases.
-        if (isFunctionMetadataNode(static_cast<ParsedNode*>(0)) || m_hasStackOverflow)
+        if (isFunctionMetadataNode(static_cast<ParsedNode*>(nullptr)) || m_hasStackOverflow)
             error = ParserError(ParserError::StackOverflow, ParserError::SyntaxErrorNone, m_token);
         else {
             ParserError::SyntaxErrorType errorType = ParserError::SyntaxErrorIrrecoverable;
@@ -2044,7 +2159,9 @@ std::unique_ptr<ParsedNode> parse(
     DerivedContextType derivedContextType = DerivedContextType::None,
     EvalContextType evalContextType = EvalContextType::None,
     DebuggerParseData* debuggerParseData = nullptr,
-    const Vector<JSTextPosition>* instanceFieldLocations = nullptr)
+    const VariableEnvironment* variablesUnderTDZ = nullptr,
+    const Vector<JSTextPosition>* instanceFieldLocations = nullptr,
+    bool isInsideOrdinaryFunction = false)
 {
     ASSERT(!source.provider()->source().isNull());
 
@@ -2054,8 +2171,8 @@ std::unique_ptr<ParsedNode> parse(
 
     std::unique_ptr<ParsedNode> result;
     if (source.provider()->source().is8Bit()) {
-        Parser<Lexer<LChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, instanceFieldLocations);
+        Parser<Lexer<LChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData, isInsideOrdinaryFunction);
+        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, variablesUnderTDZ, instanceFieldLocations);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
         if (builtinMode == JSParserBuiltinMode::Builtin) {
@@ -2067,8 +2184,8 @@ std::unique_ptr<ParsedNode> parse(
         }
     } else {
         ASSERT_WITH_MESSAGE(defaultConstructorKindForTopLevelFunction == ConstructorKind::None, "BuiltinExecutables's special constructors should always use a 8-bit string");
-        Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, instanceFieldLocations);
+        Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKindForTopLevelFunction, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData, isInsideOrdinaryFunction);
+        result = parser.parse<ParsedNode>(error, name, parseMode, isEvalNode<ParsedNode>() ? ParsingContext::Eval : ParsingContext::Program, WTF::nullopt, variablesUnderTDZ, instanceFieldLocations);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     }

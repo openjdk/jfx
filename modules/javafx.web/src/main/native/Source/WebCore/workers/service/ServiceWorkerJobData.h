@@ -41,6 +41,7 @@ namespace WebCore {
 struct ServiceWorkerJobData {
     using Identifier = ServiceWorkerJobDataIdentifier;
     ServiceWorkerJobData(SWServerConnectionIdentifier, const DocumentOrWorkerIdentifier& sourceContext);
+    ServiceWorkerJobData(Identifier, const DocumentOrWorkerIdentifier& sourceContext);
 
     SWServerConnectionIdentifier connectionIdentifier() const { return m_identifier.connectionIdentifier; }
 
@@ -72,7 +73,7 @@ template<class Encoder>
 void ServiceWorkerJobData::encode(Encoder& encoder) const
 {
     encoder << identifier() << scriptURL << clientCreationURL << topOrigin << scopeURL << sourceContext;
-    encoder.encodeEnum(type);
+    encoder << type;
     switch (type) {
     case ServiceWorkerJobType::Register:
         encoder << registrationOptions;
@@ -109,7 +110,7 @@ Optional<ServiceWorkerJobData> ServiceWorkerJobData::decode(Decoder& decoder)
         return WTF::nullopt;
     if (!decoder.decode(jobData.sourceContext))
         return WTF::nullopt;
-    if (!decoder.decodeEnum(jobData.type))
+    if (!decoder.decode(jobData.type))
         return WTF::nullopt;
 
     switch (jobData.type) {

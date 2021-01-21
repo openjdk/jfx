@@ -58,7 +58,7 @@ static bool schemeRequiresHost(const URL& url)
 
 bool SecurityOrigin::shouldIgnoreHost(const URL& url)
 {
-    return url.protocolIsData() || url.protocolIsAbout() || protocolIsJavaScript(url) || url.protocolIs("file");
+    return url.protocolIsData() || url.protocolIsAbout() || url.protocolIsJavaScript() || url.protocolIs("file");
 }
 
 bool SecurityOrigin::shouldUseInnerURL(const URL& url)
@@ -174,7 +174,7 @@ SecurityOrigin::SecurityOrigin()
     : m_data { emptyString(), emptyString(), WTF::nullopt }
     , m_domain { emptyString() }
     , m_isUnique { true }
-    , m_isPotentiallyTrustworthy { true }
+    , m_isPotentiallyTrustworthy { false }
 {
 }
 
@@ -323,7 +323,7 @@ bool SecurityOrigin::canRequest(const URL& url) const
     if (isSameSchemeHostPort(targetOrigin.get()))
         return true;
 
-    if (SecurityPolicy::isAccessWhiteListed(this, &targetOrigin.get()))
+    if (SecurityPolicy::isAccessAllowed(*this, targetOrigin.get(), url))
         return true;
 
     return false;
@@ -382,7 +382,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return canRequest(url);
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsDisplayIsolated(protocol))
-        return equalIgnoringASCIICase(m_data.protocol, protocol) || SecurityPolicy::isAccessToURLWhiteListed(this, url);
+        return equalIgnoringASCIICase(m_data.protocol, protocol) || SecurityPolicy::isAccessAllowed(*this, url);
 
     if (!SecurityPolicy::restrictAccessToLocal())
         return true;
@@ -391,7 +391,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
         return true;
 
     if (LegacySchemeRegistry::shouldTreatURLSchemeAsLocal(protocol))
-        return canLoadLocalResources() || SecurityPolicy::isAccessToURLWhiteListed(this, url);
+        return canLoadLocalResources() || SecurityPolicy::isAccessAllowed(*this, url);
 
     return true;
 }

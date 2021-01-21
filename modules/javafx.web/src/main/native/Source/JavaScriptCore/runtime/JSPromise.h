@@ -41,6 +41,7 @@ public:
     }
 
     JS_EXPORT_PRIVATE static JSPromise* create(VM&, Structure*);
+    static JSPromise* createWithInitialValues(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
@@ -60,6 +61,17 @@ public:
     };
     static_assert(numberOfInternalFields == 2);
 
+    static std::array<JSValue, numberOfInternalFields> initialValues()
+    {
+        return { {
+            jsNumber(static_cast<unsigned>(Status::Pending)),
+            jsUndefined(),
+        } };
+    }
+
+    const WriteBarrier<Unknown>& internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
+    WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
+
     JS_EXPORT_PRIVATE Status status(VM&) const;
     JS_EXPORT_PRIVATE JSValue result(VM&) const;
     JS_EXPORT_PRIVATE bool isHandled(VM&) const;
@@ -68,7 +80,9 @@ public:
 
     JS_EXPORT_PRIVATE void resolve(JSGlobalObject*, JSValue);
     JS_EXPORT_PRIVATE void reject(JSGlobalObject*, JSValue);
+    JS_EXPORT_PRIVATE void rejectAsHandled(JSGlobalObject*, JSValue);
     JS_EXPORT_PRIVATE void reject(JSGlobalObject*, Exception*);
+    JS_EXPORT_PRIVATE void rejectAsHandled(JSGlobalObject*, Exception*);
 
     struct DeferredData {
         WTF_FORBID_HEAP_ALLOCATION;

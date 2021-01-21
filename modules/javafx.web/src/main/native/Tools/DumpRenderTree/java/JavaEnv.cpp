@@ -107,9 +107,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
     JNIEnv *env;
     if (jvm->GetEnv((void **)&env, JNI_VERSION_1_2)) {
         fprintf(stderr, "DumpRenderTree::JNI_OnLoad() failed \n");
-             return JNI_ERR; /* JNI version not supported */
-         }
-     initRefs(env);
+        return JNI_ERR; /* JNI version not supported */
+    }
+    initRefs(env);
     return JNI_VERSION_1_2;
 }
 

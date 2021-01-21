@@ -25,25 +25,15 @@
 
 #include "config.h"
 
-#include "BatchedTransitionOptimizer.h"
-#include "CodeBlock.h"
 #include "CodeCache.h"
 #include "Debugger.h"
-#include "JIT.h"
-#include "JSCInlines.h"
-#include "LLIntEntrypoint.h"
-#include "ModuleProgramCodeBlock.h"
-#include "Parser.h"
-#include "TypeProfiler.h"
-#include "VMInlines.h"
-#include <wtf/CommaPrinter.h>
 
 namespace JSC {
 
 const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
 
 ModuleProgramExecutable::ModuleProgramExecutable(JSGlobalObject* globalObject, const SourceCode& source)
-    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
+    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Module);
     VM& vm = globalObject->vm();

@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include <wtf/URL.h>
+#include "PageIdentifier.h"
 #include "UserContentTypes.h"
 #include "UserStyleSheetTypes.h"
+#include <wtf/Optional.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -36,35 +38,38 @@ class UserStyleSheet {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     UserStyleSheet()
-        : m_injectedFrames(InjectInAllFrames)
+        : m_injectedFrames(UserContentInjectedFrames::InjectInAllFrames)
         , m_level(UserStyleUserLevel)
     {
     }
 
-    UserStyleSheet(const String& source, const URL& url, Vector<String>&& whitelist, Vector<String>&& blacklist, UserContentInjectedFrames injectedFrames, UserStyleLevel level)
+    UserStyleSheet(const String& source, const URL& url, Vector<String>&& allowlist, Vector<String>&& blocklist, UserContentInjectedFrames injectedFrames, UserStyleLevel level, Optional<PageIdentifier> pageID = WTF::nullopt)
         : m_source(source)
         , m_url(url)
-        , m_whitelist(WTFMove(whitelist))
-        , m_blacklist(WTFMove(blacklist))
+        , m_allowlist(WTFMove(allowlist))
+        , m_blocklist(WTFMove(blocklist))
         , m_injectedFrames(injectedFrames)
         , m_level(level)
+        , m_pageID(pageID)
     {
     }
 
     const String& source() const { return m_source; }
     const URL& url() const { return m_url; }
-    const Vector<String>& whitelist() const { return m_whitelist; }
-    const Vector<String>& blacklist() const { return m_blacklist; }
+    const Vector<String>& allowlist() const { return m_allowlist; }
+    const Vector<String>& blocklist() const { return m_blocklist; }
     UserContentInjectedFrames injectedFrames() const { return m_injectedFrames; }
     UserStyleLevel level() const { return m_level; }
+    Optional<PageIdentifier> pageID() const { return m_pageID; }
 
 private:
     String m_source;
     URL m_url;
-    Vector<String> m_whitelist;
-    Vector<String> m_blacklist;
+    Vector<String> m_allowlist;
+    Vector<String> m_blocklist;
     UserContentInjectedFrames m_injectedFrames;
     UserStyleLevel m_level;
+    Optional<PageIdentifier> m_pageID;
 };
 
 } // namespace WebCore

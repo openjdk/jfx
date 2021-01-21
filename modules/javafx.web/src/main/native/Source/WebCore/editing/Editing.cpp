@@ -47,11 +47,14 @@
 #include "HTMLUListElement.h"
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
+#include "Range.h"
 #include "RenderBlock.h"
 #include "RenderElement.h"
 #include "RenderTableCell.h"
+#include "RenderTextControlSingleLine.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include "TextControlInnerElements.h"
 #include "TextIterator.h"
 #include "VisibleUnits.h"
 #include <wtf/Assertions.h>
@@ -377,18 +380,11 @@ TextDirection directionOfEnclosingBlock(const Position& position)
 // on a Position before using it to create a DOM Range, or an exception will be thrown.
 int lastOffsetForEditing(const Node& node)
 {
-    if (node.isCharacterDataNode())
-        return node.maxCharacterOffset();
+    if (node.isCharacterDataNode() || node.hasChildNodes())
+        return node.length();
 
-    if (node.hasChildNodes())
-        return node.countChildNodes();
-
-    // NOTE: This should preempt the countChildNodes() for, e.g., select nodes.
-    // FIXME: What does the comment above mean?
-    if (editingIgnoresContent(node))
-        return 1;
-
-    return 0;
+    // FIXME: Might be more helpful to return 1 for any node where editingIgnoresContent is true, even one that happens to have child nodes, like a select element with option node children.
+    return editingIgnoresContent(node) ? 1 : 0;
 }
 
 bool isAmbiguousBoundaryCharacter(UChar character)
@@ -566,6 +562,32 @@ VisiblePosition visiblePositionAfterNode(Node& node)
     ASSERT(node.parentNode());
     ASSERT(!node.parentNode()->isShadowRoot());
     return positionInParentAfterNode(&node);
+}
+
+VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element& element, const IntPoint& point)
+{
+    if (!element.isConnected() || !element.document().frame())
+        return { };
+
+    Ref<const Element> protectedElement { element };
+    element.document().updateLayoutIgnorePendingStylesheets();
+
+    RenderObject* renderer = element.renderer();
+    // Look at the inner element of a form control, not the control itself, as it is the editable part.
+    if (is<HTMLTextFormControlElement>(element)) {
+        auto& formControlElement = downcast<HTMLTextFormControlElement>(element);
+        if (!formControlElement.isInnerTextElementEditable())
+            return { };
+        if (auto innerTextElement = formControlElement.innerTextElement())
+            renderer = innerTextElement->renderer();
+    }
+    if (!renderer)
+        return { };
+    auto absoluteBoundingBox = renderer->absoluteBoundingBoxRect();
+    auto constrainedAbsolutePoint = point.constrainedBetween(absoluteBoundingBox.minXMinYCorner(), absoluteBoundingBox.maxXMaxYCorner());
+    auto localPoint = renderer->absoluteToLocal(constrainedAbsolutePoint, UseTransforms);
+    auto visiblePosition = renderer->positionForPoint(flooredLayoutPoint(localPoint), nullptr);
+    return isEditablePosition(visiblePosition.deepEquivalent()) ? visiblePosition : VisiblePosition { };
 }
 
 bool isListHTMLElement(Node* node)
@@ -876,7 +898,7 @@ bool isEmptyTableCell(const Node* node)
 
 Ref<HTMLElement> createDefaultParagraphElement(Document& document)
 {
-    switch (document.frame()->editor().defaultParagraphSeparator()) {
+    switch (document.editor().defaultParagraphSeparator()) {
     case EditorParagraphSeparatorIsDiv:
         return HTMLDivElement::create(document);
     case EditorParagraphSeparatorIsP:
@@ -1083,15 +1105,15 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
             scope = &document;
     }
 
-    auto range = Range::create(document, firstPositionInNode(scope.get()), position.parentAnchoredEquivalent());
-    return TextIterator::rangeLength(range.ptr(), true);
+    auto range = *makeSimpleRange(makeBoundaryPointBeforeNodeContents(*scope), position);
+    return characterCount(range, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 }
 
 // FIXME: Merge this function with the one above.
 int indexForVisiblePosition(Node& node, const VisiblePosition& visiblePosition, bool forSelectionPreservation)
 {
-    auto range = Range::create(node.document(), firstPositionInNode(&node), visiblePosition.deepEquivalent().parentAnchoredEquivalent());
-    return TextIterator::rangeLength(range.ptr(), forSelectionPreservation);
+    auto range = makeSimpleRange(makeBoundaryPointBeforeNodeContents(node), visiblePosition);
+    return range ? characterCount(*range, forSelectionPreservation ? TextIteratorEmitsCharactersBetweenAllVisiblePositions : TextIteratorDefaultBehavior) : 0;
 }
 
 VisiblePosition visiblePositionForPositionWithOffset(const VisiblePosition& position, int offset)
@@ -1106,12 +1128,9 @@ VisiblePosition visiblePositionForPositionWithOffset(const VisiblePosition& posi
 
 VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
 {
-    auto range = TextIterator::rangeFromLocationAndLength(scope, index, 0, true);
-    // Check for an invalid index. Certain editing operations invalidate indices because
-    // of problems with TextIteratorEmitsCharactersBetweenAllVisiblePositions.
-    if (!range)
+    if (!scope)
         return { };
-    return { range->startPosition() };
+    return { createLegacyEditingPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*scope), index, TextIteratorEmitsCharactersBetweenAllVisiblePositions)) };
 }
 
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int index)
@@ -1119,19 +1138,18 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int in
     if (index <= 0)
         return { firstPositionInOrBeforeNode(&node), DOWNSTREAM };
 
-    auto range = Range::create(node.document());
-    range->selectNodeContents(node);
-    CharacterIterator it(range.get());
+    auto range = makeRangeSelectingNodeContents(node);
+    CharacterIterator it(range);
     it.advance(index - 1);
 
     if (!it.atEnd() && it.text().length() == 1 && it.text()[0] == '\n') {
         // FIXME: workaround for collapsed range (where only start position is correct) emitted for some emitted newlines.
         it.advance(1);
         if (!it.atEnd())
-            return VisiblePosition(it.range()->startPosition());
+            return { createLegacyEditingPosition(it.range().start) };
     }
 
-    return { it.atEnd() ? range->endPosition() : it.range()->endPosition(), UPSTREAM };
+    return { createLegacyEditingPosition((it.atEnd() ? range : it.range()).end), UPSTREAM };
 }
 
 // Determines whether two positions are visibly next to each other (first then second)
@@ -1143,19 +1161,22 @@ static bool isVisiblyAdjacent(const Position& first, const Position& second)
 
 // Determines whether a node is inside a range or visibly starts and ends at the boundaries of the range.
 // Call this function to determine whether a node is visibly fit inside selectedRange
-bool isNodeVisiblyContainedWithin(Node& node, const Range& range)
+bool isNodeVisiblyContainedWithin(Node& node, const SimpleRange& range)
 {
     // If the node is inside the range, then it surely is contained within.
-    auto comparisonResult = range.compareNode(node);
+    auto comparisonResult = createLiveRange(range)->compareNode(node);
     if (!comparisonResult.hasException() && comparisonResult.releaseReturnValue() == Range::NODE_INSIDE)
         return true;
 
-    bool startIsVisuallySame = visiblePositionBeforeNode(node) == range.startPosition();
-    if (startIsVisuallySame && comparePositions(positionInParentAfterNode(&node), range.endPosition()) < 0)
+    auto startPosition = createLegacyEditingPosition(range.start);
+    auto endPosition = createLegacyEditingPosition(range.end);
+
+    bool startIsVisuallySame = visiblePositionBeforeNode(node) == startPosition;
+    if (startIsVisuallySame && comparePositions(positionInParentAfterNode(&node), endPosition) < 0)
         return true;
 
-    bool endIsVisuallySame = visiblePositionAfterNode(node) == range.endPosition();
-    if (endIsVisuallySame && comparePositions(range.startPosition(), positionInParentBeforeNode(&node)) < 0)
+    bool endIsVisuallySame = visiblePositionAfterNode(node) == endPosition;
+    if (endIsVisuallySame && comparePositions(startPosition, positionInParentBeforeNode(&node)) < 0)
         return true;
 
     return startIsVisuallySame && endIsVisuallySame;
@@ -1240,12 +1261,12 @@ Element* deprecatedEnclosingBlockFlowElement(Node* node)
     return nullptr;
 }
 
-static inline bool caretRendersInsideNode(Node& node)
+static inline bool caretRendersInsideNode(const Node& node)
 {
     return !isRenderedTable(&node) && !editingIgnoresContent(node);
 }
 
-RenderBlock* rendererForCaretPainting(Node* node)
+RenderBlock* rendererForCaretPainting(const Node* node)
 {
     if (!node)
         return nullptr;
@@ -1304,10 +1325,10 @@ IntRect absoluteBoundsForLocalCaretRect(RenderBlock* rendererForCaretPainting, c
     return rendererForCaretPainting->localToAbsoluteQuad(FloatRect(localRect), UseTransforms, insideFixed).enclosingBoundingBox();
 }
 
-HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const Range& range)
+HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange& range)
 {
     HashSet<RefPtr<HTMLImageElement>> result;
-    for (TextIterator iterator(&range); !iterator.atEnd(); iterator.advance()) {
+    for (TextIterator iterator(range); !iterator.atEnd(); iterator.advance()) {
         if (!is<HTMLImageElement>(iterator.node()))
             continue;
 

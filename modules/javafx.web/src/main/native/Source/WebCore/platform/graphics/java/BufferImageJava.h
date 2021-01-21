@@ -63,8 +63,6 @@ public:
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
         const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
 
-
-
     NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
 
 private:

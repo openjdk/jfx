@@ -123,9 +123,7 @@ public:
 #if ENABLE(TOUCH_EVENTS)
     static Color convertTapHighlightColor(BuilderState&, const CSSValue&);
 #endif
-#if ENABLE(POINTER_EVENTS)
     static OptionSet<TouchAction> convertTouchAction(BuilderState&, const CSSValue&);
-#endif
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     static bool convertOverflowScrolling(BuilderState&, const CSSValue&);
 #endif
@@ -203,7 +201,7 @@ inline Length BuilderConverter::convertLength(const BuilderState& builderState, 
 
     if (primitiveValue.isLength()) {
         Length length = primitiveValue.computeLength<Length>(conversionData);
-        length.setHasQuirk(primitiveValue.isQuirkValue());
+        length.setHasQuirk(primitiveValue.primitiveType() == CSSUnitType::CSS_QUIRKY_EMS);
         return length;
     }
 
@@ -1169,13 +1167,22 @@ inline GridAutoFlow BuilderConverter::convertGridAutoFlow(BuilderState&, const C
     return autoFlow;
 }
 
-inline CSSToLengthConversionData BuilderConverter::csstoLengthConversionDataWithTextZoomFactor(BuilderState& builderState)
+inline float zoomWithTextZoomFactor(BuilderState& builderState)
 {
     if (auto* frame = builderState.document().frame()) {
         float textZoomFactor = builderState.style().textZoom() != TextZoom::Reset ? frame->textZoomFactor() : 1.0f;
-        return builderState.cssToLengthConversionData().copyWithAdjustedZoom(builderState.style().effectiveZoom() * textZoomFactor);
+        return builderState.style().effectiveZoom() * textZoomFactor;
     }
-    return builderState.cssToLengthConversionData();
+    return builderState.cssToLengthConversionData().zoom();
+}
+
+inline CSSToLengthConversionData BuilderConverter::csstoLengthConversionDataWithTextZoomFactor(BuilderState& builderState)
+{
+    float zoom = zoomWithTextZoomFactor(builderState);
+    if (zoom == builderState.cssToLengthConversionData().zoom())
+        return builderState.cssToLengthConversionData();
+
+    return builderState.cssToLengthConversionData().copyWithAdjustedZoom(zoom);
 }
 
 inline Optional<Length> BuilderConverter::convertWordSpacing(BuilderState& builderState, const CSSValue& value)
@@ -1347,7 +1354,6 @@ inline Color BuilderConverter::convertTapHighlightColor(BuilderState& builderSta
 }
 #endif
 
-#if ENABLE(POINTER_EVENTS)
 inline OptionSet<TouchAction> BuilderConverter::convertTouchAction(BuilderState&, const CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value))
@@ -1367,7 +1373,6 @@ inline OptionSet<TouchAction> BuilderConverter::convertTouchAction(BuilderState&
 
     return RenderStyle::initialTouchActions();
 }
-#endif
 
 #if ENABLE(OVERFLOW_SCROLLING_TOUCH)
 inline bool BuilderConverter::convertOverflowScrolling(BuilderState&, const CSSValue& value)
@@ -1515,7 +1520,8 @@ inline Optional<Length> BuilderConverter::convertLineHeight(BuilderState& builde
         return RenderStyle::initialLineHeight();
 
     if (primitiveValue.isLength()) {
-        Length length = primitiveValue.computeLength<Length>(BuilderConverter::csstoLengthConversionDataWithTextZoomFactor(builderState));
+        auto conversionData = builderState.cssToLengthConversionData().copyWithAdjustedZoomAndPropertyToCompute(zoomWithTextZoomFactor(builderState), CSSPropertyLineHeight);
+        Length length = primitiveValue.computeLength<Length>(conversionData);
         if (multiplier != 1.f)
             length = Length(length.value() * multiplier, Fixed);
         return length;

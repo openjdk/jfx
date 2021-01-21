@@ -21,13 +21,6 @@
 #include "config.h"
 #include "RegExpObject.h"
 
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "JSArray.h"
-#include "JSGlobalObject.h"
-#include "JSString.h"
-#include "Lookup.h"
-#include "JSCInlines.h"
 #include "RegExpObjectInlines.h"
 
 namespace JSC {
@@ -71,12 +64,12 @@ bool RegExpObject::getOwnPropertySlot(JSObject* object, JSGlobalObject* globalOb
     return Base::getOwnPropertySlot(object, globalObject, propertyName, slot);
 }
 
-bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     VM& vm = globalObject->vm();
     if (propertyName == vm.propertyNames->lastIndex)
         return false;
-    return Base::deleteProperty(cell, globalObject, propertyName);
+    return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
 void RegExpObject::getOwnNonIndexPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, EnumerationMode mode)
@@ -165,6 +158,11 @@ bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
         return result;
     }
     return Base::put(cell, globalObject, propertyName, value, slot);
+}
+
+String RegExpObject::toStringName(const JSObject*, JSGlobalObject*)
+{
+    return "RegExp"_s;
 }
 
 JSValue RegExpObject::exec(JSGlobalObject* globalObject, JSString* string)

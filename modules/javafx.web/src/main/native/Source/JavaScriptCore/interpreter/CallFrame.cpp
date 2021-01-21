@@ -29,11 +29,10 @@
 #include "CodeBlock.h"
 #include "ExecutableAllocator.h"
 #include "InlineCallFrame.h"
-#include "Interpreter.h"
 #include "JSCInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "LLIntPCRanges.h"
-#include "VMEntryScope.h"
+#include "VMEntryRecord.h"
 #include "WasmContextInlines.h"
 #include "WasmInstance.h"
 #include <wtf/StringPrintStream.h>
@@ -44,7 +43,7 @@ void CallFrame::initDeprecatedCallFrameForDebugger(CallFrame* globalExec, JSCall
 {
     globalExec->setCodeBlock(nullptr);
     globalExec->setCallerFrame(noCaller());
-    globalExec->setReturnPC(0);
+    globalExec->setReturnPC(nullptr);
     globalExec->setArgumentCountIncludingThis(0);
     globalExec->setCallee(globalCallee);
     ASSERT(globalExec->isDeprecatedCallFrameForDebugger());
@@ -128,7 +127,7 @@ unsigned CallFrame::callSiteBitsAsBytecodeOffset() const
     return callSiteIndex().bits();
 }
 
-BytecodeIndex CallFrame::bytecodeIndex()
+BytecodeIndex CallFrame::bytecodeIndex() const
 {
     ASSERT(!callee().isWasm());
     if (!codeBlock())
@@ -148,7 +147,7 @@ BytecodeIndex CallFrame::bytecodeIndex()
     return callSiteIndex().bytecodeIndex();
 }
 
-CodeOrigin CallFrame::codeOrigin()
+CodeOrigin CallFrame::codeOrigin() const
 {
     if (!codeBlock())
         return CodeOrigin(BytecodeIndex(0));
@@ -268,7 +267,7 @@ String CallFrame::friendlyFunctionName()
     return emptyString();
 }
 
-void CallFrame::dump(PrintStream& out)
+void CallFrame::dump(PrintStream& out) const
 {
     if (CodeBlock* codeBlock = this->codeBlock()) {
         out.print(codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), " [", codeBlock->jitType(), " ", bytecodeIndex(), "]");
@@ -292,8 +291,12 @@ void CallFrame::dump(PrintStream& out)
 
 const char* CallFrame::describeFrame()
 {
-    const size_t bufferSize = 200;
-    static char buffer[bufferSize + 1];
+    constexpr size_t bufferSize = 200;
+    static char* buffer = nullptr;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        buffer = static_cast<char*>(fastZeroedMalloc(bufferSize + 1));
+    });
 
     WTF::StringPrintStream stringStream;
 

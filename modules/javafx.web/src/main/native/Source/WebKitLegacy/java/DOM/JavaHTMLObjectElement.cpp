@@ -127,7 +127,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setCodeType
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getDataImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::dataAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::dataAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setDataImpl(JNIEnv* env, jclass, jlong peer, jstring value)

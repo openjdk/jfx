@@ -185,7 +185,11 @@ public:
         ResourceRequest resourceRequest { url(), referrer(), refresh ? ResourceRequestCachePolicy::ReloadIgnoringCacheData : ResourceRequestCachePolicy::UseProtocolCachePolicy };
         if (initiatedByMainFrame() == InitiatedByMainFrame::Yes)
             resourceRequest.setRequester(ResourceRequest::Requester::Main);
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), resourceRequest, "_self", lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        frameLoadRequest.setLockHistory(lockHistory());
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList());
+        frameLoadRequest.disableNavigationToInvalidURL();
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
 
         frame.loader().changeLocation(WTFMove(frameLoadRequest));
     }
@@ -210,7 +214,11 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::UseProtocolCachePolicy };
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), resourceRequest, "_self", lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        frameLoadRequest.setLockHistory(lockHistory());
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList());
+        frameLoadRequest.disableNavigationToInvalidURL();
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
 
         auto completionHandler = WTFMove(m_completionHandler);
         frame.loader().changeLocation(WTFMove(frameLoadRequest));
@@ -233,7 +241,10 @@ public:
         UserGestureIndicator gestureIndicator { userGestureToForward() };
 
         ResourceRequest resourceRequest { url(), referrer(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
-        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), resourceRequest, "_self", lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), WTFMove(resourceRequest), "_self", initiatedByMainFrame() };
+        frameLoadRequest.setLockHistory(lockHistory());
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList());
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
 
         frame.loader().changeLocation(WTFMove(frameLoadRequest));
     }
@@ -254,7 +265,7 @@ public:
         if (!m_historySteps) {
             // Special case for go(0) from a frame -> reload only the frame
             // To follow Firefox and IE's behavior, history reload can only navigate the self frame.
-            frame.loader().urlSelected(frame.document()->url(), "_self", 0, lockHistory(), lockBackForwardList(), MaybeSendReferrer, shouldOpenExternalURLs());
+            frame.loader().changeLocation(frame.document()->url(), "_self", 0, lockHistory(), lockBackForwardList(), ReferrerPolicy::EmptyString, shouldOpenExternalURLs());
             return;
         }
 
@@ -289,7 +300,11 @@ public:
         auto& requestingDocument = m_submission->state().sourceDocument();
         if (!requestingDocument.canNavigate(&frame))
             return;
-        FrameLoadRequest frameLoadRequest { requestingDocument, requestingDocument.securityOrigin(), { }, { }, lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { requestingDocument, requestingDocument.securityOrigin(), { }, { }, initiatedByMainFrame() };
+        frameLoadRequest.setLockHistory(lockHistory());
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList());
+        frameLoadRequest.setReferrerPolicy(ReferrerPolicy::EmptyString);
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
         m_submission->populateFrameLoadRequest(frameLoadRequest);
         frame.loader().loadFrameRequest(WTFMove(frameLoadRequest), m_submission->event(), m_submission->takeState());
     }
@@ -339,8 +354,11 @@ public:
         SubstituteData replacementData { SharedBuffer::create(), m_originDocument.url(), replacementResponse, SubstituteData::SessionHistoryVisibility::Hidden };
 
         ResourceRequest resourceRequest { m_originDocument.url(), emptyString(), ResourceRequestCachePolicy::ReloadIgnoringCacheData };
-        FrameLoadRequest frameLoadRequest { m_originDocument, m_originDocument.securityOrigin(), resourceRequest, { }, lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
+        FrameLoadRequest frameLoadRequest { m_originDocument, m_originDocument.securityOrigin(), WTFMove(resourceRequest), { }, initiatedByMainFrame() };
+        frameLoadRequest.setLockHistory(lockHistory());
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList());
         frameLoadRequest.setSubstituteData(replacementData);
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(shouldOpenExternalURLs());
         frame.loader().load(WTFMove(frameLoadRequest));
     }
 
@@ -383,7 +401,7 @@ inline bool NavigationScheduler::shouldScheduleNavigation(const URL& url) const
 {
     if (!shouldScheduleNavigation())
         return false;
-    if (WTF::protocolIsJavaScript(url))
+    if (url.protocolIsJavaScript())
         return true;
     return NavigationDisabler::isNavigationAllowed(m_frame);
 }
@@ -435,11 +453,15 @@ void NavigationScheduler::scheduleLocationChange(Document& initiatingDocument, S
     // If the URL we're going to navigate to is the same as the current one, except for the
     // fragment part, we don't need to schedule the location change.
     if (url.hasFragmentIdentifier() && equalIgnoringFragmentIdentifier(m_frame.document()->url(), url)) {
-        ResourceRequest resourceRequest { m_frame.document()->completeURL(url), referrer, ResourceRequestCachePolicy::UseProtocolCachePolicy };
+        ResourceRequest resourceRequest { m_frame.document()->completeURL(url.string()), referrer, ResourceRequestCachePolicy::UseProtocolCachePolicy };
         auto* frame = lexicalFrameFromCommonVM();
         auto initiatedByMainFrame = frame && frame->isMainFrame() ? InitiatedByMainFrame::Yes : InitiatedByMainFrame::Unknown;
 
-        FrameLoadRequest frameLoadRequest { initiatingDocument, securityOrigin, resourceRequest, "_self"_s, lockHistory, lockBackForwardList, MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, initiatingDocument.shouldOpenExternalURLsPolicyToPropagate(), initiatedByMainFrame };
+        FrameLoadRequest frameLoadRequest { initiatingDocument, securityOrigin, WTFMove(resourceRequest), "_self"_s, initiatedByMainFrame };
+        frameLoadRequest.setLockHistory(lockHistory);
+        frameLoadRequest.setLockBackForwardList(lockBackForwardList);
+        frameLoadRequest.disableNavigationToInvalidURL();
+        frameLoadRequest.setShouldOpenExternalURLsPolicy(initiatingDocument.shouldOpenExternalURLsPolicyToPropagate());
         loader.changeLocation(WTFMove(frameLoadRequest));
         return completionHandler();
     }

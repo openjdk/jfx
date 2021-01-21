@@ -202,7 +202,8 @@ PluginWidgetJava::~PluginWidgetJava() {
 void PluginWidgetJava::paint(
     GraphicsContext& context,
     const IntRect& rc /*page coordinates*/,
-    SecurityOriginPaintPolicy) {
+    SecurityOriginPaintPolicy,
+    EventRegionContext*) {
     //Widget::paint(context, rc);
     /*
     if (!m_isStarted) {

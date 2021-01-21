@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PropertyMapHashTable.h"
 
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -110,6 +110,20 @@ PropertyTable::PropertyTable(VM& vm, unsigned initialCapacity, const PropertyTab
     Vector<PropertyOffset>* otherDeletedOffsets = other.m_deletedOffsets.get();
     if (otherDeletedOffsets)
         m_deletedOffsets = makeUnique<Vector<PropertyOffset>>(*otherDeletedOffsets);
+}
+
+void PropertyTable::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
+    vm.heap.reportExtraMemoryAllocated(dataSize());
+}
+
+void PropertyTable::visitChildren(JSCell* cell, SlotVisitor& visitor)
+{
+    auto* thisObject = jsCast<PropertyTable*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(cell, visitor);
+    visitor.reportExtraMemoryVisited(thisObject->dataSize());
 }
 
 void PropertyTable::destroy(JSCell* cell)

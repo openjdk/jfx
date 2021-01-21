@@ -26,23 +26,15 @@
 #include "config.h"
 #include <wtf/FastMalloc.h>
 
-#include <limits>
 #include <string.h>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/DataLog.h>
 
 #if OS(WINDOWS)
 #include <windows.h>
 #else
-#include <pthread.h>
 #if HAVE(RESOURCE_H)
 #include <sys/resource.h>
 #endif // HAVE(RESOURCE_H)
-#endif
-
-#if OS(DARWIN)
-#include <mach/mach_init.h>
-#include <malloc/malloc.h>
 #endif
 
 #if ENABLE(MALLOC_HEAP_BREAKDOWN)
@@ -109,7 +101,7 @@ TryMallocReturnValue tryFastZeroedMalloc(size_t n)
 {
     void* result;
     if (!tryFastMalloc(n).getValue(result))
-        return 0;
+        return nullptr;
     memset(result, 0, n);
     return result;
 }
@@ -273,6 +265,8 @@ void fastDecommitAlignedMemory(void* ptr, size_t size)
 }
 
 void fastEnableMiniMode() { }
+
+void fastDisableScavenger() { }
 
 void fastMallocDumpMallocStats() { }
 
@@ -568,7 +562,7 @@ TryMallocReturnValue tryFastMalloc(size_t size)
 TryMallocReturnValue tryFastCalloc(size_t numElements, size_t elementSize)
 {
     FAIL_IF_EXCEEDS_LIMIT(numElements * elementSize);
-    Checked<size_t, RecordOverflow> checkedSize = elementSize;
+    CheckedSize checkedSize = elementSize;
     checkedSize *= numElements;
     if (checkedSize.hasOverflowed())
         return nullptr;
@@ -630,6 +624,11 @@ void fastDecommitAlignedMemory(void* ptr, size_t size)
 void fastEnableMiniMode()
 {
     bmalloc::api::enableMiniMode();
+}
+
+void fastDisableScavenger()
+{
+    bmalloc::api::disableScavenger();
 }
 
 } // namespace WTF

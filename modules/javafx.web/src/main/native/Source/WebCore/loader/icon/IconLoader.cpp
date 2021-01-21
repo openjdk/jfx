@@ -30,7 +30,6 @@
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiators.h"
-#include "CustomHeaderFields.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
@@ -104,7 +103,7 @@ void IconLoader::stopLoading()
     }
 }
 
-void IconLoader::notifyFinished(CachedResource& resource)
+void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 

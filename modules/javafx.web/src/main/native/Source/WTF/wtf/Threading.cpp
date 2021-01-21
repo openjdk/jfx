@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,18 +26,14 @@
 #include "config.h"
 #include <wtf/Threading.h>
 
-#include <algorithm>
-#include <cmath>
 #include <cstring>
-#include <thread>
 #include <wtf/DateMath.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RandomNumberSeed.h>
 #include <wtf/ThreadGroup.h>
-#include <wtf/ThreadMessage.h>
 #include <wtf/ThreadingPrimitives.h>
-#include <wtf/text/AtomStringTable.h>
-#include <wtf/text/StringView.h>
+#include <wtf/WTFConfig.h>
+#include <wtf/threads/Signals.h>
 
 #if HAVE(QOS_CLASSES)
 #include <bmalloc/bmalloc.h>
@@ -48,6 +44,31 @@
 #endif
 
 namespace WTF {
+
+static Optional<size_t> stackSize(ThreadType threadType)
+{
+    // Return the stack size for the created thread based on its type.
+    // If the stack size is not specified, then use the system default. Platforms can tune the values here.
+    // Enable STACK_STATS in StackStats.h to create a build that will track the information for tuning.
+#if PLATFORM(PLAYSTATION)
+    if (threadType == ThreadType::JavaScript)
+        return 512 * KB;
+#elif OS(DARWIN) && ASAN_ENABLED
+    if (threadType == ThreadType::Compiler)
+        return 1 * MB; // ASan needs more stack space (especially on Debug builds).
+#elif PLATFORM(JAVA) && OS(WINDOWS) && USE(JSVALUE32_64)
+    return 1 * MB;
+#else
+    UNUSED_PARAM(threadType);
+#endif
+
+#if defined(DEFAULT_THREAD_STACK_SIZE_IN_KB) && DEFAULT_THREAD_STACK_SIZE_IN_KB > 0
+    return DEFAULT_THREAD_STACK_SIZE_IN_KB * 1024;
+#else
+    // Use the platform's default stack size
+    return WTF::nullopt;
+#endif
+}
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
@@ -123,6 +144,10 @@ void Thread::initializeInThread()
         m_currentAtomStringTable = &sharedStringTable.get();
     }
 #endif
+
+#if OS(LINUX)
+    m_id = currentID();
+#endif
 }
 
 void Thread::entryPoint(NewThreadContext* newThreadContext)
@@ -152,9 +177,9 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint)
+Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType)
 {
-    WTF::initializeThreading();
+    WTF::initialize();
     Ref<Thread> thread = adoptRef(*new Thread());
     Ref<NewThreadContext> context = adoptRef(*new NewThreadContext { name, WTFMove(entryPoint), thread.copyRef() });
     // Increment the context ref on behalf of the created thread. We do not just use a unique_ptr and leak it to the created thread because both the creator and created thread has a need to keep the context alive:
@@ -165,7 +190,7 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint)
     context->ref();
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr());
+        bool success = thread->establishHandle(context.ptr(), stackSize(threadType));
         RELEASE_ASSERT(success);
         context->stage = NewThreadContext::Stage::EstablishedHandle;
 
@@ -180,9 +205,14 @@ Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint)
 #endif
     }
 
+    // We must register threads here since threads registered in allThreads are expected to have complete thread data which can be initialized in launched thread side.
+    // However, it is also possible that the launched thread has finished its execution before it is registered in allThreads here! In this case, the thread has already
+    // called Thread::didExit to unregister itself from allThreads. Registering such a thread will register a stale thread pointer to allThreads, which will not be removed
+    // even after Thread is destroyed. Register a thread only when it has not unregistered itself from allThreads yet.
     {
-        LockHolder lock(allThreadsMutex());
-        allThreads(lock).add(&thread.get());
+        auto locker = holdLock(allThreadsMutex());
+        if (!thread->m_didUnregisterFromAllThreads)
+            allThreads(locker).add(thread.ptr());
     }
 
     ASSERT(!thread->stack().isEmpty());
@@ -206,8 +236,9 @@ static bool shouldRemoveThreadFromThreadGroup()
 void Thread::didExit()
 {
     {
-        LockHolder lock(allThreadsMutex());
-        allThreads(lock).remove(this);
+        auto locker = holdLock(allThreadsMutex());
+        allThreads(locker).remove(this);
+        m_didUnregisterFromAllThreads = true;
     }
 
     if (shouldRemoveThreadFromThreadGroup()) {
@@ -331,17 +362,30 @@ void Thread::dump(PrintStream& out) const
 ThreadSpecificKey Thread::s_key = InvalidThreadSpecificKey;
 #endif
 
-void initializeThreading()
+void initialize()
 {
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
+        Config::AssertNotFrozenScope assertScope;
         initializeRandomNumberGenerator();
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
         Thread::initializeTLSKey();
 #endif
         initializeDates();
         Thread::initializePlatformThreading();
+#if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
+        SignalHandlers::initialize();
+#endif
     });
+}
+
+// This is a compatibility hack to prevent linkage errors when launching older
+// versions of Safari. initialize() used to be named initializeThreading(), and
+// Safari.framework used to call it directly from NotificationAgentMain.
+WTF_EXPORT_PRIVATE void initializeThreading();
+void initializeThreading()
+{
+    initialize();
 }
 
 } // namespace WTF

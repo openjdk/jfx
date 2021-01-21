@@ -313,8 +313,8 @@ public:
     const std::vector<char>& audioResult() const { return m_audioResult; }
     void setAudioResult(const std::vector<char>& audioData) { m_audioResult = audioData; }
 
-    void addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
-    void removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
+    void addOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
+    void removeOriginAccessAllowListEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
 
     void addUserScript(JSStringRef source, bool runAtStart, bool allFrames);
     void addUserStyleSheet(JSStringRef source, bool allFrames);
@@ -384,7 +384,6 @@ public:
     bool dumpJSConsoleLogInStdErr() const { return m_dumpJSConsoleLogInStdErr; }
 
     void setSpellCheckerLoggingEnabled(bool);
-    void setSpellCheckerResults(JSContextRef, JSObjectRef results);
 
     const std::vector<std::string>& openPanelFiles() const { return m_openPanelFiles; }
     void setOpenPanelFiles(JSContextRef, JSValueRef);

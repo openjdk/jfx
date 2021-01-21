@@ -46,6 +46,7 @@
 #include "RTCRtpCapabilities.h"
 #include "RTCTrackEvent.h"
 #include "RuntimeEnabledFeatures.h"
+#include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -298,19 +299,31 @@ void PeerConnectionBackend::setRemoteDescriptionFailed(Exception&& exception)
 
 void PeerConnectionBackend::addPendingTrackEvent(PendingTrackEvent&& event)
 {
-    ASSERT(!m_peerConnection.isClosed());
+    ASSERT(!m_peerConnection.isStopped());
     m_pendingTrackEvents.append(WTFMove(event));
 }
 
-static String extractIPAddres(const String& sdp)
+static String extractIPAddress(StringView sdp)
 {
-    ASSERT(sdp.contains(" host "));
     unsigned counter = 0;
     for (auto item : StringView { sdp }.split(' ')) {
         if (++counter == 5)
             return item.toString();
     }
     return { };
+}
+
+static inline bool shouldIgnoreIceCandidate(const RTCIceCandidate& iceCandidate)
+{
+    auto address = extractIPAddress(iceCandidate.candidate());
+    if (!address.endsWithIgnoringASCIICase(".local"_s))
+        return false;
+
+    if (!WTF::isVersion4UUID(StringView { address }.substring(0, address.length() - 6))) {
+        RELEASE_LOG_ERROR(WebRTC, "mDNS candidate is not a Version 4 UUID");
+        return true;
+    }
+    return false;
 }
 
 void PeerConnectionBackend::addIceCandidate(RTCIceCandidate* iceCandidate, DOMPromiseDeferred<void>&& promise)
@@ -327,6 +340,12 @@ void PeerConnectionBackend::addIceCandidate(RTCIceCandidate* iceCandidate, DOMPr
         promise.reject(Exception { TypeError, "Trying to add a candidate that is missing both sdpMid and sdpMLineIndex"_s });
         return;
     }
+
+    if (shouldIgnoreIceCandidate(*iceCandidate)) {
+        promise.resolve();
+        return;
+    }
+
     m_addIceCandidatePromise = WTF::makeUnique<DOMPromiseDeferred<void>>(WTFMove(promise));
     doAddIceCandidate(*iceCandidate);
 }
@@ -419,17 +438,33 @@ String PeerConnectionBackend::filterSDP(String&& sdp) const
         return WTFMove(sdp);
 
     StringBuilder filteredSDP;
-    sdp.split('\n', [&filteredSDP](StringView line) {
-        if (line.startsWith("c=IN IP4"))
-            filteredSDP.append("c=IN IP4 0.0.0.0\r");
-        else if (line.startsWith("c=IN IP6"))
-            filteredSDP.append("c=IN IP6 ::\r");
-        else if (!line.startsWith("a=candidate"))
-            filteredSDP.append(line);
-        else if (line.find(" host ", 11) == notFound)
-            filteredSDP.append(filterICECandidate(line.toString()));
-        else
+    sdp.split('\n', [this, &filteredSDP](StringView line) {
+        if (line.startsWith("c=IN IP4")) {
+            filteredSDP.append("c=IN IP4 0.0.0.0\r\n");
             return;
+        }
+        if (line.startsWith("c=IN IP6")) {
+            filteredSDP.append("c=IN IP6 ::\r\n");
+            return;
+        }
+        if (!line.startsWith("a=candidate")) {
+            filteredSDP.append(line);
+            filteredSDP.append('\n');
+            return;
+        }
+        if (line.find(" host ", 11) == notFound) {
+            filteredSDP.append(filterICECandidate(line.toString()));
+            filteredSDP.append('\n');
+            return;
+        }
+
+        auto ipAddress = extractIPAddress(line);
+        auto mdnsName = m_ipAddressToMDNSNameMap.get(ipAddress);
+        if (mdnsName.isEmpty())
+            return;
+        auto sdp = line.toString();
+        sdp.replace(ipAddress, mdnsName);
+        filteredSDP.append(sdp);
         filteredSDP.append('\n');
     });
     return filteredSDP.toString();
@@ -437,25 +472,28 @@ String PeerConnectionBackend::filterSDP(String&& sdp) const
 
 void PeerConnectionBackend::newICECandidate(String&& sdp, String&& mid, unsigned short sdpMLineIndex, String&& serverURL)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "Gathered ice candidate:", sdp);
-    m_finishedGatheringCandidates = false;
+    m_peerConnection.doTask([logSiteIdentifier = LOGIDENTIFIER, this, sdp = WTFMove(sdp), mid = WTFMove(mid), sdpMLineIndex, serverURL = WTFMove(serverURL)]() mutable {
+        UNUSED_PARAM(logSiteIdentifier);
+        ALWAYS_LOG(logSiteIdentifier, "Gathered ice candidate:", sdp);
+        m_finishedGatheringCandidates = false;
 
-    if (!m_shouldFilterICECandidates) {
-        fireICECandidateEvent(RTCIceCandidate::create(WTFMove(sdp), WTFMove(mid), sdpMLineIndex), WTFMove(serverURL));
-        return;
-    }
-    if (sdp.find(" host ", 0) != notFound) {
-        // FIXME: We might need to clear all pending candidates when setting again local description.
-        m_pendingICECandidates.append(PendingICECandidate { String { sdp }, WTFMove(mid), sdpMLineIndex, WTFMove(serverURL) });
-        if (RuntimeEnabledFeatures::sharedFeatures().webRTCMDNSICECandidatesEnabled()) {
-            auto ipAddress = extractIPAddres(sdp);
-            // We restrict to IPv4 candidates for now.
-            if (ipAddress.contains('.'))
-                registerMDNSName(ipAddress);
+        if (!m_shouldFilterICECandidates) {
+            fireICECandidateEvent(RTCIceCandidate::create(WTFMove(sdp), WTFMove(mid), sdpMLineIndex), WTFMove(serverURL));
+            return;
         }
-        return;
-    }
-    fireICECandidateEvent(RTCIceCandidate::create(filterICECandidate(WTFMove(sdp)), WTFMove(mid), sdpMLineIndex), WTFMove(serverURL));
+        if (sdp.find(" host ", 0) != notFound) {
+            // FIXME: We might need to clear all pending candidates when setting again local description.
+            m_pendingICECandidates.append(PendingICECandidate { String { sdp }, WTFMove(mid), sdpMLineIndex, WTFMove(serverURL) });
+            if (RuntimeEnabledFeatures::sharedFeatures().webRTCMDNSICECandidatesEnabled()) {
+                auto ipAddress = extractIPAddress(sdp);
+                // We restrict to IPv4 candidates for now.
+                if (ipAddress.contains('.'))
+                    registerMDNSName(ipAddress);
+            }
+            return;
+        }
+        fireICECandidateEvent(RTCIceCandidate::create(filterICECandidate(WTFMove(sdp)), WTFMove(mid), sdpMLineIndex), WTFMove(serverURL));
+    });
 }
 
 void PeerConnectionBackend::doneGatheringCandidates()
@@ -482,7 +520,7 @@ void PeerConnectionBackend::registerMDNSName(const String& ipAddress)
     ++m_waitingForMDNSRegistration;
     auto& document = downcast<Document>(*m_peerConnection.scriptExecutionContext());
     auto& provider = document.page()->libWebRTCProvider();
-    provider.registerMDNSName(document.identifier().toUInt64(), ipAddress, [peerConnection = makeRef(m_peerConnection), this, ipAddress] (LibWebRTCProvider::MDNSNameOrError&& result) {
+    provider.registerMDNSName(document.identifier(), ipAddress, [peerConnection = makeRef(m_peerConnection), this, ipAddress] (LibWebRTCProvider::MDNSNameOrError&& result) {
         if (peerConnection->isStopped())
             return;
 
@@ -498,6 +536,7 @@ void PeerConnectionBackend::registerMDNSName(const String& ipAddress)
 
 void PeerConnectionBackend::finishedRegisteringMDNSName(const String& ipAddress, const String& name)
 {
+    m_ipAddressToMDNSNameMap.add(ipAddress, name);
     Vector<PendingICECandidate*> candidates;
     for (auto& candidate : m_pendingICECandidates) {
         if (candidate.sdp.find(ipAddress) != notFound) {

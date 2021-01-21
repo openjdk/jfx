@@ -24,7 +24,8 @@
  */
 
 [
-    Conditional=VIDEO_TRACK,
+    ActiveDOMObject,
+    Conditional=VIDEO,
     GenerateIsReachable=ImplElementRoot,
     JSCustomMarkFunction,
 ] interface AudioTrackList : EventTarget {
