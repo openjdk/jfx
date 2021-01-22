@@ -34,6 +34,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -226,6 +227,15 @@ public class ContextMenu extends PopupControl {
      * If there is not enough room, the menu is moved to the opposite side and
      * the offset is not applied.
      * <p>
+     * To clarify the purpose of the {@code side} parameter,
+     * consider that it is relative to the anchor node and depending on the effective node orientation.
+     * As such, a {@code side} of {@code TOP} would mean that the ContextMenu's bottom left corner
+     * is set to the top left corner of the anchor if NodeOrientation.LEFT_TO_RIGHT is set
+     * and the ContextMenu's bottom right corner is set to the top right corner of the anchor if
+     * NodeOrientation.RIGHT_TO_LEFT is set.
+     * Using NodeOrientation.RIGHT_TO_LEFT will also "mirror" the meaning of Side.LEFT and
+     * Side.RIGHT respectively.
+     * <p>
      * This function is useful for finely tuning the position of a menu,
      * relative to the parent node to ensure close alignment.
      * @param anchor the anchor node
@@ -238,26 +248,57 @@ public class ContextMenu extends PopupControl {
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
+        setAnchorLocation(getAnchorLocation(side, anchor.getEffectiveNodeOrientation()));
         Bounds anchorBounds = anchor.localToScreen(anchor.getLayoutBounds());
-        switch (side) {
-            case TOP:
-                setAnchorLocation(AnchorLocation.CONTENT_BOTTOM_LEFT);
-                doShow(anchor, anchorBounds.getMinX() + dx, anchorBounds.getMinY() + dy);
-                break;
-            case RIGHT:
-                setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
-                doShow(anchor, anchorBounds.getMaxX() + dx, anchorBounds.getMinY() + dy);
-                break;
-            case BOTTOM:
-                setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
-                doShow(anchor, anchorBounds.getMinX() + dx, anchorBounds.getMaxY() + dy);
-                break;
-            case LEFT:
-                setAnchorLocation(AnchorLocation.CONTENT_TOP_RIGHT);
-                doShow(anchor, anchorBounds.getMinX() + dx, anchorBounds.getMinY() + dy);
-                break;
-        }
+        double x = getXBySide(anchorBounds, side, anchor.getEffectiveNodeOrientation()) + dx;
+        double y = getYBySide(anchorBounds, side) + dy;
+        doShow(anchor, x, y);
     }
+
+     private AnchorLocation getAnchorLocation(Side side, NodeOrientation orientation) {
+         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+             switch (side) {
+                 case TOP: return AnchorLocation.CONTENT_BOTTOM_RIGHT;
+                 case RIGHT: return AnchorLocation.CONTENT_TOP_RIGHT;
+                 case BOTTOM: return AnchorLocation.CONTENT_TOP_RIGHT;
+                 case LEFT: return AnchorLocation.CONTENT_TOP_LEFT;
+             }
+         } else {
+             switch (side) {
+                 case TOP: return AnchorLocation.CONTENT_BOTTOM_LEFT;
+                 case RIGHT: return AnchorLocation.CONTENT_TOP_LEFT;
+                 case BOTTOM: return AnchorLocation.CONTENT_TOP_LEFT;
+                 case LEFT: return AnchorLocation.CONTENT_TOP_RIGHT;
+             }
+         }
+        return AnchorLocation.CONTENT_TOP_LEFT; // never reached
+     }
+
+     private double getXBySide(Bounds anchorBounds, Side side, NodeOrientation orientation) {
+         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+             if (side == Side.RIGHT) {
+                 return anchorBounds.getMinX();
+             } else {
+                 return anchorBounds.getMaxX();
+             }
+         } else {
+             if (side == Side.RIGHT) {
+                 return anchorBounds.getMaxX();
+             } else {
+                 return anchorBounds.getMinX();
+             }
+         }
+     }
+
+     private double getYBySide(Bounds anchorBounds, Side side) {
+         if (side == Side.BOTTOM) {
+             return anchorBounds.getMaxY();
+         } else {
+             return anchorBounds.getMinY();
+         }
+     }
+
+
 
     /**
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
