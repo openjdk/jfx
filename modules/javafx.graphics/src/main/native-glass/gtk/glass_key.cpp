@@ -345,4 +345,36 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
     return gdk_keyval_to_glass(keyval);
 }
 
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    _isKeyLocked
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
+  (JNIEnv * env, jobject obj, jint keyCode)
+{
+#ifdef GLASS_GTK3
+    GdkKeymap *keyMap = gdk_keymap_get_default();
+    gboolean lockState = FALSE;
+    switch (keyCode) {
+        case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
+            lockState = gdk_keymap_get_caps_lock_state(keyMap);
+            break;
+
+        case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
+            lockState = gdk_keymap_get_num_lock_state(keyMap);
+            break;
+
+        default:
+            return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+    }
+    return lockState ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
+                     : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
+#else /* GLASS_GTK3 */
+    // Caps Lock detection is not reliable in GTK 2, and Num Lock detection is
+    // only available in GTK 3.
+    return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+#endif /* GLASS_GTK3 */
+}
+
 } // extern "C"

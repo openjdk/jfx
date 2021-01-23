@@ -25,10 +25,12 @@
 
 package javafx.application;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Optional;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import com.sun.javafx.application.PlatformImpl;
+import javafx.scene.input.KeyCode;
 
 /**
  * Application platform support class.
@@ -327,6 +329,43 @@ public final class Platform {
      */
     public static void exitNestedEventLoop(Object key, Object rval) {
         Toolkit.getToolkit().exitNestedEventLoop(key, rval);
+    }
+
+    /**
+     * Returns a flag indicating whether the key corresponding to {@code keyCode}
+     * is in the locked or "on" state.
+     * {@code keyCode} must be one of: {@link KeyCode#CAPS} or
+     * {@link KeyCode#NUM_LOCK}.
+     * If the underlying system is not able to determine the state of the
+     * specified {@code keyCode}, an empty {@code Optional} is returned.
+     * If the keyboard attached to the system doesn't have the specified key,
+     * {@code Boolean.FALSE} is returned.
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param keyCode the KeyCode of the lock state to query
+     *
+     * @return the lock state of the key corresponding to {@code keyCode},
+     * or an empty {@code Optional} if the system cannot determine its state
+     *
+     * @throws IllegalArgumentException if {@code keyCode} is not one of the
+     * valid KeyCode values.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread.
+     *
+     * @since 17
+     */
+    public static Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        switch (keyCode) {
+            case CAPS:
+            case NUM_LOCK:
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid KeyCode");
+        }
+        return Toolkit.getToolkit().isKeyLocked(keyCode);
     }
 
     /**

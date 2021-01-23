@@ -94,6 +94,7 @@ import com.sun.scenario.effect.AbstractShadow.ShadowMode;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import java.util.Optional;
 
 
 public abstract class Toolkit {
@@ -872,6 +873,13 @@ public abstract class Toolkit {
     public KeyCode getPlatformShortcutKey() {
         return PlatformUtil.isMac() ? KeyCode.META : KeyCode.CONTROL;
     }
+
+    /**
+     * Return the lock state for the given keyCode.
+     * @param keyCode the keyCode to check
+     * @return the lock state for the given keyCode.
+     */
+    public abstract Optional<Boolean> isKeyLocked(KeyCode keyCode);
 
     public abstract FileChooserResult showFileChooser(
             TKStage ownerWindow,

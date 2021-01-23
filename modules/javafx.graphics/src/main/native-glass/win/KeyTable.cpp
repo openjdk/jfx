@@ -247,5 +247,27 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForC
     return WindowsKeyToJavaKey(vkey);
 }
 
+/*
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _isKeyLocked
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1isKeyLocked
+  (JNIEnv * env, jobject obj, jint keyCode)
+{
+    SHORT keyState = 0;
+    switch (keyCode) {
+        case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
+            keyState = ::GetKeyState(VK_CAPITAL);
+            break;
 
+        case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
+            keyState = ::GetKeyState(VK_NUMLOCK);
+            break;
 
+        default:
+            return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+    }
+    return (keyState & 0x1) ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
+                            : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
+}

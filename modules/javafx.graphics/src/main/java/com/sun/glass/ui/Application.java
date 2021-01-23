@@ -36,6 +36,7 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
+import java.util.Optional;
 
 public abstract class Application {
 
@@ -743,5 +744,23 @@ public abstract class Application {
      */
     public static int getKeyCodeForChar(char c) {
         return application._getKeyCodeForChar(c);
+    }
+
+    protected int _isKeyLocked(int keyCode) {
+        // Overridden in subclasses
+        return KeyEvent.KEY_LOCK_UNKNOWN;
+    }
+
+    public final Optional<Boolean> isKeyLocked(int keyCode) {
+        checkEventThread();
+        int lockState = _isKeyLocked(keyCode);
+        switch (lockState) {
+            case KeyEvent.KEY_LOCK_OFF:
+                return Optional.of(false);
+            case KeyEvent.KEY_LOCK_ON:
+                return Optional.of(true);
+            default:
+                return Optional.empty();
+        }
     }
 }
