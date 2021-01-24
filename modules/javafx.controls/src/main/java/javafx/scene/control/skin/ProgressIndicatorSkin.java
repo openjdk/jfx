@@ -127,14 +127,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         super(control);
 
         this.control = control;
+        this.treeShowingExpression = new TreeShowingExpression(control);
 
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
         registerChangeListener(control.sceneProperty(), e->updateAnimation());
-
-        treeShowingExpression = new TreeShowingExpression(control);
-        treeShowingExpression.addListener((obs, old, current) -> updateAnimation());
+        registerChangeListener(treeShowingExpression, e -> updateAnimation());
 
         initialize();
         updateAnimation();
