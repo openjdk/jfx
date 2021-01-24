@@ -241,6 +241,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
+        NSApplication *app = [NSApplication sharedApplication];
+        [app setActivationPolicy:NSApplicationActivationPolicyRegular];
+        [app activateIgnoringOtherApps:true];
+
         (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyDidFinishLaunchingMethod]);
     }
     [pool drain];
