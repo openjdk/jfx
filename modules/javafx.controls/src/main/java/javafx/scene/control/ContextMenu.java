@@ -228,13 +228,9 @@ public class ContextMenu extends PopupControl {
      * the offset is not applied.
      * <p>
      * To clarify the purpose of the {@code side} parameter,
-     * consider that it is relative to the anchor node and depending on the effective node orientation.
+     * consider that it is relative to the anchor node.
      * As such, a {@code side} of {@code TOP} would mean that the ContextMenu's bottom left corner
-     * is set to the top left corner of the anchor if NodeOrientation.LEFT_TO_RIGHT is set
-     * and the ContextMenu's bottom right corner is set to the top right corner of the anchor if
-     * NodeOrientation.RIGHT_TO_LEFT is set.
-     * Using NodeOrientation.RIGHT_TO_LEFT will also "mirror" the meaning of Side.LEFT and
-     * Side.RIGHT respectively.
+     * is set to the top left corner of the anchor.
      * <p>
      * This function is useful for finely tuning the position of a menu,
      * relative to the parent node to ensure close alignment.
@@ -297,8 +293,6 @@ public class ContextMenu extends PopupControl {
              return anchorBounds.getMinY();
          }
      }
-
-
 
     /**
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
