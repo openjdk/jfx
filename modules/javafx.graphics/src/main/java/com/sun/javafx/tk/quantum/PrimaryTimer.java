@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import javafx.animation.Timeline;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.Settings;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.AnimationPulse;
 
 /**
@@ -42,21 +42,21 @@ import com.sun.scenario.animation.AnimationPulse;
  *
  * For now it is hidden until we have some use to expose it.
  */
-public final class MasterTimer extends AbstractMasterTimer {
+public final class PrimaryTimer extends AbstractPrimaryTimer {
 
-    /** Prevent external instantiation of MasterTimer */
-    private MasterTimer() {
+    /** Prevent external instantiation of PrimaryTimer */
+    private PrimaryTimer() {
     }
 
-    private static final Object MASTER_TIMER_KEY = new StringBuilder(
-            "MasterTimerKey");
+    private static final Object PRIMARY_TIMER_KEY = new StringBuilder(
+            "PrimaryTimerKey");
 
-    public static synchronized MasterTimer getInstance() {
+    public static synchronized PrimaryTimer getInstance() {
         Map<Object, Object> contextMap = Toolkit.getToolkit().getContextMap();
-        MasterTimer instance = (MasterTimer) contextMap.get(MASTER_TIMER_KEY);
+        PrimaryTimer instance = (PrimaryTimer) contextMap.get(PRIMARY_TIMER_KEY);
         if (instance == null) {
-            instance = new MasterTimer();
-            contextMap.put(MASTER_TIMER_KEY, instance);
+            instance = new PrimaryTimer();
+            contextMap.put(PRIMARY_TIMER_KEY, instance);
             if (Settings.getBoolean(ANIMATION_MBEAN_ENABLED,
                                     enableAnimationMBean)) {
                 AnimationPulse.getDefaultBean().setEnabled(true);

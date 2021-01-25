@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,8 +62,8 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 
 @implementation WebViewImpl
 
-@synthesize window;     //known as masterWindow in glass
-@synthesize windowView; //known as masterWindowHost in glass
+@synthesize window;     //known as mainWindow in glass
+@synthesize windowView; //known as mainWindowHost in glass
 
 - (void)setWidth:(CGFloat)value {
     width = value;
@@ -141,8 +141,8 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     loadingLabel.textAlignment = UITextAlignmentCenter;
     //[loadingLabel.layer setAnchorPoint:CGPointMake(0.0f, 0.0f)];
 
-    window = [self getWindow];                          //known as masterWindow in glass
-    windowView = [[window rootViewController] view];    //known as masterWindowHost in glass
+    window = [self getWindow];                          //known as mainWindow in glass
+    windowView = [[window rootViewController] view];    //known as mainWindowHost in glass
 }
 
 - (JNIEnv *)getJNIEnv {

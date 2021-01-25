@@ -3782,7 +3782,8 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 if (e.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if (!(primaryButtonDown || secondaryButtonDown || middleButtonDown ||
-                            backButtonDown || forwardButtonDown)) {
+                            backButtonDown || forwardButtonDown) &&
+                            Scene.this.dndGesture == null) {
                         //old gesture ended and new one started
                         gestureStarted = true;
                         if (!PLATFORM_DRAG_GESTURE_INITIATION) {

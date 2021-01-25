@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package javafx.animation;
 
 import com.sun.javafx.tk.Toolkit;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.TimerReceiver;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -60,7 +60,7 @@ public abstract class AnimationTimer {
         }
     }
 
-    private final AbstractMasterTimer timer;
+    private final AbstractPrimaryTimer timer;
     private final AnimationTimerReceiver timerReceiver = new AnimationTimerReceiver();
     private boolean active;
 
@@ -71,11 +71,11 @@ public abstract class AnimationTimer {
      * Creates a new timer.
      */
     public AnimationTimer() {
-        timer = Toolkit.getToolkit().getMasterTimer();
+        timer = Toolkit.getToolkit().getPrimaryTimer();
     }
 
     // For testing only
-    AnimationTimer(AbstractMasterTimer timer) {
+    AnimationTimer(AbstractPrimaryTimer timer) {
         this.timer = timer;
     }
 

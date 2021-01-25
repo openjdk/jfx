@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -986,20 +986,23 @@ public class Region extends Parent {
     private double snappedBottomInset = 0;
     private double snappedLeftInset = 0;
 
+    /**
+     * Cached snapScale values, used to determine if snapped cached insets values
+     * should be invalidated because screen scale has changed.
+     */
+    private double lastUsedSnapScaleY = 0;
+    private double lastUsedSnapScaleX = 0;
+
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
+        lastUsedSnapScaleX = getSnapScaleX();
+        lastUsedSnapScaleY = getSnapScaleY();
         final Insets insets = getInsets();
-        if (_snapToPixel) {
-            snappedTopInset = Math.ceil(insets.getTop());
-            snappedRightInset = Math.ceil(insets.getRight());
-            snappedBottomInset = Math.ceil(insets.getBottom());
-            snappedLeftInset = Math.ceil(insets.getLeft());
-        } else {
-            snappedTopInset = insets.getTop();
-            snappedRightInset = insets.getRight();
-            snappedBottomInset = insets.getBottom();
-            snappedLeftInset = insets.getLeft();
-        }
+        final boolean snap = isSnapToPixel();
+        snappedTopInset = snapSpaceY(insets.getTop(), snap);
+        snappedRightInset = snapSpaceX(insets.getRight(), snap);
+        snappedBottomInset = snapSpaceY(insets.getBottom(), snap);
+        snappedLeftInset = snapSpaceX(insets.getLeft(), snap);
     }
 
     /**
@@ -1861,6 +1864,11 @@ public class Region extends Parent {
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedTopInset;
     }
 
@@ -1872,6 +1880,11 @@ public class Region extends Parent {
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleY != getSnapScaleY()) {
+            updateSnappedInsets();
+        }
         return snappedBottomInset;
     }
 
@@ -1883,6 +1896,11 @@ public class Region extends Parent {
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedLeftInset;
     }
 
@@ -1894,6 +1912,11 @@ public class Region extends Parent {
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
+        // invalidate the cached values for snapped inset dimensions
+        // if the screen scale changed since they were last computed.
+        if (lastUsedSnapScaleX != getSnapScaleX()) {
+            updateSnappedInsets();
+        }
         return snappedRightInset;
     }
 

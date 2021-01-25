@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,15 +59,15 @@ public final class DMarlinRenderingEngine implements MarlinConst
         }
     }
 
-    // --- DRendererContext handling ---
-    // use ThreadLocal or ConcurrentLinkedQueue to get one DRendererContext
+    // --- RendererContext handling ---
+    // use ThreadLocal or ConcurrentLinkedQueue to get one RendererContext
     private static final boolean USE_THREAD_LOCAL;
 
     // reference type stored in either TL or CLQ
     static final int REF_TYPE;
 
-    // Per-thread DRendererContext
-    private static final ReentrantContextProvider<DRendererContext> RDR_CTX_PROVIDER;
+    // Per-thread RendererContext
+    private static final ReentrantContextProvider<RendererContext> RDR_CTX_PROVIDER;
 
     // Static initializer to use TL or CLQ mode
     static {
@@ -93,24 +93,24 @@ public final class DMarlinRenderingEngine implements MarlinConst
         }
 
         if (USE_THREAD_LOCAL) {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<DRendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderTL<RendererContext>(REF_TYPE)
                 {
                     @Override
-                    protected DRendererContext newContext() {
-                        return DRendererContext.createContext();
+                    protected RendererContext newContext() {
+                        return RendererContext.createContext();
                     }
                 };
         } else {
-            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<DRendererContext>(REF_TYPE)
+            RDR_CTX_PROVIDER = new ReentrantContextProviderCLQ<RendererContext>(REF_TYPE)
                 {
                     @Override
-                    protected DRendererContext newContext() {
-                        return DRendererContext.createContext();
+                    protected RendererContext newContext() {
+                        return RendererContext.createContext();
                     }
                 };
         }
 
-        logSettings(DRenderer.class.getName());
+        logSettings(Renderer.class.getName());
     }
 
     private static boolean SETTINGS_LOGGED = !ENABLE_LOGS;
@@ -228,26 +228,26 @@ public final class DMarlinRenderingEngine implements MarlinConst
                 + MarlinProperties.getQuadDecD2());
 
         logInfo("Renderer settings:");
-        logInfo("CUB_DEC_BND  = " + DRenderer.CUB_DEC_BND);
-        logInfo("CUB_INC_BND  = " + DRenderer.CUB_INC_BND);
-        logInfo("QUAD_DEC_BND = " + DRenderer.QUAD_DEC_BND);
+        logInfo("CUB_DEC_BND  = " + Renderer.CUB_DEC_BND);
+        logInfo("CUB_INC_BND  = " + Renderer.CUB_INC_BND);
+        logInfo("QUAD_DEC_BND = " + Renderer.QUAD_DEC_BND);
 
         logInfo("INITIAL_EDGES_CAPACITY        = "
                 + MarlinConst.INITIAL_EDGES_CAPACITY);
         logInfo("INITIAL_CROSSING_COUNT        = "
-                + DRenderer.INITIAL_CROSSING_COUNT);
+                + Renderer.INITIAL_CROSSING_COUNT);
 
         logInfo("=========================================================="
                 + "=====================");
     }
 
     /**
-     * Get the DRendererContext instance dedicated to the current thread
-     * @return DRendererContext instance
+     * Get the RendererContext instance dedicated to the current thread
+     * @return RendererContext instance
      */
     @SuppressWarnings({"unchecked"})
-    public static DRendererContext getRendererContext() {
-        final DRendererContext rdrCtx = RDR_CTX_PROVIDER.acquire();
+    public static RendererContext getRendererContext() {
+        final RendererContext rdrCtx = RDR_CTX_PROVIDER.acquire();
         if (DO_MONITORS) {
             rdrCtx.stats.mon_pre_getAATileGenerator.start();
         }
@@ -255,10 +255,10 @@ public final class DMarlinRenderingEngine implements MarlinConst
     }
 
     /**
-     * Reset and return the given DRendererContext instance for reuse
-     * @param rdrCtx DRendererContext instance
+     * Reset and return the given RendererContext instance for reuse
+     * @param rdrCtx RendererContext instance
      */
-    public static void returnRendererContext(final DRendererContext rdrCtx) {
+    public static void returnRendererContext(final RendererContext rdrCtx) {
         rdrCtx.dispose();
 
         if (DO_MONITORS) {

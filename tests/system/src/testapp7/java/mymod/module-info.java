@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,37 +23,11 @@
  * questions.
  */
 
-#include <jni.h>
-
-#include "../PrismES2Defs.h"
-
-extern int useDispman;
-extern const char *eglErrorMsg(int err);
-extern char *printErrorExit(char *message);
-extern int printConfigAttrs(EGLint *config);
-extern int printConfig(EGLDisplay display, EGLConfig config);
-
-extern ContextInfo *eglContextFromConfig(EGLDisplay *display, EGLConfig config);
-extern void setEGLAttrs(jint *attrs, int *eglAttrs);
-extern EGLSurface getDummyWindowSurface(EGLDisplay dpy,
-                                        EGLConfig cfg);
-extern EGLSurface getSharedWindowSurface(EGLDisplay dpy,
-                                         EGLConfig cfg,
-                                         void *nativeWindow);
-
-//#define DEBUG_EGL 1
-
-#define eglCheck() { \
-        int err; \
-        if ((err = eglGetError()) != EGL_SUCCESS) { \
-            fprintf(stderr, "EGLERROR: %s\n",eglErrorMsg(err)); \
-        }; \
-    } //end of eglCheck
-
-#ifdef DEBUG_EGL
-#define EGL_CHECK eglCheck();
-#else
-#define EGL_CHECK
-#endif
-
-
+module mymod {
+    requires javafx.controls;
+    requires javafx.media;
+    requires javafx.web;
+    requires javafx.graphics;
+    requires javafx.base;
+    exports myapp7;
+}

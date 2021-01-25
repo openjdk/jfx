@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,16 +27,16 @@ package test.com.sun.javafx.pgstub;
 
 import com.sun.javafx.tk.Toolkit;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 
 /**
- * Stubbed implementation of AbstractMasterTimer. An instance
- * of this is returned by Toolkit.getMasterTimer().
+ * Stubbed implementation of AbstractPrimaryTimer. An instance
+ * of this is returned by Toolkit.getPrimaryTimer().
  */
-public class StubMasterTimer extends AbstractMasterTimer {
+public class StubPrimaryTimer extends AbstractPrimaryTimer {
     private long currentTimeMillis;
 
-    protected StubMasterTimer() {
+    protected StubPrimaryTimer() {
     }
 
     protected int getPulseDuration(int precision) {

@@ -36,7 +36,7 @@ jar {
     //exclude 'META-INF/*'
 }
 
-// Merge the Apache Lucene jars into our master jar.
+// Merge the Apache Lucene jars into our main jar.
 jar.doLast() {
     ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
         zipgroupfileset(dir: new File("./lib"), includes:"*.jar")

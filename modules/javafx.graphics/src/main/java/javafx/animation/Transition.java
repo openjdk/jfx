@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
@@ -148,7 +148,7 @@ public abstract class Transition extends Animation {
     }
 
     // For testing purposes
-    Transition(AbstractMasterTimer timer) {
+    Transition(AbstractPrimaryTimer timer) {
         super(timer);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,35 +23,20 @@
  * questions.
  */
 
-#include <jni.h>
-#include "com_sun_prism_es2_EGLX11GLContext.h"
+package com.sun.scenario.animation;
 
-/*
- * Class:     com_sun_prism_es2_EGLX11GLDrawable
- * Method:    nCreateDrawable
- * Signature: (JJ)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLX11GLDrawable_nCreateDrawable
-(JNIEnv *env, jclass jeglx11Drawable, jlong nativeWindow, jlong nativePFInfo) {
-    return 0;
-}
+public class AbstractPrimaryTimerShim {
 
-/*
- * Class:     com_sun_prism_es2_EGLX11GLDrawable
- * Method:    nGetDummyDrawable
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLX11GLDrawable_nGetDummyDrawable
-(JNIEnv *env, jclass jeglx11Drawable, jlong nativePFInfo) {
-    return 0;
-}
+    public static boolean isPaused(AbstractPrimaryTimer amt) {
+        return amt.isPaused();
+    }
 
-/*
- * Class:     com_sun_prism_es2_EGLX11GLDrawable
- * Method:    nSwapBuffers
- * Signature: (J)Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_EGLX11GLDrawable_nSwapBuffers
-(JNIEnv *env, jclass jeglx11Drawable, jlong nativeDInfo) {
-    return 0;
+    public static long getTotalPausedTime(AbstractPrimaryTimer amt) {
+        return amt.getTotalPausedTime();
+    }
+
+    public static long getStartPauseTime(AbstractPrimaryTimer amt) {
+        return amt.getStartPauseTime();
+    }
+
 }

@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 import javafx.util.Duration;
@@ -36,11 +36,11 @@ public abstract class AnimationShim extends Animation {
         super();
     }
 
-    public AnimationShim(AbstractMasterTimer timer) {
+    public AnimationShim(AbstractPrimaryTimer timer) {
         super(timer);
     }
 
-    public AnimationShim(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
+    public AnimationShim(AbstractPrimaryTimer timer, ClipEnvelope clipEnvelope, int resolution) {
         super(timer, clipEnvelope, resolution);
     }
 
