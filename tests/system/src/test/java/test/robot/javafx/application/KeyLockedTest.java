@@ -100,10 +100,8 @@ public class KeyLockedTest {
             // Check that we don't get an exception or a null optional.
             Optional<Boolean> capsLockState = Platform.isKeyLocked(KeyCode.CAPS);
             assertNotNull(capsLockState);
-            // A result should always be present on Windows and Mac
-            if (PlatformUtil.isWindows() || PlatformUtil.isMac()) {
-                assertTrue(capsLockState.isPresent());
-            }
+            // A result should always be present
+            assertTrue(capsLockState.isPresent());
         });
     }
 
@@ -113,10 +111,11 @@ public class KeyLockedTest {
             // Check that we don't get an exception or a null optional.
             Optional<Boolean> numLockState = Platform.isKeyLocked(KeyCode.NUM_LOCK);
             assertNotNull(numLockState);
-            // A result should always be present on Windows and never on Mac
-            if (PlatformUtil.isWindows()) {
+            // A result should always be present on Windows and Linux
+            if (PlatformUtil.isWindows() || PlatformUtil.isLinux()) {
                 assertTrue(numLockState.isPresent());
             }
+            // A result should never be present on Mac
             if (PlatformUtil.isMac()) {
                 assertFalse(numLockState.isPresent());
             }

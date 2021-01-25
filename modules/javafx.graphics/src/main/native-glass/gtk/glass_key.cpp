@@ -29,6 +29,7 @@
 #include <glib.h>
 #include "glass_general.h"
 #include <gdk/gdkkeysyms.h>
+#include <X11/XKBlib.h>
 
 static gboolean key_initialized = FALSE;
 static GHashTable *keymap;
@@ -346,6 +347,25 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
 }
 
 /*
+ * Function to determine whether the Xkb extention is available. This is a
+ * precaution against X protocol errors, although it should be available on all
+ * Linux systems.
+ */
+
+static Bool xkbInitialized = False;
+static Bool xkbAvailable = False;
+
+static Bool isXkbAvailable(Display *display) {
+    if (!xkbInitialized) {
+        int xkbMajor = XkbMajorVersion;
+        int xkbMinor = XkbMinorVersion;
+        xkbAvailable = XkbQueryExtension(display, NULL, NULL, NULL, &xkbMajor, &xkbMinor);
+        xkbInitialized = True;
+    }
+    return xkbAvailable;
+}
+
+/*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _isKeyLocked
  * Signature: (I)I
@@ -353,28 +373,36 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
   (JNIEnv * env, jobject obj, jint keyCode)
 {
-#ifdef GLASS_GTK3
-    GdkKeymap *keyMap = gdk_keymap_get_default();
-    gboolean lockState = FALSE;
+    Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
+    if (!isXkbAvailable(display)) {
+        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+    }
+
+    Atom atom = None;
     switch (keyCode) {
         case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
-            lockState = gdk_keymap_get_caps_lock_state(keyMap);
+            atom = XInternAtom(display, "Caps Lock", True);
             break;
 
         case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
-            lockState = gdk_keymap_get_num_lock_state(keyMap);
+            atom = XInternAtom(display, "Num Lock", True);
             break;
-
-        default:
-            return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
     }
-    return lockState ? com_sun_glass_events_KeyEvent_KEY_LOCK_ON
-                     : com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
-#else /* GLASS_GTK3 */
-    // Caps Lock detection is not reliable in GTK 2, and Num Lock detection is
-    // only available in GTK 3.
+
+    if (atom == None) {
+        return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
+    }
+
+    Bool isLocked = False;
+    if (XkbGetNamedIndicator(display, atom, NULL, &isLocked, NULL, NULL)) {
+        if (isLocked) {
+            return com_sun_glass_events_KeyEvent_KEY_LOCK_ON;
+        } else {
+            return com_sun_glass_events_KeyEvent_KEY_LOCK_OFF;
+        }
+    }
+
     return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
-#endif /* GLASS_GTK3 */
 }
 
 } // extern "C"
