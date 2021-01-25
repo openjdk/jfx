@@ -333,25 +333,25 @@ public final class Platform {
 
     /**
      * Returns a flag indicating whether the key corresponding to {@code keyCode}
-     * is in the locked or "on" state.
+     * is in the locked (or "on") state.
      * {@code keyCode} must be one of: {@link KeyCode#CAPS} or
      * {@link KeyCode#NUM_LOCK}.
      * If the underlying system is not able to determine the state of the
      * specified {@code keyCode}, an empty {@code Optional} is returned.
      * If the keyboard attached to the system doesn't have the specified key,
-     * {@code Boolean.FALSE} is returned.
+     * an {@code Optional} containing {@code false} is returned.
      * This method must be called on the JavaFX Application thread.
      *
-     * @param keyCode the KeyCode of the lock state to query
+     * @param keyCode the {@code KeyCode} of the lock state to query
      *
      * @return the lock state of the key corresponding to {@code keyCode},
      * or an empty {@code Optional} if the system cannot determine its state
      *
      * @throws IllegalArgumentException if {@code keyCode} is not one of the
-     * valid KeyCode values.
+     * valid {@code KeyCode} values
      *
      * @throws IllegalStateException if this method is called on a thread
-     * other than the JavaFX Application Thread.
+     * other than the JavaFX Application Thread
      *
      * @since 17
      */
