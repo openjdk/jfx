@@ -46,9 +46,6 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.*;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Optional;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
