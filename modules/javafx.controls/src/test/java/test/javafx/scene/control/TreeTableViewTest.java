@@ -772,6 +772,13 @@ public class TreeTableViewTest {
         });
     }
 
+    @Test public void testNPEWhenRootItemIsNull() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            ttv.sort();
+        });
+    }
+
     @Test public void testChangingSortPolicyUpdatesItemsList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
         col.setSortType(DESCENDING);
