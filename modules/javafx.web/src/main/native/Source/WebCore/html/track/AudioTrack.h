@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "AudioTrackPrivate.h"
 #include "TrackBase.h"
@@ -64,8 +64,13 @@ public:
 
     size_t inbandTrackIndex() const;
 
+    const AudioTrackPrivate& privateTrack() const { return m_private; }
     void setPrivate(AudioTrackPrivate&);
+
     void setMediaElement(WeakPtr<HTMLMediaElement>) override;
+#if !RELEASE_LOG_DISABLED
+    void setLogger(const Logger&, const void*) final;
+#endif
 
 private:
     AudioTrack(AudioTrackClient&, AudioTrackPrivate&);

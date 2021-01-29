@@ -24,6 +24,7 @@
 
 #include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
+#include "Element.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
@@ -31,12 +32,15 @@
 namespace WebCore {
 
 class DeferredPromise;
-class Element;
+class Document;
 class ImageLoader;
+class Page;
 class RenderImageResource;
 
 template<typename T> class EventSender;
 typedef EventSender<ImageLoader> ImageEventSender;
+
+enum class RelevantMutation : bool { Yes, No };
 
 class ImageLoader : public CachedImageClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -45,13 +49,13 @@ public:
 
     // This function should be called when the element is attached to a document; starts
     // loading if a load hasn't already been started.
-    void updateFromElement();
+    void updateFromElement(RelevantMutation = RelevantMutation::No);
 
     // This function should be called whenever the 'src' attribute is set, even if its value
     // doesn't change; starts new load unconditionally (matches Firefox and Opera behavior).
-    void updateFromElementIgnoringPreviousError();
+    void updateFromElementIgnoringPreviousError(RelevantMutation = RelevantMutation::No);
 
-    void elementDidMoveToNewDocument();
+    void elementDidMoveToNewDocument(Document&);
 
     Element& element() { return m_element; }
     const Element& element() const { return m_element; }
@@ -71,15 +75,23 @@ public:
 
     void dispatchPendingEvent(ImageEventSender*);
 
-    static void dispatchPendingBeforeLoadEvents();
-    static void dispatchPendingLoadEvents();
-    static void dispatchPendingErrorEvents();
+    static void dispatchPendingBeforeLoadEvents(Page*);
+    static void dispatchPendingLoadEvents(Page*);
+    static void dispatchPendingErrorEvents(Page*);
+
+    void loadDeferredImage();
+
+    bool isDeferred() const { return m_lazyImageLoadState == LazyImageLoadState::Deferred; }
+
+    Document& document() { return m_element.document(); }
 
 protected:
     explicit ImageLoader(Element&);
-    void notifyFinished(CachedResource&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 
 private:
+    enum class LazyImageLoadState : uint8_t { None, Deferred, LoadImmediately, FullImage };
+
     virtual void dispatchLoadEvent() = 0;
     virtual String sourceURI(const AtomString&) const = 0;
 
@@ -114,6 +126,7 @@ private:
     bool m_imageComplete : 1;
     bool m_loadManually : 1;
     bool m_elementIsProtected : 1;
+    LazyImageLoadState m_lazyImageLoadState { LazyImageLoadState::None };
 };
 
 }

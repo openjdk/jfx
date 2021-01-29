@@ -45,7 +45,15 @@ public:
 
     const String& persistentId() const { return m_persistentId; }
 
-    const String& label() const { return m_label; }
+    const String& label() const
+    {
+        static NeverDestroyed<String> airPods(MAKE_STATIC_STRING_IMPL("AirPods"));
+
+        if (m_type == DeviceType::Microphone && m_label.contains(airPods))
+            return airPods;
+
+        return m_label;
+    }
 
     const String& groupId() const { return m_groupId; }
 
@@ -64,7 +72,7 @@ public:
         encoder << m_label;
         encoder << m_groupId;
         encoder << m_enabled;
-        encoder.encodeEnum(m_type);
+        encoder << m_type;
     }
 
     template <class Decoder>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,12 +42,6 @@ bool HeapCell::isLive()
     return markedBlockHandle.isLive(this);
 }
 
-#if !COMPILER(GCC_COMPATIBLE)
-NEVER_INLINE void keepAlive(const void*)
-{
-}
-#endif
-
 } // namespace JSC
 
 namespace WTF {
@@ -60,8 +54,8 @@ void printInternal(PrintStream& out, HeapCell::Kind kind)
     case HeapCell::JSCell:
         out.print("JSCell");
         return;
-    case HeapCell::JSCellWithInteriorPointers:
-        out.print("JSCellWithInteriorPointers");
+    case HeapCell::JSCellWithIndexingHeader:
+        out.print("JSCellWithIndexingHeader");
         return;
     case HeapCell::Auxiliary:
         out.print("Auxiliary");

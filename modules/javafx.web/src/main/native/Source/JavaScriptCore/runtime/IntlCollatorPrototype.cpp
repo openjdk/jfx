@@ -27,9 +27,6 @@
 #include "config.h"
 #include "IntlCollatorPrototype.h"
 
-#if ENABLE(INTL)
-
-#include "Error.h"
 #include "IntlCollator.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
@@ -45,7 +42,7 @@ static EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSG
 
 namespace JSC {
 
-const ClassInfo IntlCollatorPrototype::s_info = { "Object", &Base::s_info, &collatorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlCollatorPrototype) };
+const ClassInfo IntlCollatorPrototype::s_info = { "Intl.Collator", &Base::s_info, &collatorPrototypeTable, nullptr, CREATE_METHOD_TABLE(IntlCollatorPrototype) };
 
 /* Source for IntlCollatorPrototype.lut.h
 @begin collatorPrototypeTable
@@ -74,8 +71,8 @@ IntlCollatorPrototype::IntlCollatorPrototype(VM& vm, Structure* structure)
 void IntlCollatorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsNontrivialString(vm, "Object"_s), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 static EncodedJSValue JSC_HOST_CALL IntlCollatorFuncCompare(JSGlobalObject* globalObject, CallFrame* callFrame)
@@ -150,5 +147,3 @@ EncodedJSValue JSC_HOST_CALL IntlCollatorPrototypeFuncResolvedOptions(JSGlobalOb
 }
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

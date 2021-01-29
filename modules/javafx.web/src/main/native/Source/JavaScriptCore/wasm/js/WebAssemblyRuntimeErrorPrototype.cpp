@@ -28,9 +28,8 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
+#include "AuxiliaryBarrierInlines.h"
 #include "JSCInlines.h"
-
 #include "WebAssemblyRuntimeErrorPrototype.lut.h"
 
 namespace JSC {
@@ -57,6 +56,9 @@ Structure* WebAssemblyRuntimeErrorPrototype::createStructure(VM& vm, JSGlobalObj
 void WebAssemblyRuntimeErrorPrototype::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
+    ASSERT(inherits(vm, info()));
+    putDirectWithoutTransition(vm, vm.propertyNames->name, jsNontrivialString(vm, "RuntimeError"_s), static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, vm.propertyNames->message, jsEmptyString(vm), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 WebAssemblyRuntimeErrorPrototype::WebAssemblyRuntimeErrorPrototype(VM& vm, Structure* structure)

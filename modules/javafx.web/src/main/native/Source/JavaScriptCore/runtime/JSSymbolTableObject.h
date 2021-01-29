@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,11 +39,11 @@ namespace JSC {
 class JSSymbolTableObject : public JSScope {
 public:
     using Base = JSScope;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesAnyFormOfGetPropertyNames;
 
     SymbolTable* symbolTable() const { return m_symbolTable.get(); }
 
-    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
 
     static ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }

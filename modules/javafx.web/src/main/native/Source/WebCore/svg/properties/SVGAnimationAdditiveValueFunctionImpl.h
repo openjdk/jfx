@@ -85,14 +85,17 @@ public:
 
     void animate(SVGElement*, float progress, unsigned repeatCount, Color& animated)
     {
-        Color from = m_animationMode == AnimationMode::To ? animated : m_from;
+        auto simpleAnimated = animated.toSRGBALossy<uint8_t>();
+        auto simpleFrom = m_animationMode == AnimationMode::To ? simpleAnimated : m_from.toSRGBALossy<uint8_t>();
+        auto simpleTo = m_to.toSRGBALossy<uint8_t>();
+        auto simpleToAtEndOfDuration = toAtEndOfDuration().toSRGBALossy<uint8_t>();
 
-        float red = Base::animate(progress, repeatCount, from.red(), m_to.red(), toAtEndOfDuration().red(), animated.red());
-        float green = Base::animate(progress, repeatCount, from.green(), m_to.green(), toAtEndOfDuration().green(), animated.green());
-        float blue = Base::animate(progress, repeatCount, from.blue(), m_to.blue(), toAtEndOfDuration().blue(), animated.blue());
-        float alpha = Base::animate(progress, repeatCount, from.alpha(), m_to.alpha(), toAtEndOfDuration().alpha(), animated.alpha());
+        float red = Base::animate(progress, repeatCount, simpleFrom.red, simpleTo.red, simpleToAtEndOfDuration.red, simpleAnimated.red);
+        float green = Base::animate(progress, repeatCount, simpleFrom.green, simpleTo.green, simpleToAtEndOfDuration.green, simpleAnimated.green);
+        float blue = Base::animate(progress, repeatCount, simpleFrom.blue, simpleTo.blue, simpleToAtEndOfDuration.blue, simpleAnimated.blue);
+        float alpha = Base::animate(progress, repeatCount, simpleFrom.alpha, simpleTo.alpha, simpleToAtEndOfDuration.alpha, simpleAnimated.alpha);
 
-        animated = { roundAndClampColorChannel(red), roundAndClampColorChannel(green), roundAndClampColorChannel(blue), roundAndClampColorChannel(alpha) };
+        animated = clampToComponentBytes<SRGBA>(std::lround(red), std::lround(green), std::lround(blue), std::lround(alpha));
     }
 
     Optional<float> calculateDistance(SVGElement*, const String& from, const String& to) const override
@@ -103,9 +106,14 @@ public:
         Color toColor = CSSParser::parseColor(to.stripWhiteSpace());
         if (!toColor.isValid())
             return { };
-        float red = fromColor.red() - toColor.red();
-        float green = fromColor.green() - toColor.green();
-        float blue = fromColor.blue() - toColor.blue();
+
+        auto simpleFrom = fromColor.toSRGBALossy<uint8_t>();
+        auto simpleTo = toColor.toSRGBALossy<uint8_t>();
+
+        float red = simpleFrom.red - simpleTo.red;
+        float green = simpleFrom.green - simpleTo.green;
+        float blue = simpleFrom.blue - simpleTo.blue;
+
 #if PLATFORM(JAVA)
         return javamath::hypot(red, green, blue);
 #else
@@ -116,12 +124,11 @@ public:
 private:
     void addFromAndToValues(SVGElement*) override
     {
+        auto simpleFrom = m_from.toSRGBALossy<uint8_t>();
+        auto simpleTo = m_to.toSRGBALossy<uint8_t>();
+
         // Ignores any alpha and sets alpha on result to 100% opaque.
-        m_to = {
-            roundAndClampColorChannel(m_to.red() + m_from.red()),
-            roundAndClampColorChannel(m_to.green() + m_from.green()),
-            roundAndClampColorChannel(m_to.blue() + m_from.blue())
-        };
+        m_to = clampToComponentBytes<SRGBA>(simpleTo.red + simpleFrom.red, simpleTo.green + simpleFrom.green, simpleTo.blue + simpleFrom.blue);
     }
 
     static Color colorFromString(SVGElement*, const String&);
@@ -241,11 +248,7 @@ public:
 
     Optional<float> calculateDistance(SVGElement*, const String& from, const String& to) const override
     {
-        float fromNumber = 0;
-        float toNumber = 0;
-        parseNumberFromString(from, fromNumber);
-        parseNumberFromString(to, toNumber);
-        return fabsf(toNumber - fromNumber);
+        return std::abs(parseNumber(to).valueOr(0) - parseNumber(from).valueOr(0));
     }
 
 private:

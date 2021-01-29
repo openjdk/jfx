@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,18 +31,19 @@
 #include "BytecodeStructs.h"
 #include "CheckpointOSRExitSideState.h"
 #include "DFGOSRExitCompilerCommon.h"
-#include "FTLExitArgumentForOperand.h"
 #include "FTLJITCode.h"
 #include "FTLLocation.h"
 #include "FTLOSRExit.h"
 #include "FTLOperations.h"
-#include "FTLState.h"
 #include "FTLSaveRestore.h"
-#include "JSCInlines.h"
+#include "FTLState.h"
+#include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "OperandsInlines.h"
 #include "ProbeContext.h"
+
+#include <wtf/Scope.h>
 
 namespace JSC { namespace FTL {
 
@@ -53,7 +54,7 @@ static void reboxAccordingToFormat(
 {
     switch (format) {
     case DataFormatInt32: {
-        jit.zeroExtend32ToPtr(value, value);
+        jit.zeroExtend32ToWord(value, value);
         jit.or64(GPRInfo::numberTagRegister, value);
         break;
     }
@@ -74,7 +75,7 @@ static void reboxAccordingToFormat(
     }
 
     case DataFormatBoolean: {
-        jit.zeroExtend32ToPtr(value, value);
+        jit.zeroExtend32ToWord(value, value);
         jit.or32(MacroAssembler::TrustedImm32(JSValue::ValueFalse), value);
         break;
     }
@@ -181,7 +182,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             exit.m_descriptor->m_values.size() + numMaterializations + maxMaterializationNumArguments) +
         requiredScratchMemorySizeInBytes() +
         codeBlock->calleeSaveRegisters()->size() * sizeof(uint64_t));
-    EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : 0;
+    EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : nullptr;
     EncodedJSValue* materializationPointers = scratch + exit.m_descriptor->m_values.size();
     EncodedJSValue* materializationArguments = materializationPointers + numMaterializations;
     char* registerScratch = bitwise_cast<char*>(materializationArguments + maxMaterializationNumArguments);
@@ -207,16 +208,18 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
     saveAllRegisters(jit, registerScratch);
 
-    if (validateDFGDoesGC) {
-        // We're about to exit optimized code. So, there's no longer any optimized
-        // code running that expects no GC. We need to set this before object
-        // materialization below.
+    if constexpr (validateDFGDoesGC) {
+        if (Options::validateDoesGC()) {
+            // We're about to exit optimized code. So, there's no longer any optimized
+            // code running that expects no GC. We need to set this before object
+            // materialization below.
 
-        // Even though we set Heap::m_expectDoesGC in compileFTLOSRExit(), we also need
-        // to set it here because compileFTLOSRExit() is only called on the first time
-        // we exit from this site, but all subsequent exits will take this compiled
-        // ramp without calling compileFTLOSRExit() first.
-        jit.store8(CCallHelpers::TrustedImm32(true), vm.heap.addressOfExpectDoesGC());
+            // Even though we set Heap::m_doesGC in compileFTLOSRExit(), we also need
+            // to set it here because compileFTLOSRExit() is only called on the first time
+            // we exit from this site, but all subsequent exits will take this compiled
+            // ramp without calling compileFTLOSRExit() first.
+            jit.store32(CCallHelpers::TrustedImm32(DoesGCCheck::encode(true, DoesGCCheck::Special::FTLOSRExit)), vm.heap.addressOfDoesGC());
+        }
     }
 
     // Bring the stack back into a sane form and assert that it's sane.
@@ -282,7 +285,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
         }
 
         if (exit.m_descriptor->m_valueProfile)
-            exit.m_descriptor->m_valueProfile.emitReportValue(jit, JSValueRegs(GPRInfo::regT0));
+            exit.m_descriptor->m_valueProfile.emitReportValue(jit, JSValueRegs(GPRInfo::regT0), GPRInfo::regT1);
     }
 
     // Materialize all objects. Don't materialize an object until all
@@ -337,7 +340,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 CCallHelpers::TrustedImmPtr(materialization),
                 CCallHelpers::TrustedImmPtr(materializationArguments));
             jit.prepareCallOperation(vm);
-            jit.move(CCallHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationMaterializeObjectInOSR)), GPRInfo::nonArgGPR0);
+            jit.move(CCallHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationMaterializeObjectInOSR)), GPRInfo::nonArgGPR0);
             jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
             jit.storePtr(GPRInfo::returnValueGPR, materializationToPointer.get(materialization));
 
@@ -367,7 +370,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             CCallHelpers::TrustedImmPtr(materializationToPointer.get(materialization)),
             CCallHelpers::TrustedImmPtr(materializationArguments));
         jit.prepareCallOperation(vm);
-        jit.move(CCallHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationPopulateObjectInOSR)), GPRInfo::nonArgGPR0);
+        jit.move(CCallHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationPopulateObjectInOSR)), GPRInfo::nonArgGPR0);
         jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
     }
 
@@ -480,14 +483,21 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
         JSValue* tmpScratch = reinterpret_cast<JSValue*>(scratch + exit.m_descriptor->m_values.tmpIndex(0));
         VM* vmPtr = &vm;
         jit.probe([=] (Probe::Context& context) {
+            Vector<std::unique_ptr<CheckpointOSRExitSideState>, VM::expectedMaxActiveSideStateCount> sideStates;
+            sideStates.reserveInitialCapacity(exit.m_codeOrigin.inlineDepth());
+            auto sideStateCommitter = makeScopeExit([&] {
+                for (size_t i = sideStates.size(); i--;)
+                    vmPtr->pushCheckpointOSRSideState(WTFMove(sideStates[i]));
+            });
+
             auto addSideState = [&] (CallFrame* frame, BytecodeIndex index, size_t tmpOffset) {
-                std::unique_ptr<CheckpointOSRExitSideState> sideState = WTF::makeUnique<CheckpointOSRExitSideState>();
+                std::unique_ptr<CheckpointOSRExitSideState> sideState = WTF::makeUnique<CheckpointOSRExitSideState>(frame);
 
                 sideState->bytecodeIndex = index;
                 for (size_t i = 0; i < maxNumCheckpointTmps; ++i)
                     sideState->tmps[i] = tmpScratch[i + tmpOffset];
 
-                vmPtr->addCheckpointOSRSideState(frame, WTFMove(sideState));
+                sideStates.append(WTFMove(sideState));
             };
 
             const CodeOrigin* codeOrigin;
@@ -532,8 +542,8 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     exit.m_code = FINALIZE_CODE_IF(
         shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(),
         patchBuffer, OSRExitPtrTag,
-        "FTL OSR exit #%u (%s, %s) from %s, with operands = %s",
-            exitID, toCString(exit.m_codeOrigin).data(),
+        "FTL OSR exit #%u (D@%u, %s, %s) from %s, with operands = %s",
+            exitID, exit.m_dfgNodeIndex, toCString(exit.m_codeOrigin).data(),
             exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
             toCString(ignoringContext<DumpContext>(exit.m_descriptor->m_values)).data()
         );
@@ -546,10 +556,10 @@ extern "C" JIT_OPERATION void* operationCompileFTLOSRExit(CallFrame* callFrame, 
 
     VM& vm = callFrame->deprecatedVM();
 
-    if (validateDFGDoesGC) {
+    if constexpr (validateDFGDoesGC) {
         // We're about to exit optimized code. So, there's no longer any optimized
         // code running that expects no GC.
-        vm.heap.setExpectDoesGC(true);
+        vm.heap.setDoesGCExpectation(true, DoesGCCheck::Special::FTLOSRExit);
     }
 
     if (vm.callFrameForCatch)

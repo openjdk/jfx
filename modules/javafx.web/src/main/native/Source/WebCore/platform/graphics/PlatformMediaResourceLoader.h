@@ -29,6 +29,7 @@
 
 #include "PolicyChecker.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/Expected.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -44,14 +45,14 @@ class PlatformMediaResourceClient {
 public:
     virtual ~PlatformMediaResourceClient() = default;
 
-    virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(PolicyChecker::ShouldContinue)>&& completionHandler) { completionHandler(PolicyChecker::ShouldContinue::Yes); }
+    virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&& completionHandler) { completionHandler(ShouldContinuePolicyCheck::Yes); }
     virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
     virtual bool shouldCacheResponse(PlatformMediaResource&, const ResourceResponse&) { return true; }
     virtual void dataSent(PlatformMediaResource&, unsigned long long, unsigned long long) { }
     virtual void dataReceived(PlatformMediaResource&, const char*, int) { }
     virtual void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFailed(PlatformMediaResource&, const ResourceError&) { }
-    virtual void loadFinished(PlatformMediaResource&) { }
+    virtual void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) { }
 };
 
 class PlatformMediaResourceLoader : public ThreadSafeRefCounted<PlatformMediaResourceLoader, WTF::DestructionThread::Main> {
@@ -66,6 +67,7 @@ public:
     virtual ~PlatformMediaResourceLoader() = default;
 
     virtual RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) = 0;
+    virtual void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) = 0;
 
 protected:
     PlatformMediaResourceLoader() = default;

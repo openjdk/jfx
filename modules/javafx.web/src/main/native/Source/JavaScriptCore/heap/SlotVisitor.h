@@ -134,7 +134,7 @@ public:
     void drain(MonotonicTime timeout = MonotonicTime::infinity());
     void donateAndDrain(MonotonicTime timeout = MonotonicTime::infinity());
 
-    enum SharedDrainMode { SlaveDrain, MasterDrain };
+    enum SharedDrainMode { HelperDrain, MainDrain };
     enum class SharedDrainResult { Done, TimedOut };
     SharedDrainResult drainFromShared(SharedDrainMode, MonotonicTime timeout = MonotonicTime::infinity());
 
@@ -227,10 +227,6 @@ private:
     bool hasWork(const AbstractLocker&);
     bool didReachTermination(const AbstractLocker&);
 
-#if CPU(X86_64)
-    NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCrash(JSCell*);
-#endif
-
     template<typename Func>
     IterationStatus forEachMarkStack(const Func&);
 
@@ -242,7 +238,7 @@ private:
     size_t m_bytesVisited;
     size_t m_visitCount;
     size_t m_nonCellVisitCount { 0 }; // Used for incremental draining, ignored otherwise.
-    Checked<size_t, RecordOverflow> m_extraMemorySize { 0 };
+    CheckedSize m_extraMemorySize { 0 };
     bool m_isInParallelMode;
     bool m_ignoreNewOpaqueRoots { false }; // Useful as a debugging mode.
 

@@ -48,9 +48,9 @@ public:
         return &vm.functionExecutableSpace.space;
     }
 
-    static FunctionExecutable* create(VM& vm, ScriptExecutable* topLevelExecutable, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic)
+    static FunctionExecutable* create(VM& vm, ScriptExecutable* topLevelExecutable, const SourceCode& source, UnlinkedFunctionExecutable* unlinkedExecutable, Intrinsic intrinsic, bool isInsideOrdinaryFunction)
     {
-        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm.heap)) FunctionExecutable(vm, source, unlinkedExecutable, intrinsic);
+        FunctionExecutable* executable = new (NotNull, allocateCell<FunctionExecutable>(vm.heap)) FunctionExecutable(vm, source, unlinkedExecutable, intrinsic, isInsideOrdinaryFunction);
         executable->finishCreation(vm, topLevelExecutable);
         return executable;
     }
@@ -143,7 +143,7 @@ public:
     {
         // Per https://tc39.github.io/ecma262/#sec-forbidden-extensions, only sloppy-mode non-builtin functions in old-style (pre-ES6) syntactic forms can contain
         // "caller" and "arguments".
-        return !isStrictMode() && parseMode() == SourceParseMode::NormalFunctionMode && !isClassConstructorFunction();
+        return !isInStrictContext() && parseMode() == SourceParseMode::NormalFunctionMode && !isClassConstructorFunction();
     }
     bool hasPrototypeProperty() const
     {
@@ -287,7 +287,7 @@ public:
 
 private:
     friend class ExecutableBase;
-    FunctionExecutable(VM&, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic);
+    FunctionExecutable(VM&, const SourceCode&, UnlinkedFunctionExecutable*, Intrinsic, bool isInsideOrdinaryFunction);
 
     void finishCreation(VM&, ScriptExecutable* topLevelExecutable);
 

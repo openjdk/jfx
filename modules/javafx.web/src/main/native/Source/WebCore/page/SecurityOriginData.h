@@ -115,11 +115,12 @@ Optional<SecurityOriginData> SecurityOriginData::decode(Decoder& decoder)
     if (!host)
         return WTF::nullopt;
 
-    Optional<uint16_t> port;
-    if (!decoder.decode(port))
+    Optional<Optional<uint16_t>> port;
+    decoder >> port;
+    if (!port)
         return WTF::nullopt;
 
-    SecurityOriginData data { WTFMove(*protocol), WTFMove(*host), WTFMove(port) };
+    SecurityOriginData data { WTFMove(*protocol), WTFMove(*host), WTFMove(*port) };
     if (data.isHashTableDeletedValue())
         return WTF::nullopt;
 
@@ -151,8 +152,6 @@ struct SecurityOriginDataHash {
 namespace WTF {
 
 template<> struct HashTraits<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHashTraits { };
-template<> struct DefaultHash<WebCore::SecurityOriginData> {
-    typedef WebCore::SecurityOriginDataHash Hash;
-};
+template<> struct DefaultHash<WebCore::SecurityOriginData> : WebCore::SecurityOriginDataHash { };
 
 } // namespace WTF

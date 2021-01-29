@@ -27,6 +27,7 @@
 #include "CSSTransition.h"
 
 #include "Animation.h"
+#include "DocumentTimeline.h"
 #include "Element.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeEffect.h"
@@ -53,6 +54,7 @@ CSSTransition::CSSTransition(Element& element, CSSPropertyID property, Monotonic
     : DeclarativeAnimation(element, backingAnimation)
     , m_property(property)
     , m_generationTime(generationTime)
+    , m_timelineTimeAtCreation(element.document().timeline().currentTime())
     , m_targetStyle(RenderStyle::clonePtr(targetStyle))
     , m_currentStyle(RenderStyle::clonePtr(oldStyle))
     , m_reversingAdjustedStartStyle(RenderStyle::clonePtr(reversingAdjustedStartStyle))
@@ -60,9 +62,9 @@ CSSTransition::CSSTransition(Element& element, CSSPropertyID property, Monotonic
 {
 }
 
-void CSSTransition::resolve(RenderStyle& targetStyle)
+void CSSTransition::resolve(RenderStyle& targetStyle, Optional<Seconds> startTime)
 {
-    DeclarativeAnimation::resolve(targetStyle);
+    DeclarativeAnimation::resolve(targetStyle, startTime);
     m_currentStyle = RenderStyle::clonePtr(targetStyle);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,14 +96,10 @@ public:
     using Base = JSArrayBufferView;
     typedef typename Adaptor::Type ElementType;
 
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetPropertyNames | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesAnyFormOfGetPropertyNames | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
 
     static constexpr unsigned elementSize = sizeof(typename Adaptor::Type);
 
-protected:
-    JSGenericTypedArrayView(VM&, ConstructionContext&);
-
-public:
     static JSGenericTypedArrayView* create(JSGlobalObject*, Structure*, unsigned length);
     static JSGenericTypedArrayView* createWithFastVector(JSGlobalObject*, Structure*, unsigned length, void* vector);
     static JSGenericTypedArrayView* createUninitialized(JSGlobalObject*, Structure*, unsigned length);
@@ -297,15 +293,17 @@ public:
     // This is the default DOM unwrapping. It calls toUnsharedNativeTypedView().
     static RefPtr<typename Adaptor::ViewType> toWrapped(VM&, JSValue);
 
-protected:
+private:
     friend struct TypedArrayClassInfos;
+
+    JSGenericTypedArrayView(VM&, ConstructionContext&);
 
     static EncodedJSValue throwNeuteredTypedArrayTypeError(JSGlobalObject*, EncodedJSValue, PropertyName);
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
 
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned propertyName, PropertySlot&);
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
@@ -316,7 +314,6 @@ protected:
     static size_t estimatedSize(JSCell*, VM&);
     static void visitChildren(JSCell*, SlotVisitor&);
 
-private:
     // Returns true if successful, and false on error; it will throw on error.
     template<typename OtherAdaptor>
     bool setWithSpecificType(

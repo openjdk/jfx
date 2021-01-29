@@ -114,6 +114,11 @@ public:
     Vector<FrameRateRange> frameRateRanges;
     VideoPresetType type;
 
+    double maxFrameRate() const;
+    double minFrameRate() const;
+
+    void log()const;
+
 protected:
     VideoPreset(IntSize size, Vector<FrameRateRange>&& frameRateRanges, VideoPresetType type)
         : size(size)
@@ -122,6 +127,33 @@ protected:
     {
     }
 };
+
+inline void VideoPreset::log() const
+{
+    WTFLogAlways("VideoPreset of size (%d,%d) and type %d", size.width(), size.height(), type);
+    for (auto range : frameRateRanges)
+        WTFLogAlways("VideoPreset frame rate range [%f, %f]", range.minimum, range.maximum);
+}
+
+inline double VideoPreset::minFrameRate() const
+{
+    double minFrameRate = std::numeric_limits<double>::max();
+    for (auto& range : frameRateRanges) {
+        if (minFrameRate > range.minimum)
+            minFrameRate = range.minimum;
+    }
+    return minFrameRate;
+}
+
+inline double VideoPreset::maxFrameRate() const
+{
+    double maxFrameRate = 0;
+    for (auto& range : frameRateRanges) {
+        if (maxFrameRate < range.maximum)
+            maxFrameRate = range.maximum;
+    }
+    return maxFrameRate;
+}
 
 } // namespace WebCore
 

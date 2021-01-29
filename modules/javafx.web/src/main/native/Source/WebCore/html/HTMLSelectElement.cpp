@@ -100,8 +100,8 @@ void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
 
 const AtomString& HTMLSelectElement::formControlType() const
 {
-    static NeverDestroyed<const AtomString> selectMultiple("select-multiple", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> selectOne("select-one", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> selectMultiple("select-multiple", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> selectOne("select-one", AtomString::ConstructFromLiteral);
     return m_multiple ? selectMultiple : selectOne;
 }
 
@@ -390,10 +390,10 @@ void HTMLSelectElement::optionElementChildrenChanged()
         cache->childrenChanged(this);
 }
 
-void HTMLSelectElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLSelectElement::accessKeyAction(bool sendMouseEvents)
 {
     focus();
-    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    return dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 void HTMLSelectElement::setMultiple(bool multiple)
@@ -1100,6 +1100,7 @@ bool HTMLSelectElement::platformHandleKeydownEvent(KeyboardEvent* event)
     if (!isSpatialNavigationEnabled(document().frame())) {
         if (event->keyIdentifier() == "Down" || event->keyIdentifier() == "Up") {
             focus();
+            document().updateStyleIfNeeded();
             // Calling focus() may cause us to lose our renderer. Return true so
             // that our caller doesn't process the event further, but don't set
             // the event as handled.
@@ -1198,6 +1199,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         if (RenderTheme::singleton().popsMenuBySpaceOrReturn()) {
             if (keyCode == ' ' || keyCode == '\r') {
                 focus();
+                document().updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
                 auto* renderer = this->renderer();
@@ -1215,6 +1217,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
         } else if (RenderTheme::singleton().popsMenuByArrowKeys()) {
             if (keyCode == ' ') {
                 focus();
+                document().updateStyleIfNeeded();
 
                 // Calling focus() may remove the renderer or change the renderer type.
                 auto* renderer = this->renderer();
@@ -1243,6 +1246,8 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event& event)
     if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
 #if !PLATFORM(IOS_FAMILY)
+        document().updateStyleIfNeeded();
+
         auto* renderer = this->renderer();
         if (is<RenderMenuList>(renderer)) {
             auto& menuList = downcast<RenderMenuList>(*renderer);
@@ -1326,6 +1331,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
 
     if (event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         focus();
+        document().updateStyleIfNeeded();
 
         // Calling focus() may remove or change our renderer, in which case we don't want to handle the event further.
         auto* renderer = this->renderer();

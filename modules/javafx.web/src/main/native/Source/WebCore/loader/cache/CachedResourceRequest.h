@@ -78,7 +78,8 @@ public:
     void updateForAccessControl(Document&);
 
     void updateReferrerPolicy(ReferrerPolicy);
-    void updateReferrerOriginAndUserAgentHeaders(FrameLoader&);
+    void updateReferrerAndOriginHeaders(FrameLoader&);
+    void updateUserAgentHeader(FrameLoader&);
     void upgradeInsecureRequestIfNeeded(Document&);
     void setAcceptHeaderIfNone(CachedResource::Type);
     void updateAccordingCacheMode();
@@ -101,6 +102,7 @@ public:
     void clearFragmentIdentifier() { m_fragmentIdentifier = { }; }
 
     static String splitFragmentIdentifierFromRequestURL(ResourceRequest&);
+    static String acceptHeaderValueFromType(CachedResource::Type);
 
 #if ENABLE(SERVICE_WORKER)
     void setClientIdentifierIfNeeded(DocumentIdentifier);

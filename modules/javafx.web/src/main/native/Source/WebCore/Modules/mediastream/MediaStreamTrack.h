@@ -53,7 +53,7 @@ class MediaStreamTrack
     , public ActiveDOMObject
     , public EventTargetWithInlineData
     , private MediaStreamTrackPrivate::Observer
-    , private PlatformMediaSessionClient
+    , private PlatformMediaSession::AudioCaptureSource
 #if !RELEASE_LOG_DISABLED
     , private LoggerHelper
 #endif
@@ -87,7 +87,6 @@ public:
     void setEnabled(bool);
 
     bool muted() const;
-    void setMuted(MediaProducer::MutedStateFlags);
 
     enum class State { Live, Ended };
     State readyState() const;
@@ -149,10 +148,9 @@ public:
     using RefCounted::ref;
     using RefCounted::deref;
 
-    // ActiveDOMObject API.
-    bool hasPendingActivity() const final;
-
     void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
+
+    Document* document() const;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_private->logger(); }
@@ -170,13 +168,13 @@ private:
     explicit MediaStreamTrack(MediaStreamTrack&);
 
     void configureTrackRendering();
-
-    Document* document() const;
+    void updateToPageMutedState();
 
     // ActiveDOMObject API.
     void stop() final { stopTrack(); }
     const char* activeDOMObjectName() const override;
     void suspend(ReasonForSuspension) final;
+    bool virtualHasPendingActivity() const final;
 
     // EventTarget
     void refEventTarget() final { ref(); }
@@ -190,21 +188,8 @@ private:
     void trackSettingsChanged(MediaStreamTrackPrivate&) final;
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
 
-    // PlatformMediaSessionClient
-    PlatformMediaSession::MediaType mediaType() const final;
-    PlatformMediaSession::MediaType presentationType() const final;
-    PlatformMediaSession::CharacteristicsFlags characteristics() const final;
-    void mayResumePlayback(bool shouldResume) final;
-    void suspendPlayback() final;
-    bool canReceiveRemoteControlCommands() const final { return false; }
-    void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) final { }
-    bool supportsSeeking() const final { return false; }
-    bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const final { return false; }
-    String sourceApplicationIdentifier() const final;
-    bool canProduceAudio() const final;
-    Document* hostingDocument() const final { return document(); }
-    bool processingUserGestureForMedia() const final;
-    bool shouldOverridePauseDuringRouteChange() const final { return true; }
+    // PlatformMediaSession::AudioCaptureSource
+    bool isCapturingAudio() const final;
 
 #if !RELEASE_LOG_DISABLED
     const char* logClassName() const final { return "MediaStreamTrack"; }
@@ -218,7 +203,6 @@ private:
 
     bool m_ended { false };
     const bool m_isCaptureTrack { false };
-    std::unique_ptr<PlatformMediaSession> m_mediaSession;
 };
 
 typedef Vector<RefPtr<MediaStreamTrack>> MediaStreamTrackVector;

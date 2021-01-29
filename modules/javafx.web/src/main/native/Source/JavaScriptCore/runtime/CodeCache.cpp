@@ -28,7 +28,6 @@
 
 #include "BytecodeGenerator.h"
 #include "IndirectEvalExecutable.h"
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -75,8 +74,9 @@ template <class UnlinkedCodeBlockType, class ExecutableType = ScriptExecutable>
 UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& source, JSParserStrictMode strictMode, JSParserScriptMode scriptMode, OptionSet<CodeGenerationMode> codeGenerationMode, ParserError& error, EvalContextType evalContextType, DerivedContextType derivedContextType, bool isArrowFunctionContext, const VariableEnvironment* variablesUnderTDZ, ExecutableType* executable = nullptr)
 {
     typedef typename CacheTypes<UnlinkedCodeBlockType>::RootNode RootNode;
+    bool isInsideOrdinaryFunction = executable && executable->isInsideOrdinaryFunction();
     std::unique_ptr<RootNode> rootNode = parse<RootNode>(
-        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType);
+        vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin, strictMode, scriptMode, CacheTypes<UnlinkedCodeBlockType>::parseMode, SuperBinding::NotNeeded, error, nullptr, ConstructorKind::None, derivedContextType, evalContextType, nullptr, variablesUnderTDZ, nullptr, isInsideOrdinaryFunction);
     if (!rootNode)
         return nullptr;
 
@@ -90,11 +90,11 @@ UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& s
         executable->recordParse(rootNode->features() | arrowContextFeature, rootNode->hasCapturedVariables(), rootNode->lastLine(), endColumn);
 
     bool usesEval = rootNode->features() & EvalFeature;
-    bool isStrictMode = rootNode->features() & StrictModeFeature;
+    ECMAMode ecmaMode = rootNode->features() & StrictModeFeature ? ECMAMode::strict() : ECMAMode::sloppy();
     NeedsClassFieldInitializer needsClassFieldInitializer = NeedsClassFieldInitializer::No;
     if constexpr (std::is_same_v<ExecutableType, DirectEvalExecutable>)
         needsClassFieldInitializer = executable->needsClassFieldInitializer();
-    ExecutableInfo executableInfo(usesEval, isStrictMode, false, false, ConstructorKind::None, scriptMode, SuperBinding::NotNeeded, CacheTypes<UnlinkedCodeBlockType>::parseMode, derivedContextType, needsClassFieldInitializer, isArrowFunctionContext, false, evalContextType);
+    ExecutableInfo executableInfo(usesEval, false, false, ConstructorKind::None, scriptMode, SuperBinding::NotNeeded, CacheTypes<UnlinkedCodeBlockType>::parseMode, derivedContextType, needsClassFieldInitializer, isArrowFunctionContext, false, evalContextType);
 
     UnlinkedCodeBlockType* unlinkedCodeBlock = UnlinkedCodeBlockType::create(vm, executableInfo, codeGenerationMode);
     unlinkedCodeBlock->recordParse(rootNode->features(), rootNode->hasCapturedVariables(), lineCount, unlinkedEndColumn);
@@ -103,7 +103,7 @@ UnlinkedCodeBlockType* generateUnlinkedCodeBlockImpl(VM& vm, const SourceCode& s
     if (!source.provider()->sourceMappingURLDirective().isNull())
         unlinkedCodeBlock->setSourceMappingURLDirective(source.provider()->sourceMappingURLDirective());
 
-    error = BytecodeGenerator::generate(vm, rootNode.get(), source, unlinkedCodeBlock, codeGenerationMode, variablesUnderTDZ);
+    error = BytecodeGenerator::generate(vm, rootNode.get(), source, unlinkedCodeBlock, codeGenerationMode, variablesUnderTDZ, ecmaMode);
 
     if (error.isValid())
         return nullptr;

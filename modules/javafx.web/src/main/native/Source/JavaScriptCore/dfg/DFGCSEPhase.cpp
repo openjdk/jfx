@@ -28,6 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "ButterflyInlines.h"
 #include "DFGAbstractHeap.h"
 #include "DFGBlockMapInlines.h"
 #include "DFGClobberSet.h"
@@ -35,8 +36,6 @@
 #include "DFGDominators.h"
 #include "DFGGraph.h"
 #include "DFGPhase.h"
-#include "JSCInlines.h"
-#include <array>
 
 namespace JSC { namespace DFG {
 
@@ -64,7 +63,7 @@ public:
     unsigned hash;
 };
 
-struct ImpureDataSlotHash : public DefaultHash<std::unique_ptr<ImpureDataSlot>>::Hash {
+struct ImpureDataSlotHash : public DefaultHash<std::unique_ptr<ImpureDataSlot>> {
     static unsigned hash(const std::unique_ptr<ImpureDataSlot>& key)
     {
         return key->hash;
@@ -295,7 +294,7 @@ private:
     // a duplicate in the past and now only live in m_fallbackStackMap.
     //
     // Obviously, TOP always goes into m_fallbackStackMap since it does not have a unique value.
-    HashMap<int64_t, std::unique_ptr<ImpureDataSlot>, DefaultHash<int64_t>::Hash, WTF::SignedWithZeroKeyHashTraits<int64_t>> m_abstractHeapStackMap;
+    HashMap<int64_t, std::unique_ptr<ImpureDataSlot>, DefaultHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>> m_abstractHeapStackMap;
     Map m_fallbackStackMap;
 
     Map m_heapMap;

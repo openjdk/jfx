@@ -40,16 +40,12 @@ namespace WebCore {
 
 static const Seconds taskDelayInterval { 100_ms };
 
-#undef LOGIDENTIFIER
-#define LOGIDENTIFIER __func__
-
-#undef ALWAYS_LOG
-#define ALWAYS_LOG logger().logAlways
+#define ALWAYS_LOG_MEDIASESSIONMANAGER logger().logAlways
 
 struct ClientState {
     WTF_MAKE_STRUCT_FAST_ALLOCATED;
 
-    explicit ClientState(WebMediaSessionManagerClient& client, uint64_t contextId)
+    explicit ClientState(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
         : client(client)
         , contextId(contextId)
     {
@@ -61,7 +57,7 @@ struct ClientState {
     }
 
     WebMediaSessionManagerClient& client;
-    uint64_t contextId { 0 };
+    PlaybackTargetClientContextIdentifier contextId;
     WebCore::MediaProducer::MediaStateFlags flags { WebCore::MediaProducer::IsNotPlaying };
     bool requestedPicker { false };
     bool previouslyRequestedPicker { false };
@@ -117,7 +113,7 @@ public:
         if (!state->client.alwaysOnLoggingAllowed())
             return;
 
-        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), state->contextId, state->flags, arguments...);
+        m_logger->logAlways(LogMedia, makeString("WebMediaSessionManager::", methodName, ' '), state->contextId.toUInt64(), state->flags, arguments...);
     }
 
     template<typename... Arguments>
@@ -161,19 +157,19 @@ void WebMediaSessionManager::setMockMediaPlaybackTargetPickerEnabled(bool enable
     if (m_mockPickerEnabled == enabled)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     m_mockPickerEnabled = enabled;
 }
 
 void WebMediaSessionManager::setMockMediaPlaybackTargetPickerState(const String& name, MediaPlaybackTargetContext::State state)
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     mockPicker().setState(name, state);
 }
 
 void WebMediaSessionManager::mockMediaPlaybackTargetPickerDismissPopup()
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     mockPicker().dismissPopup();
 }
 
@@ -201,14 +197,14 @@ WebMediaSessionManager::WebMediaSessionManager()
 
 WebMediaSessionManager::~WebMediaSessionManager() = default;
 
-uint64_t WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, uint64_t contextId)
+PlaybackTargetClientContextIdentifier WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
 {
     size_t index = find(&client, contextId);
     ASSERT(index == notFound);
     if (index != notFound)
-        return 0;
+        return { };
 
-    ALWAYS_LOG(LOGIDENTIFIER, contextId);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, contextId.toUInt64());
     m_clientState.append(makeUnique<ClientState>(client, contextId));
 
     if (m_externalOutputDeviceAvailable || m_playbackTarget)
@@ -217,14 +213,14 @@ uint64_t WebMediaSessionManager::addPlaybackTargetPickerClient(WebMediaSessionMa
     return contextId;
 }
 
-void WebMediaSessionManager::removePlaybackTargetPickerClient(WebMediaSessionManagerClient& client, uint64_t contextId)
+void WebMediaSessionManager::removePlaybackTargetPickerClient(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId)
 {
     size_t index = find(&client, contextId);
     ASSERT(index != notFound);
     if (index == notFound)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER, m_clientState[index].get());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
     m_clientState.remove(index);
     scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
@@ -237,14 +233,14 @@ void WebMediaSessionManager::removeAllPlaybackTargetPickerClients(WebMediaSessio
 
     for (size_t i = m_clientState.size(); i > 0; --i) {
         if (&m_clientState[i - 1]->client == &client) {
-            ALWAYS_LOG(LOGIDENTIFIER, m_clientState[i - 1].get());
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[i - 1].get());
             m_clientState.remove(i - 1);
         }
     }
     scheduleDelayedTask(TargetMonitoringConfigurationTask | TargetClientsConfigurationTask);
 }
 
-void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClient& client, uint64_t contextId, const IntRect& rect, bool, bool useDarkAppearance)
+void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId, const IntRect& rect, bool, bool useDarkAppearance)
 {
     size_t index = find(&client, contextId);
     ASSERT(index != notFound);
@@ -257,13 +253,13 @@ void WebMediaSessionManager::showPlaybackTargetPicker(WebMediaSessionManagerClie
         state->previouslyRequestedPicker = state == clientRequestingPicker;
     }
 
-    ALWAYS_LOG(LOGIDENTIFIER, m_clientState[index].get());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get());
 
     bool hasActiveRoute = flagsAreSet(m_clientState[index]->flags, MediaProducer::IsPlayingToExternalDevice);
-    targetPicker().showPlaybackTargetPicker(FloatRect(rect), hasActiveRoute, useDarkAppearance);
+    targetPicker().showPlaybackTargetPicker(client.platformView(), FloatRect(rect), hasActiveRoute, useDarkAppearance);
 }
 
-void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& client, uint64_t contextId, MediaProducer::MediaStateFlags newFlags)
+void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& client, PlaybackTargetClientContextIdentifier contextId, MediaProducer::MediaStateFlags newFlags)
 {
     size_t index = find(&client, contextId);
     ASSERT(index != notFound);
@@ -275,7 +271,7 @@ void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& 
     if (newFlags == oldFlags)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER, m_clientState[index].get(), "new flags = ", newFlags);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, m_clientState[index].get(), "new flags = ", newFlags);
 
     changedClientState->flags = newFlags;
 
@@ -299,25 +295,25 @@ void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& 
             continue;
 
         if (flagsAreSet(state->flags, MediaProducer::IsPlayingToExternalDevice) && flagsAreSet(state->flags, MediaProducer::IsPlayingVideo)) {
-            ALWAYS_LOG(LOGIDENTIFIER, state.get(), " returning early");
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " returning early");
             return;
         }
     }
 
     // Do not begin playing to the device unless playback has just started.
     if (!flagsAreSet(newFlags, MediaProducer::IsPlayingVideo) || flagsAreSet(oldFlags, MediaProducer::IsPlayingVideo)) {
-        ALWAYS_LOG(LOGIDENTIFIER, "returning early, playback didn't just start");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "returning early, playback didn't just start");
         return;
     }
 
     for (auto& state : m_clientState) {
         if (state == changedClientState)
             continue;
-        ALWAYS_LOG(LOGIDENTIFIER, state.get(), " calling setShouldPlayToPlaybackTarget(false)");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " calling setShouldPlayToPlaybackTarget(false)");
         state->client.setShouldPlayToPlaybackTarget(state->contextId, false);
     }
 
-    ALWAYS_LOG(LOGIDENTIFIER, changedClientState.get(), " calling setShouldPlayToPlaybackTarget(true)");
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, changedClientState.get(), " calling setShouldPlayToPlaybackTarget(true)");
     changedClientState->client.setShouldPlayToPlaybackTarget(changedClientState->contextId, true);
 
     if (index && m_clientState.size() > 1)
@@ -326,7 +322,7 @@ void WebMediaSessionManager::clientStateDidChange(WebMediaSessionManagerClient& 
 
 void WebMediaSessionManager::setPlaybackTarget(Ref<MediaPlaybackTarget>&& target)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, "has active route = ", target->hasActiveRoute());
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "has active route = ", target->hasActiveRoute());
     m_playbackTarget = WTFMove(target);
     m_targetChanged = true;
     scheduleDelayedTask(TargetClientsConfigurationTask);
@@ -334,7 +330,7 @@ void WebMediaSessionManager::setPlaybackTarget(Ref<MediaPlaybackTarget>&& target
 
 void WebMediaSessionManager::externalOutputDeviceAvailableDidChange(bool available)
 {
-    ALWAYS_LOG(LOGIDENTIFIER, available);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, available);
     m_externalOutputDeviceAvailable = available;
     for (auto& state : m_clientState)
         state->client.externalOutputDeviceAvailableDidChange(state->contextId, available);
@@ -342,7 +338,7 @@ void WebMediaSessionManager::externalOutputDeviceAvailableDidChange(bool availab
 
 void WebMediaSessionManager::playbackTargetPickerWasDismissed()
 {
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     m_playbackTargetPickerDismissed = true;
     scheduleDelayedTask(TargetClientsConfigurationTask);
 }
@@ -375,7 +371,7 @@ void WebMediaSessionManager::configurePlaybackTargetClients()
     for (size_t i = 0; i < m_clientState.size(); ++i) {
         auto& state = m_clientState[i];
 
-        ALWAYS_LOG(LOGIDENTIFIER, state.get(), ", requestedPicker = ", state->requestedPicker);
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), ", requestedPicker = ", state->requestedPicker);
 
         if ((m_targetChanged || m_playbackTargetPickerDismissed) && state->requestedPicker)
             indexOfClientThatRequestedPicker = i;
@@ -401,12 +397,12 @@ void WebMediaSessionManager::configurePlaybackTargetClients()
             state->client.setPlaybackTarget(state->contextId, *m_playbackTarget.copyRef());
 
         if (i != indexOfClientWillPlayToTarget || !haveActiveRoute) {
-            ALWAYS_LOG(LOGIDENTIFIER, state.get(), " calling setShouldPlayToPlaybackTarget(false)");
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " calling setShouldPlayToPlaybackTarget(false)");
             state->client.setShouldPlayToPlaybackTarget(state->contextId, false);
         }
 
         if (state->requestedPicker && m_playbackTargetPickerDismissed) {
-            ALWAYS_LOG(LOGIDENTIFIER, state.get(), " calling playbackTargetPickerWasDismissed");
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " calling playbackTargetPickerWasDismissed");
             state->client.playbackTargetPickerWasDismissed(state->contextId);
         }
 
@@ -418,7 +414,7 @@ void WebMediaSessionManager::configurePlaybackTargetClients()
     if (haveActiveRoute && indexOfClientWillPlayToTarget != notFound) {
         auto& state = m_clientState[indexOfClientWillPlayToTarget];
         if (!flagsAreSet(state->flags, MediaProducer::IsPlayingToExternalDevice)) {
-            ALWAYS_LOG(LOGIDENTIFIER, state.get(), " calling setShouldPlayToPlaybackTarget(true)");
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " calling setShouldPlayToPlaybackTarget(true)");
             state->client.setShouldPlayToPlaybackTarget(state->contextId, true);
         }
     }
@@ -433,7 +429,7 @@ void WebMediaSessionManager::configurePlaybackTargetMonitoring()
     bool hasAvailabilityListener = false;
     bool haveClientWithMedia = false;
     for (auto& state : m_clientState) {
-        ALWAYS_LOG(LOGIDENTIFIER, state.get());
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get());
         if (state->flags & MediaProducer::RequiresPlaybackTargetMonitoring) {
             monitoringRequired = true;
             break;
@@ -445,10 +441,10 @@ void WebMediaSessionManager::configurePlaybackTargetMonitoring()
     }
 
     if (monitoringRequired || (hasAvailabilityListener && haveClientWithMedia)) {
-        ALWAYS_LOG(LOGIDENTIFIER, "starting monitoring");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "starting monitoring");
         targetPicker().startingMonitoringPlaybackTargets();
     } else {
-        ALWAYS_LOG(LOGIDENTIFIER, "stopping monitoring");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "stopping monitoring");
         targetPicker().stopMonitoringPlaybackTargets();
     }
 }
@@ -473,7 +469,7 @@ void WebMediaSessionManager::taskTimerFired()
     m_taskFlags = NoTask;
 }
 
-size_t WebMediaSessionManager::find(WebMediaSessionManagerClient* client, uint64_t contextId)
+size_t WebMediaSessionManager::find(WebMediaSessionManagerClient* client, PlaybackTargetClientContextIdentifier contextId)
 {
     for (size_t i = 0; i < m_clientState.size(); ++i) {
         if (m_clientState[i]->contextId == contextId && &m_clientState[i]->client == client)
@@ -490,7 +486,7 @@ void WebMediaSessionManager::configureWatchdogTimer()
 
     if (!m_playbackTarget || !m_playbackTarget->hasActiveRoute()) {
         if (m_watchdogTimer.isActive()) {
-            ALWAYS_LOG(LOGIDENTIFIER, "stopping timer");
+            ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "stopping timer");
             m_currentWatchdogInterval = { };
             m_watchdogTimer.stop();
         }
@@ -502,7 +498,7 @@ void WebMediaSessionManager::configureWatchdogTimer()
     bool didPlayToEnd = false;
     for (auto& state : m_clientState) {
 
-        ALWAYS_LOG(LOGIDENTIFIER, state.get(), " playedToEnd = ", state->playedToEnd);
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, state.get(), " playedToEnd = ", state->playedToEnd);
 
         if (flagsAreSet(state->flags, MediaProducer::IsPlayingToExternalDevice) && flagsAreSet(state->flags, MediaProducer::IsPlayingVideo))
             stopTimer = true;
@@ -512,7 +508,7 @@ void WebMediaSessionManager::configureWatchdogTimer()
     }
 
     if (stopTimer) {
-        ALWAYS_LOG(LOGIDENTIFIER, "stopping timer");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "stopping timer");
         m_currentWatchdogInterval = { };
         m_watchdogTimer.stop();
     } else {
@@ -520,7 +516,7 @@ void WebMediaSessionManager::configureWatchdogTimer()
         if (interval != m_currentWatchdogInterval || !m_watchdogTimer.isActive()) {
             m_watchdogTimer.startOneShot(interval);
         }
-        ALWAYS_LOG(LOGIDENTIFIER, "timer scheduled for ", interval.value(), " seconds");
+        ALWAYS_LOG_MEDIASESSIONMANAGER(__func__, "timer scheduled for ", interval.value(), " seconds");
         m_currentWatchdogInterval = interval;
     }
 }
@@ -530,7 +526,7 @@ void WebMediaSessionManager::watchdogTimerFired()
     if (!m_playbackTarget)
         return;
 
-    ALWAYS_LOG(LOGIDENTIFIER);
+    ALWAYS_LOG_MEDIASESSIONMANAGER(__func__);
     targetPicker().invalidatePlaybackTargets();
 }
 

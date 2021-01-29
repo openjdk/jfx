@@ -105,6 +105,7 @@ static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(m
     macro(OpTryGetById) \
     macro(OpGetByIdDirect) \
     macro(OpGetByValWithThis) \
+    macro(OpGetPrototypeOf) \
     macro(OpGetFromArguments) \
     macro(OpToNumber) \
     macro(OpToNumeric) \
@@ -148,6 +149,9 @@ static constexpr unsigned bitWidthForMaxOpcodeLength = WTF::getMSBSetConstexpr(m
     macro(OpTailCall) \
     macro(OpCallEval) \
     macro(OpConstruct) \
+    macro(OpIteratorOpen) \
+    macro(OpIteratorNext) \
+
 
 IGNORE_WARNINGS_BEGIN("type-limits")
 

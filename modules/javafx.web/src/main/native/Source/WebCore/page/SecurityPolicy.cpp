@@ -31,6 +31,7 @@
 
 #include "OriginAccessEntry.h"
 #include "SecurityOrigin.h"
+#include "UserContentURLPattern.h"
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
@@ -42,8 +43,8 @@ namespace WebCore {
 
 static SecurityPolicy::LocalLoadPolicy localLoadPolicy = SecurityPolicy::AllowLocalLoadsForLocalOnly;
 
-typedef Vector<OriginAccessEntry> OriginAccessWhiteList;
-typedef HashMap<String, std::unique_ptr<OriginAccessWhiteList>> OriginAccessMap;
+typedef Vector<OriginAccessEntry> OriginAccessAllowlist;
+typedef HashMap<String, std::unique_ptr<OriginAccessAllowlist>> OriginAccessMap;
 
 static Lock originAccessMapLock;
 static OriginAccessMap& originAccessMap()
@@ -51,6 +52,14 @@ static OriginAccessMap& originAccessMap()
     ASSERT(originAccessMapLock.isHeld());
     static NeverDestroyed<OriginAccessMap> originAccessMap;
     return originAccessMap;
+}
+
+static Lock originAccessPatternLock;
+static Vector<UserContentURLPattern>& originAccessPatterns()
+{
+    ASSERT(originAccessPatternLock.isHeld());
+    static NeverDestroyed<Vector<UserContentURLPattern>> originAccessPatterns;
+    return originAccessPatterns;
 }
 
 bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
@@ -81,7 +90,8 @@ String SecurityPolicy::referrerToOriginString(const String& referrer)
 
 String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, const URL& url, const String& referrer)
 {
-    ASSERT(referrer == URL(URL(), referrer).strippedForUseAsReferrer());
+    ASSERT(referrer == URL(URL(), referrer).strippedForUseAsReferrer()
+        || referrer == SecurityOrigin::create(URL(URL(), referrer))->toString());
 
     if (referrer.isEmpty())
         return String();
@@ -131,6 +141,31 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
     return shouldHideReferrer(url, referrer) ? String() : referrer;
 }
 
+String SecurityPolicy::generateOriginHeader(ReferrerPolicy referrerPolicy, const URL& url, const SecurityOrigin& securityOrigin)
+{
+    switch (referrerPolicy) {
+    case ReferrerPolicy::NoReferrer:
+        return "null"_s;
+    case ReferrerPolicy::NoReferrerWhenDowngrade:
+    case ReferrerPolicy::StrictOrigin:
+    case ReferrerPolicy::StrictOriginWhenCrossOrigin:
+        if (protocolIs(securityOrigin.protocol(), "https") && !url.protocolIs("https"))
+            return "null"_s;
+        break;
+    case ReferrerPolicy::SameOrigin:
+        if (!securityOrigin.canRequest(url))
+            return "null"_s;
+        break;
+    case ReferrerPolicy::EmptyString:
+    case ReferrerPolicy::Origin:
+    case ReferrerPolicy::OriginWhenCrossOrigin:
+    case ReferrerPolicy::UnsafeUrl:
+        break;
+    }
+
+    return securityOrigin.toString();
+}
+
 bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
 {
     // Paraphrased from <https://html.spec.whatwg.org/multipage/browsers.html#origin> (8 July 2016)
@@ -141,14 +176,14 @@ bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
     //      The origin of the document is the origin of its parent document.
     //
     // Note: We generalize this to invalid URLs because we treat such URLs as about:blank.
-    //
-    return url.isEmpty() || equalIgnoringASCIICase(url.string(), WTF::blankURL()) || equalLettersIgnoringASCIICase(url.string(), "about:srcdoc");
+    // FIXME: We also allow some URLs like "about:BLANK". We should probably block navigation to these URLs, see rdar://problem/57966056.
+    return url.isEmpty() || url.isAboutBlank() || url.isAboutSrcDoc() || equalIgnoringASCIICase(url.string(), aboutBlankURL().string());
 }
 
 bool SecurityPolicy::isBaseURLSchemeAllowed(const URL& url)
 {
     // See <https://github.com/whatwg/html/issues/2249>.
-    return !url.protocolIsData() && !WTF::protocolIsJavaScript(url);
+    return !url.protocolIsData() && !url.protocolIsJavaScript();
 }
 
 void SecurityPolicy::setLocalLoadPolicy(LocalLoadPolicy policy)
@@ -166,25 +201,32 @@ bool SecurityPolicy::allowSubstituteDataAccessToLocal()
     return localLoadPolicy != SecurityPolicy::AllowLocalLoadsForLocalOnly;
 }
 
-bool SecurityPolicy::isAccessWhiteListed(const SecurityOrigin* activeOrigin, const SecurityOrigin* targetOrigin)
+bool SecurityPolicy::isAccessAllowed(const SecurityOrigin& activeOrigin, const SecurityOrigin& targetOrigin, const URL& targetURL)
 {
-    Locker<Lock> locker(originAccessMapLock);
-    if (OriginAccessWhiteList* list = originAccessMap().get(activeOrigin->toString())) {
-        for (auto& entry : *list) {
-            if (entry.matchesOrigin(*targetOrigin))
-                return true;
+    ASSERT(targetOrigin.equal(SecurityOrigin::create(targetURL).ptr()));
+    {
+        Locker<Lock> locker(originAccessMapLock);
+        if (OriginAccessAllowlist* list = originAccessMap().get(activeOrigin.toString())) {
+            for (auto& entry : *list) {
+                if (entry.matchesOrigin(targetOrigin))
+                    return true;
+            }
         }
+    }
+    Locker<Lock> locker(originAccessPatternLock);
+    for (const auto& pattern : originAccessPatterns()) {
+        if (pattern.matches(targetURL))
+            return true;
     }
     return false;
 }
 
-bool SecurityPolicy::isAccessToURLWhiteListed(const SecurityOrigin* activeOrigin, const URL& url)
+bool SecurityPolicy::isAccessAllowed(const SecurityOrigin& activeOrigin, const URL& url)
 {
-    Ref<SecurityOrigin> targetOrigin(SecurityOrigin::create(url));
-    return isAccessWhiteListed(activeOrigin, &targetOrigin.get());
+    return isAccessAllowed(activeOrigin, SecurityOrigin::create(url).get(), url);
 }
 
-void SecurityPolicy::addOriginAccessWhitelistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains)
+void SecurityPolicy::addOriginAccessAllowlistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains)
 {
     ASSERT(!sourceOrigin.isUnique());
     if (sourceOrigin.isUnique())
@@ -195,13 +237,13 @@ void SecurityPolicy::addOriginAccessWhitelistEntry(const SecurityOrigin& sourceO
     Locker<Lock> locker(originAccessMapLock);
     OriginAccessMap::AddResult result = originAccessMap().add(sourceString, nullptr);
     if (result.isNewEntry)
-        result.iterator->value = makeUnique<OriginAccessWhiteList>();
+        result.iterator->value = makeUnique<OriginAccessAllowlist>();
 
-    OriginAccessWhiteList* list = result.iterator->value.get();
+    OriginAccessAllowlist* list = result.iterator->value.get();
     list->append(OriginAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress));
 }
 
-void SecurityPolicy::removeOriginAccessWhitelistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains)
+void SecurityPolicy::removeOriginAccessAllowlistEntry(const SecurityOrigin& sourceOrigin, const String& destinationProtocol, const String& destinationDomain, bool allowDestinationSubdomains)
 {
     ASSERT(!sourceOrigin.isUnique());
     if (sourceOrigin.isUnique())
@@ -215,7 +257,7 @@ void SecurityPolicy::removeOriginAccessWhitelistEntry(const SecurityOrigin& sour
     if (it == map.end())
         return;
 
-    OriginAccessWhiteList& list = *it->value;
+    OriginAccessAllowlist& list = *it->value;
     OriginAccessEntry originAccessEntry(destinationProtocol, destinationDomain, allowDestinationSubdomains ? OriginAccessEntry::AllowSubdomains : OriginAccessEntry::DisallowSubdomains, OriginAccessEntry::TreatIPAddressAsIPAddress);
     if (!list.removeFirst(originAccessEntry))
         return;
@@ -224,10 +266,16 @@ void SecurityPolicy::removeOriginAccessWhitelistEntry(const SecurityOrigin& sour
         map.remove(it);
 }
 
-void SecurityPolicy::resetOriginAccessWhitelists()
+void SecurityPolicy::resetOriginAccessAllowlists()
 {
     Locker<Lock> locker(originAccessMapLock);
     originAccessMap().clear();
+}
+
+void SecurityPolicy::allowAccessTo(const UserContentURLPattern& pattern)
+{
+    Locker<Lock> locker(originAccessPatternLock);
+    originAccessPatterns().append(pattern);
 }
 
 } // namespace WebCore

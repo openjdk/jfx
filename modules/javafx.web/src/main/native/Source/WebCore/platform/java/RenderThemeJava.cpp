@@ -33,6 +33,7 @@
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
 #include "PlatformJavaClasses.h"
+#include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "NotImplemented.h"
 #include "PaintInfo.h"
@@ -50,7 +51,6 @@
 #include "TimeRanges.h"
 #include "UserAgentScripts.h"
 #include "UserAgentStyleSheets.h"
-#include "MediaControlElementTypes.h"
 #include "Page.h"
 
 #include "com_sun_webkit_graphics_RenderTheme.h"
@@ -121,11 +121,11 @@ bool RenderThemeJava::paintWidget(
     }
 
     int state = createWidgetState(object);
-    RGBA32 bgColor = object.style().visitedDependentColor(
+    Color bgColor = object.style().visitedDependentColor(
         widgetIndex == JNI_EXPAND(MENU_LIST_BUTTON)
             ? CSSPropertyColor
             : CSSPropertyBackgroundColor
-    ).rgb();
+    );
 
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -202,13 +202,14 @@ bool RenderThemeJava::paintWidget(
             "(JIIIIILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/Ref;");
     ASSERT(mid);
 
+    auto [r, g, b, a] = bgColor.toSRGBALossy<uint8_t>();
     RefPtr<RQRef> widgetRef = RQRef::create(
         env->CallObjectMethod(jobject(*jRenderTheme), mid,
             ptr_to_jlong(&object),
             (jint)widgetIndex,
             (jint)state,
             (jint)rect.width(), (jint)rect.height(),
-            (jint)bgColor.value(),
+            (jint)(a << 24 | r << 16 | g << 8 | b),
             (jobject)JLObject(extParams.isEmpty()
                 ? nullptr
                 : env->NewDirectByteBuffer(
@@ -555,10 +556,11 @@ Color RenderThemeJava::getSelectionColor(int index) const
     ASSERT(mid);
 
     // Get from default theme object.
-    jint c = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
+    uint32_t color = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
     WTF::CheckAndClearException(env);
 
-    return Color(c);
+    return SRGBA<uint8_t> { static_cast<uint8_t>(color >> 16), static_cast<uint8_t>(color >> 8),
+        static_cast<uint8_t>(color), static_cast<uint8_t>(color >> 24) };
 }
 
 Color RenderThemeJava::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
@@ -584,16 +586,12 @@ Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleC
 #if ENABLE(VIDEO)
 String RenderThemeJava::mediaControlsScript()
 {
-    StringBuilder scriptBuilder;
-    scriptBuilder.appendCharacters(mediaControlsLocalizedStringsJavaScript, sizeof(mediaControlsLocalizedStringsJavaScript));
-    scriptBuilder.appendCharacters(mediaControlsBaseJavaScript, sizeof(mediaControlsBaseJavaScript));
-    scriptBuilder.appendCharacters(mediaControlsGtkJavaScript, sizeof(mediaControlsGtkJavaScript));
-    return scriptBuilder.toString();
+    return String(mediaControlsAdwaitaJavaScript, sizeof(mediaControlsAdwaitaJavaScript));
 }
 
 String RenderThemeJava::extraMediaControlsStyleSheet()
 {
-    return String(mediaControlsGtkUserAgentStyleSheet, sizeof(mediaControlsGtkUserAgentStyleSheet));
+    return String(mediaControlsAdwaitaUserAgentStyleSheet, sizeof(mediaControlsAdwaitaUserAgentStyleSheet));
 }
 
 String RenderThemeJava::formatMediaControlsCurrentTime(float, float) const
@@ -610,9 +608,21 @@ String RenderThemeJava::formatMediaControlsRemainingTime(float currentTime, floa
 bool RenderThemeJava::paintMediaFullscreenButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
 */
 
-bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+static RefPtr<HTMLMediaElement> parentMediaElement(const Node* node)
 {
-    auto mediaElement = parentMediaElement(o);
+    if (!node)
+        return nullptr;
+    RefPtr<Node> mediaNode = node->shadowHost();
+    if (!mediaNode)
+        mediaNode = const_cast<Node*>(node);
+    if (!is<HTMLMediaElement>(*mediaNode))
+        return nullptr;
+    return downcast<HTMLMediaElement>(mediaNode.get());
+}
+
+bool RenderThemeJava::paintMediaPlayButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
+{
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -622,12 +632,12 @@ bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInf
                     : mediaElement->paused()
                         ? JNI_EXPAND_MEDIA(PLAY_BUTTON)
                         : JNI_EXPAND_MEDIA(PAUSE_BUTTON);
-    return paintMediaControl(type, o, paintInfo, r);
+    return paintMediaControl(type, renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaMuteButton(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaMuteButton(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -636,7 +646,7 @@ bool RenderThemeJava::paintMediaMuteButton(const RenderObject&o, const PaintInfo
                     : mediaElement->muted()
                         ? JNI_EXPAND_MEDIA(UNMUTE_BUTTON)
                         : JNI_EXPAND_MEDIA(MUTE_BUTTON);
-    return paintMediaControl(type, o, paintInfo, r);
+    return paintMediaControl(type, renderObject, paintInfo, r);
 }
 
 /*
@@ -644,9 +654,9 @@ bool RenderThemeJava::paintMediaSeekBackButton(const RenderObject& o, const Pain
 bool RenderThemeJava::paintMediaSeekForwardButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
 */
 
-bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -674,19 +684,19 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInf
     return true;
 }
 
-bool RenderThemeJava::paintMediaSliderThumb(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), o, paintInfo, r);
+    return paintMediaControl(JNI_EXPAND_MEDIA(TIME_SLIDER_THUMB), renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_CONTAINER), o, paintInfo, r);
+    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_CONTAINER), renderObject, paintInfo, r);
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto mediaElement = parentMediaElement(o);
+    auto mediaElement = parentMediaElement(renderObject.node());
     if (mediaElement == nullptr)
         return false;
 
@@ -699,9 +709,9 @@ bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const P
 
 }
 
-bool RenderThemeJava::paintMediaVolumeSliderThumb(const RenderObject& object, const PaintInfo& paintInfo, const IntRect& rect)
+bool RenderThemeJava::paintMediaVolumeSliderThumb(const RenderObject& renderObject, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_THUMB), object, paintInfo, rect);
+    return paintMediaControl(JNI_EXPAND_MEDIA(VOLUME_THUMB), renderObject, paintInfo, rect);
 }
 
 /*

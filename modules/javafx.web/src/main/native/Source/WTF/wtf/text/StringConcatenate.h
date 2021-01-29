@@ -197,6 +197,44 @@ public:
     }
 };
 
+template<typename... StringTypes> class StringTypeAdapter<std::tuple<StringTypes...>, void> {
+public:
+    StringTypeAdapter(std::tuple<StringTypes...> tuple)
+        : m_tuple { tuple }
+        , m_length { std::apply(computeLength, tuple) }
+        , m_is8Bit { std::apply(computeIs8Bit, tuple) }
+    {
+    }
+
+    unsigned length() const { return m_length; }
+    bool is8Bit() const { return m_is8Bit; }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    {
+        std::apply([&](StringTypes... strings) {
+            unsigned offset = 0;
+            (..., (
+                StringTypeAdapter<StringTypes>(strings).writeTo(destination + (offset * sizeof(CharacterType))),
+                offset += StringTypeAdapter<StringTypes>(strings).length()
+            ));
+        }, m_tuple);
+    }
+
+private:
+    static unsigned computeLength(StringTypes... strings)
+    {
+        return (... + StringTypeAdapter<StringTypes>(strings).length());
+    }
+
+    static bool computeIs8Bit(StringTypes... strings)
+    {
+        return (... && StringTypeAdapter<StringTypes>(strings).is8Bit());
+    }
+
+    std::tuple<StringTypes...> m_tuple;
+    unsigned m_length;
+    bool m_is8Bit;
+};
+
 template<typename UnderlyingElementType> struct PaddingSpecification {
     LChar character;
     unsigned length;
@@ -287,6 +325,39 @@ private:
     Indentation<N> m_indentation;
 };
 
+struct ASCIICaseConverter {
+    StringView::CaseConvertType type;
+    StringView string;
+};
+
+inline ASCIICaseConverter lowercase(const StringView& stringView)
+{
+    return { StringView::CaseConvertType::Lower, stringView };
+}
+
+inline ASCIICaseConverter uppercase(const StringView& stringView)
+{
+    return { StringView::CaseConvertType::Upper, stringView };
+}
+
+template<> class StringTypeAdapter<ASCIICaseConverter, void> {
+public:
+    StringTypeAdapter(const ASCIICaseConverter& converter)
+        : m_converter { converter }
+    {
+    }
+
+    unsigned length() const { return m_converter.string.length(); }
+    bool is8Bit() const { return m_converter.string.is8Bit(); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    {
+        m_converter.string.getCharactersWithASCIICase(m_converter.type, destination);
+    }
+
+private:
+    const ASCIICaseConverter& m_converter;
+};
+
 template<typename Adapter>
 inline bool are8Bit(Adapter adapter)
 {
@@ -364,6 +435,8 @@ using WTF::Indentation;
 using WTF::IndentationScope;
 using WTF::makeString;
 using WTF::pad;
+using WTF::lowercase;
 using WTF::tryMakeString;
+using WTF::uppercase;
 
 #include <wtf/text/StringOperators.h>

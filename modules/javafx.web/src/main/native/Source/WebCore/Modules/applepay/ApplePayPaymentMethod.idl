@@ -32,4 +32,6 @@
     DOMString network;
     ApplePayPaymentMethodType type;
     ApplePayPaymentPass paymentPass;
+    ApplePayPaymentContact billingContact;
+    [Conditional=APPLE_PAY_INSTALLMENTS] DOMString bindToken;
 };

@@ -25,12 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// The vprintf_stderr_common function triggers this error in the Mac build.
-// Feel free to remove this pragma if this file builds on Mac.
-// According to http://gcc.gnu.org/onlinedocs/gcc-4.2.1/gcc/Diagnostic-Pragmas.html#Diagnostic-Pragmas
-// we need to place this directive before any data or functions are defined.
-#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
-
 #include "config.h"
 #include <wtf/Assertions.h>
 
@@ -42,23 +36,13 @@
 #include <wtf/Locker.h>
 #include <wtf/LoggingAccumulator.h>
 #include <wtf/PrintStream.h>
-#include <wtf/RetainPtr.h>
 #include <wtf/StackTrace.h>
-#include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
-#if HAVE(SIGNAL_H)
-#include <signal.h>
-#endif
-
 #if USE(CF)
 #include <CoreFoundation/CFString.h>
-#if PLATFORM(COCOA)
-#define USE_APPLE_SYSTEM_LOG 1
-#include <asl.h>
-#endif
 #endif // USE(CF)
 
 #if COMPILER(MSVC)
@@ -75,6 +59,14 @@
 #if OS(DARWIN)
 #include <sys/sysctl.h>
 #include <unistd.h>
+#endif
+
+#if USE(JOURNALD)
+#include <wtf/StringPrintStream.h>
+#endif
+
+#if PLATFORM(COCOA)
+#import <wtf/spi/cocoa/OSLogSPI.h>
 #endif
 
 namespace WTF {
@@ -131,10 +123,8 @@ extern "C" {
 
 static void logToStderr(const char* buffer)
 {
-#if USE(APPLE_SYSTEM_LOG)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-    asl_log(0, 0, ASL_LEVEL_NOTICE, "%s", buffer);
-    ALLOW_DEPRECATED_DECLARATIONS_END
+#if PLATFORM(COCOA)
+    os_log(OS_LOG_DEFAULT, "%s", buffer);
 #endif
     fputs(buffer, stderr);
 }
@@ -159,13 +149,11 @@ static void vprintf_stderr_common(const char* format, va_list args)
         return;
     }
 
-#if USE(APPLE_SYSTEM_LOG)
-    ALLOW_DEPRECATED_DECLARATIONS_BEGIN
+#if PLATFORM(COCOA)
     va_list copyOfArgs;
     va_copy(copyOfArgs, args);
-    asl_vlog(0, 0, ASL_LEVEL_NOTICE, format, copyOfArgs);
+    os_log_with_args(OS_LOG_DEFAULT, OS_LOG_TYPE_DEFAULT, format, copyOfArgs, __builtin_return_address(0));
     va_end(copyOfArgs);
-    ALLOW_DEPRECATED_DECLARATIONS_END
 #endif
 
     // Fall through to write to stderr in the same manner as other platforms.
@@ -189,6 +177,7 @@ static void vprintf_stderr_common(const char* format, va_list args)
 
 ALLOW_NONLITERAL_FORMAT_BEGIN
 
+WTF_ATTRIBUTE_PRINTF(2, 0)
 static void vprintf_stderr_with_prefix(const char* prefix, const char* format, va_list args)
 {
     size_t prefixLength = strlen(prefix);
@@ -201,6 +190,7 @@ static void vprintf_stderr_with_prefix(const char* prefix, const char* format, v
     vprintf_stderr_common(formatWithPrefix.data(), args);
 }
 
+WTF_ATTRIBUTE_PRINTF(1, 0)
 static void vprintf_stderr_with_trailing_newline(const char* format, va_list args)
 {
     size_t formatLength = strlen(format);
@@ -271,10 +261,10 @@ void WTFReportArgumentAssertionFailure(const char* file, int line, const char* f
     printCallSite(file, line, function);
 }
 
-class CrashLogPrintStream : public PrintStream {
+class CrashLogPrintStream final : public PrintStream {
 public:
     WTF_ATTRIBUTE_PRINTF(2, 0)
-    void vprintf(const char* format, va_list argList) override
+    void vprintf(const char* format, va_list argList) final
     {
         vprintf_stderr_common(format, argList);
     }
@@ -313,7 +303,7 @@ void WTFCrash()
 #if COMPILER(GCC_COMPATIBLE)
     __builtin_trap();
 #else
-    ((void(*)())0)();
+    ((void(*)())nullptr)();
 #endif // COMPILER(GCC_COMPATIBLE)
 #endif // ASAN_ENABLED
 #endif
@@ -438,6 +428,7 @@ void WTFLogWithLevel(WTFLogChannel* channel, WTFLogLevel level, const char* form
     va_end(args);
 }
 
+WTF_ATTRIBUTE_PRINTF(2, 0)
 static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list args)
 {
     if (channel->state == WTFLogChannelState::Off)
@@ -519,7 +510,7 @@ WTFLogChannel* WTFLogChannelByName(WTFLogChannel* channels[], size_t count, cons
             return channel;
     }
 
-    return 0;
+    return nullptr;
 }
 
 static void setStateOfAllChannels(WTFLogChannel* channels[], size_t channelCount, WTFLogChannelState state)
@@ -530,7 +521,7 @@ static void setStateOfAllChannels(WTFLogChannel* channels[], size_t channelCount
 
 void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t count, const char* logLevel)
 {
-#if !RELEASE_LOG_DISABLED
+#if USE(OS_LOG) && !RELEASE_LOG_DISABLED
     for (size_t i = 0; i < count; ++i) {
         WTFLogChannel* channel = channels[i];
         channel->osLogChannel = os_log_create(channel->subsystem, channel->name);
@@ -584,12 +575,23 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
         for (int frameNumber = 1; frameNumber < stackTrace->size(); ++frameNumber) {
             auto stackFrame = stack[frameNumber];
             auto demangled = WTF::StackTrace::demangle(stackFrame);
+#if USE(OS_LOG)
             if (demangled && demangled->demangledName())
                 os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, demangled->demangledName());
             else if (demangled && demangled->mangledName())
                 os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, demangled->mangledName());
             else
                 os_log(channel->osLogChannel, "%-3d %p", frameNumber, stackFrame);
+#elif USE(JOURNALD)
+            StringPrintStream out;
+            if (demangled && demangled->demangledName())
+                out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->demangledName());
+            else if (demangled && demangled->mangledName())
+                out.printf("%-3d %p %s", frameNumber, stackFrame, demangled->mangledName());
+            else
+                out.printf("%-3d %p", frameNumber, stackFrame);
+            sd_journal_send("WEBKIT_SUBSYSTEM=%s", channel->subsystem, "WEBKIT_CHANNEL=%s", channel->name, "MESSAGE=%s", out.toCString().data(), nullptr);
+#endif
         }
     }
 }

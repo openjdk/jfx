@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "VideoTrackList.h"
 
@@ -93,6 +93,11 @@ int VideoTrackList::selectedIndex() const
 EventTargetInterface VideoTrackList::eventTargetInterface() const
 {
     return VideoTrackListEventTargetInterfaceType;
+}
+
+const char* VideoTrackList::activeDOMObjectName() const
+{
+    return "VideoTrackList";
 }
 
 } // namespace WebCore

@@ -37,12 +37,12 @@
 #include "WorkerConsoleClient.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/DeferredWorkTimer.h>
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/ExceptionHelpers.h>
 #include <JavaScriptCore/GCActivityCallback.h>
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
-#include <JavaScriptCore/PromiseTimer.h>
 #include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
@@ -80,8 +80,9 @@ void WorkerScriptController::initScript()
     // constructed, it can mark its own prototype.)
     if (m_workerGlobalScope->isDedicatedWorkerGlobalScope()) {
         Structure* dedicatedContextPrototypeStructure = JSDedicatedWorkerGlobalScopePrototype::createStructure(*m_vm, nullptr, jsNull());
-        Strong<JSDedicatedWorkerGlobalScopePrototype> dedicatedContextPrototype(*m_vm, JSDedicatedWorkerGlobalScopePrototype::create(*m_vm, nullptr, dedicatedContextPrototypeStructure));
-        Structure* structure = JSDedicatedWorkerGlobalScope::createStructure(*m_vm, nullptr, dedicatedContextPrototype.get());
+        JSDedicatedWorkerGlobalScopePrototype* dedicatedContextPrototype = JSDedicatedWorkerGlobalScopePrototype::create(*m_vm, nullptr, dedicatedContextPrototypeStructure);
+        JSC::EnsureStillAliveScope protectedDedicatedContextPrototype(dedicatedContextPrototype);
+        Structure* structure = JSDedicatedWorkerGlobalScope::createStructure(*m_vm, nullptr, dedicatedContextPrototype);
         auto* proxyStructure = JSProxy::createStructure(*m_vm, nullptr, jsNull(), PureForwardingProxyType);
         auto* proxy = JSProxy::create(*m_vm, proxyStructure);
 
@@ -99,8 +100,9 @@ void WorkerScriptController::initScript()
 #if ENABLE(SERVICE_WORKER)
     } else if (m_workerGlobalScope->isServiceWorkerGlobalScope()) {
         Structure* contextPrototypeStructure = JSServiceWorkerGlobalScopePrototype::createStructure(*m_vm, nullptr, jsNull());
-        Strong<JSServiceWorkerGlobalScopePrototype> contextPrototype(*m_vm, JSServiceWorkerGlobalScopePrototype::create(*m_vm, nullptr, contextPrototypeStructure));
-        Structure* structure = JSServiceWorkerGlobalScope::createStructure(*m_vm, nullptr, contextPrototype.get());
+        JSServiceWorkerGlobalScopePrototype* contextPrototype = JSServiceWorkerGlobalScopePrototype::create(*m_vm, nullptr, contextPrototypeStructure);
+        JSC::EnsureStillAliveScope protectedContextPrototype(contextPrototype);
+        Structure* structure = JSServiceWorkerGlobalScope::createStructure(*m_vm, nullptr, contextPrototype);
         auto* proxyStructure = JSProxy::createStructure(*m_vm, nullptr, jsNull(), PureForwardingProxyType);
         auto* proxy = JSProxy::create(*m_vm, proxyStructure);
 
@@ -250,7 +252,7 @@ void WorkerScriptController::addTimerSetNotification(JSC::JSRunLoopTimer::TimerN
 
     processTimer(m_vm->heap.fullActivityCallback());
     processTimer(m_vm->heap.edenActivityCallback());
-    processTimer(m_vm->promiseTimer.ptr());
+    processTimer(m_vm->deferredWorkTimer.ptr());
 }
 
 void WorkerScriptController::removeTimerSetNotification(JSC::JSRunLoopTimer::TimerNotificationCallback callback)
@@ -263,7 +265,7 @@ void WorkerScriptController::removeTimerSetNotification(JSC::JSRunLoopTimer::Tim
 
     processTimer(m_vm->heap.fullActivityCallback());
     processTimer(m_vm->heap.edenActivityCallback());
-    processTimer(m_vm->promiseTimer.ptr());
+    processTimer(m_vm->deferredWorkTimer.ptr());
 }
 
 void WorkerScriptController::attachDebugger(JSC::Debugger* debugger)

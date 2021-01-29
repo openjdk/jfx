@@ -27,7 +27,7 @@
 #include "config.h"
 #include "InbandDataTextTrack.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "DataCue.h"
 #include "HTMLMediaElement.h"
@@ -38,39 +38,39 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(InbandDataTextTrack);
 
-inline InbandDataTextTrack::InbandDataTextTrack(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
-    : InbandTextTrack(context, client, trackPrivate)
+inline InbandDataTextTrack::InbandDataTextTrack(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
+    : InbandTextTrack(document, client, trackPrivate)
 {
 }
 
-Ref<InbandDataTextTrack> InbandDataTextTrack::create(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
+Ref<InbandDataTextTrack> InbandDataTextTrack::create(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
 {
-    return adoptRef(*new InbandDataTextTrack(context, client, trackPrivate));
+    return adoptRef(*new InbandDataTextTrack(document, client, trackPrivate));
 }
 
 InbandDataTextTrack::~InbandDataTextTrack() = default;
 
 void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, const void* data, unsigned length)
 {
-    addCue(DataCue::create(*scriptExecutionContext(), start, end, data, length));
+    addCue(DataCue::create(document(), start, end, data, length));
 }
 
 #if ENABLE(DATACUE_VALUE)
 
-void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformRepresentation>&& platformValue, const String& type)
+void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&& platformValue, const String& type)
 {
-    if (m_incompleteCueMap.contains(platformValue.ptr()))
+    if (findIncompleteCue(platformValue))
         return;
 
-    auto cue = DataCue::create(*scriptExecutionContext(), start, end, platformValue.copyRef(), type);
-    if (hasCue(cue.ptr(), TextTrackCue::IgnoreDuration)) {
+    auto cue = DataCue::create(document(), start, end, platformValue.copyRef(), type);
+    if (hasCue(cue, TextTrackCue::IgnoreDuration)) {
         INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", cue.get());
         return;
     }
 
     if (end.isPositiveInfinite() && mediaElement()) {
         cue->setEndTime(mediaElement()->durationMediaTime());
-        m_incompleteCueMap.add(WTFMove(platformValue), cue.copyRef());
+        m_incompleteCueMap.append(&cue.get());
     }
 
     INFO_LOG(LOGIDENTIFIER, cue.get());
@@ -78,9 +78,21 @@ void InbandDataTextTrack::addDataCue(const MediaTime& start, const MediaTime& en
     addCue(WTFMove(cue));
 }
 
-void InbandDataTextTrack::updateDataCue(const MediaTime& start, const MediaTime& inEnd, SerializedPlatformRepresentation& platformValue)
+RefPtr<DataCue> InbandDataTextTrack::findIncompleteCue(const SerializedPlatformDataCue& cueToFind)
 {
-    RefPtr<DataCue> cue = m_incompleteCueMap.get(&platformValue);
+    auto index = m_incompleteCueMap.findMatching([&](const auto& cue) {
+        return cueToFind.isEqual(*cue->platformValue());
+    });
+
+    if (index == notFound)
+        return nullptr;
+
+    return m_incompleteCueMap[index];
+}
+
+void InbandDataTextTrack::updateDataCue(const MediaTime& start, const MediaTime& inEnd, SerializedPlatformDataCue& platformValue)
+{
+    auto cue = findIncompleteCue(platformValue);
     if (!cue)
         return;
 
@@ -90,7 +102,7 @@ void InbandDataTextTrack::updateDataCue(const MediaTime& start, const MediaTime&
     if (end.isPositiveInfinite() && mediaElement())
         end = mediaElement()->durationMediaTime();
     else
-        m_incompleteCueMap.remove(&platformValue);
+        m_incompleteCueMap.removeFirst(cue);
 
     INFO_LOG(LOGIDENTIFIER, "was start = ", cue->startMediaTime(), ", end = ", cue->endMediaTime(), ", will be start = ", start, ", end = ", end);
 
@@ -100,10 +112,11 @@ void InbandDataTextTrack::updateDataCue(const MediaTime& start, const MediaTime&
     cue->didChange();
 }
 
-void InbandDataTextTrack::removeDataCue(const MediaTime&, const MediaTime&, SerializedPlatformRepresentation& platformValue)
+void InbandDataTextTrack::removeDataCue(const MediaTime&, const MediaTime&, SerializedPlatformDataCue& platformValue)
 {
-    if (auto cue = m_incompleteCueMap.take(&platformValue)) {
+    if (auto cue = findIncompleteCue(platformValue)) {
         INFO_LOG(LOGIDENTIFIER, "removing: ", *cue);
+        m_incompleteCueMap.removeFirst(cue);
         InbandTextTrack::removeCue(*cue);
     }
 }
@@ -112,7 +125,8 @@ ExceptionOr<void> InbandDataTextTrack::removeCue(TextTrackCue& cue)
 {
     ASSERT(cue.cueType() == TextTrackCue::Data);
 
-    m_incompleteCueMap.remove(const_cast<SerializedPlatformRepresentation*>(toDataCue(&cue)->platformValue()));
+    if (auto platformValue = const_cast<SerializedPlatformDataCue*>(downcast<DataCue>(cue).platformValue()))
+        removeDataCue({ }, { }, *platformValue);
 
     return InbandTextTrack::removeCue(cue);
 }

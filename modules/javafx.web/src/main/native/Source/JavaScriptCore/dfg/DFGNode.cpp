@@ -30,7 +30,7 @@
 
 #include "DFGGraph.h"
 #include "DFGPromotedHeapLocation.h"
-#include "JSCInlines.h"
+#include "DOMJITSignature.h"
 #include "JSImmutableButterfly.h"
 
 namespace JSC { namespace DFG {
@@ -55,6 +55,24 @@ bool MultiPutByOffsetData::reallocatesStorage() const
             return true;
     }
     return false;
+}
+
+bool MultiDeleteByOffsetData::writesStructures() const
+{
+    for (unsigned i = variants.size(); i--;) {
+        if (variants[i].writesStructures())
+            return true;
+    }
+    return false;
+}
+
+bool MultiDeleteByOffsetData::allVariantsStoreEmpty() const
+{
+    for (unsigned i = variants.size(); i--;) {
+        if (!variants[i].newStructure())
+            return false;
+    }
+    return true;
 }
 
 void BranchTarget::dump(PrintStream& out) const

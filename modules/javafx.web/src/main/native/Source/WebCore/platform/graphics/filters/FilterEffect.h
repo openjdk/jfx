@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "AlphaPremultiplication.h"
 #include "ColorSpace.h"
 #include "FloatRect.h"
 #include "IntRect.h"
@@ -40,6 +41,7 @@ namespace WebCore {
 class Filter;
 class FilterEffect;
 class ImageBuffer;
+class ImageData;
 
 typedef Vector<RefPtr<FilterEffect>> FilterEffectVector;
 
@@ -52,18 +54,38 @@ enum FilterEffectType {
 
 class FilterEffect : public RefCounted<FilterEffect> {
 public:
+    enum class Type : uint8_t {
+        Blend,
+        ColorMatrix,
+        ComponentTransfer,
+        Composite,
+        ConvolveMatrix,
+        DiffuseLighting,
+        DisplacementMap,
+        DropShadow,
+        Flood,
+        GaussianBlur,
+        Image,
+        Lighting,
+        Merge,
+        Morphology,
+        Offset,
+        SpecularLighting,
+        Tile,
+        Turbulence,
+        SourceAlpha,
+        SourceGraphic
+    };
     virtual ~FilterEffect();
 
     void clearResult();
     void clearResultsRecursive();
 
     ImageBuffer* imageBufferResult();
-    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&);
-    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&);
-
-    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&);
-    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&);
-
+    RefPtr<Uint8ClampedArray> unmultipliedResult(const IntRect&, Optional<ColorSpace> = WTF::nullopt);
+    RefPtr<Uint8ClampedArray> premultipliedResult(const IntRect&, Optional<ColorSpace> = WTF::nullopt);
+    void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<ColorSpace> = WTF::nullopt);
+    void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&, Optional<ColorSpace> = WTF::nullopt);
     FilterEffectVector& inputEffects() { return m_inputEffects; }
     FilterEffect* inputEffect(unsigned) const;
     unsigned numberOfEffectInputs() const { return m_inputEffects.size(); }
@@ -133,6 +155,8 @@ public:
 
     FloatPoint mapPointFromUserSpaceToBuffer(FloatPoint) const;
 
+    Type filterEffectClassType() { return m_filterEffectClassType; }
+
     Filter& filter() { return m_filter; }
     const Filter& filter() const { return m_filter; }
 
@@ -148,13 +172,13 @@ public:
     void transformResultColorSpace(ColorSpace);
 
 protected:
-    FilterEffect(Filter&);
+    FilterEffect(Filter&, Type);
 
     virtual const char* filterName() const = 0;
 
     ImageBuffer* createImageBufferResult();
-    Uint8ClampedArray* createUnmultipliedImageResult();
-    Uint8ClampedArray* createPremultipliedImageResult();
+    ImageData* createUnmultipliedImageResult();
+    ImageData* createPremultipliedImageResult();
 
     // Return true if the filter will only operate correctly on valid RGBA values, with
     // alpha in [0,255] and each color component in [0, alpha].
@@ -177,13 +201,19 @@ private:
     virtual void platformApplySoftware() = 0;
 
     void copyImageBytes(const Uint8ClampedArray& source, Uint8ClampedArray& destination, const IntRect&) const;
+    void copyConvertedImageBufferToDestination(Uint8ClampedArray&, ColorSpace, AlphaPremultiplication, const IntRect&);
+    void copyConvertedImageDataToDestination(Uint8ClampedArray&, ImageData&, ColorSpace, AlphaPremultiplication, const IntRect&);
+    bool requiresImageDataColorSpaceConversion(Optional<ColorSpace>);
+    RefPtr<ImageData> convertImageDataToColorSpace(ColorSpace, ImageData&, AlphaPremultiplication);
+    RefPtr<ImageData> convertImageBufferToColorSpace(ColorSpace, ImageBuffer&, const IntRect&, AlphaPremultiplication);
+
 
     Filter& m_filter;
     FilterEffectVector m_inputEffects;
 
     std::unique_ptr<ImageBuffer> m_imageBufferResult;
-    RefPtr<Uint8ClampedArray> m_unmultipliedImageResult;
-    RefPtr<Uint8ClampedArray> m_premultipliedImageResult;
+    RefPtr<ImageData> m_unmultipliedImageResult;
+    RefPtr<ImageData> m_premultipliedImageResult;
 
     IntRect m_absolutePaintRect;
 
@@ -213,6 +243,8 @@ private:
 
     ColorSpace m_operatingColorSpace { ColorSpace::LinearRGB };
     ColorSpace m_resultColorSpace { ColorSpace::SRGB };
+
+    const Type m_filterEffectClassType;
 };
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FilterEffect&);

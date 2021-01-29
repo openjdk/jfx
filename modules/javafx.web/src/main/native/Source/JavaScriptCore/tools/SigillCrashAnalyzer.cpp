@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,11 @@
 #include "config.h"
 #include "SigillCrashAnalyzer.h"
 
-#include "CallFrame.h"
 #include "CodeBlock.h"
+#include "ExecutableAllocator.h"
 #include "MachineContext.h"
 #include "VMInspector.h"
 #include <mutex>
-#include <wtf/StdLibExtras.h>
 
 #if ENABLE(ARM64_DISASSEMBLER)
 #include "A64DOpcode.h"
@@ -158,7 +157,7 @@ public:
 static void installCrashHandler()
 {
 #if CPU(X86_64) || CPU(ARM64)
-    installSignalHandler(Signal::Ill, [] (Signal, SigInfo&, PlatformRegisters& registers) {
+    addSignalHandler(Signal::IllegalInstruction, [] (Signal, SigInfo&, PlatformRegisters& registers) {
         auto signalContext = SignalContext::tryCreate(registers);
         if (!signalContext)
             return SignalAction::NotHandled;
@@ -171,6 +170,7 @@ static void installCrashHandler()
         analyzer.analyze(*signalContext);
         return SignalAction::NotHandled;
     });
+    activateSignalHandlersFor(Signal::IllegalInstruction);
 #endif
 }
 
@@ -200,6 +200,7 @@ SigillCrashAnalyzer& SigillCrashAnalyzer::instance()
     static SigillCrashAnalyzer* analyzer;
     static std::once_flag once;
     std::call_once(once, [] {
+        ASSERT(Options::useJIT());
         installCrashHandler();
         analyzer = new SigillCrashAnalyzer;
     });

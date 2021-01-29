@@ -179,7 +179,7 @@ public:
 
     // GraphicsLayers buffer state, which gets pushed to the underlying platform layers
     // at specific times.
-    void scheduleLayerFlush(bool canThrottle = false);
+    void scheduleRenderingUpdate();
     void flushPendingLayerChanges(bool isFlushRoot = true);
 
     // Called when the GraphicsLayer for the given RenderLayer has flushed changes inside of flushPendingLayerChanges().
@@ -196,8 +196,9 @@ public:
     // This is used to cancel any pending update timers when the document goes into back/forward cache.
     void cancelCompositingLayerUpdate();
 
-    // Update the compositing state of the given layer. Returns true if that state changed.
-    enum CompositingChangeRepaint { CompositingChangeRepaintNow, CompositingChangeWillRepaintLater };
+    // Update event regions, which only needs to happen once per rendering update.
+    void updateEventRegions();
+
     enum class LayoutUpToDate {
         Yes, No
     };
@@ -207,8 +208,6 @@ public:
         RenderLayer::ViewportConstrainedNotCompositedReason nonCompositedForPositionReason { RenderLayer::NoNotCompositedReason };
         bool reevaluateAfterLayout { false };
     };
-
-    bool updateLayerCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&, CompositingChangeRepaint = CompositingChangeRepaintNow);
 
     // Whether layer's backing needs a graphics layer to do clipping by an ancestor (non-stacking-context parent with overflow).
     bool clippedByAncestor(RenderLayer&, const RenderLayer* compositingAncestor) const;
@@ -286,6 +285,7 @@ public:
     void setIsInWindow(bool);
 
     void clearBackingForAllLayers();
+    void invalidateEventRegionForAllLayers();
 
     void layerBecameComposited(const RenderLayer&);
     void layerBecameNonComposited(const RenderLayer&);
@@ -299,6 +299,7 @@ public:
     // to know if there is non-affine content, e.g. for drawing into an image.
     bool has3DContent() const;
 
+    static bool isCompositedSubframeRenderer(const RenderObject&);
     static RenderLayerCompositor* frameContentsCompositor(RenderWidget&);
     // Return true if the layers changed.
     bool parentFrameContentLayers(RenderWidget&);
@@ -350,7 +351,7 @@ public:
     ScrollPositioningBehavior computeCoordinatedPositioningForLayer(const RenderLayer&, const RenderLayer* compositingAncestor) const;
     bool isLayerForIFrameWithScrollCoordinatedContents(const RenderLayer&) const;
 
-    ScrollableArea* scrollableAreaForScrollLayerID(ScrollingNodeID) const;
+    ScrollableArea* scrollableAreaForScrollingNodeID(ScrollingNodeID) const;
 
     void removeFromScrollCoordinatedLayers(RenderLayer&);
 
@@ -362,12 +363,11 @@ public:
 
     bool viewHasTransparentBackground(Color* backgroundColor = nullptr) const;
 
+    bool viewNeedsToInvalidateEventRegionOfEnclosingCompositingLayerForRepaint() const;
+
     bool hasNonMainLayersWithTiledBacking() const { return m_layersWithTiledBackingCount; }
 
     OptionSet<CompositingReason> reasonsForCompositing(const RenderLayer&) const;
-
-    void setLayerFlushThrottlingEnabled(bool);
-    void disableLayerFlushThrottlingTemporarilyForInteraction();
 
     void didPaintBacking(RenderLayerBacking*);
 
@@ -418,12 +418,14 @@ private:
 
     // Make or destroy the backing for this layer; returns true if backing changed.
     enum class BackingRequired { No, Yes, Unknown };
-    bool updateBacking(RenderLayer&, RequiresCompositingData&, CompositingChangeRepaint shouldRepaint, BackingRequired = BackingRequired::Unknown);
+    bool updateBacking(RenderLayer&, RequiresCompositingData&, BackingSharingState* = nullptr, BackingRequired = BackingRequired::Unknown);
+    bool updateLayerCompositingState(RenderLayer&, const RenderLayer* compositingAncestor, RequiresCompositingData&, BackingSharingState&);
 
-    void clearBackingForLayerIncludingDescendants(RenderLayer&);
+    template<typename ApplyFunctionType> void applyToCompositedLayerIncludingDescendants(RenderLayer&, const ApplyFunctionType&);
 
     // Repaint this and its child layers.
     void recursiveRepaintLayer(RenderLayer&);
+    bool layerRepaintTargetsBackingSharingLayer(RenderLayer&, BackingSharingState&) const;
 
     void computeExtent(const LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
     void addToOverlapMap(LayerOverlapMap&, const RenderLayer&, OverlapExtent&) const;
@@ -479,9 +481,7 @@ private:
     GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
-#endif
 
     // Non layout-dependent
     bool requiresCompositingForAnimation(RenderLayerModelObject&) const;
@@ -530,10 +530,11 @@ private:
     void detachScrollCoordinatedLayer(RenderLayer&, OptionSet<ScrollCoordinationRole>);
     void detachScrollCoordinatedLayerWithRole(RenderLayer&, ScrollingCoordinator&, ScrollCoordinationRole);
 
+    void updateSynchronousScrollingNodes();
+
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
     StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer&) const;
 
-    LayoutRect rootParentRelativeScrollableRect() const;
     LayoutRect parentRelativeScrollableRect(const RenderLayer&, const RenderLayer* ancestorLayer) const;
 
     // Returns list of layers and their clip rects required to clip the given layer, which include clips in the
@@ -556,11 +557,6 @@ private:
     bool isAsyncScrollableStickyLayer(const RenderLayer&, const RenderLayer** enclosingAcceleratedOverflowLayer = nullptr) const;
 
     bool shouldCompositeOverflowControls() const;
-
-    bool isThrottlingLayerFlushes() const;
-    void startInitialLayerFlushTimerIfNeeded();
-    void startLayerFlushTimerIfNeeded();
-    void layerFlushTimerFired();
 
 #if !LOG_DISABLED
     const char* logReasonsForCompositing(const RenderLayer&);
@@ -624,11 +620,6 @@ private:
 
     std::unique_ptr<GraphicsLayerUpdater> m_layerUpdater; // Updates tiled layer visible area periodically while animations are running.
 
-    Timer m_layerFlushTimer;
-
-    bool m_layerFlushThrottlingEnabled { false };
-    bool m_layerFlushThrottlingTemporarilyDisabledForInteraction { false };
-    bool m_hasPendingLayerFlush { false };
     bool m_viewBackgroundIsTransparent { false };
 
 #if !LOG_DISABLED
@@ -642,7 +633,7 @@ private:
     Color m_viewBackgroundColor;
     Color m_rootExtendedBackgroundColor;
 
-    HashMap<ScrollingNodeID, RenderLayer*> m_scrollingNodeToLayerMap;
+    HashMap<ScrollingNodeID, WeakPtr<RenderLayer>> m_scrollingNodeToLayerMap;
 #if PLATFORM(IOS_FAMILY)
     std::unique_ptr<LegacyWebKitScrollingLayerCoordinator> m_legacyScrollingLayerCoordinator;
 #endif

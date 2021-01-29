@@ -84,7 +84,7 @@ void AccessibilitySlider::addChildren()
 
     AXObjectCache* cache = m_renderer->document().axObjectCache();
 
-    auto& thumb = downcast<AccessibilitySliderThumb>(*cache->getOrCreate(AccessibilityRole::SliderThumb));
+    auto& thumb = downcast<AccessibilitySliderThumb>(*cache->create(AccessibilityRole::SliderThumb));
     thumb.setParent(this);
 
     // Before actually adding the value indicator to the hierarchy,
@@ -126,14 +126,15 @@ float AccessibilitySlider::minValueForRange() const
     return static_cast<float>(inputElement()->minimum());
 }
 
-void AccessibilitySlider::setValue(const String& value)
+bool AccessibilitySlider::setValue(const String& value)
 {
     HTMLInputElement* input = inputElement();
 
     if (input->value() == value)
-        return;
+        return true;
 
     input->setValue(value, DispatchChangeEvent);
+    return true;
 }
 
 HTMLInputElement* AccessibilitySlider::inputElement() const

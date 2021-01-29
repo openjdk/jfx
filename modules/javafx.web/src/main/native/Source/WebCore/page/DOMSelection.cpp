@@ -246,35 +246,35 @@ void DOMSelection::modify(const String& alterString, const String& directionStri
 
     SelectionDirection direction;
     if (equalLettersIgnoringASCIICase(directionString, "forward"))
-        direction = DirectionForward;
+        direction = SelectionDirection::Forward;
     else if (equalLettersIgnoringASCIICase(directionString, "backward"))
-        direction = DirectionBackward;
+        direction = SelectionDirection::Backward;
     else if (equalLettersIgnoringASCIICase(directionString, "left"))
-        direction = DirectionLeft;
+        direction = SelectionDirection::Left;
     else if (equalLettersIgnoringASCIICase(directionString, "right"))
-        direction = DirectionRight;
+        direction = SelectionDirection::Right;
     else
         return;
 
     TextGranularity granularity;
     if (equalLettersIgnoringASCIICase(granularityString, "character"))
-        granularity = CharacterGranularity;
+        granularity = TextGranularity::CharacterGranularity;
     else if (equalLettersIgnoringASCIICase(granularityString, "word"))
-        granularity = WordGranularity;
+        granularity = TextGranularity::WordGranularity;
     else if (equalLettersIgnoringASCIICase(granularityString, "sentence"))
-        granularity = SentenceGranularity;
+        granularity = TextGranularity::SentenceGranularity;
     else if (equalLettersIgnoringASCIICase(granularityString, "line"))
-        granularity = LineGranularity;
+        granularity = TextGranularity::LineGranularity;
     else if (equalLettersIgnoringASCIICase(granularityString, "paragraph"))
-        granularity = ParagraphGranularity;
+        granularity = TextGranularity::ParagraphGranularity;
     else if (equalLettersIgnoringASCIICase(granularityString, "lineboundary"))
-        granularity = LineBoundary;
+        granularity = TextGranularity::LineBoundary;
     else if (equalLettersIgnoringASCIICase(granularityString, "sentenceboundary"))
-        granularity = SentenceBoundary;
+        granularity = TextGranularity::SentenceBoundary;
     else if (equalLettersIgnoringASCIICase(granularityString, "paragraphboundary"))
-        granularity = ParagraphBoundary;
+        granularity = TextGranularity::ParagraphBoundary;
     else if (equalLettersIgnoringASCIICase(granularityString, "documentboundary"))
-        granularity = DocumentBoundary;
+        granularity = TextGranularity::DocumentBoundary;
     else
         return;
 
@@ -309,14 +309,14 @@ ExceptionOr<Ref<Range>> DOMSelection::getRangeAt(unsigned index)
     if (auto* shadowAncestor = selectionShadowAncestor(*frame)) {
         auto* container = shadowAncestor->parentNodeGuaranteedHostFree();
         unsigned offset = shadowAncestor->computeNodeIndex();
-        return Range::create(shadowAncestor->document(), container, offset, container, offset);
+        return createLiveRange(makeSimpleRange(BoundaryPoint { *container, offset }));
     }
 
     auto firstRange = frame->selection().selection().firstRange();
     ASSERT(firstRange);
     if (!firstRange)
         return Exception { IndexSizeError };
-    return firstRange.releaseNonNull();
+    return createLiveRange(*firstRange);
 }
 
 void DOMSelection::removeAllRanges()
@@ -337,11 +337,11 @@ void DOMSelection::addRange(Range& range)
 
     auto& selection = frame->selection();
     if (selection.isNone()) {
-        selection.moveTo(&range);
+        selection.setSelection(makeSimpleRange(range));
         return;
     }
 
-    auto normalizedRange = selection.selection().toNormalizedRange();
+    auto normalizedRange = createLiveRange(selection.selection().toNormalizedRange());
     if (!normalizedRange)
         return;
 
@@ -356,7 +356,7 @@ void DOMSelection::addRange(Range& range)
                 selection.moveTo(range.startPosition(), normalizedRange->endPosition(), DOWNSTREAM);
             } else {
                 // The new range contains the original range.
-                selection.moveTo(&range);
+                selection.setSelection(makeSimpleRange(range));
             }
         }
     } else {
@@ -366,7 +366,7 @@ void DOMSelection::addRange(Range& range)
             result = range.compareBoundaryPoints(Range::END_TO_END, *normalizedRange);
             if (!result.hasException() && result.releaseReturnValue() == -1) {
                 // The original range contains the new range.
-                selection.moveTo(normalizedRange.get());
+                selection.setSelection(makeSimpleRange(*normalizedRange));
             } else {
                 // The ranges intersect.
                 selection.moveTo(normalizedRange->startPosition(), range.endPosition(), DOWNSTREAM);
@@ -381,17 +381,15 @@ void DOMSelection::deleteFromDocument()
     if (!frame)
         return;
 
-    auto& selection = frame->selection();
-    if (selection.isNone())
-        return;
-
-    auto selectedRange = selection.selection().toNormalizedRange();
-    if (!selectedRange || selectedRange->shadowRoot())
+    auto selectedRange = frame->selection().selection().toNormalizedRange();
+    if (!selectedRange || selectedRange->start.container->containingShadowRoot())
         return;
 
     Ref<Frame> protector(*frame);
-    selectedRange->deleteContents();
-    setBaseAndExtent(&selectedRange->startContainer(), selectedRange->startOffset(), &selectedRange->startContainer(), selectedRange->startOffset());
+    createLiveRange(*selectedRange)->deleteContents();
+    auto container = selectedRange->start.container.ptr();
+    auto offset = selectedRange->start.offset;
+    setBaseAndExtent(container, offset, container, offset);
 }
 
 bool DOMSelection::containsNode(Node& node, bool allowPartial) const
@@ -448,7 +446,8 @@ String DOMSelection::toString()
     auto* frame = this->frame();
     if (!frame)
         return String();
-    return plainText(frame->selection().selection().toNormalizedRange().get());
+    auto range = frame->selection().selection().toNormalizedRange();
+    return range ? plainText(*range) : emptyString();
 }
 
 Node* DOMSelection::shadowAdjustedNode(const Position& position) const

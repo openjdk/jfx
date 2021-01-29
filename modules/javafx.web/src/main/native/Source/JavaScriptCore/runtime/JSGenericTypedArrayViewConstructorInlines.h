@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -156,9 +156,10 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
         else {
             // This getPropertySlot operation should not be observed by the Proxy.
             // So we use VMInquiry. And purge the opaque object cases (proxy and namespace object) by isTaintedByOpaqueObject() guard.
-            PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry);
+            PropertySlot lengthSlot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
             object->getPropertySlot(globalObject, vm.propertyNames->length, lengthSlot);
             RETURN_IF_EXCEPTION(scope, nullptr);
+            lengthSlot.disallowVMEntry.reset();
 
             JSValue iteratorFunc = object->get(globalObject, vm.propertyNames->iteratorSymbol);
             RETURN_IF_EXCEPTION(scope, nullptr);
@@ -169,7 +170,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(JSGlobalObject* glo
             // 3) The base object might have indexed getters.
             // it should not be observable that we do not use the iterator.
 
-            if (!iteratorFunc.isUndefined()
+            if (!iteratorFunc.isUndefinedOrNull()
                 && (iteratorFunc != object->globalObject(vm)->arrayProtoValuesFunction()
                     || lengthSlot.isAccessor() || lengthSlot.isCustom() || lengthSlot.isTaintedByOpaqueObject()
                     || hasAnyArrayStorage(object->indexingType()))) {
@@ -211,10 +212,11 @@ EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(JSGlobalObject* glob
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    InternalFunction* function = jsCast<InternalFunction*>(callFrame->jsCallee());
-    Structure* parentStructure = function->globalObject()->typedArrayStructure(ViewClass::TypedArrayStorageType);
-    Structure* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), parentStructure);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = newTarget == callFrame->jsCallee()
+        ? globalObject->typedArrayStructure(ViewClass::TypedArrayStorageType)
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->typedArrayStructure(ViewClass::TypedArrayStorageType));
+    RETURN_IF_EXCEPTION(scope, { });
 
     size_t argCount = callFrame->argumentCount();
 
@@ -233,15 +235,10 @@ EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(JSGlobalObject* glob
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
         if (argCount > 2) {
-            if (ViewClass::TypedArrayStorageType == TypeDataView) {
-                // If the DataView byteLength is present but undefined, treat it as missing.
-                JSValue byteLengthValue = callFrame->uncheckedArgument(2);
-                if (!byteLengthValue.isUndefined()) {
-                    length = byteLengthValue.toIndex(globalObject, "byteLength");
-                    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-                }
-            } else {
-                length = callFrame->uncheckedArgument(2).toIndex(globalObject, "length");
+            // If the length value is present but undefined, treat it as missing.
+            JSValue lengthValue = callFrame->uncheckedArgument(2);
+            if (!lengthValue.isUndefined()) {
+                length = lengthValue.toIndex(globalObject, ViewClass::TypedArrayStorageType == TypeDataView ? "byteLength" : "length");
                 RETURN_IF_EXCEPTION(scope, encodedJSValue());
             }
         }

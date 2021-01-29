@@ -43,14 +43,12 @@
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
-#if ENABLE(DATA_DETECTION)
-#include "DataDetection.h"
-#endif
-
 namespace WebCore {
 
 class FontGenericFamilies;
 class Page;
+
+enum class DataDetectorTypes : uint32_t;
 
 enum EditableLinkBehavior {
     EditableLinkDefaultBehavior,
@@ -69,6 +67,8 @@ enum TextDirectionSubmenuInclusionBehavior {
 enum DebugOverlayRegionFlags {
     NonFastScrollableRegion = 1 << 0,
     WheelEventHandlerRegion = 1 << 1,
+    TouchActionRegion = 1 << 2,
+    EditableElementRegion = 1 << 3,
 };
 
 enum class UserInterfaceDirectionPolicy {
@@ -159,9 +159,6 @@ public:
     WEBCORE_EXPORT void setMinimumDOMTimerInterval(Seconds); // Initialized to DOMTimer::defaultMinimumInterval().
     Seconds minimumDOMTimerInterval() const { return m_minimumDOMTimerInterval; }
 
-    WEBCORE_EXPORT void setLayoutInterval(Seconds);
-    Seconds layoutInterval() const { return m_layoutInterval; }
-
 #if ENABLE(TEXT_AUTOSIZING)
     float oneLineTextMultiplierCoefficient() const { return m_oneLineTextMultiplierCoefficient; }
     float multiLineTextMultiplierCoefficient() const { return m_multiLineTextMultiplierCoefficient; }
@@ -206,7 +203,6 @@ protected:
     Page* m_page;
 
     const std::unique_ptr<FontGenericFamilies> m_fontGenericFamilies;
-    Seconds m_layoutInterval;
     Seconds m_minimumDOMTimerInterval;
 
     Timer m_setImageLoadingSettingsTimer;

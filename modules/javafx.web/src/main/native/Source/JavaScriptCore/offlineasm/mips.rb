@@ -554,22 +554,27 @@ class LocalLabelReference
     end
 end
 
-def mipsAsRegister(preList, postList, operand, needRestore)
+class Instruction
+    # Replace operands with a single register operand.
+    # Note: in contrast to the risc version, this method drops all other operands.
+    def mipsCloneWithOperandLowered(preList, postList, operandIndex, needRestore)
+        operand = self.operands[operandIndex]
     tmp = MIPS_CALL_REG
     if operand.address?
-        preList << Instruction.new(operand.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
+            preList << Instruction.new(self.codeOrigin, "loadp", [operand, MIPS_CALL_REG])
     elsif operand.is_a? LabelReference
-        preList << Instruction.new(operand.codeOrigin, "la", [operand, MIPS_CALL_REG])
+            preList << Instruction.new(self.codeOrigin, "la", [operand, MIPS_CALL_REG])
     elsif operand.register? and operand != MIPS_CALL_REG
-        preList << Instruction.new(operand.codeOrigin, "move", [operand, MIPS_CALL_REG])
+            preList << Instruction.new(self.codeOrigin, "move", [operand, MIPS_CALL_REG])
     else
         needRestore = false
         tmp = operand
     end
     if needRestore
-        postList << Instruction.new(operand.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
+            postList << Instruction.new(self.codeOrigin, "move", [MIPS_GPSAVE_REG, MIPS_GP_REG])
+        end
+        cloneWithNewOperands([tmp])
     end
-    tmp
 end
 
 def mipsLowerMisplacedAddresses(list)
@@ -581,30 +586,21 @@ def mipsLowerMisplacedAddresses(list)
             annotation = node.annotation
             case node.opcode
             when "jmp"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           [mipsAsRegister(newList, [], node.operands[0], false)])
+                newList << node.mipsCloneWithOperandLowered(newList, [], 0, false)
             when "call"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           [mipsAsRegister(newList, postInstructions, node.operands[0], true)])
+                newList << node.mipsCloneWithOperandLowered(newList, postInstructions, 0, true)
             when "slt", "sltu"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, "i"))
+                newList << node.riscCloneWithOperandsLowered(newList, [], "i")
             when "sltub", "sltb"
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, "b"))
+                newList << node.riscCloneWithOperandsLowered(newList, [], "b")
             when "andb"
                 newList << Instruction.new(node.codeOrigin,
                                            "andi",
-                                           riscAsRegisters(newList, [], node.operands, "b"))
+                                           riscLowerOperandsToRegisters(node, newList, [], "b"),
+                                           node.annotation)
             when /^(bz|bnz|bs|bo)/
                 tl = $~.post_match == "" ? "i" : $~.post_match
-                newList << Instruction.new(node.codeOrigin,
-                                           node.opcode,
-                                           riscAsRegisters(newList, [], node.operands, tl))
+                newList << node.riscCloneWithOperandsLowered(newList, [], tl)
             else
                 newList << node
             end
@@ -688,7 +684,7 @@ def mipsAddPICCode(list)
             # FIXME: [JSC] checkpoint_osr_exit_from_inlined_call_trampoline is a return location
             # and we should name it properly.
             # https://bugs.webkit.org/show_bug.cgi?id=208236
-            if node.name =~ /^.*_return_location(?:_(?:wide16|wide32))?$/ or node.name.start_with?("_checkpoint_osr_exit_from_inlined_call_trampoline")
+            if node.name =~ /^.*_return_location(?:_(?:wide16|wide32))?$/ or node.name.start_with?("_checkpoint_osr_exit_from_inlined_call_trampoline") or node.name.start_with?("_fuzzer_return_early_from_loop_hint")
                 # We need to have a special case for return location labels because they are always
                 # reached from a `ret` instruction. In this case, we need to proper reconfigure `$gp`
                 # using `$ra` instead of using `$t9`.
@@ -904,7 +900,7 @@ class Instruction
         when "loadhsi"
             $asm.puts "lh #{mipsFlippedOperands(operands)}"
         when "storeh"
-            $asm.puts "shv #{mipsOperands(operands)}"
+            $asm.puts "sh #{mipsOperands(operands)}"
         when "loadd"
             $asm.puts "ldc1 #{mipsFlippedOperands(operands)}"
         when "stored"

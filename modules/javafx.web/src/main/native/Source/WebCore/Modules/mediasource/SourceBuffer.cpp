@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -535,9 +535,9 @@ MediaTime SourceBuffer::sourceBufferPrivateFastSeekTimeForMediaTime(const MediaT
     return seekTime;
 }
 
-bool SourceBuffer::hasPendingActivity() const
+bool SourceBuffer::virtualHasPendingActivity() const
 {
-    return m_source || m_asyncEventQueue->hasPendingEvents();
+    return m_source || m_asyncEventQueue->hasPendingActivity();
 }
 
 void SourceBuffer::stop()
@@ -717,7 +717,7 @@ void SourceBuffer::sourceBufferPrivateDidReceiveRenderingError(int error)
         m_source->streamEndedWithError(MediaSource::EndOfStreamError::Decode);
 }
 
-static bool decodeTimeComparator(const PresentationOrderSampleMap::MapType::value_type& a, const PresentationOrderSampleMap::MapType::value_type& b)
+static WARN_UNUSED_RETURN bool decodeTimeComparator(const PresentationOrderSampleMap::MapType::value_type& a, const PresentationOrderSampleMap::MapType::value_type& b)
 {
     return a.second->decodeTime() < b.second->decodeTime();
 }
@@ -1247,11 +1247,11 @@ void SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegment(const Init
             // FIXME: Implement steps 5.4.1-5.4.8.1 as per Editor's Draft 09 January 2015, and reorder this
             // 5.4.1 Let new text track be a new TextTrack object with its properties populated with the
             // appropriate information from the initialization segment.
-            auto newTextTrack = InbandTextTrack::create(*scriptExecutionContext(), *this, textTrackPrivate);
+            auto newTextTrack = InbandTextTrack::create(document(), *this, textTrackPrivate);
 
             // 5.4.2 If the mode property on new text track equals "showing" or "hidden", then set active
             // track flag to true.
-            if (textTrackPrivate.mode() != InbandTextTrackPrivate::Disabled)
+            if (textTrackPrivate.mode() != InbandTextTrackPrivate::Mode::Disabled)
                 activeTrackFlag = true;
 
             // 5.4.3 Add new text track to the textTracks attribute on this SourceBuffer object.
@@ -2097,7 +2097,7 @@ void SourceBuffer::updateMinimumUpcomingPresentationTime(TrackBuffer& trackBuffe
     }
 
     auto minPts = std::min_element(trackBuffer.decodeQueue.begin(), trackBuffer.decodeQueue.end(), [](auto& left, auto& right) -> bool {
-        return left.second->outputPresentationTime() < right.second->outputPresentationTime();
+        return left.second->presentationTime() < right.second->presentationTime();
     });
 
     if (minPts == trackBuffer.decodeQueue.end()) {
@@ -2106,7 +2106,7 @@ void SourceBuffer::updateMinimumUpcomingPresentationTime(TrackBuffer& trackBuffe
         return;
     }
 
-    trackBuffer.minimumEnqueuedPresentationTime = minPts->second->outputPresentationTime();
+    trackBuffer.minimumEnqueuedPresentationTime = minPts->second->presentationTime();
     m_private->setMinimumUpcomingPresentationTime(trackID, trackBuffer.minimumEnqueuedPresentationTime);
 }
 

@@ -23,8 +23,6 @@
 
 #include "BuiltinNames.h"
 #include "IdentifierInlines.h"
-#include "JSCBuiltins.h"
-#include "PrivateName.h"
 
 namespace JSC {
 
@@ -32,34 +30,25 @@ namespace JSC {
 #define INITIALIZE_KEYWORD(name) , name##Keyword(Identifier::fromString(vm, #name))
 #define INITIALIZE_PRIVATE_NAME(name) , name##PrivateName(m_builtinNames->name##PrivateName())
 #define INITIALIZE_SYMBOL(name) , name##Symbol(m_builtinNames->name##Symbol())
+#define INITIALIZE_PRIVATE_FIELD_NAME(name) , name##PrivateField(Identifier::fromString(vm, "#" #name))
 
 CommonIdentifiers::CommonIdentifiers(VM& vm)
     : nullIdentifier()
     , emptyIdentifier(Identifier::EmptyIdentifier)
     , underscoreProto(Identifier::fromString(vm, "__proto__"))
-    , thisIdentifier(Identifier::fromString(vm, "this"))
     , useStrictIdentifier(Identifier::fromString(vm, "use strict"))
     , timesIdentifier(Identifier::fromString(vm, "*"))
-    , m_builtinNames(new BuiltinNames(vm, this))
+    , m_builtinNames(makeUnique<BuiltinNames>(vm, this))
     JSC_PARSER_PRIVATE_NAMES(INITIALIZE_PRIVATE_NAME)
     JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(INITIALIZE_KEYWORD)
     JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_PROPERTY_NAME)
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_SYMBOL)
+    JSC_COMMON_IDENTIFIERS_EACH_PRIVATE_FIELD(INITIALIZE_PRIVATE_FIELD_NAME)
 {
 }
 
 CommonIdentifiers::~CommonIdentifiers()
 {
-}
-
-SymbolImpl* CommonIdentifiers::lookUpPrivateName(const Identifier& ident) const
-{
-    return m_builtinNames->lookUpPrivateName(ident);
-}
-
-Identifier CommonIdentifiers::getPublicName(VM& vm, SymbolImpl* symbol) const
-{
-    return m_builtinNames->getPublicName(vm, symbol);
 }
 
 void CommonIdentifiers::appendExternalName(const Identifier& publicName, const Identifier& privateName)

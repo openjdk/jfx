@@ -59,7 +59,6 @@ class SymbolRegistry;
 struct CStringTranslator;
 struct HashAndUTF8CharactersTranslator;
 struct LCharBufferTranslator;
-struct StringHash;
 struct SubstringTranslator;
 struct UCharBufferTranslator;
 
@@ -189,8 +188,8 @@ public:
 
     static constexpr unsigned MaxLength = StringImplShape::MaxLength;
 
-    // The bottom 6 bits in the hash are flags.
-    static constexpr const unsigned s_flagCount = 6;
+    // The bottom 6 bits in the hash are flags, but reserve 8 bits since StringHash only has 24 bits anyway.
+    static constexpr const unsigned s_flagCount = 8;
 
 private:
     static constexpr const unsigned s_flagMask = (1u << s_flagCount) - 1;
@@ -390,23 +389,23 @@ public:
     UChar operator[](unsigned i) const { return at(i); }
     WTF_EXPORT_PRIVATE UChar32 characterStartingAt(unsigned);
 
-    int toIntStrict(bool* ok = 0, int base = 10);
-    unsigned toUIntStrict(bool* ok = 0, int base = 10);
-    int64_t toInt64Strict(bool* ok = 0, int base = 10);
-    uint64_t toUInt64Strict(bool* ok = 0, int base = 10);
-    intptr_t toIntPtrStrict(bool* ok = 0, int base = 10);
+    int toIntStrict(bool* ok = nullptr, int base = 10);
+    unsigned toUIntStrict(bool* ok = nullptr, int base = 10);
+    int64_t toInt64Strict(bool* ok = nullptr, int base = 10);
+    uint64_t toUInt64Strict(bool* ok = nullptr, int base = 10);
+    intptr_t toIntPtrStrict(bool* ok = nullptr, int base = 10);
 
-    WTF_EXPORT_PRIVATE int toInt(bool* ok = 0); // ignores trailing garbage
-    unsigned toUInt(bool* ok = 0); // ignores trailing garbage
-    int64_t toInt64(bool* ok = 0); // ignores trailing garbage
-    uint64_t toUInt64(bool* ok = 0); // ignores trailing garbage
-    intptr_t toIntPtr(bool* ok = 0); // ignores trailing garbage
+    WTF_EXPORT_PRIVATE int toInt(bool* ok = nullptr); // ignores trailing garbage
+    unsigned toUInt(bool* ok = nullptr); // ignores trailing garbage
+    int64_t toInt64(bool* ok = nullptr); // ignores trailing garbage
+    uint64_t toUInt64(bool* ok = nullptr); // ignores trailing garbage
+    intptr_t toIntPtr(bool* ok = nullptr); // ignores trailing garbage
 
     // FIXME: Like the strict functions above, these give false for "ok" when there is trailing garbage.
     // Like the non-strict functions above, these return the value when there is trailing garbage.
     // It would be better if these were more consistent with the above functions instead.
-    double toDouble(bool* ok = 0);
-    float toFloat(bool* ok = 0);
+    double toDouble(bool* ok = nullptr);
+    float toFloat(bool* ok = nullptr);
 
     WTF_EXPORT_PRIVATE Ref<StringImpl> convertToASCIILowercase();
     WTF_EXPORT_PRIVATE Ref<StringImpl> convertToASCIIUppercase();
@@ -540,6 +539,27 @@ using StaticStringImpl = StringImpl::StaticStringImpl;
 
 static_assert(sizeof(StringImpl) == sizeof(StaticStringImpl), "");
 
+template<typename CharacterType>
+struct HashTranslatorCharBuffer {
+    const CharacterType* characters;
+    unsigned length;
+    unsigned hash;
+
+    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length)
+        : characters(characters)
+        , length(length)
+        , hash(StringHasher::computeHashAndMaskTop8Bits(characters, length))
+    {
+    }
+
+    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length, unsigned hash)
+        : characters(characters)
+        , length(length)
+        , hash(hash)
+    {
+    }
+};
+
 #if ASSERT_ENABLED
 
 // StringImpls created from StaticStringImpl will ASSERT in the generic ValueCheck<T>::checkConsistency
@@ -593,17 +613,11 @@ bool isSpaceOrNewline(UChar32);
 
 template<typename CharacterType> unsigned lengthOfNullTerminatedString(const CharacterType*);
 
-// StringHash is the default hash for StringImpl* and RefPtr<StringImpl>
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<StringImpl*> {
-    typedef StringHash Hash;
-};
-template<> struct DefaultHash<RefPtr<StringImpl>> {
-    typedef StringHash Hash;
-};
-template<> struct DefaultHash<PackedPtr<StringImpl>> {
-    using Hash = StringHash;
-};
+// StringHashd is the default hash for StringImpl* and RefPtr<StringImpl>
+template<typename> struct DefaultHash;
+template<> struct DefaultHash<StringImpl*>;
+template<> struct DefaultHash<RefPtr<StringImpl>>;
+template<> struct DefaultHash<PackedPtr<StringImpl>>;
 
 #define MAKE_STATIC_STRING_IMPL(characters) ([] { \
         static StaticStringImpl impl(characters); \
@@ -871,11 +885,12 @@ template<typename Malloc>
 inline StringImpl::StringImpl(MallocPtr<LChar, Malloc> characters, unsigned length)
     : StringImplShape(s_refCountIncrement, length, static_cast<const LChar*>(nullptr), s_hashFlag8BitBuffer | StringNormal | BufferOwned)
 {
-    if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
+    if constexpr (std::is_same_v<Malloc, StringImplMalloc>)
         m_data8 = characters.leakPtr();
     else {
-        m_data8 = static_cast<const LChar*>(StringImplMalloc::malloc(length));
-        memcpy((void*)m_data8, characters.get(), length);
+        auto data8 = static_cast<LChar*>(StringImplMalloc::malloc(length * sizeof(LChar)));
+        copyCharacters(data8, characters.get(), length);
+        m_data8 = data8;
     }
 
     ASSERT(m_data8);
@@ -906,11 +921,12 @@ template<typename Malloc>
 inline StringImpl::StringImpl(MallocPtr<UChar, Malloc> characters, unsigned length)
     : StringImplShape(s_refCountIncrement, length, static_cast<const UChar*>(nullptr), StringNormal | BufferOwned)
 {
-    if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
+    if constexpr (std::is_same_v<Malloc, StringImplMalloc>)
         m_data16 = characters.leakPtr();
     else {
-        m_data16 = static_cast<const UChar*>(StringImplMalloc::malloc(length * sizeof(UChar)));
-        memcpy((void*)m_data16, characters.get(), length * sizeof(UChar));
+        auto data16 = static_cast<UChar*>(StringImplMalloc::malloc(length * sizeof(UChar)));
+        copyCharacters(data16, characters.get(), length);
+        m_data16 = data16;
     }
 
     ASSERT(m_data16);
@@ -1010,22 +1026,15 @@ template<typename CharacterType> ALWAYS_INLINE RefPtr<StringImpl> StringImpl::tr
 template<typename CharacterType, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity, typename Malloc>
 inline Ref<StringImpl> StringImpl::adopt(Vector<CharacterType, inlineCapacity, OverflowHandler, minCapacity, Malloc>&& vector)
 {
-    if (size_t size = vector.size()) {
-        ASSERT(vector.data());
-        if (size > MaxLength)
+    if constexpr (std::is_same_v<Malloc, StringImplMalloc>) {
+        auto length = vector.size();
+        if (!length)
+            return *empty();
+        if (length > MaxLength)
             CRASH();
-
-        if constexpr (std::is_same<Malloc, StringImplMalloc>::value)
-            return adoptRef(*new StringImpl(vector.releaseBuffer(), size));
-        else {
-            // We have to copy between malloc zones.
-            auto vectorBuffer = vector.releaseBuffer();
-            auto stringImplBuffer = MallocPtr<CharacterType, StringImplMalloc>::malloc(size);
-            memcpy(stringImplBuffer.get(), vectorBuffer.get(), size);
-            return adoptRef(*new StringImpl(WTFMove(stringImplBuffer), size));
-        }
-    }
-    return *empty();
+        return adoptRef(*new StringImpl(vector.releaseBuffer(), length));
+    } else
+        return create(vector.data(), vector.size());
 }
 
 inline size_t StringImpl::cost() const
@@ -1113,9 +1122,9 @@ inline void StringImpl::deref()
 template<typename SourceCharacterType, typename DestinationCharacterType>
 inline void StringImpl::copyCharacters(DestinationCharacterType* destination, const SourceCharacterType* source, unsigned numCharacters)
 {
-    static_assert(std::is_same<SourceCharacterType, LChar>::value || std::is_same<SourceCharacterType, UChar>::value);
-    static_assert(std::is_same<DestinationCharacterType, LChar>::value || std::is_same<DestinationCharacterType, UChar>::value);
-    if constexpr (std::is_same<SourceCharacterType, DestinationCharacterType>::value) {
+    static_assert(std::is_same_v<SourceCharacterType, LChar> || std::is_same_v<SourceCharacterType, UChar>);
+    static_assert(std::is_same_v<DestinationCharacterType, LChar> || std::is_same_v<DestinationCharacterType, UChar>);
+    if constexpr (std::is_same_v<SourceCharacterType, DestinationCharacterType>) {
         if (numCharacters == 1) {
             *destination = *source;
             return;

@@ -26,6 +26,10 @@
 #pragma once
 
 namespace WTF {
+
+template <class T>
+class Optional;
+
 namespace Persistence {
 
 class Decoder;
@@ -37,9 +41,9 @@ template<typename T> struct Coder {
         t.encode(encoder);
     }
 
-    static bool decode(Decoder& decoder, T& t)
+    static Optional<T> decode(Decoder& decoder)
     {
-        return T::decode(decoder, t);
+        return T::decode(decoder);
     }
 };
 

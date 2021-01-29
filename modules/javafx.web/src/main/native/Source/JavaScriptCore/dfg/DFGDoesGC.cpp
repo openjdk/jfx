@@ -31,7 +31,6 @@
 #include "DFGClobberize.h"
 #include "DFGGraph.h"
 #include "DFGNode.h"
-#include "Operations.h"
 
 namespace JSC { namespace DFG {
 
@@ -115,7 +114,8 @@ bool doesGC(Graph& graph, Node* node)
     case CheckStructureImmediate:
     case GetExecutable:
     case GetButterfly:
-    case CheckSubClass:
+    case CheckJSCast:
+    case CheckNotJSCast:
     case CheckArray:
     case CheckArrayOrEmpty:
     case CheckNeutered:
@@ -133,7 +133,7 @@ bool doesGC(Graph& graph, Node* node)
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
     case PutGlobalVariable:
-    case CheckCell:
+    case CheckIsConstant:
     case CheckNotEmpty:
     case AssertNotEmpty:
     case CheckIdent:
@@ -143,14 +143,16 @@ bool doesGC(Graph& graph, Node* node)
     case ProfileControlFlow:
     case OverridesHasInstance:
     case IsEmpty:
-    case IsUndefined:
+    case TypeOfIsUndefined:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
+    case IsBigInt:
     case NumberIsInteger:
     case IsObject:
     case IsObjectOrNull:
     case IsFunction:
+    case IsConstructor:
     case IsCellWithType:
     case IsTypedArrayView:
     case TypeOf:
@@ -186,6 +188,7 @@ bool doesGC(Graph& graph, Node* node)
     case CheckVarargs:
     case CheckTypeInfoFlags:
     case MultiGetByOffset:
+    case MultiDeleteByOffset:
     case ValueRep:
     case DoubleRep:
     case Int52Rep:
@@ -203,14 +206,14 @@ bool doesGC(Graph& graph, Node* node)
     case GetEnumerableLength:
     case FiatInt52:
     case BooleanToNumber:
-    case CheckBadCell:
+    case CheckBadValue:
     case BottomValue:
     case PhantomNewObject:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncFunction:
     case PhantomNewAsyncGeneratorFunction:
-    case PhantomNewArrayIterator:
+    case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
     case PhantomDirectArguments:
     case PhantomCreateRest:
@@ -245,6 +248,7 @@ bool doesGC(Graph& graph, Node* node)
     case FilterGetByStatus:
     case FilterPutByIdStatus:
     case FilterInByIdStatus:
+    case FilterDeleteByStatus:
     case DateGetInt32OrNaN:
     case DateGetTime:
     case DataViewGetInt:
@@ -294,6 +298,8 @@ bool doesGC(Graph& graph, Node* node)
     case HasIndexedProperty:
     case HasOwnProperty:
     case HasStructureProperty:
+    case HasOwnStructureProperty:
+    case InStructureProperty:
     case InById:
     case InByVal:
     case InstanceOf:
@@ -351,12 +357,11 @@ bool doesGC(Graph& graph, Node* node)
     case Arrayify:
     case ArrayifyToStructure:
     case NewObject:
-    case NewPromise:
     case NewGenerator:
     case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSpread:
-    case NewArrayIterator:
+    case NewInternalFieldObject:
     case Spread:
     case NewArrayWithSize:
     case NewArrayBuffer:
@@ -412,6 +417,15 @@ bool doesGC(Graph& graph, Node* node)
 #endif // not ASSERT_ENABLED
         return true;
 
+    case CallNumberConstructor:
+        switch (node->child1().useKind()) {
+        case BigInt32Use:
+            return false;
+        default:
+            break;
+        }
+        return true;
+
     case CallStringConstructor:
     case ToString:
         switch (node->child1().useKind()) {
@@ -433,11 +447,14 @@ bool doesGC(Graph& graph, Node* node)
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
+        // FIXME: Add AnyBigIntUse and HeapBigIntUse specific optimizations in DFG / FTL code generation and ensure it does not perform GC.
+        // https://bugs.webkit.org/show_bug.cgi?id=210923
         if (node->isBinaryUseKind(Int32Use)
 #if USE(JSVALUE64)
             || node->isBinaryUseKind(Int52RepUse)
 #endif
             || node->isBinaryUseKind(DoubleRepUse)
+            || node->isBinaryUseKind(BigInt32Use)
             || node->isBinaryUseKind(StringIdentUse)
             )
             return false;

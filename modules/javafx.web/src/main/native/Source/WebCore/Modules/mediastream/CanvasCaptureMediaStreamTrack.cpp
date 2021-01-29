@@ -61,7 +61,7 @@ Ref<CanvasCaptureMediaStreamTrack::Source> CanvasCaptureMediaStreamTrack::Source
     auto source = adoptRef(*new Source(canvas, WTFMove(frameRequestRate)));
     source->start();
 
-    callOnMainThread([source = source.copyRef()] {
+    callOnMainThread([source] {
         if (!source->m_canvas)
             return;
         source->captureCanvas();
@@ -161,7 +161,7 @@ void CanvasCaptureMediaStreamTrack::Source::canvasChanged(CanvasBase& canvas, co
         auto& context = downcast<WebGLRenderingContextBase>(*canvas.renderingContext());
         if (!context.isPreservingDrawingBuffer()) {
             canvas.scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "Turning drawing buffer preservation for the WebGL canvas being captured"_s);
-            context.setPreserveDrawingBuffer(true);
+            context.enablePreserveDrawingBuffer();
         }
     }
 #endif

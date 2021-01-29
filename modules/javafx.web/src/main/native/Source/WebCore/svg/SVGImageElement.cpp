@@ -69,9 +69,7 @@ bool SVGImageElement::hasSingleSecurityOrigin() const
 void SVGImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::preserveAspectRatioAttr) {
-        SVGPreserveAspectRatioValue preserveAspectRatio;
-        preserveAspectRatio.parse(value);
-        m_preserveAspectRatio->setBaseValInternal(preserveAspectRatio);
+        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { value });
         return;
     }
 
@@ -171,7 +169,7 @@ void SVGImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 
 void SVGImageElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
-    m_imageLoader.elementDidMoveToNewDocument();
+    m_imageLoader.elementDidMoveToNewDocument(oldDocument);
     SVGGraphicsElement::didMoveToNewDocument(oldDocument, newDocument);
 }
 

@@ -4,7 +4,6 @@ $(PROJECT_DIR)/KeywordLookupGenerator.py
 $(PROJECT_DIR)/Scripts/UpdateContents.py
 $(PROJECT_DIR)/Scripts/generate-combined-inspector-json.py
 $(PROJECT_DIR)/Scripts/generate-js-builtins.py
-$(PROJECT_DIR)/Scripts/generateIntlCanonicalizeLanguage.py
 $(PROJECT_DIR)/Scripts/jsmin.py
 $(PROJECT_DIR)/Scripts/lazywriter.py
 $(PROJECT_DIR)/Scripts/wkbuiltins/__init__.py
@@ -81,6 +80,7 @@ $(PROJECT_DIR)/inspector/InjectedScriptSource.js
 $(PROJECT_DIR)/inspector/protocol/Animation.json
 $(PROJECT_DIR)/inspector/protocol/ApplicationCache.json
 $(PROJECT_DIR)/inspector/protocol/Audit.json
+$(PROJECT_DIR)/inspector/protocol/Browser.json
 $(PROJECT_DIR)/inspector/protocol/CPUProfiler.json
 $(PROJECT_DIR)/inspector/protocol/CSS.json
 $(PROJECT_DIR)/inspector/protocol/Canvas.json
@@ -119,6 +119,7 @@ $(PROJECT_DIR)/inspector/scripts/codegen/generate_js_backend_commands.py
 $(PROJECT_DIR)/inspector/scripts/codegen/generator.py
 $(PROJECT_DIR)/inspector/scripts/codegen/generator_templates.py
 $(PROJECT_DIR)/inspector/scripts/codegen/models.py
+$(PROJECT_DIR)/inspector/scripts/codegen/preprocess.pl
 $(PROJECT_DIR)/inspector/scripts/generate-inspector-protocol-bindings.py
 $(PROJECT_DIR)/parser/Keywords.table
 $(PROJECT_DIR)/runtime/ArrayConstructor.cpp
@@ -136,11 +137,16 @@ $(PROJECT_DIR)/runtime/IntlCollatorConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlCollatorPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlDateTimeFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlDateTimeFormatPrototype.cpp
+$(PROJECT_DIR)/runtime/IntlDisplayNamesConstructor.cpp
+$(PROJECT_DIR)/runtime/IntlDisplayNamesPrototype.cpp
+$(PROJECT_DIR)/runtime/IntlLocalePrototype.cpp
 $(PROJECT_DIR)/runtime/IntlNumberFormatConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlNumberFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/IntlObject.cpp
 $(PROJECT_DIR)/runtime/IntlPluralRulesConstructor.cpp
 $(PROJECT_DIR)/runtime/IntlPluralRulesPrototype.cpp
+$(PROJECT_DIR)/runtime/IntlRelativeTimeFormatConstructor.cpp
+$(PROJECT_DIR)/runtime/IntlRelativeTimeFormatPrototype.cpp
 $(PROJECT_DIR)/runtime/JSDataViewPrototype.cpp
 $(PROJECT_DIR)/runtime/JSGlobalObject.cpp
 $(PROJECT_DIR)/runtime/JSInternalPromiseConstructor.cpp

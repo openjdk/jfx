@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <cstdlib>
+#include <wtf/EnumTraits.h>
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
@@ -42,7 +43,7 @@ namespace WebCore {
 
 class MediaConstraint {
 public:
-    enum class DataType { None, Integer, Double, Boolean, String };
+    enum class DataType : uint8_t { None, Integer, Double, Boolean, String };
 
     bool isInt() const { return m_dataType == DataType::Integer; }
     bool isDouble() const { return m_dataType == DataType::Double; }
@@ -55,24 +56,26 @@ public:
 
     template <class Encoder> void encode(Encoder& encoder) const
     {
-        encoder.encodeEnum(m_constraintType);
+        encoder << m_constraintType;
         encoder << m_name;
-        encoder.encodeEnum(m_dataType);
+        encoder << m_dataType;
     }
 
-    template <class Decoder> static bool decode(Decoder& decoder, MediaConstraint& constraint)
+    template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, MediaConstraint& constraint)
     {
-        if (!decoder.decodeEnum(constraint.m_constraintType))
+        if (!decoder.decode(constraint.m_constraintType))
             return false;
 
         if (!decoder.decode(constraint.m_name))
             return false;
 
-        if (!decoder.decodeEnum(constraint.m_dataType))
+        if (!decoder.decode(constraint.m_dataType))
             return false;
 
         return true;
     }
+
+    void log() const;
 
 protected:
     MediaConstraint(const String& name, MediaConstraintType constraintType, DataType dataType)
@@ -343,7 +346,7 @@ public:
         encoder << m_ideal;
     }
 
-    template <class Decoder> static bool decode(Decoder& decoder, NumericConstraint& constraint)
+    template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, NumericConstraint& constraint)
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
@@ -414,6 +417,8 @@ public:
         ASSERT(other.isInt());
         NumericConstraint::innerMerge(downcast<const IntConstraint>(other));
     }
+
+    void logAsInt() const;
 };
 
 class DoubleConstraint final : public NumericConstraint<double> {
@@ -430,6 +435,8 @@ public:
         ASSERT(other.isDouble());
         NumericConstraint::innerMerge(downcast<DoubleConstraint>(other));
     }
+
+    void logAsDouble() const;
 };
 
 class BooleanConstraint final : public MediaConstraint {
@@ -513,7 +520,7 @@ public:
         encoder << m_ideal;
     }
 
-    template <class Decoder> static bool decode(Decoder& decoder, BooleanConstraint& constraint)
+    template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, BooleanConstraint& constraint)
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
@@ -525,6 +532,8 @@ public:
 
         return true;
     }
+
+    void logAsBoolean() const;
 
 private:
     Optional<bool> m_exact;
@@ -597,7 +606,7 @@ public:
         encoder << m_ideal;
     }
 
-    template <class Decoder> static bool decode(Decoder& decoder, StringConstraint& constraint)
+    template <class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder& decoder, StringConstraint& constraint)
     {
         if (!MediaConstraint::decode(decoder, constraint))
             return false;
@@ -903,5 +912,20 @@ SPECIALIZE_TYPE_TRAITS_MEDIACONSTRAINT(IntConstraint, isInt())
 SPECIALIZE_TYPE_TRAITS_MEDIACONSTRAINT(DoubleConstraint, isDouble())
 SPECIALIZE_TYPE_TRAITS_MEDIACONSTRAINT(StringConstraint, isString())
 SPECIALIZE_TYPE_TRAITS_MEDIACONSTRAINT(BooleanConstraint, isBoolean())
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MediaConstraint::DataType> {
+    using values = EnumValues<
+        WebCore::MediaConstraint::DataType,
+        WebCore::MediaConstraint::DataType::None,
+        WebCore::MediaConstraint::DataType::Integer,
+        WebCore::MediaConstraint::DataType::Double,
+        WebCore::MediaConstraint::DataType::Boolean,
+        WebCore::MediaConstraint::DataType::String
+    >;
+};
+
+} // namespace WTF
 
 #endif // ENABLE(MEDIA_STREAM)

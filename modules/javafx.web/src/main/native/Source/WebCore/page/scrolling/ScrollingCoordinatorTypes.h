@@ -26,10 +26,20 @@
 #pragma once
 
 #include "ScrollTypes.h"
+#include <wtf/EnumTraits.h>
 
 namespace WebCore {
 
-typedef unsigned SynchronousScrollingReasons;
+enum class SynchronousScrollingReason {
+    // Flags for frame scrolling.
+    ForcedOnMainThread                                          = 1 << 0,
+    HasViewportConstrainedObjectsWithoutSupportingFixedLayers   = 1 << 1,
+    HasNonLayerViewportConstrainedObjects                       = 1 << 2,
+    IsImageDocument                                             = 1 << 3,
+    // Flags for frame and overflow scrolling.
+    HasSlowRepaintObjects                                       = 1 << 4,
+    DescendantScrollersHaveSynchronousScrolling                 = 1 << 5,
+};
 
 enum class ScrollingNodeType : uint8_t {
     MainFrame,
@@ -86,16 +96,28 @@ struct ScrollableAreaParameters {
     }
 };
 
-enum class ScrollingEventResult {
-    DidNotHandleEvent,
-    DidHandleEvent,
-    SendToMainThread
-};
-
 enum class ViewportRectStability {
     Stable,
     Unstable,
     ChangingObscuredInsetsInteractively // This implies Unstable.
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ScrollingNodeType> {
+    using values = EnumValues<
+        WebCore::ScrollingNodeType,
+        WebCore::ScrollingNodeType::MainFrame,
+        WebCore::ScrollingNodeType::Subframe,
+        WebCore::ScrollingNodeType::FrameHosting,
+        WebCore::ScrollingNodeType::Overflow,
+        WebCore::ScrollingNodeType::OverflowProxy,
+        WebCore::ScrollingNodeType::Fixed,
+        WebCore::ScrollingNodeType::Sticky,
+        WebCore::ScrollingNodeType::Positioned
+    >;
+};
+
+} // namespace WTF

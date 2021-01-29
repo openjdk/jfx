@@ -31,21 +31,41 @@
 #include "CDMRequirement.h"
 #include "CDMSessionType.h"
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
+
+#if !RELEASE_LOG_DISABLED
+namespace WTF {
+class Logger;
+}
+#endif
 
 namespace WebCore {
 
 struct CDMKeySystemConfiguration;
+struct CDMMediaCapability;
 struct CDMRestrictions;
 
-class CDMPrivate {
+class CDMPrivate : public CanMakeWeakPtr<CDMPrivate> {
 public:
-    virtual ~CDMPrivate() = default;
+    WEBCORE_EXPORT virtual ~CDMPrivate();
 
-    virtual bool supportsInitDataType(const AtomString&) const = 0;
+#if !RELEASE_LOG_DISABLED
+    virtual void setLogger(WTF::Logger&, const void*) { };
+#endif
+
+    enum class LocalStorageAccess : bool {
+        NotAllowed,
+        Allowed,
+    };
+
+    using SupportedConfigurationCallback = WTF::Function<void(Optional<CDMKeySystemConfiguration>)>;
+    WEBCORE_EXPORT virtual void getSupportedConfiguration(CDMKeySystemConfiguration&& candidateConfiguration, LocalStorageAccess, SupportedConfigurationCallback&&);
+
+    virtual Vector<AtomString> supportedInitDataTypes() const = 0;
     virtual bool supportsConfiguration(const CDMKeySystemConfiguration&) const = 0;
     virtual bool supportsConfigurationWithRestrictions(const CDMKeySystemConfiguration&, const CDMRestrictions&) const = 0;
-    virtual bool supportsSessionTypeWithConfiguration(CDMSessionType&, const CDMKeySystemConfiguration&) const = 0;
-    virtual bool supportsRobustness(const String&) const = 0;
+    virtual bool supportsSessionTypeWithConfiguration(const CDMSessionType&, const CDMKeySystemConfiguration&) const = 0;
+    virtual Vector<AtomString> supportedRobustnesses() const = 0;
     virtual CDMRequirement distinctiveIdentifiersRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const = 0;
     virtual CDMRequirement persistentStateRequirement(const CDMKeySystemConfiguration&, const CDMRestrictions&) const = 0;
     virtual bool distinctiveIdentifiersAreUniquePerOriginAndClearable(const CDMKeySystemConfiguration&) const = 0;
@@ -56,6 +76,34 @@ public:
     virtual bool supportsInitData(const AtomString&, const SharedBuffer&) const = 0;
     virtual RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const = 0;
     virtual Optional<String> sanitizeSessionId(const String&) const = 0;
+
+protected:
+    WEBCORE_EXPORT CDMPrivate();
+    static bool isPersistentType(CDMSessionType);
+
+    enum class ConfigurationStatus {
+        Supported,
+        NotSupported,
+        ConsentDenied,
+    };
+
+    enum class ConsentStatus {
+        ConsentDenied,
+        InformUser,
+        Allowed,
+    };
+
+    enum class AudioVideoType {
+        Audio,
+        Video,
+    };
+
+    void doSupportedConfigurationStep(CDMKeySystemConfiguration&& candidateConfiguration, CDMRestrictions&&, LocalStorageAccess, SupportedConfigurationCallback&&);
+    Optional<CDMKeySystemConfiguration> getSupportedConfiguration(const CDMKeySystemConfiguration& candidateConfiguration, CDMRestrictions&, LocalStorageAccess);
+    Optional<Vector<CDMMediaCapability>> getSupportedCapabilitiesForAudioVideoType(AudioVideoType, const Vector<CDMMediaCapability>& requestedCapabilities, const CDMKeySystemConfiguration& partialConfiguration, CDMRestrictions&);
+
+    using ConsentStatusCallback = WTF::Function<void(ConsentStatus, CDMKeySystemConfiguration&&, CDMRestrictions&&)>;
+    void getConsentStatus(CDMKeySystemConfiguration&& accumulatedConfiguration, CDMRestrictions&&, LocalStorageAccess, ConsentStatusCallback&&);
 };
 
 }

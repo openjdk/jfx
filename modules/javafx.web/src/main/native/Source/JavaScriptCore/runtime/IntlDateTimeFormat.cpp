@@ -27,12 +27,7 @@
 #include "config.h"
 #include "IntlDateTimeFormat.h"
 
-#if ENABLE(INTL)
-
-#include "DateInstance.h"
-#include "Error.h"
-#include "IntlDateTimeFormatConstructor.h"
-#include "IntlObject.h"
+#include "IntlObjectInlines.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
 #include "ObjectConstructor.h"
@@ -40,10 +35,7 @@
 #include <unicode/udatpg.h>
 #include <unicode/uenum.h>
 #include <wtf/text/StringBuilder.h>
-
-#if JSC_ICU_HAS_UFIELDPOSITER
-#include <unicode/ufieldpositer.h>
-#endif
+#include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace JSC {
 
@@ -51,27 +43,14 @@ static const double minECMAScriptTime = -8.64E15;
 
 const ClassInfo IntlDateTimeFormat::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDateTimeFormat) };
 
-namespace IntlDTFInternal {
-static const char* const relevantExtensionKeys[3] = { "ca", "nu", "hc" };
+namespace IntlDateTimeFormatInternal {
 }
-
-static const size_t indexOfExtensionKeyCa = 0;
-static const size_t indexOfExtensionKeyNu = 1;
-static const size_t indexOfExtensionKeyHc = 2;
 
 void IntlDateTimeFormat::UDateFormatDeleter::operator()(UDateFormat* dateFormat) const
 {
     if (dateFormat)
         udat_close(dateFormat);
 }
-
-#if JSC_ICU_HAS_UFIELDPOSITER
-void IntlDateTimeFormat::UFieldPositionIteratorDeleter::operator()(UFieldPositionIterator* iterator) const
-{
-    if (iterator)
-        ufieldpositer_close(iterator);
-}
-#endif
 
 IntlDateTimeFormat* IntlDateTimeFormat::create(VM& vm, Structure* structure)
 {
@@ -111,33 +90,29 @@ void IntlDateTimeFormat::setBoundFormat(VM& vm, JSBoundFunction* format)
     m_boundFormat.set(vm, this, format);
 }
 
+static ALWAYS_INLINE bool isUTCEquivalent(StringView timeZone)
+{
+    return timeZone == "Etc/UTC" || timeZone == "Etc/GMT";
+}
+
+// https://tc39.es/ecma402/#sec-defaulttimezone
 static String defaultTimeZone()
 {
-    // 6.4.3 DefaultTimeZone () (ECMA-402 2.0)
-    // The DefaultTimeZone abstract operation returns a String value representing the valid (6.4.1) and canonicalized (6.4.2) time zone name for the host environment’s current time zone.
+    String canonical;
 
-    UErrorCode status = U_ZERO_ERROR;
-    Vector<UChar, 32> buffer(32);
-    auto bufferLength = ucal_getDefaultTimeZone(buffer.data(), buffer.size(), &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        buffer.grow(bufferLength);
-        ucal_getDefaultTimeZone(buffer.data(), bufferLength, &status);
-    }
+    Vector<UChar, 32> buffer;
+    auto status = callBufferProducingFunction(ucal_getDefaultTimeZone, buffer);
     if (U_SUCCESS(status)) {
-        status = U_ZERO_ERROR;
-        Vector<UChar, 32> canonicalBuffer(32);
-        auto canonicalLength = ucal_getCanonicalTimeZoneID(buffer.data(), bufferLength, canonicalBuffer.data(), canonicalBuffer.size(), nullptr, &status);
-        if (status == U_BUFFER_OVERFLOW_ERROR) {
-            status = U_ZERO_ERROR;
-            canonicalBuffer.grow(canonicalLength);
-            ucal_getCanonicalTimeZoneID(buffer.data(), bufferLength, canonicalBuffer.data(), canonicalLength, nullptr, &status);
-        }
+        Vector<UChar, 32> canonicalBuffer;
+        status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, buffer.data(), buffer.size(), canonicalBuffer, nullptr);
         if (U_SUCCESS(status))
-            return String(canonicalBuffer.data(), canonicalLength);
+            canonical = String(canonicalBuffer);
     }
 
-    return "UTC"_s;
+    if (canonical.isNull() || isUTCEquivalent(canonical))
+        return "UTC"_s;
+
+    return canonical;
 }
 
 static String canonicalizeTimeZoneName(const String& timeZoneName)
@@ -152,7 +127,7 @@ static String canonicalizeTimeZoneName(const String& timeZoneName)
     do {
         status = U_ZERO_ERROR;
         int32_t ianaTimeZoneLength;
-        // Time zone names are respresented as UChar[] in all related ICU apis.
+        // Time zone names are represented as UChar[] in all related ICU APIs.
         const UChar* ianaTimeZone = uenum_unext(timeZones, &ianaTimeZoneLength, &status);
         ASSERT(U_SUCCESS(status));
 
@@ -169,33 +144,26 @@ static String canonicalizeTimeZoneName(const String& timeZoneName)
         // 1. Let ianaTimeZone be the Zone or Link name of the IANA Time Zone Database such that timeZone, converted to upper case as described in 6.1, is equal to ianaTimeZone, converted to upper case as described in 6.1.
         // 2. If ianaTimeZone is a Link name, then let ianaTimeZone be the corresponding Zone name as specified in the “backward” file of the IANA Time Zone Database.
 
-        Vector<UChar, 32> buffer(ianaTimeZoneLength);
-        status = U_ZERO_ERROR;
-        auto canonicalLength = ucal_getCanonicalTimeZoneID(ianaTimeZone, ianaTimeZoneLength, buffer.data(), ianaTimeZoneLength, nullptr, &status);
-        if (status == U_BUFFER_OVERFLOW_ERROR) {
-            buffer.grow(canonicalLength);
-            status = U_ZERO_ERROR;
-            ucal_getCanonicalTimeZoneID(ianaTimeZone, ianaTimeZoneLength, buffer.data(), canonicalLength, nullptr, &status);
-        }
-        ASSERT(U_SUCCESS(status));
-        canonical = String(buffer.data(), canonicalLength);
+        Vector<UChar, 32> buffer;
+        auto status = callBufferProducingFunction(ucal_getCanonicalTimeZoneID, ianaTimeZone, ianaTimeZoneLength, buffer, nullptr);
+        ASSERT_UNUSED(status, U_SUCCESS(status));
+        canonical = String(buffer);
     } while (canonical.isNull());
     uenum_close(timeZones);
 
     // 3. If ianaTimeZone is "Etc/UTC" or "Etc/GMT", then return "UTC".
-    if (canonical == "Etc/UTC" || canonical == "Etc/GMT")
-        canonical = "UTC"_s;
+    if (isUTCEquivalent(canonical))
+        return "UTC"_s;
 
     // 4. Return ianaTimeZone.
     return canonical;
 }
 
-namespace IntlDTFInternal {
-static Vector<String> localeData(const String& locale, size_t keyIndex)
+Vector<String> IntlDateTimeFormat::localeData(const String& locale, RelevantExtensionKey key)
 {
     Vector<String> keyLocaleData;
-    switch (keyIndex) {
-    case indexOfExtensionKeyCa: {
+    switch (key) {
+    case RelevantExtensionKey::Ca: {
         UErrorCode status = U_ZERO_ERROR;
         UEnumeration* calendars = ucal_getKeywordValuesForLocale("calendar", locale.utf8().data(), false, &status);
         ASSERT(U_SUCCESS(status));
@@ -216,16 +184,16 @@ static Vector<String> localeData(const String& locale, size_t keyIndex)
         uenum_close(calendars);
         break;
     }
-    case indexOfExtensionKeyNu:
-        keyLocaleData = numberingSystemsForLocale(locale);
-        break;
-    case indexOfExtensionKeyHc:
+    case RelevantExtensionKey::Hc:
         // Null default so we know to use 'j' in pattern.
         keyLocaleData.append(String());
         keyLocaleData.append("h11"_s);
         keyLocaleData.append("h12"_s);
         keyLocaleData.append("h23"_s);
         keyLocaleData.append("h24"_s);
+        break;
+    case RelevantExtensionKey::Nu:
+        keyLocaleData = numberingSystemsForLocale(locale);
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -328,7 +296,6 @@ static JSObject* toDateTimeOptionsAnyDate(JSGlobalObject* globalObject, JSValue 
 
     // 9. Return options.
     return options;
-}
 }
 
 void IntlDateTimeFormat::setFormatsFromPattern(const StringView& pattern)
@@ -436,50 +403,67 @@ void IntlDateTimeFormat::setFormatsFromPattern(const StringView& pattern)
     }
 }
 
+// https://tc39.github.io/ecma402/#sec-initializedatetimeformat
 void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, JSValue locales, JSValue originalOptions)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // 12.1.1 InitializeDateTimeFormat (dateTimeFormat, locales, options) (ECMA-402)
-    // https://tc39.github.io/ecma402/#sec-initializedatetimeformat
-
     Vector<String> requestedLocales = canonicalizeLocaleList(globalObject, locales);
     RETURN_IF_EXCEPTION(scope, void());
 
-    JSObject* options = IntlDTFInternal::toDateTimeOptionsAnyDate(globalObject, originalOptions);
+    JSObject* options = toDateTimeOptionsAnyDate(globalObject, originalOptions);
     RETURN_IF_EXCEPTION(scope, void());
 
-    HashMap<String, String> opt;
+    ResolveLocaleOptions localeOptions;
 
-    String localeMatcher = intlStringOption(globalObject, options, vm.propertyNames->localeMatcher, { "lookup", "best fit" }, "localeMatcher must be either \"lookup\" or \"best fit\"", "best fit");
+    LocaleMatcher localeMatcher = intlOption<LocaleMatcher>(globalObject, options, vm.propertyNames->localeMatcher, { { "lookup"_s, LocaleMatcher::Lookup }, { "best fit"_s, LocaleMatcher::BestFit } }, "localeMatcher must be either \"lookup\" or \"best fit\""_s, LocaleMatcher::BestFit);
     RETURN_IF_EXCEPTION(scope, void());
-    opt.add(vm.propertyNames->localeMatcher.string(), localeMatcher);
 
-    bool isHour12Undefined;
-    bool hour12 = intlBooleanOption(globalObject, options, vm.propertyNames->hour12, isHour12Undefined);
+    String calendar = intlStringOption(globalObject, options, vm.propertyNames->calendar, { }, nullptr, nullptr);
     RETURN_IF_EXCEPTION(scope, void());
+    if (!calendar.isNull()) {
+        if (!isUnicodeLocaleIdentifierType(calendar)) {
+            throwRangeError(globalObject, scope, "calendar is not a well-formed calendar value"_s);
+            return;
+        }
+        localeOptions[static_cast<unsigned>(RelevantExtensionKey::Ca)] = calendar;
+    }
+
+    String numberingSystem = intlStringOption(globalObject, options, vm.propertyNames->numberingSystem, { }, nullptr, nullptr);
+    RETURN_IF_EXCEPTION(scope, void());
+    if (!numberingSystem.isNull()) {
+        if (!isUnicodeLocaleIdentifierType(numberingSystem)) {
+            throwRangeError(globalObject, scope, "numberingSystem is not a well-formed numbering system value"_s);
+            return;
+        }
+        localeOptions[static_cast<unsigned>(RelevantExtensionKey::Nu)] = numberingSystem;
+    }
+
+    TriState hour12 = intlBooleanOption(globalObject, options, vm.propertyNames->hour12);
+    RETURN_IF_EXCEPTION(scope, void());
+    bool isHour12Undefined = (hour12 == TriState::Indeterminate);
 
     String hourCycle = intlStringOption(globalObject, options, vm.propertyNames->hourCycle, { "h11", "h12", "h23", "h24" }, "hourCycle must be \"h11\", \"h12\", \"h23\", or \"h24\"", nullptr);
     RETURN_IF_EXCEPTION(scope, void());
     if (isHour12Undefined) {
         // Set hour12 here to simplify hour logic later.
-        hour12 = (hourCycle == "h11" || hourCycle == "h12");
+        hour12 = triState(hourCycle == "h11" || hourCycle == "h12");
         if (!hourCycle.isNull())
-            opt.add("hc"_s, hourCycle);
+            localeOptions[static_cast<unsigned>(RelevantExtensionKey::Hc)] = hourCycle;
     } else
-        opt.add("hc"_s, String());
+        localeOptions[static_cast<unsigned>(RelevantExtensionKey::Hc)] = String();
 
     const HashSet<String>& availableLocales = intlDateTimeFormatAvailableLocales();
-    HashMap<String, String> resolved = resolveLocale(globalObject, availableLocales, requestedLocales, opt, IntlDTFInternal::relevantExtensionKeys, WTF_ARRAY_LENGTH(IntlDTFInternal::relevantExtensionKeys), IntlDTFInternal::localeData);
+    auto resolved = resolveLocale(globalObject, availableLocales, requestedLocales, localeMatcher, localeOptions, { RelevantExtensionKey::Ca, RelevantExtensionKey::Hc, RelevantExtensionKey::Nu }, localeData);
 
-    m_locale = resolved.get(vm.propertyNames->locale.string());
+    m_locale = resolved.locale;
     if (m_locale.isEmpty()) {
         throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat due to invalid locale"_s);
         return;
     }
 
-    m_calendar = resolved.get("ca"_s);
+    m_calendar = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Ca)];
     if (m_calendar == "gregorian")
         m_calendar = "gregory"_s;
     else if (m_calendar == "islamicc")
@@ -487,9 +471,9 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     else if (m_calendar == "ethioaa")
         m_calendar = "ethiopic-amete-alem"_s;
 
-    m_hourCycle = resolved.get("hc"_s);
-    m_numberingSystem = resolved.get("nu"_s);
-    String dataLocale = resolved.get("dataLocale"_s);
+    m_hourCycle = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Hc)];
+    m_numberingSystem = resolved.extensions[static_cast<unsigned>(RelevantExtensionKey::Nu)];
+    CString dataLocaleWithExtensions = makeString(resolved.dataLocale, "-u-ca-", m_calendar, "-nu-", m_numberingSystem).utf8();
 
     JSValue tzValue = options->get(globalObject, vm.propertyNames->timeZone);
     RETURN_IF_EXCEPTION(scope, void());
@@ -507,110 +491,148 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     m_timeZone = tz;
 
     StringBuilder skeletonBuilder;
-    auto narrowShortLong = { "narrow", "short", "long" };
-    auto twoDigitNumeric = { "2-digit", "numeric" };
-    auto twoDigitNumericNarrowShortLong = { "2-digit", "numeric", "narrow", "short", "long" };
-    auto shortLong = { "short", "long" };
 
-    String weekday = intlStringOption(globalObject, options, vm.propertyNames->weekday, narrowShortLong, "weekday must be \"narrow\", \"short\", or \"long\"", nullptr);
+    Weekday weekday = intlOption<Weekday>(globalObject, options, vm.propertyNames->weekday, { { "narrow"_s, Weekday::Narrow }, { "short"_s, Weekday::Short }, { "long"_s, Weekday::Long } }, "weekday must be \"narrow\", \"short\", or \"long\""_s, Weekday::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!weekday.isNull()) {
-        if (weekday == "narrow")
-            skeletonBuilder.appendLiteral("EEEEE");
-        else if (weekday == "short")
-            skeletonBuilder.appendLiteral("EEE");
-        else if (weekday == "long")
-            skeletonBuilder.appendLiteral("EEEE");
+    switch (weekday) {
+    case Weekday::Narrow:
+        skeletonBuilder.appendLiteral("EEEEE");
+        break;
+    case Weekday::Short:
+        skeletonBuilder.appendLiteral("EEE");
+        break;
+    case Weekday::Long:
+        skeletonBuilder.appendLiteral("EEEE");
+        break;
+    case Weekday::None:
+        break;
     }
 
-    String era = intlStringOption(globalObject, options, vm.propertyNames->era, narrowShortLong, "era must be \"narrow\", \"short\", or \"long\"", nullptr);
+    Era era = intlOption<Era>(globalObject, options, vm.propertyNames->era, { { "narrow"_s, Era::Narrow }, { "short"_s, Era::Short }, { "long"_s, Era::Long } }, "era must be \"narrow\", \"short\", or \"long\""_s, Era::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!era.isNull()) {
-        if (era == "narrow")
-            skeletonBuilder.appendLiteral("GGGGG");
-        else if (era == "short")
-            skeletonBuilder.appendLiteral("GGG");
-        else if (era == "long")
-            skeletonBuilder.appendLiteral("GGGG");
+    switch (era) {
+    case Era::Narrow:
+        skeletonBuilder.appendLiteral("GGGGG");
+        break;
+    case Era::Short:
+        skeletonBuilder.appendLiteral("GGG");
+        break;
+    case Era::Long:
+        skeletonBuilder.appendLiteral("GGGG");
+        break;
+    case Era::None:
+        break;
     }
 
-    String year = intlStringOption(globalObject, options, vm.propertyNames->year, twoDigitNumeric, "year must be \"2-digit\" or \"numeric\"", nullptr);
+    Year year = intlOption<Year>(globalObject, options, vm.propertyNames->year, { { "2-digit"_s, Year::TwoDigit }, { "numeric"_s, Year::Numeric } }, "year must be \"2-digit\" or \"numeric\""_s, Year::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!year.isNull()) {
-        if (year == "2-digit")
-            skeletonBuilder.appendLiteral("yy");
-        else if (year == "numeric")
-            skeletonBuilder.append('y');
+    switch (year) {
+    case Year::TwoDigit:
+        skeletonBuilder.appendLiteral("yy");
+        break;
+    case Year::Numeric:
+        skeletonBuilder.append('y');
+        break;
+    case Year::None:
+        break;
     }
 
-    String month = intlStringOption(globalObject, options, vm.propertyNames->month, twoDigitNumericNarrowShortLong, "month must be \"2-digit\", \"numeric\", \"narrow\", \"short\", or \"long\"", nullptr);
+    Month month = intlOption<Month>(globalObject, options, vm.propertyNames->month, { { "2-digit"_s, Month::TwoDigit }, { "numeric"_s, Month::Numeric }, { "narrow"_s, Month::Narrow }, { "short"_s, Month::Short }, { "long"_s, Month::Long } }, "month must be \"2-digit\", \"numeric\", \"narrow\", \"short\", or \"long\""_s, Month::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!month.isNull()) {
-        if (month == "2-digit")
-            skeletonBuilder.appendLiteral("MM");
-        else if (month == "numeric")
-            skeletonBuilder.append('M');
-        else if (month == "narrow")
-            skeletonBuilder.appendLiteral("MMMMM");
-        else if (month == "short")
-            skeletonBuilder.appendLiteral("MMM");
-        else if (month == "long")
-            skeletonBuilder.appendLiteral("MMMM");
+    switch (month) {
+    case Month::TwoDigit:
+        skeletonBuilder.appendLiteral("MM");
+        break;
+    case Month::Numeric:
+        skeletonBuilder.append('M');
+        break;
+    case Month::Narrow:
+        skeletonBuilder.appendLiteral("MMMMM");
+        break;
+    case Month::Short:
+        skeletonBuilder.appendLiteral("MMM");
+        break;
+    case Month::Long:
+        skeletonBuilder.appendLiteral("MMMM");
+        break;
+    case Month::None:
+        break;
     }
 
-    String day = intlStringOption(globalObject, options, vm.propertyNames->day, twoDigitNumeric, "day must be \"2-digit\" or \"numeric\"", nullptr);
+    Day day = intlOption<Day>(globalObject, options, vm.propertyNames->day, { { "2-digit"_s, Day::TwoDigit }, { "numeric"_s, Day::Numeric } }, "day must be \"2-digit\" or \"numeric\""_s, Day::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!day.isNull()) {
-        if (day == "2-digit")
-            skeletonBuilder.appendLiteral("dd");
-        else if (day == "numeric")
-            skeletonBuilder.append('d');
+    switch (day) {
+    case Day::TwoDigit:
+        skeletonBuilder.appendLiteral("dd");
+        break;
+    case Day::Numeric:
+        skeletonBuilder.append('d');
+        break;
+    case Day::None:
+        break;
     }
 
-    String hour = intlStringOption(globalObject, options, vm.propertyNames->hour, twoDigitNumeric, "hour must be \"2-digit\" or \"numeric\"", nullptr);
+    Hour hour = intlOption<Hour>(globalObject, options, vm.propertyNames->hour, { { "2-digit"_s, Hour::TwoDigit }, { "numeric"_s, Hour::Numeric } }, "hour must be \"2-digit\" or \"numeric\""_s, Hour::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (hour == "2-digit") {
+    switch (hour) {
+    case Hour::TwoDigit:
         if (isHour12Undefined && m_hourCycle.isNull())
             skeletonBuilder.appendLiteral("jj");
-        else if (hour12)
+        else if (hour12 == TriState::True)
             skeletonBuilder.appendLiteral("hh");
         else
             skeletonBuilder.appendLiteral("HH");
-    } else if (hour == "numeric") {
+        break;
+    case Hour::Numeric:
         if (isHour12Undefined && m_hourCycle.isNull())
             skeletonBuilder.append('j');
-        else if (hour12)
+        else if (hour12 == TriState::True)
             skeletonBuilder.append('h');
         else
             skeletonBuilder.append('H');
-    } else
+        break;
+    case Hour::None:
         m_hourCycle = String();
-
-    String minute = intlStringOption(globalObject, options, vm.propertyNames->minute, twoDigitNumeric, "minute must be \"2-digit\" or \"numeric\"", nullptr);
-    RETURN_IF_EXCEPTION(scope, void());
-    if (!minute.isNull()) {
-        if (minute == "2-digit")
-            skeletonBuilder.appendLiteral("mm");
-        else if (minute == "numeric")
-            skeletonBuilder.append('m');
+        break;
     }
 
-    String second = intlStringOption(globalObject, options, vm.propertyNames->second, twoDigitNumeric, "second must be \"2-digit\" or \"numeric\"", nullptr);
+    Minute minute = intlOption<Minute>(globalObject, options, vm.propertyNames->minute, { { "2-digit"_s, Minute::TwoDigit }, { "numeric"_s, Minute::Numeric } }, "minute must be \"2-digit\" or \"numeric\""_s, Minute::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!second.isNull()) {
-        if (second == "2-digit")
-            skeletonBuilder.appendLiteral("ss");
-        else if (second == "numeric")
-            skeletonBuilder.append('s');
+    switch (minute) {
+    case Minute::TwoDigit:
+        skeletonBuilder.appendLiteral("mm");
+        break;
+    case Minute::Numeric:
+        skeletonBuilder.append('m');
+        break;
+    case Minute::None:
+        break;
     }
 
-    String timeZoneName = intlStringOption(globalObject, options, vm.propertyNames->timeZoneName, shortLong, "timeZoneName must be \"short\" or \"long\"", nullptr);
+    Second second = intlOption<Second>(globalObject, options, vm.propertyNames->second, { { "2-digit"_s, Second::TwoDigit }, { "numeric"_s, Second::Numeric } }, "second must be \"2-digit\" or \"numeric\""_s, Second::None);
     RETURN_IF_EXCEPTION(scope, void());
-    if (!timeZoneName.isNull()) {
-        if (timeZoneName == "short")
-            skeletonBuilder.append('z');
-        else if (timeZoneName == "long")
-            skeletonBuilder.appendLiteral("zzzz");
+    switch (second) {
+    case Second::TwoDigit:
+        skeletonBuilder.appendLiteral("ss");
+        break;
+    case Second::Numeric:
+        skeletonBuilder.append('s');
+        break;
+    case Second::None:
+        break;
+    }
+
+    TimeZoneName timeZoneName = intlOption<TimeZoneName>(globalObject, options, vm.propertyNames->timeZoneName, { { "short"_s, TimeZoneName::Short }, { "long"_s, TimeZoneName::Long } }, "timeZoneName must be \"short\" or \"long\""_s, TimeZoneName::None);
+    RETURN_IF_EXCEPTION(scope, void());
+    switch (timeZoneName) {
+    case TimeZoneName::Short:
+        skeletonBuilder.append('z');
+        break;
+    case TimeZoneName::Long:
+        skeletonBuilder.appendLiteral("zzzz");
+        break;
+    case TimeZoneName::None:
+        break;
     }
 
     intlStringOption(globalObject, options, vm.propertyNames->formatMatcher, { "basic", "best fit" }, "formatMatcher must be either \"basic\" or \"best fit\"", "best fit");
@@ -618,7 +640,7 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
 
     // Always use ICU date format generator, rather than our own pattern list and matcher.
     UErrorCode status = U_ZERO_ERROR;
-    UDateTimePatternGenerator* generator = udatpg_open(dataLocale.utf8().data(), &status);
+    UDateTimePatternGenerator* generator = udatpg_open(dataLocaleWithExtensions.data(), &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
         return;
@@ -626,14 +648,8 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
 
     String skeleton = skeletonBuilder.toString();
     StringView skeletonView(skeleton);
-    Vector<UChar, 32> patternBuffer(32);
-    status = U_ZERO_ERROR;
-    auto patternLength = udatpg_getBestPatternWithOptions(generator, skeletonView.upconvertedCharacters(), skeletonView.length(), UDATPG_MATCH_HOUR_FIELD_LENGTH, patternBuffer.data(), patternBuffer.size(), &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        patternBuffer.grow(patternLength);
-        udatpg_getBestPattern(generator, skeletonView.upconvertedCharacters(), skeletonView.length(), patternBuffer.data(), patternLength, &status);
-    }
+    Vector<UChar, 32> patternBuffer;
+    status = callBufferProducingFunction(udatpg_getBestPatternWithOptions, generator, skeletonView.upconvertedCharacters().get(), skeletonView.length(), UDATPG_MATCH_HOUR_FIELD_LENGTH, patternBuffer);
     udatpg_close(generator);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
@@ -652,12 +668,11 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
 
         bool isEscaped = false;
         bool hasHour = false;
-        for (auto i = 0; i < patternLength; ++i) {
-            UChar c = patternBuffer[i];
+        for (auto& c : patternBuffer) {
             if (c == '\'')
                 isEscaped = !isEscaped;
             else if (!isEscaped && (c == 'h' || c == 'H' || c == 'k' || c == 'K')) {
-                patternBuffer[i] = hour;
+                c = hour;
                 hasHour = true;
             }
         }
@@ -665,12 +680,12 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
             m_hourCycle = String();
     }
 
-    StringView pattern(patternBuffer.data(), patternLength);
+    StringView pattern(patternBuffer.data(), patternBuffer.size());
     setFormatsFromPattern(pattern);
 
     status = U_ZERO_ERROR;
     StringView timeZoneView(m_timeZone);
-    m_dateFormat = std::unique_ptr<UDateFormat, UDateFormatDeleter>(udat_open(UDAT_PATTERN, UDAT_PATTERN, m_locale.utf8().data(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), pattern.upconvertedCharacters(), pattern.length(), &status));
+    m_dateFormat = std::unique_ptr<UDateFormat, UDateFormatDeleter>(udat_open(UDAT_PATTERN, UDAT_PATTERN, dataLocaleWithExtensions.data(), timeZoneView.upconvertedCharacters(), timeZoneView.length(), pattern.upconvertedCharacters(), pattern.length(), &status));
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize DateTimeFormat"_s);
         return;
@@ -680,8 +695,6 @@ void IntlDateTimeFormat::initializeDateTimeFormat(JSGlobalObject* globalObject, 
     // Failure here means unsupported calendar, and can safely be ignored.
     UCalendar* cal = const_cast<UCalendar*>(udat_getCalendar(m_dateFormat.get()));
     ucal_setGregorianChange(cal, minECMAScriptTime, &status);
-
-    m_initializedDateTimeFormat = true;
 }
 
 ASCIILiteral IntlDateTimeFormat::weekdayString(Weekday weekday)
@@ -829,18 +842,10 @@ ASCIILiteral IntlDateTimeFormat::timeZoneNameString(TimeZoneName timeZoneName)
     return ASCIILiteral::null();
 }
 
-JSObject* IntlDateTimeFormat::resolvedOptions(JSGlobalObject* globalObject)
+// https://tc39.es/ecma402/#sec-intl.datetimeformat.prototype.resolvedoptions
+JSObject* IntlDateTimeFormat::resolvedOptions(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    // 12.3.5 Intl.DateTimeFormat.prototype.resolvedOptions() (ECMA-402 2.0)
-    // The function returns a new object whose properties and attributes are set as if constructed by an object literal assigning to each of the following properties the value of the corresponding internal slot of this DateTimeFormat object (see 12.4): locale, calendar, numberingSystem, timeZone, hour12, weekday, era, year, month, day, hour, minute, second, and timeZoneName. Properties whose corresponding internal slots are not present are not assigned.
-    // Note: In this version of the ECMAScript 2015 Internationalization API, the timeZone property will be the name of the default time zone if no timeZone property was provided in the options object provided to the Intl.DateTimeFormat constructor. The previous version left the timeZone property undefined in this case.
-    if (!m_initializedDateTimeFormat) {
-        initializeDateTimeFormat(globalObject, jsUndefined(), jsUndefined());
-        scope.assertNoException();
-    }
 
     JSObject* options = constructEmptyObject(globalObject);
     options->putDirect(vm, vm.propertyNames->locale, jsNontrivialString(vm, m_locale));
@@ -883,46 +888,35 @@ JSObject* IntlDateTimeFormat::resolvedOptions(JSGlobalObject* globalObject)
     return options;
 }
 
-JSValue IntlDateTimeFormat::format(JSGlobalObject* globalObject, double value)
+// https://tc39.es/ecma402/#sec-formatdatetime
+JSValue IntlDateTimeFormat::format(JSGlobalObject* globalObject, double value) const
 {
+    ASSERT(m_dateFormat);
+
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // 12.3.4 FormatDateTime abstract operation (ECMA-402 2.0)
-    if (!m_initializedDateTimeFormat) {
-        initializeDateTimeFormat(globalObject, jsUndefined(), jsUndefined());
-        scope.assertNoException();
-    }
-
-    // 1. If x is not a finite Number, then throw a RangeError exception.
     if (!std::isfinite(value))
         return throwRangeError(globalObject, scope, "date value is not finite in DateTimeFormat format()"_s);
 
-    // Delegate remaining steps to ICU.
-    UErrorCode status = U_ZERO_ERROR;
-    Vector<UChar, 32> result(32);
-    auto resultLength = udat_format(m_dateFormat.get(), value, result.data(), result.size(), nullptr, &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        result.grow(resultLength);
-        udat_format(m_dateFormat.get(), value, result.data(), resultLength, nullptr, &status);
-    }
+    Vector<UChar, 32> result;
+    auto status = callBufferProducingFunction(udat_format, m_dateFormat.get(), value, result, nullptr);
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
 
-    return jsString(vm, String(result.data(), resultLength));
+    return jsString(vm, String(result));
 }
 
-#if JSC_ICU_HAS_UFIELDPOSITER
-ASCIILiteral IntlDateTimeFormat::partTypeString(UDateFormatField field)
+static ASCIILiteral partTypeString(UDateFormatField field)
 {
     switch (field) {
     case UDAT_ERA_FIELD:
         return "era"_s;
     case UDAT_YEAR_FIELD:
-    case UDAT_YEAR_NAME_FIELD:
     case UDAT_EXTENDED_YEAR_FIELD:
         return "year"_s;
+    case UDAT_YEAR_NAME_FIELD:
+        return "yearName"_s;
     case UDAT_MONTH_FIELD:
     case UDAT_STANDALONE_MONTH_FIELD:
         return "month"_s;
@@ -943,10 +937,8 @@ ASCIILiteral IntlDateTimeFormat::partTypeString(UDateFormatField field)
     case UDAT_STANDALONE_DAY_FIELD:
         return "weekday"_s;
     case UDAT_AM_PM_FIELD:
-#if U_ICU_VERSION_MAJOR_NUM >= 57
     case UDAT_AM_PM_MIDNIGHT_NOON_FIELD:
     case UDAT_FLEXIBLE_DAY_PERIOD_FIELD:
-#endif
         return "dayPeriod"_s;
     case UDAT_TIMEZONE_FIELD:
     case UDAT_TIMEZONE_RFC_FIELD:
@@ -956,6 +948,8 @@ ASCIILiteral IntlDateTimeFormat::partTypeString(UDateFormatField field)
     case UDAT_TIMEZONE_ISO_FIELD:
     case UDAT_TIMEZONE_ISO_LOCAL_FIELD:
         return "timeZoneName"_s;
+    case UDAT_RELATED_YEAR_FIELD:
+        return "relatedYear"_s;
     // These should not show up because there is no way to specify them in DateTimeFormat options.
     // If they do, they don't fit well into any of known part types, so consider it an "unknown".
     case UDAT_DAY_OF_YEAR_FIELD:
@@ -967,11 +961,7 @@ ASCIILiteral IntlDateTimeFormat::partTypeString(UDateFormatField field)
     case UDAT_MILLISECONDS_IN_DAY_FIELD:
     case UDAT_QUARTER_FIELD:
     case UDAT_STANDALONE_QUARTER_FIELD:
-    case UDAT_RELATED_YEAR_FIELD:
     case UDAT_TIME_SEPARATOR_FIELD:
-#if U_ICU_VERSION_MAJOR_NUM < 58 || !defined(U_HIDE_DEPRECATED_API)
-    case UDAT_FIELD_COUNT:
-#endif
     // Any newer additions to the UDateFormatField enum should just be considered an "unknown" part.
     default:
         return "unknown"_s;
@@ -979,14 +969,13 @@ ASCIILiteral IntlDateTimeFormat::partTypeString(UDateFormatField field)
     return "unknown"_s;
 }
 
-
-JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double value)
+// https://tc39.es/ecma402/#sec-formatdatetimetoparts
+JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double value) const
 {
+    ASSERT(m_dateFormat);
+
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-
-    // 12.1.8 FormatDateTimeToParts (ECMA-402 4.0)
-    // https://tc39.github.io/ecma402/#sec-formatdatetimetoparts
 
     if (!std::isfinite(value))
         return throwRangeError(globalObject, scope, "date value is not finite in DateTimeFormat formatToParts()"_s);
@@ -996,14 +985,8 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to open field position iterator"_s);
 
-    status = U_ZERO_ERROR;
-    Vector<UChar, 32> result(32);
-    auto resultLength = udat_formatForFields(m_dateFormat.get(), value, result.data(), result.size(), fields.get(), &status);
-    if (status == U_BUFFER_OVERFLOW_ERROR) {
-        status = U_ZERO_ERROR;
-        result.grow(resultLength);
-        udat_formatForFields(m_dateFormat.get(), value, result.data(), resultLength, fields.get(), &status);
-    }
+    Vector<UChar, 32> result;
+    status = callBufferProducingFunction(udat_formatForFields, m_dateFormat.get(), value, result, fields.get());
     if (U_FAILURE(status))
         return throwTypeError(globalObject, scope, "failed to format date value"_s);
 
@@ -1011,10 +994,10 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
     if (!parts)
         return throwOutOfMemoryError(globalObject, scope);
 
-    auto resultString = String(result.data(), resultLength);
-    auto typePropertyName = Identifier::fromString(vm, "type");
+    auto resultString = String(result);
     auto literalString = jsNontrivialString(vm, "literal"_s);
 
+    int32_t resultLength = result.size();
     int32_t previousEndIndex = 0;
     int32_t beginIndex = 0;
     int32_t endIndex = 0;
@@ -1026,7 +1009,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
         if (previousEndIndex < beginIndex) {
             auto value = jsString(vm, resultString.substring(previousEndIndex, beginIndex - previousEndIndex));
             JSObject* part = constructEmptyObject(globalObject);
-            part->putDirect(vm, typePropertyName, literalString);
+            part->putDirect(vm, vm.propertyNames->type, literalString);
             part->putDirect(vm, vm.propertyNames->value, value);
             parts->push(globalObject, part);
             RETURN_IF_EXCEPTION(scope, { });
@@ -1037,7 +1020,7 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
             auto type = jsString(vm, partTypeString(UDateFormatField(fieldType)));
             auto value = jsString(vm, resultString.substring(beginIndex, endIndex - beginIndex));
             JSObject* part = constructEmptyObject(globalObject);
-            part->putDirect(vm, typePropertyName, type);
+            part->putDirect(vm, vm.propertyNames->type, type);
             part->putDirect(vm, vm.propertyNames->value, value);
             parts->push(globalObject, part);
             RETURN_IF_EXCEPTION(scope, { });
@@ -1047,8 +1030,5 @@ JSValue IntlDateTimeFormat::formatToParts(JSGlobalObject* globalObject, double v
 
     return parts;
 }
-#endif
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

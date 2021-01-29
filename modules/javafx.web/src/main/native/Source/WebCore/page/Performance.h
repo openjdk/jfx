@@ -37,6 +37,7 @@
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "GenericTaskQueue.h"
+#include "ReducedResolutionSeconds.h"
 #include <wtf/ListHashSet.h>
 
 namespace WebCore {
@@ -45,6 +46,7 @@ class LoadTiming;
 class PerformanceEntry;
 class PerformanceNavigation;
 class PerformanceObserver;
+class PerformancePaintTiming;
 class PerformanceTiming;
 class ResourceResponse;
 class ResourceTiming;
@@ -58,6 +60,7 @@ public:
     ~Performance();
 
     DOMHighResTimeStamp now() const;
+    ReducedResolutionSeconds nowInReducedResolutionSeconds() const;
 
     PerformanceNavigation* navigation();
     PerformanceTiming* timing();
@@ -65,6 +68,7 @@ public:
     Vector<RefPtr<PerformanceEntry>> getEntries() const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByType(const String& entryType) const;
     Vector<RefPtr<PerformanceEntry>> getEntriesByName(const String& name, const String& entryType) const;
+    bool appendBufferedEntriesByType(const String& entryType, Vector<RefPtr<PerformanceEntry>>&) const;
 
     void clearResourceTimings();
     void setResourceTimingBufferSize(unsigned);
@@ -76,6 +80,8 @@ public:
     void clearMeasures(const String& measureName);
 
     void addResourceTiming(ResourceTiming&&);
+
+    void reportFirstContentfulPaint();
 
     void removeAllObservers();
     void registerPerformanceObserver(PerformanceObserver&);
@@ -121,6 +127,7 @@ private:
 
     MonotonicTime m_timeOrigin;
 
+    RefPtr<PerformancePaintTiming> m_firstContentfulPaint;
     std::unique_ptr<UserTiming> m_userTiming;
 
     GenericTaskQueue<ScriptExecutionContext> m_performanceTimelineTaskQueue;

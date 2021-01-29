@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2010 Research In Motion Limited. All rights reserved.
  *
@@ -93,7 +93,7 @@ WTF_EXPORT_PRIVATE double parseES5DateFromNullTerminatedCharacters(const char* d
 WTF_EXPORT_PRIVATE double parseDateFromNullTerminatedCharacters(const char* dateString);
 WTF_EXPORT_PRIVATE double parseDateFromNullTerminatedCharacters(const char* dateString, bool& isLocalTime);
 // dayOfWeek: [0, 6] 0 being Monday, day: [1, 31], month: [0, 11], year: ex: 2011, hours: [0, 23], minutes: [0, 59], seconds: [0, 59], utcOffset: [-720,720].
-String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset);
+WTF_EXPORT_PRIVATE String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, unsigned year, unsigned hours, unsigned minutes, unsigned seconds, int utcOffset);
 
 inline double jsCurrentTime()
 {
@@ -345,7 +345,7 @@ inline int monthFromDayInYear(int dayInYear, bool leapYear)
         return 8;
     if (d < (step += 31))
         return 9;
-    if (d < (step += 30))
+    if (d < step + 30)
         return 10;
     return 11;
 }

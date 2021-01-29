@@ -17,8 +17,7 @@
  Boston, MA 02110-1301, USA.
  */
 
-#ifndef TextureMapperLayer_h
-#define TextureMapperLayer_h
+#pragma once
 
 #include "FilterOperations.h"
 #include "FloatRect.h"
@@ -59,6 +58,7 @@ public:
     void setChildren(const Vector<TextureMapperLayer*>&);
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
+    void setBackdropLayer(TextureMapperLayer*);
     void setPosition(const FloatPoint&);
     void setBoundsOrigin(const FloatPoint&);
     void setSize(const FloatSize&);
@@ -81,6 +81,7 @@ public:
     void setSolidColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
+    void setContentsClippingRect(const FloatRoundedRect&);
     void setFilters(const FilterOperations&);
 
     bool hasFilters() const
@@ -106,13 +107,13 @@ public:
     void addChild(TextureMapperLayer*);
 
 private:
-    const TextureMapperLayer& rootLayer() const
+    TextureMapperLayer& rootLayer() const
     {
         if (m_effectTarget)
             return m_effectTarget->rootLayer();
         if (m_parent)
             return m_parent->rootLayer();
-        return *this;
+        return const_cast<TextureMapperLayer&>(*this);
     }
     void computeTransformsRecursive();
 
@@ -166,8 +167,10 @@ private:
         FloatRect contentsRect;
         FloatSize contentsTileSize;
         FloatSize contentsTilePhase;
+        FloatRoundedRect contentsClippingRect;
         WeakPtr<TextureMapperLayer> maskLayer;
         WeakPtr<TextureMapperLayer> replicaLayer;
+        WeakPtr<TextureMapperLayer> backdropLayer;
         Color solidColor;
         FilterOperations filters;
         Color debugBorderColor;
@@ -209,6 +212,7 @@ private:
 #if USE(COORDINATED_GRAPHICS)
     RefPtr<Nicosia::AnimatedBackingStoreClient> m_animatedBackingStoreClient;
 #endif
+    bool m_isBackdrop { false };
 
     struct {
         TransformationMatrix localTransform;
@@ -222,6 +226,4 @@ private:
     } m_layerTransforms;
 };
 
-}
-
-#endif // TextureMapperLayer_h
+} // namespace WebCore

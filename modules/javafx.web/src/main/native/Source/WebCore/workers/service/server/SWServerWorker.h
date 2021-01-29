@@ -36,6 +36,8 @@
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include "ServiceWorkerTypes.h"
+#include "Timer.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
@@ -60,7 +62,8 @@ public:
     SWServerWorker(const SWServerWorker&) = delete;
     WEBCORE_EXPORT ~SWServerWorker();
 
-    void terminate();
+    WEBCORE_EXPORT void terminate(CompletionHandler<void()>&& = [] { });
+    WEBCORE_EXPORT void whenTerminated(CompletionHandler<void()>&&);
 
     WEBCORE_EXPORT void whenActivated(CompletionHandler<void(bool)>&&);
 
@@ -71,17 +74,21 @@ public:
     };
     bool isRunning() const { return m_state == State::Running; }
     bool isTerminating() const { return m_state == State::Terminating; }
+    bool isNotRunning() const { return m_state == State::NotRunning; }
     void setState(State);
 
     SWServer* server() { return m_server.get(); }
     const ServiceWorkerRegistrationKey& registrationKey() const { return m_registrationKey; }
     const URL& scriptURL() const { return m_data.scriptURL; }
     const String& script() const { return m_script; }
+    const CertificateInfo& certificateInfo() const { return m_certificateInfo; }
     WorkerType type() const { return m_data.type; }
 
     ServiceWorkerIdentifier identifier() const { return m_data.identifier; }
 
     ServiceWorkerState state() const { return m_data.state; }
+    bool isActive() const { return m_data.state == ServiceWorkerState::Activated || m_data.state == ServiceWorkerState::Activating; }
+
     void setState(ServiceWorkerState);
 
     bool hasPendingEvents() const { return m_hasPendingEvents; }
@@ -94,7 +101,6 @@ public:
     void contextTerminated();
     WEBCORE_EXPORT Optional<ServiceWorkerClientData> findClientByIdentifier(const ServiceWorkerClientIdentifier&) const;
     void matchAll(const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&);
-    void claim();
     void setScriptResource(URL&&, ServiceWorkerContextData::ImportedScript&&);
 
     void skipWaiting();
@@ -121,15 +127,21 @@ public:
     void didFailHeartBeatCheck();
 
 private:
-    SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const String& script, const ContentSecurityPolicyResponseHeaders&, String&& referrerPolicy, WorkerType, ServiceWorkerIdentifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
+    SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const String& script, const CertificateInfo&, const ContentSecurityPolicyResponseHeaders&, String&& referrerPolicy, WorkerType, ServiceWorkerIdentifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
 
     void callWhenActivatedHandler(bool success);
+
+    void startTermination(CompletionHandler<void()>&&);
+    void terminationCompleted();
+    void terminationTimerFired();
+    void callTerminationCallbacks();
 
     WeakPtr<SWServer> m_server;
     ServiceWorkerRegistrationKey m_registrationKey;
     WeakPtr<SWServerRegistration> m_registration;
     ServiceWorkerData m_data;
     String m_script;
+    CertificateInfo m_certificateInfo;
     ContentSecurityPolicyResponseHeaders m_contentSecurityPolicy;
     String m_referrerPolicy;
     bool m_hasPendingEvents { false };
@@ -141,6 +153,8 @@ private:
     HashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;
     bool m_shouldSkipHandleFetch;
     bool m_hasTimedOutAnyFetchTasks { false };
+    Vector<CompletionHandler<void()>> m_terminationCallbacks;
+    Timer m_terminationTimer;
 };
 
 } // namespace WebCore

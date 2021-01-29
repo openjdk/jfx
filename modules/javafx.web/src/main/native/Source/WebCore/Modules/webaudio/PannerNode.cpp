@@ -32,6 +32,7 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "ChannelCountMode.h"
 #include "HRTFDatabaseLoader.h"
 #include "HRTFPanner.h"
 #include "ScriptExecutionContext.h"
@@ -48,31 +49,65 @@ static void fixNANs(double &x)
         x = 0.0;
 }
 
-PannerNode::PannerNode(AudioContext& context, float sampleRate)
-    : AudioNode(context, sampleRate)
-    , m_panningModel(PanningModelType::HRTF)
-    , m_lastGain(-1.0)
-    , m_connectionCount(0)
+PannerNodeBase::PannerNodeBase(BaseAudioContext& context)
+    : AudioNode(context)
+{
+}
+
+ExceptionOr<Ref<PannerNode>> PannerNode::create(BaseAudioContext& context, const PannerOptions& options)
+{
+    if (context.isStopped())
+        return Exception { InvalidStateError };
+
+    context.lazyInitialize();
+
+    auto panner = adoptRef(*new PannerNode(context, options));
+
+    auto result = panner->handleAudioNodeOptions(options, { 2, ChannelCountMode::ClampedMax, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    result = panner->setMaxDistance(options.maxDistance);
+    if (result.hasException())
+        return result.releaseException();
+
+    result = panner->setRefDistance(options.refDistance);
+    if (result.hasException())
+        return result.releaseException();
+
+    result = panner->setRolloffFactor(options.rolloffFactor);
+    if (result.hasException())
+        return result.releaseException();
+
+    result = panner->setConeOuterGain(options.coneOuterGain);
+    if (result.hasException())
+        return result.releaseException();
+
+    return panner;
+}
+
+PannerNode::PannerNode(BaseAudioContext& context, const PannerOptions& options)
+    : PannerNodeBase(context)
+    , m_panningModel(options.panningModel)
+    , m_distanceGain(AudioParam::create(context, "distanceGain", 1.0, 0.0, 1.0))
+    , m_coneGain(AudioParam::create(context, "coneGain", 1.0, 0.0, 1.0))
+    , m_positionX(AudioParam::create(context, "positionX"_s, options.positionX, -FLT_MAX, FLT_MAX))
+    , m_positionY(AudioParam::create(context, "positionY"_s, options.positionY, -FLT_MAX, FLT_MAX))
+    , m_positionZ(AudioParam::create(context, "positionZ"_s, options.positionZ, -FLT_MAX, FLT_MAX))
+    , m_orientationX(AudioParam::create(context, "orientationX"_s, options.orientationX, -FLT_MAX, FLT_MAX))
+    , m_orientationY(AudioParam::create(context, "orientationY"_s, options.orientationY, -FLT_MAX, FLT_MAX))
+    , m_orientationZ(AudioParam::create(context, "orientationZ"_s, options.orientationZ, -FLT_MAX, FLT_MAX))
+    // Load the HRTF database asynchronously so we don't block the Javascript thread while creating the HRTF database.
+    , m_hrtfDatabaseLoader(HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessary(context.sampleRate()))
 {
     setNodeType(NodeTypePanner);
 
-    // Load the HRTF database asynchronously so we don't block the Javascript thread while creating the HRTF database.
-    m_hrtfDatabaseLoader = HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessary(context.sampleRate());
+    setDistanceModel(options.distanceModel);
+    setConeInnerAngle(options.coneInnerAngle);
+    setConeOuterAngle(options.coneOuterAngle);
 
     addInput(makeUnique<AudioNodeInput>(this));
     addOutput(makeUnique<AudioNodeOutput>(this, 2));
-
-    // Node-specific default mixing rules.
-    m_channelCount = 2;
-    m_channelCountMode = ClampedMax;
-    m_channelInterpretation = AudioBus::Speakers;
-
-    m_distanceGain = AudioParam::create(context, "distanceGain", 1.0, 0.0, 1.0);
-    m_coneGain = AudioParam::create(context, "coneGain", 1.0, 0.0, 1.0);
-
-    m_position = FloatPoint3D(0, 0, 0);
-    m_orientation = FloatPoint3D(1, 0, 0);
-    m_velocity = FloatPoint3D(0, 0, 0);
 
     initialize();
 }
@@ -173,7 +208,7 @@ void PannerNode::uninitialize()
     AudioNode::uninitialize();
 }
 
-AudioListener* PannerNode::listener()
+AudioListener& PannerNode::listener()
 {
     return context().listener();
 }
@@ -182,11 +217,35 @@ void PannerNode::setPanningModel(PanningModelType model)
 {
     if (!m_panner.get() || model != m_panningModel) {
         // This synchronizes with process().
-        std::lock_guard<Lock> lock(m_pannerMutex);
+        auto locker = holdLock(m_pannerMutex);
 
         m_panner = Panner::create(model, sampleRate(), m_hrtfDatabaseLoader.get());
         m_panningModel = model;
     }
+}
+
+FloatPoint3D PannerNode::position() const
+{
+    return FloatPoint3D(m_positionX->value(), m_positionY->value(), m_positionZ->value());
+}
+
+void PannerNode::setPosition(float x, float y, float z)
+{
+    m_positionX->setValue(x);
+    m_positionY->setValue(y);
+    m_positionZ->setValue(z);
+}
+
+FloatPoint3D PannerNode::orientation() const
+{
+    return FloatPoint3D(m_orientationX->value(), m_orientationY->value(), m_orientationZ->value());
+}
+
+void PannerNode::setOrientation(float x, float y, float z)
+{
+    m_orientationX->setValue(x);
+    m_orientationY->setValue(y);
+    m_orientationZ->setValue(z);
 }
 
 DistanceModelType PannerNode::distanceModel() const
@@ -199,6 +258,60 @@ void PannerNode::setDistanceModel(DistanceModelType model)
     m_distanceEffect.setModel(model, true);
 }
 
+ExceptionOr<void> PannerNode::setRefDistance(double refDistance)
+{
+    if (refDistance < 0)
+        return Exception { RangeError, "refDistance cannot be set to a negative value"_s };
+
+    m_distanceEffect.setRefDistance(refDistance);
+    return { };
+}
+
+ExceptionOr<void> PannerNode::setMaxDistance(double maxDistance)
+{
+    if (maxDistance <= 0)
+        return Exception { RangeError, "maxDistance cannot be set to a non-positive value"_s };
+
+    m_distanceEffect.setMaxDistance(maxDistance);
+    return { };
+}
+
+ExceptionOr<void> PannerNode::setRolloffFactor(double rolloffFactor)
+{
+    // FIXME: Implement clamping of linear model once feedback is received
+
+    if (rolloffFactor < 0)
+        return Exception { RangeError, "rolloffFactor cannot be set to a negative value"_s };
+
+    m_distanceEffect.setRolloffFactor(rolloffFactor);
+    return { };
+}
+
+ExceptionOr<void> PannerNode::setConeOuterGain(double gain)
+{
+    if (gain < 0 || gain > 1)
+        return Exception { InvalidStateError, "coneOuterGain must be in [0, 1]"_s };
+
+    m_coneEffect.setOuterGain(gain);
+    return { };
+}
+
+ExceptionOr<void> PannerNode::setChannelCount(unsigned channelCount)
+{
+    if (channelCount > 2)
+        return Exception { NotSupportedError, "PannerNode's channelCount cannot be greater than 2"_s };
+
+    return AudioNode::setChannelCount(channelCount);
+}
+
+ExceptionOr<void> PannerNode::setChannelCountMode(ChannelCountMode mode)
+{
+    if (mode == ChannelCountMode::Max)
+        return Exception { NotSupportedError, "PannerNode's channelCountMode cannot be max"_s };
+
+    return AudioNode::setChannelCountMode(mode);
+}
+
 void PannerNode::getAzimuthElevation(double* outAzimuth, double* outElevation)
 {
     // FIXME: we should cache azimuth and elevation (if possible), so we only re-calculate if a change has been made.
@@ -206,8 +319,8 @@ void PannerNode::getAzimuthElevation(double* outAzimuth, double* outElevation)
     double azimuth = 0.0;
 
     // Calculate the source-listener vector
-    FloatPoint3D listenerPosition = listener()->position();
-    FloatPoint3D sourceListener = m_position - listenerPosition;
+    FloatPoint3D listenerPosition = listener().position();
+    FloatPoint3D sourceListener = position() - listenerPosition;
 
     if (sourceListener.isZero()) {
         // degenerate case if source and listener are at the same point
@@ -219,8 +332,8 @@ void PannerNode::getAzimuthElevation(double* outAzimuth, double* outElevation)
     sourceListener.normalize();
 
     // Align axes
-    FloatPoint3D listenerFront = listener()->orientation();
-    FloatPoint3D listenerUp = listener()->upVector();
+    FloatPoint3D listenerFront = listener().orientation();
+    FloatPoint3D listenerUp = listener().upVector();
     FloatPoint3D listenerRight = listenerFront.cross(listenerUp);
     listenerRight.normalize();
 
@@ -265,63 +378,21 @@ void PannerNode::getAzimuthElevation(double* outAzimuth, double* outElevation)
 
 float PannerNode::dopplerRate()
 {
-    double dopplerShift = 1.0;
-
-    // FIXME: optimize for case when neither source nor listener has changed...
-    double dopplerFactor = listener()->dopplerFactor();
-
-    if (dopplerFactor > 0.0) {
-        double speedOfSound = listener()->speedOfSound();
-
-        const FloatPoint3D &sourceVelocity = m_velocity;
-        const FloatPoint3D &listenerVelocity = listener()->velocity();
-
-        // Don't bother if both source and listener have no velocity
-        bool sourceHasVelocity = !sourceVelocity.isZero();
-        bool listenerHasVelocity = !listenerVelocity.isZero();
-
-        if (sourceHasVelocity || listenerHasVelocity) {
-            // Calculate the source to listener vector
-            FloatPoint3D listenerPosition = listener()->position();
-            FloatPoint3D sourceToListener = m_position - listenerPosition;
-
-            double sourceListenerMagnitude = sourceToListener.length();
-
-            double listenerProjection = sourceToListener.dot(listenerVelocity) / sourceListenerMagnitude;
-            double sourceProjection = sourceToListener.dot(sourceVelocity) / sourceListenerMagnitude;
-
-            listenerProjection = -listenerProjection;
-            sourceProjection = -sourceProjection;
-
-            double scaledSpeedOfSound = speedOfSound / dopplerFactor;
-            listenerProjection = std::min(listenerProjection, scaledSpeedOfSound);
-            sourceProjection = std::min(sourceProjection, scaledSpeedOfSound);
-
-            dopplerShift = ((speedOfSound - dopplerFactor * listenerProjection) / (speedOfSound - dopplerFactor * sourceProjection));
-            fixNANs(dopplerShift); // avoid illegal values
-
-            // Limit the pitch shifting to 4 octaves up and 3 octaves down.
-            if (dopplerShift > 16.0)
-                dopplerShift = 16.0;
-            else if (dopplerShift < 0.125)
-                dopplerShift = 0.125;
-        }
-    }
-
-    return static_cast<float>(dopplerShift);
+    return 1.0f;
 }
 
 float PannerNode::distanceConeGain()
 {
-    FloatPoint3D listenerPosition = listener()->position();
+    FloatPoint3D listenerPosition = listener().position();
+    FloatPoint3D sourcePosition = position();
 
-    double listenerDistance = m_position.distanceTo(listenerPosition);
+    double listenerDistance = sourcePosition.distanceTo(listenerPosition);
     double distanceGain = m_distanceEffect.gain(listenerDistance);
 
     m_distanceGain->setValue(static_cast<float>(distanceGain));
 
     // FIXME: could optimize by caching coneGain
-    double coneGain = m_coneEffect.gain(m_position, m_orientation, listenerPosition);
+    double coneGain = m_coneEffect.gain(sourcePosition, orientation(), listenerPosition);
 
     m_coneGain->setValue(static_cast<float>(coneGain));
 

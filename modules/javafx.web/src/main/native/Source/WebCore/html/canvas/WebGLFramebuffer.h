@@ -44,17 +44,19 @@ public:
     public:
         virtual ~WebGLAttachment();
 
+#if !USE(ANGLE)
         virtual GCGLsizei getWidth() const = 0;
         virtual GCGLsizei getHeight() const = 0;
         virtual GCGLenum getFormat() const = 0;
+#endif
         virtual WebGLSharedObject* getObject() const = 0;
         virtual bool isSharedObject(WebGLSharedObject*) const = 0;
         virtual bool isValid() const = 0;
         virtual bool isInitialized() const = 0;
         virtual void setInitialized() = 0;
         virtual void onDetached(GraphicsContextGLOpenGL*) = 0;
-        virtual void attach(GraphicsContextGLOpenGL*, GCGLenum attachment) = 0;
-        virtual void unattach(GraphicsContextGLOpenGL*, GCGLenum attachment) = 0;
+        virtual void attach(GraphicsContextGLOpenGL*, GCGLenum target, GCGLenum attachment) = 0;
+        virtual void unattach(GraphicsContextGLOpenGL*, GCGLenum target, GCGLenum attachment) = 0;
 
     protected:
         WebGLAttachment();
@@ -64,14 +66,15 @@ public:
 
     static Ref<WebGLFramebuffer> create(WebGLRenderingContextBase&);
 
-    void setAttachmentForBoundFramebuffer(GCGLenum attachment, GCGLenum texTarget, WebGLTexture*, GCGLint level);
-    void setAttachmentForBoundFramebuffer(GCGLenum attachment, WebGLRenderbuffer*);
+    void setAttachmentForBoundFramebuffer(GCGLenum target, GCGLenum attachment, GCGLenum texTarget, WebGLTexture*, GCGLint level, GCGLint layer);
+    void setAttachmentForBoundFramebuffer(GCGLenum target, GCGLenum attachment, WebGLRenderbuffer*);
     // If an object is attached to the currently bound framebuffer, remove it.
-    void removeAttachmentFromBoundFramebuffer(WebGLSharedObject*);
+    void removeAttachmentFromBoundFramebuffer(GCGLenum target, WebGLSharedObject*);
     // If a given attachment point for the currently bound framebuffer is not null, remove the attached object.
-    void removeAttachmentFromBoundFramebuffer(GCGLenum);
+    void removeAttachmentFromBoundFramebuffer(GCGLenum target, GCGLenum attachment);
     WebGLSharedObject* getAttachmentObject(GCGLenum) const;
 
+#if !USE(ANGLE)
     GCGLenum getColorBufferFormat() const;
     GCGLsizei getColorBufferWidth() const;
     GCGLsizei getColorBufferHeight() const;
@@ -89,6 +92,7 @@ public:
     // glCheckFramebufferStatus() to return FRAMEBUFFER_UNSUPPORTED,
     // depending on hardware implementation.
     GCGLenum checkStatus(const char** reason) const;
+#endif
 
     bool hasEverBeenBound() const { return object() && m_hasEverBeenBound; }
 
@@ -101,25 +105,30 @@ public:
 
     GCGLenum getDrawBuffer(GCGLenum);
 
-protected:
+private:
     WebGLFramebuffer(WebGLRenderingContextBase&);
 
     void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
 
-private:
     WebGLAttachment* getAttachment(GCGLenum) const;
 
     // Return false if framebuffer is incomplete.
     bool initializeAttachments(GraphicsContextGLOpenGL*, const char** reason);
 
-    // Check if the framebuffer is currently bound.
-    bool isBound() const;
+    // Check if the framebuffer is currently bound to the given target.
+    bool isBound(GCGLenum target) const;
 
     // attach 'attachment' at 'attachmentPoint'.
-    void attach(GCGLenum attachment, GCGLenum attachmentPoint);
+    void attach(GCGLenum target, GCGLenum attachment, GCGLenum attachmentPoint);
 
     // Check if a new drawBuffers call should be issued. This is called when we add or remove an attachment.
     void drawBuffersIfNecessary(bool force);
+
+    void setAttachmentInternal(GCGLenum attachment, GCGLenum texTarget, WebGLTexture*, GCGLint level, GCGLint layer);
+    void setAttachmentInternal(GCGLenum attachment, WebGLRenderbuffer*);
+    // If a given attachment point for the currently bound framebuffer is not
+    // null, remove the attached object.
+    void removeAttachmentInternal(GCGLenum attachment);
 
     typedef WTF::HashMap<GCGLenum, RefPtr<WebGLAttachment>> AttachmentMap;
 

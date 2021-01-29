@@ -28,7 +28,6 @@
 
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(CF) && !PLATFORM(WIN)
@@ -103,7 +102,7 @@ static Vector<String> isolatedCopy(const Vector<String>& strings)
 Vector<String> userPreferredLanguages()
 {
     {
-        std::lock_guard<Lock> lock(userPreferredLanguagesMutex);
+        auto locker = holdLock(userPreferredLanguagesMutex);
         Vector<String>& override = preferredLanguagesOverride();
         if (!override.isEmpty())
             return isolatedCopy(override);

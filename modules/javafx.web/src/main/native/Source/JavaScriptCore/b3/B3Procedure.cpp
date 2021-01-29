@@ -31,15 +31,13 @@
 #include "AirCode.h"
 #include "B3BackwardsCFG.h"
 #include "B3BackwardsDominators.h"
-#include "B3BasicBlockInlines.h"
 #include "B3BasicBlockUtils.h"
-#include "B3BlockWorklist.h"
 #include "B3CFG.h"
 #include "B3DataSection.h"
 #include "B3Dominators.h"
 #include "B3NaturalLoops.h"
 #include "B3OpaqueByproducts.h"
-#include "B3PhiChildren.h"
+#include "B3ProcedureInlines.h"
 #include "B3StackSlot.h"
 #include "B3ValueInlines.h"
 #include "B3Variable.h"
@@ -152,6 +150,8 @@ Value* Procedure::addConstant(Origin origin, Type type, uint64_t bits)
 
 Value* Procedure::addBottom(Origin origin, Type type)
 {
+    if (type.isTuple())
+        return add<BottomTupleValue>(origin, type);
     return addIntConstant(origin, type, 0);
 }
 
@@ -164,13 +164,13 @@ Value* Procedure::addBoolConstant(Origin origin, TriState triState)
 {
     int32_t value = 0;
     switch (triState) {
-    case FalseTriState:
+    case TriState::False:
         value = 0;
         break;
-    case TrueTriState:
+    case TriState::True:
         value = 1;
         break;
-    case MixedTriState:
+    case TriState::Indeterminate:
         return nullptr;
     }
 

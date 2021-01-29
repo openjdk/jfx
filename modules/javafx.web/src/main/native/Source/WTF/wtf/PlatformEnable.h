@@ -95,7 +95,10 @@
 #include <wtf/PlatformEnableWinCairo.h>
 #endif
 
-
+/* --------- PlayStation port --------- */
+#if PLATFORM(PLAYSTATION)
+#include <wtf/PlatformEnablePlayStation.h>
+#endif
 
 /* ---------  ENABLE macro defaults --------- */
 
@@ -214,10 +217,6 @@
 #define ENABLE_CSS_BOX_DECORATION_BREAK 1
 #endif
 
-#if !defined(ENABLE_CSS_DEVICE_ADAPTATION)
-#define ENABLE_CSS_DEVICE_ADAPTATION 0
-#endif
-
 #if !defined(ENABLE_CSS_COMPOSITING)
 #define ENABLE_CSS_COMPOSITING 0
 #endif
@@ -232,10 +231,6 @@
 
 #if !defined(ENABLE_CUSTOM_CURSOR_SUPPORT)
 #define ENABLE_CUSTOM_CURSOR_SUPPORT 1
-#endif
-
-#if !defined(ENABLE_CUSTOM_SCHEME_HANDLER)
-#define ENABLE_CUSTOM_SCHEME_HANDLER 0
 #endif
 
 #if !defined(ENABLE_DARK_MODE_CSS)
@@ -274,6 +269,12 @@
 #define ENABLE_FULLSCREEN_API 0
 #endif
 
+#if ((PLATFORM(IOS) || PLATFORM(WATCHOS) || PLATFORM(MACCATALYST)) && HAVE(AVKIT)) || PLATFORM(MAC)
+#if !defined(ENABLE_VIDEO_PRESENTATION_MODE)
+#define ENABLE_VIDEO_PRESENTATION_MODE 1
+#endif
+#endif
+
 #if !defined(ENABLE_GAMEPAD)
 #define ENABLE_GAMEPAD 0
 #endif
@@ -298,10 +299,6 @@
 #define ENABLE_INPUT_TYPE_DATE 0
 #endif
 
-#if !defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE)
-#define ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE 0
-#endif
-
 #if !defined(ENABLE_INPUT_TYPE_DATETIMELOCAL)
 #define ENABLE_INPUT_TYPE_DATETIMELOCAL 0
 #endif
@@ -318,7 +315,7 @@
 #define ENABLE_INPUT_TYPE_WEEK 0
 #endif
 
-#if ENABLE(INPUT_TYPE_DATE) || ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE) || ENABLE(INPUT_TYPE_DATETIMELOCAL) || ENABLE(INPUT_TYPE_MONTH) || ENABLE(INPUT_TYPE_TIME) || ENABLE(INPUT_TYPE_WEEK)
+#if ENABLE(INPUT_TYPE_DATE) || ENABLE(INPUT_TYPE_DATETIMELOCAL) || ENABLE(INPUT_TYPE_MONTH) || ENABLE(INPUT_TYPE_TIME) || ENABLE(INPUT_TYPE_WEEK)
 #if !defined(ENABLE_DATE_AND_TIME_INPUT_TYPES)
 #define ENABLE_DATE_AND_TIME_INPUT_TYPES 1
 #endif
@@ -330,10 +327,6 @@
 
 #if !defined(ENABLE_INSPECTOR_TELEMETRY)
 #define ENABLE_INSPECTOR_TELEMETRY 0
-#endif
-
-#if !defined(ENABLE_INTL)
-#define ENABLE_INTL 0
 #endif
 
 #if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
@@ -404,6 +397,10 @@
 #define ENABLE_OFFSCREEN_CANVAS 0
 #endif
 
+#if !defined(ENABLE_THUNDER)
+#define ENABLE_THUNDER 0
+#endif
+
 #if !defined(ENABLE_ORIENTATION_EVENTS)
 #define ENABLE_ORIENTATION_EVENTS 0
 #endif
@@ -416,6 +413,10 @@
 
 #if !defined(ENABLE_PAYMENT_REQUEST)
 #define ENABLE_PAYMENT_REQUEST 0
+#endif
+
+#if !defined(ENABLE_PERIODIC_MEMORY_MONITOR)
+#define ENABLE_PERIODIC_MEMORY_MONITOR 0
 #endif
 
 #if !defined(ENABLE_POINTER_LOCK)
@@ -441,6 +442,10 @@
 #endif
 #endif
 
+#if !defined(ENABLE_SEPARATED_WX_HEAP)
+#define ENABLE_SEPARATED_WX_HEAP 0
+#endif
+
 #if !defined(ENABLE_SMOOTH_SCROLLING)
 #define ENABLE_SMOOTH_SCROLLING 0
 #endif
@@ -451,10 +456,6 @@
 
 #if !defined(ENABLE_SPELLCHECK)
 #define ENABLE_SPELLCHECK 0
-#endif
-
-#if !defined(ENABLE_STREAMS_API)
-#define ENABLE_STREAMS_API 1
 #endif
 
 #if !defined(ENABLE_SVG_FONTS)
@@ -477,12 +478,16 @@
 #define ENABLE_TOUCH_EVENTS 0
 #endif
 
-#if !defined(ENABLE_VIDEO)
-#define ENABLE_VIDEO 0
+#if !defined(ENABLE_TOUCH_ACTION_REGIONS)
+#define ENABLE_TOUCH_ACTION_REGIONS 0
 #endif
 
-#if !defined(ENABLE_VIDEO_TRACK)
-#define ENABLE_VIDEO_TRACK 0
+#if !defined(ENABLE_WHEEL_EVENT_REGIONS)
+#define ENABLE_WHEEL_EVENT_REGIONS 0
+#endif
+
+#if !defined(ENABLE_VIDEO)
+#define ENABLE_VIDEO 0
 #endif
 
 #if !defined(ENABLE_DATACUE_VALUE)
@@ -507,10 +512,6 @@
 
 #if !defined(ENABLE_XSLT)
 #define ENABLE_XSLT 1
-#endif
-
-#if !defined(ENABLE_DATA_INTERACTION)
-#define ENABLE_DATA_INTERACTION 0
 #endif
 
 #if !defined(ENABLE_SERVICE_WORKER)
@@ -545,6 +546,10 @@
 #define ENABLE_DATA_DETECTION 0
 #endif
 
+#if !defined(ENABLE_FILE_SHARE)
+#define ENABLE_FILE_SHARE 1
+#endif
+
 /*
  * Enable this to put each IsoHeap and other allocation categories into their own malloc heaps, so that tools like vmmap can show how big each heap is.
  * Turn BENABLE_MALLOC_HEAP_BREAKDOWN on in bmalloc together when using this.
@@ -553,6 +558,9 @@
 #define ENABLE_MALLOC_HEAP_BREAKDOWN 0
 #endif
 
+#if !defined(ENABLE_CFPREFS_DIRECT_MODE)
+#define ENABLE_CFPREFS_DIRECT_MODE 0
+#endif
 
 
 
@@ -577,11 +585,9 @@
 #define ENABLE_JIT 1
 #endif
 #else
-/* Disable JIT and force C_LOOP on all other 32bit architectures. */
+/* Disable JIT on all other 32bit architectures. */
 #undef ENABLE_JIT
 #define ENABLE_JIT 0
-#undef ENABLE_C_LOOP
-#define ENABLE_C_LOOP 1
 #endif
 #endif
 
@@ -602,13 +608,6 @@
 /* FIXME: This should be turned into an #error invariant */
 /* The FTL *does not* work on 32-bit platforms. Disable it even if someone asked us to enable it. */
 #if USE(JSVALUE32_64)
-#undef ENABLE_FTL_JIT
-#define ENABLE_FTL_JIT 0
-#endif
-
-/* FIXME: This should be turned into an #error invariant */
-/* The FTL is disabled on the iOS simulator, mostly for simplicity. */
-#if PLATFORM(IOS_FAMILY_SIMULATOR)
 #undef ENABLE_FTL_JIT
 #define ENABLE_FTL_JIT 0
 #endif
@@ -723,10 +722,6 @@
 #define ENABLE_DFG_REGISTER_ALLOCATION_VALIDATION 1
 #endif
 
-#if !defined(ENABLE_SEPARATED_WX_HEAP) && PLATFORM(IOS_FAMILY) && CPU(ARM64) && (!ENABLE(FAST_JIT_PERMISSIONS) || !CPU(ARM64E))
-#define ENABLE_SEPARATED_WX_HEAP 1
-#endif
-
 /* Determine if we need to enable Computed Goto Opcodes or not: */
 #if HAVE(COMPUTED_GOTO) || !ENABLE(C_LOOP)
 #define ENABLE_COMPUTED_GOTO_OPCODES 1
@@ -823,6 +818,9 @@
 #define ENABLE_OPENTYPE_MATH 1
 #endif
 
+#if !defined(ENABLE_INLINE_PATH_DATA) && USE(CG)
+#define ENABLE_INLINE_PATH_DATA 1
+#endif
 
 /* Disable SharedArrayBuffers until Spectre security concerns are mitigated. */
 #define ENABLE_SHARED_ARRAY_BUFFER 0
@@ -830,6 +828,19 @@
 
 #if ((PLATFORM(COCOA) || PLATFORM(PLAYSTATION) || PLATFORM(WPE)) && ENABLE(ASYNC_SCROLLING)) || PLATFORM(GTK)
 #define ENABLE_KINETIC_SCROLLING 1
+#endif
+
+#if PLATFORM(MAC)
+// FIXME: Maybe this can be combined with ENABLE_KINETIC_SCROLLING.
+#define ENABLE_WHEEL_EVENT_LATCHING 1
+#endif
+
+#if !defined(ENABLE_SCROLLING_THREAD)
+#if USE(NICOSIA)
+#define ENABLE_SCROLLING_THREAD 1
+#else
+#define ENABLE_SCROLLING_THREAD 0
+#endif
 #endif
 
 /* This feature works by embedding the OpcodeID in the 32 bit just before the generated LLint code
@@ -845,10 +856,6 @@
 
 
 /* Asserts, invariants for macro definitions */
-
-#if ENABLE(VIDEO_TRACK) && !ENABLE(VIDEO)
-#error "ENABLE(VIDEO_TRACK) requires ENABLE(VIDEO)"
-#endif
 
 #if ENABLE(MEDIA_CONTROLS_SCRIPT) && !ENABLE(VIDEO)
 #error "ENABLE(MEDIA_CONTROLS_SCRIPT) requires ENABLE(VIDEO)"
@@ -868,4 +875,8 @@
 
 #if ENABLE(WEBGL2) && !ENABLE(WEBGL)
 #error "ENABLE(WEBGL2) requires ENABLE(WEBGL)"
+#endif
+
+#if CPU(ARM64) && CPU(ADDRESS64)
+#define USE_JUMP_ISLANDS 1
 #endif

@@ -27,6 +27,8 @@
 #include "DisplayListItems.h"
 
 #include "FontCascade.h"
+#include "ImageData.h"
+#include "SharedBuffer.h"
 #include <wtf/text/TextStream.h>
 
 #if USE(CG)
@@ -138,6 +140,8 @@ size_t Item::sizeInBytes(const Item& item)
         return sizeof(downcast<FillPath>(item));
     case ItemType::FillEllipse:
         return sizeof(downcast<FillEllipse>(item));
+    case ItemType::PutImageData:
+        return sizeof(downcast<PutImageData>(item));
     case ItemType::StrokeRect:
         return sizeof(downcast<StrokeRect>(item));
     case ItemType::StrokePath:
@@ -192,12 +196,6 @@ Save::~Save() = default;
 void Save::apply(GraphicsContext& context) const
 {
     context.save();
-}
-
-static TextStream& operator<<(TextStream& ts, const Save& item)
-{
-    ts.dumpProperty("restore-index", item.restoreIndex());
-    return ts;
 }
 
 Restore::Restore()
@@ -545,9 +543,8 @@ DrawGlyphs::~DrawGlyphs() = default;
 inline GlyphBuffer DrawGlyphs::generateGlyphBuffer() const
 {
     GlyphBuffer result;
-    for (size_t i = 0; i < m_glyphs.size(); ++i) {
-        result.add(m_glyphs[i], &m_font.get(), m_advances[i], GlyphBuffer::noOffset);
-    }
+    for (size_t i = 0; i < m_glyphs.size(); ++i)
+        result.add(m_glyphs[i], m_font.get(), m_advances[i], GlyphBuffer::noOffset);
     return result;
 }
 
@@ -1153,6 +1150,45 @@ static TextStream& operator<<(TextStream& ts, const FillEllipse& item)
     return ts;
 }
 
+PutImageData::PutImageData(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+    : DrawingItem(ItemType::PutImageData)
+    , m_srcRect(srcRect)
+    , m_destPoint(destPoint)
+    , m_imageData(imageData.deepClone()) // This copy is actually required to preserve the semantics of putImageData().
+    , m_inputFormat(inputFormat)
+    , m_destFormat(destFormat)
+{
+}
+
+PutImageData::PutImageData(AlphaPremultiplication inputFormat, Ref<ImageData>&& imageData, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+    : DrawingItem(ItemType::PutImageData)
+    , m_srcRect(srcRect)
+    , m_destPoint(destPoint)
+    , m_imageData(WTFMove(imageData))
+    , m_inputFormat(inputFormat)
+    , m_destFormat(destFormat)
+{
+}
+
+PutImageData::~PutImageData() = default;
+
+void PutImageData::apply(GraphicsContext&) const
+{
+    // Should be handled by the delegate.
+    ASSERT_NOT_REACHED();
+}
+
+static TextStream& operator<<(TextStream& ts, const PutImageData& item)
+{
+    ts << static_cast<const DrawingItem&>(item);
+    ts.dumpProperty("inputFormat", item.inputFormat());
+    ts.dumpProperty("imageDataSize", item.imageData().size());
+    ts.dumpProperty("srcRect", item.srcRect());
+    ts.dumpProperty("destPoint", item.destPoint());
+    ts.dumpProperty("destFormat", item.destFormat());
+    return ts;
+}
+
 StrokeRect::StrokeRect(const FloatRect& rect, float lineWidth)
     : DrawingItem(ItemType::StrokeRect)
     , m_rect(rect)
@@ -1194,7 +1230,7 @@ Optional<FloatRect> StrokePath::localBounds(const GraphicsContext& context) cons
 
 void StrokePath::apply(GraphicsContext& context) const
 {
-    context.strokePath(m_path);
+    context.strokePath(WTFMove(m_path));
 }
 
 static TextStream& operator<<(TextStream& ts, const StrokePath& item)
@@ -1381,6 +1417,7 @@ static TextStream& operator<<(TextStream& ts, const ItemType& type)
     case ItemType::FillRectWithRoundedHole: ts << "fill-rect-with-rounded-hole"; break;
     case ItemType::FillPath: ts << "fill-path"; break;
     case ItemType::FillEllipse: ts << "fill-ellipse"; break;
+    case ItemType::PutImageData: ts << "put-image-data"; break;
     case ItemType::StrokeRect: ts << "stroke-rect"; break;
     case ItemType::StrokePath: ts << "stroke-path"; break;
     case ItemType::StrokeEllipse: ts << "stroke-ellipse"; break;
@@ -1404,9 +1441,6 @@ TextStream& operator<<(TextStream& ts, const Item& item)
 
     // FIXME: Make a macro which takes a macro for all these enumeration switches
     switch (item.type()) {
-    case ItemType::Save:
-        ts << downcast<Save>(item);
-        break;
     case ItemType::Translate:
         ts << downcast<Translate>(item);
         break;
@@ -1517,6 +1551,9 @@ TextStream& operator<<(TextStream& ts, const Item& item)
     case ItemType::FillEllipse:
         ts << downcast<FillEllipse>(item);
         break;
+    case ItemType::PutImageData:
+        ts << downcast<PutImageData>(item);
+        break;
     case ItemType::StrokeRect:
         ts << downcast<StrokeRect>(item);
         break;
@@ -1537,6 +1574,7 @@ TextStream& operator<<(TextStream& ts, const Item& item)
         break;
 
     // Items with no additional data.
+    case ItemType::Save:
     case ItemType::Restore:
     case ItemType::EndTransparencyLayer:
 #if USE(CG)

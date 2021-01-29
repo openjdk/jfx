@@ -28,9 +28,11 @@
 
 namespace WebCore {
 
+class Blob;
 class DeferredPromise;
 class DOMMimeTypeArray;
 class DOMPluginArray;
+class ShareDataReader;
 
 class Navigator final : public NavigatorBase, public ScriptWrappable, public DOMWindowProperty, public Supplementable<Navigator> {
     WTF_MAKE_ISO_ALLOCATED(Navigator);
@@ -47,7 +49,8 @@ public:
     String platform() const final;
     void userAgentChanged();
     bool onLine() const final;
-    void share(ScriptExecutionContext&, ShareData, Ref<DeferredPromise>&&);
+    bool canShare(ScriptExecutionContext&, const ShareData&);
+    void share(ScriptExecutionContext&, const ShareData&, Ref<DeferredPromise>&&);
 
 #if PLATFORM(IOS_FAMILY)
     bool standalone() const;
@@ -55,21 +58,23 @@ public:
 
     void getStorageUpdates();
 
-#if ENABLE(POINTER_EVENTS)
 #if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(MACCATALYST)
     int maxTouchPoints() const { return 5; }
 #else
     int maxTouchPoints() const { return 0; }
 #endif
-#endif
 
 private:
+    void showShareData(ExceptionOr<ShareDataWithParsedURL&>, Ref<DeferredPromise>&&);
     explicit Navigator(ScriptExecutionContext*, DOMWindow&);
 
+    void initializePluginAndMimeTypeArrays();
+
+    mutable RefPtr<ShareDataReader> m_loader;
+    mutable bool m_hasPendingShare { false };
     mutable RefPtr<DOMPluginArray> m_plugins;
     mutable RefPtr<DOMMimeTypeArray> m_mimeTypes;
     mutable String m_userAgent;
     mutable String m_platform;
 };
-
 }

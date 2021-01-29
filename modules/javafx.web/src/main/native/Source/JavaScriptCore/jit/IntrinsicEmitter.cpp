@@ -31,12 +31,9 @@
 #if ENABLE(JIT)
 
 #include "CCallHelpers.h"
-#include "CallFrame.h"
-#include "CodeBlock.h"
 #include "IntrinsicGetterAccessCase.h"
 #include "JSArrayBufferView.h"
 #include "JSCJSValueInlines.h"
-#include "JSCellInlines.h"
 #include "PolymorphicAccess.h"
 #include "StructureStubInfo.h"
 
@@ -64,9 +61,8 @@ bool IntrinsicGetterAccessCase::canEmitIntrinsicGetter(JSFunction* getter, Struc
         return true;
     }
     case UnderscoreProtoIntrinsic: {
-        auto getPrototypeMethod = structure->classInfo()->methodTable.getPrototype;
-        MethodTable::GetPrototypeFunctionPtr defaultGetPrototype = JSObject::getPrototype;
-        return getPrototypeMethod == defaultGetPrototype;
+        TypeInfo info = structure->typeInfo();
+        return info.isObject() && !info.overridesGetPrototype();
     }
     default:
         return false;

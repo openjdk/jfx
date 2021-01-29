@@ -32,6 +32,7 @@
 
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/TypedArrayInlines.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -77,7 +78,7 @@ RefPtr<ImageData> ImageData::create(const IntSize& size, Ref<Uint8ClampedArray>&
     return adoptRef(*new ImageData(size, WTFMove(byteArray)));
 }
 
-ExceptionOr<RefPtr<ImageData>> ImageData::create(Ref<Uint8ClampedArray>&& byteArray, unsigned sw, Optional<unsigned> sh)
+ExceptionOr<Ref<ImageData>> ImageData::create(Ref<Uint8ClampedArray>&& byteArray, unsigned sw, Optional<unsigned> sh)
 {
     unsigned length = byteArray->length();
     if (!length || length % 4)
@@ -92,7 +93,10 @@ ExceptionOr<RefPtr<ImageData>> ImageData::create(Ref<Uint8ClampedArray>&& byteAr
     if (sh && sh.value() != height)
         return Exception { IndexSizeError, "sh value is not equal to height"_s };
 
-    return create(IntSize(sw, height), WTFMove(byteArray));
+    auto result = create(IntSize(sw, height), WTFMove(byteArray));
+    if (!result)
+        return Exception { RangeError };
+    return result.releaseNonNull();
 }
 
 ImageData::ImageData(const IntSize& size)
@@ -106,6 +110,17 @@ ImageData::ImageData(const IntSize& size, Ref<Uint8ClampedArray>&& byteArray)
     , m_data(WTFMove(byteArray))
 {
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION((size.area() * 4).unsafeGet() <= m_data->length());
+}
+
+Ref<ImageData> ImageData::deepClone() const
+{
+    return adoptRef(*new ImageData(m_size, Uint8ClampedArray::create(m_data->data(), m_data->length())));
+}
+
+TextStream& operator<<(TextStream& ts, const ImageData& imageData)
+{
+    // Print out the address of the pixel data array
+    return ts << imageData.data();
 }
 
 }

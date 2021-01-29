@@ -27,9 +27,11 @@
 #include "ResourceRequestBase.h"
 
 #include "HTTPHeaderNames.h"
+#include "Logging.h"
 #include "PublicSuffix.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <wtf/PointerComparison.h>
 
@@ -127,9 +129,25 @@ void ResourceRequestBase::setURL(const URL& url)
 
 static bool shouldUseGet(const ResourceRequestBase& request, const ResourceResponse& redirectResponse)
 {
+    if (equalLettersIgnoringASCIICase(request.httpMethod(), "get") || equalLettersIgnoringASCIICase(request.httpMethod(), "head"))
+        return false;
     if (redirectResponse.httpStatusCode() == 301 || redirectResponse.httpStatusCode() == 302)
         return equalLettersIgnoringASCIICase(request.httpMethod(), "post");
     return redirectResponse.httpStatusCode() == 303;
+}
+
+// https://fetch.spec.whatwg.org/#concept-http-redirect-fetch Step 11
+void ResourceRequestBase::redirectAsGETIfNeeded(const ResourceRequestBase &redirectRequest, const ResourceResponse& redirectResponse)
+{
+    if (shouldUseGet(redirectRequest, redirectResponse)) {
+        setHTTPMethod("GET"_s);
+        setHTTPBody(nullptr);
+        m_httpHeaderFields.remove(HTTPHeaderName::ContentLength);
+        m_httpHeaderFields.remove(HTTPHeaderName::ContentLanguage);
+        m_httpHeaderFields.remove(HTTPHeaderName::ContentEncoding);
+        m_httpHeaderFields.remove(HTTPHeaderName::ContentLocation);
+        clearHTTPContentType();
+    }
 }
 
 ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect) const
@@ -143,12 +161,7 @@ ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& r
 
     request.setURL(location.isEmpty() ? URL { } : URL { redirectResponse.url(), location });
 
-    if (shouldUseGet(*this, redirectResponse)) {
-        request.setHTTPMethod("GET"_s);
-        request.setHTTPBody(nullptr);
-        request.clearHTTPContentType();
-        request.m_httpHeaderFields.remove(HTTPHeaderName::ContentLength);
-    }
+    request.redirectAsGETIfNeeded(*this, redirectResponse);
 
     if (shouldClearReferrerOnHTTPSToHTTPRedirect && !request.url().protocolIs("https") && WTF::protocolIs(request.httpReferrer(), "https"))
         request.clearHTTPReferrer();
@@ -165,12 +178,10 @@ void ResourceRequestBase::removeCredentials()
 {
     updateResourceRequest();
 
-    if (m_url.user().isEmpty() && m_url.pass().isEmpty())
+    if (!m_url.hasCredentials())
         return;
 
-    m_url.setUser(String());
-    m_url.setPass(String());
-
+    m_url.removeCredentials();
     m_platformRequestUpdated = false;
 }
 
@@ -378,6 +389,14 @@ bool ResourceRequestBase::hasHTTPReferrer() const
 
 void ResourceRequestBase::setHTTPReferrer(const String& httpReferrer)
 {
+    // https://w3c.github.io/webappsec-referrer-policy/#determine-requests-referrer
+    constexpr size_t maxLength = 4096;
+    if (httpReferrer.length() > maxLength) {
+        RELEASE_LOG(Loading, "Truncating HTTP referer");
+        String origin = SecurityOrigin::create(URL(URL(), httpReferrer))->toString();
+        if (origin.length() <= maxLength)
+            setHTTPHeaderField(HTTPHeaderName::Referer, origin);
+    } else
     setHTTPHeaderField(HTTPHeaderName::Referer, httpReferrer);
 }
 
@@ -442,25 +461,6 @@ void ResourceRequestBase::clearHTTPUserAgent()
     updateResourceRequest();
 
     m_httpHeaderFields.remove(HTTPHeaderName::UserAgent);
-
-    m_platformRequestUpdated = false;
-}
-
-String ResourceRequestBase::httpAccept() const
-{
-    return httpHeaderField(HTTPHeaderName::Accept);
-}
-
-void ResourceRequestBase::setHTTPAccept(const String& httpAccept)
-{
-    setHTTPHeaderField(HTTPHeaderName::Accept, httpAccept);
-}
-
-void ResourceRequestBase::clearHTTPAccept()
-{
-    updateResourceRequest();
-
-    m_httpHeaderFields.remove(HTTPHeaderName::Accept);
 
     m_platformRequestUpdated = false;
 }

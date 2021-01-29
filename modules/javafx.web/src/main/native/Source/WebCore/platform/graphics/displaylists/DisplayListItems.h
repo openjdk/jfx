@@ -25,14 +25,16 @@
 
 #pragma once
 
+#include "AlphaPremultiplication.h"
 #include "DisplayList.h"
-#include "FloatPoint.h"
 #include "FloatRoundedRect.h"
 #include "Font.h"
 #include "GlyphBuffer.h"
+#include "Gradient.h"
 #include "Image.h"
+#include "ImageData.h"
 #include "Pattern.h"
-#include <wtf/RefCounted.h>
+#include "SharedBuffer.h"
 #include <wtf/TypeCasts.h>
 
 namespace WTF {
@@ -41,6 +43,7 @@ class TextStream;
 
 namespace WebCore {
 
+class ImageData;
 struct ImagePaintingOptions;
 
 namespace DisplayList {
@@ -60,6 +63,10 @@ public:
     // Does not include effets of transform, shadow etc in the state.
     virtual Optional<FloatRect> localBounds(const GraphicsContext&) const { return WTF::nullopt; }
 
+    // Some operations (e.g. putImageData) operate in global bounds. For these operations, override this method.
+    // If applicable, the return value needs to include the effects of shadows, clipping, etc.
+    virtual Optional<FloatRect> globalBounds() const { return WTF::nullopt; }
+
 private:
     bool isDrawingItem() const override { return true; }
 
@@ -75,10 +82,6 @@ public:
 
     WEBCORE_EXPORT virtual ~Save();
 
-    // Index in the display list of the corresponding Restore item. 0 if unmatched.
-    size_t restoreIndex() const { return m_restoreIndex; }
-    void setRestoreIndex(size_t index) { m_restoreIndex = index; }
-
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static Optional<Ref<Save>> decode(Decoder&);
 
@@ -86,28 +89,17 @@ private:
     WEBCORE_EXPORT Save();
 
     void apply(GraphicsContext&) const override;
-
-    size_t m_restoreIndex { 0 };
 };
 
 template<class Encoder>
-void Save::encode(Encoder& encoder) const
+void Save::encode(Encoder&) const
 {
-    encoder << static_cast<uint64_t>(m_restoreIndex);
 }
 
 template<class Decoder>
-Optional<Ref<Save>> Save::decode(Decoder& decoder)
+Optional<Ref<Save>> Save::decode(Decoder&)
 {
-    Optional<uint64_t> restoreIndex;
-    decoder >> restoreIndex;
-    if (!restoreIndex)
-        return WTF::nullopt;
-
-    // FIXME: Validate restoreIndex? But we don't have the list context here.
-    auto save = Save::create();
-    save->setRestoreIndex(static_cast<size_t>(*restoreIndex));
-    return save;
+    return Save::create();
 }
 
 class Restore : public Item {
@@ -423,7 +415,7 @@ void SetState::encode(Encoder& encoder) const
         encoder << state.strokeThickness;
 
     if (changeFlags.contains(GraphicsContextState::TextDrawingModeChange))
-        encoder.encodeEnum(state.textDrawingMode);
+        encoder << state.textDrawingMode;
 
     if (changeFlags.contains(GraphicsContextState::StrokeColorChange))
         encoder << state.strokeColor;
@@ -432,7 +424,7 @@ void SetState::encode(Encoder& encoder) const
         encoder << state.fillColor;
 
     if (changeFlags.contains(GraphicsContextState::StrokeStyleChange))
-        encoder.encodeEnum(state.strokeStyle);
+        encoder << state.strokeStyle;
 
     if (changeFlags.contains(GraphicsContextState::FillRuleChange))
         encoder << state.fillRule;
@@ -575,11 +567,12 @@ Optional<Ref<SetState>> SetState::decode(Decoder& decoder)
     }
 
     if (stateChange.m_changeFlags.contains(GraphicsContextState::TextDrawingModeChange)) {
-        TextDrawingModeFlags textDrawingMode;
-        if (!decoder.decodeEnum(textDrawingMode))
+        Optional<TextDrawingModeFlags> textDrawingMode;
+        decoder >> textDrawingMode;
+        if (!textDrawingMode)
             return WTF::nullopt;
 
-        stateChange.m_state.textDrawingMode = textDrawingMode;
+        stateChange.m_state.textDrawingMode = WTFMove(*textDrawingMode);
     }
 
     if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeColorChange)) {
@@ -602,7 +595,7 @@ Optional<Ref<SetState>> SetState::decode(Decoder& decoder)
 
     if (stateChange.m_changeFlags.contains(GraphicsContextState::StrokeStyleChange)) {
         StrokeStyle strokeStyle;
-        if (!decoder.decodeEnum(strokeStyle))
+        if (!decoder.decode(strokeStyle))
             return WTF::nullopt;
 
         stateChange.m_state.strokeStyle = strokeStyle;
@@ -1340,8 +1333,8 @@ void DrawTiledScaledImage::encode(Encoder& encoder) const
     encoder << m_destination;
     encoder << m_source;
     encoder << m_tileScaleFactor;
-    encoder.encodeEnum(m_hRule);
-    encoder.encodeEnum(m_vRule);
+    encoder << m_hRule;
+    encoder << m_vRule;
     encoder << m_imagePaintingOptions;
 }
 
@@ -1369,11 +1362,11 @@ Optional<Ref<DrawTiledScaledImage>> DrawTiledScaledImage::decode(Decoder& decode
         return WTF::nullopt;
 
     Image::TileRule hRule;
-    if (!decoder.decodeEnum(hRule))
+    if (!decoder.decode(hRule))
         return WTF::nullopt;
 
     Image::TileRule vRule;
-    if (!decoder.decodeEnum(vRule))
+    if (!decoder.decode(vRule))
         return WTF::nullopt;
 
     Optional<ImagePaintingOptions> imagePaintingOptions;
@@ -2457,6 +2450,85 @@ Optional<Ref<FillEllipse>> FillEllipse::decode(Decoder& decoder)
     return FillEllipse::create(*rect);
 }
 
+class PutImageData : public DrawingItem {
+public:
+    static Ref<PutImageData> create(AlphaPremultiplication inputFormat, const ImageData& imageData, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+    {
+        return adoptRef(*new PutImageData(inputFormat, imageData, srcRect, destPoint, destFormat));
+    }
+    static Ref<PutImageData> create(AlphaPremultiplication inputFormat, Ref<ImageData>&& imageData, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat)
+    {
+        return adoptRef(*new PutImageData(inputFormat, WTFMove(imageData), srcRect, destPoint, destFormat));
+    }
+
+    WEBCORE_EXPORT virtual ~PutImageData();
+
+    AlphaPremultiplication inputFormat() const { return m_inputFormat; }
+    ImageData& imageData() const { return m_imageData; }
+    IntRect srcRect() const { return m_srcRect; }
+    IntPoint destPoint() const { return m_destPoint; }
+    AlphaPremultiplication destFormat() const { return m_destFormat; }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static Optional<Ref<PutImageData>> decode(Decoder&);
+
+private:
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, const ImageData&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat);
+    WEBCORE_EXPORT PutImageData(AlphaPremultiplication inputFormat, Ref<ImageData>&&, const IntRect& srcRect, const IntPoint& destPoint, AlphaPremultiplication destFormat);
+
+    void apply(GraphicsContext&) const override;
+
+    Optional<FloatRect> globalBounds() const override { return FloatRect(m_destPoint, m_srcRect.size()); }
+
+    IntRect m_srcRect;
+    IntPoint m_destPoint;
+    Ref<ImageData> m_imageData;
+    AlphaPremultiplication m_inputFormat;
+    AlphaPremultiplication m_destFormat;
+};
+
+template<class Encoder>
+void PutImageData::encode(Encoder& encoder) const
+{
+    encoder << m_inputFormat;
+    encoder << m_imageData;
+    encoder << m_srcRect;
+    encoder << m_destPoint;
+    encoder << m_destFormat;
+}
+
+template<class Decoder>
+Optional<Ref<PutImageData>> PutImageData::decode(Decoder& decoder)
+{
+    Optional<AlphaPremultiplication> inputFormat;
+    Optional<Ref<ImageData>> imageData;
+    Optional<IntRect> srcRect;
+    Optional<IntPoint> destPoint;
+    Optional<AlphaPremultiplication> destFormat;
+
+    decoder >> inputFormat;
+    if (!inputFormat)
+        return WTF::nullopt;
+
+    decoder >> imageData;
+    if (!imageData)
+        return WTF::nullopt;
+
+    decoder >> srcRect;
+    if (!srcRect)
+        return WTF::nullopt;
+
+    decoder >> destPoint;
+    if (!destPoint)
+        return WTF::nullopt;
+
+    decoder >> destFormat;
+    if (!destFormat)
+        return WTF::nullopt;
+
+    return PutImageData::create(*inputFormat, WTFMove(*imageData), *srcRect, *destPoint, *destFormat);
+}
+
 class StrokeRect : public DrawingItem {
 public:
     static Ref<StrokeRect> create(const FloatRect& rect, float lineWidth)
@@ -2525,7 +2597,7 @@ private:
     void apply(GraphicsContext&) const override;
     Optional<FloatRect> localBounds(const GraphicsContext&) const override;
 
-    const Path m_path;
+    mutable Path m_path;
 };
 
 template<class Encoder>
@@ -2852,6 +2924,9 @@ void Item::encode(Encoder& encoder) const
     case ItemType::FillEllipse:
         encoder << downcast<FillEllipse>(*this);
         break;
+    case ItemType::PutImageData:
+        encoder << downcast<PutImageData>(*this);
+        break;
     case ItemType::StrokeRect:
         encoder << downcast<StrokeRect>(*this);
         break;
@@ -3051,6 +3126,10 @@ Optional<Ref<Item>> Item::decode(Decoder& decoder)
         if (auto item = FillEllipse::decode(decoder))
             return static_reference_cast<Item>(WTFMove(*item));
         break;
+    case ItemType::PutImageData:
+        if (auto item = PutImageData::decode(decoder))
+            return static_reference_cast<Item>(WTFMove(*item));
+        break;
     case ItemType::StrokeRect:
         if (auto item = StrokeRect::decode(decoder))
             return static_reference_cast<Item>(WTFMove(*item));
@@ -3150,6 +3229,7 @@ SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRoundedRect)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillRectWithRoundedHole)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillPath)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(FillEllipse)
+SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(PutImageData)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeRect)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokePath)
 SPECIALIZE_TYPE_TRAITS_DISPLAYLIST_ITEM(StrokeEllipse)
@@ -3209,6 +3289,7 @@ template<> struct EnumTraits<WebCore::DisplayList::ItemType> {
     WebCore::DisplayList::ItemType::FillRectWithRoundedHole,
     WebCore::DisplayList::ItemType::FillPath,
     WebCore::DisplayList::ItemType::FillEllipse,
+    WebCore::DisplayList::ItemType::PutImageData,
     WebCore::DisplayList::ItemType::StrokeRect,
     WebCore::DisplayList::ItemType::StrokePath,
     WebCore::DisplayList::ItemType::StrokeEllipse,

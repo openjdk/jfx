@@ -29,14 +29,16 @@
 #include "DisplayListItems.h"
 #include "GraphicsContext.h"
 #include "Logging.h"
+#include <wtf/SystemTracing.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace DisplayList {
 
-Replayer::Replayer(GraphicsContext& context, const DisplayList& displayList)
+Replayer::Replayer(GraphicsContext& context, const DisplayList& displayList, Delegate* delegate)
     : m_displayList(displayList)
     , m_context(context)
+    , m_delegate(delegate)
 {
 }
 
@@ -44,6 +46,7 @@ Replayer::~Replayer() = default;
 
 std::unique_ptr<DisplayList> Replayer::replay(const FloatRect& initialClip, bool trackReplayList)
 {
+    TraceScope tracingScope(DisplayListReplayStart, DisplayListReplayEnd);
     LOG_WITH_STREAM(DisplayLists, stream << "\nReplaying with clip " << initialClip);
     UNUSED_PARAM(initialClip);
 
@@ -64,7 +67,8 @@ std::unique_ptr<DisplayList> Replayer::replay(const FloatRect& initialClip, bool
         }
 
         LOG_WITH_STREAM(DisplayLists, stream << "applying " << i << " " << item);
-        item.apply(m_context);
+        if (!m_delegate || !m_delegate->apply(item, m_context))
+            item.apply(m_context);
 
         if (UNLIKELY(trackReplayList))
             replayList->appendItem(const_cast<Item&>(item));

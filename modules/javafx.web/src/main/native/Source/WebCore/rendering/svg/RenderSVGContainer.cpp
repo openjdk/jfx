@@ -166,6 +166,8 @@ bool RenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTest
     if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
         return false;
 
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
+
     for (RenderObject* child = lastChild(); child; child = child->previousSibling()) {
         if (child->nodeAtFloatPoint(request, result, localPoint, hitTestAction)) {
             updateHitTestResult(result, LayoutPoint(localPoint));
@@ -177,7 +179,7 @@ bool RenderSVGContainer::nodeAtFloatPoint(const HitTestRequest& request, HitTest
     // Accessibility wants to return SVG containers, if appropriate.
     if (request.type() & HitTestRequest::AccessibilityHitTest && m_objectBoundingBox.contains(localPoint)) {
         updateHitTestResult(result, LayoutPoint(localPoint));
-        if (result.addNodeToListBasedTestResult(&element(), request, localPoint) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, localPoint) == HitTestProgress::Stop)
             return true;
     }
 
