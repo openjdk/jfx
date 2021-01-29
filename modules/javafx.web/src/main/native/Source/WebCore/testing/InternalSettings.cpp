@@ -66,7 +66,7 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_imagesEnabled(settings.areImagesEnabled())
     , m_preferMIMETypeForImages(settings.preferMIMETypeForImages())
     , m_minimumDOMTimerInterval(settings.minimumDOMTimerInterval())
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     , m_shouldDisplaySubtitles(settings.shouldDisplaySubtitles())
     , m_shouldDisplayCaptions(settings.shouldDisplayCaptions())
     , m_shouldDisplayTextDescriptions(settings.shouldDisplayTextDescriptions())
@@ -119,6 +119,7 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(MEDIA_STREAM)
     , m_setScreenCaptureEnabled(RuntimeEnabledFeatures::sharedFeatures().screenCaptureEnabled())
 #endif
+    , m_fetchAPIKeepAliveAPIEnabled(RuntimeEnabledFeatures::sharedFeatures().fetchAPIKeepAliveEnabled())
     , m_shouldMockBoldSystemFontForAccessibility(RenderTheme::singleton().shouldMockBoldSystemFontForAccessibility())
 #if USE(AUDIO_SESSION)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
@@ -169,7 +170,7 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setImagesEnabled(m_imagesEnabled);
     settings.setPreferMIMETypeForImages(m_preferMIMETypeForImages);
     settings.setMinimumDOMTimerInterval(m_minimumDOMTimerInterval);
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     settings.setShouldDisplaySubtitles(m_shouldDisplaySubtitles);
     settings.setShouldDisplayCaptions(m_shouldDisplayCaptions);
     settings.setShouldDisplayTextDescriptions(m_shouldDisplayTextDescriptions);
@@ -222,6 +223,7 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(MEDIA_STREAM)
     RuntimeEnabledFeatures::sharedFeatures().setScreenCaptureEnabled(m_setScreenCaptureEnabled);
 #endif
+    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(m_fetchAPIKeepAliveAPIEnabled);
     RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
 
 #if USE(AUDIO_SESSION)
@@ -439,6 +441,18 @@ ExceptionOr<void> InternalSettings::setTextAutosizingUsesIdempotentMode(bool ena
     return { };
 }
 
+ExceptionOr<void> InternalSettings::setEditableRegionEnabled(bool enabled)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+#if ENABLE(EDITABLE_REGION)
+    m_page->setEditableRegionEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+    return { };
+}
+
 ExceptionOr<void> InternalSettings::setMediaTypeOverride(const String& mediaType)
 {
     if (!m_page)
@@ -500,7 +514,7 @@ ExceptionOr<void> InternalSettings::setShouldDisplayTrackKind(const String& kind
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     auto& captionPreferences = m_page->group().captionPreferences();
     if (equalLettersIgnoringASCIICase(kind, "subtitles"))
         captionPreferences.setUserPrefersSubtitles(enabled);
@@ -521,7 +535,7 @@ ExceptionOr<bool> InternalSettings::shouldDisplayTrackKind(const String& kind)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     auto& captionPreferences = m_page->group().captionPreferences();
     if (equalLettersIgnoringASCIICase(kind, "subtitles"))
         return captionPreferences.userPrefersSubtitles();
@@ -809,6 +823,11 @@ void InternalSettings::setScreenCaptureEnabled(bool enabled)
 #endif
 }
 
+void InternalSettings::setFetchAPIKeepAliveEnabled(bool enabled)
+{
+    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIKeepAliveEnabled(enabled);
+}
+
 ExceptionOr<String> InternalSettings::userInterfaceDirectionPolicy()
 {
     if (!m_page)
@@ -1021,6 +1040,10 @@ void InternalSettings::setShouldDeactivateAudioSession(bool should)
 #endif
 }
 
+void InternalSettings::setStorageAccessAPIPerPageScopeEnabled(bool enabled)
+{
+    settings().setStorageAccessAPIPerPageScopeEnabled(enabled);
+}
 // If you add to this class, make sure that you update the Backup class for test reproducability!
 
 }

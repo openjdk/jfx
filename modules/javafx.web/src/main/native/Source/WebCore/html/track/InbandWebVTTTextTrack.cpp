@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #include "config.h"
 #include "InbandWebVTTTextTrack.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "InbandTextTrackPrivate.h"
 #include "Logging.h"
@@ -39,14 +39,14 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(InbandWebVTTTextTrack);
 
-inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
-    : InbandTextTrack(context, client, trackPrivate)
+inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
+    : InbandTextTrack(document, client, trackPrivate)
 {
 }
 
-Ref<InbandTextTrack> InbandWebVTTTextTrack::create(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
+Ref<InbandTextTrack> InbandWebVTTTextTrack::create(Document& document, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
 {
-    return adoptRef(*new InbandWebVTTTextTrack(context, client, trackPrivate));
+    return adoptRef(*new InbandWebVTTTextTrack(document, client, trackPrivate));
 }
 
 InbandWebVTTTextTrack::~InbandWebVTTTextTrack() = default;
@@ -54,7 +54,7 @@ InbandWebVTTTextTrack::~InbandWebVTTTextTrack() = default;
 WebVTTParser& InbandWebVTTTextTrack::parser()
 {
     if (!m_webVTTParser)
-        m_webVTTParser = makeUnique<WebVTTParser>(static_cast<WebVTTParserClient*>(this), scriptExecutionContext());
+        m_webVTTParser = makeUnique<WebVTTParser>(static_cast<WebVTTParserClient&>(*this), document());
     return *m_webVTTParser;
 }
 
@@ -63,35 +63,29 @@ void InbandWebVTTTextTrack::parseWebVTTCueData(const char* data, unsigned length
     parser().parseBytes(data, length);
 }
 
-void InbandWebVTTTextTrack::parseWebVTTCueData(const ISOWebVTTCue& cueData)
+void InbandWebVTTTextTrack::parseWebVTTCueData(ISOWebVTTCue&& cueData)
 {
-    parser().parseCueData(cueData);
+    parser().parseCueData(WTFMove(cueData));
 }
 
 void InbandWebVTTTextTrack::newCuesParsed()
 {
-    Vector<RefPtr<WebVTTCueData>> cues;
-    parser().getNewCues(cues);
-    for (auto& cueData : cues) {
-        auto vttCue = VTTCue::create(*scriptExecutionContext(), *cueData);
-        if (hasCue(vttCue.ptr(), TextTrackCue::IgnoreDuration)) {
-            INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", vttCue.get());
+    for (auto& cueData : parser().takeCues()) {
+        auto cue = VTTCue::create(document(), cueData);
+        if (hasCue(cue, TextTrackCue::IgnoreDuration)) {
+            INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", cue.get());
             return;
         }
-
-        INFO_LOG(LOGIDENTIFIER, vttCue.get());
-
-        addCue(WTFMove(vttCue));
+        INFO_LOG(LOGIDENTIFIER, cue.get());
+        addCue(WTFMove(cue));
     }
 }
 
 void InbandWebVTTTextTrack::newRegionsParsed()
 {
-    Vector<RefPtr<VTTRegion>> newRegions;
-    parser().getNewRegions(newRegions);
-    for (auto& region : newRegions) {
+    for (auto& region : parser().takeRegions()) {
         region->setTrack(this);
-        regions()->add(region.releaseNonNull());
+        regions()->add(WTFMove(region));
     }
 }
 

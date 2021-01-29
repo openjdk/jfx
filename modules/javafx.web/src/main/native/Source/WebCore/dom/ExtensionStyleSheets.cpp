@@ -59,7 +59,7 @@ ExtensionStyleSheets::ExtensionStyleSheets(Document& document)
 
 static Ref<CSSStyleSheet> createExtensionsStyleSheet(Document& document, URL url, const String& text, UserStyleLevel level)
 {
-    auto contents = StyleSheetContents::create(url, CSSParserContext(document, url));
+    auto contents = StyleSheetContents::create(url.string(), CSSParserContext(document, url));
     auto styleSheet = CSSStyleSheet::create(contents.get(), document, true);
 
     contents->setIsUserStyleSheet(level == UserStyleUserLevel);
@@ -127,22 +127,48 @@ void ExtensionStyleSheets::updateInjectedStyleSheetCache() const
     if (!owningPage)
         return;
 
-    owningPage->userContentProvider().forEachUserStyleSheet([&](const UserStyleSheet& userStyleSheet) {
-        if (userStyleSheet.injectedFrames() == InjectInTopFrameOnly && m_document.ownerElement())
-            return;
-
-        if (!UserContentURLPattern::matchesPatterns(m_document.url(), userStyleSheet.whitelist(), userStyleSheet.blacklist()))
-            return;
-
+    auto addStyleSheet = [&](const UserStyleSheet& userStyleSheet) {
         auto sheet = createExtensionsStyleSheet(const_cast<Document&>(m_document), userStyleSheet.url(), userStyleSheet.source(), userStyleSheet.level());
 
         m_injectedStyleSheetToSource.set(sheet.copyRef(), userStyleSheet.source());
 
-        if (userStyleSheet.level() == UserStyleUserLevel)
+        if (sheet->contents().isUserStyleSheet())
             m_injectedUserStyleSheets.append(WTFMove(sheet));
         else
             m_injectedAuthorStyleSheets.append(WTFMove(sheet));
+    };
+
+    for (const auto& userStyleSheet : m_pageSpecificStyleSheets)
+        addStyleSheet(userStyleSheet);
+
+    owningPage->userContentProvider().forEachUserStyleSheet([&](const UserStyleSheet& userStyleSheet) {
+        if (userStyleSheet.pageID())
+            return;
+
+        if (userStyleSheet.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && m_document.ownerElement())
+            return;
+
+        if (!UserContentURLPattern::matchesPatterns(m_document.url(), userStyleSheet.allowlist(), userStyleSheet.blocklist()))
+            return;
+
+        addStyleSheet(userStyleSheet);
     });
+}
+
+void ExtensionStyleSheets::injectPageSpecificUserStyleSheet(const UserStyleSheet& userStyleSheet)
+{
+    m_pageSpecificStyleSheets.append(userStyleSheet);
+    invalidateInjectedStyleSheetCache();
+}
+
+void ExtensionStyleSheets::removePageSpecificUserStyleSheet(const UserStyleSheet& userStyleSheet)
+{
+    bool removedStyleSheet = m_pageSpecificStyleSheets.removeFirstMatching([&](const auto& styleSheet) {
+        return styleSheet.url() == userStyleSheet.url();
+    });
+
+    if (removedStyleSheet)
+        invalidateInjectedStyleSheetCache();
 }
 
 void ExtensionStyleSheets::invalidateInjectedStyleSheetCache()

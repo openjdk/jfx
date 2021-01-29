@@ -33,6 +33,7 @@ public:
     static ptrdiff_t dataMemoryOffset() { return OBJECT_OFFSETOF(CharacterData, m_data); }
 
     WEBCORE_EXPORT void setData(const String&);
+    virtual void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength);
     unsigned length() const { return m_data.length(); }
     WEBCORE_EXPORT ExceptionOr<String> substringData(unsigned offset, unsigned count);
     WEBCORE_EXPORT void appendData(const String&);
@@ -62,13 +63,18 @@ protected:
 private:
     String nodeValue() const final;
     ExceptionOr<void> setNodeValue(const String&) final;
-    bool isCharacterDataNode() const final { return true; }
-    int maxCharacterOffset() const final;
-    void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength);
+    bool virtualIsCharacterData() const final { return true; }
     void notifyParentAfterChange(ContainerNode::ChildChangeSource);
 
     String m_data;
 };
+
+inline unsigned Node::length() const
+{
+    if (is<CharacterData>(*this))
+        return downcast<CharacterData>(*this).length();
+    return countChildNodes();
+}
 
 } // namespace WebCore
 

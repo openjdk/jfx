@@ -41,6 +41,8 @@ class RenderBlock;
 class VisiblePosition;
 class VisibleSelection;
 
+struct SimpleRange;
+
 // -------------------------------------------------------------------------
 // Node
 // -------------------------------------------------------------------------
@@ -98,13 +100,13 @@ bool isNodeRendered(const Node&);
 bool isRenderedAsNonInlineTableImageOrHR(const Node*);
 bool isNonTableCellHTMLBlockElement(const Node*);
 
-bool isNodeVisiblyContainedWithin(Node&, const Range&);
+bool isNodeVisiblyContainedWithin(Node&, const SimpleRange&);
 
 bool areIdenticalElements(const Node&, const Node&);
 
 bool positionBeforeOrAfterNodeIsCandidate(Node&);
 
-WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const Range&);
+WEBCORE_EXPORT HashSet<RefPtr<HTMLImageElement>> visibleImageElementsInRangeWithNonLoadedImages(const SimpleRange&);
 
 // -------------------------------------------------------------------------
 // Position
@@ -154,6 +156,8 @@ WEBCORE_EXPORT VisiblePosition visiblePositionForPositionWithOffset(const Visibl
 WEBCORE_EXPORT VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope);
 VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node&, int index); // FIXME: Why do we need this version?
 
+WEBCORE_EXPORT VisiblePosition closestEditablePositionInElementForAbsolutePoint(const Element&, const IntPoint&);
+
 // -------------------------------------------------------------------------
 // HTMLElement
 // -------------------------------------------------------------------------
@@ -201,7 +205,7 @@ const String& nonBreakingSpaceString();
 
 // Miscellaneous functions for caret rendering.
 
-RenderBlock* rendererForCaretPainting(Node*);
+RenderBlock* rendererForCaretPainting(const Node*);
 LayoutRect localCaretRectInRendererForCaretPainting(const VisiblePosition&, RenderBlock*&);
 LayoutRect localCaretRectInRendererForRect(LayoutRect&, Node*, RenderObject*, RenderBlock*&);
 IntRect absoluteBoundsForLocalCaretRect(RenderBlock* rendererForCaretPainting, const LayoutRect&, bool* insideFixed = nullptr);

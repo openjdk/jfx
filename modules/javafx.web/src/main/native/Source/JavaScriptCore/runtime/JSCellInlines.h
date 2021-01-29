@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,18 @@ inline JSCell::JSCell(VM&, Structure* structure)
     , m_cellState(CellState::DefinitelyWhite)
 {
     ASSERT(!isCompilationThread());
+
+    // Note that in the constructor initializer list above, we are only using values
+    // inside structure but not necessarily the structure pointer itself. All these
+    // values are contained inside Structure::m_blob. Note also that this constructor
+    // is an inline function. Hence, the compiler may choose to pre-compute the address
+    // of structure->m_blob and discard the structure pointer itself. There's a chance
+    // that the GC may run while allocating this cell. In the event that the structure
+    // is newly instantiated just before calling this constructor, there may not be any
+    // other references to it. As a result, the structure may get collected before this
+    // cell is even constructed. To avoid this possibility, we need to ensure that the
+    // structure pointer is still alive at this point.
+    ensureStillAliveHere(structure);
 }
 
 inline void JSCell::finishCreation(VM& vm)
@@ -142,7 +154,6 @@ ALWAYS_INLINE VM& CallFrame::deprecatedVM() const
 {
     JSCell* callee = this->callee().asCell();
     ASSERT(callee);
-    ASSERT(&callee->vm());
     return callee->vm();
 }
 
@@ -205,9 +216,9 @@ inline bool JSCell::isString() const
     return m_type == StringType;
 }
 
-inline bool JSCell::isBigInt() const
+inline bool JSCell::isHeapBigInt() const
 {
-    return m_type == BigIntType;
+    return m_type == HeapBigIntType;
 }
 
 inline bool JSCell::isSymbol() const
@@ -230,36 +241,18 @@ inline bool JSCell::isProxy() const
     return m_type == ImpureProxyType || m_type == PureForwardingProxyType || m_type == ProxyObjectType;
 }
 
-ALWAYS_INLINE bool JSCell::isFunction(VM& vm)
+ALWAYS_INLINE bool JSCell::isCallable(VM& vm)
 {
     if (type() == JSFunctionType)
         return true;
-    if (inlineTypeFlags() & OverridesGetCallData) {
-        CallData ignoredCallData;
-        return methodTable(vm)->getCallData(this, ignoredCallData) != CallType::None;
-    }
+    if (inlineTypeFlags() & OverridesGetCallData)
+        return methodTable(vm)->getCallData(this).type != CallData::Type::None;
     return false;
-}
-
-inline bool JSCell::isCallable(VM& vm, CallType& callType, CallData& callData)
-{
-    if (type() != JSFunctionType && !(inlineTypeFlags() & OverridesGetCallData))
-        return false;
-    callType = methodTable(vm)->getCallData(this, callData);
-    return callType != CallType::None;
 }
 
 inline bool JSCell::isConstructor(VM& vm)
 {
-    ConstructType constructType;
-    ConstructData constructData;
-    return isConstructor(vm, constructType, constructData);
-}
-
-inline bool JSCell::isConstructor(VM& vm, ConstructType& constructType, ConstructData& constructData)
-{
-    constructType = methodTable(vm)->getConstructData(this, constructData);
-    return constructType != ConstructType::None;
+    return methodTable(vm)->getConstructData(this).type != CallData::Type::None;
 }
 
 inline bool JSCell::isAPIValueWrapper() const
@@ -341,7 +334,7 @@ inline bool JSCell::toBoolean(JSGlobalObject* globalObject) const
 {
     if (isString())
         return static_cast<const JSString*>(this)->toBoolean();
-    if (isBigInt())
+    if (isHeapBigInt())
         return static_cast<const JSBigInt*>(this)->toBoolean();
     return !structure(getVM(globalObject))->masqueradesAsUndefined(globalObject);
 }
@@ -349,12 +342,12 @@ inline bool JSCell::toBoolean(JSGlobalObject* globalObject) const
 inline TriState JSCell::pureToBoolean() const
 {
     if (isString())
-        return static_cast<const JSString*>(this)->toBoolean() ? TrueTriState : FalseTriState;
-    if (isBigInt())
-        return static_cast<const JSBigInt*>(this)->toBoolean() ? TrueTriState : FalseTriState;
+        return static_cast<const JSString*>(this)->toBoolean() ? TriState::True : TriState::False;
+    if (isHeapBigInt())
+        return static_cast<const JSBigInt*>(this)->toBoolean() ? TriState::True : TriState::False;
     if (isSymbol())
-        return TrueTriState;
-    return MixedTriState;
+        return TriState::True;
+    return TriState::Indeterminate;
 }
 
 inline void JSCellLock::lock()

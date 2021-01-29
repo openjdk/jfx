@@ -62,7 +62,7 @@ class EmptyChromeClient : public ChromeClient {
     void focusedElementChanged(Element*) final { }
     void focusedFrameChanged(Frame*) final { }
 
-    Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
+    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
 
     bool canRunModal() final { return false; }
@@ -133,6 +133,7 @@ class EmptyChromeClient : public ChromeClient {
 
 #if ENABLE(DATALIST_ELEMENT)
     std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    bool canShowDataListSuggestionLabels() const final { return false; }
 #endif
 
     void runOpenPanel(Frame&, FileChooser&) final;
@@ -150,7 +151,7 @@ class EmptyChromeClient : public ChromeClient {
     void attachRootGraphicsLayer(Frame&, GraphicsLayer*) final { }
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) final { }
     void setNeedsOneShotDrawingSynchronization() final { }
-    void scheduleCompositingLayerFlush() final { }
+    void scheduleRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
     void setLastSetCursorToCurrentCursor() final { }
@@ -177,8 +178,10 @@ class EmptyChromeClient : public ChromeClient {
     void addOrUpdateScrollingLayer(Node*, PlatformLayer*, PlatformLayer*, const IntSize&, bool, bool) final { }
     void removeScrollingLayer(Node*, PlatformLayer*, PlatformLayer*) final { }
 
-    void webAppOrientationsUpdated() final { };
-    void showPlaybackTargetPicker(bool, RouteSharingPolicy, const String&) final { };
+    void webAppOrientationsUpdated() final { }
+    void showPlaybackTargetPicker(bool, RouteSharingPolicy, const String&) final { }
+
+    bool showDataDetectorsUIForElement(const Element&, const Event&) final { return false; }
 #endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(ORIENTATION_EVENTS)

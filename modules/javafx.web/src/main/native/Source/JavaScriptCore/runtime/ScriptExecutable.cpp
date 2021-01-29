@@ -25,7 +25,6 @@
 
 #include "config.h"
 
-#include "BatchedTransitionOptimizer.h"
 #include "CodeBlock.h"
 #include "Debugger.h"
 #include "EvalCodeBlock.h"
@@ -33,21 +32,21 @@
 #include "GlobalExecutable.h"
 #include "IsoCellSetInlines.h"
 #include "JIT.h"
-#include "JSCInlines.h"
+#include "JSCellInlines.h"
+#include "JSGlobalObjectInlines.h"
+#include "JSObjectInlines.h"
 #include "JSTemplateObjectDescriptor.h"
 #include "LLIntEntrypoint.h"
 #include "ModuleProgramCodeBlock.h"
-#include "Parser.h"
+#include "ParserError.h"
 #include "ProgramCodeBlock.h"
-#include "TypeProfiler.h"
 #include "VMInlines.h"
-#include <wtf/CommaPrinter.h>
 
 namespace JSC {
 
 const ClassInfo ScriptExecutable::s_info = { "ScriptExecutable", &ExecutableBase::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ScriptExecutable) };
 
-ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, EvalContextType evalContextType, Intrinsic intrinsic)
+ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCode& source, bool isInStrictContext, DerivedContextType derivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType evalContextType, Intrinsic intrinsic)
     : ExecutableBase(vm, structure)
     , m_source(source)
     , m_intrinsic(intrinsic)
@@ -59,6 +58,7 @@ ScriptExecutable::ScriptExecutable(Structure* structure, VM& vm, const SourceCod
     , m_isArrowFunctionContext(isInArrowFunctionContext)
     , m_canUseOSRExitFuzzing(true)
     , m_codeForGeneratorBodyWasGenerated(false)
+    , m_isInsideOrdinaryFunction(isInsideOrdinaryFunction)
     , m_derivedContextType(static_cast<unsigned>(derivedContextType))
     , m_evalContextType(static_cast<unsigned>(evalContextType))
 {
@@ -261,7 +261,7 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(
         RELEASE_ASSERT(kind == CodeForCall);
         RELEASE_ASSERT(!executable->m_evalCodeBlock);
         RELEASE_ASSERT(!function);
-        auto codeBlock = EvalCodeBlock::create(vm,
+        auto* codeBlock = EvalCodeBlock::create(vm,
             executable, executable->m_unlinkedEvalCodeBlock.get(), scope);
         EXCEPTION_ASSERT(throwScope.exception() || codeBlock);
         if (!codeBlock) {
@@ -278,7 +278,7 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(
         RELEASE_ASSERT(kind == CodeForCall);
         RELEASE_ASSERT(!executable->m_programCodeBlock);
         RELEASE_ASSERT(!function);
-        auto codeBlock = ProgramCodeBlock::create(vm,
+        auto* codeBlock = ProgramCodeBlock::create(vm,
             executable, executable->m_unlinkedProgramCodeBlock.get(), scope);
         EXCEPTION_ASSERT(throwScope.exception() || codeBlock);
         if (!codeBlock) {
@@ -295,7 +295,7 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(
         RELEASE_ASSERT(kind == CodeForCall);
         RELEASE_ASSERT(!executable->m_moduleProgramCodeBlock);
         RELEASE_ASSERT(!function);
-        auto codeBlock = ModuleProgramCodeBlock::create(vm,
+        auto* codeBlock = ModuleProgramCodeBlock::create(vm,
             executable, executable->m_unlinkedModuleProgramCodeBlock.get(), scope);
         EXCEPTION_ASSERT(throwScope.exception() || codeBlock);
         if (!codeBlock) {
@@ -337,7 +337,10 @@ CodeBlock* ScriptExecutable::newCodeBlockFor(
         return nullptr;
     }
 
-    RELEASE_AND_RETURN(throwScope, FunctionCodeBlock::create(vm, executable, unlinkedCodeBlock, scope));
+    auto* codeBlock = FunctionCodeBlock::create(vm, executable, unlinkedCodeBlock, scope);
+    if (throwScope.exception())
+        exception = throwScope.exception();
+    return codeBlock;
 }
 
 CodeBlock* ScriptExecutable::newReplacementCodeBlockFor(

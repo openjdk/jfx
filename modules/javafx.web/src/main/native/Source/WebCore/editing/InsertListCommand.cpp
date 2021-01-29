@@ -112,11 +112,12 @@ InsertListCommand::InsertListCommand(Document& document, Type type)
 
 void InsertListCommand::doApply()
 {
-    if (endingSelection().isNoneOrOrphaned() || !endingSelection().isContentRichlyEditable())
-        return;
-
     VisiblePosition visibleEnd = endingSelection().visibleEnd();
     VisiblePosition visibleStart = endingSelection().visibleStart();
+
+    if (visibleEnd.isNull() || visibleStart.isNull() || !endingSelection().isContentRichlyEditable())
+        return;
+
     // When a selection ends at the start of a paragraph, we rarely paint
     // the selection gap before that paragraph, because there often is no gap.
     // In a case like this, it's not obvious to the user that the selection
@@ -134,17 +135,17 @@ void InsertListCommand::doApply()
     auto& listTag = (m_type == Type::OrderedList) ? olTag : ulTag;
     if (endingSelection().isRange()) {
         VisibleSelection selection = selectionForParagraphIteration(endingSelection());
-        ASSERT(selection.isRange());
+        if (selection.isRange()) {
         VisiblePosition startOfSelection = selection.visibleStart();
         VisiblePosition endOfSelection = selection.visibleEnd();
         VisiblePosition startOfLastParagraph = startOfParagraph(endOfSelection, CanSkipOverEditingBoundary);
 
-        if (startOfParagraph(startOfSelection, CanSkipOverEditingBoundary) != startOfLastParagraph) {
+            if (startOfLastParagraph.isNotNull() && startOfParagraph(startOfSelection, CanSkipOverEditingBoundary) != startOfLastParagraph) {
             bool forceCreateList = !selectionHasListOfType(selection, listTag);
 
-            RefPtr<Range> currentSelection = endingSelection().firstRange();
+                auto currentSelection = *endingSelection().firstRange();
             VisiblePosition startOfCurrentParagraph = startOfSelection;
-            while (!inSameParagraph(startOfCurrentParagraph, startOfLastParagraph, CanCrossEditingBoundary)) {
+                while (startOfCurrentParagraph.isNotNull() && !inSameParagraph(startOfCurrentParagraph, startOfLastParagraph, CanCrossEditingBoundary)) {
                 // doApply() may operate on and remove the last paragraph of the selection from the document
                 // if it's in the same list item as startOfCurrentParagraph.  Return early to avoid an
                 // infinite loop and because there is no more work to be done.
@@ -161,7 +162,7 @@ void InsertListCommand::doApply()
                 // But not using index is hard because there are so many ways we can lose selection inside doApplyForSingleParagraph.
                 RefPtr<ContainerNode> scope;
                 int indexForEndOfSelection = indexForVisiblePosition(endOfSelection, scope);
-                doApplyForSingleParagraph(forceCreateList, listTag, currentSelection.get());
+                    doApplyForSingleParagraph(forceCreateList, listTag, currentSelection);
                 if (endOfSelection.isNull() || endOfSelection.isOrphan() || startOfLastParagraph.isNull() || startOfLastParagraph.isOrphan()) {
                     endOfSelection = visiblePositionForIndex(indexForEndOfSelection, scope.get());
                     // If endOfSelection is null, then some contents have been deleted from the document.
@@ -182,15 +183,17 @@ void InsertListCommand::doApply()
                 startOfCurrentParagraph = startOfNextParagraph(endingSelection().visibleStart());
             }
             setEndingSelection(endOfSelection);
-            doApplyForSingleParagraph(forceCreateList, listTag, currentSelection.get());
+                doApplyForSingleParagraph(forceCreateList, listTag, currentSelection);
             // Fetch the end of the selection, for the reason mentioned above.
             endOfSelection = endingSelection().visibleEnd();
             setEndingSelection(VisibleSelection(startOfSelection, endOfSelection, endingSelection().isDirectional()));
             return;
         }
     }
+    }
 
-    doApplyForSingleParagraph(false, listTag, endingSelection().firstRange().get());
+    auto range = endingSelection().firstRange();
+    doApplyForSingleParagraph(false, listTag, *range);
 }
 
 EditAction InsertListCommand::editingAction() const
@@ -198,7 +201,7 @@ EditAction InsertListCommand::editingAction() const
     return m_type == Type::OrderedList ? EditAction::InsertOrderedList : EditAction::InsertUnorderedList;
 }
 
-void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HTMLQualifiedName& listTag, Range* currentSelection)
+void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HTMLQualifiedName& listTag, SimpleRange& currentSelection)
 {
     // FIXME: This will produce unexpected results for a selection that starts just before a
     // table and ends inside the first cell, selectionForParagraphIteration should probably
@@ -211,7 +214,7 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
         RefPtr<HTMLElement> listNode = enclosingList(listChildNode);
         if (!listNode) {
             RefPtr<HTMLElement> listElement = fixOrphanedListChild(*listChildNode);
-            if (!listElement)
+            if (!listElement || !listElement->isConnected())
                 return;
 
             listNode = mergeWithNeighboringLists(*listElement);
@@ -227,9 +230,9 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
             return;
 
         // If the entire list is selected, then convert the whole list.
-        if (switchListType && isNodeVisiblyContainedWithin(*listNode, *currentSelection)) {
-            bool rangeStartIsInList = visiblePositionBeforeNode(*listNode) == currentSelection->startPosition();
-            bool rangeEndIsInList = visiblePositionAfterNode(*listNode) == currentSelection->endPosition();
+        if (switchListType && isNodeVisiblyContainedWithin(*listNode, currentSelection)) {
+            bool rangeStartIsInList = visiblePositionBeforeNode(*listNode) == createLegacyEditingPosition(currentSelection.start);
+            bool rangeEndIsInList = visiblePositionAfterNode(*listNode) == createLegacyEditingPosition(currentSelection.end);
 
             RefPtr<HTMLElement> newList = createHTMLElement(document(), listTag);
             insertNodeBefore(*newList, *listNode);
@@ -252,9 +255,9 @@ void InsertListCommand::doApplyForSingleParagraph(bool forceCreateList, const HT
             // Restore the start and the end of current selection if they started inside listNode
             // because moveParagraphWithClones could have removed them.
             if (rangeStartIsInList && newList)
-                currentSelection->setStart(*newList, 0);
+                currentSelection.start = makeBoundaryPointBeforeNodeContents(*newList);
             if (rangeEndIsInList && newList)
-                currentSelection->setEnd(*newList, lastOffsetInNode(newList.get()));
+                currentSelection.end = makeBoundaryPointAfterNodeContents(*newList);
 
             setEndingSelection(VisiblePosition(firstPositionInNode(newList.get())));
 
@@ -274,6 +277,10 @@ void InsertListCommand::unlistifyParagraph(const VisiblePosition& originalStart,
     Node* previousListChild;
     VisiblePosition start;
     VisiblePosition end;
+
+    if (!listNode->parentNode()->hasEditableStyle())
+        return;
+
     if (listChildNode->hasTagName(liTag)) {
         start = firstPositionInNode(listChildNode);
         end = lastPositionInNode(listChildNode);
@@ -388,6 +395,9 @@ RefPtr<HTMLElement> InsertListCommand::listifyParagraph(const VisiblePosition& o
         Node* listChild = enclosingListChild(insertionPos.deprecatedNode());
         if (listChild && listChild->hasTagName(liTag))
             insertionPos = positionInParentBeforeNode(listChild);
+
+        if (!isEditablePosition(insertionPos))
+            return 0;
 
         insertNodeAt(*listElement, insertionPos);
 

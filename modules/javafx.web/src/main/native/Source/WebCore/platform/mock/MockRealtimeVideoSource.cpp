@@ -49,7 +49,7 @@
 
 namespace WebCore {
 
-#if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY) && !(USE(GSTREAMER) && USE(LIBWEBRTC))
+#if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY) && !USE(GSTREAMER)
 CaptureSourceOrError MockRealtimeVideoSource::create(String&& deviceID, String&& name, String&& hashSalt, const MediaConstraints* constraints)
 {
 #ifndef NDEBUG
@@ -149,6 +149,7 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
         return m_currentSettings.value();
 
     RealtimeMediaSourceSettings settings;
+    settings.setLabel(name());
     if (mockCamera()) {
         settings.setFacingMode(facingMode());
         settings.setDeviceId(hashedId());
@@ -186,11 +187,13 @@ const RealtimeMediaSourceSettings& MockRealtimeVideoSource::settings()
     return m_currentSettings.value();
 }
 
-void MockRealtimeVideoSource::setFrameRateWithPreset(double, RefPtr<VideoPreset> preset)
+void MockRealtimeVideoSource::setFrameRateWithPreset(double frameRate, RefPtr<VideoPreset> preset)
 {
     m_preset = WTFMove(preset);
     if (m_preset)
         setIntrinsicSize(m_preset->size);
+    if (isProducingData())
+        m_emitFrameTimer.startRepeating(1_s / frameRate);
 }
 
 IntSize MockRealtimeVideoSource::captureSize() const
@@ -262,11 +265,6 @@ void MockRealtimeVideoSource::drawAnimation(GraphicsContext& context)
 
 void MockRealtimeVideoSource::drawBoxes(GraphicsContext& context)
 {
-    constexpr SimpleColor magenta { 0xffff00ff };
-    constexpr SimpleColor blue { 0xff0000ff };
-    constexpr SimpleColor red { 0xffff0000 };
-    constexpr SimpleColor darkGreen { 0xff008000 };
-
     IntSize size = captureSize();
     float boxSize = size.width() * .035;
     float boxTop = size.height() * .6;
@@ -315,7 +313,7 @@ void MockRealtimeVideoSource::drawBoxes(GraphicsContext& context)
 
     boxTop += boxSize + 2;
     boxLeft = boxSize;
-    constexpr SimpleColor boxColors[] = { Color::white, Color::yellow, Color::cyan, darkGreen, magenta, red, blue };
+    constexpr SRGBA<uint8_t> boxColors[] = { Color::white, Color::yellow, Color::cyan, Color::darkGreen, Color::magenta, Color::red, Color::blue };
     for (auto& boxColor : boxColors) {
         context.fillRect(FloatRect(boxLeft, boxTop, boxSize + 1, boxSize + 1), boxColor);
         boxLeft += boxSize + 1;
@@ -352,7 +350,7 @@ void MockRealtimeVideoSource::drawText(GraphicsContext& context)
     IntSize captureSize = this->captureSize();
     FloatPoint timeLocation(captureSize.width() * .05, captureSize.height() * .15);
     context.setFillColor(Color::white);
-    context.setTextDrawingMode(TextModeFill);
+    context.setTextDrawingMode(TextDrawingMode::Fill);
     String string = makeString(pad('0', 2, hours), ':', pad('0', 2, minutes), ':', pad('0', 2, seconds), '.', pad('0', 3, milliseconds % 1000));
     context.drawText(timeFont, TextRun((StringView(string))), timeLocation);
 

@@ -34,7 +34,7 @@ class RangeBoundaryPoint {
 public:
     explicit RangeBoundaryPoint(Node* container);
 
-    const Position toPosition() const;
+    Position toPosition() const;
 
     Node* container() const;
     unsigned offset() const;
@@ -85,7 +85,7 @@ inline void RangeBoundaryPoint::ensureOffsetIsValid() const
     m_offsetInContainer = m_childBeforeBoundary->computeNodeIndex() + 1;
 }
 
-inline const Position RangeBoundaryPoint::toPosition() const
+inline Position RangeBoundaryPoint::toPosition() const
 {
     ensureOffsetIsValid();
     return createLegacyEditingPosition(m_containerNode.get(), m_offsetInContainer.value());
@@ -147,8 +147,8 @@ inline void RangeBoundaryPoint::setToStartOfNode(Ref<Node>&& container)
 inline void RangeBoundaryPoint::setToEndOfNode(Ref<Node>&& container)
 {
     m_containerNode = WTFMove(container);
-    if (m_containerNode->isCharacterDataNode()) {
-        m_offsetInContainer = m_containerNode->maxCharacterOffset();
+    if (is<CharacterData>(*m_containerNode)) {
+        m_offsetInContainer = downcast<CharacterData>(*m_containerNode).length();
         m_childBeforeBoundary = nullptr;
     } else {
         m_childBeforeBoundary = m_containerNode->lastChild();

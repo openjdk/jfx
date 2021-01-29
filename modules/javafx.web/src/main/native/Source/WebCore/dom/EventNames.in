@@ -24,6 +24,7 @@ InputEvent
 InputEvents interfaceName=InputEvent
 KeyboardEvent
 KeyboardEvents interfaceName=KeyboardEvent
+MediaQueryListEvent
 MessageEvent
 MouseEvent
 MouseEvents interfaceName=MouseEvent
@@ -74,7 +75,7 @@ DeviceOrientationEvent conditional=DEVICE_ORIENTATION
 OrientationEvent interfaceName=Event, conditional=ORIENTATION_EVENTS
 WebKitMediaKeyMessageEvent conditional=LEGACY_ENCRYPTED_MEDIA
 WebKitMediaKeyNeededEvent conditional=LEGACY_ENCRYPTED_MEDIA
-TrackEvent conditional=VIDEO_TRACK
+TrackEvent conditional=VIDEO
 SecurityPolicyViolationEvent
 GestureEvent conditional=IOS_GESTURE_EVENTS|MAC_GESTURE_EVENTS
 WebKitPlaybackTargetAvailabilityEvent conditional=WIRELESS_PLAYBACK_TARGET
@@ -82,6 +83,10 @@ GamepadEvent conditional=GAMEPAD
 OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
-PointerEvent conditional=POINTER_EVENTS
+PointerEvent
 GPUUncapturedErrorEvent conditional=WEBGPU
 EnterPictureInPictureEvent conditional=PICTURE_IN_PICTURE_API
+XRInputSourceEvent conditional=WEBXR
+XRInputSourcesChangeEvent conditional=WEBXR
+XRReferenceSpaceEvent conditional=WEBXR
+XRSessionEvent conditional=WEBXR

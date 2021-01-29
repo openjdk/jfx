@@ -25,6 +25,7 @@
 #pragma once
 
 #include "AudioBasicProcessorNode.h"
+#include "BiquadFilterOptions.h"
 #include "BiquadProcessor.h"
 
 namespace WebCore {
@@ -34,25 +35,22 @@ class AudioParam;
 class BiquadFilterNode final : public AudioBasicProcessorNode {
     WTF_MAKE_ISO_ALLOCATED(BiquadFilterNode);
 public:
-    static Ref<BiquadFilterNode> create(AudioContext& context, float sampleRate)
-    {
-        return adoptRef(*new BiquadFilterNode(context, sampleRate));
-    }
+    static ExceptionOr<Ref<BiquadFilterNode>> create(BaseAudioContext& context, const BiquadFilterOptions& = { });
 
     BiquadFilterType type() const;
     void setType(BiquadFilterType);
 
-    AudioParam* frequency() { return biquadProcessor()->parameter1(); }
-    AudioParam* q() { return biquadProcessor()->parameter2(); }
-    AudioParam* gain() { return biquadProcessor()->parameter3(); }
-    AudioParam* detune() { return biquadProcessor()->parameter4(); }
+    AudioParam& frequency() { return biquadProcessor()->parameter1(); }
+    AudioParam& q() { return biquadProcessor()->parameter2(); }
+    AudioParam& gain() { return biquadProcessor()->parameter3(); }
+    AudioParam& detune() { return biquadProcessor()->parameter4(); }
 
     // Get the magnitude and phase response of the filter at the given
     // set of frequencies (in Hz). The phase response is in radians.
-    void getFrequencyResponse(const RefPtr<Float32Array>& frequencyHz, const RefPtr<Float32Array>& magResponse, const RefPtr<Float32Array>& phaseResponse);
+    ExceptionOr<void> getFrequencyResponse(const Ref<Float32Array>& frequencyHz, const Ref<Float32Array>& magResponse, const Ref<Float32Array>& phaseResponse);
 
 private:
-    BiquadFilterNode(AudioContext&, float sampleRate);
+    explicit BiquadFilterNode(BaseAudioContext&);
 
     BiquadProcessor* biquadProcessor() { return static_cast<BiquadProcessor*>(processor()); }
 };

@@ -86,6 +86,11 @@ if (DEVELOPER_MODE)
     WEBKIT_EXECUTABLE_DECLARE(testb3)
     WEBKIT_EXECUTABLE_DECLARE(testair)
     WEBKIT_EXECUTABLE_DECLARE(testdfg)
+
+    if (COMPILER_IS_GCC_OR_CLANG)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(testb3 -Wno-array-bounds)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(testair -Wno-array-bounds)
+    endif ()
 endif ()
 
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
@@ -107,6 +112,6 @@ if (DEVELOPER_MODE)
     file(COPY
         "${JAVASCRIPTCORE_DIR}/API/tests/testapiScripts"
         DESTINATION
-        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/testapiScripts
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 endif ()

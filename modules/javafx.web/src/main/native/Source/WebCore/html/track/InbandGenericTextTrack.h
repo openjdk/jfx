@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "InbandTextTrack.h"
 #include "TextTrackCueGeneric.h"
@@ -35,17 +35,16 @@ namespace WebCore {
 
 class GenericTextTrackCueMap {
 public:
-    void add(GenericCueData&, TextTrackCueGeneric&);
+    void add(InbandGenericCueIdentifier, TextTrackCueGeneric&);
 
     void remove(TextTrackCue&);
-    void remove(GenericCueData&);
+    void remove(InbandGenericCueIdentifier);
 
-    GenericCueData* find(TextTrackCue&);
-    TextTrackCueGeneric* find(GenericCueData&);
+    TextTrackCueGeneric* find(InbandGenericCueIdentifier);
 
 private:
-    using CueToDataMap = HashMap<RefPtr<TextTrackCue>, RefPtr<GenericCueData>>;
-    using CueDataToCueMap = HashMap<RefPtr<GenericCueData>, RefPtr<TextTrackCueGeneric>>;
+    using CueToDataMap = HashMap<TextTrackCue*, InbandGenericCueIdentifier>;
+    using CueDataToCueMap = HashMap<InbandGenericCueIdentifier, RefPtr<TextTrackCueGeneric>>;
 
     CueToDataMap m_cueToDataMap;
     CueDataToCueMap m_dataToCueMap;
@@ -54,21 +53,21 @@ private:
 class InbandGenericTextTrack final : public InbandTextTrack, private WebVTTParserClient {
     WTF_MAKE_ISO_ALLOCATED(InbandGenericTextTrack);
 public:
-    static Ref<InbandGenericTextTrack> create(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    static Ref<InbandGenericTextTrack> create(Document&, TextTrackClient&, InbandTextTrackPrivate&);
     virtual ~InbandGenericTextTrack();
 
 private:
-    InbandGenericTextTrack(ScriptExecutionContext&, TextTrackClient&, InbandTextTrackPrivate&);
+    InbandGenericTextTrack(Document&, TextTrackClient&, InbandTextTrackPrivate&);
 
-    void addGenericCue(GenericCueData&) final;
-    void updateGenericCue(GenericCueData&) final;
-    void removeGenericCue(GenericCueData&) final;
+    void addGenericCue(InbandGenericCue&) final;
+    void updateGenericCue(InbandGenericCue&) final;
+    void removeGenericCue(InbandGenericCue&) final;
     ExceptionOr<void> removeCue(TextTrackCue&) final;
 
-    void updateCueFromCueData(TextTrackCueGeneric&, GenericCueData&);
+    void updateCueFromCueData(TextTrackCueGeneric&, InbandGenericCue&);
 
     WebVTTParser& parser();
-    void parseWebVTTCueData(const ISOWebVTTCue&) final;
+    void parseWebVTTCueData(ISOWebVTTCue&&) final;
     void parseWebVTTFileHeader(String&&) final;
 
     void newCuesParsed() final;

@@ -27,6 +27,7 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ExceptionData.h"
 #include "RegistrableDomain.h"
 #include "ServiceWorkerClientQueryOptions.h"
 #include "ServiceWorkerContextData.h"
@@ -53,10 +54,8 @@ public:
     virtual void fireInstallEvent(ServiceWorkerIdentifier) = 0;
     virtual void fireActivateEvent(ServiceWorkerIdentifier) = 0;
     virtual void terminateWorker(ServiceWorkerIdentifier) = 0;
-    virtual void syncTerminateWorker(ServiceWorkerIdentifier) = 0;
     virtual void findClientByIdentifierCompleted(uint64_t requestIdentifier, const Optional<ServiceWorkerClientData>&, bool hasSecurityError) = 0;
     virtual void matchAllCompleted(uint64_t requestIdentifier, const Vector<ServiceWorkerClientData>&) = 0;
-    virtual void claimCompleted(uint64_t requestIdentifier) = 0;
 
     // Messages back from the SW host process
     WEBCORE_EXPORT void scriptContextFailedToStart(const Optional<ServiceWorkerJobDataIdentifier>&, ServiceWorkerIdentifier, const String& message);
@@ -68,13 +67,14 @@ public:
     WEBCORE_EXPORT void workerTerminated(ServiceWorkerIdentifier);
     WEBCORE_EXPORT void findClientByIdentifier(uint64_t clientIdRequestIdentifier, ServiceWorkerIdentifier, ServiceWorkerClientIdentifier);
     WEBCORE_EXPORT void matchAll(uint64_t requestIdentifier, ServiceWorkerIdentifier, const ServiceWorkerClientQueryOptions&);
-    WEBCORE_EXPORT void claim(uint64_t requestIdentifier, ServiceWorkerIdentifier);
+    WEBCORE_EXPORT void claim(ServiceWorkerIdentifier, CompletionHandler<void(Optional<ExceptionData>&&)>&&);
     WEBCORE_EXPORT void setScriptResource(ServiceWorkerIdentifier, URL&& scriptURL, String&& script, URL&& responseURL, String&& mimeType);
     WEBCORE_EXPORT void didFailHeartBeatCheck(ServiceWorkerIdentifier);
 
     const RegistrableDomain& registrableDomain() const { return m_registrableDomain; }
 
     virtual void connectionIsNoLongerNeeded() = 0;
+    virtual void terminateDueToUnresponsiveness() = 0;
 
 protected:
     WEBCORE_EXPORT explicit SWServerToContextConnection(RegistrableDomain&&);

@@ -28,9 +28,6 @@
 #include "RenderTheme.h"
 #include "GraphicsContext.h"
 #include "StyleResolver.h"
-#if ENABLE(VIDEO)
-#include "MediaControlElements.h"
-#endif
 
 #include <jni.h>
 
@@ -46,6 +43,8 @@ struct ThemeData {
 class RenderThemeJava final : public RenderTheme {
 public:
     RenderThemeJava();
+
+    bool canPaint(const PaintInfo&) const final { return true; }
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
     bool supportsHover(const RenderStyle&) const override { return true; }

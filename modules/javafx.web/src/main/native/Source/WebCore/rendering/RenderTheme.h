@@ -101,6 +101,21 @@ public:
 #if ENABLE(INPUT_TYPE_COLOR)
     String colorInputStyleSheet() const;
 #endif
+#if ENABLE(INPUT_TYPE_DATE)
+    virtual String dateInputStyleSheet() const;
+#endif
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+    virtual String dateTimeLocalInputStyleSheet() const;
+#endif
+#if ENABLE(INPUT_TYPE_MONTH)
+    virtual String monthInputStyleSheet() const;
+#endif
+#if ENABLE(INPUT_TYPE_TIME)
+    virtual String timeInputStyleSheet() const;
+#endif
+#if ENABLE(INPUT_TYPE_WEEK)
+    virtual String weekInputStyleSheet() const;
+#endif
 
     // A method to obtain the baseline position for a "leaf" control.  This will only be used if a baseline
     // position cannot be determined by examining child content. Checkboxes and radio buttons are examples of
@@ -154,14 +169,13 @@ public:
     Color inactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const;
     Color inactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const;
 
-    // Highlighting colors for search matches.
-    Color activeTextSearchHighlightColor(OptionSet<StyleColor::Options>) const;
-    Color inactiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const;
+    // Highlighting color for search matches.
+    Color textSearchHighlightColor(OptionSet<StyleColor::Options>) const;
 
     virtual Color disabledTextColor(const Color& textColor, const Color& backgroundColor) const;
 
-    WTF_EXPORT Color focusRingColor(OptionSet<StyleColor::Options>) const;
-    virtual Color platformFocusRingColor(OptionSet<StyleColor::Options>) const { return Color(0, 0, 0); }
+    WEBCORE_EXPORT Color focusRingColor(OptionSet<StyleColor::Options>) const;
+    virtual Color platformFocusRingColor(OptionSet<StyleColor::Options>) const { return Color::black; }
     static void setCustomFocusRingColor(const Color&);
     static float platformFocusRingWidth() { return 3; }
     static float platformFocusRingOffset(float outlineWidth) { return std::max<float>(outlineWidth - platformFocusRingWidth(), 0); }
@@ -185,7 +199,7 @@ public:
     virtual bool popupOptionSupportsTextIndent() const { return false; }
     virtual PopupMenuStyle::PopupMenuSize popupMenuSize(const RenderStyle&, IntRect&) const { return PopupMenuStyle::PopupMenuSizeNormal; }
 
-    virtual ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) { return RegularScrollbar; }
+    virtual ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) { return ScrollbarControlSize::Regular; }
 
     // Returns the repeat interval of the animation for the progress bar.
     virtual Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const;
@@ -248,6 +262,7 @@ public:
 #if ENABLE(ATTACHMENT_ELEMENT)
     virtual LayoutSize attachmentIntrinsicSize(const RenderAttachment&) const { return LayoutSize(); }
     virtual int attachmentBaseline(const RenderAttachment&) const { return -1; }
+    virtual bool attachmentShouldAllowWidthToShrink(const RenderAttachment&) const { return false; }
 #endif
 
     enum class InnerSpinButtonLayout { Vertical, HorizontalUpLeft, HorizontalUpRight };
@@ -261,6 +276,7 @@ public:
 #endif
 
 protected:
+    virtual bool canPaint(const PaintInfo&) const = 0;
     virtual FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const;
     virtual void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const = 0;
 
@@ -275,9 +291,7 @@ protected:
     virtual Color platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const;
     virtual Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const;
 
-    // The platform highlighting colors for search matches.
-    virtual Color platformActiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const;
-    virtual Color platformInactiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const;
+    virtual Color platformTextSearchHighlightColor(OptionSet<StyleColor::Options>) const;
 
     virtual bool supportsSelectionForegroundColors(OptionSet<StyleColor::Options>) const { return true; }
     virtual bool supportsListBoxSelectionForegroundColors(OptionSet<StyleColor::Options>) const { return true; }
@@ -433,14 +447,13 @@ protected:
         Color activeListBoxSelectionForegroundColor;
         Color inactiveListBoxSelectionForegroundColor;
 
-        Color activeTextSearchHighlightColor;
-        Color inactiveTextSearchHighlightColor;
+        Color textSearchHighlightColor;
     };
 
     virtual ColorCache& colorCache(OptionSet<StyleColor::Options>) const;
 
 private:
-    mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
+    mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
 };
 
 } // namespace WebCore

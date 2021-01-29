@@ -40,6 +40,10 @@
 #include "ImageDecoderAVFObjC.h"
 #endif
 
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+#include "ImageDecoderGStreamer.h"
+#endif
+
 namespace WebCore {
 
 RefPtr<ImageDecoder> ImageDecoder::create(SharedBuffer& data, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
@@ -49,6 +53,11 @@ RefPtr<ImageDecoder> ImageDecoder::create(SharedBuffer& data, const String& mime
 #if HAVE(AVASSETREADER)
     if (!ImageDecoderCG::canDecodeType(mimeType) && ImageDecoderAVFObjC::canDecodeType(mimeType))
         return ImageDecoderAVFObjC::create(data, mimeType, alphaOption, gammaAndColorProfileOption);
+#endif
+
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+    if (ImageDecoderGStreamer::canDecodeType(mimeType))
+        return ImageDecoderGStreamer::create(data, mimeType, alphaOption, gammaAndColorProfileOption);
 #endif
 
 #if USE(CG)
@@ -80,6 +89,11 @@ bool ImageDecoder::supportsMediaType(MediaType type)
 
 #if HAVE(AVASSETREADER)
     if (ImageDecoderAVFObjC::supportsMediaType(type))
+        return true;
+#endif
+
+#if USE(GSTREAMER) && ENABLE(VIDEO)
+    if (ImageDecoderGStreamer::supportsMediaType(type))
         return true;
 #endif
 

@@ -51,11 +51,11 @@ JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isA
     , m_isAttribute(isAttribute)
     , m_isolatedWorld(isolatedWorld)
 {
-    if (wrapper) {
-        JSC::Heap::heap(wrapper)->writeBarrier(wrapper, function);
+    if (function) {
+        ASSERT(wrapper);
         m_jsFunction = JSC::Weak<JSC::JSObject>(function);
-    } else
-        ASSERT(!function);
+        m_isInitialized = true;
+    }
 }
 
 JSEventListener::~JSEventListener() = default;
@@ -80,7 +80,7 @@ JSObject* JSEventListener::initializeJSFunction(ScriptExecutionContext&) const
 
 void JSEventListener::visitJSFunction(SlotVisitor& visitor)
 {
-    // If m_wrapper is null, then m_jsFunction is zombied, and should never be accessed.
+    // If m_wrapper is null, we are not keeping m_jsFunction alive.
     if (!m_wrapper)
         return;
 
@@ -110,7 +110,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
     // "If this throws an exception, report the exception." It should not propagate the
     // exception.
 
-    JSObject* jsFunction = this->jsFunction(scriptExecutionContext);
+    JSObject* jsFunction = ensureJSFunction(scriptExecutionContext);
     if (!jsFunction)
         return;
 
@@ -122,7 +122,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
         JSDOMWindow* window = jsCast<JSDOMWindow*>(globalObject);
         if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
-        if (wasCreatedFromMarkup() && !scriptExecutionContext.contentSecurityPolicy()->allowInlineEventHandlers(sourceURL(), sourcePosition().m_line))
+        if (wasCreatedFromMarkup() && !scriptExecutionContext.contentSecurityPolicy()->allowInlineEventHandlers(sourceURL().string(), sourcePosition().m_line))
             return;
         // FIXME: Is this check needed for other contexts?
         ScriptController& script = window->wrapped().frame()->script();
@@ -134,11 +134,10 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
     JSValue handleEventFunction = jsFunction;
 
-    CallData callData;
-    CallType callType = getCallData(vm, handleEventFunction, callData);
+    auto callData = getCallData(vm, handleEventFunction);
 
     // If jsFunction is not actually a function and this is an EventListener, see if it implements callback interface.
-    if (callType == CallType::None) {
+    if (callData.type == CallData::Type::None) {
         if (m_isAttribute)
             return;
 
@@ -150,8 +149,8 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
             reportException(lexicalGlobalObject, exception);
             return;
         }
-        callType = getCallData(vm, handleEventFunction, callData);
-        if (callType == CallType::None) {
+        callData = getCallData(vm, handleEventFunction);
+        if (callData.type == CallData::Type::None) {
             event.target()->uncaughtExceptionInEventHandler();
             reportException(lexicalGlobalObject, createTypeError(lexicalGlobalObject, "'handleEvent' property of event listener should be callable"_s));
             return;
@@ -173,11 +172,11 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
     VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : globalObject);
 
-    JSExecState::instrumentFunctionCall(&scriptExecutionContext, callType, callData);
+    JSExecState::instrumentFunction(&scriptExecutionContext, callData);
 
     JSValue thisValue = handleEventFunction == jsFunction ? toJS(lexicalGlobalObject, globalObject, event.currentTarget()) : jsFunction;
     NakedPtr<JSC::Exception> exception;
-    JSValue retval = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, handleEventFunction, callType, callData, thisValue, args, exception);
+    JSValue retval = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, handleEventFunction, callData, thisValue, args, exception);
 
     InspectorInstrumentation::didCallFunction(&scriptExecutionContext);
 
@@ -242,7 +241,7 @@ static inline JSC::JSValue eventHandlerAttribute(EventListener* abstractListener
     if (!is<JSEventListener>(abstractListener))
         return jsNull();
 
-    auto* function = downcast<JSEventListener>(*abstractListener).jsFunction(context);
+    auto* function = downcast<JSEventListener>(*abstractListener).ensureJSFunction(context);
     if (!function)
         return jsNull();
 

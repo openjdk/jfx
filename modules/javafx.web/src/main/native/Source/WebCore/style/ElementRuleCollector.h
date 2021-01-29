@@ -67,7 +67,7 @@ struct MatchedRule {
 struct MatchedProperties {
     RefPtr<const StyleProperties> properties;
     uint16_t linkMatchType { SelectorChecker::MatchAll };
-    uint16_t whitelistType { PropertyWhitelistNone };
+    uint16_t allowlistType { PropertyAllowlistNone };
     ScopeOrdinal styleScopeOrdinal { ScopeOrdinal::Element };
 };
 
@@ -137,7 +137,7 @@ private:
 
     void collectMatchingRules(const MatchRequest&);
     void collectMatchingRulesForList(const RuleSet::RuleDataVector*, const MatchRequest&);
-    bool ruleMatches(const RuleData&, unsigned &specificity);
+    bool ruleMatches(const RuleData&, unsigned& specificity);
 
     void sortMatchedRules();
 

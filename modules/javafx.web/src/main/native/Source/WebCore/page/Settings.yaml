@@ -204,8 +204,6 @@ forceFTPDirectoryListings:
   initial: false
 developerExtrasEnabled:
   initial: false
-scriptMarkupEnabled:
-  initial: true
 needsSiteSpecificQuirks:
   initial: false
   inspectorOverride: true
@@ -263,6 +261,10 @@ accelerated2dCanvasEnabled:
 loadDeferringEnabled:
   initial: true
 webAudioEnabled:
+  initial: false
+prefixedWebAudioEnabled:
+  initial: false
+modernUnprefixedWebAudioEnabled:
   initial: false
 paginateDuringLayoutEnabled:
   initial: false
@@ -327,16 +329,16 @@ backspaceKeyNavigationEnabled:
   initial: true
 shouldDisplaySubtitles:
   initial: false
-  conditional: VIDEO_TRACK
+  conditional: VIDEO
 shouldDisplayCaptions:
   initial: false
-  conditional: VIDEO_TRACK
+  conditional: VIDEO
 shouldDisplayTextDescriptions:
   initial: false
-  conditional: VIDEO_TRACK
+  conditional: VIDEO
 genericCueAPIEnabled:
   initial: false
-  conditional: VIDEO_TRACK
+  conditional: VIDEO
 useGPUProcessForMedia:
   initial: false
   conditional: GPU_PROCESS
@@ -368,6 +370,9 @@ requestIdleCallbackEnabled:
   initial: false
 
 HTTPSUpgradeEnabled:
+  initial: false
+
+inProcessCookieCacheEnabled:
   initial: false
 
 thirdPartyIframeRedirectBlockingEnabled:
@@ -418,6 +423,10 @@ asyncFrameScrollingEnabled:
   onChange: setNeedsRelayoutAllFrames
 
 asyncOverflowScrollingEnabled:
+  initial: false
+  onChange: setNeedsRelayoutAllFrames
+
+coreImageAcceleratedFilterRenderEnabled:
   initial: false
   onChange: setNeedsRelayoutAllFrames
 
@@ -477,6 +486,10 @@ textAutosizingUsesIdempotentMode:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
   conditional: TEXT_AUTOSIZING
+idempotentModeAutosizingOnlyHonorsPercentages:
+  initial: false
+  conditional: TEXT_AUTOSIZING
+  # This is only set before the main frame load, so there's no need to specify setNeedsRecalcStyleInAllFrames.
 
 subpixelAntialiasedLayerTextEnabled:
   initial: false
@@ -547,7 +560,7 @@ useImageDocumentForSubframePDF:
   initial: false
 dataDetectorTypes:
   type: DataDetectorTypes
-  initial: DataDetectorTypeNone
+  initial:
   conditional: DATA_DETECTION
 
 # Allow SourceBuffers to store up to 304MB each, enough for approximately five minutes
@@ -694,6 +707,9 @@ allowMediaContentTypesRequiringHardwareSupportAsFallback:
 storageAccessAPIEnabled:
   initial: true
 
+storageAccessAPIPerPageScopeEnabled:
+  initial: false
+
 timeWithoutMouseMovementBeforeHidingControls:
   type: Seconds
   initial: 3_s
@@ -753,6 +769,7 @@ pluginsEnabled:
 usesBackForwardCache:
   initial: false
   onChange: usesBackForwardCacheChanged
+  excludeFromInternalSettings: true
 
 dnsPrefetchingEnabled:
   initial: false
@@ -864,8 +881,8 @@ clientCoordinatesRelativeToLayoutViewport:
 incompleteImageBorderEnabled:
   initial: false
 
-shouldDeferAsynchronousScriptsUntilAfterDocumentLoad:
-  initial: false
+shouldDeferAsynchronousScriptsUntilAfterDocumentLoadOrFirstPaint:
+  initial: true
 
 shouldIgnoreMetaViewport:
   initial: false
@@ -915,6 +932,12 @@ isFirstPartyWebsiteDataRemovalLiveOnTestingEnabled:
 isFirstPartyWebsiteDataRemovalReproTestingEnabled:
   initial: false
 
+isSameSiteStrictEnforcementEnabled:
+  initial: false
+
+isCNAMECloakingMitigationEnabled:
+  initial: false
+
 isLoggedInAPIEnabled:
   initial: false
 
@@ -928,11 +951,38 @@ legacyGetUserMediaEnabled:
 isInAppBrowserPrivacyEnabled:
   initial: false
 
+NeedsInAppBrowserPrivacyQuirks:
+  initial: false
+
 isAccessibilityIsolatedTreeEnabled:
   initial: false
 
 aspectRatioOfImgFromWidthAndHeightEnabled:
   initial: false
+
+inputTypeColorEnabled:
+  initial: false
+  conditional: INPUT_TYPE_COLOR
+
+inputTypeDateEnabled:
+  initial: false
+  conditional: INPUT_TYPE_DATE
+
+inputTypeDateTimeLocalEnabled:
+  initial: false
+  conditional: INPUT_TYPE_DATETIMELOCAL
+
+inputTypeMonthEnabled:
+  initial: false
+  conditional: INPUT_TYPE_MONTH
+
+inputTypeTimeEnabled:
+  initial: false
+  conditional: INPUT_TYPE_TIME
+
+inputTypeWeekEnabled:
+  initial: false
+  conditional: INPUT_TYPE_WEEK
 
 # Deprecated
 
@@ -954,3 +1004,7 @@ mediaCaptureRequiresSecureConnection:
 
 shouldUseServiceWorkerShortTimeout:
   initial: false
+
+# Clients should use per-navigation "allowsContentJavaScript" policies instead
+scriptMarkupEnabled:
+    initial: true

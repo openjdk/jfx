@@ -32,10 +32,12 @@ import javafx.event.EventHandler;
 import javafx.scene.web.WebEvent;
 import netscape.javascript.JSException;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class IrresponsiveScriptTest extends TestBase {
 
+    @Ignore("JDK-8260163")
     @Test public void testInfiniteLoopInScript() {
         try {
             // This infinite loop should get interrupted by Webkit in about 10s.

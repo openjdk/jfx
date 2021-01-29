@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2020 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -77,7 +77,9 @@ CSSParserImpl::CSSParserImpl(const CSSParserContext& context, const String& stri
     , m_styleSheet(styleSheet)
     , m_observerWrapper(wrapper)
 {
-    m_tokenizer = wrapper ? makeUnique<CSSTokenizer>(string, *wrapper) : makeUnique<CSSTokenizer>(string);
+    m_tokenizer = wrapper ? CSSTokenizer::tryCreate(string, *wrapper) : CSSTokenizer::tryCreate(string);
+    if (!m_tokenizer)
+        return;
     if (context.deferredCSSParserEnabled && !wrapper && styleSheet && ruleParsing == CSSParser::RuleParsing::Deferred)
         m_deferredParser = CSSDeferredParser::create(context, string, *styleSheet);
 }
@@ -123,9 +125,16 @@ static inline void filterProperties(bool important, const ParsedPropertyVector& 
          // FIXME: Do we need to do anything here?
          } */
 
+
         if (seenProperties.test(propertyIDIndex))
             continue;
-        seenProperties.set(propertyIDIndex);
+        const unsigned relatedPropertyId = getRelatedPropertyId(property.id());
+        if (property.id() != CSSPropertyInvalid && relatedPropertyId != CSSPropertyInvalid) {
+            const unsigned relatedPropertyIDIndex = relatedPropertyId - firstCSSProperty;
+            seenProperties.set(relatedPropertyIDIndex);
+            seenProperties.set(propertyIDIndex);
+        } else
+            seenProperties.set(propertyIDIndex);
 
         output[--unusedEntries] = property;
     }
@@ -290,7 +299,7 @@ CSSSelectorList CSSParserImpl::parsePageSelector(CSSParserTokenRange range, Styl
     return CSSSelectorList { Vector<std::unique_ptr<CSSParserSelector>>::from(WTFMove(selector)) };
 }
 
-std::unique_ptr<Vector<double>> CSSParserImpl::parseKeyframeKeyList(const String& keyList)
+Vector<double> CSSParserImpl::parseKeyframeKeyList(const String& keyList)
 {
     return consumeKeyframeKeyList(CSSTokenizer(keyList).tokenRange());
 }
@@ -430,10 +439,6 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeAtRule(CSSParserTokenRange& range, A
         return consumeMediaRule(prelude, block);
     case CSSAtRuleSupports:
         return consumeSupportsRule(prelude, block);
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-    case CSSAtRuleViewport:
-        return consumeViewportRule(prelude, block);
-#endif
     case CSSAtRuleFontFace:
         return consumeFontFaceRule(prelude, block);
     case CSSAtRuleWebkitKeyframes:
@@ -575,25 +580,6 @@ RefPtr<StyleRuleSupports> CSSParserImpl::consumeSupportsRule(CSSParserTokenRange
     return StyleRuleSupports::create(prelude.serialize().stripWhiteSpace(), supported, rules);
 }
 
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-RefPtr<StyleRuleViewport> CSSParserImpl::consumeViewportRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
-{
-    if (!prelude.atEnd())
-        return nullptr; // Parser error; @viewport prelude should be empty
-
-    if (m_observerWrapper) {
-        unsigned endOffset = m_observerWrapper->endOffset(prelude);
-        m_observerWrapper->observer().startRuleHeader(StyleRuleType::Viewport, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(endOffset);
-        m_observerWrapper->observer().startRuleBody(endOffset);
-        m_observerWrapper->observer().endRuleBody(endOffset);
-    }
-
-    consumeDeclarationList(block, StyleRule::Viewport);
-    return StyleRuleViewport::create(createStyleProperties(m_parsedProperties, CSSViewportRuleMode));
-}
-#endif
-
 RefPtr<StyleRuleFontFace> CSSParserImpl::consumeFontFaceRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
     if (!prelude.atEnd())
@@ -677,8 +663,8 @@ RefPtr<StyleRulePage> CSSParserImpl::consumePageRule(CSSParserTokenRange prelude
 
 RefPtr<StyleRuleKeyframe> CSSParserImpl::consumeKeyframeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    std::unique_ptr<Vector<double>> keyList = consumeKeyframeKeyList(prelude);
-    if (!keyList)
+    auto keyList = consumeKeyframeKeyList(prelude);
+    if (keyList.isEmpty())
         return nullptr;
 
     if (m_observerWrapper) {
@@ -712,7 +698,7 @@ static void observeSelectors(CSSParserObserverWrapper& wrapper, CSSParserTokenRa
 
 RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
-    CSSSelectorList selectorList = CSSSelectorParser::parseSelector(prelude, m_context, m_styleSheet.get());
+    CSSSelectorList selectorList = parseCSSSelector(prelude, m_context, m_styleSheet.get());
     if (!selectorList.isValid())
         return nullptr; // Parse error, invalid selector list
 
@@ -842,24 +828,24 @@ void CSSParserImpl::consumeDeclarationValue(CSSParserTokenRange range, CSSProper
     CSSPropertyParser::parseValue(propertyID, important, range, m_context, m_parsedProperties, ruleType);
 }
 
-std::unique_ptr<Vector<double>> CSSParserImpl::consumeKeyframeKeyList(CSSParserTokenRange range)
+Vector<double> CSSParserImpl::consumeKeyframeKeyList(CSSParserTokenRange range)
 {
-    std::unique_ptr<Vector<double>> result = std::unique_ptr<Vector<double>>(new Vector<double>);
+    Vector<double> result;
     while (true) {
         range.consumeWhitespace();
         const CSSParserToken& token = range.consumeIncludingWhitespace();
         if (token.type() == PercentageToken && token.numericValue() >= 0 && token.numericValue() <= 100)
-            result->append(token.numericValue() / 100);
+            result.append(token.numericValue() / 100);
         else if (token.type() == IdentToken && equalIgnoringASCIICase(token.value(), "from"))
-            result->append(0);
+            result.append(0);
         else if (token.type() == IdentToken && equalIgnoringASCIICase(token.value(), "to"))
-            result->append(1);
+            result.append(1);
         else
-            return nullptr; // Parser error, invalid value in keyframe selector
+            return { }; // Parser error, invalid value in keyframe selector
         if (range.atEnd())
             return result;
         if (range.consume().type() != CommaToken)
-            return nullptr; // Parser error
+            return { }; // Parser error
     }
 }
 

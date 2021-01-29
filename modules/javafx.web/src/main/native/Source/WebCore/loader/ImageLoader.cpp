@@ -39,9 +39,11 @@
 #include "HTMLParserIdioms.h"
 #include "InspectorInstrumentation.h"
 #include "JSDOMPromiseDeferred.h"
+#include "LazyLoadImageObserver.h"
 #include "Page.h"
 #include "RenderImage.h"
 #include "RenderSVGImage.h"
+#include "RuntimeEnabledFeatures.h"
 #include <wtf/NeverDestroyed.h>
 
 #if ENABLE(VIDEO)
@@ -158,7 +160,7 @@ void ImageLoader::clearImageWithoutConsideringPendingLoadEvent()
         imageResource->resetAnimation();
 }
 
-void ImageLoader::updateFromElement()
+void ImageLoader::updateFromElement(RelevantMutation relevantMutation)
 {
     // If we're not making renderers for the page, then don't load images. We don't want to slow
     // down the raw HTML parsing case by loading images we don't intend to display.
@@ -179,10 +181,16 @@ void ImageLoader::updateFromElement()
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
         options.contentSecurityPolicyImposition = element().isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
         options.sameOriginDataURLFlag = SameOriginDataURLFlag::Set;
+        bool isImageElement = is<HTMLImageElement>(element());
+        if (isImageElement)
+            options.referrerPolicy = downcast<HTMLImageElement>(element()).referrerPolicy();
 
         auto crossOriginAttribute = element().attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
 
-        ResourceRequest resourceRequest(document.completeURL(sourceURI(attr)));
+        // Use url from original request for lazy loads that are no longer in deferred state.
+        URL imageURL = m_lazyImageLoadState == LazyImageLoadState::LoadImmediately
+            ? m_image->url() : document.completeURL(sourceURI(attr));
+        ResourceRequest resourceRequest(imageURL);
         resourceRequest.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(m_element));
 
         auto request = createPotentialAccessControlRequest(WTFMove(resourceRequest), WTFMove(options), document, crossOriginAttribute);
@@ -195,10 +203,19 @@ void ImageLoader::updateFromElement()
             newImage = new CachedImage(WTFMove(request), page->sessionID(), &page->cookieJar());
             newImage->setStatus(CachedResource::Pending);
             newImage->setLoading(true);
-            document.cachedResourceLoader().m_documentResources.set(newImage->url(), newImage.get());
+            document.cachedResourceLoader().m_documentResources.set(newImage->url().string(), newImage.get());
             document.cachedResourceLoader().setAutoLoadImages(autoLoadOtherImages);
-        } else
-            newImage = document.cachedResourceLoader().requestImage(WTFMove(request)).value_or(nullptr);
+        } else {
+            if (m_lazyImageLoadState == LazyImageLoadState::None && isImageElement) {
+                auto& imageElement = downcast<HTMLImageElement>(element());
+                if (imageElement.isLazyLoadable() && RuntimeEnabledFeatures::sharedFeatures().lazyImageLoadingEnabled()) {
+                    m_lazyImageLoadState = LazyImageLoadState::Deferred;
+                    request.setIgnoreForRequestCount(true);
+                }
+            }
+            auto imageLoading = (m_lazyImageLoadState == LazyImageLoadState::Deferred) ? ImageLoading::DeferredUntilVisible : ImageLoading::Immediate;
+            newImage = document.cachedResourceLoader().requestImage(WTFMove(request), imageLoading).value_or(nullptr);
+        }
 
         // If we do not have an image here, it means that a cross-site
         // violation occurred, or that the image was blocked via Content
@@ -218,7 +235,7 @@ void ImageLoader::updateFromElement()
     }
 
     CachedImage* oldImage = m_image.get();
-    if (newImage != oldImage) {
+    if (newImage != oldImage || relevantMutation == RelevantMutation::Yes) {
         if (m_hasPendingBeforeLoadEvent) {
             beforeLoadEventSender().cancelEvent(*this);
             m_hasPendingBeforeLoadEvent = false;
@@ -251,6 +268,9 @@ void ImageLoader::updateFromElement()
             } else
                 updateRenderer();
 
+            if (m_lazyImageLoadState == LazyImageLoadState::Deferred)
+                LazyLoadImageObserver::observe(element());
+
             // If newImage is cached, addClient() will result in the load event
             // being queued to fire. Ensure this happens after beforeload is
             // dispatched.
@@ -270,10 +290,10 @@ void ImageLoader::updateFromElement()
     updatedHasPendingEvent();
 }
 
-void ImageLoader::updateFromElementIgnoringPreviousError()
+void ImageLoader::updateFromElementIgnoringPreviousError(RelevantMutation relevantMutation)
 {
     clearFailedLoadURL();
-    updateFromElement();
+    updateFromElement(relevantMutation);
 }
 
 static inline void resolvePromises(Vector<RefPtr<DeferredPromise>>& promises)
@@ -302,10 +322,15 @@ inline void ImageLoader::rejectDecodePromises(const char* message)
     rejectPromises(m_decodingPromises, message);
 }
 
-void ImageLoader::notifyFinished(CachedResource& resource)
+void ImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
 {
     ASSERT(m_failedLoadURL.isEmpty());
     ASSERT_UNUSED(resource, &resource == m_image.get());
+
+    if (m_lazyImageLoadState == LazyImageLoadState::Deferred) {
+        LazyLoadImageObserver::unobserve(element(), element().document());
+        m_lazyImageLoadState = LazyImageLoadState::FullImage;
+    }
 
     m_imageComplete = true;
     if (!hasPendingBeforeLoadEvent())
@@ -482,7 +507,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         return;
     m_hasPendingBeforeLoadEvent = false;
     Ref<Document> originalDocument = element().document();
-    if (element().dispatchBeforeLoadEvent(m_image->url())) {
+    if (element().dispatchBeforeLoadEvent(m_image->url().string())) {
         bool didEventListenerDisconnectThisElement = !element().isConnected() || &element().document() != originalDocument.ptr();
         if (didEventListenerDisconnectThisElement)
             return;
@@ -534,30 +559,41 @@ void ImageLoader::dispatchPendingErrorEvent()
     updatedHasPendingEvent();
 }
 
-void ImageLoader::dispatchPendingBeforeLoadEvents()
+void ImageLoader::dispatchPendingBeforeLoadEvents(Page* page)
 {
-    beforeLoadEventSender().dispatchPendingEvents();
+    beforeLoadEventSender().dispatchPendingEvents(page);
 }
 
-void ImageLoader::dispatchPendingLoadEvents()
+void ImageLoader::dispatchPendingLoadEvents(Page* page)
 {
-    loadEventSender().dispatchPendingEvents();
+    loadEventSender().dispatchPendingEvents(page);
 }
 
-void ImageLoader::dispatchPendingErrorEvents()
+void ImageLoader::dispatchPendingErrorEvents(Page* page)
 {
-    errorEventSender().dispatchPendingEvents();
+    errorEventSender().dispatchPendingEvents(page);
 }
 
-void ImageLoader::elementDidMoveToNewDocument()
+void ImageLoader::elementDidMoveToNewDocument(Document& oldDocument)
 {
     clearFailedLoadURL();
     clearImage();
+    if (isDeferred())
+        LazyLoadImageObserver::unobserve(element(), oldDocument);
+    m_lazyImageLoadState = LazyImageLoadState::None;
 }
 
 inline void ImageLoader::clearFailedLoadURL()
 {
     m_failedLoadURL = nullAtom();
+}
+
+void ImageLoader::loadDeferredImage()
+{
+    if (m_lazyImageLoadState != LazyImageLoadState::Deferred)
+        return;
+    m_lazyImageLoadState = LazyImageLoadState::LoadImmediately;
+    updateFromElement(RelevantMutation::No);
 }
 
 }

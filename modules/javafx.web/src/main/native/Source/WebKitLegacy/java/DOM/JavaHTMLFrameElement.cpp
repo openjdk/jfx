@@ -134,7 +134,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_setScrolling
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_setSrcImpl(JNIEnv* env, jclass, jlong peer, jstring value)
@@ -158,7 +158,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getContentW
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getLocationImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->location());
+    return JavaReturn<String>(env, IMPL->location().string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_setLocationImpl(JNIEnv* env, jclass, jlong peer, jstring value)

@@ -37,8 +37,6 @@ namespace WebCore {
 class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
 
-    void frameLoaderDestroyed() override { }
-
     Optional<FrameIdentifier> frameID() const override { return WTF::nullopt; }
     Optional<PageIdentifier> pageID() const override { return WTF::nullopt; }
 
@@ -89,12 +87,13 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void dispatchWillClose() final { }
     void dispatchDidStartProvisionalLoad() final { }
     void dispatchDidReceiveTitle(const StringWithDirection&) final { }
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>) final { }
+    void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<UsedLegacyTLS>) final { }
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) final { }
     void dispatchDidFailLoad(const ResourceError&) final { }
     void dispatchDidFinishDocumentLoad() final { }
     void dispatchDidFinishLoad() final { }
     void dispatchDidReachLayoutMilestone(OptionSet<LayoutMilestone>) final { }
+    void dispatchDidReachVisuallyNonEmptyState() final { }
 
     Frame* dispatchCreatePage(const NavigationAction&) final { return nullptr; }
     void dispatchShow() final { }
@@ -125,20 +124,20 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void committedLoad(DocumentLoader*, const char*, int) final { }
     void finishedLoading(DocumentLoader*) final { }
 
-    ResourceError cancelledError(const ResourceRequest&) final { return { ResourceError::Type::Cancellation }; }
-    ResourceError blockedError(const ResourceRequest&) final { return { }; }
-    ResourceError blockedByContentBlockerError(const ResourceRequest&) final { return { }; }
-    ResourceError cannotShowURLError(const ResourceRequest&) final { return { }; }
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) final { return { }; }
+    ResourceError cancelledError(const ResourceRequest&) const final { return { ResourceError::Type::Cancellation }; }
+    ResourceError blockedError(const ResourceRequest&) const final { return { }; }
+    ResourceError blockedByContentBlockerError(const ResourceRequest&) const final { return { }; }
+    ResourceError cannotShowURLError(const ResourceRequest&) const final { return { }; }
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const final { return { }; }
 #if ENABLE(CONTENT_FILTERING)
-    ResourceError blockedByContentFilterError(const ResourceRequest&) final { return { }; }
+    ResourceError blockedByContentFilterError(const ResourceRequest&) const final { return { }; }
 #endif
 
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) final { return { }; }
-    ResourceError fileDoesNotExistError(const ResourceResponse&) final { return { }; }
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) final { return { }; }
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const final { return { }; }
+    ResourceError fileDoesNotExistError(const ResourceResponse&) const final { return { }; }
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const final { return { }; }
 
-    bool shouldFallBack(const ResourceError&) final { return false; }
+    bool shouldFallBack(const ResourceError&) const final { return false; }
 
     bool canHandleRequest(const ResourceRequest&) const final { return false; }
     bool canShowMIMEType(const String&) const final { return false; }
@@ -155,7 +154,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void updateCachedDocumentLoader(DocumentLoader&) final { }
     void setTitle(const StringWithDirection&, const URL&) final { }
 
-    String userAgent(const URL&) override { return emptyString(); }
+    String userAgent(const URL&) const override { return emptyString(); }
 
     void savePlatformDataToCachedFrame(CachedFrame*) final { }
     void transitionToCommittedFromCachedFrame(CachedFrame*) final { }
@@ -166,8 +165,6 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
 
     void didRestoreFromBackForwardCache() final { }
 
-    void dispatchDidBecomeFrameset(bool) final { }
-
     void updateGlobalHistory() final { }
     void updateGlobalHistoryRedirectLinks() final { }
     bool shouldGoToHistoryItem(HistoryItem&) const final { return false; }
@@ -176,7 +173,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
     void didDisplayInsecureContent() final { }
     void didRunInsecureContent(SecurityOrigin&, const URL&) final { }
     void didDetectXSS(const URL&, bool) final { }
-    RefPtr<Frame> createFrame(const URL&, const String&, HTMLFrameOwnerElement&, const String&) final;
+    RefPtr<Frame> createFrame(const String&, HTMLFrameOwnerElement&) final;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool) final;
     RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&, const Vector<String>&, const Vector<String>&) final;
 
@@ -199,6 +196,7 @@ class WEBCORE_EXPORT EmptyFrameLoaderClient : public FrameLoaderClient {
 
     bool isEmptyFrameLoaderClient() const final { return true; }
     void prefetchDNS(const String&) final { }
+    void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) final;
 
 #if USE(QUICK_LOOK)
     RefPtr<LegacyPreviewLoaderClient> createPreviewLoaderClient(const String&, const String&) final { return nullptr; }

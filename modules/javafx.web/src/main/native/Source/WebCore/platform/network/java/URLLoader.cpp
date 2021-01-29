@@ -436,7 +436,7 @@ static WebCore::ResourceResponse setupResponse(JNIEnv* env,
 
     // Setup mime type for local resources
     if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
-        response.setMimeType(MIMETypeRegistry::getMIMETypeForPath(kurl.path()));
+        response.setMimeType(MIMETypeRegistry::mimeTypeForPath(kurl.path().toString()));
     }
     return response;
 }

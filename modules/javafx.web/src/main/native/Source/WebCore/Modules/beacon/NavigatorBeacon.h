@@ -46,13 +46,16 @@ public:
     ~NavigatorBeacon();
     static ExceptionOr<bool> sendBeacon(Navigator&, Document&, const String& url, Optional<FetchBody::Init>&&);
 
+    size_t inflightBeaconsCount() const { return m_inflightBeacons.size(); }
+
+    WEBCORE_EXPORT static NavigatorBeacon* from(Navigator&);
+
 private:
     ExceptionOr<bool> sendBeacon(Document&, const String& url, Optional<FetchBody::Init>&&);
 
-    static NavigatorBeacon* from(Navigator&);
     static const char* supplementName();
 
-    void notifyFinished(CachedResource&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
     void logError(const ResourceError&);
 
     Navigator& m_navigator;

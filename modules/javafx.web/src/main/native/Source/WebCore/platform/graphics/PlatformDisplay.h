@@ -33,6 +33,13 @@
 typedef void *EGLDisplay;
 #endif
 
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
+#include "GRefPtrGStreamer.h"
+
+typedef struct _GstGLContext GstGLContext;
+typedef struct _GstGLDisplay GstGLDisplay;
+#endif // ENABLE(VIDEO) && USE(GSTREAMER_GL)
+
 namespace WebCore {
 
 class GLContext;
@@ -68,7 +75,11 @@ public:
 #if USE(EGL)
     EGLDisplay eglDisplay() const;
     bool eglCheckVersion(int major, int minor) const;
-    static void shutDownEglDisplays();
+#endif
+
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
+    GstGLDisplay* gstGLDisplay() const;
+    GstGLContext* gstGLContext() const;
 #endif
 
 protected:
@@ -98,6 +109,13 @@ private:
     bool m_eglDisplayInitialized { false };
     int m_eglMajorVersion { 0 };
     int m_eglMinorVersion { 0 };
+#endif
+
+#if ENABLE(VIDEO) && USE(GSTREAMER_GL)
+    bool tryEnsureGstGLContext() const;
+
+    mutable GRefPtr<GstGLDisplay> m_gstGLDisplay;
+    mutable GRefPtr<GstGLContext> m_gstGLContext;
 #endif
 };
 

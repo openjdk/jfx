@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -72,6 +72,7 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_del_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_by_val);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_private_name);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_get_argument_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_by_val_direct);
@@ -81,6 +82,9 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_setter_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_getter_setter_by_id);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_getter_by_val);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_put_setter_by_val);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_open_get_next);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_next_get_done);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_next_get_value);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jtrue);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jfalse);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_jless);
@@ -119,6 +123,8 @@ LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_construct_varargs);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval_wide16);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_call_eval_wide32);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_open_call);
+LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_iterator_next_call);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_tear_off_arguments);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_strcat);
 LLINT_SLOW_PATH_HIDDEN_DECL(slow_path_to_primitive);
@@ -141,6 +147,7 @@ extern "C" SlowPathReturnType slow_path_checkpoint_osr_exit_from_inlined_call(Ca
 #if ENABLE(C_LOOP)
 extern "C" SlowPathReturnType llint_stack_check_at_vm_entry(VM*, Register*) WTF_INTERNAL;
 #endif
+extern "C" SlowPathReturnType llint_check_vm_entry_permission(VM*, ProtoCallFrame*) WTF_INTERNAL;
 extern "C" NO_RETURN_DUE_TO_CRASH void llint_crash() WTF_INTERNAL;
 
 } } // namespace JSC::LLInt

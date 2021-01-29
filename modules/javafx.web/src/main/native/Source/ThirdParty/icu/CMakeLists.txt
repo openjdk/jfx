@@ -11,16 +11,6 @@ set(ICU_PRIVATE_DEFINES
     "U_CHARSET_IS_UTF8=1"
 )
 
-if (WIN32)
-    list(APPEND ICU_PUBLIC_DEFINES
-        "UCHAR_TYPE=wchar_t"
-    )
-else ()
-    list(APPEND ICU_PUBLIC_DEFINES
-        "UCHAR_TYPE=uint16_t"
-    )
-endif ()
-
 set(ICU_PUBLIC_INCLUDES
     "source/common"
     "source/i18n"

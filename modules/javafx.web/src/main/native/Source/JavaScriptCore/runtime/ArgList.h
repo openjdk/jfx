@@ -30,13 +30,14 @@ namespace JSC {
 
 class MarkedArgumentBuffer : public RecordOverflow {
     WTF_MAKE_NONCOPYABLE(MarkedArgumentBuffer);
+    WTF_MAKE_NONMOVABLE(MarkedArgumentBuffer);
     WTF_FORBID_HEAP_ALLOCATION;
     friend class VM;
     friend class ArgList;
 
 public:
     using Base = RecordOverflow;
-    static const size_t inlineCapacity = 8;
+    static constexpr size_t inlineCapacity = 8;
     typedef HashSet<MarkedArgumentBuffer*> ListSet;
 
     // Constructor for a read-write list, to which you may append values.
@@ -45,7 +46,7 @@ public:
         : m_size(0)
         , m_capacity(inlineCapacity)
         , m_buffer(m_inlineBuffer)
-        , m_markSet(0)
+        , m_markSet(nullptr)
     {
     }
 
@@ -161,7 +162,7 @@ private:
     EncodedJSValue* mallocBase()
     {
         if (m_buffer == m_inlineBuffer)
-            return 0;
+            return nullptr;
         return &slotFor(0);
     }
 
@@ -187,7 +188,7 @@ class ArgList {
     friend class JIT;
 public:
     ArgList()
-        : m_args(0)
+        : m_args(nullptr)
         , m_argCount(0)
     {
     }

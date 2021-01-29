@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, Google Inc. All rights reserved.
+ * Copyright (C) 2020, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +27,17 @@
 
 #include "AudioNode.h"
 #include "AudioParam.h"
+#include "DynamicsCompressorOptions.h"
 #include <memory>
 
 namespace WebCore {
 
 class DynamicsCompressor;
 
-class DynamicsCompressorNode final : public AudioNode {
+class DynamicsCompressorNode : public AudioNode {
     WTF_MAKE_ISO_ALLOCATED(DynamicsCompressorNode);
 public:
-    static Ref<DynamicsCompressorNode> create(AudioContext& context, float sampleRate)
-    {
-        return adoptRef(*new DynamicsCompressorNode(context, sampleRate));
-    }
+    static ExceptionOr<Ref<DynamicsCompressorNode>> create(BaseAudioContext&, const DynamicsCompressorOptions& = { });
 
     virtual ~DynamicsCompressorNode();
 
@@ -49,28 +48,33 @@ public:
     void uninitialize() override;
 
     // Static compression curve parameters.
-    AudioParam* threshold() { return m_threshold.get(); }
-    AudioParam* knee() { return m_knee.get(); }
-    AudioParam* ratio() { return m_ratio.get(); }
-    AudioParam* attack() { return m_attack.get(); }
-    AudioParam* release() { return m_release.get(); }
+    AudioParam& threshold() { return m_threshold.get(); }
+    AudioParam& knee() { return m_knee.get(); }
+    AudioParam& ratio() { return m_ratio.get(); }
+    AudioParam& attack() { return m_attack.get(); }
+    AudioParam& release() { return m_release.get(); }
 
     // Amount by which the compressor is currently compressing the signal in decibels.
-    AudioParam* reduction() { return m_reduction.get(); }
+    float reduction() const { return m_reduction; }
+
+    ExceptionOr<void> setChannelCount(unsigned) final;
+    ExceptionOr<void> setChannelCountMode(ChannelCountMode) final;
+
+protected:
+    explicit DynamicsCompressorNode(BaseAudioContext&, const DynamicsCompressorOptions& = { });
+    virtual void setReduction(float reduction) { m_reduction = reduction; }
 
 private:
     double tailTime() const override;
     double latencyTime() const override;
 
-    DynamicsCompressorNode(AudioContext&, float sampleRate);
-
     std::unique_ptr<DynamicsCompressor> m_dynamicsCompressor;
-    RefPtr<AudioParam> m_threshold;
-    RefPtr<AudioParam> m_knee;
-    RefPtr<AudioParam> m_ratio;
-    RefPtr<AudioParam> m_reduction;
-    RefPtr<AudioParam> m_attack;
-    RefPtr<AudioParam> m_release;
+    Ref<AudioParam> m_threshold;
+    Ref<AudioParam> m_knee;
+    Ref<AudioParam> m_ratio;
+    Ref<AudioParam> m_attack;
+    Ref<AudioParam> m_release;
+    float m_reduction { 0 };
 };
 
 } // namespace WebCore

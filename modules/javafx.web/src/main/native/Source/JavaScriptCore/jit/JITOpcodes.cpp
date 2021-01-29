@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,23 +31,15 @@
 #include "BasicBlockLocation.h"
 #include "BytecodeGenerator.h"
 #include "Exception.h"
-#include "Heap.h"
-#include "InterpreterInlines.h"
 #include "JITInlines.h"
-#include "JSArray.h"
 #include "JSCast.h"
 #include "JSFunction.h"
 #include "JSPropertyNameEnumerator.h"
 #include "LinkBuffer.h"
-#include "MaxFrameExtentForSlowPathCall.h"
-#include "OpcodeInlines.h"
-#include "SlowPathCall.h"
 #include "SuperSampler.h"
-#include "ThunkGenerators.h"
 #include "TypeLocation.h"
 #include "TypeProfilerLog.h"
 #include "VirtualRegister.h"
-#include "Watchdog.h"
 
 namespace JSC {
 
@@ -214,9 +206,9 @@ void JIT::emit_op_is_empty(const Instruction* currentInstruction)
     emitPutVirtualRegister(dst);
 }
 
-void JIT::emit_op_is_undefined(const Instruction* currentInstruction)
+void JIT::emit_op_typeof_is_undefined(const Instruction* currentInstruction)
 {
-    auto bytecode = currentInstruction->as<OpIsUndefined>();
+    auto bytecode = currentInstruction->as<OpTypeofIsUndefined>();
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister value = bytecode.m_operand;
 
@@ -282,6 +274,37 @@ void JIT::emit_op_is_number(const Instruction* currentInstruction)
     boxBoolean(regT0, JSValueRegs { regT0 });
     emitPutVirtualRegister(dst);
 }
+
+#if USE(BIGINT32)
+void JIT::emit_op_is_big_int(const Instruction* currentInstruction)
+{
+    auto bytecode = currentInstruction->as<OpIsBigInt>();
+    VirtualRegister dst = bytecode.m_dst;
+    VirtualRegister value = bytecode.m_operand;
+
+    emitGetVirtualRegister(value, regT0);
+    Jump isCell = branchIfCell(regT0);
+
+    move(TrustedImm64(JSValue::BigInt32Mask), regT1);
+    and64(regT1, regT0);
+    compare64(Equal, regT0, TrustedImm32(JSValue::BigInt32Tag), regT0);
+    boxBoolean(regT0, JSValueRegs { regT0 });
+    Jump done = jump();
+
+    isCell.link(this);
+    compare8(Equal, Address(regT0, JSCell::typeInfoTypeOffset()), TrustedImm32(HeapBigIntType), regT0);
+    boxBoolean(regT0, JSValueRegs { regT0 });
+
+    done.link(this);
+    emitPutVirtualRegister(dst);
+}
+#else // if !USE(BIGINT32)
+NO_RETURN void JIT::emit_op_is_big_int(const Instruction*)
+{
+    // If we only have HeapBigInts, then we emit isCellWithType instead of isBigInt.
+    RELEASE_ASSERT_NOT_REACHED();
+}
+#endif
 
 void JIT::emit_op_is_cell_with_type(const Instruction* currentInstruction)
 {
@@ -571,6 +594,47 @@ void JIT::compileOpStrictEq(const Instruction* currentInstruction, CompileOpStri
 
     emitGetVirtualRegisters(src1, regT0, src2, regT1);
 
+#if USE(BIGINT32)
+    /* At a high level we do (assuming 'type' to be StrictEq):
+    If (left is Double || right is Double)
+        goto slowPath;
+    result = (left == right);
+    if (result)
+        goto done;
+    if (left is Cell || right is Cell)
+        goto slowPath;
+    done:
+    return result;
+    */
+
+    // This fragment implements (left is Double || right is Double), with a single branch instead of the 4 that would be naively required if we used branchIfInt32/branchIfNumber
+    // The trick is that if a JSValue is an Int32, then adding 1<<49 to it will make it overflow, leaving all high bits at 0
+    // If it is not a number at all, then 1<<49 will be its only high bit set
+    // Leaving only doubles above or equal 1<<50.
+    move(regT0, regT2);
+    move(regT1, regT3);
+    move(TrustedImm64(JSValue::LowestOfHighBits), regT5);
+    add64(regT5, regT2);
+    add64(regT5, regT3);
+    lshift64(TrustedImm32(1), regT5);
+    or64(regT2, regT3);
+    addSlowCase(branch64(AboveOrEqual, regT3, regT5));
+
+    compare64(Equal, regT0, regT1, regT5);
+    Jump done = branchTest64(NonZero, regT5);
+
+    move(regT0, regT2);
+    // Jump slow if at least one is a cell (to cover strings and BigInts).
+    and64(regT1, regT2);
+    // FIXME: we could do something more precise: unless there is a BigInt32, we only need to do the slow path if both are strings
+    addSlowCase(branchIfCell(regT2));
+
+    done.link(this);
+    if (type == CompileOpStrictEqType::NStrictEq)
+        xor64(TrustedImm64(1), regT5);
+    boxBoolean(regT5, JSValueRegs { regT5 });
+    emitPutVirtualRegister(dst, regT5);
+#else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
     move(regT0, regT2);
     or64(regT1, regT2);
@@ -592,6 +656,7 @@ void JIT::compileOpStrictEq(const Instruction* currentInstruction, CompileOpStri
     boxBoolean(regT0, JSValueRegs { regT0 });
 
     emitPutVirtualRegister(dst);
+#endif
 }
 
 void JIT::emit_op_stricteq(const Instruction* currentInstruction)
@@ -614,6 +679,45 @@ void JIT::compileOpStrictEqJump(const Instruction* currentInstruction, CompileOp
 
     emitGetVirtualRegisters(src1, regT0, src2, regT1);
 
+#if USE(BIGINT32)
+    /* At a high level we do (assuming 'type' to be StrictEq):
+    If (left is Double || right is Double)
+       goto slowPath;
+    if (left == right)
+       goto taken;
+    if (left is Cell || right is Cell)
+       goto slowPath;
+    goto notTaken;
+    */
+
+    // This fragment implements (left is Double || right is Double), with a single branch instead of the 4 that would be naively required if we used branchIfInt32/branchIfNumber
+    // The trick is that if a JSValue is an Int32, then adding 1<<49 to it will make it overflow, leaving all high bits at 0
+    // If it is not a number at all, then 1<<49 will be its only high bit set
+    // Leaving only doubles above or equal 1<<50.
+    move(regT0, regT2);
+    move(regT1, regT3);
+    move(TrustedImm64(JSValue::LowestOfHighBits), regT5);
+    add64(regT5, regT2);
+    add64(regT5, regT3);
+    lshift64(TrustedImm32(1), regT5);
+    or64(regT2, regT3);
+    addSlowCase(branch64(AboveOrEqual, regT3, regT5));
+
+    Jump areEqual = branch64(Equal, regT0, regT1);
+    if (type == CompileOpStrictEqType::StrictEq)
+        addJump(areEqual, target);
+
+    move(regT0, regT2);
+    // Jump slow if at least one is a cell (to cover strings and BigInts).
+    and64(regT1, regT2);
+    // FIXME: we could do something more precise: unless there is a BigInt32, we only need to do the slow path if both are strings
+    addSlowCase(branchIfCell(regT2));
+
+    if (type == CompileOpStrictEqType::NStrictEq) {
+        addJump(jump(), target);
+        areEqual.link(this);
+    }
+#else // if !USE(BIGINT32)
     // Jump slow if both are cells (to cover strings).
     move(regT0, regT2);
     or64(regT1, regT2);
@@ -627,11 +731,11 @@ void JIT::compileOpStrictEqJump(const Instruction* currentInstruction, CompileOp
     Jump rightOK = branchIfInt32(regT1);
     addSlowCase(branchIfNumber(regT1));
     rightOK.link(this);
-
     if (type == CompileOpStrictEqType::StrictEq)
         addJump(branch64(Equal, regT1, regT0), target);
     else
         addJump(branch64(NotEqual, regT1, regT0), target);
+#endif
 }
 
 void JIT::emit_op_jstricteq(const Instruction* currentInstruction)
@@ -686,7 +790,7 @@ void JIT::emit_op_to_numeric(const Instruction* currentInstruction)
     emitGetVirtualRegister(srcVReg, regT0);
 
     Jump isNotCell = branchIfNotCell(regT0);
-    addSlowCase(branchIfNotBigInt(regT0));
+    addSlowCase(branchIfNotHeapBigInt(regT0));
     Jump isBigInt = jump();
 
     isNotCell.link(this);
@@ -1056,8 +1160,26 @@ void JIT::emitSlow_op_instanceof_custom(const Instruction* currentInstruction, V
 
 #endif // USE(JSVALUE64)
 
-void JIT::emit_op_loop_hint(const Instruction*)
+void JIT::emit_op_loop_hint(const Instruction* instruction)
 {
+#if USE(JSVALUE64)
+    if (Options::returnEarlyFromInfiniteLoopsForFuzzing() && m_codeBlock->loopHintsAreEligibleForFuzzingEarlyReturn()) {
+        uint64_t* ptr = vm().getLoopHintExecutionCounter(instruction);
+        load64(ptr, regT0);
+        auto skipEarlyReturn = branch64(Below, regT0, TrustedImm64(Options::earlyReturnFromInfiniteLoopsLimit()));
+
+        moveValue(jsUndefined(), JSValueRegs { GPRInfo::returnValueGPR });
+        checkStackPointerAlignment();
+        emitRestoreCalleeSaves();
+        emitFunctionEpilogue();
+        ret();
+
+        skipEarlyReturn.link(this);
+        add64(TrustedImm32(1), regT0);
+        store64(regT0, ptr);
+    }
+#endif
+
     // Emit the JIT optimization check:
     if (canBeOptimized()) {
         addSlowCase(branchAdd32(PositiveOrZero, TrustedImm32(Options::executionCounterIncrementForLoop()),
@@ -1250,9 +1372,11 @@ void JIT::emit_op_new_array_with_size(const Instruction* currentInstruction)
 }
 
 #if USE(JSVALUE64)
-void JIT::emit_op_has_structure_property(const Instruction* currentInstruction)
+
+template <typename OpCodeType>
+void JIT::emit_op_has_structure_propertyImpl(const Instruction* currentInstruction)
 {
-    auto bytecode = currentInstruction->as<OpHasStructureProperty>();
+    auto bytecode = currentInstruction->as<OpCodeType>();
     VirtualRegister dst = bytecode.m_dst;
     VirtualRegister base = bytecode.m_base;
     VirtualRegister enumerator = bytecode.m_enumerator;
@@ -1266,6 +1390,21 @@ void JIT::emit_op_has_structure_property(const Instruction* currentInstruction)
 
     move(TrustedImm64(JSValue::encode(jsBoolean(true))), regT0);
     emitPutVirtualRegister(dst);
+}
+
+void JIT::emit_op_has_structure_property(const Instruction* currentInstruction)
+{
+    emit_op_has_structure_propertyImpl<OpHasStructureProperty>(currentInstruction);
+}
+
+void JIT::emit_op_has_own_structure_property(const Instruction* currentInstruction)
+{
+    emit_op_has_structure_propertyImpl<OpHasOwnStructureProperty>(currentInstruction);
+}
+
+void JIT::emit_op_in_structure_property(const Instruction* currentInstruction)
+{
+    emit_op_has_structure_propertyImpl<OpInStructureProperty>(currentInstruction);
 }
 
 void JIT::privateCompileHasIndexedProperty(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
@@ -1285,7 +1424,7 @@ void JIT::privateCompileHasIndexedProperty(ByValInfo* byValInfo, ReturnAddressPt
     patchBuffer.link(badType, byValInfo->slowPathTarget);
     patchBuffer.link(slowCases, byValInfo->slowPathTarget);
 
-    patchBuffer.link(done, byValInfo->badTypeDoneTarget);
+    patchBuffer.link(done, byValInfo->doneTarget);
 
     byValInfo->stubRoutine = FINALIZE_CODE_FOR_STUB(
         m_codeBlock, patchBuffer, JITStubRoutinePtrTag,
@@ -1315,7 +1454,7 @@ void JIT::emit_op_has_indexed_property(const Instruction* currentInstruction)
     // size is always less than 4Gb). As such zero extending will have been correct (and extending the value
     // to 64-bits is necessary since it's used in the address calculation. We zero extend rather than sign
     // extending since it makes it easier to re-tag the value in the slow case.
-    zeroExtend32ToPtr(regT1, regT1);
+    zeroExtend32ToWord(regT1, regT1);
 
     emitJumpSlowCaseIfNotJSCell(regT0, base);
     emitArrayProfilingSiteWithCell(regT0, regT2, profile);
@@ -1622,6 +1761,32 @@ void JIT::emit_op_get_argument(const Instruction* currentInstruction)
     done.link(this);
     emitValueProfilingSite(bytecode.metadata(m_codeBlock));
     emitPutVirtualRegister(dst, resultRegs);
+}
+
+void JIT::emit_op_get_prototype_of(const Instruction* currentInstruction)
+{
+    auto bytecode = currentInstruction->as<OpGetPrototypeOf>();
+#if USE(JSVALUE64)
+    JSValueRegs valueRegs(regT0);
+    JSValueRegs resultRegs(regT2);
+    GPRReg scratchGPR = regT3;
+#else
+    JSValueRegs valueRegs(regT1, regT0);
+    JSValueRegs resultRegs(regT3, regT2);
+    GPRReg scratchGPR = regT1;
+    ASSERT(valueRegs.tagGPR() == scratchGPR);
+#endif
+    emitGetVirtualRegister(bytecode.m_value, valueRegs);
+
+    JumpList slowCases;
+    slowCases.append(branchIfNotCell(valueRegs));
+    slowCases.append(branchIfNotObject(valueRegs.payloadGPR()));
+
+    emitLoadPrototype(vm(), valueRegs.payloadGPR(), resultRegs, scratchGPR, slowCases);
+    addSlowCase(slowCases);
+
+    emitValueProfilingSite(bytecode.metadata(m_codeBlock));
+    emitPutVirtualRegister(bytecode.m_dst, resultRegs);
 }
 
 } // namespace JSC

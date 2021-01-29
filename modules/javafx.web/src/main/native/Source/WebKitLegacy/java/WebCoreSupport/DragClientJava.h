@@ -45,7 +45,7 @@ public:
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) override;
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer& clipboard) override;
     //We work in window rather than view coordinates here
-    DragSourceAction dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
+    OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
 
     void startDrag(DragItem, DataTransfer&, Frame&) override;
 private:

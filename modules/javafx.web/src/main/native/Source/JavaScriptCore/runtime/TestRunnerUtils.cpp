@@ -29,7 +29,6 @@
 #include "CodeBlock.h"
 #include "FunctionCodeBlock.h"
 #include "JSCInlines.h"
-#include "LLIntData.h"
 
 namespace JSC {
 
@@ -52,7 +51,7 @@ CodeBlock* getSomeBaselineCodeBlockForFunction(JSValue theFunctionValue)
 {
     FunctionExecutable* executable = getExecutableForFunction(theFunctionValue);
     if (!executable)
-        return 0;
+        return nullptr;
 
     CodeBlock* baselineCodeBlock = executable->baselineCodeBlockFor(CodeForCall);
 
@@ -66,7 +65,7 @@ JSValue numberOfDFGCompiles(JSValue theFunctionValue)
 {
     bool pretendToHaveManyCompiles = false;
 #if ENABLE(DFG_JIT)
-    if (!Options::useJIT() || !Options::useDFGJIT())
+    if (!Options::useJIT() || !Options::useBaselineJIT() || !Options::useDFGJIT())
         pretendToHaveManyCompiles = true;
 #else
     pretendToHaveManyCompiles = true;

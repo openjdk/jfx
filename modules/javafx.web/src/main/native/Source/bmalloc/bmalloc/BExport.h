@@ -27,10 +27,25 @@
 
 #include "BPlatform.h"
 
-#if BUSE(EXPORT_MACROS)
-#define BEXPORT __attribute__((visibility("default")))
+#if BUSE(DECLSPEC_ATTRIBUTE)
+#define BEXPORT_DECLARATION __declspec(dllexport)
+#define BIMPORT_DECLARATION __declspec(dllimport)
+#elif BUSE(VISIBILITY_ATTRIBUTE)
+#define BEXPORT_DECLARATION __attribute__((visibility("default")))
+#define BIMPORT_DECLARATION BEXPORT_DECLARATION
 #else
-#define BEXPORT
+#define BEXPORT_DECLARATION
+#define BIMPORT_DECLARATION
+#endif
+
+#if !defined(BEXPORT)
+
+#if defined(BUILDING_bmalloc) || defined(STATICALLY_LINKED_WITH_bmalloc)
+#define BEXPORT BEXPORT_DECLARATION
+#else
+#define BEXPORT BIMPORT_DECLARATION
+#endif
+
 #endif
 
 #define BNOEXPORT

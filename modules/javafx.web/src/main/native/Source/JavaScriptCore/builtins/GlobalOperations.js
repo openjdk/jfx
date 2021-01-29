@@ -50,14 +50,6 @@ function toLength(target)
 }
 
 @globalPrivate
-function isDictionary(object)
-{
-    "use strict";
-
-    return object == null || typeof object === "object";
-}
-
-@globalPrivate
 @getter
 @overriddenName="get [Symbol.species]"
 function speciesGetter()
@@ -76,7 +68,7 @@ function speciesConstructor(obj, defaultConstructor)
         return defaultConstructor;
     if (!@isObject(constructor))
         @throwTypeError("|this|.constructor is not an Object or undefined");
-    constructor = constructor.@speciesSymbol;
+    constructor = constructor.@@species;
     if (@isUndefinedOrNull(constructor))
         return defaultConstructor;
     if (@isConstructor(constructor))

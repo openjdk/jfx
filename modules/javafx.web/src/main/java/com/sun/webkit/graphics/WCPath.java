@@ -82,8 +82,6 @@ public abstract class WCPath<P> extends Ref {
 
     public abstract void closeSubpath();
 
-    public abstract boolean hasCurrentPoint();
-
     public abstract boolean isEmpty();
 
     public abstract void translate(double x, double y);

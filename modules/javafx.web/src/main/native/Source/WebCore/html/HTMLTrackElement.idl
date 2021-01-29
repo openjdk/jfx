@@ -24,7 +24,8 @@
  */
 
 [
-    Conditional=VIDEO_TRACK,
+    ActiveDOMObject,
+    Conditional=VIDEO,
 ] interface HTMLTrackElement : HTMLElement {
     [CEReactions=NotNeeded] attribute DOMString kind;
     [CEReactions=NotNeeded, Reflect, URL] attribute USVString src;

@@ -99,15 +99,26 @@ static bool isValidColumnSpanner(const RenderMultiColumnFlow& fragmentedFlow, co
     for (auto* ancestor = descendantBox.containingBlock(); ancestor; ancestor = ancestor->containingBlock()) {
         if (is<RenderView>(*ancestor))
             return false;
+        if (ancestor->isLegend())
+            return false;
         if (is<RenderFragmentedFlow>(*ancestor)) {
             // Don't allow any intervening non-multicol fragmentation contexts. The spec doesn't say
             // anything about disallowing this, but it's just going to be too complicated to
             // implement (not to mention specify behavior).
             return ancestor == &fragmentedFlow;
         }
-        // This ancestor (descendent of the fragmentedFlow) will create columns later. The spanner belongs to it.
-        if (is<RenderBlockFlow>(*ancestor) && downcast<RenderBlockFlow>(*ancestor).willCreateColumns())
-            return false;
+        if (is<RenderBlockFlow>(*ancestor)) {
+            auto& blockFlowAncestor = downcast<RenderBlockFlow>(*ancestor);
+            if (blockFlowAncestor.willCreateColumns()) {
+                // This ancestor (descendent of the fragmentedFlow) will create columns later. The spanner belongs to it.
+                return false;
+            }
+            if (blockFlowAncestor.multiColumnFlow()) {
+                // While this ancestor (descendent of the fragmentedFlow) has a fragmented flow context, this context is being destroyed.
+                // However the spanner still belongs to it (will most likely be moved to the parent fragmented context as the next step).
+                return false;
+            }
+        }
         ASSERT(ancestor->style().columnSpan() != ColumnSpan::All || !isValidColumnSpanner(fragmentedFlow, *ancestor));
         if (ancestor->isUnsplittableForPagination())
             return false;
@@ -207,6 +218,7 @@ void RenderTreeBuilder::MultiColumn::destroyFragmentedFlow(RenderBlockFlow& flow
         m_builder.destroy(*columnSet);
 
     flow.clearMultiColumnFlow();
+    flow.setChildrenInline(true);
     m_builder.moveAllChildren(multiColumnFlow, flow, RenderTreeBuilder::NormalizeAfterInsertion::Yes);
     m_builder.destroy(multiColumnFlow);
     for (auto& parentAndSpanner : parentAndSpannerList)

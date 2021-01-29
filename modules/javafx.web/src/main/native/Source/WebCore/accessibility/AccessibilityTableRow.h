@@ -43,8 +43,8 @@ public:
     virtual AXCoreObject* headerObject();
     virtual AccessibilityTable* parentTable() const;
 
-    void setRowIndex(int rowIndex) { m_rowIndex = rowIndex; }
-    int rowIndex() const { return m_rowIndex; }
+    void setRowIndex(unsigned rowIndex) { m_rowIndex = rowIndex; }
+    unsigned rowIndex() const override { return m_rowIndex; }
 
     // allows the table to add other children that may not originate
     // in the row, but their col/row spans overlap into it
@@ -52,8 +52,8 @@ public:
 
     void addChildren() override;
 
-    int axColumnIndex() const;
-    int axRowIndex() const;
+    int axColumnIndex() const override;
+    int axRowIndex() const override;
 
 protected:
     explicit AccessibilityTableRow(RenderObject*);
@@ -65,7 +65,7 @@ private:
     AccessibilityObject* observableObject() const final;
     bool computeAccessibilityIsIgnored() const final;
 
-    int m_rowIndex;
+    unsigned m_rowIndex;
 };
 
 } // namespace WebCore

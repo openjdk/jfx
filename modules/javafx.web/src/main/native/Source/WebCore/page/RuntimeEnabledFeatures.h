@@ -62,6 +62,9 @@ public:
     void setUserTimingEnabled(bool isEnabled) { m_isUserTimingEnabled = isEnabled; }
     bool userTimingEnabled() const { return m_isUserTimingEnabled; }
 
+    void setPaintTimingEnabled(bool isEnabled) { m_isPaintTimingEnabled = isEnabled; }
+    bool paintTimingEnabled() const { return m_isPaintTimingEnabled; }
+
     bool performanceTimelineEnabled() const { return resourceTimingEnabled() || userTimingEnabled(); }
 
     void setShadowDOMEnabled(bool isEnabled) { m_isShadowDOMEnabled = isEnabled; }
@@ -138,6 +141,11 @@ public:
     void setInspectorAdditionsEnabled(bool isEnabled) { m_inspectorAdditionsEnabled = isEnabled; }
     bool inspectorAdditionsEnabled() const { return m_inspectorAdditionsEnabled; }
 
+#if ENABLE(WEBXR)
+    void setWebXREnabled(bool isEnabled) { m_webXREnabled = isEnabled; }
+    bool webXREnabled() const { return m_webXREnabled; }
+#endif
+
     void setAccessibilityObjectModelEnabled(bool isEnabled) { m_accessibilityObjectModelEnabled = isEnabled; }
     bool accessibilityObjectModelEnabled() const { return m_accessibilityObjectModelEnabled; }
 
@@ -173,9 +181,6 @@ public:
 
     void setCSSCustomPropertiesAndValuesEnabled(bool isEnabled) { m_CSSCustomPropertiesAndValuesEnabled = isEnabled; }
     bool cssCustomPropertiesAndValuesEnabled() const { return m_CSSCustomPropertiesAndValuesEnabled; }
-
-    void setPointerEventsEnabled(bool isEnabled) { m_pointerEventsEnabled = isEnabled; }
-    bool pointerEventsEnabled() const { return m_pointerEventsEnabled; }
 
     void setSyntheticEditingCommandsEnabled(bool isEnabled) { m_syntheticEditingCommandsEnabled = isEnabled; }
     bool syntheticEditingCommandsEnabled() const { return m_syntheticEditingCommandsEnabled; }
@@ -220,6 +225,9 @@ public:
     bool indexedDBWorkersEnabled() const { return m_isIndexedDBWorkersEnabled; }
 #endif
 
+    bool userGesturePromisePropagationEnabled() const { return m_userGesturePromisePropagationEnabled; }
+    void setUserGesturePromisePropagationEnabled(bool isEnabled) { m_userGesturePromisePropagationEnabled = isEnabled; }
+
 #if ENABLE(MEDIA_STREAM)
     bool mediaRecorderEnabled() const { return m_isMediaRecorderEnabled; }
     void setMediaRecorderEnabled(bool isEnabled) { m_isMediaRecorderEnabled = isEnabled; }
@@ -234,14 +242,20 @@ public:
 #if ENABLE(WEB_RTC)
     bool webRTCDTMFEnabled() const { return m_isWebRTCDTMFEnabled; }
     void setWebRTCDTMFEnabled(bool isEnabled) { m_isWebRTCDTMFEnabled = isEnabled; }
-    bool webRTCVP8CodecEnabled() const { return m_isWebRTCVP8CodecEnabled; }
-    void setWebRTCVP8CodecEnabled(bool isEnabled) { m_isWebRTCVP8CodecEnabled = isEnabled; }
+    bool webRTCH265CodecEnabled() const { return m_isWebRTCH265CodecEnabled; }
+    void setWebRTCH265CodecEnabled(bool isEnabled) { m_isWebRTCH265CodecEnabled = isEnabled; }
+    bool webRTCVP9CodecEnabled() const { return m_isWebRTCVP9CodecEnabled; }
+    void setWebRTCVP9CodecEnabled(bool isEnabled) { m_isWebRTCVP9CodecEnabled = isEnabled; }
+    bool webRTCH264LowLatencyEncoderEnabled() const { return m_isWebRTCH264LowLatencyEncoderEnabled; }
+    void setWebRTCH264LowLatencyEncoderEnabled(bool isEnabled) { m_isWebRTCH264LowLatencyEncoderEnabled = isEnabled; }
     bool peerConnectionEnabled() const { return m_isPeerConnectionEnabled; }
     void setPeerConnectionEnabled(bool isEnabled) { m_isPeerConnectionEnabled = isEnabled; }
     bool webRTCMDNSICECandidatesEnabled() const { return m_isWebRTCMDNSICECandidatesEnabled; }
     void setWebRTCMDNSICECandidatesEnabled(bool isEnabled) { m_isWebRTCMDNSICECandidatesEnabled = isEnabled; }
     bool webRTCH264SimulcastEnabled() const { return m_isWebRTCH264SimulcastEnabled; }
     void setWebRTCH264SimulcastEnabled(bool isEnabled) { m_isWebRTCH264SimulcastEnabled = isEnabled; }
+    bool webRTCPlatformCodecsInGPUProcessEnabled() const { return m_isWebRTCPlatformCodecsInGPUProcessEnabled; }
+    void setWebRTCPlatformCodecsInGPUProcessEnabled(bool isEnabled) { m_isWebRTCPlatformCodecsInGPUProcessEnabled = isEnabled; }
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
@@ -249,44 +263,9 @@ public:
     bool legacyCSSVendorPrefixesEnabled() const { return m_isLegacyCSSVendorPrefixesEnabled; }
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    bool inputTypeColorEnabled() const { return m_isInputTypeColorEnabled; }
-    void setInputTypeColorEnabled(bool isEnabled) { m_isInputTypeColorEnabled = isEnabled; }
-#endif
-
 #if ENABLE(DATALIST_ELEMENT)
     bool dataListElementEnabled() const { return m_isDataListElementEnabled; }
     void setDataListElementEnabled(bool isEnabled) { m_isDataListElementEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_DATE)
-    bool inputTypeDateEnabled() const { return m_isInputTypeDateEnabled; }
-    void setInputTypeDateEnabled(bool isEnabled) { m_isInputTypeDateEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
-    bool inputTypeDateTimeEnabled() const { return m_isInputTypeDateTimeEnabled; }
-    void setInputTypeDateTimeEnabled(bool isEnabled) { m_isInputTypeDateTimeEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-    bool inputTypeDateTimeLocalEnabled() const { return m_isInputTypeDateTimeLocalEnabled; }
-    void setInputTypeDateTimeLocalEnabled(bool isEnabled) { m_isInputTypeDateTimeLocalEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_MONTH)
-    bool inputTypeMonthEnabled() const { return m_isInputTypeMonthEnabled; }
-    void setInputTypeMonthEnabled(bool isEnabled) { m_isInputTypeMonthEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_TIME)
-    bool inputTypeTimeEnabled() const { return m_isInputTypeTimeEnabled; }
-    void setInputTypeTimeEnabled(bool isEnabled) { m_isInputTypeTimeEnabled = isEnabled; }
-#endif
-
-#if ENABLE(INPUT_TYPE_WEEK)
-    bool inputTypeWeekEnabled() const { return m_isInputTypeWeekEnabled; }
-    void setInputTypeWeekEnabled(bool isEnabled) { m_isInputTypeWeekEnabled = isEnabled; }
 #endif
 
 #if ENABLE(GAMEPAD)
@@ -304,12 +283,15 @@ public:
     bool webGPUEnabled() const { return m_isWebGPUEnabled; }
 #endif
 
-#if ENABLE(STREAMS_API)
+#if ENABLE(WEBGL) || ENABLE(WEBGL2)
+    void setMaskWebGLStringsEnabled(bool isEnabled) { m_isMaskWebGLStringsEnabled = isEnabled; }
+    bool maskWebGLStringsEnabled() const { return m_isMaskWebGLStringsEnabled; }
+#endif
+
     void setReadableByteStreamAPIEnabled(bool isEnabled) { m_isReadableByteStreamAPIEnabled = isEnabled; }
     bool readableByteStreamAPIEnabled() const { return m_isReadableByteStreamAPIEnabled; }
     void setWritableStreamAPIEnabled(bool isEnabled) { m_isWritableStreamAPIEnabled = isEnabled; }
     bool writableStreamAPIEnabled() const { return m_isWritableStreamAPIEnabled; }
-#endif
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
     void setDownloadAttributeEnabled(bool isEnabled) { m_isDownloadAttributeEnabled = isEnabled; }
@@ -346,6 +328,12 @@ public:
 
     void setCSSLogicalEnabled(bool isEnabled) { m_CSSLogicalEnabled = isEnabled; }
     bool cssLogicalEnabled() const { return m_CSSLogicalEnabled; }
+
+    void setLegacyBeforeLoadEventEnabled(bool isEnabled) { m_legacyBeforeLoadEventEnabled = isEnabled; }
+    bool legacyBeforeLoadEventEnabled() const { return m_legacyBeforeLoadEventEnabled; }
+
+    void setLineHeightUnitsEnabled(bool isEnabled) { m_lineHeightUnitsEnabled = isEnabled; }
+    bool lineHeightUnitsEnabled() const { return m_lineHeightUnitsEnabled; }
 
     bool adClickAttributionEnabled() const { return m_adClickAttributionEnabled; }
     void setAdClickAttributionEnabled(bool isEnabled) { m_adClickAttributionEnabled = isEnabled; }
@@ -390,9 +378,25 @@ public:
     void setIsInAppBrowserPrivacyEnabled(bool isEnabled) { m_isInAppBrowserPrivacyEnabled = isEnabled; }
     bool isInAppBrowserPrivacyEnabled() const { return m_isInAppBrowserPrivacyEnabled; }
 
+    void setNeedsInAppBrowserPrivacyQuirks(bool isEnabled) { m_needsInAppBrowserPrivacyQuirks = isEnabled; }
+    bool needsInAppBrowserPrivacyQuirks() const { return m_needsInAppBrowserPrivacyQuirks; }
+
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     void setIsAccessibilityIsolatedTreeEnabled(bool isEnabled) { m_accessibilityIsolatedTree = isEnabled; }
     bool isAccessibilityIsolatedTreeEnabled() const { return m_accessibilityIsolatedTree; }
+#endif
+
+    void setWebShareFileAPIEnabled(bool isEnabled) { m_webShareFileAPIEnabled = isEnabled; }
+    bool webShareFileAPIEnabled() const { return m_webShareFileAPIEnabled; }
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+    void setIncrementalPDFLoadingEnabled(bool isEnabled) { m_incrementalPDFLoadingEnabled = isEnabled; }
+    bool incrementalPDFLoadingEnabled() const { return m_incrementalPDFLoadingEnabled; }
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+    void setWebMParserEnabled(bool isEnabled) { m_webMParserEnabled = isEnabled; }
+    bool webMParserEnabled() const { return m_webMParserEnabled; }
 #endif
 
 private:
@@ -404,6 +408,7 @@ private:
     bool m_isLinkPreloadEnabled { true };
     bool m_isLinkPrefetchEnabled { false };
     bool m_isMediaPreloadingEnabled { false };
+    bool m_isPaintTimingEnabled { false };
     bool m_isResourceTimingEnabled { false };
     bool m_isUserTimingEnabled { false };
     bool m_isInteractiveFormValidationEnabled { false };
@@ -431,6 +436,9 @@ private:
     bool m_isWebSocketEnabled { true };
     bool m_fetchAPIKeepAliveEnabled { false };
     bool m_inspectorAdditionsEnabled { false };
+#if ENABLE(WEBXR)
+    bool m_webXREnabled { false };
+#endif
     bool m_accessibilityObjectModelEnabled { false };
     bool m_ariaReflectionEnabled { true };
     bool m_itpDebugMode { false };
@@ -442,7 +450,6 @@ private:
     bool m_attrStyleEnabled { false };
     bool m_webAPIStatisticsEnabled { false };
     bool m_CSSCustomPropertiesAndValuesEnabled { false };
-    bool m_pointerEventsEnabled { true };
     bool m_syntheticEditingCommandsEnabled { true };
     bool m_dialogElementEnabled { false };
     bool m_webSQLEnabled { false };
@@ -471,6 +478,7 @@ private:
     bool m_isIndexedDBWorkersEnabled { true };
 #endif
 
+    bool m_userGesturePromisePropagationEnabled { true };
 #if ENABLE(MEDIA_STREAM)
     bool m_isMediaRecorderEnabled { false };
     bool m_isMediaDevicesEnabled { false };
@@ -480,56 +488,29 @@ private:
 
 #if ENABLE(WEB_RTC)
     bool m_isWebRTCDTMFEnabled { true };
-    bool m_isWebRTCVP8CodecEnabled { true };
     bool m_isPeerConnectionEnabled { true };
-    bool m_isWebRTCMDNSICECandidatesEnabled { false };
     bool m_isWebRTCH264SimulcastEnabled { true };
+    bool m_isWebRTCMDNSICECandidatesEnabled { false };
+    bool m_isWebRTCPlatformCodecsInGPUProcessEnabled { false };
+    bool m_isWebRTCH265CodecEnabled { false };
+    bool m_isWebRTCVP9CodecEnabled { false };
+    bool m_isWebRTCH264LowLatencyEncoderEnabled { false };
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
     bool m_isLegacyCSSVendorPrefixesEnabled { false };
 #endif
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    bool m_isInputTypeColorEnabled { false };
-#endif
-
 #if ENABLE(DATALIST_ELEMENT)
     bool m_isDataListElementEnabled { false };
-#endif
-
-#if ENABLE(INPUT_TYPE_DATE)
-    bool m_isInputTypeDateEnabled { true };
-#endif
-
-#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
-    bool m_isInputTypeDateTimeEnabled { false };
-#endif
-
-#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
-    bool m_isInputTypeDateTimeLocalEnabled { true };
-#endif
-
-#if ENABLE(INPUT_TYPE_MONTH)
-    bool m_isInputTypeMonthEnabled { true };
-#endif
-
-#if ENABLE(INPUT_TYPE_TIME)
-    bool m_isInputTypeTimeEnabled { true };
-#endif
-
-#if ENABLE(INPUT_TYPE_WEEK)
-    bool m_isInputTypeWeekEnabled { true };
 #endif
 
 #if ENABLE(GAMEPAD)
     bool m_areGamepadsEnabled { false };
 #endif
 
-#if ENABLE(STREAMS_API)
     bool m_isReadableByteStreamAPIEnabled { false };
     bool m_isWritableStreamAPIEnabled { false };
-#endif
 
 #if ENABLE(WEBGL2)
     bool m_isWebGL2Enabled { false };
@@ -537,6 +518,10 @@ private:
 
 #if ENABLE(WEBGPU)
     bool m_isWebGPUEnabled { false };
+#endif
+
+#if ENABLE(WEBGL) || ENABLE(WEBGL2)
+    bool m_isMaskWebGLStringsEnabled { false };
 #endif
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
@@ -567,6 +552,10 @@ private:
 
     bool m_CSSLogicalEnabled { false };
 
+    // False by default until https://bugs.webkit.org/show_bug.cgi?id=211351 /
+    // https://github.com/w3c/csswg-drafts/issues/3257 have been sorted out.
+    bool m_lineHeightUnitsEnabled { false };
+
     bool m_adClickAttributionEnabled { false };
     bool m_adClickAttributionDebugModeEnabled { false };
 
@@ -577,7 +566,7 @@ private:
 
     bool m_isITPDatabaseEnabled { true };
 
-    bool m_referrerPolicyAttributeEnabled { false };
+    bool m_referrerPolicyAttributeEnabled { true };
     bool m_interruptAudioOnPageVisibilityChangeEnabled { false };
 
     bool m_linkPreloadResponsiveImagesEnabled { false };
@@ -591,9 +580,21 @@ private:
     bool m_isCSSShadowPartsEnabled { true };
 
     bool m_isInAppBrowserPrivacyEnabled { false };
+    bool m_needsInAppBrowserPrivacyQuirks { false };
+
+    bool m_legacyBeforeLoadEventEnabled { false };
 
 #if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
     bool m_accessibilityIsolatedTree { false };
+#endif
+    bool m_webShareFileAPIEnabled { false };
+
+#if HAVE(INCREMENTAL_PDF_APIS)
+    bool m_incrementalPDFLoadingEnabled { false };
+#endif
+
+#if ENABLE(MEDIA_SOURCE)
+    bool m_webMParserEnabled { false };
 #endif
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;

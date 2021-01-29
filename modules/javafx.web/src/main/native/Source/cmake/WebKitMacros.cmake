@@ -17,7 +17,6 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
             "--derived-sources-path" "${_derivedSourcesPath}"
             "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
             "--print-bundled-sources"
-            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
             ${_sourceListFileTruePaths}
             RESULT_VARIABLE _resultTmp
             OUTPUT_VARIABLE _outputTmp)
@@ -35,7 +34,6 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
         execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
             "--derived-sources-path" "${_derivedSourcesPath}"
             "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
-            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
             ${_sourceListFileTruePaths}
             RESULT_VARIABLE  _resultTmp
             OUTPUT_VARIABLE _outputTmp)
@@ -52,7 +50,6 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
             "--derived-sources-path" "${_derivedSourcesPath}"
             "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
             "--print-all-sources"
-            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
             ${_sourceListFileTruePaths}
             RESULT_VARIABLE _resultTmp
             OUTPUT_VARIABLE _outputTmp)
@@ -180,8 +177,39 @@ macro(_WEBKIT_TARGET _target_logical_name _target_cmake_name)
     endif ()
 endmacro()
 
+macro(_WEBKIT_TARGET_ANALYZE _target)
+    if (ClangTidy_EXE)
+        set(_clang_path_and_options
+            ${ClangTidy_EXE}
+            # Include all non system headers
+            --header-filter=.*
+        )
+        set_target_properties(${_target} PROPERTIES
+            C_CLANG_TIDY "${_clang_path_and_options}"
+            CXX_CLANG_TIDY "${_clang_path_and_options}"
+        )
+    endif ()
+
+    if (IWYU_EXE)
+        set(_iwyu_path_and_options
+            ${IWYU_EXE}
+            # Suggests the more concise syntax introduced in C++17
+            -Xiwyu --cxx17ns
+            # Tells iwyu to always keep these includes
+            -Xiwyu --keep=**/config.h
+        )
+        if (MSVC)
+            list(APPEND _iwyu_path_and_options --driver-mode=cl)
+        endif ()
+        set_target_properties(${_target} PROPERTIES
+            CXX_INCLUDE_WHAT_YOU_USE "${_iwyu_path_and_options}"
+        )
+    endif ()
+endmacro()
+
 macro(WEBKIT_FRAMEWORK _target)
     _WEBKIT_TARGET(${_target} ${_target})
+    _WEBKIT_TARGET_ANALYZE(${_target})
 
     if (${_target}_OUTPUT_NAME)
         set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
@@ -213,9 +241,20 @@ endmacro()
 
 macro(WEBKIT_EXECUTABLE _target)
     _WEBKIT_TARGET(${_target} ${_target})
+    _WEBKIT_TARGET_ANALYZE(${_target})
 
     if (${_target}_OUTPUT_NAME)
         set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
+    endif ()
+    if (WIN32)
+        if (WTF_CPU_X86)
+            set(_processor_architecture "x86")
+        elseif (WTF_CPU_X86_64)
+            set(_processor_architecture "amd64")
+        else ()
+            set(_processor_architecture "*")
+        endif ()
+        target_link_options(${_target} PRIVATE "/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='${_processor_architecture}' publicKeyToken='6595b64144ccf1df' language='*'")
     endif ()
 endmacro()
 
@@ -233,6 +272,7 @@ macro(WEBKIT_WRAP_EXECUTABLE _target)
     add_library(${_wrapped_target_name} SHARED "${CMAKE_BINARY_DIR}/cmakeconfig.h")
 
     _WEBKIT_TARGET(${_target} ${_wrapped_target_name})
+    _WEBKIT_TARGET_ANALYZE(${_wrapped_target_name})
 
     # Unset values
     unset(${_target}_HEADERS)

@@ -100,9 +100,9 @@
     [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, DisabledByQuirk=shouldDisableElementFullscreen] void webkitRequestFullscreen(); // Prefixed W3C version.
 
     // Extensions from Pointer Events API (https://w3c.github.io/pointerevents/#extensions-to-the-element-interface).
-    [Conditional=POINTER_EVENTS, EnabledAtRuntime=PointerEvents, MayThrowException] void setPointerCapture(long pointerId);
-    [Conditional=POINTER_EVENTS, EnabledAtRuntime=PointerEvents, MayThrowException] void releasePointerCapture(long pointerId);
-    [Conditional=POINTER_EVENTS, EnabledAtRuntime=PointerEvents] boolean hasPointerCapture(long pointerId);
+    [MayThrowException] void setPointerCapture(long pointerId);
+    [MayThrowException] void releasePointerCapture(long pointerId);
+    boolean hasPointerCapture(long pointerId);
 
     // Extensions from Pointer Lock API (https://w3c.github.io/pointerlock/#extensions-to-the-element-interface).
     [Conditional=POINTER_LOCK] void requestPointerLock();
@@ -118,12 +118,6 @@
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturechange;
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongestureend;
     [NotEnumerable, Conditional=IOS_GESTURE_EVENTS] attribute EventHandler ongesturestart;
-
-    // Non standard.
-    [NotEnumerable, ImplementedAs=onwebkitAnimationEnd] attribute EventHandler onwebkitanimationend;
-    [NotEnumerable, ImplementedAs=onwebkitAnimationIteration] attribute EventHandler onwebkitanimationiteration;
-    [NotEnumerable, ImplementedAs=onwebkitAnimationStart] attribute EventHandler onwebkitanimationstart;
-    [NotEnumerable, ImplementedAs=onwebkitTransitionEnd] attribute EventHandler onwebkittransitionend;
 
     // FIXME: These event handlers should only be on Document (https://fullscreen.spec.whatwg.org/#api).
     [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, DisabledByQuirk=shouldDisableElementFullscreen] attribute EventHandler onwebkitfullscreenchange;

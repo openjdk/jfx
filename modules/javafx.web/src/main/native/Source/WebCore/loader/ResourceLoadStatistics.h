@@ -79,6 +79,7 @@ struct ResourceLoadStatistics {
 
     // Top frame stats
     HashSet<RegistrableDomain> topFrameUniqueRedirectsTo;
+    HashSet<RegistrableDomain> topFrameUniqueRedirectsToSinceSameSiteStrictEnforcement;
     HashSet<RegistrableDomain> topFrameUniqueRedirectsFrom;
     HashSet<RegistrableDomain> topFrameLinkDecorationsFrom;
     bool gotLinkDecorationFromPrevalentResource { false };
@@ -98,6 +99,8 @@ struct ResourceLoadStatistics {
     unsigned dataRecordsRemoved { 0 };
     unsigned timesAccessedAsFirstPartyDueToUserInteraction { 0 };
     unsigned timesAccessedAsFirstPartyDueToStorageAccessAPI { 0 };
+
+    enum class IsEphemeral : bool { No, Yes };
 
     enum class NavigatorAPI : uint64_t {
         AppVersion = 1 << 0,
@@ -120,7 +123,7 @@ struct ResourceLoadStatistics {
 #if ENABLE(WEB_API_STATISTICS)
     // This set represents the registrable domain of the top frame where web API
     // were used in the top frame or one of its subframes.
-    HashCountedSet<String> topFrameRegistrableDomainsWhichAccessedWebAPIs;
+    HashSet<RegistrableDomain> topFrameRegistrableDomainsWhichAccessedWebAPIs;
     HashSet<String> fontsFailedToLoad;
     HashSet<String> fontsSuccessfullyLoaded;
     CanvasActivityRecord canvasActivityRecord;
@@ -130,3 +133,33 @@ struct ResourceLoadStatistics {
 };
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::ResourceLoadStatistics::NavigatorAPI> {
+    using values = EnumValues<
+        WebCore::ResourceLoadStatistics::NavigatorAPI,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::AppVersion,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::UserAgent,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::Plugins,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::MimeTypes,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::CookieEnabled,
+        WebCore::ResourceLoadStatistics::NavigatorAPI::JavaEnabled
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ResourceLoadStatistics::ScreenAPI> {
+    using values = EnumValues<
+        WebCore::ResourceLoadStatistics::ScreenAPI,
+        WebCore::ResourceLoadStatistics::ScreenAPI::Height,
+        WebCore::ResourceLoadStatistics::ScreenAPI::Width,
+        WebCore::ResourceLoadStatistics::ScreenAPI::ColorDepth,
+        WebCore::ResourceLoadStatistics::ScreenAPI::PixelDepth,
+        WebCore::ResourceLoadStatistics::ScreenAPI::AvailLeft,
+        WebCore::ResourceLoadStatistics::ScreenAPI::AvailTop,
+        WebCore::ResourceLoadStatistics::ScreenAPI::AvailHeight,
+        WebCore::ResourceLoadStatistics::ScreenAPI::AvailWidth
+    >;
+};
+
+} // namespace WTF

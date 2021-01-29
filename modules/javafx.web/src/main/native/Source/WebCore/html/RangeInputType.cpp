@@ -33,8 +33,10 @@
 #include "RangeInputType.h"
 
 #include "AXObjectCache.h"
+#include "Decimal.h"
 #include "ElementChildIterator.h"
 #include "EventNames.h"
+#include "HTMLCollection.h"
 #include "HTMLInputElement.h"
 #include "HTMLParserIdioms.h"
 #include "InputTypeNames.h"
@@ -46,6 +48,7 @@
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
 #include "SliderThumbElement.h"
+#include "StepRange.h"
 #include <limits>
 #include <wtf/MathExtras.h>
 
@@ -202,7 +205,7 @@ auto RangeInputType::handleKeydownEvent(KeyboardEvent& event) -> ShouldCallBaseE
     const Decimal current = parseToNumberOrNaN(element()->value());
     ASSERT(current.isFinite());
 
-    StepRange stepRange(createStepRange(RejectAny));
+    auto stepRange = createStepRange(AnyStepHandling::Reject);
 
     // FIXME: We can't use stepUp() for the step value "any". So, we increase
     // or decrease the value by 1/100 of the value range. Is it reasonable?
@@ -254,9 +257,10 @@ void RangeInputType::createShadowSubtree()
     ASSERT(element());
     ASSERT(element()->userAgentShadowRoot());
 
+    static MainThreadNeverDestroyed<const AtomString> webkitSliderRunnableTrackName("-webkit-slider-runnable-track", AtomString::ConstructFromLiteral);
     Document& document = element()->document();
     auto track = HTMLDivElement::create(document);
-    track->setPseudo(AtomString("-webkit-slider-runnable-track", AtomString::ConstructFromLiteral));
+    track->setPseudo(webkitSliderRunnableTrackName);
     track->appendChild(SliderThumbElement::create(document));
     auto container = SliderContainerElement::create(document);
     container->appendChild(track);
@@ -314,12 +318,10 @@ String RangeInputType::serialize(const Decimal& value) const
 }
 
 // FIXME: Could share this with BaseClickableWithKeyInputType and BaseCheckableInputType if we had a common base class.
-void RangeInputType::accessKeyAction(bool sendMouseEvents)
+bool RangeInputType::accessKeyAction(bool sendMouseEvents)
 {
-    InputType::accessKeyAction(sendMouseEvents);
-
-    if (auto* element = this->element())
-        element->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    auto* element = this->element();
+    return InputType::accessKeyAction(sendMouseEvents) || (element && element->dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents));
 }
 
 void RangeInputType::attributeChanged(const QualifiedName& name)
@@ -353,12 +355,12 @@ void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldE
 
 String RangeInputType::fallbackValue() const
 {
-    return serializeForNumberType(createStepRange(RejectAny).defaultValue());
+    return serializeForNumberType(createStepRange(AnyStepHandling::Reject).defaultValue());
 }
 
 String RangeInputType::sanitizeValue(const String& proposedValue) const
 {
-    StepRange stepRange(createStepRange(RejectAny));
+    StepRange stepRange(createStepRange(AnyStepHandling::Reject));
     const Decimal proposedNumericValue = parseToNumber(proposedValue, stepRange.defaultValue());
     return serializeForNumberType(stepRange.clampValue(proposedNumericValue));
 }
@@ -373,7 +375,7 @@ bool RangeInputType::shouldRespectListAttribute()
 }
 
 #if ENABLE(DATALIST_ELEMENT)
-void RangeInputType::listAttributeTargetChanged()
+void RangeInputType::dataListMayHaveChanged()
 {
     m_tickMarkValuesDirty = true;
     RefPtr<HTMLElement> sliderTrackElement = this->sliderTrackElement();

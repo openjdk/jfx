@@ -29,14 +29,10 @@
 #include "config.h"
 #include "ExceptionHelpers.h"
 
-#include "CallFrame.h"
 #include "CatchScope.h"
-#include "CodeBlock.h"
 #include "ErrorHandlingScope.h"
 #include "Exception.h"
-#include "Interpreter.h"
 #include "JSCInlines.h"
-#include "JSGlobalObjectFunctions.h"
 #include "RuntimeType.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
@@ -94,9 +90,8 @@ String errorDescriptionForValue(JSGlobalObject* globalObject, JSValue v)
         return asSymbol(v)->descriptiveString();
     if (v.isObject()) {
         VM& vm = globalObject->vm();
-        CallData callData;
         JSObject* object = asObject(v);
-        if (object->methodTable(vm)->getCallData(object, callData) != CallType::None)
+        if (object->isCallable(vm))
             return vm.smallStrings.functionString()->value(globalObject);
         return JSObject::calculatedClassName(object);
     }
@@ -329,9 +324,24 @@ JSObject* createTDZError(JSGlobalObject* globalObject)
     return createReferenceError(globalObject, "Cannot access uninitialized variable.");
 }
 
+JSObject* createInvalidPrivateNameError(JSGlobalObject* globalObject)
+{
+    return createTypeError(globalObject, makeString("Cannot access invalid private field"), defaultSourceAppender, TypeNothing);
+}
+
+JSObject* createRedefinedPrivateNameError(JSGlobalObject* globalObject)
+{
+    return createTypeError(globalObject, makeString("Cannot redefine existing private field"), defaultSourceAppender, TypeNothing);
+}
+
 Exception* throwOutOfMemoryError(JSGlobalObject* globalObject, ThrowScope& scope)
 {
     return throwException(globalObject, scope, createOutOfMemoryError(globalObject));
+}
+
+Exception* throwOutOfMemoryError(JSGlobalObject* globalObject, ThrowScope& scope, const String& message)
+{
+    return throwException(globalObject, scope, createOutOfMemoryError(globalObject, message));
 }
 
 Exception* throwStackOverflowError(JSGlobalObject* globalObject, ThrowScope& scope)

@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  * Copyright (C) 2007 Samuel Weinig (sam@webkit.org)
  * Copyright (C) 2010 Google Inc. All rights reserved.
@@ -62,6 +62,7 @@
 #include "ScopedEventQueue.h"
 #include "SearchInputType.h"
 #include "Settings.h"
+#include "StepRange.h"
 #include "StyleGeneratedImage.h"
 #include "TextControlInnerElements.h"
 #include <wtf/IsoMallocInlines.h>
@@ -666,10 +667,10 @@ bool HTMLInputElement::canHaveSelection() const
     return isTextField();
 }
 
-void HTMLInputElement::accessKeyAction(bool sendMouseEvents)
+bool HTMLInputElement::accessKeyAction(bool sendMouseEvents)
 {
     Ref<InputType> protectedInputType(*m_inputType);
-    protectedInputType->accessKeyAction(sendMouseEvents);
+    return protectedInputType->accessKeyAction(sendMouseEvents);
 }
 
 bool HTMLInputElement::isPresentationAttribute(const QualifiedName& name) const
@@ -798,7 +799,7 @@ void HTMLInputElement::parseAttribute(const QualifiedName& name, const AtomStrin
         m_hasNonEmptyList = !value.isEmpty();
         if (m_hasNonEmptyList) {
             resetListAttributeTargetObserver();
-            listAttributeTargetChanged();
+            dataListMayHaveChanged();
         }
     }
 #endif
@@ -1552,6 +1553,10 @@ void HTMLInputElement::didFinishInsertingNode()
     HTMLTextFormControlElement::didFinishInsertingNode();
     if (isInTreeScope() && !form())
         addToRadioButtonGroup();
+#if ENABLE(DATALIST_ELEMENT)
+    if (isConnected() && m_hasNonEmptyList)
+        dataListMayHaveChanged();
+#endif
 }
 
 void HTMLInputElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
@@ -1570,7 +1575,7 @@ void HTMLInputElement::removedFromAncestor(RemovalType removalType, ContainerNod
 void HTMLInputElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     if (imageLoader())
-        imageLoader()->elementDidMoveToNewDocument();
+        imageLoader()->elementDidMoveToNewDocument(oldDocument);
 
     // Always unregister for cache callbacks when leaving a document, even if we would otherwise like to be registered
     if (needsSuspensionCallback()) {
@@ -1653,9 +1658,9 @@ void HTMLInputElement::resetListAttributeTargetObserver()
         m_listAttributeTargetObserver = nullptr;
 }
 
-void HTMLInputElement::listAttributeTargetChanged()
+void HTMLInputElement::dataListMayHaveChanged()
 {
-    m_inputType->listAttributeTargetChanged();
+    m_inputType->dataListMayHaveChanged();
 }
 
 #endif // ENABLE(DATALIST_ELEMENT)
@@ -1670,12 +1675,10 @@ bool HTMLInputElement::isSteppable() const
     return m_inputType->isSteppable();
 }
 
-#if PLATFORM(IOS_FAMILY)
 DateComponents::Type HTMLInputElement::dateType() const
 {
     return m_inputType->dateType();
 }
-#endif
 
 bool HTMLInputElement::isTextButton() const
 {
@@ -1762,11 +1765,6 @@ bool HTMLInputElement::isURLField() const
 bool HTMLInputElement::isDateField() const
 {
     return m_inputType->isDateField();
-}
-
-bool HTMLInputElement::isDateTimeField() const
-{
-    return m_inputType->isDateTimeField();
 }
 
 bool HTMLInputElement::isDateTimeLocalField() const
@@ -1965,7 +1963,7 @@ ListAttributeTargetObserver::ListAttributeTargetObserver(const AtomString& id, H
 
 void ListAttributeTargetObserver::idTargetChanged()
 {
-    m_element->listAttributeTargetChanged();
+    m_element->dataListMayHaveChanged();
 }
 #endif
 
@@ -2055,19 +2053,19 @@ ExceptionOr<void> HTMLInputElement::setSelectionRangeForBindings(int start, int 
 static Ref<CSSLinearGradientValue> autoFillStrongPasswordMaskImage()
 {
     CSSGradientColorStop firstStop;
-    firstStop.m_color = CSSValuePool::singleton().createColorValue(Color::black);
-    firstStop.m_position = CSSValuePool::singleton().createValue(50, CSSUnitType::CSS_PERCENTAGE);
+    firstStop.color = CSSValuePool::singleton().createColorValue(Color::black);
+    firstStop.position = CSSValuePool::singleton().createValue(50, CSSUnitType::CSS_PERCENTAGE);
 
     CSSGradientColorStop secondStop;
-    secondStop.m_color = CSSValuePool::singleton().createColorValue(Color::transparent);
-    secondStop.m_position = CSSValuePool::singleton().createValue(100, CSSUnitType::CSS_PERCENTAGE);
+    secondStop.color = CSSValuePool::singleton().createColorValue(Color::transparentBlack);
+    secondStop.position = CSSValuePool::singleton().createValue(100, CSSUnitType::CSS_PERCENTAGE);
 
     auto gradient = CSSLinearGradientValue::create(CSSGradientRepeat::NonRepeating, CSSGradientType::CSSLinearGradient);
     gradient->setAngle(CSSValuePool::singleton().createValue(90, CSSUnitType::CSS_DEG));
-    gradient->addStop(firstStop);
-    gradient->addStop(secondStop);
+    gradient->addStop(WTFMove(firstStop));
+    gradient->addStop(WTFMove(secondStop));
+    gradient->doneAddingStops();
     gradient->resolveRGBColors();
-
     return gradient;
 }
 
@@ -2088,7 +2086,7 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
     if (hasAutoFillStrongPasswordButton() && !isDisabledOrReadOnly()) {
         textBlockStyle.setDisplay(DisplayType::InlineBlock);
         textBlockStyle.setMaxWidth(Length { 100, Percent });
-        textBlockStyle.setColor({ 0.0f, 0.0f, 0.0f, 0.6f });
+        textBlockStyle.setColor(Color::black.colorWithAlphaByte(153));
         textBlockStyle.setTextOverflow(TextOverflow::Clip);
         textBlockStyle.setMaskImage(StyleGeneratedImage::create(autoFillStrongPasswordMaskImage()));
         // A stacking context is needed for the mask.
@@ -2104,6 +2102,7 @@ RenderStyle HTMLInputElement::createInnerTextStyle(const RenderStyle& style)
 }
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+
 bool HTMLInputElement::setupDateTimeChooserParameters(DateTimeChooserParameters& parameters)
 {
     if (!document().view())
@@ -2121,7 +2120,7 @@ bool HTMLInputElement::setupDateTimeChooserParameters(DateTimeChooserParameters&
         parameters.locale = computedLocale.isEmpty() ? AtomString(defaultLanguage()) : computedLocale;
     }
 
-    StepRange stepRange = createStepRange(RejectAny);
+    auto stepRange = createStepRange(AnyStepHandling::Reject);
     if (stepRange.hasStep()) {
         parameters.step = stepRange.step().toDouble();
         parameters.stepBase = stepRange.stepBase().toDouble();
@@ -2136,20 +2135,24 @@ bool HTMLInputElement::setupDateTimeChooserParameters(DateTimeChooserParameters&
         parameters.anchorRectInRootView = IntRect();
     parameters.currentValue = value();
     parameters.isAnchorElementRTL = computedStyle()->direction() == TextDirection::RTL;
+
 #if ENABLE(DATALIST_ELEMENT)
     if (auto dataList = this->dataList()) {
-        Ref<HTMLCollection> options = dataList->options();
-        for (unsigned i = 0; RefPtr<HTMLOptionElement> option = downcast<HTMLOptionElement>(options->item(i)); ++i) {
-            if (!isValidValue(option->value()))
+        for (auto& option : dataList->suggestions()) {
+            auto label = option.label();
+            auto value = option.value();
+            if (!isValidValue(value))
                 continue;
-            parameters.suggestionValues.append(sanitizeValue(option->value()));
-            parameters.localizedSuggestionValues.append(localizeValue(option->value()));
-            parameters.suggestionLabels.append(option->value() == option->label() ? String() : option->label());
+            parameters.suggestionValues.append(sanitizeValue(value));
+            parameters.localizedSuggestionValues.append(localizeValue(value));
+            parameters.suggestionLabels.append(value == label ? String() : label);
         }
     }
 #endif
+
     return true;
 }
+
 #endif
 
 void HTMLInputElement::capsLockStateMayHaveChanged()

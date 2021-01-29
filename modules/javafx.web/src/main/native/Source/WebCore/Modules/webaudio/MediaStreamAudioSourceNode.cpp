@@ -31,6 +31,7 @@
 #include "AudioContext.h"
 #include "AudioNodeOutput.h"
 #include "Logging.h"
+#include "MediaStreamAudioSourceOptions.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
 
@@ -38,13 +39,39 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioSourceNode);
 
-Ref<MediaStreamAudioSourceNode> MediaStreamAudioSourceNode::create(AudioContext& context, MediaStream& mediaStream, MediaStreamTrack& audioTrack)
+ExceptionOr<Ref<MediaStreamAudioSourceNode>> MediaStreamAudioSourceNode::create(BaseAudioContext& context, MediaStreamAudioSourceOptions&& options)
 {
-    return adoptRef(*new MediaStreamAudioSourceNode(context, mediaStream, audioTrack));
+    RELEASE_ASSERT(options.mediaStream);
+
+    if (context.isStopped())
+        return Exception { InvalidStateError };
+
+    auto audioTracks = options.mediaStream->getAudioTracks();
+    if (audioTracks.isEmpty())
+        return Exception { InvalidStateError, "Media stream has no audio tracks"_s };
+
+    MediaStreamTrack* providerTrack = nullptr;
+    for (auto& track : audioTracks) {
+        if (track->audioSourceProvider()) {
+            providerTrack = track.get();
+            break;
+        }
+    }
+    if (!providerTrack)
+        return Exception { InvalidStateError, "Could not find an audio track with an audio source provider"_s };
+
+    context.lazyInitialize();
+
+    auto node = adoptRef(*new MediaStreamAudioSourceNode(context, *options.mediaStream, *providerTrack));
+    node->setFormat(2, context.sampleRate());
+
+    context.refNode(node); // context keeps reference until node is disconnected
+
+    return node;
 }
 
-MediaStreamAudioSourceNode::MediaStreamAudioSourceNode(AudioContext& context, MediaStream& mediaStream, MediaStreamTrack& audioTrack)
-    : AudioNode(context, context.sampleRate())
+MediaStreamAudioSourceNode::MediaStreamAudioSourceNode(BaseAudioContext& context, MediaStream& mediaStream, MediaStreamTrack& audioTrack)
+    : AudioNode(context)
     , m_mediaStream(mediaStream)
     , m_audioTrack(audioTrack)
 {
@@ -84,7 +111,7 @@ void MediaStreamAudioSourceNode::setFormat(size_t numberOfChannels, float source
     }
 
     // Synchronize with process().
-    std::lock_guard<Lock> lock(m_processMutex);
+    auto locker = holdLock(m_processMutex);
 
     m_sourceNumberOfChannels = numberOfChannels;
     m_sourceSampleRate = sourceSampleRate;

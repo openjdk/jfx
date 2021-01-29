@@ -35,7 +35,7 @@ small-caption
 -webkit-small-control
 -webkit-control
 
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+#if defined(WTF_PLATFORM_COCOA) && WTF_PLATFORM_COCOA
 -apple-system-headline
 -apple-system-body
 -apple-system-subheadline
@@ -195,6 +195,7 @@ transparent
 -webkit-activelink
 activeborder
 activecaption
+activetext
 appworkspace
 background
 buttonface
@@ -202,7 +203,11 @@ buttonhighlight
 buttonshadow
 buttontext
 activebuttontext
+canvas
+canvastext
 captiontext
+field
+fieldtext
 graytext
 highlight
 highlighttext
@@ -211,6 +216,7 @@ inactivecaption
 inactivecaptiontext
 infobackground
 infotext
+linktext
 luminance
 menutext
 scrollbar
@@ -219,6 +225,7 @@ threedface
 threedhighlight
 threedlightshadow
 threedshadow
+visitedtext
 window
 windowframe
 windowtext
@@ -977,30 +984,18 @@ ease-out
 ease-in-out
 step-start
 step-end
+jump-start
+jump-end
+jump-none
+jump-both
+// start
+// end
 
 //
 // CSS_PROP_ZOOM
 //
 document
 reset
-
-#if defined(ENABLE_CSS_DEVICE_ADAPTATION) && ENABLE_CSS_DEVICE_ADAPTATION
-//
-// CSS_PROP_USER_ZOOM
-//
-// fixed
-zoom
-
-//
-// CSS_PROP_MIN_WIDTH
-// CSS_PROP_MAX_WIDTH
-// CSS_PROP_MIN_HEIGHT
-// CSS_PROP_MAX_HEIGHT
-//
-// auto
-device-width
-device-height
-#endif
 
 //
 // CSS_PROP_POINTER_EVENTS
@@ -1363,10 +1358,18 @@ plain
 buy
 set-up
 donate
-#if defined(ENABLE_APPLE_PAY_SESSION_V4) && ENABLE_APPLE_PAY_SESSION_V4
 check-out
 book
 subscribe
+#if defined(ENABLE_APPLE_PAY_NEW_BUTTON_TYPES) && ENABLE_APPLE_PAY_NEW_BUTTON_TYPES
+reload
+add-money
+top-up
+order
+rent
+support
+contribute
+tip
 #endif
 #endif
 
@@ -1378,7 +1381,6 @@ style
 scroll-position
 //contents
 
-#if defined(ENABLE_POINTER_EVENTS) && ENABLE_POINTER_EVENTS
 // touch-action
 // auto
 // none
@@ -1386,7 +1388,6 @@ manipulation
 pan-x
 pan-y
 pinch-zoom
-#endif
 
 // scroll-behavior
 // auto

@@ -33,6 +33,7 @@
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleUpdate.h"
+#include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/IsoMallocInlines.h>
@@ -221,28 +222,47 @@ void Text::updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsig
     document().updateTextRenderer(*this, offsetOfReplacedData, lengthOfReplacedData);
 }
 
+String Text::debugDescription() const
+{
+    StringBuilder builder;
+
+    builder.append(CharacterData::debugDescription());
+
+    String value = data();
+    builder.append(" length="_s, value.length());
+
+    value.replaceWithLiteral('\\', "\\\\");
+    value.replaceWithLiteral('\n', "\\n");
+
+    const size_t maxDumpLength = 30;
+    if (value.length() > maxDumpLength) {
+        value.truncate(maxDumpLength - 10);
+        value.append("..."_s);
+    }
+
+    builder.append(" \"", value, '\"');
+
+    return builder.toString();
+}
+
 #if ENABLE(TREE_DEBUGGING)
 void Text::formatForDebugger(char* buffer, unsigned length) const
 {
-    StringBuilder result;
-    String s;
-
-    result.append(nodeName());
-
-    s = data();
-    if (s.length() > 0) {
-        if (result.length())
-            result.appendLiteral("; ");
-        result.appendLiteral("length=");
-        result.appendNumber(s.length());
-        result.appendLiteral("; value=\"");
-        result.append(s);
-        result.append('"');
-    }
-
-    strncpy(buffer, result.toString().utf8().data(), length - 1);
+    strncpy(buffer, debugDescription().utf8().data(), length - 1);
     buffer[length - 1] = '\0';
 }
 #endif
+
+void Text::setDataAndUpdate(const String& newData, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength)
+{
+    auto oldData = data();
+    CharacterData::setDataAndUpdate(newData, offsetOfReplacedData, oldLength, newLength);
+
+    if (!offsetOfReplacedData) {
+        auto* textManipulationController = document().textManipulationControllerIfExists();
+        if (UNLIKELY(textManipulationController && oldData != newData))
+            textManipulationController->didUpdateContentForText(*this);
+    }
+}
 
 } // namespace WebCore

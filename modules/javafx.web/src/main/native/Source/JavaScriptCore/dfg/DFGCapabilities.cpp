@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,15 +30,13 @@
 
 #include "CodeBlock.h"
 #include "DFGCommon.h"
-#include "InterpreterInlines.h"
-#include "JSCInlines.h"
 #include "Options.h"
 
 namespace JSC { namespace DFG {
 
 bool isSupported()
 {
-    return VM::canUseJIT() && Options::useDFGJIT() && MacroAssembler::supportsFloatingPoint();
+    return Options::useDFGJIT() && MacroAssembler::supportsFloatingPoint();
 }
 
 bool isSupportedForInlining(CodeBlock* codeBlock)
@@ -145,14 +143,16 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_instanceof:
     case op_instanceof_custom:
     case op_is_empty:
-    case op_is_undefined:
+    case op_typeof_is_undefined:
     case op_is_undefined_or_null:
     case op_is_boolean:
     case op_is_number:
+    case op_is_big_int:
     case op_is_object:
     case op_is_object_or_null:
     case op_is_cell_with_type:
     case op_is_function:
+    case op_is_constructor:
     case op_not:
     case op_less:
     case op_lesseq:
@@ -174,6 +174,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_get_by_id_with_this:
     case op_get_by_id_direct:
     case op_get_by_val_with_this:
+    case op_get_prototype_of:
     case op_put_by_id:
     case op_put_by_id_with_this:
     case op_put_by_val_with_this:
@@ -253,6 +254,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_get_enumerable_length:
     case op_has_generic_property:
     case op_has_structure_property:
+    case op_has_own_structure_property:
+    case op_in_structure_property:
     case op_has_indexed_property:
     case op_get_direct_pname:
     case op_get_property_enumerator:
@@ -274,6 +277,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_catch:
     case op_create_rest:
     case op_get_rest_length:
+    case op_iterator_open:
+    case op_iterator_next:
     case op_log_shadow_chicken_prologue:
     case op_log_shadow_chicken_tail:
     case op_put_to_scope:
@@ -286,6 +291,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case op_unreachable:
     case op_super_sampler_begin:
     case op_super_sampler_end:
+    case op_get_private_name:
         return CanCompileAndInline;
 
     case op_switch_string: // Don't inline because we don't want to copy string tables in the concurrent JIT.
@@ -311,6 +317,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, const I
     case checkpoint_osr_exit_from_inlined_call_trampoline:
     case checkpoint_osr_exit_trampoline:
     case handleUncaughtException:
+    case fuzzer_return_early_from_loop_hint:
+    case op_iterator_open_return_location:
+    case op_iterator_next_return_location:
     case op_call_return_location:
     case op_construct_return_location:
     case op_call_varargs_slow_return_location:

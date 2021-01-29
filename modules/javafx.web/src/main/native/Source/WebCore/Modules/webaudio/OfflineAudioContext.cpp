@@ -30,6 +30,7 @@
 
 #include "AudioBuffer.h"
 #include "Document.h"
+#include "JSAudioBuffer.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -37,24 +38,69 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioContext);
 
 inline OfflineAudioContext::OfflineAudioContext(Document& document, AudioBuffer* renderTarget)
-    : AudioContext(document, renderTarget)
+    : BaseAudioContext(document, renderTarget)
 {
 }
 
-ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate)
+ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, unsigned numberOfChannels, size_t length, float sampleRate)
 {
     // FIXME: Add support for workers.
     if (!is<Document>(context))
         return Exception { NotSupportedError };
-    if (!numberOfChannels || numberOfChannels > 10 || !numberOfFrames || !isSampleRateRangeGood(sampleRate))
-        return Exception { SyntaxError };
-    auto renderTarget = AudioBuffer::create(numberOfChannels, numberOfFrames, sampleRate);
+    if (!numberOfChannels || numberOfChannels > 10)
+        return Exception { SyntaxError, "Number of channels is not in range"_s };
+    if (!length)
+        return Exception { SyntaxError, "length cannot be 0"_s };
+    if (!isSupportedSampleRate(sampleRate))
+        return Exception { SyntaxError, "sampleRate is not in range"_s };
+    auto renderTarget = AudioBuffer::create(numberOfChannels, length, sampleRate);
     if (!renderTarget)
-        return Exception { SyntaxError };
+        return Exception { SyntaxError, "Unable to create AudioBuffer"_s };
 
     auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), renderTarget.get()));
     audioContext->suspendIfNeeded();
     return audioContext;
+}
+
+ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, const OfflineAudioContextOptions& contextOptions)
+{
+    return create(context, contextOptions.numberOfChannels, contextOptions.length, contextOptions.sampleRate);
+}
+
+void OfflineAudioContext::startOfflineRendering(Ref<DeferredPromise>&& promise)
+{
+    if (isStopped() || !willBeginPlayback()) {
+        promise->reject(Exception { InvalidStateError });
+        return;
+    }
+
+    auto result = destination()->startRendering();
+    if (result.hasException()) {
+        promise->reject(result.releaseException());
+        return;
+    }
+
+    makePendingActivity();
+    m_pendingOfflineRenderingPromise = WTFMove(promise);
+    setState(State::Running);
+}
+
+void OfflineAudioContext::didFinishOfflineRendering(ExceptionOr<Ref<AudioBuffer>>&& result)
+{
+    if (!m_pendingOfflineRenderingPromise)
+        return;
+
+    auto promise = std::exchange(m_pendingOfflineRenderingPromise, nullptr);
+    if (result.hasException()) {
+        promise->reject(result.releaseException());
+        return;
+    }
+    promise->resolve<IDLInterface<AudioBuffer>>(result.releaseReturnValue());
+}
+
+unsigned OfflineAudioContext::length() const
+{
+    return renderTarget()->length();
 }
 
 } // namespace WebCore

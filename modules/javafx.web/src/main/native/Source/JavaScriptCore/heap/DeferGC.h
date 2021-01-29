@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,8 +44,8 @@ public:
 
     ~DeferGC()
     {
-        if (validateDFGDoesGC)
-            RELEASE_ASSERT(m_heap.expectDoesGC());
+        if constexpr (validateDFGDoesGC)
+            m_heap.verifyCanGC();
         m_heap.decrementDeferralDepthAndGCIfNeeded();
     }
 
@@ -77,16 +77,8 @@ class DisallowGC : public DisallowScope<DisallowGC> {
     WTF_FORBID_HEAP_ALLOCATION;
     typedef DisallowScope<DisallowGC> Base;
 public:
-#ifdef NDEBUG
-
-    ALWAYS_INLINE DisallowGC(bool = false) { }
-    ALWAYS_INLINE static void initialize() { }
-
-#else // not NDEBUG
-
-    DisallowGC(bool enabled = true)
-        : Base(enabled)
-    { }
+#if ASSERT_ENABLED
+    DisallowGC() = default;
 
     static void initialize()
     {
@@ -105,7 +97,10 @@ private:
 
     JS_EXPORT_PRIVATE static LazyNeverDestroyed<ThreadSpecific<unsigned, WTF::CanBeGCThread::True>> s_scopeReentryCount;
 
-#endif // NDEBUG
+#else
+    ALWAYS_INLINE DisallowGC() { } // We need this to placate Clang due to unused warnings.
+    ALWAYS_INLINE static void initialize() { }
+#endif // ASSERT_ENABLED
 
     friend class DisallowScope<DisallowGC>;
 };

@@ -37,6 +37,13 @@ public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSWebAssembly, Base);
+        return &vm.plainObjectSpace;
+    }
+
     static JSWebAssembly* create(VM&, JSGlobalObject*, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
@@ -46,11 +53,9 @@ public:
     JS_EXPORT_PRIVATE static void webAssemblyModuleInstantinateAsync(JSGlobalObject*, JSPromise*, Vector<uint8_t>&&, JSObject*);
     static JSValue instantiate(JSGlobalObject*, JSPromise*, const Identifier&, JSValue);
 
-protected:
-    void finishCreation(VM&, JSGlobalObject*);
-
 private:
     JSWebAssembly(VM&, Structure*);
+    void finishCreation(VM&, JSGlobalObject*);
 };
 
 EncodedJSValue JSC_HOST_CALL webAssemblyCompileStreamingInternal(JSGlobalObject*, CallFrame*);

@@ -93,11 +93,10 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     ASSERT(m_function);
     VM& vm = context.vm();
     JSLockHolder lock(vm);
-    auto scope = DECLARE_THROW_SCOPE(vm);
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    CallData callData;
-    CallType callType = getCallData(vm, m_function.get(), callData);
-    if (callType == CallType::None)
+    auto callData = getCallData(vm, m_function.get());
+    if (callData.type == CallData::Type::None)
         return;
 
     JSGlobalObject* lexicalGlobalObject = globalObject;
@@ -106,16 +105,21 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
     if (UNLIKELY(arguments.hasOverflowed())) {
-        throwOutOfMemoryError(lexicalGlobalObject, scope);
-        NakedPtr<JSC::Exception> exception = scope.exception();
+        {
+            auto throwScope = DECLARE_THROW_SCOPE(vm);
+            throwOutOfMemoryError(lexicalGlobalObject, throwScope);
+        }
+        NakedPtr<JSC::Exception> exception = catchScope.exception();
+        catchScope.clearException();
         reportException(lexicalGlobalObject, exception);
         return;
     }
 
-    JSExecState::instrumentFunctionCall(&context, callType, callData);
+    JSExecState::instrumentFunction(&context, callData);
 
     NakedPtr<JSC::Exception> exception;
-    JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, m_function.get(), callType, callData, thisValue, arguments, exception);
+    JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, m_function.get(), callData, thisValue, arguments, exception);
+    EXCEPTION_ASSERT(!catchScope.exception());
 
     InspectorInstrumentation::didCallFunction(&context);
 

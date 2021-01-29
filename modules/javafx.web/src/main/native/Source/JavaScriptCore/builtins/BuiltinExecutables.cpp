@@ -28,7 +28,7 @@
 #include "BuiltinExecutables.h"
 
 #include "BuiltinNames.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "Parser.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -36,7 +36,7 @@ namespace JSC {
 
 BuiltinExecutables::BuiltinExecutables(VM& vm)
     : m_vm(vm)
-    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createFromLiteral(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, URL()))
+    , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createFromLiteral(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, String()))
 {
 }
 

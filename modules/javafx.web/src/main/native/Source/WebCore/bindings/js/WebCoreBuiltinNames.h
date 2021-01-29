@@ -1,6 +1,6 @@
 /*
  *  Copyright (c) 2015, Canon Inc. All rights reserved.
- *  Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -45,11 +45,18 @@ namespace WebCore {
     macro(AnimationPlaybackEvent) \
     macro(AnimationTimeline) \
     macro(ApplePaySession) \
+    macro(ApplePaySetup) \
+    macro(ApplePaySetupFeature) \
     macro(AttachmentElement) \
     macro(Audio) \
+    macro(AudioBufferSourceNode) \
+    macro(AudioContext) \
+    macro(AudioListener) \
     macro(AuthenticatorAssertionResponse) \
     macro(AuthenticatorAttestationResponse) \
     macro(AuthenticatorResponse) \
+    macro(BaseAudioContext) \
+    macro(BeforeLoadEvent) \
     macro(BlobEvent) \
     macro(Cache) \
     macro(CacheStorage) \
@@ -75,6 +82,8 @@ namespace WebCore {
     macro(EnterPictureInPictureEvent) \
     macro(ExtendableEvent) \
     macro(ExtendableMessageEvent) \
+    macro(FakeXRDevice) \
+    macro(FakeXRInputController) \
     macro(FetchEvent) \
     macro(FileSystem) \
     macro(FileSystemDirectoryEntry) \
@@ -149,6 +158,7 @@ namespace WebCore {
     macro(MediaKeyStatusMap) \
     macro(MediaKeySystemAccess) \
     macro(MediaKeys) \
+    macro(MediaQueryListEvent) \
     macro(MediaRecorder) \
     macro(MediaRecorderErrorEvent) \
     macro(MediaSource) \
@@ -159,9 +169,12 @@ namespace WebCore {
     macro(NavigatorCredentials) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorUserMedia) \
+    macro(OfflineAudioContext) \
     macro(OffscreenCanvas) \
     macro(OffscreenCanvasRenderingContext2D) \
+    macro(OscillatorNode) \
     macro(PaintRenderingContext2D) \
+    macro(PannerNode) \
     macro(PaymentAddress) \
     macro(PaymentMethodChangeEvent) \
     macro(PaymentRequest) \
@@ -179,6 +192,7 @@ namespace WebCore {
     macro(PerformanceMeasure) \
     macro(PerformanceObserver) \
     macro(PerformanceObserverEntryList) \
+    macro(PerformancePaintTiming) \
     macro(PerformanceResourceTiming) \
     macro(PerformanceServerTiming) \
     macro(PointerEvent) \
@@ -224,6 +238,7 @@ namespace WebCore {
     macro(VisualViewport) \
     macro(WebGL2RenderingContext) \
     macro(WebGLVertexArrayObject) \
+    macro(WebGLTransformFeedback) \
     macro(WebKitMediaKeyError) \
     macro(WebKitMediaKeyMessageEvent) \
     macro(WebKitMediaKeyNeededEvent) \
@@ -235,6 +250,27 @@ namespace WebCore {
     macro(WorkletGlobalScope) \
     macro(WritableStream) \
     macro(XMLHttpRequest) \
+    macro(XRBoundedReferenceSpace) \
+    macro(XRFrame) \
+    macro(XRInputSource) \
+    macro(XRInputSourceArray) \
+    macro(XRInputSourceEvent) \
+    macro(XRInputSourcesChangeEvent) \
+    macro(XRLayer) \
+    macro(XRPose) \
+    macro(XRReferenceSpace) \
+    macro(XRReferenceSpaceEvent) \
+    macro(XRRenderState) \
+    macro(XRRigidTransform) \
+    macro(XRSession) \
+    macro(XRSessionEvent) \
+    macro(XRSpace) \
+    macro(XRSystem) \
+    macro(XRTest) \
+    macro(XRView) \
+    macro(XRViewerPose) \
+    macro(XRViewport) \
+    macro(XRWebGLLayer) \
     macro(appendFromJS) \
     macro(associatedReadableByteStreamController) \
     macro(autoAllocateChunkSize) \
@@ -246,6 +282,7 @@ namespace WebCore {
     macro(caches) \
     macro(cancel) \
     macro(cancelAlgorithm) \
+    macro(cancelAnimationFrame) \
     macro(cancelIdleCallback) \
     macro(cloneArrayBuffer) \
     macro(close) \
@@ -322,6 +359,7 @@ namespace WebCore {
     macro(readableStreamController) \
     macro(reader) \
     macro(readyPromiseCapability) \
+    macro(requestAnimationFrame) \
     macro(requestIdleCallback) \
     macro(response) \
     macro(responseCacheIsValid) \
@@ -356,6 +394,7 @@ namespace WebCore {
     macro(visualViewport) \
     macro(webkit) \
     macro(webkitAudioContext) \
+    macro(webkitAudioPannerNode) \
     macro(webkitIDBCursor) \
     macro(webkitIDBDatabase) \
     macro(webkitIDBFactory) \
@@ -365,6 +404,8 @@ namespace WebCore {
     macro(webkitIDBRequest) \
     macro(webkitIDBTransaction) \
     macro(webkitIndexedDB) \
+    macro(webkitOfflineAudioContext) \
+    macro(webkitOscillatorNode) \
     macro(window) \
     macro(writing) \
     WEBCORE_ADDITIONAL_PRIVATE_IDENTIFIERS(macro) \

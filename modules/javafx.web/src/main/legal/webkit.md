@@ -1,4 +1,4 @@
-## WebKit Open Source Project: WebKit v610.1
+## WebKit Open Source Project: WebKit v610.2
 
 ### WebKit Notice
 ```

@@ -34,16 +34,11 @@
 #include "DFGJITCode.h"
 #include "DFGJITFinalizer.h"
 #include "DFGOSRExit.h"
-#include "DFGOperations.h"
-#include "DFGRegisterBank.h"
-#include "DFGSlowPathGenerator.h"
 #include "DFGSpeculativeJIT.h"
 #include "DFGThunks.h"
-#include "JSCInlines.h"
 #include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
-#include "StructureStubInfo.h"
 #include "ThunkGenerators.h"
 #include "VM.h"
 
@@ -246,6 +241,8 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     finalizeInlineCaches(m_getByIdsWithThis, linkBuffer);
     finalizeInlineCaches(m_getByVals, linkBuffer);
     finalizeInlineCaches(m_putByIds, linkBuffer);
+    finalizeInlineCaches(m_delByIds, linkBuffer);
+    finalizeInlineCaches(m_delByVals, linkBuffer);
     finalizeInlineCaches(m_inByIds, linkBuffer);
     finalizeInlineCaches(m_instanceOfs, linkBuffer);
 
@@ -629,7 +626,7 @@ void JITCompiler::exceptionCheck()
         unsigned streamIndex = m_speculative->m_outOfLineStreamIndex ? *m_speculative->m_outOfLineStreamIndex : m_speculative->m_stream->size();
         MacroAssembler::Jump hadException = emitNonPatchableExceptionCheck(vm());
         // We assume here that this is called after callOpeartion()/appendCall() is called.
-        appendExceptionHandlingOSRExit(ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.lastCallSite(), hadException);
+        appendExceptionHandlingOSRExit(ExceptionCheck, streamIndex, opCatchOrigin, exceptionHandler, m_jitCode->common.codeOrigins->lastCallSite(), hadException);
     } else
         m_exceptionChecks.append(emitExceptionCheck(vm()));
 }

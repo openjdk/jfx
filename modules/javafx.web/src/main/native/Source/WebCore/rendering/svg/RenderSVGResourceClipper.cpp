@@ -29,8 +29,8 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "IntRect.h"
-#include "RenderObject.h"
 #include "Logging.h"
+#include "RenderSVGText.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include "SVGNames.h"
@@ -81,11 +81,11 @@ bool RenderSVGResourceClipper::applyResource(RenderElement& renderer, const Rend
 
 bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const AffineTransform& animatedLocalTransform, const FloatRect& objectBoundingBox)
 {
-    // If the current clip-path gets clipped itself, we have to fallback to masking.
+    // If the current clip-path gets clipped itself, we have to fall back to masking.
     if (style().clipPath())
         return false;
     WindRule clipRule = WindRule::NonZero;
-    Path clipPath = Path();
+    Path clipPath;
 
     // If clip-path only contains one visible shape or path, we can use path-based clipping. Invisible
     // shapes don't affect the clipping and can be ignored. If clip-path contains more than one
@@ -93,29 +93,27 @@ bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const 
     // as well as NonZero can cause self-clipping of the elements.
     // See also http://www.w3.org/TR/SVG/painting.html#FillRuleProperty
     for (Node* childNode = clipPathElement().firstChild(); childNode; childNode = childNode->nextSibling()) {
-        RenderObject* renderer = childNode->renderer();
+        auto* renderer = childNode->renderer();
         if (!renderer)
             continue;
-        // Only shapes or paths are supported for direct clipping. We need to fallback to masking for texts.
-        if (renderer->isSVGText())
+        // Only shapes or paths are supported for direct clipping. We need to fall back to masking for texts.
+        if (is<RenderSVGText>(renderer))
             return false;
-        if (!childNode->isSVGElement() || !downcast<SVGElement>(*childNode).isSVGGraphicsElement())
+        if (!is<SVGGraphicsElement>(*childNode))
             continue;
-        SVGGraphicsElement& styled = downcast<SVGGraphicsElement>(*childNode);
-        const RenderStyle& style = renderer->style();
+        auto& style = renderer->style();
         if (style.display() == DisplayType::None || style.visibility() != Visibility::Visible)
              continue;
-        const SVGRenderStyle& svgStyle = style.svgStyle();
-        // Current shape in clip-path gets clipped too. Fallback to masking.
+        // Current shape in clip-path gets clipped too. Fall back to masking.
         if (style.clipPath())
             return false;
-        // Fallback to masking, if there is more than one clipping path.
-        if (clipPath.isEmpty()) {
-            clipPath = styled.toClipPath();
-            clipRule = svgStyle.clipRule();
-        } else
+        // Fall back to masking if there is more than one clipping path.
+        if (!clipPath.isEmpty())
             return false;
+        clipPath = downcast<SVGGraphicsElement>(*childNode).toClipPath();
+        clipRule = style.svgStyle().clipRule();
     }
+
     // Only one visible shape/path was found. Directly continue clipping and transform the content to userspace if necessary.
     if (clipPathElement().clipPathUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX) {
         AffineTransform transform;
@@ -233,9 +231,9 @@ bool RenderSVGResourceClipper::drawContentIntoMaskImage(ImageBuffer& maskImageBu
         maskContext.setFillRule(newClipRule);
 
         // In the case of a <use> element, we obtained its renderere above, to retrieve its clipRule.
-        // We have to pass the <use> renderer itself to renderSubtreeToImageBuffer() to apply it's x/y/transform/etc. values when rendering.
+        // We have to pass the <use> renderer itself to renderSubtreeToContext() to apply it's x/y/transform/etc. values when rendering.
         // So if isUseElement is true, refetch the childNode->renderer(), as renderer got overridden above.
-        SVGRenderingContext::renderSubtreeToImageBuffer(&maskImageBuffer, isUseElement ? *child.renderer() : *renderer, maskContentTransformation);
+        SVGRenderingContext::renderSubtreeToContext(maskContext, isUseElement ? *child.renderer() : *renderer, maskContentTransformation);
     }
 
     view().frameView().setPaintBehavior(oldBehavior);
@@ -270,6 +268,8 @@ bool RenderSVGResourceClipper::hitTestClipContent(const FloatRect& objectBoundin
     if (!SVGRenderSupport::pointInClippingArea(*this, point))
         return false;
 
+    SVGHitTestCycleDetectionScope hitTestScope(*this);
+
     if (clipPathElement().clipPathUnits() == SVGUnitTypes::SVG_UNIT_TYPE_OBJECTBOUNDINGBOX) {
         AffineTransform transform;
         transform.translate(objectBoundingBox.location());
@@ -286,18 +286,10 @@ bool RenderSVGResourceClipper::hitTestClipContent(const FloatRect& objectBoundin
         if (!renderer->isSVGShape() && !renderer->isSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;
 
-        const RenderStyle& style = renderer->style();
-        if (is<ReferenceClipPathOperation>(style.clipPath())) {
-            auto& clipPath = downcast<ReferenceClipPathOperation>(*style.clipPath());
-            AtomString id(clipPath.fragment());
-            RenderSVGResourceClipper* clipper = getRenderSVGResourceById<RenderSVGResourceClipper>(document(), id);
-            if (clipper == this)
-                continue;
-        }
-
         IntPoint hitPoint;
         HitTestResult result(hitPoint);
-        if (renderer->nodeAtFloatPoint(HitTestRequest(HitTestRequest::SVGClipContent | HitTestRequest::DisallowUserAgentShadowContent), result, point, HitTestForeground))
+        constexpr OptionSet<HitTestRequest::RequestType> hitType { HitTestRequest::SVGClipContent, HitTestRequest::DisallowUserAgentShadowContent };
+        if (renderer->nodeAtFloatPoint(hitType, result, point, HitTestForeground))
             return true;
     }
 

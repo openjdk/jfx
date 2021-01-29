@@ -174,8 +174,6 @@ private:
     String fontValue() const;
     void appendFontLonghandValueIfExplicit(CSSPropertyID, StringBuilder& result, String& value) const;
 
-    RefPtr<CSSValue> getPropertyCSSValueInternal(CSSPropertyID) const;
-
     friend class PropertySetCSSStyleDeclaration;
 };
 

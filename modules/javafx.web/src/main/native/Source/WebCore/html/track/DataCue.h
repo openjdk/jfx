@@ -26,14 +26,17 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
-#include "SerializedPlatformRepresentation.h"
+#include "SerializedPlatformDataCue.h"
 #include "TextTrackCue.h"
-#include <JavaScriptCore/ArrayBuffer.h>
-#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/MediaTime.h>
 #include <wtf/TypeCasts.h>
+
+namespace JSC {
+class ArrayBuffer;
+class JSValue;
+}
 
 namespace WebCore {
 
@@ -42,42 +45,17 @@ class ScriptExecutionContext;
 class DataCue final : public TextTrackCue {
     WTF_MAKE_ISO_ALLOCATED(DataCue);
 public:
-    static Ref<DataCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, ArrayBuffer& data)
-    {
-        return adoptRef(*new DataCue(context, start, end, data, emptyString()));
-    }
-
-    static Ref<DataCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, const void* data, unsigned length)
-    {
-        return adoptRef(*new DataCue(context, start, end, data, length));
-    }
-
-    static Ref<DataCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, ArrayBuffer& data, const String& type)
-    {
-        return adoptRef(*new DataCue(context, start, end, data, type));
-    }
-
-    static Ref<DataCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, RefPtr<SerializedPlatformRepresentation>&& platformValue, const String& type)
-    {
-        return adoptRef(*new DataCue(context, start, end, WTFMove(platformValue), type));
-    }
-
-    static Ref<DataCue> create(ScriptExecutionContext& context, double start, double end, ArrayBuffer& data)
-    {
-        return adoptRef(*new DataCue(context, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), data, emptyString()));
-    }
-    static Ref<DataCue> create(ScriptExecutionContext& context, double start, double end, JSC::JSValue value, const String& type)
-    {
-        return adoptRef(*new DataCue(context, MediaTime::createWithDouble(start), MediaTime::createWithDouble(end), value, type));
-    }
+    static Ref<DataCue> create(Document&, double start, double end, ArrayBuffer& data);
+    static Ref<DataCue> create(Document&, double start, double end, JSC::JSValue, const String& type);
+    static Ref<DataCue> create(Document&, const MediaTime& start, const MediaTime& end, const void* data, unsigned length);
+    static Ref<DataCue> create(Document&, const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String& type);
 
     virtual ~DataCue();
-    CueType cueType() const override { return Data; }
 
     RefPtr<JSC::ArrayBuffer> data() const;
     void setData(JSC::ArrayBuffer&);
 
-    const SerializedPlatformRepresentation* platformValue() const { return m_platformValue.get(); }
+    const SerializedPlatformDataCue* platformValue() const { return m_platformValue.get(); }
 
     JSC::JSValue value(JSC::JSGlobalObject&) const;
     void setValue(JSC::JSGlobalObject&, JSC::JSValue);
@@ -85,46 +63,31 @@ public:
     String type() const { return m_type; }
     void setType(const String& type) { m_type = type; }
 
-    bool isEqual(const TextTrackCue&, CueMatchRules) const override;
-    bool cueContentsMatch(const TextTrackCue&) const override;
-    bool doesExtendCue(const TextTrackCue&) const override;
-
-    String toJSONString() const;
-
 private:
-    DataCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, ArrayBuffer&, const String&);
-    DataCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const void*, unsigned);
-    DataCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, RefPtr<SerializedPlatformRepresentation>&&, const String&);
-    DataCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, JSC::JSValue, const String&);
+    DataCue(Document&, const MediaTime& start, const MediaTime& end, ArrayBuffer&, const String&);
+    DataCue(Document&, const MediaTime& start, const MediaTime& end, const void*, unsigned);
+    DataCue(Document&, const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String&);
+    DataCue(Document&, const MediaTime& start, const MediaTime& end, JSC::JSValue, const String&);
 
     JSC::JSValue valueOrNull() const;
+    CueType cueType() const final { return Data; }
+    bool cueContentsMatch(const TextTrackCue&) const final;
+    void toJSON(JSON::Object&) const final;
 
     RefPtr<ArrayBuffer> m_data;
     String m_type;
-    RefPtr<SerializedPlatformRepresentation> m_platformValue;
+    RefPtr<SerializedPlatformDataCue> m_platformValue;
     // FIXME: The following use of JSC::Strong is incorrect and can lead to storage leaks
     // due to reference cycles; we should use JSValueInWrappedObject instead.
     // https://bugs.webkit.org/show_bug.cgi?id=201173
     JSC::Strong<JSC::Unknown> m_value;
 };
 
-DataCue* toDataCue(TextTrackCue*);
-const DataCue* toDataCue(const TextTrackCue*);
-
 } // namespace WebCore
 
 namespace WTF {
 
-template<typename Type>
-struct LogArgument;
-
-template <>
-struct LogArgument<WebCore::DataCue> {
-    static String toString(const WebCore::DataCue& cue)
-    {
-        return cue.toJSONString();
-    }
-};
+template<> struct LogArgument<WebCore::DataCue> : LogArgument<WebCore::TextTrackCue> { };
 
 }
 

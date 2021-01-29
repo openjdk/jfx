@@ -7,8 +7,9 @@
                _WTFCrash
                __ZN3WTF10fastMallocEm
                __ZN3WTF6StringC1EPKc
-               __ZN3WTF6StringC1EPKtj
+               __ZN3WTF6StringC1EPKDsj
                __ZN3WTF7RunLoop4mainEv
+               __ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE
                __ZN3WTF8fastFreeEPv
                __ZN3WTF4Lock10unlockSlowEv
                __ZN3WTF4Lock8lockSlowEv

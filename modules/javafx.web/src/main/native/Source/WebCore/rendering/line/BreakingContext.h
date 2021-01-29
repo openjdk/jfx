@@ -695,7 +695,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
     const RenderStyle& style = lineStyle(renderText, m_lineInfo);
     const FontCascade& font = style.fontCascade();
     bool isFixedPitch = font.isFixedPitch();
-    bool canHyphenate = style.hyphens() == Hyphens::Auto && WebCore::canHyphenate(style.locale());
+    bool canHyphenate = style.hyphens() == Hyphens::Auto && WebCore::canHyphenate(style.computedLocale());
     bool canHangPunctuationAtStart = style.hangingPunctuation().contains(HangingPunctuation::First);
     bool canHangPunctuationAtEnd = style.hangingPunctuation().contains(HangingPunctuation::Last);
     bool canHangStopOrCommaAtLineEnd = style.hangingPunctuation().contains(HangingPunctuation::AllowEnd);
@@ -731,7 +731,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
         m_renderTextInfo.text = &renderText;
         m_renderTextInfo.font = &font;
         m_renderTextInfo.layout = font.createLayout(renderText, m_width.currentWidth(), m_collapseWhiteSpace);
-        m_renderTextInfo.lineBreakIterator.resetStringAndReleaseIterator(renderText.text(), style.locale(), iteratorMode);
+        m_renderTextInfo.lineBreakIterator.resetStringAndReleaseIterator(renderText.text(), style.computedLocale(), iteratorMode);
     } else if (m_renderTextInfo.layout && m_renderTextInfo.font != &font) {
         m_renderTextInfo.font = &font;
         m_renderTextInfo.layout = font.createLayout(renderText, m_width.currentWidth(), m_collapseWhiteSpace);
@@ -877,7 +877,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                     // no more content, and a hyphenated single word would end up on a line by itself. This looks
                     // bad so just don't allow it.
                     if (canHyphenate && !m_width.fitsOnLine() && (m_nextObject || !renderText.containsOnlyHTMLWhitespace(m_current.offset(), renderText.text().length() - m_current.offset()) || isLineEmpty)) {
-                        tryHyphenating(renderText, font, style.locale(), consecutiveHyphenatedLines, m_blockStyle.hyphenationLimitLines(), style.hyphenationLimitBefore(), style.hyphenationLimitAfter(), lastSpace, m_current.offset(), m_width.currentWidth() - additionalTempWidth, m_width.availableWidth(), isFixedPitch, m_collapseWhiteSpace, lastSpaceWordSpacing, m_lineBreak, m_current.nextBreakablePosition(), m_lineBreaker.m_hyphenated);
+                        tryHyphenating(renderText, font, style.computedLocale(), consecutiveHyphenatedLines, m_blockStyle.hyphenationLimitLines(), style.hyphenationLimitBefore(), style.hyphenationLimitAfter(), lastSpace, m_current.offset(), m_width.currentWidth() - additionalTempWidth, m_width.availableWidth(), isFixedPitch, m_collapseWhiteSpace, lastSpaceWordSpacing, m_lineBreak, m_current.nextBreakablePosition(), m_lineBreaker.m_hyphenated);
                         if (m_lineBreaker.m_hyphenated) {
                             m_atEnd = true;
                             return false;
@@ -892,26 +892,26 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
                     }
                     // Check if the last breaking position is a soft-hyphen.
                     if (!hyphenated && style.hyphens() != Hyphens::None) {
-                        Optional<unsigned> lastBreakingPositon;
+                        Optional<unsigned> lastBreakingPosition;
                         const RenderObject* rendererAtBreakingPosition = nullptr;
                         if (m_lineBreak.offset() || m_lineBreak.nextBreakablePosition()) {
-                            lastBreakingPositon = m_lineBreak.offset();
+                            lastBreakingPosition = m_lineBreak.offset();
                             rendererAtBreakingPosition = m_lineBreak.renderer();
                         } else if (m_current.nextBreakablePosition() && m_current.nextBreakablePosition().value() <= m_current.offset()) {
                             // We might just be right after the soft-hyphen
-                            lastBreakingPositon = m_current.nextBreakablePosition().value();
+                            lastBreakingPosition = m_current.nextBreakablePosition().value();
                             rendererAtBreakingPosition = m_current.renderer();
                         }
-                        if (lastBreakingPositon) {
+                        if (lastBreakingPosition) {
                             Optional<UChar> characterBeforeBreakingPosition;
                             // When last breaking position points to the start of the current context, we need to look at the last character from
                             // the previous non-empty text renderer.
-                            if (!lastBreakingPositon.value())
+                            if (!lastBreakingPosition.value())
                                 characterBeforeBreakingPosition = lastCharacterFromPreviousRenderText;
                             else if (is<RenderText>(rendererAtBreakingPosition)) {
                                 const auto& textRenderer = downcast<RenderText>(*rendererAtBreakingPosition);
-                                ASSERT(lastBreakingPositon.value() >= 1 && textRenderer.text().length() > (lastBreakingPositon.value() - 1));
-                                characterBeforeBreakingPosition = textRenderer.characterAt(lastBreakingPositon.value() - 1);
+                                ASSERT(lastBreakingPosition.value() >= 1 && textRenderer.text().length() > (lastBreakingPosition.value() - 1));
+                                characterBeforeBreakingPosition = textRenderer.characterAt(lastBreakingPosition.value() - 1);
                             }
                             if (characterBeforeBreakingPosition)
                                 hyphenated = characterBeforeBreakingPosition.value() == softHyphen;
@@ -1071,7 +1071,7 @@ inline bool BreakingContext::handleText(WordMeasurements& wordMeasurements, bool
         // no more content, and a hyphenated single word would end up on a line by itself. This looks
         // bad so just don't allow it.
         if (canHyphenate && (m_nextObject || isLineEmpty))
-            tryHyphenating(renderText, font, style.locale(), consecutiveHyphenatedLines, m_blockStyle.hyphenationLimitLines(), style.hyphenationLimitBefore(), style.hyphenationLimitAfter(), lastSpace, m_current.offset(), m_width.currentWidth() - additionalTempWidth, m_width.availableWidth(), isFixedPitch, m_collapseWhiteSpace, lastSpaceWordSpacing, m_lineBreak, m_current.nextBreakablePosition(), m_lineBreaker.m_hyphenated);
+            tryHyphenating(renderText, font, style.computedLocale(), consecutiveHyphenatedLines, m_blockStyle.hyphenationLimitLines(), style.hyphenationLimitBefore(), style.hyphenationLimitAfter(), lastSpace, m_current.offset(), m_width.currentWidth() - additionalTempWidth, m_width.availableWidth(), isFixedPitch, m_collapseWhiteSpace, lastSpaceWordSpacing, m_lineBreak, m_current.nextBreakablePosition(), m_lineBreaker.m_hyphenated);
 
         if (!hyphenated && m_lineBreak.previousInSameNode() == softHyphen && style.hyphens() != Hyphens::None) {
             hyphenated = true;

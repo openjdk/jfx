@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -73,8 +73,12 @@ void HeapSnapshotBuilder::buildSnapshot()
         m_profiler.vm().heap.collectNow(Sync, CollectionScope::Full);
         m_profiler.setActiveHeapAnalyzer(nullptr);
     }
-    m_snapshot->finalize();
 
+    {
+        auto locker = holdLock(m_buildingNodeMutex);
+        m_appendedCells.clear();
+        m_snapshot->finalize();
+    }
     m_profiler.appendSnapshot(WTFMove(m_snapshot));
 }
 
@@ -88,7 +92,10 @@ void HeapSnapshotBuilder::analyzeNode(JSCell* cell)
     if (previousSnapshotHasNodeForCell(cell, identifier))
         return;
 
-    std::lock_guard<Lock> lock(m_buildingNodeMutex);
+    auto locker = holdLock(m_buildingNodeMutex);
+    auto addResult = m_appendedCells.add(cell);
+    if (!addResult.isNewEntry)
+        return;
     m_snapshot->appendNode(HeapSnapshotNode(cell, getNextObjectIdentifier()));
 }
 
@@ -101,7 +108,7 @@ void HeapSnapshotBuilder::analyzeEdge(JSCell* from, JSCell* to, SlotVisitor::Roo
     if (from == to)
         return;
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     if (m_snapshotType == SnapshotType::GCDebuggingSnapshot && !from) {
         if (rootMarkReason == SlotVisitor::RootMarkReason::None && m_snapshotType == SnapshotType::GCDebuggingSnapshot)
@@ -120,7 +127,7 @@ void HeapSnapshotBuilder::analyzePropertyNameEdge(JSCell* from, JSCell* to, Uniq
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Property, propertyName));
 }
@@ -130,7 +137,7 @@ void HeapSnapshotBuilder::analyzeVariableNameEdge(JSCell* from, JSCell* to, Uniq
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Variable, variableName));
 }
@@ -140,7 +147,7 @@ void HeapSnapshotBuilder::analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t in
     ASSERT(m_profiler.activeHeapAnalyzer() == this);
     ASSERT(to);
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to, index));
 }
@@ -150,7 +157,7 @@ void HeapSnapshotBuilder::setOpaqueRootReachabilityReasonForCell(JSCell* cell, c
     if (!reason || !*reason || m_snapshotType != SnapshotType::GCDebuggingSnapshot)
         return;
 
-    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+    auto locker = holdLock(m_buildingEdgeMutex);
 
     m_rootData.ensure(cell, [] () -> RootData {
         return { };
@@ -402,7 +409,7 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             // "Object" in snapshots and not get the name of the prototype's parent.
             JSObject* object = asObject(node.cell);
             if (JSGlobalObject* globalObject = object->globalObject(vm)) {
-                PropertySlot slot(object, PropertySlot::InternalMethodType::VMInquiry);
+                PropertySlot slot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
                 if (!object->getOwnPropertySlot(object, globalObject, vm.propertyNames->constructor, slot))
                     className = JSObject::calculatedClassName(object);
             }
@@ -413,9 +420,9 @@ String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowN
             nextClassNameIndex++;
         unsigned classNameIndex = result.iterator->value;
 
-        void* wrappedAddress = 0;
+        void* wrappedAddress = nullptr;
         unsigned labelIndex = 0;
-        if (!node.cell->isString() && !node.cell->isBigInt()) {
+        if (!node.cell->isString() && !node.cell->isHeapBigInt()) {
             Structure* structure = node.cell->structure(vm);
             if (!structure || !structure->globalObject())
                 flags |= static_cast<unsigned>(NodeFlags::Internal);

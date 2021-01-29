@@ -113,7 +113,7 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_webkit_MainThread_twkScheduleDispatchFunctions
   (JNIEnv*, jobject)
 {
-    dispatchFunctionsFromMainThread();
+    RunLoop::main().dispatchFunctionsFromMainThread();
 }
 }
 

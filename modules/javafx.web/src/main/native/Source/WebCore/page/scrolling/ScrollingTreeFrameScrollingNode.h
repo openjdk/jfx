@@ -33,7 +33,6 @@ namespace WebCore {
 
 class PlatformWheelEvent;
 class ScrollingTree;
-class ScrollingStateScrollingNode;
 
 class WEBCORE_EXPORT ScrollingTreeFrameScrollingNode : public ScrollingTreeScrollingNode {
 public:
@@ -41,8 +40,6 @@ public:
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
 
-    SynchronousScrollingReasons synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
-    bool shouldUpdateScrollLayerPositionSynchronously() const { return m_synchronousScrollingReasons; }
     bool fixedElementsLayoutRelativeToFrame() const { return m_fixedElementsLayoutRelativeToFrame; }
     bool visualViewportIsSmallerThanLayoutViewport() const { return m_visualViewportIsSmallerThanLayoutViewport; }
 
@@ -68,9 +65,6 @@ protected:
     ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
 
 private:
-    LayoutPoint parentToLocalPoint(LayoutPoint) const final;
-    LayoutPoint localToContentsPoint(LayoutPoint) const final;
-
     void updateViewportForCurrentScrollPosition(Optional<FloatRect>) override;
     bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport) override;
     FloatRect layoutViewportForScrollPosition(const FloatPoint&, float scale, ScrollBehaviorForFixedElements = StickToDocumentBounds) const;
@@ -88,7 +82,6 @@ private:
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
 
-    SynchronousScrollingReasons m_synchronousScrollingReasons { 0 };
     ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
 
     bool m_fixedElementsLayoutRelativeToFrame { false };
