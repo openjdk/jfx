@@ -378,23 +378,23 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isKeyLocked
         return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
     }
 
-    Atom atom = None;
+    Atom keyCodeAtom = None;
     switch (keyCode) {
         case com_sun_glass_events_KeyEvent_VK_CAPS_LOCK:
-            atom = XInternAtom(display, "Caps Lock", True);
+            keyCodeAtom = XInternAtom(display, "Caps Lock", True);
             break;
 
         case com_sun_glass_events_KeyEvent_VK_NUM_LOCK:
-            atom = XInternAtom(display, "Num Lock", True);
+            keyCodeAtom = XInternAtom(display, "Num Lock", True);
             break;
     }
 
-    if (atom == None) {
+    if (keyCodeAtom == None) {
         return com_sun_glass_events_KeyEvent_KEY_LOCK_UNKNOWN;
     }
 
     Bool isLocked = False;
-    if (XkbGetNamedIndicator(display, atom, NULL, &isLocked, NULL, NULL)) {
+    if (XkbGetNamedIndicator(display, keyCodeAtom, NULL, &isLocked, NULL, NULL)) {
         if (isLocked) {
             return com_sun_glass_events_KeyEvent_KEY_LOCK_ON;
         } else {

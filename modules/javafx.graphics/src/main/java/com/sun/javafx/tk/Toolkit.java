@@ -875,7 +875,7 @@ public abstract class Toolkit {
     }
 
     /**
-     * Return the lock state for the given keyCode.
+     * Returns the lock state for the given keyCode.
      * @param keyCode the keyCode to check
      * @return the lock state for the given keyCode.
      */
