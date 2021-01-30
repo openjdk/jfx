@@ -181,7 +181,7 @@ public interface ListChangeListener<E> {
 
         /**
          * Indicates if elements were added during this change.
-         * @return true if something was added to the list
+         * @return {@code true} if something was added to the list
          * @throws IllegalStateException if this Change instance is in initial state
          */
         public boolean wasAdded() {

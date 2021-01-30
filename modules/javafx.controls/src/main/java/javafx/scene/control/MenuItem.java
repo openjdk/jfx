@@ -506,7 +506,7 @@ public class MenuItem implements EventTarget, Styleable {
      * Returns the {@code Object} that was set by {@link #setUserData(Object)}, or {@code null} if no object has been
      * set.
      *
-     * @return the user object that was stored (including {@code null}), or {@code null} if no object has been set.
+     * @return the user object that was stored (including {@code null}), or {@code null} if no object has been set
      */
     public Object getUserData() {
         return userData;
