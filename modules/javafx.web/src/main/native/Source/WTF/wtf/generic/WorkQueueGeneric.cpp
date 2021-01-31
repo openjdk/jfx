@@ -72,6 +72,11 @@ void WorkQueue::dispatch(Function<void()>&& function)
 void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
     RefPtr<WorkQueue> protect(this);
+#if OS(WINDOWS) && PLATFORM(JAVA)
+    // Adding the slop adjustment from wtf/win/WorkQueueWin.cpp
+    const Seconds slopAdjustment { 20_ms };
+    delay += slopAdjustment;
+#endif
     m_runLoop->dispatchAfter(delay, [protect, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
         AttachThreadAsDaemonToJavaEnv autoAttach;
