@@ -26,29 +26,30 @@
 
 #pragma once
 
-#if ENABLE(INTL)
-
 #include "JSObject.h"
 
 namespace JSC {
 
 class IntlCollatorPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(IntlCollatorPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static IntlCollatorPrototype* create(VM&, JSGlobalObject*, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
-protected:
-    void finishCreation(VM&);
-
 private:
     IntlCollatorPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC
-
-#endif // ENABLE(INTL)

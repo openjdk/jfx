@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,23 +29,14 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "B3Compilation.h"
-#include "B3OpaqueByproducts.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "WasmB3IRGenerator.h"
 #include "WasmCallee.h"
-#include "WasmContext.h"
-#include "WasmInstance.h"
-#include "WasmMachineThreads.h"
-#include "WasmMemory.h"
 #include "WasmNameSection.h"
 #include "WasmSignatureInlines.h"
-#include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
-#include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/ThreadMessage.h>
 
 namespace JSC { namespace Wasm {
 
@@ -59,6 +50,7 @@ OMGPlan::OMGPlan(Context* context, Ref<Module>&& module, uint32_t functionIndex,
     , m_codeBlock(*m_module->codeBlockFor(mode))
     , m_functionIndex(functionIndex)
 {
+    ASSERT(Options::useOMGJIT());
     setMode(mode);
     ASSERT(m_codeBlock->runnable());
     ASSERT(m_codeBlock.ptr() == m_module->codeBlockFor(m_mode));
@@ -113,7 +105,21 @@ void OMGPlan::work(CompilationEffort)
         // will update. It's also ok if they publish their code before we reset the instruction caches because after we release
         // the lock our code is ready to be published too.
         LockHolder holder(m_codeBlock->m_lock);
+
         m_codeBlock->m_omgCallees[m_functionIndex] = callee.copyRef();
+
+        for (auto& call : callee->wasmToWasmCallsites()) {
+            MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
+            if (call.functionIndexSpace < m_module->moduleInformation().importFunctionCount())
+                entrypoint = m_codeBlock->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
+            else
+                entrypoint = m_codeBlock->wasmEntrypointCalleeFromFunctionIndexSpace(call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
+
+            MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
+        }
+
+        Plan::updateCallSitesToCallUs(m_codeBlock, CodeLocationLabel<WasmEntryPtrTag>(entrypoint), m_functionIndex, functionIndexSpace);
+
         {
             if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[m_functionIndex].get()) {
                 auto locker = holdLock(bbqCallee->tierUpCount()->getLock());
@@ -125,53 +131,6 @@ void OMGPlan::work(CompilationEffort)
                 auto locker = holdLock(llintCallee.tierUpCounter().m_lock);
                 llintCallee.setReplacement(callee.copyRef());
                 llintCallee.tierUpCounter().m_compilationStatus = LLIntTierUpCounter::CompilationStatus::Compiled;
-            }
-        }
-        for (auto& call : callee->wasmToWasmCallsites()) {
-            MacroAssemblerCodePtr<WasmEntryPtrTag> entrypoint;
-            if (call.functionIndexSpace < m_module->moduleInformation().importFunctionCount())
-                entrypoint = m_codeBlock->m_wasmToWasmExitStubs[call.functionIndexSpace].code();
-            else
-                entrypoint = m_codeBlock->wasmEntrypointCalleeFromFunctionIndexSpace(call.functionIndexSpace).entrypoint().retagged<WasmEntryPtrTag>();
-
-            MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-        }
-    }
-
-    // It's important to make sure we do this before we make any of the code we just compiled visible. If we didn't, we could end up
-    // where we are tiering up some function A to A' and we repatch some function B to call A' instead of A. Another CPU could see
-    // the updates to B but still not have reset its cache of A', which would lead to all kinds of badness.
-    resetInstructionCacheOnAllThreads();
-    WTF::storeStoreFence(); // This probably isn't necessary but it's good to be paranoid.
-
-    m_codeBlock->m_wasmIndirectCallEntryPoints[m_functionIndex] = entrypoint;
-    {
-        LockHolder holder(m_codeBlock->m_lock);
-
-        auto repatchCalls = [&] (const Vector<UnlinkedWasmToWasmCall>& callsites) {
-            for (auto& call : callsites) {
-                dataLogLnIf(WasmOMGPlanInternal::verbose, "Considering repatching call at: ", RawPointer(call.callLocation.dataLocation()), " that targets ", call.functionIndexSpace);
-                if (call.functionIndexSpace == functionIndexSpace) {
-                    dataLogLnIf(WasmOMGPlanInternal::verbose, "Repatching call at: ", RawPointer(call.callLocation.dataLocation()), " to ", RawPointer(entrypoint.executableAddress()));
-                    MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(entrypoint));
-                }
-            }
-        };
-
-        for (unsigned i = 0; i < m_codeBlock->m_wasmToWasmCallsites.size(); ++i) {
-            repatchCalls(m_codeBlock->m_wasmToWasmCallsites[i]);
-            if (m_codeBlock->m_llintCallees) {
-                LLIntCallee& llintCallee = m_codeBlock->m_llintCallees->at(i).get();
-                if (JITCallee* replacementCallee = llintCallee.replacement())
-                    repatchCalls(replacementCallee->wasmToWasmCallsites());
-                if (OMGForOSREntryCallee* osrEntryCallee = llintCallee.osrEntryCallee())
-                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
-            }
-            if (BBQCallee* bbqCallee = m_codeBlock->m_bbqCallees[i].get()) {
-                if (OMGCallee* replacementCallee = bbqCallee->replacement())
-                    repatchCalls(replacementCallee->wasmToWasmCallsites());
-                if (OMGForOSREntryCallee* osrEntryCallee = bbqCallee->osrEntryCallee())
-                    repatchCalls(osrEntryCallee->wasmToWasmCallsites());
             }
         }
     }

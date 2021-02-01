@@ -65,11 +65,11 @@ class CppGenerator(Generator):
         if isinstance(_type, ArrayType):
             return 'getArray'
         if isinstance(_type, PrimitiveType):
-            if _type.raw_name() is 'integer':
+            if _type.raw_name() == 'integer':
                 return 'getInteger'
-            elif _type.raw_name() is 'number':
+            elif _type.raw_name() == 'number':
                 return 'getDouble'
-            elif _type.raw_name() is 'any':
+            elif _type.raw_name() == 'any':
                 return 'getValue'
             else:
                 return 'get' + ucfirst(_type.raw_name())
@@ -85,11 +85,11 @@ class CppGenerator(Generator):
         if isinstance(_type, ArrayType):
             return 'setArray'
         if isinstance(_type, PrimitiveType):
-            if _type.raw_name() is 'integer':
+            if _type.raw_name() == 'integer':
                 return 'setInteger'
-            elif _type.raw_name() is 'number':
+            elif _type.raw_name() == 'number':
                 return 'setDouble'
-            elif _type.raw_name() is 'any':
+            elif _type.raw_name() == 'any':
                 return 'setValue'
             else:
                 return 'set' + ucfirst(_type.raw_name())
@@ -131,7 +131,7 @@ class CppGenerator(Generator):
             _type = _type.primitive_type  # Fall through to primitive.
 
         # This handles the 'any' type and objects with defined properties.
-        if isinstance(_type, ObjectType) or _type.qualified_name() is 'object':
+        if isinstance(_type, ObjectType) or _type.qualified_name() == 'object':
             cpp_name = 'JSON::Object'
             if parameter.is_optional:
                 return 'const %s*' % cpp_name

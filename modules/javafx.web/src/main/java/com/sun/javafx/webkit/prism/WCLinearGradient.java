@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.prism.paint.Color;
 import com.sun.prism.paint.LinearGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.webkit.graphics.WCGradient;
@@ -47,8 +48,8 @@ final class WCLinearGradient extends WCGradient<LinearGradient> {
     }
 
     @Override
-    protected void addStop(int argb, float offset) {
-        this.stops.add(new Stop(WCGraphicsPrismContext.createColor(argb), offset));
+    protected void addStop(Color color, float offset) {
+        this.stops.add(new Stop(color, offset));
     }
 
     public LinearGradient getPlatformGradient() {

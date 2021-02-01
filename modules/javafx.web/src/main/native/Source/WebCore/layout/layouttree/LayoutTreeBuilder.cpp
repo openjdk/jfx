@@ -34,15 +34,19 @@
 #include "HTMLNames.h"
 #include "HTMLTableCellElement.h"
 #include "HTMLTableColElement.h"
+#include "HTMLTableElement.h"
 #include "InlineFormattingState.h"
 #include "InvalidationContext.h"
 #include "InvalidationState.h"
 #include "LayoutBox.h"
 #include "LayoutChildIterator.h"
-#include "LayoutContainer.h"
+#include "LayoutContainerBox.h"
 #include "LayoutContext.h"
-#include "LayoutDescendantIterator.h"
+#include "LayoutInitialContainingBlock.h"
+#include "LayoutInlineTextBox.h"
+#include "LayoutLineBreakBox.h"
 #include "LayoutPhase.h"
+#include "LayoutReplacedBox.h"
 #include "LayoutSize.h"
 #include "LayoutState.h"
 #include "RenderBlock.h"
@@ -64,7 +68,7 @@ namespace WebCore {
 namespace Layout {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(LayoutTreeContent);
-LayoutTreeContent::LayoutTreeContent(const RenderBox& rootRenderer, std::unique_ptr<Container> rootLayoutBox)
+LayoutTreeContent::LayoutTreeContent(const RenderBox& rootRenderer, std::unique_ptr<ContainerBox> rootLayoutBox)
     : m_rootRenderer(rootRenderer)
     , m_rootLayoutBox(WTFMove(rootLayoutBox))
 {
@@ -79,7 +83,7 @@ void LayoutTreeContent::addLayoutBoxForRenderer(const RenderObject& renderer, Bo
     m_layoutBoxToRenderObject.add(&layoutBox, &renderer);
 }
 
-static void appendChild(Container& parent, Box& newChild)
+static void appendChild(ContainerBox& parent, Box& newChild)
 {
     if (!parent.hasChild()) {
         parent.setFirstChild(newChild);
@@ -127,7 +131,7 @@ std::unique_ptr<Layout::LayoutTreeContent> TreeBuilder::buildLayoutTree(const Re
     style.setLogicalWidth(Length(renderView.width(), Fixed));
     style.setLogicalHeight(Length(renderView.height(), Fixed));
 
-    auto layoutTreeContent = makeUnique<LayoutTreeContent>(renderView, makeUnique<Container>(WTF::nullopt, WTFMove(style)));
+    auto layoutTreeContent = makeUnique<LayoutTreeContent>(renderView, makeUnique<InitialContainingBlock>(WTFMove(style)));
     TreeBuilder(*layoutTreeContent).buildTree();
     return layoutTreeContent;
 }
@@ -142,31 +146,39 @@ void TreeBuilder::buildTree()
     buildSubTree(m_layoutTreeContent.rootRenderer(), m_layoutTreeContent.rootLayoutBox());
 }
 
-Box& TreeBuilder::createBox(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
+Box& TreeBuilder::createReplacedBox(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
 {
-    auto newBox = makeUnique<Box>(elementAttributes, WTFMove(style));
+    auto newBox = makeUnique<ReplacedBox>(elementAttributes, WTFMove(style));
     auto& box = *newBox;
     m_layoutTreeContent.addBox(WTFMove(newBox));
     return box;
 }
 
-Box& TreeBuilder::createTextBox(TextContext&& textContent, RenderStyle&& style)
+Box& TreeBuilder::createTextBox(String text, bool canUseSimplifiedTextMeasuring, RenderStyle&& style)
 {
-    auto newBox = makeUnique<Box>(WTFMove(textContent), WTFMove(style));
+    auto newBox = makeUnique<InlineTextBox>(text, canUseSimplifiedTextMeasuring, WTFMove(style));
     auto& box = *newBox;
     m_layoutTreeContent.addBox(WTFMove(newBox));
     return box;
 }
 
-Container& TreeBuilder::createContainer(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
+Box& TreeBuilder::createLineBreakBox(bool isOptional, RenderStyle&& style)
 {
-    auto newContainer = makeUnique<Container>(elementAttributes, WTFMove(style));
+    auto newBox = makeUnique<Layout::LineBreakBox>(isOptional, WTFMove(style));
+    auto& box = *newBox;
+    m_layoutTreeContent.addBox(WTFMove(newBox));
+    return box;
+}
+
+ContainerBox& TreeBuilder::createContainer(Optional<Box::ElementAttributes> elementAttributes, RenderStyle&& style)
+{
+    auto newContainer = makeUnique<ContainerBox>(elementAttributes, WTFMove(style));
     auto& container = *newContainer;
     m_layoutTreeContent.addContainer(WTFMove(newContainer));
     return container;
 }
 
-Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const RenderObject& childRenderer)
+Box* TreeBuilder::createLayoutBox(const ContainerBox& parentContainer, const RenderObject& childRenderer)
 {
     auto elementAttributes = [] (const RenderElement& renderer) -> Optional<Box::ElementAttributes> {
         if (renderer.isDocumentElementRenderer())
@@ -178,9 +190,6 @@ Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const Render
                 return Box::ElementAttributes { Box::ElementType::Image };
             if (element->hasTagName(HTMLNames::iframeTag))
                 return Box::ElementAttributes { Box::ElementType::IFrame };
-            // FIXME wbr should not be considered as hard linebreak.
-            if (element->hasTagName(HTMLNames::brTag) || element->hasTagName(HTMLNames::wbrTag))
-                return Box::ElementAttributes { Box::ElementType::HardLineBreak };
             return Box::ElementAttributes { Box::ElementType::GenericElement };
         }
         return WTF::nullopt;
@@ -191,12 +200,11 @@ Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const Render
         auto& textRenderer = downcast<RenderText>(childRenderer);
         // RenderText::text() has already applied text-transform and text-security properties.
         String text = textRenderer.text();
-        auto textContent = TextContext { text, canUseSimplifiedTextMeasuring(text, parentContainer.style().fontCascade(), parentContainer.style().collapseWhiteSpace()) };
+        auto useSimplifiedTextMeasuring = canUseSimplifiedTextMeasuring(text, parentContainer.style().fontCascade(), parentContainer.style().collapseWhiteSpace());
         if (parentContainer.style().display() == DisplayType::Inline)
-            childLayoutBox = &createTextBox(WTFMove(textContent), RenderStyle::clone(parentContainer.style()));
+            childLayoutBox = &createTextBox(text, useSimplifiedTextMeasuring, RenderStyle::clone(parentContainer.style()));
         else
-            childLayoutBox = &createTextBox(WTFMove(textContent), RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), DisplayType::Inline));
-        childLayoutBox->setIsAnonymous();
+            childLayoutBox = &createTextBox(text, useSimplifiedTextMeasuring, RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), DisplayType::Inline));
     } else {
         auto& renderer = downcast<RenderElement>(childRenderer);
         auto displayType = renderer.style().display();
@@ -206,25 +214,38 @@ Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const Render
         if (is<RenderLineBreak>(renderer)) {
             clonedStyle.setDisplay(DisplayType::Inline);
             clonedStyle.setFloating(Float::No);
-            childLayoutBox = &createBox(elementAttributes(renderer), WTFMove(clonedStyle));
+            childLayoutBox = &createLineBreakBox(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(clonedStyle));
         } else if (is<RenderTable>(renderer)) {
             // Construct the principal table wrapper box (and not the table box itself).
-            childLayoutBox = &createContainer(Box::ElementAttributes { Box::ElementType::TableWrapperBox }, WTFMove(clonedStyle));
+            // The computed values of properties 'position', 'float', 'margin-*', 'top', 'right', 'bottom', and 'left' on the table element
+            // are used on the table wrapper box and not the table box; all other values of non-inheritable properties are used
+            // on the table box and not the table wrapper box.
+            auto tableWrapperBoxStyle = RenderStyle::createAnonymousStyleWithDisplay(parentContainer.style(), renderer.style().display() == DisplayType::Table ? DisplayType::Block : DisplayType::Inline);
+            tableWrapperBoxStyle.setPosition(renderer.style().position());
+            tableWrapperBoxStyle.setFloating(renderer.style().floating());
+
+            tableWrapperBoxStyle.setTop(Length { renderer.style().top() });
+            tableWrapperBoxStyle.setLeft(Length { renderer.style().left() });
+            tableWrapperBoxStyle.setBottom(Length { renderer.style().bottom() });
+            tableWrapperBoxStyle.setRight(Length { renderer.style().right() });
+
+            tableWrapperBoxStyle.setMarginTop(Length { renderer.style().marginTop() });
+            tableWrapperBoxStyle.setMarginLeft(Length { renderer.style().marginLeft() });
+            tableWrapperBoxStyle.setMarginBottom(Length { renderer.style().marginBottom() });
+            tableWrapperBoxStyle.setMarginRight(Length { renderer.style().marginRight() });
+
+            childLayoutBox = &createContainer(Box::ElementAttributes { Box::ElementType::TableWrapperBox }, WTFMove(tableWrapperBoxStyle));
             childLayoutBox->setIsAnonymous();
         } else if (is<RenderReplaced>(renderer)) {
-            if (displayType == DisplayType::Block)
-                childLayoutBox = &createBox(elementAttributes(renderer), WTFMove(clonedStyle));
-            else
-                childLayoutBox = &createBox(elementAttributes(renderer), WTFMove(clonedStyle));
+            childLayoutBox = &createReplacedBox(elementAttributes(renderer), WTFMove(clonedStyle));
             // FIXME: We don't yet support all replaced elements and this is temporary anyway.
-            if (childLayoutBox->replaced())
-                childLayoutBox->replaced()->setIntrinsicSize(downcast<RenderReplaced>(renderer).intrinsicSize());
+            downcast<ReplacedBox>(*childLayoutBox).setIntrinsicSize(downcast<RenderReplaced>(renderer).intrinsicSize());
             if (is<RenderImage>(renderer)) {
                 auto& imageRenderer = downcast<RenderImage>(renderer);
                 if (imageRenderer.shouldDisplayBrokenImageIcon())
-                    childLayoutBox->replaced()->setIntrinsicRatio(1);
+                    downcast<ReplacedBox>(*childLayoutBox).setIntrinsicRatio(1);
                 if (imageRenderer.cachedImage())
-                    childLayoutBox->replaced()->setCachedImage(*imageRenderer.cachedImage());
+                    downcast<ReplacedBox>(*childLayoutBox).setCachedImage(*imageRenderer.cachedImage());
             }
         } else {
             if (displayType == DisplayType::Block) {
@@ -253,19 +274,24 @@ Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const Render
                     childLayoutBox->setColumnSpan(tableColElement.span());
             } else {
                 ASSERT_NOT_IMPLEMENTED_YET();
-                return nullptr;
+                // Let's fall back to a regular block level container when the renderer type is not yet supported.
+                clonedStyle.setDisplay(DisplayType::Block);
+                childLayoutBox = &createContainer(elementAttributes(renderer), WTFMove(clonedStyle));
             }
         }
 
         if (is<RenderTableCell>(renderer)) {
-            auto& cellElement = downcast<HTMLTableCellElement>(*renderer.element());
-            auto rowSpan = cellElement.rowSpan();
-            if (rowSpan > 1)
-                childLayoutBox->setRowSpan(rowSpan);
+            auto* tableCellElement = renderer.element();
+            if (is<HTMLTableCellElement>(tableCellElement)) {
+                auto& cellElement = downcast<HTMLTableCellElement>(*tableCellElement);
+                auto rowSpan = cellElement.rowSpan();
+                if (rowSpan > 1)
+                    childLayoutBox->setRowSpan(rowSpan);
 
-            auto columnSpan = cellElement.colSpan();
-            if (columnSpan > 1)
-                childLayoutBox->setColumnSpan(columnSpan);
+                auto columnSpan = cellElement.colSpan();
+                if (columnSpan > 1)
+                    childLayoutBox->setColumnSpan(columnSpan);
+            }
         }
 
         if (childRenderer.isAnonymous())
@@ -275,7 +301,7 @@ Box* TreeBuilder::createLayoutBox(const Container& parentContainer, const Render
     return childLayoutBox;
 }
 
-void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Container& tableWrapperBox)
+void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, ContainerBox& tableWrapperBox)
 {
     // Create caption and table box.
     auto* tableChild = tableRenderer.firstChild();
@@ -283,37 +309,80 @@ void TreeBuilder::buildTableStructure(const RenderTable& tableRenderer, Containe
         auto& captionRenderer = *tableChild;
         auto* captionBox = createLayoutBox(tableWrapperBox, captionRenderer);
         appendChild(tableWrapperBox, *captionBox);
-        auto& captionContainer = downcast<Container>(*captionBox);
+        auto& captionContainer = downcast<ContainerBox>(*captionBox);
         buildSubTree(downcast<RenderElement>(captionRenderer), captionContainer);
         tableChild = tableChild->nextSibling();
     }
 
-    auto& tableBox = createContainer(Box::ElementAttributes { Box::ElementType::TableBox }, RenderStyle::clone(tableRenderer.style()));
+    auto tableBoxStyle = RenderStyle::clone(tableRenderer.style());
+    tableBoxStyle.setPosition(PositionType::Static);
+    tableBoxStyle.setFloating(Float::No);
+    tableBoxStyle.resetMargin();
+    // FIXME: Figure out where the spec says table width is like box-sizing: border-box;
+    if (is<HTMLTableElement>(tableRenderer.element()))
+        tableBoxStyle.setBoxSizing(BoxSizing::BorderBox);
+    auto& tableBox = createContainer(Box::ElementAttributes { Box::ElementType::TableBox }, WTFMove(tableBoxStyle));
     appendChild(tableWrapperBox, tableBox);
     auto* sectionRenderer = tableChild;
     while (sectionRenderer) {
         auto* sectionBox = createLayoutBox(tableBox, *sectionRenderer);
         appendChild(tableBox, *sectionBox);
-        auto& sectionContainer = downcast<Container>(*sectionBox);
+        auto& sectionContainer = downcast<ContainerBox>(*sectionBox);
         buildSubTree(downcast<RenderElement>(*sectionRenderer), sectionContainer);
         sectionRenderer = sectionRenderer->nextSibling();
     }
+    auto addMissingTableCells = [&] (auto& tableBody) {
+        // A "missing cell" is a cell in the row/column grid that is not occupied by an element or pseudo-element.
+        // Missing cells are rendered as if an anonymous table-cell box occupied their position in the grid.
+
+        // Find the max number of columns and fill in the gaps.
+        size_t maximumColumns = 0;
+        Vector<size_t> numberOfCellsPerRow;
+        size_t currentRow = 0;
+        for (auto& rowBox : childrenOfType<ContainerBox>(tableBody)) {
+            for (auto& cellBox : childrenOfType<ContainerBox>(rowBox)) {
+                for (size_t rowSpan = 0; rowSpan < cellBox.rowSpan(); ++rowSpan) {
+                    if (numberOfCellsPerRow.size() <= currentRow + rowSpan)
+                        numberOfCellsPerRow.append(cellBox.columnSpan());
+                    else
+                        numberOfCellsPerRow[currentRow + rowSpan] += cellBox.columnSpan();
+                }
+            }
+            maximumColumns = std::max(maximumColumns, numberOfCellsPerRow[currentRow]);
+            ++currentRow;
+        }
+        // Fill in the gaps.
+        size_t rowIndex = 0;
+        for (auto& rowBox : childrenOfType<ContainerBox>(tableBody)) {
+            ASSERT(maximumColumns >= numberOfCellsPerRow[rowIndex]);
+            auto numberOfMissingCells = maximumColumns - numberOfCellsPerRow[rowIndex++];
+            for (size_t i = 0; i < numberOfMissingCells; ++i)
+                appendChild(const_cast<ContainerBox&>(rowBox), createContainer({ }, RenderStyle::createAnonymousStyleWithDisplay(rowBox.style(), DisplayType::TableCell)));
+        }
+    };
+
+    for (auto& section : childrenOfType<ContainerBox>(tableBox)) {
+        // FIXME: Check if headers and footers need the same treatment.
+        if (!section.isTableBody())
+            continue;
+        addMissingTableCells(section);
+    }
 }
 
-void TreeBuilder::buildSubTree(const RenderElement& parentRenderer, Container& parentContainer)
+void TreeBuilder::buildSubTree(const RenderElement& parentRenderer, ContainerBox& parentContainer)
 {
     for (auto& childRenderer : childrenOfType<RenderObject>(parentRenderer)) {
         auto* childLayoutBox = createLayoutBox(parentContainer, childRenderer);
         appendChild(parentContainer, *childLayoutBox);
         if (childLayoutBox->isTableWrapperBox())
-            buildTableStructure(downcast<RenderTable>(childRenderer), downcast<Container>(*childLayoutBox));
-        else if (is<Container>(*childLayoutBox))
-            buildSubTree(downcast<RenderElement>(childRenderer), downcast<Container>(*childLayoutBox));
+            buildTableStructure(downcast<RenderTable>(childRenderer), downcast<ContainerBox>(*childLayoutBox));
+        else if (is<ContainerBox>(*childLayoutBox))
+            buildSubTree(downcast<RenderElement>(childRenderer), downcast<ContainerBox>(*childLayoutBox));
     }
 }
 
 #if ENABLE(TREE_DEBUGGING)
-static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState, const Container& inlineFormattingRoot, unsigned depth)
+static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState, const ContainerBox& inlineFormattingRoot, unsigned depth)
 {
     auto& inlineFormattingState = layoutState.establishedInlineFormattingState(inlineFormattingRoot);
     auto* displayInlineContent = inlineFormattingState.displayInlineContent();
@@ -338,13 +407,13 @@ static void outputInlineRuns(TextStream& stream, const LayoutState& layoutState,
         while (++printedCharacters <= depth * 2)
             stream << " ";
         stream << "  ";
-        if (displayRun.textContext())
+        if (displayRun.textContent())
             stream << "inline text box";
         else
             stream << "inline box";
         stream << " at (" << displayRun.left() << "," << displayRun.top() << ") size " << displayRun.width() << "x" << displayRun.height();
-        if (displayRun.textContext())
-            stream << " run(" << displayRun.textContext()->start() << ", " << displayRun.textContext()->end() << ")";
+        if (displayRun.textContent())
+            stream << " run(" << displayRun.textContent()->start() << ", " << displayRun.textContent()->end() << ")";
         stream.nextLine();
     }
 }
@@ -358,7 +427,7 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
     if (layoutBox.isFloatingPositioned())
         stream << "[float] ";
 
-    if (layoutBox.isInitialContainingBlock())
+    if (is<InitialContainingBlock>(layoutBox))
         stream << "Initial containing block";
     else if (layoutBox.isDocumentBox())
         stream << "HTML";
@@ -389,7 +458,7 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
     else if (layoutBox.isInlineLevelBox()) {
         if (layoutBox.isInlineBox())
             stream << "SPAN inline box";
-        else if (layoutBox.replaced())
+        else if (layoutBox.isReplacedBox())
             stream << "IMG replaced inline box";
         else if (layoutBox.isAnonymous())
             stream << "anonymous inline box";
@@ -406,13 +475,13 @@ static void outputLayoutBox(TextStream& stream, const Box& layoutBox, const Disp
     if (displayBox)
         stream << " at (" << displayBox->left() << "," << displayBox->top() << ") size " << displayBox->width() << "x" << displayBox->height();
     stream << " layout box->(" << &layoutBox << ")";
-    if (layoutBox.isInlineLevelBox() && layoutBox.isAnonymous())
-        stream << " text content [\"" << layoutBox.textContext()->content.utf8().data() << "\"]";
+    if (is<InlineTextBox>(layoutBox))
+        stream << " text content [\"" << downcast<InlineTextBox>(layoutBox).content().utf8().data() << "\"]";
 
     stream.nextLine();
 }
 
-static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream, const Container& rootContainer, unsigned depth)
+static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream, const ContainerBox& rootContainer, unsigned depth)
 {
     for (auto& child : childrenOfType<Box>(rootContainer)) {
         if (layoutState) {
@@ -420,12 +489,12 @@ static void outputLayoutTree(const LayoutState* layoutState, TextStream& stream,
             if (layoutState->hasDisplayBox(child))
                 outputLayoutBox(stream, child, &layoutState->displayBoxForLayoutBox(child), depth);
             if (child.establishesInlineFormattingContext())
-                outputInlineRuns(stream, *layoutState, downcast<Container>(child), depth + 1);
+                outputInlineRuns(stream, *layoutState, downcast<ContainerBox>(child), depth + 1);
         } else
             outputLayoutBox(stream, child, nullptr, depth);
 
-        if (is<Container>(child))
-            outputLayoutTree(layoutState, stream, downcast<Container>(child), depth + 1);
+        if (is<ContainerBox>(child))
+            outputLayoutTree(layoutState, stream, downcast<ContainerBox>(child), depth + 1);
     }
 }
 

@@ -44,14 +44,14 @@ struct IDBIterateCursorData {
 #endif
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBIterateCursorData&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBIterateCursorData&);
 };
 
 template<class Encoder>
 void IDBIterateCursorData::encode(Encoder& encoder) const
 {
     encoder << keyData << primaryKeyData << static_cast<uint64_t>(count);
-    encoder.encodeEnum(option);
+    encoder << option;
 }
 
 template<class Decoder>
@@ -77,7 +77,7 @@ bool IDBIterateCursorData::decode(Decoder& decoder, IDBIterateCursorData& iterat
         return false;
     iteratorCursorData.count = static_cast<unsigned>(count);
 
-    if (!decoder.decodeEnum(iteratorCursorData.option))
+    if (!decoder.decode(iteratorCursorData.option))
         return false;
 
     return true;

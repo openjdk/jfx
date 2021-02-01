@@ -28,13 +28,11 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentContact.h"
+#include "PaymentInstallmentConfigurationWebCore.h"
+#include <wtf/EnumTraits.h>
 #include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
-
-#if USE(APPLE_INTERNAL_SDK)
-#include <WebKitAdditions/ApplePaySessionPaymentRequestAdditions.h>
-#endif
 
 namespace WebCore {
 
@@ -88,7 +86,7 @@ public:
     void setMerchantCapabilities(const MerchantCapabilities& merchantCapabilities) { m_merchantCapabilities = merchantCapabilities; }
 
     struct LineItem {
-        enum class Type {
+        enum class Type : bool {
             Pending,
             Final,
         } type { Type::Final };
@@ -133,7 +131,7 @@ public:
     const Vector<String>& supportedCountries() const { return m_supportedCountries; }
     void setSupportedCountries(Vector<String>&& supportedCountries) { m_supportedCountries = WTFMove(supportedCountries); }
 
-    enum class Requester {
+    enum class Requester : bool {
         ApplePayJS,
         PaymentRequest,
     };
@@ -141,9 +139,9 @@ public:
     Requester requester() const { return m_requester; }
     void setRequester(Requester requester) { m_requester = requester; }
 
-#if defined(APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS)
-APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS
-#undef APPLEPAYSESSIONPAYMENTREQUEST_PUBLIC_ADDITIONS
+#if HAVE(PASSKIT_INSTALLMENTS)
+    const PaymentInstallmentConfiguration& installmentConfiguration() const { return m_installmentConfiguration; }
+    void setInstallmentConfiguration(PaymentInstallmentConfiguration&& installmentConfiguration) { m_installmentConfiguration = WTFMove(installmentConfiguration); }
 #endif
 
 private:
@@ -172,9 +170,8 @@ private:
 
     Requester m_requester { Requester::ApplePayJS };
 
-#if defined(APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS)
-APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS
-#undef APPLEPAYSESSIONPAYMENTREQUEST_PRIVATE_ADDITIONS
+#if HAVE(PASSKIT_INSTALLMENTS)
+    PaymentInstallmentConfiguration m_installmentConfiguration;
 #endif
 };
 
@@ -225,9 +222,19 @@ struct ShippingMethodUpdate {
 
 WEBCORE_EXPORT bool isFinalStateResult(const Optional<PaymentAuthorizationResult>&);
 
-}
+} // namespace WebCore
 
 namespace WTF {
+
+template<> struct EnumTraits<WebCore::ApplePaySessionPaymentRequest::ShippingType> {
+    using values = EnumValues<
+        WebCore::ApplePaySessionPaymentRequest::ShippingType,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::Shipping,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::Delivery,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::StorePickup,
+        WebCore::ApplePaySessionPaymentRequest::ShippingType::ServicePickup
+    >;
+};
 
 template<> struct EnumTraits<WebCore::PaymentError::Code> {
     using values = EnumValues<
@@ -258,6 +265,6 @@ template<> struct EnumTraits<WebCore::PaymentError::ContactField> {
     >;
 };
 
-}
+} // namespace WTF
 
 #endif

@@ -110,6 +110,8 @@ public:
     using FrameFlatteningValue = FrameFlattening;
     ExceptionOr<void> setFrameFlattening(FrameFlatteningValue);
 
+    ExceptionOr<void> setEditableRegionEnabled(bool);
+
     static void setAllowsAnySSLCertificate(bool);
 
     ExceptionOr<bool> deferredCSSParserEnabled();
@@ -131,10 +133,13 @@ public:
     static void setWebGPUEnabled(bool);
     static void setPictureInPictureAPIEnabled(bool);
     static void setScreenCaptureEnabled(bool);
+    static void setFetchAPIKeepAliveEnabled(bool);
 
     static bool webAnimationsCSSIntegrationEnabled();
 
     void setShouldDeactivateAudioSession(bool);
+
+    void setStorageAccessAPIPerPageScopeEnabled(bool);
 
 private:
     explicit InternalSettings(Page*);
@@ -173,7 +178,7 @@ private:
         bool m_imagesEnabled;
         bool m_preferMIMETypeForImages;
         Seconds m_minimumDOMTimerInterval;
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
         bool m_shouldDisplaySubtitles;
         bool m_shouldDisplayCaptions;
         bool m_shouldDisplayTextDescriptions;
@@ -220,6 +225,7 @@ private:
         bool m_indexedDBWorkersEnabled;
         bool m_webGL2Enabled;
         bool m_setScreenCaptureEnabled;
+        bool m_fetchAPIKeepAliveAPIEnabled;
 
         bool m_shouldMockBoldSystemFontForAccessibility;
 #if USE(AUDIO_SESSION)

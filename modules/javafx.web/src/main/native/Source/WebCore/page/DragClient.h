@@ -37,7 +37,10 @@ class DataTransfer;
 class Element;
 class Frame;
 class Image;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
 struct PromisedAttachmentInfo;
+#endif
 
 class DragClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -47,7 +50,7 @@ public:
     virtual void willPerformDragDestinationAction(DragDestinationAction, const DragData&) = 0;
     virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) = 0;
     virtual void didConcludeEditDrag() { }
-    virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& rootViewPoint) = 0;
+    virtual OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint& rootViewPoint) = 0;
 
     virtual void startDrag(DragItem, DataTransfer&, Frame&) = 0;
     virtual void dragEnded() { }

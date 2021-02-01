@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,27 +32,22 @@
 #include "AirGenerate.h"
 #include "AirHelpers.h"
 #include "AirOpcodeUtils.h"
-#include "AirValidate.h"
 #include "AllowMacroScratchRegisterUsageIf.h"
-#include "B3CCallValue.h"
 #include "B3CheckSpecial.h"
 #include "B3CheckValue.h"
 #include "B3PatchpointSpecial.h"
 #include "B3Procedure.h"
 #include "B3ProcedureInlines.h"
 #include "BinarySwitch.h"
-#include "DisallowMacroScratchRegisterUsage.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "ScratchRegisterAllocator.h"
-#include "VirtualRegister.h"
 #include "WasmCallingConvention.h"
 #include "WasmContextInlines.h"
 #include "WasmExceptionType.h"
 #include "WasmFunctionParser.h"
 #include "WasmInstance.h"
 #include "WasmMemory.h"
-#include "WasmOMGPlan.h"
 #include "WasmOSREntryData.h"
 #include "WasmOpcodeOrigin.h"
 #include "WasmOperations.h"
@@ -60,7 +55,6 @@
 #include "WasmThunks.h"
 #include <limits>
 #include <wtf/Box.h>
-#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace Wasm {
@@ -899,6 +893,7 @@ AirIRGenerator::AirIRGenerator(const ModuleInformation& info, B3::Procedure& pro
         }
     }
 
+    if (wasmFunctionSizeCanBeOMGCompiled(m_info.functions[m_functionIndex].data.size()))
     emitEntryTierUpCheck();
 }
 
@@ -1826,7 +1821,7 @@ void AirIRGenerator::emitLoopTierUpCheck(uint32_t loopIndex, const Stack& enclos
             forceOSREntry.link(&jit);
             tierUp.link(&jit);
 
-            jit.probe(operationWasmTriggerOSREntryNow, osrEntryDataPtr);
+            jit.probe(tagCFunction<JITProbePtrTag>(operationWasmTriggerOSREntryNow), osrEntryDataPtr);
             jit.branchTestPtr(CCallHelpers::Zero, GPRInfo::argumentGPR0).linkTo(tierUpResume, &jit);
             jit.farJump(GPRInfo::argumentGPR1, WasmEntryPtrTag);
         });
@@ -2460,7 +2455,7 @@ void AirIRGenerator::emitChecksForModOrDiv(bool isSignedDiv, ExpressionType left
         append(Move, Arg::bigImm(static_cast<uint64_t>(min)), minTmp);
         append(op, Arg::relCond(MacroAssembler::Equal), left, minTmp, minTmp);
 
-        append(Move, Arg::imm(-1), negOne);
+        append(Move, Arg::isValidImmForm(-1) ? Arg::imm(-1) : Arg::bigImm(-1) , negOne);
         append(op, Arg::relCond(MacroAssembler::Equal), right, negOne, negOne);
 
         emitCheck([&] {
@@ -2817,11 +2812,11 @@ template<>
 auto AirIRGenerator::addOp<OpType::I32TruncSF64>(ExpressionType arg, ExpressionType& result) -> PartialResult
 {
     auto max = addConstant(Type::F64, bitwise_cast<uint64_t>(-static_cast<double>(std::numeric_limits<int32_t>::min())));
-    auto min = addConstant(Type::F64, bitwise_cast<uint64_t>(static_cast<double>(std::numeric_limits<int32_t>::min())));
+    auto min = addConstant(Type::F64, bitwise_cast<uint64_t>(static_cast<double>(std::numeric_limits<int32_t>::min()) - 1.0));
 
     auto temp1 = g32();
     auto temp2 = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThanOrUnordered), arg, min, temp1);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThanOrEqualOrUnordered), arg, min, temp1);
     append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleGreaterThanOrEqualOrUnordered), arg, max, temp2);
     append(Or32, temp1, temp2);
 
@@ -3189,7 +3184,7 @@ template<> auto AirIRGenerator::addOp<OpType::I32Sub>(ExpressionType arg0, Expre
 template<> auto AirIRGenerator::addOp<OpType::F64Le>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThanOrEqual), arg0, arg1, result);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThanOrEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3215,7 +3210,7 @@ template<> auto AirIRGenerator::addOp<OpType::F64Ne>(ExpressionType arg0, Expres
 template<> auto AirIRGenerator::addOp<OpType::F64Lt>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThan), arg0, arg1, result);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleLessThanAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3233,13 +3228,13 @@ auto AirIRGenerator::addFloatingPointMinOrMax(Type floatType, MinOrMax minOrMax,
     BasicBlock* continuation = m_code.addBlock();
 
     auto branchOp = floatType == F32 ? BranchFloat : BranchDouble;
-    append(m_currentBlock, branchOp, Arg::doubleCond(MacroAssembler::DoubleEqual), arg0, arg1);
+    append(m_currentBlock, branchOp, Arg::doubleCond(MacroAssembler::DoubleEqualAndOrdered), arg0, arg1);
     m_currentBlock->setSuccessors(isEqual, notEqual);
 
-    append(notEqual, branchOp, Arg::doubleCond(MacroAssembler::DoubleLessThan), arg0, arg1);
+    append(notEqual, branchOp, Arg::doubleCond(MacroAssembler::DoubleLessThanAndOrdered), arg0, arg1);
     notEqual->setSuccessors(isLessThan, notLessThan);
 
-    append(notLessThan, branchOp, Arg::doubleCond(MacroAssembler::DoubleGreaterThan), arg0, arg1);
+    append(notLessThan, branchOp, Arg::doubleCond(MacroAssembler::DoubleGreaterThanAndOrdered), arg0, arg1);
     notLessThan->setSuccessors(isGreaterThan, isNaN);
 
     auto andOp = floatType == F32 ? AndFloat : AndDouble;
@@ -3348,7 +3343,7 @@ template<> auto AirIRGenerator::addOp<OpType::F32Ne>(ExpressionType arg0, Expres
 template<> auto AirIRGenerator::addOp<OpType::F64Gt>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleGreaterThan), arg0, arg1, result);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleGreaterThanAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3362,7 +3357,7 @@ template<> auto AirIRGenerator::addOp<OpType::F32Sqrt>(ExpressionType arg0, Expr
 template<> auto AirIRGenerator::addOp<OpType::F64Ge>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleGreaterThanOrEqual), arg0, arg1, result);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleGreaterThanOrEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3532,7 +3527,7 @@ template<> auto AirIRGenerator::addOp<OpType::I64Rotl>(ExpressionType arg0, Expr
 template<> auto AirIRGenerator::addOp<OpType::F32Lt>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleLessThan), arg0, arg1, result);
+    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleLessThanAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3546,21 +3541,21 @@ template<> auto AirIRGenerator::addOp<OpType::F64ConvertSI32>(ExpressionType arg
 template<> auto AirIRGenerator::addOp<OpType::F64Eq>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleEqual), arg0, arg1, result);
+    append(CompareDouble, Arg::doubleCond(MacroAssembler::DoubleEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
 template<> auto AirIRGenerator::addOp<OpType::F32Le>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleLessThanOrEqual), arg0, arg1, result);
+    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleLessThanOrEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
 template<> auto AirIRGenerator::addOp<OpType::F32Ge>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleGreaterThanOrEqual), arg0, arg1, result);
+    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleGreaterThanOrEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3772,7 +3767,7 @@ template<> auto AirIRGenerator::addOp<OpType::F64ReinterpretI64>(ExpressionType 
 template<> auto AirIRGenerator::addOp<OpType::F32Eq>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleEqual), arg0, arg1, result);
+    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleEqualAndOrdered), arg0, arg1, result);
     return { };
 }
 
@@ -3836,7 +3831,7 @@ template<> auto AirIRGenerator::addOp<OpType::I64Shl>(ExpressionType arg0, Expre
 template<> auto AirIRGenerator::addOp<OpType::F32Gt>(ExpressionType arg0, ExpressionType arg1, ExpressionType& result) -> PartialResult
 {
     result = g32();
-    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleGreaterThan), arg0, arg1, result);
+    append(CompareFloat, Arg::doubleCond(MacroAssembler::DoubleGreaterThanAndOrdered), arg0, arg1, result);
     return { };
 }
 

@@ -40,6 +40,7 @@ API/JSValueRef.cpp
 API/JSWeakObjectMapRefPrivate.cpp
 API/JSWeakPrivate.cpp
 API/JSWeakValue.cpp
+API/MarkedJSValueRefArray.cpp
 API/OpaqueJSString.cpp
 
 assembler/AbstractMacroAssembler.cpp
@@ -108,6 +109,7 @@ b3/B3AtomicValue.cpp
 b3/B3Bank.cpp
 b3/B3BasicBlock.cpp
 b3/B3BlockInsertionSet.cpp
+b3/B3BottomTupleValue.cpp
 b3/B3BreakCriticalEdges.cpp
 b3/B3CCallValue.cpp
 b3/B3CaseCollection.cpp
@@ -195,6 +197,7 @@ bytecode/AdaptiveInferredPropertyValueWatchpointBase.cpp
 bytecode/ArithProfile.cpp
 bytecode/ArrayAllocationProfile.cpp
 bytecode/ArrayProfile.cpp
+bytecode/ByValInfo.cpp
 bytecode/BytecodeBasicBlock.cpp
 bytecode/BytecodeDumper.cpp
 bytecode/BytecodeGeneratorification.cpp
@@ -218,6 +221,8 @@ bytecode/DFGExitProfile.cpp
 bytecode/DataFormat.cpp
 bytecode/DeferredCompilationCallback.cpp
 bytecode/DeferredSourceDump.cpp
+bytecode/DeleteByStatus.cpp
+bytecode/DeleteByIdVariant.cpp
 bytecode/DirectEvalCodeCache.cpp
 bytecode/EvalCodeBlock.cpp
 bytecode/ExecutableToCodeBlockEdge.cpp
@@ -264,6 +269,7 @@ bytecode/ProxyableAccessCase.cpp
 bytecode/PutByIdFlags.cpp
 bytecode/PutByIdStatus.cpp
 bytecode/PutByIdVariant.cpp
+bytecode/PutByValFlags.cpp
 bytecode/RecordedStatuses.cpp
 bytecode/ReduceWhitespace.cpp
 bytecode/SpeculatedType.cpp
@@ -327,6 +333,7 @@ dfg/DFGCleanUpPhase.cpp
 dfg/DFGClobberSet.cpp
 dfg/DFGClobberize.cpp
 dfg/DFGClobbersExitState.cpp
+dfg/DFGCodeOriginPool.cpp
 dfg/DFGCombinedLiveness.cpp
 dfg/DFGCommon.cpp
 dfg/DFGCommonData.cpp
@@ -343,6 +350,7 @@ dfg/DFGDesiredWatchpoints.cpp
 dfg/DFGDesiredWeakReferences.cpp
 dfg/DFGDisassembler.cpp
 dfg/DFGDoesGC.cpp
+dfg/DFGDoesGCCheck.cpp
 dfg/DFGDriver.cpp
 dfg/DFGEdge.cpp
 dfg/DFGEpoch.cpp
@@ -673,8 +681,6 @@ llint/LLIntEntrypoint.cpp
 llint/LLIntExceptions.cpp
 llint/LLIntSlowPaths.cpp
 llint/LLIntThunks.cpp
-// FIXME: We can't bundle this file due to a clang bug.
-llint/LowLevelInterpreter.cpp @no-unify
 
 parser/Lexer.cpp
 parser/ModuleAnalyzer.cpp
@@ -704,6 +710,9 @@ profiler/ProfilerProfiledBytecodes.cpp
 profiler/ProfilerUID.cpp
 
 runtime/AbstractModuleRecord.cpp
+runtime/AggregateError.cpp
+runtime/AggregateErrorConstructor.cpp
+runtime/AggregateErrorPrototype.cpp
 runtime/ArgList.cpp
 runtime/ArrayBuffer.cpp
 runtime/ArrayBufferView.cpp
@@ -758,10 +767,10 @@ runtime/DatePrototype.cpp
 runtime/DirectArguments.cpp
 runtime/DirectArgumentsOffset.cpp
 runtime/DirectEvalExecutable.cpp
-runtime/DisallowVMReentry.cpp
 runtime/DoublePredictionFuzzerAgent.cpp
 runtime/DumpContext.cpp
-runtime/ECMAScriptSpecInternalFunctions.cpp
+runtime/ECMAMode.cpp
+runtime/EnsureStillAliveHere.cpp
 runtime/Error.cpp
 runtime/ErrorConstructor.cpp
 runtime/ErrorHandlingScope.cpp
@@ -777,6 +786,8 @@ runtime/ExceptionScope.cpp
 runtime/ExecutableBase.cpp
 runtime/FileBasedFuzzerAgent.cpp
 runtime/FileBasedFuzzerAgentBase.cpp
+runtime/FinalizationRegistryConstructor.cpp
+runtime/FinalizationRegistryPrototype.cpp
 runtime/FunctionConstructor.cpp
 runtime/FunctionExecutable.cpp
 runtime/FunctionExecutableDump.cpp
@@ -805,6 +816,12 @@ runtime/IntlCollatorPrototype.cpp
 runtime/IntlDateTimeFormat.cpp
 runtime/IntlDateTimeFormatConstructor.cpp
 runtime/IntlDateTimeFormatPrototype.cpp
+runtime/IntlDisplayNames.cpp
+runtime/IntlDisplayNamesConstructor.cpp
+runtime/IntlDisplayNamesPrototype.cpp
+runtime/IntlLocale.cpp
+runtime/IntlLocaleConstructor.cpp
+runtime/IntlLocalePrototype.cpp
 runtime/IntlNumberFormat.cpp
 runtime/IntlNumberFormatConstructor.cpp
 runtime/IntlNumberFormatPrototype.cpp
@@ -812,6 +829,9 @@ runtime/IntlObject.cpp
 runtime/IntlPluralRules.cpp
 runtime/IntlPluralRulesConstructor.cpp
 runtime/IntlPluralRulesPrototype.cpp
+runtime/IntlRelativeTimeFormat.cpp
+runtime/IntlRelativeTimeFormatConstructor.cpp
+runtime/IntlRelativeTimeFormatPrototype.cpp
 runtime/IteratorOperations.cpp
 runtime/IteratorPrototype.cpp
 runtime/JSArray.cpp
@@ -835,6 +855,7 @@ runtime/JSDataView.cpp
 runtime/JSDataViewPrototype.cpp
 runtime/JSDateMath.cpp
 runtime/JSDestructibleObjectHeapCellType.cpp
+runtime/JSFinalizationRegistry.cpp
 runtime/JSFunction.cpp
 runtime/JSGenerator.cpp
 runtime/JSGeneratorFunction.cpp
@@ -917,7 +938,7 @@ runtime/Operations.cpp
 runtime/Options.cpp
 runtime/PredictionFileCreatingFuzzerAgent.cpp
 runtime/ProgramExecutable.cpp
-runtime/PromiseTimer.cpp
+runtime/DeferredWorkTimer.cpp
 runtime/PropertyDescriptor.cpp
 runtime/PropertySlot.cpp
 runtime/PropertyTable.cpp
@@ -994,11 +1015,9 @@ runtime/WideningNumberPredictionFuzzerAgent.cpp
 JSCBuiltins.cpp
 
 tools/CellList.cpp
-tools/CodeProfile.cpp
-tools/CodeProfiling.cpp
 tools/CompilerTimingScope.cpp
+tools/FunctionAllowlist.cpp
 tools/FunctionOverrides.cpp
-tools/FunctionWhitelist.cpp
 tools/HeapVerifier.cpp
 tools/Integrity.cpp
 tools/JSDollarVM.cpp

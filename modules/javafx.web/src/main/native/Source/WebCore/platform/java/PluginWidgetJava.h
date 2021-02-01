@@ -60,7 +60,7 @@ public:
     ~PluginWidgetJava() override;
 
     void invalidateRect(const IntRect&) override;
-    void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin) override;
+    void paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy = SecurityOriginPaintPolicy::AnyOrigin, EventRegionContext* = nullptr) override;
     void invalidateWindowlessPluginRect(const IntRect& rect);
     void convertToPage(IntRect& rect);
     void focusPluginElement(bool isFocused);

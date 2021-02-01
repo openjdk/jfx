@@ -61,8 +61,6 @@ public:
         return getLSBSet(v);
     }
 
-    static constexpr Scale ScalePtr = TimesFour;
-
     // For storing immediate number
     static constexpr RegisterID immTempRegister = MIPSRegisters::t0;
     // For storing data loaded from the memory
@@ -74,6 +72,8 @@ public:
 
     // FP temp register
     static constexpr FPRegisterID fpTempRegister = MIPSRegisters::f16;
+
+    RegisterID scratchRegister() { return dataTempRegister; }
 
     static constexpr int MaximumCompactPtrAlignedAddressOffset = 0x7FFFFFFF;
 
@@ -99,12 +99,12 @@ public:
     };
 
     enum DoubleCondition {
-        DoubleEqual,
-        DoubleNotEqual,
-        DoubleGreaterThan,
-        DoubleGreaterThanOrEqual,
-        DoubleLessThan,
-        DoubleLessThanOrEqual,
+        DoubleEqualAndOrdered,
+        DoubleNotEqualAndOrdered,
+        DoubleGreaterThanAndOrdered,
+        DoubleGreaterThanOrEqualAndOrdered,
+        DoubleLessThanAndOrdered,
+        DoubleLessThanOrEqualAndOrdered,
         DoubleEqualOrUnordered,
         DoubleNotEqualOrUnordered,
         DoubleGreaterThanOrUnordered,
@@ -475,6 +475,25 @@ public:
         m_assembler.subu(dest, MIPSRegisters::zero, src);
     }
 
+
+    void or8(TrustedImm32 imm, AbsoluteAddress dest)
+    {
+        if (!imm.m_value && !m_fixedWidth)
+            return;
+
+        if (m_fixedWidth) {
+            load8(dest.m_ptr, immTempRegister);
+            or32(imm, immTempRegister);
+            store8(immTempRegister, dest.m_ptr);
+        } else {
+            uintptr_t adr = reinterpret_cast<uintptr_t>(dest.m_ptr);
+            m_assembler.lui(addrTempRegister, (adr + 0x8000) >> 16);
+            m_assembler.lbu(immTempRegister, addrTempRegister, adr & 0xffff);
+            or32(imm, immTempRegister);
+            m_assembler.sb(immTempRegister, addrTempRegister, adr & 0xffff);
+        }
+    }
+
     void or16(TrustedImm32 imm, AbsoluteAddress dest)
     {
         if (!imm.m_value && !m_fixedWidth)
@@ -616,6 +635,12 @@ public:
             }
             m_assembler.sw(dataTempRegister, addrTempRegister, address.offset);
         }
+    }
+
+    // This is only referenced by code intented for ARM64_32.
+    void rotateRight32(TrustedImm32, RegisterID)
+    {
+        UNREACHABLE_FOR_PLATFORM();
     }
 
     void rshift32(RegisterID shiftAmount, RegisterID dest)
@@ -1306,7 +1331,7 @@ public:
         }
     }
 
-    void store8(RegisterID src, void* address)
+    void store8(RegisterID src, const void* address)
     {
         if (m_fixedWidth) {
             /*
@@ -1686,7 +1711,7 @@ public:
             move(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         if (src != dest || m_fixedWidth)
             move(src, dest);
@@ -3074,6 +3099,54 @@ public:
         m_assembler.addd(dest, dest, fpTempRegister);
     }
 
+    // andDouble and orDouble are a bit convoluted to implement
+    // because we don't have FP instructions for those
+    // operations. That means we'll have to go back and forth between
+    // the FPU and the CPU, which accounts for most of the code here.
+    void andDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.mfc1(immTempRegister, op1);
+        m_assembler.mfc1(dataTempRegister, op2);
+        m_assembler.andInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+        m_assembler.mtc1(cmpTempRegister, dest);
+
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mfhc1(immTempRegister, op1);
+        m_assembler.mfhc1(dataTempRegister, op2);
+#else
+        m_assembler.mfc1(immTempRegister, FPRegisterID(op1+1));
+        m_assembler.mfc1(dataTempRegister, FPRegisterID(op2+1));
+#endif
+        m_assembler.andInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mthc1(cmpTempRegister, dest);
+#else
+        m_assembler.mtc1(cmpTempRegister, FPRegisterID(dest+1));
+#endif
+    }
+
+    void orDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.mfc1(immTempRegister, op1);
+        m_assembler.mfc1(dataTempRegister, op2);
+        m_assembler.orInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+        m_assembler.mtc1(cmpTempRegister, dest);
+
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mfhc1(immTempRegister, op1);
+        m_assembler.mfhc1(dataTempRegister, op2);
+#else
+        m_assembler.mfc1(immTempRegister, FPRegisterID(op1+1));
+        m_assembler.mfc1(dataTempRegister, FPRegisterID(op2+1));
+#endif
+        m_assembler.orInsn(cmpTempRegister, immTempRegister, dataTempRegister);
+#if WTF_MIPS_ISA_REV(2) && WTF_MIPS_FP64
+        m_assembler.mthc1(cmpTempRegister, dest);
+#else
+        m_assembler.mtc1(cmpTempRegister, FPRegisterID(dest+1));
+#endif
+    }
+
     void subDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.subd(dest, dest, src);
@@ -3204,27 +3277,27 @@ public:
 
     Jump branchDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right)
     {
-        if (cond == DoubleEqual) {
+        if (cond == DoubleEqualAndOrdered) {
             m_assembler.ceqd(left, right);
             return branchTrue();
         }
-        if (cond == DoubleNotEqual) {
+        if (cond == DoubleNotEqualAndOrdered) {
             m_assembler.cueqd(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleGreaterThan) {
+        if (cond == DoubleGreaterThanAndOrdered) {
             m_assembler.cngtd(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleGreaterThanOrEqual) {
+        if (cond == DoubleGreaterThanOrEqualAndOrdered) {
             m_assembler.cnged(left, right);
             return branchFalse(); // false
         }
-        if (cond == DoubleLessThan) {
+        if (cond == DoubleLessThanAndOrdered) {
             m_assembler.cltd(left, right);
             return branchTrue();
         }
-        if (cond == DoubleLessThanOrEqual) {
+        if (cond == DoubleLessThanOrEqualAndOrdered) {
             m_assembler.cled(left, right);
             return branchTrue();
         }
@@ -3305,7 +3378,7 @@ public:
     Jump branchDoubleNonZero(FPRegisterID reg, FPRegisterID scratch)
     {
         m_assembler.vmov(scratch, MIPSRegisters::zero, MIPSRegisters::zero);
-        return branchDouble(DoubleNotEqual, reg, scratch);
+        return branchDouble(DoubleNotEqualAndOrdered, reg, scratch);
     }
 
     Jump branchDoubleZeroOrNaN(FPRegisterID reg, FPRegisterID scratch)

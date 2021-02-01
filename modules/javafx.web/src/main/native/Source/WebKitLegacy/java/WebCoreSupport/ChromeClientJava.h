@@ -55,7 +55,7 @@ public:
     // created Page has its show method called.
     // The FrameLoadRequest parameter is only for ChromeClient to check if the
     // request could be fulfilled. The ChromeClient should not load the request.
-    Page* createWindow(Frame&, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) override;
+    Page* createWindow(Frame&, const WindowFeatures&, const NavigationAction&) override;
     void show() override;
 
     bool canRunModal() override;
@@ -154,7 +154,7 @@ public:
     void setNeedsOneShotDrawingSynchronization() override;
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
-    void scheduleCompositingLayerFlush() override;
+    void scheduleRenderingUpdate() override;
     void attachViewOverlayGraphicsLayer(GraphicsLayer*) override;
 
 #if ENABLE(TOUCH_EVENTS)

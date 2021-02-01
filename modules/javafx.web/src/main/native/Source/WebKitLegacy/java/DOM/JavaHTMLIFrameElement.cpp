@@ -146,7 +146,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setScrollin
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSrcImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::srcAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setSrcImpl(JNIEnv* env, jclass, jlong peer, jstring value)

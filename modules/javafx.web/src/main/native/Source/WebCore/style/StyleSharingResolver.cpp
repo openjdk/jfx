@@ -223,7 +223,13 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
         return false;
     if (candidateElement.focused() != element.focused())
         return false;
+    if (candidateElement.hasFocusWithin() != element.hasFocusWithin())
+        return false;
+    if (candidateElement.isBeingDragged() != element.isBeingDragged())
+        return false;
     if (candidateElement.shadowPseudoId() != element.shadowPseudoId())
+        return false;
+    if (element.isInShadowTree() && candidateElement.partNames() != element.partNames())
         return false;
     if (&candidateElement == m_document.cssTarget())
         return false;
@@ -232,8 +238,6 @@ bool SharingResolver::canShareStyleWithElement(const Context& context, const Sty
     if (const_cast<StyledElement&>(candidateElement).additionalPresentationAttributeStyle() != const_cast<StyledElement&>(element).additionalPresentationAttributeStyle())
         return false;
     if (candidateElement.affectsNextSiblingElementStyle() || candidateElement.styleIsAffectedByPreviousSibling())
-        return false;
-    if (candidateElement.styleAffectedByFocusWithin() || element.styleAffectedByFocusWithin())
         return false;
 
     auto& candidateElementId = candidateElement.idForStyleResolution();

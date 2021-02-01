@@ -30,10 +30,13 @@
 #include "AnimationPlaybackEvent.h"
 #include "AnimationTimeline.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "DOMPromiseProxy.h"
 #include "DeclarativeAnimation.h"
 #include "Document.h"
 #include "DocumentTimeline.h"
+#include "Element.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "InspectorInstrumentation.h"
@@ -45,7 +48,6 @@
 #include "StyledElement.h"
 #include "WebAnimationUtilities.h"
 #include <wtf/IsoMallocInlines.h>
-#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Optional.h>
 #include <wtf/text/TextStream.h>
@@ -55,20 +57,10 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebAnimation);
 
-HashSet<WebAnimation*>& WebAnimation::instances(const LockHolder&)
+HashSet<WebAnimation*>& WebAnimation::instances()
 {
     static NeverDestroyed<HashSet<WebAnimation*>> instances;
     return instances;
-}
-
-Lock& WebAnimation::instancesMutex()
-{
-    static LazyNeverDestroyed<Lock> mutex;
-    static std::once_flag initializeMutex;
-    std::call_once(initializeMutex, [] {
-        mutex.construct();
-    });
-    return mutex.get();
 }
 
 Ref<WebAnimation> WebAnimation::create(Document& document, AnimationEffect* effect)
@@ -102,8 +94,7 @@ WebAnimation::WebAnimation(Document& document)
     m_readyPromise->resolve(*this);
     suspendIfNeeded();
 
-    LockHolder lock(instancesMutex());
-    instances(lock).add(this);
+    instances().add(this);
 }
 
 WebAnimation::~WebAnimation()
@@ -113,9 +104,8 @@ WebAnimation::~WebAnimation()
     if (m_timeline)
         m_timeline->forgetAnimation(this);
 
-    LockHolder lock(instancesMutex());
-    ASSERT(instances(lock).contains(this));
-    instances(lock).remove(this);
+    ASSERT(instances().contains(this));
+    instances().remove(this);
 }
 
 void WebAnimation::contextDestroyed()
@@ -144,19 +134,26 @@ void WebAnimation::unsuspendEffectInvalidation()
     --m_suspendCount;
 }
 
-void WebAnimation::effectTimingDidChange(Optional<ComputedEffectTiming> previousTiming)
+void WebAnimation::effectTimingDidChange()
 {
     timingDidChange(DidSeek::No, SynchronouslyNotify::Yes);
 
+    if (m_effect)
+        m_effect->animationDidChangeTimingProperties();
+
     InspectorInstrumentation::didChangeWebAnimationEffectTiming(*this);
+}
 
-    if (!previousTiming)
-        return;
+void WebAnimation::setId(const String& id)
+{
+    m_id = id;
 
-    auto* effect = this->effect();
-    ASSERT(effect);
-    if (previousTiming->progress != effect->getComputedTiming().progress)
-        effect->animationDidSeek();
+    InspectorInstrumentation::didChangeWebAnimationName(*this);
+}
+
+void WebAnimation::setBindingsEffect(RefPtr<AnimationEffect>&& newEffect)
+{
+    setEffect(WTFMove(newEffect));
 }
 
 void WebAnimation::setEffect(RefPtr<AnimationEffect>&& newEffect)
@@ -202,11 +199,6 @@ void WebAnimation::setEffect(RefPtr<AnimationEffect>&& newEffect)
     invalidateEffect();
 }
 
-AnimationTimeline* WebAnimation::timeline() const
-{
-    return m_timeline.get();
-}
-
 void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool doNotRemoveFromTimeline)
 {
     if (m_effect == newEffect)
@@ -216,11 +208,11 @@ void WebAnimation::setEffectInternal(RefPtr<AnimationEffect>&& newEffect, bool d
 
     Element* previousTarget = nullptr;
     if (is<KeyframeEffect>(oldEffect))
-        previousTarget = downcast<KeyframeEffect>(oldEffect.get())->target();
+        previousTarget = downcast<KeyframeEffect>(oldEffect.get())->targetElementOrPseudoElement();
 
     Element* newTarget = nullptr;
     if (is<KeyframeEffect>(m_effect))
-        newTarget = downcast<KeyframeEffect>(m_effect.get())->target();
+        newTarget = downcast<KeyframeEffect>(m_effect.get())->targetElementOrPseudoElement();
 
     // Update the effect-to-animation relationships and the timeline's animation map.
     if (oldEffect) {
@@ -245,7 +237,7 @@ void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
     // https://drafts.csswg.org/web-animations-1/#setting-the-timeline
 
     // 2. If new timeline is the same object as old timeline, abort this procedure.
-    if (timeline == m_timeline.get())
+    if (timeline == m_timeline)
         return;
 
     // 4. If the animation start time of animation is resolved, make animation's hold time unresolved.
@@ -254,7 +246,7 @@ void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
 
     if (is<KeyframeEffect>(m_effect)) {
         auto* keyframeEffect = downcast<KeyframeEffect>(m_effect.get());
-        auto* target = keyframeEffect->target();
+        auto* target = keyframeEffect->targetElementOrPseudoElement();
         if (target) {
             // In the case of a declarative animation, we don't want to remove the animation from the relevant maps because
             // while the timeline was set via the API, the element still has a transition or animation set up and we must
@@ -270,7 +262,7 @@ void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
     auto protectedThis = makeRef(*this);
     setTimelineInternal(WTFMove(timeline));
 
-    setSuspended(is<DocumentTimeline>(m_timeline.get()) && downcast<DocumentTimeline>(*m_timeline).animationsAreSuspended());
+    setSuspended(is<DocumentTimeline>(m_timeline) && downcast<DocumentTimeline>(*m_timeline).animationsAreSuspended());
 
     // 5. Run the procedure to update an animation's finished state for animation with the did seek flag set to false,
     // and the synchronously notify flag set to false.
@@ -281,13 +273,13 @@ void WebAnimation::setTimeline(RefPtr<AnimationTimeline>&& timeline)
 
 void WebAnimation::setTimelineInternal(RefPtr<AnimationTimeline>&& timeline)
 {
-    if (m_timeline.get() == timeline)
+    if (m_timeline == timeline)
         return;
 
     if (m_timeline)
         m_timeline->removeAnimation(*this);
 
-    m_timeline = makeWeakPtr(timeline.get());
+    m_timeline = WTFMove(timeline);
 
     if (m_effect)
         m_effect->animationTimelineDidChange(m_timeline.get());
@@ -309,23 +301,25 @@ void WebAnimation::effectTargetDidChange(Element* previousTarget, Element* newTa
     InspectorInstrumentation::didChangeWebAnimationEffectTarget(*this);
 }
 
-Optional<double> WebAnimation::startTime() const
+Optional<double> WebAnimation::bindingsStartTime() const
 {
     if (!m_startTime)
         return WTF::nullopt;
-    return secondsToWebAnimationsAPITime(m_startTime.value());
+    return secondsToWebAnimationsAPITime(*m_startTime);
 }
 
-void WebAnimation::setStartTime(Optional<double> startTime)
+void WebAnimation::setBindingsStartTime(Optional<double> newStartTime)
+{
+    if (newStartTime)
+        setStartTime(Seconds::fromMilliseconds(*newStartTime));
+    else
+        setStartTime(WTF::nullopt);
+}
+
+void WebAnimation::setStartTime(Optional<Seconds> newStartTime)
 {
     // 3.4.6 The procedure to set the start time of animation, animation, to new start time, is as follows:
     // https://drafts.csswg.org/web-animations/#setting-the-start-time-of-an-animation
-
-    Optional<Seconds> newStartTime;
-    if (!startTime)
-        newStartTime = WTF::nullopt;
-    else
-        newStartTime = Seconds::fromMilliseconds(startTime.value());
 
     // 1. Let timeline time be the current time value of the timeline that animation is associated with. If
     //    there is no timeline associated with animation or the associated timeline is inactive, let the timeline
@@ -385,12 +379,12 @@ ExceptionOr<void> WebAnimation::setBindingsCurrentTime(Optional<double> currentT
     return setCurrentTime(Seconds::fromMilliseconds(currentTime.value()));
 }
 
-Optional<Seconds> WebAnimation::currentTime() const
+Optional<Seconds> WebAnimation::currentTime(Optional<Seconds> startTime) const
 {
-    return currentTime(RespectHoldTime::Yes);
+    return currentTime(RespectHoldTime::Yes, startTime);
 }
 
-Optional<Seconds> WebAnimation::currentTime(RespectHoldTime respectHoldTime) const
+Optional<Seconds> WebAnimation::currentTime(RespectHoldTime respectHoldTime, Optional<Seconds> startTime) const
 {
     // 3.4.4. The current time of an animation
     // https://drafts.csswg.org/web-animations-1/#the-current-time-of-an-animation
@@ -410,7 +404,7 @@ Optional<Seconds> WebAnimation::currentTime(RespectHoldTime respectHoldTime) con
         return WTF::nullopt;
 
     // Otherwise, current time = (timeline time - start time) * playback rate
-    return (m_timeline->currentTime().value() - m_startTime.value()) * m_playbackRate;
+    return (*m_timeline->currentTime() - startTime.valueOr(*m_startTime)) * m_playbackRate;
 }
 
 ExceptionOr<void> WebAnimation::silentlySetCurrentTime(Optional<Seconds> seekTime)
@@ -483,7 +477,7 @@ ExceptionOr<void> WebAnimation::setCurrentTime(Optional<Seconds> seekTime)
     timingDidChange(DidSeek::Yes, SynchronouslyNotify::No);
 
     if (m_effect)
-        m_effect->animationDidSeek();
+        m_effect->animationDidChangeTimingProperties();
 
     invalidateEffect();
 
@@ -514,6 +508,9 @@ void WebAnimation::setPlaybackRate(double newPlaybackRate)
     // 4. If previous time is resolved, set the current time of animation to previous time.
     if (previousTime)
         setCurrentTime(previousTime);
+
+    if (m_effect)
+        m_effect->animationDidChangeTimingProperties();
 }
 
 void WebAnimation::updatePlaybackRate(double newPlaybackRate)
@@ -566,6 +563,9 @@ void WebAnimation::updatePlaybackRate(double newPlaybackRate)
         // Run the procedure to play an animation for animation with the auto-rewind flag set to false.
         play(AutoRewind::No);
     }
+
+    if (m_effect)
+        m_effect->animationDidChangeTimingProperties();
 }
 
 void WebAnimation::applyPendingPlaybackRate()
@@ -622,12 +622,6 @@ Seconds WebAnimation::effectEndTime() const
     return m_effect ? m_effect->endTime() : 0_s;
 }
 
-void WebAnimation::cancel()
-{
-    cancel(Silently::No);
-    invalidateEffect();
-}
-
 void WebAnimation::cancel(Silently silently)
 {
     LOG_WITH_STREAM(Animations, stream << "WebAnimation " << this << " cancel(silently " << (silently == Silently::Yes) << ") (current time is " << currentTime() << ")");
@@ -645,19 +639,20 @@ void WebAnimation::cancel(Silently silently)
         resetPendingTasks(silently);
 
         // 2. Reject the current finished promise with a DOMException named "AbortError".
+        // 3. Set the [[PromiseIsHandled]] internal slot of the current finished promise to true.
         if (silently == Silently::No && !m_finishedPromise->isFulfilled())
-            m_finishedPromise->reject(Exception { AbortError });
+            m_finishedPromise->reject(Exception { AbortError }, RejectAsHandled::Yes);
 
-        // 3. Let current finished promise be a new (pending) Promise object.
+        // 4. Let current finished promise be a new (pending) Promise object.
         m_finishedPromise = makeUniqueRef<FinishedPromise>(*this, &WebAnimation::finishedPromiseResolve);
 
-        // 4. Create an AnimationPlaybackEvent, cancelEvent.
-        // 5. Set cancelEvent's type attribute to cancel.
-        // 6. Set cancelEvent's currentTime to null.
-        // 7. Let timeline time be the current time of the timeline with which animation is associated. If animation is not associated with an
+        // 5. Create an AnimationPlaybackEvent, cancelEvent.
+        // 6. Set cancelEvent's type attribute to cancel.
+        // 7. Set cancelEvent's currentTime to null.
+        // 8. Let timeline time be the current time of the timeline with which animation is associated. If animation is not associated with an
         //    active timeline, let timeline time be n unresolved time value.
-        // 8. Set cancelEvent's timelineTime to timeline time. If timeline time is unresolved, set it to null.
-        // 9. If animation has a document for timing, then append cancelEvent to its document for timing's pending animation event queue along
+        // 9. Set cancelEvent's timelineTime to timeline time. If timeline time is unresolved, set it to null.
+        // 10. If animation has a document for timing, then append cancelEvent to its document for timing's pending animation event queue along
         //    with its target, animation. If animation is associated with an active timeline that defines a procedure to convert timeline times
         //    to origin-relative time, let the scheduled event time be the result of applying that procedure to timeline time. Otherwise, the
         //    scheduled event time is an unresolved time value.
@@ -695,7 +690,7 @@ void WebAnimation::enqueueAnimationPlaybackEvent(const AtomString& type, Optiona
 
 void WebAnimation::enqueueAnimationEvent(Ref<AnimationEventBase>&& event)
 {
-    if (is<DocumentTimeline>(m_timeline.get())) {
+    if (is<DocumentTimeline>(m_timeline)) {
         // If animation has a document for timing, then append event to its document for timing's pending animation event queue along
         // with its target, animation. If animation is associated with an active timeline that defines a procedure to convert timeline times
         // to origin-relative time, let the scheduled event time be the result of applying that procedure to timeline time. Otherwise, the
@@ -729,10 +724,11 @@ void WebAnimation::resetPendingTasks(Silently silently)
     applyPendingPlaybackRate();
 
     // 5. Reject animation's current ready promise with a DOMException named "AbortError".
+    // 6. Set the [[PromiseIsHandled]] internal slot of animation’s current ready promise to true.
     if (silently == Silently::No)
-        m_readyPromise->reject(Exception { AbortError });
+        m_readyPromise->reject(Exception { AbortError }, RejectAsHandled::Yes);
 
-    // 6. Let animation's current ready promise be the result of creating a new resolved Promise object.
+    // 7. Let animation's current ready promise be the result of creating a new resolved Promise object.
     m_readyPromise = makeUniqueRef<ReadyPromise>(*this, &WebAnimation::readyPromiseResolve);
     m_readyPromise->resolve(*this);
 }
@@ -917,6 +913,13 @@ void WebAnimation::finishNotificationSteps()
     //    effect end to an origin-relative time.
     //    Otherwise, queue a task to dispatch finishEvent at animation. The task source for this task is the DOM manipulation task source.
     enqueueAnimationPlaybackEvent(eventNames().finishEvent, currentTime(), m_timeline ? m_timeline->currentTime() : WTF::nullopt);
+
+    if (is<KeyframeEffect>(m_effect)) {
+        if (auto target = makeRefPtr(downcast<KeyframeEffect>(*m_effect).target())) {
+            if (auto* page = target->document().page())
+                page->chrome().client().animationDidFinishForElement(*target);
+        }
+    }
 }
 
 ExceptionOr<void> WebAnimation::play()
@@ -941,7 +944,7 @@ ExceptionOr<void> WebAnimation::play(AutoRewind autoRewind)
     bool hasPendingReadyPromise = false;
 
     // 3. Perform the steps corresponding to the first matching condition from the following, if any:
-    if (effectivePlaybackRate() > 0 && autoRewind == AutoRewind::Yes && (!localTime || localTime.value() < 0_s || localTime.value() >= endTime)) {
+    if (effectivePlaybackRate() > 0 && autoRewind == AutoRewind::Yes && (!localTime || localTime.value() < 0_s || (localTime.value() + timeEpsilon) >= endTime)) {
         // If animation's effective playback rate > 0, the auto-rewind flag is true and either animation's:
         //     - current time is unresolved, or
         //     - current time < zero, or
@@ -1120,6 +1123,11 @@ ExceptionOr<void> WebAnimation::pause()
     return { };
 }
 
+ExceptionOr<void> WebAnimation::bindingsReverse()
+{
+    return reverse();
+}
+
 ExceptionOr<void> WebAnimation::reverse()
 {
     LOG_WITH_STREAM(Animations, stream << "WebAnimation " << this << " reverse (current time is " << currentTime() << ")");
@@ -1149,6 +1157,9 @@ ExceptionOr<void> WebAnimation::reverse()
         m_pendingPlaybackRate = originalPendingPlaybackRate;
         return playResult.releaseException();
     }
+
+    if (m_effect)
+        m_effect->animationDidChangeTimingProperties();
 
     return { };
 }
@@ -1227,14 +1238,14 @@ void WebAnimation::tick()
         m_effect->animationDidTick();
 }
 
-void WebAnimation::resolve(RenderStyle& targetStyle)
+void WebAnimation::resolve(RenderStyle& targetStyle, Optional<Seconds> startTime)
 {
     if (!m_shouldSkipUpdatingFinishedStateWhenResolving)
         updateFinishedState(DidSeek::No, SynchronouslyNotify::Yes);
     m_shouldSkipUpdatingFinishedStateWhenResolving = false;
 
     if (m_effect)
-        m_effect->apply(targetStyle);
+        m_effect->apply(targetStyle, startTime);
 }
 
 void WebAnimation::setSuspended(bool isSuspended)
@@ -1250,7 +1261,7 @@ void WebAnimation::setSuspended(bool isSuspended)
 
 void WebAnimation::acceleratedStateDidChange()
 {
-    if (is<DocumentTimeline>(m_timeline.get()))
+    if (is<DocumentTimeline>(m_timeline))
         downcast<DocumentTimeline>(*m_timeline).animationAcceleratedRunningStateDidChange(*this);
 }
 
@@ -1291,10 +1302,10 @@ void WebAnimation::stop()
     removeAllEventListeners();
 }
 
-bool WebAnimation::hasPendingActivity() const
+bool WebAnimation::virtualHasPendingActivity() const
 {
     // Keep the JS wrapper alive if the animation is considered relevant or could become relevant again by virtue of having a timeline.
-    return m_timeline || m_isRelevant || ActiveDOMObject::hasPendingActivity();
+    return m_timeline || m_isRelevant;
 }
 
 void WebAnimation::updateRelevance()
@@ -1371,7 +1382,7 @@ void WebAnimation::persist()
     if (previousReplaceState == ReplaceState::Removed && m_timeline) {
         if (is<KeyframeEffect>(m_effect)) {
             auto& keyframeEffect = downcast<KeyframeEffect>(*m_effect);
-            auto& target = *keyframeEffect.target();
+            auto& target = *keyframeEffect.targetElementOrPseudoElement();
             m_timeline->animationWasAddedToElement(*this, target);
             target.ensureKeyframeEffectStack().addEffect(keyframeEffect);
         }
@@ -1390,7 +1401,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
     //
     // 2.1 If target is not an element capable of having a style attribute (for example, it is a pseudo-element or is an element in a
     // document format for which style attributes are not defined) throw a "NoModificationAllowedError" DOMException and abort these steps.
-    if (!is<StyledElement>(target))
+    if (!is<StyledElement>(target) || effect->targetsPseudoElement())
         return Exception { NoModificationAllowedError };
 
     auto& styledElement = downcast<StyledElement>(*target);
@@ -1413,7 +1424,6 @@ ExceptionOr<void> WebAnimation::commitStyles()
     inlineStyle->setCssText(styledElement.getAttribute("style"));
 
     auto& keyframeStack = styledElement.ensureKeyframeEffectStack();
-    auto* cssAnimationList = keyframeStack.cssAnimationList();
 
     // 2.5 For each property, property, in targeted properties:
     for (auto property : effect->animatedProperties()) {
@@ -1430,7 +1440,7 @@ ExceptionOr<void> WebAnimation::commitStyles()
         // effect stack and stop when we've found this animation's effect or when we've found an effect associated with an animation with a higher composite order.
         auto animatedStyle = RenderStyle::clonePtr(style);
         for (const auto& effectInStack : keyframeStack.sortedEffects()) {
-            if (effectInStack->animation() != this && !compareAnimationsByCompositeOrder(*effectInStack->animation(), *this, cssAnimationList))
+            if (effectInStack->animation() != this && !compareAnimationsByCompositeOrder(*effectInStack->animation(), *this))
                 break;
             if (effectInStack->animatedProperties().contains(property))
                 effectInStack->animation()->resolve(*animatedStyle);
@@ -1475,6 +1485,11 @@ Seconds WebAnimation::timeToNextTick() const
             }
             // Fully-accelerated running animations in the "active" phase can wait until they ended.
             return (effect.endTime() - timing.localTime.value()) / playbackRate;
+        }
+        if (auto iterationProgress = effect.getComputedTiming().simpleIterationProgress) {
+            // In case we're in a range that uses a steps() timing function, we can compute the time until the next step starts.
+            if (auto progressUntilNextStep = effect.progressUntilNextStep(*iterationProgress))
+                return effect.iterationDuration() * *progressUntilNextStep / playbackRate;
         }
         // Other animations in the "active" phase will need to update their animated value at the immediate next opportunity.
         return 0_s;

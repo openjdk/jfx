@@ -118,7 +118,7 @@ void runTest(
                     notify(fullCondition, mustNotify);
 
                     {
-                        std::lock_guard<LockType> locker(receivedLock);
+                        auto locker = holdLock(receivedLock);
                         received.append(result);
                     }
                 }
@@ -152,7 +152,7 @@ void runTest(
         thread->waitForCompletion();
 
     {
-        std::lock_guard<LockType> locker(lock);
+        auto locker = holdLock(lock);
         shouldContinue = false;
     }
     notifyAll(emptyCondition);
@@ -193,7 +193,7 @@ void runBenchmark(
 
 int main(int argc, char** argv)
 {
-    WTF::initializeThreading();
+    WTF::initialize();
 
     if (argc != 6
         || sscanf(argv[2], "%u", &numProducers) != 1

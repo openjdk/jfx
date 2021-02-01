@@ -47,7 +47,8 @@ public:
     const SourceCode& source() const { return m_source; }
     intptr_t sourceID() const { return m_source.providerID(); }
     const SourceOrigin& sourceOrigin() const { return m_source.provider()->sourceOrigin(); }
-    const String& sourceURL() const { return m_source.provider()->url(); }
+    // This is NOT the path that should be used for computing relative paths from a script. Use SourceOrigin's URL for that, the values may or may not be the same... This should only be used for `error.sourceURL` and stack traces.
+    const String& sourceURL() const { return m_source.provider()->sourceURL(); }
     int firstLine() const { return m_source.firstLine().oneBasedInt(); }
     JS_EXPORT_PRIVATE int lastLine() const;
     unsigned startColumn() const { return m_source.startColumn().oneBasedInt(); }
@@ -60,11 +61,9 @@ public:
     bool usesEval() const { return m_features & EvalFeature; }
     bool usesArguments() const { return m_features & ArgumentsFeature; }
     bool isArrowFunctionContext() const { return m_isArrowFunctionContext; }
-    bool isStrictMode() const { return m_features & StrictModeFeature; }
     DerivedContextType derivedContextType() const { return static_cast<DerivedContextType>(m_derivedContextType); }
     EvalContextType evalContextType() const { return static_cast<EvalContextType>(m_evalContextType); }
-
-    ECMAMode ecmaMode() const { return isStrictMode() ? StrictMode : NotStrictMode; }
+    bool isInStrictContext() const { return m_features & StrictModeFeature; }
 
     void setNeverInline(bool value) { m_neverInline = value; }
     void setNeverOptimize(bool value) { m_neverOptimize = value; }
@@ -78,6 +77,7 @@ public:
     bool isInliningCandidate() const { return !neverInline(); }
     bool isOkToOptimize() const { return !neverOptimize(); }
     bool canUseOSRExitFuzzing() const { return m_canUseOSRExitFuzzing; }
+    bool isInsideOrdinaryFunction() const { return m_isInsideOrdinaryFunction; }
 
     bool* addressOfDidTryToEnterInLoop() { return &m_didTryToEnterInLoop; }
 
@@ -128,7 +128,7 @@ private:
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
 protected:
-    ScriptExecutable(Structure*, VM&, const SourceCode&, bool isInStrictContext, DerivedContextType, bool isInArrowFunctionContext, EvalContextType, Intrinsic);
+    ScriptExecutable(Structure*, VM&, const SourceCode&, bool isInStrictContext, DerivedContextType, bool isInArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, Intrinsic);
 
     void finishCreation(VM& vm)
     {
@@ -160,6 +160,7 @@ protected:
     bool m_isArrowFunctionContext : 1;
     bool m_canUseOSRExitFuzzing : 1;
     bool m_codeForGeneratorBodyWasGenerated : 1;
+    bool m_isInsideOrdinaryFunction : 1;
     unsigned m_derivedContextType : 2; // DerivedContextType
     unsigned m_evalContextType : 2; // EvalContextType
 };

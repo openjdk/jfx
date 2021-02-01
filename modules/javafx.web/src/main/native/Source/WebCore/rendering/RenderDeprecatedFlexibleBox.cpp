@@ -987,19 +987,21 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
             continue;
 
         RootInlineBox* lastVisibleLine = blockChild.lineAtIndex(numVisibleLines - 1);
-        if (!lastVisibleLine)
+        if (!lastVisibleLine || !lastVisibleLine->firstChild())
             continue;
 
         const UChar ellipsisAndSpace[2] = { horizontalEllipsis, ' ' };
-        static NeverDestroyed<AtomString> ellipsisAndSpaceStr(ellipsisAndSpace, 2);
-        static NeverDestroyed<AtomString> ellipsisStr(&horizontalEllipsis, 1);
+        static MainThreadNeverDestroyed<const AtomString> ellipsisAndSpaceStr(ellipsisAndSpace, 2);
+        static MainThreadNeverDestroyed<const AtomString> ellipsisStr(&horizontalEllipsis, 1);
         const RenderStyle& lineStyle = numVisibleLines == 1 ? firstLineStyle() : style();
         const FontCascade& font = lineStyle.fontCascade();
 
         // Get ellipsis width, and if the last child is an anchor, it will go after the ellipsis, so add in a space and the anchor width too
         LayoutUnit totalWidth;
         InlineBox* anchorBox = lastLine->lastChild();
-        if (anchorBox && anchorBox->renderer().style().isLink())
+        auto& anchorRenderer = anchorBox->renderer();
+        auto& lastVisibleRenderer = lastVisibleLine->firstChild()->renderer();
+        if (anchorBox && anchorBox->renderer().style().isLink() && &lastVisibleRenderer != &anchorRenderer)
             totalWidth = anchorBox->logicalWidth() + font.width(constructTextRun(ellipsisAndSpace, 2, style()));
         else {
             anchorBox = nullptr;

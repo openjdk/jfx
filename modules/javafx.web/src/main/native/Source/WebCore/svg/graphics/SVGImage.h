@@ -69,6 +69,8 @@ public:
     NativeImagePtr nativeImage(const GraphicsContext* = nullptr) final;
 #endif
 
+    Page* internalPage() { return m_page.get(); }
+
 private:
     friend class SVGImageChromeClient;
     friend class SVGImageForContainer;

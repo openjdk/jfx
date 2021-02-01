@@ -24,13 +24,9 @@
 #include "config.h"
 #include <wtf/text/AtomStringImpl.h>
 
-#include <wtf/CommaPrinter.h>
-#include <wtf/DataLog.h>
 #include <wtf/HashSet.h>
-#include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
 #include <wtf/text/AtomStringTable.h>
-#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/unicode/UTF8Conversion.h>
 
@@ -122,27 +118,6 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(const LChar* characters)
 
     return addToStringTable<const LChar*, CStringTranslator>(characters);
 }
-
-template<typename CharacterType>
-struct HashTranslatorCharBuffer {
-    const CharacterType* characters;
-    unsigned length;
-    unsigned hash;
-
-    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length)
-        : characters(characters)
-        , length(length)
-        , hash(StringHasher::computeHashAndMaskTop8Bits(characters, length))
-    {
-    }
-
-    HashTranslatorCharBuffer(const CharacterType* characters, unsigned length, unsigned hash)
-        : characters(characters)
-        , length(length)
-        , hash(hash)
-    {
-    }
-};
 
 using UCharBuffer = HashTranslatorCharBuffer<UChar>;
 struct UCharBufferTranslator {

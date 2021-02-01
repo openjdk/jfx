@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,11 @@
 #include "config.h"
 #include "JSInjectedScriptHost.h"
 
-#include "ArrayIteratorPrototype.h"
 #include "ArrayPrototype.h"
-#include "BuiltinNames.h"
 #include "Completion.h"
 #include "DateInstance.h"
 #include "DeferGC.h"
 #include "DirectArguments.h"
-#include "Error.h"
 #include "FunctionPrototype.h"
 #include "HeapAnalyzer.h"
 #include "HeapIterationScope.h"
@@ -41,42 +38,32 @@
 #include "InjectedScriptHost.h"
 #include "IterationKind.h"
 #include "IteratorOperations.h"
-#include "IteratorPrototype.h"
 #include "JSArray.h"
 #include "JSArrayIterator.h"
 #include "JSBoundFunction.h"
 #include "JSCInlines.h"
-#include "JSFunction.h"
-#include "JSGlobalObjectFunctions.h"
 #include "JSInjectedScriptHostPrototype.h"
-#include "JSLock.h"
 #include "JSMap.h"
+#include "JSMapIterator.h"
 #include "JSPromise.h"
 #include "JSPromisePrototype.h"
 #include "JSSet.h"
+#include "JSSetIterator.h"
 #include "JSStringIterator.h"
 #include "JSTypedArrays.h"
 #include "JSWeakMap.h"
 #include "JSWeakSet.h"
-#include "JSWithScope.h"
-#include "MapIteratorPrototype.h"
-#include "MapPrototype.h"
 #include "MarkedSpaceInlines.h"
 #include "ObjectConstructor.h"
-#include "ObjectPrototype.h"
 #include "PreventCollectionScope.h"
 #include "ProxyObject.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
-#include "SetIteratorPrototype.h"
-#include "SetPrototype.h"
 #include "SourceCode.h"
-#include "TypedArrayInlines.h"
 #include <wtf/Function.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/HashTraits.h>
 #include <wtf/Lock.h>
 #include <wtf/PrintStream.h>
 #include <wtf/text/StringConcatenate.h>
@@ -88,7 +75,7 @@ using namespace JSC;
 const ClassInfo JSInjectedScriptHost::s_info = { "InjectedScriptHost", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSInjectedScriptHost) };
 
 JSInjectedScriptHost::JSInjectedScriptHost(VM& vm, Structure* structure, Ref<InjectedScriptHost>&& impl)
-    : JSDestructibleObject(vm, structure)
+    : Base(vm, structure)
     , m_wrapped(WTFMove(impl))
 {
 }
@@ -150,7 +137,7 @@ JSValue JSInjectedScriptHost::internalConstructorName(JSGlobalObject* globalObje
         return jsUndefined();
 
     VM& vm = globalObject->vm();
-    JSObject* object = jsCast<JSObject*>(callFrame->uncheckedArgument(0).toThis(globalObject, NotStrictMode));
+    JSObject* object = jsCast<JSObject*>(callFrame->uncheckedArgument(0).toThis(globalObject, ECMAMode::sloppy()));
     return jsString(vm, JSObject::calculatedClassName(object));
 }
 
@@ -229,8 +216,8 @@ JSValue JSInjectedScriptHost::subtype(JSGlobalObject* globalObject, CallFrame* c
             return jsNontrivialString(vm, "iterator"_s);
 
         if (object->inherits<JSArrayIterator>(vm)
-            || object->getDirect(vm, vm.propertyNames->builtinNames().mapBucketPrivateName())
-            || object->getDirect(vm, vm.propertyNames->builtinNames().setBucketPrivateName()))
+            || object->inherits<JSMapIterator>(vm)
+            || object->inherits<JSSetIterator>(vm))
             return jsNontrivialString(vm, "iterator"_s);
 
         if (object->inherits<JSInt8Array>(vm)
@@ -397,9 +384,9 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
             return array;
         }
 
-        if (iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().mapBucketPrivateName())) {
-            JSValue iteratedValue = iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().iteratedObjectPrivateName());
-            IterationKind kind = static_cast<IterationKind>(iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().mapIteratorKindPrivateName()).asInt32());
+        if (auto* mapIterator = jsDynamicCast<JSMapIterator*>(vm, iteratorObject)) {
+            JSValue iteratedValue = mapIterator->iteratedObject();
+            IterationKind kind = mapIterator->kind();
 
             unsigned index = 0;
             JSArray* array = constructEmptyArray(globalObject, nullptr, 2);
@@ -411,9 +398,9 @@ JSValue JSInjectedScriptHost::getInternalProperties(JSGlobalObject* globalObject
             return array;
         }
 
-        if (iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().setBucketPrivateName())) {
-            JSValue iteratedValue = iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().iteratedObjectPrivateName());
-            IterationKind kind = static_cast<IterationKind>(iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().setIteratorKindPrivateName()).asInt32());
+        if (auto* setIterator = jsDynamicCast<JSSetIterator*>(vm, iteratorObject)) {
+            JSValue iteratedValue = setIterator->iteratedObject();
+            IterationKind kind = setIterator->kind();
 
             unsigned index = 0;
             JSArray* array = constructEmptyArray(globalObject, nullptr, 2);
@@ -549,23 +536,17 @@ static JSObject* cloneArrayIteratorObject(JSGlobalObject* globalObject, VM& vm, 
     return clone;
 }
 
-static JSObject* cloneMapIteratorObject(JSGlobalObject* globalObject, VM& vm, JSObject* iteratorObject, JSValue mapBucket, JSValue iteratedObject)
+static JSObject* cloneMapIteratorObject(JSGlobalObject* globalObject, VM& vm, JSMapIterator* iteratorObject)
 {
-    ASSERT(iteratorObject->type() == FinalObjectType);
-    JSObject* clone = constructEmptyObject(globalObject, MapIteratorPrototype::create(vm, globalObject, MapIteratorPrototype::createStructure(vm, globalObject, globalObject->iteratorPrototype())));
-    clone->putDirect(vm, vm.propertyNames->builtinNames().iteratedObjectPrivateName(), iteratedObject);
-    clone->putDirect(vm, vm.propertyNames->builtinNames().mapIteratorKindPrivateName(), iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().mapIteratorKindPrivateName()));
-    clone->putDirect(vm, vm.propertyNames->builtinNames().mapBucketPrivateName(), mapBucket);
+    JSMapIterator* clone = JSMapIterator::create(vm, globalObject->mapIteratorStructure(), jsCast<JSMap*>(iteratorObject->iteratedObject()), iteratorObject->kind());
+    clone->internalField(JSMapIterator::Field::MapBucket).set(vm, clone, iteratorObject->internalField(JSMapIterator::Field::MapBucket).get());
     return clone;
 }
 
-static JSObject* cloneSetIteratorObject(JSGlobalObject* globalObject, VM& vm, JSObject* iteratorObject, JSValue setBucket, JSValue iteratedObject)
+static JSObject* cloneSetIteratorObject(JSGlobalObject* globalObject, VM& vm, JSSetIterator* iteratorObject)
 {
-    ASSERT(iteratorObject->type() == FinalObjectType);
-    JSObject* clone = constructEmptyObject(globalObject, SetIteratorPrototype::create(vm, globalObject, SetIteratorPrototype::createStructure(vm, globalObject, globalObject->iteratorPrototype())));
-    clone->putDirect(vm, vm.propertyNames->builtinNames().iteratedObjectPrivateName(), iteratedObject);
-    clone->putDirect(vm, vm.propertyNames->builtinNames().setIteratorKindPrivateName(), iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().setIteratorKindPrivateName()));
-    clone->putDirect(vm, vm.propertyNames->builtinNames().setBucketPrivateName(), setBucket);
+    JSSetIterator* clone = JSSetIterator::create(vm, globalObject->setIteratorStructure(), jsCast<JSSet*>(iteratorObject->iteratedObject()), iteratorObject->kind());
+    clone->internalField(JSSetIterator::Field::SetBucket).set(vm, clone, iteratorObject->internalField(JSSetIterator::Field::SetBucket).get());
     return clone;
 }
 
@@ -593,15 +574,12 @@ JSValue JSInjectedScriptHost::iteratorEntries(JSGlobalObject* globalObject, Call
                 if (globalObject->isArrayPrototypeIteratorProtocolFastAndNonObservable())
                     iterator = cloneArrayIteratorObject(globalObject, vm, arrayIterator);
             }
-        } else {
-            JSValue iteratedObject = iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().iteratedObjectPrivateName());
-            if (JSValue mapBucket = iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().mapBucketPrivateName())) {
-                if (jsCast<JSMap*>(iteratedObject)->isIteratorProtocolFastAndNonObservable())
-                    iterator = cloneMapIteratorObject(globalObject, vm, iteratorObject, mapBucket, iteratedObject);
-            } else if (JSValue setBucket = iteratorObject->getDirect(vm, vm.propertyNames->builtinNames().setBucketPrivateName())) {
-                if (jsCast<JSSet*>(iteratedObject)->isIteratorProtocolFastAndNonObservable())
-                    iterator = cloneSetIteratorObject(globalObject, vm, iteratorObject, setBucket, iteratedObject);
-            }
+        } else if (auto* mapIterator = jsDynamicCast<JSMapIterator*>(vm, iteratorObject)) {
+            if (jsCast<JSMap*>(mapIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable())
+                iterator = cloneMapIteratorObject(globalObject, vm, mapIterator);
+        } else if (auto* setIterator = jsDynamicCast<JSSetIterator*>(vm, iteratorObject)) {
+            if (jsCast<JSSet*>(setIterator->iteratedObject())->isIteratorProtocolFastAndNonObservable())
+                iterator = cloneSetIteratorObject(globalObject, vm, setIterator);
         }
     }
     RETURN_IF_EXCEPTION(scope, { });
@@ -668,7 +646,7 @@ JSValue JSInjectedScriptHost::queryInstances(JSGlobalObject* globalObject, CallF
 
     JSValue prototype = object;
 
-    PropertySlot prototypeSlot(object, PropertySlot::InternalMethodType::VMInquiry);
+    PropertySlot prototypeSlot(object, PropertySlot::InternalMethodType::VMInquiry, &vm);
     if (object->getPropertySlot(globalObject, vm.propertyNames->prototype, prototypeSlot)) {
         RETURN_IF_EXCEPTION(scope, { });
         if (prototypeSlot.isValue()) {
@@ -679,6 +657,7 @@ JSValue JSInjectedScriptHost::queryInstances(JSGlobalObject* globalObject, CallF
             }
         }
     }
+    prototypeSlot.disallowVMEntry.reset();
 
     if (object->inherits<ProxyObject>(vm) || prototype.inherits<ProxyObject>(vm))
         return throwTypeError(globalObject, scope, "queryInstances cannot be called with a Proxy."_s);
@@ -772,7 +751,7 @@ public:
 
     HashSet<JSCell*>& holders() { return m_holders; }
 
-    void analyzeEdge(JSCell* from, JSCell* to, SlotVisitor::RootMarkReason reason) override
+    void analyzeEdge(JSCell* from, JSCell* to, SlotVisitor::RootMarkReason reason) final
     {
         ASSERT(to);
         ASSERT(to->vm().heapProfiler()->activeHeapAnalyzer() == this);
@@ -797,14 +776,14 @@ public:
         else if (!from || reason != SlotVisitor::RootMarkReason::None)
             m_rootsToInclude.add(to);
     }
-    void analyzePropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl*) override { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
-    void analyzeVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl*) override { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
-    void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t) override { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
+    void analyzePropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl*) final { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
+    void analyzeVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl*) final { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
+    void analyzeIndexEdge(JSCell* from, JSCell* to, uint32_t) final { analyzeEdge(from, to, SlotVisitor::RootMarkReason::None); }
 
-    void analyzeNode(JSCell*) override { }
-    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) override { }
-    void setWrappedObjectForCell(JSCell*, void*) override { }
-    void setLabelForCell(JSCell*, const String&) override { }
+    void analyzeNode(JSCell*) final { }
+    void setOpaqueRootReachabilityReasonForCell(JSCell*, const char*) final { }
+    void setWrappedObjectForCell(JSCell*, void*) final { }
+    void setLabelForCell(JSCell*, const String&) final { }
 
 #ifndef NDEBUG
     void dump(PrintStream& out) const

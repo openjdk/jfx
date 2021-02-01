@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setAcceptChar
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getActionImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::actionAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::actionAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setActionImpl(JNIEnv* env, jclass, jlong peer, jstring value)

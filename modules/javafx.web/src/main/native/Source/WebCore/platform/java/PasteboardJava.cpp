@@ -257,7 +257,7 @@ void Pasteboard::setDragImage(DragImage, const IntPoint&)
 #endif
 
 void Pasteboard::writeSelection(
-    Range& selectedRange,
+    const SimpleRange& selectedRange,
     bool canSmartCopyOrDelete,
     Frame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
@@ -303,7 +303,7 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
 
     String title(pasteboardURL.title);
     if (title.isEmpty()) {
-        title = pasteboardURL.url.lastPathComponent();
+        title = pasteboardURL.url.lastPathComponent().toString();
         if (title.isEmpty()) {
             title = pasteboardURL.url.host().toString();
         }
@@ -320,24 +320,24 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
     }
 }
 
-void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
+void Pasteboard::writeImage(Element& element, const URL& url, const String& title)
 {
     m_dataObject->setURL(url, title);
 
     // Write the bytes of the image to the file format
-    writeImageToDataObject(m_dataObject,    node, url);
+    writeImageToDataObject(m_dataObject, element, url);
 
-    AtomString imageURL = node.getAttribute(HTMLNames::srcAttr);
+    AtomString imageURL = element.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
-        String fullURL = node.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL));
+        String fullURL = element.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL)).string();
         if (!fullURL.isEmpty()) {
             m_dataObject->setHTML(
-                imageToMarkup(fullURL, node),
-                node.document().url());
+                imageToMarkup(fullURL, element),
+                element.document().url());
         }
     }
     if (m_copyPasteMode) {
-        CachedImage* cachedImage = getCachedImage(node);
+        CachedImage* cachedImage = getCachedImage(element);
         // CachedImage not exist
         if (!cachedImage) {
             return;
@@ -352,7 +352,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
         // SVGImage are not Bitmap backed, Let the receiving end decode the svg image
         // based on url and its markup
         if (image->isSVGImage()) {
-            jWriteURL(url.string(), serializeFragment(node, SerializedNodes::SubtreeIncludingNode));
+            jWriteURL(url.string(), serializeFragment(element, SerializedNodes::SubtreeIncludingNode));
         }
         else {
             jWriteImage(*image);
@@ -430,7 +430,7 @@ bool Pasteboard::hasData()
     return m_dataObject && m_dataObject->hasData();
 }
 
-void Pasteboard::read(PasteboardFileReader& reader)
+void Pasteboard::read(PasteboardFileReader& reader, Optional<size_t>)
 {
     if (m_dataObject) {
         for (const auto& filename : m_dataObject->asFilenames())
@@ -473,10 +473,7 @@ bool Pasteboard::canSmartReplace()
 }
 
 RefPtr<DocumentFragment> Pasteboard::documentFragment(
-    Frame& frame,
-    Range& range,
-    bool allowPlainText,
-    bool &chosePlainText)
+    Frame& frame, const SimpleRange& range, bool allowPlainText, bool &chosePlainText)
 {
     chosePlainText = false;
 
@@ -486,10 +483,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!htmlString.isNull()) {
         if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-                *frame.document(),
-                htmlString,
-                String(),
-                DisallowScriptingContent))
+                *frame.document(), htmlString, String(), DisallowScriptingContent))
         {
             return fragment;
         }
@@ -505,9 +499,8 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!plainTextString.isNull()) {
         chosePlainText = true;
-        if (RefPtr<DocumentFragment> fragment = createFragmentFromText(
-                range,
-                plainTextString))
+        if (RefPtr<DocumentFragment> fragment =
+            createFragmentFromText(range, plainTextString))
         {
             return fragment;
         }

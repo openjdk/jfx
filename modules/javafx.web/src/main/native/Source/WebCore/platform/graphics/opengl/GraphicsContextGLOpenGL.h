@@ -62,7 +62,7 @@ typedef struct __IOSurface* IOSurfaceRef;
 
 #if USE(NICOSIA)
 namespace Nicosia {
-class GC3DLayer;
+class GCGLLayer;
 }
 #endif
 
@@ -79,7 +79,7 @@ class HostWindow;
 class ImageBuffer;
 class ImageData;
 #if USE(TEXTURE_MAPPER)
-class TextureMapperGC3DPlatformLayer;
+class TextureMapperGCGLPlatformLayer;
 #endif
 
 typedef WTF::HashMap<CString, uint64_t> ShaderNameHash;
@@ -146,6 +146,17 @@ public:
     // Helpers for texture uploading and pixel readback.
     //
 
+    struct PixelStoreParams final {
+        PixelStoreParams();
+
+        GCGLint alignment;
+        GCGLint rowLength;
+        GCGLint imageHeight;
+        GCGLint skipPixels;
+        GCGLint skipRows;
+        GCGLint skipImages;
+    };
+
     // Computes the components per pixel and bytes per component
     // for the given format and type combination. Returns false if
     // either was an invalid enum.
@@ -163,17 +174,25 @@ public:
         GCGLenum type,
         GCGLsizei width,
         GCGLsizei height,
-        GCGLint alignment,
+        GCGLsizei depth,
+        const PixelStoreParams&,
         unsigned* imageSizeInBytes,
-        unsigned* paddingInBytes);
+        unsigned* paddingInBytes,
+        unsigned* skipSizeInBytes);
 
+#if !USE(ANGLE)
     static bool possibleFormatAndTypeForInternalFormat(GCGLenum internalFormat, GCGLenum& format, GCGLenum& type);
+#endif // !USE(ANGLE)
 
     // Extracts the contents of the given ImageData into the passed Vector,
     // packing the pixel data according to the given format and type,
     // and obeying the flipY and premultiplyAlpha flags. Returns true
     // upon success.
     static bool extractImageData(ImageData*,
+        DataFormat,
+        const IntRect& sourceImageSubRectangle,
+        int depth,
+        int unpackImageHeight,
         GCGLenum format,
         GCGLenum type,
         bool flipY,
@@ -183,11 +202,11 @@ public:
     // Helper function which extracts the user-supplied texture
     // data, applying the flipY and premultiplyAlpha parameters.
     // If the data is not tightly packed according to the passed
-    // unpackAlignment, the output data will be tightly packed.
+    // unpackParams, the output data will be tightly packed.
     // Returns true if successful, false if any error occurred.
     static bool extractTextureData(unsigned width, unsigned height,
         GCGLenum format, GCGLenum type,
-        unsigned unpackAlignment,
+        const PixelStoreParams& unpackParams,
         bool flipY, bool premultiplyAlpha,
         const void* pixels,
         Vector<uint8_t>& data);
@@ -256,7 +275,9 @@ public:
     void getFloatv(GCGLenum pname, GCGLfloat* value) final;
     void getFramebufferAttachmentParameteriv(GCGLenum target, GCGLenum attachment, GCGLenum pname, GCGLint* value) final;
     void getIntegerv(GCGLenum pname, GCGLint* value) final;
+    void getIntegeri_v(GCGLenum pname, GCGLuint index, GCGLint* value) final;
     void getInteger64v(GCGLenum pname, GCGLint64* value) final;
+    void getInteger64i_v(GCGLenum pname, GCGLuint index, GCGLint64* value) final;
     void getProgramiv(PlatformGLObject program, GCGLenum pname, GCGLint* value) final;
 #if !USE(ANGLE)
     void getNonBuiltInActiveSymbolCount(PlatformGLObject program, GCGLenum pname, GCGLint* value);
@@ -273,6 +294,7 @@ public:
     void getTexParameteriv(GCGLenum target, GCGLenum pname, GCGLint* value) final;
     void getUniformfv(PlatformGLObject program, GCGLint location, GCGLfloat* value) final;
     void getUniformiv(PlatformGLObject program, GCGLint location, GCGLint* value) final;
+    void getUniformuiv(PlatformGLObject program, GCGLint location, GCGLuint* value) final;
     GCGLint getUniformLocation(PlatformGLObject, const String& name) final;
     void getVertexAttribfv(GCGLuint index, GCGLenum pname, GCGLfloat* value) final;
     void getVertexAttribiv(GCGLuint index, GCGLenum pname, GCGLint* value) final;
@@ -374,8 +396,8 @@ public:
 
     void blitFramebuffer(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter) final;
     void framebufferTextureLayer(GCGLenum target, GCGLenum attachment, PlatformGLObject texture, GCGLint level, GCGLint layer) final;
-    void invalidateFramebuffer(GCGLenum target, const Vector<GCGLenum>& attachments) final;
-    void invalidateSubFramebuffer(GCGLenum target, const Vector<GCGLenum>& attachments, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) final;
+    void invalidateFramebuffer(GCGLenum target, GCGLsizei numAttachments, const GCGLenum* attachments) final;
+    void invalidateSubFramebuffer(GCGLenum target, GCGLsizei numAttachments, const GCGLenum* attachments, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) final;
     void readBuffer(GCGLenum src) final;
 
     // getInternalFormatParameter
@@ -385,19 +407,7 @@ public:
     void texStorage2D(GCGLenum target, GCGLsizei levels, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) final;
     void texStorage3D(GCGLenum target, GCGLsizei levels, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth) final;
 
-    void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) final;
-    void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, const void* pixels) final;
-    void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) final;
-
-    void texSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) final;
-    void texSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) final;
-
     void copyTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) final;
-
-    void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLsizei imageSize, GCGLintptr offset) final;
-    void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) final;
-    void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, GCGLintptr offset) final;
-    void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) final;
 
     GCGLint getFragDataLocation(PlatformGLObject program, const String& name) final;
 
@@ -423,7 +433,7 @@ public:
 
     void drawRangeElements(GCGLenum mode, GCGLuint start, GCGLuint end, GCGLsizei count, GCGLenum type, GCGLintptr offset) final;
 
-    void drawBuffers(const Vector<GCGLenum>& buffers) final;
+    void drawBuffers(GCGLsizei n, const GCGLenum* bufs) final;
     void clearBufferiv(GCGLenum buffer, GCGLint drawbuffer, const GCGLint* values, GCGLuint srcOffset) final;
     void clearBufferuiv(GCGLenum buffer, GCGLint drawbuffer, const GCGLuint* values, GCGLuint srcOffset) final;
     void clearBufferfv(GCGLenum buffer, GCGLint drawbuffer, const GCGLfloat* values, GCGLuint srcOffset) final;
@@ -448,14 +458,14 @@ public:
     void getSamplerParameterfv(PlatformGLObject sampler, GCGLenum pname, GCGLfloat* value) final;
     void getSamplerParameteriv(PlatformGLObject sampler, GCGLenum pname, GCGLint* value) final;
 
-    PlatformGLObject fenceSync(GCGLenum condition, GCGLbitfield flags) final;
-    GCGLboolean isSync(PlatformGLObject sync) final;
-    void deleteSync(PlatformGLObject sync) final;
-    GCGLenum clientWaitSync(PlatformGLObject sync, GCGLbitfield flags, GCGLuint64 timeout) final;
-    void waitSync(PlatformGLObject sync, GCGLbitfield flags, GCGLint64 timeout) final;
+    GCGLsync fenceSync(GCGLenum condition, GCGLbitfield flags) final;
+    GCGLboolean isSync(GCGLsync) final;
+    void deleteSync(GCGLsync) final;
+    GCGLenum clientWaitSync(GCGLsync, GCGLbitfield flags, GCGLuint64 timeout) final;
+    void waitSync(GCGLsync, GCGLbitfield flags, GCGLint64 timeout) final;
     // getSyncParameter
     // FIXME - this can be implemented at the WebGL level if we signal the WebGLSync object.
-    void getSynciv(PlatformGLObject sync, GCGLenum pname, GCGLsizei bufSize, GCGLint *value) final;
+    void getSynciv(GCGLsync, GCGLenum pname, GCGLsizei bufSize, GCGLint *value) final;
 
     PlatformGLObject createTransformFeedback() final;
     void deleteTransformFeedback(PlatformGLObject id) final;
@@ -479,9 +489,6 @@ public:
     void getActiveUniformBlockiv(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLenum pname, GCGLint* params) final;
     String getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) final;
     void uniformBlockBinding(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLuint uniformBlockBinding) final;
-
-    void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) final;
-    void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) final;
 
     void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLsizei imageSize, GCGLintptr offset) final;
     void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) final;
@@ -516,6 +523,14 @@ public:
     void forceContextLost();
     void recycleContext();
 
+    // Maintenance of auto-clearing of color/depth/stencil buffers. The
+    // reset method is present to keep calling code simpler, so it
+    // doesn't have to know which buffers were allocated.
+    void resetBuffersToAutoClear();
+    void setBuffersToAutoClear(GCGLbitfield);
+    GCGLbitfield getBuffersToAutoClear() const;
+    void enablePreserveDrawingBuffer() override;
+
     void dispatchContextChangedNotification();
     void simulateContextChanged();
 
@@ -535,7 +550,7 @@ public:
 #endif
 
 #if USE(OPENGL) || USE(ANGLE)
-    void allocateIOSurfaceBackingStore(IntSize);
+    bool allocateIOSurfaceBackingStore(IntSize);
     void updateFramebufferTextureBackingStoreFromLayer();
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
     void updateCGLContext();
@@ -587,11 +602,11 @@ public:
     // Packs the contents of the given Image which is passed in |pixels| into the passed Vector
     // according to the given format and type, and obeying the flipY and AlphaOp flags.
     // Returns true upon success.
-    static bool packImageData(Image*, const void* pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp, DataFormat sourceFormat, unsigned width, unsigned height, unsigned sourceUnpackAlignment, Vector<uint8_t>& data);
+    static bool packImageData(Image*, const void* pixels, GCGLenum format, GCGLenum type, bool flipY, AlphaOp, DataFormat sourceFormat, unsigned sourceImageWidth, unsigned sourceImageHeight, const IntRect& sourceImageSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, Vector<uint8_t>& data);
 
     class ImageExtractor {
     public:
-        ImageExtractor(Image*, DOMSource, bool premultiplyAlpha, bool ignoreGammaAndColorProfile);
+        ImageExtractor(Image*, DOMSource, bool premultiplyAlpha, bool ignoreGammaAndColorProfile, bool ignoreNativeImageAlphaPremultiplication);
 
         // Each platform must provide an implementation of this method to deallocate or release resources
         // associated with the image if needed.
@@ -609,7 +624,7 @@ public:
         // Each platform must provide an implementation of this method.
         // Extracts the image and keeps track of its status, such as width, height, Source Alignment, format and AlphaOp etc,
         // needs to lock the resources or relevant data if needed and returns true upon success
-        bool extractImage(bool premultiplyAlpha, bool ignoreGammaAndColorProfile);
+        bool extractImage(bool premultiplyAlpha, bool ignoreGammaAndColorProfile, bool ignoreNativeImageAlphaPremultiplication);
 
 #if USE(CAIRO)
         RefPtr<cairo_surface_t> m_imageSurface;
@@ -642,6 +657,8 @@ public:
     void screenDidChange(PlatformDisplayID);
 #endif
 
+    void prepareForDisplay();
+
 private:
     GraphicsContextGLOpenGL(GraphicsContextGLAttributes, HostWindow*, Destination = Destination::Offscreen, GraphicsContextGLOpenGL* sharedContext = nullptr);
 
@@ -650,7 +667,7 @@ private:
     // A sourceUnpackAlignment of zero indicates that the source
     // data is tightly packed. Non-zero values may take a slow path.
     // Destination data will have no gaps between rows.
-    static bool packPixels(const uint8_t* sourceData, DataFormat sourceDataFormat, unsigned width, unsigned height, unsigned sourceUnpackAlignment, unsigned destinationFormat, unsigned destinationType, AlphaOp, void* destinationData, bool flipY);
+    static bool packPixels(const uint8_t* sourceData, DataFormat sourceDataFormat, unsigned sourceDataWidth, unsigned sourceDataHeight, const IntRect& sourceDataSubRectangle, int depth, unsigned sourceUnpackAlignment, int unpackImageHeight, unsigned destinationFormat, unsigned destinationType, AlphaOp, void* destinationData, bool flipY);
 
     // Take into account the user's requested context creation attributes,
     // in particular stencil and antialias, and determine which could or
@@ -803,7 +820,8 @@ private:
 #endif
 
     struct GraphicsContextGLState {
-        GCGLuint boundFBO { 0 };
+        GCGLuint boundReadFBO { 0 };
+        GCGLuint boundDrawFBO { 0 };
         GCGLenum activeTextureUnit { GraphicsContextGL::TEXTURE0 };
 
         using BoundTextureMap = HashMap<GCGLenum,
@@ -847,15 +865,27 @@ private:
     GCGLuint m_multisampleDepthStencilBuffer { 0 };
     GCGLuint m_multisampleColorBuffer { 0 };
 
+#if USE(ANGLE)
+    // For preserveDrawingBuffer:true without multisampling.
+    GCGLuint m_preserveDrawingBufferTexture { 0 };
+    // Attaches m_texture when m_preserveDrawingBufferTexture is non-zero.
+    GCGLuint m_preserveDrawingBufferFBO { 0 };
+#endif
+
+    // A bitmask of GL buffer bits (GL_COLOR_BUFFER_BIT,
+    // GL_DEPTH_BUFFER_BIT, GL_STENCIL_BUFFER_BIT) which need to be
+    // auto-cleared.
+    GCGLbitfield m_buffersToAutoClear { 0 };
+
     // Errors raised by synthesizeGLError().
     ListHashSet<GCGLenum> m_syntheticErrors;
 
 #if USE(NICOSIA) && USE(TEXTURE_MAPPER)
-    friend class Nicosia::GC3DLayer;
-    std::unique_ptr<Nicosia::GC3DLayer> m_nicosiaLayer;
+    friend class Nicosia::GCGLLayer;
+    std::unique_ptr<Nicosia::GCGLLayer> m_nicosiaLayer;
 #elif USE(TEXTURE_MAPPER)
-    friend class TextureMapperGC3DPlatformLayer;
-    std::unique_ptr<TextureMapperGC3DPlatformLayer> m_texmapLayer;
+    friend class TextureMapperGCGLPlatformLayer;
+    std::unique_ptr<TextureMapperGCGLPlatformLayer> m_texmapLayer;
 #elif !PLATFORM(COCOA)
     friend class GraphicsContextGLOpenGLPrivate;
     std::unique_ptr<GraphicsContextGLOpenGLPrivate> m_private;

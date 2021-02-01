@@ -65,7 +65,7 @@ private:
     void doUnapply() override
     {
         if (!m_hasBeenUndone) {
-            frame().editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
+            document().editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
 
@@ -83,12 +83,17 @@ private:
 };
 #endif
 
-SpellingCorrectionCommand::SpellingCorrectionCommand(Range& rangeToBeCorrected, const String& correction)
-    : CompositeEditCommand(rangeToBeCorrected.startContainer().document(), EditAction::InsertReplacement)
+SpellingCorrectionCommand::SpellingCorrectionCommand(const SimpleRange& rangeToBeCorrected, const String& correction)
+    : CompositeEditCommand(rangeToBeCorrected.start.container->document(), EditAction::InsertReplacement)
     , m_rangeToBeCorrected(rangeToBeCorrected)
     , m_selectionToBeCorrected(m_rangeToBeCorrected)
     , m_correction(correction)
 {
+}
+
+Ref<SpellingCorrectionCommand> SpellingCorrectionCommand::create(const SimpleRange& rangeToBeCorrected, const String& correction)
+{
+    return adoptRef(*new SpellingCorrectionCommand(rangeToBeCorrected, correction));
 }
 
 bool SpellingCorrectionCommand::willApplyCommand()
@@ -99,11 +104,11 @@ bool SpellingCorrectionCommand::willApplyCommand()
 
 void SpellingCorrectionCommand::doApply()
 {
-    m_corrected = plainText(m_rangeToBeCorrected.ptr());
+    m_corrected = plainText(m_rangeToBeCorrected);
     if (!m_corrected.length())
         return;
 
-    if (!frame().selection().shouldChangeSelection(m_selectionToBeCorrected))
+    if (!document().selection().shouldChangeSelection(m_selectionToBeCorrected))
         return;
 
     applyCommandToComposite(SetSelectionCommand::create(m_selectionToBeCorrected, FrameSelection::defaultSetSelectionOptions() | FrameSelection::SpellCorrectionTriggered));
@@ -124,7 +129,7 @@ String SpellingCorrectionCommand::inputEventData() const
 
 Vector<RefPtr<StaticRange>> SpellingCorrectionCommand::targetRanges() const
 {
-    return { 1, StaticRange::createFromRange(m_rangeToBeCorrected) };
+    return { 1, StaticRange::create(m_rangeToBeCorrected) };
 }
 
 RefPtr<DataTransfer> SpellingCorrectionCommand::inputEventDataTransfer() const

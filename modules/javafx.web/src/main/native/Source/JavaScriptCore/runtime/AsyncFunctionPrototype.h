@@ -31,7 +31,14 @@ namespace JSC {
 
 class AsyncFunctionPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AsyncFunctionPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     DECLARE_INFO;
 
@@ -47,11 +54,9 @@ public:
         return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&);
-
 private:
     AsyncFunctionPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC

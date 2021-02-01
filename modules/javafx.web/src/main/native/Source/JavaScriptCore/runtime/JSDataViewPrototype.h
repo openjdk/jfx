@@ -31,20 +31,25 @@ namespace JSC {
 
 class JSDataViewPrototype final : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-protected:
-    JSDataViewPrototype(VM&, Structure*);
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSDataViewPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
-    void finishCreation(VM&);
-
-public:
     static JSDataViewPrototype* create(VM&, Structure*);
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+private:
+    JSDataViewPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC

@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  *           (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2011, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
@@ -28,7 +28,6 @@
 #include "RenderObject.h"
 
 #include "AXObjectCache.h"
-#include "CSSAnimationController.h"
 #include "Editing.h"
 #include "FloatQuad.h"
 #include "Frame.h"
@@ -36,7 +35,7 @@
 #include "FrameView.h"
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
-#include "HTMLElement.h"
+#include "HTMLBRElement.h"
 #include "HTMLNames.h"
 #include "HTMLTableCellElement.h"
 #include "HTMLTableElement.h"
@@ -71,6 +70,7 @@
 #include "TransformState.h"
 #include <algorithm>
 #include <stdio.h>
+#include <wtf/HexNumber.h>
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/text/TextStream.h>
@@ -85,19 +85,20 @@ using namespace HTMLNames;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderObject);
 
-#ifndef NDEBUG
+#if ASSERT_ENABLED
 
-RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScope(RenderObject* renderObject, bool isForbidden)
+RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScope(const RenderObject& renderObject, bool isForbidden)
     : m_renderObject(renderObject)
-    , m_preexistingForbidden(m_renderObject->isSetNeedsLayoutForbidden())
+    , m_preexistingForbidden(m_renderObject.isSetNeedsLayoutForbidden())
 {
-    m_renderObject->setNeedsLayoutIsForbidden(isForbidden);
+    m_renderObject.setNeedsLayoutIsForbidden(isForbidden);
 }
 
 RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
 {
-    m_renderObject->setNeedsLayoutIsForbidden(m_preexistingForbidden);
+    m_renderObject.setNeedsLayoutIsForbidden(m_preexistingForbidden);
 }
+
 #endif
 
 struct SameSizeAsRenderObject {
@@ -162,6 +163,14 @@ bool RenderObject::isDescendantOf(const RenderObject* ancestor) const
             return true;
     }
     return false;
+}
+
+RenderElement* RenderObject::firstNonAnonymousAncestor() const
+{
+    auto* ancestor = parent();
+    while (ancestor && ancestor->isAnonymous())
+        ancestor = ancestor->parent();
+    return ancestor;
 }
 
 bool RenderObject::isLegend() const
@@ -521,11 +530,9 @@ void RenderObject::markContainingBlocksForLayout(ScheduleRelayout scheduleRelayo
     bool hasOutOfFlowPosition = !isText() && style().hasOutOfFlowPosition();
 
     while (ancestor) {
-#ifndef NDEBUG
-        // FIXME: Remove this once we remove the special cases for counters, quotes and mathml
-        // calling setNeedsLayout during preferred width computation.
-        SetLayoutNeededForbiddenScope layoutForbiddenScope(ancestor, isSetNeedsLayoutForbidden());
-#endif
+        // FIXME: Remove this once we remove the special cases for counters, quotes and mathml calling setNeedsLayout during preferred width computation.
+        SetLayoutNeededForbiddenScope layoutForbiddenScope(*ancestor, isSetNeedsLayoutForbidden());
+
         // Don't mark the outermost object of an unrooted subtree. That object will be
         // marked when the subtree is added to the document.
         auto container = ancestor->container();
@@ -713,15 +720,7 @@ IntRect RenderObject::absoluteBoundingBoxRect(bool useTransforms, bool* wasFixed
     if (useTransforms) {
         Vector<FloatQuad> quads;
         absoluteQuads(quads, wasFixed);
-
-        size_t n = quads.size();
-        if (!n)
-            return IntRect();
-
-        IntRect result = quads[0].enclosingBoundingBox();
-        for (size_t i = 1; i < n; ++i)
-            result.unite(quads[i].enclosingBoundingBox());
-        return result;
+        return enclosingIntRect(unitedBoundingBoxes(quads));
     }
 
     FloatPoint absPos = localToAbsolute(FloatPoint(), 0 /* ignore transforms */, wasFixed);
@@ -752,26 +751,6 @@ void RenderObject::absoluteFocusRingQuads(Vector<FloatQuad>& quads)
         rect.moveBy(LayoutPoint(-absolutePoint));
         quads.append(localToAbsoluteQuad(FloatQuad(snapRectToDevicePixels(rect, deviceScaleFactor))));
     }
-}
-
-FloatRect RenderObject::absoluteBoundingBoxRectForRange(const Range* range)
-{
-    if (!range)
-        return FloatRect();
-
-    range->ownerDocument().updateLayout();
-
-    Vector<FloatQuad> quads;
-    range->absoluteTextQuads(quads);
-
-    if (quads.isEmpty())
-        return FloatRect();
-
-    FloatRect result = quads[0].boundingBox();
-    for (size_t i = 1; i < quads.size(); ++i)
-        result.uniteEvenIfEmpty(quads[i].boundingBox());
-
-    return result;
 }
 
 void RenderObject::addAbsoluteRectForLayer(LayoutRect& result)
@@ -1001,7 +980,7 @@ Optional<LayoutRect> RenderObject::computeVisibleRectInContainer(const LayoutRec
     if (parent->hasOverflowClip()) {
         bool isEmpty = !downcast<RenderBox>(*parent).applyCachedClipAndScrollPosition(adjustedRect, container, context);
         if (isEmpty) {
-            if (context.m_options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
+            if (context.options.contains(VisibleRectContextOption::UseEdgeInclusiveIntersection))
                 return WTF::nullopt;
             return adjustedRect;
         }
@@ -1210,6 +1189,20 @@ void RenderObject::outputRenderObject(TextStream& stream, bool mark, int depth) 
         if (renderer.continuation())
             stream << " continuation->(" << renderer.continuation() << ")";
     }
+
+    if (is<RenderBox>(*this)) {
+        const auto& box = downcast<RenderBox>(*this);
+        if (box.hasRenderOverflow()) {
+            auto layoutOverflow = box.layoutOverflowRect();
+            stream << " (layout overflow " << layoutOverflow.x().toInt() << "," << layoutOverflow.y().toInt() << " " << layoutOverflow.width().toInt() << "x" << layoutOverflow.height().toInt() << ")";
+
+            if (box.hasVisualOverflow()) {
+                auto visualOverflow = box.visualOverflowRect();
+                stream << " (visual overflow " << visualOverflow.x().toInt() << "," << visualOverflow.y().toInt() << " " << visualOverflow.width().toInt() << "x" << visualOverflow.height().toInt() << ")";
+            }
+        }
+    }
+
     outputRegionsInformation(stream);
     if (needsLayout()) {
         stream << " layout->";
@@ -1265,9 +1258,9 @@ FloatQuad RenderObject::absoluteToLocalQuad(const FloatQuad& quad, MapCoordinate
     return transformState.lastPlanarQuad();
 }
 
-void RenderObject::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
+void RenderObject::mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
-    if (repaintContainer == this)
+    if (ancestorContainer == this)
         return;
 
     auto* parent = this->parent();
@@ -1285,7 +1278,7 @@ void RenderObject::mapLocalToContainer(const RenderLayerModelObject* repaintCont
     if (is<RenderBox>(*parent))
         transformState.move(-toLayoutSize(downcast<RenderBox>(*parent).scrollPosition()));
 
-    parent->mapLocalToContainer(repaintContainer, transformState, mode, wasFixed);
+    parent->mapLocalToContainer(ancestorContainer, transformState, mode, wasFixed);
 }
 
 const RenderObject* RenderObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
@@ -1351,21 +1344,21 @@ void RenderObject::getTransformFromContainer(const RenderObject* containerObject
 #endif
 }
 
-FloatQuad RenderObject::localToContainerQuad(const FloatQuad& localQuad, const RenderLayerModelObject* repaintContainer, MapCoordinatesFlags mode, bool* wasFixed) const
+FloatQuad RenderObject::localToContainerQuad(const FloatQuad& localQuad, const RenderLayerModelObject* container, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     // Track the point at the center of the quad's bounding box. As mapLocalToContainer() calls offsetFromContainer(),
     // it will use that point as the reference point to decide which column's transform to apply in multiple-column blocks.
     TransformState transformState(TransformState::ApplyTransformDirection, localQuad.boundingBox().center(), localQuad);
-    mapLocalToContainer(repaintContainer, transformState, mode | ApplyContainerFlip, wasFixed);
+    mapLocalToContainer(container, transformState, mode | ApplyContainerFlip, wasFixed);
     transformState.flatten();
 
     return transformState.lastPlanarQuad();
 }
 
-FloatPoint RenderObject::localToContainerPoint(const FloatPoint& localPoint, const RenderLayerModelObject* repaintContainer, MapCoordinatesFlags mode, bool* wasFixed) const
+FloatPoint RenderObject::localToContainerPoint(const FloatPoint& localPoint, const RenderLayerModelObject* container, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     TransformState transformState(TransformState::ApplyTransformDirection, localPoint);
-    mapLocalToContainer(repaintContainer, transformState, mode | ApplyContainerFlip, wasFixed);
+    mapLocalToContainer(container, transformState, mode | ApplyContainerFlip, wasFixed);
     transformState.flatten();
 
     return transformState.lastPlanarPoint();
@@ -1450,10 +1443,10 @@ RenderElement* RenderObject::container(const RenderLayerModelObject* repaintCont
 
 bool RenderObject::isSelectionBorder() const
 {
-    SelectionState st = selectionState();
-    return st == SelectionStart
-        || st == SelectionEnd
-        || st == SelectionBoth
+    HighlightState st = selectionState();
+    return st == HighlightState::Start
+        || st == HighlightState::End
+        || st == HighlightState::Both
         || view().selection().start() == this
         || view().selection().end() == this;
 }
@@ -1524,22 +1517,6 @@ VisiblePosition RenderObject::positionForPoint(const LayoutPoint&, const RenderF
     return createVisiblePosition(caretMinOffset(), DOWNSTREAM);
 }
 
-void RenderObject::updateDragState(bool dragOn)
-{
-    bool valueChanged = (dragOn != isDragging());
-    setIsDragging(dragOn);
-
-    if (!is<RenderElement>(*this))
-        return;
-    auto& renderElement = downcast<RenderElement>(*this);
-
-    if (valueChanged && renderElement.element() && (style().affectedByDrag() || renderElement.element()->childrenAffectedByDrag()))
-        renderElement.element()->invalidateStyleForSubtree();
-
-    for (auto& child : childrenOfType<RenderObject>(renderElement))
-        child.updateDragState(dragOn);
-}
-
 bool RenderObject::isComposited() const
 {
     return hasLayer() && downcast<RenderLayerModelObject>(*this).layer()->isComposited();
@@ -1568,21 +1545,24 @@ bool RenderObject::hitTest(const HitTestRequest& request, HitTestResult& result,
     return inside;
 }
 
-void RenderObject::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+Node* RenderObject::nodeForHitTest() const
 {
-    if (result.innerNode())
-        return;
-
-    Node* node = this->node();
-
+    auto* node = this->node();
     // If we hit the anonymous renderers inside generated content we should
     // actually hit the generated content so walk up to the PseudoElement.
     if (!node && parent() && parent()->isBeforeOrAfterContent()) {
         for (auto* renderer = parent(); renderer && !node; renderer = renderer->parent())
             node = renderer->element();
     }
+    return node;
+}
 
-    if (node) {
+void RenderObject::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
+{
+    if (result.innerNode())
+        return;
+
+    if (auto* node = nodeForHitTest()) {
         result.setInnerNode(node);
         if (!result.innerNonSharedNode())
             result.setInnerNonSharedNode(node);
@@ -1839,8 +1819,8 @@ void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const Box
     ASSERT(style == BorderStyle::Inset || style == BorderStyle::Outset);
 
     // This values were derived empirically.
-    constexpr SimpleColor baseDarkColor { 0xFF202020 };
-    constexpr SimpleColor baseLightColor { 0xFFEBEBEB };
+    constexpr float baseDarkColorLuminance { 0.014443844f }; // Luminance of SRGBA<uint8_t> { 32, 32, 32 }
+    constexpr float baseLightColorLuminance { 0.83077f }; // Luminance of SRGBA<uint8_t> { 235, 235, 235 }
 
     enum Operation { Darken, Lighten };
 
@@ -1848,18 +1828,12 @@ void RenderObject::calculateBorderStyleColor(const BorderStyle& style, const Box
 
     // Here we will darken the border decoration color when needed. This will yield a similar behavior as in FF.
     if (operation == Darken) {
-        if (differenceSquared(color, Color::black) > differenceSquared(baseDarkColor, Color::black))
-            color = color.dark();
+        if (color.luminance() > baseDarkColorLuminance)
+            color = color.darkened();
     } else {
-        if (differenceSquared(color, Color::white) > differenceSquared(baseLightColor, Color::white))
-            color = color.light();
+        if (color.luminance() < baseLightColorLuminance)
+            color = color.lightened();
     }
-}
-
-void RenderObject::setIsDragging(bool isDragging)
-{
-    if (isDragging || hasRareData())
-        ensureRareData().setIsDragging(isDragging);
 }
 
 void RenderObject::setHasReflection(bool hasReflection)
@@ -1924,6 +1898,318 @@ bool RenderObject::hasNonEmptyVisibleRectRespectingParentFrames() const
     }
 
     return false;
+}
+
+Vector<FloatQuad> RenderObject::absoluteTextQuads(const SimpleRange& range, bool useSelectionHeight)
+{
+    Vector<FloatQuad> quads;
+    for (auto& node : intersectingNodes(range)) {
+        auto renderer = node.renderer();
+        if (renderer && renderer->isBR())
+            renderer->absoluteQuads(quads);
+        else if (is<RenderText>(renderer)) {
+            auto offsetRange = characterDataOffsetRange(range, downcast<CharacterData>(node));
+            quads.appendVector(downcast<RenderText>(*renderer).absoluteQuadsForRange(offsetRange.start, offsetRange.end, useSelectionHeight));
+        }
+    }
+    return quads;
+}
+
+Vector<IntRect> RenderObject::absoluteTextRects(const SimpleRange& range, bool useSelectionHeight)
+{
+    Vector<IntRect> rects;
+    for (auto& node : intersectingNodes(range)) {
+        auto renderer = node.renderer();
+        if (renderer && renderer->isBR())
+            renderer->absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
+        else if (is<RenderText>(renderer)) {
+            auto offsetRange = characterDataOffsetRange(range, downcast<CharacterData>(node));
+            for (auto& quad : downcast<RenderText>(*renderer).absoluteQuadsForRange(offsetRange.start, offsetRange.end, useSelectionHeight))
+                rects.append(quad.enclosingBoundingBox());
+        }
+    }
+    return rects;
+}
+
+#if PLATFORM(IOS_FAMILY)
+
+static bool intervalsSufficientlyOverlap(int startA, int endA, int startB, int endB)
+{
+    if (endA <= startA || endB <= startB)
+        return false;
+
+    const float sufficientOverlap = .75;
+
+    int lengthA = endA - startA;
+    int lengthB = endB - startB;
+
+    int maxStart = std::max(startA, startB);
+    int minEnd = std::min(endA, endB);
+
+    if (maxStart > minEnd)
+        return false;
+
+    return minEnd - maxStart >= sufficientOverlap * std::min(lengthA, lengthB);
+}
+
+static inline void adjustLineHeightOfSelectionRects(Vector<SelectionRect>& rects, size_t numberOfRects, int lineNumber, int lineTop, int lineHeight)
+{
+    ASSERT(rects.size() >= numberOfRects);
+    for (size_t i = numberOfRects; i; ) {
+        --i;
+        if (rects[i].lineNumber())
+            break;
+        rects[i].setLineNumber(lineNumber);
+        rects[i].setLogicalTop(lineTop);
+        rects[i].setLogicalHeight(lineHeight);
+    }
+}
+
+static SelectionRect coalesceSelectionRects(const SelectionRect& original, const SelectionRect& previous)
+{
+    SelectionRect result(unionRect(previous.rect(), original.rect()), original.isHorizontal(), original.pageNumber());
+    result.setDirection(original.containsStart() || original.containsEnd() ? original.direction() : previous.direction());
+    result.setContainsStart(previous.containsStart() || original.containsStart());
+    result.setContainsEnd(previous.containsEnd() || original.containsEnd());
+    result.setIsFirstOnLine(previous.isFirstOnLine() || original.isFirstOnLine());
+    result.setIsLastOnLine(previous.isLastOnLine() || original.isLastOnLine());
+    return result;
+}
+
+Vector<SelectionRect> RenderObject::collectSelectionRectsWithoutUnionInteriorLines(const SimpleRange& range)
+{
+    return collectSelectionRectsInternal(range).rects;
+}
+
+auto RenderObject::collectSelectionRectsInternal(const SimpleRange& range) -> SelectionRects
+{
+    Vector<SelectionRect> rects;
+    Vector<SelectionRect> newRects;
+    bool hasFlippedWritingMode = range.start.container->renderer() && range.start.container->renderer()->style().isFlippedBlocksWritingMode();
+    bool containsDifferentWritingModes = false;
+    for (auto& node : intersectingNodes(range)) {
+        auto renderer = node.renderer();
+        // Only ask leaf render objects for their line box rects.
+        if (renderer && !renderer->firstChildSlow() && renderer->style().userSelect() != UserSelect::None) {
+            bool isStartNode = renderer->node() == range.start.container.ptr();
+            bool isEndNode = renderer->node() == range.end.container.ptr();
+            if (hasFlippedWritingMode != renderer->style().isFlippedBlocksWritingMode())
+                containsDifferentWritingModes = true;
+            // FIXME: Sending 0 for the startOffset is a weird way of telling the renderer that the selection
+            // doesn't start inside it, since we'll also send 0 if the selection *does* start in it, at offset 0.
+            //
+            // FIXME: Selection endpoints aren't always inside leaves, and we only build SelectionRects for leaves,
+            // so we can't accurately determine which SelectionRects contain the selection start and end using
+            // only the offsets of the start and end. We need to pass the whole Range.
+            int beginSelectionOffset = isStartNode ? range.start.offset : 0;
+            int endSelectionOffset = isEndNode ? range.end.offset : std::numeric_limits<int>::max();
+            renderer->collectSelectionRects(newRects, beginSelectionOffset, endSelectionOffset);
+            for (auto& selectionRect : newRects) {
+                if (selectionRect.containsStart() && !isStartNode)
+                    selectionRect.setContainsStart(false);
+                if (selectionRect.containsEnd() && !isEndNode)
+                    selectionRect.setContainsEnd(false);
+                if (selectionRect.logicalWidth() || selectionRect.logicalHeight())
+                    rects.append(selectionRect);
+            }
+            newRects.shrink(0);
+        }
+    }
+
+    // The range could span nodes with different writing modes.
+    // If this is the case, we use the writing mode of the common ancestor.
+    if (containsDifferentWritingModes) {
+        if (auto ancestor = commonInclusiveAncestor(range))
+            hasFlippedWritingMode = ancestor->renderer()->style().isFlippedBlocksWritingMode();
+    }
+
+    auto numberOfRects = rects.size();
+
+    // If the selection ends in a BR, then add the line break bit to the last rect we have.
+    // This will cause its selection rect to extend to the end of the line.
+    if (numberOfRects) {
+        // Only set the line break bit if the end of the range actually
+        // extends all the way to include the <br>. VisiblePosition helps to
+        // figure this out.
+        if (is<HTMLBRElement>(VisiblePosition(createLegacyEditingPosition(range.end)).deepEquivalent().firstNode()))
+            rects.last().setIsLineBreak(true);
+    }
+
+    int lineTop = std::numeric_limits<int>::max();
+    int lineBottom = std::numeric_limits<int>::min();
+    int lastLineTop = lineTop;
+    int lastLineBottom = lineBottom;
+    int lineNumber = 0;
+
+    for (size_t i = 0; i < numberOfRects; ++i) {
+        int currentRectTop = rects[i].logicalTop();
+        int currentRectBottom = currentRectTop + rects[i].logicalHeight();
+
+        // We don't want to count the ruby text as a separate line.
+        if (intervalsSufficientlyOverlap(currentRectTop, currentRectBottom, lineTop, lineBottom) || (i && rects[i].isRubyText())) {
+            // Grow the current line bounds.
+            lineTop = std::min(lineTop, currentRectTop);
+            lineBottom = std::max(lineBottom, currentRectBottom);
+            // Avoid overlap with the previous line.
+            if (!hasFlippedWritingMode)
+                lineTop = std::max(lastLineBottom, lineTop);
+            else
+                lineBottom = std::min(lastLineTop, lineBottom);
+        } else {
+            adjustLineHeightOfSelectionRects(rects, i, lineNumber, lineTop, lineBottom - lineTop);
+            if (!hasFlippedWritingMode) {
+                lastLineTop = lineTop;
+                if (currentRectBottom >= lastLineTop) {
+                    lastLineBottom = lineBottom;
+                    lineTop = lastLineBottom;
+                } else {
+                    lineTop = currentRectTop;
+                    lastLineBottom = std::numeric_limits<int>::min();
+                }
+                lineBottom = currentRectBottom;
+            } else {
+                lastLineBottom = lineBottom;
+                if (currentRectTop <= lastLineBottom && i && rects[i].pageNumber() == rects[i - 1].pageNumber()) {
+                    lastLineTop = lineTop;
+                    lineBottom = lastLineTop;
+                } else {
+                    lastLineTop = std::numeric_limits<int>::max();
+                    lineBottom = currentRectBottom;
+                }
+                lineTop = currentRectTop;
+            }
+            ++lineNumber;
+        }
+    }
+
+    // Adjust line height.
+    adjustLineHeightOfSelectionRects(rects, numberOfRects, lineNumber, lineTop, lineBottom - lineTop);
+
+    // Sort the rectangles and make sure there are no gaps. The rectangles could be unsorted when
+    // there is ruby text and we could have gaps on the line when adjacent elements on the line
+    // have a different orientation.
+    size_t firstRectWithCurrentLineNumber = 0;
+    for (size_t currentRect = 1; currentRect < numberOfRects; ++currentRect) {
+        if (rects[currentRect].lineNumber() != rects[currentRect - 1].lineNumber()) {
+            firstRectWithCurrentLineNumber = currentRect;
+            continue;
+        }
+        if (rects[currentRect].logicalLeft() >= rects[currentRect - 1].logicalLeft())
+            continue;
+
+        SelectionRect selectionRect = rects[currentRect];
+        size_t i;
+        for (i = currentRect; i > firstRectWithCurrentLineNumber && selectionRect.logicalLeft() < rects[i - 1].logicalLeft(); --i)
+            rects[i] = rects[i - 1];
+        rects[i] = selectionRect;
+    }
+
+    for (size_t j = 1; j < numberOfRects; ++j) {
+        if (rects[j].lineNumber() != rects[j - 1].lineNumber())
+            continue;
+        SelectionRect& previousRect = rects[j - 1];
+        bool previousRectMayNotReachRightEdge = (previousRect.direction() == TextDirection::LTR && previousRect.containsEnd()) || (previousRect.direction() == TextDirection::RTL && previousRect.containsStart());
+        if (previousRectMayNotReachRightEdge)
+            continue;
+        int adjustedWidth = rects[j].logicalLeft() - previousRect.logicalLeft();
+        if (adjustedWidth > previousRect.logicalWidth())
+            previousRect.setLogicalWidth(adjustedWidth);
+    }
+
+    int maxLineNumber = lineNumber;
+
+    // Extend rects out to edges as needed.
+    for (size_t i = 0; i < numberOfRects; ++i) {
+        SelectionRect& selectionRect = rects[i];
+        if (!selectionRect.isLineBreak() && selectionRect.lineNumber() >= maxLineNumber)
+            continue;
+        if (selectionRect.direction() == TextDirection::RTL && selectionRect.isFirstOnLine()) {
+            selectionRect.setLogicalWidth(selectionRect.logicalWidth() + selectionRect.logicalLeft() - selectionRect.minX());
+            selectionRect.setLogicalLeft(selectionRect.minX());
+        } else if (selectionRect.direction() == TextDirection::LTR && selectionRect.isLastOnLine())
+            selectionRect.setLogicalWidth(selectionRect.maxX() - selectionRect.logicalLeft());
+    }
+
+    return { WTFMove(rects), maxLineNumber };
+}
+
+Vector<SelectionRect> RenderObject::collectSelectionRects(const SimpleRange& range)
+{
+    auto result = RenderObject::collectSelectionRectsInternal(range);
+    auto numberOfRects = result.rects.size();
+
+    // Union all the rectangles on interior lines (i.e. not first or last).
+    // On first and last lines, just avoid having overlaps by merging intersecting rectangles.
+    Vector<SelectionRect> unionedRects;
+    IntRect interiorUnionRect;
+    for (size_t i = 0; i < numberOfRects; ++i) {
+        SelectionRect& currentRect = result.rects[i];
+        if (currentRect.lineNumber() == 1) {
+            ASSERT(interiorUnionRect.isEmpty());
+            if (!unionedRects.isEmpty()) {
+                SelectionRect& previousRect = unionedRects.last();
+                if (previousRect.rect().intersects(currentRect.rect())) {
+                    previousRect = coalesceSelectionRects(currentRect, previousRect);
+                    continue;
+                }
+            }
+            // Couldn't merge with previous rect, so just appending.
+            unionedRects.append(currentRect);
+        } else if (currentRect.lineNumber() < result.maxLineNumber) {
+            if (interiorUnionRect.isEmpty()) {
+                // Start collecting interior rects.
+                interiorUnionRect = currentRect.rect();
+            } else if (interiorUnionRect.intersects(currentRect.rect())
+                || interiorUnionRect.maxX() == currentRect.rect().x()
+                || interiorUnionRect.maxY() == currentRect.rect().y()
+                || interiorUnionRect.x() == currentRect.rect().maxX()
+                || interiorUnionRect.y() == currentRect.rect().maxY()) {
+                // Only union the lines that are attached.
+                // For iBooks, the interior lines may cross multiple horizontal pages.
+                interiorUnionRect.unite(currentRect.rect());
+            } else {
+                unionedRects.append(SelectionRect(interiorUnionRect, currentRect.isHorizontal(), currentRect.pageNumber()));
+                interiorUnionRect = currentRect.rect();
+            }
+        } else {
+            // Processing last line.
+            if (!interiorUnionRect.isEmpty()) {
+                unionedRects.append(SelectionRect(interiorUnionRect, currentRect.isHorizontal(), currentRect.pageNumber()));
+                interiorUnionRect = IntRect();
+            }
+
+            ASSERT(!unionedRects.isEmpty());
+            SelectionRect& previousRect = unionedRects.last();
+            if (previousRect.logicalTop() == currentRect.logicalTop() && previousRect.rect().intersects(currentRect.rect())) {
+                // previousRect is also on the last line, and intersects the current one.
+                previousRect = coalesceSelectionRects(currentRect, previousRect);
+                continue;
+            }
+            // Couldn't merge with previous rect, so just appending.
+            unionedRects.append(currentRect);
+        }
+    }
+
+    return unionedRects;
+}
+
+#endif
+
+String RenderObject::debugDescription() const
+{
+    StringBuilder builder;
+
+    builder.append(renderName(), " 0x"_s, hex(reinterpret_cast<uintptr_t>(this), Lowercase));
+    if (node())
+        builder.append(' ', node()->debugDescription());
+
+    return builder.toString();
+}
+
+TextStream& operator<<(TextStream& ts, const RenderObject& renderer)
+{
+    ts << renderer.debugDescription();
+    return ts;
 }
 
 #if ENABLE(TREE_DEBUGGING)

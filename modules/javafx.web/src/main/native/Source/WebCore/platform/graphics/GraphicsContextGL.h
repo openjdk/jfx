@@ -666,49 +666,85 @@ public:
         MAX_CLIENT_WAIT_TIMEOUT_WEBGL = 0x9247,
 
         // Necessary desktop OpenGL constants.
-        TEXTURE_RECTANGLE_ARB = 0x84F5
+        TEXTURE_RECTANGLE_ARB = 0x84F5,
+        TEXTURE_BINDING_RECTANGLE_ARB = 0x84F6,
     };
 
+    // Attempt to enumerate all possible native image formats to
+    // reduce the amount of temporary allocations during texture
+    // uploading. This enum must be public because it is accessed
+    // by non-member functions.
+    // "_S" postfix indicates signed type.
     enum class DataFormat : uint8_t {
         RGBA8 = 0,
-        RGBA16Little,
-        RGBA16Big,
+        RGBA8_S,
+        RGBA16,
+        RGBA16_S,
+        RGBA16Little, // CoreGraphics-specific source format.
+        RGBA16Big, // CoreGraphics-specific source format.
+        RGBA32,
+        RGBA32_S,
         RGBA16F,
         RGBA32F,
+        RGBA2_10_10_10,
         RGB8,
-        RGB16Little,
-        RGB16Big,
+        RGB8_S,
+        RGB16,
+        RGB16_S,
+        RGB16Little, // CoreGraphics-specific source format.
+        RGB16Big, // CoreGraphics-specific source format.
+        RGB32,
+        RGB32_S,
         RGB16F,
         RGB32F,
         BGR8,
         BGRA8,
-        BGRA16Little,
-        BGRA16Big,
+        BGRA16Little, // CoreGraphics-specific source format.
+        BGRA16Big, // CoreGraphics-specific source format.
         ARGB8,
-        ARGB16Little,
-        ARGB16Big,
+        ARGB16Little, // CoreGraphics-specific source format.
+        ARGB16Big, // CoreGraphics-specific source format.
         ABGR8,
         RGBA5551,
         RGBA4444,
         RGB565,
+        RGB10F11F11F,
+        RGB5999,
+        RG8,
+        RG8_S,
+        RG16,
+        RG16_S,
+        RG32,
+        RG32_S,
+        RG16F,
+        RG32F,
         R8,
-        R16Little,
-        R16Big,
+        R8_S,
+        R16,
+        R16_S,
+        R16Little, // CoreGraphics-specific source format.
+        R16Big, // CoreGraphics-specific source format.
+        R32,
+        R32_S,
         R16F,
         R32F,
         RA8,
-        RA16Little,
-        RA16Big,
+        RA16Little, // CoreGraphics-specific source format.
+        RA16Big, // CoreGraphics-specific source format.
         RA16F,
         RA32F,
         AR8,
-        AR16Little,
-        AR16Big,
+        AR16Little, // CoreGraphics-specific source format.
+        AR16Big, // CoreGraphics-specific source format.
         A8,
-        A16Little,
-        A16Big,
+        A16Little, // CoreGraphics-specific source format.
+        A16Big, // CoreGraphics-specific source format.
         A16F,
         A32F,
+        D16,
+        D32,
+        D32F,
+        DS24_8,
         NumFormats
     };
 
@@ -750,11 +786,13 @@ public:
         // These constants are redefined here from ANGLE's OpenGL ES headers to
         // provide a single place where multiple portions of platform code can
         // reference them.
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(MACCATALYST)
         IOSurfaceTextureTarget = TEXTURE_RECTANGLE_ARB, // also GL_TEXTURE_RECTANGLE_ANGLE
+        IOSurfaceTextureTargetQuery = TEXTURE_BINDING_RECTANGLE_ARB,
         EGLIOSurfaceTextureTarget = 0x345B, // EGL_TEXTURE_RECTANGLE_ANGLE
 #else
         IOSurfaceTextureTarget = TEXTURE_2D,
+        IOSurfaceTextureTargetQuery = TEXTURE_BINDING_2D,
         EGLIOSurfaceTextureTarget = 0x305F, // EGL_TEXTURE_2D
 #endif // PLATFORM(MAC)
     };
@@ -782,6 +820,12 @@ public:
         case DataFormat::RGBA32F:
         case DataFormat::RGBA4444:
         case DataFormat::RGBA5551:
+        case DataFormat::RGBA8_S:
+        case DataFormat::RGBA16:
+        case DataFormat::RGBA16_S:
+        case DataFormat::RGBA32:
+        case DataFormat::RGBA32_S:
+        case DataFormat::RGBA2_10_10_10:
             return true;
         default:
             return false;
@@ -811,6 +855,32 @@ public:
         case DataFormat::RA16F:
         case DataFormat::RA32F:
         case DataFormat::AR8:
+        case DataFormat::RGBA8_S:
+        case DataFormat::RGBA16:
+        case DataFormat::RGBA16_S:
+        case DataFormat::RGBA32:
+        case DataFormat::RGBA32_S:
+        case DataFormat::RGBA2_10_10_10:
+        case DataFormat::RGB8_S:
+        case DataFormat::RGB16:
+        case DataFormat::RGB16_S:
+        case DataFormat::RGB32:
+        case DataFormat::RGB32_S:
+        case DataFormat::RGB10F11F11F:
+        case DataFormat::RGB5999:
+        case DataFormat::RG8:
+        case DataFormat::RG8_S:
+        case DataFormat::RG16:
+        case DataFormat::RG16_S:
+        case DataFormat::RG32:
+        case DataFormat::RG32_S:
+        case DataFormat::RG16F:
+        case DataFormat::RG32F:
+        case DataFormat::R8_S:
+        case DataFormat::R16:
+        case DataFormat::R16_S:
+        case DataFormat::R32:
+        case DataFormat::R32_S:
             return true;
         default:
             return false;
@@ -921,7 +991,9 @@ public:
     virtual String getString(GCGLenum name) = 0;
     virtual void getFloatv(GCGLenum pname, GCGLfloat* value) = 0;
     virtual void getIntegerv(GCGLenum pname, GCGLint* value) = 0;
+    virtual void getIntegeri_v(GCGLenum pname, GCGLuint index, GCGLint* value) = 0;
     virtual void getInteger64v(GCGLenum pname, GCGLint64* value) = 0;
+    virtual void getInteger64i_v(GCGLenum pname, GCGLuint index, GCGLint64* value) = 0;
     virtual void getProgramiv(PlatformGLObject program, GCGLenum pname, GCGLint* value) = 0;
     virtual void getBooleanv(GCGLenum pname, GCGLboolean* value) = 0;
 
@@ -951,6 +1023,7 @@ public:
     // getUniform
     virtual void getUniformfv(PlatformGLObject program, GCGLint location, GCGLfloat* value) = 0;
     virtual void getUniformiv(PlatformGLObject program, GCGLint location, GCGLint* value) = 0;
+    virtual void getUniformuiv(PlatformGLObject program, GCGLint location, GCGLuint* value) = 0;
 
     virtual GCGLint getUniformLocation(PlatformGLObject, const String& name) = 0;
 
@@ -1043,6 +1116,10 @@ public:
 
     GraphicsContextGLAttributes contextAttributes() const { return m_attrs; }
     void setContextAttributes(const GraphicsContextGLAttributes& attrs) { m_attrs = attrs; }
+    // Concession to Canvas captureStream, which needs to dynamically set
+    // preserveDrawingBuffer to true in order to avoid implicit clears.
+    // Implementations generally do not support toggling this bit arbitrarily.
+    virtual void enablePreserveDrawingBuffer();
 
     // VertexArrayOject calls
     virtual PlatformGLObject createVertexArray() = 0;
@@ -1072,8 +1149,8 @@ public:
 
     virtual void blitFramebuffer(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter) = 0;
     virtual void framebufferTextureLayer(GCGLenum target, GCGLenum attachment, PlatformGLObject texture, GCGLint level, GCGLint layer) = 0;
-    virtual void invalidateFramebuffer(GCGLenum target, const Vector<GCGLenum>& attachments) = 0;
-    virtual void invalidateSubFramebuffer(GCGLenum target, const Vector<GCGLenum>& attachments, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) = 0;
+    virtual void invalidateFramebuffer(GCGLenum target, GCGLsizei numAttachments, const GCGLenum* attachments) = 0;
+    virtual void invalidateSubFramebuffer(GCGLenum target, GCGLsizei numAttachments, const GCGLenum* attachments, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) = 0;
     virtual void readBuffer(GCGLenum src) = 0;
 
     // getInternalFormatParameter
@@ -1083,19 +1160,11 @@ public:
     virtual void texStorage2D(GCGLenum target, GCGLsizei levels, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) = 0;
     virtual void texStorage3D(GCGLenum target, GCGLsizei levels, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth) = 0;
 
-    virtual void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) = 0;
-    virtual void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, const void* pixels) = 0;
-    virtual void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) = 0;
-
-    virtual void texSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) = 0;
-    virtual void texSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) = 0;
+    // tex{Sub}Image3D are supported only via ANGLE_robust_client_memory.
 
     virtual void copyTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height) = 0;
 
-    virtual void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLsizei imageSize, GCGLintptr offset) = 0;
-    virtual void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) = 0;
-    virtual void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, GCGLintptr offset) = 0;
-    virtual void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) = 0;
+    // compressedTex{Sub}Image3D are supported only via ANGLE_robust_client_memory.
 
     virtual GCGLint getFragDataLocation(PlatformGLObject program, const String& name) = 0;
 
@@ -1121,7 +1190,7 @@ public:
 
     virtual void drawRangeElements(GCGLenum mode, GCGLuint start, GCGLuint end, GCGLsizei count, GCGLenum type, GCGLintptr offset) = 0;
 
-    virtual void drawBuffers(const Vector<GCGLenum>& buffers) = 0;
+    virtual void drawBuffers(GCGLsizei n, const GCGLenum* bufs) = 0;
     virtual void clearBufferiv(GCGLenum buffer, GCGLint drawbuffer, const GCGLint* values, GCGLuint srcOffset) = 0;
     virtual void clearBufferuiv(GCGLenum buffer, GCGLint drawbuffer, const GCGLuint* values, GCGLuint srcOffset) = 0;
     virtual void clearBufferfv(GCGLenum buffer, GCGLint drawbuffer, const GCGLfloat* values, GCGLuint srcOffset) = 0;
@@ -1146,13 +1215,13 @@ public:
     virtual void getSamplerParameterfv(PlatformGLObject sampler, GCGLenum pname, GCGLfloat* value) = 0;
     virtual void getSamplerParameteriv(PlatformGLObject sampler, GCGLenum pname, GCGLint* value) = 0;
 
-    virtual PlatformGLObject fenceSync(GCGLenum condition, GCGLbitfield flags) = 0;
-    virtual GCGLboolean isSync(PlatformGLObject sync) = 0;
-    virtual void deleteSync(PlatformGLObject sync) = 0;
-    virtual GCGLenum clientWaitSync(PlatformGLObject sync, GCGLbitfield flags, GCGLuint64 timeout) = 0;
-    virtual void waitSync(PlatformGLObject sync, GCGLbitfield flags, GCGLint64 timeout) = 0;
+    virtual GCGLsync fenceSync(GCGLenum condition, GCGLbitfield flags) = 0;
+    virtual GCGLboolean isSync(GCGLsync) = 0;
+    virtual void deleteSync(GCGLsync) = 0;
+    virtual GCGLenum clientWaitSync(GCGLsync, GCGLbitfield flags, GCGLuint64 timeout) = 0;
+    virtual void waitSync(GCGLsync, GCGLbitfield flags, GCGLint64 timeout) = 0;
     // getSyncParameter
-    virtual void getSynciv(PlatformGLObject sync, GCGLenum pname, GCGLsizei bufSize, GCGLint* value) = 0;
+    virtual void getSynciv(GCGLsync, GCGLenum pname, GCGLsizei bufSize, GCGLint* value) = 0;
 
     virtual PlatformGLObject createTransformFeedback() = 0;
     virtual void deleteTransformFeedback(PlatformGLObject id) = 0;
@@ -1177,8 +1246,8 @@ public:
     virtual String getActiveUniformBlockName(PlatformGLObject program, GCGLuint uniformBlockIndex) = 0;
     virtual void uniformBlockBinding(PlatformGLObject program, GCGLuint uniformBlockIndex, GCGLuint uniformBlockBinding) = 0;
 
-    virtual void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLintptr pboOffset) = 0;
-    virtual void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, const void* srcData, GCGLuint srcOffset) = 0;
+    // texSubImage2D with pixel pack buffer, and srcData+offset, are
+    // supported only via ANGLE_robust_client_memory.
 
     virtual void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLsizei imageSize, GCGLintptr offset) = 0;
     virtual void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, const void* srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride) = 0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,27 +29,25 @@
 #if ENABLE(DFG_JIT)
 
 #include "AssemblyHelpers.h"
-#include "BytecodeUseDef.h"
+#include "BytecodeStructs.h"
 #include "CheckpointOSRExitSideState.h"
-#include "ClonedArguments.h"
 #include "DFGGraph.h"
 #include "DFGMayExit.h"
 #include "DFGOSRExitCompilerCommon.h"
 #include "DFGOperations.h"
 #include "DFGSpeculativeJIT.h"
-#include "DirectArguments.h"
 #include "FrameTracers.h"
 #include "InlineCallFrame.h"
-#include "JSCInlines.h"
-#include "JSCJSValue.h"
+#include "JSCJSValueInlines.h"
 #include "OperandsInlines.h"
 #include "ProbeContext.h"
-#include "ProbeFrame.h"
+
+#include <wtf/Scope.h>
 
 namespace JSC { namespace DFG {
 
 OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAValueProfile valueProfile, SpeculativeJIT* jit, unsigned streamIndex, unsigned recoveryIndex)
-    : OSRExitBase(kind, jit->m_origin.forExit, jit->m_origin.semantic, jit->m_origin.wasHoisted)
+    : OSRExitBase(kind, jit->m_origin.forExit, jit->m_origin.semantic, jit->m_origin.wasHoisted, jit->m_currentNode ? jit->m_currentNode->index() : 0)
     , m_jsValueSource(jsValueSource)
     , m_valueProfile(valueProfile)
     , m_recoveryIndex(recoveryIndex)
@@ -126,10 +124,10 @@ void OSRExit::emitRestoreArguments(CCallHelpers& jit, VM& vm, const Operands<Val
         jit.prepareCallOperation(vm);
         switch (recovery.technique()) {
         case DirectArgumentsThatWereNotCreated:
-            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationCreateDirectArgumentsDuringExit)), GPRInfo::nonArgGPR0);
+            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationCreateDirectArgumentsDuringExit)), GPRInfo::nonArgGPR0);
             break;
         case ClonedArgumentsThatWereNotCreated:
-            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationCreateClonedArgumentsDuringExit)), GPRInfo::nonArgGPR0);
+            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationCreateClonedArgumentsDuringExit)), GPRInfo::nonArgGPR0);
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -147,10 +145,10 @@ void JIT_OPERATION operationCompileOSRExit(CallFrame* callFrame)
     VM& vm = callFrame->deprecatedVM();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (validateDFGDoesGC) {
+    if constexpr (validateDFGDoesGC) {
         // We're about to exit optimized code. So, there's no longer any optimized
         // code running that expects no GC.
-        vm.heap.setExpectDoesGC(true);
+        vm.heap.setDoesGCExpectation(true, DoesGCCheck::Special::DFGOSRExit);
     }
 
     if (vm.callFrameForCatch)
@@ -174,7 +172,7 @@ void JIT_OPERATION operationCompileOSRExit(CallFrame* callFrame)
     Operands<ValueRecovery> operands;
     codeBlock->jitCode()->dfg()->variableEventStream.reconstruct(codeBlock, exit.m_codeOrigin, codeBlock->jitCode()->dfg()->minifiedDFG, exit.m_streamIndex, operands);
 
-    SpeculationRecovery* recovery = 0;
+    SpeculationRecovery* recovery = nullptr;
     if (exit.m_recoveryIndex != UINT_MAX)
         recovery = &codeBlock->jitCode()->dfg()->speculationRecovery[exit.m_recoveryIndex];
 
@@ -209,8 +207,8 @@ void JIT_OPERATION operationCompileOSRExit(CallFrame* callFrame)
         exit.m_code = FINALIZE_CODE_IF(
             shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseDFGOSRExit(),
             patchBuffer, OSRExitPtrTag,
-            "DFG OSR exit #%u (%s, %s) from %s, with operands = %s",
-                exitIndex, toCString(exit.m_codeOrigin).data(),
+            "DFG OSR exit #%u (D@%u, %s, %s) from %s, with operands = %s",
+                exitIndex, exit.m_dfgNodeIndex, toCString(exit.m_codeOrigin).data(),
                 exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
                 toCString(ignoringContext<DumpContext>(operands)).data());
     }
@@ -383,10 +381,13 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                 // We can't be sure that we have a spare register. So use the numberTagRegister,
                 // since we know how to restore it.
                 jit.load64(AssemblyHelpers::Address(exit.m_jsValueSource.asAddress()), GPRInfo::numberTagRegister);
-                profile.emitReportValue(jit, JSValueRegs(GPRInfo::numberTagRegister));
+                // We also use the notCellMaskRegister as the scratch register, for the same reason.
+                // FIXME: find a less gross way of doing this, maybe through delaying these operations until we actually have some spare registers around?
+                profile.emitReportValue(jit, JSValueRegs(GPRInfo::numberTagRegister), GPRInfo::notCellMaskRegister, DoNotHaveTagRegisters);
                 jit.move(AssemblyHelpers::TrustedImm64(JSValue::NumberTag), GPRInfo::numberTagRegister);
             } else
-                profile.emitReportValue(jit, JSValueRegs(exit.m_jsValueSource.gpr()));
+                profile.emitReportValue(jit, JSValueRegs(exit.m_jsValueSource.gpr()), GPRInfo::notCellMaskRegister, DoNotHaveTagRegisters);
+            jit.move(AssemblyHelpers::TrustedImm64(JSValue::NotCellMask), GPRInfo::notCellMaskRegister);
 #else // not USE(JSVALUE64)
             if (exit.m_jsValueSource.isAddress()) {
                 // Save a register so we can use it.
@@ -398,7 +399,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                 JSValueRegs scratch(scratchTag, scratchPayload);
 
                 jit.loadValue(exit.m_jsValueSource.asAddress(), scratch);
-                profile.emitReportValue(jit, scratch);
+                profile.emitReportValue(jit, scratch, InvalidGPRReg);
 
                 jit.popToRestore(scratchTag);
                 jit.popToRestore(scratchPayload);
@@ -407,10 +408,10 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                 jit.pushToSave(scratchTag);
                 jit.move(AssemblyHelpers::TrustedImm32(exit.m_jsValueSource.tag()), scratchTag);
                 JSValueRegs value(scratchTag, exit.m_jsValueSource.payloadGPR());
-                profile.emitReportValue(jit, value);
+                profile.emitReportValue(jit, value, InvalidGPRReg);
                 jit.popToRestore(scratchTag);
             } else
-                profile.emitReportValue(jit, exit.m_jsValueSource.regs());
+                profile.emitReportValue(jit, exit.m_jsValueSource.regs(), InvalidGPRReg);
 #endif // USE(JSVALUE64)
         }
     }
@@ -454,7 +455,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
     // Save all state from GPRs into the scratch buffer.
 
     ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(sizeof(EncodedJSValue) * operands.size());
-    EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : 0;
+    EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : nullptr;
 
     for (size_t index = 0; index < operands.size(); ++index) {
         const ValueRecovery& recovery = operands[index];
@@ -551,16 +552,18 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         }
     }
 
-    if (validateDFGDoesGC) {
+    if constexpr (validateDFGDoesGC) {
+        if (Options::validateDoesGC()) {
         // We're about to exit optimized code. So, there's no longer any optimized
         // code running that expects no GC. We need to set this before arguments
         // materialization below (see emitRestoreArguments()).
 
-        // Even though we set Heap::m_expectDoesGC in compileOSRExit(), we also need
+            // Even though we set Heap::m_doesGC in compileOSRExit(), we also need
         // to set it here because compileOSRExit() is only called on the first time
         // we exit from this site, but all subsequent exits will take this compiled
         // ramp without calling compileOSRExit() first.
-        jit.store8(CCallHelpers::TrustedImm32(true), vm.heap.addressOfExpectDoesGC());
+            jit.store32(CCallHelpers::TrustedImm32(DoesGCCheck::encode(true, DoesGCCheck::Special::DFGOSRExit)), vm.heap.addressOfDoesGC());
+        }
     }
 
     // Need to ensure that the stack pointer accounts for the worst-case stack usage at exit. This
@@ -590,14 +593,23 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         VM* vmPtr = &vm;
         auto* tmpScratch = scratch + operands.tmpIndex(0);
         jit.probe([=, values = WTFMove(values)] (Probe::Context& context) {
+            Vector<std::unique_ptr<CheckpointOSRExitSideState>, VM::expectedMaxActiveSideStateCount> sideStates;
+            sideStates.reserveInitialCapacity(exit.m_codeOrigin.inlineDepth());
+            auto sideStateCommitter = makeScopeExit([&] {
+                for (size_t i = sideStates.size(); i--;)
+                    vmPtr->pushCheckpointOSRSideState(WTFMove(sideStates[i]));
+            });
+
+
             auto addSideState = [&] (CallFrame* frame, BytecodeIndex index, size_t tmpOffset) {
-                std::unique_ptr<CheckpointOSRExitSideState> sideState = WTF::makeUnique<CheckpointOSRExitSideState>();
+                std::unique_ptr<CheckpointOSRExitSideState> sideState = WTF::makeUnique<CheckpointOSRExitSideState>(frame);
 
                 sideState->bytecodeIndex = index;
                 for (size_t i = 0; i < maxNumCheckpointTmps; ++i) {
                     auto& recovery = values[i + tmpOffset];
                     // FIXME: We should do what the FTL does and materialize all the JSValues into the scratch buffer.
                     switch (recovery.technique()) {
+
                     case Constant:
                         sideState->tmps[i] = recovery.constant();
                         break;
@@ -608,31 +620,39 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                         break;
                     }
 
-#if USE(JSVALUE32_64)
-                    case InPair:
-#endif
-                    case InGPR:
+                    case UnboxedBooleanInGPR: {
+                        sideState->tmps[i] = jsBoolean(static_cast<bool>(tmpScratch[i + tmpOffset]));
+                        break;
+                    }
+
+#if USE(JSVALUE64)
                     case BooleanDisplacedInJSStack:
                     case CellDisplacedInJSStack:
+                    case UnboxedCellInGPR:
+                    case InGPR:
+                    case DisplacedInJSStack: {
+                        sideState->tmps[i] = reinterpret_cast<JSValue*>(tmpScratch)[i + tmpOffset];
+                        break;
+                    }
+#else // USE(JSVALUE32_64)
+                    case InPair:
                     case DisplacedInJSStack: {
                         sideState->tmps[i] = reinterpret_cast<JSValue*>(tmpScratch)[i + tmpOffset];
                         break;
                     }
 
+                    case CellDisplacedInJSStack:
                     case UnboxedCellInGPR: {
-#if USE(JSVALUE64)
-                        sideState->tmps[i] = reinterpret_cast<JSValue*>(tmpScratch)[i + tmpOffset];
-#else
                         EncodedValueDescriptor* valueDescriptor = bitwise_cast<EncodedValueDescriptor*>(tmpScratch + i + tmpOffset);
                         sideState->tmps[i] = JSValue(JSValue::CellTag, valueDescriptor->asBits.payload);
-#endif
                         break;
                     }
 
-                    case UnboxedBooleanInGPR: {
+                    case BooleanDisplacedInJSStack: {
                         sideState->tmps[i] = jsBoolean(static_cast<bool>(tmpScratch[i + tmpOffset]));
                         break;
                     }
+#endif // USE(JSVALUE64)
 
                     default:
                         RELEASE_ASSERT_NOT_REACHED();
@@ -640,7 +660,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
                     }
                 }
 
-                vmPtr->addCheckpointOSRSideState(frame, WTFMove(sideState));
+                sideStates.append(WTFMove(sideState));
             };
 
             const CodeOrigin* codeOrigin;
@@ -731,7 +751,7 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
         case Int32DisplacedInJSStack:
 #if USE(JSVALUE64)
             jit.load64(scratch + index, GPRInfo::regT0);
-            jit.zeroExtend32ToPtr(GPRInfo::regT0, GPRInfo::regT0);
+            jit.zeroExtend32ToWord(GPRInfo::regT0, GPRInfo::regT0);
             jit.or64(GPRInfo::numberTagRegister, GPRInfo::regT0);
             jit.store64(GPRInfo::regT0, AssemblyHelpers::addressFor(operand));
 #else

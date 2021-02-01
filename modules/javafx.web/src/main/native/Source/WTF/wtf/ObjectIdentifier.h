@@ -69,6 +69,7 @@ public:
         ASSERT(isValidIdentifier(m_identifier));
         encoder << m_identifier;
     }
+
     template<typename Decoder> static Optional<ObjectIdentifier> decode(Decoder& decoder)
     {
         Optional<uint64_t> identifier;
@@ -138,9 +139,7 @@ template<typename T> struct ObjectIdentifierHash {
 
 template<typename T> struct HashTraits<ObjectIdentifier<T>> : SimpleClassHashTraits<ObjectIdentifier<T>> { };
 
-template<typename T> struct DefaultHash<ObjectIdentifier<T>> {
-    typedef ObjectIdentifierHash<T> Hash;
-};
+template<typename T> struct DefaultHash<ObjectIdentifier<T>> : ObjectIdentifierHash<T> { };
 
 template<typename T>
 TextStream& operator<<(TextStream& ts, const ObjectIdentifier<T>& identifier)

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Samuel Weinig <sam@webkit.org>
  *  Copyright (C) 2013 Michael Pruett <michael@68k.org>
  *
@@ -34,7 +34,6 @@
 #include <JavaScriptCore/ExceptionHelpers.h>
 #include <JavaScriptCore/ScriptCallStack.h>
 #include <JavaScriptCore/ScriptCallStackFactory.h>
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -140,6 +139,8 @@ JSValue createDOMException(JSGlobalObject* lexicalGlobalObject, ExceptionCode ec
 
     if (ec == StackOverflowError)
         return createStackOverflowError(lexicalGlobalObject);
+    if (ec == OutOfMemoryError)
+        return createOutOfMemoryError(lexicalGlobalObject);
 
     // FIXME: All callers to createDOMException need to pass in the correct global object.
     // For now, we're going to assume the lexicalGlobalObject. Which is wrong in cases like this:
@@ -168,14 +169,13 @@ static EncodedJSValue throwTypeError(JSC::JSGlobalObject& lexicalGlobalObject, J
     return throwVMTypeError(&lexicalGlobalObject, scope, errorMessage);
 }
 
-static void appendArgumentMustBe(StringBuilder& builder, unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName)
+template<typename... StringTypes> static String makeArgumentTypeErrorMessage(unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName, StringTypes ...strings)
 {
-    builder.append("Argument ", argumentIndex + 1, " ('", argumentName, "') to ");
-    if (!functionName)
-        builder.append("the ", interfaceName, " constructor");
-    else
-        builder.append(interfaceName, '.', functionName);
-    builder.appendLiteral(" must be ");
+    return makeString(
+        "Argument ", argumentIndex + 1, " ('", argumentName, "') to ",
+        functionName ? std::make_tuple(interfaceName, ".", functionName) : std::make_tuple("the ", interfaceName, " constructor"),
+        " must be ", strings...
+    );
 }
 
 void throwNotSupportedError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, ASCIILiteral message)
@@ -198,26 +198,22 @@ void throwSecurityError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScop
 
 JSC::EncodedJSValue throwArgumentMustBeEnumError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* functionInterfaceName, const char* functionName, const char* expectedValues)
 {
-    StringBuilder builder;
-    appendArgumentMustBe(builder, argumentIndex, argumentName, functionInterfaceName, functionName);
-    builder.append("one of: ", expectedValues);
-    return throwVMTypeError(&lexicalGlobalObject, scope, builder.toString());
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "one of: ", expectedValues));
 }
 
 JSC::EncodedJSValue throwArgumentMustBeFunctionError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName)
 {
-    StringBuilder builder;
-    appendArgumentMustBe(builder, argumentIndex, argumentName, interfaceName, functionName);
-    builder.appendLiteral("a function");
-    return throwVMTypeError(&lexicalGlobalObject, scope, builder.toString());
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "a function"));
+}
+
+JSC::EncodedJSValue throwArgumentMustBeObjectError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* interfaceName, const char* functionName)
+{
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, interfaceName, functionName, "an object"));
 }
 
 JSC::EncodedJSValue throwArgumentTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, unsigned argumentIndex, const char* argumentName, const char* functionInterfaceName, const char* functionName, const char* expectedType)
 {
-    StringBuilder builder;
-    appendArgumentMustBe(builder, argumentIndex, argumentName, functionInterfaceName, functionName);
-    builder.append("an instance of ", expectedType);
-    return throwVMTypeError(&lexicalGlobalObject, scope, builder.toString());
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeArgumentTypeErrorMessage(argumentIndex, argumentName, functionInterfaceName, functionName, "an instance of ", expectedType));
 }
 
 void throwAttributeTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName, const char* expectedType)
@@ -227,14 +223,7 @@ void throwAttributeTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::Thro
 
 JSC::EncodedJSValue throwRequiredMemberTypeError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* memberName, const char* dictionaryName, const char* expectedType)
 {
-    StringBuilder builder;
-    builder.appendLiteral("Member ");
-    builder.append(dictionaryName);
-    builder.append('.');
-    builder.append(memberName);
-    builder.appendLiteral(" is required and must be an instance of ");
-    builder.append(expectedType);
-    return throwVMTypeError(&lexicalGlobalObject, scope, builder.toString());
+    return throwVMTypeError(&lexicalGlobalObject, scope, makeString("Member ", dictionaryName, '.', memberName, " is required and must be an instance of ", expectedType));
 }
 
 JSC::EncodedJSValue throwConstructorScriptExecutionContextUnavailableError(JSC::JSGlobalObject& lexicalGlobalObject, JSC::ThrowScope& scope, const char* interfaceName)

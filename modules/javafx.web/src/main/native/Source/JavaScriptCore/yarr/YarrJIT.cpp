@@ -26,20 +26,50 @@
 #include "config.h"
 #include "YarrJIT.h"
 
-#include <wtf/ASCIICType.h>
 #include "LinkBuffer.h"
 #include "Options.h"
 #include "VM.h"
 #include "Yarr.h"
 #include "YarrCanonicalize.h"
 #include "YarrDisassembler.h"
+#include <wtf/ASCIICType.h>
+#include <wtf/Threading.h>
+
 
 #if ENABLE(YARR_JIT)
 
 namespace JSC { namespace Yarr {
 
+MatchingContextHolder::MatchingContextHolder(VM& vm, YarrCodeBlock* yarrCodeBlock, MatchFrom matchFrom)
+    : m_vm(vm)
+{
+    if (matchFrom == MatchFrom::VMThread)
+        m_stackLimit = vm.softStackLimit();
+    else {
+        StackBounds stack = Thread::current().stack();
+        m_stackLimit = stack.recursionLimit(Options::reservedZoneSize());
+    }
+
+#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+    if (yarrCodeBlock->usesPatternContextBuffer()) {
+        m_patternContextBuffer = m_vm.acquireRegExpPatternContexBuffer();
+        m_patternContextBufferSize = VM::patternContextBufferSize;
+    }
+#else
+    UNUSED_PARAM(yarrCodeBlock);
+#endif
+}
+
+MatchingContextHolder::~MatchingContextHolder()
+{
+#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+    if (m_patternContextBuffer)
+        m_vm.releaseRegExpPatternContexBuffer();
+#endif
+}
+
 template<YarrJITCompileMode compileMode>
-class YarrGenerator : public YarrJITInfo, private MacroAssembler {
+class YarrGenerator final : public YarrJITInfo, private MacroAssembler {
 
 #if CPU(ARM_THUMB2)
     static const RegisterID input = ARMRegisters::r0;
@@ -60,7 +90,8 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
     static const RegisterID index = ARM64Registers::x1;
     static const RegisterID length = ARM64Registers::x2;
     static const RegisterID output = ARM64Registers::x3;
-    static const RegisterID freelistRegister = ARM64Registers::x4;
+    static const RegisterID matchingContext = ARM64Registers::x4;
+    static const RegisterID freelistRegister = ARM64Registers::x4; // Loaded from the MatchingContextHolder in the prologue.
     static const RegisterID freelistSizeRegister = ARM64Registers::x5; // Only used during initialization.
 
     // Scratch registers
@@ -101,7 +132,8 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
     static const RegisterID index = X86Registers::esi;
     static const RegisterID length = X86Registers::edx;
     static const RegisterID output = X86Registers::ecx;
-    static const RegisterID freelistRegister = X86Registers::r8;
+    static const RegisterID matchingContext = X86Registers::r8;
+    static const RegisterID freelistRegister = X86Registers::r8; // Loaded from the MatchingContextHolder in the prologue.
     static const RegisterID freelistSizeRegister = X86Registers::r9; // Only used during initialization.
 #else
     // If the return value doesn't fit in 64bits, its destination is pointed by rcx and the parameters are shifted.
@@ -220,6 +252,9 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
             return;
         }
 
+        load32(Address(matchingContext, MatchingContextHolder::offsetOfPatternContextBufferSize()), freelistSizeRegister);
+        // Note that matchingContext and freelistRegister are likely the same register.
+        loadPtr(Address(matchingContext, MatchingContextHolder::offsetOfPatternContextBuffer()), freelistRegister);
         Jump emptyFreeList = branchTestPtr(Zero, freelistRegister);
         move(freelistRegister, parenContextPointer);
         addPtr(TrustedImm32(parenContextSize), freelistRegister, nextParenContextPointer);
@@ -634,12 +669,6 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
             CRASH();
         callFrameSize = (callFrameSize + 0x3f) & ~0x3f;
         return callFrameSize;
-    }
-    void initCallFrame()
-    {
-        unsigned callFrameSizeInBytes = alignCallFrameSizeInBytes(m_pattern.m_body->m_callFrameSize);
-        if (callFrameSizeInBytes)
-            subPtr(Imm32(callFrameSizeInBytes), stackPointerRegister);
     }
     void removeCallFrame()
     {
@@ -2792,17 +2821,17 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
                 if (onceThrough)
                     m_backtrackingState.linkTo(endOp.m_reentry, this);
                 else {
-                    // If we don't need to move the input poistion, and the pattern has a fixed size
-                    // (in which case we omit the store of the start index until the pattern has matched)
-                    // then we can just link the backtrack out of the last alternative straight to the
-                    // head of the first alternative.
-                    if (m_pattern.m_body->m_hasFixedSize
-                        && (alternative->m_minimumSize > beginOp->m_alternative->m_minimumSize)
-                        && (alternative->m_minimumSize - beginOp->m_alternative->m_minimumSize == 1))
-                        m_backtrackingState.linkTo(beginOp->m_reentry, this);
-                    else if (m_pattern.sticky() && m_ops[op.m_nextOp].m_op == OpBodyAlternativeEnd) {
+                    if (m_pattern.sticky() && m_ops[op.m_nextOp].m_op == OpBodyAlternativeEnd) {
                         // It is a sticky pattern and the last alternative failed, jump to the end.
                         m_backtrackingState.takeBacktracksToJumpList(lastStickyAlternativeFailures, this);
+                    } else if (m_pattern.m_body->m_hasFixedSize
+                        && (alternative->m_minimumSize > beginOp->m_alternative->m_minimumSize)
+                        && (alternative->m_minimumSize - beginOp->m_alternative->m_minimumSize == 1)) {
+                        // If we don't need to move the input position, and the pattern has a fixed size
+                        // (in which case we omit the store of the start index until the pattern has matched)
+                        // then we can just link the backtrack out of the last alternative straight to the
+                        // head of the first alternative.
+                        m_backtrackingState.linkTo(beginOp->m_reentry, this);
                     } else {
                         // We need to generate a trampoline of code to execute before looping back
                         // around to the first alternative.
@@ -3481,7 +3510,7 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
         YarrOp& lastOp = m_ops.last();
         ASSERT(lastOp.m_op == alternativeNextOpCode);
         lastOp.m_op = alternativeEndOpCode;
-        lastOp.m_alternative = 0;
+        lastOp.m_alternative = nullptr;
         lastOp.m_nextOp = notFound;
 
         size_t parenEnd = m_ops.size();
@@ -3537,7 +3566,7 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
         YarrOp& lastOp = m_ops.last();
         ASSERT(lastOp.m_op == OpSimpleNestedAlternativeNext);
         lastOp.m_op = OpSimpleNestedAlternativeEnd;
-        lastOp.m_alternative = 0;
+        lastOp.m_alternative = nullptr;
         lastOp.m_nextOp = notFound;
 
         size_t parenEnd = m_ops.size();
@@ -3625,7 +3654,7 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
 
             ASSERT(lastOp.m_op == OpBodyAlternativeNext);
             lastOp.m_op = OpBodyAlternativeEnd;
-            lastOp.m_alternative = 0;
+            lastOp.m_alternative = nullptr;
             lastOp.m_nextOp = notFound;
         }
 
@@ -3659,7 +3688,7 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
         YarrOp& lastOp = m_ops.last();
         ASSERT(lastOp.m_op == OpBodyAlternativeNext);
         lastOp.m_op = OpBodyAlternativeEnd;
-        lastOp.m_alternative = 0;
+        lastOp.m_alternative = nullptr;
         lastOp.m_nextOp = repeatLoop;
     }
 
@@ -3708,8 +3737,8 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
             push(X86Registers::r15);
         }
         // The ABI doesn't guarantee the upper bits are zero on unsigned arguments, so clear them ourselves.
-        zeroExtend32ToPtr(index, index);
-        zeroExtend32ToPtr(length, length);
+        zeroExtend32ToWord(index, index);
+        zeroExtend32ToWord(length, length);
 #if OS(WINDOWS)
         if (compileMode == IncludeSubpatterns)
             loadPtr(Address(X86Registers::ebp, 6 * sizeof(void*)), output);
@@ -3726,8 +3755,8 @@ class YarrGenerator : public YarrJITInfo, private MacroAssembler {
         }
 
         // The ABI doesn't guarantee the upper bits are zero on unsigned arguments, so clear them ourselves.
-        zeroExtend32ToPtr(index, index);
-        zeroExtend32ToPtr(length, length);
+        zeroExtend32ToWord(index, index);
+        zeroExtend32ToWord(length, length);
 #elif CPU(ARM_THUMB2)
         push(ARMRegisters::r4);
         push(ARMRegisters::r5);
@@ -3851,6 +3880,30 @@ public:
         generateFailReturn();
         hasInput.link(this);
 
+        unsigned callFrameSizeInBytes = alignCallFrameSizeInBytes(m_pattern.m_body->m_callFrameSize);
+        if (callFrameSizeInBytes) {
+            // Check stack size
+            addPtr(TrustedImm32(-callFrameSizeInBytes), stackPointerRegister, regT0);
+#if CPU(X86_64) && OS(WINDOWS)
+            // matchingContext is the 5th argument, it is found on the stack.
+            RegisterID matchingContext = regT1;
+            loadPtr(Address(X86Registers::ebp, 7 * sizeof(void*)), matchingContext);
+#elif CPU(ARM_THUMB2) || CPU(MIPS)
+            // matchingContext is the 5th argument, it is found on the stack.
+            RegisterID matchingContext = regT1;
+            loadPtr(Address(stackPointerRegister, 4 * sizeof(void*)), matchingContext);
+#endif
+            Jump stackOk = branchPtr(BelowOrEqual, Address(matchingContext, MatchingContextHolder::offsetOfStackLimit()), regT0);
+
+            // Exceeded stack limit, punt to the interpreter.
+            move(TrustedImmPtr((void*)static_cast<size_t>(JSRegExpJITCodeFailure)), returnRegister);
+            move(TrustedImm32(0), returnRegister2);
+            generateReturn();
+
+            stackOk.link(this);
+            move(regT0, stackPointerRegister);
+        }
+
 #ifdef JIT_UNICODE_EXPRESSIONS
         if (m_decodeSurrogatePairs)
             getEffectiveAddress(BaseIndex(input, length, TimesTwo), endOfStringAddress);
@@ -3868,8 +3921,6 @@ public:
 
         if (!m_pattern.m_body->m_hasFixedSize)
             setMatchStart(index);
-
-        initCallFrame();
 
 #if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
         if (m_containsNestedSubpatterns) {
@@ -3931,7 +3982,7 @@ public:
             codeBlock.setFallBackWithFailureReason(*m_failureReason);
     }
 
-    const char* variant() override
+    const char* variant() final
     {
         if (compileMode == MatchOnly) {
             if (m_charSize == Char8)
@@ -3946,17 +3997,17 @@ public:
         return "16-bit regular expression";
     }
 
-    unsigned opCount() override
+    unsigned opCount() final
     {
         return m_ops.size();
     }
 
-    void dumpPatternString(PrintStream& out) override
+    void dumpPatternString(PrintStream& out) final
     {
         m_pattern.dumpPatternString(out, m_patternString);
     }
 
-    int dumpFor(PrintStream& out, unsigned opIndex) override
+    int dumpFor(PrintStream& out, unsigned opIndex) final
     {
         if (opIndex >= opCount())
             return 0;

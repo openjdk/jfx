@@ -38,6 +38,7 @@ my $scriptDir = $FindBin::Bin;
 my @idlDirectories;
 my $outputDirectory;
 my $idlFilesList;
+my $ppIDLFilesList;
 my $generator;
 my @generatorDependency;
 my $defines;
@@ -53,6 +54,7 @@ my $includeDirsList;
 GetOptions('includeDirsList=s' => \$includeDirsList,
            'outputDir=s' => \$outputDirectory,
            'idlFilesList=s' => \$idlFilesList,
+           'ppIDLFilesList=s' => \$ppIDLFilesList,
            'generator=s' => \$generator,
            'generatorDependency=s@' => \@generatorDependency,
            'defines=s' => \$defines,
@@ -70,6 +72,11 @@ open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
 @idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
 close($fh) or die;
 
+my @ppIDLFiles;
+open($fh, '<', $ppIDLFilesList) or die "Cannot open $ppIDLFilesList";
+@ppIDLFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+close($fh) or die;
+
 open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
 @idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
 close($dh) or die;
@@ -78,12 +85,12 @@ my %oldSupplements;
 my %newSupplements;
 if ($supplementalDependencyFile) {
     my @output = ($supplementalDependencyFile, @ppExtraOutput);
-    my @deps = ($idlFilesList, @idlFiles, @generatorDependency);
+    my @deps = ($ppIDLFilesList, @ppIDLFiles, @generatorDependency);
     if (needsUpdate(\@output, \@deps)) {
         readSupplementalDependencyFile($supplementalDependencyFile, \%oldSupplements) if -e $supplementalDependencyFile;
         my @args = (File::Spec->catfile($scriptDir, 'preprocess-idls.pl'),
                     '--defines', $defines,
-                    '--idlFilesList', $idlFilesList,
+                    '--idlFilesList', $ppIDLFilesList,
                     '--supplementalDependencyFile', $supplementalDependencyFile,
                     @ppExtraArgs);
         printProgress("Preprocess IDL");

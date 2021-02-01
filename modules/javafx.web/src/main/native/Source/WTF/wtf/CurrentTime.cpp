@@ -34,7 +34,6 @@
 #include "config.h"
 #include <wtf/MonotonicTime.h>
 
-#include <time.h>
 #include <wtf/WallTime.h>
 
 #if OS(DARWIN)
@@ -51,8 +50,10 @@
 #include <windows.h>
 #include <math.h>
 #include <stdint.h>
+#include <time.h>
 #else
 #include <sys/time.h>
+#include <time.h>
 #endif
 
 #if OS(FUCHSIA)

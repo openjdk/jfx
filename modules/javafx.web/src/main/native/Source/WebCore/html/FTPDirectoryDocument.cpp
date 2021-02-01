@@ -135,6 +135,7 @@ void FTPDirectoryDocumentParser::appendEntry(const String& filename, const Strin
     sizeElement->appendChild(Text::create(document, size));
     sizeElement->setAttributeWithoutSynchronization(HTMLNames::classAttr, AtomString("ftpDirectoryFileSize", AtomString::ConstructFromLiteral));
     rowElement->appendChild(sizeElement);
+    document.setHasVisuallyNonEmptyCustomContent();
 }
 
 Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filename)
@@ -154,7 +155,7 @@ Ref<Element> FTPDirectoryDocumentParser::createTDForFilename(const String& filen
     auto tdElement = HTMLTableCellElement::create(tdTag, document);
     tdElement->appendChild(anchorElement);
 
-    return WTFMove(tdElement);
+    return tdElement;
 }
 
 static String processFilesizeString(const String& size, bool isDirectory)

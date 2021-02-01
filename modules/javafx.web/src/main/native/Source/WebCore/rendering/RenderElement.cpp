@@ -26,6 +26,7 @@
 #include "RenderElement.h"
 
 #include "AXObjectCache.h"
+#include "CachedResourceLoader.h"
 #if PLATFORM(IOS_FAMILY)
 #include "ContentChangeObserver.h"
 #endif
@@ -117,6 +118,7 @@ inline RenderElement::RenderElement(ContainerNode& elementOrDocument, RenderStyl
     , m_renderBlockFlowLineLayoutPath(RenderBlockFlow::UndeterminedPath)
     , m_isRegisteredForVisibleInViewportCallback(false)
     , m_visibleInViewportState(static_cast<unsigned>(VisibleInViewportState::Unknown))
+    , m_didContributeToVisuallyNonEmptyPixelCount(false)
     , m_firstChild(nullptr)
     , m_lastChild(nullptr)
     , m_style(WTFMove(style))
@@ -737,9 +739,17 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
         auto needsInvalidateEventRegion = [&] {
             if (m_style.pointerEvents() != newStyle.pointerEvents())
                 return true;
-#if ENABLE(POINTER_EVENTS)
+#if ENABLE(TOUCH_ACTION_REGIONS)
             if (m_style.effectiveTouchActions() != newStyle.effectiveTouchActions())
                 return true;
+#endif
+            if (m_style.eventListenerRegionTypes() != newStyle.eventListenerRegionTypes())
+                return true;
+#if ENABLE(EDITABLE_REGION)
+            bool wasEditable = m_style.userModify() != UserModify::ReadOnly;
+            bool isEditable = newStyle.userModify() != UserModify::ReadOnly;
+            if (wasEditable != isEditable)
+                return page().shouldBuildEditableRegion();
 #endif
             return false;
         };
@@ -747,7 +757,7 @@ void RenderElement::styleWillChange(StyleDifference diff, const RenderStyle& new
         if (needsInvalidateEventRegion()) {
             // Usually the event region gets updated as a result of paint invalidation. Here we need to request an update explicitly.
             if (auto* layer = enclosingLayer())
-                layer->invalidateEventRegion();
+                layer->invalidateEventRegion(RenderLayer::EventRegionInvalidationReason::Style);
         }
 
         if (m_parent && (newStyle.outlineSize() < m_style.outlineSize() || shouldRepaintForStyleDifference(diff)))
@@ -1320,10 +1330,21 @@ VisibleInViewportState RenderElement::imageFrameAvailable(CachedImage& image, Im
     return isVisible ? VisibleInViewportState::Yes : VisibleInViewportState::No;
 }
 
+void RenderElement::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+{
+    document().cachedResourceLoader().notifyFinished(resource);
+}
+
 void RenderElement::didRemoveCachedImageClient(CachedImage& cachedImage)
 {
     if (hasPausedImageAnimations())
         view().removeRendererWithPausedImageAnimations(*this, cachedImage);
+}
+
+void RenderElement::scheduleTimedRenderingUpdate()
+{
+    if (auto* page = document().page())
+        page->scheduleTimedRenderingUpdate();
 }
 
 bool RenderElement::repaintForPausedImageAnimationsIfNeeded(const IntRect& visibleRect, CachedImage& cachedImage)
@@ -2068,6 +2089,11 @@ void RenderElement::adjustFragmentedFlowStateOnContainingBlockChangeIfNeeded()
     // Invalidate the containing block caches.
     if (is<RenderBlock>(*this))
         downcast<RenderBlock>(*this).resetEnclosingFragmentedFlowAndChildInfoIncludingDescendants();
+    else {
+        // Relatively positioned inline boxes can have absolutely positioned block children. We need to reset them as well.
+        for (auto& descendant : childrenOfType<RenderBlock>(*this))
+            descendant.resetEnclosingFragmentedFlowAndChildInfoIncludingDescendants();
+    }
 
     // Adjust the flow tread state on the subtree.
     setFragmentedFlowState(RenderObject::computedFragmentedFlowState(*this));

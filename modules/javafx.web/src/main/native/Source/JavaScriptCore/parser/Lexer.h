@@ -38,8 +38,6 @@ enum class LexerFlags : uint8_t {
     DontBuildKeywords = 1 << 2
 };
 
-enum class LexerEscapeParseMode { Template, String };
-
 struct ParsedUnicodeEscapeValue;
 
 bool isLexerKeyword(const Identifier&);
@@ -135,6 +133,7 @@ private:
     void append16(const LChar*, size_t);
     void append16(const UChar* characters, size_t length) { m_buffer16.append(characters, length); }
 
+    UChar32 currentCodePoint() const;
     ALWAYS_INLINE void shift();
     ALWAYS_INLINE bool atEnd() const;
     ALWAYS_INLINE T peek(int offset) const;
@@ -147,7 +146,6 @@ private:
 
     String invalidCharacterMessage() const;
     ALWAYS_INLINE const T* currentSourcePtr() const;
-    ALWAYS_INLINE void setOffsetFromSourcePtr(const T* sourcePtr, unsigned lineStartOffset) { setOffset(offsetFromSourcePtr(sourcePtr), lineStartOffset); }
 
     ALWAYS_INLINE void setCodeStart(const StringView&);
 
@@ -166,7 +164,7 @@ private:
     template <int shiftAmount> void internalShift();
     template <bool shouldCreateIdentifier> ALWAYS_INLINE JSTokenType parseKeyword(JSTokenData*);
     template <bool shouldBuildIdentifiers> ALWAYS_INLINE JSTokenType parseIdentifier(JSTokenData*, OptionSet<LexerFlags>, bool strictMode);
-    template <bool shouldBuildIdentifiers> NEVER_INLINE JSTokenType parseIdentifierSlowCase(JSTokenData*, OptionSet<LexerFlags>, bool strictMode);
+    template <bool shouldBuildIdentifiers> NEVER_INLINE JSTokenType parseIdentifierSlowCase(JSTokenData*, OptionSet<LexerFlags>, bool strictMode, const T* identifierStart);
     enum StringParseResult {
         StringParsedSuccessfully,
         StringUnterminated,
@@ -176,7 +174,7 @@ private:
     template <bool shouldBuildStrings> NEVER_INLINE StringParseResult parseStringSlowCase(JSTokenData*, bool strictMode);
 
 
-    template <bool shouldBuildStrings, LexerEscapeParseMode escapeParseMode> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode, T stringQuoteCharacter);
+    template <bool shouldBuildStrings> ALWAYS_INLINE StringParseResult parseComplexEscape(bool strictMode);
     ALWAYS_INLINE StringParseResult parseTemplateLiteral(JSTokenData*, RawStringsBuildMode);
 
     using NumberParseResult = Variant<double, const Identifier*>;
@@ -380,7 +378,7 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, Op
         && !m_parsingBuiltinFunction
 #endif
         )
-        tokenData->ident = 0;
+        tokenData->ident = nullptr;
     else
         tokenData->ident = makeLCharIdentifier(start, ptr - start);
 

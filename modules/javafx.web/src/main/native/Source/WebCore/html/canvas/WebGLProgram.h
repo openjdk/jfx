@@ -70,12 +70,21 @@ public:
     bool attachShader(WebGLShader*);
     bool detachShader(WebGLShader*);
 
-protected:
+    void setRequiredTransformFeedbackBufferCount(int count)
+    {
+        m_requiredTransformFeedbackBufferCountAfterNextLink = count;
+    }
+    int requiredTransformFeedbackBufferCount()
+    {
+        cacheInfoIfNeeded();
+        return m_requiredTransformFeedbackBufferCount;
+    }
+
+private:
     WebGLProgram(WebGLRenderingContextBase&);
 
     void deleteObjectImpl(GraphicsContextGLOpenGL*, PlatformGLObject) override;
 
-private:
     void cacheActiveAttribLocations(GraphicsContextGLOpenGL*);
     void cacheInfoIfNeeded();
 
@@ -90,6 +99,8 @@ private:
     RefPtr<WebGLShader> m_fragmentShader;
 
     bool m_infoValid { true };
+    int m_requiredTransformFeedbackBufferCountAfterNextLink { 0 };
+    int m_requiredTransformFeedbackBufferCount { 0 };
 };
 
 } // namespace WebCore

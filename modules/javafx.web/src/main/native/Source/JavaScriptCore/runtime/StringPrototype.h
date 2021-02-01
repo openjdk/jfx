@@ -30,9 +30,6 @@ class RegExp;
 class RegExpObject;
 
 class StringPrototype final : public StringObject {
-private:
-    StringPrototype(VM&, Structure*);
-
 public:
     using Base = StringObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
@@ -46,7 +43,8 @@ public:
 
     DECLARE_INFO;
 
-protected:
+private:
+    StringPrototype(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*, JSString*);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(StringPrototype, StringObject);
@@ -60,7 +58,8 @@ void substituteBackreferences(StringBuilder& result, const String& replacement, 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncRepeatCharacter(JSGlobalObject*, CallFrame*);
 EncodedJSValue JSC_HOST_CALL stringProtoFuncSplitFast(JSGlobalObject*, CallFrame*);
 
-EncodedJSValue JSC_HOST_CALL builtinStringSubstrInternal(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL builtinStringSubstringInternal(JSGlobalObject*, CallFrame*);
 EncodedJSValue JSC_HOST_CALL builtinStringIncludesInternal(JSGlobalObject*, CallFrame*);
+EncodedJSValue JSC_HOST_CALL builtinStringIndexOfInternal(JSGlobalObject*, CallFrame*);
 
 } // namespace JSC

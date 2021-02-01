@@ -37,7 +37,7 @@ class GraphicsContext;
 class BitmapTextureJava : public BitmapTexture {
 public:
     static Ref<BitmapTexture> create() { return adoptRef(*new BitmapTextureJava); }
-    IntSize size() const override { return m_image->internalSize(); }
+    IntSize size() const override { return m_image->backendSize(); }
     void didReset() override;
     bool isValid() const override { return m_image.get(); }
     inline GraphicsContext* graphicsContext() { return m_image ? &(m_image->context()) : nullptr; }

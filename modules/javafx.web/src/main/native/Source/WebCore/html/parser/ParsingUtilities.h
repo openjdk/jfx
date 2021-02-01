@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,16 +32,16 @@
 #pragma once
 
 #include <wtf/text/StringCommon.h>
+#include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
 
-inline bool isNotASCIISpace(UChar c)
+template<typename CharacterType> inline bool isNotASCIISpace(CharacterType c)
 {
     return !isASCIISpace(c);
 }
 
-template<typename CharType>
-bool skipExactly(const CharType*& position, const CharType* end, CharType delimiter)
+template<typename CharacterType, typename DelimiterType> bool skipExactly(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
 {
     if (position < end && *position == delimiter) {
         ++position;
@@ -49,8 +50,16 @@ bool skipExactly(const CharType*& position, const CharType* end, CharType delimi
     return false;
 }
 
-template<typename CharType, bool characterPredicate(CharType)>
-bool skipExactly(const CharType*& position, const CharType* end)
+template<typename CharacterType, typename DelimiterType> bool skipExactly(StringParsingBuffer<CharacterType>& buffer, DelimiterType delimiter)
+{
+    if (buffer.hasCharactersRemaining() && *buffer == delimiter) {
+        ++buffer;
+        return true;
+    }
+    return false;
+}
+
+template<bool characterPredicate(LChar)> bool skipExactly(const LChar*& position, const LChar* end)
 {
     if (position < end && characterPredicate(*position)) {
         ++position;
@@ -59,44 +68,148 @@ bool skipExactly(const CharType*& position, const CharType* end)
     return false;
 }
 
-template<typename CharType>
-void skipUntil(const CharType*& position, const CharType* end, CharType delimiter)
+template<bool characterPredicate(UChar)> bool skipExactly(const UChar*& position, const UChar* end)
+{
+    if (position < end && characterPredicate(*position)) {
+        ++position;
+        return true;
+    }
+    return false;
+}
+
+template<bool characterPredicate(LChar)> bool skipExactly(StringParsingBuffer<LChar>& buffer)
+{
+    if (buffer.hasCharactersRemaining() && characterPredicate(*buffer)) {
+        ++buffer;
+        return true;
+    }
+    return false;
+}
+
+template<bool characterPredicate(UChar)> bool skipExactly(StringParsingBuffer<UChar>& buffer)
+{
+    if (buffer.hasCharactersRemaining() && characterPredicate(*buffer)) {
+        ++buffer;
+        return true;
+    }
+    return false;
+}
+
+template<typename CharacterType, typename DelimiterType> void skipUntil(const CharacterType*& position, const CharacterType* end, DelimiterType delimiter)
 {
     while (position < end && *position != delimiter)
         ++position;
 }
 
-template<typename CharType, bool characterPredicate(CharType)>
-void skipUntil(const CharType*& position, const CharType* end)
+template<typename CharacterType, typename DelimiterType> void skipUntil(StringParsingBuffer<CharacterType>& buffer, DelimiterType delimiter)
+{
+    while (buffer.hasCharactersRemaining() && *buffer != delimiter)
+        ++buffer;
+}
+
+template<bool characterPredicate(LChar)> void skipUntil(const LChar*& position, const LChar* end)
 {
     while (position < end && !characterPredicate(*position))
         ++position;
 }
 
-template<typename CharType, bool characterPredicate(CharType)>
-void skipWhile(const CharType*& position, const CharType* end)
+template<bool characterPredicate(UChar)> void skipUntil(const UChar*& position, const UChar* end)
+{
+    while (position < end && !characterPredicate(*position))
+        ++position;
+}
+
+template<bool characterPredicate(LChar)> void skipUntil(StringParsingBuffer<LChar>& buffer)
+{
+    while (buffer.hasCharactersRemaining() && !characterPredicate(*buffer))
+        ++buffer;
+}
+
+template<bool characterPredicate(UChar)> void skipUntil(StringParsingBuffer<UChar>& buffer)
+{
+    while (buffer.hasCharactersRemaining() && !characterPredicate(*buffer))
+        ++buffer;
+}
+
+template<bool characterPredicate(LChar)> void skipWhile(const LChar*& position, const LChar* end)
 {
     while (position < end && characterPredicate(*position))
         ++position;
 }
 
-template<typename CharType, bool characterPredicate(CharType)>
-void reverseSkipWhile(const CharType*& position, const CharType* start)
+template<bool characterPredicate(UChar)> void skipWhile(const UChar*& position, const UChar* end)
+{
+    while (position < end && characterPredicate(*position))
+        ++position;
+}
+
+template<bool characterPredicate(LChar)> void skipWhile(StringParsingBuffer<LChar>& buffer)
+{
+    while (buffer.hasCharactersRemaining() && characterPredicate(*buffer))
+        ++buffer;
+}
+
+template<bool characterPredicate(UChar)> void skipWhile(StringParsingBuffer<UChar>& buffer)
+{
+    while (buffer.hasCharactersRemaining() && characterPredicate(*buffer))
+        ++buffer;
+}
+
+
+template<bool characterPredicate(LChar)> void reverseSkipWhile(const LChar*& position, const LChar* start)
 {
     while (position >= start && characterPredicate(*position))
         --position;
 }
 
-template<typename CharacterType, unsigned lowercaseLettersLength>
-bool skipExactlyIgnoringASCIICase(const CharacterType*& position, const CharacterType* end, const char (&lowercaseLetters)[lowercaseLettersLength])
+template<bool characterPredicate(UChar)> void reverseSkipWhile(const UChar*& position, const UChar* start)
 {
+    while (position >= start && characterPredicate(*position))
+        --position;
+}
+
+template<typename CharacterType, unsigned lowercaseLettersArraySize> bool skipExactlyIgnoringASCIICase(const CharacterType*& position, const CharacterType* end, const char (&lowercaseLetters)[lowercaseLettersArraySize])
+{
+    constexpr auto lowercaseLettersLength = lowercaseLettersArraySize - 1;
+
     if (position + lowercaseLettersLength > end)
         return false;
+    if (!WTF::equalLettersIgnoringASCIICase(position, lowercaseLettersLength, lowercaseLetters))
+        return false;
+    position += lowercaseLettersLength;
+    return true;
+}
 
-    bool result = WTF::equalLettersIgnoringASCIICase(position, lowercaseLettersLength - 1, lowercaseLetters);
-    if (result)
-        position += (lowercaseLettersLength - 1);
-    return result;
+template<typename CharacterType, unsigned lowercaseLettersArraySize> bool skipExactlyIgnoringASCIICase(StringParsingBuffer<CharacterType>& buffer, const char (&lowercaseLetters)[lowercaseLettersArraySize])
+{
+    constexpr auto lowercaseLettersLength = lowercaseLettersArraySize - 1;
+
+    if (buffer.lengthRemaining() < lowercaseLettersLength)
+        return false;
+    if (!WTF::equalLettersIgnoringASCIICase(buffer.position(), lowercaseLettersLength, lowercaseLetters))
+        return false;
+    buffer += lowercaseLettersLength;
+    return true;
+}
+
+template<typename CharacterType, unsigned characterCount> constexpr bool skipCharactersExactly(const CharacterType*& ptr, const CharacterType* end, const CharacterType(&str)[characterCount])
+{
+    if (end - ptr < characterCount)
+        return false;
+    if (memcmp(str, ptr, sizeof(CharacterType) * characterCount))
+        return false;
+    ptr += characterCount;
+    return true;
+}
+
+template<typename CharacterType, unsigned characterCount> constexpr bool skipCharactersExactly(StringParsingBuffer<CharacterType>& buffer, const CharacterType(&str)[characterCount])
+{
+    if (buffer.lengthRemaining() < characterCount)
+        return false;
+    if (memcmp(str, buffer.position(), sizeof(CharacterType) * characterCount))
+        return false;
+    buffer += characterCount;
+    return true;
 }
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -25,23 +25,8 @@
 #include "DateConversion.h"
 #include "DateInstance.h"
 #include "DatePrototype.h"
-#include "JSDateMath.h"
-#include "JSFunction.h"
-#include "JSGlobalObject.h"
-#include "JSString.h"
-#include "ObjectPrototype.h"
 #include "JSCInlines.h"
-#include <math.h>
-#include <time.h>
-#include <wtf/MathExtras.h>
-
-#if HAVE(SYS_TIME_H)
-#include <sys/time.h>
-#endif
-
-#if HAVE(SYS_TIMEB_H)
-#include <sys/timeb.h>
-#endif
+#include "JSDateMath.h"
 
 namespace JSC {
 
@@ -110,7 +95,7 @@ static double millisecondsFromComponents(JSGlobalObject* globalObject, const Arg
     t.setMinute(JSC::toInt32(doubleArguments[4]));
     t.setSecond(JSC::toInt32(doubleArguments[5]));
     t.setIsDST(-1);
-    return gregorianDateTimeToMS(vm, t, doubleArguments[6], timeType);
+    return gregorianDateTimeToMS(vm.dateCache, t, doubleArguments[6], timeType);
 }
 
 // ECMA 15.9.3
@@ -143,7 +128,9 @@ JSObject* constructDate(JSGlobalObject* globalObject, JSValue newTarget, const A
         value = millisecondsFromComponents(globalObject, args, WTF::LocalTime);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    Structure* dateStructure = InternalFunction::createSubclassStructure(globalObject, globalObject->dateConstructor(), newTarget, globalObject->dateStructure());
+    Structure* dateStructure = !newTarget || newTarget == globalObject->dateConstructor()
+        ? globalObject->dateStructure()
+        : InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), getFunctionRealm(vm, asObject(newTarget))->dateStructure());
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     return DateInstance::create(vm, dateStructure, value);
@@ -160,7 +147,7 @@ static EncodedJSValue JSC_HOST_CALL callDate(JSGlobalObject* globalObject, CallF
 {
     VM& vm = globalObject->vm();
     GregorianDateTime ts;
-    msToGregorianDateTime(vm, WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
+    msToGregorianDateTime(vm.dateCache, WallTime::now().secondsSinceEpoch().milliseconds(), WTF::LocalTime, ts);
     return JSValue::encode(jsNontrivialString(vm, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
 }
 

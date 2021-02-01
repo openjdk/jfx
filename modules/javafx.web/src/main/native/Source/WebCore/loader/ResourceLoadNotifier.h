@@ -30,6 +30,7 @@
 #pragma once
 
 #include <wtf/Noncopyable.h>
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
@@ -67,6 +68,7 @@ public:
 
 private:
     Frame& m_frame;
+    Optional<unsigned long> m_initialRequestIdentifier;
 };
 
 } // namespace WebCore

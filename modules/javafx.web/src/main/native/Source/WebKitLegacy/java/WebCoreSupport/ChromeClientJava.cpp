@@ -329,7 +329,6 @@ void ChromeClientJava::focusedFrameChanged(Frame*)
 
 Page* ChromeClientJava::createWindow(
     Frame&,
-    const FrameLoadRequest& req,
     const WindowFeatures& features,
     const NavigationAction& na)
 {
@@ -351,11 +350,7 @@ Page* ChromeClientJava::createWindow(
     }
 
     Page* p = WebPage::pageFromJObject(newWebPage);
-    if (!req.isEmpty()) {
-        p->mainFrame().loader().load(
-            FrameLoadRequest(p->mainFrame(), ResourceRequest(na.url()), req.shouldOpenExternalURLsPolicy()));
-    }
-
+    p->mainFrame().loader().load(FrameLoadRequest(p->mainFrame(), ResourceRequest(na.url())));
     return p;
 }
 
@@ -676,9 +671,9 @@ void ChromeClientJava::setNeedsOneShotDrawingSynchronization()
             ->setNeedsOneShotDrawingSynchronization();
 }
 
-void ChromeClientJava::scheduleCompositingLayerFlush()
+void ChromeClientJava::scheduleRenderingUpdate()
 {
-    WebPage::webPageFromJObject(m_webPage)->scheduleCompositingLayerSync();
+    WebPage::webPageFromJObject(m_webPage)->scheduleRenderingUpdate();
 }
 
 void ChromeClientJava::attachViewOverlayGraphicsLayer(GraphicsLayer*)

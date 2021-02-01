@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include <wtf/LoggerHelper.h>
 #include <wtf/WeakPtr.h>
@@ -59,7 +59,7 @@ public:
     AtomString label() const { return m_label; }
     void setLabel(const AtomString& label) { m_label = label; }
 
-    AtomString validBCP47Language() const;
+    AtomString validBCP47Language() const { return m_validBCP47Language; }
     AtomString language() const { return m_language; }
     virtual void setLanguage(const AtomString&);
 
@@ -75,6 +75,7 @@ public:
     virtual bool enabled() const = 0;
 
 #if !RELEASE_LOG_DISABLED
+    virtual void setLogger(const Logger&, const void*);
     const Logger& logger() const final { ASSERT(m_logger); return *m_logger.get(); }
     const void* logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
@@ -98,7 +99,7 @@ private:
     AtomString m_validBCP47Language;
 #if !RELEASE_LOG_DISABLED
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const void* m_logIdentifier { nullptr };
 #endif
 };
 

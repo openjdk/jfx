@@ -405,6 +405,40 @@ void MediaConstraints::setDefaultVideoConstraints()
     addDefaultVideoConstraints(mandatoryConstraints, needsFrameRateConstraints, needsSizeConstraints, needsFacingModeConstraints);
 }
 
+void MediaConstraint::log() const
+{
+    switch (dataType()) {
+    case DataType::Boolean:
+        downcast<const BooleanConstraint>(*this).logAsBoolean();
+        break;
+    case DataType::Double:
+        downcast<const DoubleConstraint>(*this).logAsDouble();
+        break;
+    case DataType::Integer:
+        downcast<const IntConstraint>(*this).logAsInt();
+        break;
+    case DataType::None:
+    case DataType::String:
+        WTFLogAlways("MediaConstraint %d of type %d", static_cast<int>(constraintType()), static_cast<int>(dataType()));
+    }
+}
+
+void BooleanConstraint::logAsBoolean() const
+{
+    WTFLogAlways("BooleanConstraint %d, exact %d, ideal %d", static_cast<int>(constraintType()), m_exact ? *m_exact : -1, m_ideal ? *m_ideal : -1);
+}
+
+void DoubleConstraint::logAsDouble() const
+{
+    WTFLogAlways("DoubleConstraint %d, min %f, max %f, exact %f, ideal %f", static_cast<int>(constraintType()), m_min ? *m_min : -1, m_max ? *m_max : -1, m_exact ? *m_exact : -1, m_ideal ? *m_ideal : -1);
+}
+
+void IntConstraint::logAsInt() const
+{
+    WTFLogAlways("IntConstraint %d, min %d, max %d, exact %d, ideal %d", static_cast<int>(constraintType()), m_min ? *m_min : -1, m_max ? *m_max : -1, m_exact ? *m_exact : -1, m_ideal ? *m_ideal : -1);
+}
+
+
 }
 
 #endif // ENABLE(MEDIA_STREAM)

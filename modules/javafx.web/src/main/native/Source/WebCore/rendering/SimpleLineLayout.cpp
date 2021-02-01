@@ -240,6 +240,10 @@ static AvoidanceReasonFlags canUseForStyle(const RenderStyle& style, IncludeReas
         SET_REASON_AND_RETURN_IF_NEEDED(FlowHasNonAutoLineBreak, reasons, includeReasons);
     if (style.nbspMode() != NBSPMode::Normal)
         SET_REASON_AND_RETURN_IF_NEEDED(FlowHasWebKitNBSPMode, reasons, includeReasons);
+    // Special handling of text-security:disc is not yet implemented in the simple line layout code path.
+    // See RenderBlock::updateSecurityDiscCharacters.
+    if (style.textSecurity() != TextSecurity::None)
+        SET_REASON_AND_RETURN_IF_NEEDED(FlowHasTextSecurity, reasons, includeReasons);
     if (style.hyphens() == Hyphens::Auto) {
         auto textReasons = canUseForText(style.hyphenString(), style.fontCascade(), WTF::nullopt, false, includeReasons);
         if (textReasons != NoReason)
@@ -307,7 +311,7 @@ AvoidanceReasonFlags canUseForWithReason(const RenderBlockFlow& flow, IncludeRea
     // This currently covers <blockflow>#text</blockflow>, <blockflow>#text<br></blockflow> and mutiple (sibling) RenderText cases.
     // The <blockflow><inline>#text</inline></blockflow> case is also popular and should be relatively easy to cover.
     for (const auto* child = flow.firstChild(); child;) {
-        if (child->selectionState() != RenderObject::SelectionNone)
+        if (child->selectionState() != RenderObject::HighlightState::None)
             SET_REASON_AND_RETURN_IF_NEEDED(FlowChildIsSelected, reasons, includeReasons);
         if (is<RenderText>(*child)) {
             const auto& renderText = downcast<RenderText>(*child);
@@ -874,8 +878,8 @@ static bool createLineRuns(LineState& line, const LineState& previousLine, Layou
 static ExpansionBehavior expansionBehavior(bool isAfterExpansion, bool lastRunOnLine)
 {
     ExpansionBehavior expansionBehavior;
-    expansionBehavior = isAfterExpansion ? ForbidLeadingExpansion : AllowLeadingExpansion;
-    expansionBehavior |= lastRunOnLine ? ForbidTrailingExpansion : AllowTrailingExpansion;
+    expansionBehavior = isAfterExpansion ? ForbidLeftExpansion : AllowLeftExpansion;
+    expansionBehavior |= lastRunOnLine ? ForbidRightExpansion : AllowRightExpansion;
     return expansionBehavior;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include "ClassInfo.h"
 #include "ConcurrentJSLock.h"
+#include "DeletePropertySlot.h"
 #include "IndexingType.h"
 #include "JSCJSValue.h"
 #include "JSCast.h"
@@ -95,26 +96,26 @@ struct PropertyMapEntry {
     }
 };
 
-class StructureFireDetail : public FireDetail {
+class StructureFireDetail final : public FireDetail {
 public:
     StructureFireDetail(const Structure* structure)
         : m_structure(structure)
     {
     }
 
-    void dump(PrintStream& out) const override;
+    void dump(PrintStream& out) const final;
 
 private:
     const Structure* m_structure;
 };
 
-class DeferredStructureTransitionWatchpointFire : public DeferredWatchpointFire {
+class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
     WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
 public:
     JS_EXPORT_PRIVATE DeferredStructureTransitionWatchpointFire(VM&, Structure*);
-    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire();
+    JS_EXPORT_PRIVATE ~DeferredStructureTransitionWatchpointFire() final;
 
-    void dump(PrintStream& out) const override;
+    void dump(PrintStream& out) const final;
 
     const Structure* structure() const { return m_structure; }
 
@@ -145,7 +146,7 @@ public:
 
     JS_EXPORT_PRIVATE static bool isValidPrototype(JSValue);
 
-protected:
+private:
     void finishCreation(VM& vm)
     {
         Base::finishCreation(vm);
@@ -172,6 +173,8 @@ protected:
         ASSERT(!vm.structureStructure);
     }
 
+    void validateFlags();
+
 public:
     StructureID id() const { return m_blob.structureID(); }
     int32_t objectInitializationBlob() const { return m_blob.blobExcludingStructureID(); }
@@ -191,7 +194,8 @@ public:
     JS_EXPORT_PRIVATE static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
     static Structure* removeNewPropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
     static Structure* removePropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
-    static Structure* removePropertyTransitionFromExistingStructure(VM&, Structure*, PropertyName, PropertyOffset&, DeferredStructureTransitionWatchpointFire* = nullptr);
+    static Structure* removePropertyTransitionFromExistingStructure(Structure*, PropertyName, PropertyOffset&);
+    static Structure* removePropertyTransitionFromExistingStructureConcurrently(Structure*, PropertyName, PropertyOffset&);
     static Structure* changePrototypeTransition(VM&, Structure*, JSValue prototype, DeferredStructureTransitionWatchpointFire&);
     JS_EXPORT_PRIVATE static Structure* attributeChangeTransition(VM&, Structure*, PropertyName, unsigned attributes);
     JS_EXPORT_PRIVATE static Structure* toCacheableDictionaryTransition(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
@@ -477,7 +481,6 @@ public:
     }
 
     bool hasIndexingHeader(const JSCell*) const;
-
     bool masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject);
 
     PropertyOffset get(VM&, PropertyName);
@@ -529,11 +532,11 @@ public:
     JSString* objectToStringValue()
     {
         if (!hasRareData())
-            return 0;
+            return nullptr;
         return rareData()->objectToStringValue();
     }
 
-    void setObjectToStringValue(JSGlobalObject*, VM&, JSString* value, PropertySlot toStringTagSymbolSlot);
+    void setObjectToStringValue(JSGlobalObject*, VM&, JSString* value, const PropertySlot& toStringTagSymbolSlot);
 
     const ClassInfo* classInfo() const { return m_classInfo; }
 
@@ -555,6 +558,11 @@ public:
     static ptrdiff_t classInfoOffset()
     {
         return OBJECT_OFFSETOF(Structure, m_classInfo);
+    }
+
+    static ptrdiff_t outOfLineTypeFlagsOffset()
+    {
+        return OBJECT_OFFSETOF(Structure, m_outOfLineTypeFlags);
     }
 
     static ptrdiff_t indexingModeIncludingHistoryOffset()
@@ -716,6 +724,7 @@ private:
     static Structure* create(VM&, Structure*, DeferredStructureTransitionWatchpointFire* = nullptr);
 
     static Structure* addPropertyTransitionToExistingStructureImpl(Structure*, UniquedStringImpl* uid, unsigned attributes, PropertyOffset&);
+    static Structure* removePropertyTransitionFromExistingStructureImpl(Structure*, PropertyName, unsigned attributes, PropertyOffset&);
 
     // This will return the structure that has a usable property table, that property table,
     // and the list of structures that we visited before we got to it. If it returns a

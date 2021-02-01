@@ -223,19 +223,14 @@ void ApplyStyleCommand::doApply()
 
 void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
 {
-    // update document layout once before removing styles
-    // so that we avoid the expense of updating before each and every call
-    // to check a computed style
+    // Update document layout once before removing styles so that we avoid the expense of
+    // updating before each and every call to check a computed style.
     document().updateLayoutIgnorePendingStylesheets();
 
-    // get positions we want to use for applying style
     Position start = startPosition();
     Position end = endPosition();
-    if (comparePositions(end, start) < 0) {
-        Position swap = start;
-        start = end;
-        end = swap;
-    }
+    if (comparePositions(end, start) < 0)
+        std::swap(start, end);
 
     VisiblePosition visibleStart(start);
     VisiblePosition visibleEnd(end);
@@ -246,14 +241,14 @@ void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
     // Save and restore the selection endpoints using their indices in the editable root, since
     // addBlockStyleIfNeeded may moveParagraphs, which can remove these endpoints.
     // Calculate start and end indices from the start of the tree that they're in.
-    auto* scope = highestEditableRoot(visibleStart.deepEquivalent());
-    if (!scope)
+    auto scopeRoot = makeRefPtr(highestEditableRoot(visibleStart.deepEquivalent()));
+    if (!scopeRoot)
         return;
 
-    auto startRange = Range::create(document(), firstPositionInNode(scope), visibleStart.deepEquivalent().parentAnchoredEquivalent());
-    auto endRange = Range::create(document(), firstPositionInNode(scope), visibleEnd.deepEquivalent().parentAnchoredEquivalent());
-    int startIndex = TextIterator::rangeLength(startRange.ptr(), true);
-    int endIndex = TextIterator::rangeLength(endRange.ptr(), true);
+    auto scope = makeRangeSelectingNodeContents(*scopeRoot);
+    auto range = *makeSimpleRange(visibleStart, visibleEnd);
+    auto startIndex = characterCount({ scope.start, range.start }, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
+    auto endIndex = characterCount({ scope.start, range.end }, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 
     VisiblePosition paragraphStart(startOfParagraph(visibleStart));
     VisiblePosition nextParagraphStart(endOfParagraph(paragraphStart).next());
@@ -284,12 +279,9 @@ void ApplyStyleCommand::applyBlockStyle(EditingStyle& style)
         nextParagraphStart = endOfParagraph(paragraphStart).next();
     }
 
-    {
-        auto startRange = TextIterator::rangeFromLocationAndLength(scope, startIndex, 0, true);
-        auto endRange = TextIterator::rangeFromLocationAndLength(scope, endIndex, 0, true);
-        if (startRange && endRange)
-            updateStartEnd(startRange->startPosition(), endRange->startPosition());
-    }
+    auto startPosition = createLegacyEditingPosition(resolveCharacterLocation(scope, startIndex, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+    auto endPosition = createLegacyEditingPosition(resolveCharacterLocation(scope, endIndex, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+    updateStartEnd(startPosition, endPosition);
 }
 
 static Ref<MutableStyleProperties> copyStyleOrCreateEmpty(const StyleProperties* style)
@@ -719,7 +711,7 @@ void ApplyStyleCommand::fixRangeAndApplyInlineStyle(EditingStyle& style, const P
     // Start from the highest fully selected ancestor so that we can modify the fully selected node.
     // e.g. When applying font-size: large on <font color="blue">hello</font>, we need to include the font element in our run
     // to generate <font color="blue" size="4">hello</font> instead of <font color="blue"><font size="4">hello</font></font>
-    auto range = Range::create(startNode->document(), start, end);
+    auto range = *makeSimpleRange(start, end);
     auto* editableRoot = startNode->rootEditableElement();
     if (startNode != editableRoot) {
         while (editableRoot && startNode->parentNode() != editableRoot && isNodeVisiblyContainedWithin(*startNode->parentNode(), range))
@@ -1095,7 +1087,7 @@ void ApplyStyleCommand::removeInlineStyle(EditingStyle& style, const Position& s
     // Move it to the next deep quivalent position to avoid removing the style from this node.
     // e.g. if pushDownStart was at Position("hello", 5) in <b>hello<div>world</div></b>, we want Position("world", 0) instead.
     auto* pushDownStartContainer = pushDownStart.containerNode();
-    if (is<Text>(pushDownStartContainer) && pushDownStart.computeOffsetInContainerNode() == pushDownStartContainer->maxCharacterOffset())
+    if (is<Text>(pushDownStartContainer) && static_cast<unsigned>(pushDownStart.computeOffsetInContainerNode()) == downcast<Text>(*pushDownStartContainer).length())
         pushDownStart = nextVisuallyDistinctCandidate(pushDownStart);
     // If pushDownEnd is at the start of a text node, then this node is not fully selected.
     // Move it to the previous deep equivalent position to avoid removing the style from this node.
@@ -1266,8 +1258,7 @@ bool ApplyStyleCommand::isValidCaretPositionInTextNode(const Position& position)
 bool ApplyStyleCommand::mergeStartWithPreviousIfIdentical(const Position& start, const Position& end)
 {
     auto* startNode = start.containerNode();
-    int startOffset = start.computeOffsetInContainerNode();
-    if (startOffset)
+    if (start.computeOffsetInContainerNode())
         return false;
 
     if (isAtomicNode(startNode)) {
@@ -1289,10 +1280,11 @@ bool ApplyStyleCommand::mergeStartWithPreviousIfIdentical(const Position& start,
     ASSERT(startChild);
     mergeIdenticalElements(previousElement, element);
 
-    int startOffsetAdjustment = startChild->computeNodeIndex();
-    int endOffsetAdjustment = startNode == end.deprecatedNode() ? startOffsetAdjustment : 0;
-    updateStartEnd({ startNode, startOffsetAdjustment, Position::PositionIsOffsetInAnchor},
-        { end.deprecatedNode(), end.deprecatedEditingOffset() + endOffsetAdjustment, Position::PositionIsOffsetInAnchor });
+    // FIXME: Inconsistent that we use computeOffsetInContainerNode for start, but deprecatedEditingOffset for end.
+    unsigned startOffset = startChild->computeNodeIndex();
+    unsigned endOffset = end.deprecatedEditingOffset() + (startNode == end.deprecatedNode() ? startOffset : 0);
+    updateStartEnd({ startNode, startOffset, Position::PositionIsOffsetInAnchor },
+        { end.deprecatedNode(), endOffset, Position::PositionIsOffsetInAnchor });
     return true;
 }
 
@@ -1322,7 +1314,7 @@ bool ApplyStyleCommand::mergeEndWithNextIfIdentical(const Position& start, const
     mergeIdenticalElements(element, nextElement);
 
     bool shouldUpdateStart = start.containerNode() == endNode;
-    int endOffset = nextChild ? nextChild->computeNodeIndex() : nextElement.countChildNodes();
+    unsigned endOffset = nextChild ? nextChild->computeNodeIndex() : nextElement.countChildNodes();
     updateStartEnd(shouldUpdateStart ? Position(&nextElement, start.offsetInContainerNode(), Position::PositionIsOffsetInAnchor) : start,
         { &nextElement, endOffset, Position::PositionIsOffsetInAnchor });
     return true;
@@ -1497,6 +1489,8 @@ float ApplyStyleCommand::computedFontSize(Node* node)
         return 0;
 
     auto value = ComputedStyleExtractor(node).propertyValue(CSSPropertyFontSize);
+    if (!value)
+        return 0;
     return downcast<CSSPrimitiveValue>(*value).floatValue(CSSUnitType::CSS_PX);
 }
 

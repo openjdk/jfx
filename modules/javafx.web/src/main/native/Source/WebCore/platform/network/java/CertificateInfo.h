@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CertificateInfoBase.h"
+#include "CertificateSummary.h"
 #include "NotImplemented.h"
 #include <wtf/Vector.h>
 #include <wtf/persistence/PersistentCoders.h>
@@ -34,7 +34,9 @@
 
 namespace WebCore {
 
-class CertificateInfo : public CertificateInfoBase {
+struct CertificateSummary;
+
+class CertificateInfo {
 public:
     using Certificate = Vector<uint8_t>;
     using CertificateChain = Vector<Certificate>;
@@ -49,7 +51,7 @@ public:
 
     bool containsNonRootSHA1SignedCertificate() const { notImplemented(); return false; }
 
-    Optional<SummaryInfo> summaryInfo() const { notImplemented(); return WTF::nullopt; }
+    Optional<CertificateSummary> summary() const { notImplemented(); return WTF::nullopt; }
 
     bool isEmpty() const { return m_certificateChain.isEmpty(); }
 
@@ -76,10 +78,10 @@ template<> struct Coder<WebCore::CertificateInfo> {
         notImplemented();
     }
 
-    static bool decode(Decoder&, WebCore::CertificateInfo&)
+    static Optional<WebCore::CertificateInfo> decode(Decoder&)
     {
         notImplemented();
-        return false;
+        return WTF::nullopt;
     }
 };
 

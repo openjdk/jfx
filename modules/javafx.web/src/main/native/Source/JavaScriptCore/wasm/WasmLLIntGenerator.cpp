@@ -38,10 +38,8 @@
 #include "WasmFunctionCodeBlock.h"
 #include "WasmFunctionParser.h"
 #include "WasmGeneratorTraits.h"
-#include "WasmThunks.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/RefPtr.h>
-#include <wtf/StdUnorderedMap.h>
 #include <wtf/Variant.h>
 
 namespace JSC { namespace Wasm {
@@ -259,6 +257,7 @@ private:
 
     LLIntCallInformation callInformationForCaller(const Signature&);
     Vector<VirtualRegister, 2> callInformationForCallee(const Signature&);
+    void linkSwitchTargets(Label&, unsigned location);
 
     VirtualRegister virtualRegisterForWasmLocal(uint32_t index)
     {
@@ -427,11 +426,33 @@ Expected<std::unique_ptr<FunctionCodeBlock>, String> parseAndCompileBytecode(con
     return llintGenerator.finalize();
 }
 
+
+using Buffer = InstructionStream::InstructionBuffer;
+static ThreadSpecific<Buffer>* threadSpecificBufferPtr;
+
+static ThreadSpecific<Buffer>& threadSpecificBuffer()
+{
+    static std::once_flag flag;
+    std::call_once(
+        flag,
+        [] () {
+            threadSpecificBufferPtr = new ThreadSpecific<Buffer>();
+        });
+    return *threadSpecificBufferPtr;
+}
+
 LLIntGenerator::LLIntGenerator(const ModuleInformation& info, unsigned functionIndex, const Signature&)
     : BytecodeGeneratorBase(makeUnique<FunctionCodeBlock>(functionIndex), 0)
     , m_info(info)
     , m_functionIndex(functionIndex)
 {
+    {
+        auto& threadSpecific = threadSpecificBuffer();
+        Buffer buffer = WTFMove(*threadSpecific);
+        *threadSpecific = Buffer();
+        m_writer.setInstructionBuffer(WTFMove(buffer));
+    }
+
     m_codeBlock->m_numVars = numberOfLLIntCalleeSaveRegisters;
     m_stackSize = numberOfLLIntCalleeSaveRegisters;
     m_maxStackSize = numberOfLLIntCalleeSaveRegisters;
@@ -443,7 +464,15 @@ std::unique_ptr<FunctionCodeBlock> LLIntGenerator::finalize()
 {
     RELEASE_ASSERT(m_codeBlock);
     m_codeBlock->m_numCalleeLocals = WTF::roundUpToMultipleOf(stackAlignmentRegisters(), m_maxStackSize);
-    m_codeBlock->setInstructions(m_writer.finalize());
+
+    auto& threadSpecific = threadSpecificBuffer();
+    Buffer usedBuffer;
+    m_codeBlock->setInstructions(m_writer.finalize(usedBuffer));
+    size_t oldCapacity = usedBuffer.capacity();
+    usedBuffer.resize(0);
+    RELEASE_ASSERT(usedBuffer.capacity() == oldCapacity);
+    *threadSpecific = WTFMove(usedBuffer);
+
     return WTFMove(m_codeBlock);
 }
 
@@ -991,6 +1020,7 @@ auto LLIntGenerator::addEndToUnreachable(ControlEntry& entry, const Stack& expre
     }
 
     if (m_lastOpcodeID == wasm_jmp && data.m_continuation->unresolvedJumps().size() == 1 && data.m_continuation->unresolvedJumps()[0] == static_cast<int>(m_lastInstruction.offset())) {
+        linkSwitchTargets(*data.m_continuation, m_lastInstruction.offset());
         m_lastOpcodeID = wasm_unreachable;
         m_writer.rewind(m_lastInstruction);
     } else
@@ -1210,6 +1240,18 @@ auto LLIntGenerator::store(StoreOpType op, ExpressionType pointer, ExpressionTyp
     return { };
 }
 
+void LLIntGenerator::linkSwitchTargets(Label& label, unsigned location)
+{
+    auto it = m_switches.find(&label);
+    if (it != m_switches.end()) {
+        for (const auto& entry : it->value) {
+            ASSERT(!*entry.jumpTarget);
+            *entry.jumpTarget = location - entry.offset;
+        }
+        m_switches.remove(it);
+    }
+}
+
 }
 
 template<>
@@ -1220,16 +1262,7 @@ void GenericLabel<Wasm::GeneratorTraits>::setLocation(BytecodeGeneratorBase<Wasm
     m_location = location;
 
     Wasm::LLIntGenerator* llintGenerator = static_cast<Wasm::LLIntGenerator*>(&generator);
-
-    auto it = llintGenerator->m_switches.find(this);
-    if (it != llintGenerator->m_switches.end()) {
-        for (const auto& entry : it->value) {
-            ASSERT(!*entry.jumpTarget);
-            *entry.jumpTarget = m_location - entry.offset;
-        }
-        llintGenerator->m_switches.remove(it);
-    }
-
+    llintGenerator->linkSwitchTargets(*this, m_location);
 
     for (auto offset : m_unresolvedJumps) {
         auto instruction = generator.m_writer.ref(offset);

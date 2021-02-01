@@ -33,6 +33,9 @@
 #include <wtf/Vector.h>
 
 namespace JSC {
+namespace DFG {
+class CodeOriginPool;
+}
 
 class CallLinkInfo;
 class JITStubRoutineSet;
@@ -51,7 +54,7 @@ class JITStubRoutineSet;
 class GCAwareJITStubRoutine : public JITStubRoutine {
 public:
     GCAwareJITStubRoutine(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&);
-    virtual ~GCAwareJITStubRoutine();
+    ~GCAwareJITStubRoutine() override;
 
     static Ref<JITStubRoutine> create(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>& code, VM& vm)
     {
@@ -83,7 +86,7 @@ class MarkingGCAwareJITStubRoutine : public GCAwareJITStubRoutine {
 public:
     MarkingGCAwareJITStubRoutine(
         const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&);
-    virtual ~MarkingGCAwareJITStubRoutine();
+    ~MarkingGCAwareJITStubRoutine() override;
 
 protected:
     void markRequiredObjectsInternal(SlotVisitor&) override;
@@ -97,17 +100,21 @@ private:
 // The stub has exception handlers in it. So it clears itself from exception
 // handling table when it dies. It also frees space in CodeOrigin table
 // for new exception handlers to use the same DisposableCallSiteIndex.
-class GCAwareJITStubRoutineWithExceptionHandler : public MarkingGCAwareJITStubRoutine {
+class GCAwareJITStubRoutineWithExceptionHandler final : public MarkingGCAwareJITStubRoutine {
 public:
     typedef GCAwareJITStubRoutine Base;
 
     GCAwareJITStubRoutineWithExceptionHandler(const MacroAssemblerCodeRef<JITStubRoutinePtrTag>&, VM&, const JSCell* owner, const Vector<JSCell*>&, Bag<CallLinkInfo>&&, CodeBlock*, DisposableCallSiteIndex);
+    ~GCAwareJITStubRoutineWithExceptionHandler() final;
 
-    void aboutToDie() override;
-    void observeZeroRefCount() override;
+    void aboutToDie() final;
+    void observeZeroRefCount() final;
 
 private:
     CodeBlock* m_codeBlockWithExceptionHandler;
+#if ENABLE(DFG_JIT)
+    RefPtr<DFG::CodeOriginPool> m_codeOriginPool;
+#endif
     DisposableCallSiteIndex m_exceptionHandlerCallSiteIndex;
 };
 

@@ -21,7 +21,6 @@
 #include "SVGTextMetrics.h"
 
 #include "RenderSVGInlineText.h"
-#include "WidthIterator.h"
 
 namespace WebCore {
 
@@ -67,7 +66,7 @@ TextRun SVGTextMetrics::constructTextRun(RenderSVGInlineText& text, unsigned pos
     TextRun run(StringView(text.text()).substring(position, length)
                 , 0 /* xPos, only relevant with allowTabs=true */
                 , 0 /* padding, only relevant for justified text, not relevant for SVG */
-                , AllowTrailingExpansion
+                , AllowRightExpansion
                 , style.direction()
                 , isOverride(style.unicodeBidi()) /* directionalOverride */);
 

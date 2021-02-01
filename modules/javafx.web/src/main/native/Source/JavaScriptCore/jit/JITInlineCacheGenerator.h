@@ -30,11 +30,13 @@
 #include "CodeOrigin.h"
 #include "JITOperations.h"
 #include "JSCJSValue.h"
+#include "PutByValFlags.h"
 #include "PutKind.h"
 #include "RegisterSet.h"
 
 namespace JSC {
 
+class CacheableIdentifier;
 class CallSiteIndex;
 class CodeBlock;
 class StructureStubInfo;
@@ -105,7 +107,7 @@ public:
     JITGetByIdGenerator() { }
 
     JITGetByIdGenerator(
-        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, UniquedStringImpl* propertyName,
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value, AccessType);
 
     void generateFastPath(MacroAssembler&);
@@ -119,7 +121,7 @@ public:
     JITGetByIdWithThisGenerator() { }
 
     JITGetByIdWithThisGenerator(
-        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, UniquedStringImpl* propertyName,
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
         JSValueRegs value, JSValueRegs base, JSValueRegs thisRegs);
 
     void generateFastPath(MacroAssembler&);
@@ -127,19 +129,73 @@ public:
 
 class JITPutByIdGenerator : public JITByIdGenerator {
 public:
-    JITPutByIdGenerator() { }
+    JITPutByIdGenerator()
+        : m_ecmaMode(ECMAMode::strict())
+        , m_privateFieldAccessKind(PrivateFieldAccessKind::None)
+    { }
 
     JITPutByIdGenerator(
-        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, JSValueRegs base,
-        JSValueRegs value, GPRReg scratch, ECMAMode, PutKind);
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier, JSValueRegs base,
+        JSValueRegs value, GPRReg scratch, ECMAMode, PutKind, PrivateFieldAccessKind privateAccess);
 
     void generateFastPath(MacroAssembler&);
 
-    V_JITOperation_GSsiJJI slowPathFunction();
+    V_JITOperation_GSsiJJC slowPathFunction();
 
 private:
     ECMAMode m_ecmaMode;
     PutKind m_putKind;
+    PrivateFieldAccessKind m_privateFieldAccessKind;
+};
+
+class JITDelByValGenerator : public JITInlineCacheGenerator {
+    using Base = JITInlineCacheGenerator;
+public:
+    JITDelByValGenerator() { }
+
+    JITDelByValGenerator(
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters,
+        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg scratch);
+
+    MacroAssembler::Jump slowPathJump() const
+    {
+        ASSERT(m_slowPathJump.m_jump.isSet());
+        return m_slowPathJump.m_jump;
+    }
+
+    void finalize(
+        LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
+
+    void generateFastPath(MacroAssembler&);
+
+private:
+    MacroAssembler::Label m_start;
+    MacroAssembler::PatchableJump m_slowPathJump;
+};
+
+class JITDelByIdGenerator : public JITInlineCacheGenerator {
+    using Base = JITInlineCacheGenerator;
+public:
+    JITDelByIdGenerator() { }
+
+    JITDelByIdGenerator(
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
+        JSValueRegs base, JSValueRegs result, GPRReg scratch);
+
+    MacroAssembler::Jump slowPathJump() const
+    {
+        ASSERT(m_slowPathJump.m_jump.isSet());
+        return m_slowPathJump.m_jump;
+    }
+
+    void finalize(
+        LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
+
+    void generateFastPath(MacroAssembler&);
+
+private:
+    MacroAssembler::Label m_start;
+    MacroAssembler::PatchableJump m_slowPathJump;
 };
 
 class JITInByIdGenerator : public JITByIdGenerator {
@@ -147,7 +203,7 @@ public:
     JITInByIdGenerator() { }
 
     JITInByIdGenerator(
-        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, UniquedStringImpl* propertyName,
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value);
 
     void generateFastPath(MacroAssembler&);
@@ -176,7 +232,7 @@ public:
     JITGetByValGenerator() { }
 
     JITGetByValGenerator(
-        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters,
+        CodeBlock*, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result);
 
     MacroAssembler::Jump slowPathJump() const

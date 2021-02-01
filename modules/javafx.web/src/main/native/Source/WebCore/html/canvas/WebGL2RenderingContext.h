@@ -46,6 +46,9 @@ public:
 
     ~WebGL2RenderingContext();
 
+    // Context state
+    void pixelStorei(GCGLenum pname, GCGLint param) override;
+
     // Buffer objects
     using WebGLRenderingContextBase::bufferData;
     using WebGLRenderingContextBase::bufferSubData;
@@ -56,7 +59,9 @@ public:
 
     // Framebuffer objects
     WebGLAny getFramebufferAttachmentParameter(GCGLenum target, GCGLenum attachment, GCGLenum pname) final;
+    void bindFramebuffer(GCGLenum target, WebGLFramebuffer*) final;
     void blitFramebuffer(GCGLint srcX0, GCGLint srcY0, GCGLint srcX1, GCGLint srcY1, GCGLint dstX0, GCGLint dstY0, GCGLint dstX1, GCGLint dstY1, GCGLbitfield mask, GCGLenum filter);
+    void deleteFramebuffer(WebGLFramebuffer*) final;
     void framebufferTextureLayer(GCGLenum target, GCGLenum attachment, WebGLTexture*, GCGLint level, GCGLint layer);
     WebGLAny getInternalformatParameter(GCGLenum target, GCGLenum internalformat, GCGLenum pname);
     void invalidateFramebuffer(GCGLenum target, const Vector<GCGLenum>& attachments);
@@ -67,6 +72,7 @@ public:
     void renderbufferStorageMultisample(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height);
 
     // Texture objects
+    WebGLAny getTexParameter(GCGLenum target, GCGLenum pname) final;
     void texStorage2D(GCGLenum target, GCGLsizei levels, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height);
     void texStorage3D(GCGLenum target, GCGLsizei levels, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, GCGLsizei depth);
 
@@ -76,7 +82,10 @@ public:
     using TexImageSource = WTF::Variant<RefPtr<ImageBitmap>, RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>>;
 #endif
 
-    using WebGLRenderingContextBase::texImage2D;
+    // Must override the WebGL 1.0 signatures to add extra validation.
+    void texImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&&) override;
+    ExceptionOr<void> texImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLenum format, GCGLenum type, Optional<TexImageSource>) override;
+    // WebGL 2.0 entry points:
     void texImage2D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, GCGLintptr offset);
     ExceptionOr<void> texImage2D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, TexImageSource&&);
     void texImage2D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& srcData, GCGLuint srcOffset);
@@ -86,7 +95,10 @@ public:
     void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& pixels);
     void texImage3D(GCGLenum target, GCGLint level, GCGLint internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& srcData, GCGLuint srcOffset);
 
-    using WebGLRenderingContextBase::texSubImage2D;
+    // Must override the WebGL 1.0 signature to add extra validation.
+    void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&&) override;
+    ExceptionOr<void> texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLenum format, GCGLenum type, Optional<TexImageSource>&&) override;
+    // WebGL 2.0 entry points:
     void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, GCGLintptr pboOffset);
     ExceptionOr<void> texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, TexImageSource&&);
     void texSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, RefPtr<ArrayBufferView>&& srcData, GCGLuint srcOffset);
@@ -97,18 +109,22 @@ public:
 
     void copyTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height);
 
-    using WebGLRenderingContextBase::compressedTexImage2D;
+    // Must override the WebGL 1.0 signature in order to add extra validation.
+    void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, ArrayBufferView& srcData);
+    // WebGL 2.0 entry points:
     void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, GCGLsizei imageSize, GCGLint64 offset);
-    void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, ArrayBufferView& data, GCGLuint srcOffset, GCGLuint srcLengthOverride);
+    void compressedTexImage2D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLint border, ArrayBufferView& srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride);
     void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, GCGLsizei imageSize, GCGLint64 offset);
     void compressedTexImage3D(GCGLenum target, GCGLint level, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLint border, ArrayBufferView& srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride);
 
-    using WebGLRenderingContextBase::compressedTexSubImage2D;
+    // Must override the WebGL 1.0 signature in order to add extra validation.
+    void compressedTexSubImage2D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLsizei width, GCGLsizei height, GCGLenum format, ArrayBufferView& srcData);
+    // WebGL 2.0 entry points:
     void compressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, GLintptr offset);
     void compressedTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, ArrayBufferView& srcData, GLuint srcOffset, GLuint srcLengthOverride);
 
     void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, GCGLsizei imageSize, GCGLint64 offset);
-    void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, ArrayBufferView& data, GCGLuint srcOffset, GCGLuint srcLengthOverride);
+    void compressedTexSubImage3D(GCGLenum target, GCGLint level, GCGLint xoffset, GCGLint yoffset, GCGLint zoffset, GCGLsizei width, GCGLsizei height, GCGLsizei depth, GCGLenum format, ArrayBufferView& srcData, GCGLuint srcOffset, GCGLuint srcLengthOverride);
 
     // Programs and shaders
     GCGLint getFragDataLocation(WebGLProgram&, const String& name);
@@ -162,7 +178,6 @@ public:
     void uniformMatrix4fv(WebGLUniformLocation* location, GLboolean transpose, Float32List data, GLuint srcOffset, GLuint srcLength);
 
     // Writing to the drawing buffer
-    void clear(GCGLbitfield mask) final;
     void vertexAttribDivisor(GCGLuint index, GCGLuint divisor);
     void drawArraysInstanced(GCGLenum mode, GCGLint first, GCGLsizei count, GCGLsizei instanceCount);
     void drawElementsInstanced(GCGLenum mode, GCGLsizei count, GCGLenum type, GCGLint64 offset, GCGLsizei instanceCount);
@@ -234,12 +249,17 @@ public:
     Optional<Vector<String>> getSupportedExtensions() final;
     WebGLAny getParameter(GCGLenum pname) final;
 
-    using WebGLRenderingContextBase::readPixels;
+    // Must override the WebGL 1.0 signature in order to add extra validation.
+    void readPixels(GCGLint x, GCGLint y, GCGLsizei width, GCGLsizei height, GCGLenum format, GCGLenum type, ArrayBufferView& pixels) override;
     void readPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLintptr offset);
     void readPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, ArrayBufferView& dstData, GLuint dstOffset);
 
-    void renderbufferStorage(GCGLenum target, GCGLenum internalformat, GCGLsizei width, GCGLsizei height) final;
-    void hint(GCGLenum target, GCGLenum mode) final;
+    GCGLuint maxTransformFeedbackSeparateAttribs() const;
+
+    GraphicsContextGLOpenGL::PixelStoreParams getPackPixelStoreParams() const override;
+    GraphicsContextGLOpenGL::PixelStoreParams getUnpackPixelStoreParams(TexImageDimension) const override;
+
+    bool checkAndTranslateAttachments(const char* functionName, GCGLenum, Vector<GCGLenum>&);
 
 private:
     WebGL2RenderingContext(CanvasBase&, GraphicsContextGLAttributes);
@@ -247,36 +267,99 @@ private:
 
     bool isWebGL2() const final { return true; }
 
+    void initializeNewContext() final;
+
+    // Set all ES 3.0 unpack parameters to their default value.
+    void resetUnpackParameters() final;
+    // Restore the client's ES 3.0 unpack parameters.
+    void restoreUnpackParameters() final;
+
     RefPtr<ArrayBufferView> arrayBufferViewSliceFactory(const char* const functionName, const ArrayBufferView& data, unsigned startByte, unsigned bytelength);
     RefPtr<ArrayBufferView> sliceArrayBufferView(const char* const functionName, const ArrayBufferView& data, GCGLuint srcOffset, GCGLuint length);
-    RefPtr<ArrayBufferView> sliceTypedArrayBufferView(const char* const functionName, RefPtr<ArrayBufferView>&, GCGLuint);
+
+    long long getInt64Parameter(GCGLenum);
 
     void initializeVertexArrayObjects() final;
+    bool validateBufferTarget(const char* functionName, GCGLenum target) final;
+    bool validateBufferTargetCompatibility(const char*, GCGLenum, WebGLBuffer*);
+    WebGLBuffer* validateBufferDataParameters(const char* functionName, GCGLenum target, GCGLenum usage) final;
+    WebGLBuffer* validateBufferDataTarget(const char* functionName, GCGLenum target) final;
+    bool validateAndCacheBufferBinding(const char* functionName, GCGLenum target, WebGLBuffer*) final;
     GCGLint getMaxDrawBuffers() final;
     GCGLint getMaxColorAttachments() final;
     bool validateIndexArrayConservative(GCGLenum type, unsigned& numElementsRequired) final;
     bool validateBlendEquation(const char* functionName, GCGLenum mode) final;
     bool validateCapability(const char* functionName, GCGLenum cap) final;
-    bool validateFramebufferFuncParameters(const char* functionName, GCGLenum target, GCGLenum attachment) final;
-    bool validateFramebufferTarget(const char* functionName, GCGLenum target);
+    bool validateClearBuffer(const char* functionName, GCGLenum buffer, size_t, GCGLuint srcOffset);
+    bool validateFramebufferTarget(GCGLenum target) final;
+    WebGLFramebuffer* getFramebufferBinding(GCGLenum target) final;
+    WebGLFramebuffer* getReadFramebufferBinding() final;
+    void restoreCurrentFramebuffer() final;
     bool validateNonDefaultFramebufferAttachment(const char* functionName, GCGLenum attachment);
+    bool validateQueryTarget(const char* functionName, GCGLenum target, GCGLenum* targetKey);
+    void renderbufferStorageImpl(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height, const char* functionName) final;
+    void renderbufferStorageHelper(GCGLenum target, GCGLsizei samples, GCGLenum internalformat, GCGLsizei width, GCGLsizei height);
 
     GCGLenum baseInternalFormatFromInternalFormat(GCGLenum internalformat);
     bool isIntegerFormat(GCGLenum internalformat);
     void initializeShaderExtensions();
-    void initializeTransformFeedbackBufferCache();
-    void initializeSamplerCache();
+    bool setIndexedBufferBinding(const char *functionName, GCGLenum target, GCGLuint index, WebGLBuffer*);
 
+    IntRect getTextureSourceSubRectangle(GLsizei width, GLsizei height);
+
+    RefPtr<WebGLTexture> validateTexImageBinding(const char*, TexImageFunctionID, GCGLenum) final;
+
+    // Helper function to check texture 3D target and texture bound to the target.
+    // Generate GL errors and return 0 if target is invalid or texture bound is
+    // null. Otherwise, return the texture bound to the target.
+    RefPtr<WebGLTexture> validateTexture3DBinding(const char* functionName, GCGLenum target);
+
+    bool validateTexFuncLayer(const char*, GLenum texTarget, GLint layer);
+    GCGLint maxTextureLevelForTarget(GCGLenum target) final;
+
+#if !USE(ANGLE)
     bool validateTexStorageFuncParameters(GCGLenum target, GCGLsizei levels, GCGLenum internalFormat, GCGLsizei width, GCGLsizei height, const char* functionName);
+#endif
 
     void uncacheDeletedBuffer(WebGLBuffer*) final;
 
+    enum class ClearBufferCaller : uint8_t {
+        ClearBufferiv,
+        ClearBufferuiv,
+        ClearBufferfv,
+        ClearBufferfi
+    };
+    void updateBuffersToAutoClear(ClearBufferCaller, GCGLenum buffer, GCGLint drawbuffer);
+
+    RefPtr<WebGLFramebuffer> m_readFramebufferBinding;
     RefPtr<WebGLTransformFeedback> m_boundTransformFeedback;
-    Vector<RefPtr<WebGLBuffer>> m_boundTransformFeedbackBuffers;
+    RefPtr<WebGLTransformFeedback> m_defaultTransformFeedback;
+
+    RefPtr<WebGLBuffer> m_boundCopyReadBuffer;
+    RefPtr<WebGLBuffer> m_boundCopyWriteBuffer;
+    RefPtr<WebGLBuffer> m_boundPixelPackBuffer;
+    RefPtr<WebGLBuffer> m_boundPixelUnpackBuffer;
+    RefPtr<WebGLBuffer> m_boundTransformFeedbackBuffer;
+    RefPtr<WebGLBuffer> m_boundUniformBuffer;
+    Vector<RefPtr<WebGLBuffer>> m_boundIndexedUniformBuffers;
 
     HashMap<GCGLenum, RefPtr<WebGLQuery>> m_activeQueries;
 
     Vector<RefPtr<WebGLSampler>> m_boundSamplers;
+
+    GCGLint m_packRowLength { 0 };
+    GCGLint m_packSkipPixels { 0 };
+    GCGLint m_packSkipRows { 0 };
+    GCGLint m_unpackSkipPixels { 0 };
+    GCGLint m_unpackSkipRows { 0 };
+    GCGLint m_unpackRowLength { 0 };
+    GCGLint m_unpackImageHeight { 0 };
+    GCGLint m_unpackSkipImages { 0 };
+    GCGLint m_uniformBufferOffsetAlignment { 0 };
+    GCGLuint m_maxTransformFeedbackSeparateAttribs { 0 };
+    GCGLint m_max3DTextureSize { 0 };
+    GCGLint m_max3DTextureLevel { 0 };
+    GCGLint m_maxArrayTextureLayers { 0 };
 };
 
 } // namespace WebCore

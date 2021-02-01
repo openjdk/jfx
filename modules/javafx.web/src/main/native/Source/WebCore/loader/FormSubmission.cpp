@@ -69,7 +69,7 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
 
     if (equalLettersIgnoringASCIICase(encodingType, "text/plain")) {
         // Convention seems to be to decode, and s/&/\r\n/. Also, spaces are encoded as %20.
-        body = decodeURLEscapeSequences(body.replaceWithLiteral('&', "\r\n").replace('+', ' ') + "\r\n");
+        body = decodeURLEscapeSequences(makeString(body.replaceWithLiteral('&', "\r\n").replace('+', ' '), "\r\n"));
     }
 
     Vector<char> bodyData;
@@ -77,11 +77,11 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
     FormDataBuilder::encodeStringAsFormData(bodyData, body.utf8());
     body = String(bodyData.data(), bodyData.size()).replaceWithLiteral('+', "%20");
 
-    String query = url.query();
+    auto query = url.query();
     if (query.isEmpty())
         url.setQuery(body);
     else
-        url.setQuery(query + '&' + body);
+        url.setQuery(makeString(query, '&', body));
 }
 
 void FormSubmission::Attributes::parseAction(const String& action)
@@ -248,7 +248,6 @@ void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 
     frameRequest.resourceRequest().setURL(requestURL());
     FrameLoader::addHTTPOriginIfNeeded(frameRequest.resourceRequest(), m_origin);
-    FrameLoader::addHTTPUpgradeInsecureRequestsIfNeeded(frameRequest.resourceRequest());
 }
 
 }

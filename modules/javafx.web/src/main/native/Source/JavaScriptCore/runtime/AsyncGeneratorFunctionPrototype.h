@@ -33,6 +33,13 @@ public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(AsyncGeneratorFunctionPrototype, Base);
+        return &vm.plainObjectSpace;
+    }
+
     DECLARE_INFO;
 
     static AsyncGeneratorFunctionPrototype* create(VM& vm, Structure* structure)
@@ -47,11 +54,9 @@ public:
         return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
-    void finishCreation(VM&);
-
 private:
     AsyncGeneratorFunctionPrototype(VM&, Structure*);
+    void finishCreation(VM&);
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,22 +26,34 @@
 #include "config.h"
 #include "Quirks.h"
 
-#include "CustomHeaderFields.h"
+#include "Attr.h"
 #include "DOMTokenList.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "DocumentStorageAccess.h"
 #include "EventNames.h"
 #include "FrameLoader.h"
 #include "HTMLBodyElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLMetaElement.h"
 #include "HTMLObjectElement.h"
+#include "HTMLVideoElement.h"
 #include "JSEventListener.h"
 #include "LayoutUnit.h"
+#include "NamedNodeMap.h"
+#include "ResourceLoadObserver.h"
 #include "RuntimeEnabledFeatures.h"
+#include "SVGPathElement.h"
+#include "SVGSVGElement.h"
+#include "ScriptController.h"
+#include "ScriptSourceCode.h"
 #include "Settings.h"
+#include "SpaceSplitString.h"
 #include "UserAgent.h"
+#include "UserContentTypes.h"
+#include "UserScript.h"
+#include "UserScriptTypes.h"
 
 namespace WebCore {
 
@@ -53,6 +65,14 @@ static inline OptionSet<AutoplayQuirk> allowedAutoplayQuirks(Document& document)
 
     return loader->allowedAutoplayQuirks();
 }
+
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+static inline bool isYahooMail(Document& document)
+{
+    auto host = document.topDocument().url().host();
+    return startsWithLettersIgnoringASCIICase(host, "mail.") && topPrivatelyControlledDomain(host.toString()).startsWith("yahoo.");
+}
+#endif
 
 Quirks::Quirks(Document& document)
     : m_document(makeWeakPtr(document))
@@ -110,6 +130,9 @@ bool Quirks::needsPerDocumentAutoplayBehavior() const
     ASSERT(m_document == &m_document->topDocument());
     return needsQuirks() && allowedAutoplayQuirks(*m_document).contains(AutoplayQuirk::PerDocumentAutoplayBehavior);
 #else
+    if (!needsQuirks())
+        return false;
+
     auto host = m_document->topDocument().url().host();
     return equalLettersIgnoringASCIICase(host, "netflix.com") || host.endsWithIgnoringASCIICase(".netflix.com");
 #endif
@@ -120,8 +143,21 @@ bool Quirks::shouldAutoplayForArbitraryUserGesture() const
 #if PLATFORM(MAC)
     return needsQuirks() && allowedAutoplayQuirks(*m_document).contains(AutoplayQuirk::ArbitraryUserGestures);
 #else
+    if (!needsQuirks())
     return false;
+
+    auto host = m_document->url().host();
+    return equalLettersIgnoringASCIICase(host, "twitter.com") || host.endsWithIgnoringASCIICase(".twitter.com");
 #endif
+}
+
+bool Quirks::shouldAutoplayWebAudioForArbitraryUserGesture() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto host = m_document->topDocument().url().host();
+    return equalLettersIgnoringASCIICase(host, "www.bing.com");
 }
 
 bool Quirks::hasBrokenEncryptedMediaAPISupportQuirk() const
@@ -156,6 +192,15 @@ bool Quirks::shouldDisableContentChangeObserverTouchEventAdjustment() const
 
     auto host = m_document->topDocument().url().host();
     return host.endsWith(".youtube.com") || host == "youtube.com";
+}
+
+bool Quirks::needsMillisecondResolutionForHighResTimeStamp() const
+{
+    if (!needsQuirks())
+        return false;
+    // webkit.org/b/210527
+    auto host = m_document->url().host();
+    return equalLettersIgnoringASCIICase(host, "www.icourse163.org");
 }
 
 bool Quirks::shouldStripQuotationMarkInFontFaceSetFamily() const
@@ -330,7 +375,9 @@ bool Quirks::shouldDispatchSimulatedMouseEvents() const
             return true;
         if (host == "naver.com")
             return true;
-        if (host == "nhl.com" || host.endsWith(".nhl.com"))
+        if (host == "nhl.com" || (host.endsWith(".nhl.com") && !host.startsWith("account.")))
+            return true;
+        if (host == "nba.com" || host.endsWith(".nba.com"))
             return true;
         if (host.endsWith(".naver.com")) {
             // Disable the quirk for tv.naver.com subdomain to be able to simulate hover on videos.
@@ -423,6 +470,41 @@ bool Quirks::shouldMakeTouchEventNonCancelableForTarget(EventTarget* target) con
     }
 
     return false;
+}
+
+bool Quirks::shouldPreventPointerMediaQueryFromEvaluatingToCoarse() const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto host = m_document->topDocument().url().host();
+    return equalLettersIgnoringASCIICase(host, "shutterstock.com") || host.endsWithIgnoringASCIICase(".shutterstock.com");
+}
+
+bool Quirks::shouldPreventDispatchOfTouchEvent(const AtomString& touchEventType, EventTarget* target) const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (is<Element>(target) && touchEventType == eventNames().touchendEvent && equalLettersIgnoringASCIICase(m_document->topDocument().url().host(), "sites.google.com")) {
+        auto& classList = downcast<Element>(*target).classList();
+        return classList.contains("DPvwYc") && classList.contains("sm8sCf");
+    }
+
+    return false;
+}
+
+#endif
+
+#if ENABLE(IOS_TOUCH_EVENTS)
+bool Quirks::shouldSynthesizeTouchEvents() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_shouldSynthesizeTouchEventsQuirk)
+        m_shouldSynthesizeTouchEventsQuirk = isYahooMail(*m_document);
+    return m_shouldSynthesizeTouchEventsQuirk.value();
 }
 #endif
 
@@ -539,6 +621,23 @@ bool Quirks::needsYouTubeOverflowScrollQuirk() const
 #endif
 }
 
+bool Quirks::needsFullscreenDisplayNoneQuirk() const
+{
+#if PLATFORM(IOS_FAMILY)
+    if (!needsQuirks())
+        return false;
+
+    if (!m_needsFullscreenDisplayNoneQuirk) {
+        auto host = m_document->topDocument().url().host();
+        m_needsFullscreenDisplayNoneQuirk = equalLettersIgnoringASCIICase(host, "gizmodo.com") || host.endsWithIgnoringASCIICase(".gizmodo.com");
+    }
+
+    return *m_needsFullscreenDisplayNoneQuirk;
+#else
+    return false;
+#endif
+}
+
 bool Quirks::shouldAvoidScrollingWhenFocusedContentIsVisible() const
 {
     if (!needsQuirks())
@@ -633,7 +732,7 @@ bool Quirks::shouldBypassBackForwardCache() const
     // because it puts an overlay (with class "docs-homescreen-freeze-el-full") over the page when navigating away and fails
     // to remove it when coming back from the back/forward cache (e.g. in 'pageshow' event handler). See <rdar://problem/57670064>.
     // Note that this does not check for docs.google.com host because of hosted G Suite apps.
-    static NeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> googleDocsOverlayDivClass("docs-homescreen-freeze-el-full", AtomString::ConstructFromLiteral);
     auto* firstChildInBody = m_document->body() ? m_document->body()->firstChild() : nullptr;
     if (is<HTMLDivElement>(firstChildInBody)) {
         auto& div = downcast<HTMLDivElement>(*firstChildInBody);
@@ -642,6 +741,19 @@ bool Quirks::shouldBypassBackForwardCache() const
     }
 
     return false;
+}
+
+bool Quirks::shouldBypassAsyncScriptDeferring() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_shouldBypassAsyncScriptDeferring) {
+        auto domain = RegistrableDomain { m_document->topDocument().url() };
+        // Deferring 'mapbox-gl.js' script on bungalow.com causes the script to get in a bad state (rdar://problem/61658940).
+        m_shouldBypassAsyncScriptDeferring = (domain == "bungalow.com");
+    }
+    return *m_shouldBypassAsyncScriptDeferring;
 }
 
 bool Quirks::shouldMakeEventListenerPassive(const EventTarget& eventTarget, const AtomString& eventType, const EventListener& eventListener)
@@ -706,6 +818,210 @@ bool Quirks::shouldDisableElementFullscreenQuirk() const
 
     return m_shouldDisableElementFullscreenQuirk.value();
 #else
+    return false;
+#endif
+}
+
+bool Quirks::needsCanPlayAfterSeekedQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (m_needsCanPlayAfterSeekedQuirk)
+        return *m_needsCanPlayAfterSeekedQuirk;
+
+    auto domain = m_document->securityOrigin().domain().convertToASCIILowercase();
+
+    m_needsCanPlayAfterSeekedQuirk = domain == "hulu.com" || domain.endsWith(".hulu.com");
+
+    return m_needsCanPlayAfterSeekedQuirk.value();
+}
+
+bool Quirks::shouldLayOutAtMinimumWindowWidthWhenIgnoringScalingConstraints() const
+{
+    if (!needsQuirks())
+        return false;
+
+    // FIXME: We should consider replacing this with a heuristic to determine whether
+    // or not the edges of the page mostly lack content after shrinking to fit.
+    return m_document->url().host().endsWithIgnoringASCIICase(".wikipedia.org");
+}
+
+bool Quirks::shouldIgnoreContentObservationForSyntheticClick(bool isFirstSyntheticClickOnPage) const
+{
+    if (!needsQuirks())
+        return false;
+
+    auto host = m_document->url().host();
+    return isFirstSyntheticClickOnPage && (equalLettersIgnoringASCIICase(host, "shutterstock.com") || host.endsWithIgnoringASCIICase(".shutterstock.com"));
+}
+
+bool Quirks::shouldAvoidPastingImagesAsWebContent() const
+{
+    if (!needsQuirks())
+        return false;
+
+#if PLATFORM(IOS_FAMILY)
+    if (!m_shouldAvoidPastingImagesAsWebContent)
+        m_shouldAvoidPastingImagesAsWebContent = isYahooMail(*m_document);
+    return *m_shouldAvoidPastingImagesAsWebContent;
+#else
+    return false;
+#endif
+}
+
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+static bool isKinjaLoginAvatarElement(const Element& element)
+{
+    // The click event handler has been found to trigger on a div or
+    // span with these class names, or the svg, or the svg's path.
+    if (element.hasClass()) {
+        auto& classNames = element.classNames();
+        if (classNames.contains("js_switch-to-burner-login")
+            || classNames.contains("js_header-userbutton")
+            || classNames.contains("sc-1il3uru-3") || classNames.contains("cIhKfd")
+            || classNames.contains("iyvn34-0") || classNames.contains("bYIjtl"))
+            return true;
+    }
+
+    const Element* svgElement = nullptr;
+    if (is<SVGSVGElement>(element))
+        svgElement = &element;
+    else if (is<SVGPathElement>(element) && is<SVGSVGElement>(element.parentElement()))
+        svgElement = element.parentElement();
+
+    if (svgElement && svgElement->hasAttributes()) {
+        auto ariaLabelAttr = svgElement->attributes().getNamedItem("aria-label");
+        if (ariaLabelAttr && ariaLabelAttr->value() == "UserFilled icon")
+            return true;
+    }
+
+    return false;
+}
+#endif
+
+Quirks::StorageAccessResult Quirks::triggerOptionalStorageAccessQuirk(const Element& element, const AtomString& eventType) const
+{
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    if (!needsQuirks())
+        return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+
+    RegistrableDomain domain { m_document->url() };
+
+    static NeverDestroyed<HashSet<RegistrableDomain>> kinjaQuirks = [] {
+        HashSet<RegistrableDomain> set;
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("avclub.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("gizmodo.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("deadspin.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("jalopnik.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("jezebel.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("kotaku.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("lifehacker.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("theroot.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("thetakeout.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("theonion.com"_s));
+        set.add(RegistrableDomain::uncheckedCreateFromRegistrableDomainString("theinventory.com"_s));
+        return set;
+    }();
+    static NeverDestroyed<URL> kinjaURL = URL(URL(), "https://kinja.com");
+    static NeverDestroyed<RegistrableDomain> kinjaDomain { kinjaURL };
+
+    static NeverDestroyed<RegistrableDomain> youTubeDomain = RegistrableDomain::uncheckedCreateFromRegistrableDomainString("youtube.com"_s);
+
+    static NeverDestroyed<String> loginPopupWindowFeatureString = "toolbar=no,location=yes,directories=no,status=no,menubar=no,scrollbars=yes,resizable=yes,copyhistory=no,width=599,height=600,top=420,left=980.5"_s;
+
+    static NeverDestroyed<UserScript> kinjaLoginUserScript { "function triggerLoginForm() { let elements = document.getElementsByClassName('js_header-userbutton'); if (elements && elements[0]) { elements[0].click(); clearInterval(interval); } } let interval = setInterval(triggerLoginForm, 200);", URL(aboutBlankURL()), Vector<String>(), Vector<String>(), UserScriptInjectionTime::DocumentEnd, UserContentInjectedFrames::InjectInTopFrameOnly, WaitForNotificationBeforeInjecting::Yes };
+
+    if (eventType == "click") {
+
+        // Embedded YouTube case.
+        if (element.hasClass() && domain == youTubeDomain && !m_document->isTopDocument() && ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
+            auto& classNames = element.classNames();
+            if (classNames.contains("ytp-watch-later-icon") || classNames.contains("ytp-watch-later-icon")) {
+                if (ResourceLoadObserver::shared().hasHadUserInteraction(youTubeDomain)) {
+                    DocumentStorageAccess::requestStorageAccessForDocumentQuirk(*m_document, [](StorageAccessWasGranted) { });
+                    return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+                }
+            }
+            return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+        }
+
+        // Kinja login case.
+        if (kinjaQuirks.get().contains(domain) && isKinjaLoginAvatarElement(element)) {
+            if (ResourceLoadObserver::shared().hasHadUserInteraction(kinjaDomain)) {
+                DocumentStorageAccess::requestStorageAccessForNonDocumentQuirk(*m_document, kinjaDomain.get().isolatedCopy(), [](StorageAccessWasGranted) { });
+                return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+            }
+
+            auto* domWindow = m_document->domWindow();
+            if (!domWindow)
+                return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+
+            ExceptionOr<RefPtr<WindowProxy>> proxyOrException =  domWindow->open(*domWindow, *domWindow, kinjaURL->string(), emptyString(), loginPopupWindowFeatureString);
+            if (proxyOrException.hasException())
+                return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+            auto proxy = proxyOrException.releaseReturnValue();
+
+            auto* abstractFrame = proxy->frame();
+            if (abstractFrame && is<Frame>(*abstractFrame)) {
+                auto& frame = downcast<Frame>(*abstractFrame);
+                auto world = ScriptController::createWorld("kinjaComQuirkWorld", ScriptController::WorldType::User);
+                frame.addUserScriptAwaitingNotification(world.get(), kinjaLoginUserScript);
+                return Quirks::StorageAccessResult::ShouldCancelEvent;
+            }
+        }
+    }
+#else
+    UNUSED_PARAM(element);
+    UNUSED_PARAM(eventType);
+#endif
+    return Quirks::StorageAccessResult::ShouldNotCancelEvent;
+}
+
+bool Quirks::needsVP9FullRangeFlagQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_needsVP9FullRangeFlagQuirk)
+        m_needsVP9FullRangeFlagQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+
+    return *m_needsVP9FullRangeFlagQuirk;
+}
+
+bool Quirks::needsHDRPixelDepthQuirk() const
+{
+    if (!needsQuirks())
+        return false;
+
+    if (!m_needsHDRPixelDepthQuirk)
+        m_needsHDRPixelDepthQuirk = equalLettersIgnoringASCIICase(m_document->url().host(), "www.youtube.com");
+
+    return *m_needsHDRPixelDepthQuirk;
+}
+
+// FIXME: remove this once rdar://66739450 has been fixed.
+bool Quirks::needsAkamaiMediaPlayerQuirk(const HTMLVideoElement& element) const
+{
+#if PLATFORM(IOS_FAMILY)
+    // Akamai Media Player begins polling `webkitDisplayingFullscreen` every 100ms immediately after calling
+    // `webkitEnterFullscreen` and exits fullscreen as soon as it returns false. r262456 changed the HTMLMediaPlayer state
+    // machine so `webkitDisplayingFullscreen` doesn't return true until the fullscreen window has been opened in the
+    // UI process, which causes Akamai Media Player to frequently exit fullscreen mode immediately.
+
+    static NeverDestroyed<const AtomString> akamaiHTML5(MAKE_STATIC_STRING_IMPL("akamai-html5"));
+    static NeverDestroyed<const AtomString> akamaiMediaElement(MAKE_STATIC_STRING_IMPL("akamai-media-element"));
+
+    if (!needsQuirks())
+        return false;
+
+    if (!element.hasClass())
+        return false;
+
+    auto& classNames = element.classNames();
+    return classNames.contains(akamaiHTML5) && classNames.contains(akamaiMediaElement);
+#else
+    UNUSED_PARAM(element);
     return false;
 #endif
 }

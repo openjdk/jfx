@@ -43,12 +43,14 @@ class HTMLMapElement;
 
 struct ImageCandidate;
 
+enum class RelevantMutation : bool;
+
 class HTMLImageElement : public HTMLElement, public FormNamedItem {
     WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
     friend class HTMLFormElement;
 public:
     static Ref<HTMLImageElement> create(Document&);
-    static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr, bool createdByParser = false);
+    static Ref<HTMLImageElement> create(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
     static Ref<HTMLImageElement> createForJSConstructor(Document&, Optional<unsigned> width, Optional<unsigned> height);
 
     virtual ~HTMLImageElement();
@@ -128,19 +130,32 @@ public:
 
     void defaultEventHandler(Event&) final;
 
-    bool createdByParser() const { return m_createdByParser; }
+    void loadDeferredImage();
+
+    const AtomString& loadingForBindings() const;
+    void setLoadingForBindings(const AtomString&);
+
+    bool isLazyLoadable() const;
+    static bool hasLazyLoadableAttributeValue(const AtomString&);
+
+    bool isDeferred() const;
 
     bool isDroppedImagePlaceholder() const { return m_isDroppedImagePlaceholder; }
     void setIsDroppedImagePlaceholder() { m_isDroppedImagePlaceholder = true; }
 
     void evaluateDynamicMediaQueryDependencies();
 
+    void setReferrerPolicyForBindings(const AtomString&);
+    String referrerPolicyForBindings() const;
+    ReferrerPolicy referrerPolicy() const;
+
 protected:
-    HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr, bool createdByParser = false);
+    HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = nullptr);
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
 private:
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void parseAttribute(const QualifiedName&, const AtomString&) override;
     bool isPresentationAttribute(const QualifiedName&) const override;
     void collectStyleForPresentationAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) override;
@@ -170,7 +185,7 @@ private:
 
     bool isInteractiveContent() const final;
 
-    void selectImageSource();
+    void selectImageSource(RelevantMutation);
 
     ImageCandidate bestFitSourceFromPictureElement();
 
@@ -199,7 +214,6 @@ private:
     float m_imageDevicePixelRatio;
     bool m_experimentalImageMenuEnabled;
     bool m_hadNameBeforeAttributeChanged { false }; // FIXME: We only need this because parseAttribute() can't see the old value.
-    bool m_createdByParser { false };
     bool m_isDroppedImagePlaceholder { false };
 
     RefPtr<EditableImageReference> m_editableImage;

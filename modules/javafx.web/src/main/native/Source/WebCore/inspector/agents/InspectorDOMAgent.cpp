@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2009 Joseph Pecoraro
  *
@@ -131,25 +131,18 @@ static const UChar ellipsisUChar[] = { 0x2026, 0 };
 static Color parseColor(const JSON::Object* colorObject)
 {
     if (!colorObject)
-        return Color::transparent;
+        return Color::transparentBlack;
 
     int r = 0;
     int g = 0;
     int b = 0;
     if (!colorObject->getInteger("r", r) || !colorObject->getInteger("g", g) || !colorObject->getInteger("b", b))
-        return Color::transparent;
+        return Color::transparentBlack;
 
     double a = 1.0;
     if (!colorObject->getDouble("a", a))
-        return Color(r, g, b);
-
-    // Clamp alpha to the [0..1] range.
-    if (a < 0)
-        a = 0;
-    else if (a > 1)
-        a = 1;
-
-    return Color(r, g, b, static_cast<int>(a * 255));
+        return clampToComponentBytes<SRGBA>(r, g, b);
+    return clampToComponentBytes<SRGBA>(r, g, b, convertToComponentByte(a));
 }
 
 static Color parseConfigColor(const String& fieldName, const JSON::Object* configObject)
@@ -262,7 +255,7 @@ public:
             data->setBoolean("enabled"_s, !!node->document().fullscreenManager().fullscreenElement());
 #endif // ENABLE(FULLSCREEN_API)
 
-        auto timestamp = m_domAgent.m_environment.executionStopwatch()->elapsedTime().seconds();
+        auto timestamp = m_domAgent.m_environment.executionStopwatch().elapsedTime().seconds();
         m_domAgent.m_frontendDispatcher->didFireEvent(nodeId, event.type(), timestamp, data->size() ? WTFMove(data) : nullptr);
     }
 
@@ -306,7 +299,7 @@ void InspectorDOMAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, 
     m_history = makeUnique<InspectorHistory>();
     m_domEditor = makeUnique<DOMEditor>(*m_history);
 
-    m_instrumentingAgents.setInspectorDOMAgent(this);
+    m_instrumentingAgents.setPersistentDOMAgent(this);
     m_document = m_inspectedPage.mainFrame().document();
 
 #if ENABLE(VIDEO)
@@ -330,7 +323,7 @@ void InspectorDOMAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReaso
     setSearchingForNode(ignored, false, nullptr, false);
     hideHighlight(ignored);
 
-    m_instrumentingAgents.setInspectorDOMAgent(nullptr);
+    m_instrumentingAgents.setPersistentDOMAgent(nullptr);
     m_documentRequested = false;
     reset();
 }
@@ -418,7 +411,7 @@ void InspectorDOMAgent::unbind(Node* node, NodeToIdMap* nodesMap)
 
     nodesMap->remove(node);
 
-    if (auto* cssAgent = m_instrumentingAgents.inspectorCSSAgent())
+    if (auto* cssAgent = m_instrumentingAgents.enabledCSSAgent())
         cssAgent->didRemoveDOMNode(*node, id);
 
     if (m_childrenRequested.remove(id)) {
@@ -552,6 +545,8 @@ int InspectorDOMAgent::pushNodeToFrontend(Node* nodeToPush)
     if (!nodeToPush)
         return 0;
 
+    // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
+
     ErrorString ignored;
     return pushNodeToFrontend(ignored, boundNodeId(&nodeToPush->document()), nodeToPush);
 }
@@ -653,6 +648,7 @@ int InspectorDOMAgent::pushNodePathToFrontend(ErrorString errorString, Node* nod
         return 0;
     }
 
+    // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
     if (!m_documentNodeToIdMap.contains(m_document)) {
         errorString = "Document must have been requested"_s;
         return 0;
@@ -885,6 +881,7 @@ void InspectorDOMAgent::getSupportedEventNames(ErrorString&, RefPtr<JSON::ArrayO
 #undef DOM_EVENT_NAMES_ADD
 }
 
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 void InspectorDOMAgent::getDataBindingsForNode(ErrorString& errorString, int /* nodeId */, RefPtr<JSON::ArrayOf<Inspector::Protocol::DOM::DataBinding>>& /* dataBindings */)
 {
     errorString = "Not supported"_s;
@@ -894,6 +891,7 @@ void InspectorDOMAgent::getAssociatedDataForNode(ErrorString& errorString, int /
 {
     errorString = "Not supported"_s;
 }
+#endif
 
 void InspectorDOMAgent::getEventListenersForNode(ErrorString& errorString, int nodeId, RefPtr<JSON::ArrayOf<Inspector::Protocol::DOM::EventListener>>& listenersArray)
 {
@@ -1114,7 +1112,7 @@ void InspectorDOMAgent::inspect(Node* inspectedNode)
     RefPtr<Node> node = inspectedNode;
     setSearchingForNode(ignored, false, nullptr, false);
 
-    if (node->nodeType() != Node::ELEMENT_NODE && node->nodeType() != Node::DOCUMENT_NODE)
+    if (!node->isElementNode() && !node->isDocumentNode())
         node = node->parentNode();
     m_nodeToFocus = node;
 
@@ -1126,6 +1124,7 @@ void InspectorDOMAgent::inspect(Node* inspectedNode)
 
 void InspectorDOMAgent::focusNode()
 {
+    // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
     if (!m_documentRequested)
         return;
 
@@ -1159,7 +1158,7 @@ void InspectorDOMAgent::mouseDidMoveOverElement(const HitTestResult& result, uns
 void InspectorDOMAgent::highlightMousedOverNode()
 {
     Node* node = m_mousedOverNode.get();
-    while (node && node->nodeType() == Node::TEXT_NODE)
+    if (node && node->isTextNode())
         node = node->parentNode();
     if (node && m_inspectModeHighlightConfig)
         m_overlay->highlightNode(node, *m_inspectModeHighlightConfig);
@@ -1207,10 +1206,17 @@ std::unique_ptr<HighlightConfig> InspectorDOMAgent::highlightConfigFromInspector
     return highlightConfig;
 }
 
+#if PLATFORM(IOS_FAMILY)
+void InspectorDOMAgent::setInspectModeEnabled(ErrorString& errorString, bool enabled, const JSON::Object* highlightConfig)
+{
+    setSearchingForNode(errorString, enabled, highlightConfig ? highlightConfig : nullptr, false);
+}
+#else
 void InspectorDOMAgent::setInspectModeEnabled(ErrorString& errorString, bool enabled, const JSON::Object* highlightConfig, const bool* showRulers)
 {
     setSearchingForNode(errorString, enabled, highlightConfig ? highlightConfig : nullptr, showRulers && *showRulers);
 }
+#endif
 
 void InspectorDOMAgent::highlightRect(ErrorString&, int x, int y, int width, int height, const JSON::Object* color, const JSON::Object* outlineColor, const bool* usePageCoordinates)
 {
@@ -1246,7 +1252,7 @@ void InspectorDOMAgent::highlightSelector(ErrorString& errorString, const JSON::
     RefPtr<Document> document;
 
     if (frameId) {
-        auto* pageAgent = m_instrumentingAgents.inspectorPageAgent();
+        auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
         if (!pageAgent) {
             errorString = "Page domain must be enabled"_s;
             return;
@@ -1291,8 +1297,7 @@ void InspectorDOMAgent::highlightSelector(ErrorString& errorString, const JSON::
             SelectorChecker::CheckingContext context(SelectorChecker::Mode::ResolvingStyle);
             context.pseudoId = pseudoId;
 
-            unsigned ignoredSpecificity;
-            if (selectorChecker.match(*selector, descendantElement, context, ignoredSpecificity)) {
+            if (selectorChecker.match(*selector, descendantElement, context)) {
                 if (seenNodes.add(&descendantElement))
                     nodeList.append(descendantElement);
             }
@@ -1385,7 +1390,7 @@ void InspectorDOMAgent::highlightNodeList(ErrorString& errorString, const JSON::
 
 void InspectorDOMAgent::highlightFrame(ErrorString& errorString, const String& frameId, const JSON::Object* color, const JSON::Object* outlineColor)
 {
-    auto* pageAgent = m_instrumentingAgents.inspectorPageAgent();
+    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
     if (!pageAgent) {
         errorString = "Page domain must be enabled"_s;
         return;
@@ -1632,7 +1637,7 @@ Ref<Inspector::Protocol::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* 
             value->setChildren(WTFMove(children));
     }
 
-    auto* pageAgent = m_instrumentingAgents.inspectorPageAgent();
+    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
     if (pageAgent) {
         if (auto* frameView = node->document().view())
             value->setFrameId(pageAgent->frameId(&frameView->frame()));
@@ -1770,7 +1775,7 @@ Ref<Inspector::Protocol::DOM::EventListener> InspectorDOMAgent::buildObjectForEv
         JSC::JSLockHolder lock(scriptListener.isolatedWorld().vm());
 
         if (document) {
-            handlerObject = scriptListener.jsFunction(*document);
+            handlerObject = scriptListener.ensureJSFunction(*document);
             exec = execStateFromNode(scriptListener.isolatedWorld(), document);
         }
 
@@ -2348,7 +2353,7 @@ void InspectorDOMAgent::didModifyDOMAttr(Element& element, const AtomString& nam
     if (!id)
         return;
 
-    if (auto* cssAgent = m_instrumentingAgents.inspectorCSSAgent())
+    if (auto* cssAgent = m_instrumentingAgents.enabledCSSAgent())
         cssAgent->didModifyDOMAttr(element);
 
     m_frontendDispatcher->attributeModified(id, name, value);
@@ -2360,7 +2365,7 @@ void InspectorDOMAgent::didRemoveDOMAttr(Element& element, const AtomString& nam
     if (!id)
         return;
 
-    if (auto* cssAgent = m_instrumentingAgents.inspectorCSSAgent())
+    if (auto* cssAgent = m_instrumentingAgents.enabledCSSAgent())
         cssAgent->didModifyDOMAttr(element);
 
     m_frontendDispatcher->attributeRemoved(id, name);
@@ -2374,7 +2379,7 @@ void InspectorDOMAgent::styleAttributeInvalidated(const Vector<Element*>& elemen
         if (!id)
             continue;
 
-        if (auto* cssAgent = m_instrumentingAgents.inspectorCSSAgent())
+        if (auto* cssAgent = m_instrumentingAgents.enabledCSSAgent())
             cssAgent->didModifyDOMAttr(*element);
 
         nodeIds->addItem(id);
@@ -2592,7 +2597,7 @@ void InspectorDOMAgent::mediaMetricsTimerFired()
 
             int nodeId = pushNodePathToFrontend(mediaElement);
             if (nodeId) {
-                auto timestamp = m_environment.executionStopwatch()->elapsedTime().seconds();
+                auto timestamp = m_environment.executionStopwatch().elapsedTime().seconds();
                 m_frontendDispatcher->powerEfficientPlaybackStateChanged(nodeId, timestamp, iterator->value.isPowerEfficient);
             }
         }

@@ -28,14 +28,15 @@
 #include "config.h"
 #include "FELighting.h"
 
-#include "ColorUtilities.h"
+#include "ColorConversion.h"
 #include "FELightingNEON.h"
+#include "ImageData.h"
 #include <wtf/ParallelJobs.h>
 
 namespace WebCore {
 
-FELighting::FELighting(Filter& filter, LightingType lightingType, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
-    : FilterEffect(filter)
+FELighting::FELighting(Filter& filter, LightingType lightingType, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource, Type type)
+    : FilterEffect(filter, type)
     , m_lightingType(lightingType)
     , m_lightSource(WTFMove(lightSource))
     , m_lightingColor(lightingColor)
@@ -403,8 +404,13 @@ bool FELighting::drawLighting(Uint8ClampedArray& pixels, int width, int height)
     data.widthDecreasedByOne = width - 1;
     data.heightDecreasedByOne = height - 1;
 
-    FloatComponents lightColor = (operatingColorSpace() == ColorSpace::LinearRGB) ? sRGBColorToLinearComponents(m_lightingColor) : FloatComponents(m_lightingColor);
-    paintingData.initialLightingData.colorVector = FloatPoint3D(lightColor.components[0], lightColor.components[1], lightColor.components[2]);
+    if (operatingColorSpace() == ColorSpace::LinearRGB) {
+        auto [r, g, b, a] = toLinearSRGBA(m_lightingColor.toSRGBALossy<float>());
+        paintingData.initialLightingData.colorVector = FloatPoint3D(r, g, b);
+    } else {
+        auto [r, g, b, a] = m_lightingColor.toSRGBALossy<float>();
+        paintingData.initialLightingData.colorVector = FloatPoint3D(r, g, b);
+    }
     m_lightSource->initPaintingData(*this, paintingData);
 
     // Top left.
@@ -473,15 +479,15 @@ void FELighting::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
 
-    Uint8ClampedArray* resutPixelArray = createPremultipliedImageResult();
+    auto* resultImage = createPremultipliedImageResult();
+    auto* resutPixelArray = resultImage ? resultImage->data() : nullptr;
     if (!resutPixelArray)
         return;
 
     setIsAlphaImage(false);
 
     IntRect effectDrawingRect = requestedRegionOfInputImageData(in->absolutePaintRect());
-    in->copyPremultipliedResult(*resutPixelArray, effectDrawingRect);
-
+    in->copyPremultipliedResult(*resutPixelArray, effectDrawingRect, operatingColorSpace());
     // FIXME: support kernelUnitLengths other than (1,1). The issue here is that the W3
     // standard has no test case for them, and other browsers (like Firefox) has strange
     // output for various kernelUnitLengths, and I am not sure they are reliable.

@@ -49,11 +49,25 @@
 
 namespace WebCore {
 
-static const uint64_t schemaVersion = 4;
+static const uint64_t schemaVersion = 5;
 
 static const String recordsTableSchema(const String& tableName)
 {
-    return makeString("CREATE TABLE ", tableName, " (key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE, origin TEXT NOT NULL ON CONFLICT FAIL, scopeURL TEXT NOT NULL ON CONFLICT FAIL, topOrigin TEXT NOT NULL ON CONFLICT FAIL, lastUpdateCheckTime DOUBLE NOT NULL ON CONFLICT FAIL, updateViaCache TEXT NOT NULL ON CONFLICT FAIL, scriptURL TEXT NOT NULL ON CONFLICT FAIL, script TEXT NOT NULL ON CONFLICT FAIL, workerType TEXT NOT NULL ON CONFLICT FAIL, contentSecurityPolicy BLOB NOT NULL ON CONFLICT FAIL, referrerPolicy TEXT NOT NULL ON CONFLICT FAIL, scriptResourceMap BLOB NOT NULL ON CONFLICT FAIL)");
+    return makeString("CREATE TABLE ", tableName, " ("
+        "key TEXT NOT NULL ON CONFLICT FAIL UNIQUE ON CONFLICT REPLACE"
+        ", origin TEXT NOT NULL ON CONFLICT FAIL"
+        ", scopeURL TEXT NOT NULL ON CONFLICT FAIL"
+        ", topOrigin TEXT NOT NULL ON CONFLICT FAIL"
+        ", lastUpdateCheckTime DOUBLE NOT NULL ON CONFLICT FAIL"
+        ", updateViaCache TEXT NOT NULL ON CONFLICT FAIL"
+        ", scriptURL TEXT NOT NULL ON CONFLICT FAIL"
+        ", script TEXT NOT NULL ON CONFLICT FAIL"
+        ", workerType TEXT NOT NULL ON CONFLICT FAIL"
+        ", contentSecurityPolicy BLOB NOT NULL ON CONFLICT FAIL"
+        ", referrerPolicy TEXT NOT NULL ON CONFLICT FAIL"
+        ", scriptResourceMap BLOB NOT NULL ON CONFLICT FAIL"
+        ", certificateInfo BLOB NOT NULL ON CONFLICT FAIL"
+        ")");
 }
 
 static const String recordsTableSchema()
@@ -119,12 +133,13 @@ void RegistrationDatabase::postTaskToWorkQueue(Function<void()>&& task)
 {
     ASSERT(isMainThread());
 
+    ++m_pushCounter;
     m_workQueue->dispatch([protectedThis = makeRef(*this), task = WTFMove(task)]() mutable {
         task();
     });
 }
 
-void RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
+bool RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
 {
     ASSERT(!isMainThread());
     ASSERT(!m_database);
@@ -140,10 +155,7 @@ void RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
     if (!m_database->open(fullFilename)) {
         RELEASE_LOG_ERROR(ServiceWorker, "Failed to open Service Worker registration database");
         m_database = nullptr;
-        callOnMainThread([this, protectedThis = makeRef(*this)] {
-            databaseFailedToOpen();
-        });
-        return;
+        return false;
     }
 
     // Disable threading checks. We always access the database from our serial WorkQueue. Such accesses
@@ -152,36 +164,42 @@ void RegistrationDatabase::openSQLiteDatabase(const String& fullFilename)
     m_database->disableThreadingChecks();
 
     auto doRecoveryAttempt = [&] {
-        // Delete the database and re-create it.
+        // Delete the database and files. We will try recreating it when flushing changes.
         m_database = nullptr;
         SQLiteFileSystem::deleteDatabaseFile(fullFilename);
-        openSQLiteDatabase(fullFilename);
     };
 
     String errorMessage = ensureValidRecordsTable();
     if (!errorMessage.isNull()) {
-        RELEASE_LOG_ERROR(ServiceWorker, "ensureValidRecordsTable failed, reason: %{public}s", errorMessage.utf8().data());
+        RELEASE_LOG_ERROR(ServiceWorker, "ensureValidRecordsTable failed, reason: %" PUBLIC_LOG_STRING, errorMessage.utf8().data());
         doRecoveryAttempt();
-        return;
+        return false;
     }
 
     errorMessage = importRecords();
     if (!errorMessage.isNull()) {
-        RELEASE_LOG_ERROR(ServiceWorker, "importRecords failed, reason: %{public}s", errorMessage.utf8().data());
+        RELEASE_LOG_ERROR(ServiceWorker, "importRecords failed, reason: %" PUBLIC_LOG_STRING, errorMessage.utf8().data());
         doRecoveryAttempt();
-        return;
+        return false;
     }
+    return true;
 }
 
 void RegistrationDatabase::importRecordsIfNecessary()
 {
     ASSERT(!isMainThread());
 
-    if (FileSystem::fileExists(m_databaseFilePath))
-        openSQLiteDatabase(m_databaseFilePath);
+    if (FileSystem::fileExists(m_databaseFilePath)) {
+        if (!openSQLiteDatabase(m_databaseFilePath)) {
+            callOnMainThread([this, protectedThis = makeRef(*this)] {
+                databaseFailedToOpen();
+            });
+            return;
+        }
+    }
 
-    callOnMainThread([protectedThis = makeRef(*this)] {
-        protectedThis->databaseOpenedAndRecordsImported();
+    callOnMainThread([this, protectedThis = makeRef(*this)] {
+        databaseOpenedAndRecordsImported();
     });
 }
 
@@ -279,14 +297,26 @@ void RegistrationDatabase::pushChanges(const HashMap<ServiceWorkerRegistrationKe
         else
             removedRegistrations.append(keyValue.key.isolatedCopy());
     }
+    schedulePushChanges(WTFMove(updatedRegistrations), WTFMove(removedRegistrations), WTFMove(completionHandler));
+}
 
-    postTaskToWorkQueue([this, updatedRegistrations = WTFMove(updatedRegistrations), removedRegistrations = WTFMove(removedRegistrations), completionHandler = WTFMove(completionHandler)]() mutable {
-        doPushChanges(updatedRegistrations, removedRegistrations);
-
-        if (!completionHandler)
-            return;
-
-        callOnMainThread(WTFMove(completionHandler));
+void RegistrationDatabase::schedulePushChanges(Vector<ServiceWorkerContextData>&& updatedRegistrations, Vector<ServiceWorkerRegistrationKey>&& removedRegistrations, CompletionHandler<void()>&& completionHandler)
+{
+    postTaskToWorkQueue([this, protectedThis = makeRef(*this), pushCounter = m_pushCounter, updatedRegistrations = WTFMove(updatedRegistrations), removedRegistrations = WTFMove(removedRegistrations), completionHandler = WTFMove(completionHandler)]() mutable {
+        bool success = doPushChanges(updatedRegistrations, removedRegistrations);
+        if (success) {
+            updatedRegistrations.clear();
+            removedRegistrations.clear();
+        }
+        callOnMainThread([this, protectedThis = WTFMove(protectedThis), success, pushCounter, updatedRegistrations = WTFMove(updatedRegistrations).isolatedCopy(), removedRegistrations = WTFMove(removedRegistrations).isolatedCopy(), completionHandler = WTFMove(completionHandler)]() mutable {
+            if (!success && (pushCounter + 1) == m_pushCounter) {
+                // We retry writing if no other change was pushed.
+                schedulePushChanges(WTFMove(updatedRegistrations), WTFMove(removedRegistrations), WTFMove(completionHandler));
+                return;
+            }
+            if (completionHandler)
+                completionHandler();
+        });
     });
 }
 
@@ -310,21 +340,21 @@ void RegistrationDatabase::clearAll(CompletionHandler<void()>&& completionHandle
     });
 }
 
-void RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>& updatedRegistrations, const Vector<ServiceWorkerRegistrationKey>& removedRegistrations)
+bool RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>& updatedRegistrations, const Vector<ServiceWorkerRegistrationKey>& removedRegistrations)
 {
     if (!m_database) {
         openSQLiteDatabase(m_databaseFilePath);
         if (!m_database)
-            return;
+            return false;
     }
 
     SQLiteTransaction transaction(*m_database);
     transaction.begin();
 
-    SQLiteStatement sql(*m_database, "INSERT INTO Records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"_s);
+    SQLiteStatement sql(*m_database, "INSERT INTO Records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"_s);
     if (sql.prepare() != SQLITE_OK) {
         RELEASE_LOG_ERROR(ServiceWorker, "Failed to prepare statement to store registration data into records table (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
-        return;
+        return false;
     }
 
     for (auto& registration : removedRegistrations) {
@@ -333,7 +363,7 @@ void RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>&
             || sql.bindText(1, registration.toDatabaseKey()) != SQLITE_OK
             || sql.step() != SQLITE_DONE) {
             RELEASE_LOG_ERROR(ServiceWorker, "Failed to remove registration data from records table (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
-            return;
+            return false;
         }
     }
 
@@ -342,11 +372,14 @@ void RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>&
         data.contentSecurityPolicy.encode(cspEncoder);
 
         WTF::Persistence::Encoder scriptResourceMapEncoder;
-        scriptResourceMapEncoder.encode(data.scriptResourceMap);
+        scriptResourceMapEncoder << data.scriptResourceMap;
+
+        WTF::Persistence::Encoder certificateInfoEncoder;
+        certificateInfoEncoder << data.certificateInfo;
 
         if (sql.bindText(1, data.registration.key.toDatabaseKey()) != SQLITE_OK
             || sql.bindText(2, data.registration.scopeURL.protocolHostAndPort()) != SQLITE_OK
-            || sql.bindText(3, data.registration.scopeURL.path()) != SQLITE_OK
+            || sql.bindText(3, data.registration.scopeURL.path().toString()) != SQLITE_OK
             || sql.bindText(4, data.registration.key.topOrigin().databaseIdentifier()) != SQLITE_OK
             || sql.bindDouble(5, data.registration.lastUpdateTime.secondsSinceEpoch().value()) != SQLITE_OK
             || sql.bindText(6, updateViaCacheToString(data.registration.updateViaCache)) != SQLITE_OK
@@ -356,15 +389,17 @@ void RegistrationDatabase::doPushChanges(const Vector<ServiceWorkerContextData>&
             || sql.bindBlob(10, cspEncoder.buffer(), cspEncoder.bufferSize()) != SQLITE_OK
             || sql.bindText(11, data.referrerPolicy) != SQLITE_OK
             || sql.bindBlob(12, scriptResourceMapEncoder.buffer(), scriptResourceMapEncoder.bufferSize()) != SQLITE_OK
+            || sql.bindBlob(13, certificateInfoEncoder.buffer(), certificateInfoEncoder.bufferSize()) != SQLITE_OK
             || sql.step() != SQLITE_DONE) {
             RELEASE_LOG_ERROR(ServiceWorker, "Failed to store registration data into records table (%i) - %s", m_database->lastError(), m_database->lastErrorMsg());
-            return;
+            return false;
         }
     }
 
     transaction.commit();
 
     LOG(ServiceWorker, "Updated ServiceWorker registration database (%zu added/updated registrations and %zu removed registrations", updatedRegistrations.size(), removedRegistrations.size());
+    return true;
 }
 
 String RegistrationDatabase::importRecords()
@@ -381,6 +416,7 @@ String RegistrationDatabase::importRecords()
         auto key = ServiceWorkerRegistrationKey::fromDatabaseKey(sql.getColumnText(0));
         auto originURL = URL { URL(), sql.getColumnText(1) };
         auto scopePath = sql.getColumnText(2);
+        auto scopeURL = URL { originURL, scopePath };
         auto topOrigin = SecurityOriginData::fromDatabaseIdentifier(sql.getColumnText(3));
         auto lastUpdateCheckTime = WallTime::fromRawSeconds(sql.getColumnDouble(4));
         auto updateViaCache = stringToUpdateViaCache(sql.getColumnText(5));
@@ -391,33 +427,46 @@ String RegistrationDatabase::importRecords()
         Vector<uint8_t> contentSecurityPolicyData;
         sql.getColumnBlobAsVector(9, contentSecurityPolicyData);
         WTF::Persistence::Decoder cspDecoder(contentSecurityPolicyData.data(), contentSecurityPolicyData.size());
-        ContentSecurityPolicyResponseHeaders contentSecurityPolicy;
-        if (contentSecurityPolicyData.size() && !ContentSecurityPolicyResponseHeaders::decode(cspDecoder, contentSecurityPolicy))
-            continue;
+        Optional<ContentSecurityPolicyResponseHeaders> contentSecurityPolicy;
+        if (contentSecurityPolicyData.size()) {
+            cspDecoder >> contentSecurityPolicy;
+            if (!contentSecurityPolicy)
+                continue;
+        }
 
         auto referrerPolicy = sql.getColumnText(10);
 
         Vector<uint8_t> scriptResourceMapData;
         sql.getColumnBlobAsVector(11, scriptResourceMapData);
-        HashMap<URL, ServiceWorkerContextData::ImportedScript> scriptResourceMap;
+        Optional<HashMap<URL, ServiceWorkerContextData::ImportedScript>> scriptResourceMap;
 
         WTF::Persistence::Decoder scriptResourceMapDecoder(scriptResourceMapData.data(), scriptResourceMapData.size());
         if (scriptResourceMapData.size()) {
-            if (!scriptResourceMapDecoder.decode(scriptResourceMap))
+            scriptResourceMapDecoder >> scriptResourceMap;
+            if (!scriptResourceMap)
                 continue;
         }
+
+        Vector<uint8_t> certificateInfoData;
+        sql.getColumnBlobAsVector(12, certificateInfoData);
+        Optional<CertificateInfo> certificateInfo;
+
+        WTF::Persistence::Decoder certificateInfoDecoder(certificateInfoData.data(), certificateInfoData.size());
+        certificateInfoDecoder >> certificateInfo;
+        if (!certificateInfo)
+            continue;
 
         // Validate the input for this registration.
         // If any part of this input is invalid, let's skip this registration.
         // FIXME: Should we return an error skipping *all* registrations?
-        if (!key || !originURL.isValid() || !topOrigin || !updateViaCache || !scriptURL.isValid() || !workerType)
+        if (!key || !originURL.isValid() || !topOrigin || !updateViaCache || !scriptURL.isValid() || !workerType || !scopeURL.isValid())
             continue;
 
         auto workerIdentifier = ServiceWorkerIdentifier::generate();
         auto registrationIdentifier = ServiceWorkerRegistrationIdentifier::generate();
         auto serviceWorkerData = ServiceWorkerData { workerIdentifier, scriptURL, ServiceWorkerState::Activated, *workerType, registrationIdentifier };
-        auto registration = ServiceWorkerRegistrationData { WTFMove(*key), registrationIdentifier, URL(originURL, scopePath), *updateViaCache, lastUpdateCheckTime, WTF::nullopt, WTF::nullopt, WTFMove(serviceWorkerData) };
-        auto contextData = ServiceWorkerContextData { WTF::nullopt, WTFMove(registration), workerIdentifier, WTFMove(script), WTFMove(contentSecurityPolicy), WTFMove(referrerPolicy), WTFMove(scriptURL), *workerType, true, WTFMove(scriptResourceMap) };
+        auto registration = ServiceWorkerRegistrationData { WTFMove(*key), registrationIdentifier, WTFMove(scopeURL), *updateViaCache, lastUpdateCheckTime, WTF::nullopt, WTF::nullopt, WTFMove(serviceWorkerData) };
+        auto contextData = ServiceWorkerContextData { WTF::nullopt, WTFMove(registration), workerIdentifier, WTFMove(script), WTFMove(*certificateInfo), WTFMove(*contentSecurityPolicy), WTFMove(referrerPolicy), WTFMove(scriptURL), *workerType, true, WTFMove(*scriptResourceMap) };
 
         callOnMainThread([protectedThis = makeRef(*this), contextData = contextData.isolatedCopy()]() mutable {
             protectedThis->addRegistrationToStore(WTFMove(contextData));

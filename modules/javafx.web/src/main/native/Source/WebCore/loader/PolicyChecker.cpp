@@ -53,6 +53,11 @@
 #include "QuickLook.h"
 #endif
 
+#define IS_ALLOWED (m_frame.page() ? m_frame.page()->sessionID().isAlwaysOnLoggingAllowed() : false)
+#define PAGE_ID (m_frame.loader().pageID().valueOr(PageIdentifier()).toUInt64())
+#define FRAME_ID (m_frame.loader().frameID().valueOr(FrameIdentifier()).toUInt64())
+#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(IS_ALLOWED, Loading, "%p - [pageID=%" PRIu64 ", frameID=%" PRIu64 "] PolicyChecker::" fmt, this, PAGE_ID, FRAME_ID, ##__VA_ARGS__)
+
 namespace WebCore {
 
 static bool isAllowedByContentSecurityPolicy(const URL& url, const Element* ownerElement, bool didReceiveRedirectResponse)
@@ -86,7 +91,7 @@ bool PolicyCheckIdentifier::isValidFor(PolicyCheckIdentifier expectedIdentifier)
     return m_policyCheck == expectedIdentifier.m_policyCheck;
 }
 
-PolicyChecker::PolicyChecker(Frame& frame)
+FrameLoader::PolicyChecker::PolicyChecker(Frame& frame)
     : m_frame(frame)
     , m_delegateIsDecidingNavigationPolicy(false)
     , m_delegateIsHandlingUnimplementablePolicy(false)
@@ -94,12 +99,12 @@ PolicyChecker::PolicyChecker(Frame& frame)
 {
 }
 
-void PolicyChecker::checkNavigationPolicy(ResourceRequest&& newRequest, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&& function)
+void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& newRequest, const ResourceResponse& redirectResponse, NavigationPolicyDecisionFunction&& function)
 {
     checkNavigationPolicy(WTFMove(newRequest), redirectResponse, m_frame.loader().activeDocumentLoader(), { }, WTFMove(function));
 }
 
-CompletionHandlerCallingScope PolicyChecker::extendBlobURLLifetimeIfNecessary(ResourceRequest& request) const
+CompletionHandlerCallingScope FrameLoader::PolicyChecker::extendBlobURLLifetimeIfNecessary(ResourceRequest& request, DocumentLoader* loader) const
 {
     if (!request.url().protocolIsBlob())
         return { };
@@ -108,12 +113,14 @@ CompletionHandlerCallingScope PolicyChecker::extendBlobURLLifetimeIfNecessary(Re
     URL temporaryBlobURL = BlobURL::createPublicURL(&m_frame.document()->securityOrigin());
     blobRegistry().registerBlobURL(temporaryBlobURL, request.url());
     request.setURL(temporaryBlobURL);
+    if (loader)
+        loader->request().setURL(temporaryBlobURL);
     return CompletionHandler<void()>([temporaryBlobURL = WTFMove(temporaryBlobURL)] {
         blobRegistry().unregisterBlobURL(temporaryBlobURL);
     });
 }
 
-void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const ResourceResponse& redirectResponse, DocumentLoader* loader, RefPtr<FormState>&& formState, NavigationPolicyDecisionFunction&& function, PolicyDecisionMode policyDecisionMode)
+void FrameLoader::PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const ResourceResponse& redirectResponse, DocumentLoader* loader, RefPtr<FormState>&& formState, NavigationPolicyDecisionFunction&& function, PolicyDecisionMode policyDecisionMode)
 {
     NavigationAction action = loader->triggeringAction();
     if (action.isEmpty()) {
@@ -128,6 +135,10 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
     // Don't ask more than once for the same request or if we are loading an empty URL.
     // This avoids confusion on the part of the client.
     if (equalIgnoringHeaderFields(request, loader->lastCheckedRequest()) || (!request.isNull() && request.url().isEmpty())) {
+        if (!request.isNull() && request.url().isEmpty())
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because the URL is empty");
+        else
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because the URL is the same as the last request");
         function(ResourceRequest(request), { }, NavigationPolicyDecision::ContinueLoad);
         loader->setLastCheckedRequest(WTFMove(request));
         return;
@@ -143,6 +154,11 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
 #endif
         if (isBackForwardLoadType(m_loadType))
             m_loadType = FrameLoadType::Reload;
+        if (shouldContinue)
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because we have valid substitute data");
+        else
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: not continuing with substitute data because the content filter told us not to");
+
         function(WTFMove(request), { }, shouldContinue ? NavigationPolicyDecision::ContinueLoad : NavigationPolicyDecision::IgnoreLoad);
         return;
     }
@@ -153,6 +169,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
             // reveal that the frame was blocked. This way, it looks like any other cross-origin page load.
             m_frame.ownerElement()->dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
         }
+        RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: ignoring because disallowed by content security policy");
         function(WTFMove(request), { }, NavigationPolicyDecision::IgnoreLoad);
         return;
     }
@@ -161,8 +178,10 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
 
 #if USE(QUICK_LOOK)
     // Always allow QuickLook-generated URLs based on the protocol scheme.
-    if (!request.isNull() && isQuickLookPreviewURL(request.url()))
+    if (!request.isNull() && isQuickLookPreviewURL(request.url())) {
+        RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because quicklook-generated URL");
         return function(WTFMove(request), makeWeakPtr(formState.get()), NavigationPolicyDecision::ContinueLoad);
+    }
 #endif
 
 #if ENABLE(CONTENT_FILTERING)
@@ -172,6 +191,7 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
             if (unblocked)
                 frame->loader().reload();
         });
+        RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: ignoring because ContentFilterUnblockHandler can handle the request");
         return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
     }
     m_contentFilterUnblockHandler = { };
@@ -179,16 +199,18 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
 
     m_frame.loader().clearProvisionalLoadForPolicyCheck();
 
-    auto blobURLLifetimeExtension = policyDecisionMode == PolicyDecisionMode::Asynchronous ? extendBlobURLLifetimeIfNecessary(request) : CompletionHandlerCallingScope { };
+    auto blobURLLifetimeExtension = policyDecisionMode == PolicyDecisionMode::Asynchronous ? extendBlobURLLifetimeIfNecessary(request, loader) : CompletionHandlerCallingScope { };
 
     bool isInitialEmptyDocumentLoad = !m_frame.loader().stateMachine().committedFirstRealDocumentLoad() && request.url().protocolIsAbout() && !substituteData.isValid();
     auto requestIdentifier = PolicyCheckIdentifier::create();
     m_delegateIsDecidingNavigationPolicy = true;
     String suggestedFilename = action.downloadAttribute().isEmpty() ? nullAtom() : action.downloadAttribute();
-    FramePolicyFunction decisionHandler = [this, function = WTFMove(function), request = ResourceRequest(request), formState = WTFMove(formState), suggestedFilename = WTFMove(suggestedFilename),
-         blobURLLifetimeExtension = WTFMove(blobURLLifetimeExtension), requestIdentifier] (PolicyAction policyAction, PolicyCheckIdentifier responseIdentifier) mutable {
-        if (!responseIdentifier.isValidFor(requestIdentifier))
+    FramePolicyFunction decisionHandler = [this, function = WTFMove(function), request = ResourceRequest(request), formState = std::exchange(formState, nullptr), suggestedFilename = WTFMove(suggestedFilename),
+         blobURLLifetimeExtension = WTFMove(blobURLLifetimeExtension), requestIdentifier, isInitialEmptyDocumentLoad] (PolicyAction policyAction, PolicyCheckIdentifier responseIdentifier) mutable {
+        if (!responseIdentifier.isValidFor(requestIdentifier)) {
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: ignoring because response is not valid for request");
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
+        }
 
         m_delegateIsDecidingNavigationPolicy = false;
 
@@ -198,15 +220,22 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
             m_frame.loader().client().startDownload(request, suggestedFilename);
             FALLTHROUGH;
         case PolicyAction::Ignore:
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: ignoring because policyAction from dispatchDecidePolicyForNavigationAction is Ignore");
             return function({ }, nullptr, NavigationPolicyDecision::IgnoreLoad);
         case PolicyAction::StopAllLoads:
+            RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: stopping because policyAction from dispatchDecidePolicyForNavigationAction is StopAllLoads");
             function({ }, nullptr, NavigationPolicyDecision::StopAllLoads);
             return;
         case PolicyAction::Use:
             if (!m_frame.loader().client().canHandleRequest(request)) {
                 handleUnimplementablePolicy(m_frame.loader().client().cannotShowURLError(request));
+                RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: ignoring because frame loader client can't handle the request");
                 return function({ }, { }, NavigationPolicyDecision::IgnoreLoad);
             }
+            if (isInitialEmptyDocumentLoad)
+                RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because this is an initial empty document");
+            else
+                RELEASE_LOG_IF_ALLOWED("checkNavigationPolicy: continuing because this policyAction from dispatchDecidePolicyForNavigationAction is Use");
             return function(WTFMove(request), makeWeakPtr(formState.get()), NavigationPolicyDecision::ContinueLoad);
         }
         ASSERT_NOT_REACHED();
@@ -220,15 +249,15 @@ void PolicyChecker::checkNavigationPolicy(ResourceRequest&& request, const Resou
         m_frame.loader().client().dispatchDecidePolicyForNavigationAction(action, request, redirectResponse, formState.get(), policyDecisionMode, requestIdentifier, WTFMove(decisionHandler));
 }
 
-void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, ResourceRequest&& request, RefPtr<FormState>&& formState, const String& frameName, NewWindowPolicyDecisionFunction&& function)
+void FrameLoader::PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, ResourceRequest&& request, RefPtr<FormState>&& formState, const String& frameName, NewWindowPolicyDecisionFunction&& function)
 {
     if (m_frame.document() && m_frame.document()->isSandboxed(SandboxPopups))
-        return function({ }, nullptr, { }, { }, ShouldContinue::No);
+        return function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
 
     if (!DOMWindow::allowPopUp(m_frame))
-        return function({ }, nullptr, { }, { }, ShouldContinue::No);
+        return function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
 
-    auto blobURLLifetimeExtension = extendBlobURLLifetimeIfNecessary(request);
+    auto blobURLLifetimeExtension = extendBlobURLLifetimeIfNecessary(request, nullptr);
 
     auto requestIdentifier = PolicyCheckIdentifier::create();
     m_frame.loader().client().dispatchDecidePolicyForNewWindowAction(navigationAction, request, formState.get(), frameName, requestIdentifier, [frame = makeRef(m_frame), request,
@@ -236,38 +265,38 @@ void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, Re
         requestIdentifier] (PolicyAction policyAction, PolicyCheckIdentifier responseIdentifier) mutable {
 
         if (!responseIdentifier.isValidFor(requestIdentifier))
-            return function({ }, nullptr, { }, { }, ShouldContinue::No);
+            return function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
 
         switch (policyAction) {
         case PolicyAction::Download:
             frame->loader().client().startDownload(request);
             FALLTHROUGH;
         case PolicyAction::Ignore:
-            function({ }, nullptr, { }, { }, ShouldContinue::No);
+            function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
         case PolicyAction::StopAllLoads:
             ASSERT_NOT_REACHED();
-            function({ }, nullptr, { }, { }, ShouldContinue::No);
+            function({ }, nullptr, { }, { }, ShouldContinuePolicyCheck::No);
             return;
         case PolicyAction::Use:
-            function(request, makeWeakPtr(formState.get()), frameName, navigationAction, ShouldContinue::Yes);
+            function(request, makeWeakPtr(formState.get()), frameName, navigationAction, ShouldContinuePolicyCheck::Yes);
             return;
         }
         ASSERT_NOT_REACHED();
     });
 }
 
-void PolicyChecker::stopCheck()
+void FrameLoader::PolicyChecker::stopCheck()
 {
     m_frame.loader().client().cancelPolicyCheck();
 }
 
-void PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
+void FrameLoader::PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
 {
     handleUnimplementablePolicy(m_frame.loader().client().cannotShowMIMETypeError(response));
 }
 
-void PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)
+void FrameLoader::PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)
 {
     m_delegateIsHandlingUnimplementablePolicy = true;
     m_frame.loader().client().dispatchUnableToImplementPolicy(error);
@@ -275,3 +304,8 @@ void PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)
 }
 
 } // namespace WebCore
+
+#undef IS_ALLOWED
+#undef PAGE_ID
+#undef FRAME_ID
+#undef RELEASE_LOG_IF_ALLOWED

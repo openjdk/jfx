@@ -36,25 +36,13 @@
 #import <wtf/Assertions.h>
 #import <wtf/HashSet.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/RunLoop.h>
 #import <wtf/SchedulePair.h>
 #import <wtf/Threading.h>
 
 #if USE(WEB_THREAD)
-#include <wtf/ios/WebCoreThread.h>
+#import <wtf/ios/WebCoreThread.h>
 #endif
-
-@interface JSWTFMainThreadCaller : NSObject
-- (void)call;
-@end
-
-@implementation JSWTFMainThreadCaller
-
-- (void)call
-{
-    WTF::dispatchFunctionsFromMainThread();
-}
-
-@end
 
 #define LOG_CHANNEL_PREFIX Log
 
@@ -66,17 +54,12 @@ WTFLogChannel LogThreading = { WTFLogChannelState::On, "Threading", WTFLogLevel:
 WTFLogChannel LogThreading = { WTFLogChannelState::On, "Threading", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM, OS_LOG_DEFAULT };
 #endif
 
-
-static JSWTFMainThreadCaller* staticMainThreadCaller;
-static bool isTimerPosted; // This is only accessed on the main thread.
-
 #if USE(WEB_THREAD)
 // When the Web thread is enabled, we consider it to be the main thread, not pthread main.
-static pthread_t mainThreadPthread { nullptr };
-static NSThread* mainThreadNSThread { nullptr };
+static pthread_t s_webThreadPthread;
 
-static Thread* sApplicationUIThread;
-static Thread* sWebThread;
+static Thread* s_applicationUIThread;
+static Thread* s_webThread;
 #endif
 
 void initializeMainThreadPlatform()
@@ -84,54 +67,6 @@ void initializeMainThreadPlatform()
     if (!pthread_main_np())
         RELEASE_LOG_FAULT(Threading, "WebKit Threading Violation - initial use of WebKit from a secondary thread.");
     ASSERT(pthread_main_np());
-
-    ASSERT(!staticMainThreadCaller);
-    staticMainThreadCaller = [[JSWTFMainThreadCaller alloc] init];
-}
-
-static void timerFired(CFRunLoopTimerRef timer, void*)
-{
-    CFRelease(timer);
-    isTimerPosted = false;
-
-    @autoreleasepool {
-        WTF::dispatchFunctionsFromMainThread();
-    }
-}
-
-static void postTimer()
-{
-    ASSERT(isMainThread());
-
-    if (isTimerPosted)
-        return;
-
-    isTimerPosted = true;
-    CFRunLoopAddTimer(CFRunLoopGetCurrent(), CFRunLoopTimerCreate(0, 0, 0, 0, 0, timerFired, 0), kCFRunLoopCommonModes);
-}
-
-void scheduleDispatchFunctionsOnMainThread()
-{
-    ASSERT(staticMainThreadCaller);
-
-#if USE(WEB_THREAD)
-    if (isWebThread()) {
-        postTimer();
-        return;
-    }
-
-    if (mainThreadPthread) {
-        [staticMainThreadCaller performSelector:@selector(call) onThread:mainThreadNSThread withObject:nil waitUntilDone:NO];
-        return;
-    }
-#else
-    if (isMainThread()) {
-        postTimer();
-        return;
-    }
-#endif
-
-    [staticMainThreadCaller performSelectorOnMainThread:@selector(call) withObject:nil waitUntilDone:NO];
 }
 
 void dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(void (^block)())
@@ -179,13 +114,13 @@ bool isUIThread()
 // Keep in mind that isWebThread can be called even when destroying the current thread.
 bool isWebThread()
 {
-    return pthread_equal(pthread_self(), mainThreadPthread);
+    return pthread_equal(pthread_self(), s_webThreadPthread);
 }
 
 void initializeApplicationUIThread()
 {
     ASSERT(pthread_main_np());
-    sApplicationUIThread = &Thread::current();
+    s_applicationUIThread = &Thread::current();
 }
 
 void initializeWebThread()
@@ -193,9 +128,9 @@ void initializeWebThread()
     static std::once_flag initializeKey;
     std::call_once(initializeKey, [] {
         ASSERT(!pthread_main_np());
-        mainThreadPthread = pthread_self();
-        mainThreadNSThread = [NSThread currentThread];
-        sWebThread = &Thread::current();
+        s_webThreadPthread = pthread_self();
+        s_webThread = &Thread::current();
+        RunLoop::initializeWeb();
     });
 }
 
@@ -205,8 +140,8 @@ bool canCurrentThreadAccessThreadLocalData(Thread& thread)
     if (&thread == &currentThread)
         return true;
 
-    if (&thread == sWebThread || &thread == sApplicationUIThread)
-        return (&currentThread == sWebThread || &currentThread == sApplicationUIThread) && webThreadIsUninitializedOrLockedOrDisabled();
+    if (&thread == s_webThread || &thread == s_applicationUIThread)
+        return (&currentThread == s_webThread || &currentThread == s_applicationUIThread) && webThreadIsUninitializedOrLockedOrDisabled();
 
     return false;
 }

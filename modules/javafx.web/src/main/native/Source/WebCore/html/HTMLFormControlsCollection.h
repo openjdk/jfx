@@ -54,16 +54,13 @@ private:
     void invalidateCacheForDocument(Document&) override;
     void updateNamedElementCache() const override;
 
-    const Vector<FormAssociatedElement*>& unsafeFormControlElements() const;
-    Vector<Ref<FormAssociatedElement>> copyFormControlElementsVector() const;
-
     mutable Element* m_cachedElement;
     mutable unsigned m_cachedElementOffsetInArray;
 };
 
 inline HTMLElement* HTMLFormControlsCollection::item(unsigned offset) const
 {
-    return downcast<HTMLElement>(CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType>::item(offset));
+    return downcast<HTMLElement>(CachedHTMLCollection::item(offset));
 }
 
 } // namespace WebCore

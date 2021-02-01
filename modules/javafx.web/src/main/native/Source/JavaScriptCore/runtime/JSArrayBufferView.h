@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,16 +55,21 @@ class LLIntOffsetsExtractor;
 // whether the user has done anything that requires a separate backing
 // buffer or the DOM-specified neutering capabilities.
 enum TypedArrayMode : uint32_t {
+    // Legend:
+    // B: JSArrayBufferView::m_butterfly pointer
+    // V: JSArrayBufferView::m_vector pointer
+    // M: JSArrayBufferView::m_mode
+
     // Small and fast typed array. B is unused, V points to a vector
-    // allocated in copied space, and M = FastTypedArray. V's liveness is
-    // determined entirely by the view's liveness.
+    // allocated in the primitive Gigacage, and M = FastTypedArray. V's
+    // liveness is determined entirely by the view's liveness.
     FastTypedArray,
 
     // A large typed array that still attempts not to waste too much
-    // memory. B is initialized to point to a slot that could hold a
-    // buffer pointer, V points to a vector allocated using fastCalloc(),
-    // and M = OversizeTypedArray. V's liveness is determined entirely by
-    // the view's liveness, and the view will add a finalizer to delete V.
+    // memory. B is unused, V points to a vector allocated using
+    // Gigacage::tryMalloc(), and M = OversizeTypedArray. V's liveness is
+    // determined entirely by the view's liveness, and the view will add a
+    // finalizer to delete V.
     OversizeTypedArray,
 
     // A typed array that was used in some crazy way. B's IndexingHeader
@@ -105,6 +110,12 @@ public:
 
     static constexpr unsigned fastSizeLimit = 1000;
     using VectorPtr = CagedBarrierPtr<Gigacage::Primitive, void, tagCagedPtr>;
+
+    static void* nullVectorPtr()
+    {
+        VectorPtr null { };
+        return null.rawBits();
+    }
 
     static size_t sizeOf(uint32_t length, uint32_t elementSize)
     {
@@ -205,8 +216,6 @@ protected:
     friend class LLIntOffsetsExtractor;
 
     ArrayBuffer* existingBufferInButterfly();
-
-    static String toStringName(const JSObject*, JSGlobalObject*);
 
     VectorPtr m_vector;
     uint32_t m_length;

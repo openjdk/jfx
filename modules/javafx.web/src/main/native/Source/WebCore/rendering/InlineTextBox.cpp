@@ -35,6 +35,7 @@
 #include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
+#include "HighlightData.h"
 #include "HighlightMap.h"
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
@@ -51,7 +52,6 @@
 #include "RenderView.h"
 #include "RenderedDocumentMarker.h"
 #include "RuntimeEnabledFeatures.h"
-#include "SelectionRangeData.h"
 #include "Text.h"
 #include "TextDecorationPainter.h"
 #include "TextPaintStyle.h"
@@ -156,54 +156,54 @@ bool InlineTextBox::isSelected(unsigned startPosition, unsigned endPosition) con
     return clampedOffset(startPosition) < clampedOffset(endPosition);
 }
 
-RenderObject::SelectionState InlineTextBox::selectionState()
+RenderObject::HighlightState InlineTextBox::selectionState()
 {
     auto state = verifySelectionState(renderer().selectionState(), renderer().view().selection());
 
     // FIXME: this code mutates selection state, but it's used at a simple getter elsewhere
-    // in this file. This code should likely live in SelectionRangeData, or somewhere else.
+    // in this file. This code should likely live in HighlightData, or somewhere else.
     // <rdar://problem/58125978>
     // https://bugs.webkit.org/show_bug.cgi?id=205528
     // If there are ellipsis following, make sure their selection is updated.
     if (m_truncation != cNoTruncation && root().ellipsisBox()) {
         EllipsisBox* ellipsis = root().ellipsisBox();
-        if (state != RenderObject::SelectionNone) {
+        if (state != RenderObject::HighlightState::None) {
             auto [selectionStart, selectionEnd] = selectionStartEnd();
             // The ellipsis should be considered to be selected if the end of
             // the selection is past the beginning of the truncation and the
             // beginning of the selection is before or at the beginning of the
             // truncation.
             ellipsis->setSelectionState(selectionEnd >= m_truncation && selectionStart <= m_truncation ?
-                RenderObject::SelectionInside : RenderObject::SelectionNone);
+                RenderObject::HighlightState::Inside : RenderObject::HighlightState::None);
         } else
-            ellipsis->setSelectionState(RenderObject::SelectionNone);
+            ellipsis->setSelectionState(RenderObject::HighlightState::None);
     }
 
     return state;
 }
 
-RenderObject::SelectionState InlineTextBox::verifySelectionState(RenderObject::SelectionState state, SelectionRangeData& selection) const
+RenderObject::HighlightState InlineTextBox::verifySelectionState(RenderObject::HighlightState state, HighlightData& selection) const
 {
-    if (state == RenderObject::SelectionStart || state == RenderObject::SelectionEnd || state == RenderObject::SelectionBoth) {
+    if (state == RenderObject::HighlightState::Start || state == RenderObject::HighlightState::End || state == RenderObject::HighlightState::Both) {
         auto startOffset = selection.startOffset();
         auto endOffset = selection.endOffset();
         // The position after a hard line break is considered to be past its end.
         ASSERT(start() + len() >= (isLineBreak() ? 1 : 0));
         unsigned lastSelectable = start() + len() - (isLineBreak() ? 1 : 0);
 
-        bool start = (state != RenderObject::SelectionEnd && startOffset >= m_start && startOffset < m_start + m_len);
-        bool end = (state != RenderObject::SelectionStart && endOffset > m_start && endOffset <= lastSelectable);
+        bool start = (state != RenderObject::HighlightState::End && startOffset >= m_start && startOffset < m_start + m_len);
+        bool end = (state != RenderObject::HighlightState::Start && endOffset > m_start && endOffset <= lastSelectable);
         if (start && end)
-            state = RenderObject::SelectionBoth;
+            state = RenderObject::HighlightState::Both;
         else if (start)
-            state = RenderObject::SelectionStart;
+            state = RenderObject::HighlightState::Start;
         else if (end)
-            state = RenderObject::SelectionEnd;
-        else if ((state == RenderObject::SelectionEnd || startOffset < m_start)
-            && (state == RenderObject::SelectionStart || endOffset > lastSelectable))
-            state = RenderObject::SelectionInside;
-        else if (state == RenderObject::SelectionBoth)
-            state = RenderObject::SelectionNone;
+            state = RenderObject::HighlightState::End;
+        else if ((state == RenderObject::HighlightState::End || startOffset < m_start)
+            && (state == RenderObject::HighlightState::Start || endOffset > lastSelectable))
+            state = RenderObject::HighlightState::Inside;
+        else if (state == RenderObject::HighlightState::Both)
+            state = RenderObject::HighlightState::None;
     }
 
     return state;
@@ -385,7 +385,7 @@ bool InlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
     if (locationInContainer.intersects(rect)) {
         renderer().updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset)));
-        if (result.addNodeToListBasedTestResult(renderer().textNode(), request, locationInContainer, rect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(renderer().nodeForHitTest(), request, locationInContainer, rect) == HitTestProgress::Stop)
             return true;
     }
     return false;
@@ -417,7 +417,7 @@ Optional<bool> InlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyle& st
         return isAbove; // Ruby text is always over, so it cannot suppress emphasis marks under.
 
     RenderBlock* containingBlock = renderer().containingBlock();
-    if (!containingBlock->isRubyBase())
+    if (!containingBlock || !containingBlock->isRubyBase())
         return isAbove; // This text is not inside a ruby base, so it does not have ruby text over it.
 
     if (!is<RenderRubyRun>(*containingBlock->parent()))
@@ -494,7 +494,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     bool isPrinting = renderer().document().printing();
 
     // Determine whether or not we're selected.
-    bool haveSelection = !isPrinting && paintInfo.phase != PaintPhase::TextClip && selectionState() != RenderObject::SelectionNone;
+    bool haveSelection = !isPrinting && paintInfo.phase != PaintPhase::TextClip && selectionState() != RenderObject::HighlightState::None;
     if (!haveSelection && paintInfo.phase == PaintPhase::Selection) {
         // When only painting the selection, don't bother to paint if there is none.
         return;
@@ -623,7 +623,9 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
     // Paint decorations
     auto textDecorations = lineStyle.textDecorationsInEffect();
-    if (!textDecorations.isEmpty() && paintInfo.phase != PaintPhase::Selection) {
+    bool highlightDecorations = !collectMarkedTextsForHighlights(TextPaintPhase::Decoration).isEmpty();
+    bool lineDecorations = !textDecorations.isEmpty();
+    if ((lineDecorations || highlightDecorations) && paintInfo.phase != PaintPhase::Selection) {
         TextRun textRun = createTextRun();
         unsigned length = textRun.length();
         if (m_truncation != cNoTruncation)
@@ -686,14 +688,14 @@ unsigned InlineTextBox::clampedOffset(unsigned x) const
     return offset;
 }
 
-std::pair<unsigned, unsigned> InlineTextBox::clampedStartEndForState(unsigned start, unsigned end, RenderObject::SelectionState selectionState) const
+std::pair<unsigned, unsigned> InlineTextBox::clampedStartEndForState(unsigned start, unsigned end, RenderObject::HighlightState selectionState) const
 {
-    if (selectionState == RenderObject::SelectionInside)
+    if (selectionState == RenderObject::HighlightState::Inside)
         return { 0, clampedOffset(m_start + m_len) };
 
-    if (selectionState == RenderObject::SelectionStart)
+    if (selectionState == RenderObject::HighlightState::Start)
         end = renderer().text().length();
-    else if (selectionState == RenderObject::SelectionEnd)
+    else if (selectionState == RenderObject::HighlightState::End)
         start = 0;
     return { clampedOffset(start), clampedOffset(end) };
 }
@@ -705,12 +707,12 @@ std::pair<unsigned, unsigned> InlineTextBox::selectionStartEnd() const
     return clampedStartEndForState(renderer().view().selection().startOffset(), renderer().view().selection().endOffset(), selectionState);
 }
 
-std::pair<unsigned, unsigned> InlineTextBox::highlightStartEnd(SelectionRangeData &rangeData) const
+std::pair<unsigned, unsigned> InlineTextBox::highlightStartEnd(HighlightData &rangeData) const
 {
-    auto state = rangeData.selectionStateForRenderer(renderer());
+    auto state = rangeData.highlightStateForRenderer(renderer());
     state = verifySelectionState(state, rangeData);
 
-    if (state == RenderObject::SelectionNone)
+    if (state == RenderObject::HighlightState::None)
         return {0, 0};
 
     return clampedStartEndForState(rangeData.startOffset(), rangeData.endOffset(), state);
@@ -825,13 +827,21 @@ auto InlineTextBox::resolveStyleForMarkedText(const MarkedText& markedText, cons
             style.textStyles.fillColor = renderStyle->computedStrokeColor();
             style.textStyles.strokeColor = renderStyle->computedStrokeColor();
 
-            auto color = renderStyle->visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
+            auto color = TextDecorationPainter::decorationColor(*renderStyle.get());
             auto decorationStyle = renderStyle->textDecorationStyle();
             auto decorations = renderStyle->textDecorationsInEffect();
 
-            if (decorations.containsAny({ TextDecoration::Underline, TextDecoration::Overline, TextDecoration::LineThrough })) {
+            if (decorations.contains(TextDecoration::Underline)) {
                 style.textDecorationStyles.underlineColor = color;
                 style.textDecorationStyles.underlineStyle = decorationStyle;
+            }
+            if (decorations.contains(TextDecoration::Overline)) {
+                style.textDecorationStyles.overlineColor = color;
+                style.textDecorationStyles.overlineStyle = decorationStyle;
+            }
+            if (decorations.contains(TextDecoration::LineThrough)) {
+                style.textDecorationStyles.linethroughColor = color;
+                style.textDecorationStyles.linethroughStyle = decorationStyle;
             }
         }
         break;
@@ -843,8 +853,8 @@ auto InlineTextBox::resolveStyleForMarkedText(const MarkedText& markedText, cons
 
         Color selectionBackgroundColor = renderer().selectionBackgroundColor();
         style.backgroundColor = selectionBackgroundColor;
-        if (selectionBackgroundColor.isValid() && selectionBackgroundColor.alpha() && style.textStyles.fillColor == selectionBackgroundColor)
-            style.backgroundColor = { 0xff - selectionBackgroundColor.red(), 0xff - selectionBackgroundColor.green(), 0xff - selectionBackgroundColor.blue() };
+        if (selectionBackgroundColor.isValid() && selectionBackgroundColor.isVisible() && style.textStyles.fillColor == selectionBackgroundColor)
+            style.backgroundColor = selectionBackgroundColor.invertedColorWithAlpha(1.0);
         break;
     }
     case MarkedText::TextMatch: {
@@ -853,7 +863,7 @@ auto InlineTextBox::resolveStyleForMarkedText(const MarkedText& markedText, cons
 #if PLATFORM(MAC)
         style.textStyles.fillColor = renderer().theme().systemColor(CSSValueAppleSystemLabel, styleColorOptions);
 #endif
-        style.backgroundColor = markedText.marker->isActiveMatch() ? renderer().theme().activeTextSearchHighlightColor(styleColorOptions) : renderer().theme().inactiveTextSearchHighlightColor(styleColorOptions);
+        style.backgroundColor = renderer().theme().textSearchHighlightColor(styleColorOptions);
         break;
     }
     }
@@ -1028,7 +1038,6 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
     return markedTexts;
 }
 
-
 Vector<MarkedText> InlineTextBox::collectMarkedTextsForHighlights(TextPaintPhase phase) const
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().highlightAPIEnabled())
@@ -1045,19 +1054,21 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForHighlights(TextPaintPhase
         auto renderStyle = parentRenderer.getUncachedPseudoStyle({ PseudoId::Highlight, highlight.key }, &parentStyle);
         if (!renderStyle)
             continue;
+        if (renderStyle->textDecorationsInEffect().isEmpty() && phase == TextPaintPhase::Decoration)
+            continue;
         for (auto& rangeData : highlight.value->rangesData()) {
             if (rangeData->startPosition && rangeData->endPosition) {
-                Position startPos = rangeData->startPosition.value();
-                Position endPos = rangeData->endPosition.value();
-                RenderObject* startRenderer = startPos.deprecatedNode()->renderer();
-                int startOffset = startPos.deprecatedEditingOffset();
-                RenderObject* endRenderer = endPos.deprecatedNode()->renderer();
-                int endOffset = endPos.deprecatedEditingOffset();
-                ASSERT(startOffset >= 0 && endOffset >= 0);
+                Position startPosition = rangeData->startPosition.value();
+                Position endPosition = rangeData->endPosition.value();
+                auto* startRenderer = startPosition.deprecatedNode()->renderer();
+                unsigned startOffset = startPosition.deprecatedEditingOffset();
+                auto* endRenderer = endPosition.deprecatedNode()->renderer();
+                unsigned endOffset = endPosition.deprecatedEditingOffset();
                 if (!startRenderer || !endRenderer)
                     continue;
-                auto highlightData = SelectionRangeData(renderer().view());
-                highlightData.setContext({startRenderer, endRenderer, static_cast<unsigned>(startOffset), static_cast<unsigned>(endOffset)});
+
+                auto highlightData = HighlightData(renderer().view());
+                highlightData.setRenderRange({ startRenderer, endRenderer, startOffset, endOffset });
                 auto [highlightStart, highlightEnd] = highlightStartEnd(highlightData);
                 if (highlightStart < highlightEnd)
                     markedTexts.append({ highlightStart, highlightEnd, MarkedText::Highlight, nullptr, highlight.key });
@@ -1099,7 +1110,7 @@ void InlineTextBox::paintMarkedTexts(PaintInfo& paintInfo, TextPaintPhase phase,
     }
 }
 
-void InlineTextBox::paintMarkedTextBackground(PaintInfo& paintInfo, const FloatPoint& boxOrigin, const Color& color, unsigned clampedStartOffset, unsigned clampedEndOffset)
+void InlineTextBox::paintMarkedTextBackground(PaintInfo& paintInfo, const FloatPoint& boxOrigin, const Color& color, unsigned clampedStartOffset, unsigned clampedEndOffset, MarkedTextBackgroundStyle style)
 {
     if (clampedStartOffset >= clampedEndOffset)
         return;
@@ -1125,7 +1136,15 @@ void InlineTextBox::paintMarkedTextBackground(PaintInfo& paintInfo, const FloatP
     lineFont().adjustSelectionRectForText(textRun, selectionRect, clampedStartOffset, clampedEndOffset);
 
     // FIXME: Support painting combined text. See <https://bugs.webkit.org/show_bug.cgi?id=180993>.
-    context.fillRect(snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), textRun.ltr()), color);
+    auto backgroundRect = snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), textRun.ltr());
+    if (style == MarkedTextBackgroundStyle::Rounded) {
+        backgroundRect.expand(-1, -1);
+        backgroundRect.move(0.5, 0.5);
+        context.fillRoundedRect(FloatRoundedRect { backgroundRect, FloatRoundedRect::Radii { 2 } }, color);
+        return;
+    }
+
+    context.fillRect(backgroundRect, color);
 }
 
 void InlineTextBox::paintMarkedTextForeground(PaintInfo& paintInfo, const FloatRect& boxRect, const StyledMarkedText& markedText)
@@ -1197,7 +1216,9 @@ void InlineTextBox::paintMarkedTextDecoration(PaintInfo& paintInfo, const FloatR
     }
 
     // 2. Paint
-    TextDecorationPainter decorationPainter { context, lineStyle().textDecorationsInEffect(), renderer(), isFirstLine(), lineFont(), markedText.style.textDecorationStyles };
+    auto textDecorations = lineStyle().textDecorationsInEffect();
+    textDecorations.add(TextDecorationPainter::textDecorationsInEffectForStyle(markedText.style.textDecorationStyles));
+    TextDecorationPainter decorationPainter { context, textDecorations, renderer(), isFirstLine(), lineFont(), markedText.style.textDecorationStyles };
     decorationPainter.setInlineTextBox(this);
     decorationPainter.setWidth(snappedSelectionRect.width());
     decorationPainter.setIsHorizontal(isHorizontal());
@@ -1227,7 +1248,7 @@ void InlineTextBox::paintMarkedTextDecoration(PaintInfo& paintInfo, const FloatR
 void InlineTextBox::paintCompositionBackground(PaintInfo& paintInfo, const FloatPoint& boxOrigin)
 {
     if (!renderer().frame().editor().compositionUsesCustomHighlights()) {
-        paintMarkedTextBackground(paintInfo, boxOrigin, Color::compositionFill, clampedOffset(renderer().frame().editor().compositionStart()), clampedOffset(renderer().frame().editor().compositionEnd()));
+        paintMarkedTextBackground(paintInfo, boxOrigin, CompositionHighlight::defaultCompositionFillColor, clampedOffset(renderer().frame().editor().compositionStart()), clampedOffset(renderer().frame().editor().compositionEnd()));
         return;
     }
 
@@ -1238,7 +1259,7 @@ void InlineTextBox::paintCompositionBackground(PaintInfo& paintInfo, const Float
         if (highlight.startOffset >= end())
             break;
 
-        paintMarkedTextBackground(paintInfo, boxOrigin, highlight.color, clampedOffset(highlight.startOffset), clampedOffset(highlight.endOffset));
+        paintMarkedTextBackground(paintInfo, boxOrigin, highlight.color, clampedOffset(highlight.startOffset), clampedOffset(highlight.endOffset), MarkedTextBackgroundStyle::Rounded);
 
         if (highlight.endOffset > end())
             break;
@@ -1393,17 +1414,23 @@ TextRun InlineTextBox::createTextRun(bool ignoreCombinedText, bool ignoreHyphen)
 
 String InlineTextBox::text(bool ignoreCombinedText, bool ignoreHyphen) const
 {
+    String result;
     if (auto* combinedText = this->combinedText()) {
         if (ignoreCombinedText)
-            return renderer().text().substring(m_start, m_len);
-        return combinedText->combinedStringForRendering();
-    }
-    if (hasHyphen()) {
+            result = renderer().text().substring(m_start, m_len);
+        else
+            result = combinedText->combinedStringForRendering();
+    } else if (hasHyphen()) {
         if (ignoreHyphen)
-            return renderer().text().substring(m_start, m_len);
-        return makeString(StringView(renderer().text()).substring(m_start, m_len), lineStyle().hyphenString());
-    }
-    return renderer().text().substring(m_start, m_len);
+            result = renderer().text().substring(m_start, m_len);
+        else
+            result = makeString(StringView(renderer().text()).substring(m_start, m_len), lineStyle().hyphenString());
+    } else
+        result = renderer().text().substring(m_start, m_len);
+
+    // This works because this replacement doesn't affect string indices. We're replacing a single Unicode code unit with another Unicode code unit.
+    // How convenient.
+    return RenderBlock::updateSecurityDiscCharacters(lineStyle(), WTFMove(result));
 }
 
 inline const RenderCombineText* InlineTextBox::combinedText() const
@@ -1413,23 +1440,23 @@ inline const RenderCombineText* InlineTextBox::combinedText() const
 
 ExpansionBehavior InlineTextBox::expansionBehavior() const
 {
-    ExpansionBehavior leadingBehavior;
-    if (forceLeadingExpansion())
-        leadingBehavior = ForceLeadingExpansion;
-    else if (canHaveLeadingExpansion())
-        leadingBehavior = AllowLeadingExpansion;
+    ExpansionBehavior leftBehavior;
+    if (forceLeftExpansion())
+        leftBehavior = ForceLeftExpansion;
+    else if (canHaveLeftExpansion())
+        leftBehavior = AllowLeftExpansion;
     else
-        leadingBehavior = ForbidLeadingExpansion;
+        leftBehavior = ForbidLeftExpansion;
 
-    ExpansionBehavior trailingBehavior;
-    if (forceTrailingExpansion())
-        trailingBehavior = ForceTrailingExpansion;
+    ExpansionBehavior rightBehavior;
+    if (forceRightExpansion())
+        rightBehavior = ForceRightExpansion;
     else if (expansion() && nextLeafOnLine() && !nextLeafOnLine()->isLineBreak())
-        trailingBehavior = AllowTrailingExpansion;
+        rightBehavior = AllowRightExpansion;
     else
-        trailingBehavior = ForbidTrailingExpansion;
+        rightBehavior = ForbidRightExpansion;
 
-    return leadingBehavior | trailingBehavior;
+    return leftBehavior | rightBehavior;
 }
 
 #if ENABLE(TREE_DEBUGGING)

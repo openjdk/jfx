@@ -136,7 +136,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeImpl_getAttributesImpl(JNIEn
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getBaseURIImpl(JNIEnv* env, jclass, jlong peer) {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->baseURI());
+    return JavaReturn<String>(env, IMPL->baseURI().string());
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_NodeImpl_getTextContentImpl(JNIEnv* env, jclass, jlong peer) {

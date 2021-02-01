@@ -3,7 +3,7 @@
  * (C) 2000 Gunnstein Lye (gunnstein@netcom.no)
  * (C) 2000 Frederik Holljen (frederik.holljen@hig.no)
  * (C) 2001 Peter Kelly (pmk@post.com)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,32 +27,26 @@
 #include "FloatRect.h"
 #include "IntRect.h"
 #include "RangeBoundaryPoint.h"
-#include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class ContainerNode;
 class DOMRect;
 class DOMRectList;
-class Document;
 class DocumentFragment;
 class FloatQuad;
-class Node;
 class NodeWithIndex;
 class RenderText;
 class SelectionRect;
 class Text;
 class VisiblePosition;
 
+struct SimpleRange;
+
+// FIXME: Rename to LiveRange, while leaving the DOM-exposed name as Range.
 class Range : public RefCounted<Range> {
 public:
     WEBCORE_EXPORT static Ref<Range> create(Document&);
-    WEBCORE_EXPORT static Ref<Range> create(Document&, RefPtr<Node>&& startContainer, int startOffset, RefPtr<Node>&& endContainer, int endOffset);
-    WEBCORE_EXPORT static Ref<Range> create(Document&, const Position&, const Position&);
-    WEBCORE_EXPORT static Ref<Range> create(Document&, const VisiblePosition&, const VisiblePosition&);
     WEBCORE_EXPORT ~Range();
 
     Document& ownerDocument() const { return m_ownerDocument; }
@@ -63,8 +57,7 @@ public:
     unsigned endOffset() const { return m_end.offset(); }
     bool collapsed() const { return m_start == m_end; }
 
-    Node* commonAncestorContainer() const { return commonAncestorContainer(&startContainer(), &endContainer()); }
-    WEBCORE_EXPORT static Node* commonAncestorContainer(Node* containerA, Node* containerB);
+    Node* commonAncestorContainer() const { return commonInclusiveAncestor(startContainer(), endContainer()).get(); }
     WEBCORE_EXPORT ExceptionOr<void> setStart(Ref<Node>&& container, unsigned offset);
     WEBCORE_EXPORT ExceptionOr<void> setEnd(Ref<Node>&& container, unsigned offset);
     WEBCORE_EXPORT void collapse(bool toStart);
@@ -100,21 +93,10 @@ public:
     WEBCORE_EXPORT ExceptionOr<void> surroundContents(Node&);
     WEBCORE_EXPORT ExceptionOr<void> setStartBefore(Node&);
 
-    const Position startPosition() const { return m_start.toPosition(); }
-    const Position endPosition() const { return m_end.toPosition(); }
-    WEBCORE_EXPORT ExceptionOr<void> setStart(const Position&);
-    WEBCORE_EXPORT ExceptionOr<void> setEnd(const Position&);
+    Position startPosition() const { return m_start.toPosition(); }
+    Position endPosition() const { return m_end.toPosition(); }
 
     WEBCORE_EXPORT Node* firstNode() const;
-    WEBCORE_EXPORT Node* pastLastNode() const;
-
-    ShadowRoot* shadowRoot() const;
-
-    enum RangeInFixedPosition {
-        NotFixedPosition,
-        PartiallyFixedPosition,
-        EntirelyFixedPosition
-    };
 
     enum class BoundingRectBehavior : uint8_t {
         RespectClipping = 1 << 0,
@@ -124,16 +106,11 @@ public:
     };
 
     // Not transform-friendly
-    WEBCORE_EXPORT void absoluteTextRects(Vector<IntRect>&, bool useSelectionHeight = false, RangeInFixedPosition* = nullptr, OptionSet<BoundingRectBehavior> = { }) const;
+    WEBCORE_EXPORT void absoluteTextRects(Vector<IntRect>&, bool useSelectionHeight = false, OptionSet<BoundingRectBehavior> = { }) const;
     WEBCORE_EXPORT IntRect absoluteBoundingBox(OptionSet<BoundingRectBehavior> = { }) const;
 
     // Transform-friendly
-    WEBCORE_EXPORT void absoluteTextQuads(Vector<FloatQuad>&, bool useSelectionHeight = false, RangeInFixedPosition* = nullptr) const;
     WEBCORE_EXPORT FloatRect absoluteBoundingRect(OptionSet<BoundingRectBehavior> = { }) const;
-#if PLATFORM(IOS_FAMILY)
-    WEBCORE_EXPORT void collectSelectionRects(Vector<SelectionRect>&) const;
-    WEBCORE_EXPORT int collectSelectionRectsWithoutUnionInteriorLines(Vector<SelectionRect>&) const;
-#endif
 
     void nodeChildrenChanged(ContainerNode&);
     void nodeChildrenWillBeRemoved(ContainerNode&);
@@ -165,7 +142,6 @@ public:
 
 private:
     explicit Range(Document&);
-    Range(Document&, Node* startContainer, int startOffset, Node* endContainer, int endOffset);
 
     void setDocument(Document&);
     ExceptionOr<Node*> checkNodeWOffset(Node&, unsigned offset) const;
@@ -177,25 +153,35 @@ private:
 
     Vector<FloatRect> absoluteRectsForRangeInText(Node*, RenderText&, bool useSelectionHeight, bool& isFixed, OptionSet<BoundingRectBehavior>) const;
 
+    Node* pastLastNode() const;
+
     Ref<Document> m_ownerDocument;
     RangeBoundaryPoint m_start;
     RangeBoundaryPoint m_end;
 };
 
-WEBCORE_EXPORT Ref<Range> rangeOfContents(Node&);
-
 WEBCORE_EXPORT bool areRangesEqual(const Range*, const Range*);
 WEBCORE_EXPORT bool rangesOverlap(const Range*, const Range*);
+
+WEBCORE_EXPORT SimpleRange makeSimpleRange(const Range&);
+WEBCORE_EXPORT SimpleRange makeSimpleRange(const Ref<Range>&);
+WEBCORE_EXPORT Optional<SimpleRange> makeSimpleRange(const Range*);
+WEBCORE_EXPORT Optional<SimpleRange> makeSimpleRange(const RefPtr<Range>&);
+
+WEBCORE_EXPORT Ref<Range> createLiveRange(const SimpleRange&);
+WEBCORE_EXPORT RefPtr<Range> createLiveRange(const Optional<SimpleRange>&);
+
+bool documentOrderComparator(const Node*, const Node*);
+
+WTF::TextStream& operator<<(WTF::TextStream&, const RangeBoundaryPoint&);
+WTF::TextStream& operator<<(WTF::TextStream&, const Range&);
 
 inline bool documentOrderComparator(const Node* a, const Node* b)
 {
     return Range::compareBoundaryPoints(const_cast<Node*>(a), 0, const_cast<Node*>(b), 0).releaseReturnValue() < 0;
 }
 
-WTF::TextStream& operator<<(WTF::TextStream&, const RangeBoundaryPoint&);
-WTF::TextStream& operator<<(WTF::TextStream&, const Range&);
-
-} // namespace
+} // namespace WebCore
 
 #if ENABLE(TREE_DEBUGGING)
 // Outside the WebCore namespace for ease of invocation from the debugger.

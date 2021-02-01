@@ -36,14 +36,14 @@
 namespace WebCore {
 
 FEImage::FEImage(Filter& filter, RefPtr<Image> image, const SVGPreserveAspectRatioValue& preserveAspectRatio)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::Image)
     , m_image(image)
     , m_preserveAspectRatio(preserveAspectRatio)
 {
 }
 
 FEImage::FEImage(Filter& filter, TreeScope& treeScope, const String& href, const SVGPreserveAspectRatioValue& preserveAspectRatio)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::Image)
     , m_treeScope(&treeScope)
     , m_href(href)
     , m_preserveAspectRatio(preserveAspectRatio)
@@ -113,9 +113,11 @@ void FEImage::platformApplySoftware()
     IntPoint paintLocation = absolutePaintRect().location();
     destRect.move(-paintLocation.x(), -paintLocation.y());
 
+    auto& context = resultImage->context();
+
     if (renderer) {
         const AffineTransform& absoluteTransform = filter().absoluteTransform();
-        resultImage->context().concatCTM(absoluteTransform);
+        context.concatCTM(absoluteTransform);
 
         auto contextNode = makeRefPtr(downcast<SVGElement>(renderer->element()));
         if (contextNode->hasRelativeLengths()) {
@@ -125,15 +127,15 @@ void FEImage::platformApplySoftware()
             // If we're referencing an element with percentage units, eg. <rect with="30%"> those values were resolved against the viewport.
             // Build up a transformation that maps from the viewport space to the filter primitive subregion.
             if (lengthContext.determineViewport(viewportSize))
-                resultImage->context().concatCTM(makeMapBetweenRects(FloatRect(FloatPoint(), viewportSize), destRect));
+                context.concatCTM(makeMapBetweenRects(FloatRect(FloatPoint(), viewportSize), destRect));
         }
 
         AffineTransform contentTransformation;
-        SVGRenderingContext::renderSubtreeToImageBuffer(resultImage, *renderer, contentTransformation);
+        SVGRenderingContext::renderSubtreeToContext(context, *renderer, contentTransformation);
         return;
     }
 
-    resultImage->context().drawImage(*m_image, destRect, srcRect);
+    context.drawImage(*m_image, destRect, srcRect);
 }
 
 TextStream& FEImage::externalRepresentation(TextStream& ts, RepresentationType representation) const

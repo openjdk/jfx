@@ -26,6 +26,7 @@
 
 #if ENABLE(WEB_AUDIO)
 
+#include "AudioContext.h"
 #include "AudioListener.h"
 #include "AudioNode.h"
 #include "AudioParam.h"
@@ -33,6 +34,7 @@
 #include "Distance.h"
 #include "FloatPoint3D.h"
 #include "Panner.h"
+#include "PannerOptions.h"
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -40,6 +42,17 @@
 namespace WebCore {
 
 class HRTFDatabaseLoader;
+class BaseAudioContext;
+
+class PannerNodeBase : public AudioNode {
+public:
+    virtual ~PannerNodeBase() = default;
+
+    virtual float dopplerRate() = 0;
+
+protected:
+    PannerNodeBase(BaseAudioContext&);
+};
 
 // PannerNode is an AudioNode with one input and one output.
 // It positions a sound in 3D space, with the exact effect dependent on the panning model.
@@ -48,13 +61,10 @@ class HRTFDatabaseLoader;
 // A cone effect will attenuate the gain as the orientation moves away from the listener.
 // All of these effects follow the OpenAL specification very closely.
 
-class PannerNode final : public AudioNode {
+class PannerNode final : public PannerNodeBase {
     WTF_MAKE_ISO_ALLOCATED(PannerNode);
 public:
-    static Ref<PannerNode> create(AudioContext& context, float sampleRate)
-    {
-        return adoptRef(*new PannerNode(context, sampleRate));
-    }
+    static ExceptionOr<Ref<PannerNode>> create(BaseAudioContext&, const PannerOptions& = { });
 
     virtual ~PannerNode();
 
@@ -66,36 +76,38 @@ public:
     void uninitialize() override;
 
     // Listener
-    AudioListener* listener();
+    AudioListener& listener();
 
     // Panning model
     PanningModelType panningModel() const { return m_panningModel; }
     void setPanningModel(PanningModelType);
 
     // Position
-    FloatPoint3D position() const { return m_position; }
-    void setPosition(float x, float y, float z) { m_position = FloatPoint3D(x, y, z); }
+    FloatPoint3D position() const;
+    void setPosition(float x, float y, float z);
+    AudioParam& positionX() { return m_positionX.get(); }
+    AudioParam& positionY() { return m_positionY.get(); }
+    AudioParam& positionZ() { return m_positionZ.get(); }
 
     // Orientation
-    FloatPoint3D orientation() const { return m_position; }
-    void setOrientation(float x, float y, float z) { m_orientation = FloatPoint3D(x, y, z); }
-
-    // Velocity
-    FloatPoint3D velocity() const { return m_velocity; }
-    void setVelocity(float x, float y, float z) { m_velocity = FloatPoint3D(x, y, z); }
+    FloatPoint3D orientation() const;
+    void setOrientation(float x, float y, float z);
+    AudioParam& orientationX() { return m_orientationX.get(); }
+    AudioParam& orientationY() { return m_orientationY.get(); }
+    AudioParam& orientationZ() { return m_orientationZ.get(); }
 
     // Distance parameters
     DistanceModelType distanceModel() const;
     void setDistanceModel(DistanceModelType);
 
-    double refDistance() { return m_distanceEffect.refDistance(); }
-    void setRefDistance(double refDistance) { m_distanceEffect.setRefDistance(refDistance); }
+    double refDistance() const { return m_distanceEffect.refDistance(); }
+    ExceptionOr<void> setRefDistance(double);
 
-    double maxDistance() { return m_distanceEffect.maxDistance(); }
-    void setMaxDistance(double maxDistance) { m_distanceEffect.setMaxDistance(maxDistance); }
+    double maxDistance() const { return m_distanceEffect.maxDistance(); }
+    ExceptionOr<void> setMaxDistance(double);
 
-    double rolloffFactor() { return m_distanceEffect.rolloffFactor(); }
-    void setRolloffFactor(double rolloffFactor) { m_distanceEffect.setRolloffFactor(rolloffFactor); }
+    double rolloffFactor() const { return m_distanceEffect.rolloffFactor(); }
+    ExceptionOr<void> setRolloffFactor(double);
 
     // Sound cones - angles in degrees
     double coneInnerAngle() const { return m_coneEffect.innerAngle(); }
@@ -105,10 +117,13 @@ public:
     void setConeOuterAngle(double angle) { m_coneEffect.setOuterAngle(angle); }
 
     double coneOuterGain() const { return m_coneEffect.outerGain(); }
-    void setConeOuterGain(double angle) { m_coneEffect.setOuterGain(angle); }
+    ExceptionOr<void> setConeOuterGain(double);
+
+    ExceptionOr<void> setChannelCount(unsigned) final;
+    ExceptionOr<void> setChannelCountMode(ChannelCountMode) final;
 
     void getAzimuthElevation(double* outAzimuth, double* outElevation);
-    float dopplerRate();
+    float dopplerRate() final;
 
     // Accessors for dynamically calculated gain values.
     AudioParam* distanceGain() { return m_distanceGain.get(); }
@@ -118,7 +133,7 @@ public:
     double latencyTime() const override { return m_panner ? m_panner->latencyTime() : 0; }
 
 private:
-    PannerNode(AudioContext&, float sampleRate);
+    PannerNode(BaseAudioContext&, const PannerOptions&);
 
     // Returns the combined distance and cone gain attenuation.
     float distanceConeGain();
@@ -130,21 +145,25 @@ private:
     std::unique_ptr<Panner> m_panner;
     PanningModelType m_panningModel;
 
-    FloatPoint3D m_position;
-    FloatPoint3D m_orientation;
-    FloatPoint3D m_velocity;
-
     // Gain
     RefPtr<AudioParam> m_distanceGain;
     RefPtr<AudioParam> m_coneGain;
     DistanceEffect m_distanceEffect;
     ConeEffect m_coneEffect;
-    float m_lastGain;
+    float m_lastGain { -1.0 };
+
+    Ref<AudioParam> m_positionX;
+    Ref<AudioParam> m_positionY;
+    Ref<AudioParam> m_positionZ;
+
+    Ref<AudioParam> m_orientationX;
+    Ref<AudioParam> m_orientationY;
+    Ref<AudioParam> m_orientationZ;
 
     // HRTF Database loader
     RefPtr<HRTFDatabaseLoader> m_hrtfDatabaseLoader;
 
-    unsigned m_connectionCount;
+    unsigned m_connectionCount { 0 };
 
     // Synchronize process() and setPanningModel() which can change the panner.
     mutable Lock m_pannerMutex;

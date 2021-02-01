@@ -33,8 +33,8 @@ namespace Layout {
 template <typename T>
 class LayoutIterator {
 public:
-    LayoutIterator(const Container* root);
-    LayoutIterator(const Container* root, const T* current);
+    LayoutIterator(const ContainerBox* root);
+    LayoutIterator(const ContainerBox* root, const T* current);
 
     const T& operator*() const;
     const T* operator->() const;
@@ -44,11 +44,9 @@ public:
 
     LayoutIterator& traverseNext();
     LayoutIterator& traverseNextSibling();
-    LayoutIterator& traversePreviousSibling();
-    LayoutIterator& traverseAncestor();
 
 private:
-    const Container* m_root;
+    const ContainerBox* m_root;
     const T* m_current;
 };
 
@@ -66,15 +64,15 @@ inline const Box* firstChild(U& object)
 
 inline const Box* firstChild(const Box& box)
 {
-    if (is<Container>(box))
-        return downcast<Container>(box).firstChild();
+    if (is<ContainerBox>(box))
+        return downcast<ContainerBox>(box).firstChild();
     return nullptr;
 }
 
-inline const Box* nextAncestorSibling(const Box& current, const Container* stayWithin)
+inline const Box* nextAncestorSibling(const Box& current, const ContainerBox& stayWithin)
 {
-    for (auto* ancestor = current.parent(); ancestor; ancestor = ancestor->parent()) {
-        if (ancestor == stayWithin)
+    for (auto* ancestor = &current.parent(); !is<InitialContainingBlock>(*ancestor); ancestor = &ancestor->parent()) {
+        if (ancestor == &stayWithin)
             return nullptr;
         if (auto* sibling = ancestor->nextSibling())
             return sibling;
@@ -83,23 +81,12 @@ inline const Box* nextAncestorSibling(const Box& current, const Container* stayW
 }
 
 template <typename U>
-inline const Box* next(const U& current, const Container* stayWithin)
+inline const Box* next(const U& current, const ContainerBox& stayWithin)
 {
     if (auto* child = firstChild(current))
         return child;
 
-    if (&current == stayWithin)
-        return nullptr;
-
-    if (auto* sibling = current.nextSibling())
-        return sibling;
-
-    return nextAncestorSibling(current, stayWithin);
-}
-
-inline const Box* nextSkippingChildren(Box& current, const Container* stayWithin)
-{
-    if (&current == stayWithin)
+    if (&current == &stayWithin)
         return nullptr;
 
     if (auto* sibling = current.nextSibling())
@@ -121,15 +108,6 @@ inline const T* firstChild(U& current)
     return static_cast<const T*>(object);
 }
 
-template <typename T, typename U>
-inline const T* lastChild(U& current)
-{
-    auto* object = current.lastChild();
-    while (object && !isLayoutBoxOfType<T>(*object))
-        object = object->previousSibling();
-    return static_cast<const T*>(object);
-}
-
 template <typename T>
 inline const T* nextSibling(const T& current)
 {
@@ -140,35 +118,16 @@ inline const T* nextSibling(const T& current)
 }
 
 template <typename T, typename U>
-inline const T* previousSibling(const T& current)
-{
-    auto* object = current.previousSibling();
-    while (object && !isLayoutBoxOfType<T>(*object))
-        object = object->previousSibling();
-    return static_cast<const T*>(object);
-}
-
-template <typename T, typename U>
-inline const T* findAncestorOfType(const T& current)
-{
-    for (auto* ancestor = current.parent(); ancestor; ancestor = ancestor->parent()) {
-        if (isLayoutBoxOfType<T>(*ancestor))
-            return static_cast<const T*>(ancestor);
-    }
-    return nullptr;
-}
-
-template <typename T, typename U>
 inline const T* firstWithin(const U& stayWithin)
 {
     auto* descendant = LayoutBoxTraversal::firstChild(stayWithin);
     while (descendant && !isLayoutBoxOfType<T>(*descendant))
-        descendant = LayoutBoxTraversal::next(*descendant, &stayWithin);
+        descendant = LayoutBoxTraversal::next(*descendant, stayWithin);
     return static_cast<const T*>(descendant);
 }
 
 template <typename T, typename U>
-inline const T* next(const U& current, const Container* stayWithin)
+inline const T* next(const U& current, const ContainerBox& stayWithin)
 {
     auto* descendant = LayoutBoxTraversal::next(current, stayWithin);
     while (descendant && !isLayoutBoxOfType<T>(*descendant))
@@ -181,14 +140,14 @@ inline const T* next(const U& current, const Container* stayWithin)
 // LayoutIterator
 
 template <typename T>
-inline LayoutIterator<T>::LayoutIterator(const Container* root)
+inline LayoutIterator<T>::LayoutIterator(const ContainerBox* root)
     : m_root(root)
     , m_current(nullptr)
 {
 }
 
 template <typename T>
-inline LayoutIterator<T>::LayoutIterator(const Container* root, const T* current)
+inline LayoutIterator<T>::LayoutIterator(const ContainerBox* root, const T* current)
     : m_root(root)
     , m_current(current)
 {
@@ -206,24 +165,7 @@ template <typename T>
 inline LayoutIterator<T>& LayoutIterator<T>::traverseNext()
 {
     ASSERT(m_current);
-    m_current = Traversal::next<T>(*m_current, m_root);
-    return *this;
-}
-
-template <typename T>
-inline LayoutIterator<T>& LayoutIterator<T>::traversePreviousSibling()
-{
-    ASSERT(m_current);
-    m_current = Traversal::previousSibling<T>(*m_current);
-    return *this;
-}
-
-template <typename T>
-inline LayoutIterator<T>& LayoutIterator<T>::traverseAncestor()
-{
-    ASSERT(m_current);
-    ASSERT(m_current != m_root);
-    m_current = Traversal::findAncestorOfType<T>(*m_current);
+    m_current = Traversal::next<T>(*m_current, *m_root);
     return *this;
 }
 
@@ -256,7 +198,6 @@ inline bool LayoutIterator<T>::operator!=(const LayoutIterator& other) const
 
 }
 }
-#include "LayoutAncestorIterator.h"
 #include "LayoutChildIterator.h"
 
 #endif

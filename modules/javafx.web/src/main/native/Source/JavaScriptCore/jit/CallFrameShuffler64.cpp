@@ -30,7 +30,7 @@
 
 #include "CCallHelpers.h"
 #include "DataFormat.h"
-#include "JSCInlines.h"
+#include "JSCJSValueInlines.h"
 
 namespace JSC {
 
@@ -84,7 +84,7 @@ void CallFrameShuffler::emitBox(CachedRecovery& cachedRecovery)
         case DataFormatInt32:
             if (verbose)
                 dataLog("   * Boxing ", cachedRecovery.recovery());
-            m_jit.zeroExtend32ToPtr(
+            m_jit.zeroExtend32ToWord(
                 cachedRecovery.recovery().gpr(),
                 cachedRecovery.recovery().gpr());
             m_lockedRegisters.set(cachedRecovery.recovery().gpr());

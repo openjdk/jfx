@@ -47,7 +47,7 @@ extern "C" {
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLModElementImpl_getCiteImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::citeAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::citeAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLModElementImpl_setCiteImpl(JNIEnv* env, jclass, jlong peer, jstring value)

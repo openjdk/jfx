@@ -36,11 +36,16 @@ class JSModuleRecord;
 class SourceCode;
 
 class JSModuleLoader final : public JSNonFinalObject {
-private:
-    JSModuleLoader(VM&, Structure*);
 public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(JSModuleLoader, Base);
+        return &vm.plainObjectSpace;
+    }
 
     enum Status {
         Fetch = 1,
@@ -86,7 +91,8 @@ public:
     JSModuleNamespaceObject* getModuleNamespaceObject(JSGlobalObject*, JSValue moduleRecord);
     JSArray* dependencyKeysIfEvaluated(JSGlobalObject*, JSValue key);
 
-protected:
+private:
+    JSModuleLoader(VM&, Structure*);
     void finishCreation(JSGlobalObject*, VM&);
 };
 

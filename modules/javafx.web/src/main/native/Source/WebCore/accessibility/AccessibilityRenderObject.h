@@ -72,9 +72,9 @@ public:
     bool hasBoldFont() const override;
     bool hasItalicFont() const override;
     bool hasPlainText() const override;
-    bool hasSameFont(RenderObject*) const override;
-    bool hasSameFontColor(RenderObject*) const override;
-    bool hasSameStyle(RenderObject*) const override;
+    bool hasSameFont(const AXCoreObject&) const override;
+    bool hasSameFontColor(const AXCoreObject&) const override;
+    bool hasSameStyle(const AXCoreObject&) const override;
     bool hasUnderline() const override;
 
     bool canSetTextRangeAttributes() const override;
@@ -138,7 +138,7 @@ public:
     String actionVerb() const override;
     Widget* widget() const override;
     Widget* widgetForAttachmentView() const override;
-    virtual void getDocumentLinks(AccessibilityChildrenVector&);
+    AccessibilityChildrenVector documentLinks() override;
     FrameView* documentFrameView() const override;
 
     void clearChildren() override;
@@ -146,7 +146,7 @@ public:
 
     void setFocused(bool) override;
     void setSelectedTextRange(const PlainTextRange&) override;
-    void setValue(const String&) override;
+    bool setValue(const String&) override;
     void setSelectedRows(AccessibilityChildrenVector&) override;
     AccessibilityOrientation orientation() const override;
 
@@ -166,15 +166,15 @@ public:
     VisiblePositionRange visiblePositionRange() const override;
     VisiblePositionRange visiblePositionRangeForLine(unsigned) const override;
     IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const override;
-    IntRect boundsForRange(const RefPtr<Range>) const override;
+    IntRect boundsForRange(const SimpleRange&) const override;
     void setSelectedVisiblePositionRange(const VisiblePositionRange&) const override;
     bool isVisiblePositionRangeInDifferentDocument(const VisiblePositionRange&) const;
     bool hasPopup() const override;
 
-    bool supportsARIADropping() const override;
-    bool supportsARIADragging() const override;
-    bool isARIAGrabbed() override;
-    Vector<String> determineARIADropEffects() override;
+    bool supportsDropping() const override;
+    bool supportsDragging() const override;
+    bool isGrabbed() override;
+    Vector<String> determineDropEffects() const override;
 
     VisiblePosition visiblePositionForPoint(const IntPoint&) const override;
     VisiblePosition visiblePositionForIndex(unsigned indexValue, bool lastIndexOK) const override;
@@ -293,8 +293,6 @@ private:
     bool canHavePlainText() const;
     // Special handling of click point for links.
     IntPoint linkClickPoint();
-    // Rects utilities.
-    static IntRect boundsForRects(LayoutRect const&, LayoutRect const&, RefPtr<Range> const&);
 };
 
 } // namespace WebCore

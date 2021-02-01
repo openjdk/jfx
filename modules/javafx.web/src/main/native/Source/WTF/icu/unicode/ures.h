@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
-*   Copyright (C) 1997-2012,2014, International Business Machines
+*   Copyright (C) 1997-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -14,7 +16,7 @@
 *   04/04/99    helena      Fixed internal header inclusion.
 *   04/15/99    Madhu       Updated Javadoc
 *   06/14/99    stephen     Removed functions taking a filename suffix.
-*   07/20/99    stephen     Language-independent ypedef to void*
+*   07/20/99    stephen     Language-independent typedef to void*
 *   11/09/99    weiv        Added ures_getLocale()
 *   06/24/02    weiv        Added support for resource sharing
 ******************************************************************************
@@ -120,9 +122,13 @@ typedef enum {
     RES_INT_VECTOR=URES_INT_VECTOR,
     /** @deprecated ICU 2.6 Not used. */
     RES_RESERVED=15,
-#endif /* U_HIDE_DEPRECATED_API */
 
+    /**
+     * One more than the highest normal UResType value.
+     * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.
+     */
     URES_LIMIT = 16
+#endif  // U_HIDE_DEPRECATED_API
 } UResType;
 
 /*
@@ -132,7 +138,7 @@ typedef enum {
 /**
  * Opens a UResourceBundle, from which users can extract strings by using
  * their corresponding keys.
- * Note that the caller is responsible of calling <TT>ures_close</TT> on each succesfully
+ * Note that the caller is responsible of calling <TT>ures_close</TT> on each successfully
  * opened resource bundle.
  * @param packageName   The packageName and locale together point to an ICU udata object,
  *                      as defined by <code> udata_open( packageName, "res", locale, err) </code>
@@ -295,7 +301,7 @@ ures_getVersion(const UResourceBundle* resB,
  * you to query for the real locale of the resource. For example, if you requested
  * "en_US_CALIFORNIA" and only "en_US" bundle exists, "en_US" will be returned.
  * For subresources, the locale where this resource comes from will be returned.
- * If fallback has occured, getLocale will reflect this.
+ * If fallback has occurred, getLocale will reflect this.
  *
  * @param resourceBundle resource bundle in question
  * @param status just for catching illegal arguments
@@ -574,7 +580,7 @@ ures_hasNext(const UResourceBundle *resourceBundle);
  * @param fillIn            if NULL a new UResourceBundle struct is allocated and must be closed by the caller.
  *                          Alternatively, you can supply a struct to be filled by this function.
  * @param status            fills in the outgoing error code. You may still get a non NULL result even if an
- *                          error occured. Check status instead.
+ *                          error occurred. Check status instead.
  * @return                  a pointer to a UResourceBundle struct. If fill in param was NULL, caller must close it
  * @stable ICU 2.0
  */
@@ -590,7 +596,7 @@ ures_getNextResource(UResourceBundle *resourceBundle,
  * @param resourceBundle    a resource
  * @param len               fill in length of the string
  * @param key               fill in for key associated with this string. NULL if no key
- * @param status            fills in the outgoing error code. If an error occured, we may return NULL, but don't
+ * @param status            fills in the outgoing error code. If an error occurred, we may return NULL, but don't
  *                          count on it. Check status instead!
  * @return a pointer to a zero-terminated UChar array which lives in a memory mapped/DLL file.
  * @stable ICU 2.0
@@ -609,7 +615,7 @@ ures_getNextString(UResourceBundle *resourceBundle,
  * @param fillIn            if NULL a new UResourceBundle struct is allocated and must be closed by the caller.
  *                          Alternatively, you can supply a struct to be filled by this function.
  * @param status            fills in the outgoing error code. Don't count on NULL being returned if an error has
- *                          occured. Check status instead.
+ *                          occurred. Check status instead.
  * @return                  a pointer to a UResourceBundle struct. If fill in param was NULL, caller must close it
  * @stable ICU 2.0
  */
@@ -625,7 +631,7 @@ ures_getByIndex(const UResourceBundle *resourceBundle,
  * @param resourceBundle    a resource
  * @param indexS            an index to the wanted string.
  * @param len               fill in length of the string
- * @param status            fills in the outgoing error code. If an error occured, we may return NULL, but don't
+ * @param status            fills in the outgoing error code. If an error occurred, we may return NULL, but don't
  *                          count on it. Check status instead!
  * @return                  a pointer to a zero-terminated UChar array which lives in a memory mapped/DLL file.
  * @stable ICU 2.0
@@ -716,7 +722,7 @@ ures_getByKey(const UResourceBundle *resourceBundle,
  * @param resB              a resource
  * @param key               a key associated with the wanted string
  * @param len               fill in length of the string
- * @param status            fills in the outgoing error code. If an error occured, we may return NULL, but don't
+ * @param status            fills in the outgoing error code. If an error occurred, we may return NULL, but don't
  *                          count on it. Check status instead!
  * @return                  a pointer to a zero-terminated UChar array which lives in a memory mapped/DLL file.
  * @stable ICU 2.0
@@ -789,82 +795,97 @@ ures_getUTF8StringByKey(const UResourceBundle *resB,
 
 U_NAMESPACE_BEGIN
 /**
- * returns a string from a string resource type
+ * Returns the string value from a string resource bundle.
  *
- * @param resB    a resource
+ * @param resB    a resource, should have type URES_STRING
  * @param status: fills in the outgoing error code
  *                could be <TT>U_MISSING_RESOURCE_ERROR</TT> if the key is not found
  *                could be a non-failing error
  *                e.g.: <TT>U_USING_FALLBACK_WARNING</TT>,<TT>U_USING_DEFAULT_WARNING </TT>
- * @return        a UnicodeString object. If there is an error, string is bogus
+ * @return The string value, or a bogus string if there is a failure UErrorCode.
  * @stable ICU 2.0
  */
 inline UnicodeString
-ures_getUnicodeString(const UResourceBundle *resB,
-                      UErrorCode* status)
-{
+ures_getUnicodeString(const UResourceBundle *resB, UErrorCode* status) {
+    UnicodeString result;
     int32_t len = 0;
     const UChar *r = ures_getString(resB, &len, status);
-    return UnicodeString(TRUE, r, len);
+    if(U_SUCCESS(*status)) {
+        result.setTo(TRUE, r, len);
+    } else {
+        result.setToBogus();
+    }
+    return result;
 }
 
 /**
- * Returns the next string in a resource or NULL if there are no more resources
+ * Returns the next string in a resource, or an empty string if there are no more resources
  * to iterate over.
+ * Use ures_getNextString() instead to distinguish between
+ * the end of the iteration and a real empty string value.
  *
  * @param resB              a resource
  * @param key               fill in for key associated with this string
  * @param status            fills in the outgoing error code
- * @return an UnicodeString object.
+ * @return The string value, or a bogus string if there is a failure UErrorCode.
  * @stable ICU 2.0
  */
 inline UnicodeString
-ures_getNextUnicodeString(UResourceBundle *resB,
-                          const char ** key,
-                          UErrorCode* status)
-{
+ures_getNextUnicodeString(UResourceBundle *resB, const char ** key, UErrorCode* status) {
+    UnicodeString result;
     int32_t len = 0;
     const UChar* r = ures_getNextString(resB, &len, key, status);
-    return UnicodeString(TRUE, r, len);
+    if(U_SUCCESS(*status)) {
+        result.setTo(TRUE, r, len);
+    } else {
+        result.setToBogus();
+    }
+    return result;
 }
 
 /**
- * Returns the string in a given resource at the specified index.
+ * Returns the string in a given resource array or table at the specified index.
  *
  * @param resB              a resource
  * @param indexS            an index to the wanted string.
  * @param status            fills in the outgoing error code
- * @return                  an UnicodeString object. If there is an error, string is bogus
+ * @return The string value, or a bogus string if there is a failure UErrorCode.
  * @stable ICU 2.0
  */
 inline UnicodeString
-ures_getUnicodeStringByIndex(const UResourceBundle *resB,
-                             int32_t indexS,
-                             UErrorCode* status)
-{
+ures_getUnicodeStringByIndex(const UResourceBundle *resB, int32_t indexS, UErrorCode* status) {
+    UnicodeString result;
     int32_t len = 0;
     const UChar* r = ures_getStringByIndex(resB, indexS, &len, status);
-    return UnicodeString(TRUE, r, len);
+    if(U_SUCCESS(*status)) {
+        result.setTo(TRUE, r, len);
+    } else {
+        result.setToBogus();
+    }
+    return result;
 }
 
 /**
- * Returns a string in a resource that has a given key. This procedure works only with table
- * resources.
+ * Returns a string in a resource that has a given key.
+ * This procedure works only with table resources.
  *
  * @param resB              a resource
  * @param key               a key associated with the wanted string
  * @param status            fills in the outgoing error code
- * @return                  an UnicodeString object. If there is an error, string is bogus
+ * @return The string value, or a bogus string if there is a failure UErrorCode.
  * @stable ICU 2.0
  */
 inline UnicodeString
-ures_getUnicodeStringByKey(const UResourceBundle *resB,
-                           const char* key,
-                           UErrorCode* status)
-{
+ures_getUnicodeStringByKey(const UResourceBundle *resB, const char* key, UErrorCode* status) {
+    UnicodeString result;
     int32_t len = 0;
     const UChar* r = ures_getStringByKey(resB, key, &len, status);
-    return UnicodeString(TRUE, r, len);
+    if(U_SUCCESS(*status)) {
+        result.setTo(TRUE, r, len);
+    } else {
+        result.setToBogus();
+    }
+    return result;
 }
 
 U_NAMESPACE_END

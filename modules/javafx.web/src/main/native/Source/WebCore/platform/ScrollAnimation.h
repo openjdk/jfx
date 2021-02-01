@@ -32,24 +32,25 @@ namespace WebCore {
 
 class FloatPoint;
 class ScrollableArea;
+enum class ScrollClamping : bool;
+
+struct ScrollExtents {
+    ScrollPosition minimumScrollPosition;
+    ScrollPosition maximumScrollPosition;
+    IntSize visibleSize;
+};
 
 class ScrollAnimation {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~ScrollAnimation() { };
     virtual bool scroll(ScrollbarOrientation, ScrollGranularity, float /* step */, float /* multiplier */) { return true; };
+    virtual void scroll(const FloatPoint&) { };
     virtual void stop() = 0;
     virtual void updateVisibleLengths() { };
     virtual void setCurrentPosition(const FloatPoint&) { };
     virtual void serviceAnimation() { };
-
-protected:
-    ScrollAnimation(ScrollableArea& scrollableArea)
-        : m_scrollableArea(scrollableArea)
-    {
-    }
-
-    ScrollableArea& m_scrollableArea;
+    virtual bool isActive() const = 0;
 };
 
 } // namespace WebCore
