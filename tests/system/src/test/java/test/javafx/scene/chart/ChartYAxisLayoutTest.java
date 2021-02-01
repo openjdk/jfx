@@ -49,12 +49,12 @@ import org.junit.Test;
 
 import test.util.Util;
 
-public class ChartAxisLayoutTest {
+public class ChartYAxisLayoutTest {
 
     private static CountDownLatch startupLatch;
     private static Stage stage;
     private static VBox rootPane;
-    private static CategoryAxis xAxis;
+    private static CategoryAxis yAxis;
 
     public static class TestApp extends Application {
 
@@ -62,20 +62,18 @@ public class ChartAxisLayoutTest {
         public void start(Stage primaryStage) throws Exception {
             stage = primaryStage;
             rootPane = new VBox();
-            stage.setScene(new Scene(rootPane, 600, 800));
+            stage.setScene(new Scene(rootPane, 800, 600));
 
             var categories = List.of(
-                    "1st very long category name..............",
-                    "2nd very long category name..............",
-                    "3rd very long category name..............",
-                    "4th very long category name..............",
-                    "5th very long category name.............."
+                    "1\ns\nt\nv\ne\nr\ny\nt\na\nl",
+                    "2\nn\nd\nv\ne\nr\ny\nt\na\nl",
+                    "3\nr\nd\nv\ne\nr\ny\nt\na\nl"
             );
 
-            xAxis = new CategoryAxis();
-            xAxis.setCategories(FXCollections.observableList(categories));
+            yAxis = new CategoryAxis();
+            yAxis.setCategories(FXCollections.observableList(categories));
 
-            BarChart<String, Number> chart = new BarChart<>(xAxis, new NumberAxis());
+            BarChart<Number, String> chart = new BarChart<>(new NumberAxis(), yAxis);
             chart.prefWidthProperty().bind(rootPane.widthProperty());
             chart.prefHeightProperty().bind(rootPane.heightProperty());
             chart.setAnimated(false);
@@ -91,21 +89,23 @@ public class ChartAxisLayoutTest {
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(ChartAxisLayoutTest.TestApp.class, (String[]) null)).start();
+        new Thread(() -> Application.launch(ChartYAxisLayoutTest.TestApp.class, (String[]) null)).start();
 
         assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
     public void ensureThatLabelsAreRotatedWhenLackingSpace() {
-        Util.runAndWait(() -> stage.setWidth(600));
-        Util.runAndWait(() -> assertEquals(90.0, xAxis.getTickLabelRotation(), 0.0001));
+        Util.runAndWait(() -> stage.setHeight(300));
+        Util.sleep(10);
+        Util.runAndWait(() -> assertEquals(90.0, yAxis.getTickLabelRotation(), 0.0001));
     }
 
     @Test
     public void ensureThatLabelsAreNotRotatedWhenEnoughSpace() {
-        Util.runAndWait(() -> stage.setWidth(2000));
-        Util.runAndWait(() -> assertEquals(0.0, xAxis.getTickLabelRotation(), 0.0001));
+        Util.runAndWait(() -> stage.setHeight(900));
+        Util.sleep(10);
+        Util.runAndWait(() -> assertEquals(0.0, yAxis.getTickLabelRotation(), 0.0001));
     }
 
     @AfterClass
