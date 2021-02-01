@@ -86,7 +86,7 @@ public class TreeShowingExpression extends BooleanExpression {
 
         NodeHelper.treeVisibleProperty(node).addListener(windowShowingChangedListener);
 
-        nodeSceneChangedListener.changed(null, null, node.getScene());
+        nodeSceneChangedListener.changed(null, null, node.getScene());  // registers listeners on Window/Showing
     }
 
     /**
@@ -97,6 +97,9 @@ public class TreeShowingExpression extends BooleanExpression {
         node.sceneProperty().removeListener(nodeSceneChangedListener);
 
         NodeHelper.treeVisibleProperty(node).removeListener(windowShowingChangedListener);
+
+        valid = false;  // prevents unregistration from triggering an invalidation notification
+        nodeSceneChangedListener.changed(null, node.getScene(), null);  // unregisters listeners on Window/Showing
     }
 
     private void updateTreeShowing() {
