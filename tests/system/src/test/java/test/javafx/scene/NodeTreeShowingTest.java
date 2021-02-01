@@ -45,18 +45,22 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.assertTrue;
 
 /**
- * TODO fix
- * This test is based on the test case reported in JDK-8209830
+ * Tests for regressions in performance of manipulating Nodes in a very large
+ * Scene (see JDK-8252935).
  *
- * Redundant CSS Re-application was avoided in JDK-8193445.
- * It results in faster application of CSS on Controls (Nodes). In turn,
- * resulting in improved Node creation/addition time to a Scene.
+ * Specifically, this test was created for the Tree Showing property which
+ * (before this fix) involved registering a listener to Scene and Window by
+ * each Node, causing large listeners lists on the Window property in Scene
+ * and the Showing property in Window.  The large lists of listeners would
+ * cause noticeable performance issues in Scenes with 10-20k+ Nodes (which
+ * for example can happen with a TableView with many visible small cells).
  *
  * The goal of this test is *NOT* to measure absolute performance, but to show
- * creating and adding 500 Nodes to a scene does not take more than a
- * particular threshold of time.
+ * that adding and removing Nodes (which involves registering and unregistering
+ * listeners) in a very large Scene does not take more than a particular
+ * threshold of time.
  *
- * The selected thresold is larger than actual observed time.
+ * The selected threshold is larger than actual observed time.
  * It is not a benchmark value. It is good enough to catch the regression
  * in performance, if any.
  */
@@ -122,7 +126,7 @@ public class NodeTreeShowingTest {
             rootPane.setCenter(root);
         });
 
-        for(int j = 0; j < 5; j++) {
+        for (int j = 0; j < 5; j++) {
             int loopNumber = j + 1;
 
             Util.runAndWait(() -> {
@@ -153,7 +157,7 @@ public class NodeTreeShowingTest {
 
         // NOTE : 800 mSec is not a benchmark value
         // It is good enough to catch the regression in performance, if any
-        assertTrue("Time to add/remove " + loopCount + " nodes in a large Scene is more than 800 mSec", bestMillis.get() <= 800);
+        assertTrue("Time to add/remove " + loopCount + " nodes in a large Scene is more than 800 mSec (" + bestMillis.get() + ")", bestMillis.get() <= 800);
     }
 
     @AfterClass
