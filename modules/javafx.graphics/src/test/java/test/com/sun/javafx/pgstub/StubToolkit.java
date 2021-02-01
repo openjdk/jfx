@@ -750,6 +750,11 @@ public class StubToolkit extends Toolkit {
         return platformShortcutKey;
     }
 
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        return Optional.empty();
+    }
+
     private DndDelegate dndDelegate;
     public void setDndDelegate(DndDelegate dndDelegate) {
         this.dndDelegate = dndDelegate;
