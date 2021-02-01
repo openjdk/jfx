@@ -362,19 +362,18 @@ public final class CategoryAxis extends Axis<String> {
         if (length >= 0) {
             double requiredLengthToDisplay = calculateRequiredSize(side.isVertical(), tickLabelRotation);
             if (requiredLengthToDisplay > length) {
-                // try to rotate the text to increase the density
-                if (side.isHorizontal() && tickLabelRotation != 90) {
-                    tickLabelRotation = 90;
-                }
-                if (side.isVertical() && tickLabelRotation != 0) {
-                    tickLabelRotation = 0;
+                if (tickLabelRotation != 90) {
+                    var rotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 90);
+                    if (rotatedRequiredLengthToDisplay < length) {
+                        tickLabelRotation = 90;
+                    }
                 }
             } else {
-                if (side.isHorizontal() && tickLabelRotation == 90) {
-                    tickLabelRotation = 0;
-                }
-                if (side.isVertical() && tickLabelRotation == 0) {
-                    tickLabelRotation = 90;
+                if (tickLabelRotation != 0) {
+                    var unrotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 0);
+                    if (unrotatedRequiredLengthToDisplay < length) {
+                        tickLabelRotation = 0;
+                    }
                 }
             }
             if (!isAutoRanging()) setTickLabelRotation(tickLabelRotation);
@@ -389,7 +388,7 @@ public final class CategoryAxis extends Axis<String> {
         boolean first = true;
         for (String category: allDataCategories) {
             Dimension2D textSize = measureTickMarkSize(category, tickLabelRotation);
-            double size = (axisVertical || (tickLabelRotation != 0)) ? textSize.getHeight() : textSize.getWidth();
+            double size = axisVertical ? textSize.getHeight() : textSize.getWidth();
             // TODO better handle calculations for rotated text, overlapping text etc
             if (first) {
                 first = false;
