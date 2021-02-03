@@ -12,9 +12,9 @@
     <classpathentry kind="src" path="Ensemble8/src/compiletime/java"/>
     <classpathentry kind="src" path="Ensemble8/src/generated/java"/>
     <classpathentry kind="src" path="Ensemble8/src/generated/resources"/>
-    <classpathentry kind="lib" path="Ensemble8/lib/lucene-core-7.7.2.jar"/>
-    <classpathentry kind="lib" path="Ensemble8/lib/lucene-grouping-7.7.2.jar"/>
-    <classpathentry kind="lib" path="Ensemble8/lib/lucene-queryparser-7.7.2.jar"/>
+    <classpathentry kind="lib" path="Ensemble8/lib/lucene-core-7.7.3.jar"/>
+    <classpathentry kind="lib" path="Ensemble8/lib/lucene-grouping-7.7.3.jar"/>
+    <classpathentry kind="lib" path="Ensemble8/lib/lucene-queryparser-7.7.3.jar"/>
     <classpathentry kind="src" path="MandelbrotSet/src"/>
     <classpathentry kind="src" path="Modena/src/main/java"/>
     <classpathentry kind="src" path="Modena/src/main/resources"/>
