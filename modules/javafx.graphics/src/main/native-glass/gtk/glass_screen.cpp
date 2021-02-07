@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 
 #include <stdlib.h>
-
 #include "glass_screen.h"
 #include "glass_general.h"
 
@@ -33,6 +32,7 @@
 #include <gdk/gdkx.h>
 
 jfloat OverrideUIScale = -1.0f;
+int DEFAULT_DPI = 96;
 
 static guint get_current_desktop(GdkScreen *screen) {
     Display* display = gdk_x11_display_get_xdisplay(gdk_display_get_default());
@@ -103,7 +103,7 @@ static GdkRectangle get_screen_workarea(GdkScreen *screen) {
 
 }
 
-jfloat getUIScale() {
+jfloat getUIScale(GdkScreen* screen) {
     jfloat uiScale;
     if (OverrideUIScale > 0.0f) {
         uiScale = OverrideUIScale;
@@ -115,6 +115,9 @@ jfloat getUIScale() {
         } else {
             uiScale = (jfloat) glass_settings_get_guint_opt("org.gnome.desktop.interface",
                                                             "scaling-factor", 0);
+            if (uiScale < 1) {
+                uiScale = (jfloat) (gdk_screen_get_resolution(screen) / DEFAULT_DPI);
+            }
             if (uiScale < 1) {
                 uiScale = 1;
             }
@@ -140,7 +143,8 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
     GdkRectangle working_monitor_geometry;
     gdk_rectangle_intersect(&workArea, &monitor_geometry, &working_monitor_geometry);
 
-    jfloat uiScale = getUIScale();
+    jfloat uiScale = getUIScale(screen);
+
 
     jint mx = monitor_geometry.x / uiScale;
     jint my = monitor_geometry.y / uiScale;
