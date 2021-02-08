@@ -2270,7 +2270,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetAmbientLight
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nSetPointLight
+ * Method:    nSetLight
  * Signature: (JJIFFFFFFFFFFFFFFFFF)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetLight

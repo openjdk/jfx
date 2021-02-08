@@ -122,7 +122,12 @@ public abstract class NGShape3D extends NGNode {
                     NGPointLight.getDefaultLa(),
                     NGPointLight.getDefaultQa(),
                     NGPointLight.getDefaultMaxRange(),
-                    0, 0, 1, 0, 180, 0); // simulating point light);
+                    (float) NGPointLight.getSimulatedDirection().getX(),
+                    (float) NGPointLight.getSimulatedDirection().getY(),
+                    (float) NGPointLight.getSimulatedDirection().getZ(),
+                    NGPointLight.getSimulatedInnerAngle(),
+                    NGPointLight.getSimulatedOuterAngle(),
+                    NGPointLight.getSimulatedFalloff());
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
