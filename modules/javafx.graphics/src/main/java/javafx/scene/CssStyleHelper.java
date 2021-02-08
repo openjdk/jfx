@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1435,7 +1435,7 @@ final class CssStyleHelper {
                 // did we get a fontValue from the preceding block?
                 // if not, get it from our cacheEntry or choose the default
                 if (fontForFontRelativeSizes == null) {
-                    if (fontFromCacheEntry != null && fontFromCacheEntry.isRelative() == false) {
+                    if (fontFromCacheEntry != null && (!fontFromCacheEntry.isRelative() || !isFontProperty)) {
                         fontForFontRelativeSizes = (Font)fontFromCacheEntry.getValue();
                     } else {
                         fontForFontRelativeSizes = Font.getDefault();
