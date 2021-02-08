@@ -76,38 +76,38 @@ varying vec4 lightTangentSpaceDirections[3];
 // Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
 // we need special treatment for falloff == 0 cases
 float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
-    if (falloff == 0 && cosOuter == -1) { // point light optimization (cosOuter == -1 is outerAngle == 180)
-        return 1;
+    if (falloff == 0.0 && cosOuter == -1.0) { // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1.0;
     }
     float cosAngle = dot(normalize(lightDir), l);
     float cutoff = cosAngle - cosOuter;
-    if (falloff != 0) {
-        return pow(clamp(cutoff / denom, 0, 1), falloff);
+    if (falloff != 0.0) {
+        return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
     }
-    return cutoff >= 0 ? 1 : 0;
+    return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
 float computeSpotlightFactor2(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
-    if (falloff != 0) {
+    if (falloff != 0.0) {
         float cosAngle = dot(normalize(lightDir), l);
         float cutoff = cosAngle - cosOuter;
-        return pow(clamp(cutoff / denom, 0, 1), falloff);
+        return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
     }
-    if (cosOuter == -1) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
-        return 1;
+    if (cosOuter == -1.0) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1.0;
     }
     float cosAngle = dot(normalize(lightDir), l);
     float cutoff = cosAngle - cosOuter;
-    return cutoff >= 0 ? 1 : 0;
+    return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
 float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
     float cosAngle = dot(normalize(lightDir), l);
     float cutoff = cosAngle - cosOuter;
-    if (falloff != 0) {
-        return pow(clamp(cutoff / denom, 0, 1), falloff);
+    if (falloff != 0.0) {
+        return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
     }
-    return cutoff >= 0 ? 1 : 0;
+    return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
 void computeLight(int i, vec3 n, vec3 refl, float specPower, out vec3 d, out vec3 s) {
