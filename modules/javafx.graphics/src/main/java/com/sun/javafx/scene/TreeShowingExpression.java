@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,32 +42,9 @@ import javafx.stage.Window;
  * an observable form.
  */
 public class TreeShowingExpression extends BooleanExpression {
-    private final ChangeListener<Boolean> windowShowingChangedListener = (obs, oldVal, newVal) -> updateTreeShowing();
-
-    private final ChangeListener<Window> sceneWindowChangedListener = (scene, oldWindow, newWindow) -> {
-        if (oldWindow != null) {
-            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
-        }
-        if (newWindow != null) {
-            newWindow.showingProperty().addListener(windowShowingChangedListener);
-        }
-        updateTreeShowing();
-    };
-
-    private final ChangeListener<Scene> nodeSceneChangedListener = (node, oldScene, newScene) -> {
-        if (oldScene != null) {
-            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
-        }
-        if (newScene != null) {
-            newScene.windowProperty().addListener(sceneWindowChangedListener);
-        }
-
-        sceneWindowChangedListener.changed(
-            null,
-            oldScene == null ? null : oldScene.getWindow(),
-            newScene == null ? null : newScene.getWindow()
-        );
-    };
+    private final ChangeListener<Boolean> windowShowingChangedListener = (obs, old, current) -> updateTreeShowing();
+    private final ChangeListener<Window> sceneWindowChangedListener = (obs, old, current) -> windowChanged(old, current);
+    private final ChangeListener<Scene> nodeSceneChangedListener = (obs, old, current) -> sceneChanged(old, current);
 
     private final Node node;
 
@@ -86,7 +63,7 @@ public class TreeShowingExpression extends BooleanExpression {
 
         NodeHelper.treeVisibleProperty(node).addListener(windowShowingChangedListener);
 
-        nodeSceneChangedListener.changed(null, null, node.getScene());  // registers listeners on Window/Showing
+        sceneChanged(null, node.getScene());
     }
 
     /**
@@ -99,16 +76,7 @@ public class TreeShowingExpression extends BooleanExpression {
         NodeHelper.treeVisibleProperty(node).removeListener(windowShowingChangedListener);
 
         valid = false;  // prevents unregistration from triggering an invalidation notification
-        nodeSceneChangedListener.changed(null, node.getScene(), null);  // unregisters listeners on Window/Showing
-    }
-
-    private void updateTreeShowing() {
-        boolean newValue = NodeHelper.isTreeShowing(node);
-
-        if (newValue != treeShowing) {
-            treeShowing = newValue;
-            invalidate();
-        }
+        sceneChanged(node.getScene(), null);
     }
 
     @Override
@@ -146,5 +114,36 @@ public class TreeShowingExpression extends BooleanExpression {
         }
 
         return treeShowing;
+    }
+
+    private void sceneChanged(Scene oldScene, Scene newScene) {
+        if (oldScene != null) {
+            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
+        }
+        if (newScene != null) {
+            newScene.windowProperty().addListener(sceneWindowChangedListener);
+        }
+
+        windowChanged(oldScene.getWindow(), newScene.getWindow());
+    }
+
+    private void windowChanged(Window oldWindow, Window newWindow) {
+        if (oldWindow != null) {
+            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
+        }
+        if (newWindow != null) {
+            newWindow.showingProperty().addListener(windowShowingChangedListener);
+        }
+
+        updateTreeShowing();
+    }
+
+    private void updateTreeShowing() {
+        boolean newValue = NodeHelper.isTreeShowing(node);
+
+        if (newValue != treeShowing) {
+            treeShowing = newValue;
+            invalidate();
+        }
     }
 }
