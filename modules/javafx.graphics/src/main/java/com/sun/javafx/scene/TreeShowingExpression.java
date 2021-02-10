@@ -124,7 +124,10 @@ public class TreeShowingExpression extends BooleanExpression {
             newScene.windowProperty().addListener(sceneWindowChangedListener);
         }
 
-        windowChanged(oldScene.getWindow(), newScene.getWindow());
+        windowChanged(
+            oldScene == null ? null : oldScene.getWindow(),
+            newScene == null ? null : newScene.getWindow()
+        );
     }
 
     private void windowChanged(Window oldWindow, Window newWindow) {
