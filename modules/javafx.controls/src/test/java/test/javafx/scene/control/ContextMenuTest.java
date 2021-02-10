@@ -782,7 +782,6 @@ public class ContextMenuTest {
         assertEquals(0.333 * fontSize, padding.getRight(), 0.01);
         assertEquals(0, padding.getBottom(), 0.0);
         assertEquals(0, padding.getLeft(), 0.0);
-        
         anchorBtn.setGraphic(null);
     }
 }
