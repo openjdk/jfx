@@ -27,6 +27,9 @@ package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
+import javafx.geometry.Insets;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
@@ -760,7 +763,7 @@ public class ContextMenuTest {
         assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
     }
 
-    @Test public void test_position_onDialogPane() {
+    @Test public void test_graphic_padding_onDialogPane() {
         DialogPane dialogPane = new DialogPane();
         anchorBtn.setGraphic(dialogPane);
         // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
@@ -771,9 +774,15 @@ public class ContextMenuTest {
         final ContextMenu contextMenu = new ContextMenu(menuItem);
         contextMenu.show(dialogPane, 0, 0);
 
-        final Bounds boundsInParent = graphic.getBoundsInParent();
-        assertEquals(0, boundsInParent.getMinX(), 0.0);
-        assertEquals(0, boundsInParent.getMinY(), 0.0);
+        final Insets padding = ((StackPane) graphic.getParent()).getPadding();
+        final double fontSize = Font.getDefault().getSize();
+
+        // -fx-padding: 0em 0.333em 0em 0em;
+        assertEquals(0, padding.getTop(), 0.0);
+        assertEquals(0.333 * fontSize, padding.getRight(), 0.01);
+        assertEquals(0, padding.getBottom(), 0.0);
+        assertEquals(0, padding.getLeft(), 0.0);
+        
         anchorBtn.setGraphic(null);
     }
 }
