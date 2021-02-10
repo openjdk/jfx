@@ -843,14 +843,14 @@ ContentWidthAndMargin FormattingContext::Geometry::floatingNonReplacedWidthAndMa
     auto computedHorizontalMargin = Geometry::computedHorizontalMargin(layoutBox, horizontalConstraints);
 
     // #1
-    auto usedHorizontallMargin = UsedHorizontalMargin { computedHorizontalMargin.start.valueOr(0), computedHorizontalMargin.end.valueOr(0) };
+    auto usedHorizontalMargin = UsedHorizontalMargin { computedHorizontalMargin.start.valueOr(0), computedHorizontalMargin.end.valueOr(0) };
     // #2
     auto width = overrideHorizontalValues.width ? overrideHorizontalValues.width : computedWidth(layoutBox, horizontalConstraints.logicalWidth);
     if (!width)
         width = shrinkToFitWidth(layoutBox, horizontalConstraints.logicalWidth);
 
-    LOG_WITH_STREAM(FormattingContextLayout, stream << "[Width][Margin] -> floating non-replaced -> width(" << *width << "px) margin(" << usedHorizontallMargin.start << "px, " << usedHorizontallMargin.end << "px) -> layoutBox(" << &layoutBox << ")");
-    return ContentWidthAndMargin { *width, usedHorizontallMargin };
+    LOG_WITH_STREAM(FormattingContextLayout, stream << "[Width][Margin] -> floating non-replaced -> width(" << *width << "px) margin(" << usedHorizontalMargin.start << "px, " << usedHorizontalMargin.end << "px) -> layoutBox(" << &layoutBox << ")");
+    return ContentWidthAndMargin { *width, usedHorizontalMargin };
 }
 
 ContentHeightAndMargin FormattingContext::Geometry::floatingReplacedHeightAndMargin(const ReplacedBox& replacedBox, const HorizontalConstraints& horizontalConstraints, const OverrideVerticalValues& overrideVerticalValues) const
