@@ -25,8 +25,8 @@
 
 package test.javafx.util.converter;
 
+import java.time.DateTimeException;
 import java.time.LocalDateTime;
-import java.time.chrono.Chronology;
 import java.time.chrono.IsoChronology;
 import java.time.chrono.JapaneseChronology;
 import java.time.format.DateTimeFormatter;
@@ -37,13 +37,11 @@ import java.util.Locale;
 import static org.junit.Assert.*;
 
 import javafx.util.StringConverter;
-import javafx.util.converter.LocalTimeStringConverterShim;
 import javafx.util.converter.LocalDateTimeStringConverter;
 import javafx.util.converter.LocalDateTimeStringConverterShim;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -51,6 +49,7 @@ import org.junit.runners.Parameterized;
  */
 @RunWith(Parameterized.class)
 public class LocalDateTimeStringConverterTest {
+
     private static final String JAPANESE_DATE_STRING = "Saturday, January 12, 60 Shōwa, 12:34:56 PM";
     private static final LocalDateTime VALID_LDT_WITH_SECONDS    = LocalDateTime.of(1985, 1, 12, 12, 34, 56);
     private static final LocalDateTime VALID_LDT_WITHOUT_SECONDS = LocalDateTime.of(1985, 1, 12, 12, 34, 0);
@@ -164,8 +163,8 @@ public class LocalDateTimeStringConverterTest {
         assertEquals(JAPANESE_DATE_STRING, converter.toString(VALID_LDT_WITH_SECONDS));
         // force a chronology change with an invalid Japanese date
         try {
-            System.out.println(converter.toString(LocalDateTime.of(1, 1, 1, 1, 1, 1)));
-        } catch (Exception e) {}
+            converter.toString(LocalDateTime.of(1, 1, 1, 1, 1, 1));
+        } catch (DateTimeException e) {}
         assertEquals(VALID_LDT_WITH_SECONDS, converter.fromString(JAPANESE_DATE_STRING));
     }
 }
