@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -36,9 +37,12 @@ import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -754,5 +758,22 @@ public class ContextMenuTest {
 
         assertEquals(anchorBounds.getMinX(), cmBounds.getMaxX(), 0.0);
         assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_onDialogPane() {
+        DialogPane dialogPane = new DialogPane();
+        anchorBtn.setGraphic(dialogPane);
+        // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
+        dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
+
+        final ImageView graphic = new ImageView(new Image(ContextMenuTest.class.getResource("/test/com/sun/javafx/scene/control/icon.png").toExternalForm()));
+        final MenuItem menuItem = new MenuItem("Menu Item Text", graphic);
+        final ContextMenu contextMenu = new ContextMenu(menuItem);
+        contextMenu.show(dialogPane, 0, 0);
+
+        final Bounds boundsInParent = graphic.getBoundsInParent();
+        assertEquals(0, boundsInParent.getMinX(), 0.0);
+        assertEquals(0, boundsInParent.getMinY(), 0.0);
+        anchorBtn.setGraphic(null);
     }
 }
