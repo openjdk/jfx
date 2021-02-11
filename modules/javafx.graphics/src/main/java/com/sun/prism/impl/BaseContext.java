@@ -303,6 +303,7 @@ public abstract class BaseContext {
     }
 
     public int getRectTextureMaxSize() {
+        // KCR: No need to chek surfaceLost since context will be recreated
         if (rectTex == null) {
             createRectTexture();
         }
@@ -310,6 +311,7 @@ public abstract class BaseContext {
     }
 
     public Texture getRectTexture() {
+        // KCR: No need to chek surfaceLost since context will be recreated
         if (rectTex == null) {
             createRectTexture();
         }
@@ -367,6 +369,7 @@ public abstract class BaseContext {
     }
 
     public Texture getWrapRectTexture() {
+        // KCR: No need to chek surfaceLost since context will be recreated
         if (wrapRectTex == null) {
             Texture tex =
                 getResourceFactory().createMaskTexture(2, 2, WrapMode.CLAMP_TO_EDGE);
@@ -406,6 +409,7 @@ public abstract class BaseContext {
     }
 
     public Texture getOvalTexture() {
+        // KCR: No need to chek surfaceLost since context will be recreated
         if (ovalTex == null) {
             int cellMax = getRectTextureMaxSize();
             int texDim = (cellMax * (cellMax + 1)) / 2;

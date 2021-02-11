@@ -53,6 +53,7 @@ import com.sun.prism.paint.RadialGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderGraphics;
+import java.util.WeakHashMap;
 
 class PaintHelper {
 
@@ -105,6 +106,11 @@ class PaintHelper {
     private static Texture gradientCacheTexture = null;
     private static Texture gtexCacheTexture = null;
 
+    /**
+     * KCR: document the purpose of this map
+     */
+    private static final WeakHashMap<Gradient, Void> gradientMap = new WeakHashMap<>();
+
     private static final Affine2D scratchXform2D = new Affine2D();
     private static final Affine3D scratchXform3D = new Affine3D();
 
@@ -115,6 +121,12 @@ class PaintHelper {
     }
 
     static void initGradientTextures(ShaderGraphics g) {
+        // KCR: Need to document this better
+        // Need to clear cached gradient texture and offsets when the
+        // device is removed and recreated
+        cacheOffset = -1;
+        gradientMap.clear();
+
         gradientCacheTexture = g.getResourceFactory().createTexture(
                 PixelFormat.BYTE_BGRA_PRE, Usage.DEFAULT, WrapMode.CLAMP_TO_EDGE,
                 MULTI_TEXTURE_SIZE, MULTI_CACHE_SIZE);
@@ -137,10 +149,13 @@ class PaintHelper {
     }
 
     static Texture getGradientTexture(ShaderGraphics g, Gradient paint) {
-        if (gradientCacheTexture == null) {
+        if (gradientCacheTexture == null || gradientCacheTexture.isSurfaceLost()) {
             initGradientTextures(g);
         }
 
+        // KCR: fix this comment (and look for similar). Permanent resources
+        // still can be lost when the graphics device is reinitialized
+        //
         // gradientCacheTexture is left permanent and locked so it never
         // goes away or needs to be checked for isSurfaceLost(), but we
         // add a lock here so that the caller can unlock without knowing
@@ -150,10 +165,13 @@ class PaintHelper {
     }
 
     static Texture getWrapGradientTexture(ShaderGraphics g) {
-        if (gtexCacheTexture == null) {
+        if (gtexCacheTexture == null || gtexCacheTexture.isSurfaceLost()) {
             initGradientTextures(g);
         }
 
+        // KCR: fix this comment (and look for similar). Permanent resources
+        // still can be lost when the graphics device is reinitialized
+        //
         // gtexCacheTexture is left permanent and locked so it never
         // goes away or needs to be checked for isSurfaceLost(), but we
         // add a lock here so that the caller can unlock without knowing
@@ -252,7 +270,7 @@ class PaintHelper {
     // the cache in the range [cacheOffset - cacheSize + 1, cacheOffset]..
     public static int initGradient(Gradient paint) {
         long offset = paint.getGradientOffset();
-        if (offset >= 0 && (offset > cacheOffset - MULTI_CACHE_SIZE)) {
+        if (gradientMap.containsKey(paint) && offset >= 0 && (offset > cacheOffset - MULTI_CACHE_SIZE)) {
             return (int) (offset % MULTI_CACHE_SIZE);
         } else {
             List<Stop> stops = paint.getStops();
@@ -267,6 +285,7 @@ class PaintHelper {
             // either or both of them here.
             gradientCacheTexture.update(colorsImg, 0, cacheIdx);
             gtexCacheTexture.update(gtexImg, 0, cacheIdx);
+            gradientMap.put(paint, null);
             return cacheIdx;
         }
     }

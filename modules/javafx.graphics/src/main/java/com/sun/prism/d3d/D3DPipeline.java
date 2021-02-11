@@ -27,7 +27,6 @@ package com.sun.prism.d3d;
 
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
-import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
@@ -78,14 +77,6 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static D3DResourceFactory factories[];
 
     public static D3DPipeline getInstance() {
-        if(theInstance == null){
-            if (d3dEnabled) {
-                // device was removed, reinitialize
-                nInit(PrismSettings.class);
-                theInstance = new D3DPipeline();
-                factories = new D3DResourceFactory[nGetAdapterCount()];
-            }
-        }
         return theInstance;
     }
 
@@ -163,18 +154,38 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     private static native int nGetMaxSampleSupport(int adapterOrdinal);
 
-    @Override
-    public void dispose() {
+    // Called by dispose and reinitialize methods to reset the pipeline
+    // and free all resources
+    private void reset() {
         if (creator != Thread.currentThread()) {
             throw new IllegalStateException(
                     "This operation is not permitted on the current thread ["
                     + Thread.currentThread().getName() + "]");
         }
-        notifyAllResourcesReleased();
-        nDispose();
-        for (int i=0; i!=factories.length; ++i) {
+        for (int i = 0; i != factories.length; ++i) {
+            if (factories[i] != null) {
+                factories[i].dispose();
+            }
             factories[i] = null;
         }
+        factories = null;
+        _default = null;
+        nDispose();
+    }
+
+    // Reinitialize pipeline
+    void reinitialize() {
+        // Device was removed, reset and reinitialize
+        reset();
+
+        // KCR: TODO: throw exception on error?
+        boolean success = nInit(PrismSettings.class);
+        factories = new D3DResourceFactory[nGetAdapterCount()];
+    }
+
+    @Override
+    public void dispose() {
+        reset();
         theInstance = null;
         super.dispose();
     }
@@ -191,12 +202,6 @@ public final class D3DPipeline extends GraphicsPipeline {
             factories[adapterOrdinal] = factory;
         }
         return factory;
-    }
-
-    private static void notifyAllResourcesReleased() {
-        for (D3DResourceFactory rf : factories) {
-            if (rf != null) rf.notifyReleased();
-        }
     }
 
     /*
@@ -217,11 +222,12 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
+        // KCR: maybe revert this change, since I don't think it is needed
         int adapterCount = nGetAdapterCount();
-        if(adapterCount == 0){
+        if (adapterCount == 0) {
             // adapters lost, recreate
-            GraphicsPipeline.getPipeline().dispose();
-            GraphicsPipeline.getPipeline().createPipeline();
+            System.err.println("KCR: adapters lost, recreate -- will this ever happen??");
+            D3DPipeline.getInstance().reinitialize();
             return null;
         }
         for (int adapter = 0, n = adapterCount; adapter != n; ++adapter) {

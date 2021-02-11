@@ -35,7 +35,6 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
-import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MeshView;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
@@ -85,6 +84,7 @@ class D3DContext extends BaseShaderContext {
 
     private State state;
     private boolean isLost = false;
+    private boolean disposed = false;
 
     private final long pContext;
 
@@ -131,8 +131,8 @@ class D3DContext extends BaseShaderContext {
      */
     static void validate(int res) {
         if (PrismSettings.verbose && FAILED(res)) {
-            System.out.println("D3D hresult failed :" + hResultToString(res));
-            new Exception("Stack trace").printStackTrace(System.out);
+            System.err.println("D3D hresult failed :" + hResultToString(res));
+            new Exception("Stack trace").printStackTrace(System.err);
         }
     }
 
@@ -148,16 +148,12 @@ class D3DContext extends BaseShaderContext {
      * status if necessary, and tries to restore the context if needed.
      */
     boolean testLostStateAndReset() {
+        if (disposed) return false;
+
         int hr = D3DResourceFactory.nTestCooperativeLevel(pContext);
 
         if (hr == D3DERR_DEVICELOST) {
             setLost();
-        }
-
-        if (hr == D3DERR_DEVICEREMOVED) {
-            setLost();
-            GraphicsPipeline.getPipeline().dispose();
-            GraphicsPipeline.getPipeline().createPipeline();
         }
 
         if (hr == D3DERR_DEVICENOTRESET) {
@@ -177,6 +173,13 @@ class D3DContext extends BaseShaderContext {
             }
         }
 
+        if (hr == D3DERR_DEVICEREMOVED) {
+            // Dispose of this context and reinitialize the D3DPipeline.
+            // This will recreate the resource factory and context for each adapter
+            dispose();
+            D3DPipeline.getInstance().reinitialize();
+        }
+
         return !FAILED(hr);
     }
 
@@ -185,13 +188,24 @@ class D3DContext extends BaseShaderContext {
      * sets the context lost status if necessary
      */
     boolean validatePresent(int res) {
-        if (res == D3DERR_DEVICELOST || res == D3DERR_DEVICENOTRESET) {
+        validate(res);
+        // KCR: This is insufficient for D3DERR_DEVICEREMOVED (maybe revert this change?)
+        if (res == D3DERR_DEVICELOST || res == D3DERR_DEVICENOTRESET || res == D3DERR_DEVICEREMOVED) {
             setLost();
-        } else {
-            validate(res);
         }
 
         return !FAILED(res);
+    }
+
+    // Dispose of this context along with its associated resources
+    public void dispose() {
+        disposed = true;
+        disposeLCDBuffer();
+        // KCR: TODO: finish this
+    }
+
+    public boolean isDisposed() {
+        return disposed;
     }
 
     /**

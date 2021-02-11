@@ -67,6 +67,7 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     private final D3DContext context;
     private final int maxTextureSize;
+    private boolean disposed;
 
     /**
      * List of disposer records for d3d resources created by the pipeline.
@@ -82,7 +83,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         maxTextureSize = computeMaxTextureSize();
 
         if (PrismSettings.noClampToZero && PrismSettings.verbose) {
-            System.out.println("prism.noclamptozero not supported by D3D");
+            System.err.println("prism.noclamptozero not supported by D3D");
         }
     }
 
@@ -142,6 +143,9 @@ class D3DResourceFactory extends BaseShaderFactory {
     @Override
     public D3DTexture createTexture(PixelFormat format, Usage usagehint,
             WrapMode wrapMode, int w, int h, boolean useMipmap) {
+
+        if (checkDisposed()) return null;
+
         if (!isFormatSupported(format)) {
             throw new UnsupportedOperationException(
                 "Pixel format " + format +
@@ -182,6 +186,8 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public Texture createTexture(MediaFrame frame) {
+        if (checkDisposed()) return null;
+
         frame.holdFrame();
 
         int width = frame.getWidth();
@@ -275,6 +281,8 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
+        if (checkDisposed()) return null;
+
         if (PrismSettings.verbose && context.isLost()) {
             System.err.println("RT Texture allocation while the device is lost");
         }
@@ -322,6 +330,8 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public Presentable createPresentable(PresentableState pState) {
+        if (checkDisposed()) return null;
+
         if (PrismSettings.verbose && context.isLost()) {
             System.err.println("SwapChain allocation while the device is lost");
         }
@@ -391,6 +401,8 @@ class D3DResourceFactory extends BaseShaderFactory {
                                boolean isPixcoordUsed,
                                boolean isPerVertexColorUsed)
     {
+        if (checkDisposed()) return null;
+
         long shaderHandle = D3DShader.init(
                 context.getContextHandle(), getBuffer(pixelShaderCode),
                 maxTexCoordIndex, isPixcoordUsed, isPerVertexColorUsed);
@@ -420,7 +432,23 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public void dispose() {
-        throw new UnsupportedOperationException("Not supported yet.");
+        disposed = true;
+        notifyReleased();
+        // KCR: TODO: finish this
+    }
+
+    public boolean isDisposed() {
+        return disposed;
+    }
+
+    private boolean checkDisposed() {
+        boolean ret = isDisposed() || context.isDisposed();
+        if (PrismSettings.verbose && ret) {
+            System.err.println("D3DResourceFactory: cannot allocate resource because " +
+                    (isDisposed() ? "this resource factory" : "the context") +
+                    " has been disposed");
+        }
+        return ret;
     }
 
     @Override
@@ -479,16 +507,19 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public PhongMaterial createPhongMaterial() {
+        if (checkDisposed()) return null;
         return D3DPhongMaterial.create(context);
     }
 
     @Override
     public MeshView createMeshView(Mesh mesh) {
+        if (checkDisposed()) return null;
         return D3DMeshView.create(context, (D3DMesh) mesh);
     }
 
     @Override
     public Mesh createMesh() {
+        if (checkDisposed()) return null;
         return D3DMesh.create(context);
     }
 
