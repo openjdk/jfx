@@ -1024,7 +1024,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
-     * Keep the position constant and adjust the absoluteOffset to 
+     * Keep the position constant and adjust the absoluteOffset to
      * match the (new) position.
      */
     void adjustAbsoluteOffset() {
@@ -2822,7 +2822,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * We calculate the total size until the absoluteoffset is reached.
      * For this calculation, we use the cached sizes for each item, or an
      * educated guess in case we don't have a cached size yet. While we could
-     * fill the cache with the size here, we do not do it as it will affect 
+     * fill the cache with the size here, we do not do it as it will affect
      * performance.
      */
     private double computeViewportOffset(double position) {
