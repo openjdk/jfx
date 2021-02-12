@@ -60,7 +60,7 @@ public class DialogPaneTest {
         // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
         dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
 
-        final ImageView graphic = new ImageView(new Image(ContextMenuTest.class.getResource("/test/com/sun/javafx/scene/control/icon.png").toExternalForm()));
+        final ImageView graphic = new ImageView(new Image(ContextMenuTest.class.getResource("icon.png").toExternalForm()));
         dialogPane.setGraphic(graphic);
         dialogPane.applyCss();
 
