@@ -3013,7 +3013,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private void recalculateEstimatedSize() {
         recalculateAndImproveEstimatedSize(DEFAULT_IMPROVEMENT);
     }
-    
+
     private void recalculateAndImproveEstimatedSize(int improve) {
         int itemCount = getCellCount();
         int cacheCount = itemSizeCache.size();

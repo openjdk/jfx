@@ -72,7 +72,7 @@ public class VirtualFlowTest {
     // and each cell is 100 wide and 25 tall, except for the 30th cell, which
     // is 200 wide and 100 tall.
     private VirtualFlowShim<IndexedCell> flow;
-    
+
 
     @Before public void setUp() {
         list = new ArrayLinkedListShim<CellStub>();
@@ -525,7 +525,7 @@ public class VirtualFlowTest {
     /**
      * Tests that changes to the vertical property will clear the maxPrefBreadth
      */
-    //@Test 
+    //@Test
     public void testGeneralLayout_VerticalChangeClearsmaxPrefBreadth() {
         flow.setVertical(false);
         assertEquals(-1, flow.shim_getMaxPrefBreadth(), 0.0);
@@ -556,7 +556,7 @@ public class VirtualFlowTest {
      * all the way to the end, in which case it will remain scrolled to the
      * end.
      */
-    @Test 
+    @Test
     public void testGeneralLayout_maxPrefBreadthScrollBarValueInteraction() {
         flow.resize(50, flow.getHeight());
         flow.shim_getHbar().setValue(30);
@@ -601,7 +601,7 @@ public class VirtualFlowTest {
         assertEquals(flow.shim_getVbar().getMax(), flow.shim_getVbar().getValue(), 0.0);
     }
 
-    @Test 
+    @Test
     public void testGeneralLayout_ScrollToEndOfVirtual_BarStillVisible() {
         assertTrue("The vbar was expected to be visible", flow.shim_getVbar().isVisible());
         flow.setPosition(1);
@@ -641,7 +641,7 @@ public class VirtualFlowTest {
      * Test to make sure that we are virtual -- that all cells are not being
      * created.
      */
-    @Test 
+    @Test
     public void testCellLayout_NotAllCellsAreCreated() {
         // due to the initial size of the VirtualFlow and the number of cells
         // and their heights, we should have more cells than we have space to
@@ -655,7 +655,7 @@ public class VirtualFlowTest {
      * Tests the size and position of all the cells to make sure they were
      * laid out properly.
      */
-    @Test 
+    @Test
     public void testCellLayout_CellSizes_AfterLayout() {
         double offset = 0.0;
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
@@ -681,8 +681,7 @@ public class VirtualFlowTest {
      * max pref width/height. They should be uniform, and should be the
      * width of the viewport.
      */
-    @Test 
-    public void testCellLayout_ViewportWiderThanmaxPrefBreadth() {
+    @Test public void testCellLayout_ViewportWiderThanmaxPrefBreadth() {
         // Note that the pref width of everything is 100, but the actual
         // available width is much larger (300 - hbar.width or
         // 300 - vbar.height) and so the non-virtual dimension of the cell
@@ -707,8 +706,7 @@ public class VirtualFlowTest {
      * max pref width/height. They should be uniform, and should be the max
      * pref.
      */
-    @Test 
-    public void testCellLayout_ViewportShorterThanmaxPrefBreadth() {
+    @Test public void testCellLayout_ViewportShorterThanmaxPrefBreadth() {
         flow.resize(50, flow.getHeight());
         pulse();
         assertEquals(100, flow.shim_getMaxPrefBreadth(), 0.0);
@@ -761,8 +759,7 @@ public class VirtualFlowTest {
      * Checks that the initial set of cells (the first page of cells) are
      * indexed starting with cell #0 and working up from there.
      */
-    @Test 
-    public void testCellLayout_CellIndexes_FirstPage() {
+    @Test public void testCellLayout_CellIndexes_FirstPage() {
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             assertEquals(i, VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i).getIndex());
         }
@@ -779,8 +776,7 @@ public class VirtualFlowTest {
      * event was delivered to a different cell than expected and misbehavior
      * took place.
      */
-    @Test 
-    public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
+    @Test public void testCellLayout_LayoutWithoutChangingThingsUsesCellsInSameOrderAsBefore() {
         List<IndexedCell> cells = new LinkedList<IndexedCell>();
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             cells.add(VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i));
@@ -801,8 +797,7 @@ public class VirtualFlowTest {
     }
 
 
-    @Test
-    public void testCellLayout_BiasedCellAndLengthBar() {
+    @Test public void testCellLayout_BiasedCellAndLengthBar() {
         flow.setCellFactory(param -> new CellStub(flow) {
             @Override
             protected double computeMinWidth(double height) {
@@ -857,8 +852,7 @@ public class VirtualFlowTest {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    @Test 
-    public void testCellLifeCycle_CellsAreCreatedOnLayout() {
+    @Test public void testCellLifeCycle_CellsAreCreatedOnLayout() {
         // when the flow was first created in setUp we do a layout()
         assertTrue("The cells didn't get created", VirtualFlowShim.cells_size(flow.cells) > 0);
     }
@@ -938,8 +932,7 @@ public class VirtualFlowTest {
     /**
      * Tests that when the createCell method changes, it results in layout
      */
-    @Test
-    public void testCreateCellFunctionChangesResultInNeedsLayoutAndNoCellsAndNoAccumCell() {
+    @Test public void testCreateCellFunctionChangesResultInNeedsLayoutAndNoCellsAndNoAccumCell() {
         assertFalse(flow.isNeedsLayout());
         flow.getCellLength(49); // forces accum cell to be created
         assertNotNull("Accum cell was null", flow.get_accumCell());
@@ -955,8 +948,7 @@ public class VirtualFlowTest {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    @Test 
-    public void test_getCellLength() {
+    @Test public void test_getCellLength() {
         assertEquals(100, flow.getCellCount());
         for (int i = 0; i < 50; i++) {
             if (i != 29) assertEquals(25, flow.getCellLength(i), 0.0);
@@ -975,8 +967,7 @@ public class VirtualFlowTest {
     ** without having done anything to select a cell
     ** the flow should scroll.
     */
-    @Test 
-    public void testInitialScrollEventActuallyScrolls() {
+    @Test public void testInitialScrollEventActuallyScrolls() {
         /*
         ** re-initialize this, as it must be the first
         ** interaction with the flow
@@ -1034,8 +1025,7 @@ public class VirtualFlowTest {
         assertTrue(originalValue != flow.getPosition());
     }
 
-    @Test
-    public void test_RT_36507() {
+    @Test public void test_RT_36507() {
         flow = new VirtualFlowShim();
         flow.setVertical(true);
         // Worst case scenario is that the cells have height = 0.
@@ -1235,9 +1225,9 @@ public class VirtualFlowTest {
         sheetChildrenSize = flow.sheetChildren.size();
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
     }
-    
+
     private ArrayLinkedListShim<GraphicalCellStub> circlelist= new ArrayLinkedListShim<GraphicalCellStub>();
-        
+
     private VirtualFlowShim createCircleFlow() {
             // The second VirtualFlow we are going to test, with 7 cells. Each cell
     // contains a Circle whith a radius that varies between cells.
@@ -1271,7 +1261,6 @@ public class VirtualFlowTest {
                 return computePrefHeight(width);
             }
 
-        
         });
         circleFlow.setCellCount(7);
         circleFlow.resize(300, 300);
@@ -1279,7 +1268,7 @@ public class VirtualFlowTest {
         circleFlow.layout();
         return circleFlow;
     }
-    
+
     // when moving the flow in one direction, the position of the flow
     // should not increase in the opposite direction
     @Test
@@ -1322,7 +1311,7 @@ public class VirtualFlowTest {
             vf.layout();
             newPosition = vf.getPosition();
             s1 = sb.getLayoutY();
-            newDelta = newPosition - position; 
+            newDelta = newPosition - position;
             System.err.println("s0 = "+s0+", s1 = "+s1);
             System.err.println("newDelta = "+newDelta+", delta = "+delta);
             if (i > 0) {
@@ -1394,7 +1383,7 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
         return answer;
     }
 
-    @Override 
+    @Override
     public String toString() {
         return "GraphicCell with item = "+myItem+" at "+super.toString();
     }
