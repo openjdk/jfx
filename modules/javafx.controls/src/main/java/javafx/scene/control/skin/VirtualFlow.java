@@ -980,11 +980,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             cellFactory = new SimpleObjectProperty<Callback<VirtualFlow<T>, T>>(this, "cellFactory") {
                 @Override protected void invalidated() {
                     if (get() != null) {
-                        accumCell = null;
                         setNeedsLayout(true);
                         recreateCells();
                         if (getParent() != null) getParent().requestLayout();
                     }
+                    if (accumCellParent != null) {
+                        accumCellParent.getChildren().clear();
+                    }
+                    accumCell = null;
                 }
             };
         }
