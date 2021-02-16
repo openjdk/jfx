@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,18 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-import javafx.beans.value.ObservableValue;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
+
+import javafx.beans.Observable;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -238,7 +241,75 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         return lambdaChangeListenerHandler.unregisterChangeListeners(property);
     }
 
+    /**
+     * Subclasses can invoke this method to register that they want to listen to
+     * invalidation events for the given observable. Registered {@link Consumer} instances
+     * will be executed in the order in which they are registered.
+     * @param observable the observable to observe for invalidation events
+     * @param consumer the consumer
+     */
+    protected final void registerInvalidationListener(Observable observable, Consumer<Observable> consumer) {
+        if (lambdaChangeListenerHandler == null) {
+            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
+        }
+        lambdaChangeListenerHandler.registerInvalidationListener(observable, consumer);
+    }
 
+    /**
+     * Unregisters all invalidation listeners that have been registered using
+     * {@link #registerInvalidationListener(Observable, Consumer)}
+     * for the given observable. The end result is that the given observable is no longer observed by any of the invalidation
+     * listeners, but it may still have additional listeners registered on it through means outside of
+     * {@link #registerInvalidationListener(Observable, Consumer)}.
+     *
+     * @param observable The observable for which all listeners should be removed.
+     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
+     *      {@link #registerInvalidationListener(Observable, Consumer)}. If no consumers have been registered on this
+     *      property, null will be returned.
+     * @since 9
+     */
+    protected final Consumer<Observable> unregisterInvalidationListeners(Observable observable) {
+        if (lambdaChangeListenerHandler == null) {
+            return null;
+        }
+        return lambdaChangeListenerHandler.unregisterInvalidationListeners(observable);
+    }
+
+
+    /**
+     * Subclasses can invoke this method to register that they want to listen to
+     * list change events for the given observable list. Registered {@link Consumer} instances
+     * will be executed in the order in which they are registered.
+     * @param observableList the observable list to observe for list change events
+     * @param consumer the consumer
+     */
+    protected final void registerListChangeListener(ObservableList<?> observableList, Consumer<Change<?>> consumer) {
+        if (lambdaChangeListenerHandler == null) {
+            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
+        }
+        lambdaChangeListenerHandler.registerListChangeListener(observableList, consumer);
+    }
+
+    /**
+     * Unregisters all list change listeners that have been registered using
+     * {@link #registerListChangeListener(ObservableList, Consumer)}
+     * for the given list. The end result is that the given observable is no longer observed by any of the
+     * list change listeners,
+     * but it may still have additional listeners registered on it through means outside of
+     * {@link #registerListChangeListener(ObservableList, Consumer)}.
+     *
+     * @param observableList The list for which all listeners should be removed.
+     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
+     *      {@link #registerListChangeListener(ObservableList, Consumer)}. If no consumers have been registered on this
+     *      list, null will be returned.
+     * @since 9
+     */
+    protected final Consumer<Change<?>> unregisterListChangeListeners(ObservableList<?> observableList) {
+        if (lambdaChangeListenerHandler == null) {
+            return null;
+        }
+        return lambdaChangeListenerHandler.unregisterListChangeListeners(observableList);
+    }
 
 
     /***************************************************************************
