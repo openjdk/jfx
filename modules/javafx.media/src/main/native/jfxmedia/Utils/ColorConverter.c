@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +23,16 @@
  * questions.
  */
 
+#include <Common/ProductFlags.h>
 #include "ColorConverter.h"
 #include <stdio.h>
 
 #if (! TARGET_OS_LINUX || defined(__SSE2__))
+#if defined(TARGET_OS_MAC_ARM64)
+#define ENABLE_SIMD_SSE2 0
+#else
 #define ENABLE_SIMD_SSE2 1
+#endif
 #else
 #define ENABLE_SIMD_SSE2 0
 #endif

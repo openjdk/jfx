@@ -127,7 +127,7 @@ def commonParams = [
         "-arch", "$TARGET_ARCH"]
 
 if (hasProperty('TARGET_ARCH')) {
-    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams]
+    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams].flatten()
 }
 
 def ccBaseFlags = [

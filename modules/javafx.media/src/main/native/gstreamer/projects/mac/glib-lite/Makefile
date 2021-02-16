@@ -46,8 +46,16 @@ endif
 INCLUDES = -I$(SRCBASE_DIR) \
 	   -I$(SRCBASE_DIR)/glib \
 	   -I$(SRCBASE_DIR)/build/osx \
-	   -I$(LIBFFI_DIR)/include \
-	   -I$(LIBFFI_DIR)/include/mac/x64
+	   -I$(LIBFFI_DIR)/src \
+	   -I$(LIBFFI_DIR)/include
+
+ifeq ($(ARCH), arm64)
+INCLUDES += -I$(LIBFFI_DIR)/src/aarch64 \
+	    -I$(LIBFFI_DIR)/include/mac/aarch64
+else
+INCLUDES += -I$(LIBFFI_DIR)/src/x86 \
+	    -I$(LIBFFI_DIR)/include/mac/x64
+endif
 
 LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -Wl,-framework \
