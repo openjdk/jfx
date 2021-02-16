@@ -132,6 +132,8 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private D3DPipeline() {
+        // KCR: debug
+        System.err.println("KCR: D3DPipeline constructor");
     }
 
     @Override
@@ -157,6 +159,9 @@ public final class D3DPipeline extends GraphicsPipeline {
     // Called by dispose and reinitialize methods to reset the pipeline
     // and free all resources
     private void reset() {
+        // KCR: debug
+        System.err.println("    reset D3DPipeline");
+
         if (creator != Thread.currentThread()) {
             throw new IllegalStateException(
                     "This operation is not permitted on the current thread ["
@@ -175,6 +180,9 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     // Reinitialize pipeline
     void reinitialize() {
+        // KCR: debug
+        System.err.println("KCR: reinitialize D3DPipeline");
+
         // Device was removed, reset and reinitialize
         reset();
 
@@ -185,6 +193,9 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     @Override
     public void dispose() {
+        // KCR: debug
+        System.err.println("KCR: dispose D3DPipeline");
+
         reset();
         theInstance = null;
         super.dispose();
@@ -198,6 +209,10 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static D3DResourceFactory getD3DResourceFactory(int adapterOrdinal, Screen screen) {
         D3DResourceFactory factory = factories[adapterOrdinal];
         if (factory == null && screen != null) {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("KCR: create resource factory for screen " + adapterOrdinal);
+            }
             factory = createResourceFactory(adapterOrdinal, screen);
             factories[adapterOrdinal] = factory;
         }

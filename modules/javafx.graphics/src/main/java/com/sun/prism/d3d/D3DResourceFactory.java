@@ -78,6 +78,10 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     D3DResourceFactory(long pContext, Screen screen) {
         super(clampTexCache, repeatTexCache, mipmapTexCache);
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("constructor: " + this);
+        }
         context = new D3DContext(pContext, screen, this);
         context.initState();
         maxTextureSize = computeMaxTextureSize();
@@ -432,6 +436,11 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public void dispose() {
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("D3DResourceFactory::dispose");
+        }
+
         disposed = true;
         notifyReleased();
         // KCR: TODO: finish this

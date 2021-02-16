@@ -117,6 +117,13 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.useMipmap = useMipmap;
     }
 
+    // KCR: debug
+    {
+        if (PrismSettings.verbose) {
+            System.err.println("constructor: " + this);
+        }
+    }
+
     @Override
     public final PixelFormat getPixelFormat() {
         return format;
@@ -294,6 +301,10 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
 
     @Override
     public final void dispose() {
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("dispose: " + this);
+        }
         resource.dispose();
     }
 

@@ -98,6 +98,8 @@ class D3DContext extends BaseShaderContext {
 
     D3DContext(long pContext, Screen screen, D3DResourceFactory factory) {
         super(screen, factory, NUM_QUADS);
+        // KCR: debug
+        System.err.println("constructor: " + this);
         this.pContext = pContext;
         this.factory = factory;
     }
@@ -143,6 +145,21 @@ class D3DContext extends BaseShaderContext {
         isLost = true;
     }
 
+    // KCR: debug
+    // KCR: simulate device removed
+    private int counter = 0;
+
+    private int simulateDeviceRemoved(int hr) {
+        if (hr != D3D_OK) return hr;
+
+        if (++counter >= 10) {
+            counter = 0;
+            System.err.println("simulate D3DERR_DEVICEREMOVED");
+            return D3DERR_DEVICEREMOVED;
+        }
+        return D3D_OK;
+    }
+
     /**
      * Validates the device, sets the context lost
      * status if necessary, and tries to restore the context if needed.
@@ -151,6 +168,35 @@ class D3DContext extends BaseShaderContext {
         if (disposed) return false;
 
         int hr = D3DResourceFactory.nTestCooperativeLevel(pContext);
+
+        // KCR: debug
+        // KCR: Periodically simulate device removed state
+//        hr = simulateDeviceRemoved(hr);
+
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.print("KCR: testLostStateAndReset : ");
+            switch (hr) {
+                case D3D_OK:
+                    System.err.println("D3D_OK");
+                    break;
+                case D3DERR_DEVICELOST:
+                    System.err.println("D3DERR_DEVICELOST");
+                    break;
+                case D3DERR_DEVICEREMOVED:
+                    System.err.println("D3DERR_DEVICEREMOVED");
+                    Thread.dumpStack();
+                    break;
+                case D3DERR_DEVICENOTRESET:
+                    System.err.println("D3DERR_DEVICENOTRESET");
+                    break;
+                case E_FAIL:
+                    System.err.println("E_FAIL");
+                    break;
+                default:
+                    System.err.println(String.format("Unknown D3D error 0x%x", hr));
+            }
+        }
 
         if (hr == D3DERR_DEVICELOST) {
             setLost();
@@ -199,6 +245,9 @@ class D3DContext extends BaseShaderContext {
 
     // Dispose of this context along with its associated resources
     public void dispose() {
+        // KCR: debug
+        System.err.println("D3DContext::dispose");
+
         disposed = true;
         disposeLCDBuffer();
         // KCR: TODO: finish this

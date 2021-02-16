@@ -39,6 +39,7 @@ import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
@@ -538,6 +539,8 @@ public class CacheFilter {
             if (implImage != null) {
                 implImage.lock();
                 if (!cachedImageData.validate(fctx)) {
+                    // KCR: debug
+                    System.err.println("CacheFilter::render : Invalidate cached image");
                     implImage.unlock();
                     invalidate();
                 }
@@ -546,6 +549,8 @@ public class CacheFilter {
         float pixelScaleX = g.getPixelScaleFactorX();
         float pixelScaleY = g.getPixelScaleFactorY();
         if (needToRenderCache(xform, xformInfo, pixelScaleX, pixelScaleY)) {
+            // KCR: debug
+            System.err.println("CacheFilter: renderToCache");
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter rebuilding");
             }
@@ -621,11 +626,19 @@ public class CacheFilter {
 
         Filterable implImage = cachedImageData.getUntransformedImage();
         if (implImage == null) {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("CacheFilter not used");
+            }
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter not used");
             }
             renderNodeToScreen(g);
         } else {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("CacheFilter::render : renderCacheToScreen");
+            }
             double mxt = xform.getMxt();
             double myt = xform.getMyt();
             renderCacheToScreen(g, implImage, mxt, myt);

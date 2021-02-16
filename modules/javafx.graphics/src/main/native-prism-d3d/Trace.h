@@ -51,7 +51,8 @@ extern "C" {
 
 void TraceImpl(int level, jboolean cr, const char *string, ...);
 
-#if !defined DEBUG && !defined _DEBUG
+// KCR: debug
+#if 0
     #define Trace(level, string)
     #define Trace1(level, string, arg1)
     #define Trace2(level, string, arg1, arg2)

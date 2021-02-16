@@ -32,6 +32,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
 import com.sun.prism.RTTexture;
+import com.sun.prism.impl.PrismSettings;
 
 class D3DSwapChain
     extends D3DResource
@@ -43,6 +44,10 @@ class D3DSwapChain
 
     D3DSwapChain(D3DContext context, long pResource, D3DRTTexture rtt, float pixelScaleX, float pixelScaleY) {
         super(new D3DRecord(context, pResource));
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("constructor: " + this);
+        }
         texBackBuffer = rtt;
         pixelScaleFactorX = pixelScaleX;
         pixelScaleFactorY = pixelScaleY;
@@ -50,6 +55,10 @@ class D3DSwapChain
 
     @Override
     public void dispose() {
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("dispose: " + this);
+        }
         texBackBuffer.dispose();
         super.dispose();
     }

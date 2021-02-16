@@ -150,6 +150,11 @@ class PaintHelper {
 
     static Texture getGradientTexture(ShaderGraphics g, Gradient paint) {
         if (gradientCacheTexture == null || gradientCacheTexture.isSurfaceLost()) {
+            // KCR: debug
+            if (gradientCacheTexture != null && gradientCacheTexture.isSurfaceLost()) {
+                System.err.println("*** lost texture, need to recreate");
+            }
+
             initGradientTextures(g);
         }
 
