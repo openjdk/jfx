@@ -1,6 +1,11 @@
 #
 # MacOS glib-lite Makefile
 #
+ifeq ($(ARCH), arm64)
+    MARCH = aarch64
+else
+    MARCH = x86
+endif
 
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 TARGET_DIRS = $(BUILD_DIR)
@@ -46,8 +51,10 @@ endif
 INCLUDES = -I$(SRCBASE_DIR) \
 	   -I$(SRCBASE_DIR)/glib \
 	   -I$(SRCBASE_DIR)/build/osx \
+	   -I$(LIBFFI_DIR)/src \
 	   -I$(LIBFFI_DIR)/include \
-	   -I$(LIBFFI_DIR)/include/mac/x64
+	   -I$(LIBFFI_DIR)/src/$(MARCH) \
+	   -I$(LIBFFI_DIR)/include/mac/$(MARCH)
 
 LDFLAGS += -Wl,-install_name,@rpath/$(TARGET_NAME) \
            -Wl,-framework \

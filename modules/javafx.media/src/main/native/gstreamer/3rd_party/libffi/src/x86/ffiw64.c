@@ -39,15 +39,15 @@
 
 struct win64_call_frame
 {
-  UINT64 rbp;       /* 0 */
-  UINT64 retaddr;   /* 8 */
-  UINT64 fn;        /* 16 */
-  UINT64 flags;     /* 24 */
-  UINT64 rvalue;    /* 32 */
+  UINT64 rbp;		/* 0 */
+  UINT64 retaddr;	/* 8 */
+  UINT64 fn;		/* 16 */
+  UINT64 flags;		/* 24 */
+  UINT64 rvalue;	/* 32 */
 };
 
 extern void ffi_call_win64 (void *stack, struct win64_call_frame *,
-                void *closure) FFI_HIDDEN;
+			    void *closure) FFI_HIDDEN;
 
 ffi_status FFI_HIDDEN
 EFI64(ffi_prep_cif_machdep)(ffi_cif *cif)
@@ -71,27 +71,27 @@ EFI64(ffi_prep_cif_machdep)(ffi_cif *cif)
     case FFI_TYPE_LONGDOUBLE:
       /* GCC returns long double values by reference, like a struct */
       if (cif->abi == FFI_GNUW64)
-    flags = FFI_TYPE_STRUCT;
+	flags = FFI_TYPE_STRUCT;
       break;
     case FFI_TYPE_COMPLEX:
       flags = FFI_TYPE_STRUCT;
       /* FALLTHRU */
     case FFI_TYPE_STRUCT:
       switch (cif->rtype->size)
-    {
-    case 8:
-      flags = FFI_TYPE_UINT64;
-      break;
-    case 4:
-      flags = FFI_TYPE_SMALL_STRUCT_4B;
-      break;
-    case 2:
-      flags = FFI_TYPE_SMALL_STRUCT_2B;
-      break;
-    case 1:
-      flags = FFI_TYPE_SMALL_STRUCT_1B;
-      break;
-    }
+	{
+	case 8:
+	  flags = FFI_TYPE_UINT64;
+	  break;
+	case 4:
+	  flags = FFI_TYPE_SMALL_STRUCT_4B;
+	  break;
+	case 2:
+	  flags = FFI_TYPE_SMALL_STRUCT_2B;
+	  break;
+	case 1:
+	  flags = FFI_TYPE_SMALL_STRUCT_1B;
+	  break;
+	}
       break;
     }
   cif->flags = flags;
@@ -109,7 +109,7 @@ EFI64(ffi_prep_cif_machdep)(ffi_cif *cif)
 
 static void
 ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
-          void **avalue, void *closure)
+	      void **avalue, void *closure)
 {
   int i, j, n, flags;
   UINT64 *stack;
@@ -126,9 +126,9 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
   if (rvalue == NULL)
     {
       if (flags == FFI_TYPE_STRUCT)
-    rsize = cif->rtype->size;
+	rsize = cif->rtype->size;
       else
-    flags = FFI_TYPE_VOID;
+	flags = FFI_TYPE_VOID;
     }
 
   stack = alloca(cif->bytes + sizeof(struct win64_call_frame) + rsize);
@@ -150,23 +150,23 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
   for (i = 0, n = cif->nargs; i < n; ++i, ++j)
     {
       switch (cif->arg_types[i]->size)
-    {
-    case 8:
-      stack[j] = *(UINT64 *)avalue[i];
-      break;
-    case 4:
-      stack[j] = *(UINT32 *)avalue[i];
-      break;
-    case 2:
-      stack[j] = *(UINT16 *)avalue[i];
-      break;
-    case 1:
-      stack[j] = *(UINT8 *)avalue[i];
-      break;
-    default:
-      stack[j] = (uintptr_t)avalue[i];
-      break;
-    }
+	{
+	case 8:
+	  stack[j] = *(UINT64 *)avalue[i];
+	  break;
+	case 4:
+	  stack[j] = *(UINT32 *)avalue[i];
+	  break;
+	case 2:
+	  stack[j] = *(UINT16 *)avalue[i];
+	  break;
+	case 1:
+	  stack[j] = *(UINT8 *)avalue[i];
+	  break;
+	default:
+	  stack[j] = (uintptr_t)avalue[i];
+	  break;
+	}
     }
 
   ffi_call_win64 (stack, frame, closure);
@@ -180,29 +180,34 @@ EFI64(ffi_call)(ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
 
 void
 EFI64(ffi_call_go)(ffi_cif *cif, void (*fn)(void), void *rvalue,
-         void **avalue, void *closure)
+	     void **avalue, void *closure)
 {
   ffi_call_int (cif, fn, rvalue, avalue, closure);
 }
 
 
 extern void ffi_closure_win64(void) FFI_HIDDEN;
+
+#ifdef FFI_GO_CLOSURES
 extern void ffi_go_closure_win64(void) FFI_HIDDEN;
+#endif
 
 ffi_status
 EFI64(ffi_prep_closure_loc)(ffi_closure* closure,
-              ffi_cif* cif,
-              void (*fun)(ffi_cif*, void*, void**, void*),
-              void *user_data,
-              void *codeloc)
+		      ffi_cif* cif,
+		      void (*fun)(ffi_cif*, void*, void**, void*),
+		      void *user_data,
+		      void *codeloc)
 {
-  static const unsigned char trampoline[16] = {
-    /* leaq  -0x7(%rip),%r10   # 0x0  */
-    0x4c, 0x8d, 0x15, 0xf9, 0xff, 0xff, 0xff,
-    /* jmpq  *0x3(%rip)        # 0x10 */
-    0xff, 0x25, 0x03, 0x00, 0x00, 0x00,
-    /* nopl  (%rax) */
-    0x0f, 0x1f, 0x00
+  static const unsigned char trampoline[FFI_TRAMPOLINE_SIZE - 8] = {
+    /* endbr64 */
+    0xf3, 0x0f, 0x1e, 0xfa,
+    /* leaq  -0xb(%rip),%r10   # 0x0  */
+    0x4c, 0x8d, 0x15, 0xf5, 0xff, 0xff, 0xff,
+    /* jmpq  *0x7(%rip)        # 0x18 */
+    0xff, 0x25, 0x07, 0x00, 0x00, 0x00,
+    /* nopl  0(%rax) */
+    0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00
   };
   char *tramp = closure->tramp;
 
@@ -216,7 +221,7 @@ EFI64(ffi_prep_closure_loc)(ffi_closure* closure,
     }
 
   memcpy (tramp, trampoline, sizeof(trampoline));
-  *(UINT64 *)(tramp + 16) = (uintptr_t)ffi_closure_win64;
+  *(UINT64 *)(tramp + sizeof (trampoline)) = (uintptr_t)ffi_closure_win64;
 
   closure->cif = cif;
   closure->fun = fun;
@@ -225,9 +230,10 @@ EFI64(ffi_prep_closure_loc)(ffi_closure* closure,
   return FFI_OK;
 }
 
+#ifdef FFI_GO_CLOSURES
 ffi_status
 EFI64(ffi_prep_go_closure)(ffi_go_closure* closure, ffi_cif* cif,
-             void (*fun)(ffi_cif*, void*, void**, void*))
+		     void (*fun)(ffi_cif*, void*, void**, void*))
 {
   switch (cif->abi)
     {
@@ -244,6 +250,7 @@ EFI64(ffi_prep_go_closure)(ffi_go_closure* closure, ffi_cif* cif,
 
   return FFI_OK;
 }
+#endif
 
 struct win64_closure_frame
 {
@@ -259,9 +266,9 @@ struct win64_closure_frame
    the compiler.  */
 int FFI_HIDDEN __attribute__((ms_abi))
 ffi_closure_win64_inner(ffi_cif *cif,
-            void (*fun)(ffi_cif*, void*, void**, void*),
-            void *user_data,
-            struct win64_closure_frame *frame)
+			void (*fun)(ffi_cif*, void*, void**, void*),
+			void *user_data,
+			struct win64_closure_frame *frame)
 {
   void **avalue;
   void *rvalue;
@@ -289,16 +296,16 @@ ffi_closure_win64_inner(ffi_cif *cif,
       void *a;
 
       if (type == FFI_TYPE_DOUBLE || type == FFI_TYPE_FLOAT)
-    {
-      if (nreg < 4)
-        a = &frame->fargs[nreg];
-      else
-        a = &frame->args[nreg];
-    }
+	{
+	  if (nreg < 4)
+	    a = &frame->fargs[nreg];
+	  else
+	    a = &frame->args[nreg];
+	}
       else if (size == 1 || size == 2 || size == 4 || size == 8)
-    a = &frame->args[nreg];
+	a = &frame->args[nreg];
       else
-    a = (void *)(uintptr_t)frame->args[nreg];
+	a = (void *)(uintptr_t)frame->args[nreg];
 
       avalue[i] = a;
     }

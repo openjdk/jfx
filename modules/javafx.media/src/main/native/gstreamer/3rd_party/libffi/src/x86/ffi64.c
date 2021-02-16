@@ -64,12 +64,12 @@ struct register_args
   /* Registers for argument passing.  */
   UINT64 gpr[MAX_GPR_REGS];
   union big_int_union sse[MAX_SSE_REGS];
-  UINT64 rax;   /* ssecount */
-  UINT64 r10;   /* static chain */
+  UINT64 rax;	/* ssecount */
+  UINT64 r10;	/* static chain */
 };
 
 extern void ffi_call_unix64 (void *args, unsigned long bytes, unsigned flags,
-                 void *raddr, void (*fnaddr)(void)) FFI_HIDDEN;
+			     void *raddr, void (*fnaddr)(void)) FFI_HIDDEN;
 
 /* All reference to register classes here is identical to the code in
    gcc/config/i386/i386.c. Do *not* change one without the other.  */
@@ -99,7 +99,7 @@ enum x86_64_reg_class
 
 #define MAX_CLASSES 4
 
-#define SSE_CLASS_P(X)  ((X) >= X86_64_SSE_CLASS && X <= X86_64_SSEUP_CLASS)
+#define SSE_CLASS_P(X)	((X) >= X86_64_SSE_CLASS && X <= X86_64_SSEUP_CLASS)
 
 /* x86-64 register passing implementation.  See x86-64 ABI for details.  Goal
    of this code is to classify each 8bytes of incoming argument by the register
@@ -158,7 +158,7 @@ merge_classes (enum x86_64_reg_class class1, enum x86_64_reg_class class2)
 */
 static size_t
 classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
-           size_t byte_offset)
+		   size_t byte_offset)
 {
   switch (type->type)
     {
@@ -173,37 +173,37 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
     case FFI_TYPE_POINTER:
     do_integer:
       {
-    size_t size = byte_offset + type->size;
+	size_t size = byte_offset + type->size;
 
-    if (size <= 4)
-      {
-        classes[0] = X86_64_INTEGERSI_CLASS;
-        return 1;
-      }
-    else if (size <= 8)
-      {
-        classes[0] = X86_64_INTEGER_CLASS;
-        return 1;
-      }
-    else if (size <= 12)
-      {
-        classes[0] = X86_64_INTEGER_CLASS;
-        classes[1] = X86_64_INTEGERSI_CLASS;
-        return 2;
-      }
-    else if (size <= 16)
-      {
-        classes[0] = classes[1] = X86_64_INTEGER_CLASS;
-        return 2;
-      }
-    else
-      FFI_ASSERT (0);
+	if (size <= 4)
+	  {
+	    classes[0] = X86_64_INTEGERSI_CLASS;
+	    return 1;
+	  }
+	else if (size <= 8)
+	  {
+	    classes[0] = X86_64_INTEGER_CLASS;
+	    return 1;
+	  }
+	else if (size <= 12)
+	  {
+	    classes[0] = X86_64_INTEGER_CLASS;
+	    classes[1] = X86_64_INTEGERSI_CLASS;
+	    return 2;
+	  }
+	else if (size <= 16)
+	  {
+	    classes[0] = classes[1] = X86_64_INTEGER_CLASS;
+	    return 2;
+	  }
+	else
+	  FFI_ASSERT (0);
       }
     case FFI_TYPE_FLOAT:
       if (!(byte_offset % 8))
-    classes[0] = X86_64_SSESF_CLASS;
+	classes[0] = X86_64_SSESF_CLASS;
       else
-    classes[0] = X86_64_SSE_CLASS;
+	classes[0] = X86_64_SSE_CLASS;
       return 1;
     case FFI_TYPE_DOUBLE:
       classes[0] = X86_64_SSEDF_CLASS;
@@ -216,126 +216,126 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
 #endif
     case FFI_TYPE_STRUCT:
       {
-    const size_t UNITS_PER_WORD = 8;
-    size_t words = (type->size + UNITS_PER_WORD - 1) / UNITS_PER_WORD;
-    ffi_type **ptr;
-    unsigned int i;
-    enum x86_64_reg_class subclasses[MAX_CLASSES];
+	const size_t UNITS_PER_WORD = 8;
+	size_t words = (type->size + UNITS_PER_WORD - 1) / UNITS_PER_WORD;
+	ffi_type **ptr;
+	unsigned int i;
+	enum x86_64_reg_class subclasses[MAX_CLASSES];
 
-    /* If the struct is larger than 32 bytes, pass it on the stack.  */
-    if (type->size > 32)
-      return 0;
+	/* If the struct is larger than 32 bytes, pass it on the stack.  */
+	if (type->size > 32)
+	  return 0;
 
-    for (i = 0; i < words; i++)
-      classes[i] = X86_64_NO_CLASS;
+	for (i = 0; i < words; i++)
+	  classes[i] = X86_64_NO_CLASS;
 
-    /* Zero sized arrays or structures are NO_CLASS.  We return 0 to
-       signalize memory class, so handle it as special case.  */
-    if (!words)
-      {
+	/* Zero sized arrays or structures are NO_CLASS.  We return 0 to
+	   signalize memory class, so handle it as special case.  */
+	if (!words)
+	  {
     case FFI_TYPE_VOID:
-        classes[0] = X86_64_NO_CLASS;
-        return 1;
-      }
+	    classes[0] = X86_64_NO_CLASS;
+	    return 1;
+	  }
 
-    /* Merge the fields of structure.  */
-    for (ptr = type->elements; *ptr != NULL; ptr++)
-      {
-        size_t num;
+	/* Merge the fields of structure.  */
+	for (ptr = type->elements; *ptr != NULL; ptr++)
+	  {
+	    size_t num;
 
-        byte_offset = FFI_ALIGN (byte_offset, (*ptr)->alignment);
+	    byte_offset = FFI_ALIGN (byte_offset, (*ptr)->alignment);
 
-        num = classify_argument (*ptr, subclasses, byte_offset % 8);
-        if (num == 0)
-          return 0;
-        for (i = 0; i < num; i++)
-          {
-        size_t pos = byte_offset / 8;
-        classes[i + pos] =
-          merge_classes (subclasses[i], classes[i + pos]);
-          }
+	    num = classify_argument (*ptr, subclasses, byte_offset % 8);
+	    if (num == 0)
+	      return 0;
+	    for (i = 0; i < num; i++)
+	      {
+		size_t pos = byte_offset / 8;
+		classes[i + pos] =
+		  merge_classes (subclasses[i], classes[i + pos]);
+	      }
 
-        byte_offset += (*ptr)->size;
-      }
+	    byte_offset += (*ptr)->size;
+	  }
 
-    if (words > 2)
-      {
-        /* When size > 16 bytes, if the first one isn't
-           X86_64_SSE_CLASS or any other ones aren't
-           X86_64_SSEUP_CLASS, everything should be passed in
-           memory.  */
-        if (classes[0] != X86_64_SSE_CLASS)
-          return 0;
+	if (words > 2)
+	  {
+	    /* When size > 16 bytes, if the first one isn't
+	       X86_64_SSE_CLASS or any other ones aren't
+	       X86_64_SSEUP_CLASS, everything should be passed in
+	       memory.  */
+	    if (classes[0] != X86_64_SSE_CLASS)
+	      return 0;
 
-        for (i = 1; i < words; i++)
-          if (classes[i] != X86_64_SSEUP_CLASS)
-        return 0;
-      }
+	    for (i = 1; i < words; i++)
+	      if (classes[i] != X86_64_SSEUP_CLASS)
+		return 0;
+	  }
 
-    /* Final merger cleanup.  */
-    for (i = 0; i < words; i++)
-      {
-        /* If one class is MEMORY, everything should be passed in
-           memory.  */
-        if (classes[i] == X86_64_MEMORY_CLASS)
-          return 0;
+	/* Final merger cleanup.  */
+	for (i = 0; i < words; i++)
+	  {
+	    /* If one class is MEMORY, everything should be passed in
+	       memory.  */
+	    if (classes[i] == X86_64_MEMORY_CLASS)
+	      return 0;
 
-        /* The X86_64_SSEUP_CLASS should be always preceded by
-           X86_64_SSE_CLASS or X86_64_SSEUP_CLASS.  */
-        if (i > 1 && classes[i] == X86_64_SSEUP_CLASS
-        && classes[i - 1] != X86_64_SSE_CLASS
-        && classes[i - 1] != X86_64_SSEUP_CLASS)
-          {
-        /* The first one should never be X86_64_SSEUP_CLASS.  */
-        FFI_ASSERT (i != 0);
-        classes[i] = X86_64_SSE_CLASS;
-          }
+	    /* The X86_64_SSEUP_CLASS should be always preceded by
+	       X86_64_SSE_CLASS or X86_64_SSEUP_CLASS.  */
+	    if (i > 1 && classes[i] == X86_64_SSEUP_CLASS
+		&& classes[i - 1] != X86_64_SSE_CLASS
+		&& classes[i - 1] != X86_64_SSEUP_CLASS)
+	      {
+		/* The first one should never be X86_64_SSEUP_CLASS.  */
+		FFI_ASSERT (i != 0);
+		classes[i] = X86_64_SSE_CLASS;
+	      }
 
-        /*  If X86_64_X87UP_CLASS isn't preceded by X86_64_X87_CLASS,
-        everything should be passed in memory.  */
-        if (i > 1 && classes[i] == X86_64_X87UP_CLASS
-        && (classes[i - 1] != X86_64_X87_CLASS))
-          {
-        /* The first one should never be X86_64_X87UP_CLASS.  */
-        FFI_ASSERT (i != 0);
-        return 0;
-          }
-      }
-    return words;
+	    /*  If X86_64_X87UP_CLASS isn't preceded by X86_64_X87_CLASS,
+		everything should be passed in memory.  */
+	    if (i > 1 && classes[i] == X86_64_X87UP_CLASS
+		&& (classes[i - 1] != X86_64_X87_CLASS))
+	      {
+		/* The first one should never be X86_64_X87UP_CLASS.  */
+		FFI_ASSERT (i != 0);
+		return 0;
+	      }
+	  }
+	return words;
       }
     case FFI_TYPE_COMPLEX:
       {
-    ffi_type *inner = type->elements[0];
-    switch (inner->type)
-      {
-      case FFI_TYPE_INT:
-      case FFI_TYPE_UINT8:
-      case FFI_TYPE_SINT8:
-      case FFI_TYPE_UINT16:
-      case FFI_TYPE_SINT16:
-      case FFI_TYPE_UINT32:
-      case FFI_TYPE_SINT32:
-      case FFI_TYPE_UINT64:
-      case FFI_TYPE_SINT64:
-        goto do_integer;
+	ffi_type *inner = type->elements[0];
+	switch (inner->type)
+	  {
+	  case FFI_TYPE_INT:
+	  case FFI_TYPE_UINT8:
+	  case FFI_TYPE_SINT8:
+	  case FFI_TYPE_UINT16:
+	  case FFI_TYPE_SINT16:
+	  case FFI_TYPE_UINT32:
+	  case FFI_TYPE_SINT32:
+	  case FFI_TYPE_UINT64:
+	  case FFI_TYPE_SINT64:
+	    goto do_integer;
 
-      case FFI_TYPE_FLOAT:
-        classes[0] = X86_64_SSE_CLASS;
-        if (byte_offset % 8)
-          {
-        classes[1] = X86_64_SSESF_CLASS;
-        return 2;
-    }
-        return 1;
-      case FFI_TYPE_DOUBLE:
-        classes[0] = classes[1] = X86_64_SSEDF_CLASS;
-        return 2;
+	  case FFI_TYPE_FLOAT:
+	    classes[0] = X86_64_SSE_CLASS;
+	    if (byte_offset % 8)
+	      {
+		classes[1] = X86_64_SSESF_CLASS;
+		return 2;
+	      }
+	    return 1;
+	  case FFI_TYPE_DOUBLE:
+	    classes[0] = classes[1] = X86_64_SSEDF_CLASS;
+	    return 2;
 #if FFI_TYPE_LONGDOUBLE != FFI_TYPE_DOUBLE
-      case FFI_TYPE_LONGDOUBLE:
-        classes[0] = X86_64_COMPLEX_X87_CLASS;
-        return 1;
+	  case FFI_TYPE_LONGDOUBLE:
+	    classes[0] = X86_64_COMPLEX_X87_CLASS;
+	    return 1;
 #endif
-}
+	  }
       }
     }
   abort();
@@ -347,7 +347,7 @@ classify_argument (ffi_type *type, enum x86_64_reg_class classes[],
 
 static size_t
 examine_argument (ffi_type *type, enum x86_64_reg_class classes[MAX_CLASSES],
-          _Bool in_return, int *pngpr, int *pnsse)
+		  _Bool in_return, int *pngpr, int *pnsse)
 {
   size_t n;
   unsigned int i;
@@ -363,22 +363,22 @@ examine_argument (ffi_type *type, enum x86_64_reg_class classes[MAX_CLASSES],
       {
       case X86_64_INTEGER_CLASS:
       case X86_64_INTEGERSI_CLASS:
-    ngpr++;
-    break;
+	ngpr++;
+	break;
       case X86_64_SSE_CLASS:
       case X86_64_SSESF_CLASS:
       case X86_64_SSEDF_CLASS:
-    nsse++;
-    break;
+	nsse++;
+	break;
       case X86_64_NO_CLASS:
       case X86_64_SSEUP_CLASS:
-    break;
+	break;
       case X86_64_X87_CLASS:
       case X86_64_X87UP_CLASS:
       case X86_64_COMPLEX_X87_CLASS:
-    return in_return != 0;
+	return in_return != 0;
       default:
-    abort ();
+	abort ();
       }
 
   *pngpr = ngpr;
@@ -459,64 +459,64 @@ ffi_prep_cif_machdep (ffi_cif *cif)
     case FFI_TYPE_STRUCT:
       n = examine_argument (cif->rtype, classes, 1, &ngpr, &nsse);
       if (n == 0)
-    {
-      /* The return value is passed in memory.  A pointer to that
-         memory is the first argument.  Allocate a register for it.  */
-      gprcount++;
-      /* We don't have to do anything in asm for the return.  */
-      flags = UNIX64_RET_VOID | UNIX64_FLAG_RET_IN_MEM;
-    }
+	{
+	  /* The return value is passed in memory.  A pointer to that
+	     memory is the first argument.  Allocate a register for it.  */
+	  gprcount++;
+	  /* We don't have to do anything in asm for the return.  */
+	  flags = UNIX64_RET_VOID | UNIX64_FLAG_RET_IN_MEM;
+	}
       else
-    {
-      _Bool sse0 = SSE_CLASS_P (classes[0]);
+	{
+	  _Bool sse0 = SSE_CLASS_P (classes[0]);
 
-      if (rtype_size == 4 && sse0)
-        flags = UNIX64_RET_XMM32;
-      else if (rtype_size == 8)
-        flags = sse0 ? UNIX64_RET_XMM64 : UNIX64_RET_INT64;
-      else
-        {
-      _Bool sse1 = n == 2 && SSE_CLASS_P (classes[1]);
-          if (sse0 && sse1)
-        flags = UNIX64_RET_ST_XMM0_XMM1;
-          else if (sse0)
-        flags = UNIX64_RET_ST_XMM0_RAX;
-          else if (sse1)
-        flags = UNIX64_RET_ST_RAX_XMM0;
-          else
-        flags = UNIX64_RET_ST_RAX_RDX;
-          flags |= rtype_size << UNIX64_SIZE_SHIFT;
-    }
-    }
+	  if (rtype_size == 4 && sse0)
+	    flags = UNIX64_RET_XMM32;
+	  else if (rtype_size == 8)
+	    flags = sse0 ? UNIX64_RET_XMM64 : UNIX64_RET_INT64;
+	  else
+	    {
+	      _Bool sse1 = n == 2 && SSE_CLASS_P (classes[1]);
+	      if (sse0 && sse1)
+		flags = UNIX64_RET_ST_XMM0_XMM1;
+	      else if (sse0)
+		flags = UNIX64_RET_ST_XMM0_RAX;
+	      else if (sse1)
+		flags = UNIX64_RET_ST_RAX_XMM0;
+	      else
+		flags = UNIX64_RET_ST_RAX_RDX;
+	      flags |= rtype_size << UNIX64_SIZE_SHIFT;
+	    }
+	}
       break;
     case FFI_TYPE_COMPLEX:
       switch (rtype->elements[0]->type)
-    {
-    case FFI_TYPE_UINT8:
-    case FFI_TYPE_SINT8:
-    case FFI_TYPE_UINT16:
-    case FFI_TYPE_SINT16:
-    case FFI_TYPE_INT:
-    case FFI_TYPE_UINT32:
-    case FFI_TYPE_SINT32:
-    case FFI_TYPE_UINT64:
-    case FFI_TYPE_SINT64:
-      flags = UNIX64_RET_ST_RAX_RDX | ((unsigned) rtype_size << UNIX64_SIZE_SHIFT);
-      break;
-    case FFI_TYPE_FLOAT:
-      flags = UNIX64_RET_XMM64;
-      break;
-    case FFI_TYPE_DOUBLE:
-      flags = UNIX64_RET_ST_XMM0_XMM1 | (16 << UNIX64_SIZE_SHIFT);
-      break;
+	{
+	case FFI_TYPE_UINT8:
+	case FFI_TYPE_SINT8:
+	case FFI_TYPE_UINT16:
+	case FFI_TYPE_SINT16:
+	case FFI_TYPE_INT:
+	case FFI_TYPE_UINT32:
+	case FFI_TYPE_SINT32:
+	case FFI_TYPE_UINT64:
+	case FFI_TYPE_SINT64:
+	  flags = UNIX64_RET_ST_RAX_RDX | ((unsigned) rtype_size << UNIX64_SIZE_SHIFT);
+	  break;
+	case FFI_TYPE_FLOAT:
+	  flags = UNIX64_RET_XMM64;
+	  break;
+	case FFI_TYPE_DOUBLE:
+	  flags = UNIX64_RET_ST_XMM0_XMM1 | (16 << UNIX64_SIZE_SHIFT);
+	  break;
 #if FFI_TYPE_LONGDOUBLE != FFI_TYPE_DOUBLE
-    case FFI_TYPE_LONGDOUBLE:
-      flags = UNIX64_RET_X87_2;
-      break;
+	case FFI_TYPE_LONGDOUBLE:
+	  flags = UNIX64_RET_X87_2;
+	  break;
 #endif
-    default:
-      return FFI_BAD_TYPEDEF;
-    }
+	default:
+	  return FFI_BAD_TYPEDEF;
+	}
       break;
     default:
       return FFI_BAD_TYPEDEF;
@@ -528,22 +528,22 @@ ffi_prep_cif_machdep (ffi_cif *cif)
   for (bytes = 0, i = 0, avn = cif->nargs; i < avn; i++)
     {
       if (examine_argument (cif->arg_types[i], classes, 0, &ngpr, &nsse) == 0
-      || gprcount + ngpr > MAX_GPR_REGS
-      || ssecount + nsse > MAX_SSE_REGS)
-    {
-      long align = cif->arg_types[i]->alignment;
+	  || gprcount + ngpr > MAX_GPR_REGS
+	  || ssecount + nsse > MAX_SSE_REGS)
+	{
+	  long align = cif->arg_types[i]->alignment;
 
-      if (align < 8)
-        align = 8;
+	  if (align < 8)
+	    align = 8;
 
-      bytes = FFI_ALIGN (bytes, align);
-      bytes += cif->arg_types[i]->size;
-    }
+	  bytes = FFI_ALIGN (bytes, align);
+	  bytes += cif->arg_types[i]->size;
+	}
       else
-    {
-      gprcount += ngpr;
-      ssecount += nsse;
-    }
+	{
+	  gprcount += ngpr;
+	  ssecount += nsse;
+	}
     }
   if (ssecount)
     flags |= UNIX64_FLAG_XMM_ARGS;
@@ -556,7 +556,7 @@ ffi_prep_cif_machdep (ffi_cif *cif)
 
 static void
 ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
-          void **avalue, void *closure)
+	      void **avalue, void *closure)
 {
   enum x86_64_reg_class classes[MAX_CLASSES];
   char *stack, *argp;
@@ -573,9 +573,9 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
   if (rvalue == NULL)
     {
       if (flags & UNIX64_FLAG_RET_IN_MEM)
-    rvalue = alloca (cif->rtype->size);
+	rvalue = alloca (cif->rtype->size);
       else
-    flags = UNIX64_RET_VOID;
+	flags = UNIX64_RET_VOID;
     }
 
   /* Allocate the space for the arguments, plus 4 words of temp space.  */
@@ -601,73 +601,73 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *rvalue,
 
       n = examine_argument (arg_types[i], classes, 0, &ngpr, &nsse);
       if (n == 0
-      || gprcount + ngpr > MAX_GPR_REGS
-      || ssecount + nsse > MAX_SSE_REGS)
-    {
-      long align = arg_types[i]->alignment;
+	  || gprcount + ngpr > MAX_GPR_REGS
+	  || ssecount + nsse > MAX_SSE_REGS)
+	{
+	  long align = arg_types[i]->alignment;
 
-      /* Stack arguments are *always* at least 8 byte aligned.  */
-      if (align < 8)
-        align = 8;
+	  /* Stack arguments are *always* at least 8 byte aligned.  */
+	  if (align < 8)
+	    align = 8;
 
-      /* Pass this argument in memory.  */
-      argp = (void *) FFI_ALIGN (argp, align);
-      memcpy (argp, avalue[i], size);
-      argp += size;
-    }
+	  /* Pass this argument in memory.  */
+	  argp = (void *) FFI_ALIGN (argp, align);
+	  memcpy (argp, avalue[i], size);
+	  argp += size;
+	}
       else
-    {
-      /* The argument is passed entirely in registers.  */
-      char *a = (char *) avalue[i];
-      unsigned int j;
+	{
+	  /* The argument is passed entirely in registers.  */
+	  char *a = (char *) avalue[i];
+	  unsigned int j;
 
-      for (j = 0; j < n; j++, a += 8, size -= 8)
-        {
-          switch (classes[j])
-        {
-        case X86_64_NO_CLASS:
-        case X86_64_SSEUP_CLASS:
-          break;
-        case X86_64_INTEGER_CLASS:
-        case X86_64_INTEGERSI_CLASS:
-          /* Sign-extend integer arguments passed in general
-             purpose registers, to cope with the fact that
-             LLVM incorrectly assumes that this will be done
-             (the x86-64 PS ABI does not specify this). */
-          switch (arg_types[i]->type)
-            {
-            case FFI_TYPE_SINT8:
-              reg_args->gpr[gprcount] = (SINT64) *((SINT8 *) a);
-              break;
-            case FFI_TYPE_SINT16:
-              reg_args->gpr[gprcount] = (SINT64) *((SINT16 *) a);
-              break;
-            case FFI_TYPE_SINT32:
-              reg_args->gpr[gprcount] = (SINT64) *((SINT32 *) a);
-              break;
-            default:
-              reg_args->gpr[gprcount] = 0;
-              memcpy (&reg_args->gpr[gprcount], a, size);
-            }
-          gprcount++;
-          break;
-        case X86_64_SSE_CLASS:
-        case X86_64_SSEDF_CLASS:
-          memcpy (&reg_args->sse[ssecount++].i64, a, sizeof(UINT64));
-          break;
-        case X86_64_SSESF_CLASS:
-          memcpy (&reg_args->sse[ssecount++].i32, a, sizeof(UINT32));
-          break;
-        default:
-          abort();
-        }
-        }
-    }
+	  for (j = 0; j < n; j++, a += 8, size -= 8)
+	    {
+	      switch (classes[j])
+		{
+		case X86_64_NO_CLASS:
+		case X86_64_SSEUP_CLASS:
+		  break;
+		case X86_64_INTEGER_CLASS:
+		case X86_64_INTEGERSI_CLASS:
+		  /* Sign-extend integer arguments passed in general
+		     purpose registers, to cope with the fact that
+		     LLVM incorrectly assumes that this will be done
+		     (the x86-64 PS ABI does not specify this). */
+		  switch (arg_types[i]->type)
+		    {
+		    case FFI_TYPE_SINT8:
+		      reg_args->gpr[gprcount] = (SINT64) *((SINT8 *) a);
+		      break;
+		    case FFI_TYPE_SINT16:
+		      reg_args->gpr[gprcount] = (SINT64) *((SINT16 *) a);
+		      break;
+		    case FFI_TYPE_SINT32:
+		      reg_args->gpr[gprcount] = (SINT64) *((SINT32 *) a);
+		      break;
+		    default:
+		      reg_args->gpr[gprcount] = 0;
+		      memcpy (&reg_args->gpr[gprcount], a, size);
+		    }
+		  gprcount++;
+		  break;
+		case X86_64_SSE_CLASS:
+		case X86_64_SSEDF_CLASS:
+		  memcpy (&reg_args->sse[ssecount++].i64, a, sizeof(UINT64));
+		  break;
+		case X86_64_SSESF_CLASS:
+		  memcpy (&reg_args->sse[ssecount++].i32, a, sizeof(UINT32));
+		  break;
+		default:
+		  abort();
+		}
+	    }
+	}
     }
   reg_args->rax = ssecount;
 
   ffi_call_unix64 (stack, cif->bytes + sizeof (struct register_args),
-           flags, rvalue, fn);
+		   flags, rvalue, fn);
 }
 
 #ifndef __ILP32__
@@ -688,15 +688,17 @@ ffi_call (ffi_cif *cif, void (*fn)(void), void *rvalue, void **avalue)
   ffi_call_int (cif, fn, rvalue, avalue, NULL);
 }
 
+#ifdef FFI_GO_CLOSURES
+
 #ifndef __ILP32__
 extern void
 ffi_call_go_efi64(ffi_cif *cif, void (*fn)(void), void *rvalue,
-          void **avalue, void *closure);
+		  void **avalue, void *closure);
 #endif
 
 void
 ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
-         void **avalue, void *closure)
+	     void **avalue, void *closure)
 {
 #ifndef __ILP32__
   if (cif->abi == FFI_EFI64 || cif->abi == FFI_GNUW64)
@@ -708,6 +710,7 @@ ffi_call_go (ffi_cif *cif, void (*fn)(void), void *rvalue,
   ffi_call_int (cif, fn, rvalue, avalue, closure);
 }
 
+#endif /* FFI_GO_CLOSURES */
 
 extern void ffi_closure_unix64(void) FFI_HIDDEN;
 extern void ffi_closure_unix64_sse(void) FFI_HIDDEN;
@@ -715,26 +718,28 @@ extern void ffi_closure_unix64_sse(void) FFI_HIDDEN;
 #ifndef __ILP32__
 extern ffi_status
 ffi_prep_closure_loc_efi64(ffi_closure* closure,
-               ffi_cif* cif,
-               void (*fun)(ffi_cif*, void*, void**, void*),
-               void *user_data,
-               void *codeloc);
+			   ffi_cif* cif,
+			   void (*fun)(ffi_cif*, void*, void**, void*),
+			   void *user_data,
+			   void *codeloc);
 #endif
 
 ffi_status
 ffi_prep_closure_loc (ffi_closure* closure,
-              ffi_cif* cif,
-              void (*fun)(ffi_cif*, void*, void**, void*),
-              void *user_data,
-              void *codeloc)
+		      ffi_cif* cif,
+		      void (*fun)(ffi_cif*, void*, void**, void*),
+		      void *user_data,
+		      void *codeloc)
 {
-  static const unsigned char trampoline[16] = {
-    /* leaq  -0x7(%rip),%r10   # 0x0  */
-    0x4c, 0x8d, 0x15, 0xf9, 0xff, 0xff, 0xff,
-    /* jmpq  *0x3(%rip)        # 0x10 */
-    0xff, 0x25, 0x03, 0x00, 0x00, 0x00,
-    /* nopl  (%rax) */
-    0x0f, 0x1f, 0x00
+  static const unsigned char trampoline[24] = {
+    /* endbr64 */
+    0xf3, 0x0f, 0x1e, 0xfa,
+    /* leaq  -0xb(%rip),%r10   # 0x0  */
+    0x4c, 0x8d, 0x15, 0xf5, 0xff, 0xff, 0xff,
+    /* jmpq  *0x7(%rip)        # 0x18 */
+    0xff, 0x25, 0x07, 0x00, 0x00, 0x00,
+    /* nopl  0(%rax) */
+    0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00
   };
   void (*dest)(void);
   char *tramp = closure->tramp;
@@ -744,7 +749,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
     return ffi_prep_closure_loc_efi64(closure, cif, fun, user_data, codeloc);
 #endif
   if (cif->abi != FFI_UNIX64)
-      return FFI_BAD_ABI;
+    return FFI_BAD_ABI;
 
   if (cif->flags & UNIX64_FLAG_XMM_ARGS)
     dest = ffi_closure_unix64_sse;
@@ -752,7 +757,7 @@ ffi_prep_closure_loc (ffi_closure* closure,
     dest = ffi_closure_unix64;
 
   memcpy (tramp, trampoline, sizeof(trampoline));
-  *(UINT64 *)(tramp + 16) = (uintptr_t)dest;
+  *(UINT64 *)(tramp + sizeof (trampoline)) = (uintptr_t)dest;
 
   closure->cif = cif;
   closure->fun = fun;
@@ -763,11 +768,11 @@ ffi_prep_closure_loc (ffi_closure* closure,
 
 int FFI_HIDDEN
 ffi_closure_unix64_inner(ffi_cif *cif,
-             void (*fun)(ffi_cif*, void*, void**, void*),
-             void *user_data,
-             void *rvalue,
-             struct register_args *reg_args,
-             char *argp)
+			 void (*fun)(ffi_cif*, void*, void**, void*),
+			 void *user_data,
+			 void *rvalue,
+			 struct register_args *reg_args,
+			 char *argp)
 {
   void **avalue;
   ffi_type **arg_types;
@@ -783,7 +788,7 @@ ffi_closure_unix64_inner(ffi_cif *cif,
   if (flags & UNIX64_FLAG_RET_IN_MEM)
     {
       /* On return, %rax will contain the address that was passed
-     by the caller in %rdi.  */
+	 by the caller in %rdi.  */
       void *r = (void *)(uintptr_t)reg_args->gpr[gprcount++];
       *(void **)rvalue = r;
       rvalue = r;
@@ -798,53 +803,53 @@ ffi_closure_unix64_inner(ffi_cif *cif,
 
       n = examine_argument (arg_types[i], classes, 0, &ngpr, &nsse);
       if (n == 0
-      || gprcount + ngpr > MAX_GPR_REGS
-      || ssecount + nsse > MAX_SSE_REGS)
-    {
-      long align = arg_types[i]->alignment;
+	  || gprcount + ngpr > MAX_GPR_REGS
+	  || ssecount + nsse > MAX_SSE_REGS)
+	{
+	  long align = arg_types[i]->alignment;
 
-      /* Stack arguments are *always* at least 8 byte aligned.  */
-      if (align < 8)
-        align = 8;
+	  /* Stack arguments are *always* at least 8 byte aligned.  */
+	  if (align < 8)
+	    align = 8;
 
-      /* Pass this argument in memory.  */
-      argp = (void *) FFI_ALIGN (argp, align);
-      avalue[i] = argp;
-      argp += arg_types[i]->size;
-    }
+	  /* Pass this argument in memory.  */
+	  argp = (void *) FFI_ALIGN (argp, align);
+	  avalue[i] = argp;
+	  argp += arg_types[i]->size;
+	}
       /* If the argument is in a single register, or two consecutive
-     integer registers, then we can use that address directly.  */
+	 integer registers, then we can use that address directly.  */
       else if (n == 1
-           || (n == 2 && !(SSE_CLASS_P (classes[0])
-                   || SSE_CLASS_P (classes[1]))))
-    {
-      /* The argument is in a single register.  */
-      if (SSE_CLASS_P (classes[0]))
-        {
-          avalue[i] = &reg_args->sse[ssecount];
-          ssecount += n;
-        }
-      else
-        {
-          avalue[i] = &reg_args->gpr[gprcount];
-          gprcount += n;
-        }
-    }
+	       || (n == 2 && !(SSE_CLASS_P (classes[0])
+			       || SSE_CLASS_P (classes[1]))))
+	{
+	  /* The argument is in a single register.  */
+	  if (SSE_CLASS_P (classes[0]))
+	    {
+	      avalue[i] = &reg_args->sse[ssecount];
+	      ssecount += n;
+	    }
+	  else
+	    {
+	      avalue[i] = &reg_args->gpr[gprcount];
+	      gprcount += n;
+	    }
+	}
       /* Otherwise, allocate space to make them consecutive.  */
       else
-    {
-      char *a = alloca (16);
-      unsigned int j;
+	{
+	  char *a = alloca (16);
+	  unsigned int j;
 
-      avalue[i] = a;
-      for (j = 0; j < n; j++, a += 8)
-        {
-          if (SSE_CLASS_P (classes[j]))
-        memcpy (a, &reg_args->sse[ssecount++], 8);
-          else
-        memcpy (a, &reg_args->gpr[gprcount++], 8);
-        }
-    }
+	  avalue[i] = a;
+	  for (j = 0; j < n; j++, a += 8)
+	    {
+	      if (SSE_CLASS_P (classes[j]))
+		memcpy (a, &reg_args->sse[ssecount++], 8);
+	      else
+		memcpy (a, &reg_args->gpr[gprcount++], 8);
+	    }
+	}
     }
 
   /* Invoke the closure.  */
@@ -854,18 +859,20 @@ ffi_closure_unix64_inner(ffi_cif *cif,
   return flags;
 }
 
+#ifdef FFI_GO_CLOSURES
+
 extern void ffi_go_closure_unix64(void) FFI_HIDDEN;
 extern void ffi_go_closure_unix64_sse(void) FFI_HIDDEN;
 
 #ifndef __ILP32__
 extern ffi_status
 ffi_prep_go_closure_efi64(ffi_go_closure* closure, ffi_cif* cif,
-              void (*fun)(ffi_cif*, void*, void**, void*));
+			  void (*fun)(ffi_cif*, void*, void**, void*));
 #endif
 
 ffi_status
 ffi_prep_go_closure (ffi_go_closure* closure, ffi_cif* cif,
-             void (*fun)(ffi_cif*, void*, void**, void*))
+		     void (*fun)(ffi_cif*, void*, void**, void*))
 {
 #ifndef __ILP32__
   if (cif->abi == FFI_EFI64 || cif->abi == FFI_GNUW64)
@@ -875,12 +882,14 @@ ffi_prep_go_closure (ffi_go_closure* closure, ffi_cif* cif,
     return FFI_BAD_ABI;
 
   closure->tramp = (cif->flags & UNIX64_FLAG_XMM_ARGS
-            ? ffi_go_closure_unix64_sse
-            : ffi_go_closure_unix64);
+		    ? ffi_go_closure_unix64_sse
+		    : ffi_go_closure_unix64);
   closure->cif = cif;
   closure->fun = fun;
 
   return FFI_OK;
 }
+
+#endif /* FFI_GO_CLOSURES */
 
 #endif /* __x86_64__ */

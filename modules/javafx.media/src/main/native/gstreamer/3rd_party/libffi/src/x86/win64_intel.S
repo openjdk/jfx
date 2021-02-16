@@ -29,7 +29,7 @@
 #if defined(__clang__) || defined(__APPLE__) || (defined (__sun__) && defined(__svr4__))
 # define E(BASE, X)	ALIGN 8
 #else
-# define E(BASE, X)	ALIGN 8; ORG BASE + X * 8
+# define E(BASE, X)	ALIGN 8; ORG BASE + (X) * 8
 #endif
 
 	.CODE
@@ -107,7 +107,8 @@ E(0b, FFI_TYPE_FLOAT)
 E(0b, FFI_TYPE_DOUBLE)
 	movsd qword ptr[r8], xmm0; movsd	%xmm0, (%r8)
 	epilogue
-E(0b, FFI_TYPE_LONGDOUBLE)
+// FFI_TYPE_LONGDOUBLE may be FFI_TYPE_DOUBLE but we need a different value here.
+E(0b, FFI_TYPE_DOUBLE + 1)
 	call	PLT(C(abort))
 E(0b, FFI_TYPE_UINT8)
 	movzx eax, al ;movzbl	%al, %eax
@@ -190,7 +191,7 @@ C(ffi_go_closure_win64) proc
 	C(ffi_go_closure_win64) endp
 
 	align	8
-
+	
 PUBLIC C(ffi_closure_win64)
 C(ffi_closure_win64) PROC FRAME
 	cfi_startproc
@@ -219,7 +220,7 @@ ffi_closure_win64_2 LABEL near
 	call C(ffi_closure_win64_inner)
 
 	/* Load the result into both possible result registers.  */
-
+	
 	mov rax, qword ptr [ffi_clo_OFF_R + rsp] ;movq    ffi_clo_OFF_R(%rsp), %rax
 	movsd xmm0, qword ptr [rsp + ffi_clo_OFF_R] ;movsd   ffi_clo_OFF_R(%rsp), %xmm0
 

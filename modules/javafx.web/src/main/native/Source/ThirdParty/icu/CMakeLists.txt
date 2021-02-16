@@ -43,6 +43,7 @@ elseif (APPLE)
 
       "-Wno-unused-function"
       "-Wno-cast-align"
+      "--target=x86_64-apple-macos11"
 
       # ICU uses its own deprecated functions.
       "-Wno-deprecated-declarations"
@@ -557,6 +558,9 @@ target_include_directories(data_as_asm
 )
 target_compile_definitions(data_as_asm
     PRIVATE "U_TOOLUTIL_IMPLEMENTATION"
+)
+target_link_options(data_as_asm
+    PRIVATE ${ICU_PRIVATE_COMPILER_OPTIONS}
 )
 target_compile_options(data_as_asm
     PRIVATE ${ICU_PRIVATE_COMPILER_OPTIONS}

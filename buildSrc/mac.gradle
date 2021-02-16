@@ -121,13 +121,14 @@ if (!file(MACOSX_SDK_PATH).isDirectory()) {
 
 // NOTE: There is no space between -iframework and the specified path
 def commonParams = [
+        "-target","$TARGET_ARCH-apple-macos11",
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
         "-isysroot", "$MACOSX_SDK_PATH",
         "-iframework$MACOSX_SDK_PATH/System/Library/Frameworks",
         "-arch", "$TARGET_ARCH"]
 
 if (hasProperty('TARGET_ARCH')) {
-    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams]
+    commonParams = ["-target", "${TARGET_ARCH}-apple-macos-11", commonParams].flatten()
 }
 
 def ccBaseFlags = [

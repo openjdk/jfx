@@ -27,7 +27,8 @@
 #include <stdio.h>
 
 #if (! TARGET_OS_LINUX || defined(__SSE2__))
-#define ENABLE_SIMD_SSE2 1
+#define ENABLE_SIMD_SSE2 0
+// #define ENABLE_SIMD_SSE2 1
 #else
 #define ENABLE_SIMD_SSE2 0
 #endif

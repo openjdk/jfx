@@ -403,6 +403,9 @@ if (IS_STATIC_BUILD && IS_COMPILE_MEDIA) {
     throw new GradleException("Can not have COMPILE_MEDIA when STATIC_BUILD is enabled");
 }
 
+// By default, target architecture = host architecture, but we allow different ones.
+defineProperty("TARGET_ARCH", OS_ARCH)
+
 // BUILD_TOOLS_DOWNLOAD_SCRIPT specifies a path of a gradle script which downloads
 // required build tools.
 defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
@@ -3295,13 +3298,13 @@ project(":media") {
                     doLast {
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/libffi")
-                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=ffi", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}", "AR=${mediaProperties.ar}")
                         }
 
                         exec {
                             commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/glib-lite")
-                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite")
+                            args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=glib-lite", "ARCH=$TARGET_ARCH")
                             args ("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
                         }
                     }
@@ -3456,12 +3459,17 @@ project(":web") {
                     if (IS_STATIC_BUILD) {
                         cmakeArgs = " $cmakeArgs -DSTATIC_BUILD=1 -DUSE_THIN_ARCHIVES=OFF";
                     }
-                    cmakeArgs = " $cmakeArgs -DCMAKE_C_COMPILER='${webkitProperties.compiler}'"
+                    cmakeArgs = " -target arm64-apple-macos11 $cmakeArgs -DCMAKE_C_COMPILER='${webkitProperties.compiler}'"
+
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                     } else if (t.name == "mac") {
-                        cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
+                        def TARGET_ARCH = "x86_64"
+                        if (hasProperty('TARGET_ARCH')) {
+                            TARGET_ARCH = ext.TARGET_ARCH
+                        }
+                        cmakeArgs = " -target $TARGET_ARCH-apple-macox11 $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_SYSTEM_NAME=Linux"
                         if (IS_64) {

@@ -2,7 +2,7 @@
    ffi_common.h - Copyright (C) 2011, 2012, 2013  Anthony Green
                   Copyright (C) 2007  Free Software Foundation, Inc
                   Copyright (c) 1996  Red Hat, Inc.
-
+                  
    Common internal definitions and macros. Only necessary for building
    libffi.
    ----------------------------------------------------------------------- */
@@ -82,7 +82,7 @@ void ffi_type_test(ffi_type *a, char *file, int line);
 /* Perform machine dependent cif processing */
 ffi_status ffi_prep_cif_machdep(ffi_cif *cif);
 ffi_status ffi_prep_cif_machdep_var(ffi_cif *cif,
-     unsigned int nfixedargs, unsigned int ntotalargs);
+	 unsigned int nfixedargs, unsigned int ntotalargs);
 
 
 #if HAVE_LONG_DOUBLE_VARIANT
@@ -92,12 +92,12 @@ void ffi_prep_types (ffi_abi abi);
 
 /* Used internally, but overridden by some architectures */
 ffi_status ffi_prep_cif_core(ffi_cif *cif,
-                 ffi_abi abi,
-                 unsigned int isvariadic,
-                 unsigned int nfixedargs,
-                 unsigned int ntotalargs,
-                 ffi_type *rtype,
-                 ffi_type **atypes);
+			     ffi_abi abi,
+			     unsigned int isvariadic,
+			     unsigned int nfixedargs,
+			     unsigned int ntotalargs,
+			     ffi_type *rtype,
+			     ffi_type **atypes);
 
 /* Translate a data pointer to a code pointer.  Needed for closures on
    some targets.  */
