@@ -85,6 +85,7 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
             new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
             new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
             new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited),
+            new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged, false),
 
             // on non-Mac OS platforms, we support pressing the ENTER key to activate the button
             new KeyMapping(new KeyBinding(ENTER, KeyEvent.KEY_PRESSED), this::keyPressed, event -> PlatformUtil.isMac()),
@@ -230,6 +231,18 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
     protected void mouseExited(MouseEvent e) {
         // Disarm if necessary
         if (! keyDown && getNode().isArmed()) {
+            getNode().disarm();
+        }
+    }
+
+    /**
+     * Invoked when the the Button is dragged. If the Button had been armed
+     * by a touch event or a mouse press and the mouse is still pressed,
+     * then this will cause the button to be rearmed. This allows not to fire
+     * the button's action after dragging or scrolling the button.
+     */
+    protected void mouseDragged(MouseEvent e) {
+        if (e.isSynthesized() && getNode().isArmed()) {
             getNode().disarm();
         }
     }

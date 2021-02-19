@@ -97,7 +97,8 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
             new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
             new MouseMapping(MouseEvent.MOUSE_ENTERED, this::mouseEntered),
-            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited)
+            new MouseMapping(MouseEvent.MOUSE_EXITED, this::mouseExited),
+            new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged, false)
         );
 
         // we don't want to consume events on enter press - let them carry on through
@@ -261,6 +262,18 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     public void mouseExited(MouseEvent e) {
         mouseInsideButton = false;
         disarm();
+    }
+
+    /**
+     * Invoked when the the ComboBox is dragged. If the box had been armed
+     * by a touch event or a mouse press and the mouse is still pressed,
+     * then this will cause the box to be rearmed. This allows not to fire
+     * the box's action after dragging or scrolling the box.
+     */
+    public void mouseDragged(MouseEvent e) {
+        if(e.isSynthesized()) {
+            showPopupOnMouseRelease = false;
+        }
     }
 
 //    private void getFocus() {

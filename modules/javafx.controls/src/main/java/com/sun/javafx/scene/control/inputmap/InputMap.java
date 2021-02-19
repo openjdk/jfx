@@ -860,10 +860,34 @@ public class InputMap<N extends Node> implements EventHandler<Event> {
          *           {@link MouseEvent} is observed.
          */
         public MouseMapping(final EventType<MouseEvent> eventType, final EventHandler<MouseEvent> eventHandler) {
+            this(eventType, eventHandler, true);
+        }
+
+        /**
+         * Creates a new MouseMapping instance that will fire when the given
+         * {@link MouseEvent} is entered into the application by the user, and this
+         * will result in the given {@link EventHandler} being fired. The
+         * eventType argument can be any of the {@link MouseEvent} event types,
+         * but typically it is one of the following:
+         *
+         * <ul>
+         *     <li>{@link MouseEvent#ANY}</li>
+         *     <li>{@link MouseEvent#MOUSE_PRESSED}</li>
+         *     <li>{@link MouseEvent#MOUSE_CLICKED}</li>
+         *     <li>{@link MouseEvent#MOUSE_RELEASED}</li>
+         * </ul>
+         *
+         * @param eventType The type of {@link MouseEvent} to listen for.
+         * @param eventHandler The {@link EventHandler} to fire when the
+         *           {@link MouseEvent} is observed.
+         * @param autoConsume Auto consume mouse events
+         */
+        public MouseMapping(final EventType<MouseEvent> eventType, final EventHandler<MouseEvent> eventHandler, boolean autoConsume) {
             super(eventType, eventHandler);
             if (eventType == null) {
                 throw new IllegalArgumentException("MouseMapping eventType constructor argument can not be null");
             }
+            setAutoConsume(autoConsume);
         }
 
 
