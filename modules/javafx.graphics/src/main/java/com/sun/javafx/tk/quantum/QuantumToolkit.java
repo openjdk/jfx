@@ -133,6 +133,7 @@ import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.DragboardHelper;
+import java.util.Optional;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -1234,6 +1235,24 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public boolean isMSAASupported() {
         return  GraphicsPipeline.getPipeline().isMSAASupported();
+    }
+
+    // Returns the glass keycode for the given JavaFX KeyCode.
+    // This method only converts lock state KeyCode values
+    private int toGlassKeyCode(KeyCode keyCode) {
+        switch (keyCode) {
+            case CAPS:
+                return com.sun.glass.events.KeyEvent.VK_CAPS_LOCK;
+            case NUM_LOCK:
+                return com.sun.glass.events.KeyEvent.VK_NUM_LOCK;
+            default:
+                return com.sun.glass.events.KeyEvent.VK_UNDEFINED;
+        }
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        return Application.GetApplication().isKeyLocked(toGlassKeyCode(keyCode));
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {

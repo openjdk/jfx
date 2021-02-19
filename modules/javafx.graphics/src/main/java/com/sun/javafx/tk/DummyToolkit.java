@@ -67,6 +67,7 @@ import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import java.util.Optional;
 
 /**
  * A stubbed out Toolkit that provides no useful implementation. This is used
@@ -368,6 +369,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

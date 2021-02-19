@@ -1,4 +1,4 @@
-## Apache Lucene v7.7.2
+## Apache Lucene v7.7.3
 
 ### Apache Lucene Notice
 ```

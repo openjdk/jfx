@@ -319,6 +319,7 @@ abstract class ViewPainter implements Runnable {
                     g.setClipRect(dirtyRect);
                     g.setClipRectIndex(i);
                     doPaint(g, getRootPath(i));
+                    getRootPath(i).clear();
                 }
             }
         } else {

@@ -438,7 +438,7 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     static_cast<TextureMapperJava&>(*m_textureMapper).setGraphicsContext(&context);
     TransformationMatrix matrix;
     m_textureMapper->beginPainting();
-    m_textureMapper->beginClip(matrix, clip);
+    m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
     rootTextureMapperLayer.applyAnimationsRecursively(MonotonicTime::now());
     downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
     rootTextureMapperLayer.paint();

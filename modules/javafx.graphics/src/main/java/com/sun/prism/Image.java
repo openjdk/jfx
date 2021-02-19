@@ -650,9 +650,9 @@ public class Image implements PlatformImage {
                                                   (IntBuffer) pixelBuffer);
                     break;
             }
-        }
-        if (pixelaccessor != null && pixelScale != 1.0f) {
-            pixelaccessor = new ScaledAccessor<>(pixelaccessor, pixelScale);
+            if (pixelScale != 1.0f) {
+                pixelaccessor = new ScaledAccessor<>(pixelaccessor, pixelScale);
+            }
         }
         return pixelaccessor;
     }
