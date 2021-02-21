@@ -186,7 +186,7 @@ final class TabOrderHelper {
         ** we've reached the end of the peer nodes, and none have been selected,
         ** time to look at our parents peers.....
         */
-        while (newNode == null && startNode.getParent() != root) {
+        while (newNode == null && startNode != null && startNode.getParent() != root) {
             List<Node> peerNodes;
             int parentIndex;
 
