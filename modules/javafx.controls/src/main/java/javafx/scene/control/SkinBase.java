@@ -245,8 +245,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * Subclasses can invoke this method to register that they want to listen to
      * invalidation events for the given observable. Registered {@link Consumer} instances
      * will be executed in the order in which they are registered.
+     *
      * @param observable the observable to observe for invalidation events
      * @param consumer the consumer
+     * @since 17
      */
     protected final void registerInvalidationListener(Observable observable, Consumer<Observable> consumer) {
         if (lambdaChangeListenerHandler == null) {
@@ -266,7 +268,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
      *      {@link #registerInvalidationListener(Observable, Consumer)}. If no consumers have been registered on this
      *      property, null will be returned.
-     * @since 9
+     * @since 17
      */
     protected final Consumer<Observable> unregisterInvalidationListeners(Observable observable) {
         if (lambdaChangeListenerHandler == null) {
@@ -280,8 +282,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * Subclasses can invoke this method to register that they want to listen to
      * list change events for the given observable list. Registered {@link Consumer} instances
      * will be executed in the order in which they are registered.
+     *
      * @param observableList the observable list to observe for list change events
      * @param consumer the consumer
+     * @since 17
      */
     protected final void registerListChangeListener(ObservableList<?> observableList, Consumer<Change<?>> consumer) {
         if (lambdaChangeListenerHandler == null) {
@@ -302,7 +306,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
      *      {@link #registerListChangeListener(ObservableList, Consumer)}. If no consumers have been registered on this
      *      list, null will be returned.
-     * @since 9
+     * @since 17
      */
     protected final Consumer<Change<?>> unregisterListChangeListeners(ObservableList<?> observableList) {
         if (lambdaChangeListenerHandler == null) {
