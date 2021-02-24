@@ -190,6 +190,8 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public Texture createTexture(MediaFrame frame) {
+        // KCR: debug
+        System.err.println("D3DResourceFactory:: createTexture(MediaFrame) : frame = " + frame);
         if (checkDisposed()) return null;
 
         frame.holdFrame();
@@ -437,11 +439,10 @@ class D3DResourceFactory extends BaseShaderFactory {
     @Override
     public void dispose() {
         // KCR: debug
-        if (PrismSettings.verbose) {
-            System.err.println("D3DResourceFactory::dispose");
-        }
+        System.err.println("D3DResourceFactory::dispose");
 
         disposed = true;
+        context.dispose();
         notifyReleased();
         // KCR: TODO: finish this
     }
@@ -451,13 +452,12 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     private boolean checkDisposed() {
-        boolean ret = isDisposed() || context.isDisposed();
-        if (PrismSettings.verbose && ret) {
+        // KCR: debug
+        if (/*PrismSettings.verbose && */ isDisposed()) {
             System.err.println("D3DResourceFactory: cannot allocate resource because " +
-                    (isDisposed() ? "this resource factory" : "the context") +
-                    " has been disposed");
+                    "this resource factory has been disposed");
         }
-        return ret;
+        return isDisposed();
     }
 
     @Override

@@ -127,6 +127,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
         return false;
     }
 
+// KCR: only do this once (skip if reinstalizing)
 #ifdef STATIC_BUILD
     loadD3DLibrary();
 #endif // STATIC_BUILD
@@ -159,6 +160,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose(JNIEnv *pEnv,
         D3DPipelineManager::DeleteInstance();
     }
 
+// KCR: this call will need to be moved
 #ifdef STATIC_BUILD
     freeD3DLibrary();
 #endif // STATIC_BUILD

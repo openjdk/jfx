@@ -182,12 +182,21 @@ public final class D3DPipeline extends GraphicsPipeline {
     void reinitialize() {
         // KCR: debug
         System.err.println("KCR: reinitialize D3DPipeline");
+        Thread.dumpStack();
 
         // Device was removed, reset and reinitialize
         reset();
 
-        // KCR: TODO: throw exception on error?
         boolean success = nInit(PrismSettings.class);
+        if (!success) {
+            // KCR: TODO: return failure or throw exception on error?
+            System.err.println("Error: unable to reinitialize D3D graphics device");
+            return;
+        }
+        if (nGetAdapterCount() == 0) {
+            System.err.println("Error: D3D graphics device reset: no adapters found");
+        }
+        // KCR: TODO: check adapterCount?
         factories = new D3DResourceFactory[nGetAdapterCount()];
     }
 
@@ -237,11 +246,13 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
-        // KCR: maybe revert this change, since I don't think it is needed
         int adapterCount = nGetAdapterCount();
         if (adapterCount == 0) {
+            // KCR: debug
+            System.err.println();
+            System.err.println("*****");
+            System.err.println("KCR: findDefaultResourceFactory: adapters lost, recreate");
             // adapters lost, recreate
-            System.err.println("KCR: adapters lost, recreate -- will this ever happen??");
             D3DPipeline.getInstance().reinitialize();
             return null;
         }

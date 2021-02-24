@@ -697,6 +697,8 @@ public final class WebPage {
             if (pageClient != null && pageClient.isBackBufferSupported()) {
                 if (!backbuffer.validate(width, height)) {
                     // We need to repaint the whole page on the next turn
+                    // KCR: debug
+                    System.err.println("WebPage::paint : lostSurface");
                     Invoker.getInvoker().invokeOnEventThread(() -> {
                         repaintAll();
                     });

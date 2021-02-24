@@ -72,6 +72,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     }
 
     private RTTexture getTexture() {
+        // KCR: debug
+        if (txt != null && txt.isSurfaceLost()) {
+            System.err.println("***** surface lost: " + this);
+        }
+
         if (txt == null) {
             ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
             txt = f.createRTTexture(

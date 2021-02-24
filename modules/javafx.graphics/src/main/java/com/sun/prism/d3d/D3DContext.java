@@ -174,7 +174,7 @@ class D3DContext extends BaseShaderContext {
 //        hr = simulateDeviceRemoved(hr);
 
         // KCR: debug
-        if (PrismSettings.verbose) {
+        if (PrismSettings.verbose || FAILED(hr)) {
             System.err.print("KCR: testLostStateAndReset : ");
             switch (hr) {
                 case D3D_OK:
@@ -185,7 +185,6 @@ class D3DContext extends BaseShaderContext {
                     break;
                 case D3DERR_DEVICEREMOVED:
                     System.err.println("D3DERR_DEVICEREMOVED");
-                    Thread.dumpStack();
                     break;
                 case D3DERR_DEVICENOTRESET:
                     System.err.println("D3DERR_DEVICENOTRESET");
@@ -220,9 +219,8 @@ class D3DContext extends BaseShaderContext {
         }
 
         if (hr == D3DERR_DEVICEREMOVED) {
-            // Dispose of this context and reinitialize the D3DPipeline.
-            // This will recreate the resource factory and context for each adapter
-            dispose();
+            // Reinitialize the D3DPipeline. This will dispose and recreate
+            // the resource factory and context for each adapter.
             D3DPipeline.getInstance().reinitialize();
         }
 

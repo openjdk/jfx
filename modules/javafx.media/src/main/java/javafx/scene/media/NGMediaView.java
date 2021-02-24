@@ -158,6 +158,9 @@ class NGMediaView extends NGNode {
         }
 
         Texture texture = handler.getTexture(g, frame);
+        // KCR: debug
+        System.err.println("NGMediaView: getTexture: " + texture +
+                (texture != null && texture.isSurfaceLost() ? " (lost surface)" : ""));
         if (texture != null) {
             float iw = viewport.getWidth();
             float ih = viewport.getHeight();

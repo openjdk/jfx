@@ -36,6 +36,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.PixelFormat;
+import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 
@@ -63,7 +64,8 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         return ret;
     }
 
-    private boolean registeredWithFactory = false;
+    private ResourceFactory registeredWithFactory = null;
+
     private PrismMediaFrameHandler(Object provider) {
     }
 
@@ -85,6 +87,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         Screen screen = g.getAssociatedScreen();
         TextureMapEntry tme = textures.get(screen);
 
+        // KCR: debug
+        System.err.println("PrismMediaFrameHandler: getTexture: currentFrame = " + currentFrame +
+                ", tme = " + tme);
         if (null == currentFrame) {
             // null frame, remove the existing texture
             if (textures.containsKey(screen)) {
@@ -100,8 +105,12 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         }
 
         if (tme.texture != null) {
+            // KCR: debug
+            System.err.println("KCR: PrismMediaFrameHandler: tme.texture = " + tme.texture);
             tme.texture.lock();
             if (tme.texture.isSurfaceLost()) {
+                // KCR: debug
+                System.err.println("KCR: PrismMediaFrameHandler: surface lost");
                 tme.texture = null;
             }
         }
@@ -129,11 +138,12 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
         PrismFrameBuffer prismBuffer = new PrismFrameBuffer(vdb);
         if (tme.texture == null) {
-            if (!registeredWithFactory) {
+            ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
+            if (registeredWithFactory != factory) {
                 // make sure we've registered with the resource factory so we know
                 // when to purge old textures
-                GraphicsPipeline.getDefaultResourceFactory().addFactoryListener(this);
-                registeredWithFactory = true;
+                factory.addFactoryListener(this);
+                registeredWithFactory = factory;
             }
 
             tme.texture = GraphicsPipeline.getPipeline().
@@ -173,10 +183,14 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
     }
 
     public void factoryReset() {
+        // KCR: debug
+        System.err.println("*** PrismMediaFrameHandler: factoryReset");
         releaseData();
     }
 
     public void factoryReleased() {
+        // KCR: debug
+        System.err.println("*** PrismMediaFrameHandler: factoryReleased");
         releaseData();
     }
 
