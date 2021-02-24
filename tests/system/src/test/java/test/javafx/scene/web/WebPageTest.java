@@ -132,6 +132,7 @@ public class WebPageTest {
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+        Util.sleep(1000);
 
         Util.runAndWait(() -> {
             final WebPage page = WebEngineShim.getPage(webView.getEngine());
@@ -139,7 +140,7 @@ public class WebPageTest {
             WebPageShim.scroll(page, 1, 1, 0, 100);
         });
 
-        Util.sleep(100);
+        Util.sleep(500);
 
         Util.runAndWait(() -> {
             assertEquals("WebPage should display pass: ", "Pass", webView.getEngine().executeScript("document.getElementById('test').innerHTML"));
