@@ -407,6 +407,7 @@ void FrameViewLayoutContext::scheduleLayout()
 #endif
 
 #if PLATFORM(JAVA)
+    // scheduleLayout will be called from prePaint in next updateContent cycle.
     const Seconds layoutScheduleThreshold = 250_ms;
     m_layoutTimer.startOneShot(layoutScheduleThreshold);
 #else
