@@ -111,7 +111,11 @@ private:
     PerAxisData m_verticalData;
 
     MonotonicTime m_startTime;
+#if USE(GENERIC_EVENT_LOOP) && PLATFORM(JAVA)
+    Timer m_animationTimer;
+#else
     RunLoop::Timer<ScrollAnimationSmooth> m_animationTimer;
+#endif
 };
 
 } // namespace WebCore
