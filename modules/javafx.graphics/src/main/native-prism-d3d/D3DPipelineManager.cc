@@ -144,11 +144,36 @@ HRESULT D3DPipelineManager::ReleaseAdapters()
     return S_OK;
 }
 
+// KCR: debug
+/*
+static int firstTime = 1;
+
+static int tickCount = 0;
+static int numFailBeforePass = 3;
+*/
+
 HRESULT D3DPipelineManager::InitAdapters(IConfig &cfg)
 {
     TraceLn(NWT_TRACE_INFO, "D3DPPLM::InitAdapters()");
 
     adapterCount = pd3d9->GetAdapterCount();
+
+// KCR: debug
+// Simulate a failure upon initial reconnect
+/*
+    if (firstTime) {
+        firstTime = 0;
+    } else if (numFailBeforePass > 0) {
+        if ((++tickCount % (numFailBeforePass + 1)) != 0) {
+            fprintf(stderr, "Forcing adapterCount to 0\n");
+            adapterCount = 0;
+        }
+    }
+*/
+
+    if (adapterCount == 0) {
+        RlsTraceLn(NWT_TRACE_WARNING, "Zero adapters found");
+    }
     pAdapters = new D3DAdapter[adapterCount];
     if (pAdapters == NULL) {
         SetErrorMessage("InitAdapters: out of memory");

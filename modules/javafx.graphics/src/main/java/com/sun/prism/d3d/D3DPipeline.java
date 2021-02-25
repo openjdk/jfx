@@ -39,6 +39,11 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     private static final boolean d3dEnabled;
 
+    private static final Thread creator;
+    private static D3DPipeline theInstance;
+    private static D3DResourceFactory factories[];
+    private static boolean d3dInitialized;
+
     static {
 
         d3dEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
@@ -52,9 +57,10 @@ public final class D3DPipeline extends GraphicsPipeline {
             return Boolean.valueOf(nInit(PrismSettings.class));
         });
 
-        if (PrismSettings.verbose) {
+// KCR: Restore check for verbose
+//        if (PrismSettings.verbose) {
             System.out.println("Direct3D initialization " + (d3dEnabled ? "succeeded" : "failed"));
-        }
+//        }
 
         boolean printD3DError = PrismSettings.verbose || !PrismSettings.disableBadDriverWarning;
         if (!d3dEnabled && printD3DError) {
@@ -67,14 +73,11 @@ public final class D3DPipeline extends GraphicsPipeline {
         creator = Thread.currentThread();
 
         if (d3dEnabled) {
+            d3dInitialized = true;
             theInstance = new D3DPipeline();
             factories = new D3DResourceFactory[nGetAdapterCount()];
         }
     }
-
-    private static Thread creator;
-    private static D3DPipeline theInstance;
-    private static D3DResourceFactory factories[];
 
     public static D3DPipeline getInstance() {
         return theInstance;
@@ -160,7 +163,14 @@ public final class D3DPipeline extends GraphicsPipeline {
     // and free all resources
     private void reset() {
         // KCR: debug
-        System.err.println("    reset D3DPipeline");
+        System.err.println("D3DPipeline::reset");
+
+        if (!d3dInitialized) {
+            // KCR: debug
+            System.err.println("    D3D device not initialized, so no need to reset");
+
+            return;
+        }
 
         if (creator != Thread.currentThread()) {
             throw new IllegalStateException(
@@ -175,6 +185,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         }
         factories = null;
         _default = null;
+        d3dInitialized = false;
         nDispose();
     }
 
@@ -189,14 +200,19 @@ public final class D3DPipeline extends GraphicsPipeline {
 
         boolean success = nInit(PrismSettings.class);
         if (!success) {
-            // KCR: TODO: return failure or throw exception on error?
+            // KCR: debug
             System.err.println("Error: unable to reinitialize D3D graphics device");
+
+            nDispose();
             return;
         }
+
+        // KCR: debug
         if (nGetAdapterCount() == 0) {
-            System.err.println("Error: D3D graphics device reset: no adapters found");
+            throw new InternalError("This should never happen");
         }
-        // KCR: TODO: check adapterCount?
+
+        d3dInitialized = true;
         factories = new D3DResourceFactory[nGetAdapterCount()];
     }
 
@@ -218,9 +234,8 @@ public final class D3DPipeline extends GraphicsPipeline {
     private static D3DResourceFactory getD3DResourceFactory(int adapterOrdinal, Screen screen) {
         D3DResourceFactory factory = factories[adapterOrdinal];
         if (factory == null && screen != null) {
-            // KCR: debug
             if (PrismSettings.verbose) {
-                System.err.println("KCR: create resource factory for screen " + adapterOrdinal);
+                System.err.println("Create resource factory for screen " + adapterOrdinal);
             }
             factory = createResourceFactory(adapterOrdinal, screen);
             factories[adapterOrdinal] = factory;
@@ -246,17 +261,23 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
-        int adapterCount = nGetAdapterCount();
-        if (adapterCount == 0) {
+        if (!d3dInitialized) {
+            // If initialization failed, try again
             // KCR: debug
             System.err.println();
             System.err.println("*****");
-            System.err.println("KCR: findDefaultResourceFactory: adapters lost, recreate");
+            System.err.println("KCR: findDefaultResourceFactory: attempt to reinitialize D3D device");
             // adapters lost, recreate
             D3DPipeline.getInstance().reinitialize();
-            return null;
+
+            // If reinitializion failed, return  a null resource factory; we will
+            // try again the next time this method is called.
+            if (!d3dInitialized) {
+                return null;
+            }
         }
-        for (int adapter = 0, n = adapterCount; adapter != n; ++adapter) {
+
+        for (int adapter = 0, n = nGetAdapterCount(); adapter != n; ++adapter) {
             D3DResourceFactory rf =
                     getD3DResourceFactory(adapter, getScreenForAdapter(screens, adapter));
 
