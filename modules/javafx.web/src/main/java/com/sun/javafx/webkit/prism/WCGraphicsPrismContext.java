@@ -1346,6 +1346,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             if (permanent) {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
                 RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                // KCR: check this
                 rtt.makePermanent();
                 buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
             } else {

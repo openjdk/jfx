@@ -707,6 +707,7 @@ public abstract class BaseShaderContext extends BaseContext {
         // but the flow of control through the text methods is
         // not straight-forward enough for a simple set of lock/unlock
         // fixes at this time.
+        // KCR: No need to check surfaceLost since context will be recreated
         lcdBuffer.makePermanent();
     }
 
