@@ -57,7 +57,8 @@ public final class D3DPipeline extends GraphicsPipeline {
             return Boolean.valueOf(nInit(PrismSettings.class));
         });
 
-// KCR: Restore check for verbose
+// KCR: debug
+// TODO: restore verbose check
 //        if (PrismSettings.verbose) {
             System.out.println("Direct3D initialization " + (d3dEnabled ? "succeeded" : "failed"));
 //        }
