@@ -112,10 +112,10 @@ struct ConfigJavaStaticClass : IConfig {
 /*
  * Class:     com_sun_prism_d3d_D3DPipeline
  * Method:    nInit
+ * Signature: (Ljava/lang/Class;Z)Z
  */
-
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
-  (JNIEnv *env, jclass, jclass psClass)
+  (JNIEnv *env, jclass, jclass psClass, jboolean load)
 {
     if (D3DPipelineManager::GetInstance()) {
         D3DPipelineManager::SetErrorMessage("Double D3DPipelineManager initialization");
@@ -127,9 +127,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DPipeline_nInit
         return false;
     }
 
-// KCR: only do this once (skip if reinstalizing)
 #ifdef STATIC_BUILD
-    loadD3DLibrary();
+    if (load) {
+        loadD3DLibrary();
+    }
 #endif // STATIC_BUILD
 
     TraceLn(NWT_TRACE_INFO, "D3DPipeline_nInit");
@@ -151,18 +152,20 @@ JNIEXPORT jstring JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetErrorMessage(JN
 /*
  * Class:     com_sun_prism_d3d_D3DPipeline
  * Method:    nDispose
+ * Signature: (Z)V
  */
-
-JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose(JNIEnv *pEnv, jclass)
+JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DPipeline_nDispose
+  (JNIEnv *pEnv, jclass, jboolean unload)
 {
     TraceLn(NWT_TRACE_INFO, "D3DPipeline_nDispose");
     if (D3DPipelineManager::GetInstance()) {
         D3DPipelineManager::DeleteInstance();
     }
 
-// KCR: this call will need to be moved
 #ifdef STATIC_BUILD
-    freeD3DLibrary();
+    if (unload) {
+        freeD3DLibrary();
+    }
 #endif // STATIC_BUILD
 }
 

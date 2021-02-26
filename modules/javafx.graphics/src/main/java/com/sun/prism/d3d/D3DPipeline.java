@@ -54,7 +54,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             if (PrismSettings.verbose) {
                 System.out.println("\tsucceeded.");
             }
-            return Boolean.valueOf(nInit(PrismSettings.class));
+            return Boolean.valueOf(nInit(PrismSettings.class, true));
         });
 
 // KCR: debug
@@ -145,9 +145,9 @@ public final class D3DPipeline extends GraphicsPipeline {
         return d3dEnabled;
     }
 
-    private static native boolean nInit(Class psClass);
+    private static native boolean nInit(Class psClass, boolean load);
     private static native String nGetErrorMessage();
-    private static native void nDispose();
+    private static native void nDispose(boolean unload);
 
     private static native int nGetAdapterOrdinal(long hMonitor);
     private static native int nGetAdapterCount();
@@ -162,7 +162,7 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     // Called by dispose and reinitialize methods to reset the pipeline
     // and free all resources
-    private void reset() {
+    private void reset(boolean unload) {
         // KCR: debug
         System.err.println("D3DPipeline::reset");
 
@@ -187,7 +187,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         factories = null;
         _default = null;
         d3dInitialized = false;
-        nDispose();
+        nDispose(unload);
     }
 
     // Reinitialize pipeline
@@ -197,14 +197,14 @@ public final class D3DPipeline extends GraphicsPipeline {
         Thread.dumpStack();
 
         // Device was removed, reset and reinitialize
-        reset();
+        reset(false);
 
-        boolean success = nInit(PrismSettings.class);
+        boolean success = nInit(PrismSettings.class, false);
         if (!success) {
             // KCR: debug
             System.err.println("Error: unable to reinitialize D3D graphics device");
 
-            nDispose();
+            nDispose(false);
             return;
         }
 
@@ -222,7 +222,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         // KCR: debug
         System.err.println("KCR: dispose D3DPipeline");
 
-        reset();
+        reset(true);
         theInstance = null;
         super.dispose();
     }
