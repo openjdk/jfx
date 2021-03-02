@@ -1,0 +1,115 @@
+# Release Notes for JavaFX 16
+
+## Introduction
+
+The following notes describe important changes and information about this release. In some cases, the descriptions provide links to additional detailed information about an issue or a change.
+
+As of JDK 11 the JavaFX modules are delivered separately from the JDK. These release notes cover the standalone JavaFX 16 release. JavaFX 16 requires JDK 11 or later.
+
+## List of Fixed Bugs
+
+Issue key|Summary|Subcomponent
+---------|-------|------------
+[JDK-8253597](https://bugs.openjdk.java.net/browse/JDK-8253597)|TreeTableView: must select leaf row on click into indentation region|controls
+[JDK-8253696](https://bugs.openjdk.java.net/browse/JDK-8253696)|WebEngine refuses to load local "file:///" CSS stylesheets when using JDK 15|web
+[JDK-8248490](https://bugs.openjdk.java.net/browse/JDK-8248490)|[macOS] Undecorated stage does not minimize|window-toolkit
+[JDK-8252446](https://bugs.openjdk.java.net/browse/JDK-8252446)|Screen.getScreens() is empty sometimes|graphics
+[JDK-8251941](https://bugs.openjdk.java.net/browse/JDK-8251941)|ListCell: visual artifact when items contain null values|controls
+[JDK-8176270](https://bugs.openjdk.java.net/browse/JDK-8176270)|Adding ChangeListener to TextField.selectedTextProperty causes StringOutOfBoundsException|controls
+[JDK-8255415](https://bugs.openjdk.java.net/browse/JDK-8255415)|Nested calls to snap methods in Region give different results|graphics
+[JDK-8246343](https://bugs.openjdk.java.net/browse/JDK-8246343)|Fix mistakes in FX API docs|other
+[JDK-8249839](https://bugs.openjdk.java.net/browse/JDK-8249839)|Cherry pick GTK WebKit 2.28.3 changes|web
+[JDK-8245053](https://bugs.openjdk.java.net/browse/JDK-8245053)|Keyboard doesn't show when TextInputControl has focus|controls
+[JDK-8251946](https://bugs.openjdk.java.net/browse/JDK-8251946)|ObservableList.setAll does not conform to specification|base
+[JDK-8249777](https://bugs.openjdk.java.net/browse/JDK-8249777)|build.gradle: project.version should not contain time stamps|build
+[JDK-8220484](https://bugs.openjdk.java.net/browse/JDK-8220484)|JFXPanel renders a slanted image with a hidpi monitor scale of 125% or 175%|swing
+[JDK-8259639](https://bugs.openjdk.java.net/browse/JDK-8259639)|GitHub actions: build fails on Linux due to missing apt-get update|build
+[JDK-8251555](https://bugs.openjdk.java.net/browse/JDK-8251555)|Remove unused focusedWindow field in glass Window to avoid leak|window-toolkit
+[JDK-8254605](https://bugs.openjdk.java.net/browse/JDK-8254605)|repaint on Android broken|graphics
+[JDK-8228570](https://bugs.openjdk.java.net/browse/JDK-8228570)|Add various documentation clarifications|other
+[JDK-8255241](https://bugs.openjdk.java.net/browse/JDK-8255241)|[TestBug] Re-enable few ignored tests in javafx.controls module that pass with latest code|controls
+[JDK-8252389](https://bugs.openjdk.java.net/browse/JDK-8252389)|Fix mistakes in FX API docs|other
+[JDK-8254964](https://bugs.openjdk.java.net/browse/JDK-8254964)|Fix default values in Spinner class|controls
+[JDK-8213573](https://bugs.openjdk.java.net/browse/JDK-8213573)|MouseLocationOnScreenTest fails intermittently|window-toolkit
+[JDK-8256184](https://bugs.openjdk.java.net/browse/JDK-8256184)|Openjfx build broken (Eclipse)|other
+[JDK-8252236](https://bugs.openjdk.java.net/browse/JDK-8252236)|TabPane: must keep header of selected tab visible|controls
+[JDK-8202990](https://bugs.openjdk.java.net/browse/JDK-8202990)|javafx webview css filter property with display scaling|web
+[JDK-8233678](https://bugs.openjdk.java.net/browse/JDK-8233678)|[macos 10.15] System menu bar does not work initially on macOS Catalina|window-toolkit
+[JDK-8252811](https://bugs.openjdk.java.net/browse/JDK-8252811)|The list of cells in a VirtualFlow is cleared every time the number of items changes|controls
+[JDK-8257719](https://bugs.openjdk.java.net/browse/JDK-8257719)|JFXPanel scene fails to render correctly on HiDPI after fix for JDK-8199592|graphics
+[JDK-8242361](https://bugs.openjdk.java.net/browse/JDK-8242361)|JavaFX Web View crashes with Segmentation Fault, when HTML contains Data-URIs|web
+[JDK-8252107](https://bugs.openjdk.java.net/browse/JDK-8252107)|Media pipeline initialization can crash if audio or video bin state change fails|media
+[JDK-8256978](https://bugs.openjdk.java.net/browse/JDK-8256978)|GitHub actions: build fails on Linux due to missing package|build
+[JDK-8231372](https://bugs.openjdk.java.net/browse/JDK-8231372)|JFXPanel fails to render if setScene called on Swing thread|swing
+[JDK-8237491](https://bugs.openjdk.java.net/browse/JDK-8237491)|[Linux] Undecorated stage cannot be maximized|window-toolkit
+[JDK-8246745](https://bugs.openjdk.java.net/browse/JDK-8246745)|ListCell/Skin: misbehavior on switching skin|controls
+[JDK-8255487](https://bugs.openjdk.java.net/browse/JDK-8255487)|Mark SandboxAppTest unstable on Windows|application-lifecycle
+[JDK-8253634](https://bugs.openjdk.java.net/browse/JDK-8253634)|TreeCell/Skin: misbehavior on switching skin|controls
+[JDK-8253123](https://bugs.openjdk.java.net/browse/JDK-8253123)|Switch FX build to use JDK 15 as boot JDK|build
+[JDK-8252062](https://bugs.openjdk.java.net/browse/JDK-8252062)|WebKit build fails with recent VS 2019 compiler|web
+[JDK-8201568](https://bugs.openjdk.java.net/browse/JDK-8201568)|zForce touchscreen input device fails when closed and immediately reopened|window-toolkit
+[JDK-8199592](https://bugs.openjdk.java.net/browse/JDK-8199592)|Control labels truncated at certain DPI scaling levels|graphics
+[JDK-8247494](https://bugs.openjdk.java.net/browse/JDK-8247494)|Test failure in ImageRaceTest on some systems|graphics
+[JDK-8209788](https://bugs.openjdk.java.net/browse/JDK-8209788)|Left/Right/Ctrl+A keys not working in editor of ComboBox if popup showing|controls
+[JDK-8258592](https://bugs.openjdk.java.net/browse/JDK-8258592)|Control labels in Dialogs are truncated at certain DPI scaling levels|graphics
+[JDK-8256649](https://bugs.openjdk.java.net/browse/JDK-8256649)|Parameterized tests must not use instances as parameters|controls
+[JDK-8252192](https://bugs.openjdk.java.net/browse/JDK-8252192)|Update to Visual Studio 2019 version 16.7.2|build
+[JDK-8252060](https://bugs.openjdk.java.net/browse/JDK-8252060)|gstreamer fails to build with gcc 10|media
+[JDK-8249647](https://bugs.openjdk.java.net/browse/JDK-8249647)|Many classes in package javafx.beans.binding in module javafx.base have implicit no-arg constructors|base
+[JDK-8248381](https://bugs.openjdk.java.net/browse/JDK-8248381)|Create a daemon thread for MonocleTimer|window-toolkit
+[JDK-8252191](https://bugs.openjdk.java.net/browse/JDK-8252191)|Update to gcc 10.2 on Linux|build
+[JDK-8242621](https://bugs.openjdk.java.net/browse/JDK-8242621)|TabPane: Memory leak when switching skin|controls
+[JDK-8253935](https://bugs.openjdk.java.net/browse/JDK-8253935)|[testbug] ComboBoxTest.testEditorKeyInputsWhenPopupIsShowing fails on Mac, Linux|controls
+[JDK-8255002](https://bugs.openjdk.java.net/browse/JDK-8255002)|Many javafx.controls unit tests have incorrect name containing impl_*|controls
+[JDK-8251858](https://bugs.openjdk.java.net/browse/JDK-8251858)|Update to Xcode 11.3.1|build
+[JDK-8251241](https://bugs.openjdk.java.net/browse/JDK-8251241)|macOS: iconify property doesn't change after minimize when resizable is false|window-toolkit
+[JDK-8248908](https://bugs.openjdk.java.net/browse/JDK-8248908)|Printer.createPageLayout() returns 0.75" margins instead of hardware margins|graphics
+[JDK-8178297](https://bugs.openjdk.java.net/browse/JDK-8178297)|TableView scrolls slightly when adding new elements|controls
+[JDK-8257897](https://bugs.openjdk.java.net/browse/JDK-8257897)|Fix webkit build for XCode 12|web
+[JDK-8256686](https://bugs.openjdk.java.net/browse/JDK-8256686)|GitHub actions: build fails due to upgraded MSVC compiler|build
+[JDK-8253356](https://bugs.openjdk.java.net/browse/JDK-8253356)|JavaFX Terminology Refresh|other
+[JDK-8241840](https://bugs.openjdk.java.net/browse/JDK-8241840)|Memoryleak: Closed focused Stages are not collected with Monocle.|window-toolkit
+[JDK-8245284](https://bugs.openjdk.java.net/browse/JDK-8245284)|Update to 610.1 version of WebKit|web
+[JDK-8256821](https://bugs.openjdk.java.net/browse/JDK-8256821)|TreeViewSkin/Behavior: misbehavior on switching skin|controls
+[JDK-8240969](https://bugs.openjdk.java.net/browse/JDK-8240969)|WebView does not allow to load style sheet in modularized applications|web
+[JDK-8250238](https://bugs.openjdk.java.net/browse/JDK-8250238)|Media fails to load libav 58 library when using modules from maven central|media
+[JDK-8177945](https://bugs.openjdk.java.net/browse/JDK-8177945)|Single cell selection flickers when adding data to TableView|controls
+[JDK-8254049](https://bugs.openjdk.java.net/browse/JDK-8254049)|Update WebView to public suffix list 2020-04-24|web
+[JDK-8252381](https://bugs.openjdk.java.net/browse/JDK-8252381)|Cherry pick GTK WebKit 2.28.4 changes|web
+[JDK-8255337](https://bugs.openjdk.java.net/browse/JDK-8255337)|[TestBug] Controls unit tests - ButtonTest and ComboBoxTest - log ClassCastException|controls
+[JDK-8255723](https://bugs.openjdk.java.net/browse/JDK-8255723)|Gtk glass backend should run with Gtk+ 3.8 (minimum)|window-toolkit
+[JDK-8252387](https://bugs.openjdk.java.net/browse/JDK-8252387)|Deprecate for removal css Selector and ShapeConverter constructors|scenegraph
+[JDK-8250799](https://bugs.openjdk.java.net/browse/JDK-8250799)|NumberStringConverter and its subclasses are missing documentation for all their constructors|base
+[JDK-8255714](https://bugs.openjdk.java.net/browse/JDK-8255714)|Switch FX build to use JDK 15.0.1 as boot JDK|build
+[JDK-8181775](https://bugs.openjdk.java.net/browse/JDK-8181775)|JavaFX WebView does not calculate border-radius properly|web
+[JDK-8247576](https://bugs.openjdk.java.net/browse/JDK-8247576)|Labeled/SkinBase: misbehavior on switching skin|controls
+[JDK-8247947](https://bugs.openjdk.java.net/browse/JDK-8247947)|Build DirectShow Samples (Base Classes) from source checked into repo|media
+[JDK-8246202](https://bugs.openjdk.java.net/browse/JDK-8246202)|ChoiceBoxSkin: misbehavior on switching skin, part 2|controls
+[JDK-8211294](https://bugs.openjdk.java.net/browse/JDK-8211294)|ScrollPane content is blurry with 125% scaling|graphics
+[JDK-8248365](https://bugs.openjdk.java.net/browse/JDK-8248365)|Debug build crashes on Windows when playing media file|media
+[JDK-8251352](https://bugs.openjdk.java.net/browse/JDK-8251352)|Many javafx.base classes have implicit no-arg constructors|base
+[JDK-8252596](https://bugs.openjdk.java.net/browse/JDK-8252596)|[TESTBUG] WebPageShim::paint is not thread-safe|web
+[JDK-8251353](https://bugs.openjdk.java.net/browse/JDK-8251353)|Many javafx scenegraph classes have implicit no-arg constructors|scenegraph
+[JDK-8256362](https://bugs.openjdk.java.net/browse/JDK-8256362)|JavaFX must warn when the javafx.* modules are loaded from the classpath|application-lifecycle
+[JDK-8255497](https://bugs.openjdk.java.net/browse/JDK-8255497)|[TestBug] Controls unit tests - clean up unnecessary prints on STANDARD_OUT|controls
+[JDK-8201567](https://bugs.openjdk.java.net/browse/JDK-8201567)|QuantumRenderer modifies buffer in use by JavaFX Application Thread|graphics
+[JDK-8254040](https://bugs.openjdk.java.net/browse/JDK-8254040)|[testbug] Need additional regressions tests for ObservableList removeAll / retainAll|controls
+[JDK-8252547](https://bugs.openjdk.java.net/browse/JDK-8252547)|Correct transformations docs in Node|scenegraph
+[JDK-8240499](https://bugs.openjdk.java.net/browse/JDK-8240499)|Enforce whitespace checking for additional source files|other
+[JDK-8256012](https://bugs.openjdk.java.net/browse/JDK-8256012)|Fix build of Monocle for Linux|graphics
+
+## List of Enhancement
+
+Issue key|Summary|Subcomponent
+---------|-------|------------
+[JDK-8254569](https://bugs.openjdk.java.net/browse/JDK-8254569)|Remove hard dependency on Dispman in Monocle fb rendering|graphics
+[JDK-8254255](https://bugs.openjdk.java.net/browse/JDK-8254255)|Remove obsolete .hgignore file|other
+[JDK-8242861](https://bugs.openjdk.java.net/browse/JDK-8242861)|Update ImagePattern to apply SVG pattern transforms|web
+[JDK-8254691](https://bugs.openjdk.java.net/browse/JDK-8254691)|Enable GitHub actions for jfx repo|build
+[JDK-8252546](https://bugs.openjdk.java.net/browse/JDK-8252546)|Move ObservableValue's equality check and lazy evaluation descriptions to @implSpec|base
+[JDK-8256983](https://bugs.openjdk.java.net/browse/JDK-8256983)|GitHub actions: specify the version of each platform OS and compiler|build
+[JDK-8254013](https://bugs.openjdk.java.net/browse/JDK-8254013)|gradle test should run all test classes even if they don't end with "Test"|other
+[JDK-8257758](https://bugs.openjdk.java.net/browse/JDK-8257758)|Allow building of JavaFX native libs for Apple Silicon|build
+[JDK-8196079](https://bugs.openjdk.java.net/browse/JDK-8196079)|Remove obsolete Pisces rasterizer|graphics
+[JDK-8244297](https://bugs.openjdk.java.net/browse/JDK-8244297)|Provide utility for testing for memory leaks|other
+[JDK-8217472](https://bugs.openjdk.java.net/browse/JDK-8217472)|Add attenuation for PointLight|graphics
