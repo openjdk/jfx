@@ -6,23 +6,30 @@ The following notes describe important changes and information about this releas
 
 As of JDK 11 the JavaFX modules are delivered separately from the JDK. These release notes cover the standalone JavaFX 16 release. JavaFX 16 requires JDK 11 or later.
 
+## Important Changes
+
+### JavaFX runtime logs a warning if javafx.* modules are loaded from the classpath
+
+The JavaFX classes must be loaded from a set of named `javafx.*` modules on the _module path_. Loading the JavaFX classes from the classpath is not supported.
+The JavaFX runtime logs a warning at startup if the JavaFX classes are not loaded from the expected named module.
+See [JDK-8256362](https://bugs.openjdk.java.net/browse/JDK-8256362) for more information.
+
+## Removed Features and Options
+
+### The obsolete Pisces rasterizer has been removed from JavaFX
+
+The obsolete Pisces rasterizer has been removed from JavaFX.
+The Marlin rasterizer has been the default since JDK 10, but it was possible to select either the native Pisces rasterizer or the Java-based Pisces rasterizer by setting the `prism.rasterizerorder` system property to `nativepisces` or `javapisces`, respectively.
+Those options will now be silently ignored, and the default Marlin rasterizer will always be used.
+See [JDK-8196079](https://bugs.openjdk.java.net/browse/JDK-8196079) for more information.
+
 ## List of Fixed Bugs
 
 Issue key|Summary|Subcomponent
 ---------|-------|------------
-[JDK-8255487](https://bugs.openjdk.java.net/browse/JDK-8255487)|Mark SandboxAppTest unstable on Windows|application-lifecycle
 [JDK-8256362](https://bugs.openjdk.java.net/browse/JDK-8256362)|JavaFX must warn when the javafx.* modules are loaded from the classpath|application-lifecycle
 [JDK-8251352](https://bugs.openjdk.java.net/browse/JDK-8251352)|Many javafx.base classes have implicit no-arg constructors|base
 [JDK-8251946](https://bugs.openjdk.java.net/browse/JDK-8251946)|ObservableList.setAll does not conform to specification|base
-[JDK-8249777](https://bugs.openjdk.java.net/browse/JDK-8249777)|build.gradle: project.version should not contain time stamps|build
-[JDK-8251858](https://bugs.openjdk.java.net/browse/JDK-8251858)|Update to Xcode 11.3.1|build
-[JDK-8252191](https://bugs.openjdk.java.net/browse/JDK-8252191)|Update to gcc 10.2 on Linux|build
-[JDK-8252192](https://bugs.openjdk.java.net/browse/JDK-8252192)|Update to Visual Studio 2019 version 16.7.2|build
-[JDK-8253123](https://bugs.openjdk.java.net/browse/JDK-8253123)|Switch FX build to use JDK 15 as boot JDK|build
-[JDK-8255714](https://bugs.openjdk.java.net/browse/JDK-8255714)|Switch FX build to use JDK 15.0.1 as boot JDK|build
-[JDK-8256686](https://bugs.openjdk.java.net/browse/JDK-8256686)|GitHub actions: build fails due to upgraded MSVC compiler|build
-[JDK-8256978](https://bugs.openjdk.java.net/browse/JDK-8256978)|GitHub actions: build fails on Linux due to missing package|build
-[JDK-8259639](https://bugs.openjdk.java.net/browse/JDK-8259639)|GitHub actions: build fails on Linux due to missing apt-get update|build
 [JDK-8177945](https://bugs.openjdk.java.net/browse/JDK-8177945)|Single cell selection flickers when adding data to TableView|controls
 [JDK-8178297](https://bugs.openjdk.java.net/browse/JDK-8178297)|TableView scrolls slightly when adding new elements|controls
 [JDK-8209788](https://bugs.openjdk.java.net/browse/JDK-8209788)|Left/Right/Ctrl+A keys not working in editor of ComboBox if popup showing|controls
@@ -36,18 +43,10 @@ Issue key|Summary|Subcomponent
 [JDK-8252811](https://bugs.openjdk.java.net/browse/JDK-8252811)|The list of cells in a VirtualFlow is cleared every time the number of items changes|controls
 [JDK-8253597](https://bugs.openjdk.java.net/browse/JDK-8253597)|TreeTableView: must select leaf row on click into indentation region|controls
 [JDK-8253634](https://bugs.openjdk.java.net/browse/JDK-8253634)|TreeCell/Skin: misbehavior on switching skin|controls
-[JDK-8253935](https://bugs.openjdk.java.net/browse/JDK-8253935)|[testbug] ComboBoxTest.testEditorKeyInputsWhenPopupIsShowing fails on Mac, Linux|controls
-[JDK-8254040](https://bugs.openjdk.java.net/browse/JDK-8254040)|[testbug] Need additional regressions tests for ObservableList removeAll / retainAll|controls
 [JDK-8254964](https://bugs.openjdk.java.net/browse/JDK-8254964)|Fix default values in Spinner class|controls
-[JDK-8255002](https://bugs.openjdk.java.net/browse/JDK-8255002)|Many javafx.controls unit tests have incorrect name containing impl_*|controls
-[JDK-8255241](https://bugs.openjdk.java.net/browse/JDK-8255241)|[TestBug] Re-enable few ignored tests in javafx.controls module that pass with latest code|controls
-[JDK-8255337](https://bugs.openjdk.java.net/browse/JDK-8255337)|[TestBug] Controls unit tests - ButtonTest and ComboBoxTest - log ClassCastException|controls
-[JDK-8255497](https://bugs.openjdk.java.net/browse/JDK-8255497)|[TestBug] Controls unit tests - clean up unnecessary prints on STANDARD_OUT|controls
-[JDK-8256649](https://bugs.openjdk.java.net/browse/JDK-8256649)|Parameterized tests must not use instances as parameters|controls
 [JDK-8256821](https://bugs.openjdk.java.net/browse/JDK-8256821)|TreeViewSkin/Behavior: misbehavior on switching skin|controls
 [JDK-8199592](https://bugs.openjdk.java.net/browse/JDK-8199592)|Control labels truncated at certain DPI scaling levels|graphics
 [JDK-8211294](https://bugs.openjdk.java.net/browse/JDK-8211294)|ScrollPane content is blurry with 125% scaling|graphics
-[JDK-8247494](https://bugs.openjdk.java.net/browse/JDK-8247494)|Test failure in ImageRaceTest on some systems|graphics
 [JDK-8248908](https://bugs.openjdk.java.net/browse/JDK-8248908)|Printer.createPageLayout() returns 0.75" margins instead of hardware margins|graphics
 [JDK-8252446](https://bugs.openjdk.java.net/browse/JDK-8252446)|Screen.getScreens() is empty sometimes|graphics
 [JDK-8254605](https://bugs.openjdk.java.net/browse/JDK-8254605)|repaint on Android broken|graphics
@@ -55,14 +54,10 @@ Issue key|Summary|Subcomponent
 [JDK-8256012](https://bugs.openjdk.java.net/browse/JDK-8256012)|Fix build of Monocle for Linux|graphics
 [JDK-8257719](https://bugs.openjdk.java.net/browse/JDK-8257719)|JFXPanel scene fails to render correctly on HiDPI after fix for JDK-8199592|graphics
 [JDK-8258592](https://bugs.openjdk.java.net/browse/JDK-8258592)|Control labels in Dialogs are truncated at certain DPI scaling levels|graphics
-[JDK-8247947](https://bugs.openjdk.java.net/browse/JDK-8247947)|Build DirectShow Samples (Base Classes) from source checked into repo|media
 [JDK-8248365](https://bugs.openjdk.java.net/browse/JDK-8248365)|Debug build crashes on Windows when playing media file|media
 [JDK-8252060](https://bugs.openjdk.java.net/browse/JDK-8252060)|gstreamer fails to build with gcc 10|media
 [JDK-8252107](https://bugs.openjdk.java.net/browse/JDK-8252107)|Media pipeline initialization can crash if audio or video bin state change fails|media
-[JDK-8240499](https://bugs.openjdk.java.net/browse/JDK-8240499)|Enforce whitespace checking for additional source files|other
 [JDK-8252389](https://bugs.openjdk.java.net/browse/JDK-8252389)|Fix mistakes in FX API docs|other
-[JDK-8253356](https://bugs.openjdk.java.net/browse/JDK-8253356)|JavaFX Terminology Refresh|other
-[JDK-8256184](https://bugs.openjdk.java.net/browse/JDK-8256184)|Openjfx build broken (Eclipse)|other
 [JDK-8251353](https://bugs.openjdk.java.net/browse/JDK-8251353)|Many javafx scenegraph classes have implicit no-arg constructors|scenegraph
 [JDK-8252387](https://bugs.openjdk.java.net/browse/JDK-8252387)|Deprecate for removal css Selector and ShapeConverter constructors|scenegraph
 [JDK-8252547](https://bugs.openjdk.java.net/browse/JDK-8252547)|Correct transformations docs in Node|scenegraph
@@ -75,14 +70,12 @@ Issue key|Summary|Subcomponent
 [JDK-8249839](https://bugs.openjdk.java.net/browse/JDK-8249839)|Cherry pick GTK WebKit 2.28.3 changes|web
 [JDK-8252062](https://bugs.openjdk.java.net/browse/JDK-8252062)|WebKit build fails with recent VS 2019 compiler|web
 [JDK-8252381](https://bugs.openjdk.java.net/browse/JDK-8252381)|Cherry pick GTK WebKit 2.28.4 changes|web
-[JDK-8252596](https://bugs.openjdk.java.net/browse/JDK-8252596)|[TESTBUG] WebPageShim::paint is not thread-safe|web
 [JDK-8253696](https://bugs.openjdk.java.net/browse/JDK-8253696)|WebEngine refuses to load local "file:///" CSS stylesheets when using JDK 15|web
 [JDK-8254049](https://bugs.openjdk.java.net/browse/JDK-8254049)|Update WebView to public suffix list 2020-04-24|web
 [JDK-8257897](https://bugs.openjdk.java.net/browse/JDK-8257897)|Fix webkit build for XCode 12|web
 [JDK-8201568](https://bugs.openjdk.java.net/browse/JDK-8201568)|zForce touchscreen input device fails when closed and immediately reopened|window-toolkit
-[JDK-8213573](https://bugs.openjdk.java.net/browse/JDK-8213573)|MouseLocationOnScreenTest fails intermittently|window-toolkit
-[JDK-8233678](https://bugs.openjdk.java.net/browse/JDK-8233678)|[macos 10.15] System menu bar does not work initially on macOS Catalina|window-toolkit
-[JDK-8237491](https://bugs.openjdk.java.net/browse/JDK-8237491)|[Linux] Undecorated stage cannot be maximized|window-toolkit
+[JDK-8233678](https://bugs.openjdk.java.net/browse/JDK-8233678) [macos 10.15] System menu bar does not work initially on macOS Catalina|window-toolkit
+[JDK-8237491](https://bugs.openjdk.java.net/browse/JDK-8237491) [Linux] Undecorated stage cannot be maximized|window-toolkit
 [JDK-8241840](https://bugs.openjdk.java.net/browse/JDK-8241840)|Memoryleak: Closed focused Stages are not collected with Monocle.|window-toolkit
 [JDK-8251241](https://bugs.openjdk.java.net/browse/JDK-8251241)|macOS: iconify property doesn't change after minimize when resizable is false|window-toolkit
 [JDK-8251555](https://bugs.openjdk.java.net/browse/JDK-8251555)|Remove unused focusedWindow field in glass Window to avoid leak|window-toolkit
@@ -93,13 +86,7 @@ Issue key|Summary|Subcomponent
 Issue key|Summary|Subcomponent
 ---------|-------|------------
 [JDK-8252546](https://bugs.openjdk.java.net/browse/JDK-8252546)|Move ObservableValue's equality check and lazy evaluation descriptions to @implSpec|base
-[JDK-8254691](https://bugs.openjdk.java.net/browse/JDK-8254691)|Enable GitHub actions for jfx repo|build
-[JDK-8256983](https://bugs.openjdk.java.net/browse/JDK-8256983)|GitHub actions: specify the version of each platform OS and compiler|build
-[JDK-8257758](https://bugs.openjdk.java.net/browse/JDK-8257758)|Allow building of JavaFX native libs for Apple Silicon|build
 [JDK-8196079](https://bugs.openjdk.java.net/browse/JDK-8196079)|Remove obsolete Pisces rasterizer|graphics
 [JDK-8217472](https://bugs.openjdk.java.net/browse/JDK-8217472)|Add attenuation for PointLight|graphics
 [JDK-8254569](https://bugs.openjdk.java.net/browse/JDK-8254569)|Remove hard dependency on Dispman in Monocle fb rendering|graphics
-[JDK-8244297](https://bugs.openjdk.java.net/browse/JDK-8244297)|Provide utility for testing for memory leaks|other
-[JDK-8254013](https://bugs.openjdk.java.net/browse/JDK-8254013)|gradle test should run all test classes even if they don't end with "Test"|other
-[JDK-8254255](https://bugs.openjdk.java.net/browse/JDK-8254255)|Remove obsolete .hgignore file|other
 [JDK-8242861](https://bugs.openjdk.java.net/browse/JDK-8242861)|Update ImagePattern to apply SVG pattern transforms|web
