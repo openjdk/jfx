@@ -272,7 +272,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         // for the x/y offset to use
         if (PlatformUtil.useEGL()) {
             return ((int) (pState.getScreenHeight() * pState.getOutputScaleY())) -
-                    pState.getOutputHeight()  - ((int) (pState.getWindowY() * pState.getOutputScaleY()));
+                    pState.getOutputHeight() - ((int) (pState.getWindowY() * pState.getOutputScaleY()));
         } else {
             return 0;
         }
