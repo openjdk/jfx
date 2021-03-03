@@ -74,8 +74,8 @@ Issue key|Summary|Subcomponent
 [JDK-8254049](https://bugs.openjdk.java.net/browse/JDK-8254049)|Update WebView to public suffix list 2020-04-24|web
 [JDK-8257897](https://bugs.openjdk.java.net/browse/JDK-8257897)|Fix webkit build for XCode 12|web
 [JDK-8201568](https://bugs.openjdk.java.net/browse/JDK-8201568)|zForce touchscreen input device fails when closed and immediately reopened|window-toolkit
-[JDK-8233678](https://bugs.openjdk.java.net/browse/JDK-8233678) [macos 10.15] System menu bar does not work initially on macOS Catalina|window-toolkit
-[JDK-8237491](https://bugs.openjdk.java.net/browse/JDK-8237491) [Linux] Undecorated stage cannot be maximized|window-toolkit
+[JDK-8233678](https://bugs.openjdk.java.net/browse/JDK-8233678)|[macos 10.15] System menu bar does not work initially on macOS Catalina|window-toolkit
+[JDK-8237491](https://bugs.openjdk.java.net/browse/JDK-8237491)|[Linux] Undecorated stage cannot be maximized|window-toolkit
 [JDK-8241840](https://bugs.openjdk.java.net/browse/JDK-8241840)|Memoryleak: Closed focused Stages are not collected with Monocle.|window-toolkit
 [JDK-8251241](https://bugs.openjdk.java.net/browse/JDK-8251241)|macOS: iconify property doesn't change after minimize when resizable is false|window-toolkit
 [JDK-8251555](https://bugs.openjdk.java.net/browse/JDK-8251555)|Remove unused focusedWindow field in glass Window to avoid leak|window-toolkit
