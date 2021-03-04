@@ -35,6 +35,22 @@ static JGClass jMainThreadCls;
 static jmethodID fwkIsMainThread;
 static jmethodID fwkScheduleDispatchFunctions;
 
+static void initRefs(JNIEnv* env)
+{
+    if (!jMainThreadCls) {
+        static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
+        jMainThreadCls = jMainThreadRef;
+
+        fwkIsMainThread = env->GetStaticMethodID(jMainThreadCls,
+            "fwkIsMainThread", "()Z");
+        ASSERT(fwkIsMainThread);
+
+        fwkScheduleDispatchFunctions = env->GetStaticMethodID(jMainThreadCls,
+            "fwkScheduleDispatchFunctions", "()V");
+        ASSERT(fwkScheduleDispatchFunctions);
+    }
+}
+
 void scheduleDispatchFunctionsOnMainThread()
 {
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
@@ -66,23 +82,7 @@ void initializeMainThreadPlatform()
 
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
-
-    static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
-    jMainThreadCls = jMainThreadRef;
-
-    fwkIsMainThread = env->GetStaticMethodID(
-            jMainThreadCls,
-            "fwkIsMainThread",
-            "()Z");
-
-    ASSERT(fwkIsMainThread);
-
-    fwkScheduleDispatchFunctions = env->GetStaticMethodID(
-            jMainThreadCls,
-            "fwkScheduleDispatchFunctions",
-            "()V");
-
-    ASSERT(fwkScheduleDispatchFunctions);
+    initRefs(env);
 
 #if OS(WINDOWS)
     RunLoop::registerRunLoopMessageWindowClass();
@@ -98,6 +98,8 @@ bool isMainThread()
 {
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
+    initRefs(env);
+
     jboolean isMainThread = env->CallStaticBooleanMethod(jMainThreadCls, fwkIsMainThread);
     WTF::CheckAndClearException(env);
     return isMainThread == JNI_TRUE;

@@ -309,7 +309,7 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
         jvalue jarg = convertValueToJValue(globalObject, m_rootObject.get(),
             callFrame->argument(i), jtype, javaClassName.data());
         jArgs[i] = jvalueToJObject(jarg, jtype);
-        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, globalObject->argument(i).toString(globalObject)->value(globalObject).ascii().data());
+        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, callFrame->argument(i).toString(globalObject)->value(globalObject).ascii().data());
     }
 
     jvalue result;
