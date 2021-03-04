@@ -33,17 +33,108 @@ import javafx.scene.text.Font;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.Ignore;
+
 import static org.junit.Assert.assertEquals;
 
 public class PropertySizeTest {
-    private HBox root, p1, p2;
-    private Label l0, l1, l2;
-    private final static int ROOT_FONT_SIZE = 48;
+    private HBox root, p1, p2, p3, p4;
+    private Label l0, l1, l2, l3, l4;
+    private final static double ROOT_FONT_SIZE = 200;
+
+    private class Property {
+        String style;
+        double size;
+        boolean isRelative;
+
+        Property(String stylee) {
+            style = stylee;
+            if (!style.equals("")) {
+                size = Double.parseDouble(style.substring(0, style.length() - 2));
+                isRelative = style.substring(style.length() - 2).equals("em");
+            }
+        }
+
+        double getValue(double fontSize) {
+            if (!style.equals("")) {
+                return isRelative ? fontSize * size : size;
+            }
+            return fontSize;
+        }
+    }
+
+    private class TestLabel {
+
+        private Label label;
+        private Property padding, labelPadding;
+        private Property minW, minH;
+        private Property maxW, maxH;
+        private Property prefW, prefH;
+        private Property bgRadius, bgInsets;
+
+        public TestLabel(Label label, String fontSize, String padding, String labelPadding,
+                         String maxW, String maxH, String minW, String minH,
+                         String prefW, String prefH, String bgRadius, String bgInsets) {
+
+            this.label = label;
+            this.padding = new Property(padding);
+            this.labelPadding = new Property(labelPadding);
+            this.minW = new Property(minW);
+            this.minH = new Property(minH);
+            this.maxW = new Property(maxW);
+            this.maxH = new Property(maxH);
+            this.prefW = new Property(prefW);
+            this.prefH = new Property(prefH);
+            this.bgRadius = new Property(bgRadius);
+            this.bgInsets = new Property(bgInsets);
+
+            String style = fontSize.equals("") ? "" : "-fx-font-size: " + fontSize + "; ";
+            style += "-fx-padding: " + padding + ";  -fx-label-padding: " + labelPadding + ";" +
+                    "-fx-max-width:  " + maxW + "; -fx-max-height:  " + maxH + ";" +
+                    "-fx-min-width:  " + minW + "; -fx-min-height:  " + minH + ";" +
+                    "-fx-pref-width: " + prefW + "; -fx-pref-height: " + prefH + ";" +
+                    "-fx-background-color: red; -fx-background-radius: " + bgRadius + "; " +
+                    "-fx-background-insets: " + bgInsets + ";";
+
+            label.setStyle(style);
+        }
+
+        public void verifySizes() {
+            root.applyCss();
+            double fontSize = label.getFont().getSize();
+            assertEquals("Incorrect padding", padding.getValue(fontSize), label.getPadding().getLeft(), 0.1);
+            assertEquals("Incorrect labelPadding", labelPadding.getValue(fontSize), label.getLabelPadding().getLeft(), 0.1);
+            assertEquals("Incorrect max width", maxW.getValue(fontSize), label.getMaxWidth(), 0.1);
+            assertEquals("Incorrect min width", minW.getValue(fontSize), label.getMinWidth(), 0.1);
+            assertEquals("Incorrect pref width", prefW.getValue(fontSize), label.getPrefWidth(), 0.1);
+            assertEquals("Incorrect max Height", maxH.getValue(fontSize), label.getMaxHeight(), 0.1);
+            assertEquals("Incorrect min height", minH.getValue(fontSize), label.getMinHeight(), 0.1);
+            assertEquals("Incorrect pref height", prefH.getValue(fontSize), label.getPrefHeight(), 0.1);
+            assertEquals("Incorrect background radius", bgRadius.getValue(fontSize),
+                    label.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.1);
+            assertEquals("Incorrect background insets", bgInsets.getValue(fontSize),
+                    label.getBackground().getFills().get(0).getInsets().getLeft(), 0.1);
+        }
+    }
+
+    private void verifyFontSizes(double l0Font, double l1Font, double l2Font, double l3Font, double l4Font) {
+        root.applyCss();
+        assertEquals("l0 font size is incorrect.", l0Font, l0.getFont().getSize(), 0.1);
+        assertEquals("l1 font size is incorrect.", l1Font, l1.getFont().getSize(), 0.1);
+        assertEquals("l2 font size is incorrect.", l2Font, l2.getFont().getSize(), 0.1);
+        assertEquals("l3 font size is incorrect.", l3Font, l3.getFont().getSize(), 0.1);
+        assertEquals("l4 font size is incorrect.", l4Font, l4.getFont().getSize(), 0.1);
+    }
 
     @Before
     public void setupTest() {
+        l4 = new Label("L4");
+        p4 = new HBox(l4);
+
+        l3 = new Label("L3");
+        p3 = new HBox(l3, p4);
+
         l2 = new Label("L2");
-        p2 = new HBox(l2);
+        p2 = new HBox(l2, p3);
 
         l1 = new Label("L1");
         p1 = new HBox(l1, p2);
@@ -54,128 +145,264 @@ public class PropertySizeTest {
         Scene scene = new Scene(root);
 
         root.setStyle("-fx-font-size: " + ROOT_FONT_SIZE + "px;");
-        root.applyCss();
     }
 
-    // -fx-font-size tests
+    // -fx-font-size tests - begin
     @Test
     public void defaultFontSizeTest() {
         root.setStyle("");
-        root.applyCss();
-        assertEquals(Font.getDefault().getSize(), l0.getFont().getSize(), 0);
-        assertEquals(Font.getDefault().getSize(), l1.getFont().getSize(), 0);
-        assertEquals(Font.getDefault().getSize(), l2.getFont().getSize(), 0);
+        double defFontSize = Font.getDefault().getSize();
+        verifyFontSizes(defFontSize, defFontSize, defFontSize, defFontSize, defFontSize);
     }
 
     @Test
-    public void absoluteFontSizeSetOnRootTest() {
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE, l1.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE, l2.getFont().getSize(), 0);
+    public void absoluteFontSizeSetOnlyOnRootTest() {
+        verifyFontSizes(ROOT_FONT_SIZE, ROOT_FONT_SIZE, ROOT_FONT_SIZE, ROOT_FONT_SIZE, ROOT_FONT_SIZE);
     }
 
     @Test
     public void absoluteFontSizeSetOnControlTest() {
-        l1.setStyle("-fx-font-size: 24px");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(24, l1.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE, l2.getFont().getSize(), 0);
-    }
-
-    @Test
-    public void relativeFontSizeNestedParentTest() {
-        p1.setStyle("-fx-font-size: 0.5em");
-        p2.setStyle("-fx-font-size: 0.25em");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.5, l1.getFont().getSize(), 0);
-        assertEquals(Font.getDefault().getSize() * 0.25, l2.getFont().getSize(), 0); // def * 0.25
-    }
-
-    @Ignore()
-    @Test
-    public void sameRelativeFontSizeNestedParentTest() {
-        p1.setStyle("-fx-font-size: 0.5em");
-        p2.setStyle("-fx-font-size: 0.5em");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0); // 48
-        assertEquals(ROOT_FONT_SIZE * 0.5, l1.getFont().getSize(), 0); // 24
-        // Compared to previous test relativeFontSizeNestedParentTest, there is only
-        // one difference in this test: font size of p2 is 0.5em which is same as of p1.
-        // In previous test where the font sizes are different for p1 and p2,
-        // the font size of l2 is relative to default font size but
-        // here in this test, p1 and p2 have same font size.
-        // Issue is: Unlike previous test, font size of l2 is not relative to default
-        // font size instead it is relative to the font size of root.
-        // expected default font size * 0.5 but actual is ROOT_FONT_SIZE * 0.5
-        assertEquals(Font.getDefault().getSize() * 0.5, l2.getFont().getSize(), 0);
+        l1.setStyle("-fx-font-size: 20px");
+        l3.setStyle("-fx-font-size: 30px");
+        verifyFontSizes(ROOT_FONT_SIZE, 20, ROOT_FONT_SIZE, 30, ROOT_FONT_SIZE);
     }
 
     @Test
     public void relativeFontSizeNestedControlTest() {
-        l1.setStyle("-fx-font-size: 0.5em");
-        l2.setStyle("-fx-font-size: 0.25em");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.50, l1.getFont().getSize(), 0); // 24
-        assertEquals(ROOT_FONT_SIZE * 0.25, l2.getFont().getSize(), 0); // 12
+        testRelativeFontSizeSetOnControl(0.9, 0.8, 0.7, 0.6, 0.5);
+        testRelativeFontSizeSetOnControl(0.5, 0.5, 0.5, 0.5, 0.5);
+        testRelativeFontSizeSetOnControl(1, 1, 1, 1, 1);
+    }
+
+    private void testRelativeFontSizeSetOnControl(double l0s, double l1s, double l2s, double l3s, double l4s) {
+        l0.setStyle("-fx-font-size: " + l0s + "em");
+        l1.setStyle("-fx-font-size: " + l1s + "em");
+        l2.setStyle("-fx-font-size: " + l2s + "em");
+        l3.setStyle("-fx-font-size: " + l3s + "em");
+        l4.setStyle("-fx-font-size: " + l4s + "em");
+
+        verifyFontSizes(ROOT_FONT_SIZE * l0s, ROOT_FONT_SIZE * l1s, ROOT_FONT_SIZE * l2s,
+                ROOT_FONT_SIZE * l3s, ROOT_FONT_SIZE * l4s);
     }
 
     @Test
-    public void sameRelativeFontSizeNestedControlTest() {
+    public void relativeFontSizeSetOnNestedParentAndControlsExceptRootTest() {
+        root.setStyle("-fx-font-size: " + ROOT_FONT_SIZE + "px;");
+        p1.setStyle("-fx-font-size: 0.8em");
+        p2.setStyle("-fx-font-size: 0.7em");
+        p3.setStyle("-fx-font-size: 0.6em");
+        p4.setStyle("-fx-font-size: 0.5em");
+
+        double p1FontSize = ROOT_FONT_SIZE * 0.8;
+        double p2FontSize = ROOT_FONT_SIZE * 0.7;
+        double p3FontSize = p1FontSize * 0.6;
+        double p4FontSize = p2FontSize * 0.5;
+
+        l0.setStyle("-fx-font-size: 0.5em");
         l1.setStyle("-fx-font-size: 0.5em");
-        l2.setStyle("-fx-font-size: 0.5em");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.5, l1.getFont().getSize(), 0); // 24
-        assertEquals(ROOT_FONT_SIZE * 0.5, l2.getFont().getSize(), 0); // 24
+        l2.setStyle("-fx-font-size: 0.45em");
+        l3.setStyle("-fx-font-size: 0.4em");
+        l4.setStyle("-fx-font-size: 0.35em");
+
+        verifyFontSizes(ROOT_FONT_SIZE * 0.5, p1FontSize * 0.5, p2FontSize * 0.45,
+                p3FontSize * 0.4, p4FontSize * 0.35);
     }
 
     @Test
-    public void relativeFontSizeNestedParentControlTest() {
-        p1.setStyle("-fx-font-size: 0.75em"); // 36
-        p2.setStyle("-fx-font-size: 0.50em"); // 24
+    public void relativeFontSizeSetOnAllNestedParentsAndControlsTest() {
+        root.setStyle("-fx-font-size: 100em");
+        p1.setStyle("-fx-font-size: 0.8em");
+        p2.setStyle("-fx-font-size: 0.7em");
+        p3.setStyle("-fx-font-size: 0.6em");
+        p4.setStyle("-fx-font-size: 0.5em");
 
-        l1.setStyle("-fx-font-size: 0.25em"); // 9
-        l2.setStyle("-fx-font-size: 0.25em"); // 6
+        double defFontSize = Font.getDefault().getSize();
+        double rootFontSize = defFontSize * 100;
+        double p1FontSize = defFontSize * 0.8;
+        double p2FontSize = rootFontSize * 0.7;
+        double p3FontSize = p1FontSize * 0.6;
+        double p4FontSize = p2FontSize * 0.5;
 
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.75 * 0.25, l1.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.50 * 0.25, l2.getFont().getSize(), 0);
+        l0.setStyle("-fx-font-size: 0.5em");
+        l1.setStyle("-fx-font-size: 0.45em");
+        l2.setStyle("-fx-font-size: 0.4em");
+        l3.setStyle("-fx-font-size: 0.35em");
+        l4.setStyle("-fx-font-size: 0.3em");
+
+        verifyFontSizes(rootFontSize * 0.5, p1FontSize * 0.45, p2FontSize * 0.4,
+                p3FontSize * 0.35, p4FontSize * 0.3);
     }
 
     @Ignore()
     @Test
-    public void relativeFontSizeDeepNestedParentControlTest() {
-        Label l4 = new Label("L4");
-        HBox p4 = new HBox(l4);
+    public void ideal_relativeFontSizeNestedParentControlTest() {
+        root.setStyle("-fx-font-size: 0.9em");
+        p1.setStyle("-fx-font-size: 0.8em");
+        p2.setStyle("-fx-font-size: 0.7em");
+        p3.setStyle("-fx-font-size: 0.6em");
+        p4.setStyle("-fx-font-size: 0.5em");
 
-        Label l3 = new Label("L3");
-        HBox p3 = new HBox(l3, p4);
+        l0.setStyle("-fx-font-size: 0.25em");
+        l1.setStyle("-fx-font-size: 0.25em");
+        l2.setStyle("-fx-font-size: 0.25em");
+        l3.setStyle("-fx-font-size: 0.25em");
+        l4.setStyle("-fx-font-size: 0.25em");
 
-        p2.getChildren().add(p3);
+        // This should have been the behavior of font size calculation with
+        // nested set of parents and controls. We are not changing current behaviour to avoid
+        // regressing any applications that rely on current behaviour. Current behaviour can be
+        // observed in other -fx-font-size tests here.
+        double defFontSize = Font.getDefault().getSize();
+        double rootFontSize = defFontSize * 0.9;
+        double p1FontSize = rootFontSize * 0.8;
+        double p2FontSize = p1FontSize * 0.7;
+        double p3FontSize = p2FontSize * 0.6;
+        double p4FontSize = p3FontSize * 0.5;
 
-        p1.setStyle("-fx-font-size: 0.75em"); // 36
-        p2.setStyle("-fx-font-size: 0.50em"); // 24
-        p3.setStyle("-fx-font-size: 0.334em");// ~16
-        p4.setStyle("-fx-font-size: 0.25em"); // 12
-
-        l1.setStyle("-fx-font-size: 0.25em"); // 9
-        l2.setStyle("-fx-font-size: 0.25em"); // 6
-        l3.setStyle("-fx-font-size: 0.25em"); // ~4
-        l4.setStyle("-fx-font-size: 0.25em"); // 3
-
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.75 * 0.25,  l1.getFont().getSize(), 0);
-        assertEquals(ROOT_FONT_SIZE * 0.50 * 0.25,  l2.getFont().getSize(), 0);
-        //expected 4 but is 3 which is l1.getFontSize() * 0.334 => 9 * 0.334
-        assertEquals(ROOT_FONT_SIZE * 0.334 * 0.25, l3.getFont().getSize(), 0.1);
-        //expected 3 but is 1.5 which is l2.getFontSize() * 0.25 => 6 * 0.25
-        assertEquals(ROOT_FONT_SIZE * 0.25 * 0.25,  l4.getFont().getSize(), 0.1);
+        verifyFontSizes(rootFontSize * 0.25, p1FontSize * 0.25, p2FontSize * 0.25,
+                p3FontSize * 0.25, p4FontSize * 0.25);
     }
+
+    // This test is an extension of relativeFontSizeSetOnNestedParentAndControlsExceptRootTest() and
+    // relativeFontSizeSetOnAllNestedParentsAndControlsTest() to test combinations of -fx-font-size
+    @Test
+    public void relativeFontSizeOfNestedParentsTest() {
+
+        testFontSizeOfParents("", "", "", "", "");
+        testFontSizeOfParents("", "0.9em", "0.7em", "0.5em", "0.3em");
+
+        testFontSizeOfParents(ROOT_FONT_SIZE + "em", "", "", "", "");
+        testFontSizeOfParents(ROOT_FONT_SIZE + "px", "", "", "", "");
+
+        testFontSizeOfParents(ROOT_FONT_SIZE + "em", "100px", "80px", "60px", "40px");
+        testFontSizeOfParents(ROOT_FONT_SIZE + "px", "100px", "80px", "60px", "40px");
+
+        testFontSizeOfParents(ROOT_FONT_SIZE + "em", "0.9em", "0.8em", "0.7em", "0.6em");
+        testFontSizeOfParents(ROOT_FONT_SIZE + "px", "0.9em", "0.8em", "0.7em", "0.6em");
+
+        testFontSizeOfParents(ROOT_FONT_SIZE + "em", "0.9em", "80px", "0.6em", "40px");
+        testFontSizeOfParents(ROOT_FONT_SIZE + "px", "0.9em", "80px", "0.6em", "40px");
+    }
+
+    // This is a specific combination where -fx-font-size of parents is same and test fails.
+    // If we fix this then the test can be moved inside previous test.
+    @Ignore()
+    @Test
+    public void sameRelativeFontSizeOfNestedParentsTest() {
+        testFontSizeOfParents(ROOT_FONT_SIZE + "px", "0.5em", "0.5em",
+                "0.5em", "0.5em");
+    }
+
+    private void testFontSizeOfParents(String rtSize, String p1Size, String p2Size, String p3Size, String p4Size) {
+
+        Property rtFont = new Property(rtSize);
+        Property p1Font = new Property(p1Size);
+        Property p2Font = new Property(p2Size);
+        Property p3Font = new Property(p3Size);
+        Property p4Font = new Property(p4Size);
+
+        String rtStyle = rtSize.equals("") ? "" : "-fx-font-size: " + rtSize;
+        String p1Style = p1Size.equals("") ? "" : "-fx-font-size: " + p1Size;
+        String p2Style = p2Size.equals("") ? "" : "-fx-font-size: " + p2Size;
+        String p3Style = p3Size.equals("") ? "" : "-fx-font-size: " + p3Size;
+        String p4Style = p4Size.equals("") ? "" : "-fx-font-size: " + p4Size;
+
+        root.setStyle(rtStyle);
+        p1.setStyle(p1Style);
+        p2.setStyle(p2Style);
+        p3.setStyle(p3Style);
+        p4.setStyle(p4Style);
+
+        double defFontSize = Font.getDefault().getSize();
+        double rtFontSize = rtFont.getValue(defFontSize);
+        double p1RefeFont = (rtFont.isRelative && p1Font.isRelative) ? defFontSize : rtFontSize;
+        double p1FontSize = p1Font.getValue(p1RefeFont);
+
+        double p2RefeFont = (p1Font.isRelative && p2Font.isRelative) ? rtFontSize : p1FontSize;
+        double p2FontSize = p2Font.getValue(p2RefeFont);
+        //double p2FontSize = p2Font.getValue(rtFontSize);
+
+        double p3RefeFont = (p2Font.isRelative && p3Font.isRelative) ? p1FontSize : p2FontSize;
+        double p3FontSize = p3Font.getValue(p3RefeFont);
+        //double p3FontSize = p3Font.getValue(p1FontSize);
+
+        double p4RefeFont = (p3Font.isRelative && p4Font.isRelative) ? p2FontSize : p3FontSize;
+        double p4FontSize = p4Font.getValue(p4RefeFont);
+        //double p4FontSize = p4Font.getValue(p2FontSize);
+
+        System.err.println("rtFontSize: " + rtFontSize);
+        System.err.println("p1FontSize: " + p1FontSize);
+        System.err.println("p2FontSize: " + p2FontSize);
+        System.err.println("p3FontSize: " + p3FontSize);
+        System.err.println("p4FontSize: " + p4FontSize);
+
+        testFontSizeOfControls(rtFontSize, "0.55em", p1FontSize, "0.5em",
+                p2FontSize, "0.45em",  p3FontSize, "0.4em", p4FontSize, "0.35em");
+
+        testFontSizeOfControls(rtFontSize, "150px", p1FontSize, "0.5em",
+                p2FontSize, "0.45em",  p3FontSize, "0.4em", p4FontSize, "0.35em");
+
+        testFontSizeOfControls(rtFontSize, "150px", p1FontSize, "140px",
+                p2FontSize, "0.45em",  p3FontSize, "0.4em", p4FontSize, "0.35em");
+
+        testFontSizeOfControls(rtFontSize, "150px", p1FontSize, "140px",
+                p2FontSize, "130px",  p3FontSize, "0.4em", p4FontSize, "0.35em");
+
+        testFontSizeOfControls(rtFontSize, "150px", p1FontSize, "140px",
+                p2FontSize, "130px",  p3FontSize, "120px", p4FontSize, "0.35em");
+
+        testFontSizeOfControls(rtFontSize, "150px", p1FontSize, "140px",
+                p2FontSize, "130px",  p3FontSize, "120px", p4FontSize, "110px");
+
+        testFontSizeOfControls(rtFontSize, "0.55em", p1FontSize, "0.5em",
+                p2FontSize, "35px", p3FontSize, "0.4em", p4FontSize, "20px");
+
+
+        // @Ignore
+        // Does not behave like the other tests above. Should be revisited if we plan to change -fx-font-size behavior.
+        /*
+        testFontSizeOfControls(rtFontSize, "0.55em", p1FontSize, "",
+                p2FontSize, "35px", p3FontSize, "", p4FontSize, "20px");
+
+        testFontSizeOfControls(rtFontSize, "", p1FontSize, "",
+                p2FontSize, "", p3FontSize, "", p4FontSize, "");
+         */
+    }
+
+    private void testFontSizeOfControls(double rtFontSize, String l0s,
+                                        double p1FontSize, String l1s,
+                                        double p2FontSize, String l2s,
+                                        double p3FontSize, String l3s,
+                                        double p4FontSize, String l4s) {
+
+        Property l0Font = new Property(l0s);
+        Property l1Font = new Property(l1s);
+        Property l2Font = new Property(l2s);
+        Property l3Font = new Property(l3s);
+        Property l4Font = new Property(l4s);
+
+        String l0FontStyle = l0s == "" ? "" : ("-fx-font-size: " + l0s);
+        String l1FontStyle = l1s == "" ? "" : ("-fx-font-size: " + l1s);
+        String l2FontStyle = l2s == "" ? "" : ("-fx-font-size: " + l2s);
+        String l3FontStyle = l3s == "" ? "" : ("-fx-font-size: " + l3s);
+        String l4FontStyle = l4s == "" ? "" : ("-fx-font-size: " + l4s);
+
+        l0.setStyle(l0FontStyle);
+        l1.setStyle(l1FontStyle);
+        l2.setStyle(l2FontStyle);
+        l3.setStyle(l3FontStyle);
+        l4.setStyle(l4FontStyle);
+
+        double l0FontSize = l0Font.getValue(rtFontSize);
+        double l1FontSize = l1Font.getValue(p1FontSize);
+        double l2FontSize = l2Font.getValue(p2FontSize);
+        double l3FontSize = l3Font.getValue(p3FontSize);
+        double l4FontSize = l4Font.getValue(p4FontSize);
+
+        verifyFontSizes(l0FontSize, l1FontSize, l2FontSize, l3FontSize, l4FontSize);
+    }
+    // -fx-font-size tests - end
+
 
     // Test the following properties using Label, to verify that
     // 1. The relative size of css properties of a control are computed relative to
@@ -187,131 +414,122 @@ public class PropertySizeTest {
     // -fx-pref-width, -fx-pref-height
     // -fx-background-radius, -fx-background-insets
     @Test
-    public void absoluteSizePropertiesTest() {
-        l1.setStyle("-fx-font-size:  20px; -fx-padding:  5px; -fx-label-padding:  6px;" +
-                "-fx-max-width:  200px; -fx-max-height: 100px;" +
-                "-fx-min-width:  198px; -fx-min-height:  98px;" +
-                "-fx-pref-width: 199px; -fx-pref-height: 99px;" +
-                "-fx-background-color: red; -fx-background-radius: 5px; -fx-background-insets: 3px;");
-        l2.setStyle("-fx-font-size: 0.5em; -fx-padding: 10px; -fx-label-padding: 11px;" +
-                "-fx-max-width:  210px; -fx-max-height:  110px;" +
-                "-fx-min-width:  208px; -fx-min-height:  108px;" +
-                "-fx-pref-width: 209px; -fx-pref-height: 109px;" +
-                "-fx-background-color: red; -fx-background-radius: 4px; -fx-background-insets: 2px;");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
+    public void absolutePropertySizeTest() {
 
-        assertEquals(20,  l1.getFont().getSize(), 0);
-        assertEquals(5,   l1.getPadding().getLeft(), 0);
-        assertEquals(6,   l1.getLabelPadding().getLeft(), 0);
-        assertEquals(200, l1.getMaxWidth(), 0);
-        assertEquals(198, l1.getMinWidth(), 0);
-        assertEquals(199, l1.getPrefWidth(), 0);
-        assertEquals(100, l1.getMaxHeight(), 0);
-        assertEquals(98,  l1.getMinHeight(), 0);
-        assertEquals(99,  l1.getPrefHeight(), 0);
-        assertEquals(5,   l1.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0);
-        assertEquals(3,   l1.getBackground().getFills().get(0).getInsets().getLeft(), 0);
+        // absolute font size, absolute property sizes
+        TestLabel testL1 = new TestLabel(l1, "20px", "5px", "6px", "200px", "100px",
+                "198px", "98px", "199px", "99px", "5px", "3px");
 
-        assertEquals(24,  l2.getFont().getSize(), 0);
-        assertEquals(10,  l2.getPadding().getLeft(), 0);
-        assertEquals(11,  l2.getLabelPadding().getLeft(), 0);
-        assertEquals(210, l2.getMaxWidth(), 0);
-        assertEquals(208, l2.getMinWidth(), 0);
-        assertEquals(209, l2.getPrefWidth(), 0);
-        assertEquals(110, l2.getMaxHeight(), 0);
-        assertEquals(108, l2.getMinHeight(), 0);
-        assertEquals(109, l2.getPrefHeight(), 0);
-        assertEquals(4,   l2.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0);
-        assertEquals(2,   l2.getBackground().getFills().get(0).getInsets().getLeft(), 0);
+        // relative font size, absolute property sizes
+        TestLabel testL2 = new TestLabel(l2, "0.5em", "10px", "11px", "210px", "110px",
+                "208px", "108px", "209px", "109px", "4px", "2px");
+
+        testL1.verifySizes();
+        testL2.verifySizes();
     }
 
     @Test
-    public void propertySizesRelativeToFontSizeOfControlTest() {
-        l1.setStyle("-fx-font-size: 0.5em; -fx-padding: 0.5em;  -fx-label-padding: 0.25em;" +
-                "-fx-max-width:  20em; -fx-max-height:  10em;" +
-                "-fx-min-width:  18em; -fx-min-height:  8em;" +
-                "-fx-pref-width: 19em; -fx-pref-height: 9em;" +
-                "-fx-background-color: red; -fx-background-radius: 0.2em; -fx-background-insets: 0.1em;");
-        l2.setStyle("-fx-font-size:  20px; -fx-padding: 0.25em; -fx-label-padding: 0.2em;" +
-                "-fx-max-width:  20em; -fx-max-height:  10em;" +
-                "-fx-min-width:  18em; -fx-min-height:  8em;" +
-                "-fx-pref-width: 19em; -fx-pref-height: 9em;" +
-                "-fx-background-color: red; -fx-background-radius: 0.1em; -fx-background-insets: 0.05em;");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
+    public void relativePropertySizeTest() {
 
-        double l1FontSize = ROOT_FONT_SIZE * 0.5;
-        assertEquals(l1FontSize, l1.getFont().getSize(), 0);
-        assertEquals(l1FontSize * 0.5, l1.getPadding().getLeft(), 0);
-        assertEquals(l1FontSize * 0.25,  l1.getLabelPadding().getLeft(), 0);
-        assertEquals(l1FontSize * 20, l1.getMaxWidth(), 0);
-        assertEquals(l1FontSize * 18, l1.getMinWidth(), 0);
-        assertEquals(l1FontSize * 19, l1.getPrefWidth(), 0);
-        assertEquals(l1FontSize * 10, l1.getMaxHeight(), 0);
-        assertEquals(l1FontSize * 8,  l1.getMinHeight(), 0);
-        assertEquals(l1FontSize * 9,  l1.getPrefHeight(), 0);
-        assertEquals(l1FontSize * 0.2, l1.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.01);
-        assertEquals(l1FontSize * 0.1, l1.getBackground().getFills().get(0).getInsets().getLeft(), 0.01);
+        // relative font size, relative property sizes
+        TestLabel testL1 = new TestLabel(l1, "0.5em", "0.5em", "0.25em", "20em", "10em",
+                "18em", "8em", "19em", "9em", "0.2em", "0.1em");
 
-        double l2FontSize = 20;
-        assertEquals(l2FontSize, l2.getFont().getSize(), 0);
-        assertEquals(5,  l2.getPadding().getLeft(), 0);
-        assertEquals(4,  l2.getLabelPadding().getLeft(), 0);
-        assertEquals(l2FontSize * 20, l2.getMaxWidth(), 0);
-        assertEquals(l2FontSize * 18, l2.getMinWidth(), 0);
-        assertEquals(l2FontSize * 19, l2.getPrefWidth(), 0);
-        assertEquals(l2FontSize * 10, l2.getMaxHeight(), 0);
-        assertEquals(l2FontSize * 8,  l2.getMinHeight(), 0);
-        assertEquals(l2FontSize * 9,  l2.getPrefHeight(), 0);
-        assertEquals(l2FontSize * 0.1, l2.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0);
-        assertEquals(l2FontSize * 0.05, l2.getBackground().getFills().get(0).getInsets().getLeft(), 0.01);
+        // absolute font size, relative property sizes
+        TestLabel testL2 = new TestLabel(l2, "20px", "0.25em", "0.125em", "17em", "7em",
+                "15em", "5em", "16em", "6em", "0.1em", "0.05em");
+
+        testL1.verifySizes();
+        testL2.verifySizes();
     }
 
     @Test
-    public void propertySizesRelativeToFontSizeOfParentTest() {
-        l1.setStyle("-fx-padding: 0.5em;   -fx-label-padding: 0.25em;" +
-                "-fx-max-width:  20em; -fx-max-height:  10em;" +
-                "-fx-min-width:  18em; -fx-min-height:  8em;" +
-                "-fx-pref-width: 19em; -fx-pref-height: 9em;" +
-                "-fx-background-color: red; -fx-background-radius: 0.2em; -fx-background-insets: 0.1em;");
-        p2.setStyle("-fx-font-size: 0.5em; -fx-label-padding: 0.25em;" +
-                "-fx-max-width:  20em; -fx-max-height:  10em;" +
-                "-fx-min-width:  18em; -fx-min-height:  8em;" +
-                "-fx-pref-width: 19em; -fx-pref-height: 9em;" +
-                "-fx-background-color: red; -fx-background-radius: 0.15em; -fx-background-insets: 0.075em;");
-        l2.setStyle("-fx-padding: 0.25em;  -fx-label-padding: 0.125em;" +
-                "-fx-max-width:  17em; -fx-max-height:  7em;" +
-                "-fx-min-width:  15em; -fx-min-height:  5em;" +
-                "-fx-pref-width: 16em; -fx-pref-height: 6em;" +
-                "-fx-background-color: red; -fx-background-radius: 0.1em; -fx-background-insets: 0.05em;");
-        root.applyCss();
-        assertEquals(ROOT_FONT_SIZE, l0.getFont().getSize(), 0);
+    public void propertySizesCombinationTest() {
+        verifyCombinationsWithParentFontSizes("", "", "", "", "");
+        verifyCombinationsWithParentFontSizes("200px", "", "", "", "");
+        verifyCombinationsWithParentFontSizes("20em", "", "", "", "");
 
-        double l1FontSize = ROOT_FONT_SIZE;
-        assertEquals(l1FontSize, l1.getFont().getSize(), 0);
-        assertEquals(l1FontSize * 0.5, l1.getPadding().getLeft(), 0);
-        assertEquals(l1FontSize * 0.25, l1.getLabelPadding().getLeft(), 0);
-        assertEquals(l1FontSize * 20, l1.getMaxWidth(), 0);
-        assertEquals(l1FontSize * 18, l1.getMinWidth(), 0);
-        assertEquals(l1FontSize * 19, l1.getPrefWidth(), 0);
-        assertEquals(l1FontSize * 10, l1.getMaxHeight(), 0);
-        assertEquals(l1FontSize * 8,  l1.getMinHeight(), 0);
-        assertEquals(l1FontSize * 9,  l1.getPrefHeight(), 0);
-        assertEquals(l1FontSize * 0.2, l1.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.01);
-        assertEquals(l1FontSize * 0.1, l1.getBackground().getFills().get(0).getInsets().getLeft(), 0.01);
+        verifyCombinationsWithParentFontSizes("", "0.9em", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("", "300px", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("", "0.9em", "0.8em", "100px", "0.6em");
+        verifyCombinationsWithParentFontSizes("", "180px", "160px", "140px", "120px");
 
-        double l2FontSize = ROOT_FONT_SIZE * 0.5;
-        assertEquals(l2FontSize, l2.getFont().getSize(), 0);
-        assertEquals(l2FontSize * 0.25,  l2.getPadding().getLeft(), 0);
-        assertEquals(l2FontSize * 0.125,  l2.getLabelPadding().getLeft(), 0);
-        assertEquals(l2FontSize * 17, l2.getMaxWidth(), 0);
-        assertEquals(l2FontSize * 15, l2.getMinWidth(), 0);
-        assertEquals(l2FontSize * 16, l2.getPrefWidth(), 0);
-        assertEquals(l2FontSize * 7,  l2.getMaxHeight(), 0);
-        assertEquals(l2FontSize * 5,  l2.getMinHeight(), 0);
-        assertEquals(l2FontSize * 6,  l2.getPrefHeight(), 0);
-        assertEquals(l2FontSize * 0.1, l2.getBackground().getFills().get(0).getRadii().getTopLeftHorizontalRadius(), 0.01);
-        assertEquals(l2FontSize * 0.05, l2.getBackground().getFills().get(0).getInsets().getLeft(), 0.01);
+        verifyCombinationsWithParentFontSizes("200px", "0.9em", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("200px", "300px", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("200px", "0.9em", "0.8em", "100px", "0.6em");
+        verifyCombinationsWithParentFontSizes("200px", "180px", "160px", "140px", "120px");
+
+        verifyCombinationsWithParentFontSizes("20em", "0.9em", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("20em", "300px", "0.8em", "0.7em", "0.6em");
+        verifyCombinationsWithParentFontSizes("20em", "0.9em", "0.8em", "100px", "0.6em");
+        verifyCombinationsWithParentFontSizes("20em", "180px", "160px", "140px", "120px");
+    }
+
+
+    private void verifyCombinationsWithParentFontSizes(String rootFont, String p1Font,
+                                                       String p2Font, String p3Font, String p4Font) {
+
+        String rootStyle = rootFont.equals("") ? "" : "-fx-font-size: " + rootFont;
+        String p1Style = p1Font.equals("") ? "" : "-fx-font-size: " + p1Font;
+        String p2Style = p2Font.equals("") ? "" : "-fx-font-size: " + p2Font;
+        String p3Style = p3Font.equals("") ? "" : "-fx-font-size: " + p3Font;
+        String p4Style = p4Font.equals("") ? "" : "-fx-font-size: " + p4Font;
+
+        root.setStyle(rootStyle);
+        p1.setStyle(p1Style);
+        p2.setStyle(p2Style);
+        p3.setStyle(p3Style);
+        p4.setStyle(p4Style);
+
+        verifyCombinationsOfChildrenProperties1();
+        verifyCombinationsOfChildrenProperties2();
+    }
+
+    TestLabel testL0, testL1, testL2, testL3, testL4;
+
+    private void verifyCombinationsOfChildrenProperties1() {
+        testL0 = new TestLabel(l0, "0.5em", "0.5em", "0.5em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        testL1 = new TestLabel(l1, "0.5em", "0.5em", "0.25em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        testL2 = new TestLabel(l2, "0.5em", "0.5em", "0.25em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        testL3 = new TestLabel(l3, "0.5em", "0.5em", "0.25em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        testL4 = new TestLabel(l4, "0.5em", "0.5em", "0.25em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        verifyLabelSizes();
+    }
+
+    private void verifyCombinationsOfChildrenProperties2() {
+        testL0 = new TestLabel(l0, "0.5em", "0.5em", "0.5em", "20em",
+                "10em", "18em", "8em", "19em", "9em", "0.2em", "0.1em");
+
+        testL1 = new TestLabel(l1, "100px", "5px", "2.5px", "90px",
+                "10em", "50px", "10px", "19px", "9em", "0.2em", "0.1em");
+
+        testL2 = new TestLabel(l2, "0.5em", "0.5em", "0.25em", "20em",
+                "10em", "40px", "8em", "19em", "9em", "6px", "0.1em");
+
+        testL3 = new TestLabel(l3, "200px", "0.5em", "0.25em", "120px",
+                "60px", "110px", "40px", "100px", "50px", "0.2em", "2px");
+
+        testL4 = new TestLabel(l4, "200px", "5px", "4px", "180px",
+                "30px", "40px", "10px", "120px", "35px", "6px", "2px");
+
+        verifyLabelSizes();
+    }
+
+    private void verifyLabelSizes() {
+        testL0.verifySizes();
+        testL1.verifySizes();
+        testL2.verifySizes();
+        testL3.verifySizes();
+        testL4.verifySizes();
     }
 }

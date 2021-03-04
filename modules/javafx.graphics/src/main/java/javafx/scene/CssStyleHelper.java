@@ -571,6 +571,140 @@ final class CssStyleHelper {
 
     }
 
+    // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
+    // Any modifications to the method transitionToStates() should be relatively applied here if needed.
+    // Currently this method is executed only by Labeled.fontProperty().set(), when it's font size
+    // is changed by LabeledText.
+    void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
+
+        if (transitionStateInProgress) {
+            // If transitionToState() is being executed for the current control then all the css properties will get
+            // calculated there, and so we need to do anything here.
+            return;
+        }
+        if (cacheContainer == null) {
+            return;
+        }
+        final StyleMap styleMap = getStyleMap(node);
+        if (styleMap == null) {
+            return;
+        }
+        // if the style-map is empty, then we are only looking for inherited styles.
+        final boolean inheritOnly = styleMap.isEmpty();
+
+        final Set<PseudoClass>[] transitionStates = getTransitionStates(node);
+        CalculatedValue cachedFont = new CalculatedValue(fontForRelativeSizes, null, false);
+
+        final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
+        final int numStyleables = styleables.size();
+
+        for (int n = 0; n < numStyleables; n++) {
+
+            final CssMetaData<Styleable,Object> cssMetaData =
+                    (CssMetaData<Styleable,Object>)styleables.get(n);
+
+            // Don't bother looking up styles that don't inherit.
+            if (inheritOnly && cssMetaData.isInherits() == false) {
+                continue;
+            }
+
+            // Skip the lookup if we know there isn't a chance for this property
+            // to be set (usually due to a "bind").
+            if (!cssMetaData.isSettable(node)) {
+                continue;
+            }
+
+            final String property = cssMetaData.getProperty();
+            boolean isFontProperty = property.equals("-fx-font") || property.equals("-fx-font-size");
+            // This method is executed as a result of change in font size of the control, hence font property should be skipped.
+            if (isFontProperty) {
+                continue;
+            }
+
+            CascadingStyle style = getStyle(node, property, styleMap, transitionStates[0]);
+            if (style != null) {
+                final ParsedValue cssValue = style.getParsedValue();
+                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
+                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], whence, new HashSet<>());
+                boolean isRelative = ParsedValueImpl.containsFontRelativeSize(resolved, false);
+                if (!isRelative) {
+                    continue;
+                }
+            } else {
+                final List<CssMetaData<? extends Styleable, ?>> subProperties = cssMetaData.getSubProperties();
+                final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
+                if (numSubProperties == 0) {
+                    continue;
+                } else {
+                    // TODO: further optimization
+                    // determine a way to find if any of the sub properties are specified with relative size.
+                    // if none is relatively sized then continue;
+                }
+            }
+
+            // If code flow reaches here then it means that the property is
+            // explicitly specified in css style by user with a relative size.
+            // We should not use the cached value as relative
+            // sized properties must be recalculated when font size changes.
+
+            CalculatedValue calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
+                        node, cachedFont);
+
+            // lookup is not supposed to return null.
+            if (calculatedValue == null || calculatedValue == SKIP) {
+                continue;
+            }
+
+            try {
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
+                final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
+
+                if (originOfCalculatedValue == null) {
+                    assert false : styleableProperty.toString();
+                    continue;
+                }
+
+                if (originOfCurrentValue == StyleOrigin.USER) {
+                    if (originOfCalculatedValue == StyleOrigin.USER_AGENT) {
+                        continue;
+                    }
+                }
+
+                final Object value = calculatedValue.getValue();
+                final Object currentValue = styleableProperty.getValue();
+
+                if ((originOfCurrentValue != originOfCalculatedValue)
+                        || (currentValue != null
+                        ? currentValue.equals(value) == false
+                        : value != null)) {
+
+                    if (LOGGER.isLoggable(Level.FINER)) {
+                        LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
+                                String.valueOf(value) + ", originOfCalculatedValue=" + originOfCalculatedValue);
+                    }
+                    styleableProperty.applyStyle(originOfCalculatedValue, value);
+
+                    CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, true);
+                    cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
+                }
+            } catch (Exception e) {
+                // This exception should have been handled by transitionToState().
+                // Here, we will not try to reset the value but only log the warning.
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+
+                final String msg = String.format("Failed to recalculate and set css [%s] on [%s] due to '%s'\n",
+                        cssMetaData.getProperty(), styleableProperty, e.getMessage());
+
+                PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(Level.WARNING)) {
+                    logger.warning(msg);
+                }
+            }
+        }
+    }
+
+    private boolean transitionStateInProgress = false;
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
@@ -653,6 +787,7 @@ final class CssStyleHelper {
 
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
+        transitionStateInProgress = true;
         for(int n=0; n<max; n++) {
 
             @SuppressWarnings("unchecked") // this is a widening conversion
@@ -838,6 +973,7 @@ final class CssStyleHelper {
             }
 
         }
+        transitionStateInProgress = false;
     }
 
     /**
