@@ -406,7 +406,13 @@ void FrameViewLayoutContext::scheduleLayout()
         LOG(Layout, "FrameView %p layout timer scheduled at %.3fs", this, frame().document()->timeSinceDocumentCreation().value());
 #endif
 
+#if PLATFORM(JAVA)
+    // scheduleLayout will be called from prePaint in next updateContent cycle.
+    const Seconds layoutScheduleThreshold = 250_ms;
+    m_layoutTimer.startOneShot(layoutScheduleThreshold);
+#else
     m_layoutTimer.startOneShot(0_s);
+#endif
 }
 
 void FrameViewLayoutContext::unscheduleLayout()

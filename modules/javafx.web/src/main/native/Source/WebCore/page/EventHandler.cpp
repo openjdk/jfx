@@ -3138,8 +3138,8 @@ void EventHandler::scheduleCursorUpdate()
     if (!page)
         return;
 
-        if (!page->chrome().client().supportsSettingCursor())
-            return;
+    if (!page->chrome().client().supportsSettingCursor())
+        return;
 
     m_hasScheduledCursorUpdate = true;
     page->scheduleRenderingUpdate();

@@ -609,11 +609,6 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public BooleanExpression treeShowingProperty(Node node) {
-                return node.treeShowingProperty();
-            }
-
-            @Override
             public List<Style> getMatchingStyles(CssMetaData cssMetaData,
                     Styleable styleable) {
                 return Node.getMatchingStyles(cssMetaData, styleable);
@@ -1011,20 +1006,6 @@ public abstract class Node implements EventTarget, Styleable {
 
     private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
-    private final ChangeListener<Boolean> windowShowingChangedListener
-            = (win, oldVal, newVal) -> updateTreeShowing();
-
-    private final ChangeListener<Window> sceneWindowChangedListener = (scene, oldWindow, newWindow) -> {
-        // Replace the windowShowingListener and call updateTreeShowing()
-        if (oldWindow != null) {
-            oldWindow.showingProperty().removeListener(windowShowingChangedListener);
-        }
-        if (newWindow != null) {
-            newWindow.showingProperty().addListener(windowShowingChangedListener);
-        }
-        updateTreeShowing();
-    };
-
     private SubScene subScene = null;
 
     /**
@@ -1085,26 +1066,6 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-
-        // isTreeShowing needs to take into account of Window's showing
-        if (oldScene != null) {
-            oldScene.windowProperty().removeListener(sceneWindowChangedListener);
-
-            Window window = oldScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().removeListener(windowShowingChangedListener);
-            }
-        }
-        if (newScene != null) {
-            newScene.windowProperty().addListener(sceneWindowChangedListener);
-
-            Window window = newScene.windowProperty().get();
-            if (window != null) {
-                window.showingProperty().addListener(windowShowingChangedListener);
-            }
-
-        }
-        updateTreeShowing();
 
         if (sceneChanged) reapplyCSS();
 
@@ -8428,69 +8389,8 @@ public abstract class Node implements EventTarget, Styleable {
         return w != null && w.isShowing();
     }
 
-    private void updateTreeShowing() {
-        setTreeShowing(isTreeVisible() && isWindowShowing());
-    }
-
-    private boolean treeShowing;
-    private TreeShowingPropertyReadOnly treeShowingRO;
-
-    final void setTreeShowing(boolean value) {
-        if (treeShowing != value) {
-            treeShowing = value;
-            ((TreeShowingPropertyReadOnly) treeShowingProperty()).invalidate();
-        }
-    }
-
     final boolean isTreeShowing() {
-        return treeShowingProperty().get();
-    }
-
-    final BooleanExpression treeShowingProperty() {
-        if (treeShowingRO == null) {
-            treeShowingRO = new TreeShowingPropertyReadOnly();
-        }
-        return treeShowingRO;
-    }
-
-    class TreeShowingPropertyReadOnly extends BooleanExpression {
-
-        private ExpressionHelper<Boolean> helper;
-        private boolean valid;
-
-        @Override
-        public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        @Override
-        public void addListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
-        }
-
-        @Override
-        public void removeListener(ChangeListener<? super Boolean> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
-        }
-
-        protected void invalidate() {
-            if (valid) {
-                valid = false;
-                ExpressionHelper.fireValueChangedEvent(helper);
-            }
-        }
-
-        @Override
-        public boolean get() {
-            valid = true;
-            return Node.this.treeShowing;
-        }
-
+        return isTreeVisible() && isWindowShowing();
     }
 
     private void updateTreeVisible(boolean parentChanged) {
@@ -8509,8 +8409,6 @@ public abstract class Node implements EventTarget, Styleable {
             addToSceneDirtyList();
         }
         setTreeVisible(isTreeVisible);
-
-        updateTreeShowing();
     }
 
     private boolean treeVisible;

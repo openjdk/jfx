@@ -681,13 +681,13 @@ Vector<SimpleRange> AccessibilityObject::findTextRanges(const AccessibilitySearc
     if (!range)
         return { };
 
-        if (criteria.start == AccessibilitySearchTextStartFrom::Begin)
+    if (criteria.start == AccessibilitySearchTextStartFrom::Begin)
         range->end = range->start;
-        else if (criteria.start == AccessibilitySearchTextStartFrom::End)
+    else if (criteria.start == AccessibilitySearchTextStartFrom::End)
         range->start = range->end;
     else if (criteria.direction == AccessibilitySearchTextDirection::Backward)
         range->start = range->end;
-        else
+    else
         range->end = range->start;
 
     Vector<SimpleRange> result;

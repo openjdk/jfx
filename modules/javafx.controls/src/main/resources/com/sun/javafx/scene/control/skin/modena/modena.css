@@ -3379,7 +3379,7 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.833em; /* 10 */
 }
 
-.dialog-pane:no-header .graphic-container {
+.dialog-pane:no-header > * > .graphic-container {
     -fx-padding: 0.833em 0 0 0.833em; /* 10px 0px 0px 10px */
 }
 
