@@ -83,6 +83,12 @@ public class TreeCellTest {
         assertNull(cell.getItem());
     }
 
+    @Test public void collapsedPseudoclassIsSetByDefault() {
+        TreeCell<?> cell = new TreeCell<>();
+        assertTrue(cell.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("collapsed")));
+        assertFalse(cell.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("expanded")));
+    }
+
     /*********************************************************************
      * Tests for the treeView property                                   *
      ********************************************************************/

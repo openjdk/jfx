@@ -78,6 +78,12 @@ public class TreeTableRowTest {
         assertNull(cell.getItem());
     }
 
+    @Test public void collapsedPseudoclassIsSetByDefault() {
+        TreeTableRow<?> row = new TreeTableRow<>();
+        assertTrue(row.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("collapsed")));
+        assertFalse(row.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("expanded")));
+    }
+
     /*********************************************************************
      * Tests for the treeView property                                   *
      ********************************************************************/
