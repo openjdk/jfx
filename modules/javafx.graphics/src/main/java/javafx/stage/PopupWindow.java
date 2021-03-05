@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.stage;
 
+import com.sun.javafx.scene.TreeShowingExpression;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ import com.sun.javafx.stage.WindowCloseRequestHandler;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.tk.Toolkit;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
-import com.sun.javafx.scene.NodeHelper;
+
 import com.sun.javafx.stage.PopupWindowHelper;
 import com.sun.javafx.stage.WindowHelper;
 import javafx.beans.property.ObjectPropertyBase;
@@ -149,6 +150,7 @@ public abstract class PopupWindow extends Window {
     };
 
     private WeakChangeListener<Boolean> weakOwnerNodeListener = new WeakChangeListener(changeListener);
+    private TreeShowingExpression treeShowingExpression;
 
     public PopupWindow() {
         final Pane popupRoot = new Pane();
@@ -410,7 +412,8 @@ public abstract class PopupWindow extends Window {
 
         // PopupWindow should disappear when owner node is not visible
         if (ownerNode != null) {
-            NodeHelper.treeShowingProperty(ownerNode).addListener(weakOwnerNodeListener);
+            treeShowingExpression = new TreeShowingExpression(ownerNode);
+            treeShowingExpression.addListener(weakOwnerNodeListener);
         }
 
         updateWindow(anchorX, anchorY);
@@ -487,7 +490,11 @@ public abstract class PopupWindow extends Window {
 
         // When popup hides, remove listeners; these are added when the popup shows.
         if (getOwnerWindow() != null) getOwnerWindow().showingProperty().removeListener(weakOwnerNodeListener);
-        if (getOwnerNode() != null) NodeHelper.treeShowingProperty(getOwnerNode()).removeListener(weakOwnerNodeListener);
+        if (treeShowingExpression != null) {
+            treeShowingExpression.removeListener(weakOwnerNodeListener);
+            treeShowingExpression.dispose();
+            treeShowingExpression = null;
+        }
     }
 
     /*

@@ -21,5 +21,7 @@
 --add-exports javafx.graphics/com.sun.javafx.sg.prism=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.prism.impl=ALL-UNNAMED
+#
+--add-exports javafx.web/com.sun.webkit=ALL-UNNAMED
 # compilation additions
 --add-exports=javafx.graphics/com.sun.glass.events=ALL-UNNAMED
