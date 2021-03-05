@@ -216,6 +216,9 @@ public class PropertySizeTest {
         p3.setStyle("-fx-font-size: 0.6em");
         p4.setStyle("-fx-font-size: 0.5em");
 
+        // When a Parent and its Parent's font size is relative then that Parent's
+        // font size is computed in relative to it's grand parent's font size.
+        // For compatibility we are preserving this odd behaviour.
         double defFontSize = Font.getDefault().getSize();
         double rootFontSize = defFontSize * 100;
         double p1FontSize = defFontSize * 0.8;
@@ -248,10 +251,12 @@ public class PropertySizeTest {
         l3.setStyle("-fx-font-size: 0.25em");
         l4.setStyle("-fx-font-size: 0.25em");
 
-        // This should have been the behavior of font size calculation with
-        // nested set of parents and controls. We are not changing current behaviour to avoid
-        // regressing any applications that rely on current behaviour. Current behaviour can be
-        // observed in other -fx-font-size tests here.
+        // This should have been the behavior of font size calculation with nested
+        // set of parents and controls, that a Parent's font size is calculated with reference
+        // to its Parent and not grand parent. We are not changing current behaviour to avoid
+        // regressing any applications that rely on current behaviour.
+        // Current behaviour can be observed in other -fx-font-size tests here.
+        // see: relativeFontSizeSetOnAllNestedParentsAndControlsTest()
         double defFontSize = Font.getDefault().getSize();
         double rootFontSize = defFontSize * 0.9;
         double p1FontSize = rootFontSize * 0.8;
@@ -320,21 +325,12 @@ public class PropertySizeTest {
 
         double p2RefeFont = (p1Font.isRelative && p2Font.isRelative) ? rtFontSize : p1FontSize;
         double p2FontSize = p2Font.getValue(p2RefeFont);
-        //double p2FontSize = p2Font.getValue(rtFontSize);
 
         double p3RefeFont = (p2Font.isRelative && p3Font.isRelative) ? p1FontSize : p2FontSize;
         double p3FontSize = p3Font.getValue(p3RefeFont);
-        //double p3FontSize = p3Font.getValue(p1FontSize);
 
         double p4RefeFont = (p3Font.isRelative && p4Font.isRelative) ? p2FontSize : p3FontSize;
         double p4FontSize = p4Font.getValue(p4RefeFont);
-        //double p4FontSize = p4Font.getValue(p2FontSize);
-
-        System.err.println("rtFontSize: " + rtFontSize);
-        System.err.println("p1FontSize: " + p1FontSize);
-        System.err.println("p2FontSize: " + p2FontSize);
-        System.err.println("p3FontSize: " + p3FontSize);
-        System.err.println("p4FontSize: " + p4FontSize);
 
         testFontSizeOfControls(rtFontSize, "0.55em", p1FontSize, "0.5em",
                 p2FontSize, "0.45em",  p3FontSize, "0.4em", p4FontSize, "0.35em");

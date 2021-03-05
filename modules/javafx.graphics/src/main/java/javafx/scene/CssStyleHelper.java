@@ -571,10 +571,17 @@ final class CssStyleHelper {
 
     }
 
-    // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
-    // Any modifications to the method transitionToStates() should be relatively applied here if needed.
+    // The font size property of the Controls that are inherited from class Labeled is a shared a property,
+    // it is shared with a child LabeledText. The Control's(inherited from Labeled) css properties are
+    // first computed relative to the font size that was computed for the Control. And when the font size
+    // is computed for LabeledText, it computes a different font size(which is not same as what was computed for Control).
+    // This results in the behaviour that Control's relative sized properties do not remain relative to its font size.
+    // This method is a remedy to this problem. It gets executed when LabeledText updates the shared font size property
+    // and recalculates the relative sized properties of Control.
     // Currently this method is executed only by Labeled.fontProperty().set(), when it's font size
     // is changed by LabeledText.
+    // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
+    // Any modifications to the method transitionToStates() should be relatively applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
 
         if (transitionStateInProgress) {
@@ -600,6 +607,7 @@ final class CssStyleHelper {
 
         for (int n = 0; n < numStyleables; n++) {
 
+            @SuppressWarnings("unchecked") // this is a widening conversion
             final CssMetaData<Styleable,Object> cssMetaData =
                     (CssMetaData<Styleable,Object>)styleables.get(n);
 
@@ -661,7 +669,6 @@ final class CssStyleHelper {
                 final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
 
                 if (originOfCalculatedValue == null) {
-                    assert false : styleableProperty.toString();
                     continue;
                 }
 
@@ -705,6 +712,7 @@ final class CssStyleHelper {
     }
 
     private boolean transitionStateInProgress = false;
+
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
