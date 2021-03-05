@@ -356,7 +356,7 @@ public class ListView<T> extends Control {
                 selectFirstRowByDefault = _selectFirstRowByDefault;
             }
         });
-        
+
         pseudoClassStateChanged(PSEUDO_CLASS_VERTICAL, true);
     }
 
