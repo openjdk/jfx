@@ -86,7 +86,6 @@ public class TreeCell<T> extends IndexedCell<T> {
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         setAccessibleRole(AccessibleRole.TREE_ITEM);
-        pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, true);
     }
 
 
