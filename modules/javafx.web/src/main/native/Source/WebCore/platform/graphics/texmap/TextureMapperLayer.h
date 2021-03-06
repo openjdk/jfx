@@ -59,6 +59,7 @@ public:
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
     void setBackdropLayer(TextureMapperLayer*);
+    void setBackdropFiltersRect(const FloatRoundedRect&);
     void setPosition(const FloatPoint&);
     void setBoundsOrigin(const FloatPoint&);
     void setSize(const FloatSize&);
@@ -123,15 +124,21 @@ private:
     void removeFromParent();
     void removeAllChildren();
 
-    enum ResolveSelfOverlapMode {
-        ResolveSelfOverlapAlways = 0,
-        ResolveSelfOverlapIfNeeded
+    enum class ComputeOverlapRegionMode : uint8_t {
+        Intersection,
+        Union
     };
-    void computeOverlapRegions(Region& overlapRegion, Region& nonOverlapRegion, ResolveSelfOverlapMode);
+    struct ComputeOverlapRegionData {
+        ComputeOverlapRegionMode mode;
+        IntRect clipBounds;
+        Region& overlapRegion;
+        Region& nonOverlapRegion;
+    };
+    void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(const TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(const TextureMapperPaintOptions&);
-    RefPtr<BitmapTexture> paintIntoSurface(const TextureMapperPaintOptions&, const IntSize&);
+    void paintIntoSurface(TextureMapperPaintOptions&);
     void paintWithIntermediateSurface(const TextureMapperPaintOptions&, const IntRect&);
     void paintSelf(const TextureMapperPaintOptions&);
     void paintSelfAndChildren(const TextureMapperPaintOptions&);
@@ -171,6 +178,7 @@ private:
         WeakPtr<TextureMapperLayer> maskLayer;
         WeakPtr<TextureMapperLayer> replicaLayer;
         WeakPtr<TextureMapperLayer> backdropLayer;
+        FloatRoundedRect backdropFiltersRect;
         Color solidColor;
         FilterOperations filters;
         Color debugBorderColor;
@@ -213,6 +221,7 @@ private:
     RefPtr<Nicosia::AnimatedBackingStoreClient> m_animatedBackingStoreClient;
 #endif
     bool m_isBackdrop { false };
+    bool m_isReplica { false };
 
     struct {
         TransformationMatrix localTransform;

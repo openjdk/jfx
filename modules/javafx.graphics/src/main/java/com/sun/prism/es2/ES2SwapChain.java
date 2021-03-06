@@ -260,7 +260,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         // EGL doesn't have a window manager, so we need to ask the window for
         // the x/y offset to use
         if (PlatformUtil.useEGL()) {
-            return pState.getWindowX();
+            return (int) (pState.getWindowX() * pState.getOutputScaleX());
         } else {
             return 0;
         }
@@ -271,8 +271,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         // EGL doesn't have a window manager, so we need to ask the window
         // for the x/y offset to use
         if (PlatformUtil.useEGL()) {
-            return pState.getScreenHeight() -
-                   pState.getOutputHeight() - pState.getWindowY();
+            return ((int) (pState.getScreenHeight() * pState.getOutputScaleY())) -
+                    pState.getOutputHeight() - ((int) (pState.getWindowY() * pState.getOutputScaleY()));
         } else {
             return 0;
         }

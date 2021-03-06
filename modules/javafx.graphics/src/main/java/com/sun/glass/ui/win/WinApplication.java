@@ -358,4 +358,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _getKeyCodeForChar(char c);
+
+    @Override
+    protected native int _isKeyLocked(int keyCode);
 }
