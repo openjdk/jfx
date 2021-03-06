@@ -571,17 +571,19 @@ final class CssStyleHelper {
 
     }
 
-    // The font size property of the Controls that are inherited from class Labeled is a shared a property,
-    // it is shared with a child LabeledText. The Control's(inherited from Labeled) css properties are
-    // first computed relative to the font size that was computed for the Control. And when the font size
-    // is computed for LabeledText, it computes a different font size(which is not same as what was computed for Control).
-    // This results in the behaviour that Control's relative sized properties do not remain relative to its font size.
-    // This method is a remedy to this problem. It gets executed when LabeledText updates the shared font size property
-    // and recalculates the relative sized properties of Control.
-    // Currently this method is executed only by Labeled.fontProperty().set(), when it's font size
+    // The font size property of Controls that are inherited from class Labeled is a shared property,
+    // it is shared with a child LabeledText control.
+    // This font size is first computed when applying CSS to the Control and then the relative sized
+    // CSS properties of the Control are computed relative to this font size.
+    // This shared font size may get changed if a different font size is computed for child LabeledText control.
+    // So in such scenario if font size gets changed then the relative sized css properties of the Control
+    // no longer remain relative to its font size.
+    // This method is a remedy to above problem. It is executed when LabeledText changes the shared
+    // font size property and it recalculates the relative sized properties of Control.
+    // Currently this method is executed only by Labeled.fontProperty().set(), when its font size
     // is changed by LabeledText.
     // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
-    // Any modifications to the method transitionToStates() should be relatively applied here if needed.
+    // Any modifications to the method transitionToState() should be applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
 
         if (transitionStateInProgress) {
@@ -624,7 +626,8 @@ final class CssStyleHelper {
 
             final String property = cssMetaData.getProperty();
             boolean isFontProperty = property.equals("-fx-font") || property.equals("-fx-font-size");
-            // This method is executed as a result of change in font size of the control, hence font property should be skipped.
+            // This method is executed as a result of change in font size of the control,
+            // hence font property should be skipped.
             if (isFontProperty) {
                 continue;
             }
@@ -645,7 +648,7 @@ final class CssStyleHelper {
                     continue;
                 } else {
                     // TODO: further optimization
-                    // determine a way to find if any of the sub properties are specified with relative size.
+                    // Determine a way to find if any of the sub properties are specified with relative size.
                     // if none is relatively sized then continue;
                 }
             }

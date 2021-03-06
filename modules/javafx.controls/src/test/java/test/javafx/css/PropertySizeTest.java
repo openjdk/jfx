@@ -216,9 +216,10 @@ public class PropertySizeTest {
         p3.setStyle("-fx-font-size: 0.6em");
         p4.setStyle("-fx-font-size: 0.5em");
 
-        // When a Parent and its Parent's font size is relative then that Parent's
-        // font size is computed in relative to it's grand parent's font size.
-        // For compatibility we are preserving this odd behaviour.
+        // Ideally relative font size of a parent should be relative to font size of its parent.
+        // But the current behavior is that when -fx-font-size of a parent and its parent is specified as a
+        // relative size then the font size of that parent is computed relative to font size of its grandparent.
+        // For compatibility we are preserving this odd behavior.
         double defFontSize = Font.getDefault().getSize();
         double rootFontSize = defFontSize * 100;
         double p1FontSize = defFontSize * 0.8;
@@ -251,11 +252,11 @@ public class PropertySizeTest {
         l3.setStyle("-fx-font-size: 0.25em");
         l4.setStyle("-fx-font-size: 0.25em");
 
-        // This should have been the behavior of font size calculation with nested
-        // set of parents and controls, that a Parent's font size is calculated with reference
-        // to its Parent and not grand parent. We are not changing current behaviour to avoid
-        // regressing any applications that rely on current behaviour.
-        // Current behaviour can be observed in other -fx-font-size tests here.
+        // The expected behavior of -fx-font-size calculation with nested set of parents is that
+        // the font size of a parent is always calculated relative to font size of its parent.
+        // But currently it is calculated relative to font size of grandparent.
+        // We are not changing current behavior to avoid regressing any applications that rely on this behavior.
+        // Current behavior can be observed in other -fx-font-size tests here.
         // see: relativeFontSizeSetOnAllNestedParentsAndControlsTest()
         double defFontSize = Font.getDefault().getSize();
         double rootFontSize = defFontSize * 0.9;
@@ -269,7 +270,7 @@ public class PropertySizeTest {
     }
 
     // This test is an extension of relativeFontSizeSetOnNestedParentAndControlsExceptRootTest() and
-    // relativeFontSizeSetOnAllNestedParentsAndControlsTest() to test combinations of -fx-font-size
+    // relativeFontSizeSetOnAllNestedParentsAndControlsTest() to test combinations of -fx-font-size.
     @Test
     public void relativeFontSizeOfNestedParentsTest() {
 
@@ -400,8 +401,8 @@ public class PropertySizeTest {
     // -fx-font-size tests - end
 
 
-    // Test the following properties using Label, to verify that
-    // 1. The relative size of css properties of a control are computed relative to
+    // Test the following properties using Label control, to verify that
+    // 1. The relative sized css properties are computed relative to
     // the -fx-font-size of that control. and,
     // 2. The absolute sized properties remain as specified.
     // -fx-padding,    -fx-label-padding
@@ -460,7 +461,6 @@ public class PropertySizeTest {
         verifyCombinationsWithParentFontSizes("20em", "0.9em", "0.8em", "100px", "0.6em");
         verifyCombinationsWithParentFontSizes("20em", "180px", "160px", "140px", "120px");
     }
-
 
     private void verifyCombinationsWithParentFontSizes(String rootFont, String p1Font,
                                                        String p2Font, String p3Font, String p4Font) {
