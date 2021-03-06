@@ -67,7 +67,6 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     private final D3DContext context;
     private final int maxTextureSize;
-    private boolean disposed;
 
     /**
      * List of disposer records for d3d resources created by the pipeline.
@@ -118,8 +117,22 @@ class D3DResourceFactory extends BaseShaderFactory {
 
     @Override
     public boolean isDeviceReady() {
+        if (isDisposed()) {
+            return false;
+        }
         displayPrismStatistics();
-        return context.testLostStateAndReset();
+
+        // KCR: debug
+//        return context.testLostStateAndReset();   // KCR: uncomment this when done debugging
+        if (PrismSettings.verbose) {
+            System.err.println("----------------------------------------");
+            System.err.println("calling testLostStateAndReset context: " + context);
+        }
+        boolean status = context.testLostStateAndReset();
+        if (PrismSettings.verbose) {
+            System.err.println("testLostStateAndReset:" + status + " context:" + context);
+        }
+        return status;
     }
 
     static int nextPowerOfTwo(int val, int max) {
@@ -437,30 +450,6 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public void dispose() {
-        // KCR: debug
-        System.err.println("D3DResourceFactory::dispose");
-
-        disposed = true;
-        context.dispose();
-        notifyReleased();
-        // KCR: TODO: finish this
-    }
-
-    public boolean isDisposed() {
-        return disposed;
-    }
-
-    private boolean checkDisposed() {
-        // KCR: debug
-        if (/*PrismSettings.verbose && */ isDisposed()) {
-            System.err.println("D3DResourceFactory: cannot allocate resource because " +
-                    "this resource factory has been disposed");
-        }
-        return isDisposed();
-    }
-
-    @Override
     public boolean isFormatSupported(PixelFormat format) {
         return true;
     }
@@ -497,13 +486,21 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    protected void notifyReleased() {
+    public void dispose() {
+        // KCR: debug
+        if (PrismSettings.verbose) {
+            System.err.println("D3DResourceFactory::dispose");
+        }
+
+        context.dispose();
+
         for (ListIterator<D3DRecord> it = records.listIterator(); it.hasNext();) {
             D3DRecord r = it.next();
             r.markDisposed();
         }
         records.clear();
-        super.notifyReleased();
+
+        super.dispose();
     }
 
     void addRecord(D3DRecord record) {

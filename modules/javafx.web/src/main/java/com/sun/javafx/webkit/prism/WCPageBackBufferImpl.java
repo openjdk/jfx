@@ -30,6 +30,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
 import com.sun.prism.RTTexture;
+import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.paint.Color;
@@ -37,11 +38,13 @@ import com.sun.webkit.graphics.WCCamera;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
+import java.lang.ref.WeakReference;
 import javafx.scene.transform.Transform;
 
 final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFactoryListener {
     private RTTexture texture;
-    private boolean listenerAdded = false;
+    private WeakReference<ResourceFactory> listenerAdded = null;
+    private boolean firstValidate = true;
     private float pixelScale;
 
     WCPageBackBufferImpl(float pixelScale) {
@@ -88,6 +91,14 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     public boolean validate(int width, int height) {
+        ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
+        if (factory.isDisposed()) {
+            // KCR: debug
+            System.err.println("KCR: WCPageBackBufferImpl::validate device has been disposed");
+
+            return false;
+        }
+
         width = (int) Math.ceil(width * pixelScale);
         height = (int) Math.ceil(height * pixelScale);
         if (texture != null) {
@@ -100,13 +111,16 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
         if (texture == null) {
             texture = createTexture(width, height);
             texture.contentsUseful();
-            if (! listenerAdded) {
+            if (listenerAdded == null || listenerAdded.get() != factory) {
+                factory.addFactoryListener(this);
+                listenerAdded = new WeakReference<>(factory);
+            }
+            if (firstValidate) {
                 // this is the very first time validate() is called. We assume
                 // full repaint is already happening, so we don't return false
-                GraphicsPipeline.getDefaultResourceFactory().addFactoryListener(this);
-                listenerAdded = true;
+                firstValidate = false;
             } else {
-                // texture must have been nullified in factoryReset().
+                // texture must have been nullified in factoryReset() or factoryReleased.
                 // Backbuffer is lost, so we request full repaint.
                 texture.unlock();
                 return false;
@@ -135,5 +149,12 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     @Override public void factoryReleased() {
+        // KCR: debug
+        System.err.println("WCPageBackBufferImpl: resource factory released");
+
+        if (texture != null) {
+            texture.dispose();
+            texture = null;
+        }
     }
 }

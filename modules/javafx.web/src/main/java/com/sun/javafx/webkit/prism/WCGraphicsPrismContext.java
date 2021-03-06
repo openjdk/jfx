@@ -845,9 +845,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
+                ResourceFactory rf = g.getResourceFactory();
+                if (rf.isDisposed()) {
+                    // KCR: debug
+                    System.err.println("KCR: WCGraphicsPrismContext::doPaint skipping because device has been disposed");
+
+                    return;
+                }
                 image.order(ByteOrder.nativeOrder());
                 Image img = Image.fromByteBgraPreData(image, w, h);
-                ResourceFactory rf = g.getResourceFactory();
                 Texture txt = rf.createTexture(img, Texture.Usage.STATIC, Texture.WrapMode.REPEAT);
                 g.drawTexture(txt, x, y, x + w, y + h, 0, 0, w, h);
                 txt.dispose();
@@ -1345,17 +1351,23 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             fctx = getFilterContext(g);
             if (permanent) {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
-                // KCR: check this
-                rtt.makePermanent();
-                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                if (!f.isDisposed()) {
+                    RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    rtt.makePermanent();
+                    buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                } else {
+                    // KCR: debug
+                    System.err.println("Layer :: cannot construct RTT, device has been disposed");
+                    fctx = null;
+                    buffer = null;
+                }
             } else {
                 buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
             }
         }
 
         Graphics getGraphics() {
-            if (graphics == null) {
+            if (graphics == null && buffer != null) {
                 graphics = buffer.createGraphics();
             }
             return graphics;

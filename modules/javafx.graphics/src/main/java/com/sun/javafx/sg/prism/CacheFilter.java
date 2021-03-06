@@ -540,7 +540,9 @@ public class CacheFilter {
                 implImage.lock();
                 if (!cachedImageData.validate(fctx)) {
                     // KCR: debug
-                    System.err.println("CacheFilter::render : Invalidate cached image");
+                    if (PrismSettings.verbose) {
+                        System.err.println("CacheFilter::render : Invalidate cached image");
+                    }
                     implImage.unlock();
                     invalidate();
                 }
@@ -550,7 +552,9 @@ public class CacheFilter {
         float pixelScaleY = g.getPixelScaleFactorY();
         if (needToRenderCache(xform, xformInfo, pixelScaleX, pixelScaleY)) {
             // KCR: debug
-            System.err.println("CacheFilter: renderToCache");
+            if (PrismSettings.verbose) {
+                System.err.println("CacheFilter: renderToCache");
+            }
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter rebuilding");
             }

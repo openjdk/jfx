@@ -37,6 +37,7 @@ import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -47,7 +48,7 @@ import java.nio.IntBuffer;
 final class RTImage extends PrismImage implements ResourceFactoryListener {
     private RTTexture txt;
     private final int width, height;
-    private boolean listenerAdded = false;
+    private WeakReference<ResourceFactory> listenerAdded = null;
     private ByteBuffer pixelBuffer;
     private float pixelScale;
 
@@ -66,7 +67,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override
     Graphics getGraphics() {
-        Graphics g = getTexture().createGraphics();
+        RTTexture texture = getTexture();
+        if (texture == null) {
+            return null;
+        }
+        Graphics g = texture.createGraphics();
         g.transform(PrismGraphicsManager.getPixelScaleTransform());
         return g;
     }
@@ -77,17 +82,23 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             System.err.println("***** surface lost: " + this);
         }
 
+        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+        if (f.isDisposed()) {
+            // KCR: debug
+            System.err.println("KCR: RTImage::getTexture return null because device has been disposed");
+            return null;
+        }
+
         if (txt == null) {
-            ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
             txt = f.createRTTexture(
                     (int) Math.ceil(width * pixelScale),
                     (int) Math.ceil(height * pixelScale),
                     Texture.WrapMode.CLAMP_NOT_NEEDED);
             txt.contentsUseful();
             txt.makePermanent();
-            if (! listenerAdded) {
+            if (listenerAdded == null || listenerAdded.get() != f) {
                 f.addFactoryListener(this);
-                listenerAdded = true;
+                listenerAdded = new WeakReference<>(f);
             }
         }
         return txt;
@@ -99,6 +110,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
         if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
+            return;
+        }
+        if (g.getResourceFactory().isDisposed()) {
+            // KCR: debug
+            System.err.println("KCR: RTImage::draw skipping because device has been disposed");
             return;
         }
         if (g instanceof PrinterGraphics) {
@@ -165,6 +181,14 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         }
         if (isNew || isDirty()) {
             PrismInvoker.runOnRenderThread(() -> {
+                final ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                if (f.isDisposed()) {
+                    // KCR: debug
+                    System.err.println("ResourceFactory: " + f + "  disposed:" + f.isDisposed());
+                    System.err.println("KCR: RTImage::getPixelBuffer skipping because device is disposed");
+
+                    return;
+                }
                 flushRQ();
                 if (txt != null && pixelBuffer != null) {
                     PixelFormat pf = txt.getPixelFormat();
@@ -177,7 +201,19 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     RTTexture t = txt;
                     if (pixelScale != 1.0f) {
                         // Convert [txt] to a texture the size of the image
-                        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                        // KCR: debug
+                        // KCR: this check is redundant due to earlier test
+                        //      (remove the entire check when done debugging)
+                        if (f.isDisposed()) {
+                            try {
+                                throw new IllegalStateException("factory used to be active, but now is disposed!");
+                            } catch (RuntimeException ex) {
+                                ex.printStackTrace();
+                            }
+                            System.err.println("ResourceFactory: " + f + "  disposed:" + f.isDisposed());
+                            return;
+                        }
+
                         t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                         Graphics g = t.createGraphics();
                         g.drawTexture(txt, 0, 0, width, height,
@@ -208,7 +244,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         PrismInvoker.invokeOnRenderThread(new Runnable() {
             public void run() {
                 //[g] field can be null if it is the first paint
-                //from synthetic ImageData.
+                //from synthetic ImageData or if the resource factory is disposed
                 Graphics g = getGraphics();
                 if (g != null && pixelBuffer != null) {
                     pixelBuffer.rewind();//critical!
@@ -233,6 +269,13 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     }
 
     @Override public void factoryReleased() {
+        // KCR: debug
+        System.err.println("RTImage: resource factory released");
+
+        if (txt != null) {
+            txt.dispose();
+            txt = null;
+        }
     }
 
     @Override

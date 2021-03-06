@@ -194,7 +194,9 @@ public final class D3DPipeline extends GraphicsPipeline {
     void reinitialize() {
         // KCR: debug
         System.err.println("KCR: reinitialize D3DPipeline");
-        Thread.dumpStack();
+        if (PrismSettings.verbose) {
+            Thread.dumpStack();
+        }
 
         // Device was removed, reset and reinitialize
         reset(false);

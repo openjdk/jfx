@@ -54,6 +54,8 @@ public abstract class BaseContext {
     private final ResourceFactory factory;
     private final VertexBuffer vertexBuffer;
 
+    private boolean disposed = false;
+
     private static final int MIN_MASK_DIM = 1024;
     private Texture maskTex;
     private ByteBuffer maskBuffer;
@@ -73,7 +75,6 @@ public abstract class BaseContext {
 
     private final GeneralTransform3D perspectiveTransform = new GeneralTransform3D();
 
-    // TODO: need to dispose these when the context is disposed... (RT-27421)
     private final Map<FontStrike, GlyphCache>
         greyGlyphCaches = new HashMap<FontStrike, GlyphCache>();
     private final Map<FontStrike, GlyphCache>
@@ -101,6 +102,8 @@ public abstract class BaseContext {
     }
 
     public void flushVertexBuffer() {
+        if (checkDisposed()) return;
+
         vertexBuffer.flush();
     }
 
@@ -169,6 +172,7 @@ public abstract class BaseContext {
     public void clearGlyphCaches() {
         clearCaches(greyGlyphCaches);
         clearCaches(lcdGlyphCaches);
+        GlyphCache.disposeForContext(this);
     }
 
     private void clearCaches(Map<FontStrike, GlyphCache> glyphCaches) {
@@ -199,6 +203,9 @@ public abstract class BaseContext {
 
     private GlyphCache getGlyphCache(FontStrike strike,
                                      Map<FontStrike, GlyphCache> glyphCaches) {
+
+        if (checkDisposed()) return null;
+
         GlyphCache glyphCache = glyphCaches.get(strike);
         if (glyphCache == null) {
             glyphCache = new GlyphCache(this, strike);
@@ -208,6 +215,8 @@ public abstract class BaseContext {
     }
 
     public Texture validateMaskTexture(MaskData maskData, boolean canScale) {
+        if (checkDisposed()) return null;
+
         int pad = canScale ? 1 : 0;
         int needW = maskData.getWidth() + pad + pad;
         int needH = maskData.getHeight() + pad + pad;
@@ -252,6 +261,8 @@ public abstract class BaseContext {
     }
 
     public void updateMaskTexture(MaskData maskData, RectBounds maskBounds, boolean canScale) {
+        if (checkDisposed()) return;
+
         // assert maskTex bound as texture 1...
         maskTex.assertLocked();
         int maskW = maskData.getWidth();
@@ -303,7 +314,8 @@ public abstract class BaseContext {
     }
 
     public int getRectTextureMaxSize() {
-        // KCR: No need to chek surfaceLost since context will be recreated
+        if (checkDisposed()) return 0;
+
         if (rectTex == null) {
             createRectTexture();
         }
@@ -311,7 +323,8 @@ public abstract class BaseContext {
     }
 
     public Texture getRectTexture() {
-        // KCR: No need to chek surfaceLost since context will be recreated
+        if (checkDisposed()) return null;
+
         if (rectTex == null) {
             createRectTexture();
         }
@@ -325,6 +338,8 @@ public abstract class BaseContext {
     }
 
     private void createRectTexture() {
+        if (checkDisposed()) return;
+
         int texMax = PrismSettings.primTextureSize;
         if (texMax < 0) texMax = getResourceFactory().getMaximumTextureSize();
         int texDim = 3;
@@ -369,7 +384,8 @@ public abstract class BaseContext {
     }
 
     public Texture getWrapRectTexture() {
-        // KCR: No need to chek surfaceLost since context will be recreated
+        if (checkDisposed()) return null;
+
         if (wrapRectTex == null) {
             Texture tex =
                 getResourceFactory().createMaskTexture(2, 2, WrapMode.CLAMP_TO_EDGE);
@@ -409,7 +425,8 @@ public abstract class BaseContext {
     }
 
     public Texture getOvalTexture() {
-        // KCR: No need to chek surfaceLost since context will be recreated
+        if (checkDisposed()) return null;
+
         if (ovalTex == null) {
             int cellMax = getRectTextureMaxSize();
             int texDim = (cellMax * (cellMax + 1)) / 2;
@@ -503,6 +520,8 @@ public abstract class BaseContext {
                                       MaskData maskData,
                                       float bx, float by, float bw, float bh)
     {
+        if (checkDisposed()) return null;
+
         int sizeInPixels = paintW * paintH;
         int sizeInBytes = sizeInPixels * 4;
         if (paintBuffer == null || paintBuffer.capacity() < sizeInBytes) {
@@ -580,4 +599,61 @@ public abstract class BaseContext {
 
         return paintTex;
     }
+
+    /**
+     * Dispose of this context. Subclass implementations can override this
+     * if needed. They must call super.dispose().
+     */
+    public void dispose() {
+        clearGlyphCaches();
+
+        if (maskTex != null) {
+            maskTex.dispose();
+            maskTex = null;
+        }
+        if (paintTex != null) {
+            paintTex.dispose();
+            paintTex = null;
+        }
+        if (rectTex != null) {
+            rectTex.dispose();
+            rectTex = null;
+        }
+        if (wrapRectTex != null) {
+            wrapRectTex.dispose();
+            wrapRectTex = null;
+        }
+        if (ovalTex != null) {
+            ovalTex.dispose();
+            ovalTex = null;
+        }
+        disposed = true;
+    }
+
+    /**
+     * Returns a flag indicating whether this context has been disposed. A graphics
+     * context is disposed by the associated ResourceFactory when it is disposed.
+     * If a context has been disposed, it must be recreated, by a new ResourceFactory.
+     * All draw calls will be ignored. An attempt to create a resource will be
+     * ignored and will return null.
+     *
+     * @return true if this context has been disposed.
+     */
+    public final boolean isDisposed() {
+        return disposed;
+    }
+
+    protected boolean checkDisposed() {
+        // KCR: debug
+        if (isDisposed()) {
+            try {
+                throw new IllegalStateException("attempt to use resource after context is disposed");
+            } catch (RuntimeException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return isDisposed();
+    }
+
 }

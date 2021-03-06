@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.media;
 
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -64,7 +65,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         return ret;
     }
 
-    private ResourceFactory registeredWithFactory = null;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
 
     private PrismMediaFrameHandler(Object provider) {
     }
@@ -139,11 +140,11 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         PrismFrameBuffer prismBuffer = new PrismFrameBuffer(vdb);
         if (tme.texture == null) {
             ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
-            if (registeredWithFactory != factory) {
+            if (registeredWithFactory == null || registeredWithFactory.get() != factory) {
                 // make sure we've registered with the resource factory so we know
                 // when to purge old textures
                 factory.addFactoryListener(this);
-                registeredWithFactory = factory;
+                registeredWithFactory = new WeakReference<>(factory);
             }
 
             tme.texture = GraphicsPipeline.getPipeline().
