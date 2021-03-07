@@ -707,8 +707,8 @@ get_net_frame_extents_atom() {
 // Work-around because frame extents are only obtained after window is shown.
 // This is used to know the total window size (content + decoration)
 // The first window will have a duplicated resize event, subsequent windows will use the cached value.
-WindowFrameExtents WindowContextTop::normal_extents = {0, 0, 0, 0};
-WindowFrameExtents WindowContextTop::utility_extents = {0, 0, 0, 0};
+WindowFrameExtents WindowContextTop::normal_extents;
+WindowFrameExtents WindowContextTop::utility_extents;
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
         WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf) :

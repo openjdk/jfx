@@ -53,6 +53,11 @@ enum request_type {
 };
 
 struct WindowFrameExtents {
+    WindowFrameExtents() : top(0),
+                           left(0),
+                           bottom(0),
+                           right(0) {}
+
     int top;
     int left;
     int bottom;
@@ -71,7 +76,6 @@ struct WindowGeometry {
                        current_ch(0),
                        last_cw(0),
                        last_ch(0),
-                       extents({0, 0, 0, 0}),
                        frame_extents_supported(false),
                        frame_extents_received(false),
                        enabled(true),
