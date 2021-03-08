@@ -544,6 +544,11 @@ defineProperty("RELEASE_VERSION", relVer)
 defineProperty("RELEASE_VERSION_PADDED", "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}")
 
 def buildDate = new java.util.Date()
+def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
+if (sourceDateEpoch != null) {
+    def ms = 1000 * Long.parseLong(sourceDateEpoch)
+    buildDate = new java.util.Date(ms)
+}
 def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss").format(buildDate)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
@@ -1336,6 +1341,7 @@ logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
 logger.quiet("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER")
 logger.quiet("PRODUCT_NAME: $PRODUCT_NAME")
+logger.quiet("BUILD_TIMESTAMP: $BUILD_TIMESTAMP")
 logger.quiet("RELEASE_VERSION: $RELEASE_VERSION")
 logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
