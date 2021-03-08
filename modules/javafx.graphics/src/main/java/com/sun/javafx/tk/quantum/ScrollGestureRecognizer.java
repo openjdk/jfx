@@ -262,7 +262,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }
     }
 
-    private void sendScrollStartedEvent(double centerX, double centerY, int touchCount) {
+    private void sendScrollStartedEvent(double centerAbsX, double centerAbsY, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_STARTED,
@@ -283,7 +283,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollEvent(boolean isInertia, double centerX, double centerY, int touchCount) {
+    private void sendScrollEvent(boolean isInertia, double centerAbsX, double centerAbsY, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
@@ -304,7 +304,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollFinishedEvent(double centerX, double centerY, int touchCount) {
+    private void sendScrollFinishedEvent(double centerAbsX, double centerAbsY, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_FINISHED,
