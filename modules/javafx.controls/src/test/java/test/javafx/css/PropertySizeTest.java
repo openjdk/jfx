@@ -216,7 +216,7 @@ public class PropertySizeTest {
         p3.setStyle("-fx-font-size: 0.6em");
         p4.setStyle("-fx-font-size: 0.5em");
 
-        // Ideally relative font size of a parent should be relative to font size of its parent.
+        // Ideally the relative font size of a parent should be relative to the font size of that parent's parent.
         // But the current behavior is that when -fx-font-size of a parent and its parent is specified as a
         // relative size then the font size of that parent is computed relative to font size of its grandparent.
         // For compatibility we are preserving this odd behavior.
@@ -254,7 +254,7 @@ public class PropertySizeTest {
 
         // The expected behavior of -fx-font-size calculation with nested set of parents is that
         // the font size of a parent is always calculated relative to font size of its parent.
-        // But currently it is calculated relative to font size of grandparent.
+        // But currently it is calculated relative to the font size of its grandparent.
         // We are not changing current behavior to avoid regressing any applications that rely on this behavior.
         // Current behavior can be observed in other -fx-font-size tests here.
         // see: relativeFontSizeSetOnAllNestedParentsAndControlsTest()
