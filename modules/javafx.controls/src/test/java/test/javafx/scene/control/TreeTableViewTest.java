@@ -260,6 +260,18 @@ public class TreeTableViewTest {
         assertNull(treeTableView.getOnSort());
     }
 
+    @Test public void noArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TreeTableView<?> view = new TreeTableView<>();
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TreeTableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
+    @Test public void singleArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TreeTableView<?> view = new TreeTableView<>(null);
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TreeTableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
 //    @Test public void singleArgConstructorSetsNonNullSelectionModel() {
 //        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
 //        assertNotNull(b2.getSelectionModel());
