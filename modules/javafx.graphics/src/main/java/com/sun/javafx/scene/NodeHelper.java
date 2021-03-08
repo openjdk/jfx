@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.scene.Node;
 import javafx.scene.SubScene;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.Shape3D;
+import javafx.scene.text.Font;
 
 /**
  * Used to access internal methods of Node.
@@ -282,6 +283,10 @@ public abstract class NodeHelper {
         nodeAccessor.reapplyCSS(node);
     }
 
+    public static void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
+        nodeAccessor.recalculateRelativeSizeProperties(node, fontForRelativeSizes);
+    }
+
     public static boolean isTreeVisible(Node node) {
         return nodeAccessor.isTreeVisible(node);
     }
@@ -354,6 +359,7 @@ public abstract class NodeHelper {
         void setLabeledBy(Node node, Node labeledBy);
         Accessible getAccessible(Node node);
         void reapplyCSS(Node node);
+        void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes);
         boolean isTreeVisible(Node node);
         BooleanExpression treeVisibleProperty(Node node);
         boolean isTreeShowing(Node node);
