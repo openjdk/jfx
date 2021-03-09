@@ -171,7 +171,7 @@ public class LauncherImpl {
             final Class<? extends Preloader> preloaderClass,
             final String[] args) {
 
-        if (launchCalled.getAndSet(true)) {
+        if (com.sun.glass.ui.Application.isEventThread() || launchCalled.getAndSet(true)) {
             throw new IllegalStateException("Application launch must not be called more than once");
         }
 
