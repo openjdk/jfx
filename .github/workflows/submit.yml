@@ -47,10 +47,18 @@ on:
       - 'WIP*'
 
 jobs:
+  validation:
+    name: "Gradle Wrapper Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: gradle/wrapper-validation-action@v1
+
+
   linux_x64_build:
     name: Linux x64
+    needs: validation
     runs-on: "ubuntu-20.04"
-    if: 'true'
 
     env:
       # FIXME: read this information from a property file
@@ -131,8 +139,8 @@ jobs:
 
   macos_x64_build:
     name: macOS x64
+    needs: validation
     runs-on: "macos-10.15"
-    if: 'true'
 
     env:
       # FIXME: read this information from a property file
@@ -212,8 +220,8 @@ jobs:
 
   windows_x64_build:
     name: Windows x64
+    needs: validation
     runs-on: "windows-2019"
-    if: 'true'
 
     env:
       # FIXME: read this information from a property file
