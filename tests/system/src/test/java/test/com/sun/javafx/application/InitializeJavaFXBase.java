@@ -36,7 +36,7 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-public class InitializeJavaFXTest {
+public class InitializeJavaFXBase {
 
     public static final CountDownLatch appLatch = new CountDownLatch(1);
 
@@ -47,7 +47,7 @@ public class InitializeJavaFXTest {
         }
     }
 
-    public static void initializeApplication() throws Exception {
+    public static void initializeApplicationLaunch() throws Exception {
         new Thread(() -> {
             Application.launch(InitializeApp.class);
         }).start();
@@ -62,12 +62,6 @@ public class InitializeJavaFXTest {
         latch.await(5, TimeUnit.SECONDS);
     }
 
-    @BeforeClass
-    public static void initialize() throws Exception {
-        System.out.println("Calling Startup!");
-        initializeStartup();
-        System.out.println("Called Startup!");
-    }
 
     public static class TestApp extends Application {
         @Override
@@ -76,8 +70,7 @@ public class InitializeJavaFXTest {
         }
     }
 
-    @Test (timeout = 15000)
-    public void testStartupThenLaunchInFX() throws Exception {
+    public void doTestStartupThenLaunchInFX() throws Exception {
         Util.runAndWait(() ->{
             try {
                 System.out.println("Calling launch!");
@@ -89,8 +82,7 @@ public class InitializeJavaFXTest {
         });
     }
 
-    @Test (timeout = 15000)
-    public void testStartupThenLaunch() throws Exception {
+    public void doTestStartupThenLaunch() throws Exception {
         try {
             System.out.println("Calling launch!");
             Application.launch(TestApp.class);
