@@ -65,7 +65,7 @@ public class PrimaryExprTest extends ParserBase {
     public void floatLiteral() throws Exception {
         Expr tree = parseTreeFor("1.234");
         assertTrue(tree instanceof LiteralExpr);
-        assertEquals(((LiteralExpr)tree).getValue(), Float.valueOf(1.234));
+        assertEquals(((LiteralExpr)tree).getValue(), Float.valueOf(1.234f));
     }
 
     @Test
