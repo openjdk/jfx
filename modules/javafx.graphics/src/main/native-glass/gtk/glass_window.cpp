@@ -964,6 +964,12 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
 }
 
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
+    // This will prevent sending window sizes before java is done configuring the window
+    // Without it, some content size oriented window gets the size before finishing the layout
+    if (!map_received && !is_fullscreen && !is_maximized) {
+        return;
+    }
+
     gint x, y, cw, ch, w, h;
 
     // content width / height
