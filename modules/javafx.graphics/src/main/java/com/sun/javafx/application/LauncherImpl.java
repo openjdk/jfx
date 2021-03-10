@@ -171,7 +171,10 @@ public class LauncherImpl {
             final Class<? extends Preloader> preloaderClass,
             final String[] args) {
 
-        if (com.sun.glass.ui.Application.isEventThread() || launchCalled.getAndSet(true)) {
+        if (com.sun.glass.ui.Application.isEventThread()) {
+            throw new IllegalStateException("Application launch must not be called on the JavaFX Application Thread");
+        }
+        if (launchCalled.getAndSet(true)) {
             throw new IllegalStateException("Application launch must not be called more than once");
         }
 
@@ -655,7 +658,7 @@ public class LauncherImpl {
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
         // Note, this method is called on the FX Application Thread
-        PlatformImpl.startup(() -> startupLatch.countDown());
+        PlatformImpl.startup(() -> startupLatch.countDown(), true);
 
         // Wait for FX platform to start
         startupLatch.await();
