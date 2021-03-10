@@ -25,11 +25,8 @@
 
 package test.com.sun.javafx.application;
 
-import javafx.application.Application;
-import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import test.util.Util;
 
 public class InitializeJavaFXStartupTest extends InitializeJavaFXBase {
 
