@@ -31,6 +31,7 @@ import javafx.stage.Stage;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -75,31 +76,27 @@ public class InitializeJavaFXTest {
         }
     }
 
-    @Test
+    @Test (timeout = 15000)
     public void testStartupThenLaunchInFX() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        Platform.runLater(() -> {
+        Util.runAndWait(() ->{
             try {
                 System.out.println("Calling launch!");
                 Application.launch(TestApp.class);
                 System.out.println("Finished launch!");
+                Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
             } catch (IllegalStateException e) {
-                latch.countDown();
-            } catch (Exception e) {
-                System.out.println("got exception:  " + e);
-                e.printStackTrace();
             }
         });
-        Assert.assertTrue("Timeout", latch.await(5, TimeUnit.SECONDS));
     }
 
-    @Test
+    @Test (timeout = 15000)
     public void testStartupThenLaunch() throws Exception {
         try {
             System.out.println("Calling launch!");
             Application.launch(TestApp.class);
             System.out.println("Finished launch!");
-            throw new Exception("We excpect an error!");
+            Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
+            throw new Exception();
         } catch (IllegalStateException e) {
             System.out.println("Works!");
         } catch (Exception e) {
