@@ -204,7 +204,10 @@ class D3DResourceFactory extends BaseShaderFactory {
     @Override
     public Texture createTexture(MediaFrame frame) {
         // KCR: debug
-        System.err.println("D3DResourceFactory:: createTexture(MediaFrame) : frame = " + frame);
+        if (PrismSettings.verbose) {
+            System.err.println("D3DResourceFactory:: createTexture(MediaFrame) : frame = " + frame);
+        }
+
         if (checkDisposed()) return null;
 
         frame.holdFrame();

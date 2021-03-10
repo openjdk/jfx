@@ -87,6 +87,12 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode(WCGraphicsContext gc) {
+        if (gc == null || !gc.isValid()) {
+            // KCR: debug
+            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
+
         for (BufferData bdata : buffers) {
             try {
                 GraphicsDecoder.decode(
@@ -99,13 +105,21 @@ public abstract class WCRenderQueue extends Ref {
     }
 
     public synchronized void decode() {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            // KCR: debug
+            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         decode(gc);
         gc.flush();
     }
 
     public synchronized void decode(int fontSmoothingType) {
-        assert (gc != null);
+        if (gc == null || !gc.isValid()) {
+            // KCR: debug
+            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            return;
+        }
         gc.setFontSmoothingType(fontSmoothingType);
         decode();
     }

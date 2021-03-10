@@ -31,6 +31,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.media.jfxmedia.control.VideoDataBuffer;
 import com.sun.prism.Graphics;
 import com.sun.prism.Texture;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  */
@@ -159,8 +160,11 @@ class NGMediaView extends NGNode {
 
         Texture texture = handler.getTexture(g, frame);
         // KCR: debug
-        System.err.println("NGMediaView: getTexture: " + texture +
-                (texture != null && texture.isSurfaceLost() ? " (lost surface)" : ""));
+        if (PrismSettings.verbose) {
+            System.err.println("NGMediaView: getTexture: " + texture +
+                    (texture != null && texture.isSurfaceLost() ? " (lost surface)" : ""));
+        }
+
         if (texture != null) {
             float iw = viewport.getWidth();
             float ih = viewport.getHeight();

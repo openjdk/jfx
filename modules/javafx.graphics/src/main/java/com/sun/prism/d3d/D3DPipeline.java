@@ -27,6 +27,8 @@ package com.sun.prism.d3d;
 
 import com.sun.glass.ui.Screen;
 import com.sun.glass.utils.NativeLibLoader;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.tk.quantum.QuantumToolkit;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.impl.PrismSettings;
@@ -302,6 +304,9 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getDefaultResourceFactory(List<Screen> screens) {
+        // KCR: debug
+        ((QuantumToolkit)Toolkit.getToolkit()).checkRendererThread();
+
         if (_default == null) {
             _default = findDefaultResourceFactory(screens);
         }
@@ -310,6 +315,9 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
+        // KCR: debug
+        ((QuantumToolkit)Toolkit.getToolkit()).checkRendererThread();
+
         return getD3DResourceFactory(screen.getAdapterOrdinal(), screen);
     }
 

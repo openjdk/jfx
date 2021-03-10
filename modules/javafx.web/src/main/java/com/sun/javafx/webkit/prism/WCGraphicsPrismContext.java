@@ -126,6 +126,18 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return getGraphics(false);
     }
 
+    @Override
+    public boolean isValid() {
+        Object platformGraphics = getPlatformGraphics();
+
+        // Ensure that graphics is non-null and of the right type
+        if (! (platformGraphics instanceof Graphics)) {
+            return false;
+        }
+        Graphics g = (Graphics)platformGraphics;
+        return !g.getResourceFactory().isDisposed();
+    }
+
     Graphics getGraphics(boolean checkClip) {
         if (cachedGraphics == null) {
             Layer l = state.getLayerNoClone();
@@ -133,7 +145,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     ? l.getGraphics()
                     : baseGraphics;
 
-            state.apply(cachedGraphics);
+            ResourceFactory rf = cachedGraphics.getResourceFactory();
+            if (!rf.isDisposed()) {
+                state.apply(cachedGraphics);
+            }
 
             if (log.isLoggable(Level.FINE)) {
                 log.fine("getPlatformGraphics for " + this + " : " +
@@ -1351,13 +1366,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             fctx = getFilterContext(g);
             if (permanent) {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                if (!f.isDisposed()) {
+                if (f != null && !f.isDisposed()) {
                     RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
                     rtt.makePermanent();
                     buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
                 } else {
                     // KCR: debug
-                    System.err.println("Layer :: cannot construct RTT, device has been disposed");
+                    System.err.println("Layer :: cannot construct RTT, device has been disposed or is not ready");
                     fctx = null;
                     buffer = null;
                 }
@@ -1833,6 +1848,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void flush() {
+        if (!isValid()) {
+            // KCR: debug
+            System.err.println("WCGraphicsPrismContext::flush : GC is invalid");
+            return;
+        }
         flushAllLayers();
     }
 

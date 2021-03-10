@@ -210,6 +210,14 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         instanceReference.set(null);
     }
 
+    // KCR: debug
+    void checkRendererThread() {
+        if (Thread.currentThread() != _renderer) {
+            throw new IllegalStateException("Not on QuantumRenderer thread; currentThread = "
+                    + Thread.currentThread().getName());
+        }
+    }
+
     @Override protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return (RenderJob)runnable;
     }

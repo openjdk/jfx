@@ -79,13 +79,13 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     private RTTexture getTexture() {
         // KCR: debug
         if (txt != null && txt.isSurfaceLost()) {
-            System.err.println("***** surface lost: " + this);
+            System.err.println("KCR: RTImage::getTexture : surface lost: " + this);
         }
 
         ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-        if (f.isDisposed()) {
+        if (f == null || f.isDisposed()) {
             // KCR: debug
-            System.err.println("KCR: RTImage::getTexture return null because device has been disposed");
+            System.err.println("KCR: RTImage::getTexture return null because device has been disposed or is not ready");
             return null;
         }
 
@@ -182,10 +182,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         if (isNew || isDirty()) {
             PrismInvoker.runOnRenderThread(() -> {
                 final ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                if (f.isDisposed()) {
+                if (f == null || f.isDisposed()) {
                     // KCR: debug
-                    System.err.println("ResourceFactory: " + f + "  disposed:" + f.isDisposed());
-                    System.err.println("KCR: RTImage::getPixelBuffer skipping because device is disposed");
+                    System.err.println("ResourceFactory: " + f +
+                            (f != null ? "  disposed:" + f.isDisposed() : ""));
+                    System.err.println("KCR: RTImage::getPixelBuffer skipping because device is disposed or is not ready");
 
                     return;
                 }

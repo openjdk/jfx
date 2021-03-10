@@ -463,7 +463,9 @@ public class NGRegion extends NGGroup {
             RTTexture tex = cache.getBackingStore();
             if (tex.isSurfaceLost()) {
                 // KCR: debug
-                System.err.println("RegionImageCache: surface lost for cached texture");
+                if (PrismSettings.verbose) {
+                    System.err.println("RegionImageCache: surface lost for cached texture");
+                }
                 imageCacheMap.remove(screen);
                 cache = null;
             }

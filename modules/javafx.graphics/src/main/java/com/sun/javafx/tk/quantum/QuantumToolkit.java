@@ -452,6 +452,11 @@ public final class QuantumToolkit extends Toolkit {
         return Toolkit.getFxUserThread();
     }
 
+    // KCR: debug
+    public void checkRendererThread() {
+        QuantumRenderer.getInstance().checkRendererThread();
+    }
+
     @Override public Future addRenderJob(RenderJob r) {
         // Do not run any render jobs (this is for benchmarking only)
         if (noRenderJobs) {
@@ -1420,8 +1425,17 @@ public final class QuantumToolkit extends Toolkit {
         public double getHeight() { return image.getHeight(); }
         @Override
         public void factoryReset() { dispose(); }
+
         @Override
-        public void factoryReleased() { dispose(); }
+        public void factoryReleased() {
+            dispose();
+
+            // ResourceFactory is being disposed; clear reference to avoid leak
+            if (rf != null) {
+                rf.removeFactoryListener(this);
+                rf = null;
+            }
+        }
     }
 
     @Override public ImageLoader loadPlatformImage(Object platformImage) {

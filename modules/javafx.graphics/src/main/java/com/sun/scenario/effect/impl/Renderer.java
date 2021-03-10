@@ -47,7 +47,10 @@ public abstract class Renderer {
 
     /**
      * Enumeration describing the lifecycle states of the renderer.
-     * When the renderer is created, it is in the {@code OK} state.
+     * When the renderer is created, it will either start in the {@code OK}
+     * state, or it will start in the {@code NOTREADY} state until
+     * the first time it is used during rendering, then transitions
+     * to the {@code OK} state.
      *
      * It could become {@code LOST} at some point. This may happen for
      * example if the renderer is susceptible to display changes.
@@ -61,9 +64,13 @@ public abstract class Renderer {
      * will be created for the particular context.
      * <p>
      * Thus the lifecycle of a renderer is:
-     * {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
+     * {@code NOTREADY} => {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
      */
     public static enum RendererState {
+        /**
+         * Renderer is not ready; it might be able to be used for rendering.
+         */
+        NOTREADY,
         /**
          * Renderer can be used for rendering.
          */
@@ -339,6 +346,11 @@ public abstract class Renderer {
 
         Renderer r = rendererMap.get(fctx);
         if (r != null) {
+            if (r.getRendererState() == RendererState.NOTREADY) {
+                // KCR: debug
+                System.err.println("KCR: renderer not ready, but return it anyway");
+                return r;
+            }
             if (r.getRendererState() == RendererState.OK) {
                 return r;
             }
@@ -347,9 +359,13 @@ public abstract class Renderer {
                 // it is disposed (or forever if it can't be disposed/reset)
                 // Note: we don't add it to the cache to prevent permanent
                 // association of the backup renderer and this filter context.
+                // KCR: debug
+                System.err.println("KCR: RendererState.LOST -- return backup renderer");
                 return r.getBackupRenderer();
             }
             if (r.getRendererState() == RendererState.DISPOSED) {
+                // KCR: debug
+                System.err.println("KCR: RendererState.DISPOSED -- OOPS!!");
                 r = null;
                 // we remove disposed renderers below instead of here to cover
                 // cases where we never use a context which the disposed
@@ -381,6 +397,8 @@ public abstract class Renderer {
                         " (AccelType=" + r.getAccelType() +
                         ") for " + screen);
                 }
+                // KCR: debug
+                System.err.println("    created new renderer; state = " + r.getRendererState());
             }
             rendererMap.put(fctx, r);
         }

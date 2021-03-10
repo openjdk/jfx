@@ -106,7 +106,7 @@ class D3DResource extends BaseGraphicsResource {
         }
 
         protected void markDisposed() {
-            // KCR: need to confirm that we should release the native resource.
+            // KCR: FIXME: need to confirm that we should release the native resource.
             // If so, then we should consider renaming "markDisposed" to something else
             if (pResource != 0L) {
                 D3DResourceFactory.nReleaseResource(context.getContextHandle(), pResource);

@@ -150,4 +150,8 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.scenario.effect.impl.prism to
         javafx.web;
+
+    // KCR: debug
+    exports com.sun.prism.impl to
+        javafx.media;
 }

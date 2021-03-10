@@ -92,9 +92,9 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
 
     public boolean validate(int width, int height) {
         ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
-        if (factory.isDisposed()) {
+        if (factory == null || factory.isDisposed()) {
             // KCR: debug
-            System.err.println("KCR: WCPageBackBufferImpl::validate device has been disposed");
+            System.err.println("KCR: WCPageBackBufferImpl::validate device has been disposed or is not ready");
 
             return false;
         }

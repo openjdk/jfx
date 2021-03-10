@@ -462,10 +462,15 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
         }
 
         // KCR: need to fix this, since it should not happen even when the device is revmoved
-        try {
-            throw new IllegalStateException("unmanaged resource freed from pool " + this);
-        } catch (IllegalStateException ex) {
-            ex.printStackTrace();
+        if (PrismSettings.verbose) {
+            try {
+                throw new IllegalStateException("unmanaged resource freed from pool " + this);
+            } catch (IllegalStateException ex) {
+                // KCR: debug
+                ex.printStackTrace();
+            }
+        } else {
+            System.err.println("Warning: unmanaged resource freed from pool " + this);
         }
     }
 

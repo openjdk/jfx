@@ -40,6 +40,7 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * Prism-specific subclass for handling media frames. The frames uploaded
@@ -89,8 +90,11 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         TextureMapEntry tme = textures.get(screen);
 
         // KCR: debug
-        System.err.println("PrismMediaFrameHandler: getTexture: currentFrame = " + currentFrame +
-                ", tme = " + tme);
+        if (PrismSettings.verbose) {
+            System.err.println("PrismMediaFrameHandler: getTexture: currentFrame = " + currentFrame +
+                    ", tme = " + tme);
+        }
+
         if (null == currentFrame) {
             // null frame, remove the existing texture
             if (textures.containsKey(screen)) {
@@ -107,7 +111,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
         if (tme.texture != null) {
             // KCR: debug
-            System.err.println("KCR: PrismMediaFrameHandler: tme.texture = " + tme.texture);
+            if (PrismSettings.verbose) {
+                System.err.println("KCR: PrismMediaFrameHandler: tme.texture = " + tme.texture);
+            }
             tme.texture.lock();
             if (tme.texture.isSurfaceLost()) {
                 // KCR: debug

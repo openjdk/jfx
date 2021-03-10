@@ -257,7 +257,7 @@ class D3DContext extends BaseShaderContext {
      */
     boolean validatePresent(int res) {
         validate(res);
-        // KCR: This is insufficient for D3DERR_DEVICEREMOVED (maybe revert this change?)
+        // KCR: FIXME: This is insufficient for D3DERR_DEVICEREMOVED (maybe revert this change?)
         if (res == D3DERR_DEVICELOST || res == D3DERR_DEVICENOTRESET || res == D3DERR_DEVICEREMOVED) {
             setLost();
         }

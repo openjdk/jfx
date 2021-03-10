@@ -107,7 +107,7 @@ class PaintHelper {
     private static Texture gtexCacheTexture = null;
 
     /**
-     * KCR: document the purpose of this map
+     * KCR: FIXME: document the purpose of this map
      */
     private static final WeakHashMap<Gradient, Void> gradientMap = new WeakHashMap<>();
 
@@ -121,7 +121,7 @@ class PaintHelper {
     }
 
     static void initGradientTextures(ShaderGraphics g) {
-        // KCR: Need to document this better
+        // KCR: FIXME: Need to document this better
         // Need to clear cached gradient texture and offsets when the
         // device is removed and recreated
         cacheOffset = -1;
@@ -158,7 +158,7 @@ class PaintHelper {
             initGradientTextures(g);
         }
 
-        // KCR: fix this comment (and look for similar). Permanent resources
+        // KCR: FIXME: fix this comment (and look for similar). Permanent resources
         // still can be lost when the graphics device is reinitialized
         //
         // gradientCacheTexture is left permanent and locked so it never
@@ -174,7 +174,7 @@ class PaintHelper {
             initGradientTextures(g);
         }
 
-        // KCR: fix this comment (and look for similar). Permanent resources
+        // KCR: FIXME: fix this comment (and look for similar). Permanent resources
         // still can be lost when the graphics device is reinitialized
         //
         // gtexCacheTexture is left permanent and locked so it never
