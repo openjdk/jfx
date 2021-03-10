@@ -70,7 +70,7 @@ public class InitializeJavaFXBase {
         }
     }
 
-    public void doTestStartupThenLaunchInFX() throws Exception {
+    public void doTestInitializeThenLaunchInFX() throws Exception {
         Util.runAndWait(() ->{
             try {
                 System.out.println("Calling launch!");
@@ -82,7 +82,7 @@ public class InitializeJavaFXBase {
         });
     }
 
-    public void doTestStartupThenLaunch() throws Exception {
+    public void doTestInitializeThenSecondLaunch() throws Exception {
         try {
             System.out.println("Calling launch!");
             Application.launch(TestApp.class);

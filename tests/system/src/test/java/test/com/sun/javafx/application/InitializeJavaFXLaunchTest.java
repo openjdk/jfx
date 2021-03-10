@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.application;
 
+import javafx.application.Application;
 import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,11 +41,11 @@ public class InitializeJavaFXLaunchTest extends InitializeJavaFXBase {
 
     @Test (timeout = 15000)
     public void testStartupThenLaunchInFX() throws Exception {
-        doTestStartupThenLaunchInFX();
+        doTestInitializeThenLaunchInFX();
     }
 
     @Test (timeout = 15000)
     public void testStartupThenLaunch() throws Exception {
-        doTestStartupThenLaunch();
+        doTestInitializeThenSecondLaunch();
     }
 }
