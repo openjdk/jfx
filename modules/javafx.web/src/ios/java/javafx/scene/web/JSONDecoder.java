@@ -98,7 +98,7 @@ class JSONDecoder {
         } else {
             long val = Long.parseLong(sNum);
             if ((val <= Integer.MAX_VALUE) && (Integer.MIN_VALUE <= val)) {
-                return Integer.valueOf(int) val);
+                return Integer.valueOf((int) val);
             } else {
                 return Double.valueOf(val);
             }
