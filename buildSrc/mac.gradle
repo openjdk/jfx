@@ -147,6 +147,7 @@ def dynamicLinkFlags = [
         commonParams,
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
+        "-framework", "Carbon",
         "-framework", "OpenGL",
         "-framework", "QuartzCore",
         "-framework", "Security",

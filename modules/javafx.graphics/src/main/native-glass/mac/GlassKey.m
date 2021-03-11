@@ -31,6 +31,8 @@
 #import "GlassMacros.h"
 #import "GlassKey.h"
 
+#import <Carbon/Carbon.h>
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -178,6 +180,146 @@ static const struct KeyMapEntry gKeyMap[] =
 };
 static const int gKeyMapSize = sizeof(gKeyMap) / sizeof(struct KeyMapEntry);
 
+static BOOL macKeyCodeIsLayoutSensitive(unsigned int keyCode)
+{
+    // Mac key codes that generate different characters based on the keyboard layout
+    // lie in two ranges with a few exceptions. For the purpose of Java key code
+    // mapping we pretend that the top row of number keys always produce digits even
+    // though that is not true on some keyboards e.g. French. This matches the behavior
+    // of JavaFX on Windows and the historical behavior of JavaFX on Mac.
+    switch (keyCode)
+    {
+        case 0x12: // 1
+        case 0x13: // 2
+        case 0x14: // 3
+        case 0x15: // 4
+        case 0x17: // 5
+        case 0x16: // 6
+        case 0x1A: // 7
+        case 0x1C: // 8
+        case 0x19: // 9
+        case 0x1D: // 0
+        case 0x24: // Enter
+        case 0x30: // Tab
+        case 0x31: // Space
+            return NO;
+    }
+
+    if (keyCode >= 0x00 && keyCode <= 0x32)
+        return YES;
+
+    if (keyCode >= 0x5D && keyCode <= 0x5F)
+        return YES;
+
+    return NO;
+}
+
+static jint getJavaCodeForASCII(UniChar ascii)
+{
+    if (ascii >= L'0' && ascii <= L'9')
+        return ascii;
+    if (ascii >= L'a' && ascii <= L'z')
+        return ascii + (L'A' - L'a');
+    if (ascii >= L'A' && ascii <= L'Z')
+        return ascii;
+
+    switch (ascii)
+    {
+        case L' ': return com_sun_glass_events_KeyEvent_VK_SPACE;
+        case L'!': return com_sun_glass_events_KeyEvent_VK_EXCLAMATION;
+        case L'"': return com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE;
+        case L'#': return com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN;
+        case L'$': return com_sun_glass_events_KeyEvent_VK_DOLLAR;
+        case L'&': return com_sun_glass_events_KeyEvent_VK_AMPERSAND;
+        case L'\'':return com_sun_glass_events_KeyEvent_VK_QUOTE;
+        case L'(': return com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS;
+        case L')': return com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS;
+        case L'*': return com_sun_glass_events_KeyEvent_VK_ASTERISK;
+        case L'+': return com_sun_glass_events_KeyEvent_VK_PLUS;
+        case L',': return com_sun_glass_events_KeyEvent_VK_COMMA;
+        case L'-': return com_sun_glass_events_KeyEvent_VK_MINUS;
+        case L'.': return com_sun_glass_events_KeyEvent_VK_PERIOD;
+        case L'/': return com_sun_glass_events_KeyEvent_VK_SLASH;
+        case L':': return com_sun_glass_events_KeyEvent_VK_COLON;
+        case L';': return com_sun_glass_events_KeyEvent_VK_SEMICOLON;
+        case L'<': return com_sun_glass_events_KeyEvent_VK_LESS;
+        case L'=': return com_sun_glass_events_KeyEvent_VK_EQUALS;
+        case L'>': return com_sun_glass_events_KeyEvent_VK_GREATER;
+        case L'@': return com_sun_glass_events_KeyEvent_VK_AT;
+        case L'[': return com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET;
+        case L'\\':return com_sun_glass_events_KeyEvent_VK_BACK_SLASH;
+        case L']': return com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET;
+        case L'^': return com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX;
+        case L'_': return com_sun_glass_events_KeyEvent_VK_UNDERSCORE;
+        case L'`': return com_sun_glass_events_KeyEvent_VK_BACK_QUOTE;
+        case L'{': return com_sun_glass_events_KeyEvent_VK_BRACELEFT;
+        case L'}': return com_sun_glass_events_KeyEvent_VK_BRACERIGHT;
+    }
+
+    return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+};
+
+static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short keyCode,
+                                  BOOL shifted, BOOL forAccelerator,
+                                  UniChar* buffer, UniCharCount bufferSize)
+{
+    CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty(keyboard,
+                                                          kTISPropertyUnicodeKeyLayoutData);
+    if (uchr == NULL)
+        return 0;
+    const UCKeyboardLayout *layout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
+
+    UInt32 modifierMask = 0;
+    if (shifted)
+        modifierMask |= (1 << (shiftKeyBit - 8));
+
+    // Java key codes are used in accelerator processing so we will try to match them
+    // the same way Apple handles key equivalents e.g. by asking for the Cmd character.
+    // This is necessary on non-ASCII layouts such as Cyrillic or Arabic to ensure the
+    // translation produces an ASCII key. Exactly how this is done is specific to the
+    // keyboard but for non-ASCII keyboards it generally generates some variant of
+    // QWERTY.
+    if (forAccelerator)
+        modifierMask |= (1 << (cmdKeyBit - 8));
+
+    UInt32 deadKeyState = 0;
+    UniCharCount actualLength = 0;
+    OSStatus status = UCKeyTranslate(layout,
+                                     keyCode, kUCKeyActionDown,
+                                     modifierMask,
+                                     LMGetKbdType(),
+                                     kUCKeyTranslateNoDeadKeysMask, &deadKeyState,
+                                     bufferSize, &actualLength,
+                                     buffer);
+    if (status != noErr)
+        actualLength = 0;
+
+    return actualLength;
+}
+
+static UniCharCount getCharsForMacKey(unsigned short keyCode, BOOL shifted, BOOL forAccelerator, UniChar* buffer, UniCharCount bufferSize)
+{
+    TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+    if (keyboard == NULL)
+        return 0;
+
+    UniCharCount length = queryKeyboard(keyboard, keyCode,
+                                        shifted, forAccelerator,
+                                        buffer, bufferSize);
+    CFRelease(keyboard);
+    return length;
+}
+
+// This is only valid for keys in the area that is sensitive to layout changes.
+static jint getJavaCodeForMacKey(unsigned short keyCode)
+{
+    UniChar unicode[8];
+    UniCharCount length = getCharsForMacKey(keyCode, NO, YES, unicode, 8);
+    if (length == 1)
+        return getJavaCodeForASCII(unicode[0]);
+    return 0;
+}
+
 jint GetJavaKeyModifiers(NSEvent *event)
 {
     jint jModifiers = 0;
@@ -234,6 +376,11 @@ jint GetJavaModifiers(NSEvent *event)
 
 jint GetJavaKeyCodeFor(unsigned short keyCode)
 {
+    if (macKeyCodeIsLayoutSensitive(keyCode))
+    {
+        return getJavaCodeForMacKey(keyCode);
+    }
+
     // Not the fastest implementation...
     for (int i=0; i<gKeyMapSize; i++)
     {
@@ -281,16 +428,39 @@ jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
 
 BOOL GetMacKey(jint javaKeyCode, unsigned short *outMacKeyCode)
 {
+    BOOL found = NO;
+    // Find a key code based on the US QWERTY layout
     for (int index=0; index<gKeyMapSize; index++)
     {
         if (gKeyMap[index].jKeyCode == javaKeyCode)
         {
             *outMacKeyCode = gKeyMap[index].keyCode;
-            return YES;
+            found = YES;
+            break;
         }
     }
 
-    // ??? unknown VK
+    if (!found)
+        return NO;
+
+    if (!macKeyCodeIsLayoutSensitive(*outMacKeyCode))
+        return YES;
+
+    // If the QWERTY key is in the layout sensitive area search the other keys in that
+    // area. We may not find a key so returning NO is possible.
+    for (unsigned short trialKey = 0x00; trialKey <= 0x7E; ++trialKey)
+    {
+        if (macKeyCodeIsLayoutSensitive(trialKey))
+        {
+            jint trialCode = getJavaCodeForMacKey(trialKey);
+            if (trialCode == javaKeyCode)
+            {
+                *outMacKeyCode = trialKey;
+                return YES;
+            }
+        }
+    }
+
     return NO;
 }
 
