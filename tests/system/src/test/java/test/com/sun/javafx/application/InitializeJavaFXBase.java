@@ -26,39 +26,11 @@
 package test.com.sun.javafx.application;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.stage.Stage;
 import junit.framework.Assert;
 import test.util.Util;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 public class InitializeJavaFXBase {
-
-    public static final CountDownLatch appLatch = new CountDownLatch(1);
-
-    public static class InitializeApp extends Application {
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            appLatch.countDown();
-        }
-    }
-
-    public static void initializeApplicationLaunch() throws Exception {
-        new Thread(() -> {
-            Application.launch(InitializeApp.class);
-        }).start();
-        appLatch.await(5, TimeUnit.SECONDS);
-    }
-
-    public static void initializeStartup() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        Platform.startup(() -> {
-            latch.countDown();
-        });
-        latch.await(5, TimeUnit.SECONDS);
-    }
 
 
     public static class TestApp extends Application {

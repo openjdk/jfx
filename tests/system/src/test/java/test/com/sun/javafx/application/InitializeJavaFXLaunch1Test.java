@@ -28,26 +28,17 @@ package test.com.sun.javafx.application;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class InitializeJavaFXStartupTest extends InitializeJavaFXBase {
+public class InitializeJavaFXLaunch1Test extends InitializeJavaFXLaunchBase {
 
     @BeforeClass
     public static void initialize() throws Exception {
         System.out.println("Calling Startup!");
-        InitializeJavaFXBase.initializeStartup();
+        InitializeJavaFXLaunchBase.initializeApplicationLaunch();
         System.out.println("Called Startup!");
     }
 
     @Test (timeout = 15000)
     public void testStartupThenLaunchInFX() throws Exception {
         doTestInitializeThenLaunchInFX();
-    }
-
-    @Test (timeout = 15000)
-    public void testStartupThenLaunch() throws Exception {
-
-        // The first call to Application.launch should work
-        InitializeJavaFXBase.initializeApplicationLaunch();
-
-        doTestInitializeThenSecondLaunch();
     }
 }
