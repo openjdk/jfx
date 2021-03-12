@@ -42,64 +42,56 @@ import test.util.memory.JMemoryBuddy;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
 
 
 public class StyleMemoryLeakTest {
 
     static CountDownLatch startupLatch;
     static Stage stage;
+    static Button toBeRemoved;
+    static Group root;
 
     public static class TestApp extends Application {
 
         @Override
         public void start(Stage primaryStage) throws Exception {
             stage = primaryStage;
-            startupLatch.countDown();
+            toBeRemoved = new Button();
+            root = new Group();
+            root.getChildren().add(toBeRemoved);
+            stage.setScene(new Scene(root));
+            stage.setOnShown(l -> {
+                Platform.runLater(() -> startupLatch.countDown());
+            });
+            stage.show();
         }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(StyleMemoryLeakTest.TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            fail("Unexpected exception: " + ex);
-        }
+        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
     public void testRootNodeMemoryLeak() throws Exception {
+        Util.runAndWait(() -> {
+            root.getChildren().clear();
+            stage.hide();
+        });
         JMemoryBuddy.memoryTest((checker) -> {
-            Parent toBeRemoved = new Button();
-            Group root = new Group();
-            root.getChildren().add(toBeRemoved);
-            Util.runAndWait(() -> {
-                stage.setScene(new Scene(root));
-                stage.show();
-            });
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            Util.runAndWait(() -> {
-                root.getChildren().clear();
-                stage.close();
-            });
             checker.assertCollectable(stage);
             checker.setAsReferenced(toBeRemoved);
             stage = null;
+            root = null;
         });
     }
 
     @AfterClass
     public static void teardownOnce() {
         Platform.runLater(() -> {
-            stage.hide();
             Platform.exit();
         });
     }
