@@ -76,6 +76,8 @@ public class InitializeJavaFXBase {
                 System.out.println("Finished launch!");
                 Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
             } catch (IllegalStateException e) {
+                // This Exception is what we expect!
+                System.out.println("Works!");
             }
         });
     }
@@ -88,6 +90,7 @@ public class InitializeJavaFXBase {
             Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
             throw new Exception();
         } catch (IllegalStateException e) {
+            // This Exception is what we expect!
             System.out.println("Works!");
         }
     }
