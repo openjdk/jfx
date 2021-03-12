@@ -29,8 +29,6 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import junit.framework.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import test.util.Util;
 
 import java.util.concurrent.CountDownLatch;
@@ -91,8 +89,6 @@ public class InitializeJavaFXBase {
             throw new Exception();
         } catch (IllegalStateException e) {
             System.out.println("Works!");
-        } catch (Exception e) {
-            throw e;
         }
     }
 }
