@@ -107,7 +107,7 @@ public class SkinningMesh extends PolygonMesh {
             weightIndices[j] = new ArrayList<Integer>();
             for (int i = 0; i < nPoints; i++) {
                 if (weights[j][i] != 0.0f) {
-                    weightIndices[j].add(new Integer(i));
+                    weightIndices[j].add(i);
                 }
             }
         }
