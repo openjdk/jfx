@@ -65,7 +65,11 @@ ScrollAnimationSmooth::ScrollAnimationSmooth(ScrollExtentsCallback&& scrollExten
     , m_notifyAnimationStoppedFunction(WTFMove(notifyAnimationStoppedFunction))
     , m_horizontalData(HorizontalScrollbar, position, m_scrollExtentsFunction)
     , m_verticalData(VerticalScrollbar, position, m_scrollExtentsFunction)
+#if USE(GENERIC_EVENT_LOOP) && PLATFORM(JAVA)
+    , m_animationTimer(*this, &ScrollAnimationSmooth::animationTimerFired)
+#else
     , m_animationTimer(RunLoop::current(), this, &ScrollAnimationSmooth::animationTimerFired)
+#endif
 {
 #if USE(GLIB_EVENT_LOOP)
     m_animationTimer.setPriority(WTF::RunLoopSourcePriority::DisplayRefreshMonitorTimer);

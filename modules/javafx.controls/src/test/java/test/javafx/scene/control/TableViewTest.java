@@ -203,6 +203,18 @@ public class TableViewTest {
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
+    @Test public void noArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>();
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
+    @Test public void singleArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>(FXCollections.observableArrayList());
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
     /*********************************************************************
      * Tests for selection model                                         *
      ********************************************************************/
