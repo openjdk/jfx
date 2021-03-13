@@ -92,8 +92,7 @@ public final class GraphicsDecoder  {
 
     static void decode(WCGraphicsManager gm, WCGraphicsContext gc, BufferData bdata) {
         if (gc == null || !gc.isValid()) {
-            // KCR: debug
-            System.err.println("GraphicsDecoder::decode : GC is " +
+            log.fine("GraphicsDecoder::decode : GC is " +
                     (gc == null ? "null" : " invalid"));
 
             return;

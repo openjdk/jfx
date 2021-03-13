@@ -88,8 +88,7 @@ public abstract class WCRenderQueue extends Ref {
 
     public synchronized void decode(WCGraphicsContext gc) {
         if (gc == null || !gc.isValid()) {
-            // KCR: debug
-            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
             return;
         }
 
@@ -106,8 +105,7 @@ public abstract class WCRenderQueue extends Ref {
 
     public synchronized void decode() {
         if (gc == null || !gc.isValid()) {
-            // KCR: debug
-            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
             return;
         }
         decode(gc);
@@ -116,8 +114,7 @@ public abstract class WCRenderQueue extends Ref {
 
     public synchronized void decode(int fontSmoothingType) {
         if (gc == null || !gc.isValid()) {
-            // KCR: debug
-            System.err.println("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
+            log.fine("WCRenderQueue::decode : GC is " + (gc == null ? "null" : " invalid"));
             return;
         }
         gc.setFontSmoothingType(fontSmoothingType);

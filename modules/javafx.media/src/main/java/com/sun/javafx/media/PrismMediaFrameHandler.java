@@ -117,7 +117,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
             tme.texture.lock();
             if (tme.texture.isSurfaceLost()) {
                 // KCR: debug
-                System.err.println("KCR: PrismMediaFrameHandler: surface lost");
+                if (PrismSettings.verbose) {
+                    System.err.println("KCR: PrismMediaFrameHandler: surface lost");
+                }
                 tme.texture = null;
             }
         }
@@ -191,13 +193,19 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
 
     public void factoryReset() {
         // KCR: debug
-        System.err.println("*** PrismMediaFrameHandler: factoryReset");
+        if (PrismSettings.verbose) {
+            System.err.println("*** PrismMediaFrameHandler: factoryReset");
+        }
+
         releaseData();
     }
 
     public void factoryReleased() {
         // KCR: debug
-        System.err.println("*** PrismMediaFrameHandler: factoryReleased");
+        if (PrismSettings.verbose) {
+            System.err.println("*** PrismMediaFrameHandler: factoryReleased");
+        }
+
         releaseData();
     }
 

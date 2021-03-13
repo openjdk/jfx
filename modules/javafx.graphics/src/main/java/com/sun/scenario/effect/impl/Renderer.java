@@ -64,7 +64,7 @@ public abstract class Renderer {
      * will be created for the particular context.
      * <p>
      * Thus the lifecycle of a renderer is:
-     * {@code NOTREADY} => {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
+     * [{@code NOTREADY} =>] {@code OK} [=> {@code LOST} [=> {@code DISPOSED}]]
      */
     public static enum RendererState {
         /**
@@ -347,8 +347,6 @@ public abstract class Renderer {
         Renderer r = rendererMap.get(fctx);
         if (r != null) {
             if (r.getRendererState() == RendererState.NOTREADY) {
-                // KCR: debug
-                System.err.println("KCR: renderer not ready, but return it anyway");
                 return r;
             }
             if (r.getRendererState() == RendererState.OK) {
@@ -359,13 +357,9 @@ public abstract class Renderer {
                 // it is disposed (or forever if it can't be disposed/reset)
                 // Note: we don't add it to the cache to prevent permanent
                 // association of the backup renderer and this filter context.
-                // KCR: debug
-                System.err.println("KCR: RendererState.LOST -- return backup renderer");
                 return r.getBackupRenderer();
             }
             if (r.getRendererState() == RendererState.DISPOSED) {
-                // KCR: debug
-                System.err.println("KCR: RendererState.DISPOSED -- OOPS!!");
                 r = null;
                 // we remove disposed renderers below instead of here to cover
                 // cases where we never use a context which the disposed
@@ -397,8 +391,6 @@ public abstract class Renderer {
                         " (AccelType=" + r.getAccelType() +
                         ") for " + screen);
                 }
-                // KCR: debug
-                System.err.println("    created new renderer; state = " + r.getRendererState());
             }
             rendererMap.put(fctx, r);
         }

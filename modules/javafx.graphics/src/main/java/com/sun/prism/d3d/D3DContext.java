@@ -238,6 +238,8 @@ class D3DContext extends BaseShaderContext {
         }
 
         if (hr == D3DERR_DEVICEREMOVED) {
+            setLost();
+
             // Reinitialize the D3DPipeline. This will dispose and recreate
             // the resource factory and context for each adapter.
             D3DPipeline.getInstance().reinitialize();
@@ -256,10 +258,10 @@ class D3DContext extends BaseShaderContext {
      * sets the context lost status if necessary
      */
     boolean validatePresent(int res) {
-        validate(res);
-        // KCR: FIXME: This is insufficient for D3DERR_DEVICEREMOVED (maybe revert this change?)
-        if (res == D3DERR_DEVICELOST || res == D3DERR_DEVICENOTRESET || res == D3DERR_DEVICEREMOVED) {
+        if (res == D3DERR_DEVICELOST || res == D3DERR_DEVICENOTRESET) {
             setLost();
+        } else {
+            validate(res);
         }
 
         return !FAILED(res);

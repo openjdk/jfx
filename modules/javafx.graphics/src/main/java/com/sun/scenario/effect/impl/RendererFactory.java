@@ -186,13 +186,8 @@ class RendererFactory {
             String klassName = fctx.getClass().getName();
             String simpleName = klassName.substring(klassName.lastIndexOf(".") + 1);
 
-            // KCR: debug
-            System.err.println("RendererFactory::createRenderer");
             if (simpleName.equals("PrFilterContext") && tryPrism) {
-                System.err.println("  createPrismRenderer: ");
-                System.err.flush();
                 r = createPrismRenderer(fctx);
-                System.err.println("    returns " + r);
             }
             // check to see whether one of the hardware accelerated
             // Java 2D pipelines is in use and exposes the necessary

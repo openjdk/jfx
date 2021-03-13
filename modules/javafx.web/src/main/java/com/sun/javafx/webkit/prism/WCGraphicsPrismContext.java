@@ -862,9 +862,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             @Override void doPaint(Graphics g) {
                 ResourceFactory rf = g.getResourceFactory();
                 if (rf.isDisposed()) {
-                    // KCR: debug
-                    System.err.println("KCR: WCGraphicsPrismContext::doPaint skipping because device has been disposed");
-
+                    log.fine("WCGraphicsPrismContext::doPaint skip because device has been disposed");
                     return;
                 }
                 image.order(ByteOrder.nativeOrder());
@@ -1371,8 +1369,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     rtt.makePermanent();
                     buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
                 } else {
-                    // KCR: debug
-                    System.err.println("Layer :: cannot construct RTT, device has been disposed or is not ready");
+                    log.fine("Layer :: cannot construct RTT because device disposed or not ready");
                     fctx = null;
                     buffer = null;
                 }
@@ -1849,8 +1846,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void flush() {
         if (!isValid()) {
-            // KCR: debug
-            System.err.println("WCGraphicsPrismContext::flush : GC is invalid");
+            log.fine("WCGraphicsPrismContext::flush : GC is invalid");
             return;
         }
         flushAllLayers();

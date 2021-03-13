@@ -101,14 +101,19 @@ public class PPSRenderer extends PrRenderer {
                     rf = GraphicsPipeline.getPipeline().getResourceFactory(screen);
                     if (rf == null || rf.isDisposed()) {
                         // KCR: debug
-                        System.err.println("KCR: PPSRenderer::validate -- device still NOTREADY");
+                        if (PrismSettings.verbose) {
+                            System.err.println("KCR: PPSRenderer::validate -- device still NOTREADY");
+                        }
 
                         return false;
                     }
                 }
                 if (rf.isDisposed()) {
                     // KCR: debug
-                    System.err.println("KCR: PPSRenderer::validate -- device has been disposed");
+                    if (PrismSettings.verbose) {
+                        System.err.println("KCR: PPSRenderer::validate -- device has been disposed");
+                    }
+
                     return false;
                 }
                 rf.addFactoryListener(listener);
@@ -123,9 +128,6 @@ public class PPSRenderer extends PrRenderer {
                 return true;
 
             case DISPOSED:
-                // KCR: debug
-                System.err.println("DISPOSED resource factory .. skipping operation");
-                /* FALL THROUSH */
             default:
                 return false;
         }
@@ -462,13 +464,12 @@ public class PPSRenderer extends PrRenderer {
 
     public static Renderer createRenderer(FilterContext fctx) {
         // KCR: debug
-        System.err.println("PPSRenderer::createRenderer");
+        if (PrismSettings.verbose) {
+            System.err.println("PPSRenderer::createRenderer");
+        }
         Object ref = fctx.getReferent();
         GraphicsPipeline pipe = GraphicsPipeline.getPipeline();
         if (pipe == null || !(ref instanceof Screen)) {
-            // KCR: debug
-            System.err.println("  returns null because: "
-                    + (pipe == null ? "pipe is null" : ("" + ref + " is not a Screen")));
             return null;
         }
         Screen screen = (Screen)ref;
@@ -481,12 +482,8 @@ public class PPSRenderer extends PrRenderer {
             throw new InternalError("Unknown GraphicsPipeline");
         }
         if (shaderSource == null) {
-            // KCR: debug
-            System.err.println("  returns null because: shaderSource is null");
             return null;
         }
-        // KCR: debug
-        System.err.println("  returns new PPSRenderer");
         return new PPSRenderer(screen, shaderSource);
     }
 }

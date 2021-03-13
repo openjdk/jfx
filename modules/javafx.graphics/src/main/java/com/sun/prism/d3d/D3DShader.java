@@ -26,7 +26,6 @@
 package com.sun.prism.d3d;
 
 import com.sun.prism.impl.BufferUtil;
-import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.ps.Shader;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -42,10 +41,6 @@ final class D3DShader extends D3DResource implements Shader {
 
     D3DShader(D3DContext context, long pData, Map<String, Integer> registers) {
         super(new D3DRecord(context, pData));
-        // KCR: debug
-        if (PrismSettings.verbose){
-            System.err.println("constructor: " + this);
-        }
         this.valid = (pData != 0L);
         this.registers = registers;
     }
@@ -221,10 +216,6 @@ final class D3DShader extends D3DResource implements Shader {
 
     @Override
     public void dispose() {
-        // KCR: debug
-        if (PrismSettings.verbose) {
-            System.err.println("dispose: " + this);
-        }
         super.dispose();
         valid = false;
     }

@@ -121,8 +121,7 @@ class PaintHelper {
     }
 
     static void initGradientTextures(ShaderGraphics g) {
-        // KCR: FIXME: Need to document this better
-        // Need to clear cached gradient texture and offsets when the
+        // We must clear cached gradient texture and offsets when the
         // device is removed and recreated
         cacheOffset = -1;
         gradientMap.clear();
@@ -150,21 +149,13 @@ class PaintHelper {
 
     static Texture getGradientTexture(ShaderGraphics g, Gradient paint) {
         if (gradientCacheTexture == null || gradientCacheTexture.isSurfaceLost()) {
-            // KCR: debug
-            if (gradientCacheTexture != null && gradientCacheTexture.isSurfaceLost()) {
-                System.err.println("*** lost texture, need to recreate");
-            }
-
             initGradientTextures(g);
         }
 
-        // KCR: FIXME: fix this comment (and look for similar). Permanent resources
-        // still can be lost when the graphics device is reinitialized
-        //
-        // gradientCacheTexture is left permanent and locked so it never
-        // goes away or needs to be checked for isSurfaceLost(), but we
-        // add a lock here so that the caller can unlock without knowing
-        // our inner implementation details
+        // gradientCacheTexture is left permanent and locked, although we still
+        // must check for isSurfaceLost() is the case the device is disposed.
+        // We add a lock here so that the caller can unlock without knowing
+        // our inner implementation details.
         gradientCacheTexture.lock();
         return gradientCacheTexture;
     }
@@ -174,13 +165,10 @@ class PaintHelper {
             initGradientTextures(g);
         }
 
-        // KCR: FIXME: fix this comment (and look for similar). Permanent resources
-        // still can be lost when the graphics device is reinitialized
-        //
-        // gtexCacheTexture is left permanent and locked so it never
-        // goes away or needs to be checked for isSurfaceLost(), but we
-        // add a lock here so that the caller can unlock without knowing
-        // our inner implementation details
+        // gtexCacheTexture is left permanent and locked, although we still
+        // must check for isSurfaceLost() is the case the device is disposed.
+        // We add a lock here so that the caller can unlock without knowing
+        // our inner implementation details.
         gtexCacheTexture.lock();
         return gtexCacheTexture;
     }

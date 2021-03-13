@@ -55,8 +55,7 @@ class RegionImageCache {
     private RectanglePacker hPacker;
     private RectanglePacker vPacker;
 
-    // KCR: Make sure we do not reuse this after the factory is disposed
-    // (it looks OK)
+
     RegionImageCache(final ResourceFactory factory) {
         imageMap = new HashMap<>();
         WrapMode mode;

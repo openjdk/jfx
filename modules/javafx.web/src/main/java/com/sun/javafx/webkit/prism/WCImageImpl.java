@@ -92,9 +92,7 @@ final class WCImageImpl extends PrismImage {
     {
         ResourceFactory resourceFactory = g.getResourceFactory();
         if (resourceFactory.isDisposed()) {
-            // KCR: debug
-            System.err.println("KCR: WCImageImpl::draw skipping because device has been disposed");
-
+            log.fine("WCImageImpl::draw : skip because device disposed or not ready");
             return;
         }
 

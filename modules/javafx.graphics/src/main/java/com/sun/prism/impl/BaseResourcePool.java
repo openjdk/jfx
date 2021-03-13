@@ -461,7 +461,7 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
             }
         }
 
-        // KCR: need to fix this, since it should not happen even when the device is revmoved
+        // KCR: FIXME: this should not happen even when the device is removed
         if (PrismSettings.verbose) {
             try {
                 throw new IllegalStateException("unmanaged resource freed from pool " + this);

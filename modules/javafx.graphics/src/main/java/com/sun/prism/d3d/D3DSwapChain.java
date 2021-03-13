@@ -90,6 +90,12 @@ class D3DSwapChain
     @Override
     public boolean present() {
         D3DContext context = getContext();
+        if (context.isDisposed()) {
+            // KCR: debug
+            System.err.println("D3DSwapChain::present : context is disposed");
+
+            return false;
+        }
         int res = nPresent(context.getContextHandle(), d3dResRecord.getResource());
         return context.validatePresent(res);
     }

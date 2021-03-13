@@ -90,8 +90,6 @@ public class GlyphCache {
     static WeakHashMap<BaseContext, RectanglePacker> lcdPackerMap =
         new WeakHashMap<BaseContext, RectanglePacker>();
 
-    // KCR: since this cache is associated with a context it will be recreated
-    // if needed when the surface is lost
     public GlyphCache(BaseContext context, FontStrike strike) {
         this.context = context;
         this.strike = strike;

@@ -36,7 +36,7 @@ import com.sun.webkit.Invoker;
 
 public final class PrismInvoker extends Invoker {
 
-    private static final PlatformLogger logger =
+    private static final PlatformLogger log =
             PlatformLogger.getLogger(PrismInvoker.class.getName());
 
     public PrismInvoker() {
@@ -92,7 +92,7 @@ public final class PrismInvoker extends Invoker {
                 // block until job is complete
                 f.get();
             } catch (ExecutionException | InterruptedException ex) {
-                logger.severe("RenderJob error", ex);
+                log.severe("RenderJob error", ex);
             }
         }
     }

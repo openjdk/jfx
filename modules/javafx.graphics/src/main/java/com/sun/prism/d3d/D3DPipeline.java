@@ -270,8 +270,8 @@ public final class D3DPipeline extends GraphicsPipeline {
             // If initialization failed, try again
             // KCR: debug
             System.err.println();
-            System.err.println("*****");
             System.err.println("KCR: findDefaultResourceFactory: attempt to reinitialize D3D device");
+
             // adapters lost, recreate
             D3DPipeline.getInstance().reinitialize();
 

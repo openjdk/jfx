@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
@@ -52,6 +53,9 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     private ByteBuffer pixelBuffer;
     private float pixelScale;
 
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(RTImage.class.getName());
+
     RTImage(int w, int h, float pixelScale) {
         width = w;
         height = h;
@@ -77,15 +81,13 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     }
 
     private RTTexture getTexture() {
-        // KCR: debug
         if (txt != null && txt.isSurfaceLost()) {
-            System.err.println("KCR: RTImage::getTexture : surface lost: " + this);
+            log.fine("RTImage::getTexture : surface lost: " + this);
         }
 
         ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
         if (f == null || f.isDisposed()) {
-            // KCR: debug
-            System.err.println("KCR: RTImage::getTexture return null because device has been disposed or is not ready");
+            log.fine("RTImage::getTexture : return null because device disposed or not ready");
             return null;
         }
 
@@ -113,8 +115,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             return;
         }
         if (g.getResourceFactory().isDisposed()) {
-            // KCR: debug
-            System.err.println("KCR: RTImage::draw skipping because device has been disposed");
+            log.fine("RTImage::draw : skip because device has been disposed");
             return;
         }
         if (g instanceof PrinterGraphics) {
@@ -183,11 +184,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             PrismInvoker.runOnRenderThread(() -> {
                 final ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
                 if (f == null || f.isDisposed()) {
-                    // KCR: debug
-                    System.err.println("ResourceFactory: " + f +
+                    // KCR: debug (remove the first log message
+                    log.fine("KCR: ResourceFactory: " + f +
                             (f != null ? "  disposed:" + f.isDisposed() : ""));
-                    System.err.println("KCR: RTImage::getPixelBuffer skipping because device is disposed or is not ready");
 
+                    log.fine("RTImage::getPixelBuffer : skip because device disposed or not ready");
                     return;
                 }
                 flushRQ();
@@ -202,19 +203,6 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     RTTexture t = txt;
                     if (pixelScale != 1.0f) {
                         // Convert [txt] to a texture the size of the image
-                        // KCR: debug
-                        // KCR: this check is redundant due to earlier test
-                        //      (remove the entire check when done debugging)
-                        if (f.isDisposed()) {
-                            try {
-                                throw new IllegalStateException("factory used to be active, but now is disposed!");
-                            } catch (RuntimeException ex) {
-                                ex.printStackTrace();
-                            }
-                            System.err.println("ResourceFactory: " + f + "  disposed:" + f.isDisposed());
-                            return;
-                        }
-
                         t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                         Graphics g = t.createGraphics();
                         g.drawTexture(txt, 0, 0, width, height,
@@ -270,9 +258,6 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     }
 
     @Override public void factoryReleased() {
-        // KCR: debug
-        System.err.println("RTImage: resource factory released");
-
         if (txt != null) {
             txt.dispose();
             txt = null;

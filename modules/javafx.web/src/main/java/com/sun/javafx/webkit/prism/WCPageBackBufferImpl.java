@@ -26,6 +26,7 @@
 package com.sun.javafx.webkit.prism;
 
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
@@ -46,6 +47,9 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     private WeakReference<ResourceFactory> listenerAdded = null;
     private boolean firstValidate = true;
     private float pixelScale;
+
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCPageBackBufferImpl.class.getName());
 
     WCPageBackBufferImpl(float pixelScale) {
         this.pixelScale = pixelScale;
@@ -93,8 +97,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     public boolean validate(int width, int height) {
         ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
         if (factory == null || factory.isDisposed()) {
-            // KCR: debug
-            System.err.println("KCR: WCPageBackBufferImpl::validate device has been disposed or is not ready");
+            log.fine("WCPageBackBufferImpl::validate : device disposed or not ready");
 
             return false;
         }
@@ -149,8 +152,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
     }
 
     @Override public void factoryReleased() {
-        // KCR: debug
-        System.err.println("WCPageBackBufferImpl: resource factory released");
+        log.fine("WCPageBackBufferImpl: resource factory released");
 
         if (texture != null) {
             texture.dispose();
