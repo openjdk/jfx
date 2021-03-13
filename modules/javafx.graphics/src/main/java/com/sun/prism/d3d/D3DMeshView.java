@@ -36,6 +36,9 @@ import com.sun.prism.impl.Disposer;
 class D3DMeshView extends BaseMeshView {
 
     static int count = 0;
+
+    // KCR: FIXME: need to dispose this object when context/resourceFactory is disposed
+
     private final D3DContext context;
     private final long nativeHandle;
 

@@ -172,7 +172,6 @@ public abstract class BaseContext {
     public void clearGlyphCaches() {
         clearCaches(greyGlyphCaches);
         clearCaches(lcdGlyphCaches);
-        GlyphCache.disposeForContext(this);
     }
 
     private void clearCaches(Map<FontStrike, GlyphCache> glyphCaches) {
@@ -606,6 +605,7 @@ public abstract class BaseContext {
      */
     public void dispose() {
         clearGlyphCaches();
+        GlyphCache.disposeForContext(this);
 
         if (maskTex != null) {
             maskTex.dispose();

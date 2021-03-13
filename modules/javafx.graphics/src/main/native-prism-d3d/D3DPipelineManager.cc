@@ -145,12 +145,10 @@ HRESULT D3DPipelineManager::ReleaseAdapters()
 }
 
 // KCR: debug
-/*
 static int firstTime = 1;
 
 static int tickCount = 0;
 static int numFailBeforePass = 2;
-*/
 
 HRESULT D3DPipelineManager::InitAdapters(IConfig &cfg)
 {

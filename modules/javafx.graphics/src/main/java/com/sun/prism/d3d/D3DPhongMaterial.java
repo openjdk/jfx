@@ -40,6 +40,8 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
 
     static int count = 0;
 
+    // KCR: FIXME: need to dispose this object when context/resourceFactory is disposed
+
     private final D3DContext context;
     private final long nativeHandle;
     private TextureMap maps[] = new TextureMap[MAX_MAP_TYPE];
