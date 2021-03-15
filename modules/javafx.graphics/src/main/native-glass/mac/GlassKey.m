@@ -183,22 +183,9 @@ static const int gKeyMapSize = sizeof(gKeyMap) / sizeof(struct KeyMapEntry);
 static BOOL macKeyCodeIsLayoutSensitive(unsigned int keyCode)
 {
     // Mac key codes that generate different characters based on the keyboard layout
-    // lie in two ranges with a few exceptions. For the purpose of Java key code
-    // mapping we pretend that the top row of number keys always produce digits even
-    // though that is not true on some keyboards e.g. French. This matches the behavior
-    // of JavaFX on Windows and the historical behavior of JavaFX on Mac.
+    // lie in two ranges with a few exceptions.
     switch (keyCode)
     {
-        case 0x12: // 1
-        case 0x13: // 2
-        case 0x14: // 3
-        case 0x15: // 4
-        case 0x17: // 5
-        case 0x16: // 6
-        case 0x1A: // 7
-        case 0x1C: // 8
-        case 0x19: // 9
-        case 0x1D: // 0
         case 0x24: // Enter
         case 0x30: // Tab
         case 0x31: // Space
@@ -297,27 +284,47 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
     return actualLength;
 }
 
-static UniCharCount getCharsForMacKey(unsigned short keyCode, BOOL shifted, BOOL forAccelerator, UniChar* buffer, UniCharCount bufferSize)
+static BOOL isLetterOrDigit(jint javaKeyCode)
 {
-    TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
-    if (keyboard == NULL)
-        return 0;
-
-    UniCharCount length = queryKeyboard(keyboard, keyCode,
-                                        shifted, forAccelerator,
-                                        buffer, bufferSize);
-    CFRelease(keyboard);
-    return length;
+    if (javaKeyCode >= '0' && javaKeyCode <= '9')
+        return YES;
+    if (javaKeyCode >= 'A' && javaKeyCode <= 'Z')
+        return YES;
+    return NO;
 }
 
 // This is only valid for keys in the area that is sensitive to layout changes.
 static jint getJavaCodeForMacKey(unsigned short keyCode)
 {
+    jint result = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    TISInputSourceRef keyboard = TISCopyCurrentKeyboardLayoutInputSource();
+    if (keyboard == NULL)
+        return result;
+
     UniChar unicode[8];
-    UniCharCount length = getCharsForMacKey(keyCode, NO, YES, unicode, 8);
+    UniCharCount length = queryKeyboard(keyboard, keyCode, NO, YES, unicode, 8);
     if (length == 1)
-        return getJavaCodeForASCII(unicode[0]);
-    return 0;
+        result = getJavaCodeForASCII(unicode[0]);
+
+    // If we didn't get a hit try looking at the shifted variant. Even if we did get a
+    // hit we favor digits and letters over punctuation. This brings the French
+    // keyboard in line with Windows; the digits are shifted but are still considered
+    // the canonical keycodes.
+    if (!isLetterOrDigit(result))
+    {
+        length = queryKeyboard(keyboard, keyCode, YES, YES, unicode, 8);
+        if (length == 1)
+        {
+            jint trial = getJavaCodeForASCII(unicode[0]);
+            if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+                result = trial; // Something is better than nothing
+            else if (isLetterOrDigit(trial))
+                result = trial;
+        }
+    }
+
+    CFRelease(keyboard);
+    return result;
 }
 
 jint GetJavaKeyModifiers(NSEvent *event)
