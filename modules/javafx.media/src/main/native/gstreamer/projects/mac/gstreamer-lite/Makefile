@@ -51,13 +51,16 @@ CFLAGS += -fPIC \
          -DHAVE_CONFIG_H \
          -DGSTREAMER_LITE \
          -DGST_REMOVE_DISABLED \
-         -DOSX \
-         -msse2
+         -DOSX
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
 else
     CFLAGS += -O0 -g -Wall
+endif
+
+ifneq ($(ARCH), arm64)
+    CFLAGS += -msse2
 endif
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/,$(DIRLIST)) \
