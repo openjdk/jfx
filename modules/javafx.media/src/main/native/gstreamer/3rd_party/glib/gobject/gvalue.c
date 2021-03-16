@@ -376,7 +376,7 @@ g_value_set_instance (GValue  *value,
       g_free (error_msg);
 
       /* we purposely leak the value here, it might not be
-       * in a sane state if an error condition occoured
+       * in a correct state if an error condition occurred
        */
       value_meminit (value, g_type);
       value_table->value_init (value);
@@ -440,7 +440,7 @@ g_value_init_from_instance (GValue  *value,
           g_free (error_msg);
 
           /* we purposely leak the value here, it might not be
-           * in a sane state if an error condition occoured
+           * in a correct state if an error condition occurred
            */
           value_meminit (value, g_type);
           value_table->value_init (value);

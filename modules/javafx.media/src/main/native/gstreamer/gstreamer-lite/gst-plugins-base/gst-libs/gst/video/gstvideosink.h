@@ -128,9 +128,7 @@ GST_VIDEO_API
 void gst_video_sink_center_rect (GstVideoRectangle src, GstVideoRectangle dst,
                                  GstVideoRectangle *result, gboolean scaling);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoSink, gst_object_unref)
-#endif
 
 G_END_DECLS
 

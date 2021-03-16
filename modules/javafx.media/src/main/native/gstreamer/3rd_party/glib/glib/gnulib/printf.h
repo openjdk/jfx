@@ -50,6 +50,3 @@ int _g_gnulib_vasprintf (char       **result,
 
 
 #endif /* __GNULIB_PRINTF_H__ */
-
-
-

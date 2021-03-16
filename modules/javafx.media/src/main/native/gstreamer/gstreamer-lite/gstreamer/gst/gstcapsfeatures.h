@@ -129,9 +129,7 @@ void              gst_caps_features_remove (GstCapsFeatures * features, const gc
 GST_API
 void              gst_caps_features_remove_id (GstCapsFeatures * features, GQuark feature);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstCapsFeatures, gst_caps_features_free)
-#endif
 
 G_END_DECLS
 

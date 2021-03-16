@@ -130,9 +130,7 @@ void            gst_pipeline_set_auto_flush_bus (GstPipeline *pipeline, gboolean
 GST_API
 gboolean        gst_pipeline_get_auto_flush_bus (GstPipeline *pipeline);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPipeline, gst_object_unref)
-#endif
 
 G_END_DECLS
 

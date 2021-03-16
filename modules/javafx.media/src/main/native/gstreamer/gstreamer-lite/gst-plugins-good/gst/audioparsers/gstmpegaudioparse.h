@@ -69,6 +69,7 @@ struct _GstMpegAudioParse {
 
   /* Bitrate from non-vbr headers */
   guint32      hdr_bitrate;
+  gboolean     bitrate_is_constant;
 
   /* Xing info */
   guint32      xing_flags;

@@ -970,9 +970,13 @@ current_attribute (GMarkupParseContext *context)
   return context->attr_names[context->cur_attr]->str;
 }
 
-static void
+static gboolean
 add_attribute (GMarkupParseContext *context, GString *str)
 {
+  /* Sanity check on the number of attributes. */
+  if (context->cur_attr >= 1000)
+    return FALSE;
+
   if (context->cur_attr + 2 >= context->alloc_attrs)
     {
       context->alloc_attrs += 5; /* silly magic number */
@@ -984,6 +988,8 @@ add_attribute (GMarkupParseContext *context, GString *str)
   context->attr_values[context->cur_attr] = NULL;
   context->attr_names[context->cur_attr+1] = NULL;
   context->attr_values[context->cur_attr+1] = NULL;
+
+  return TRUE;
 }
 
 static void
@@ -1332,7 +1338,15 @@ g_markup_parse_context_parse (GMarkupParseContext  *context,
               if (!name_validate (context, context->partial_chunk->str, error))
                 break;
 
-              add_attribute (context, context->partial_chunk);
+              if (!add_attribute (context, context->partial_chunk))
+                {
+                  set_error (context,
+                             error,
+                             G_MARKUP_ERROR_PARSE,
+                             _("Too many attributes in element “%s”"),
+                             current_element (context));
+                  break;
+                }
 
               context->partial_chunk = NULL;
               context->start = NULL;
@@ -1939,8 +1953,8 @@ g_markup_parse_context_get_element_stack (GMarkupParseContext *context)
 /**
  * g_markup_parse_context_get_position:
  * @context: a #GMarkupParseContext
- * @line_number: (nullable): return location for a line number, or %NULL
- * @char_number: (nullable): return location for a char-on-line number, or %NULL
+ * @line_number: (out) (optional): return location for a line number, or %NULL
+ * @char_number: (out) (optional): return location for a char-on-line number, or %NULL
  *
  * Retrieves the current line number and the number of the character on
  * that line. Intended for use in error messages; there are no strict
@@ -2936,7 +2950,6 @@ g_markup_collect_attributes (const gchar         *element_name,
 failure:
   /* replay the above to free allocations */
   type = first_type;
-  attr = first_attr;
 
   va_start (ap, first_attr);
   while (type != G_MARKUP_COLLECT_INVALID)
@@ -2971,7 +2984,10 @@ failure:
 
       type = va_arg (ap, GMarkupCollectType);
       if (type != G_MARKUP_COLLECT_INVALID)
-        attr = va_arg (ap, const char *);
+        {
+          attr = va_arg (ap, const char *);
+          (void) attr;
+        }
     }
   va_end (ap);
 

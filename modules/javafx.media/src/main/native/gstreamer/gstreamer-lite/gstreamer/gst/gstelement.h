@@ -373,8 +373,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_ERROR_WITH_DETAILS:
  * @el:     the element that generates the error
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -406,8 +406,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_ERROR:
  * @el:     the element that generates the error
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -434,8 +434,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_WARNING_WITH_DETAILS:
  * @el:     the element that generates the warning
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -467,8 +467,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_WARNING:
  * @el:     the element that generates the warning
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -495,8 +495,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_INFO_WITH_DETAILS:
  * @el:     the element that generates the information
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -531,8 +531,8 @@ G_STMT_START {                                                          \
 /**
  * GST_ELEMENT_INFO:
  * @el:     the element that generates the information
- * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see #gstreamer-GstGError)
- * @code:   error code defined for that domain (see #gstreamer-GstGError)
+ * @domain: like CORE, LIBRARY, RESOURCE or STREAM (see [GstGError](gsterror))
+ * @code:   error code defined for that domain (see [GstGError](gsterror))
  * @text:   the message to display (format string and args enclosed in
             parentheses)
  * @debug:  debugging information for the message (format string and args
@@ -860,6 +860,12 @@ void                    gst_element_set_start_time      (GstElement *element, Gs
 GST_API
 GstClockTime            gst_element_get_start_time      (GstElement *element);
 
+GST_API
+GstClockTime            gst_element_get_current_running_time (GstElement *element);
+
+GST_API
+GstClockTime            gst_element_get_current_clock_time (GstElement *element);
+
 /* bus */
 
 GST_API
@@ -1016,6 +1022,13 @@ GST_API
 void                    gst_element_lost_state          (GstElement * element);
 
 
+/**
+ * GstElementCallAsyncFunc:
+ * @element: The #GstElement this function has been called against
+ * @user_data: Data passed in the function where that callback has been passed
+ *
+ * Callback prototype used in #gst_element_call_async
+ */
 typedef void          (*GstElementCallAsyncFunc)        (GstElement * element,
                                                          gpointer     user_data);
 GST_API
@@ -1050,9 +1063,7 @@ GList*                  gst_element_get_pad_template_list      (GstElement *elem
 GST_API
 const gchar *           gst_element_get_metadata               (GstElement * element, const gchar * key);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstElement, gst_object_unref)
-#endif
 
 G_END_DECLS
 

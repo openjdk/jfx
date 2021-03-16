@@ -338,7 +338,7 @@ copy_config (GQuark field_id, const GValue * value, gpointer user_data)
  * %FALSE and will try to update as much state as possible. The new state can
  * then be retrieved and refined with gst_audio_converter_get_config().
  *
- * Look at the #GST_AUDIO_CONVERTER_OPT_* fields to check valid configuration
+ * Look at the `GST_AUDIO_CONVERTER_OPT_*` fields to check valid configuration
  * option and values.
  *
  * Returns: %TRUE when the new parameters could be set
@@ -420,7 +420,7 @@ get_temp_samples (AudioChain * chain, gsize num_samples, gpointer user_data)
     gint8 *s;
     gsize stride = GST_ROUND_UP_N (num_samples * chain->stride, ALIGN);
     /* first part contains the pointers, second part the data, add some extra bytes
-     * for alignement */
+     * for alignment */
     gsize needed = (stride + sizeof (gpointer)) * chain->blocks + ALIGN - 1;
 
     GST_DEBUG ("alloc samples %d %" G_GSIZE_FORMAT " %" G_GSIZE_FORMAT,
@@ -1313,7 +1313,7 @@ converter_resample (GstAudioConverter * convert,
  * Create a new #GstAudioConverter that is able to convert between @in and @out
  * audio formats.
  *
- * @config contains extra configuration options, see #GST_AUDIO_CONVERTER_OPT_*
+ * @config contains extra configuration options, see `GST_AUDIO_CONVERTER_OPT_*`
  * parameters for details about the options and values.
  *
  * Returns: a #GstAudioConverter or %NULL if conversion is not possible.
@@ -1643,6 +1643,8 @@ gst_audio_converter_convert (GstAudioConverter * convert,
  * The return value would be typically input to gst_base_transform_set_in_place()
  *
  * Returns: %TRUE when the conversion can be done in place.
+ *
+ * Since: 1.12
  */
 gboolean
 gst_audio_converter_supports_inplace (GstAudioConverter * convert)

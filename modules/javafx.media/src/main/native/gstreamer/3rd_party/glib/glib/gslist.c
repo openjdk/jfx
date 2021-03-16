@@ -39,7 +39,12 @@
  * @short_description: linked lists that can be iterated in one direction
  *
  * The #GSList structure and its associated functions provide a
- * standard singly-linked list data structure.
+ * standard singly-linked list data structure. The benefit of this
+ * data-structure is to provide insertion/deletion operations in O(1)
+ * complexity where access/search operations are in O(n). The benefit
+ * of #GSList over #GList (doubly linked list) is that they are lighter
+ * in space as they only need to retain one pointer but it double the
+ * cost of the worst case access/search operations.
  *
  * Each element in the list contains a piece of data, together with a
  * pointer which links to the next element in the list. Using this
@@ -122,7 +127,7 @@ g_slist_alloc (void)
 
 /**
  * g_slist_free:
- * @list: a #GSList
+ * @list: the first link of a #GSList
  *
  * Frees all of the memory used by a #GSList.
  * The freed elements are returned to the slice allocator.
@@ -130,6 +135,13 @@ g_slist_alloc (void)
  * If list elements contain dynamically-allocated memory,
  * you should either use g_slist_free_full() or free them manually
  * first.
+ *
+ * It can be combined with g_steal_pointer() to ensure the list head pointer
+ * is not left dangling:
+ * |[<!-- language="C" -->
+ * GSList *list_of_borrowed_things = …;  /<!-- -->* (transfer container) *<!-- -->/
+ * g_slist_free (g_steal_pointer (&list_of_borrowed_things));
+ * ]|
  */
 void
 g_slist_free (GSList *list)
@@ -159,7 +171,7 @@ g_slist_free_1 (GSList *list)
 
 /**
  * g_slist_free_full:
- * @list: a pointer to a #GSList
+ * @list: the first link of a #GSList
  * @free_func: the function to be called to free each element's data
  *
  * Convenience method, which frees all the memory used by a #GSList, and
@@ -167,6 +179,15 @@ g_slist_free_1 (GSList *list)
  *
  * @free_func must not modify the list (eg, by removing the freed
  * element from it).
+ *
+ * It can be combined with g_steal_pointer() to ensure the list head pointer
+ * is not left dangling ­— this also has the nice property that the head pointer
+ * is cleared before any of the list elements are freed, to prevent double frees
+ * from @free_func:
+ * |[<!-- language="C" -->
+ * GSList *list_of_owned_things = …;  /<!-- -->* (transfer full) (element-type GObject) *<!-- -->/
+ * g_slist_free_full (g_steal_pointer (&list_of_owned_things), g_object_unref);
+ * ]|
  *
  * Since: 2.28
  **/
@@ -1064,4 +1085,33 @@ g_slist_sort_with_data (GSList           *list,
                         gpointer          user_data)
 {
   return g_slist_sort_real (list, (GFunc) compare_func, user_data);
+}
+
+/**
+ * g_clear_slist: (skip)
+ * @slist_ptr: (not nullable): a #GSList return location
+ * @destroy: (nullable): the function to pass to g_slist_free_full() or %NULL to not free elements
+ *
+ * Clears a pointer to a #GSList, freeing it and, optionally, freeing its elements using @destroy.
+ *
+ * @slist_ptr must be a valid pointer. If @slist_ptr points to a null #GSList, this does nothing.
+ *
+ * Since: 2.64
+ */
+void
+(g_clear_slist) (GSList         **slist_ptr,
+                 GDestroyNotify   destroy)
+{
+  GSList *slist;
+
+  slist = *slist_ptr;
+  if (slist)
+    {
+      *slist_ptr = NULL;
+
+      if (destroy)
+        g_slist_free_full (slist, destroy);
+      else
+        g_slist_free (slist);
+    }
 }

@@ -184,9 +184,7 @@ void             gst_app_src_set_callbacks           (GstAppSrc * appsrc,
                                                       gpointer user_data,
                                                       GDestroyNotify notify);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSrc, gst_object_unref)
-#endif
 
 G_END_DECLS
 

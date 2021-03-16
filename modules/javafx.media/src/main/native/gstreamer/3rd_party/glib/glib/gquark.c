@@ -273,7 +273,7 @@ g_quark_to_string (GQuark quark)
   gchar **strings;
   guint seq_id;
 
-  seq_id = g_atomic_int_get (&quark_seq_id);
+  seq_id = (guint) g_atomic_int_get (&quark_seq_id);
   strings = g_atomic_pointer_get (&quarks);
 
   if (quark < seq_id)

@@ -299,8 +299,7 @@
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
 
-/* Have PTHREAD_PRIO_INHERIT. */
-#define HAVE_PTHREAD_PRIO_INHERIT 1
+#define HAVE_PTHREAD_COND_TIMEDWAIT_RELATIVE_NP 1
 
 /* Have function pthread_setname_np(const char*) */
 #undef HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID
@@ -475,7 +474,7 @@
 #define PACKAGE_NAME "GStreamer"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "GStreamer 1.16.1"
+#define PACKAGE_STRING "GStreamer 1.18.3"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "gstreamer"
@@ -484,7 +483,7 @@
 #undef PACKAGE_URL
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.16.1"
+#define PACKAGE_VERSION "1.18.3"
 
 /* directory where plugins are located */
 #undef PLUGINDIR
@@ -524,7 +523,7 @@
 #undef USE_POISONING
 
 /* Version number of package */
-#define VERSION "1.16.1"
+#define VERSION "1.18.3"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

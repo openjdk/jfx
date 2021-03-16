@@ -114,6 +114,10 @@ guint    g_unix_fd_add             (gint              fd,
                                     GUnixFDSourceFunc function,
                                     gpointer          user_data);
 
+GLIB_AVAILABLE_IN_2_64
+struct passwd *g_unix_get_passwd_entry (const gchar  *user_name,
+                                        GError      **error);
+
 G_END_DECLS
 
 #endif  /* __G_UNIX_H__ */
