@@ -81,9 +81,7 @@ public abstract class PrRenderer extends Renderer {
             Class klass = Class.forName(klassName);
             Method m = klass.getMethod("createRenderer", new Class[] { FilterContext.class });
             return (PrRenderer)m.invoke(null, new Object[] { fctx });
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
+        } catch (Throwable e) {}
         return null;
     }
 

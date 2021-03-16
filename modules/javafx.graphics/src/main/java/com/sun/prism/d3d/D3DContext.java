@@ -194,7 +194,7 @@ class D3DContext extends BaseShaderContext {
 
         // KCR: debug
         if (PrismSettings.verbose || FAILED(hr)) {
-            System.err.print("KCR: testLostStateAndReset : ");
+            System.err.print("D3DContext::testLostStateAndReset : ");
             switch (hr) {
                 case D3D_OK:
                     System.err.println("D3D_OK");

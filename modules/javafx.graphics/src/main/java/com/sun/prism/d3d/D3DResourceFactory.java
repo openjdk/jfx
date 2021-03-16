@@ -86,7 +86,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         maxTextureSize = computeMaxTextureSize();
 
         if (PrismSettings.noClampToZero && PrismSettings.verbose) {
-            System.err.println("prism.noclamptozero not supported by D3D");
+            System.out.println("prism.noclamptozero not supported by D3D");
         }
     }
 

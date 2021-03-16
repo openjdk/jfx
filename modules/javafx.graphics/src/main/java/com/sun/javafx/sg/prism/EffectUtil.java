@@ -128,7 +128,6 @@ class EffectUtil {
     static void renderRectInnerShadow(Graphics g, InnerShadow shadow, float alpha,
                                       float rx, float ry, float rw, float rh)
     {
-        // KCR: double-check that checking for lost surface is sufficient
         if (itex == null || itex.isSurfaceLost()) {
             byte[] sdata = new byte[TEX_SIZE * TEX_SIZE];
             fillGaussian(sdata, TEX_SIZE, TEX_SIZE/2, shadow.getChoke(), true);
@@ -243,7 +242,6 @@ class EffectUtil {
     static void renderRectDropShadow(Graphics g, DropShadow shadow, float alpha,
                                      float rx, float ry, float rw, float rh)
     {
-        // KCR: double-check that checking for lost surface is sufficient
         if (dtex == null || dtex.isSurfaceLost()) {
             byte[] sdata = new byte[TEX_SIZE * TEX_SIZE];
             fillGaussian(sdata, TEX_SIZE, TEX_SIZE / 2, shadow.getSpread(), false);
