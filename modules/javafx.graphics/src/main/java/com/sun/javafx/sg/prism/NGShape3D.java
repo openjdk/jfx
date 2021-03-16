@@ -35,6 +35,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * TODO: 3D - Need documentation
@@ -75,6 +76,24 @@ public abstract class NGShape3D extends NGNode {
         g.setup3DRendering();
 
         ResourceFactory rf = g.getResourceFactory();
+        if (rf == null || rf.isDisposed()) {
+            // KCR: debug
+//            if (PrismSettings.verbose) {
+                System.err.println("NGShape3D::renderMeshView : return because device disposed or not ready");
+//            }
+            return;
+        }
+
+        // Check whether the meshView is valid; dispose and recreate if needed
+        if (meshView != null && !meshView.isValid()) {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("NGShape3D::renderMeshView : dispose invalid meshView");
+            }
+
+            meshView.dispose();
+            meshView = null;
+        }
 
         if (meshView == null && mesh != null) {
             meshView = rf.createMeshView(mesh.createMesh(rf));

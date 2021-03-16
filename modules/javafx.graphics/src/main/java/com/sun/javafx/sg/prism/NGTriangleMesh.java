@@ -29,6 +29,7 @@ import com.sun.javafx.collections.FloatArraySyncer;
 import com.sun.javafx.collections.IntegerArraySyncer;
 import com.sun.prism.Mesh;
 import com.sun.prism.ResourceFactory;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * TODO: 3D - Need documentation
@@ -59,6 +60,18 @@ public class NGTriangleMesh {
     private int[] faceSmoothingGroupsFromAndLengthIndices = new int[2];
 
     Mesh createMesh(ResourceFactory rf) {
+
+        // Check whether the mesh is valid; dispose and recreate if needed
+        if (mesh != null && !mesh.isValid()) {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("NGTriangleMesh::createMesh : dispose invalid mesh");
+            }
+
+            mesh.dispose();
+            mesh = null;
+        }
+
         if (mesh == null) {
             mesh = rf.createMesh();
             meshDirty = true;

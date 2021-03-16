@@ -30,6 +30,7 @@ import com.sun.prism.Material;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.TextureMap;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 
 /**
@@ -55,11 +56,35 @@ public class NGPhongMaterial {
     private TextureMap selfIllumMap = new TextureMap(PhongMaterial.MapType.SELF_ILLUM);
 
     Material createMaterial(ResourceFactory f) {
+
+        // Check whether the material is valid; dispose and recreate if needed
+        if (material != null && !material.isValid()) {
+            // KCR: debug
+            if (PrismSettings.verbose) {
+                System.err.println("NGPhongMaterial::createMaterial : dispose invalid material");
+            }
+
+            disposeMaterial();
+        }
+
         if (material == null) {
             material = f.createPhongMaterial();
         }
         validate(f);
         return material;
+    }
+
+    private void disposeMaterial() {
+        diffuseColorDirty = true;
+        specularColorDirty = true;
+        specularPowerDirty = true;
+        diffuseMap.setDirty(true);
+        specularMap.setDirty(true);
+        bumpMap.setDirty(true);
+        selfIllumMap.setDirty(true);
+
+        material.dispose();
+        material = null;
     }
 
     private void validate(ResourceFactory f) {

@@ -1339,7 +1339,10 @@ public class Scene implements EventTarget {
         context.platformImage = accessor.getTkImageLoader(wimg);
         setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
-        accessor.loadTkImage(wimg, tkImage);
+
+        if (tkImage != null) {
+            accessor.loadTkImage(wimg, tkImage);
+        }
 
         if (camera != null) {
             setAllowPGAccess(true);

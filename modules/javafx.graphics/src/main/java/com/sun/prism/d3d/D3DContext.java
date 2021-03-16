@@ -152,7 +152,7 @@ class D3DContext extends BaseShaderContext {
     private static int maxResets = 100000;
 
     private int simulateDeviceRemoved(int hr) {
-        if (hr != D3D_OK) return hr;
+        if (FAILED(hr)) return hr;
 
         if (++counter >= 10) {
             counter = 0;
@@ -163,7 +163,7 @@ class D3DContext extends BaseShaderContext {
                 return D3DERR_DEVICEREMOVED;
             }
         }
-        return D3D_OK;
+        return hr;
     }
 
     /**

@@ -99,7 +99,7 @@ public class PPSRenderer extends PrRenderer {
             case NOTREADY:
                 if (rf == null) {
                     rf = GraphicsPipeline.getPipeline().getResourceFactory(screen);
-                    if (rf == null || rf.isDisposed()) {
+                    if (rf == null) {
                         // KCR: debug
                         if (PrismSettings.verbose) {
                             System.err.println("KCR: PPSRenderer::validate -- device still NOTREADY");
@@ -114,8 +114,17 @@ public class PPSRenderer extends PrRenderer {
                         System.err.println("KCR: PPSRenderer::validate -- device has been disposed");
                     }
 
+                    // This case happens if the ResourceFactory has already been
+                    // disposed the first time we try to validate it, meaning
+                    // this Renderer was never in the "OK" state. As a result,
+                    // we have never added this Renderer as an RF listener, so
+                    // we need to explicitly dispose.
+                    dispose();
+
                     return false;
                 }
+
+                // Device is now ready, transition to OK.
                 rf.addFactoryListener(listener);
                 needsSWDispMap = !rf.isFormatSupported(PixelFormat.FLOAT_XYZW);
                 synchronized (this) {

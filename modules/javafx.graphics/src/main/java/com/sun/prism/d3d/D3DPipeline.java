@@ -79,6 +79,10 @@ public final class D3DPipeline extends GraphicsPipeline {
             d3dInitialized = true;
             theInstance = new D3DPipeline();
             factories = new D3DResourceFactory[nGetAdapterCount()];
+
+            // KCR: debug
+            System.err.println("D3DPipeline initialization complete : adapterCount = "
+                    + nGetAdapterCount());
         }
     }
 
@@ -216,6 +220,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         if (nGetAdapterCount() == 0) {
             throw new InternalError("This should never happen");
         }
+        System.err.println("    success: adapterCount = " + nGetAdapterCount());
 
         d3dInitialized = true;
         factories = new D3DResourceFactory[nGetAdapterCount()];

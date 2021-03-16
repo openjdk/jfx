@@ -37,8 +37,6 @@ class D3DMeshView extends BaseMeshView {
 
     static int count = 0;
 
-    // KCR: FIXME: need to dispose this object when context/resourceFactory is disposed
-
     private final D3DContext context;
     private final long nativeHandle;
 
@@ -97,6 +95,11 @@ class D3DMeshView extends BaseMeshView {
         material.lockTextureMaps();
         context.renderMeshView(nativeHandle, g);
         material.unlockTextureMaps();
+    }
+
+    @Override
+    public boolean isValid() {
+        return !context.isDisposed();
     }
 
     @Override
