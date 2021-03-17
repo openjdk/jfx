@@ -235,9 +235,8 @@ jobs:
       ANT_DIR: "apache-ant-1.10.5"
       ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
       ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
-      # FIXME: hard-code the location and version of VS 2019 for now
+      # FIXME: hard-code the location of VS 2019 for now
       VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build"
-      MSVC_VER: "14.28.29333"
 
     steps:
       - name: Checkout the source
@@ -283,7 +282,10 @@ jobs:
       - name: Setup environment
         run: |
           echo "VS150COMNTOOLS=$env:VS150COMNTOOLS"
-          echo "MSVC_VER=$env:MSVC_VER"
+          echo "dir ...\VC\Tools\MSVC"
+          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          echo "dir VS150COMNTOOLS"
+          dir "$env:VS150COMNTOOLS"
           # echo "dir ...\VC\Tools\MSVC"
           # dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
           # echo "dir VS150COMNTOOLS"
