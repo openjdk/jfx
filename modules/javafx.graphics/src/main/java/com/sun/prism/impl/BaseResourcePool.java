@@ -460,8 +460,15 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
                 cur = cur.next;
             }
         }
-        if(PrismSettings.verbose) {
-            System.err.println("unmanaged resource freed from pool " + this);
+
+        // If we get here, the resource is not currently being managed. This
+        // can happen when the Disposer processes its queue of disposed records
+        // and encounters a record that was previously reclaimed via
+        // cleanup() or freeDisposalRequestedAndCheckResources(), when the
+        // device is lost or removed. We can safely ignore it.
+        if (PrismSettings.poolDebug) {
+            System.err.println("Warning: unmanaged resource " + freed +
+                    " freed from pool: " + this);
         }
     }
 

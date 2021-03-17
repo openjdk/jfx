@@ -35,7 +35,6 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGDefaultCamera;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
-import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.MeshView;
 import com.sun.prism.RTTexture;
 import com.sun.prism.RenderTarget;
@@ -131,8 +130,8 @@ class D3DContext extends BaseShaderContext {
      */
     static void validate(int res) {
         if (PrismSettings.verbose && FAILED(res)) {
-            System.out.println("D3D hresult failed :" + hResultToString(res));
-            new Exception("Stack trace").printStackTrace(System.out);
+            System.err.println("D3D hresult failed :" + hResultToString(res));
+            new Exception("Stack trace").printStackTrace(System.err);
         }
     }
 
@@ -146,18 +145,41 @@ class D3DContext extends BaseShaderContext {
     /**
      * Validates the device, sets the context lost
      * status if necessary, and tries to restore the context if needed.
+     * If the device has been removed, then it reinitializes the device, which
+     * disposes the existing factories and contexts.
      */
     boolean testLostStateAndReset() {
+        if (isDisposed()) {
+            return false;
+        }
+
         int hr = D3DResourceFactory.nTestCooperativeLevel(pContext);
+
+        if (PrismSettings.verbose && hr != D3D_OK) {
+            System.err.print("D3DContext::testLostStateAndReset : ");
+            switch (hr) {
+                case D3D_OK:
+                    System.err.println("D3D_OK");
+                    break;
+                case D3DERR_DEVICELOST:
+                    System.err.println("D3DERR_DEVICELOST");
+                    break;
+                case D3DERR_DEVICEREMOVED:
+                    System.err.println("D3DERR_DEVICEREMOVED");
+                    break;
+                case D3DERR_DEVICENOTRESET:
+                    System.err.println("D3DERR_DEVICENOTRESET");
+                    break;
+                case E_FAIL:
+                    System.err.println("E_FAIL");
+                    break;
+                default:
+                    System.err.println(String.format("Unknown D3D error 0x%x", hr));
+            }
+        }
 
         if (hr == D3DERR_DEVICELOST) {
             setLost();
-        }
-
-        if (hr == D3DERR_DEVICEREMOVED) {
-            setLost();
-            GraphicsPipeline.getPipeline().dispose();
-            GraphicsPipeline.getPipeline().createPipeline();
         }
 
         if (hr == D3DERR_DEVICENOTRESET) {
@@ -177,6 +199,14 @@ class D3DContext extends BaseShaderContext {
             }
         }
 
+        if (hr == D3DERR_DEVICEREMOVED) {
+            setLost();
+
+            // Reinitialize the D3DPipeline. This will dispose and recreate
+            // the resource factory and context for each adapter.
+            D3DPipeline.getInstance().reinitialize();
+        }
+
         return !FAILED(hr);
     }
 
@@ -192,6 +222,14 @@ class D3DContext extends BaseShaderContext {
         }
 
         return !FAILED(res);
+    }
+
+    @Override
+    public void dispose() {
+        disposeLCDBuffer();
+        state = null;
+
+        super.dispose();
     }
 
     /**
@@ -211,6 +249,8 @@ class D3DContext extends BaseShaderContext {
     @Override
     protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
+        if (checkDisposed()) return null;
+
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
         int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isMSAA());
         validate(res);
@@ -455,6 +495,8 @@ class D3DContext extends BaseShaderContext {
     private static native boolean nIsRTTVolatile(long contextHandle);
 
     public boolean isRTTVolatile() {
+        if (checkDisposed()) return false;
+
         return nIsRTTVolatile(pContext);
     }
 
@@ -477,15 +519,21 @@ class D3DContext extends BaseShaderContext {
 
     @Override
     public void setDeviceParametersFor2D() {
+        if (checkDisposed()) return;
+
         nSetDeviceParametersFor2D(pContext);
     }
 
     @Override
     protected void setDeviceParametersFor3D() {
+        if (checkDisposed()) return;
+
         nSetDeviceParametersFor3D(pContext);
     }
 
     long createD3DMesh() {
+        if (checkDisposed()) return 0;
+
         return nCreateD3DMesh(pContext);
     }
 

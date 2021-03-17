@@ -54,6 +54,11 @@ class D3DMesh extends BaseMesh {
     }
 
     @Override
+    public boolean isValid() {
+        return !context.isDisposed();
+    }
+
+    @Override
     public void dispose() {
         disposerRecord.dispose();
         count--;

@@ -29,14 +29,14 @@ import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
 import com.sun.prism.TextureMap;
-import com.sun.prism.impl.BaseGraphicsResource;
+import com.sun.prism.impl.BasePhongMaterial;
 import com.sun.prism.impl.Disposer;
 import com.sun.javafx.logging.PlatformLogger;
 
 /**
  * TODO: 3D - Need documentation
  */
-class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
+class D3DPhongMaterial extends BasePhongMaterial implements PhongMaterial {
 
     static int count = 0;
 
@@ -116,6 +116,11 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
                 texture.unlock();
             }
         }
+    }
+
+    @Override
+    public boolean isValid() {
+        return !context.isDisposed();
     }
 
     @Override

@@ -1420,8 +1420,17 @@ public final class QuantumToolkit extends Toolkit {
         public double getHeight() { return image.getHeight(); }
         @Override
         public void factoryReset() { dispose(); }
+
         @Override
-        public void factoryReleased() { dispose(); }
+        public void factoryReleased() {
+            dispose();
+
+            // ResourceFactory is being disposed; clear reference to avoid leak
+            if (rf != null) {
+                rf.removeFactoryListener(this);
+                rf = null;
+            }
+        }
     }
 
     @Override public ImageLoader loadPlatformImage(Object platformImage) {
