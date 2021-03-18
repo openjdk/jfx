@@ -88,3 +88,52 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nE
     return answer;
 }
 
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetHandle
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetHandle(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetDepth
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetDepth(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetWidth
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetWidth(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetHeight
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetHeight(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetOffsetX
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetOffsetX(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetOffsetY
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetOffsetY(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetDpi
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetDpi(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetNativeFormat
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetNativeFormat(idx);
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetScale
+(JNIEnv *env, jclass clazz, jint idx)  {
+    return doGetScale(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLPlatform_nGetNumberOfScreens
+(JNIEnv *env, jclass clazz) {
+    return doGetNumberOfScreens();
+}
