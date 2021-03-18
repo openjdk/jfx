@@ -272,4 +272,9 @@ public class ControlAcceleratorSupport {
 
         return null;
     }
+
+    // --- Test method
+    static int testGetListenerMapSize() {
+        return changeListenerMap.size();
+    }
 }
