@@ -158,7 +158,7 @@ class PaintHelper {
         }
 
         // gradientCacheTexture is left permanent and locked, although we still
-        // must check for isSurfaceLost() is the case the device is disposed.
+        // must check for isSurfaceLost() in case the device is disposed.
         // We add a lock here so that the caller can unlock without knowing
         // our inner implementation details.
         gradientCacheTexture.lock();
@@ -171,7 +171,7 @@ class PaintHelper {
         }
 
         // gtexCacheTexture is left permanent and locked, although we still
-        // must check for isSurfaceLost() is the case the device is disposed.
+        // must check for isSurfaceLost() in case the device is disposed.
         // We add a lock here so that the caller can unlock without knowing
         // our inner implementation details.
         gtexCacheTexture.lock();

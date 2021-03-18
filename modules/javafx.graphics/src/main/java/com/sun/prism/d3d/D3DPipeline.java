@@ -183,7 +183,7 @@ public final class D3DPipeline extends GraphicsPipeline {
     // Reinitialize pipeline
     void reinitialize() {
         if (PrismSettings.verbose) {
-            System.err.println("D3DPipeline: reinitialize after device lost");
+            System.err.println("D3DPipeline: reinitialize after device was removed");
         }
 
         // Device was removed, reset and reinitialize
