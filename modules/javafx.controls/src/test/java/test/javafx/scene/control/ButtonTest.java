@@ -29,6 +29,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
@@ -544,6 +546,18 @@ public class ButtonTest {
         // This is the acid test. If this fails, then RT-23207 is present.
         assertTrue(greenStops0.equals(greenStops3));
 
+    }
+
+    @Test public void testBaselineOffsetWithResizedButton() {
+        Button button = new Button("foo") {{
+            setSkin(createDefaultSkin());
+        }};
+        button.setPrefHeight(32);
+        button.setAlignment(Pos.BOTTOM_LEFT);
+        button.layout();
+        Node text = button.getChildrenUnmodifiable().get(0);
+
+        assertEquals(text.getLayoutY() + text.getBaselineOffset(), button.getBaselineOffset(), 0.001);
     }
 
 
