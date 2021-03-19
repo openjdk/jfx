@@ -49,7 +49,7 @@ import java.nio.IntBuffer;
 final class RTImage extends PrismImage implements ResourceFactoryListener {
     private RTTexture txt;
     private final int width, height;
-    private WeakReference<ResourceFactory> listenerAdded = null;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
     private ByteBuffer pixelBuffer;
     private float pixelScale;
 
@@ -98,9 +98,9 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     Texture.WrapMode.CLAMP_NOT_NEEDED);
             txt.contentsUseful();
             txt.makePermanent();
-            if (listenerAdded == null || listenerAdded.get() != f) {
+            if (registeredWithFactory == null || registeredWithFactory.get() != f) {
                 f.addFactoryListener(this);
-                listenerAdded = new WeakReference<>(f);
+                registeredWithFactory = new WeakReference<>(f);
             }
         }
         return txt;

@@ -44,7 +44,7 @@ import javafx.scene.transform.Transform;
 
 final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFactoryListener {
     private RTTexture texture;
-    private WeakReference<ResourceFactory> listenerAdded = null;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
     private boolean firstValidate = true;
     private float pixelScale;
 
@@ -114,9 +114,9 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
         if (texture == null) {
             texture = createTexture(width, height);
             texture.contentsUseful();
-            if (listenerAdded == null || listenerAdded.get() != factory) {
+            if (registeredWithFactory == null || registeredWithFactory.get() != factory) {
                 factory.addFactoryListener(this);
-                listenerAdded = new WeakReference<>(factory);
+                registeredWithFactory = new WeakReference<>(factory);
             }
             if (firstValidate) {
                 // this is the very first time validate() is called. We assume

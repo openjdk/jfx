@@ -242,7 +242,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             // If initialization failed, try again
             D3DPipeline.getInstance().reinitialize();
 
-            // If reinitializion failed, return  a null resource factory; we will
+            // If reinitialization failed, return a null resource factory; we will
             // try again the next time this method is called.
             if (!d3dInitialized) {
                 return null;

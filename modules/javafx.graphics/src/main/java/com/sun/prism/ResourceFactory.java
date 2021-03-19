@@ -35,7 +35,7 @@ public interface ResourceFactory extends GraphicsResource {
      * Returns whether this resource factory has been disposed.
      * If this resource factory has been disposed, it is no longer valid and
      * will need to be recreated before any new resources can be created.
-     * Any attempt to create a resource will be ignored will return null.
+     * Any attempt to create a resource will be ignored and will return null.
      *
      * @return true if this resource factory has been disposed.
      */
