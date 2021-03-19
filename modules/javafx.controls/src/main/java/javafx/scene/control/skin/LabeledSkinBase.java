@@ -48,6 +48,7 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -156,6 +157,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new LabeledText(labeled);
+        text.layoutYProperty().addListener(o -> labeled.requestLayout());
 
         updateChildren();
 
@@ -408,24 +410,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        double textBaselineOffset = text.getBaselineOffset();
-        double h = textBaselineOffset;
-        final Labeled labeled = getSkinnable();
-        final Node g = labeled.getGraphic();
-        if (!isIgnoreGraphic()) {
-            ContentDisplay contentDisplay = labeled.getContentDisplay();
-            if (contentDisplay == ContentDisplay.TOP) {
-                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + textBaselineOffset;
-            } else if (contentDisplay == ContentDisplay.LEFT || contentDisplay == RIGHT) {
-                h = textBaselineOffset + (g.prefHeight(-1) - text.prefHeight(-1)) / 2;
-            }
+        if (!isIgnoreText()) {
+            return text.getLayoutY() + text.getBaselineOffset();
         }
 
-        double offset = topInset + h;
-        if (!isIgnoreText()) {
-            offset += topLabelPadding();
-        }
-        return offset;
+        return Region.BASELINE_OFFSET_SAME_AS_HEIGHT;
     }
 
     /**

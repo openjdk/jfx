@@ -779,6 +779,11 @@ public class Text extends Shape {
     }
 
     @Override
+    public boolean isTextBaseline() {
+        return true;
+    }
+
+    @Override
     public final double getBaselineOffset() {
         return baselineOffsetProperty().get();
     }

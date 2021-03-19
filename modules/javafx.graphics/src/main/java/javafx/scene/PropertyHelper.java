@@ -45,4 +45,13 @@ class PropertyHelper {
         return false;
     }
 
+    static int getIntegerProperty(final String propName, final int fallbackValue) {
+        try {
+            return AccessController.doPrivileged((java.security.PrivilegedAction<Integer>) () ->
+                Integer.parseInt(System.getProperty(propName, Integer.toString(fallbackValue))));
+        } catch (Exception any) {
+        }
+        return fallbackValue;
+    }
+
 }

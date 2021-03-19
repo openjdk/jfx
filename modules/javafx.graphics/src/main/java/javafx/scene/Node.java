@@ -3221,6 +3221,16 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * Returns whether the baseline offset reported by this node corresponds to the baseline
+     * of a text node (as compared to the baseline of a non-text node).
+     * Layout containers that manage multiple children will usually prefer to use the baseline
+     * offset of a text-node child to compute their own baseline offset.
+     */
+    public boolean isTextBaseline() {
+        return false;
+    }
+
+    /**
      * Returns the area of this {@code Node} projected onto the
      * physical screen in pixel units.
      * @return the area of this {@code Node} projected onto the physical screen

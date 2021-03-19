@@ -836,6 +836,10 @@ public abstract class Labeled extends Control {
         return builder.toString();
     }
 
+    @Override public boolean isTextBaseline() {
+        return true;
+    }
+
     /* *************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

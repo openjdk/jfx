@@ -80,9 +80,15 @@ public abstract class Parent extends Node {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
-    // If set to true, generate a warning message whenever adding a node to a
-    // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    // If set to true, generate a warning message whenever:
+    // 1. adding a node to a parent if it is currently a child of another parent
+    // 2. the layout limit has been exceeded
+    private static final boolean WARN = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+
+    /**
+     * Limits the number of layout passes in a single call to {@link Parent#layout()}.
+     */
+    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 100);
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -331,13 +337,13 @@ public abstract class Parent extends Node {
                     for (int i = from; i < to; ++i) {
                         Node n = children.get(i);
                         if (n.getParent() != null && n.getParent() != Parent.this) {
-                            if (warnOnAutoMove) {
+                            if (WARN) {
                                 java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
                                 java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
                                 java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
                             }
                             n.getParent().children.remove(n);
-                            if (warnOnAutoMove) {
+                            if (WARN) {
                                 Thread.dumpStack();
                             }
                         }
@@ -1148,12 +1154,16 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * Calculates the baseline offset based on the first managed child. If there
-     * is no such child, returns {@link Node#getBaselineOffset()}.
+     * Calculates the baseline offset based on the first managed child that reports a text-node
+     * baseline (as indicated by {@link Node#isTextBaseline()}), or if there is no such child,
+     * the first managed child that reports a baseline other than BASELINE_OFFSET_SAME_AS_HEIGHT.
+     * If there is no such child, returns {@link Node#getBaselineOffset()}.
      *
      * @return baseline offset
      */
     @Override public double getBaselineOffset() {
+        double baselineOffset = Double.NaN;
+
         for (int i=0, max=children.size(); i<max; i++) {
             final Node child = children.get(i);
             if (child.isManaged()) {
@@ -1161,10 +1171,15 @@ public abstract class Parent extends Node {
                 if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                     continue;
                 }
-                return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
+                if (child.isTextBaseline()) {
+                    return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
+                } else if (Double.isNaN(baselineOffset)) {
+                    baselineOffset = child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
+                }
             }
         }
-        return super.getBaselineOffset();
+
+        return Double.isNaN(baselineOffset) ? super.getBaselineOffset() : baselineOffset;
     }
 
     /**
@@ -1184,41 +1199,52 @@ public abstract class Parent extends Node {
      * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
-        // layoutFlag can be accessed or changed during layout processing.
-        // Hence we need to cache and reset it before performing layout.
-        LayoutFlags flag = layoutFlag;
-        setLayoutFlag(LayoutFlags.CLEAN);
-        switch(flag) {
-            case CLEAN:
-                break;
-            case NEEDS_LAYOUT:
-                if (performingLayout) {
-                    /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
-                     * while doing the layout.
-                     * One example might be an invocation from Group layout bounds recalculation
-                     *  (e.g. during the localToScene/localToParent calculation).
-                     * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
-                     * which is likely what the code would expect.
-                     * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
-                     */
-                    break;
+        int pass = 0;
+        while (layoutFlag != LayoutFlags.CLEAN) {
+            if (pass++ == LAYOUT_LIMIT) {
+                if (WARN) {
+                    System.err.println(
+                        "WARNING layout limit exceeded (current limit: " + LAYOUT_LIMIT + " layout passes)\r\n" +
+                        "    You can change the limit by setting the javafx.sg.layoutLimit system property.");
                 }
-                performingLayout = true;
-                layoutChildren();
-                // Intended fall-through
-            case DIRTY_BRANCH:
-                for (int i = 0, max = children.size(); i < max; i++) {
-                    final Node child = children.get(i);
-                    currentLayoutChild = child;
-                    if (child instanceof Parent) {
-                        ((Parent)child).layout();
-                    } else if (child instanceof SubScene) {
-                        ((SubScene)child).layoutPass();
+                break;
+            }
+
+            // layoutFlag can be accessed or changed during layout processing.
+            // Hence we need to cache and reset it before performing layout.
+            LayoutFlags flag = layoutFlag;
+            setLayoutFlag(LayoutFlags.CLEAN);
+
+            switch (flag) {
+                case NEEDS_LAYOUT:
+                    if (performingLayout) {
+                        /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
+                         * while doing the layout.
+                         * One example might be an invocation from Group layout bounds recalculation
+                         *  (e.g. during the localToScene/localToParent calculation).
+                         * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
+                         * which is likely what the code would expect.
+                         * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
+                         */
+                        break;
                     }
-                }
-                currentLayoutChild = null;
-                performingLayout = false;
-                break;
+                    performingLayout = true;
+                    layoutChildren();
+                    // Intended fall-through
+                case DIRTY_BRANCH:
+                    for (int i = 0, max = children.size(); i < max; i++) {
+                        final Node child = children.get(i);
+                        currentLayoutChild = child;
+                        if (child instanceof Parent) {
+                            ((Parent)child).layout();
+                        } else if (child instanceof SubScene) {
+                            ((SubScene)child).layoutPass();
+                        }
+                    }
+                    currentLayoutChild = null;
+                    performingLayout = false;
+                    break;
+            }
         }
     }
 
