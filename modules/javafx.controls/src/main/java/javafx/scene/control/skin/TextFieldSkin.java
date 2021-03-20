@@ -423,8 +423,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        return textGroup.getLayoutBounds().getMinY() + textGroup.getLayoutY()
-            + textNode.getLayoutBounds().getMinY() + textNode.getLayoutY() + textNode.getBaselineOffset();
+        return topInset + snapSpaceY(textNode.getY());
     }
 
     // Public for behavior
