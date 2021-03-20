@@ -123,7 +123,7 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
                 // full repaint is already happening, so we don't return false
                 firstValidate = false;
             } else {
-                // texture must have been nullified in factoryReset() or factoryReleased.
+                // texture must have been nullified in factoryReset() or factoryReleased().
                 // Backbuffer is lost, so we request full repaint.
                 texture.unlock();
                 return false;
