@@ -217,7 +217,7 @@ class ES2PhongShader {
         shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
         shader.setConstant("lights[" + i + "].range", light.maxRange);
         if (light.isPointLight()) {
-            shader.setConstant("lights[" + i + "].lightDir", 0f, 0f, 1f);
+            shader.setConstant("lights[" + i + "].dir", 0f, 0f, 1f);
             shader.setConstant("lights[" + i + "].cosOuter", -1f); // cos(180)
             shader.setConstant("lights[" + i + "].denom", 2f);     // cos(0) - cos(180)
             shader.setConstant("lights[" + i + "].falloff", 0f);
