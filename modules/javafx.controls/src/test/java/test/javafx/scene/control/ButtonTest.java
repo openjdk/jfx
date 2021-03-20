@@ -554,10 +554,11 @@ public class ButtonTest {
         }};
         button.setPrefHeight(32);
         button.setAlignment(Pos.BOTTOM_LEFT);
-        button.layout();
-        Node text = button.getChildrenUnmodifiable().get(0);
+        show();
+        root.getChildren().add(button);
+        tk.firePulse();
 
-        assertEquals(text.getLayoutY() + text.getBaselineOffset(), button.getBaselineOffset(), 0.001);
+        assertEquals(28, button.getBaselineOffset(), 0.001);
     }
 
 
