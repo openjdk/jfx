@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenTest;
+package attenuation;
 
 import java.util.ArrayList;
 import java.util.List;

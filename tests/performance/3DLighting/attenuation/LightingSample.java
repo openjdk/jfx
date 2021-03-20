@@ -23,7 +23,7 @@
  * questions.
  */
 
-package attenTest;
+package attenuation;
 
 import javafx.animation.Animation;
 import javafx.animation.TranslateTransition;
