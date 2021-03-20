@@ -200,7 +200,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
         textNode.setManaged(false);
         textNode.getStyleClass().add("text");
         textNode.fontProperty().bind(control.fontProperty());
-
+        textNode.yProperty().addListener(o -> control.requestLayout());
         textNode.layoutXProperty().bind(textTranslateX);
         textNode.textProperty().bind(new StringBinding() {
             { bind(control.textProperty()); }
@@ -423,7 +423,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
 
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        return topInset + textNode.getBaselineOffset();
+        return textGroup.getLayoutBounds().getMinY() + textGroup.getLayoutY()
+            + textNode.getLayoutBounds().getMinY() + textNode.getLayoutY() + textNode.getBaselineOffset();
     }
 
     // Public for behavior

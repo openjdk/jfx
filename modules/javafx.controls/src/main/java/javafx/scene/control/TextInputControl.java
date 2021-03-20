@@ -447,6 +447,11 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
+    @Override
+    public boolean isTextBaseline() {
+        return true;
+    }
+
     /**
      * Returns a subset of the text input's content.
      *

@@ -411,7 +411,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
         if (!isIgnoreText()) {
-            return text.getLayoutY() + text.getBaselineOffset();
+            return text.getLayoutBounds().getMinY() + text.getLayoutY() + text.getBaselineOffset();
         }
 
         return Region.BASELINE_OFFSET_SAME_AS_HEIGHT;
