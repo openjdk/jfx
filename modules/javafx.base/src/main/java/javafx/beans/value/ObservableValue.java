@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,11 @@
  */
 
 package javafx.beans.value;
+
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -137,4 +142,138 @@ public interface ObservableValue<T> extends Observable {
      * @return The current value
      */
     T getValue();
+
+    /**
+     * Returns an {@link ObservableValue} which holds a mapping of the value
+     * held by this {@code ObservableValue}, and is {@code null} when this
+     * {@code ObservableValue} is {@code null}.
+     *
+     * @param <U> the type of values held by the resulting {@code ObservableValue}
+     * @param mapper a {@link Function} which converts a given value to a new value, cannot be null
+     * @return an {@link ObservableValue} which holds a mapping of the value
+     *     held by this {@code ObservableValue}, and is {@code null} when this
+     *     {@code ObservableValue} is {@code null}, never null
+     */
+    default <U> ObservableValue<U> map(Function<? super T, ? extends U> mapper) {
+        return Bindings.mapping(this, Objects.requireNonNull(mapper));
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which holds a mapping of the value
+     * held by this {@code ObservableValue}, or the value held by
+     * {@code alternativeValue} when this {@code ObservableValue} is
+     * {@code null}.
+     *
+     * @param alternativeValue an alternative value to use when the value held
+     *     by this {@code ObservableValue} is {@code null}, can be null
+     * @return an {@link ObservableValue} which holds a mapping of the value
+     *     held by this {@code ObservableValue}, or the value held by {@code
+     *     alternativeValue} when this {@code ObservableValue} is {@code null},
+     *     never null
+     */
+    default ObservableValue<T> orElse(T alternativeValue) {
+        return orElseGet(() -> alternativeValue);
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which holds a mapping of the value
+     * held by this {@code ObservableValue}, or the value supplied by {@code
+     * supplier} when this {@code ObservableValue} is {@code null}.
+     *
+     * @param supplier a {@link Supplier} to use when the value held by this
+     *     {@code ObservableValue} is {@code null}, cannot be null
+     * @return an {@link ObservableValue} which holds a mapping of the value
+     *     held by this {@code ObservableValue}, or the value supplied by
+     *     {@code supplier} when this {@code ObservableValue} is {@code null},
+     *     never null
+     */
+    default ObservableValue<T> orElseGet(Supplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier);
+
+        return Bindings.nullableMapping(this, v -> v == null ? supplier.get() : v);
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which holds the value in the {@code
+     * ObservableValue} given by applying {@code mapper} on the value of this
+     * {@code ObservableValue}, and is {@code null} when this
+     * {@code ObservableValue} is {@code null}.<p>
+     *
+     * Returning {@code null} from {@code mapper} will result in an
+     * {@code ObservableValue} which holds {@code null}.
+     *
+     * @param <U> the type of values held by the resulting {@code ObservableValue}
+     * @param mapper a {@link Function} which converts a given value to an
+     *     {@code ObservableValue}, cannot be null
+     * @return an {@link ObservableValue} which holds the value in the
+     *     {@code ObservableValue} given by applying {@code mapper} on the value
+     *     of this {@code ObservableValue}, and is {@code null} when this
+     *     {@code ObservableValue} is {@code null}, never null
+     */
+    default <U> ObservableValue<U> flatMap(Function<? super T, ? extends ObservableValue<? extends U>> mapper) {
+        return Bindings.flatMapping(this, Objects.requireNonNull(mapper));
+    }
+
+    /**
+     * Returns an {@link ObservableValue} which holds the value in this
+     * {@code ObservableValue} whenever the given {@code condition} evaluates to
+     * {@code true}, otherwise holds the value held by this {@code ObservableValue}
+     * when {@code condition} became {@code false}.<p>
+     *
+     * The returned {@code ObservableValue} only observes this
+     * {@code ObservableValue} when the given {@code condition} evaluates to
+     * {@code true}. This allows the returned {@code ObservableValue} to be
+     * garbage collected if not otherwise strongly referenced when
+     * {@code condition} becomes {@code false}.<p>
+     *
+     * Returning {@code null} from the given {@code condition} is treated the
+     * same as returning {@code false}.
+     *
+     * @param condition a boolean {@code ObservableValue}, cannot be null
+     * @return an {@link ObservableValue} which holds the value in this
+     *     {@code ObservableValue} whenever the given {@code condition}
+     *     evaluates to {@code true}, otherwise holds the value held by this
+     *     {@code ObservableValue} when {@code condition} became {@code false},
+     *     never null
+     */
+    default ObservableValue<T> conditionOn(ObservableValue<Boolean> condition) {
+        return Bindings.conditional(this, condition);
+    }
+
+    /**
+     * Creates a {@link Subscription} on this {@link ObservableValue} which
+     * immediately provides its current value to the given {@code subscriber},
+     * followed by any subsequent changes in value.
+     *
+     * @param subscriber a {@link Consumer} to supply with the values of this
+     *     {@link ObservableValue}, cannot be null
+     * @return a {@link Subscription} which can be used to cancel this
+     *     subscription, never null
+     */
+    default Subscription subscribe(Consumer<? super T> subscriber) {
+        ChangeListener<T> listener = (obs, old, current) -> subscriber.accept(current);
+
+        subscriber.accept(getValue());  // eagerly send current value
+        addListener(listener);
+
+        return () -> removeListener(listener);
+    }
+
+    /**
+     * Creates a {@link Subscription} on this {@link ObservableValue} which
+     * calls the given {@code runnable} whenever this {@code ObservableValue}
+     * becomes invalid.
+     *
+     * @param runnable a {@link Runnable} to call whenever this
+     *     {@link ObservableValue} becomes invalid, cannot be null
+     * @return a {@link Subscription} which can be used to cancel this
+     *     subscription, never null
+     */
+    default Subscription subscribeInvalidations(Runnable runnable) {
+        InvalidationListener listener = obs -> runnable.run();
+
+        addListener(listener);
+
+        return () -> removeListener(listener);
+    }
 }
