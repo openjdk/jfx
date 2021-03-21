@@ -32,9 +32,7 @@ public class InitializeJavaFXLaunch2Test extends InitializeJavaFXLaunchBase {
 
     @BeforeClass
     public static void initialize() throws Exception {
-        System.out.println("Calling Startup!");
         InitializeJavaFXLaunchBase.initializeApplicationLaunch();
-        System.out.println("Called Startup!");
     }
 
     @Test (timeout = 15000)

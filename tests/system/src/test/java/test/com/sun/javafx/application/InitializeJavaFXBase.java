@@ -32,38 +32,29 @@ import test.util.Util;
 
 public class InitializeJavaFXBase {
 
-
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            System.out.println("start called!");
         }
     }
 
     public void doTestInitializeThenLaunchInFX() throws Exception {
         Util.runAndWait(() ->{
             try {
-                System.out.println("Calling launch!");
                 Application.launch(TestApp.class);
-                System.out.println("Finished launch!");
                 Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
             } catch (IllegalStateException e) {
                 // This Exception is what we expect!
-                System.out.println("Works!");
             }
         });
     }
 
     public void doTestInitializeThenSecondLaunch() throws Exception {
         try {
-            System.out.println("Calling launch!");
             Application.launch(TestApp.class);
-            System.out.println("Finished launch!");
             Assert.fail("Error: No Exception was thrown - expected IllegalStateException");
-            throw new Exception();
         } catch (IllegalStateException e) {
             // This Exception is what we expect!
-            System.out.println("Works!");
         }
     }
 }
