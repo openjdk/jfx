@@ -36,7 +36,7 @@ public class InitializeJavaFXLaunch2Test extends InitializeJavaFXLaunchBase {
     }
 
     @Test (timeout = 15000)
-    public void testStartupThenLaunch() throws Exception {
+    public void testLaunchThenLaunch() throws Exception {
         doTestInitializeThenSecondLaunch();
     }
 }
