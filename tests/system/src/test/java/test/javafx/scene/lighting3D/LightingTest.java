@@ -231,7 +231,7 @@ public class LightingTest {
     }
 
     private static double calculateAttenuationFactor(double dist) {
-        return 1 / (LIGHT.getConstantAttenuation() + LIGHT.getLinearAttenuation() * dist 
+        return 1 / (LIGHT.getConstantAttenuation() + LIGHT.getLinearAttenuation() * dist
                       + LIGHT.getQuadraticAttenuation() * dist * dist);
     }
 
