@@ -41,51 +41,55 @@ import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
 
 
 public class StyleMemoryLeakTest {
 
-    static CountDownLatch startupLatch;
-    static Stage stage;
-    static Button toBeRemoved;
-    static Group root;
-
-    public static class TestApp extends Application {
-
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            stage = primaryStage;
-            toBeRemoved = new Button();
-            root = new Group();
-            root.getChildren().add(toBeRemoved);
-            stage.setScene(new Scene(root));
-            stage.setOnShown(l -> {
-                Platform.runLater(() -> startupLatch.countDown());
-            });
-            stage.show();
-        }
-    }
-
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(StyleMemoryLeakTest.TestApp.class, (String[])null)).start();
+        CountDownLatch startupLatch = new CountDownLatch(1);
+        Platform.startup(() -> {
+            Platform.setImplicitExit(false);
+            startupLatch.countDown();
+        });
         assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
     public void testRootNodeMemoryLeak() throws Exception {
-        Util.runAndWait(() -> {
-            root.getChildren().clear();
-            stage.hide();
-        });
         JMemoryBuddy.memoryTest((checker) -> {
-            checker.assertCollectable(stage);
+            CountDownLatch showingLatch = new CountDownLatch(1);
+
+            Button toBeRemoved = new Button();
+            Group root = new Group();
+            AtomicReference<Stage> stage = new AtomicReference<>();
+
+            Util.runAndWait(() -> {
+                stage.set(new Stage());
+                stage.get().setOnShown(l -> {
+                    Platform.runLater(() -> showingLatch.countDown());
+                });
+                stage.get().setScene(new Scene(root));
+                stage.get().show();
+            });
+
+            try {
+                assertTrue("Timeout waiting test stage", showingLatch.await(15, TimeUnit.SECONDS));
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            Util.runAndWait(() -> {
+                root.getChildren().clear();
+                stage.get().hide();
+            });
+
+            checker.assertCollectable(stage.get());
             checker.setAsReferenced(toBeRemoved);
-            stage = null;
-            root = null;
         });
     }
 
