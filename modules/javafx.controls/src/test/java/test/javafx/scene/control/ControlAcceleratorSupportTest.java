@@ -34,17 +34,24 @@ import com.sun.javafx.scene.control.ControlAcceleratorSupportShim;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 import org.junit.Test;
+import org.junit.BeforeClass;
 import static org.junit.Assert.assertEquals;
 
 public class ControlAcceleratorSupportTest {
+    private static int numListeners;
 
-    @Test
-    public void sanityTestListenerMapShouldBeEmpty() {
-        assertEquals(0, ControlAcceleratorSupportShim.get_ListenerMapSize());
+    @BeforeClass
+    public static void setup() throws Exception {
+        for (int i = 0; i < 4; i++) {
+            System.gc();
+            Thread.sleep(500);
+        }
+        numListeners = ControlAcceleratorSupportShim.get_ListenerMapSize();
     }
 
     @Test
     public void testNumberOfListenersByRemovingAndAddingMenuItems() {
+
         Menu menu1 = new Menu("1");
         MenuItem item11 = new MenuItem("Item 1");
         MenuItem item12 = new MenuItem("Item 2");
@@ -62,19 +69,24 @@ public class ControlAcceleratorSupportTest {
 
         StageLoader sl = new StageLoader(pane);
 
-        assertEquals(4, ControlAcceleratorSupportShim.get_ListenerMapSize());
+        assertEquals(numListeners + 4, ControlAcceleratorSupportShim.get_ListenerMapSize());
 
         menu1.getItems().clear();
-        assertEquals(2, ControlAcceleratorSupportShim.get_ListenerMapSize());
+        assertEquals(numListeners + 2, ControlAcceleratorSupportShim.get_ListenerMapSize());
 
         menu2.getItems().clear();
-        assertEquals(0, ControlAcceleratorSupportShim.get_ListenerMapSize());
+        assertEquals(numListeners + 0, ControlAcceleratorSupportShim.get_ListenerMapSize());
 
         menu1.getItems().addAll(item11, item12);
-        assertEquals(2, ControlAcceleratorSupportShim.get_ListenerMapSize());
+        assertEquals(numListeners + 2, ControlAcceleratorSupportShim.get_ListenerMapSize());
 
         menu2.getItems().addAll(item21, item22);
-        assertEquals(4, ControlAcceleratorSupportShim.get_ListenerMapSize());
+        assertEquals(numListeners + 4, ControlAcceleratorSupportShim.get_ListenerMapSize());
+
+        menu2.getItems().clear();
+        menu1.getItems().clear();
+
+        assertEquals(numListeners + 0, ControlAcceleratorSupportShim.get_ListenerMapSize());
 
         sl.dispose();
     }
