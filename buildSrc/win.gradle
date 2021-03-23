@@ -41,6 +41,10 @@ WIN.modLibDest = "lib"
 
 def CPU_BITS = IS_64 ? "x64" : "x86"
 
+def HOST_ARCH = getWinArch(ext.OS_ARCH)
+def TARGET_ARCH = getWinArch(ext.TARGET_ARCH)
+def IS_CROSS = HOST_ARCH != TARGET_ARCH
+
 setupTools("windows_tools",
     { propFile ->
         if (project.hasProperty('setupWinTools')) {
@@ -53,8 +57,8 @@ setupTools("windows_tools",
                 environment([
                         "WINSDKPATH" : winsdkDir == null ? "" : winsdkDir,
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
-                        "VCARCH"     : IS_64 ? "amd64" : "x86",
-                        "SDKARCH"    : IS_64 ? "/x64" : "/x86",
+                        "VCARCH"     : IS_CROSS ? "${HOST_ARCH}_${TARGET_ARCH}" : TARGET_ARCH,
+                        "SDKARCH"    : "/$TARGET_ARCH",
                 ]);
                 commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
@@ -147,7 +151,7 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
 def msvcVer = System.getenv("MSVC_VER")
 def msvcBinDir = ""
 if (hasProperty('toolchainDir')) {
-    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$CPU_BITS"
+    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$TARGET_ARCH"
 } else if (winVsVer == 150) {
     def msvcInstallDir = ""
     if (msvcVer) {
@@ -155,7 +159,7 @@ if (hasProperty('toolchainDir')) {
     } else {
         msvcInstallDir = "$WINDOWS_VS_VC_TOOLS_INSTALL_DIR"
     }
-    msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$CPU_BITS"
+    msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$TARGET_ARCH"
 } else if (winVsVer <= 120) {
     msvcBinDir = (IS_64
                       ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
@@ -165,17 +169,20 @@ def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_STATIC_BUILD ? (IS_COMPILE_PARFAIT ? "lib.exe" : cygpath("$msvcBinDir/lib.exe")) : (IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe"))
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
 if (WINDOWS_VS_VER != "100") {
-    winSdkBinDir += "/$CPU_BITS"
+    winSdkBinDir += "/$TARGET_ARCH"
 }
 
 if (!file(cygpath("$winSdkBinDir/RC.Exe")).exists()) {
     winSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION"
     if (WINDOWS_VS_VER != "100") {
-        winSdkBinDir += "/$CPU_BITS"
+        winSdkBinDir += "/$TARGET_ARCH"
     }
 }
 
 ext.RC = cygpath("$winSdkBinDir/rc.exe")
+// Use rc from host system if it is not possible to run it from target system
+def hostWinSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION/$HOST_ARCH"
+ext.RC = !isExecutable(RC) ? cygpath("$hostWinSdkBinDir/rc.exe") : RC
 def rcCompiler = RC
 ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
 
@@ -186,6 +193,9 @@ if (!file(FXC).exists()) {
     ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 }
 
+// Use fxc from host system if it is not possible to run it from target system
+ext.FXC = !isExecutable(FXC) ? cygpath("$hostWinSdkBinDir/fxc.exe") : FXC
+
 ext.MC = cygpath("$winSdkBinDir/mt.exe")
 
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
@@ -193,17 +203,17 @@ if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + F
 
 def msvcRedstDir
 if (hasProperty('toolchainDir')) {
-    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/$CPU_BITS"
+    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/$TARGET_ARCH"
 } else {
     def msvcRedistVer = System.getenv("MSVC_REDIST_VER")
     if (msvcRedistVer) {
-        msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$CPU_BITS"
+        msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$TARGET_ARCH"
     } else {
-        msvcRedstDir = "$WINDOWS_VS_VC_TOOLS_REDIST_DIR/$CPU_BITS"
+        msvcRedstDir = "$WINDOWS_VS_VC_TOOLS_REDIST_DIR/$TARGET_ARCH"
     }
 }
 
-def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$CPU_BITS"
+def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$TARGET_ARCH"
 
 def WINDOWS_DLL_VER = WINDOWS_VS_VER
 
@@ -452,3 +462,20 @@ WIN.webkit.linker = linker
 WIN.webkit.rcCompiler = rcCompiler
 WIN.webkit.rcSource = defaultRcSource
 WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();
+
+String getWinArch(String arch) {
+    switch (arch) {
+        case "aarch64" : return "arm64"
+        case "amd64" : return "x64"
+        default: return arch
+    }
+}
+
+boolean isExecutable(String file) {
+    try {
+        Runtime.runtime.exec(file)
+        return true
+    } catch (IOException e) {
+        return false
+    }
+}

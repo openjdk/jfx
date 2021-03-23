@@ -2202,7 +2202,9 @@ project(":graphics") {
     addNative(project, "prismSW")
     addNative(project, "font")
     addNative(project, "iio")
-    addNative(project, "prismES2")
+    if (IS_INCLUDE_ES2) {
+        addNative(project, "prismES2")
+    }
 
     if (IS_COMPILE_PANGO) {
         addNative(project, "fontFreetype")
