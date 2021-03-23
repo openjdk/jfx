@@ -138,5 +138,7 @@ public abstract class WCGraphicsContext {
 
     public abstract void flush();
 
+    public abstract boolean isValid();
+
     public abstract void dispose();
 }
