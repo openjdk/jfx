@@ -325,6 +325,7 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override void indexChanged(int oldIndex, int newIndex) {
         super.indexChanged(oldIndex, newIndex);
 
+        updateEditing();
         if (isEditing() && newIndex == oldIndex) {
             // no-op
             // Fix for RT-31165 - if we (needlessly) update the index whilst the

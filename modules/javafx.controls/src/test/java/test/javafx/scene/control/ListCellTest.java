@@ -833,5 +833,15 @@ public class ListCellTest {
                 cell.maxHeight(-1), 1);
     }
 
+    @Test
+    public void testChangeIndexWhileEditing_jdk_8264127() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(1);
+        list.edit(1);
+        cell.updateIndex(0);
+        assertTrue(!cell.isEditing());
+    }
+
 
 }
