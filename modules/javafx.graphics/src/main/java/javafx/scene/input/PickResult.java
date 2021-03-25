@@ -203,6 +203,7 @@ public class PickResult {
         if (getIntersectedTexCoord() != null) {
                 sb.append(", texCoord = ").append(getIntersectedTexCoord());
         }
+        sb.append("]");
         return sb.toString();
     }
 }
