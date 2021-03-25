@@ -246,8 +246,7 @@ static jint getJavaCodeForASCII(UniChar ascii)
     return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
 };
 
-static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short keyCode,
-                                  BOOL shifted, BOOL forAccelerator,
+static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short keyCode, UInt32 modifiers,
                                   UniChar* buffer, UniCharCount bufferSize)
 {
     CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty(keyboard,
@@ -256,24 +255,11 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
         return 0;
     const UCKeyboardLayout *layout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
 
-    UInt32 modifierMask = 0;
-    if (shifted)
-        modifierMask |= (1 << (shiftKeyBit - 8));
-
-    // Java key codes are used in accelerator processing so we will try to match them
-    // the same way Apple handles key equivalents e.g. by asking for the Cmd character.
-    // This is necessary on non-ASCII layouts such as Cyrillic or Arabic to ensure the
-    // translation produces an ASCII key. Exactly how this is done is specific to the
-    // keyboard but for non-ASCII keyboards it generally generates some variant of
-    // QWERTY.
-    if (forAccelerator)
-        modifierMask |= (1 << (cmdKeyBit - 8));
-
     UInt32 deadKeyState = 0;
     UniCharCount actualLength = 0;
     OSStatus status = UCKeyTranslate(layout,
                                      keyCode, kUCKeyActionDown,
-                                     modifierMask,
+                                     modifiers >> 8,
                                      LMGetKbdType(),
                                      kUCKeyTranslateNoDeadKeysMask, &deadKeyState,
                                      bufferSize, &actualLength,
@@ -281,6 +267,11 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
     if (status != noErr)
         actualLength = 0;
 
+    // The Unicode Hex layout can yield a string of length 1 consisting of a
+    // code point of 0.
+    if (actualLength == 1 && buffer[0] == 0)
+        actualLength = 0;
+    
     return actualLength;
 }
 
@@ -293,7 +284,18 @@ static BOOL isLetterOrDigit(jint javaKeyCode)
     return NO;
 }
 
-// This is only valid for keys in the area that is sensitive to layout changes.
+// This is only valid for keys in the layout-sensitive area.
+static jint getJavaCodeForMacKeyAndModifiers(TISInputSourceRef keyboard, unsigned short keyCode, UInt32 modifiers)
+{
+    jint result = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+    UniChar unicode[8];
+    UniCharCount length = queryKeyboard(keyboard, keyCode, modifiers, unicode, 8);
+    if (length == 1)
+        result = getJavaCodeForASCII(unicode[0]);
+    return result;
+}
+
+// This is only valid for keys in the layout-sensitive area.
 static jint getJavaCodeForMacKey(unsigned short keyCode)
 {
     jint result = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
@@ -301,24 +303,37 @@ static jint getJavaCodeForMacKey(unsigned short keyCode)
     if (keyboard == NULL)
         return result;
 
-    UniChar unicode[8];
-    UniCharCount length = queryKeyboard(keyboard, keyCode, NO, YES, unicode, 8);
-    if (length == 1)
-        result = getJavaCodeForASCII(unicode[0]);
+    // Java key codes are used in accelerator processing so we will try to match them
+    // the same way Apple handles key equivalents e.g. by asking for the Cmd character.
+    // This is necessary on non-ASCII layouts such as Cyrillic or Arabic to ensure the
+    // translation produces an ASCII key. Exactly how this is done is specific to the
+    // keyboard but for non-ASCII keyboards it generally generates some variant of
+    // QWERTY.
 
-    // If we didn't get a hit try looking at the shifted variant. Even if we did get a
-    // hit we favor digits and letters over punctuation. This brings the French
+    // First just Cmd.
+    result = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, cmdKey);
+
+    // If we didn't get a hit try looking at the Shifted variant. Even if we did get a
+    // hit we favor numerals and letters over punctuation. This brings the French
     // keyboard in line with Windows; the digits are shifted but are still considered
-    // the canonical keycodes.
+    // the canonical key codes.
     if (!isLetterOrDigit(result))
     {
-        length = queryKeyboard(keyboard, keyCode, YES, YES, unicode, 8);
-        if (length == 1)
+        jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, cmdKey | shiftKey);
+        if (isLetterOrDigit(trial))
+            result = trial;
+        else if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+            result = trial;
+
+        // A handful of keyboards (Azeri, Turkmen, and Sami variants) can only access
+        // critical letters like Q by using the Option key in conjunction with Cmd.
+        // In this API the Cmd flag suppresses the Option flag so we ommit Cmd.
+        if (!isLetterOrDigit(result))
         {
-            jint trial = getJavaCodeForASCII(unicode[0]);
-            if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
-                result = trial; // Something is better than nothing
-            else if (isLetterOrDigit(trial))
+            jint trial = getJavaCodeForMacKeyAndModifiers(keyboard, keyCode, optionKey);
+            if (isLetterOrDigit(trial))
+                result = trial;
+            else if (result == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
                 result = trial;
         }
     }
