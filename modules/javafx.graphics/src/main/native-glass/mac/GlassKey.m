@@ -271,7 +271,7 @@ static UniCharCount queryKeyboard(TISInputSourceRef keyboard, unsigned short key
     // code point of 0.
     if (actualLength == 1 && buffer[0] == 0)
         actualLength = 0;
-    
+
     return actualLength;
 }
 
