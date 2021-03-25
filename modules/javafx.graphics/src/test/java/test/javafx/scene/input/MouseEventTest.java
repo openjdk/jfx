@@ -127,6 +127,12 @@ public class MouseEventTest {
 
         assertSame(pickRes, e.getPickResult());
 
+        // Check the String returned by MouseEvent::toString method to ensure
+        // that all of the square brackets are matching.
+        // Note that this will fail if the toString method of any of the
+        // components that make up the MouseEvent returns a String with
+        // mismatched brackets, including the source and target
+        // objects, the PickResult, the picked Node, or the picked Point3D.
         String str = e.toString();
         int bracketCount = 0;
         for (int i = 0; i < str.length(); i++) {
