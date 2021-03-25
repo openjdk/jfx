@@ -41,8 +41,8 @@ class LinkTask extends DefaultTask {
             commandLine(linker);
             if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
                 if (linker.equals("ld")) {
-                    args("-r"); 
-                    args("-o"); 
+                    args("-r");
+                    args("-o");
                 } else {
                     args("rcs");
                 }
