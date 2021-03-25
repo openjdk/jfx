@@ -79,7 +79,7 @@ float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom,
     if (falloff == 0.0 && cosOuter == -1.0) { // point light optimization (cosOuter == -1 is outerAngle == 180)
         return 1.0;
     }
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     if (falloff != 0.0) {
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
@@ -89,20 +89,20 @@ float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom,
 
 float computeSpotlightFactor2(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
     if (falloff != 0.0) {
-        float cosAngle = dot(normalize(lightDir), l);
+        float cosAngle = dot(normalize(-lightDir), l);
         float cutoff = cosAngle - cosOuter;
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
     }
     if (cosOuter == -1.0) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
         return 1.0;
     }
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
 float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     if (falloff != 0.0) {
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);

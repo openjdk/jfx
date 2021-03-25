@@ -79,7 +79,7 @@ float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom,
     if (falloff == 0.0 && cosOuter == -1.0) { // point light optimization (cosOuter == -1 is outerAngle == 180)
         return 1.0;
     }
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     if (falloff != 0.0) {
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
@@ -89,20 +89,20 @@ float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom,
 
 float computeSpotlightFactor2(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
     if (falloff != 0.0) {
-        float cosAngle = dot(normalize(lightDir), l);
+        float cosAngle = dot(normalize(-lightDir), l);
         float cutoff = cosAngle - cosOuter;
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
     }
     if (cosOuter == -1.0) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
         return 1.0;
     }
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
 float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
-    float cosAngle = dot(normalize(lightDir), l);
+    float cosAngle = dot(normalize(-lightDir), l);
     float cutoff = cosAngle - cosOuter;
     if (falloff != 0.0) {
         return pow(clamp(cutoff / denom, 0.0, 1.0), falloff);
@@ -120,7 +120,7 @@ void computeLight(int i, vec3 n, vec3 refl, float specPower, out vec3 d, out vec
     vec3 l = normalize(pos);
 
     vec3 lightDir = lightTangentSpaceDirections[i].xyz;
-    float spotlightFactor = computeSpotlightFactor3(l, lightDir, light.cosOuter, light.denom, light.falloff);
+    float spotlightFactor = computeSpotlightFactor2(l, lightDir, light.cosOuter, light.denom, light.falloff);
 
     float invAttnFactor = light.attn.x + light.attn.y * dist + light.attn.z * dist * dist;
 
