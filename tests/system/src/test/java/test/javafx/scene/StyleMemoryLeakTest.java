@@ -25,11 +25,8 @@
 
 package test.javafx.scene;
 
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -95,8 +92,6 @@ public class StyleMemoryLeakTest {
 
     @AfterClass
     public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Platform.exit();
-        });
+        Platform.exit();
     }
 }
