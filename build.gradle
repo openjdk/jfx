@@ -3853,6 +3853,14 @@ allprojects {
         }
     } // tasks with javaCompile
 
+    // Reproducible archives
+    tasks.withType(AbstractArchiveTask) {
+        if (sourceDateEpoch != null) {
+            preserveFileTimestamps = false
+            reproducibleFileOrder = true
+        }
+    }
+
     // If I am a module....
     if (project.hasProperty('moduleSourcePath') &&
             (project.hasProperty('buildModule') && project.buildModule)) {
@@ -4170,19 +4178,9 @@ compileTargets { t ->
             )
     }
 
-    // FIXME: do we really need the index task for this modular jar?
-    def javafxSwtIndexTask = task("javafxSwtIndex$t.capital") {
-        //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
-        dependsOn(javafxSwtTask)
-
-        doLast() {
-            ant.jar (update: true, index: true, destfile: "${javafxSwtTask.destinationDir}/${javafxSwtTask.archiveName}")
-        }
-    }
-
     def sdkTask = task("sdk$t.capital") {
         group = "Basic"
-        dependsOn(javafxSwtIndexTask)
+        dependsOn(javafxSwtTask)
     }
 
     sdk.dependsOn(sdkTask)
@@ -5050,8 +5048,8 @@ compileTargets { t ->
             dependsOn(buildModuleGraphicsTask) // we copy to the graphics module
 
             if (COMPILE_SWT) {
-                def javafxSwtIndexTask = tasks.getByName("javafxSwtIndex${t.capital}");
-                dependsOn(javafxSwtIndexTask)
+                def javafxSwtTask = tasks.getByName("javafxSwt$t.capital");
+                dependsOn(javafxSwtTask)
                 //enabled = COMPILE_SWT
             }
 

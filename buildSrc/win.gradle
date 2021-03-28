@@ -111,6 +111,8 @@ if (winVsVer >= 120) {
     if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
 }
 
+// Enables reproducible builds when defined
+def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
 
 // Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
@@ -119,6 +121,9 @@ def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
 if (IS_STATIC_BUILD) ccFlags.add("/DSTATIC_BUILD")
+if (sourceDateEpoch != null) {
+    ccFlags.add("/experimental:deterministic")
+}
 
 def linkFlags = ["/nologo"]
 if (!IS_STATIC_BUILD) {
@@ -126,6 +131,9 @@ if (!IS_STATIC_BUILD) {
 }
 if (!IS_64) linkFlags.add("/safeseh");
 if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
+if (sourceDateEpoch != null) {
+    linkFlags.add("/experimental:deterministic")
+}
 
 // Remove C++ static linking if not on VS2010
 if (WINDOWS_VS_VER != "100") {
