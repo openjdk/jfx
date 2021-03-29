@@ -25,8 +25,11 @@
 
 package test.javafx.scene.layout;
 
-import test.javafx.scene.layout.MockBiased;
-import test.javafx.scene.layout.MockRegion;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.scene.Scene;
+import javafx.scene.layout.Region;
+import javafx.stage.Stage;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -782,5 +785,75 @@ public class VBoxTest {
         ParentShim.getChildren(vbox).remove(child2);
         assertEquals(100, vbox.prefWidth(-1), 1e-100);
         assertEquals(100, vbox.prefHeight(-1), 1e-100);
+    }
+
+    /**
+     * Given resizable children, the sum of child heights of a VBox must pixel-snap to the
+     * same value as the height of the VBox itself, independent of render scale.
+     *
+     *   (prefHeight=76.0)
+     * ╔═══════════════════╗
+     * ║  prefHeight=25.3  ║
+     * ╟───────────────────╢
+     * ║  prefHeight=25.3  ║
+     * ╟───────────────────╢
+     * ║  prefHeight=25.4  ║
+     * ╚═══════════════════╝
+     */
+    @Test public void testPixelSnappedContentHeightIsSameAsBoxHeight() {
+        for (testPixelSnapConfig config : new testPixelSnapConfig[] {
+            // For these tests, VBox.prefHeight is specified, so we expect the final height to be exactly that.
+            // Child heights will be adjusted appropriately such that the sum of child widths corresponds to VBox.prefHeight.
+            new testPixelSnapConfig(76.0, 1.0, true),
+            new testPixelSnapConfig(76.0, 1.25, true),
+            new testPixelSnapConfig(76.0, 1.5, true),
+            new testPixelSnapConfig(76.0, 1.75, true),
+            new testPixelSnapConfig(76.0, 2.0, true),
+            new testPixelSnapConfig(76.0, 2.25, true),
+            new testPixelSnapConfig(76.0, 2.5, true),
+
+            // For these tests, VBox.prefHeight is not specified, which means that child heights will not be adjusted.
+            // The final height will snap slightly differently for each configuration.
+            new testPixelSnapConfig(78.0, 1.0, false),
+            new testPixelSnapConfig(76.8, 1.25, false),
+            new testPixelSnapConfig(76.66666666666667, 1.5, false),
+            new testPixelSnapConfig(77.14285714285714, 1.75, false),
+            new testPixelSnapConfig(76.5, 2.0, false),
+            new testPixelSnapConfig(76.44444444444444, 2.25, false),
+            new testPixelSnapConfig(76.8, 2.5, false),
+        }) {
+            Region r1 = new Region(); r1.setPrefHeight(25.3);
+            Region r2 = new Region(); r2.setPrefHeight(25.3);
+            Region r3 = new Region(); r3.setPrefHeight(25.4);
+            VBox box = new VBox(r1, r2, r3);
+            box.setSnapToPixel(true);
+
+            if (config.specifyContainerPrefHeight) {
+                box.setPrefHeight(76.0);
+            }
+
+            SimpleDoubleProperty renderScale = new SimpleDoubleProperty(config.scale);
+            Stage stage = new Stage();
+            stage.renderScaleXProperty().bind(renderScale);
+            stage.renderScaleYProperty().bind(renderScale);
+            stage.setScene(new Scene(new VBox(box)));
+            stage.show();
+
+            assertEquals(config.expectedHeight, box.getHeight(), 10e-14);
+            assertEquals(config.expectedHeight, r1.getHeight() + r2.getHeight() + r3.getHeight(), 10e-14);
+            stage.close();
+        }
+    }
+
+    private static class testPixelSnapConfig {
+        final double expectedHeight;
+        final double scale;
+        final boolean specifyContainerPrefHeight;
+
+        testPixelSnapConfig(double expectedHeight, double scale, boolean specifyContainerPrefHeight) {
+            this.expectedHeight = expectedHeight;
+            this.scale = scale;
+            this.specifyContainerPrefHeight = specifyContainerPrefHeight;
+        }
     }
 }
