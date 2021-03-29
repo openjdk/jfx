@@ -242,32 +242,32 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * Subclasses can invoke this method to register that they want to listen to
-     * invalidation events for the given observable. Registered {@link Consumer} instances
-     * will be executed in the order in which they are registered.
+     * Registers an operation to perform when the given {@code Observable} sends an invalidation event.
+     * Does nothing if observable or operation is {@code null}. 
+     * If multiple operations are registered on the same observable, they will be performed in the 
+     * order in which they were registered.
      *
-     * @param observable the observable to observe for invalidation events
-     * @param consumer the consumer
+     * @param observable the observable to observe for invalidation events, may be {@code null}
+     * @param operation the operation to perform when the observable sends an invalidation event, 
+     *  may be {@code null}
      * @since 17
      */
-    protected final void registerInvalidationListener(Observable observable, Consumer<Observable> consumer) {
+    protected final void registerInvalidationListener(Observable observable, Consumer<Observable> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
-        lambdaChangeListenerHandler.registerInvalidationListener(observable, consumer);
+        lambdaChangeListenerHandler.registerInvalidationListener(observable, operation);
     }
 
     /**
-     * Unregisters all invalidation listeners that have been registered using
+     * Unregisters all operations that have been registered using
      * {@link #registerInvalidationListener(Observable, Consumer)}
-     * for the given observable. The end result is that the given observable is no longer observed by any of the invalidation
-     * listeners, but it may still have additional listeners registered on it through means outside of
-     * {@link #registerInvalidationListener(Observable, Consumer)}.
+     * for the given observable. 
      *
-     * @param observable The observable for which all listeners should be removed.
-     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
-     *      {@link #registerInvalidationListener(Observable, Consumer)}. If no consumers have been registered on this
-     *      property, null will be returned.
+     * @param observable the observable for which the registered operations should be removed, 
+     *  may be {@code null}
+     * @return a composed consumer that performs all removed operations or 
+     *  {@code null} if none has been registered or the observable is {@null}
      * @since 17
      */
     protected final Consumer<Observable> unregisterInvalidationListeners(Observable observable) {
