@@ -29,19 +29,16 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
 
 public class TableRowSkinTest {
 
@@ -64,10 +61,10 @@ public class TableRowSkinTest {
         tableView.getColumns().addAll(firstNameCol, lastNameCol, emailCol, ageCol);
 
         ObservableList<Person> items = FXCollections.observableArrayList(
-                new Person("firstName1", "lastName1","email1@javafx.com",1),
-                new Person("firstName2", "lastName2","email2@javafx.com",2),
-                new Person("firstName3", "lastName3","email3@javafx.com",3),
-                new Person("firstName4", "lastName4","email4@javafx.com",4)
+                new Person("firstName1", "lastName1", "email1@javafx.com", 1),
+                new Person("firstName2", "lastName2", "email2@javafx.com", 2),
+                new Person("firstName3", "lastName3", "email3@javafx.com", 3),
+                new Person("firstName4", "lastName4", "email4@javafx.com", 4)
         );
 
         tableView.setItems(items);
@@ -77,22 +74,24 @@ public class TableRowSkinTest {
 
     @Test
     public void removedColumnsShouldRemoveCorrespondingCellsInRowFixedCellSize() {
-        removedColumnsShouldRemoveCorrespondingCellsInRow(true);
+        tableView.setFixedCellSize(24);
+        removedColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
     @Test
     public void removedColumnsShouldRemoveCorrespondingCellsInRow() {
-        removedColumnsShouldRemoveCorrespondingCellsInRow(false);
+        removedColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
     @Test
     public void invisibleColumnsShouldRemoveCorrespondingCellsInRowFixedCellSize() {
-        invisibleColumnsShouldRemoveCorrespondingCellsInRow(true);
+        tableView.setFixedCellSize(24);
+        invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
     @Test
     public void invisibleColumnsShouldRemoveCorrespondingCellsInRow() {
-        invisibleColumnsShouldRemoveCorrespondingCellsInRow(false);
+        invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl();
     }
 
     @After
@@ -100,9 +99,7 @@ public class TableRowSkinTest {
         stageLoader.dispose();
     }
 
-    private void invisibleColumnsShouldRemoveCorrespondingCellsInRow(boolean useFixedCellSize) {
-        TableRow<Person> tableRow = setRowFactoryVerifyReturnFirstRow(useFixedCellSize);
-
+    private void invisibleColumnsShouldRemoveCorrespondingCellsInRowImpl() {
         // Set the last 2 columns invisible.
         tableView.getColumns().get(tableView.getColumns().size() - 1).setVisible(false);
         tableView.getColumns().get(tableView.getColumns().size() - 2).setVisible(false);
@@ -110,49 +107,19 @@ public class TableRowSkinTest {
         Toolkit.getToolkit().firePulse();
 
         // We set 2 columns to invisible, so the cell count should be decremented by 2 as well.
-        assertEquals(tableView.getColumns().size() - 2, tableRow.getChildrenUnmodifiable().size());
+        assertEquals(tableView.getColumns().size() - 2,
+                VirtualFlowTestUtils.getCell(tableView, 0).getChildrenUnmodifiable().size());
     }
 
-    private void removedColumnsShouldRemoveCorrespondingCellsInRow(boolean useFixedCellSize) {
-        TableRow<Person> tableRow = setRowFactoryVerifyReturnFirstRow(useFixedCellSize);
-
+    private void removedColumnsShouldRemoveCorrespondingCellsInRowImpl() {
         // Remove the last 2 columns.
-        tableView.getColumns().remove(tableView.getColumns().size() - 1);
-        tableView.getColumns().remove(tableView.getColumns().size() - 1);
+        tableView.getColumns().remove(tableView.getColumns().size() - 2, tableView.getColumns().size() - 1);
 
         Toolkit.getToolkit().firePulse();
 
         // We removed 2 columns, so the cell count should be decremented by 2 as well.
-        assertEquals(tableView.getColumns().size(), tableRow.getChildrenUnmodifiable().size());
-    }
-
-    private TableRow<Person> setRowFactoryVerifyReturnFirstRow(boolean useFixedCellSize) {
-        // We save the first table row to check it later.
-        AtomicReference<TableRow<Person>> tableRowRef = new AtomicReference<>();
-
-        if (useFixedCellSize) {
-            tableView.setFixedCellSize(24);
-        }
-
-        tableView.setRowFactory(tableView -> {
-            TableRow<Person> tableRow = new TableRow<>();
-            if (tableRowRef.get() == null) {
-                tableRowRef.set(tableRow);
-            }
-            return tableRow;
-        });
-
-        // Refresh the table so that the rows are recreated.
-        tableView.refresh();
-
-        Toolkit.getToolkit().firePulse();
-
-        TableRow<Person> tableRow = tableRowRef.get();
-        assertNotNull(tableRow);
-
-        // Column count should match the cell count.
-        assertEquals(tableView.getColumns().size(), tableRow.getChildrenUnmodifiable().size());
-        return tableRow;
+        assertEquals(tableView.getColumns().size(),
+                VirtualFlowTestUtils.getCell(tableView, 0).getChildrenUnmodifiable().size());
     }
 
 }
