@@ -242,8 +242,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * Registers an operation to perform when the given {@code Observable} sends an invalidation event.
-     * Does nothing if observable or operation is {@code null}.
+     * Registers an operation to perform when the given {@code observable} sends an invalidation event.
+     * Does nothing if either {@code observable} or {@code operation} are {@code null}.
      * If multiple operations are registered on the same observable, they will be performed in the
      * order in which they were registered.
      *
@@ -262,12 +262,12 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * Unregisters all operations that have been registered using
      * {@link #registerInvalidationListener(Observable, Consumer)}
-     * for the given observable.
+     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}
      *
      * @param observable the observable for which the registered operations should be removed,
      *  may be {@code null}
-     * @return a composed consumer that performs all removed operations or
-     *  {@code null} if none has been registered or the observable is {@null}
+     * @return a composed consumer that performs all removed operations, or
+     *  {@code null} if none have been registered or the observable is {@code null}
      * @since 17
      */
     protected final Consumer<Observable> unregisterInvalidationListeners(Observable observable) {
