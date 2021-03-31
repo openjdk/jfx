@@ -565,12 +565,11 @@ target_link_libraries(data_as_asm icuuc icui18n)
 ###### tools END ####
 
 ###### data BEGIN ####
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/icu/data")
-file(GLOB ICU_DATA_ZIP_FILE "java/data/icudt*l.zip")
+set(ICU_VERSION 64l)
+file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icudt-${ICU_VERSION}.zip")
 
-get_filename_component(ICU_DATA_FILE_NAME ${ICU_DATA_ZIP_FILE} NAME)
 # Get just file name without extension
-string(REGEX REPLACE ".zip" "" ICU_DATA_FILE_NAME ${ICU_DATA_FILE_NAME})
+set(ICU_DATA_FILE_NAME "icudt${ICU_VERSION}")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)

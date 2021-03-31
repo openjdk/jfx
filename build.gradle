@@ -3339,6 +3339,8 @@ project(":web") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.web"
 
+    getConfigurations().create("icu");
+
     sourceSets {
         main
         shims {
@@ -3360,7 +3362,11 @@ project(":web") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
 
+    def icuVersion = "64l"
     dependencies {
+        if (IS_COMPILE_WEBKIT) {
+            icu group: "org.openjfx", name: "icudt", version: icuVersion, ext: "zip"
+        }
         compile project(":base")
         compile project(":graphics")
         compile project(":controls")
@@ -3442,7 +3448,16 @@ project(":web") {
         File nativeBuildDir = new File("${webkitOutputDir}")
         nativeBuildDir.mkdirs()
 
-        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava]) {
+        def getICUFile = task("copyICUFile", type: Copy) {
+            enabled = IS_COMPILE_WEBKIT
+
+            configurations.icu.files.each { f ->
+                from "f.getPath()"
+                into "$webkitOutputDir/$webkitConfig/icu/data"
+            }
+        }
+
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 
