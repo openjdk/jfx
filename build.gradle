@@ -305,7 +305,7 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
 if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_MAC && OS_ARCH != "x86_64") {
+} else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
