@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,7 @@ import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SceneShim;
 import javafx.scene.SubScene;
+import test.util.memory.JMemoryBuddy;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
@@ -976,7 +977,6 @@ public class SceneTest {
 
     @Test public void testNoReferencesRemainToRemovedNodeAfterBeingClicked() {
         StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
-        MouseEventGenerator generator = new MouseEventGenerator();
         TilePane pane = new TilePane();
         VBox vbox = new VBox(pane);
         Scene scene = new Scene(vbox, 300, 200);
@@ -989,13 +989,13 @@ public class SceneTest {
         // Press mouse on TilePane so it gets picked up as a potential node to drag:
         SceneHelper.processMouseEvent(
             scene,
-            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 100, 100)
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 100, 100)
         );
 
         // Release mouse on TilePane to trigger clean up code as there will be no dragging:
         SceneHelper.processMouseEvent(
             scene,
-            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 100, 100)
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 100, 100)
         );
 
         // Remove TilePane, and replace with something else:
@@ -1013,12 +1013,10 @@ public class SceneTest {
 
         toolkit.firePulse();
 
-        // Clear our own reference and call GC to see if the TilePane is now not referenced anywhere:
+        // Clear our own reference and see if the TilePane is now not referenced anywhere:
         pane = null;
 
-        System.gc();
-
         // Verify TilePane was GC'd:
-        assertNull(ref.get());
+        JMemoryBuddy.assertCollectable(ref);
     }
 }
