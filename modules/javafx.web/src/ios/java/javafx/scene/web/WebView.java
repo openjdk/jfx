@@ -26,6 +26,7 @@
 package javafx.scene.web;
 
 
+import javafx.application.Platform;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
@@ -45,6 +46,7 @@ import com.sun.javafx.scene.SceneHelper;
 import com.sun.java.scene.web.WebViewHelper;
 
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.sg.prism.web.NGWebView;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import java.util.ArrayList;
@@ -103,9 +105,11 @@ final public class WebView extends Parent {
 
             @Override
             public void doPickNodeLocal(Node node, PickRay localPickRay, PickResultChooser result) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                // Not supported yet
             }
         });
+
+        System.loadLibrary("webview");
     }
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
@@ -122,6 +126,7 @@ final public class WebView extends Parent {
     private final WebEngine engine;
     // pointer to native WebViewImpl
     private final long handle;
+    private boolean nativeVisible = true;
 
     /**
      * The stage pulse listener registered with the toolkit.
@@ -340,7 +345,7 @@ final public class WebView extends Parent {
 
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                _setVisible(handle, newValue);
+                setNativeVisible(handle, newValue);
             }
         });
     }
@@ -1029,11 +1034,13 @@ final public class WebView extends Parent {
         if (reallyVisible) {
             if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
                 SceneHelper.setAllowPGAccess(true);
-                //getPGWebView().update(); // creates new render queues
+                final NGWebView peer = NodeHelper.getPeer(this);
+                peer.update(); // creates new render queues
                 SceneHelper.setAllowPGAccess(false);
             }
+            setNativeVisible(handle, true);
         } else {
-            _setVisible(handle, false);
+            setNativeVisible(handle, false);
         }
     }
 
@@ -1042,13 +1049,16 @@ final public class WebView extends Parent {
     }
 
     // Node stuff
+    {
+        // To initialize the class helper at the beginning each constructor of this class
+        WebViewHelper.initHelper(this);
+    }
 
     /*
      * Note: This method MUST only be called via its accessor method.
      */
     private NGNode doCreatePeer() {
-        // return new NGWebView();
-        return null; // iOS doesn't need this method.
+        return new NGWebView();
     }
 
     /*
@@ -1072,13 +1082,13 @@ final public class WebView extends Parent {
      * Note: This method MUST only be called via its accessor method.
      */
     private void doUpdatePeer() {
-        //PGWebView peer = getPGWebView();
+        final NGWebView peer = NodeHelper.getPeer(this);
 
         if (NodeHelper.isDirty(this, DirtyBits.NODE_GEOMETRY)) {
-            //peer.resize((float)getWidth(), (float)getHeight());
+            peer.resize((float)getWidth(), (float)getHeight());
         }
         if (NodeHelper.isDirty(this, DirtyBits.WEBVIEW_VIEW)) {
-            //peer.requestRender();
+            peer.requestRender();
         }
     }
 
@@ -1107,21 +1117,34 @@ final public class WebView extends Parent {
         return handle;
     }
 
+    private void setNativeVisible(long handle, boolean v) {
+        if (nativeVisible != v) {
+            nativeVisible = v;
+            _setVisible(handle, v);
+        }
+    }
 
     // native callbacks
     private void notifyLoadStarted() {
-        engine.notifyLoadStarted();
+        checkThreadAndRun(engine::notifyLoadStarted);
     }
     private void notifyLoadFinished(String loc, String content) {
-        engine.notifyLoadFinished(loc, content);
+        checkThreadAndRun(() -> engine.notifyLoadFinished(loc, content));
     }
     private void notifyLoadFailed() {
-        engine.notifyLoadFailed();
+        checkThreadAndRun(engine::notifyLoadFailed);
     }
     private void notifyJavaCall(String arg) {
-        engine.notifyJavaCall(arg);
+        checkThreadAndRun(() -> engine.notifyJavaCall(arg));
     }
 
+    private static void checkThreadAndRun(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
+    }
 
     /* Inits native WebView and returns its pointer in the given array */
     private native void _initWebView(long[] nativeHandle);
