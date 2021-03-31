@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3630,6 +3630,7 @@ public class Scene implements EventTarget {
             currentEventTarget = currentEventTargets.size() > 0
                     ? currentEventTargets.get(0) : null;
             pdrEventTarget.clear();
+            pdrEventTargets.clear();  // clear to remove potentially removed nodes, see JDK-8264330
         }
 
         public void enterFullPDR(EventTarget gestureSource) {

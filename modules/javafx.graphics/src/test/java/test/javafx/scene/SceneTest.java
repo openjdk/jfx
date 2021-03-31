@@ -30,6 +30,7 @@ import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
@@ -53,6 +54,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -970,5 +972,53 @@ public class SceneTest {
         scene.removePostLayoutPulseListener(r);
         SceneShim.scenePulseListener_pulse(scene);
         assertEquals(1, counter.get());
+    }
+
+    @Test public void testNoReferencesRemainToRemovedNodeAfterBeingClicked() {
+        StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        MouseEventGenerator generator = new MouseEventGenerator();
+        TilePane pane = new TilePane();
+        VBox vbox = new VBox(pane);
+        Scene scene = new Scene(vbox, 300, 200);
+        WeakReference<TilePane> ref = new WeakReference<>(pane);
+
+        pane.setMinSize(1000, 1000);  // ensure mouse click will hit this node
+
+        stage.setScene(scene);
+
+        // Press mouse on TilePane so it gets picked up as a potential node to drag:
+        SceneHelper.processMouseEvent(
+            scene,
+            generator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 100, 100)
+        );
+
+        // Release mouse on TilePane to trigger clean up code as there will be no dragging:
+        SceneHelper.processMouseEvent(
+            scene,
+            generator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 100, 100)
+        );
+
+        // Remove TilePane, and replace with something else:
+        vbox.getChildren().setAll(new StackPane());
+
+        // Generate a MOUSE_EXITED event for the removed node and a pulse as otherwise many unrelated Scene references
+        // hang around to the removed node:
+        SceneHelper.processMouseEvent(
+                scene,
+                new MouseEvent(
+                        MouseEvent.MOUSE_EXITED, 100, 100, 100, 100, MouseButton.NONE, 0, false, false, false,
+                        false, false, false, false, false, false, true, null
+                )
+        );
+
+        toolkit.firePulse();
+
+        // Clear our own reference and call GC to see if the TilePane is now not referenced anywhere:
+        pane = null;
+
+        System.gc();
+
+        // Verify TilePane was GC'd:
+        assertNull(ref.get());
     }
 }
