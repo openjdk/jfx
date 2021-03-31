@@ -548,7 +548,7 @@ public abstract class TableRowSkinBase<T,
             for (Node cell : getChildren()) {
                 if (!(cell instanceof IndexedCell)) continue;
                 TableColumnBase<T, ?> tableColumn = getTableColumn((R) cell);
-                if (!getVisibleLeafColumns().contains(tableColumn) || !tableColumn.isVisible()) {
+                if (!getVisibleLeafColumns().contains(tableColumn)) {
                     toRemove.add(cell);
                 }
             }

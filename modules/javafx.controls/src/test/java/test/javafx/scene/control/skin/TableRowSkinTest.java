@@ -38,7 +38,7 @@ import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 public class TableRowSkinTest {
 
@@ -113,7 +113,7 @@ public class TableRowSkinTest {
 
     private void removedColumnsShouldRemoveCorrespondingCellsInRowImpl() {
         // Remove the last 2 columns.
-        tableView.getColumns().remove(tableView.getColumns().size() - 2, tableView.getColumns().size() - 1);
+        tableView.getColumns().remove(tableView.getColumns().size() - 1, tableView.getColumns().size());
 
         Toolkit.getToolkit().firePulse();
 
