@@ -28,7 +28,7 @@ SYSTEM_LIBS = Ws2_32.lib \
               shell32.lib \
               advapi32.lib \
               ole32.lib \
-	      Winmm.lib
+              Winmm.lib
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" \
@@ -45,6 +45,11 @@ ifeq ($(ARCH), x32)
     LDFLAGS += -safeseh -MACHINE:x86
 else
     LDFLAGS += -MACHINE:x64
+endif
+
+# Enables reproducible builds when defined
+ifdef SOURCE_DATE_EPOCH
+    LDFLAGS += -experimental:deterministic
 endif
 
 LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))

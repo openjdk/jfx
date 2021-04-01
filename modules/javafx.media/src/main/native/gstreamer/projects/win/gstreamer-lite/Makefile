@@ -45,6 +45,11 @@ else
     LDFLAGS += -MACHINE:x64
 endif
 
+# Enables reproducible builds when defined
+ifdef SOURCE_DATE_EPOCH
+    LDFLAGS += -experimental:deterministic
+endif
+
 LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))
 
 .PHONY: default $(MODULES) list
