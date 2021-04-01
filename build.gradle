@@ -2089,6 +2089,7 @@ project(":graphics") {
         stubCompile group: "junit", name: "junit", version: "4.8.2"
 
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
+        testCompile project(":base").sourceSets.test.output
         compile project(':base')
     }
 
