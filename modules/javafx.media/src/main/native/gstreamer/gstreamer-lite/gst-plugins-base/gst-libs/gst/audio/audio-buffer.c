@@ -22,6 +22,10 @@
 #  include "config.h"
 #endif
 
+#ifdef GSTREAMER_LITE
+#include <string.h>
+#endif // GSTREAMER_LITE
+
 #include "audio-buffer.h"
 
 

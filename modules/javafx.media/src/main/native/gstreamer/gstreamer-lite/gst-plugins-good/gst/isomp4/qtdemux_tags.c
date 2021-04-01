@@ -34,6 +34,10 @@
 #endif
 
 #include <stdio.h>
+#ifdef GSTREAMER_LITE
+#include <string.h>
+#endif // GSTREAMER_LITE
+
 #include <gst/base/gstbytereader.h>
 #include <gst/tag/tag.h>
 
