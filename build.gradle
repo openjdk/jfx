@@ -3451,10 +3451,8 @@ project(":web") {
         def getICUFile = task("copyICUFile", type: Copy) {
             enabled = IS_COMPILE_WEBKIT
 
-            configurations.icu.files.each { f ->
-                from "f.getPath()"
-                into "$webkitOutputDir/$webkitConfig/icu/data"
-            }
+            from configurations.icu.files
+            into "$webkitOutputDir/$webkitConfig/icu/data"
         }
 
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
