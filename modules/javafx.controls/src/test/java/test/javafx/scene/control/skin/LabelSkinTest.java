@@ -2091,6 +2091,15 @@ public class LabelSkinTest {
     }
 
     @Test
+    public void escapedMnemonicSymbolIsNotProcessedWhenMnemonicParsingIsDisabled() {
+        label.setMnemonicParsing(false);
+        label.setText("foo __bar");
+        label.autosize();
+        skin.updateDisplayedText();
+        assertEquals("foo __bar", LabelSkinBaseShim.getText(label).getText());
+    }
+
+    @Test
     public void underscoreNotFollowedByAlphabeticCharIsNotAMnemonic() {
         label.setMnemonicParsing(true);
         label.setText("foo_ bar");
