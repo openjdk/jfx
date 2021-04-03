@@ -856,7 +856,6 @@ public class ListCellTest {
         cell.updateIndex(0);
         assertTrue(cell.isEditing());
         assertEquals("Should still be editing 0", list.getEditingIndex(), 0);
-        assertTrue(false);
     }
 
 }
