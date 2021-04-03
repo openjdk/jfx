@@ -35,9 +35,12 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ListView.EditEvent;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
+import java.util.List;
+import java.util.ArrayList;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -841,7 +844,19 @@ public class ListCellTest {
         list.edit(1);
         cell.updateIndex(0);
         assertTrue(!cell.isEditing());
+        assertEquals("Should still be editing 1", list.getEditingIndex(), 1);
     }
 
+    @Test
+    public void testChangeIndexWhileNotEditing_jdk_8264127() {
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(1);
+        list.edit(0);
+        cell.updateIndex(0);
+        assertTrue(cell.isEditing());
+        assertEquals("Should still be editing 0", list.getEditingIndex(), 0);
+        assertTrue(false);
+    }
 
 }
