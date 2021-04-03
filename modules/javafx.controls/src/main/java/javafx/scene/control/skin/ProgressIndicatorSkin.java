@@ -742,7 +742,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
 
                 ((Timeline)indeterminateTransition).getKeyFrames().setAll(keyFrames);
-                indeterminateTransition.playFromStart();
+
+                if(NodeHelper.isTreeShowing(control)) {
+                    indeterminateTransition.playFromStart();
+                }
             } else {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.stop();

@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Node;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.skin.ProgressIndicatorSkin;
@@ -38,11 +39,14 @@ import java.lang.ref.WeakReference;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
+import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
 public class ProgressIndicatorLeakTest {
@@ -83,6 +87,38 @@ public class ProgressIndicatorLeakTest {
     @Test
     public void memoryTest() throws Exception {
         JMemoryBuddy.assertCollectable(detIndicator);
+    }
+
+    @Test
+    public void treeNotShowing() throws Exception {
+        JMemoryBuddy.memoryTest((checker) -> {
+            CountDownLatch showingLatch = new CountDownLatch(1);
+            AtomicReference<Stage> stage = new AtomicReference<>();
+
+            Util.runAndWait(() -> {
+                stage.set(new Stage());
+                Group root = new Group();
+                root.setVisible(false);
+                root.getChildren().add(new ProgressIndicator());
+                stage.get().setScene(new Scene(root));
+                stage.get().setOnShown(l -> {
+                    Platform.runLater(() -> showingLatch.countDown());
+                });
+                stage.get().show();
+            });
+
+            try {
+                assertTrue("Timeout waiting test stage", showingLatch.await(15, TimeUnit.SECONDS));
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            Util.runAndWait(() -> {
+                stage.get().close();
+            });
+
+            checker.assertCollectable(stage.get());
+        });
     }
 
     @AfterClass
