@@ -459,4 +459,8 @@ WIN.webkit.compiler = compiler
 WIN.webkit.linker = linker
 WIN.webkit.rcCompiler = rcCompiler
 WIN.webkit.rcSource = defaultRcSource
+if (sourceDateEpoch != null) {
+    WIN.webkit.ccFlags = ["/experimental:deterministic"].flatten()
+    WIN.webkit.linkFlags = ["/experimental:deterministic"].flatten()
+}
 WIN.webkit.rcFlags = ["/d", "JFX_FNAME=jfxwebkit.dll", "/d", "JFX_INTERNAL_NAME=webkit", rcFlags].flatten();
