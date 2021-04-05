@@ -1,7 +1,5 @@
-/* GStreamer buffer-frames conversion plugin
- * Copyright (C) 2004 Andy Wingo <wingo at pobox.com>
- *
- * plugin.h: the stubs for the buffer-frames-convert plugin
+/* GStreamer
+ * Copyright (C) <1999> Erik Walthinsen <omega@cse.ogi.edu>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,17 +17,14 @@
  * Boston, MA 02110-1301, USA.
  */
 
-
-#ifndef __GST_PLUGIN_AUDIO_CONVERT_H__
-#define __GST_PLUGIN_AUDIO_CONVERT_H__
-
+#ifndef __QTDEMUX_TAGS_H__
+#define __QTDEMUX_TAGS_H__
 
 #include <gst/gst.h>
+#include "qtdemux.h"
 
-G_BEGIN_DECLS
+void qtdemux_parse_udta (GstQTDemux * qtdemux, GstTagList * taglist, GNode * udta);
+void qtdemux_handle_xmp_taglist (GstQTDemux * qtdemux, GstTagList * taglist,
+    GstTagList * xmptaglist);
 
-GType gst_audio_convert_get_type (void);
-
-G_END_DECLS
-
-#endif /* __GST_PLUGIN_AUDIO_CONVERT_H__ */
+#endif

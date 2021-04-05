@@ -241,18 +241,19 @@ struct _GstVideoCodecFrame
   GstClockTime pts;       /* ED */
   GstClockTime duration;  /* ED */
 
-  int distance_from_sync; /* ED */
+  int distance_from_sync;   /* ED */
 
   GstBuffer *input_buffer;  /* ED */
   GstBuffer *output_buffer; /* ED */
 
-  GstClockTime deadline;  /* D */
+  GstClockTime deadline;    /* D */
 
   /*< private >*/
 
   /* Events that should be pushed downstream *before*
    * the next output_buffer */
-  GList *events;    /* ED */
+  /* FIXME 2.0: Use a GQueue or similar */
+  GList *events;        /* ED */
 
   gpointer       user_data;
   GDestroyNotify user_data_destroy_notify;
@@ -261,6 +262,7 @@ struct _GstVideoCodecFrame
     struct {
       GstClockTime ts;
       GstClockTime ts2;
+      guint num_subframes;
     } ABI;
     gpointer padding[GST_PADDING_LARGE];
   } abidata;
@@ -297,13 +299,9 @@ void                 gst_video_codec_frame_set_user_data (GstVideoCodecFrame *fr
 GST_VIDEO_API
 gpointer             gst_video_codec_frame_get_user_data (GstVideoCodecFrame *frame);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoCodecFrame, gst_video_codec_frame_unref)
-#endif
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoCodecState, gst_video_codec_state_unref)
-#endif
 
 G_END_DECLS
 

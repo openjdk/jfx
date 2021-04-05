@@ -19,7 +19,11 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-
+/**
+ * plugin-coreelements:
+ *
+ * GStreamer core elements
+ */
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -33,6 +37,7 @@
 #include "gsttypefindelement.h"
 #else // GSTREAMER_LITE
 #include "gstcapsfilter.h"
+#include "gstclocksync.h"
 #include "gstconcat.h"
 #include "gstdataurisrc.h"
 #include "gstdownloadbuffer.h"
@@ -67,6 +72,9 @@ plugin_init (GstPlugin * plugin)
 #ifndef GSTREAMER_LITE
   if (!gst_element_register (plugin, "capsfilter", GST_RANK_NONE,
           gst_capsfilter_get_type ()))
+    return FALSE;
+  if (!gst_element_register (plugin, "clocksync", GST_RANK_NONE,
+          gst_clock_sync_get_type ()))
     return FALSE;
   if (!gst_element_register (plugin, "concat", GST_RANK_NONE,
           gst_concat_get_type ()))

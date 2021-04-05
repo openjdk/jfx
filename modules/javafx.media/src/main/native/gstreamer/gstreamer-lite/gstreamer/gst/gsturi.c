@@ -42,6 +42,7 @@
 #  include "config.h"
 #endif
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "gst.h"
 #include "gsturi.h"
@@ -618,7 +619,7 @@ gst_uri_protocol_is_supported (const GstURIType type, const gchar * protocol)
  *
  * Creates an element for handling the given URI.
  *
- * Returns: (transfer floating) (nullable): a new element or %NULL if none
+ * Returns: (transfer floating): a new element or %NULL if none
  * could be created
  */
 GstElement *
@@ -900,7 +901,7 @@ file_path_contains_relatives (const gchar * path)
  * the current working directory if it is a relative path, and then the path
  * will be canonicalised so that it doesn't contain any './' or '../' segments.
  *
- * On Windows #filename should be in UTF-8 encoding.
+ * On Windows @filename should be in UTF-8 encoding.
  *
  * Returns: newly-allocated URI string, or NULL on error. The caller must
  *   free the URI string with g_free() when no longer needed.
@@ -1265,7 +1266,7 @@ _gst_uri_escape_http_query_element (const gchar * element)
 {
   gchar *ret, *c;
 
-  ret = g_uri_escape_string (element, "!$'()*,;:@/? ", FALSE);
+  ret = g_uri_escape_string (element, "!$'()*,;:@/?= ", FALSE);
   for (c = ret; *c; c++)
     if (*c == ' ')
       *c = '+';
@@ -1497,19 +1498,8 @@ gst_uri_new_with_base (GstUri * base, const gchar * scheme,
   return new_uri;
 }
 
-/**
- * gst_uri_from_string:
- * @uri: The URI string to parse.
- *
- * Parses a URI string into a new #GstUri object. Will return NULL if the URI
- * cannot be parsed.
- *
- * Returns: (transfer full) (nullable): A new #GstUri object, or NULL.
- *
- * Since: 1.6
- */
-GstUri *
-gst_uri_from_string (const gchar * uri)
+static GstUri *
+_gst_uri_from_string_internal (const gchar * uri, gboolean unescape)
 {
   const gchar *orig_uri = uri;
   GstUri *uri_obj;
@@ -1545,7 +1535,10 @@ gst_uri_from_string (const gchar * uri)
       /* find end of userinfo */
       eoui = strchr (uri, '@');
       if (eoui != NULL && eoui < eoa) {
-        uri_obj->userinfo = g_uri_unescape_segment (uri, eoui, NULL);
+        if (unescape)
+          uri_obj->userinfo = g_uri_unescape_segment (uri, eoui, NULL);
+        else
+          uri_obj->userinfo = g_strndup (uri, eoui - uri);
         uri = eoui + 1;
       }
       /* find end of host */
@@ -1565,8 +1558,10 @@ gst_uri_from_string (const gchar * uri)
           reoh = eoh = eoa;
       }
       /* don't capture empty host strings */
-      if (eoh != uri)
+      if (eoh != uri) {
+        /* always unescape hostname */
         uri_obj->host = g_uri_unescape_segment (uri, eoh, NULL);
+      }
 
       uri = reoh;
       if (uri < eoa) {
@@ -1620,11 +1615,59 @@ gst_uri_from_string (const gchar * uri)
       }
     }
     if (uri != NULL && uri[0] == '#') {
-      uri_obj->fragment = g_uri_unescape_string (uri + 1, NULL);
+      if (unescape)
+        uri_obj->fragment = g_uri_unescape_string (uri + 1, NULL);
+      else
+        uri_obj->fragment = g_strdup (uri + 1);
     }
   }
 
   return uri_obj;
+}
+
+/**
+ * gst_uri_from_string:
+ * @uri: The URI string to parse.
+ *
+ * Parses a URI string into a new #GstUri object. Will return NULL if the URI
+ * cannot be parsed.
+ *
+ * Returns: (transfer full) (nullable): A new #GstUri object, or NULL.
+ *
+ * Since: 1.6
+ */
+GstUri *
+gst_uri_from_string (const gchar * uri)
+{
+  return _gst_uri_from_string_internal (uri, TRUE);
+}
+
+/**
+ * gst_uri_from_string_escaped:
+ * @uri: The URI string to parse.
+ *
+ * Parses a URI string into a new #GstUri object. Will return NULL if the URI
+ * cannot be parsed. This is identical to gst_uri_from_string() except that
+ * the userinfo and fragment components of the URI will not be unescaped while
+ * parsing.
+ *
+ * Use this when you need to extract a username and password from the userinfo
+ * such as https://user:password@example.com since either may contain
+ * a URI-escaped ':' character. gst_uri_from_string() will unescape the entire
+ * userinfo component, which will make it impossible to know which ':'
+ * delineates the username and password.
+ *
+ * The same applies to the fragment component of the URI, such as
+ * https://example.com/path#fragment which may contain a URI-escaped '#'.
+ *
+ * Returns: (transfer full) (nullable): A new #GstUri object, or NULL.
+ *
+ * Since: 1.18
+ */
+GstUri *
+gst_uri_from_string_escaped (const gchar * uri)
+{
+  return _gst_uri_from_string_internal (uri, FALSE);
 }
 
 /**
@@ -2831,4 +2874,76 @@ gst_uri_get_media_fragment_table (const GstUri * uri)
   if (!uri->fragment)
     return NULL;
   return _gst_uri_string_to_table (uri->fragment, "&", "=", TRUE, TRUE);
+}
+
+/**
+ * gst_uri_copy:
+ * @uri: This #GstUri object.
+ *
+ * Create a new #GstUri object with the same data as this #GstUri object.
+ * If @uri is %NULL then returns %NULL.
+ *
+ * Returns: (transfer full): A new #GstUri object which is a copy of this
+ *          #GstUri or %NULL.
+ *
+ * Since: 1.6
+ */
+GstUri *
+gst_uri_copy (const GstUri * uri)
+{
+  return GST_URI_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (uri)));
+}
+
+/**
+ * gst_uri_ref:
+ * @uri: (transfer none): This #GstUri object.
+ *
+ * Add a reference to this #GstUri object. See gst_mini_object_ref() for further
+ * info.
+ *
+ * Returns: This object with the reference count incremented.
+ *
+ * Since: 1.6
+ */
+GstUri *
+gst_uri_ref (GstUri * uri)
+{
+  return GST_URI_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (uri)));
+}
+
+/**
+ * gst_uri_unref:
+ * @uri: (transfer full): This #GstUri object.
+ *
+ * Decrement the reference count to this #GstUri object.
+ *
+ * If the reference count drops to 0 then finalize this object.
+ *
+ * See gst_mini_object_unref() for further info.
+ *
+ * Since: 1.6
+ */
+void
+gst_uri_unref (GstUri * uri)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (uri));
+}
+
+/**
+ * gst_clear_uri: (skip)
+ * @uri_ptr: a pointer to a #GstUri reference
+ *
+ * Clears a reference to a #GstUri.
+ *
+ * @uri_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the uri is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.18
+ */
+void
+gst_clear_uri (GstUri ** uri_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) uri_ptr);
 }

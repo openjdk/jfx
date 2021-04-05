@@ -27,6 +27,7 @@
 #include <glib/gstring.h>
 #include <glib/gerror.h>
 #include <glib/gslist.h>
+#include <errno.h>
 #include <string.h>
 
 G_BEGIN_DECLS
@@ -79,11 +80,17 @@ typedef void (*GTestFixtureFunc) (gpointer      fixture,
 #define g_assert_cmpmem(m1, l1, m2, l2) G_STMT_START {\
                                              gconstpointer __m1 = m1, __m2 = m2; \
                                              int __l1 = l1, __l2 = l2; \
-                                             if (__l1 != __l2) \
+                                             if (__l1 != 0 && __m1 == NULL) \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "assertion failed (" #l1 " == 0 || " #m1 " != NULL)"); \
+                                             else if (__l2 != 0 && __m2 == NULL) \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "assertion failed (" #l2 " == 0 || " #m2 " != NULL)"); \
+                                             else if (__l1 != __l2) \
                                                g_assertion_message_cmpnum (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                            #l1 " (len(" #m1 ")) == " #l2 " (len(" #m2 "))", \
                                                                            (long double) __l1, "==", (long double) __l2, 'i'); \
-                                             else if (__l1 != 0 && memcmp (__m1, __m2, __l1) != 0) \
+                                             else if (__l1 != 0 && __m2 != NULL && memcmp (__m1, __m2, __l1) != 0) \
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "assertion failed (" #m1 " == " #m2 ")"); \
                                         } G_STMT_END
@@ -104,6 +111,20 @@ typedef void (*GTestFixtureFunc) (gpointer      fixture,
       } \
   } \
   G_STMT_END
+#define g_assert_no_errno(expr)         G_STMT_START { \
+                                             int __ret, __errsv; \
+                                             errno = 0; \
+                                             __ret = expr; \
+                                             __errsv = errno; \
+                                             if (__ret < 0) \
+                                               { \
+                                                 gchar *__msg; \
+                                                 __msg = g_strdup_printf ("assertion failed (" #expr " >= 0): errno %i: %s", __errsv, g_strerror (__errsv)); \
+                                                 g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, __msg); \
+                                                 g_free (__msg); \
+                                               } \
+                                        } G_STMT_END \
+                                        GLIB_AVAILABLE_MACRO_IN_2_66
 #define g_assert_no_error(err)          G_STMT_START { \
                                              if (err) \
                                                g_assertion_message_error (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
@@ -446,7 +467,7 @@ void    g_assertion_message             (const char     *domain,
                                          const char     *file,
                                          int             line,
                                          const char     *func,
-                                         const char     *message);
+                                         const char     *message) G_ANALYZER_NORETURN;
 GLIB_AVAILABLE_IN_ALL
 void    g_assertion_message_expr        (const char     *domain,
                                          const char     *file,
@@ -461,7 +482,7 @@ void    g_assertion_message_cmpstr      (const char     *domain,
                                          const char     *expr,
                                          const char     *arg1,
                                          const char     *cmp,
-                                         const char     *arg2);
+                                         const char     *arg2) G_ANALYZER_NORETURN;
 GLIB_AVAILABLE_IN_ALL
 void    g_assertion_message_cmpnum      (const char     *domain,
                                          const char     *file,
@@ -471,7 +492,7 @@ void    g_assertion_message_cmpnum      (const char     *domain,
                                          long double     arg1,
                                          const char     *cmp,
                                          long double     arg2,
-                                         char            numtype);
+                                         char            numtype) G_ANALYZER_NORETURN;
 GLIB_AVAILABLE_IN_ALL
 void    g_assertion_message_error       (const char     *domain,
                                          const char     *file,
@@ -480,7 +501,7 @@ void    g_assertion_message_error       (const char     *domain,
                                          const char     *expr,
                                          const GError   *error,
                                          GQuark          error_domain,
-                                         int             error_code);
+                                         int             error_code) G_ANALYZER_NORETURN;
 GLIB_AVAILABLE_IN_ALL
 void    g_test_add_vtable               (const char     *testpath,
                                          gsize           data_size,

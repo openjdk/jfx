@@ -76,10 +76,10 @@ static const char base64_alphabet[] =
  * be written to it. Due to the way base64 encodes you will need
  * at least: (@len / 3 + 1) * 4 + 4 bytes (+ 4 may be needed in case of
  * non-zero state). If you enable line-breaking you will need at least:
- * ((@len / 3 + 1) * 4 + 4) / 72 + 1 bytes of extra space.
+ * ((@len / 3 + 1) * 4 + 4) / 76 + 1 bytes of extra space.
  *
  * @break_lines is typically used when putting base64-encoded data in emails.
- * It breaks the lines at 72 columns instead of putting all of the text on
+ * It breaks the lines at 76 columns instead of putting all of the text on
  * the same line. This avoids problems with long lines in the email system.
  * Note however that it breaks the lines with `LF` characters, not
  * `CR LF` sequences, so the result cannot be passed directly to SMTP

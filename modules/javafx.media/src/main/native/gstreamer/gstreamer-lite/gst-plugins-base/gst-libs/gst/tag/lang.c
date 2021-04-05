@@ -370,6 +370,10 @@ gst_tag_get_language_code_iso_639_1 (const gchar * lang_code)
     if (strcmp (lang_code, iso_639_codes[i].iso_639_1) == 0 ||
         strcmp (lang_code, iso_639_codes[i].iso_639_2) == 0) {
       c = iso_639_codes[i].iso_639_1;
+
+      /* If the language code does not have a 2-letter representation, the table
+       * holds an empty string. We want to return NULL in that case. */
+      c = c[0] != '\0' ? c : NULL;
       break;
     }
   }
@@ -421,7 +425,7 @@ gst_tag_get_language_code_iso_639_2X (const gchar * lang_code, guint8 flags)
  *
  * The "terminological" code is derived from the local name of the language
  * (e.g. "deu" for German instead of "ger"). In most scenarios, the
- * "terminological" codes are prefered over the "bibliographic" ones.
+ * "terminological" codes are preferred over the "bibliographic" ones.
  *
  * Language codes are case-sensitive and expected to be lower case.
  *
@@ -455,7 +459,7 @@ gst_tag_get_language_code_iso_639_2T (const gchar * lang_code)
  *
  * The "bibliographic" code is derived from the English name of the language
  * (e.g. "ger" for German instead of "de" or "deu"). In most scenarios, the
- * "terminological" codes are prefered.
+ * "terminological" codes are preferred.
  *
  * Language codes are case-sensitive and expected to be lower case.
  *
