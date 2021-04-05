@@ -262,7 +262,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }
     }
 
-    private void sendScrollStartedEvent(double centerX, double centerY, int touchCount) {
+    private void sendScrollStartedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_STARTED,
@@ -272,7 +272,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -283,7 +283,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollEvent(boolean isInertia, double centerX, double centerY, int touchCount) {
+    private void sendScrollEvent(boolean isInertia, double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
@@ -293,7 +293,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -304,7 +304,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollFinishedEvent(double centerX, double centerY, int touchCount) {
+    private void sendScrollFinishedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL_FINISHED,
@@ -314,7 +314,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     touchCount,
                     0 /*scrollTextX*/, 0 /*scrollTextY*/,
                     0 /*defaultTextX*/, 0 /*defaultTextY*/,
-                    centerX, centerY, centerAbsX, centerAbsY,
+                    centerX, centerY, xAbs, yAbs,
                     (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,

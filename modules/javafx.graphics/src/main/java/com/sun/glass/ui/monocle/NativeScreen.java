@@ -53,6 +53,22 @@ public interface NativeScreen {
     int getHeight();
 
     /**
+     * Returns the horizontal start position of this screen relative to the total
+     * combined screen size.
+     */
+    default int getOffsetX() {
+        return 0;
+    }
+
+    /**
+     * Returns the vertical start position of this screen relative to the total
+     * combined screen size.
+     */
+    default int getOffsetY() {
+        return 0;
+    }
+
+    /**
      * Returns the number of pixels per inch in the screen.
      */
     int getDPI();

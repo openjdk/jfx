@@ -91,9 +91,13 @@ public final class GraphicsDecoder  {
             PlatformLogger.getLogger(GraphicsDecoder.class.getName());
 
     static void decode(WCGraphicsManager gm, WCGraphicsContext gc, BufferData bdata) {
-        if (gc == null) {
+        if (gc == null || !gc.isValid()) {
+            log.fine("GraphicsDecoder::decode : GC is " +
+                    (gc == null ? "null" : " invalid"));
+
             return;
         }
+
         ByteBuffer buf = bdata.getBuffer();
         buf.order(ByteOrder.nativeOrder());
         while (buf.remaining() > 0) {

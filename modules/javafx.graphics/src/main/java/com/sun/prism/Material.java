@@ -30,5 +30,6 @@ package com.sun.prism;
  * This class represents base material for retained mode rendering
  */
 
-public interface Material {
+public interface Material extends GraphicsResource {
+    public boolean isValid();
 }

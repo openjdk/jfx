@@ -75,6 +75,15 @@ public abstract class NGShape3D extends NGNode {
         g.setup3DRendering();
 
         ResourceFactory rf = g.getResourceFactory();
+        if (rf == null || rf.isDisposed()) {
+            return;
+        }
+
+        // Check whether the meshView is valid; dispose and recreate if needed
+        if (meshView != null && !meshView.isValid()) {
+            meshView.dispose();
+            meshView = null;
+        }
 
         if (meshView == null && mesh != null) {
             meshView = rf.createMeshView(mesh.createMesh(rf));

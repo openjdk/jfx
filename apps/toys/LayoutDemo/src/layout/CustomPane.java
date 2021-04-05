@@ -88,8 +88,8 @@ public class CustomPane extends Pane {
     @Override protected void layoutChildren() {
         List<Node> sortedManagedChidlren = new ArrayList<>(getManagedChildren());
         Collections.sort(sortedManagedChidlren, (c1, c2)
-                -> new Double(c2.prefHeight(-1)).compareTo(
-                        new Double(c1.prefHeight(-1))));
+                -> Double.valueOf(c2.prefHeight(-1)).compareTo(
+                        Double.valueOf(c1.prefHeight(-1))));
         double currentX = pad;
         for (Node c : sortedManagedChidlren) {
             double width = c.prefWidth(-1);
