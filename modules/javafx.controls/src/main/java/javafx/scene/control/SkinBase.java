@@ -266,7 +266,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *
      * @param observable the observable for which the registered operations should be removed,
      *  may be {@code null}
-     * @return a composed consumer that performs all removed operations, or
+     * @return a composed consumer representing all previously registered operations, or
      *  {@code null} if none have been registered or the observable is {@code null}
      * @since 17
      */
