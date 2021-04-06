@@ -531,6 +531,13 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
         if (!isEmbedded)
         {
+            // Not embedded in another toolkit, so disable automatic tabbing for all windows
+            // We use a guarded call to preserve the ability to run on 10.10 or 10.11.
+            // Using a guard, instead of reflection, assumes the Xcode used to
+            // build includes MacOSX SDK 10.12 or later
+            if (@available(macOS 10.12, *)) {
+                [NSWindow setAllowsAutomaticWindowTabbing:NO];
+            }
             if (self->jTaskBarApp == JNI_TRUE)
             {
                 isNormalTaskbarApp = YES;
