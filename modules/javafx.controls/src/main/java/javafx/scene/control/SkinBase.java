@@ -209,29 +209,31 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
     /**
-     * Subclasses can invoke this method to register that they want to listen to
-     * property change events for the given property. Registered {@link Consumer} instances
-     * will be executed in the order in which they are registered.
-     * @param property the property
-     * @param consumer the consumer
+     * Registers an operation to perform when the given {@code property} sends a change event.
+     * Does nothing if either {@code property} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same property, they will be performed in the
+     * order in which they were registered.
+     *
+     * @param property the property to observe for change events, may be {@code null}
+     * @param operation the operation to perform when the property sends a change event,
+     *  may be {@code null}
      */
-    protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
+    protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
-        lambdaChangeListenerHandler.registerChangeListener(property, consumer);
+        lambdaChangeListenerHandler.registerChangeListener(property, operation);
     }
 
     /**
-     * Unregisters all change listeners that have been registered using {@link #registerChangeListener(ObservableValue, Consumer)}
-     * for the given property. The end result is that the given property is no longer observed by any of the change
-     * listeners, but it may still have additional listeners registered on it through means outside of
-     * {@link #registerChangeListener(ObservableValue, Consumer)}.
+     * Unregisters all operations that have been registered using
+     * {@link #registerChangeListener(ObservableValue, Consumer)}
+     * for the given {@code property}. Does nothing if {@code property} is {@code null}.
      *
-     * @param property The property for which all listeners should be removed.
-     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
-     *      {@link #registerChangeListener(ObservableValue, Consumer)}. If no consumers have been registered on this
-     *      property, null will be returned.
+     * @param property the property for which the registered operations should be removed,
+     *  may be {@code null}
+     * @return a composed consumer representing all previously registered operations, or
+     *  {@code null} if none have been registered or the propery is {@code null}
      * @since 9
      */
     protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> property) {
@@ -262,7 +264,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * Unregisters all operations that have been registered using
      * {@link #registerInvalidationListener(Observable, Consumer)}
-     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}
+     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}.
      *
      * @param observable the observable for which the registered operations should be removed,
      *  may be {@code null}
@@ -279,33 +281,32 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
     /**
-     * Subclasses can invoke this method to register that they want to listen to
-     * list change events for the given observable list. Registered {@link Consumer} instances
-     * will be executed in the order in which they are registered.
+     * Registers an operation to perform when the given {@code observableList} sends a list change event.
+     * Does nothing if either {@code observableList} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same observableList, they will be performed in the
+     * order in which they were registered.
      *
-     * @param observableList the observable list to observe for list change events
-     * @param consumer the consumer
+     * @param observableList the observableList to observe for list change events, may be {@code null}
+     * @param operation the operation to perform when the observableList sends a list change event,
+     *  may be {@code null}
      * @since 17
      */
-    protected final void registerListChangeListener(ObservableList<?> observableList, Consumer<Change<?>> consumer) {
+    protected final void registerListChangeListener(ObservableList<?> observableList, Consumer<Change<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
-        lambdaChangeListenerHandler.registerListChangeListener(observableList, consumer);
+        lambdaChangeListenerHandler.registerListChangeListener(observableList, operation);
     }
 
     /**
-     * Unregisters all list change listeners that have been registered using
+     * Unregisters all operations that have been registered using
      * {@link #registerListChangeListener(ObservableList, Consumer)}
-     * for the given list. The end result is that the given observable is no longer observed by any of the
-     * list change listeners,
-     * but it may still have additional listeners registered on it through means outside of
-     * {@link #registerListChangeListener(ObservableList, Consumer)}.
+     * for the given {@code observableList}. Does nothing if {@code observableList} is {@code null}.
      *
-     * @param observableList The list for which all listeners should be removed.
-     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
-     *      {@link #registerListChangeListener(ObservableList, Consumer)}. If no consumers have been registered on this
-     *      list, null will be returned.
+     * @param observableList the observableList for which the registered operations should be removed,
+     *  may be {@code null}
+     * @return a composed consumer representing all previously registered operations, or
+     *  {@code null} if none have been registered or the observableList is {@code null}
      * @since 17
      */
     protected final Consumer<Change<?>> unregisterListChangeListeners(ObservableList<?> observableList) {
