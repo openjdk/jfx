@@ -220,19 +220,23 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
     /** {@inheritDoc} */
     @Override protected void updateChildren() {
-        super.updateChildren();
-
-        updateDisclosureNodeAndGraphic();
-
-        if (childrenDirty) {
+        if (fixedCellSizeEnabled) {
+            updateDisclosureNodeAndGraphic();
+            super.updateChildren();
             childrenDirty = false;
-            if (cells.isEmpty()) {
-                getChildren().clear();
-            } else {
-                // TODO we can optimise this by only showing cells that are
-                // visible based on the table width and the amount of horizontal
-                // scrolling.
-                getChildren().addAll(cells);
+        } else {
+            super.updateChildren();
+            updateDisclosureNodeAndGraphic();
+            if (childrenDirty) {
+                childrenDirty = false;
+                if (cells.isEmpty()) {
+                    getChildren().clear();
+                } else {
+                    // TODO we can optimise this by only showing cells that are
+                    // visible based on the table width and the amount of horizontal
+                    // scrolling.
+                    getChildren().addAll(cells);
+                }
             }
         }
     }
