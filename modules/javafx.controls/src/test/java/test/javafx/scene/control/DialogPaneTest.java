@@ -25,8 +25,12 @@
 
 package test.javafx.scene.control;
 
+import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -73,5 +77,41 @@ public class DialogPaneTest {
         assertEquals(0, padding.getRight(), 0.0);
         assertEquals(0, padding.getBottom(), 0.0);
         assertEquals(0.833 * fontSize, padding.getLeft(), 0.01);
+    }
+
+    @Test
+    public void testLookupButtonIsReturningCorrectButton() {
+        String id1 = "Test";
+
+        dialogPane.getButtonTypes().setAll(ButtonType.OK);
+        assertEquals(1, dialogPane.getButtonTypes().size());
+
+        Node button = dialogPane.lookupButton(ButtonType.OK);
+        button.setId(id1);
+
+        verifyIdOfButtonInButtonBar(id1);
+
+        String id2 = "Test2";
+
+        dialogPane.getButtonTypes().setAll(ButtonType.OK);
+        assertEquals(1, dialogPane.getButtonTypes().size());
+
+        button = dialogPane.lookupButton(ButtonType.OK);
+        button.setId(id2);
+
+        verifyIdOfButtonInButtonBar(id2);
+    }
+
+    private void verifyIdOfButtonInButtonBar(String id) {
+        for (Node children : dialogPane.getChildren()) {
+            if (children instanceof ButtonBar) {
+                ObservableList<Node> buttons = ((ButtonBar) children).getButtons();
+
+                assertEquals(1, buttons.size());
+
+                Node button = buttons.get(0);
+                assertEquals(id, button.getId());
+            }
+        }
     }
 }
