@@ -348,6 +348,8 @@ defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
 defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
 
+defineProperty("icuVersion", "68.2")
+
 loadProperties("$projectDir/build.properties")
 
 def supplementalPreBuildFile = file("$closedDir/closed-pre-build.gradle");
@@ -1904,6 +1906,7 @@ allprojects {
     }
 
     if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
+        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
         repositories {
             ivy {
                 url icuRepositoryURL
@@ -1911,7 +1914,7 @@ allprojects {
                     artifact()
                 }
                 patternLayout {
-                    artifact "download/release-68-2/[artifact].[ext]"
+                    artifact "download/release-$icuReleaseVersion/[artifact].[ext]"
                 }
             }
         }
@@ -3380,7 +3383,7 @@ project(":web") {
 
     dependencies {
         if (IS_COMPILE_WEBKIT) {
-            icu name: "icu4c-68.2-data-bin-l", ext: "zip"
+            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
         }
         compile project(":base")
         compile project(":graphics")
