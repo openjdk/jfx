@@ -43,7 +43,8 @@ static jclass GetFileSystemClass(JNIEnv* env)
 
 bool fileExists(const String& path)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
 
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
@@ -72,7 +73,8 @@ bool deleteEmptyDirectory(String const &)
 
 bool getFileSize(const String& path, long long& result)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
 
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
@@ -122,8 +124,9 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 
 String pathByAppendingComponent(const String& path, const String& component)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
 
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
             "fwkPathByAppendingComponent",
@@ -142,7 +145,8 @@ String pathByAppendingComponent(const String& path, const String& component)
 
 bool makeAllDirectories(const String& path)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
 
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
@@ -171,7 +175,8 @@ String directoryName(String const &)
 
 Optional<FileMetadata> fileMetadata(const String& path)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
 
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
@@ -227,7 +232,8 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
     if (mode != FileOpenMode::Read) {
         return invalidPlatformFileHandle;
     }
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
             "fwkOpenFile",
@@ -246,7 +252,8 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
 void closeFile(PlatformFileHandle& handle)
 {
     if (isHandleValid(handle)) {
-        JNIEnv* env = WTF::GetJavaEnv();
+        AttachThreadAsNonDaemonToJavaEnv autoAttach;
+        JNIEnv* env = autoAttach.env();
         static jmethodID mid = env->GetStaticMethodID(
                 GetFileSystemClass(env),
                 "fwkCloseFile",
@@ -266,7 +273,8 @@ int readFromFile(PlatformFileHandle handle, char* data, int length)
     if (length < 0 || !isHandleValid(handle) || data == nullptr) {
         return -1;
     }
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
             "fwkReadFromFile",
@@ -301,7 +309,8 @@ bool truncateFile(PlatformFileHandle, long long offset)
 
 String pathGetFileName(const String& path)
 {
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
 
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
@@ -325,7 +334,8 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin)
     if (offset < 0 || !isHandleValid(handle)) {
         return -1;
     }
-    JNIEnv* env = WTF::GetJavaEnv();
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
+    JNIEnv* env = autoAttach.env();
     static jmethodID mid = env->GetStaticMethodID(
             GetFileSystemClass(env),
             "fwkSeekFile",
