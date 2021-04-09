@@ -15,6 +15,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/measure.h"
@@ -39,7 +41,7 @@ class U_I18N_API CurrencyAmount: public Measure {
     /**
      * Construct an object with the given numeric amount and the given
      * ISO currency code.
-     * @param amount a numeric object; amount.isNumeric() must be TRUE
+     * @param amount a numeric object; amount.isNumeric() must be true
      * @param isoCode the 3-letter ISO 4217 currency code; must not be
      * NULL and must have length 3
      * @param ec input-output error code. If the amount or the isoCode
@@ -79,7 +81,7 @@ class U_I18N_API CurrencyAmount: public Measure {
      * have the same class as returned by getDynamicClassID().
      * @stable ICU 3.0
      */
-    virtual UObject* clone() const;
+    virtual CurrencyAmount* clone() const;
 
     /**
      * Destructor
@@ -129,4 +131,7 @@ inline const char16_t* CurrencyAmount::getISOCurrency() const {
 U_NAMESPACE_END
 
 #endif // !UCONFIG_NO_FORMATTING
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif // __CURRENCYAMOUNT_H__

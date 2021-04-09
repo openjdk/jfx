@@ -25,6 +25,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C++ API: Keys for comparing strings multiple times.
@@ -148,7 +150,7 @@ public:
     /**
     * Compare if two collation keys are not the same.
     * @param source the collation key to compare to.
-    * @return Returns TRUE if two collation keys are different, FALSE otherwise.
+    * @return Returns true if two collation keys are different, false otherwise.
     * @stable ICU 2.0
     */
     UBool                   operator!=(const CollationKey& source) const;
@@ -157,7 +159,7 @@ public:
     /**
     * Test to see if the key is in an invalid state. The key will be in an
     * invalid state if it couldn't allocate memory for some operation.
-    * @return Returns TRUE if the key is in an invalid, FALSE otherwise.
+    * @return Returns true if the key is in an invalid, false otherwise.
     * @stable ICU 2.0
     */
     UBool                   isBogus(void) const;
@@ -336,5 +338,7 @@ CollationKey::getByteArray(int32_t &count) const
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_COLLATION */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif
