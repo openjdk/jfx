@@ -246,7 +246,7 @@ void closeFile(PlatformFileHandle& handle)
 {
     if (isHandleValid(handle)) {
         AttachThreadAsDaemonToJavaEnv autoAttach;
-    JNIEnv* env = autoAttach.env();
+        JNIEnv* env = autoAttach.env();
         static jmethodID mid = env->GetStaticMethodID(
                 comSunWebkitFileSystem,
                 "fwkCloseFile",

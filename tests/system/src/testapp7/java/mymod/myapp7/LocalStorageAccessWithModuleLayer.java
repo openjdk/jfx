@@ -77,19 +77,17 @@ public class LocalStorageAccessWithModuleLayer extends Application {
         // The loaded test page LocalStorageAccess will set the title to
         // 'Executed'. This indicates, that the second script block was reached
         webview.getEngine().getLoadWorker().stateProperty().addListener(
-                new ChangeListener<State>() {
-                    public void changed(ObservableValue ov, State oldState, State newState) {
-                        if (newState == State.SUCCEEDED) {
-                            String title = webview.getEngine().getTitle();
-                            if ("Executed".equals(title)) {
-                                System.exit(ERROR_OK);
-                            } else {
-                                System.exit(ERROR_TITLE_NOT_UPDATED);
-                            }
-                        }
+            (observableValue, oldState, newState) -> {
+                if (newState == State.SUCCEEDED) {
+                    String title = webview.getEngine().getTitle();
+                    if ("Executed".equals(title)) {
+                        System.exit(ERROR_OK);
+                    } else {
+                        System.exit(ERROR_TITLE_NOT_UPDATED);
                     }
-                });
-        webview.getEngine().load(LocalStorageAccessWithModuleLayer.class.getResource("/LocalStorageAccess.html").toExternalForm());
+                }
+            });
+        webview.getEngine().load(LocalStorageAccessWithModuleLayer.class.getResource("LocalStorageAccess.html").toExternalForm());
 
         primaryStage.setScene(scene);
         primaryStage.setWidth(1024);

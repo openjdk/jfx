@@ -61,7 +61,7 @@ public class LocalStorageAccessWithModuleLayerLauncher {
 
         // Hack to get the classes of this programm into a module layer
         List<Path> modulePaths = new ArrayList<>();
-        for(String workerPath: System.getProperty("module.path").split(File.pathSeparator)) {
+        for (String workerPath : System.getProperty("module.path").split(File.pathSeparator)) {
             modulePaths.add(Paths.get(workerPath));
         }
         ModuleFinder finder = ModuleFinder.of(modulePaths.toArray(new Path[0]));
