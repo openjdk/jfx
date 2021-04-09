@@ -44,6 +44,7 @@ public class ControlAcceleratorSupportTest {
     public static void setup() throws Exception {
         for (int i = 0; i < 4; i++) {
             System.gc();
+            System.runFinalization();
             Thread.sleep(500);
         }
         numListeners = ControlAcceleratorSupportShim.get_ListenerMapSize();
