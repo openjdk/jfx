@@ -46,51 +46,43 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
+import static test.util.Util.TIMEOUT;
 import test.util.Util;
 import test.util.memory.JMemoryBuddy;
 
 public class ProgressIndicatorLeakTest {
 
-    static CountDownLatch startupLatch;
-    static WeakReference<Node> detIndicator = null;
-    static Stage stage = null;
-
-    public static class TestApp extends Application {
-
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            ProgressIndicator indicator = new ProgressIndicator(-1);
-            indicator.setSkin(new ProgressIndicatorSkin(indicator));
-            Scene scene = new Scene(indicator);
-            primaryStage.setScene(scene);
-            stage = primaryStage;
-            indicator.setProgress(1.0);
-            Assert.assertEquals("size is wrong", 1, indicator.getChildrenUnmodifiable().size());
-            detIndicator = new WeakReference<Node>(indicator.getChildrenUnmodifiable().get(0));
-            indicator.setProgress(-1.0);
-            indicator.setProgress(1.0);
-
-            primaryStage.setOnShown(l -> {
-                Platform.runLater(() -> startupLatch.countDown());
-            });
-            primaryStage.show();
-        }
-    }
-
     @BeforeClass
     public static void initFX() throws Exception {
-        startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
+        CountDownLatch startupLatch = new CountDownLatch(1);
+        Platform.setImplicitExit(false);
+        Platform.startup(startupLatch::countDown);
+        Assert.assertTrue("Timeout waiting for FX runtime to start",
+                startupLatch.await(TIMEOUT, TimeUnit.MILLISECONDS));
     }
 
     @Test
-    public void memoryTest() throws Exception {
-        JMemoryBuddy.assertCollectable(detIndicator);
+    public void leakDeterminationIndicator() throws Exception {
+        JMemoryBuddy.memoryTest((checker) -> {
+            Util.runAndWait(() -> {
+                Stage stage = new Stage();
+                ProgressIndicator indicator = new ProgressIndicator(-1);
+                indicator.setSkin(new ProgressIndicatorSkin(indicator));
+                Scene scene = new Scene(indicator);
+                stage.setScene(scene);
+                indicator.setProgress(1.0);
+                Assert.assertEquals("size is wrong", 1, indicator.getChildrenUnmodifiable().size());
+                Node detIndicator = indicator.getChildrenUnmodifiable().get(0);
+                indicator.setProgress(-1.0);
+                indicator.setProgress(1.0);
+                checker.assertCollectable(detIndicator);
+                stage.show();
+            });
+        });
     }
 
     @Test
-    public void treeNotShowing() throws Exception {
+    public void stageLeakWhenTreeNotShowing() throws Exception {
         JMemoryBuddy.memoryTest((checker) -> {
             CountDownLatch showingLatch = new CountDownLatch(1);
             AtomicReference<Stage> stage = new AtomicReference<>();
@@ -124,7 +116,6 @@ public class ProgressIndicatorLeakTest {
     @AfterClass
     public static void teardownOnce() {
         Platform.runLater(() -> {
-            stage.hide();
             Platform.exit();
         });
     }
