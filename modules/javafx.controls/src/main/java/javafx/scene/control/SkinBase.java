@@ -209,38 +209,38 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
     /**
-     * Registers an operation to perform when the given {@code property} sends a change event.
-     * Does nothing if either {@code property} or {@code operation} are {@code null}.
-     * If multiple operations are registered on the same property, they will be performed in the
+     * Registers an operation to perform when the given {@code observable} sends a change event.
+     * Does nothing if either {@code observable} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same observable, they will be performed in the
      * order in which they were registered.
      *
-     * @param property the property to observe for change events, may be {@code null}
-     * @param operation the operation to perform when the property sends a change event,
+     * @param observable the observable to observe for change events, may be {@code null}
+     * @param operation the operation to perform when the observable sends a change event,
      *  may be {@code null}
      */
-    protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> operation) {
+    protected final void registerChangeListener(ObservableValue<?> observable, Consumer<ObservableValue<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
-        lambdaChangeListenerHandler.registerChangeListener(property, operation);
+        lambdaChangeListenerHandler.registerChangeListener(observable, operation);
     }
 
     /**
      * Unregisters all operations that have been registered using
      * {@link #registerChangeListener(ObservableValue, Consumer)}
-     * for the given {@code property}. Does nothing if {@code property} is {@code null}.
+     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}.
      *
-     * @param property the property for which the registered operations should be removed,
+     * @param observable the observable for which the registered operations should be removed,
      *  may be {@code null}
      * @return a composed consumer representing all previously registered operations, or
-     *  {@code null} if none have been registered or the propery is {@code null}
+     *  {@code null} if none have been registered or the observable is {@code null}
      * @since 9
      */
-    protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> property) {
+    protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> observable) {
         if (lambdaChangeListenerHandler == null) {
             return null;
         }
-        return lambdaChangeListenerHandler.unregisterChangeListeners(property);
+        return lambdaChangeListenerHandler.unregisterChangeListeners(observable);
     }
 
     /**
