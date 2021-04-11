@@ -350,9 +350,11 @@ final class CssStyleHelper {
         return false;
     }
 
+    private static final WeakReference<Node> EMPTY_NODE = new WeakReference<>(null);
+
     /* This is the first Styleable parent (of Node this StyleHelper belongs to)
      * having a valid StyleHelper */
-    private WeakReference<Node> firstStyleableAncestor = null;
+    private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
 
     private CacheContainer cacheContainer;
 
