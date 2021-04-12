@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.InsetsConverter;
@@ -41,9 +42,9 @@ import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.StringPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Insets;
@@ -139,7 +140,17 @@ public abstract class Labeled extends Control {
      */
     public final StringProperty textProperty() {
         if (text == null) {
-            text = new SimpleStringProperty(this, "text", "");
+            text = new StringPropertyBase("") {
+                @Override
+                public Object getBean() {
+                    return Labeled.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "text";
+                }
+            };
         }
         return text;
     }
@@ -648,6 +659,11 @@ public abstract class Labeled extends Control {
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
         if (contentDisplay == null) {
             contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
+                @Override
+                protected void invalidated() {
+                    ParentHelper.notifyTextBaselineChanged(Labeled.this);
+                    ParentHelper.notifyBaselineOffsetChanged(Labeled.this);
+                }
 
                 @Override
                 public CssMetaData<Labeled,ContentDisplay> getCssMetaData() {
@@ -837,7 +853,7 @@ public abstract class Labeled extends Control {
     }
 
     @Override public boolean isTextBaseline() {
-        return true;
+        return getContentDisplay() != ContentDisplay.GRAPHIC_ONLY;
     }
 
     /* *************************************************************************

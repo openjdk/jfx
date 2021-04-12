@@ -477,6 +477,11 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void doNotifyBaselineOffsetChanged(Node node) {
+                node.requestParentLayout(true);
+            }
+
+            @Override
             public void doProcessCSS(Node node) {
                 node.doProcessCSS();
             }
@@ -2726,19 +2731,7 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     NodeHelper.transformsChanged(Node.this);
-                    final Parent p = getParent();
-
-                    // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
-                        if (isManaged()) {
-                            // Force its parent to fix the layout since it is a managed child.
-                            p.requestLayout(true);
-                        } else {
-                            // Parent size changed, parent's parent might need to re-layout
-                            p.clearSizeCache();
-                            p.requestParentLayout();
-                        }
-                    }
+                    requestParentLayout(false);
                 }
 
                 @Override
@@ -2800,19 +2793,11 @@ public abstract class Node implements EventTarget, Styleable {
                 @Override
                 protected void invalidated() {
                     NodeHelper.transformsChanged(Node.this);
-                    final Parent p = getParent();
 
-                    // Propagate layout if this change isn't triggered by its parent
-                    if (p != null && !p.isCurrentLayoutChild(Node.this)) {
-                        if (isManaged()) {
-                            // Force its parent to fix the layout since it is a managed child.
-                            p.requestLayout(true);
-                        } else {
-                            // Parent size changed, parent's parent might need to re-layout
-                            p.clearSizeCache();
-                            p.requestParentLayout();
-                        }
-                    }
+                    // Changing layoutY can affect the baseline of the parent node.
+                    // Since baseline changes can affect any parent (not only the direct parent), we need
+                    // to propagate the layout request down to the layout root.
+                    requestParentLayout(true);
                 }
 
                 @Override
@@ -3198,6 +3183,52 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * Indicates whether this node is the preferred baseline source for its container.
+     * Setting this value overrides the value returned by {@link Node#isTextBaseline()}.
+     */
+    public final BooleanProperty prefBaselineProperty() {
+        if (prefBaseline == null) {
+            prefBaseline = new BooleanPropertyBase() {
+                @Override
+                public Object getBean() {
+                    return Node.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "prefBaseline";
+                }
+            };
+        }
+        return prefBaseline;
+    }
+
+    /**
+     * Returns whether the baseline offset reported by this node should be preferred by layout
+     * containers for the purpose of computing their own baseline offset.
+     */
+    public final boolean isPrefBaseline() {
+        return prefBaseline != null && prefBaseline.get();
+    }
+
+    public final void setPrefBaseline(boolean value) {
+        if (value || prefBaseline != null) {
+            prefBaselineProperty().set(value);
+        }
+    }
+
+    private BooleanProperty prefBaseline;
+
+    /**
+     * Returns whether the baseline offset reported by this node corresponds to the baseline
+     * of a text node (as compared to the baseline of a non-text node). Subclasses that contain
+     * text should override this method and return {@code true}.
+     */
+    public boolean isTextBaseline() {
+        return false;
+    }
+
+    /**
      * This is a special value that might be returned by {@link #getBaselineOffset()}.
      * This means that the Parent (layout Pane) of this Node should use the height of this Node as a baseline.
      */
@@ -3206,11 +3237,35 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The 'alphabetic' (or 'roman') baseline offset from the node's layoutBounds.minY location
      * that should be used when this node is being vertically aligned by baseline with
-     * other nodes.  By default this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable Nodes
-     * and layoutBounds height for non-resizable.  Subclasses
-     * which contain text should override this method to return their actual text baseline offset.
-     *
-     * @return offset of text baseline from layoutBounds.minY for non-resizable Nodes or {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} otherwise
+     * other nodes.
+     * <p>
+     * By default this returns {@link #BASELINE_OFFSET_SAME_AS_HEIGHT} for resizable nodes
+     * and layoutBounds.height for non-resizable nodes.
+     * <p>
+     * {@link Parent} nodes change this default behavior and derive their baseline offset from the
+     * first managed child for which:
+     * <ol>
+     *     <li>{@link Node#isPrefBaseline()} returns {@code true}, or if there is no such child,
+     *     <li>{@link Node#isTextBaseline()} returns {@code true}, or if there is no such child,
+     *     <li>this method returns a value other than {@link Node#BASELINE_OFFSET_SAME_AS_HEIGHT}.
+     * </ol>
+     * Otherwise, {@link Parent} nodes fall back to the default behavior. Layout containers use this
+     * behavior to implement a preference mechanism for baseline calculation. For example, consider a
+     * simple layout container with some child nodes:
+     * <pre><code>
+     *     HBox container = new HBox();
+     *     Rectangle rect = new Rectangle();
+     *     Label label = new Label();
+     *     container.getChildren().addAll(rect, label);
+     * </code></pre>
+     * In this example, the layout container will compute its own baseline offset based on the first
+     * text node it encounters, which is the 'label' node (for which {@link Node#isTextBaseline()}
+     * returns {@code true}). The preference for text nodes is a good choice for most situations; however,
+     * this can be overridden by setting {@link Node#prefBaselineProperty()} on one of the contained
+     * children. In this case, the first child for which {@link Node#isPrefBaseline()} returns {@code true}
+     * will be selected by the layout container to derive its own baseline.
+     * <p>
+     * Subclasses which contain text should override this method to return their actual text baseline offset.
      */
     public double getBaselineOffset() {
         if (isResizable()) {
@@ -3218,16 +3273,6 @@ public abstract class Node implements EventTarget, Styleable {
         } else {
             return getLayoutBounds().getHeight();
         }
-    }
-
-    /**
-     * Returns whether the baseline offset reported by this node corresponds to the baseline
-     * of a text node (as compared to the baseline of a non-text node).
-     * Layout containers that manage multiple children will usually prefer to use the baseline
-     * offset of a text-node child to compute their own baseline offset.
-     */
-    public boolean isTextBaseline() {
-        return false;
     }
 
     /**
@@ -3365,6 +3410,51 @@ public abstract class Node implements EventTarget, Styleable {
             return area * (camera.getViewWidth() / 2 * camera.getViewHeight() / 2);
         }
         return 0;
+    }
+
+    private void requestParentLayout(boolean forceRootLayout) {
+        final Parent p = getParent();
+
+        // Propagate layout if this change isn't triggered by its parent
+        if (p != null && !p.isCurrentLayoutChild(Node.this)) {
+            if (isManaged()) {
+                // Force its parent to fix the layout since it is a managed child.
+                p.requestLayout(forceRootLayout ?
+                    InvalidateLayoutOption.FORCE_ROOT_LAYOUT :
+                    InvalidateLayoutOption.FORCE_PARENT_LAYOUT);
+            } else {
+                // Parent size changed, parent's parent might need to re-layout
+                p.clearSizeCache();
+                p.requestParentLayout(forceRootLayout ?
+                    InvalidateLayoutOption.FORCE_ROOT_LAYOUT :
+                    InvalidateLayoutOption.PARENT_LAYOUT);
+            }
+        }
+    }
+
+    enum InvalidateLayoutOption {
+        /**
+         * The current node will be scheduled for layout.
+         */
+        LOCAL_LAYOUT,
+
+        /**
+         * The parent node will be scheduled for layout, except if the parent node is currently
+         * performing layout. In this case, no further layout cycle will be scheduled.
+         */
+        PARENT_LAYOUT,
+
+        /**
+         * The parent node will be scheduled for layout. If the parent node is currently
+         * performing layout, a new layout cycle will be scheduled.
+         */
+        FORCE_PARENT_LAYOUT,
+
+        /**
+         * All parent nodes (up to the layout root) will be scheduled for layout.
+         * If a parent node is currently performing layout, a new layout cycle will be scheduled.
+         */
+        FORCE_ROOT_LAYOUT
     }
 
     /* *************************************************************************
@@ -4061,7 +4151,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())
                 && !p.isPerformingLayout()) {
             // Force its parent to fix the layout since it is a managed child.
-            p.requestLayout(true);
+            p.requestLayout(InvalidateLayoutOption.FORCE_PARENT_LAYOUT);
         }
     }
 
@@ -8382,6 +8472,17 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    /**
+     * Walks up the scene graph and sets {@link LayoutFlags#DIRTY_BRANCH} on all parent nodes
+     * that are still layout-clean. If a parent node has the {@link LayoutFlags#NEEDS_LAYOUT}
+     * flag, it remains unchanged. The effect of calling this function is to ensure that when
+     * {@link Parent#layout()} is called on the root node, the layout algorithm will arrive
+     * at the current node and call this node's {@link Parent#layout()} method.
+     * <p>
+     * Note that this method does not change the layout flag of the current node.
+     * This means that in order to actually perform layout, in addition to calling this method,
+     * the layout flag of the current node needs to be set to {@link LayoutFlags#NEEDS_LAYOUT}.
+     */
     void markDirtyLayoutBranch() {
         Parent p = getParent();
         while (p != null && p.layoutFlag == LayoutFlags.CLEAN) {

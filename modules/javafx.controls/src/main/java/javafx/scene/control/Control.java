@@ -577,7 +577,8 @@ public abstract class Control extends Region implements Skinnable {
     /** {@inheritDoc} */
     @Override public double getBaselineOffset() {
         if (skinBase != null) {
-            return skinBase.computeBaselineOffset(snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
+            double offset = skinBase.computeBaselineOffset(snappedTopInset(), snappedRightInset(), snappedBottomInset(), snappedLeftInset());
+            return Double.isNaN(offset) ? super.getBaselineOffset() : offset;
         } else {
             final Node skinNode = getSkinNode();
             return skinNode == null ? 0 : skinNode.getBaselineOffset();

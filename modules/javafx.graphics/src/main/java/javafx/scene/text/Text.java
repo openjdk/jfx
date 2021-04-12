@@ -531,6 +531,7 @@ public class Text extends Shape {
                 @Override public String getName() { return "y"; }
                 @Override public void invalidated() {
                     NodeHelper.geomChanged(Text.this);
+                    NodeHelper.notifyBaselineOffsetChanged(Text.this);
                 }
             };
         }
@@ -779,13 +780,13 @@ public class Text extends Shape {
     }
 
     @Override
-    public boolean isTextBaseline() {
-        return true;
+    public final double getBaselineOffset() {
+        return baselineOffsetProperty().get();
     }
 
     @Override
-    public final double getBaselineOffset() {
-        return baselineOffsetProperty().get();
+    public boolean isTextBaseline() {
+        return true;
     }
 
     /**

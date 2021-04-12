@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,6 +121,10 @@ public class ParentHelper extends NodeHelper {
         return parentAccessor.getTraversalEngine(parent);
     }
 
+    public static void notifyTextBaselineChanged(Parent parent) {
+        parentAccessor.notifyTextBaselineChanged(parent);
+    }
+
     public static void setParentAccessor(final ParentAccessor newAccessor) {
         if (parentAccessor != null) {
             throw new IllegalStateException();
@@ -140,6 +144,7 @@ public class ParentHelper extends NodeHelper {
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
+        void notifyTextBaselineChanged(Parent parent);
     }
 
 }

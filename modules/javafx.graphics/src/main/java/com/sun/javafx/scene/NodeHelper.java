@@ -142,6 +142,10 @@ public abstract class NodeHelper {
         getHelper(node).notifyLayoutBoundsChangedImpl(node);
     }
 
+    public static void notifyBaselineOffsetChanged(Node node) {
+        getHelper(node).notifyBaselineOffsetChangedImpl(node);
+    }
+
     public static void processCSS(Node node) {
         getHelper(node).processCSSImpl(node);
     }
@@ -187,6 +191,10 @@ public abstract class NodeHelper {
 
     protected void notifyLayoutBoundsChangedImpl(Node node) {
         nodeAccessor.doNotifyLayoutBoundsChanged(node);
+    }
+
+    protected void notifyBaselineOffsetChangedImpl(Node node) {
+        nodeAccessor.doNotifyBaselineOffsetChanged(node);
     }
 
     protected void processCSSImpl(Node node) {
@@ -337,6 +345,7 @@ public abstract class NodeHelper {
                 PickResultChooser pickResult);
         void doGeomChanged(Node node);
         void doNotifyLayoutBoundsChanged(Node node);
+        void doNotifyBaselineOffsetChanged(Node node);
         void doProcessCSS(Node node);
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);

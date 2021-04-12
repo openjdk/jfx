@@ -315,7 +315,6 @@ public class StackPane extends Pane {
                padding.getBottom();
     }
 
-
     @Override public void requestLayout() {
         biasDirty = true;
         bias = null;

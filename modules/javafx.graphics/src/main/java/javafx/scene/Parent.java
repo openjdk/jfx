@@ -156,6 +156,11 @@ public abstract class Parent extends Node {
             public List<String> doGetAllParentStylesheets(Parent parent) {
                 return parent.doGetAllParentStylesheets();
             }
+
+            @Override
+            public void notifyTextBaselineChanged(Parent parent) {
+                parent.notifyTextBaselineChanged();
+            }
         });
     }
 
@@ -326,6 +331,8 @@ public abstract class Parent extends Node {
 
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
+            cachedBaselineSourceValid = false;
+            cachedBaselineSource = null;
             unmodifiableManagedChildren = null;
             boolean relayout = false;
             boolean viewOrderChildrenDirty = false;
@@ -885,7 +892,7 @@ public abstract class Parent extends Node {
 
     protected final void setNeedsLayout(boolean value) {
         if (value) {
-            markDirtyLayout(true, false);
+            markDirtyLayout(InvalidateLayoutOption.LOCAL_LAYOUT);
         } else if (layoutFlag == LayoutFlags.NEEDS_LAYOUT) {
             boolean hasBranch = false;
             for (int i = 0, max = children.size(); i < max; i++) {
@@ -925,7 +932,6 @@ public abstract class Parent extends Node {
         return performingLayout;
     }
 
-    private boolean sizeCacheClear = true;
     private double prefWidthCache = -1;
     private double prefHeightCache = -1;
     private double minWidthCache = -1;
@@ -938,9 +944,18 @@ public abstract class Parent extends Node {
         layoutFlag = flag;
     }
 
-    private void markDirtyLayout(boolean local, boolean forceParentLayout) {
+    private InvalidateLayoutOption invalidateLayoutOption = InvalidateLayoutOption.PARENT_LAYOUT;
+
+    /**
+     * Sets the {@link LayoutFlags#NEEDS_LAYOUT} flag on the current node, and walks up
+     * the scene graph to also set the {@link LayoutFlags#DIRTY_BRANCH} flag on all parents
+     * that are layout-clean. This is done to ensure that the layout system will actually
+     * reach this node on the next layout pass.
+     */
+    private void markDirtyLayout(InvalidateLayoutOption option) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
-        if (local || layoutRoot) {
+
+        if (option == InvalidateLayoutOption.LOCAL_LAYOUT || layoutRoot) {
             if (sceneRoot) {
                 Toolkit.getToolkit().requestNextPulse();
                 if (getSubScene() != null) {
@@ -950,7 +965,7 @@ public abstract class Parent extends Node {
                 markDirtyLayoutBranch();
             }
         } else {
-            requestParentLayout(forceParentLayout);
+            requestParentLayout(option);
         }
     }
 
@@ -966,20 +981,19 @@ public abstract class Parent extends Node {
      */
     public void requestLayout() {
         clearSizeCache();
-        markDirtyLayout(false, forceParentLayout);
+        markDirtyLayout(invalidateLayoutOption);
     }
 
-    private boolean forceParentLayout = false;
     /**
      * A package scope method used by Node and serves as a helper method for
      * requestLayout() (see above). If forceParentLayout is true it will
      * propagate this force layout flag to its parent.
      */
-    void requestLayout(boolean forceParentLayout) {
-        boolean savedForceParentLayout = this.forceParentLayout;
-        this.forceParentLayout = forceParentLayout;
+    void requestLayout(InvalidateLayoutOption option) {
+        InvalidateLayoutOption current = invalidateLayoutOption;
+        this.invalidateLayoutOption = option;
         requestLayout();
-        this.forceParentLayout = savedForceParentLayout;
+        this.invalidateLayoutOption = current;
     }
 
     /**
@@ -992,28 +1006,40 @@ public abstract class Parent extends Node {
      * when it's parent recomputes the layout with the new hints.
      */
     protected final void requestParentLayout() {
-       requestParentLayout(false);
+       requestParentLayout(InvalidateLayoutOption.PARENT_LAYOUT);
     }
 
     /**
-     * A package scope method used by Node and serves as a helper method for
-     * requestParentLayout() (see above). If forceParentLayout is true it will
-     * force a request layout call on its parent if its parent is not null.
+     * A package scope method used by Node and serves as a helper method for requestParentLayout()
+     * (see above). The {@code option} argument specifies the details on whether the parent node
+     * (or the entire scene graph up to the layout root) will be scheduled for layout.
+     * <p>
+     * If {@link InvalidateLayoutOption#LOCAL_LAYOUT} is specified, this is a no-op.
      */
-    void requestParentLayout(boolean forceParentLayout) {
+    void requestParentLayout(InvalidateLayoutOption option) {
         if (!layoutRoot) {
             final Parent p = getParent();
-            if (p != null && (!p.performingLayout || forceParentLayout)) {
-                p.requestLayout();
+            if (p != null) {
+                switch (option) {
+                    case PARENT_LAYOUT:
+                        if (!p.performingLayout) {
+                            p.requestLayout(InvalidateLayoutOption.PARENT_LAYOUT);
+                        }
+                        break;
+
+                    case FORCE_PARENT_LAYOUT:
+                        p.requestLayout(InvalidateLayoutOption.PARENT_LAYOUT);
+                        break;
+
+                    case FORCE_ROOT_LAYOUT:
+                        p.requestLayout(InvalidateLayoutOption.FORCE_ROOT_LAYOUT);
+                        break;
+                }
             }
         }
     }
 
     void clearSizeCache() {
-        if (sizeCacheClear) {
-            return;
-        }
-        sizeCacheClear = true;
         prefWidthCache = -1;
         prefHeightCache = -1;
         minWidthCache = -1;
@@ -1025,7 +1051,6 @@ public abstract class Parent extends Node {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
                 if (Double.isNaN(prefWidthCache) || prefWidthCache < 0) prefWidthCache = 0;
-                sizeCacheClear = false;
             }
             return prefWidthCache;
         } else {
@@ -1039,7 +1064,6 @@ public abstract class Parent extends Node {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
                 if (Double.isNaN(prefHeightCache) || prefHeightCache < 0) prefHeightCache = 0;
-                sizeCacheClear = false;
             }
             return prefHeightCache;
         } else {
@@ -1053,7 +1077,6 @@ public abstract class Parent extends Node {
             if (minWidthCache == -1) {
                 minWidthCache = computeMinWidth(-1);
                 if (Double.isNaN(minWidthCache) || minWidthCache < 0) minWidthCache = 0;
-                sizeCacheClear = false;
             }
             return minWidthCache;
         } else {
@@ -1067,7 +1090,6 @@ public abstract class Parent extends Node {
             if (minHeightCache == -1) {
                 minHeightCache = computeMinHeight(-1);
                 if (Double.isNaN(minHeightCache) || minHeightCache < 0) minHeightCache = 0;
-                sizeCacheClear = false;
             }
             return minHeightCache;
         } else {
@@ -1153,33 +1175,78 @@ public abstract class Parent extends Node {
         return prefHeight(width);
     }
 
-    /**
-     * Calculates the baseline offset based on the first managed child that reports a text-node
-     * baseline (as indicated by {@link Node#isTextBaseline()}), or if there is no such child,
-     * the first managed child that reports a baseline other than BASELINE_OFFSET_SAME_AS_HEIGHT.
-     * If there is no such child, returns {@link Node#getBaselineOffset()}.
-     *
-     * @return baseline offset
-     */
     @Override public double getBaselineOffset() {
-        double baselineOffset = Double.NaN;
+        Node baselineSource = getBaselineSource();
+        if (baselineSource == null) {
+            return super.getBaselineOffset();
+        }
 
-        for (int i=0, max=children.size(); i<max; i++) {
-            final Node child = children.get(i);
-            if (child.isManaged()) {
-                double offset = child.getBaselineOffset();
-                if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                    continue;
-                }
-                if (child.isTextBaseline()) {
-                    return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
-                } else if (Double.isNaN(baselineOffset)) {
-                    baselineOffset = child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
-                }
+        return baselineSource.getLayoutBounds().getMinY()
+            + baselineSource.getLayoutY()
+            + baselineSource.getBaselineOffset();
+    }
+
+    @Override public boolean isTextBaseline() {
+        Node baselineSource = getBaselineSource();
+        return baselineSource != null && baselineSource.isTextBaseline();
+    }
+
+    private boolean cachedBaselineSourceValid;
+    private Node cachedBaselineSource;
+
+    /**
+     * Returns the managed child that is the source of this node's baseline offset.
+     * See {@link Node#getBaselineOffset()} for a description of the selection algorithm.
+     */
+    private Node getBaselineSource() {
+        if (cachedBaselineSourceValid) {
+            return cachedBaselineSource;
+        }
+
+        Node firstTextNode = null;
+        Node firstManagedNode = null;
+
+        for (int i = 0, max = children.size(); i < max; ++i) {
+            Node child = children.get(i);
+
+            if (!child.isManaged()) {
+                continue;
+            }
+
+            if (child.isPrefBaseline()) {
+                cachedBaselineSourceValid = true;
+                return cachedBaselineSource = child;
+            }
+
+            if (firstTextNode == null && child.isTextBaseline()) {
+                firstTextNode = child;
+            }
+
+            if (firstManagedNode == null && child.getBaselineOffset() != BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                firstManagedNode = child;
             }
         }
 
-        return Double.isNaN(baselineOffset) ? super.getBaselineOffset() : baselineOffset;
+        if (firstTextNode != null) {
+            cachedBaselineSourceValid = true;
+            return cachedBaselineSource = firstTextNode;
+        }
+
+        if (firstManagedNode != null) {
+            cachedBaselineSourceValid = true;
+            return cachedBaselineSource = firstManagedNode;
+        }
+
+        return null;
+    }
+
+    private void notifyTextBaselineChanged() {
+        cachedBaselineSourceValid = false;
+        cachedBaselineSource = null;
+        Parent parent = getParent();
+        if (parent != null) {
+            parent.notifyTextBaselineChanged();
+        }
     }
 
     /**
@@ -1200,7 +1267,7 @@ public abstract class Parent extends Node {
      */
     public final void layout() {
         int pass = 0;
-        while (layoutFlag != LayoutFlags.CLEAN) {
+        while (layoutFlag != LayoutFlags.CLEAN && (layoutRoot || pass == 0)) {
             if (pass++ == LAYOUT_LIMIT) {
                 if (WARN) {
                     System.err.println(
