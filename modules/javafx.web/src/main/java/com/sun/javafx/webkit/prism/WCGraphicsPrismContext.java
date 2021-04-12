@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,6 +126,18 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return getGraphics(false);
     }
 
+    @Override
+    public boolean isValid() {
+        Object platformGraphics = getPlatformGraphics();
+
+        // Ensure that graphics is non-null and of the right type
+        if (! (platformGraphics instanceof Graphics)) {
+            return false;
+        }
+        Graphics g = (Graphics)platformGraphics;
+        return !g.getResourceFactory().isDisposed();
+    }
+
     Graphics getGraphics(boolean checkClip) {
         if (cachedGraphics == null) {
             Layer l = state.getLayerNoClone();
@@ -133,7 +145,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     ? l.getGraphics()
                     : baseGraphics;
 
-            state.apply(cachedGraphics);
+            ResourceFactory rf = cachedGraphics.getResourceFactory();
+            if (!rf.isDisposed()) {
+                state.apply(cachedGraphics);
+            }
 
             if (log.isLoggable(Level.FINE)) {
                 log.fine("getPlatformGraphics for " + this + " : " +
@@ -503,19 +518,17 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void fillRect(final float x, final float y, final float w, final float h, final Integer rgba) {
+    public void fillRect(final float x, final float y, final float w, final float h, final Color color) {
         if (log.isLoggable(Level.FINE)) {
-            String format = (rgba != null)
-                    ? "fillRect(%f, %f, %f, %f, 0x%x)"
-                    : "fillRect(%f, %f, %f, %f, null)";
-            log.fine(String.format(format, x, y, w, h, rgba));
+            String format = "fillRect(%f, %f, %f, %f, %s)";
+            log.fine(String.format(format, x, y, w, h, color));
         }
         if (!shouldRenderRect(x, y, w, h, state.getShadowNoClone(), null)) {
             return;
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
-                Paint paint = (rgba != null) ? createColor(rgba) : state.getPaintNoClone();
+                Paint paint = (color != null) ? color : state.getPaintNoClone();
                 DropShadow shadow = state.getShadowNoClone();
                 // TextureMapperJava::drawSolidColor calls fillRect with perspective
                 // projection.
@@ -535,13 +548,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     public void fillRoundedRect(final float x, final float y, final float w, final float h,
         final float topLeftW, final float topLeftH, final float topRightW, final float topRightH,
         final float bottomLeftW, final float bottomLeftH, final float bottomRightW, final float bottomRightH,
-        final int rgba)
+        final Color color)
     {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("fillRoundedRect(%f, %f, %f, %f, "
-                    + "%f, %f, %f, %f, %f, %f, %f, %f, 0x%x)",
+                    + "%f, %f, %f, %f, %f, %f, %f, %f, %s)",
                     x, y, w, h, topLeftW, topLeftH, topRightW, topRightH,
-                    bottomLeftW, bottomLeftH, bottomRightW, bottomRightH, rgba));
+                    bottomLeftW, bottomLeftH, bottomRightW, bottomRightH, color));
         }
         if (!shouldRenderRect(x, y, w, h, state.getShadowNoClone(), null)) {
             return;
@@ -554,14 +567,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 float arcW = (topLeftW + topRightW + bottomLeftW + bottomRightW) / 2;
                 float arcH = (topLeftH + topRightH + bottomLeftH + bottomRightH) / 2;
 
-                Paint paint = createColor(rgba);
                 DropShadow shadow = state.getShadowNoClone();
                 if (shadow != null) {
                     final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, arcW, arcH);
-                    render(g, shadow, paint, null, node);
+                    render(g, shadow, color, null, node);
                 } else {
-                    g.setPaint(paint);
+                    g.setPaint(color);
                     g.fillRoundRect(x, y, w, h, arcW, arcH);
                 }
             }
@@ -585,11 +597,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void setFillColor(int rgba) {
+    public void setFillColor(Color color) {
         if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format("setFillColor(0x%x)", rgba));
+            log.fine(String.format("setFillColor(%s)", color));
         }
-        state.setPaint(createColor(rgba));
+        state.setPaint(color);
     }
 
     @Override
@@ -627,11 +639,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void setStrokeColor(int rgba) {
+    public void setStrokeColor(Color color) {
         if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format("setStrokeColor(0x%x)", rgba));
+            log.fine(String.format("setStrokeColor(%s)", color));
         }
-        state.getStrokeNoClone().setPaint(createColor(rgba));
+        state.getStrokeNoClone().setPaint(color);
     }
 
     @Override
@@ -701,12 +713,12 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void setShadow(float dx, float dy, float blur, int rgba) {
+    public void setShadow(float dx, float dy, float blur, Color color) {
         if (log.isLoggable(Level.FINE)) {
-            String format = "setShadow(%f, %f, %f, 0x%x)";
-            log.fine(String.format(format, dx, dy, blur, rgba));
+            String format = "setShadow(%f, %f, %f, %s)";
+            log.fine(String.format(format, dx, dy, blur, color));
         }
-        state.setShadow(createShadow(dx, dy, blur, rgba));
+        state.setShadow(createShadow(dx, dy, blur, color));
     }
 
     @Override
@@ -773,17 +785,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         if (texture != null) {
             new Composite() {
                 @Override void doPaint(Graphics g) {
-                    // The handling of pattern transform is modeled after the WebKit
-                    // ImageCG.cpp's Image::drawPattern()
-                    float adjustedX = phase.getX()
-                            + srcRect.getX() * (float) patternTransform.getMatrix()[0];
-                    float adjustedY = phase.getY()
-                            + srcRect.getY() * (float) patternTransform.getMatrix()[3];
-                    float scaledTileWidth =
-                            srcRect.getWidth() * (float) patternTransform.getMatrix()[0];
-                    float scaledTileHeight =
-                            srcRect.getHeight() * (float) patternTransform.getMatrix()[3];
-
                     Image img = ((PrismImage)texture).getImage();
 
                     // Create subImage only if srcRect doesn't fit the texture bounds. See RT-20193.
@@ -794,11 +795,17 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                                                  (int)Math.ceil(srcRect.getWidth()),
                                                  (int)Math.ceil(srcRect.getHeight()));
                     }
+
+                    double m[] = patternTransform.getMatrix();
+                    Affine3D at = new Affine3D();
+                    at.translate(phase.getX(), phase.getY());
+                    at.concatenate(m[0], m[2], m[4], m[1], m[3], m[5]);
+
                     g.setPaint(new ImagePattern(
                                img,
-                               adjustedX, adjustedY,
-                               scaledTileWidth, scaledTileHeight,
-                               false, false));
+                               srcRect.getX(), srcRect.getY(),
+                               srcRect.getWidth(), srcRect.getHeight(),
+                               at, false, false));
 
                     g.fillRect(destRect.getX(), destRect.getY(),
                                destRect.getWidth(), destRect.getHeight());
@@ -853,9 +860,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
+                ResourceFactory rf = g.getResourceFactory();
+                if (rf.isDisposed()) {
+                    log.fine("WCGraphicsPrismContext::doPaint skip because device has been disposed");
+                    return;
+                }
                 image.order(ByteOrder.nativeOrder());
                 Image img = Image.fromByteBgraPreData(image, w, h);
-                ResourceFactory rf = g.getResourceFactory();
                 Texture txt = rf.createTexture(img, Texture.Usage.STATIC, Texture.WrapMode.REPEAT);
                 g.drawTexture(txt, x, y, x + w, y + h, 0, 0, w, h);
                 txt.dispose();
@@ -1023,16 +1034,16 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                          new float[] {1.0f}, 0.0f);
 
     @Override
-    public void drawFocusRing(final int x, final int y, final int w, final int h, final int rgba) {
+    public void drawFocusRing(final int x, final int y, final int w, final int h, final Color color) {
         if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format("drawFocusRing: %d, %d, %d, %d, 0x%x", x, y, w, h, rgba));
+            log.fine(String.format("drawFocusRing: %d, %d, %d, %d, %s", x, y, w, h, color));
         }
         if (!shouldRenderRect(x, y, w, h, null, focusRingStroke)) {
             return;
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
-                g.setPaint(createColor(rgba));
+                g.setPaint(color);
                 BasicStroke stroke = g.getStroke();
                 g.setStroke(focusRingStroke);
                 g.drawRoundRect(x, y, w, h, 4, 4);
@@ -1120,23 +1131,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return what;
     }
 
-    static Color createColor(int rgba) {
-        float a = (0xFF & (rgba >> 24)) / 255.0f;
-        float r = (0xFF & (rgba >> 16)) / 255.0f;
-        float g = (0xFF & (rgba >> 8)) / 255.0f;
-        float b = (0xFF & (rgba)) / 255.0f;
-        return new Color(r, g, b, a);
+    private static Color4f createColor4f(Color color) {
+        return new Color4f(color.getRed(),
+                           color.getGreen(),
+                           color.getBlue(),
+                           color.getAlpha());
     }
 
-    private static Color4f createColor4f(int rgba) {
-        float a = (0xFF & (rgba >> 24)) / 255.0f;
-        float r = (0xFF & (rgba >> 16)) / 255.0f;
-        float g = (0xFF & (rgba >> 8)) / 255.0f;
-        float b = (0xFF & (rgba)) / 255.0f;
-        return new Color4f(r, g, b, a);
-    }
-
-    private DropShadow createShadow(float dx, float dy, float blur, int rgba) {
+    private DropShadow createShadow(float dx, float dy, float blur, Color color) {
         if (dx == 0f && dy == 0f && blur == 0f) {
             return null;
         }
@@ -1144,7 +1146,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         shadow.setOffsetX((int) dx);
         shadow.setOffsetY((int) dy);
         shadow.setRadius((blur < 0f) ? 0f : (blur > 127f) ? 127f : blur);
-        shadow.setColor(createColor4f(rgba));
+        shadow.setColor(createColor4f(color));
         return shadow;
     }
 
@@ -1362,16 +1364,22 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             fctx = getFilterContext(g);
             if (permanent) {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
-                rtt.makePermanent();
-                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                if (f != null && !f.isDisposed()) {
+                    RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    rtt.makePermanent();
+                    buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                } else {
+                    log.fine("Layer :: cannot construct RTT because device disposed or not ready");
+                    fctx = null;
+                    buffer = null;
+                }
             } else {
                 buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
             }
         }
 
         Graphics getGraphics() {
-            if (graphics == null) {
+            if (graphics == null && buffer != null) {
                 graphics = buffer.createGraphics();
             }
             return graphics;
@@ -1837,6 +1845,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void flush() {
+        if (!isValid()) {
+            log.fine("WCGraphicsPrismContext::flush : GC is invalid");
+            return;
+        }
         flushAllLayers();
     }
 

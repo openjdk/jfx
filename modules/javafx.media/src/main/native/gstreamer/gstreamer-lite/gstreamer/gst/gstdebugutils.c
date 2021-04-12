@@ -118,7 +118,8 @@ debug_dump_get_object_params (GObject * object,
       /* skip some properties */
       if (!(property->flags & G_PARAM_READABLE))
         continue;
-      if (!strcmp (property->name, "name"))
+      if (!strcmp (property->name, "name")
+          || !strcmp (property->name, "parent"))
         continue;
 
       if (ignored_propnames)
@@ -230,8 +231,7 @@ debug_dump_pad (GstPad * pad, const gchar * color_name,
   GstPadPresence presence;
   gchar *pad_name, *param_name = NULL;
   const gchar *style_name;
-  static const char *const ignore_propnames[] =
-      { "parent", "direction", "template",
+  static const char *const ignore_propnames[] = { "direction", "template",
     "caps", NULL
   };
   const gchar *spc = MAKE_INDENT (indent);
@@ -614,6 +614,7 @@ debug_dump_element (GstBin * bin, GstDebugGraphDetails details,
   gchar *state_name = NULL;
   gchar *param_name = NULL;
   const gchar *spc = MAKE_INDENT (indent);
+  static const char *const ignore_propnames[] = { "stats", NULL };
 
   element_iter = gst_bin_iterate_elements (bin);
   elements_done = FALSE;
@@ -628,7 +629,7 @@ debug_dump_element (GstBin * bin, GstDebugGraphDetails details,
         }
         if (details & GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS) {
           param_name = debug_dump_get_object_params (G_OBJECT (element),
-              details, NULL);
+              details, ignore_propnames);
         }
         /* elements */
         g_string_append_printf (str, "%ssubgraph cluster_%s {\n", spc,
@@ -829,9 +830,10 @@ gst_debug_bin_to_dot_data (GstBin * bin, GstDebugGraphDetails details)
  * To aid debugging applications one can use this method to write out the whole
  * network of gstreamer elements that form the pipeline into an dot file.
  * This file can be processed with graphviz to get an image.
- * <informalexample><programlisting>
+ *
+ * ``` shell
  *  dot -Tpng -oimage.png graph_lowlevel.dot
- * </programlisting></informalexample>
+ * ```
  */
 void
 gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,

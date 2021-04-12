@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -734,7 +734,9 @@ HRESULT D3DContext::InitDevice(IDirect3DDevice9 *pd3dDevice)
 HRESULT
 D3DContext::TestCooperativeLevel()
 {
-    TraceLn(NWT_TRACE_INFO, "D3DContext::testCooperativeLevel");
+    TraceLn2(NWT_TRACE_INFO,
+             "D3DContext::testCooperativeLevel pd3dDevice = 0x%x, pd3dDeviceEx = 0x%x",
+             pd3dDevice, pd3dDeviceEx);
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
@@ -746,12 +748,13 @@ D3DContext::TestCooperativeLevel()
     switch (res) {
     case S_OK: break;
     case D3DERR_DEVICELOST:
-        TraceLn1(NWT_TRACE_VERBOSE, "  device %d is still lost",
-            adapterOrdinal);
+        TraceLn1(NWT_TRACE_INFO, "  device %d is still lost", adapterOrdinal);
         break;
     case D3DERR_DEVICENOTRESET:
-        TraceLn1(NWT_TRACE_VERBOSE, "  device %d needs to be reset",
-            adapterOrdinal);
+        TraceLn1(NWT_TRACE_INFO, "  device %d needs to be reset", adapterOrdinal);
+        break;
+    case D3DERR_DEVICEREMOVED:
+        TraceLn1(NWT_TRACE_INFO, "  device %d has been removed", adapterOrdinal);
         break;
     case S_PRESENT_OCCLUDED:
         break;

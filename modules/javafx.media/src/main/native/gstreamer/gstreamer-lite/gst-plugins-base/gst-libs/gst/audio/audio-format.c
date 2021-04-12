@@ -520,3 +520,132 @@ gst_audio_format_fill_silence (const GstAudioFormatInfo * info,
     }
   }
 }
+
+struct RawAudioFormats
+{
+  GstAudioFormat *formats;
+  guint n;
+};
+
+static gpointer
+generate_raw_audio_formats (gpointer data)
+{
+  GValue list = G_VALUE_INIT;
+  struct RawAudioFormats *all = g_new (struct RawAudioFormats, 1);
+  gchar *tmp;
+  guint i;
+
+  g_value_init (&list, GST_TYPE_LIST);
+  /* Workaround a bug in our parser that would lead to segfaults
+   * when deserializing container types using static strings,
+   * see https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/446 */
+  tmp = g_strdup (GST_AUDIO_FORMATS_ALL);
+  g_assert (gst_value_deserialize (&list, tmp));
+  g_free (tmp);
+
+  all->n = gst_value_list_get_size (&list);
+  all->formats = g_new (GstAudioFormat, all->n);
+
+  for (i = 0; i < all->n; i++) {
+    const GValue *v = gst_value_list_get_value (&list, i);
+
+    all->formats[i] = gst_audio_format_from_string (g_value_get_string (v));
+    g_assert (all->formats[i] != GST_AUDIO_FORMAT_UNKNOWN
+        && all->formats[i] != GST_AUDIO_FORMAT_ENCODED);
+  }
+
+  g_value_unset (&list);
+
+  return all;
+}
+
+/**
+ * gst_audio_formats_raw:
+ * @len: (out): the number of elements in the returned array
+ *
+ * Return all the raw audio formats supported by GStreamer.
+ *
+ * Returns: (transfer none) (array length=len): an array of #GstAudioFormat
+ * Since: 1.18
+ */
+const GstAudioFormat *
+gst_audio_formats_raw (guint * len)
+{
+  static GOnce raw_audio_formats_once = G_ONCE_INIT;
+  struct RawAudioFormats *all;
+
+  g_return_val_if_fail (len, NULL);
+
+  g_once (&raw_audio_formats_once, generate_raw_audio_formats, NULL);
+
+  all = raw_audio_formats_once.retval;
+  *len = all->n;
+  return all->formats;
+}
+
+/**
+ * gst_audio_make_raw_caps:
+ * @formats: (array length=len) (nullable): an array of raw #GstAudioFormat, or %NULL
+ * @len: the size of @formats
+ * @layout: the layout of audio samples
+ *
+ * Return a generic raw audio caps for formats defined in @formats.
+ * If @formats is %NULL returns a caps for all the supported raw audio formats,
+ * see gst_audio_formats_raw().
+ *
+ * Returns: (transfer full): an audio @GstCaps
+ * Since: 1.18
+ */
+GstCaps *
+gst_audio_make_raw_caps (const GstAudioFormat formats[], guint len,
+    GstAudioLayout layout)
+{
+  GstStructure *s;
+  GValue format = G_VALUE_INIT;
+  GstCaps *caps;
+  const gchar *layout_str;
+
+  g_return_val_if_fail ((formats && len > 0) || (!formats && len == 0), NULL);
+
+  if (!formats) {
+    formats = gst_audio_formats_raw (&len);
+  }
+
+  if (len > 1) {
+    guint i;
+
+    g_value_init (&format, GST_TYPE_LIST);
+
+    for (i = 0; i < len; i++) {
+      GValue v = G_VALUE_INIT;
+
+      g_return_val_if_fail (formats[i] != GST_AUDIO_FORMAT_UNKNOWN
+          && formats[i] != GST_AUDIO_FORMAT_ENCODED, NULL);
+
+      g_value_init (&v, G_TYPE_STRING);
+      g_value_set_static_string (&v, gst_audio_format_to_string (formats[i]));
+      gst_value_list_append_and_take_value (&format, &v);
+    }
+  } else {
+    g_value_init (&format, G_TYPE_STRING);
+
+    g_value_set_static_string (&format,
+        gst_audio_format_to_string (formats[0]));
+  }
+
+  if (layout == GST_AUDIO_LAYOUT_INTERLEAVED)
+    layout_str = "interleaved";
+  else
+    layout_str = "non-interleaved";
+
+  s = gst_structure_new ("audio/x-raw",
+      "rate", GST_TYPE_INT_RANGE, 1, G_MAXINT,
+      "channels", GST_TYPE_INT_RANGE, 1, G_MAXINT,
+      "layout", G_TYPE_STRING, layout_str, NULL);
+
+  gst_structure_take_value (s, "format", &format);
+
+  caps = gst_caps_new_full (s, NULL);
+
+  return caps;
+}

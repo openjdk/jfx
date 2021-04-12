@@ -47,6 +47,7 @@ class JSGlobalObject;
     v(ownKeys, nullptr) \
     v(enqueueJob, nullptr) \
     v(makeTypeError, nullptr) \
+    v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
     v(typedArrayGetOriginalConstructor, nullptr) \
     v(typedArraySort, nullptr) \
@@ -73,6 +74,7 @@ class JSGlobalObject;
     v(Set, nullptr) \
     v(thisTimeValue, nullptr) \
     v(isConstructor, nullptr) \
+    v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
     v(regExpProtoGlobalGetter, nullptr) \
     v(regExpProtoIgnoreCaseGetter, nullptr) \
@@ -86,11 +88,13 @@ class JSGlobalObject;
     v(regExpMatchFast, nullptr) \
     v(regExpSearchFast, nullptr) \
     v(regExpSplitFast, nullptr) \
+    v(regExpPrototypeSymbolMatch, nullptr) \
     v(regExpPrototypeSymbolReplace, nullptr) \
     v(regExpTestFast, nullptr) \
     v(stringIncludesInternal, nullptr) \
+    v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
-    v(stringSubstrInternal, nullptr) \
+    v(stringSubstringInternal, nullptr) \
     v(makeBoundFunction, nullptr) \
     v(hasOwnLengthProperty, nullptr) \
     v(dateTimeFormat, nullptr) \
@@ -100,6 +104,8 @@ class JSGlobalObject;
     v(Array, nullptr) \
     v(applyFunction, nullptr) \
     v(callFunction, nullptr) \
+    v(hasOwnPropertyFunction, nullptr) \
+    v(createPrivateSymbol, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

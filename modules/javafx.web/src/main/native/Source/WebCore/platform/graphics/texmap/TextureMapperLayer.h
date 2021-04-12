@@ -17,8 +17,7 @@
  Boston, MA 02110-1301, USA.
  */
 
-#ifndef TextureMapperLayer_h
-#define TextureMapperLayer_h
+#pragma once
 
 #include "FilterOperations.h"
 #include "FloatRect.h"
@@ -59,6 +58,8 @@ public:
     void setChildren(const Vector<TextureMapperLayer*>&);
     void setMaskLayer(TextureMapperLayer*);
     void setReplicaLayer(TextureMapperLayer*);
+    void setBackdropLayer(TextureMapperLayer*);
+    void setBackdropFiltersRect(const FloatRoundedRect&);
     void setPosition(const FloatPoint&);
     void setBoundsOrigin(const FloatPoint&);
     void setSize(const FloatSize&);
@@ -81,6 +82,7 @@ public:
     void setSolidColor(const Color&);
     void setContentsTileSize(const FloatSize&);
     void setContentsTilePhase(const FloatSize&);
+    void setContentsClippingRect(const FloatRoundedRect&);
     void setFilters(const FilterOperations&);
 
     bool hasFilters() const
@@ -106,13 +108,13 @@ public:
     void addChild(TextureMapperLayer*);
 
 private:
-    const TextureMapperLayer& rootLayer() const
+    TextureMapperLayer& rootLayer() const
     {
         if (m_effectTarget)
             return m_effectTarget->rootLayer();
         if (m_parent)
             return m_parent->rootLayer();
-        return *this;
+        return const_cast<TextureMapperLayer&>(*this);
     }
     void computeTransformsRecursive();
 
@@ -122,15 +124,21 @@ private:
     void removeFromParent();
     void removeAllChildren();
 
-    enum ResolveSelfOverlapMode {
-        ResolveSelfOverlapAlways = 0,
-        ResolveSelfOverlapIfNeeded
+    enum class ComputeOverlapRegionMode : uint8_t {
+        Intersection,
+        Union
     };
-    void computeOverlapRegions(Region& overlapRegion, Region& nonOverlapRegion, ResolveSelfOverlapMode);
+    struct ComputeOverlapRegionData {
+        ComputeOverlapRegionMode mode;
+        IntRect clipBounds;
+        Region& overlapRegion;
+        Region& nonOverlapRegion;
+    };
+    void computeOverlapRegions(ComputeOverlapRegionData&, const TransformationMatrix&, bool includesReplica = true);
 
     void paintRecursive(const TextureMapperPaintOptions&);
     void paintUsingOverlapRegions(const TextureMapperPaintOptions&);
-    RefPtr<BitmapTexture> paintIntoSurface(const TextureMapperPaintOptions&, const IntSize&);
+    void paintIntoSurface(TextureMapperPaintOptions&);
     void paintWithIntermediateSurface(const TextureMapperPaintOptions&, const IntRect&);
     void paintSelf(const TextureMapperPaintOptions&);
     void paintSelfAndChildren(const TextureMapperPaintOptions&);
@@ -166,8 +174,11 @@ private:
         FloatRect contentsRect;
         FloatSize contentsTileSize;
         FloatSize contentsTilePhase;
+        FloatRoundedRect contentsClippingRect;
         WeakPtr<TextureMapperLayer> maskLayer;
         WeakPtr<TextureMapperLayer> replicaLayer;
+        WeakPtr<TextureMapperLayer> backdropLayer;
+        FloatRoundedRect backdropFiltersRect;
         Color solidColor;
         FilterOperations filters;
         Color debugBorderColor;
@@ -209,6 +220,8 @@ private:
 #if USE(COORDINATED_GRAPHICS)
     RefPtr<Nicosia::AnimatedBackingStoreClient> m_animatedBackingStoreClient;
 #endif
+    bool m_isBackdrop { false };
+    bool m_isReplica { false };
 
     struct {
         TransformationMatrix localTransform;
@@ -222,6 +235,4 @@ private:
     } m_layerTransforms;
 };
 
-}
-
-#endif // TextureMapperLayer_h
+} // namespace WebCore

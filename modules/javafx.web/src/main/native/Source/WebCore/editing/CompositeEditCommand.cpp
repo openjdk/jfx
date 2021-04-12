@@ -55,7 +55,6 @@
 #include "InsertTextCommand.h"
 #include "MergeIdenticalElementsCommand.h"
 #include "NodeTraversal.h"
-#include "Range.h"
 #include "RemoveNodeCommand.h"
 #include "RemoveNodePreservingChildrenCommand.h"
 #include "RenderBlockFlow.h"
@@ -131,7 +130,7 @@ static String stringForVisiblePositionIndexRange(const VisiblePositionIndexRange
         return String();
     VisiblePosition start = visiblePositionForIndex(range.startIndex.value, range.startIndex.scope.get());
     VisiblePosition end = visiblePositionForIndex(range.endIndex.value, range.endIndex.scope.get());
-    return AccessibilityObject::stringForVisiblePositionRange(VisiblePositionRange(start, end));
+    return AccessibilityObject::stringForVisiblePositionRange({ WTFMove(start), WTFMove(end) });
 }
 
 String AccessibilityUndoReplacedText::textDeletedByUnapply()
@@ -228,17 +227,18 @@ void EditCommandComposition::unapply()
     // up the composition will leave a stale, invalid composition, as in <rdar://problem/6831637>.
     // Desktop handles this in -[WebHTMLView _updateSelectionForInputManager], but the phone
     // goes another route.
-    frame->editor().cancelComposition();
+    m_document->editor().cancelComposition();
 #endif
 
-    if (!frame->editor().willUnapplyEditing(*this))
+    auto prohibitScrollingForScope = m_document->view() ? m_document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
+    if (!m_document->editor().willUnapplyEditing(*this))
         return;
 
     size_t size = m_commands.size();
     for (size_t i = size; i; --i)
         m_commands[i - 1]->doUnapply();
 
-    frame->editor().unappliedEditing(*this);
+    m_document->editor().unappliedEditing(*this);
 
     if (AXObjectCache::accessibilityEnabled())
         m_replacedText.postTextStateChangeNotificationForUnapply(m_document->existingAXObjectCache());
@@ -258,13 +258,14 @@ void EditCommandComposition::reapply()
     // if one is necessary (like for the creation of VisiblePositions).
     m_document->updateLayoutIgnorePendingStylesheets();
 
-    if (!frame->editor().willReapplyEditing(*this))
+    auto prohibitScrollingForScope = m_document->view() ? m_document->view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
+    if (!m_document->editor().willReapplyEditing(*this))
         return;
 
     for (auto& command : m_commands)
         command->doReapply();
 
-    frame->editor().reappliedEditing(*this);
+    m_document->editor().reappliedEditing(*this);
 
     if (AXObjectCache::accessibilityEnabled())
         m_replacedText.postTextStateChangeNotificationForReapply(m_document->existingAXObjectCache());
@@ -319,7 +320,7 @@ CompositeEditCommand::~CompositeEditCommand()
 
 bool CompositeEditCommand::willApplyCommand()
 {
-    return frame().editor().willApplyEditing(*this, targetRangesForBindings());
+    return document().editor().willApplyEditing(*this, targetRangesForBindings());
 }
 
 void CompositeEditCommand::apply()
@@ -364,6 +365,7 @@ void CompositeEditCommand::apply()
     // if one is necessary (like for the creation of VisiblePositions).
     document().updateLayoutIgnorePendingStylesheets();
 
+    auto prohibitScrollingForScope = document().view() ? document().view()->prohibitScrollingWhenChangingContentSizeForScope() : nullptr;
     if (!willApplyCommand())
         return;
 
@@ -378,17 +380,17 @@ void CompositeEditCommand::apply()
 
 void CompositeEditCommand::didApplyCommand()
 {
-    frame().editor().appliedEditing(*this);
+    document().editor().appliedEditing(*this);
 }
 
 Vector<RefPtr<StaticRange>> CompositeEditCommand::targetRanges() const
 {
     ASSERT(!isEditingTextAreaOrTextInput());
-    auto firstRange = frame().selection().selection().firstRange();
+    auto firstRange = document().selection().selection().firstRange();
     if (!firstRange)
         return { };
 
-    return { 1, StaticRange::createFromRange(*firstRange) };
+    return { 1, StaticRange::create(WTFMove(*firstRange)) };
 }
 
 Vector<RefPtr<StaticRange>> CompositeEditCommand::targetRangesForBindings() const
@@ -769,32 +771,12 @@ static Vector<RenderedDocumentMarker> copyMarkers(const Vector<RenderedDocumentM
 
 void CompositeEditCommand::replaceTextInNodePreservingMarkers(Text& node, unsigned offset, unsigned count, const String& replacementText)
 {
-    Ref<Text> protectedNode(node);
-    DocumentMarkerController& markerController = document().markers();
-    auto markers = copyMarkers(markerController.markersInRange(Range::create(document(), &node, offset, &node, offset + count), DocumentMarker::allMarkers()));
+    auto range = SimpleRange { { node, offset }, { node, offset + count } };
+    auto markers = copyMarkers(document().markers().markersInRange(range, DocumentMarker::allMarkers()));
     replaceTextInNode(node, offset, count, replacementText);
-    auto newRange = Range::create(document(), &node, offset, &node, offset + replacementText.length());
-    for (const auto& marker : markers) {
-#if PLATFORM(IOS_FAMILY)
-        if (marker.isDictation()) {
-            markerController.addMarker(newRange, marker.type(), marker.description(), marker.alternatives(), marker.metadata());
-            continue;
-        }
-#endif
-#if ENABLE(PLATFORM_DRIVEN_TEXT_CHECKING)
-        if (marker.type() == DocumentMarker::PlatformTextChecking) {
-            if (!WTF::holds_alternative<DocumentMarker::PlatformTextCheckingData>(marker.data())) {
-                ASSERT_NOT_REACHED();
-                continue;
-            }
-
-            auto& textCheckingData = WTF::get<DocumentMarker::PlatformTextCheckingData>(marker.data());
-            markerController.addPlatformTextCheckingMarker(newRange, textCheckingData.key, textCheckingData.value);
-            continue;
-        }
-#endif
-        markerController.addMarker(newRange, marker.type(), marker.description());
-    }
+    range.end.offset = range.start.offset + replacementText.length();
+    for (auto& marker : markers)
+        addMarker(range, marker.type(), marker.data());
 }
 
 Position CompositeEditCommand::positionOutsideTabSpan(const Position& position)
@@ -1179,6 +1161,9 @@ RefPtr<Node> CompositeEditCommand::moveParagraphContentsToNewBlockIfNecessary(co
     VisiblePosition visiblePos(pos, VP_DEFAULT_AFFINITY);
     VisiblePosition visibleParagraphStart(startOfParagraph(visiblePos));
     VisiblePosition visibleParagraphEnd = endOfParagraph(visiblePos);
+    if (visibleParagraphStart.isNull() || visibleParagraphEnd.isNull())
+        return nullptr;
+
     VisiblePosition next = visibleParagraphEnd.next();
     VisiblePosition visibleEnd = next.isNotNull() ? next : visibleParagraphEnd;
 
@@ -1276,6 +1261,9 @@ void CompositeEditCommand::cloneParagraphUnderNewElement(const Position& start, 
             lastNode = WTFMove(child);
         }
     }
+
+    if (!start.deprecatedNode()->isConnected() || !end.deprecatedNode()->isConnected())
+        return;
 
     // Handle the case of paragraphs with more than one node,
     // cloning all the siblings until end.deprecatedNode() is reached.
@@ -1412,12 +1400,11 @@ void CompositeEditCommand::moveParagraph(const VisiblePosition& startOfParagraph
 
 void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagraphToMove, const VisiblePosition& endOfParagraphToMove, const VisiblePosition& destination, bool preserveSelection, bool preserveStyle)
 {
-    if (startOfParagraphToMove == destination)
+    if (destination.isNull() || startOfParagraphToMove == destination)
         return;
 
-    int startIndex = -1;
-    int endIndex = -1;
-    int destinationIndex = -1;
+    Optional<uint64_t> startIndex;
+    Optional<uint64_t> endIndex;
     bool originalIsDirectional = endingSelection().isDirectional();
     if (preserveSelection && !endingSelection().isNone()) {
         VisiblePosition visibleStart = endingSelection().visibleStart();
@@ -1432,14 +1419,14 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
 
             startIndex = 0;
             if (startInParagraph) {
-                auto startRange = Range::create(document(), startOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent(), visibleStart.deepEquivalent().parentAnchoredEquivalent());
-                startIndex = TextIterator::rangeLength(startRange.ptr(), true);
+                if (auto rangeToSelectionStart = makeSimpleRange(startOfParagraphToMove, visibleStart))
+                    startIndex = characterCount(*rangeToSelectionStart, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
             }
 
             endIndex = 0;
             if (endInParagraph) {
-                auto endRange = Range::create(document(), startOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent(), visibleEnd.deepEquivalent().parentAnchoredEquivalent());
-                endIndex = TextIterator::rangeLength(endRange.ptr(), true);
+                if (auto rangeToSelectionEnd = makeSimpleRange(startOfParagraphToMove, visibleEnd))
+                    endIndex = characterCount(*rangeToSelectionEnd, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
             }
         }
     }
@@ -1452,17 +1439,11 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     Position start = startOfParagraphToMove.deepEquivalent().downstream();
     Position end = endOfParagraphToMove.deepEquivalent().upstream();
 
-    // start and end can't be used directly to create a Range; they are "editing positions"
-    Position startRangeCompliant = start.parentAnchoredEquivalent();
-    Position endRangeCompliant = end.parentAnchoredEquivalent();
-    auto range = Range::create(document(), startRangeCompliant.deprecatedNode(), startRangeCompliant.deprecatedEditingOffset(), endRangeCompliant.deprecatedNode(), endRangeCompliant.deprecatedEditingOffset());
-
     // FIXME: This is an inefficient way to preserve style on nodes in the paragraph to move. It
     // shouldn't matter though, since moved paragraphs will usually be quite small.
     RefPtr<DocumentFragment> fragment;
-    // This used to use a ternary for initialization, but that confused some versions of GCC, see bug 37912
     if (startOfParagraphToMove != endOfParagraphToMove)
-        fragment = createFragmentFromMarkup(document(), serializePreservingVisualAppearance(range.get(), nullptr, AnnotateForInterchange::No, ConvertBlocksToInlines::Yes), emptyString());
+        fragment = createFragmentFromMarkup(document(), serializePreservingVisualAppearance(*makeSimpleRange(start, end), nullptr, AnnotateForInterchange::No, ConvertBlocksToInlines::Yes), emptyString());
 
     // A non-empty paragraph's style is moved when we copy and move it.  We don't move
     // anything if we're given an empty paragraph, but an empty paragraph can have style
@@ -1482,12 +1463,15 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     // FIXME (5098931): We should add a new insert action "WebViewInsertActionMoved" and call shouldInsertFragment here.
 
     setEndingSelection(VisibleSelection(start, end, DOWNSTREAM));
-    frame().editor().clearMisspellingsAndBadGrammar(endingSelection());
+    document().editor().clearMisspellingsAndBadGrammar(endingSelection());
     deleteSelection(false, false, false, false);
 
     ASSERT(destination.deepEquivalent().anchorNode()->isConnected());
     cleanupAfterDeletion(destination);
-    ASSERT(destination.deepEquivalent().anchorNode()->isConnected());
+
+    // FIXME (Bug 211793): We should redesign cleanupAfterDeletion or find another destination when it is removed.
+    if (!destination.deepEquivalent().anchorNode()->isConnected())
+        return;
 
     // Add a br if pruning an empty block level element caused a collapse. For example:
     // foo^
@@ -1509,8 +1493,7 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
     if (!editableRoot)
         editableRoot = &document();
 
-    auto startToDestinationRange = Range::create(document(), firstPositionInNode(editableRoot.get()), destination.deepEquivalent().parentAnchoredEquivalent());
-    destinationIndex = TextIterator::rangeLength(startToDestinationRange.ptr(), true);
+    auto destinationIndex = characterCount({ { *editableRoot, 0 }, *makeBoundaryPoint(destination) }, TextIteratorEmitsCharactersBetweenAllVisiblePositions);
 
     setEndingSelection(VisibleSelection(destination, originalIsDirectional));
     ASSERT(endingSelection().isCaretOrRange());
@@ -1519,23 +1502,22 @@ void CompositeEditCommand::moveParagraphs(const VisiblePosition& startOfParagrap
         options.add(ReplaceSelectionCommand::MatchStyle);
     applyCommandToComposite(ReplaceSelectionCommand::create(document(), WTFMove(fragment), options));
 
-    frame().editor().markMisspellingsAndBadGrammar(endingSelection());
+    document().editor().markMisspellingsAndBadGrammar(endingSelection());
 
     // If the selection is in an empty paragraph, restore styles from the old empty paragraph to the new empty paragraph.
     bool selectionIsEmptyParagraph = endingSelection().isCaret() && isStartOfParagraph(endingSelection().visibleStart()) && isEndOfParagraph(endingSelection().visibleStart());
     if (styleInEmptyParagraph && selectionIsEmptyParagraph)
         applyStyle(styleInEmptyParagraph.get());
 
-    if (preserveSelection && startIndex != -1) {
+    if (preserveSelection && startIndex && endIndex) {
         // Fragment creation (using createMarkup) incorrectly uses regular
         // spaces instead of nbsps for some spaces that were rendered (11475), which
         // causes spaces to be collapsed during the move operation.  This results
         // in a call to rangeFromLocationAndLength with a location past the end
         // of the document (which will return null).
-        RefPtr<Range> start = TextIterator::rangeFromLocationAndLength(editableRoot.get(), destinationIndex + startIndex, 0, true);
-        RefPtr<Range> end = TextIterator::rangeFromLocationAndLength(editableRoot.get(), destinationIndex + endIndex, 0, true);
-        if (start && end)
-            setEndingSelection(VisibleSelection(start->startPosition(), end->startPosition(), DOWNSTREAM, originalIsDirectional));
+        auto start = createLegacyEditingPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*editableRoot), destinationIndex + *startIndex, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+        auto end = createLegacyEditingPosition(resolveCharacterLocation(makeRangeSelectingNodeContents(*editableRoot), destinationIndex + *endIndex, TextIteratorEmitsCharactersBetweenAllVisiblePositions));
+        setEndingSelection({ start, end, DOWNSTREAM, originalIsDirectional });
     }
 }
 

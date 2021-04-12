@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "CertificateInfo.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "FetchOptions.h"
 #include "ResourceError.h"
@@ -46,6 +47,7 @@ class ResourceResponse;
 class ScriptExecutionContext;
 class TextResourceDecoder;
 class WorkerScriptLoaderClient;
+enum class CertificateInfoPolicy : uint8_t;
 
 class WorkerScriptLoader : public RefCounted<WorkerScriptLoader>, public ThreadableLoaderClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -65,6 +67,7 @@ public:
     const String& referrerPolicy() const { return m_referrerPolicy; }
     const URL& url() const { return m_url; }
     const URL& responseURL() const;
+    const CertificateInfo& certificateInfo() const { return m_certificateInfo; }
     const String& responseMIMEType() const { return m_responseMIMEType; }
     bool failed() const { return m_failed; }
     unsigned long identifier() const { return m_identifier; }
@@ -96,6 +99,7 @@ private:
     StringBuilder m_script;
     URL m_url;
     URL m_responseURL;
+    CertificateInfo m_certificateInfo;
     String m_responseMIMEType;
     FetchOptions::Destination m_destination;
     ContentSecurityPolicyResponseHeaders m_contentSecurityPolicy;

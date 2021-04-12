@@ -66,7 +66,7 @@ static TextPosition convertZeroToOne(const TextPosition& position)
     return position;
 }
 
-JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const String& sourceURL, const TextPosition& sourcePosition)
+JSLazyEventListener::JSLazyEventListener(CreationArguments&& arguments, const URL& sourceURL, const TextPosition& sourcePosition)
     : JSEventListener(nullptr, arguments.wrapper, true, mainThreadNormalWorld())
     , m_functionName(arguments.attributeName.localName().string())
     , m_eventParameterName(eventParameterName(arguments.shouldUseSVGEventName))
@@ -130,7 +130,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     if (!document.frame())
         return nullptr;
 
-    if (!document.contentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL, m_sourcePosition.m_line))
+    if (!document.contentSecurityPolicy()->allowInlineEventHandlers(m_sourceURL.string(), m_sourcePosition.m_line))
         return nullptr;
 
     auto& script = document.frame()->script();
@@ -150,7 +150,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
 
     MarkedArgumentBuffer args;
     args.append(jsNontrivialString(vm, m_eventParameterName));
-    args.append(jsStringWithCache(lexicalGlobalObject, m_code));
+    args.append(jsStringWithCache(vm, m_code));
     ASSERT(!args.hasOverflowed());
 
     // We want all errors to refer back to the line on which our attribute was
@@ -160,7 +160,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     JSObject* jsFunction = constructFunctionSkippingEvalEnabledCheck(
         lexicalGlobalObject, args, Identifier::fromString(vm, m_functionName),
         SourceOrigin { m_sourceURL, CachedScriptFetcher::create(document.charset()) },
-        m_sourceURL, m_sourcePosition, overrideLineNumber);
+        m_sourceURL.string(), m_sourcePosition, overrideLineNumber);
     if (UNLIKELY(scope.exception())) {
         reportCurrentException(lexicalGlobalObject);
         scope.clearException();
@@ -173,7 +173,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         if (!wrapper()) {
             // Ensure that 'node' has a JavaScript wrapper to mark the event listener we're creating.
             // FIXME: Should pass the global object associated with the node
-            setWrapper(vm, asObject(toJS(lexicalGlobalObject, globalObject, *m_originalNode)));
+            setWrapperWhenInitializingJSFunction(vm, asObject(toJS(lexicalGlobalObject, globalObject, *m_originalNode)));
         }
 
         // Add the event's home element to the scope
@@ -191,12 +191,12 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(CreationArguments&& argu
 
     // FIXME: We should be able to provide source information for frameless documents too (e.g. for importing nodes from XMLHttpRequest.responseXML).
     TextPosition position;
-    String sourceURL;
+    URL sourceURL;
     if (Frame* frame = arguments.document.frame()) {
         if (!frame->script().canExecuteScripts(AboutToCreateEventListener))
             return nullptr;
         position = frame->script().eventHandlerPosition();
-        sourceURL = arguments.document.url().string();
+        sourceURL = arguments.document.url();
     }
 
     return adoptRef(*new JSLazyEventListener(WTFMove(arguments), sourceURL, position));

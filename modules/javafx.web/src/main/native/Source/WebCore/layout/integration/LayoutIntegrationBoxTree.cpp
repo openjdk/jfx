@@ -28,8 +28,11 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "LayoutInlineTextBox.h"
+#include "LayoutLineBreakBox.h"
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
+#include "RenderLineBreak.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
@@ -44,7 +47,7 @@ static RenderStyle rootBoxStyle(const RenderStyle& style)
 }
 
 BoxTree::BoxTree(const RenderBlockFlow& flow)
-    : m_root({ }, rootBoxStyle(flow.style()))
+    : m_root(rootBoxStyle(flow.style()))
 {
     if (flow.isAnonymous())
         m_root.setIsAnonymous();
@@ -58,14 +61,13 @@ void BoxTree::buildTree(const RenderBlockFlow& flow)
         std::unique_ptr<Layout::Box> childBox;
         if (is<RenderText>(childRenderer)) {
             auto& textRenderer = downcast<RenderText>(childRenderer);
-            auto textContent = Layout::TextContext { textRenderer.text(), textRenderer.canUseSimplifiedTextMeasuring() };
-            childBox = makeUnique<Layout::Box>(WTFMove(textContent), RenderStyle::createAnonymousStyleWithDisplay(m_root.style(), DisplayType::Inline));
-            childBox->setIsAnonymous();
+            childBox = makeUnique<Layout::InlineTextBox>(textRenderer.text(), textRenderer.canUseSimplifiedTextMeasuring(), RenderStyle::createAnonymousStyleWithDisplay(m_root.style(), DisplayType::Inline));
         } else if (childRenderer.isLineBreak()) {
             auto clonedStyle = RenderStyle::clone(childRenderer.style());
             clonedStyle.setDisplay(DisplayType::Inline);
             clonedStyle.setFloating(Float::No);
-            childBox = makeUnique<Layout::Box>(Layout::Box::ElementAttributes { Layout::Box::ElementType::HardLineBreak }, WTFMove(clonedStyle));
+            clonedStyle.setPosition(PositionType::Static);
+            childBox = makeUnique<Layout::LineBreakBox>(downcast<RenderLineBreak>(childRenderer).isWBR(), WTFMove(clonedStyle));
         }
         ASSERT(childBox);
 

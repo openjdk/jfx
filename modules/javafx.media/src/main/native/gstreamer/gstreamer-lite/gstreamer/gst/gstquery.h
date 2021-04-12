@@ -74,7 +74,7 @@ typedef enum {
 #define GST_QUERY_MAKE_TYPE(num,flags) \
     (((num) << GST_QUERY_NUM_SHIFT) | (flags))
 
-#define FLAG(name) GST_QUERY_TYPE_##name
+#define _FLAG(name) GST_QUERY_TYPE_##name
 
 
 /**
@@ -107,27 +107,27 @@ typedef enum {
  * this enum */
 typedef enum {
   GST_QUERY_UNKNOWN      = GST_QUERY_MAKE_TYPE (0, 0),
-  GST_QUERY_POSITION     = GST_QUERY_MAKE_TYPE (10, FLAG(BOTH)),
-  GST_QUERY_DURATION     = GST_QUERY_MAKE_TYPE (20, FLAG(BOTH)),
-  GST_QUERY_LATENCY      = GST_QUERY_MAKE_TYPE (30, FLAG(BOTH)),
-  GST_QUERY_JITTER       = GST_QUERY_MAKE_TYPE (40, FLAG(BOTH)),
-  GST_QUERY_RATE         = GST_QUERY_MAKE_TYPE (50, FLAG(BOTH)),
-  GST_QUERY_SEEKING      = GST_QUERY_MAKE_TYPE (60, FLAG(BOTH)),
-  GST_QUERY_SEGMENT      = GST_QUERY_MAKE_TYPE (70, FLAG(BOTH)),
-  GST_QUERY_CONVERT      = GST_QUERY_MAKE_TYPE (80, FLAG(BOTH)),
-  GST_QUERY_FORMATS      = GST_QUERY_MAKE_TYPE (90, FLAG(BOTH)),
-  GST_QUERY_BUFFERING    = GST_QUERY_MAKE_TYPE (110, FLAG(BOTH)),
-  GST_QUERY_CUSTOM       = GST_QUERY_MAKE_TYPE (120, FLAG(BOTH)),
-  GST_QUERY_URI          = GST_QUERY_MAKE_TYPE (130, FLAG(BOTH)),
-  GST_QUERY_ALLOCATION   = GST_QUERY_MAKE_TYPE (140, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_QUERY_SCHEDULING   = GST_QUERY_MAKE_TYPE (150, FLAG(UPSTREAM)),
-  GST_QUERY_ACCEPT_CAPS  = GST_QUERY_MAKE_TYPE (160, FLAG(BOTH)),
-  GST_QUERY_CAPS         = GST_QUERY_MAKE_TYPE (170, FLAG(BOTH)),
-  GST_QUERY_DRAIN        = GST_QUERY_MAKE_TYPE (180, FLAG(DOWNSTREAM) | FLAG(SERIALIZED)),
-  GST_QUERY_CONTEXT      = GST_QUERY_MAKE_TYPE (190, FLAG(BOTH)),
-  GST_QUERY_BITRATE      = GST_QUERY_MAKE_TYPE (200, FLAG(DOWNSTREAM)),
+  GST_QUERY_POSITION     = GST_QUERY_MAKE_TYPE (10, _FLAG(BOTH)),
+  GST_QUERY_DURATION     = GST_QUERY_MAKE_TYPE (20, _FLAG(BOTH)),
+  GST_QUERY_LATENCY      = GST_QUERY_MAKE_TYPE (30, _FLAG(BOTH)),
+  GST_QUERY_JITTER       = GST_QUERY_MAKE_TYPE (40, _FLAG(BOTH)),
+  GST_QUERY_RATE         = GST_QUERY_MAKE_TYPE (50, _FLAG(BOTH)),
+  GST_QUERY_SEEKING      = GST_QUERY_MAKE_TYPE (60, _FLAG(BOTH)),
+  GST_QUERY_SEGMENT      = GST_QUERY_MAKE_TYPE (70, _FLAG(BOTH)),
+  GST_QUERY_CONVERT      = GST_QUERY_MAKE_TYPE (80, _FLAG(BOTH)),
+  GST_QUERY_FORMATS      = GST_QUERY_MAKE_TYPE (90, _FLAG(BOTH)),
+  GST_QUERY_BUFFERING    = GST_QUERY_MAKE_TYPE (110, _FLAG(BOTH)),
+  GST_QUERY_CUSTOM       = GST_QUERY_MAKE_TYPE (120, _FLAG(BOTH)),
+  GST_QUERY_URI          = GST_QUERY_MAKE_TYPE (130, _FLAG(BOTH)),
+  GST_QUERY_ALLOCATION   = GST_QUERY_MAKE_TYPE (140, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
+  GST_QUERY_SCHEDULING   = GST_QUERY_MAKE_TYPE (150, _FLAG(UPSTREAM)),
+  GST_QUERY_ACCEPT_CAPS  = GST_QUERY_MAKE_TYPE (160, _FLAG(BOTH)),
+  GST_QUERY_CAPS         = GST_QUERY_MAKE_TYPE (170, _FLAG(BOTH)),
+  GST_QUERY_DRAIN        = GST_QUERY_MAKE_TYPE (180, _FLAG(DOWNSTREAM) | _FLAG(SERIALIZED)),
+  GST_QUERY_CONTEXT      = GST_QUERY_MAKE_TYPE (190, _FLAG(BOTH)),
+  GST_QUERY_BITRATE      = GST_QUERY_MAKE_TYPE (200, _FLAG(DOWNSTREAM)),
 } GstQueryType;
-#undef FLAG
+#undef _FLAG
 
 #ifndef GSTREAMER_LITE
 GST_API GType _gst_query_type;
@@ -232,47 +232,20 @@ GstQueryTypeFlags
 GST_API
 GType           gst_query_get_type             (void);
 
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 /* refcounting */
-/**
- * gst_query_ref:
- * @q: a #GstQuery to increase the refcount of.
- *
- * Increases the refcount of the given query by one.
- *
- * Returns: @q
- */
 static inline GstQuery *
 gst_query_ref (GstQuery * q)
 {
   return GST_QUERY_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (q)));
 }
 
-/**
- * gst_query_unref:
- * @q: a #GstQuery to decrease the refcount of.
- *
- * Decreases the refcount of the query. If the refcount reaches 0, the query
- * will be freed.
- */
 static inline void
 gst_query_unref (GstQuery * q)
 {
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (q));
 }
 
-/**
- * gst_clear_query: (skip)
- * @query_ptr: a pointer to a #GstQuery reference
- *
- * Clears a reference to a #GstQuery.
- *
- * @query_ptr must not be %NULL.
- *
- * If the reference is %NULL then this function does nothing. Otherwise, the
- * reference count of the query is decreased and the pointer is set to %NULL.
- *
- * Since: 1.16
- */
 static inline void
 gst_clear_query (GstQuery ** query_ptr)
 {
@@ -280,21 +253,24 @@ gst_clear_query (GstQuery ** query_ptr)
 }
 
 /* copy query */
-/**
- * gst_query_copy:
- * @q: a #GstQuery to copy.
- *
- * Copies the given query using the copy function of the parent #GstStructure.
- *
- * Free-function: gst_query_unref
- *
- * Returns: (transfer full): a new copy of @q.
- */
 static inline GstQuery *
 gst_query_copy (const GstQuery * q)
 {
   return GST_QUERY_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (q)));
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+GstQuery *  gst_query_ref   (GstQuery * q);
+
+GST_API
+void        gst_query_unref (GstQuery * q);
+
+GST_API
+void        gst_clear_query (GstQuery ** query_ptr);
+
+GST_API
+GstQuery *  gst_query_copy  (const GstQuery * q);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /**
  * gst_query_is_writable:
@@ -312,51 +288,29 @@ gst_query_copy (const GstQuery * q)
  * Returns: (transfer full): a new writable query (possibly same as @q)
  */
 #define         gst_query_make_writable(q)      GST_QUERY_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (q)))
-/**
- * gst_query_replace:
- * @old_query: (inout) (transfer full) (nullable): pointer to a pointer to a
- *     #GstQuery to be replaced.
- * @new_query: (allow-none) (transfer none): pointer to a #GstQuery that will
- *     replace the query pointed to by @old_query.
- *
- * Modifies a pointer to a #GstQuery to point to a different #GstQuery. The
- * modification is done atomically (so this is useful for ensuring thread safety
- * in some cases), and the reference counts are updated appropriately (the old
- * query is unreffed, the new one is reffed).
- *
- * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
- *
- * Returns: %TRUE if @new_query was different from @old_query
- */
+
+#ifndef GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 static inline gboolean
 gst_query_replace (GstQuery **old_query, GstQuery *new_query)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_query, (GstMiniObject *) new_query);
 }
 
-/**
- * gst_query_take:
- * @old_query: (inout) (transfer full) (nullable): pointer to a
- *     pointer to a #GstQuery to be stolen.
- * @new_query: (allow-none) (transfer full): pointer to a #GstQuery that will
- *     replace the query pointed to by @old_query.
- *
- * Modifies a pointer to a #GstQuery to point to a different #GstQuery. This
- * function is similar to gst_query_replace() except that it takes ownership of
- * @new_query.
- *
- * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
- *
- * Returns: %TRUE if @new_query was different from @old_query
- *
- * Since: 1.16
- */
 static inline gboolean
 gst_query_take (GstQuery **old_query, GstQuery *new_query)
 {
   return gst_mini_object_take ((GstMiniObject **) old_query,
       (GstMiniObject *) new_query);
 }
+#else /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
+GST_API
+gboolean        gst_query_replace               (GstQuery ** old_query,
+                                                 GstQuery * new_query);
+
+GST_API
+gboolean        gst_query_take                  (GstQuery ** old_query,
+                                                 GstQuery * new_query);
+#endif /* GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS */
 
 /* application specific query */
 
@@ -703,9 +657,7 @@ void            gst_query_set_bitrate              (GstQuery * query, guint nomi
 GST_API
 void            gst_query_parse_bitrate            (GstQuery * query, guint * nominal_bitrate);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstQuery, gst_query_unref)
-#endif
 
 G_END_DECLS
 

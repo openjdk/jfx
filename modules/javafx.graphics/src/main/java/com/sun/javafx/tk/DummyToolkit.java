@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,9 +64,10 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
+import java.util.Optional;
 
 /**
  * A stubbed out Toolkit that provides no useful implementation. This is used
@@ -282,7 +283,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public AbstractMasterTimer getMasterTimer() {
+    public AbstractPrimaryTimer getPrimaryTimer() {
         return null;
     }
 
@@ -368,6 +369,11 @@ final public class DummyToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

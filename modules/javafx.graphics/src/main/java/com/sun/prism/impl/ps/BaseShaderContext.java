@@ -128,7 +128,6 @@ public abstract class BaseShaderContext extends BaseContext {
     // paint opts    2 bits
     private static final int NUM_STOCK_SHADER_SLOTS =
         MaskType.values().length << 4;
-    // TODO: need to dispose these when the context is disposed... (RT-27379)
     private final Shader[] stockShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
     // stockShaders with alpha test
     private final Shader[] stockATShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
@@ -149,6 +148,7 @@ public abstract class BaseShaderContext extends BaseContext {
             return name;
         }
     }
+
     private final Shader[] specialShaders = new Shader[SpecialShaderType.values().length];
     // specialShaders with alpha test
     private final Shader[] specialATShaders = new Shader[SpecialShaderType.values().length];
@@ -196,11 +196,15 @@ public abstract class BaseShaderContext extends BaseContext {
 
     @Override
     protected void setPerspectiveTransform(GeneralTransform3D transform) {
+        if (checkDisposed()) return;
+
         state.isXformValid = false;
         super.setPerspectiveTransform(transform);
     }
 
     protected void resetLastClip(State state) {
+        if (checkDisposed()) return;
+
         state.lastClip = null;
     }
 
@@ -236,6 +240,8 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     private Shader getPaintShader(boolean alphaTest, MaskType maskType, Paint paint) {
+        if (checkDisposed()) return null;
+
         int index = getStockShaderIndex(maskType, paint);
         Shader shaders[] = alphaTest ? stockATShaders : stockShaders;
         Shader shader = shaders[index];
@@ -269,6 +275,8 @@ public abstract class BaseShaderContext extends BaseContext {
                                    MaskType maskType, Paint paint,
                                    float bx, float by, float bw, float bh)
     {
+        if (checkDisposed()) return;
+
         Paint.Type paintType = paint.getType();
         if (paintType == Paint.Type.COLOR || maskType.isNewPaintStyle()) {
             return;
@@ -302,6 +310,8 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     private Shader getSpecialShader(BaseGraphics g, SpecialShaderType sst) {
+        if (checkDisposed()) return null;
+
         // We do alpha test if depth test is enabled
         boolean alphaTest = g.isAlphaTestShader();
         Shader shaders[] = alphaTest ? specialATShaders : specialShaders;
@@ -322,11 +332,15 @@ public abstract class BaseShaderContext extends BaseContext {
 
     @Override
     public boolean isSuperShaderEnabled() {
+        if (checkDisposed()) return false;
+
         return state.lastShader == specialATShaders[SpecialShaderType.SUPER.ordinal()]
                 || state.lastShader == specialShaders[SpecialShaderType.SUPER.ordinal()];
     }
 
     private void updatePerVertexColor(Paint paint, float extraAlpha) {
+        if (checkDisposed()) return;
+
         if (paint != null && paint.getType() == Paint.Type.COLOR) {
             getVertexBuffer().setPerVertexColor((Color)paint, extraAlpha);
         } else {
@@ -360,6 +374,8 @@ public abstract class BaseShaderContext extends BaseContext {
                            float bx, float by, float bw, float bh,
                            float k1, float k2, float k3, float k4, float k5, float k6)
     {
+        if (checkDisposed()) return null;
+
         // this is not ideal, but will have to do for now (tm).
         // various paint primitives use shader parameters, and we have to flush
         // the vertex buffer if those change.  Ideally we would do this in
@@ -512,6 +528,8 @@ public abstract class BaseShaderContext extends BaseContext {
                                 Texture tex0, Texture tex1, boolean firstPass,
                                 Paint fillColor)
     {
+        if (checkDisposed()) return null;
+
         Shader shader = firstPass ? getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD) :
                                     getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);
 
@@ -525,6 +543,8 @@ public abstract class BaseShaderContext extends BaseContext {
     Shader validateTextureOp(BaseShaderGraphics g, BaseTransform xform,
                              Texture[] textures, PixelFormat format)
     {
+        if (checkDisposed()) return null;
+
         Shader shader;
 
         if (format == PixelFormat.MULTI_YCbCr_420) {
@@ -557,6 +577,8 @@ public abstract class BaseShaderContext extends BaseContext {
     Shader validateTextureOp(BaseShaderGraphics g, BaseTransform xform,
                              Texture tex0, Texture tex1, PixelFormat format)
     {
+        if (checkDisposed()) return null;
+
         Shader shader;
         if (externalShader == null) {
             switch (format) {
@@ -597,6 +619,8 @@ public abstract class BaseShaderContext extends BaseContext {
     Shader validateMaskTextureOp(BaseShaderGraphics g, BaseTransform xform,
                                  Texture tex0, Texture tex1, PixelFormat format)
     {
+        if (checkDisposed()) return null;
+
         Shader shader;
         if (externalShader == null) {
             switch (format) {
@@ -623,6 +647,8 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     void setExternalShader(BaseShaderGraphics g, Shader shader) {
+        if (checkDisposed()) return;
+
         // Note that this method is called when the user calls
         // ShaderGraphics.setExternalShader().  We flush any pending
         // operations and synchronously enable the given shader here
@@ -648,6 +674,8 @@ public abstract class BaseShaderContext extends BaseContext {
                             BaseTransform xform,
                             Shader shader)
     {
+        if (checkDisposed()) return;
+
         setRenderTarget(g);
 
         if ((checkFlags & CHECK_SHADER) != 0) {
@@ -692,6 +720,8 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     private void setTexture(int texUnit, Texture tex) {
+        if (checkDisposed()) return;
+
         if (tex != null) tex.assertLocked();
         if (tex != state.lastTextures[texUnit]) {
             flushVertexBuffer();
@@ -702,6 +732,8 @@ public abstract class BaseShaderContext extends BaseContext {
 
     //Current RenderTarget is the lcdBuffer after this method.
     public void initLCDBuffer(int width, int height) {
+        if (checkDisposed()) return;
+
         lcdBuffer = factory.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
         // TODO: RT-29488 we need to track the uses of the LCD buffer,
         // but the flow of control through the text methods is
@@ -724,6 +756,8 @@ public abstract class BaseShaderContext extends BaseContext {
 
     //Current RenderTarget is undefined after this method.
     public void validateLCDBuffer(RenderTarget renderTarget) {
+        if (checkDisposed()) return;
+
         if (lcdBuffer == null ||
                 lcdBuffer.getPhysicalWidth() < renderTarget.getPhysicalWidth() ||
                 lcdBuffer.getPhysicalHeight() < renderTarget.getPhysicalHeight())
@@ -741,6 +775,8 @@ public abstract class BaseShaderContext extends BaseContext {
     protected void setRenderTarget(RenderTarget target, NGCamera camera,
             boolean depthTest, boolean state3D)
     {
+        if (checkDisposed()) return;
+
         if (target instanceof Texture) {
             ((Texture) target).assertLocked();
         }
@@ -799,4 +835,30 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
+    private void disposeShaders(Shader[] shaders) {
+        for (int i = 0; i < shaders.length; i++) {
+            if (shaders[i] != null) {
+                shaders[i].dispose();
+                shaders[i] = null;
+            }
+        }
+    }
+
+    @Override
+    public void dispose() {
+        disposeShaders(stockShaders);
+        disposeShaders(stockATShaders);
+        disposeShaders(specialShaders);
+        disposeShaders(specialATShaders);
+        if (externalShader != null) {
+            externalShader.dispose();
+            externalShader = null;
+        }
+
+        disposeLCDBuffer();
+        releaseRenderTarget();
+        state = null;
+
+        super.dispose();
+    }
 }

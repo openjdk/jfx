@@ -89,15 +89,13 @@ public:
     void setFullscreenMode(VideoFullscreenMode);
     void fullscreenModeChanged(VideoFullscreenMode) final;
 
-#if ENABLE(PICTURE_IN_PICTURE_API)
     WEBCORE_EXPORT void didBecomeFullscreenElement() final;
-    void setPictureInPictureObserver(PictureInPictureObserver*);
-    WEBCORE_EXPORT void setPictureInPictureAPITestEnabled(bool);
-#endif
-#endif
-
-#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    WEBCORE_EXPORT void didStopBeingFullscreenElement() final;
     void setVideoFullscreenFrame(FloatRect) final;
+
+#if ENABLE(PICTURE_IN_PICTURE_API)
+    void setPictureInPictureObserver(PictureInPictureObserver*);
+#endif
 #endif
 
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
@@ -127,7 +125,7 @@ private:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
     void setDisplayMode(DisplayMode) final;
 
-    PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::Video; }
+    PlatformMediaSession::MediaType presentationType() const final { return PlatformMediaSession::MediaType::Video; }
 
     std::unique_ptr<HTMLImageLoader> m_imageLoader;
 
@@ -135,13 +133,15 @@ private:
 
     unsigned m_lastReportedVideoWidth { 0 };
     unsigned m_lastReportedVideoHeight { 0 };
+    bool m_isChangingPresentationMode { false };
+
+#if ENABLE(VIDEO_PRESENTATION_MODE)
+    bool m_isEnteringOrExitingPictureInPicture { false };
+    bool m_isWaitingForPictureInPictureWindowFrame { false };
+#endif
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
-    bool m_waitingForPictureInPictureWindowFrame { false };
-    bool m_isFullscreen { false };
     PictureInPictureObserver* m_pictureInPictureObserver { nullptr };
-
-    bool m_pictureInPictureAPITestEnabled { false };
 #endif
 };
 

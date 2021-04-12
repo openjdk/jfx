@@ -27,8 +27,6 @@
 #include "config.h"
 #include "FetchBodySource.h"
 
-#if ENABLE(STREAMS_API)
-
 #include "FetchResponse.h"
 
 namespace WebCore {
@@ -41,15 +39,16 @@ FetchBodySource::FetchBodySource(FetchBodyOwner& bodyOwner)
 void FetchBodySource::setActive()
 {
     ASSERT(m_bodyOwner);
+    ASSERT(!m_pendingActivity);
     if (m_bodyOwner)
-        m_bodyOwner->setPendingActivity(*m_bodyOwner);
+        m_pendingActivity = m_bodyOwner->makePendingActivity(*m_bodyOwner);
 }
 
 void FetchBodySource::setInactive()
 {
     ASSERT(m_bodyOwner);
-    if (m_bodyOwner)
-        m_bodyOwner->unsetPendingActivity(*m_bodyOwner);
+    ASSERT(m_pendingActivity);
+    m_pendingActivity = nullptr;
 }
 
 void FetchBodySource::doStart()
@@ -96,5 +95,3 @@ void FetchBodySource::error(const Exception& value)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(STREAMS_API)

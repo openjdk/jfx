@@ -166,7 +166,7 @@ public:
         { }
     };
 
-    SamplingProfiler(VM&, RefPtr<Stopwatch>&&);
+    SamplingProfiler(VM&, Ref<Stopwatch>&&);
     ~SamplingProfiler();
     void noticeJSLockAcquisition();
     void noticeVMEntry();
@@ -193,9 +193,7 @@ public:
     JS_EXPORT_PRIVATE void reportTopBytecodes();
     JS_EXPORT_PRIVATE void reportTopBytecodes(PrintStream&);
 
-#if OS(DARWIN)
-    JS_EXPORT_PRIVATE mach_port_t machThread();
-#endif
+    JS_EXPORT_PRIVATE Thread* thread() const;
 
 private:
     void createThreadIfNecessary(const AbstractLocker&);
@@ -208,7 +206,7 @@ private:
     bool m_needsReportAtExit { false };
     VM& m_vm;
     WeakRandom m_weakRandom;
-    RefPtr<Stopwatch> m_stopwatch;
+    Ref<Stopwatch> m_stopwatch;
     Vector<StackTrace> m_stackTraces;
     Vector<UnprocessedStackTrace> m_unprocessedStackTraces;
     Seconds m_timingInterval;

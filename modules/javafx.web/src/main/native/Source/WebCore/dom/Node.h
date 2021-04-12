@@ -41,6 +41,10 @@
 // This needs to be here because Document.h also depends on it.
 #define DUMP_NODE_STATISTICS 0
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class ContainerNode;
@@ -194,14 +198,12 @@ public:
     bool isAfterPseudoElement() const { return pseudoId() == PseudoId::After; }
     PseudoId pseudoId() const { return (isElementNode() && hasCustomStyleResolveCallbacks()) ? customPseudoId() : PseudoId::None; }
 
-    virtual bool isMediaControlElement() const { return false; }
-    virtual bool isMediaControls() const { return false; }
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
     virtual bool isWebVTTElement() const { return false; }
 #endif
     bool isStyledElement() const { return getFlag(IsHTMLFlag) || getFlag(IsSVGFlag) || getFlag(IsMathMLFlag); }
     virtual bool isAttributeNode() const { return false; }
-    virtual bool isCharacterDataNode() const { return false; }
+    bool isCharacterDataNode() const { return !isContainerNode() && (isTextNode() || virtualIsCharacterData()); }
     virtual bool isFrameOwnerElement() const { return false; }
     virtual bool isPluginElement() const { return false; }
 #if ENABLE(SERVICE_CONTROLS)
@@ -309,19 +311,20 @@ public:
     bool hasEventTargetData() const { return getFlag(HasEventTargetDataFlag); }
     void setHasEventTargetData(bool flag) { setFlag(flag, HasEventTargetDataFlag); }
 
-    enum UserSelectAllTreatment {
-        UserSelectAllDoesNotAffectEditability,
-        UserSelectAllIsAlwaysNonEditable
-    };
     WEBCORE_EXPORT bool isContentEditable();
     bool isContentRichlyEditable();
 
     WEBCORE_EXPORT void inspect();
 
+    enum UserSelectAllTreatment {
+        UserSelectAllDoesNotAffectEditability,
+        UserSelectAllIsAlwaysNonEditable
+    };
     bool hasEditableStyle(UserSelectAllTreatment treatment = UserSelectAllIsAlwaysNonEditable) const
     {
         return computeEditability(treatment, ShouldUpdateStyle::DoNotUpdate) != Editability::ReadOnly;
     }
+
     // FIXME: Replace every use of this function by helpers in Editing.h
     bool hasRichlyEditableStyle() const
     {
@@ -341,12 +344,8 @@ public:
     // of a Document node.
     WEBCORE_EXPORT Document* ownerDocument() const;
 
-    // Returns the document associated with this node.
-    // A Document node returns itself.
-    Document& document() const
-    {
-        return treeScope().documentScope();
-    }
+    // Returns the document associated with this node. A document node returns itself.
+    Document& document() const { return treeScope().documentScope(); }
 
     TreeScope& treeScope() const
     {
@@ -358,10 +357,7 @@ public:
 
     // Returns true if this node is associated with a document and is in its associated document's
     // node tree, false otherwise (https://dom.spec.whatwg.org/#connected).
-    bool isConnected() const
-    {
-        return getFlag(IsConnectedFlag);
-    }
+    bool isConnected() const { return getFlag(IsConnectedFlag); }
     bool isInUserAgentShadowTree() const;
     bool isInShadowTree() const { return getFlag(IsInShadowTreeFlag); }
     bool isInTreeScope() const { return getFlag(static_cast<NodeFlags>(IsConnectedFlag | IsInShadowTreeFlag)); }
@@ -369,6 +365,7 @@ public:
     bool isDocumentTypeNode() const { return nodeType() == DOCUMENT_TYPE_NODE; }
     virtual bool childTypeAllowed(NodeType) const { return false; }
     unsigned countChildNodes() const;
+    unsigned length() const;
     Node* traverseToChildAt(unsigned) const;
 
     ExceptionOr<void> checkSetPrefix(const AtomString& prefix);
@@ -378,11 +375,7 @@ public:
 
     bool isDescendantOrShadowDescendantOf(const Node*) const;
     WEBCORE_EXPORT bool contains(const Node*) const;
-    bool containsIncludingShadowDOM(const Node*) const;
-
-    // Number of DOM 16-bit units contained in node. Note that rendered text length can be different - e.g. because of
-    // css-transform:capitalize breaking up precomposed characters and ligatures.
-    virtual int maxCharacterOffset() const;
+    WEBCORE_EXPORT bool containsIncludingShadowDOM(const Node*) const;
 
     // Whether or not a selection can be started in this object
     virtual bool canStartSelection() const;
@@ -413,7 +406,6 @@ public:
         Done,
         NeedsPostInsertionCallback,
     };
-
     struct InsertionType {
         bool connectedToDocument { false };
         bool treeScopeChanged { false };
@@ -428,6 +420,8 @@ public:
         bool treeScopeChanged { false };
     };
     virtual void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree);
+
+    virtual String debugDescription() const;
 
 #if ENABLE(TREE_DEBUGGING)
     virtual void formatForDebugger(char* buffer, unsigned length) const;
@@ -499,8 +493,6 @@ public:
     void unregisterTransientMutationObserver(MutationObserverRegistration&);
     void notifyMutationObserversNodeWillDetach();
 
-    WEBCORE_EXPORT void textRects(Vector<IntRect>&) const;
-
     unsigned connectedSubframeCount() const;
     void incrementConnectedSubframeCount(unsigned amount = 1);
     void decrementConnectedSubframeCount(unsigned amount = 1);
@@ -537,7 +529,7 @@ protected:
         IsShadowRootFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
         IsInShadowTreeFlag = 1 << 9,
-        StyleAffectedByFocusWithinFlag = 1 << 10,
+        // UnusedFlag = 1 << 10,
         HasEventTargetDataFlag = 1 << 11,
 
         // These bits are used by derived classes, pulled up here so they can
@@ -561,7 +553,7 @@ protected:
 
         ChildrenAffectedByFirstChildRulesFlag = 1 << 25,
         ChildrenAffectedByLastChildRulesFlag = 1 << 26,
-        ChildrenAffectedByHoverRulesFlag = 1 << 27,
+        // UnusedFlag = 1 << 27,
 
         AffectsNextSiblingElementStyle = 1 << 28,
         StyleIsAffectedByPreviousSibling = 1 << 29,
@@ -601,18 +593,15 @@ protected:
     static constexpr uint32_t s_refCountMask = ~static_cast<uint32_t>(1);
 
     enum class ElementStyleFlag : uint8_t {
-        StyleAffectedByActive = 1 << 0,
-        StyleAffectedByEmpty = 1 << 1,
-        ChildrenAffectedByDrag = 1 << 2,
-
+        StyleAffectedByEmpty                                    = 1 << 0,
         // Bits for dynamic child matching.
         // We optimize for :first-child and :last-child. The other positional child selectors like nth-child or
         // *-child-of-type, we will just give up and re-evaluate whenever children change at all.
-        ChildrenAffectedByForwardPositionalRules = 1 << 3,
-        DescendantsAffectedByForwardPositionalRules = 1 << 4,
-        ChildrenAffectedByBackwardPositionalRules = 1 << 5,
-        DescendantsAffectedByBackwardPositionalRules = 1 << 6,
-        ChildrenAffectedByPropertyBasedBackwardPositionalRules = 1 << 7,
+        ChildrenAffectedByForwardPositionalRules                = 1 << 1,
+        DescendantsAffectedByForwardPositionalRules             = 1 << 2,
+        ChildrenAffectedByBackwardPositionalRules               = 1 << 3,
+        DescendantsAffectedByBackwardPositionalRules            = 1 << 4,
+        ChildrenAffectedByPropertyBasedBackwardPositionalRules  = 1 << 5,
     };
 
     bool hasStyleFlag(ElementStyleFlag state) const { return m_rendererWithStyleFlags.type() & static_cast<uint8_t>(state); }
@@ -643,6 +632,8 @@ private:
         ASSERT(hasCustomStyleResolveCallbacks());
         return PseudoId::None;
     }
+
+    virtual bool virtualIsCharacterData() const { return false; }
 
     WEBCORE_EXPORT void removedLastRef();
 
@@ -679,7 +670,10 @@ private:
     std::unique_ptr<NodeRareData, NodeRareDataDeleter> m_rareData;
 };
 
+WEBCORE_EXPORT RefPtr<Node> commonInclusiveAncestor(Node&, Node&);
+
 #if ASSERT_ENABLED
+
 inline void adopted(Node* node)
 {
     if (!node)
@@ -688,6 +682,7 @@ inline void adopted(Node* node)
     ASSERT(!node->m_inRemovedLastRefFunction);
     node->m_adoptionIsRequired = false;
 }
+
 #endif // ASSERT_ENABLED
 
 ALWAYS_INLINE void Node::ref() const
@@ -791,6 +786,8 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
 }
 
 bool areNodesConnectedInSameTreeScope(const Node*, const Node*);
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Node&);
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.util.Logging;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -35,6 +36,8 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -73,6 +76,18 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
                          boolean isTaskbarApplication);
     @Override
     protected void runLoop(final Runnable launchable) {
+        // For normal (not embedded) taskbar applications the masOS activation
+        // init code will deactivate and then reactivate the application to
+        // allow the system menubar to work properly.
+        // We need to spin up a nested event loop and wait for the reactivation
+        // to finish prior to allowing the rest of the initialization to run.
+        final Runnable wrappedRunnable = () -> {
+            if (isNormalTaskbarApp()) {
+                waitForReactivation();
+            }
+            launchable.run();
+        };
+
         isTaskbarApplication =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 String taskbarAppProp = System.getProperty("glass.taskbarApplication");
@@ -80,7 +95,30 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             });
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
-        _runLoop(classLoader, launchable, isTaskbarApplication);
+        _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);
+    }
+
+    private final CountDownLatch reactivationLatch = new CountDownLatch(1);
+
+    // Spin up a nested event loop waiting for the app reactivation event
+    void waitForReactivation() {
+        final EventLoop eventLoop = createEventLoop();
+        Thread thr = new Thread(() -> {
+            try {
+                if (!reactivationLatch.await(5, TimeUnit.SECONDS)) {
+                    Logging.getJavaFXLogger().warning("Timeout while waiting for app reactivation");
+                }
+            } catch (InterruptedException ex) {
+                Logging.getJavaFXLogger().warning("Exception while waiting for app reactivation: " + ex);
+            }
+            Application.invokeLater(() -> {
+                eventLoop.leave(null);
+            });
+        });
+        thr.setDaemon(true);
+        thr.start();
+
+        eventLoop.enter();
     }
 
     native private void _finishTerminating();
@@ -93,6 +131,22 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private void notifyApplicationDidTerminate() {
         setEventThread(null);
+    }
+
+    private boolean firstDidResignActive = false;
+
+    @Override
+    protected void notifyDidResignActive() {
+        firstDidResignActive = true;
+        super.notifyDidResignActive();
+    }
+
+    @Override
+    protected void notifyDidBecomeActive() {
+        if (firstDidResignActive) {
+            reactivationLatch.countDown();
+        }
+        super.notifyDidBecomeActive();
     }
 
     // Called from the native code
@@ -313,6 +367,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override native protected boolean _supportsSystemMenu();
 
+    // NOTE: this will not return a valid result until the native _runloop
+    // method has been executed and called the Runnable passed to that method.
+    native private boolean _isNormalTaskbarApp();
+    boolean isNormalTaskbarApp() {
+        return _isNormalTaskbarApp();
+    }
+
     native protected String _getRemoteLayerServerName();
     public String getRemoteLayerServerName() {
         return _getRemoteLayerServerName();
@@ -330,4 +391,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _getKeyCodeForChar(char c);
+
+    @Override
+    protected native int _isKeyLocked(int keyCode);
 }

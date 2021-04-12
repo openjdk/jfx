@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.javafx.animation;
 
 import javafx.util.Duration;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 
 import static org.junit.Assert.*;
 
@@ -53,7 +53,7 @@ public class AnimationMock extends AnimationImpl {
         shim_setCycleDuration(duration);
     }
 
-    public AnimationMock(AbstractMasterTimer timer, Duration cycleDuration, double rate, int cycleCount, boolean autoReverse) {
+    public AnimationMock(AbstractPrimaryTimer timer, Duration cycleDuration, double rate, int cycleCount, boolean autoReverse) {
         super(timer);
         shim_setCycleDuration(cycleDuration);
         setRate(rate);

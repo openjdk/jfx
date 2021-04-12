@@ -751,7 +751,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     }
 
     gtk_widget_set_size_request(gtk_widget, 0, 0);
-    gtk_widget_set_events(gtk_widget, GDK_ALL_EVENTS_MASK);
+    gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
     if (frame_type != TITLED) {
         gtk_window_set_decorated(GTK_WINDOW(gtk_widget), FALSE);
@@ -761,6 +761,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     gtk_window_set_title(GTK_WINDOW(gtk_widget), "");
 
     gdk_window = gtk_widget_get_window(gtk_widget);
+    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
 
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
 
@@ -1344,6 +1345,11 @@ void WindowContextTop::set_minimized(bool minimize) {
 void WindowContextTop::set_maximized(bool maximize) {
     is_maximized = maximize;
     if (maximize) {
+        // enable the functionality on the window manager as it might ignore the maximize command,
+        // for example when the window is undecorated.
+        GdkWMFunction wmf = (GdkWMFunction)(gdk_windowManagerFunctions | GDK_FUNC_MAXIMIZE);
+        gdk_window_set_functions(gdk_window, wmf);
+
         ensure_window_size();
         gtk_window_maximize(GTK_WINDOW(gtk_widget));
     } else {
@@ -1538,12 +1544,13 @@ WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
     g_signal_connect(G_OBJECT(gtk_widget), "configure-event", G_CALLBACK(plug_configure), this);
 
     gtk_widget_set_size_request(gtk_widget, 0, 0);
-    gtk_widget_set_events(gtk_widget, GDK_ALL_EVENTS_MASK);
+    gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
     gtk_widget_set_can_focus(GTK_WIDGET(gtk_widget), TRUE);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
 
     gtk_widget_realize(gtk_widget);
     gdk_window = gtk_widget_get_window(gtk_widget);
+    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
 
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
     gdk_window_register_dnd(gdk_window);
@@ -1706,12 +1713,13 @@ WindowContextChild::WindowContextChild(jobject _jwindow,
         glass_gtk_window_configure_from_visual(gtk_widget, visual);
     }
 
-    gtk_widget_set_events(gtk_widget, GDK_ALL_EVENTS_MASK);
+    gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
     gtk_widget_set_can_focus(GTK_WIDGET(gtk_widget), TRUE);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
     gtk_container_add (GTK_CONTAINER(parent_widget), gtk_widget);
     gtk_widget_realize(gtk_widget);
     gdk_window = gtk_widget_get_window(gtk_widget);
+    gdk_window_set_events(gdk_window, GDK_FILTERED_EVENTS_MASK);
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
     gdk_window_register_dnd(gdk_window);
     g_signal_connect(gtk_widget, "focus-in-event", G_CALLBACK(child_focus_callback), this);

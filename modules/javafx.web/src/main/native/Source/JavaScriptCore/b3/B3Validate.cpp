@@ -31,12 +31,11 @@
 #include "AirCode.h"
 #include "B3ArgumentRegValue.h"
 #include "B3AtomicValue.h"
-#include "B3BasicBlockInlines.h"
 #include "B3Dominators.h"
 #include "B3MemoryValue.h"
 #include "B3Procedure.h"
+#include "B3ProcedureInlines.h"
 #include "B3SlotBaseValue.h"
-#include "B3StackSlot.h"
 #include "B3SwitchValue.h"
 #include "B3UpsilonValue.h"
 #include "B3ValueInlines.h"
@@ -171,6 +170,11 @@ public:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
                 VALIDATE(!value->numChildren(), ("At ", *value));
                 VALIDATE(value->type() == Float, ("At ", *value));
+                break;
+            case BottomTuple:
+                VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));
+                VALIDATE(!value->numChildren(), ("At ", *value));
+                VALIDATE(value->type().isTuple(), ("At ", *value));
                 break;
             case Set:
                 VALIDATE(!value->kind().hasExtraBits(), ("At ", *value));

@@ -442,9 +442,7 @@ GST_AUDIO_API
 void              gst_audio_decoder_set_use_default_pad_acceptcaps (GstAudioDecoder * decoder,
                                                                    gboolean use);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioDecoder, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -48,7 +48,7 @@ class X11GLFactory extends GLFactory {
         new GLGPUInfo("x.org", null)
     };
 
-    private GLGPUInfo blackList[] = {
+    private GLGPUInfo rejectList[] = {
         new GLGPUInfo("ati", "radeon x1300"),
         new GLGPUInfo("ati", "radeon x1350"),
         new GLGPUInfo("ati", "radeon x1400"),
@@ -97,8 +97,8 @@ class X11GLFactory extends GLFactory {
     }
 
     @Override
-    GLGPUInfo[] getBlackList() {
-        return blackList;
+    GLGPUInfo[] getRejectList() {
+        return rejectList;
     }
 
     @Override
@@ -166,8 +166,8 @@ class X11GLFactory extends GLFactory {
 
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
-        deviceDetails.put("XVisualID", new Long(nGetVisualID(nativeCtxInfo)));
-        deviceDetails.put("XDisplay", new Long(nGetDisplay(nativeCtxInfo)));
-        deviceDetails.put("XScreenID", new Integer(nGetDefaultScreen(nativeCtxInfo)));
+        deviceDetails.put("XVisualID", Long.valueOf(nGetVisualID(nativeCtxInfo)));
+        deviceDetails.put("XDisplay", Long.valueOf(nGetDisplay(nativeCtxInfo)));
+        deviceDetails.put("XScreenID", Integer.valueOf(nGetDefaultScreen(nativeCtxInfo)));
     }
 }

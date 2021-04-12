@@ -64,7 +64,7 @@ static unsigned fontSelectorId;
 CSSFontSelector::CSSFontSelector(Document& document)
     : m_document(makeWeakPtr(document))
     , m_cssFontFaceSet(CSSFontFaceSet::create(this))
-    , m_beginLoadingTimer(*this, &CSSFontSelector::beginLoadTimerFired)
+    , m_beginLoadingTimer(&document, *this, &CSSFontSelector::beginLoadTimerFired)
     , m_uniqueId(++fontSelectorId)
     , m_version(0)
 {
@@ -72,6 +72,8 @@ CSSFontSelector::CSSFontSelector(Document& document)
     FontCache::singleton().addClient(*this);
     m_cssFontFaceSet->addClient(*this);
     LOG(Fonts, "CSSFontSelector %p ctor", this);
+
+    m_beginLoadingTimer.suspendIfNeeded();
 }
 
 CSSFontSelector::~CSSFontSelector()
@@ -263,7 +265,7 @@ void CSSFontSelector::fontCacheInvalidated()
 
 static Optional<AtomString> resolveGenericFamily(Document* document, const FontDescription& fontDescription, const AtomString& familyName)
 {
-    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.locale(), familyName);
+    auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.computedLocale(), familyName);
     if (!platformResult.isNull())
         return platformResult;
 
@@ -336,7 +338,7 @@ void CSSFontSelector::clearDocument()
         return;
     }
 
-    m_beginLoadingTimer.stop();
+    m_beginLoadingTimer.cancel();
 
     CachedResourceLoader& cachedResourceLoader = m_document->cachedResourceLoader();
     for (auto& fontHandle : m_fontsToBeginLoading) {
@@ -362,7 +364,28 @@ void CSSFontSelector::beginLoadingFontSoon(CachedFont& font)
     // decrementRequestCount() in beginLoadTimerFired() and in clearDocument().
     m_document->cachedResourceLoader().incrementRequestCount(font);
 
-    m_beginLoadingTimer.startOneShot(0_s);
+    if (!m_fontLoadingTimerIsSuspended)
+        m_beginLoadingTimer.startOneShot(0_s);
+}
+
+void CSSFontSelector::suspendFontLoadingTimer()
+{
+    if (m_fontLoadingTimerIsSuspended)
+        return;
+
+    m_beginLoadingTimer.cancel();
+    m_fontLoadingTimerIsSuspended = true;
+}
+
+void CSSFontSelector::restartFontLoadingTimer()
+{
+    if (!m_fontLoadingTimerIsSuspended)
+        return;
+
+    if (!m_fontsToBeginLoading.isEmpty())
+        m_beginLoadingTimer.startOneShot(0_s);
+
+    m_fontLoadingTimerIsSuspended = false;
 }
 
 void CSSFontSelector::beginLoadTimerFired()

@@ -30,10 +30,10 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.marlin.DMarlinRenderer;
 import com.sun.marlin.DMarlinRenderingEngine;
+import com.sun.marlin.MarlinRenderer;
 import com.sun.marlin.MaskMarlinAlphaConsumer;
-import com.sun.marlin.DRendererContext;
+import com.sun.marlin.RendererContext;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.impl.PrismSettings;
 
@@ -77,8 +77,8 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             return EMPTY_MASK;
         }
 
-        final DRendererContext rdrCtx = DMarlinRenderingEngine.getRendererContext();
-        DMarlinRenderer renderer = null;
+        final RendererContext rdrCtx = DMarlinRenderingEngine.getRendererContext();
+        MarlinRenderer renderer = null;
         try {
             final Rectangle rclip = rdrCtx.clip;
             rclip.setBounds(xformBounds);
@@ -112,7 +112,7 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             if (renderer != null) {
                 renderer.dispose();
             }
-            // recycle the DRendererContext instance
+            // recycle the RendererContext instance
             DMarlinRenderingEngine.returnRendererContext(rdrCtx);
         }
     }
@@ -122,7 +122,7 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
         final float lw = (stroke.getType() == BasicStroke.TYPE_CENTERED) ?
                              stroke.getLineWidth() : stroke.getLineWidth() * 2.0f;
 
-        final DRendererContext rdrCtx = DMarlinRenderingEngine.getRendererContext();
+        final RendererContext rdrCtx = DMarlinRenderingEngine.getRendererContext();
         try {
             // initialize a large copyable Path2D to avoid a lot of array growing:
             final Path2D p2d = rdrCtx.getPath2D();
@@ -135,7 +135,7 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             return new Path2D(p2d);
 
         } finally {
-            // recycle the DRendererContext instance
+            // recycle the RendererContext instance
             DMarlinRenderingEngine.returnRendererContext(rdrCtx);
         }
     }

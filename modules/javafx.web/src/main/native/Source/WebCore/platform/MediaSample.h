@@ -30,7 +30,7 @@
 #include <JavaScriptCore/TypedArrays.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/AtomString.h>
 
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
@@ -54,15 +54,13 @@ struct PlatformSample {
     } sample;
 };
 
-class MediaSample : public RefCounted<MediaSample> {
+class WEBCORE_EXPORT MediaSample : public ThreadSafeRefCounted<MediaSample> {
 public:
     virtual ~MediaSample() = default;
 
     virtual MediaTime presentationTime() const = 0;
-    virtual MediaTime outputPresentationTime() const { return presentationTime(); }
     virtual MediaTime decodeTime() const = 0;
     virtual MediaTime duration() const = 0;
-    virtual MediaTime outputDuration() const { return duration(); }
     virtual AtomString trackID() const = 0;
     virtual void setTrackID(const String&) = 0;
     virtual size_t sizeInBytes() const = 0;
@@ -100,7 +98,18 @@ public:
     bool hasAlpha() const { return flags() & HasAlpha; }
 
     virtual void dump(PrintStream&) const = 0;
-    virtual String toJSONString() const { return { }; }
+    String toJSONString() const
+    {
+        auto object = JSON::Object::create();
+
+        object->setObject("pts"_s, presentationTime().toJSONObject());
+        object->setObject("dts"_s, decodeTime().toJSONObject());
+        object->setObject("duration"_s, duration().toJSONObject());
+        object->setInteger("flags"_s, static_cast<unsigned>(flags()));
+        object->setObject("presentationSize"_s, presentationSize().toJSONObject());
+
+        return object->toJSONString();
+    }
 };
 
 } // namespace WebCore

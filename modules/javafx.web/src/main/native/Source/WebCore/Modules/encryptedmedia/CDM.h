@@ -40,6 +40,12 @@
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
+#if !RELEASE_LOG_DISABLED
+namespace WTF {
+class Logger;
+}
+#endif
+
 namespace WebCore {
 
 class CDMFactory;
@@ -80,29 +86,10 @@ public:
 private:
     CDM(Document&, const String& keySystem);
 
-    enum class ConfigurationStatus {
-        Supported,
-        NotSupported,
-        ConsentDenied,
-    };
-
-    enum class ConsentStatus {
-        ConsentDenied,
-        InformUser,
-        Allowed,
-    };
-
-    enum class AudioVideoType {
-        Audio,
-        Video,
-    };
-
-    void doSupportedConfigurationStep(MediaKeySystemConfiguration&& candidateConfiguration, MediaKeysRestrictions&&, SupportedConfigurationCallback&&);
-    Optional<MediaKeySystemConfiguration>  getSupportedConfiguration(const MediaKeySystemConfiguration& candidateConfiguration, MediaKeysRestrictions&);
-    Optional<Vector<MediaKeySystemMediaCapability>> getSupportedCapabilitiesForAudioVideoType(AudioVideoType, const Vector<MediaKeySystemMediaCapability>& requestedCapabilities, const MediaKeySystemConfiguration& partialConfiguration, MediaKeysRestrictions&);
-
-    using ConsentStatusCallback = WTF::Function<void(ConsentStatus, MediaKeySystemConfiguration&&, MediaKeysRestrictions&&)>;
-    void getConsentStatus(MediaKeySystemConfiguration&& accumulatedConfiguration, MediaKeysRestrictions&&, ConsentStatusCallback&&);
+#if !RELEASE_LOG_DISABLED
+    Ref<WTF::Logger> m_logger;
+    const void* m_logIdentifier;
+#endif
     String m_keySystem;
     std::unique_ptr<CDMPrivate> m_private;
 };

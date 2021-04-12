@@ -239,23 +239,8 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.closePath();
     }
 
-    public boolean hasCurrentPoint() {
-        return hasCP;
-    }
-
     public boolean isEmpty() {
-        PathIterator pi = path.getPathIterator(null);
-        float [] coords = new float[6];
-        while(!pi.isDone()) {
-            switch(pi.currentSegment(coords)) {
-                case PathIterator.SEG_LINETO:
-                case PathIterator.SEG_QUADTO:
-                case PathIterator.SEG_CUBICTO:
-                    return false;
-            }
-            pi.next();
-        }
-        return true;
+        return !hasCP;
     }
 
     public int getWindingRule() {

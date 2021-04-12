@@ -75,7 +75,7 @@
  *
  * The pull mode, in which the need-data signal triggers the next push-buffer call.
  * This mode is typically used in the "random-access" stream-type. Use this
- * mode for file access or other randomly accessable sources. In this mode, a
+ * mode for file access or other randomly accessible sources. In this mode, a
  * buffer of exactly the amount of bytes given by the need-data signal should be
  * pushed into appsrc.
  *
@@ -108,6 +108,35 @@ typedef enum
   APP_WAITING = 1 << 1,         /* application thread is waiting for streaming thread */
 } GstAppSrcWaitStatus;
 
+typedef struct
+{
+  GstAppSrcCallbacks callbacks;
+  gpointer user_data;
+  GDestroyNotify destroy_notify;
+  gint ref_count;
+} Callbacks;
+
+static Callbacks *
+callbacks_ref (Callbacks * callbacks)
+{
+  g_atomic_int_inc (&callbacks->ref_count);
+
+  return callbacks;
+}
+
+static void
+callbacks_unref (Callbacks * callbacks)
+{
+  if (!g_atomic_int_dec_and_test (&callbacks->ref_count))
+    return;
+
+  if (callbacks->destroy_notify)
+    callbacks->destroy_notify (callbacks->user_data);
+
+  g_free (callbacks);
+}
+
+
 struct _GstAppSrcPrivate
 {
   GCond cond;
@@ -117,6 +146,9 @@ struct _GstAppSrcPrivate
 
   GstCaps *last_caps;
   GstCaps *current_caps;
+  GstSegment last_segment;
+  GstSegment current_segment;
+  gboolean pending_custom_segment;
 
   gint64 size;
   GstClockTime duration;
@@ -137,10 +169,9 @@ struct _GstAppSrcPrivate
   guint64 max_latency;
   gboolean emit_signals;
   guint min_percent;
+  gboolean handle_segment_change;
 
-  GstAppSrcCallbacks callbacks;
-  gpointer user_data;
-  GDestroyNotify notify;
+  Callbacks *callbacks;
 };
 
 GST_DEBUG_CATEGORY_STATIC (app_src_debug);
@@ -174,6 +205,7 @@ enum
 #define DEFAULT_PROP_MIN_PERCENT   0
 #define DEFAULT_PROP_CURRENT_LEVEL_BYTES   0
 #define DEFAULT_PROP_DURATION      GST_CLOCK_TIME_NONE
+#define DEFAULT_PROP_HANDLE_SEGMENT_CHANGE FALSE
 
 enum
 {
@@ -191,6 +223,7 @@ enum
   PROP_MIN_PERCENT,
   PROP_CURRENT_LEVEL_BYTES,
   PROP_DURATION,
+  PROP_HANDLE_SEGMENT_CHANGE,
   PROP_LAST
 };
 
@@ -261,7 +294,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
   gobject_class->get_property = gst_app_src_get_property;
 
   /**
-   * GstAppSrc::caps:
+   * GstAppSrc:caps:
    *
    * The GstCaps that will negotiated downstream and will be put
    * on outgoing buffers.
@@ -271,7 +304,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           "The allowed caps for the src pad", GST_TYPE_CAPS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::format:
+   * GstAppSrc:format:
    *
    * The format to use for segment events. When the source is producing
    * timestamped buffers this property should be set to GST_FORMAT_TIME.
@@ -281,7 +314,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           "The format of the segment events and seek", GST_TYPE_FORMAT,
           DEFAULT_PROP_FORMAT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::size:
+   * GstAppSrc:size:
    *
    * The total size in bytes of the data stream. If the total size is known, it
    * is recommended to configure it with this property.
@@ -292,7 +325,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           -1, G_MAXINT64, DEFAULT_PROP_SIZE,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::stream-type:
+   * GstAppSrc:stream-type:
    *
    * The type of stream that this source is producing.  For seekable streams the
    * application should connect to the seek-data signal.
@@ -303,7 +336,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           DEFAULT_PROP_STREAM_TYPE,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::max-bytes:
+   * GstAppSrc:max-bytes:
    *
    * The maximum amount of bytes that can be queued internally.
    * After the maximum amount of bytes are queued, appsrc will emit the
@@ -315,7 +348,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           0, G_MAXUINT64, DEFAULT_PROP_MAX_BYTES,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::block:
+   * GstAppSrc:block:
    *
    * When max-bytes are queued and after the enough-data signal has been emitted,
    * block any further push-buffer calls until the amount of queued bytes drops
@@ -327,7 +360,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           DEFAULT_PROP_BLOCK, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstAppSrc::is-live:
+   * GstAppSrc:is-live:
    *
    * Instruct the source to behave like a live source. This includes that it
    * will only push out buffers in the PLAYING state.
@@ -337,7 +370,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           "Whether to act as a live source",
           DEFAULT_PROP_IS_LIVE, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   /**
-   * GstAppSrc::min-latency:
+   * GstAppSrc:min-latency:
    *
    * The minimum latency of the source. A value of -1 will use the default
    * latency calculations of #GstBaseSrc.
@@ -350,7 +383,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
   /**
    * GstAppSrc::max-latency:
    *
-   * The maximum latency of the source. A value of -1 means an unlimited amout
+   * The maximum latency of the source. A value of -1 means an unlimited amount
    * of latency.
    */
   g_object_class_install_property (gobject_class, PROP_MAX_LATENCY,
@@ -360,7 +393,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstAppSrc::emit-signals:
+   * GstAppSrc:emit-signals:
    *
    * Make appsrc emit the "need-data", "enough-data" and "seek-data" signals.
    * This option is by default enabled for backwards compatibility reasons but
@@ -373,7 +406,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstAppSrc::min-percent:
+   * GstAppSrc:min-percent:
    *
    * Make appsrc emit the "need-data" signal when the amount of bytes in the
    * queue drops below this percentage of max-bytes.
@@ -385,7 +418,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstAppSrc::current-level-bytes:
+   * GstAppSrc:current-level-bytes:
    *
    * The number of currently queued bytes inside appsrc.
    *
@@ -398,7 +431,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
   /**
-   * GstAppSrc::duration:
+   * GstAppSrc:duration:
    *
    * The total duration in nanoseconds of the data stream. If the total duration is known, it
    * is recommended to configure it with this property.
@@ -410,6 +443,29 @@ gst_app_src_class_init (GstAppSrcClass * klass)
           "The duration of the data stream in nanoseconds (GST_CLOCK_TIME_NONE if unknown)",
           0, G_MAXUINT64, DEFAULT_PROP_DURATION,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GstAppSrc:handle-segment-change:
+   *
+   * When enabled, appsrc will check GstSegment in GstSample which was
+   * pushed via gst_app_src_push_sample() or "push-sample" signal action.
+   * If a GstSegment is changed, corresponding segment event will be followed
+   * by next data flow.
+   *
+   * FIXME: currently only GST_FORMAT_TIME format is supported and therefore
+   * GstAppSrc::format should be time. However, possibly #GstAppSrc can support
+   * other formats.
+   *
+   * Since: 1.18
+   */
+  g_object_class_install_property (gobject_class, PROP_HANDLE_SEGMENT_CHANGE,
+      g_param_spec_boolean ("handle-segment-change", "Handle Segment Change",
+          "Whether to detect and handle changed time format GstSegment in "
+          "GstSample. User should set valid GstSegment in GstSample. "
+          "Must set format property as \"time\" to enable this property",
+          DEFAULT_PROP_HANDLE_SEGMENT_CHANGE,
+          G_PARAM_READWRITE | GST_PARAM_MUTABLE_READY |
+          G_PARAM_STATIC_STRINGS));
 
   /**
    * GstAppSrc::need-data:
@@ -441,7 +497,7 @@ gst_app_src_class_init (GstAppSrcClass * klass)
   gst_app_src_signals[SIGNAL_ENOUGH_DATA] =
       g_signal_new ("enough-data", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstAppSrcClass, enough_data),
-      NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0, G_TYPE_NONE);
+      NULL, NULL, NULL, G_TYPE_NONE, 0, G_TYPE_NONE);
 
   /**
    * GstAppSrc::seek-data:
@@ -516,7 +572,6 @@ gst_app_src_class_init (GstAppSrcClass * klass)
     * becomes available in the queue.
     *
     * Since: 1.6
-    *
     */
   gst_app_src_signals[SIGNAL_PUSH_SAMPLE] =
       g_signal_new ("push-sample", G_TYPE_FROM_CLASS (klass),
@@ -587,6 +642,7 @@ gst_app_src_init (GstAppSrc * appsrc)
   priv->max_latency = DEFAULT_PROP_MAX_LATENCY;
   priv->emit_signals = DEFAULT_PROP_EMIT_SIGNALS;
   priv->min_percent = DEFAULT_PROP_MIN_PERCENT;
+  priv->handle_segment_change = DEFAULT_PROP_HANDLE_SEGMENT_CHANGE;
 
   gst_base_src_set_live (GST_BASE_SRC (appsrc), DEFAULT_PROP_IS_LIVE);
 }
@@ -621,6 +677,7 @@ gst_app_src_dispose (GObject * obj)
 {
   GstAppSrc *appsrc = GST_APP_SRC_CAST (obj);
   GstAppSrcPrivate *priv = appsrc->priv;
+  Callbacks *callbacks = NULL;
 
   GST_OBJECT_LOCK (appsrc);
   if (priv->current_caps) {
@@ -631,17 +688,15 @@ gst_app_src_dispose (GObject * obj)
     gst_caps_unref (priv->last_caps);
     priv->last_caps = NULL;
   }
-  if (priv->notify) {
-    priv->notify (priv->user_data);
-  }
-  priv->user_data = NULL;
-  priv->notify = NULL;
-
   GST_OBJECT_UNLOCK (appsrc);
 
   g_mutex_lock (&priv->mutex);
+  if (priv->callbacks)
+    callbacks = g_steal_pointer (&priv->callbacks);
   gst_app_src_flush_queued (appsrc, FALSE);
   g_mutex_unlock (&priv->mutex);
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
@@ -734,6 +789,9 @@ gst_app_src_set_property (GObject * object, guint prop_id,
     case PROP_DURATION:
       gst_app_src_set_duration (appsrc, g_value_get_uint64 (value));
       break;
+    case PROP_HANDLE_SEGMENT_CHANGE:
+      priv->handle_segment_change = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -796,6 +854,9 @@ gst_app_src_get_property (GObject * object, guint prop_id, GValue * value,
       break;
     case PROP_DURATION:
       g_value_set_uint64 (value, gst_app_src_get_duration (appsrc));
+      break;
+    case PROP_HANDLE_SEGMENT_CHANGE:
+      g_value_set_boolean (value, priv->handle_segment_change);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -869,6 +930,9 @@ gst_app_src_start (GstBaseSrc * bsrc)
   g_mutex_unlock (&priv->mutex);
 
   gst_base_src_set_format (bsrc, priv->format);
+  gst_segment_init (&priv->last_segment, priv->format);
+  gst_segment_init (&priv->current_segment, priv->format);
+  priv->pending_custom_segment = FALSE;
 
   return TRUE;
 }
@@ -997,6 +1061,8 @@ gst_app_src_do_seek (GstBaseSrc * src, GstSegment * segment)
   GstAppSrcPrivate *priv = appsrc->priv;
   gint64 desired_position;
   gboolean res = FALSE;
+  gboolean emit;
+  Callbacks *callbacks = NULL;
 
   desired_position = segment->position;
 
@@ -1007,24 +1073,30 @@ gst_app_src_do_seek (GstBaseSrc * src, GstSegment * segment)
   GST_DEBUG_OBJECT (appsrc, "seeking to %" G_GINT64_FORMAT ", format %s",
       desired_position, gst_format_get_name (segment->format));
 
-  if (priv->callbacks.seek_data)
-    res = priv->callbacks.seek_data (appsrc, desired_position, priv->user_data);
-  else {
-    gboolean emit;
+  g_mutex_lock (&priv->mutex);
+  emit = priv->emit_signals;
+  if (priv->callbacks)
+    callbacks = callbacks_ref (priv->callbacks);
+  g_mutex_unlock (&priv->mutex);
 
-    g_mutex_lock (&priv->mutex);
-    emit = priv->emit_signals;
-    g_mutex_unlock (&priv->mutex);
-
-    if (emit)
-      g_signal_emit (appsrc, gst_app_src_signals[SIGNAL_SEEK_DATA], 0,
-          desired_position, &res);
+  if (callbacks && callbacks->callbacks.seek_data) {
+    res =
+        callbacks->callbacks.seek_data (appsrc, desired_position,
+        callbacks->user_data);
+  } else if (emit) {
+    g_signal_emit (appsrc, gst_app_src_signals[SIGNAL_SEEK_DATA], 0,
+        desired_position, &res);
   }
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   if (res) {
     GST_DEBUG_OBJECT (appsrc, "flushing queue");
     g_mutex_lock (&priv->mutex);
     gst_app_src_flush_queued (appsrc, TRUE);
+    gst_segment_copy_into (segment, &priv->last_segment);
+    gst_segment_copy_into (segment, &priv->current_segment);
+    priv->pending_custom_segment = FALSE;
     g_mutex_unlock (&priv->mutex);
     priv->is_eos = FALSE;
   } else {
@@ -1041,19 +1113,24 @@ gst_app_src_emit_seek (GstAppSrc * appsrc, guint64 offset)
   gboolean res = FALSE;
   gboolean emit;
   GstAppSrcPrivate *priv = appsrc->priv;
+  Callbacks *callbacks = NULL;
 
   emit = priv->emit_signals;
+  if (priv->callbacks)
+    callbacks = callbacks_ref (priv->callbacks);
   g_mutex_unlock (&priv->mutex);
 
   GST_DEBUG_OBJECT (appsrc,
       "we are at %" G_GINT64_FORMAT ", seek to %" G_GINT64_FORMAT,
       priv->offset, offset);
 
-  if (priv->callbacks.seek_data)
-    res = priv->callbacks.seek_data (appsrc, offset, priv->user_data);
+  if (callbacks && callbacks->callbacks.seek_data)
+    res = callbacks->callbacks.seek_data (appsrc, offset, callbacks->user_data);
   else if (emit)
     g_signal_emit (appsrc, gst_app_src_signals[SIGNAL_SEEK_DATA], 0,
         offset, &res);
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   g_mutex_lock (&priv->mutex);
 
@@ -1067,16 +1144,21 @@ gst_app_src_emit_need_data (GstAppSrc * appsrc, guint size)
 {
   gboolean emit;
   GstAppSrcPrivate *priv = appsrc->priv;
+  Callbacks *callbacks = NULL;
 
   emit = priv->emit_signals;
+  if (priv->callbacks)
+    callbacks = callbacks_ref (priv->callbacks);
   g_mutex_unlock (&priv->mutex);
 
   /* we have no data, we need some. We fire the signal with the size hint. */
-  if (priv->callbacks.need_data)
-    priv->callbacks.need_data (appsrc, size, priv->user_data);
+  if (callbacks && callbacks->callbacks.need_data)
+    callbacks->callbacks.need_data (appsrc, size, callbacks->user_data);
   else if (emit)
     g_signal_emit (appsrc, gst_app_src_signals[SIGNAL_NEED_DATA], 0, size,
         NULL);
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   g_mutex_lock (&priv->mutex);
   /* we can be flushing now because we released the lock */
@@ -1217,10 +1299,8 @@ gst_app_src_create (GstBaseSrc * bsrc, guint64 offset, guint size,
         *buf = GST_BUFFER (obj);
         buf_size = gst_buffer_get_size (*buf);
         GST_LOG_OBJECT (appsrc, "have buffer %p of size %u", *buf, buf_size);
-      } else {
+      } else if (GST_IS_BUFFER_LIST (obj)) {
         GstBufferList *buffer_list;
-
-        g_assert (GST_IS_BUFFER_LIST (obj));
 
         buffer_list = GST_BUFFER_LIST (obj);
 
@@ -1231,6 +1311,29 @@ gst_app_src_create (GstBaseSrc * bsrc, guint64 offset, guint size,
 
         gst_base_src_submit_buffer_list (bsrc, buffer_list);
         *buf = NULL;
+      } else if (GST_IS_EVENT (obj)) {
+        GstEvent *event = GST_EVENT (obj);
+        const GstSegment *segment = NULL;
+
+        gst_event_parse_segment (event, &segment);
+        g_assert (segment != NULL);
+
+        if (!gst_segment_is_equal (&priv->current_segment, segment)) {
+          GST_DEBUG_OBJECT (appsrc,
+              "Update new segment %" GST_PTR_FORMAT, event);
+          if (!gst_base_src_new_segment (bsrc, segment)) {
+            GST_ERROR_OBJECT (appsrc,
+                "Couldn't set new segment %" GST_PTR_FORMAT, event);
+            gst_event_unref (event);
+            goto invalid_segment;
+          }
+          gst_segment_copy_into (segment, &priv->current_segment);
+        }
+
+        gst_event_unref (event);
+        continue;
+      } else {
+        g_assert_not_reached ();
       }
 
       priv->queued_bytes -= buf_size;
@@ -1302,6 +1405,14 @@ seek_error:
         GST_ERROR_SYSTEM);
     return GST_FLOW_ERROR;
   }
+
+invalid_segment:
+  {
+    g_mutex_unlock (&priv->mutex);
+    GST_ELEMENT_ERROR (appsrc, LIBRARY, SETTINGS,
+        (NULL), ("Failed to configure the provided input segment."));
+    return GST_FLOW_ERROR;
+  }
 }
 
 /* external API */
@@ -1309,7 +1420,7 @@ seek_error:
 /**
  * gst_app_src_set_caps:
  * @appsrc: a #GstAppSrc
- * @caps: caps to set
+ * @caps: (nullable): caps to set
  *
  * Set the capabilities on the appsrc element.  This function takes
  * a copy of the caps structure. After calling this method, the source will
@@ -1346,6 +1457,9 @@ gst_app_src_set_caps (GstAppSrc * appsrc, const GstCaps * caps)
     }
     gst_queue_array_push_tail (priv->queue, new_caps);
     gst_caps_replace (&priv->last_caps, new_caps);
+
+    if ((priv->wait_status & STREAM_WAITING))
+      g_cond_broadcast (&priv->cond);
   }
 
   GST_OBJECT_UNLOCK (appsrc);
@@ -1817,17 +1931,22 @@ gst_app_src_push_internal (GstAppSrc * appsrc, GstBuffer * buffer,
           priv->queued_bytes, priv->max_bytes);
 
       if (first) {
+        Callbacks *callbacks = NULL;
         gboolean emit;
 
         emit = priv->emit_signals;
+        if (priv->callbacks)
+          callbacks = callbacks_ref (priv->callbacks);
         /* only signal on the first push */
         g_mutex_unlock (&priv->mutex);
 
-        if (priv->callbacks.enough_data)
-          priv->callbacks.enough_data (appsrc, priv->user_data);
+        if (callbacks && callbacks->callbacks.enough_data)
+          callbacks->callbacks.enough_data (appsrc, callbacks->user_data);
         else if (emit)
           g_signal_emit (appsrc, gst_app_src_signals[SIGNAL_ENOUGH_DATA], 0,
               NULL);
+
+        g_clear_pointer (&callbacks, callbacks_unref);
 
         g_mutex_lock (&priv->mutex);
         /* continue to check for flushing/eos after releasing the lock */
@@ -1849,6 +1968,14 @@ gst_app_src_push_internal (GstAppSrc * appsrc, GstBuffer * buffer,
       }
     } else
       break;
+  }
+
+  if (priv->pending_custom_segment) {
+    GstEvent *event = gst_event_new_segment (&priv->last_segment);
+
+    GST_DEBUG_OBJECT (appsrc, "enqueue new segment %" GST_PTR_FORMAT, event);
+    gst_queue_array_push_tail (priv->queue, event);
+    priv->pending_custom_segment = FALSE;
   }
 
   if (buflist != NULL) {
@@ -1901,6 +2028,7 @@ gst_app_src_push_buffer_full (GstAppSrc * appsrc, GstBuffer * buffer,
 static GstFlowReturn
 gst_app_src_push_sample_internal (GstAppSrc * appsrc, GstSample * sample)
 {
+  GstAppSrcPrivate *priv = appsrc->priv;
   GstBufferList *buffer_list;
   GstBuffer *buffer;
   GstCaps *caps;
@@ -1913,6 +2041,30 @@ gst_app_src_push_sample_internal (GstAppSrc * appsrc, GstSample * sample)
   } else {
     GST_WARNING_OBJECT (appsrc, "received sample without caps");
   }
+
+  if (priv->handle_segment_change && priv->format == GST_FORMAT_TIME) {
+    GstSegment *segment = gst_sample_get_segment (sample);
+
+    if (segment->format != GST_FORMAT_TIME) {
+      GST_LOG_OBJECT (appsrc, "format %s is not supported",
+          gst_format_get_name (segment->format));
+      goto handle_buffer;
+    }
+
+    g_mutex_lock (&priv->mutex);
+    if (gst_segment_is_equal (&priv->last_segment, segment)) {
+      GST_LOG_OBJECT (appsrc, "segment wasn't changed");
+      g_mutex_unlock (&priv->mutex);
+      goto handle_buffer;
+    }
+
+    /* will be pushed to queue with next buffer/buffer-list */
+    gst_segment_copy_into (segment, &priv->last_segment);
+    priv->pending_custom_segment = TRUE;
+    g_mutex_unlock (&priv->mutex);
+  }
+
+handle_buffer:
 
   buffer = gst_sample_get_buffer (sample);
   if (buffer != NULL)
@@ -1937,9 +2089,9 @@ gst_app_src_push_sample_internal (GstAppSrc * appsrc, GstSample * sample)
  * When the block property is TRUE, this function can block until free
  * space becomes available in the queue.
  *
- * Returns: #GST_FLOW_OK when the buffer was successfuly queued.
+ * Returns: #GST_FLOW_OK when the buffer was successfully queued.
  * #GST_FLOW_FLUSHING when @appsrc is not PAUSED or PLAYING.
- * #GST_FLOW_EOS when EOS occured.
+ * #GST_FLOW_EOS when EOS occurred.
  */
 GstFlowReturn
 gst_app_src_push_buffer (GstAppSrc * appsrc, GstBuffer * buffer)
@@ -1959,9 +2111,9 @@ gst_app_src_push_buffer (GstAppSrc * appsrc, GstBuffer * buffer)
  * When the block property is TRUE, this function can block until free
  * space becomes available in the queue.
  *
- * Returns: #GST_FLOW_OK when the buffer list was successfuly queued.
+ * Returns: #GST_FLOW_OK when the buffer list was successfully queued.
  * #GST_FLOW_FLUSHING when @appsrc is not PAUSED or PLAYING.
- * #GST_FLOW_EOS when EOS occured.
+ * #GST_FLOW_EOS when EOS occurred.
  *
  * Since: 1.14
  */
@@ -1988,9 +2140,9 @@ gst_app_src_push_buffer_list (GstAppSrc * appsrc, GstBufferList * buffer_list)
  * When the block property is TRUE, this function can block until free
  * space becomes available in the queue.
  *
- * Returns: #GST_FLOW_OK when the buffer was successfuly queued.
+ * Returns: #GST_FLOW_OK when the buffer was successfully queued.
  * #GST_FLOW_FLUSHING when @appsrc is not PAUSED or PLAYING.
- * #GST_FLOW_EOS when EOS occured.
+ * #GST_FLOW_EOS when EOS occurred.
  *
  * Since: 1.6
  *
@@ -2033,7 +2185,7 @@ gst_app_src_push_sample_action (GstAppSrc * appsrc, GstSample * sample)
  * Indicates to the appsrc element that the last buffer queued in the
  * element is the last buffer of the stream.
  *
- * Returns: #GST_FLOW_OK when the EOS was successfuly queued.
+ * Returns: #GST_FLOW_OK when the EOS was successfully queued.
  * #GST_FLOW_FLUSHING when @appsrc is not PAUSED or PLAYING.
  */
 GstFlowReturn
@@ -2081,12 +2233,15 @@ flushing:
  *
  * If callbacks are installed, no signals will be emitted for performance
  * reasons.
+ *
+ * Before 1.16.3 it was not possible to change the callbacks in a thread-safe
+ * way.
  */
 void
 gst_app_src_set_callbacks (GstAppSrc * appsrc,
     GstAppSrcCallbacks * callbacks, gpointer user_data, GDestroyNotify notify)
 {
-  GDestroyNotify old_notify;
+  Callbacks *old_callbacks, *new_callbacks = NULL;
   GstAppSrcPrivate *priv;
 
   g_return_if_fail (GST_IS_APP_SRC (appsrc));
@@ -2094,26 +2249,20 @@ gst_app_src_set_callbacks (GstAppSrc * appsrc,
 
   priv = appsrc->priv;
 
-  GST_OBJECT_LOCK (appsrc);
-  old_notify = priv->notify;
-
-  if (old_notify) {
-    gpointer old_data;
-
-    old_data = priv->user_data;
-
-    priv->user_data = NULL;
-    priv->notify = NULL;
-    GST_OBJECT_UNLOCK (appsrc);
-
-    old_notify (old_data);
-
-    GST_OBJECT_LOCK (appsrc);
+  if (callbacks) {
+    new_callbacks = g_new0 (Callbacks, 1);
+    new_callbacks->callbacks = *callbacks;
+    new_callbacks->user_data = user_data;
+    new_callbacks->destroy_notify = notify;
+    new_callbacks->ref_count = 1;
   }
-  priv->callbacks = *callbacks;
-  priv->user_data = user_data;
-  priv->notify = notify;
-  GST_OBJECT_UNLOCK (appsrc);
+
+  g_mutex_lock (&priv->mutex);
+  old_callbacks = g_steal_pointer (&priv->callbacks);
+  priv->callbacks = g_steal_pointer (&new_callbacks);
+  g_mutex_unlock (&priv->mutex);
+
+  g_clear_pointer (&old_callbacks, callbacks_unref);
 }
 
 /*** GSTURIHANDLER INTERFACE *************************************************/

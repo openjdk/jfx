@@ -397,4 +397,19 @@ public class GlyphCache {
             return rect;
         }
     }
+
+    private static void disposePackerForContext(BaseContext ctx,
+            WeakHashMap<BaseContext, RectanglePacker> packerMap) {
+
+        RectanglePacker packer = packerMap.remove(ctx);
+        if (packer != null) {
+            packer.dispose();
+        }
+    }
+
+    public static void disposeForContext(BaseContext ctx) {
+        disposePackerForContext(ctx, greyPackerMap);
+        disposePackerForContext(ctx, lcdPackerMap);
+    }
+
 }

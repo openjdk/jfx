@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,7 +179,7 @@ public final class ClipShapeTest {
                 if (msg != null) {
                     // last space to avoid matching other settings:
                     if (msg.startsWith("prism.marlin ")) {
-                        isMarlin.set(msg.contains("DRenderer"));
+                        isMarlin.set(msg.contains("Renderer"));
                     }
                     if (msg.startsWith("prism.marlin.clip.runtime.enable")) {
                         isClipRuntime.set(msg.contains("true"));

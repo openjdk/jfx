@@ -48,7 +48,6 @@
 #include "WebSocket.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/CryptographicallyRandomNumber.h>
-#include <wtf/MD5.h>
 #include <wtf/SHA1.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
@@ -64,15 +63,12 @@ namespace WebCore {
 
 static String resourceName(const URL& url)
 {
-    StringBuilder name;
-    name.append(url.path());
-    if (name.isEmpty())
-        name.append('/');
-    if (!url.query().isNull()) {
-        name.append('?');
-        name.append(url.query());
-    }
-    String result = name.toString();
+    auto path = url.path();
+    auto result = makeString(
+        path,
+        path.isEmpty() ? "/" : "",
+        url.queryWithLeadingQuestionMark()
+    );
     ASSERT(!result.isEmpty());
     ASSERT(!result.contains(' '));
     return result;

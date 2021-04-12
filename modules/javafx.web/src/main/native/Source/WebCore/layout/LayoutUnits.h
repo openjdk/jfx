@@ -31,6 +31,8 @@
 #include "LayoutPoint.h"
 #include "LayoutRect.h"
 #include "MarginTypes.h"
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 #include <wtf/Optional.h>
 
 namespace WebCore {
@@ -113,26 +115,29 @@ inline void Point::moveBy(LayoutPoint offset)
 struct HorizontalEdges {
     LayoutUnit left;
     LayoutUnit right;
-
-    LayoutUnit width() const { return left + right; }
 };
 
 struct VerticalEdges {
     LayoutUnit top;
     LayoutUnit bottom;
-
-    LayoutUnit height() const { return top + bottom; }
 };
 
 struct Edges {
     HorizontalEdges horizontal;
     VerticalEdges vertical;
+
+    LayoutUnit width() const { return horizontal.left + horizontal.right; }
+    LayoutUnit height() const { return vertical.top + vertical.bottom; }
 };
+
+inline Edges operator/(const Edges& edge, size_t value)
+{
+    return { { edge.horizontal.left / value, edge.horizontal.right / value }, { edge.vertical.top / value, edge.vertical.bottom / value } };
+}
 
 struct ContentWidthAndMargin {
     LayoutUnit contentWidth;
     UsedHorizontalMargin usedMargin;
-    ComputedHorizontalMargin computedMargin;
 };
 
 struct ContentHeightAndMargin {
@@ -153,6 +158,8 @@ struct VerticalGeometry {
 };
 
 struct HorizontalConstraints {
+    LayoutUnit logicalRight() const { return logicalLeft + logicalWidth; }
+
     LayoutUnit logicalLeft;
     LayoutUnit logicalWidth;
 };
@@ -177,6 +184,11 @@ inline LayoutUnit toLayoutUnit(InlineLayoutUnit value)
     return LayoutUnit { value };
 }
 
+inline LayoutUnit ceiledLayoutUnit(InlineLayoutUnit value)
+{
+    return LayoutUnit::fromFloatCeil(value);
+}
+
 inline LayoutPoint toLayoutPoint(const InlineLayoutPoint& point)
 {
     return LayoutPoint { point };
@@ -196,6 +208,46 @@ inline InlineLayoutUnit maxInlineLayoutUnit()
 #endif
 }
 
+struct SlotPosition {
+    SlotPosition() = default;
+    SlotPosition(size_t column, size_t row);
+
+    size_t column { 0 };
+    size_t row { 0 };
+};
+
+inline SlotPosition::SlotPosition(size_t column, size_t row)
+    : column(column)
+    , row(row)
+{
+}
+
+inline bool operator==(const SlotPosition& a, const SlotPosition& b)
+{
+    return a.column == b.column && a.row == b.row;
+}
+
+struct CellSpan {
+    size_t column { 1 };
+    size_t row { 1 };
+};
+
 }
 }
+
+namespace WTF {
+struct SlotPositionHash {
+    static unsigned hash(const WebCore::Layout::SlotPosition& slotPosition) { return pairIntHash(slotPosition.column, slotPosition.row); }
+    static bool equal(const WebCore::Layout::SlotPosition& a, const WebCore::Layout::SlotPosition& b) { return a == b; }
+    static const bool safeToCompareToEmptyOrDeleted = true;
+};
+template<> struct HashTraits<WebCore::Layout::SlotPosition> : GenericHashTraits<WebCore::Layout::SlotPosition> {
+    static WebCore::Layout::SlotPosition emptyValue() { return WebCore::Layout::SlotPosition(0, std::numeric_limits<size_t>::max()); }
+
+    static void constructDeletedValue(WebCore::Layout::SlotPosition& slot) { slot = WebCore::Layout::SlotPosition(std::numeric_limits<size_t>::max(), 0); }
+    static bool isDeletedValue(const WebCore::Layout::SlotPosition& slot) { return slot == WebCore::Layout::SlotPosition(std::numeric_limits<size_t>::max(), 0); }
+};
+template<> struct DefaultHash<WebCore::Layout::SlotPosition> : SlotPositionHash { };
+}
+
 #endif

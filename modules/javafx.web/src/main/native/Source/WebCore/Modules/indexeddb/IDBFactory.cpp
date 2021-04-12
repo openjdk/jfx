@@ -34,10 +34,10 @@
 #include "IDBDatabaseIdentifier.h"
 #include "IDBKey.h"
 #include "IDBOpenDBRequest.h"
+#include "JSIDBFactory.h"
 #include "Logging.h"
 #include "Page.h"
 #include "ScriptExecutionContext.h"
-#include "SecurityOrigin.h"
 
 
 namespace WebCore {
@@ -54,7 +54,7 @@ static bool shouldThrowSecurityException(ScriptExecutionContext& context)
             return true;
     }
 
-    if (!context.securityOrigin()->canAccessDatabase(context.topOrigin()))
+    if (!context.securityOrigin()->canAccessDatabase(nullptr))
         return true;
 
     return false;
@@ -91,7 +91,8 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionConte
         return Exception { SecurityError, "IDBFactory.open() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
+    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.open() called with an invalid security origin"_s };
 
@@ -111,7 +112,8 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
         return Exception { SecurityError, "IDBFactory.deleteDatabase() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
+    bool isTransient = !context.securityOrigin()->canAccessDatabase(&context.topOrigin());
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() }, isTransient);
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.deleteDatabase() called with an invalid security origin"_s };
 
@@ -133,9 +135,41 @@ ExceptionOr<short> IDBFactory::cmp(JSGlobalObject& execState, JSValue firstValue
     return first->compare(second.get());
 }
 
-void IDBFactory::getAllDatabaseNames(const SecurityOrigin& mainFrameOrigin, const SecurityOrigin& openingOrigin, Function<void (const Vector<String>&)>&& callback)
+void IDBFactory::databases(ScriptExecutionContext& context, IDBDatabasesResponsePromise&& promise)
 {
-    m_connectionProxy->getAllDatabaseNames(mainFrameOrigin, openingOrigin, WTFMove(callback));
+    LOG(IndexedDB, "IDBFactory::databases");
+
+    if (shouldThrowSecurityException(context)) {
+        promise.reject(SecurityError);
+        return;
+    }
+
+    ASSERT(context.securityOrigin());
+
+    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [promise = WTFMove(promise)](auto&& result) mutable {
+        if (!result) {
+            promise.reject(Exception { UnknownError });
+            return;
+        }
+
+        promise.resolve(WTF::map(*result, [](auto&& info) {
+            return IDBFactory::DatabaseInfo { WTFMove(info.name), info.version };
+        }));
+    });
+}
+
+void IDBFactory::getAllDatabaseNames(ScriptExecutionContext& context, Function<void(const Vector<String>&)>&& callback)
+{
+    m_connectionProxy->getAllDatabaseNamesAndVersions(context, [callback = WTFMove(callback)](auto&& result) mutable {
+        if (!result) {
+            callback({ });
+            return;
+        }
+
+        callback(WTF::map(*result, [](auto&& info) {
+            return WTFMove(info.name);
+        }));
+    });
 }
 
 } // namespace WebCore

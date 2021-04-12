@@ -46,9 +46,14 @@ namespace WebCore {
 
 class FloatPoint;
 class PlatformTouchEvent;
+class ScrollAnimation;
 class ScrollableArea;
 class Scrollbar;
 class WheelEventTestMonitor;
+
+#if ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)
+class ScrollControllerTimer;
+#endif
 
 #if ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)
 class ScrollAnimator : private ScrollControllerClient {
@@ -68,6 +73,7 @@ public:
     // The base class implementation always scrolls immediately, never animates.
     virtual bool scroll(ScrollbarOrientation, ScrollGranularity, float step, float multiplier);
 
+    void scrollToOffset(const FloatPoint&);
     virtual void scrollToOffsetWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     ScrollableArea& scrollableArea() const { return m_scrollableArea; }
@@ -85,8 +91,8 @@ public:
     void setCurrentPosition(const FloatPoint&);
     const FloatPoint& currentPosition() const { return m_currentPosition; }
 
-    virtual void cancelAnimations() { }
-    virtual void serviceScrollAnimations() { }
+    virtual void cancelAnimations();
+    virtual void serviceScrollAnimations();
 
     virtual void contentAreaWillPaint() const { }
     virtual void mouseEnteredContentArea() { }
@@ -97,16 +103,16 @@ public:
     virtual void mouseIsDownInScrollbar(Scrollbar*, bool) const { }
     virtual void willStartLiveResize() { }
     virtual void contentsResized() const { }
-    virtual void willEndLiveResize() { }
+    virtual void willEndLiveResize();
     virtual void contentAreaDidShow() { }
     virtual void contentAreaDidHide() { }
 
     virtual void lockOverlayScrollbarStateToHidden(bool) { }
     virtual bool scrollbarsCanBeActive() const { return true; }
 
-    virtual void didAddVerticalScrollbar(Scrollbar*) { }
+    virtual void didAddVerticalScrollbar(Scrollbar*);
     virtual void willRemoveVerticalScrollbar(Scrollbar*) { }
-    virtual void didAddHorizontalScrollbar(Scrollbar*) { }
+    virtual void didAddHorizontalScrollbar(Scrollbar*);
     virtual void willRemoveHorizontalScrollbar(Scrollbar*) { }
 
     virtual void invalidateScrollbarPartLayers(Scrollbar*) { }
@@ -118,14 +124,22 @@ public:
 
     virtual void notifyContentAreaScrolled(const FloatSize& delta) { UNUSED_PARAM(delta); }
 
+    virtual bool isUserScrollInProgress() const { return false; }
     virtual bool isRubberBandInProgress() const { return false; }
     virtual bool isScrollSnapInProgress() const { return false; }
+
+    virtual String horizontalScrollbarStateForTesting() const { return emptyString(); }
+    virtual String verticalScrollbarStateForTesting() const { return emptyString(); }
 
     void setWheelEventTestMonitor(RefPtr<WheelEventTestMonitor>&& testMonitor) { m_wheelEventTestMonitor = testMonitor; }
 
 #if (ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)) && PLATFORM(MAC)
     void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
     void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
+#endif
+
+#if ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)
+    std::unique_ptr<ScrollControllerTimer> createTimer(Function<void()>&&) final;
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -151,6 +165,8 @@ protected:
     ScrollController m_scrollController;
 #endif
     FloatPoint m_currentPosition;
+
+    std::unique_ptr<ScrollAnimation> m_animationProgrammaticScroll;
 };
 
 } // namespace WebCore

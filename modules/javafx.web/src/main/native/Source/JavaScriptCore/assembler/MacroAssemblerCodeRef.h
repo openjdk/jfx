@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ExecutableAllocator.h"
 #include "JSCPtrTag.h"
 #include <wtf/DataLog.h>
+#include <wtf/MetaAllocatorHandle.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/CString.h>
@@ -54,6 +54,7 @@
 
 namespace JSC {
 
+typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
 template<PtrTag> class MacroAssemblerCodePtr;
 
 enum OpcodeID : unsigned;
@@ -434,7 +435,6 @@ public:
         : m_codePtr(executableMemory->start().retaggedPtr<tag>())
         , m_executableMemory(WTFMove(executableMemory))
     {
-        ASSERT(m_executableMemory->isManaged());
         ASSERT(m_executableMemory->start());
         ASSERT(m_codePtr);
     }
@@ -530,9 +530,7 @@ inline FunctionPtr<tag>::FunctionPtr(MacroAssemblerCodePtr<tag> ptr)
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<JSC::PtrTag tag> struct DefaultHash<JSC::MacroAssemblerCodePtr<tag>> {
-    typedef JSC::MacroAssemblerCodePtrHash<tag> Hash;
-};
+template<JSC::PtrTag tag> struct DefaultHash<JSC::MacroAssemblerCodePtr<tag>> : JSC::MacroAssemblerCodePtrHash<tag> { };
 
 template<typename T> struct HashTraits;
 template<JSC::PtrTag tag> struct HashTraits<JSC::MacroAssemblerCodePtr<tag>> : public CustomHashTraits<JSC::MacroAssemblerCodePtr<tag>> { };

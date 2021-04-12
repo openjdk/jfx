@@ -4,9 +4,9 @@ apply plugin:'application'
 def mainClassName = "ensemble.EnsembleApp"
 
 def FileCollection apachecp = files(
-   "./lib/lucene-core-7.7.2.jar",
-   "./lib/lucene-grouping-7.7.2.jar",
-   "./lib/lucene-queryparser-7.7.2.jar")
+   "./lib/lucene-core-7.7.3.jar",
+   "./lib/lucene-grouping-7.7.3.jar",
+   "./lib/lucene-queryparser-7.7.3.jar")
 
 sourceSets {
     main {
@@ -36,7 +36,7 @@ jar {
     //exclude 'META-INF/*'
 }
 
-// Merge the Apache Lucene jars into our master jar.
+// Merge the Apache Lucene jars into our main jar.
 jar.doLast() {
     ant.zip(destfile: jar.archivePath, update: true, duplicate: "preserve") {
         zipgroupfileset(dir: new File("./lib"), includes:"*.jar")

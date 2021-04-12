@@ -80,14 +80,14 @@ public:
 
     using InlineBox::hasHyphen;
     using InlineBox::setHasHyphen;
-    using InlineBox::canHaveLeadingExpansion;
-    using InlineBox::setCanHaveLeadingExpansion;
-    using InlineBox::canHaveTrailingExpansion;
-    using InlineBox::setCanHaveTrailingExpansion;
-    using InlineBox::forceTrailingExpansion;
-    using InlineBox::setForceTrailingExpansion;
-    using InlineBox::forceLeadingExpansion;
-    using InlineBox::setForceLeadingExpansion;
+    using InlineBox::canHaveLeftExpansion;
+    using InlineBox::setCanHaveLeftExpansion;
+    using InlineBox::canHaveRightExpansion;
+    using InlineBox::setCanHaveRightExpansion;
+    using InlineBox::forceRightExpansion;
+    using InlineBox::setForceRightExpansion;
+    using InlineBox::forceLeftExpansion;
+    using InlineBox::setForceLeftExpansion;
 
     static inline bool compareByStart(const InlineTextBox* first, const InlineTextBox* second) { return first->start() < second->start(); }
 
@@ -121,7 +121,7 @@ public:
     virtual LayoutRect localSelectionRect(unsigned startPos, unsigned endPos) const;
     bool isSelected(unsigned startPosition, unsigned endPosition) const;
     std::pair<unsigned, unsigned> selectionStartEnd() const;
-    std::pair<unsigned, unsigned> highlightStartEnd(SelectionRangeData&) const;
+    std::pair<unsigned, unsigned> highlightStartEnd(HighlightData&) const;
 
 protected:
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
@@ -134,11 +134,11 @@ private:
     void extractLine() final;
     void attachLine() final;
 
-    RenderObject::SelectionState verifySelectionState(RenderObject::SelectionState, SelectionRangeData&) const;
-    std::pair<unsigned, unsigned> clampedStartEndForState(unsigned, unsigned, RenderObject::SelectionState) const;
+    RenderObject::HighlightState verifySelectionState(RenderObject::HighlightState, HighlightData&) const;
+    std::pair<unsigned, unsigned> clampedStartEndForState(unsigned, unsigned, RenderObject::HighlightState) const;
 
 public:
-    RenderObject::SelectionState selectionState() final;
+    RenderObject::HighlightState selectionState() final;
 
 private:
     void clearTruncation() final { m_truncation = cNoTruncation; }
@@ -193,7 +193,8 @@ private:
     void paintCompositionUnderlines(PaintInfo&, const FloatPoint& boxOrigin) const;
     void paintCompositionUnderline(PaintInfo&, const FloatPoint& boxOrigin, const CompositionUnderline&) const;
 
-    void paintMarkedTextBackground(PaintInfo&, const FloatPoint& boxOrigin, const Color&, unsigned clampedStartOffset, unsigned clampedEndOffset);
+    enum class MarkedTextBackgroundStyle : bool { Default, Rounded };
+    void paintMarkedTextBackground(PaintInfo&, const FloatPoint& boxOrigin, const Color&, unsigned clampedStartOffset, unsigned clampedEndOffset, MarkedTextBackgroundStyle = MarkedTextBackgroundStyle::Default);
     void paintMarkedTextForeground(PaintInfo&, const FloatRect& boxRect, const StyledMarkedText&);
     void paintMarkedTextDecoration(PaintInfo&, const FloatRect& boxRect, const FloatRect& clipOutRect, const StyledMarkedText&);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@
 #include "RenderTheme.h"
 #include "GraphicsContext.h"
 #include "StyleResolver.h"
-#if ENABLE(VIDEO)
-#include "MediaControlElements.h"
-#endif
 
 #include <jni.h>
 
@@ -46,6 +43,8 @@ struct ThemeData {
 class RenderThemeJava final : public RenderTheme {
 public:
     RenderThemeJava();
+
+    bool canPaint(const PaintInfo&) const final { return true; }
 
     // A method asking if the theme's controls actually care about redrawing when hovered.
     bool supportsHover(const RenderStyle&) const override { return true; }

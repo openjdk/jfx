@@ -28,6 +28,7 @@
 
 #include "PublicSuffix.h"
 #include <wtf/URL.h>
+#include <wtf/glib/ChassisType.h>
 
 namespace WebCore {
 
@@ -37,6 +38,11 @@ namespace WebCore {
 static bool isGoogle(const URL& url)
 {
     String domain = url.host().toString();
+
+    // Google uses accounts.youtube.com for its login service.
+    if (domain == "accounts.youtube.com")
+        return true;
+
     String baseDomain = topPrivatelyControlledDomain(domain);
 
     // Our Google UA is *very* complicated to get right. Read
@@ -75,6 +81,12 @@ static bool urlRequiresChromeBrowser(const URL& url)
     if (domain == "auth.mayohr.com")
         return true;
 
+    // Bank of America shows an unsupported browser warning with WebKitGTK's
+    // standard user agent.
+    if (baseDomain == "bankofamerica.com")
+        return true;
+
+
     return false;
 }
 
@@ -86,17 +98,14 @@ static bool urlRequiresFirefoxBrowser(const URL& url)
 {
     String domain = url.host().toString();
 
-    // This quirk actually has nothing to do with YouTube. It's needed to avoid
-    // unsupported browser warnings on Google Docs. After removing this quirk,
-    // to reproduce the warnings you will need to sign out of Google, then click
-    // on a link to a non-public document that requires signing in. The
-    // unsupported browser warning will be displayed after signing in.
-    if (domain == "accounts.youtube.com" || domain == "docs.google.com")
-        return true;
-
     // Google Drive shows an unsupported browser warning with WebKitGTK's
     // standard user agent.
     if (domain == "drive.google.com")
+        return true;
+
+    // Red Hat Bugzilla displays a warning page when performing searches with WebKitGTK's standard
+    // user agent.
+    if (domain == "bugzilla.redhat.com")
         return true;
 
     return false;
@@ -108,11 +117,11 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
     String baseDomain = topPrivatelyControlledDomain(domain);
 
     // At least finance.yahoo.com displays a mobile version with WebKitGTK's standard user agent.
-    if (baseDomain == "yahoo.com")
+    if (chassisType() != WTF::ChassisType::Mobile && baseDomain == "yahoo.com")
         return true;
 
     // taobao.com displays a mobile version with WebKitGTK's standard user agent.
-    if (baseDomain == "taobao.com")
+    if (chassisType() != WTF::ChassisType::Mobile && baseDomain == "taobao.com")
         return true;
 
     // web.whatsapp.com completely blocks users with WebKitGTK's standard user agent.
@@ -131,14 +140,9 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
     // Microsoft Outlook Web App forces users with WebKitGTK's standard user
     // agent to use the light version. Earlier versions even block users from
     // accessing the calendar.
-    if (domain == "outlook.live.com"
+    if (domain == "outlook.office.com"
         || domain == "mail.ntu.edu.tw"
         || domain == "exchange.tu-berlin.de")
-        return true;
-
-    // Bank of America shows an unsupported browser warning with WebKitGTK's
-    // standard user agent.
-    if (baseDomain == "bankofamerica.com")
         return true;
 
     return false;
@@ -146,7 +150,7 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
 
 static bool urlRequiresLinuxDesktopPlatform(const URL& url)
 {
-    return isGoogle(url);
+    return isGoogle(url) && chassisType() != WTF::ChassisType::Mobile;
 }
 
 UserAgentQuirks UserAgentQuirks::quirksForURL(const URL& url)
@@ -173,9 +177,9 @@ String UserAgentQuirks::stringForQuirk(UserAgentQuirk quirk)
     switch (quirk) {
     case NeedsChromeBrowser:
         // Get versions from https://chromium.googlesource.com/chromium/src.git
-        return "Chrome/83.0.4096.4"_s;
+        return "Chrome/86.0.4208.2"_s;
     case NeedsFirefoxBrowser:
-        return "; rv:76.0) Gecko/20100101 Firefox/76.0"_s;
+        return "; rv:80.0) Gecko/20100101 Firefox/80.0"_s;
     case NeedsMacintoshPlatform:
         return "Macintosh; Intel Mac OS X 10_15"_s;
     case NeedsLinuxDesktopPlatform:

@@ -553,14 +553,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // optimised in the future when time permits.
         flow.setCellCount(newCount);
 
-        if (newCount != oldCount) {
-            // FIXME updateItemCount is called _a lot_. Perhaps we can make rebuildCells
-            // smarter. Imagine if items has one million items added - do we really
-            // need to rebuildCells a million times? Maybe this is better now that
-            // we do rebuildCells instead of recreateCells.
-            requestRebuildCells();
-        } else {
+        if (newCount == oldCount) {
             needCellsReconfigured = true;
+        } else if (oldCount == 0) {
+            // see comments above, this is used as an alternative to flow.setDirtyCell(int)
+            requestRebuildCells();
         }
     }
 

@@ -35,13 +35,14 @@
 namespace WebCore {
 
 class AudioBus;
+class PlatformAudioData;
 class RealtimeMediaSourceCapabilities;
 
 class MediaStreamAudioSource final : public RealtimeMediaSource {
 public:
     static Ref<MediaStreamAudioSource> create(float sampleRate) { return adoptRef(*new MediaStreamAudioSource { sampleRate }); }
 
-    ~MediaStreamAudioSource() = default;
+    ~MediaStreamAudioSource();
 
     const RealtimeMediaSourceCapabilities& capabilities() final;
     const RealtimeMediaSourceSettings& settings() final;
@@ -58,7 +59,10 @@ private:
 
     String m_deviceId;
     RealtimeMediaSourceSettings m_currentSettings;
+    std::unique_ptr<PlatformAudioData> m_audioBuffer;
+#if USE(AVFOUNDATION)
     size_t m_numberOfFrames { 0 };
+#endif
 };
 
 } // namespace WebCore

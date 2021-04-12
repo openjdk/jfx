@@ -132,7 +132,7 @@ GstPad*          gst_ghost_pad_get_target        (GstGhostPad *gpad);
 GST_API
 gboolean         gst_ghost_pad_set_target        (GstGhostPad *gpad, GstPad *newtarget);
 
-GST_API
+GST_DEPRECATED
 gboolean         gst_ghost_pad_construct         (GstGhostPad *gpad);
 
 GST_API
@@ -142,13 +142,9 @@ GST_API
 gboolean         gst_ghost_pad_internal_activate_mode_default   (GstPad * pad, GstObject * parent,
                                                                  GstPadMode mode, gboolean active);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstGhostPad, gst_object_unref)
-#endif
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstProxyPad, gst_object_unref)
-#endif
 
 G_END_DECLS
 

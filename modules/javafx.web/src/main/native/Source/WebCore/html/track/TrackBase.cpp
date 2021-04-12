@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 #include <wtf/Language.h>
 #include <wtf/text/StringBuilder.h>
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
 #include "HTMLMediaElement.h"
 
@@ -38,13 +38,9 @@ namespace WebCore {
 
 static int s_uniqueId = 0;
 
-#if !RELEASE_LOG_DISABLED
-static const void* nextLogIdentifier()
-{
-    static uint64_t logIdentifier = cryptographicallyRandomNumber();
-    return reinterpret_cast<const void*>(++logIdentifier);
-}
+static bool isValidBCP47LanguageTag(const String&);
 
+#if !RELEASE_LOG_DISABLED
 static RefPtr<Logger>& nullLogger()
 {
     static NeverDestroyed<RefPtr<Logger>> logger;
@@ -57,9 +53,11 @@ TrackBase::TrackBase(Type type, const AtomString& id, const AtomString& label, c
     , m_id(id)
     , m_label(label)
     , m_language(language)
-    , m_validBCP47Language(language)
 {
     ASSERT(type != BaseTrack);
+    if (isValidBCP47LanguageTag(language))
+        m_validBCP47Language = language;
+
     m_type = type;
 
 #if !RELEASE_LOG_DISABLED
@@ -69,7 +67,6 @@ TrackBase::TrackBase(Type type, const AtomString& id, const AtomString& label, c
     }
 
     m_logger = nullLogger().get();
-    m_logIdentifier = nextLogIdentifier();
 #endif
 }
 
@@ -81,13 +78,6 @@ Element* TrackBase::element()
 void TrackBase::setMediaElement(WeakPtr<HTMLMediaElement> element)
 {
     m_mediaElement = element;
-
-#if !RELEASE_LOG_DISABLED
-    if (element) {
-        m_logger = &element->logger();
-        m_logIdentifier = element->logIdentifier();
-    }
-#endif
 }
 
 // See: https://tools.ietf.org/html/bcp47#section-2.1
@@ -143,31 +133,34 @@ static bool isValidBCP47LanguageTag(const String& languageTag)
 
 void TrackBase::setLanguage(const AtomString& language)
 {
-    if (!language.isEmpty() && !isValidBCP47LanguageTag(language)) {
-        String message;
-        if (language.contains((UChar)'\0'))
-            message = "The language contains a null character and is not a valid BCP 47 language tag."_s;
-        else {
-            StringBuilder stringBuilder;
-            stringBuilder.appendLiteral("The language '");
-            stringBuilder.append(language);
-            stringBuilder.appendLiteral("' is not a valid BCP 47 language tag.");
-            message = stringBuilder.toString();
-        }
-        if (auto element = this->element())
-            element->document().addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
-    } else
-        m_validBCP47Language = language;
-
     m_language = language;
-}
+    if (language.isEmpty() || isValidBCP47LanguageTag(language)) {
+        m_validBCP47Language = language;
+        return;
+    }
 
-AtomString TrackBase::validBCP47Language() const
-{
-    return m_validBCP47Language;
+    m_validBCP47Language = emptyAtom();
+
+    auto element = this->element();
+    if (!element)
+        return;
+
+    String message;
+    if (language.contains((UChar)'\0'))
+        message = "The language contains a null character and is not a valid BCP 47 language tag."_s;
+    else
+        message = makeString("The language '", language, "' is not a valid BCP 47 language tag.");
+
+    element->document().addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
 }
 
 #if !RELEASE_LOG_DISABLED
+void TrackBase::setLogger(const Logger& logger, const void* logIdentifier)
+{
+    m_logger = &logger;
+    m_logIdentifier = childLogIdentifier(logIdentifier, m_uniqueId);
+}
+
 WTFLogChannel& TrackBase::logChannel() const
 {
     return LogMedia;

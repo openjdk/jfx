@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,9 @@
  *
  */
 
-#ifndef FileChooser_h
-#define FileChooser_h
+#pragma once
 
+#include <wtf/EnumTraits.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -46,18 +46,13 @@ class FileChooser;
 class Icon;
 
 struct FileChooserFileInfo {
-    FileChooserFileInfo(const String& path, const String& displayName = String())
-        : path(path)
-        , displayName(displayName)
-    {
-    }
-
     FileChooserFileInfo isolatedCopy() const
     {
-        return { path.isolatedCopy(), displayName.isolatedCopy() };
+        return { path.isolatedCopy(), replacementPath.isolatedCopy(), displayName.isolatedCopy() };
     }
 
     const String path;
+    const String replacementPath;
     const String displayName;
 };
 
@@ -87,7 +82,7 @@ public:
     void invalidate();
 
     WEBCORE_EXPORT void chooseFile(const String& path);
-    WEBCORE_EXPORT void chooseFiles(const Vector<String>& paths);
+    WEBCORE_EXPORT void chooseFiles(const Vector<String>& paths, const Vector<String>& replacementPaths = { });
 #if PLATFORM(IOS_FAMILY)
     // FIXME: This function is almost identical to FileChooser::chooseFiles(). We should merge this
     // function with FileChooser::chooseFiles() and hence remove the PLATFORM(IOS_FAMILY)-guard.
@@ -108,4 +103,15 @@ private:
 
 } // namespace WebCore
 
-#endif // FileChooser_h
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MediaCaptureType> {
+    using values = EnumValues<
+        WebCore::MediaCaptureType,
+        WebCore::MediaCaptureType::MediaCaptureTypeNone,
+        WebCore::MediaCaptureType::MediaCaptureTypeUser,
+        WebCore::MediaCaptureType::MediaCaptureTypeEnvironment
+    >;
+};
+
+} // namespace WTF

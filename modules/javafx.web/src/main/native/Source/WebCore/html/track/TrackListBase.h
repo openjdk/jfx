@@ -25,9 +25,9 @@
 
 #pragma once
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
+#include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "GenericEventQueue.h"
 #include <wtf/RefCounted.h>
@@ -40,7 +40,7 @@ class HTMLMediaElement;
 class Element;
 class TrackBase;
 
-class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ContextDestructionObserver {
+class TrackListBase : public RefCounted<TrackListBase>, public EventTargetWithInlineData, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(TrackListBase);
 public:
     virtual ~TrackListBase();
@@ -76,6 +76,9 @@ protected:
 private:
     void scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&&);
 
+    // ActiveDOMObject.
+    bool virtualHasPendingActivity() const override;
+
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -87,4 +90,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO)

@@ -27,12 +27,19 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
+#include "EventTrackingRegions.h"
+#include "PageIdentifier.h"
 #include "PlatformWheelEvent.h"
+#include "RectEdges.h"
 #include "Region.h"
-#include "ScrollingCoordinator.h"
+#include "ScrollTypes.h"
+#include "ScrollingCoordinatorTypes.h"
+#include "ScrollingTreeGestureState.h"
+#include "ScrollingTreeLatchingController.h"
 #include "WheelEventTestMonitor.h"
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
 
@@ -46,8 +53,30 @@ class ScrollingTreeNode;
 class ScrollingTreeOverflowScrollProxyNode;
 class ScrollingTreePositionedNode;
 class ScrollingTreeScrollingNode;
+enum class EventListenerRegionType : uint8_t;
+using PlatformDisplayID = uint32_t;
+
+struct WheelEventHandlingResult {
+    OptionSet<WheelEventProcessingSteps> steps;
+    bool wasHandled { false };
+    bool needsMainThreadProcessing() const { return steps.containsAny({ WheelEventProcessingSteps::MainThreadForScrolling, WheelEventProcessingSteps::MainThreadForDOMEventDispatch }); }
+
+    static WheelEventHandlingResult handled()
+    {
+        return { { }, true };
+    }
+    static WheelEventHandlingResult unhandled()
+    {
+        return { { }, false };
+    }
+    static WheelEventHandlingResult result(bool handled)
+    {
+        return { { }, handled };
+    }
+};
 
 class ScrollingTree : public ThreadSafeRefCounted<ScrollingTree> {
+friend class ScrollingTreeLatchingController;
 public:
     WEBCORE_EXPORT ScrollingTree();
     WEBCORE_EXPORT virtual ~ScrollingTree();
@@ -60,16 +89,21 @@ public:
     bool asyncFrameOrOverflowScrollingEnabled() const { return m_asyncFrameOrOverflowScrollingEnabled; }
     void setAsyncFrameOrOverflowScrollingEnabled(bool);
 
-    virtual ScrollingEventResult tryToHandleWheelEvent(const PlatformWheelEvent&) = 0;
-    WEBCORE_EXPORT bool shouldHandleWheelEventSynchronously(const PlatformWheelEvent&);
+    WEBCORE_EXPORT OptionSet<WheelEventProcessingSteps> determineWheelEventProcessing(const PlatformWheelEvent&);
+    WEBCORE_EXPORT virtual WheelEventHandlingResult handleWheelEvent(const PlatformWheelEvent&);
 
     void setMainFrameIsRubberBanding(bool);
     bool isRubberBandInProgress();
-    void setMainFrameIsScrollSnapping(bool);
-    bool isScrollSnapInProgress();
+
+    bool isUserScrollInProgressForNode(ScrollingNodeID);
+    void setUserScrollInProgressForNode(ScrollingNodeID, bool);
+    void clearNodesWithUserScrollInProgress();
+
+    bool isScrollSnapInProgressForNode(ScrollingNodeID);
+    void setNodeScrollSnapInProgress(ScrollingNodeID, bool);
 
     virtual void invalidate() { }
-    WEBCORE_EXPORT virtual void commitTreeState(std::unique_ptr<ScrollingStateTree>);
+    WEBCORE_EXPORT virtual void commitTreeState(std::unique_ptr<ScrollingStateTree>&&);
 
     WEBCORE_EXPORT virtual void applyLayerPositions();
     WEBCORE_EXPORT void applyLayerPositionsAfterCommit();
@@ -77,6 +111,9 @@ public:
     virtual Ref<ScrollingTreeNode> createScrollingTreeNode(ScrollingNodeType, ScrollingNodeID) = 0;
 
     WEBCORE_EXPORT ScrollingTreeNode* nodeForID(ScrollingNodeID) const;
+
+    using VisitorFunction = WTF::Function<void (ScrollingNodeID, ScrollingNodeType, Optional<FloatPoint> scrollPosition, Optional<FloatPoint> layoutViewportOrigin, bool scrolledSinceLastCommit)>;
+    void traverseScrollingTree(VisitorFunction&&);
 
     // Called after a scrolling tree node has handled a scroll and updated its layers.
     // Updates FrameView/RenderLayer scrolling state and GraphicsLayers.
@@ -88,37 +125,42 @@ public:
     // Delegated scrolling/zooming has caused the viewport to change, so update viewport-constrained layers
     WEBCORE_EXPORT void mainFrameViewportChangedViaDelegatedScrolling(const FloatPoint& scrollPosition, const WebCore::FloatRect& layoutViewport, double scale);
 
-    void didScrollByDelegatedScrolling() { m_wasScrolledByDelegatedScrollingSincePreviousCommit = true; }
+    void setNeedsApplyLayerPositionsAfterCommit() { m_needsApplyLayerPositionsAfterCommit = true; }
 
     void notifyRelatedNodesAfterScrollPositionChange(ScrollingTreeScrollingNode& changedNode);
 
-    virtual void reportSynchronousScrollingReasonsChanged(MonotonicTime, SynchronousScrollingReasons) { }
+    virtual void reportSynchronousScrollingReasonsChanged(MonotonicTime, OptionSet<SynchronousScrollingReason>) { }
     virtual void reportExposedUnfilledArea(MonotonicTime, unsigned /* unfilledArea */) { }
 
 #if PLATFORM(IOS_FAMILY)
-    virtual void scrollingTreeNodeWillStartPanGesture() { }
-    virtual void scrollingTreeNodeWillStartScroll() { }
-    virtual void scrollingTreeNodeDidEndScroll() { }
+    virtual void scrollingTreeNodeWillStartPanGesture(ScrollingNodeID) { }
+    virtual void scrollingTreeNodeWillStartScroll(ScrollingNodeID) { }
+    virtual void scrollingTreeNodeDidEndScroll(ScrollingNodeID) { }
 #endif
 
     WEBCORE_EXPORT TrackingType eventTrackingTypeForPoint(const AtomString& eventName, IntPoint);
 
 #if PLATFORM(MAC)
-    virtual void handleWheelEventPhase(PlatformWheelEventPhase) = 0;
+    virtual void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) = 0;
     virtual void setActiveScrollSnapIndices(ScrollingNodeID, unsigned /*horizontalIndex*/, unsigned /*verticalIndex*/) { }
+
+    virtual void setWheelEventTestMonitor(RefPtr<WheelEventTestMonitor>&&) { }
 
     virtual void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) { }
     virtual void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) { }
+#else
+    void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) { }
 #endif
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT virtual void currentSnapPointIndicesDidChange(ScrollingNodeID, unsigned horizontal, unsigned vertical) = 0;
 #endif
 
-    void setMainFramePinState(bool pinnedToTheLeft, bool pinnedToTheRight, bool pinnedToTheTop, bool pinnedToTheBottom);
+    void setMainFramePinnedState(RectEdges<bool>);
 
     // Can be called from any thread. Will update what edges allow rubber-banding.
-    WEBCORE_EXPORT void setCanRubberBandState(bool canRubberBandAtLeft, bool canRubberBandAtRight, bool canRubberBandAtTop, bool canRubberBandAtBottom);
+    WEBCORE_EXPORT void setMainFrameCanRubberBand(RectEdges<bool>);
+    bool mainFrameCanRubberBandInDirection(ScrollDirection);
 
     bool isHandlingProgrammaticScroll() const { return m_isHandlingProgrammaticScroll; }
     void setIsHandlingProgrammaticScroll(bool isHandlingProgrammaticScroll) { m_isHandlingProgrammaticScroll = isHandlingProgrammaticScroll; }
@@ -132,13 +174,8 @@ public:
     bool scrollingPerformanceLoggingEnabled();
 
     ScrollingTreeFrameScrollingNode* rootNode() const { return m_rootNode.get(); }
-
-    ScrollingNodeID latchedNode();
-    void setLatchedNode(ScrollingNodeID);
+    Optional<ScrollingNodeID> latchedNodeID() const;
     void clearLatchedNode();
-
-    bool hasLatchedNode() const { return m_treeState.latchedNodeID; }
-    void setOrClearLatchedNode(const PlatformWheelEvent&, ScrollingNodeID);
 
     bool hasFixedOrSticky() const { return !!m_fixedOrStickyNodeCount; }
     void fixedOrStickyNodeAdded() { ++m_fixedOrStickyNodeCount; }
@@ -161,25 +198,46 @@ public:
     bool isMonitoringWheelEvents() const { return m_isMonitoringWheelEvents; }
     bool inCommitTreeState() const { return m_inCommitTreeState; }
 
+    void scrollBySimulatingWheelEventForTesting(ScrollingNodeID, FloatSize);
+
+    virtual void lockLayersForHitTesting() { }
+    virtual void unlockLayersForHitTesting() { }
+
+    Lock& treeMutex() { return m_treeMutex; }
+
+    void windowScreenDidChange(PlatformDisplayID, Optional<unsigned> nominalFramesPerSecond);
+    PlatformDisplayID displayID();
+
 protected:
+    FloatPoint mainFrameScrollPosition() const;
     void setMainFrameScrollPosition(FloatPoint);
 
-    WEBCORE_EXPORT virtual ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&);
+    Optional<unsigned> nominalFramesPerSecond();
 
-private:
-    using OrphanScrollingNodeMap = HashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
-    void updateTreeFromStateNode(const ScrollingStateNode*, OrphanScrollingNodeMap&, HashSet<ScrollingNodeID>& unvisitedNodes);
-
-    void applyLayerPositionsRecursive(ScrollingTreeNode&);
-
-    void notifyRelatedNodesRecursive(ScrollingTreeNode&);
+    void applyLayerPositionsInternal();
+    void removeAllNodes();
 
     Lock m_treeMutex; // Protects the scrolling tree.
+
+private:
+    void updateTreeFromStateNodeRecursive(const ScrollingStateNode*, struct CommitTreeState&);
+    virtual void propagateSynchronousScrollingReasons(const HashSet<ScrollingNodeID>&) { }
+
+    void applyLayerPositionsRecursive(ScrollingTreeNode&);
+    void notifyRelatedNodesRecursive(ScrollingTreeNode&);
+    void traverseScrollingTreeRecursive(ScrollingTreeNode&, const VisitorFunction&);
+
+    WEBCORE_EXPORT virtual RefPtr<ScrollingTreeNode> scrollingNodeForPoint(FloatPoint);
+    WEBCORE_EXPORT virtual OptionSet<EventListenerRegionType> eventListenerRegionTypesForPoint(FloatPoint) const;
+    virtual void receivedWheelEvent(const PlatformWheelEvent&) { }
 
     RefPtr<ScrollingTreeFrameScrollingNode> m_rootNode;
 
     using ScrollingTreeNodeMap = HashMap<ScrollingNodeID, RefPtr<ScrollingTreeNode>>;
     ScrollingTreeNodeMap m_nodeMap;
+
+    ScrollingTreeLatchingController m_latchingController;
+    ScrollingTreeGestureState m_gestureState;
 
     RelatedNodesMap m_overflowRelatedNodesMap;
 
@@ -187,11 +245,13 @@ private:
     HashSet<Ref<ScrollingTreePositionedNode>> m_activePositionedNodes;
 
     struct TreeState {
-        ScrollingNodeID latchedNodeID { 0 };
         EventTrackingRegions eventTrackingRegions;
         FloatPoint mainFrameScrollPosition;
+        PlatformDisplayID displayID { 0 };
+        Optional<unsigned> nominalFramesPerSecond;
+        HashSet<ScrollingNodeID> nodesWithActiveScrollSnap;
+        HashSet<ScrollingNodeID> nodesWithActiveUserScrolls;
         bool mainFrameIsRubberBanding { false };
-        bool mainFrameIsScrollSnapping { false };
     };
 
     Lock m_treeStateMutex;
@@ -203,21 +263,24 @@ private:
         bool rubberBandsAtRight { true };
         bool rubberBandsAtTop { true };
         bool rubberBandsAtBottom { true };
-        bool mainFramePinnedToTheLeft { true };
-        bool mainFramePinnedToTheRight { true };
-        bool mainFramePinnedToTheTop { true };
-        bool mainFramePinnedToTheBottom { true };
+
+        RectEdges<bool> canRubberBand  { true, true, true, true };
+        RectEdges<bool> mainFramePinnedState { true, true, true, true };
     };
 
     Lock m_swipeStateMutex;
     SwipeState m_swipeState;
 
+protected:
+    bool m_allowLatching { true };
+
+private:
     unsigned m_fixedOrStickyNodeCount { 0 };
     bool m_isHandlingProgrammaticScroll { false };
     bool m_isMonitoringWheelEvents { false };
     bool m_scrollingPerformanceLoggingEnabled { false };
     bool m_asyncFrameOrOverflowScrollingEnabled { false };
-    bool m_wasScrolledByDelegatedScrollingSincePreviousCommit { false };
+    bool m_needsApplyLayerPositionsAfterCommit { false };
     bool m_inCommitTreeState { false };
 };
 

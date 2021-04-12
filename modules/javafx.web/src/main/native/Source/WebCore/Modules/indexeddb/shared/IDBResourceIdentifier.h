@@ -83,7 +83,7 @@ public:
     WEBCORE_EXPORT IDBResourceIdentifier();
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, IDBResourceIdentifier&);
+    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, IDBResourceIdentifier&);
 
 private:
     IDBResourceIdentifier(IDBConnectionIdentifier, uint64_t resourceIdentifier);
@@ -145,9 +145,7 @@ bool IDBResourceIdentifier::decode(Decoder& decoder, IDBResourceIdentifier& iden
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBResourceIdentifier> {
-    typedef WebCore::IDBResourceIdentifierHash Hash;
-};
+template<> struct DefaultHash<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHash { };
 
 inline WebCore::IDBConnectionIdentifier crossThreadCopy(WebCore::IDBConnectionIdentifier identifier)
 {

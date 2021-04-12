@@ -31,8 +31,6 @@
  * and needs to be done before any pipeline state is set to PAUSED.
  */
 
-#define GST_USE_UNSTABLE_API
-
 #include "gst_private.h"
 #include "gsttracer.h"
 #include "gsttracerfactory.h"
@@ -188,12 +186,52 @@ gst_tracing_register_hook_id (GstTracer * tracer, GQuark detail, GCallback func)
  *
  * Register @func to be called when the trace hook @detail is getting invoked.
  * Use %NULL for @detail to register to all hooks.
+ *
+ * Since: 1.8
  */
 void
 gst_tracing_register_hook (GstTracer * tracer, const gchar * detail,
     GCallback func)
 {
   gst_tracing_register_hook_id (tracer, g_quark_try_string (detail), func);
+}
+
+/**
+ * gst_tracing_get_active_tracers:
+ *
+ * Get a list of all active tracer objects owned by the tracing framework for
+ * the entirety of the run-time of the process or till gst_deinit() is called.
+ *
+ * Returns: (transfer full) (element-type Gst.Tracer): A #GList of
+ * #GstTracer objects
+ *
+ * Since: 1.18
+ */
+GList *
+gst_tracing_get_active_tracers (void)
+{
+  GList *tracers, *h_list, *h_node, *t_node;
+  GstTracerHook *hook;
+
+  if (!_priv_tracer_enabled || !_priv_tracers)
+    return NULL;
+
+  tracers = NULL;
+  h_list = g_hash_table_get_values (_priv_tracers);
+  for (h_node = h_list; h_node; h_node = g_list_next (h_node)) {
+    for (t_node = h_node->data; t_node; t_node = g_list_next (t_node)) {
+      hook = (GstTracerHook *) t_node->data;
+      /* Skip duplicate tracers from different hooks. This function is O(n), but
+       * that should be fine since the number of tracers enabled on a process
+       * should be small. */
+      if (g_list_index (tracers, hook->tracer) >= 0)
+        continue;
+      tracers = g_list_prepend (tracers, gst_object_ref (hook->tracer));
+    }
+  }
+  g_list_free (h_list);
+
+  return tracers;
 }
 
 #else /* !GST_DISABLE_GST_TRACER_HOOKS */
@@ -204,4 +242,9 @@ gst_tracing_register_hook (GstTracer * tracer, const gchar * detail,
 {
 }
 
+GList *
+gst_tracing_get_active_tracers (void)
+{
+  return NULL;
+}
 #endif /* GST_DISABLE_GST_TRACER_HOOKS */

@@ -23,7 +23,7 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/bindings/java"
     "${WEBCORE_DIR}/page/java"
     "${WEBCORE_DIR}/bridge/jni"
-    "${WEBKIT_DIR}"
+    "${WEBKITLEGACY_DIR}"
     # JNI headers
     "${JAVA_JNI_GENSRC_PATH}"
 )
@@ -55,16 +55,15 @@ elseif (APPLE)
 endif ()
 
 #FIXME: Workaround
-list(APPEND WebCoreTestSupport_LIBRARIES ${SQLITE_LIBRARIES})
+list(APPEND WebCoreTestSupport_LIBRARIES ${SQLite3_LIBRARIES})
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
-    ${WEBCORE_DIR}/css/mediaControlsGtk.css
+    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.css
+    ${WEBCORE_DIR}/css/themeAdwaita.css
 )
 
 set(WebCore_USER_AGENT_SCRIPTS
-    ${WEBCORE_DIR}/en.lproj/mediaControlsLocalizedStrings.js
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsBase.js
-    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsGtk.js
+    ${WEBCORE_DIR}/Modules/mediacontrols/mediaControlsAdwaita.js
 )
 
 add_definitions(-DMAX_DOM_TREE_DEPTH=2000)
@@ -86,7 +85,7 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
     bindings/java/JavaNodeFilterCondition.h
     bridge/jni/jsc/BridgeUtils.h
     dom/DOMStringList.h
-    platform/graphics/java/ImageBufferDataJava.h
+    platform/graphics/java/ImageBufferJavaBackend.h
     platform/graphics/java/PlatformContextJava.h
     platform/graphics/java/RQRef.h
     platform/graphics/java/RenderingQueue.h
@@ -106,5 +105,5 @@ list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
 )
 
 list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
-    "SourcesPlatformJava.txt"
+    "SourcesJava.txt"
 )

@@ -41,7 +41,7 @@ namespace WebCore {
 
 bool isScriptAllowedByNosniff(const ResourceResponse& response)
 {
-    if (parseContentTypeOptionsHeader(response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsNosniff)
+    if (parseContentTypeOptionsHeader(response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsDisposition::Nosniff)
         return true;
     String mimeType = extractMIMETypeFromMediaType(response.httpHeaderField(HTTPHeaderName::ContentType));
     return MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType);
@@ -55,7 +55,12 @@ ResourceResponseBase::ResourceResponseBase()
     , m_haveParsedLastModifiedHeader(false)
     , m_haveParsedContentRangeHeader(false)
     , m_isRedirected(false)
+    , m_isRangeRequested(false)
     , m_isNull(true)
+    , m_usedLegacyTLS(UsedLegacyTLS::No)
+    , m_tainting(Tainting::Basic)
+    , m_source(Source::Unknown)
+    , m_type(Type::Default)
 {
 }
 
@@ -72,7 +77,12 @@ ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeTyp
     , m_haveParsedLastModifiedHeader(false)
     , m_haveParsedContentRangeHeader(false)
     , m_isRedirected(false)
+    , m_isRangeRequested(false)
     , m_isNull(false)
+    , m_usedLegacyTLS(UsedLegacyTLS::No)
+    , m_tainting(Tainting::Basic)
+    , m_source(Source::Unknown)
+    , m_type(Type::Default)
 {
 }
 
@@ -90,7 +100,8 @@ ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() co
     data.httpVersion = httpVersion().isolatedCopy();
 
     data.httpHeaderFields = httpHeaderFields().isolatedCopy();
-    data.networkLoadMetrics = m_networkLoadMetrics.isolatedCopy();
+    if (m_networkLoadMetrics)
+        data.networkLoadMetrics = m_networkLoadMetrics->isolatedCopy();
     data.type = m_type;
     data.tainting = m_tainting;
     data.isRedirected = m_isRedirected;
@@ -113,7 +124,10 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.setHTTPVersion(data.httpVersion);
 
     response.m_httpHeaderFields = WTFMove(data.httpHeaderFields);
-    response.m_networkLoadMetrics = data.networkLoadMetrics;
+    if (data.networkLoadMetrics)
+        response.m_networkLoadMetrics = Box<NetworkLoadMetrics>::create(WTFMove(data.networkLoadMetrics.value()));
+    else
+        response.m_networkLoadMetrics = nullptr;
     response.m_type = data.type;
     response.m_tainting = data.tainting;
     response.m_isRedirected = data.isRedirected;
@@ -134,7 +148,7 @@ ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& from
     return redirectResponse;
 }
 
-ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response)
+ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, PerformExposeAllHeadersCheck performCheck)
 {
     if (response.tainting() == Tainting::Opaque) {
         ResourceResponse opaqueResponse;
@@ -155,17 +169,21 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response)
     // Let's initialize filteredResponse to remove some header fields.
     filteredResponse.lazyInit(AllFields);
 
+    filteredResponse.m_httpHeaderFields.remove(HTTPHeaderName::SetCookie);
+    filteredResponse.m_httpHeaderFields.remove(HTTPHeaderName::SetCookie2);
+
     if (response.tainting() == Tainting::Basic) {
         filteredResponse.setType(Type::Basic);
-        filteredResponse.m_httpHeaderFields.remove(HTTPHeaderName::SetCookie);
-        filteredResponse.m_httpHeaderFields.remove(HTTPHeaderName::SetCookie2);
         return filteredResponse;
     }
 
     ASSERT(response.tainting() == Tainting::Cors);
     filteredResponse.setType(Type::Cors);
 
-    auto accessControlExposeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(response.httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders));
+    auto accessControlExposeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(response.httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)).valueOr(HashSet<String, ASCIICaseInsensitiveHash> { });
+    if (performCheck == PerformExposeAllHeadersCheck::Yes && accessControlExposeHeaderSet.contains("*"))
+        return filteredResponse;
+
     filteredResponse.m_httpHeaderFields.uncommonHeaders().removeAllMatching([&](auto& entry) {
         return !isCrossOriginSafeHeader(entry.key, accessControlExposeHeaderSet);
     });
@@ -176,8 +194,7 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response)
     return filteredResponse;
 }
 
-// FIXME: Name does not make it clear this is true for HTTPS!
-bool ResourceResponseBase::isHTTP() const
+bool ResourceResponseBase::isInHTTPFamily() const
 {
     lazyInit(CommonFieldsOnly);
 
@@ -261,12 +278,11 @@ void ResourceResponseBase::setType(Type type)
     m_type = type;
 }
 
-void ResourceResponseBase::includeCertificateInfo(UsedLegacyTLS usedLegacyTLS) const
+void ResourceResponseBase::includeCertificateInfo() const
 {
     if (m_certificateInfo)
         return;
     m_certificateInfo = static_cast<const ResourceResponse*>(this)->platformCertificateInfo();
-    m_usedLegacyTLS = usedLegacyTLS;
 }
 
 String ResourceResponseBase::suggestedFilename() const
@@ -418,23 +434,27 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
         || name == HTTPHeaderName::XContentTypeOptions
         || name == HTTPHeaderName::XDNSPrefetchControl
         || name == HTTPHeaderName::XFrameOptions
-        || name == HTTPHeaderName::XWebKitCSP
-        || name == HTTPHeaderName::XWebKitCSPReportOnly
         || name == HTTPHeaderName::XXSSProtection;
 }
 
 void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
 {
-    switch (m_tainting) {
+    // FIXME: we don't really need to construct a Tainting here, this is just a workaround
+    // for a GCC 10 bug (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97634), that will
+    // be removed once the bug is fixed.
+    switch (Tainting(m_tainting)) {
     case ResourceResponse::Tainting::Basic:
         return;
     case ResourceResponse::Tainting::Cors: {
+        auto corsSafeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders)).valueOr(HashSet<String, ASCIICaseInsensitiveHash> { });
+        if (corsSafeHeaderSet.contains("*"))
+            return;
+
         HTTPHeaderMap filteredHeaders;
         for (auto& header : m_httpHeaderFields.commonHeaders()) {
             if (isSafeCrossOriginResponseHeader(header.key))
                 filteredHeaders.add(header.key, WTFMove(header.value));
         }
-        auto corsSafeHeaderSet = parseAccessControlAllowList<ASCIICaseInsensitiveHash>(httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders));
         for (auto& headerName : corsSafeHeaderSet) {
             if (!filteredHeaders.contains(headerName)) {
                 auto value = m_httpHeaderFields.get(headerName);
@@ -808,9 +828,26 @@ bool ResourceResponseBase::compare(const ResourceResponse& a, const ResourceResp
         return false;
     if (a.httpHeaderFields() != b.httpHeaderFields())
         return false;
-    if (a.deprecatedNetworkLoadMetrics() != b.deprecatedNetworkLoadMetrics())
-        return false;
+    if (a.m_networkLoadMetrics.get() != b.m_networkLoadMetrics.get()) {
+        if (!a.m_networkLoadMetrics) {
+            if (NetworkLoadMetrics() != *b.m_networkLoadMetrics.get())
+                return false;
+        } else if (!b.m_networkLoadMetrics) {
+            if (NetworkLoadMetrics() != *a.m_networkLoadMetrics.get())
+                return false;
+        } else if (*a.m_networkLoadMetrics.get() != *b.m_networkLoadMetrics.get())
+            return false;
+    }
     return ResourceResponse::platformCompare(a, b);
+}
+
+bool ResourceResponseBase::containsInvalidHTTPHeaders() const
+{
+    for (auto& header : httpHeaderFields()) {
+        if (!isValidHTTPHeaderValue(stripLeadingAndTrailingHTTPSpaces(header.value)))
+            return true;
+    }
+    return false;
 }
 
 }

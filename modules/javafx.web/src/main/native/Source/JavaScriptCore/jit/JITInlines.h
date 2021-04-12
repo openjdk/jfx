@@ -26,7 +26,9 @@
 #pragma once
 
 #if ENABLE(JIT)
+#include "BytecodeOperandsForCheckpoint.h"
 #include "CommonSlowPathsInlines.h"
+#include "JIT.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -105,7 +107,7 @@ ALWAYS_INLINE JIT::Call JIT::emitNakedTailCall(CodePtr<NoPtrTag> target)
 
 ALWAYS_INLINE void JIT::updateTopCallFrame()
 {
-    uint32_t locationBits = CallSiteIndex(m_bytecodeIndex).bits();
+    uint32_t locationBits = CallSiteIndex(m_bytecodeIndex.offset()).bits();
     store32(TrustedImm32(locationBits), tagFor(CallFrameSlot::argumentCountIncludingThis));
 
     // FIXME: It's not clear that this is needed. JITOperations tend to update the top call frame on
@@ -166,7 +168,7 @@ ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueRe
 
 ALWAYS_INLINE void JIT::linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator& iter, VirtualRegister reg)
 {
-    if (!m_codeBlock->isKnownNotImmediate(reg))
+    if (!m_codeBlock->isKnownCell(reg))
         linkSlowCase(iter);
 }
 
@@ -181,6 +183,27 @@ ALWAYS_INLINE bool JIT::hasAnySlowCases(Vector<SlowCaseEntry>& slowCases, Vector
     if (iter != slowCases.end() && iter->to == bytecodeIndex)
         return true;
     return false;
+}
+
+inline void JIT::advanceToNextCheckpoint()
+{
+    ASSERT_WITH_MESSAGE(m_bytecodeIndex, "This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set");
+    ASSERT(m_codeBlock->instructionAt(m_bytecodeIndex)->hasCheckpoints());
+    m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset(), m_bytecodeIndex.checkpoint() + 1);
+
+    auto result = m_checkpointLabels.add(m_bytecodeIndex, label());
+    ASSERT_UNUSED(result, result.isNewEntry);
+}
+
+inline void JIT::emitJumpSlowToHotForCheckpoint(Jump jump)
+{
+    ASSERT_WITH_MESSAGE(m_bytecodeIndex, "This method should only be called during hot/cold path generation, so that m_bytecodeIndex is set");
+    ASSERT(m_codeBlock->instructionAt(m_bytecodeIndex)->hasCheckpoints());
+    m_bytecodeIndex = BytecodeIndex(m_bytecodeIndex.offset(), m_bytecodeIndex.checkpoint() + 1);
+
+    auto iter = m_checkpointLabels.find(m_bytecodeIndex);
+    ASSERT(iter != m_checkpointLabels.end());
+    jump.linkTo(iter->value, this);
 }
 
 ALWAYS_INLINE void JIT::addSlowCase(Jump jump)
@@ -319,7 +342,7 @@ inline void JIT::emitValueProfilingSite(Metadata& metadata)
 {
     if (!shouldEmitProfiling())
         return;
-    emitValueProfilingSite(metadata.m_profile);
+    emitValueProfilingSite(valueProfileFor(metadata, m_bytecodeIndex.checkpoint()));
 }
 
 inline void JIT::emitArrayProfilingSiteWithCell(RegisterID cell, RegisterID indexingType, ArrayProfile* arrayProfile)
@@ -496,7 +519,7 @@ inline void JIT::emitStore(VirtualRegister reg, const JSValue constant, Register
 
 inline void JIT::emitJumpSlowCaseIfNotJSCell(VirtualRegister reg)
 {
-    if (!m_codeBlock->isKnownNotImmediate(reg)) {
+    if (!m_codeBlock->isKnownCell(reg)) {
         if (reg.isConstant())
             addSlowCase(jump());
         else
@@ -506,7 +529,7 @@ inline void JIT::emitJumpSlowCaseIfNotJSCell(VirtualRegister reg)
 
 inline void JIT::emitJumpSlowCaseIfNotJSCell(VirtualRegister reg, RegisterID tag)
 {
-    if (!m_codeBlock->isKnownNotImmediate(reg)) {
+    if (!m_codeBlock->isKnownCell(reg)) {
         if (reg.isConstant())
             addSlowCase(jump());
         else
@@ -593,14 +616,9 @@ ALWAYS_INLINE void JIT::emitJumpSlowCaseIfJSCell(RegisterID reg)
     addSlowCase(branchIfCell(reg));
 }
 
-ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotJSCell(RegisterID reg)
-{
-    addSlowCase(branchIfNotCell(reg));
-}
-
 ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotJSCell(RegisterID reg, VirtualRegister vReg)
 {
-    if (!m_codeBlock->isKnownNotImmediate(vReg))
+    if (!m_codeBlock->isKnownCell(vReg))
         emitJumpSlowCaseIfNotJSCell(reg);
 }
 
@@ -633,6 +651,11 @@ ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotNumber(RegisterID reg)
 
 #endif // USE(JSVALUE32_64)
 
+ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotJSCell(RegisterID reg)
+{
+    addSlowCase(branchIfNotCell(reg));
+}
+
 ALWAYS_INLINE int JIT::jumpTarget(const Instruction* instruction, int target)
 {
     if (target)
@@ -661,6 +684,36 @@ ALWAYS_INLINE BinaryArithProfile JIT::copiedArithProfile(BinaryOp bytecode)
     BinaryArithProfile arithProfile = bytecode.metadata(m_codeBlock).m_arithProfile;
     m_copiedArithProfiles.add(key, arithProfile);
     return arithProfile;
+}
+
+template<typename Op>
+ALWAYS_INLINE ECMAMode JIT::ecmaMode(Op op)
+{
+    return op.m_ecmaMode;
+}
+
+template<>
+ALWAYS_INLINE ECMAMode JIT::ecmaMode<OpPutById>(OpPutById op)
+{
+    return op.m_flags.ecmaMode();
+}
+
+template<>
+ALWAYS_INLINE ECMAMode JIT::ecmaMode<OpPutByValDirect>(OpPutByValDirect op)
+{
+    return op.m_flags.ecmaMode();
+}
+
+template<typename Op>
+PrivateFieldAccessKind JIT::privateFieldAccessKind(Op)
+{
+    return PrivateFieldAccessKind::None;
+}
+
+template<>
+ALWAYS_INLINE PrivateFieldAccessKind JIT::privateFieldAccessKind<OpPutByValDirect>(OpPutByValDirect op)
+{
+    return op.m_flags.privateFieldAccessKind();
 }
 
 } // namespace JSC

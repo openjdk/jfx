@@ -49,8 +49,8 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(AudioScheduledSourceNode);
 
 const double AudioScheduledSourceNode::UnknownTime = -1;
 
-AudioScheduledSourceNode::AudioScheduledSourceNode(AudioContext& context, float sampleRate)
-    : AudioNode(context, sampleRate)
+AudioScheduledSourceNode::AudioScheduledSourceNode(BaseAudioContext& context)
+    : AudioNode(context)
     , ActiveDOMObject(context.scriptExecutionContext())
     , m_endTime(UnknownTime)
 {
@@ -145,8 +145,9 @@ ExceptionOr<void> AudioScheduledSourceNode::startLater(double when)
 
     if (m_playbackState != UNSCHEDULED_STATE)
         return Exception { InvalidStateError };
+
     if (!std::isfinite(when) || when < 0)
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "when value should be positive"_s };
 
     m_startTime = when;
     m_playbackState = SCHEDULED_STATE;
@@ -161,8 +162,9 @@ ExceptionOr<void> AudioScheduledSourceNode::stopLater(double when)
 
     if (m_playbackState == UNSCHEDULED_STATE || m_endTime != UnknownTime)
         return Exception { InvalidStateError };
+
     if (!std::isfinite(when) || when < 0)
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "when value should be positive"_s };
 
     m_endTime = when;
 

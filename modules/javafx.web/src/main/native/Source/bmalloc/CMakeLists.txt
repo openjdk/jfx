@@ -29,10 +29,10 @@ set(bmalloc_SOURCES
     bmalloc/Logging.cpp
     bmalloc/Mutex.cpp
     bmalloc/ObjectType.cpp
+    bmalloc/ObjectTypeTable.cpp
     bmalloc/PerProcess.cpp
     bmalloc/Scavenger.cpp
     bmalloc/bmalloc.cpp
-    bmalloc/mbmalloc.cpp
 )
 
 set(bmalloc_PUBLIC_HEADERS
@@ -69,6 +69,8 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/FreeList.h
     bmalloc/FreeListInlines.h
     bmalloc/Gigacage.h
+    bmalloc/GigacageConfig.h
+    bmalloc/GigacageKind.h
     bmalloc/Heap.h
     bmalloc/HeapConstants.h
     bmalloc/HeapKind.h
@@ -111,6 +113,7 @@ set(bmalloc_PUBLIC_HEADERS
     bmalloc/Mutex.h
     bmalloc/Object.h
     bmalloc/ObjectType.h
+    bmalloc/ObjectTypeTable.h
     bmalloc/Packed.h
     bmalloc/PerHeapKind.h
     bmalloc/PerProcess.h
@@ -146,8 +149,6 @@ set(bmalloc_INTERFACE_LIBRARIES bmalloc)
 set(bmalloc_INTERFACE_INCLUDE_DIRECTORIES ${bmalloc_FRAMEWORK_HEADERS_DIR})
 set(bmalloc_INTERFACE_DEPENDENCIES bmalloc_CopyHeaders)
 
-set(mbmalloc_LIBRARIES bmalloc)
-
 WEBKIT_FRAMEWORK_DECLARE(bmalloc)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
@@ -160,9 +161,10 @@ WEBKIT_WRAP_SOURCELIST(${bmalloc_SOURCES})
 WEBKIT_FRAMEWORK(bmalloc)
 WEBKIT_FRAMEWORK_TARGET(bmalloc)
 
-if (DEVELOPER_MODE)
+# Only build mbmalloc on platforms that MallocBench supports
+if (DEVELOPER_MODE AND (APPLE OR HAVE_MALLOC_TRIM))
     add_library(mbmalloc SHARED bmalloc/mbmalloc.cpp)
     target_include_directories(mbmalloc PRIVATE ${bmalloc_PRIVATE_INCLUDE_DIRECTORIES})
-    target_link_libraries(mbmalloc ${CMAKE_THREAD_LIBS_INIT} ${mbmalloc_LIBRARIES} ${bmalloc_LIBRARIES})
+    target_link_libraries(mbmalloc Threads::Threads bmalloc)
     set_target_properties(mbmalloc PROPERTIES COMPILE_DEFINITIONS "BUILDING_mbmalloc")
 endif ()

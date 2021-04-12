@@ -60,24 +60,44 @@ ExceptionOr<void> PerformanceObserver::observe(Init&& init)
     if (!m_performance)
         return Exception { TypeError };
 
-    if (init.entryTypes.isEmpty())
-        return Exception { TypeError, "entryTypes cannot be an empty list"_s };
-
+    bool isBuffered = false;
     OptionSet<PerformanceEntry::Type> filter;
-    for (const String& entryType : init.entryTypes) {
-        if (auto type = PerformanceEntry::parseEntryTypeString(entryType))
+    if (init.entryTypes) {
+        if (init.type)
+            return Exception { TypeError, "either entryTypes or type must be provided"_s };
+        if (m_registered && m_isTypeObserver)
+            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+        for (auto& entryType : *init.entryTypes) {
+            if (auto type = PerformanceEntry::parseEntryTypeString(entryType))
+                filter.add(*type);
+        }
+        if (filter.isEmpty())
+            return { };
+        m_typeFilter = filter;
+    } else {
+        if (!init.type)
+            return Exception { TypeError, "no type or entryTypes were provided"_s };
+        if (m_registered && !m_isTypeObserver)
+            return Exception { InvalidModificationError, "observer type can't be changed once registered"_s };
+        m_isTypeObserver = true;
+        if (auto type = PerformanceEntry::parseEntryTypeString(*init.type))
             filter.add(*type);
+        else
+            return { };
+        if (init.buffered) {
+            isBuffered = true;
+            if (m_performance->appendBufferedEntriesByType(*init.type, m_entriesToDeliver))
+                std::stable_sort(m_entriesToDeliver.begin(), m_entriesToDeliver.end(), PerformanceEntry::startTimeCompareLessThan);
+        }
+        m_typeFilter.add(filter);
     }
-
-    if (filter.isEmpty())
-        return Exception { TypeError, "entryTypes contained only unsupported types"_s };
-
-    m_typeFilter = filter;
 
     if (!m_registered) {
         m_performance->registerPerformanceObserver(*this);
         m_registered = true;
     }
+    if (isBuffered)
+        deliver();
 
     return { };
 }
@@ -109,19 +129,25 @@ void PerformanceObserver::deliver()
     auto list = PerformanceObserverEntryList::create(WTFMove(entries));
 
     InspectorInstrumentation::willFireObserverCallback(*context, "PerformanceObserver"_s);
-    m_callback->handleEvent(list, *this);
+    m_callback->handleEvent(*this, list, *this);
     InspectorInstrumentation::didFireObserverCallback(*context);
 }
 
-Vector<String> PerformanceObserver::supportedEntryTypes()
+Vector<String> PerformanceObserver::supportedEntryTypes(ScriptExecutionContext& context)
 {
-    return {
+    Vector<String> entryTypes = {
         // FIXME: <https://webkit.org/b/184363> Add support for Navigation Timing Level 2
         // "navigation"_s,
         "mark"_s,
-        "measure"_s,
-        "resource"_s
+        "measure"_s
     };
+
+    if (is<Document>(context) && downcast<Document>(context).supportsPaintTiming())
+        entryTypes.append("paint"_s);
+
+    entryTypes.append("resource"_s);
+
+    return entryTypes;
 }
 
 } // namespace WebCore

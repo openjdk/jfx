@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ public:
     void drawNumber(int number, const Color&, const FloatPoint&, const TransformationMatrix&) final;
     void drawTexture(const BitmapTexture&, const FloatRect& targetRect, const TransformationMatrix&, float opacity, unsigned exposedEdges) final;
     void drawSolidColor(const FloatRect&, const TransformationMatrix&, const Color&, bool) final;
-    void beginClip(const TransformationMatrix&, const FloatRect&) final;
+    void beginClip(const TransformationMatrix&, const FloatRoundedRect&) final;
     void bindSurface(BitmapTexture* surface) final { m_currentSurface = surface;}
     void endClip() final { graphicsContext()->restore(); }
     IntRect clipBounds() final { return currentContext()->clipBounds(); }

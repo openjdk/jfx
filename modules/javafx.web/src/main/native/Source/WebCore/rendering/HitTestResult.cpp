@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2011-2020 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  *
  * This library is free software; you can redistribute it and/or
@@ -28,21 +28,17 @@
 #include "File.h"
 #include "Frame.h"
 #include "FrameSelection.h"
-#include "FrameTree.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLAttachmentElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
-#include "HTMLMediaElement.h"
-#include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLPlugInImageElement.h"
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
-#include "HitTestLocation.h"
 #include "PseudoElement.h"
+#include "Range.h"
 #include "RenderBlockFlow.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
@@ -59,29 +55,35 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HitTestResult::HitTestResult()
-    : m_isOverWidget(false)
+static inline void appendToNodeSet(const HitTestResult::NodeSet& source, HitTestResult::NodeSet& destination)
 {
+    for (auto& node : source)
+        destination.add(node.copyRef());
 }
+
+HitTestResult::HitTestResult() = default;
 
 HitTestResult::HitTestResult(const LayoutPoint& point)
     : m_hitTestLocation(point)
     , m_pointInInnerNodeFrame(point)
-    , m_isOverWidget(false)
+{
+}
+
+HitTestResult::HitTestResult(const LayoutRect& rect)
+    : m_hitTestLocation { rect }
+    , m_pointInInnerNodeFrame { rect.center() }
 {
 }
 
 HitTestResult::HitTestResult(const LayoutPoint& centerPoint, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding)
     : m_hitTestLocation(centerPoint, topPadding, rightPadding, bottomPadding, leftPadding)
     , m_pointInInnerNodeFrame(centerPoint)
-    , m_isOverWidget(false)
 {
 }
 
 HitTestResult::HitTestResult(const HitTestLocation& other)
     : m_hitTestLocation(other)
     , m_pointInInnerNodeFrame(m_hitTestLocation.point())
-    , m_isOverWidget(false)
 {
 }
 
@@ -96,7 +98,10 @@ HitTestResult::HitTestResult(const HitTestResult& other)
     , m_isOverWidget(other.isOverWidget())
 {
     // Only copy the NodeSet in case of list hit test.
-    m_listBasedTestResult = other.m_listBasedTestResult ? makeUnique<NodeSet>(*other.m_listBasedTestResult) : nullptr;
+    if (other.m_listBasedTestResult) {
+        m_listBasedTestResult = makeUnique<NodeSet>();
+        appendToNodeSet(*other.m_listBasedTestResult, *m_listBasedTestResult);
+    }
 }
 
 HitTestResult::~HitTestResult() = default;
@@ -113,7 +118,10 @@ HitTestResult& HitTestResult::operator=(const HitTestResult& other)
     m_isOverWidget = other.isOverWidget();
 
     // Only copy the NodeSet in case of list hit test.
-    m_listBasedTestResult = other.m_listBasedTestResult ? makeUnique<NodeSet>(*other.m_listBasedTestResult) : nullptr;
+    if (other.m_listBasedTestResult) {
+        m_listBasedTestResult = makeUnique<NodeSet>();
+        appendToNodeSet(*other.m_listBasedTestResult, *m_listBasedTestResult);
+    }
 
     return *this;
 }
@@ -207,8 +215,12 @@ String HitTestResult::selectedText() const
     if (!frame)
         return emptyString();
 
+    auto range = frame->selection().selection().toNormalizedRange();
+    if (!range)
+        return emptyString();
+
     // Look for a character that's not just a separator.
-    for (TextIterator it(frame->selection().toNormalizedRange().get()); !it.atEnd(); it.advance()) {
+    for (TextIterator it(*range); !it.atEnd(); it.advance()) {
         int length = it.text().length();
         for (int i = 0; i < length; ++i) {
             if (!(U_GET_GC_MASK(it.text()[i]) & U_GC_Z_MASK))
@@ -568,11 +580,8 @@ bool HitTestResult::isOverTextInsideFormControlElement() const
     if (position.isNull())
         return false;
 
-    RefPtr<Range> wordRange = enclosingTextUnitOfGranularity(position, WordGranularity, DirectionForward);
-    if (!wordRange)
-        return false;
-
-    return !wordRange->text().isEmpty();
+    auto wordRange = enclosingTextUnitOfGranularity(position, TextGranularity::WordGranularity, SelectionDirection::Forward);
+    return wordRange && hasAnyPlainText(*wordRange);
 }
 
 URL HitTestResult::absoluteLinkURL() const
@@ -620,7 +629,8 @@ bool HitTestResult::isContentEditable() const
     return m_innerNonSharedNode->hasEditableStyle();
 }
 
-HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+template<typename RectType>
+inline HitTestProgress HitTestResult::addNodeToListBasedTestResultCommon(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const RectType& rect)
 {
     // If it is not a list-based hit test, this method has to be no-op.
     if (!request.resultIsElementList()) {
@@ -634,7 +644,7 @@ HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const Hi
     if (request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
         node = node->document().ancestorNodeInThisScope(node);
 
-    mutableListBasedTestResult().add(node);
+    mutableListBasedTestResult().add(*node);
 
     if (request.includesAllElementsUnderPoint())
         return HitTestProgress::Continue;
@@ -643,27 +653,14 @@ HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const Hi
     return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
 }
 
+HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const LayoutRect& rect)
+{
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
+}
+
 HitTestProgress HitTestResult::addNodeToListBasedTestResult(Node* node, const HitTestRequest& request, const HitTestLocation& locationInContainer, const FloatRect& rect)
 {
-    // If it is not a list-based hit test, this method has to be no-op.
-    if (!request.resultIsElementList()) {
-        ASSERT(!isRectBasedTest());
-        return HitTestProgress::Stop;
-    }
-
-    if (!node)
-        return HitTestProgress::Continue;
-
-    if (request.disallowsUserAgentShadowContent() && node->isInUserAgentShadowTree())
-        node = node->document().ancestorNodeInThisScope(node);
-
-    mutableListBasedTestResult().add(node);
-
-    if (request.includesAllElementsUnderPoint())
-        return HitTestProgress::Continue;
-
-    bool regionFilled = rect.contains(locationInContainer.boundingBox());
-    return regionFilled ? HitTestProgress::Stop : HitTestProgress::Continue;
+    return addNodeToListBasedTestResultCommon(node, request, locationInContainer, rect);
 }
 
 void HitTestResult::append(const HitTestResult& other, const HitTestRequest& request)
@@ -680,11 +677,8 @@ void HitTestResult::append(const HitTestResult& other, const HitTestRequest& req
         m_isOverWidget = other.isOverWidget();
     }
 
-    if (other.m_listBasedTestResult) {
-        NodeSet& set = mutableListBasedTestResult();
-        for (const auto& node : *other.m_listBasedTestResult)
-            set.add(node.get());
-    }
+    if (other.m_listBasedTestResult)
+        appendToNodeSet(*other.m_listBasedTestResult, mutableListBasedTestResult());
 }
 
 const HitTestResult::NodeSet& HitTestResult::listBasedTestResult() const
@@ -722,7 +716,7 @@ Node* HitTestResult::targetNode() const
 {
     Node* node = innerNode();
     if (!node)
-        return 0;
+        return nullptr;
     if (node->isConnected())
         return node;
 

@@ -148,7 +148,7 @@ void RenderListBox::updateFromElement()
             if (text.isEmpty())
                 continue;
             text = applyTextTransform(style(), text, ' ');
-            auto textRun = constructTextRun(text, style(), AllowTrailingExpansion);
+            auto textRun = constructTextRun(text, style(), AllowRightExpansion);
             width = std::max(width, selectFont().width(textRun));
         }
         // FIXME: Is ceiling right here, or should we be doing some kind of rounding instead?
@@ -435,7 +435,7 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
 
     paintInfo.context().setFillColor(textColor);
 
-    TextRun textRun(itemText, 0, 0, AllowTrailingExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
+    TextRun textRun(itemText, 0, 0, AllowRightExpansion, itemStyle.direction(), isOverride(itemStyle.unicodeBidi()), true);
     FontCascade itemFont = style().fontCascade();
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
     r.move(itemOffsetForAlignment(textRun, &itemStyle, itemFont, r));
@@ -743,7 +743,7 @@ int RenderListBox::scrollLeft() const
     return 0;
 }
 
-void RenderListBox::setScrollLeft(int, ScrollType, ScrollClamping)
+void RenderListBox::setScrollLeft(int, ScrollType, ScrollClamping, AnimatedScroll)
 {
 }
 
@@ -760,7 +760,7 @@ static void setupWheelEventTestMonitor(RenderListBox& renderer)
     renderer.scrollAnimator().setWheelEventTestMonitor(renderer.page().wheelEventTestMonitor());
 }
 
-void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping)
+void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping, AnimatedScroll)
 {
     // Determine an index and scroll to it.
     int index = newTop / itemHeight();
@@ -856,9 +856,9 @@ IntSize RenderListBox::contentsSize() const
     return IntSize(scrollWidth(), scrollHeight());
 }
 
-IntPoint RenderListBox::lastKnownMousePosition() const
+IntPoint RenderListBox::lastKnownMousePositionInView() const
 {
-    return view().frameView().lastKnownMousePosition();
+    return view().frameView().lastKnownMousePositionInView();
 }
 
 bool RenderListBox::isHandlingWheelEvent() const
@@ -878,8 +878,11 @@ bool RenderListBox::forceUpdateScrollbarsOnMainThreadForPerformanceTesting() con
 
 ScrollableArea* RenderListBox::enclosingScrollableArea() const
 {
-    // FIXME: Return a RenderLayer that's scrollable.
-    return nullptr;
+    auto* layer = enclosingLayer();
+    if (!layer)
+        return nullptr;
+
+    return layer->enclosingScrollableLayer(IncludeSelfOrNot::ExcludeSelf, CrossFrameBoundaries::No);
 }
 
 bool RenderListBox::isScrollableOrRubberbandable()
@@ -905,6 +908,11 @@ bool RenderListBox::usesMockScrollAnimator() const
 void RenderListBox::logMockScrollAnimatorMessage(const String& message) const
 {
     document().addConsoleMessage(MessageSource::Other, MessageLevel::Debug, "RenderListBox: " + message);
+}
+
+String RenderListBox::debugDescription() const
+{
+    return RenderObject::debugDescription();
 }
 
 Ref<Scrollbar> RenderListBox::createScrollbar()

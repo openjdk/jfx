@@ -260,6 +260,18 @@ public class TreeTableViewTest {
         assertNull(treeTableView.getOnSort());
     }
 
+    @Test public void noArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TreeTableView<?> view = new TreeTableView<>();
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TreeTableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
+    @Test public void singleArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TreeTableView<?> view = new TreeTableView<>(null);
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TreeTableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
 //    @Test public void singleArgConstructorSetsNonNullSelectionModel() {
 //        final TreeTableView<String> b2 = new TreeTableView<String>(FXCollections.observableArrayList("Hi"));
 //        assertNotNull(b2.getSelectionModel());
@@ -751,6 +763,32 @@ public class TreeTableViewTest {
         treeTableView.setSortPolicy(null);
         assertNull(treeTableView.getSortPolicy());
         treeTableView.sort();
+    }
+
+    @Test public void testNoIOOBEWhenSortingAfterSelectAndClearRootChildren() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        TreeItem<String> root = new TreeItem<>("root");
+        TreeItem<String> child = new TreeItem<>("child");
+        root.getChildren().add(child);
+        root.setExpanded(true);
+        ttv.setRoot(root);
+        ttv.setShowRoot(false);
+
+        TreeTableColumn<String, String> ttc = new TreeTableColumn<>("Column");
+        ttv.getSortOrder().add(ttc);
+
+        ttv.getSelectionModel().select(0);
+        root.getChildren().remove(0);
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            ttv.sort();
+        });
+    }
+
+    @Test public void testNPEWhenRootItemIsNull() {
+        TreeTableView<String> ttv = new TreeTableView<>();
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            ttv.sort();
+        });
     }
 
     @Test public void testChangingSortPolicyUpdatesItemsList() {

@@ -28,7 +28,7 @@
 
 #include "PlatformWheelEvent.h"
 
-#if USE(GLIB)
+#if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
@@ -114,7 +114,7 @@ ScrollAnimationKinetic::ScrollAnimationKinetic(ScrollExtentsCallback&& scrollExt
     , m_notifyPositionChangedFunction(WTFMove(notifyPositionChangedFunction))
     , m_animationTimer(RunLoop::current(), this, &ScrollAnimationKinetic::animationTimerFired)
 {
-#if USE(GLIB)
+#if USE(GLIB_EVENT_LOOP)
     m_animationTimer.setPriority(WTF::RunLoopSourcePriority::DisplayRefreshMonitorTimer);
 #endif
 }
@@ -126,6 +126,11 @@ void ScrollAnimationKinetic::stop()
     m_animationTimer.stop();
     m_horizontalData = WTF::nullopt;
     m_verticalData = WTF::nullopt;
+}
+
+bool ScrollAnimationKinetic::isActive() const
+{
+    return m_animationTimer.isActive();
 }
 
 void ScrollAnimationKinetic::appendToScrollHistory(const PlatformWheelEvent& event)

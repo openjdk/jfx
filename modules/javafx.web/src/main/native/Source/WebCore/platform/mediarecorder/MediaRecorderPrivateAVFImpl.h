@@ -24,7 +24,7 @@
 
 #pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)
 
 #include "MediaRecorderPrivate.h"
 #include "MediaRecorderPrivateWriterCocoa.h"
@@ -33,27 +33,27 @@ namespace WebCore {
 
 class MediaStreamPrivate;
 
-class MediaRecorderPrivateAVFImpl final : public MediaRecorderPrivate {
+class MediaRecorderPrivateAVFImpl final
+    : public MediaRecorderPrivate {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(const MediaStreamPrivate&);
+    static std::unique_ptr<MediaRecorderPrivateAVFImpl> create(MediaStreamPrivate&);
+
+    explicit MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&);
+    ~MediaRecorderPrivateAVFImpl();
 
 private:
-    MediaRecorderPrivateAVFImpl(Ref<MediaRecorderPrivateWriter>&&, String&& audioTrackId, String&& videoTrackId);
+    // MediaRecorderPrivate
+    void videoSampleAvailable(MediaSample&) final;
+    void fetchData(FetchDataCallback&&) final;
+    void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
 
-    friend std::unique_ptr<MediaRecorderPrivateAVFImpl> std::make_unique<MediaRecorderPrivateAVFImpl>(Ref<MediaRecorderPrivateWriter>&&, String&&, String&&);
-
-    void sampleBufferUpdated(const MediaStreamTrackPrivate&, MediaSample&) final;
-    void audioSamplesAvailable(const MediaStreamTrackPrivate&, const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
-    void fetchData(CompletionHandler<void(RefPtr<SharedBuffer>&&, const String&)>&&) final;
     const String& mimeType();
     void stopRecording();
 
     Ref<MediaRecorderPrivateWriter> m_writer;
-    String m_recordedAudioTrackID;
-    String m_recordedVideoTrackID;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(MEDIA_STREAM) && HAVE(AVASSETWRITERDELEGATE)

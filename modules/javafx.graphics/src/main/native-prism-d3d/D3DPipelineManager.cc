@@ -149,6 +149,10 @@ HRESULT D3DPipelineManager::InitAdapters(IConfig &cfg)
     TraceLn(NWT_TRACE_INFO, "D3DPPLM::InitAdapters()");
 
     adapterCount = pd3d9->GetAdapterCount();
+
+    if (adapterCount == 0) {
+        RlsTraceLn(NWT_TRACE_WARNING, "Zero adapters found");
+    }
     pAdapters = new D3DAdapter[adapterCount];
     if (pAdapters == NULL) {
         SetErrorMessage("InitAdapters: out of memory");

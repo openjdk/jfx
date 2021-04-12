@@ -27,39 +27,41 @@
 
 #include "Blob.h"
 #include "Document.h"
+#include "ExceptionCode.h"
 #include "FileReaderLoader.h"
 #include "FileReaderLoaderClient.h"
 #include "SharedBuffer.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
 class BlobLoader final : public FileReaderLoaderClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    BlobLoader(Document*, Blob&, CompletionHandler<void()>&&);
+    BlobLoader(Document*, Blob&, Function<void()>&&);
     ~BlobLoader();
 
     bool isLoading() const { return !!m_loader; }
     const RefPtr<JSC::ArrayBuffer>& result() const { return m_buffer; }
-    int errorCode() const { return m_errorCode; }
+    Optional<ExceptionCode> errorCode() const { return m_errorCode; }
 
 private:
     void didStartLoading() final { }
     void didReceiveData() final { }
 
     void didFinishLoading() final;
-    void didFail(int errorCode) final;
+    void didFail(ExceptionCode errorCode) final;
     void complete();
 
     std::unique_ptr<FileReaderLoader> m_loader;
     RefPtr<JSC::ArrayBuffer> m_buffer;
-    int m_errorCode { 0 };
-    CompletionHandler<void()> m_completionHandler;
+    Optional<ExceptionCode> m_errorCode;
+    Function<void()> m_completionHandler;
 };
 
-inline BlobLoader::BlobLoader(WebCore::Document* document, Blob& blob, CompletionHandler<void()>&& completionHandler)
+inline BlobLoader::BlobLoader(WebCore::Document* document, Blob& blob, Function<void()>&& completionHandler)
     : m_loader(makeUnique<FileReaderLoader>(FileReaderLoader::ReadAsArrayBuffer, this))
     , m_completionHandler(WTFMove(completionHandler))
 {
@@ -70,6 +72,7 @@ inline BlobLoader::~BlobLoader()
 {
     if (m_loader)
         m_loader->cancel();
+    // FIXME: Call m_completionHandler to migrate it from a Function to a CompletionHandler.
 }
 
 inline void BlobLoader::didFinishLoading()
@@ -78,7 +81,7 @@ inline void BlobLoader::didFinishLoading()
     complete();
 }
 
-inline void BlobLoader::didFail(int errorCode)
+inline void BlobLoader::didFail(ExceptionCode errorCode)
 {
     m_errorCode = errorCode;
     complete();

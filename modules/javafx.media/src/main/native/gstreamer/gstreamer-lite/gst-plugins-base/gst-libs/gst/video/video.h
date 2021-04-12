@@ -190,6 +190,7 @@ G_END_DECLS
 #ifndef GSTREAMER_LITE
 #include <gst/video/gstvideoaffinetransformationmeta.h>
 #include <gst/video/video-anc.h>
+#include <gst/video/video-hdr.h>
 #endif // GSTREAMER_LITE
 
 #endif /* __GST_VIDEO_H__ */

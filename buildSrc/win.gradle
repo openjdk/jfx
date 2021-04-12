@@ -78,6 +78,8 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
         defineProperty("WINDOWS_VS_DEVENVCMD", properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
+        defineProperty("WINDOWS_VS_VC_TOOLS_INSTALL_DIR", properties, "")
+        defineProperty("WINDOWS_VS_VC_TOOLS_REDIST_DIR", properties, "")
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
         defineProperty("WINDOWS_VS_VER", properties, "150")
@@ -142,12 +144,18 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
-def msvcVer = System.getenv("MSVC_VER") ?: "14.10.25017"
+def msvcVer = System.getenv("MSVC_VER")
 def msvcBinDir = ""
 if (hasProperty('toolchainDir')) {
     msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/bin/$CPU_BITS"
 } else if (winVsVer == 150) {
-    msvcBinDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer/bin/Host${CPU_BITS}/$CPU_BITS"
+    def msvcInstallDir = ""
+    if (msvcVer) {
+        msvcInstallDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer"
+    } else {
+        msvcInstallDir = "$WINDOWS_VS_VC_TOOLS_INSTALL_DIR"
+    }
+    msvcBinDir = "$msvcInstallDir/bin/Host${CPU_BITS}/$CPU_BITS"
 } else if (winVsVer <= 120) {
     msvcBinDir = (IS_64
                       ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
@@ -187,8 +195,12 @@ def msvcRedstDir
 if (hasProperty('toolchainDir')) {
     msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/$CPU_BITS"
 } else {
-    def msvcRedistVer = System.getenv("MSVC_REDIST_VER") ?: "14.10.25008"
-    msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$CPU_BITS"
+    def msvcRedistVer = System.getenv("MSVC_REDIST_VER")
+    if (msvcRedistVer) {
+        msvcRedstDir = "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/$CPU_BITS"
+    } else {
+        msvcRedstDir = "$WINDOWS_VS_VC_TOOLS_REDIST_DIR/$CPU_BITS"
+    }
 }
 
 def winSdkDllDir = "$WINDOWS_VS_WINSDKDLLINSTALLDIR/$CPU_BITS"

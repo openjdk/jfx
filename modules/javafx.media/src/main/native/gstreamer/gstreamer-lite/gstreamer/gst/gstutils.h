@@ -554,11 +554,12 @@ static inline guint16 __gst_slow_read16_le (const guint8 * data) {
                                         } while (0)
 
 /* Float endianness conversion macros */
+#ifndef __GI_SCANNER__
 
 /* FIXME: Remove this once we depend on a GLib version with this */
 #ifndef GFLOAT_FROM_LE
 /**
- * GFLOAT_SWAP_LE_BE:
+ * GFLOAT_SWAP_LE_BE: (skip)
  * @in: input value
  *
  * Swap byte order of a 32-bit floating point value (float).
@@ -580,7 +581,7 @@ GFLOAT_SWAP_LE_BE(gfloat in)
 }
 
 /**
- * GDOUBLE_SWAP_LE_BE:
+ * GDOUBLE_SWAP_LE_BE: (skip)
  * @in: input value
  *
  * Swap byte order of a 64-bit floating point value (double).
@@ -602,28 +603,28 @@ GDOUBLE_SWAP_LE_BE(gdouble in)
 }
 
 /**
- * GDOUBLE_TO_LE:
+ * GDOUBLE_TO_LE: (skip)
  * @val: value
  *
  * Convert 64-bit floating point value (double) from native byte order into
  * little endian byte order.
  */
 /**
- * GDOUBLE_TO_BE:
+ * GDOUBLE_TO_BE: (skip)
  * @val: value
  *
  * Convert 64-bit floating point value (double) from native byte order into
  * big endian byte order.
  */
 /**
- * GDOUBLE_FROM_LE:
+ * GDOUBLE_FROM_LE: (skip)
  * @val: value
  *
  * Convert 64-bit floating point value (double) from little endian byte order
  * into native byte order.
  */
 /**
- * GDOUBLE_FROM_BE:
+ * GDOUBLE_FROM_BE: (skip)
  * @val: value
  *
  * Convert 64-bit floating point value (double) from big endian byte order
@@ -631,28 +632,28 @@ GDOUBLE_SWAP_LE_BE(gdouble in)
  */
 
 /**
- * GFLOAT_TO_LE:
+ * GFLOAT_TO_LE: (skip)
  * @val: value
  *
  * Convert 32-bit floating point value (float) from native byte order into
  * little endian byte order.
  */
 /**
- * GFLOAT_TO_BE:
+ * GFLOAT_TO_BE: (skip)
  * @val: value
  *
  * Convert 32-bit floating point value (float) from native byte order into
  * big endian byte order.
  */
 /**
- * GFLOAT_FROM_LE:
+ * GFLOAT_FROM_LE: (skip)
  * @val: value
  *
  * Convert 32-bit floating point value (float) from little endian byte order
  * into native byte order.
  */
 /**
- * GFLOAT_FROM_BE:
+ * GFLOAT_FROM_BE: (skip)
  * @val: value
  *
  * Convert 32-bit floating point value (float) from big endian byte order
@@ -681,6 +682,8 @@ GDOUBLE_SWAP_LE_BE(gdouble in)
 #define GDOUBLE_FROM_BE(val) (GDOUBLE_TO_BE (val))
 
 #endif /* !defined(GFLOAT_FROM_LE) */
+
+#endif /* !__GI_SCANNER__ */
 
 /**
  * GST_READ_FLOAT_LE:
@@ -1168,6 +1171,18 @@ typedef enum {
   GST_SEARCH_MODE_AFTER
 } GstSearchMode;
 
+/**
+ * GstPluginAPIFlags:
+ * @GST_PLUGIN_API_FLAG_IGNORE_ENUM_MEMBERS: Ignore enum members when generating
+ *   the plugins cache. This is useful if the members of the enum are generated
+ *   dynamically, in order not to expose incorrect documentation to the end user.
+ *
+ * Since: 1.18
+ */
+typedef enum {
+  GST_PLUGIN_API_FLAG_IGNORE_ENUM_MEMBERS = (1 << 0),
+} GstPluginAPIFlags;
+
 GST_API
 gpointer      gst_util_array_binary_search      (gpointer array, guint num_elements,
                                                  gsize element_size, GCompareDataFunc search_func,
@@ -1204,6 +1219,11 @@ gboolean      gst_calculate_linear_regression   (const GstClockTime * xy,
                                                  GstClockTime * b, GstClockTime * xbase,
                                                  gdouble * r_squared);
 
+GST_API
+void          gst_type_mark_as_plugin_api       (GType type, GstPluginAPIFlags flags);
+
+GST_API
+gboolean      gst_type_is_plugin_api            (GType type, GstPluginAPIFlags *flags);
 
 G_END_DECLS
 

@@ -38,7 +38,7 @@ public:
     bool hasButtons(Scrollbar&) override { return true; }
     bool hasThumb(Scrollbar&) override;
 
-    int scrollbarThickness(ScrollbarControlSize = RegularScrollbar, ScrollbarExpansionState = ScrollbarExpansionState::Expanded) override;
+    int scrollbarThickness(ScrollbarControlSize = ScrollbarControlSize::Regular, ScrollbarExpansionState = ScrollbarExpansionState::Expanded) override;
 
     IntRect backButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
     IntRect forwardButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;

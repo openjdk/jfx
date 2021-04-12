@@ -33,10 +33,25 @@
 
 namespace WebCore {
 
+static UniqueRef<AudioSession>& sharedAudioSession()
+{
+    static NeverDestroyed<UniqueRef<AudioSession>> session = AudioSession::create();
+    return session.get();
+}
+
+UniqueRef<AudioSession> AudioSession::create()
+{
+    return makeUniqueRef<AudioSession>();
+}
+
 AudioSession& AudioSession::sharedSession()
 {
-    static NeverDestroyed<AudioSession> session;
-    return session;
+    return sharedAudioSession();
+}
+
+void AudioSession::setSharedSession(UniqueRef<AudioSession>&& session)
+{
+    sharedAudioSession() = WTFMove(session);
 }
 
 bool AudioSession::tryToSetActive(bool active)
@@ -47,6 +62,24 @@ bool AudioSession::tryToSetActive(bool active)
     m_active = active;
     return true;
 }
+
+#if !PLATFORM(IOS_FAMILY)
+void AudioSession::addInterruptionObserver(InterruptionObserver&)
+{
+}
+
+void AudioSession::removeInterruptionObserver(InterruptionObserver&)
+{
+}
+
+void AudioSession::beginInterruption()
+{
+}
+
+void AudioSession::endInterruption(MayResume)
+{
+}
+#endif
 
 #if !PLATFORM(COCOA)
 class AudioSessionPrivate {
@@ -167,6 +200,33 @@ String convertEnumerationToString(AudioSession::CategoryType enumerationValue)
     ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
     return values[static_cast<size_t>(enumerationValue)];
 }
+
+String convertEnumerationToString(AudioSessionRoutingArbitrationClient::RoutingArbitrationError enumerationValue)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("None"),
+        MAKE_STATIC_STRING_IMPL("Failed"),
+        MAKE_STATIC_STRING_IMPL("Cancelled"),
+    };
+    static_assert(!static_cast<size_t>(AudioSessionRoutingArbitrationClient::RoutingArbitrationError::None), "AudioSessionRoutingArbitrationClient::RoutingArbitrationError::None is not 0 as expected");
+    static_assert(static_cast<size_t>(AudioSessionRoutingArbitrationClient::RoutingArbitrationError::Failed), "AudioSessionRoutingArbitrationClient::RoutingArbitrationError::Failed is not 1 as expected");
+    static_assert(static_cast<size_t>(AudioSessionRoutingArbitrationClient::RoutingArbitrationError::Cancelled), "AudioSessionRoutingArbitrationClient::RoutingArbitrationError::Cancelled is not 2 as expected");
+    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    return values[static_cast<size_t>(enumerationValue)];
+}
+
+String convertEnumerationToString(AudioSessionRoutingArbitrationClient::DefaultRouteChanged enumerationValue)
+{
+    static const NeverDestroyed<String> values[] = {
+        MAKE_STATIC_STRING_IMPL("No"),
+        MAKE_STATIC_STRING_IMPL("Yes"),
+    };
+    static_assert(!static_cast<bool>(AudioSessionRoutingArbitrationClient::DefaultRouteChanged::No), "AudioSessionRoutingArbitrationClient::DefaultRouteChanged::No is not false as expected");
+    static_assert(static_cast<bool>(AudioSessionRoutingArbitrationClient::DefaultRouteChanged::Yes), "AudioSessionRoutingArbitrationClient::DefaultRouteChanged::Yes is not true as expected");
+    ASSERT(static_cast<size_t>(enumerationValue) < WTF_ARRAY_LENGTH(values));
+    return values[static_cast<size_t>(enumerationValue)];
+}
+
 }
 
 #endif // USE(AUDIO_SESSION)

@@ -27,22 +27,22 @@
 
 #include "AirCode.h"
 #include "AirGenerate.h"
-#include "AirInstInlines.h"
 #include "AirSpecial.h"
 #include "AllowMacroScratchRegisterUsage.h"
 #include "B3BasicBlockInlines.h"
 #include "B3Compilation.h"
 #include "B3Procedure.h"
 #include "B3PatchpointSpecial.h"
+#include "B3PatchpointValue.h"
+#include "B3StackmapGenerationParams.h"
 #include "CCallHelpers.h"
 #include "InitializeThreading.h"
-#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "ProbeContext.h"
 #include "PureNaN.h"
-#include <cmath>
 #include <regex>
 #include <string>
+#include <wtf/DataLog.h>
 #include <wtf/Lock.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/StdMap.h>
@@ -2096,11 +2096,19 @@ void testElideSimpleMove()
 
         auto compilation = compile(proc);
         CString disassembly = compilation->disassembly();
-        std::regex findRRMove(isARM64() ? "mov r\\d+, r\\d+\\n" : "mov %\\w+, %\\w+\\n");
+        std::regex findRRMove(isARM64() ? "mov\\s+x\\d+, x\\d+\\n" : "mov %\\w+, %\\w+\\n");
         auto result = matchAll(disassembly, findRRMove);
-        // sp -> fp; arg0 -> ret0; fp -> sp
-        // fp -> sp only happens in O0 because we don't actually need to move the stack in general.
-        CHECK(result.size() == 2 + !Options::defaultB3OptLevel());
+        if (isARM64()) {
+            if (!Options::defaultB3OptLevel())
+                CHECK(result.size() == 2);
+            else
+                CHECK(result.size() == 0);
+        } else if (isX86()) {
+            // sp -> fp; arg0 -> ret0; fp -> sp
+            // fp -> sp only happens in O0 because we don't actually need to move the stack in general.
+            CHECK(result.size() == 2 + !Options::defaultB3OptLevel());
+        } else
+            RELEASE_ASSERT_NOT_REACHED();
     }
 }
 
@@ -2177,10 +2185,19 @@ void testElideMoveThenRealloc()
         BasicBlock* continuation = code.addBlock();
 
         Tmp tmp = code.newTmp(B3::GP);
+        Arg negOne;
+        if (isARM64()) {
+            negOne = code.newTmp(B3::GP);
+            root->append(Move, nullptr, Arg::bigImm(-1), negOne);
+        } else if (isX86())
+            negOne = Arg::bitImm(-1);
+        else
+            RELEASE_ASSERT_NOT_REACHED();
+
         {
             root->append(Move, nullptr, Arg::imm(1), Tmp(reg));
 
-            root->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), Arg::bitImm(-1));
+            root->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), negOne);
             root->setSuccessors(taken, notTaken);
         }
 
@@ -2190,14 +2207,14 @@ void testElideMoveThenRealloc()
         }
 
         {
-            notTaken->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), Arg::bitImm(-1));
+            notTaken->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), Tmp(reg), negOne);
             notTaken->setSuccessors(continuation, notTakenReturn);
         }
 
         {
             tmp = code.newTmp(B3::GP);
             continuation->append(Move, nullptr, Arg::imm(42), tmp);
-            continuation->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), tmp, Arg::bitImm(-1));
+            continuation->append(BranchTest32, nullptr, Arg::resCond(MacroAssembler::NonZero), tmp, negOne);
             continuation->setSuccessors(ret, notTakenReturn);
         }
 
@@ -2219,6 +2236,128 @@ void testElideMoveThenRealloc()
         auto runResult = compileAndRun<uint32_t>(proc);
         CHECK(runResult == static_cast<unsigned>(42 + (42 * (reg == GPRInfo::returnValueGPR))));
     }
+}
+
+void testLinearScanSpillRangesLateUse()
+{
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+    Vector<Tmp> tmps;
+    for (unsigned i = 0; i < 100; ++i) {
+        Tmp tmp = code.newTmp(GP);
+        tmps.append(tmp);
+        root->append(Move, nullptr, Arg::bigImm(i), tmp);
+    }
+
+    for (unsigned i = 0; i + 1 < tmps.size(); ++i) {
+        Tmp tmp1 = tmps[i];
+        Tmp tmp2 = tmps[i + 1];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+        B3::Value* dummyValue2 = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+        patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+        patchpoint->append(dummyValue2, B3::ValueRep::SomeLateRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            RELEASE_ASSERT(params[0].gpr() != params[1].gpr());
+
+            auto good = jit.branch32(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+
+            good = jit.branch32(CCallHelpers::Equal, params[1].gpr(), CCallHelpers::TrustedImm32(i + 1));
+            jit.breakpoint();
+            good.link(&jit);
+
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp1);
+        inst.args.append(tmp2);
+
+        root->append(inst);
+    }
+
+    root->append(Move32, nullptr, tmps.last(), Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    auto runResult = compileAndRun<uint32_t>(proc);
+    CHECK(runResult == 99);
+}
+
+void testLinearScanSpillRangesEarlyDef()
+{
+    B3::Procedure proc;
+    Code& code = proc.code();
+
+    BasicBlock* root = code.addBlock();
+
+    B3::Air::Special* patchpointSpecial = code.addSpecial(makeUnique<B3::PatchpointSpecial>());
+
+    Vector<Tmp> tmps;
+    for (unsigned i = 0; i < 100; ++i) {
+        Tmp tmp = code.newTmp(GP);
+        tmps.append(tmp);
+        if (!i)
+            root->append(Move, nullptr, Arg::bigImm(i), tmp);
+    }
+
+    for (unsigned i = 0; i + 1 < tmps.size(); ++i) {
+        Tmp tmp1 = tmps[i];
+        Tmp tmp2 = tmps[i + 1];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Int32, B3::Origin());
+        patchpoint->resultConstraints = { B3::ValueRep::SomeEarlyRegister };
+        patchpoint->append(dummyValue, B3::ValueRep::SomeLateRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            RELEASE_ASSERT(params[0].gpr() != params[1].gpr());
+
+            auto good = jit.branch32(CCallHelpers::Equal, params[1].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+
+            jit.move(CCallHelpers::TrustedImm32(i + 1), params[0].gpr());
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp2); // def
+        inst.args.append(tmp1); // use
+
+        root->append(inst);
+    }
+
+    // Make all tmps live till the end
+    for (unsigned i = 0; i < tmps.size(); ++i) {
+        Tmp tmp = tmps[i];
+
+        B3::Value* dummyValue = proc.addConstant(B3::Origin(), B3::Int64, 0);
+
+        B3::PatchpointValue* patchpoint = proc.add<B3::PatchpointValue>(B3::Void, B3::Origin());
+        patchpoint->append(dummyValue, B3::ValueRep::SomeRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
+            auto good = jit.branch32(CCallHelpers::Equal, params[0].gpr(), CCallHelpers::TrustedImm32(i));
+            jit.breakpoint();
+            good.link(&jit);
+        });
+
+        Inst inst(Patch, patchpoint, Arg::special(patchpointSpecial));
+        inst.args.append(tmp);
+        root->append(inst);
+    }
+
+    root->append(Move32, nullptr, tmps.last(), Tmp(GPRInfo::returnValueGPR));
+    root->append(Ret32, nullptr, Tmp(GPRInfo::returnValueGPR));
+
+    auto runResult = compileAndRun<uint32_t>(proc);
+    CHECK(runResult == 99);
 }
 
 #define PREFIX "O", Options::defaultB3OptLevel(), ": "
@@ -2313,6 +2452,9 @@ void run(const char* filter)
     RUN(testElideHandlesEarlyClobber());
     RUN(testElideMoveThenRealloc());
 
+    RUN(testLinearScanSpillRangesLateUse());
+    RUN(testLinearScanSpillRangesEarlyDef());
+
     if (tasks.isEmpty())
         usage();
 
@@ -2369,7 +2511,7 @@ int main(int argc, char** argv)
         break;
     }
 
-    JSC::initializeThreading();
+    JSC::initialize();
 
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;

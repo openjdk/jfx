@@ -129,12 +129,13 @@ public:
     LayoutRect columnRectAt(unsigned index) const;
     unsigned columnCount() const;
 
-protected:
+private:
     void addOverflowFromChildren() override;
 
-private:
     bool isRenderMultiColumnSet() const override { return true; }
     void layout() override;
+
+    Node* nodeForHitTest() const override;
 
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 

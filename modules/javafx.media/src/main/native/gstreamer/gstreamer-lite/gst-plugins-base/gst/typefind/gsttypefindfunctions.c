@@ -697,6 +697,73 @@ xges_type_find (GstTypeFind * tf, gpointer unused)
   }
 }
 
+/***application/vnd.apple-fcp+xml ****************************************************/
+
+static GstStaticCaps fcpxml_caps =
+GST_STATIC_CAPS ("application/vnd.apple-fcp+xml");
+
+#define FCPXML_CAPS gst_static_caps_get (&fcpxml_caps)
+
+static void
+fcpxml_type_find (GstTypeFind * tf, gpointer unused)
+{
+  if (xml_check_first_element (tf, "fcpxml", 3, FALSE)) {
+    gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, FCPXML_CAPS);
+  }
+}
+
+/*** application/vnd.apple-xmeml+xml ****************************************************/
+
+static GstStaticCaps xmeml_caps =
+GST_STATIC_CAPS ("application/vnd.apple-xmeml+xml");
+
+#define XMEML_CAPS gst_static_caps_get (&xmeml_caps)
+
+static void
+xmeml_type_find (GstTypeFind * tf, gpointer unused)
+{
+  if (xml_check_first_element (tf, "xmeml", 3, FALSE)) {
+    gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, XMEML_CAPS);
+  }
+}
+
+/*** application/otio ****************************************************/
+
+static GstStaticCaps otio_caps =
+GST_STATIC_CAPS ("application/vnd.pixar.opentimelineio+json");
+
+#define OTIO_CAPS gst_static_caps_get (&otio_caps)
+
+static void
+otio_type_find (GstTypeFind * tf, gpointer unused)
+{
+  const gchar *data, *tmp;
+
+  data = (const gchar *) gst_type_find_peek (tf, 0, 30);
+  if (!data)
+    return;
+
+  tmp = (const gchar *) memchr (data, '{', 30);
+  if (!tmp)
+    return;
+
+  data = (const gchar *) gst_type_find_peek (tf, tmp - data, 30);
+  if (!data)
+    return;
+
+  tmp = (const gchar *) memchr (data, '"', 30);
+  if (!tmp)
+    return;
+
+  data = (const gchar *) gst_type_find_peek (tf, tmp - data, 14);
+  if (!data)
+    return;
+
+  if (memcmp (data, "\"OTIO_SCHEMA\":", 14) == 0) {
+    gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, OTIO_CAPS);
+  }
+}
+
 
 /*** application/sdp *********************************************************/
 
@@ -2155,7 +2222,7 @@ static GstStaticCaps mpeg_sys_caps = GST_STATIC_CAPS ("video/mpeg, "
                                          IS_MPEG_PACK_CODE (((guint8 *)(data))[3]))
 
 #define IS_MPEG_PES_CODE(b) (((b) & 0xF0) == 0xE0 || ((b) & 0xF0) == 0xC0 || \
-                             (b) >= 0xBD)
+                             (b) >= 0xBC)
 #define IS_MPEG_PES_HEADER(data)        (IS_MPEG_HEADER (data) &&            \
                                          IS_MPEG_PES_CODE (((guint8 *)(data))[3]))
 
@@ -3350,6 +3417,12 @@ qt_type_find (GstTypeFind * tf, gpointer unused)
       break;
     }
 
+    if (STRNCMP (&data[4], "ftypmif1", 8) == 0) {
+      tip = GST_TYPE_FIND_MAXIMUM;
+      variant = "heif";
+      break;
+    }
+
     /* box/atom types that are in common with ISO base media file format */
     if (STRNCMP (&data[4], "moov", 4) == 0 ||
         STRNCMP (&data[4], "mdat", 4) == 0 ||
@@ -3379,7 +3452,7 @@ qt_type_find (GstTypeFind * tf, gpointer unused)
     size = GST_READ_UINT32_BE (data);
     if (size + offset >= G_MAXINT64)
       break;
-    /* check compatible brands rather than ever expaning major brands above */
+    /* check compatible brands rather than ever expanding major brands above */
     if ((STRNCMP (&data[4], "ftyp", 4) == 0) && (size >= 16)) {
       data = gst_type_find_peek (tf, offset, size);
       if (data == NULL)
@@ -3394,6 +3467,10 @@ qt_type_find (GstTypeFind * tf, gpointer unused)
             STRNCMP (&data[new_offset], "mp42", 4) == 0) {
           tip = GST_TYPE_FIND_MAXIMUM;
           variant = "iso";
+          goto done;
+        } else if (STRNCMP (&data[new_offset], "mif1", 4) == 0) {
+          tip = GST_TYPE_FIND_MAXIMUM;
+          variant = "heif";
           goto done;
         }
         new_offset += 4;
@@ -4073,7 +4150,7 @@ static GstStaticCaps tiff_le_caps = GST_STATIC_CAPS ("image/tiff, "
     "endianness = (int) LITTLE_ENDIAN");
 #define TIFF_LE_CAPS (gst_static_caps_get(&tiff_le_caps))
 static void
-tiff_type_find (GstTypeFind * tf, gpointer ununsed)
+tiff_type_find (GstTypeFind * tf, gpointer unused)
 {
   const guint8 *data = gst_type_find_peek (tf, 0, 8);
   guint8 le_header[4] = { 0x49, 0x49, 0x2A, 0x00 };
@@ -4092,7 +4169,7 @@ tiff_type_find (GstTypeFind * tf, gpointer ununsed)
 static GstStaticCaps exr_caps = GST_STATIC_CAPS ("image/x-exr");
 #define EXR_CAPS (gst_static_caps_get(&exr_caps))
 static void
-exr_type_find (GstTypeFind * tf, gpointer ununsed)
+exr_type_find (GstTypeFind * tf, gpointer unused)
 {
   const guint8 *data = gst_type_find_peek (tf, 0, 8);
 
@@ -4127,7 +4204,7 @@ static GstStaticCaps pnm_caps = GST_STATIC_CAPS ("image/x-portable-bitmap; "
     ((c) == ' ' || (c) == '\r' || (c) == '\n' || (c) == 't')
 
 static void
-pnm_type_find (GstTypeFind * tf, gpointer ununsed)
+pnm_type_find (GstTypeFind * tf, gpointer unused)
 {
   const gchar *media_type = NULL;
   DataScanCtx c = { 0, NULL, 0 };
@@ -4226,7 +4303,7 @@ static GstStaticCaps sds_caps = GST_STATIC_CAPS ("audio/x-sds");
 
 #define SDS_CAPS (gst_static_caps_get(&sds_caps))
 static void
-sds_type_find (GstTypeFind * tf, gpointer ununsed)
+sds_type_find (GstTypeFind * tf, gpointer unused)
 {
   const guint8 *data = gst_type_find_peek (tf, 0, 4);
   guint8 mask[4] = { 0xFF, 0xFF, 0x80, 0xFF };
@@ -4247,7 +4324,7 @@ static GstStaticCaps ircam_caps = GST_STATIC_CAPS ("audio/x-ircam");
 
 #define IRCAM_CAPS (gst_static_caps_get(&ircam_caps))
 static void
-ircam_type_find (GstTypeFind * tf, gpointer ununsed)
+ircam_type_find (GstTypeFind * tf, gpointer unused)
 {
   const guint8 *data = gst_type_find_peek (tf, 0, 4);
   guint8 mask[4] = { 0xFF, 0xFF, 0xF8, 0xFF };
@@ -4476,7 +4553,7 @@ static GstStaticCaps matroska_caps = GST_STATIC_CAPS ("video/x-matroska");
 
 #define MATROSKA_CAPS (gst_static_caps_get(&matroska_caps))
 static void
-matroska_type_find (GstTypeFind * tf, gpointer ununsed)
+matroska_type_find (GstTypeFind * tf, gpointer unused)
 {
   GstTypeFindProbability prob;
   GstMatroskaInfo info = { 0, };
@@ -4545,7 +4622,7 @@ static GstStaticCaps mxf_caps = GST_STATIC_CAPS ("application/mxf");
  * not contain the partition pack key.
  */
 static void
-mxf_type_find (GstTypeFind * tf, gpointer ununsed)
+mxf_type_find (GstTypeFind * tf, gpointer unused)
 {
   static const guint8 partition_pack_key[] =
       { 0x06, 0x0e, 0x2b, 0x34, 0x02, 0x05, 0x01, 0x01, 0x0d, 0x01, 0x02, 0x01,
@@ -5327,6 +5404,26 @@ vivo_type_find (GstTypeFind * tf, gpointer unused)
 /*** XDG MIME typefinder (to avoid false positives mostly) ***/
 
 #ifdef USE_GIO
+static gboolean
+xdgmime_validate_name (const gchar * name)
+{
+  const gchar *s;
+
+  if (G_UNLIKELY (!g_ascii_isalpha (*name))) {
+    return FALSE;
+  }
+
+  /* FIXME: test name string more */
+  s = &name[1];
+  while (*s && (g_ascii_isalnum (*s) || strchr ("/-_.:+", *s) != NULL))
+    s++;
+  if (G_UNLIKELY (*s != '\0')) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 static void
 xdgmime_typefind (GstTypeFind * find, gpointer user_data)
 {
@@ -5367,6 +5464,12 @@ xdgmime_typefind (GstTypeFind * find, gpointer user_data)
   if (g_str_has_prefix (mimetype, "audio/") ||
       g_str_has_prefix (mimetype, "video/")) {
     GST_LOG ("Ignoring audio/video mime type");
+    g_free (mimetype);
+    return;
+  }
+
+  if (!xdgmime_validate_name (mimetype)) {
+    GST_LOG ("Ignoring mimetype with invalid structure name");
     g_free (mimetype);
     return;
   }
@@ -5941,6 +6044,12 @@ plugin_init (GstPlugin * plugin)
       GST_RANK_SECONDARY, swf_type_find, "swf,swfl", SWF_CAPS, NULL, NULL);
   TYPE_FIND_REGISTER (plugin, "application/xges",
       GST_RANK_PRIMARY, xges_type_find, "xges", XGES_CAPS, NULL, NULL);
+  TYPE_FIND_REGISTER (plugin, "application/vnd.apple-xmeml+xml",
+      GST_RANK_SECONDARY, xmeml_type_find, "xmeml", XMEML_CAPS, NULL, NULL);
+  TYPE_FIND_REGISTER (plugin, "application/vnd.apple-fcp+xml",
+      GST_RANK_SECONDARY, fcpxml_type_find, "fcpxml", FCPXML_CAPS, NULL, NULL);
+  TYPE_FIND_REGISTER (plugin, "application/vnd.pixar.opentimelineio+json",
+      GST_RANK_SECONDARY, otio_type_find, "otio", OTIO_CAPS, NULL, NULL);
   TYPE_FIND_REGISTER (plugin, "application/dash+xml",
       GST_RANK_PRIMARY, dash_mpd_type_find, "mpd,MPD", DASH_CAPS, NULL, NULL);
   TYPE_FIND_REGISTER (plugin, "application/vnd.ms-sstr+xml",

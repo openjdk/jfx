@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.tk.*;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import javafx.application.ConditionalFeature;
@@ -78,7 +78,7 @@ public class StubToolkit extends Toolkit {
 
     private Map<Object, Object> contextMap = new HashMap<Object, Object>();
 
-    private StubMasterTimer masterTimer = new StubMasterTimer();
+    private StubPrimaryTimer primaryTimer = new StubPrimaryTimer();
 
     private PerformanceTracker performanceTracker = new StubPerformanceTracker();
 
@@ -335,8 +335,8 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public AbstractMasterTimer getMasterTimer() {
-        return masterTimer;
+    public AbstractPrimaryTimer getPrimaryTimer() {
+        return primaryTimer;
     }
 
     @Override
@@ -373,7 +373,7 @@ public class StubToolkit extends Toolkit {
         pulseRequested = false;
     }
 
-    // do nothing -- bringing in FrameJob and MasterTimer also bring in
+    // do nothing -- bringing in FrameJob and PrimaryTimer also bring in
     // Settings and crap which isn't setup for the testing stuff because
     // we don't run through a RuntimeProvider or do normal startup
     // public @Override public void triggerNextPulse():Void { }
@@ -680,7 +680,7 @@ public class StubToolkit extends Toolkit {
     }
 
     public void setCurrentTime(long millis) {
-        masterTimer.setCurrentTime(millis);
+        primaryTimer.setCurrentTime(millis);
     }
 
     public void handleAnimation() {
@@ -748,6 +748,11 @@ public class StubToolkit extends Toolkit {
 
     public KeyCode getPlatformShortcutKey() {
         return platformShortcutKey;
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        return Optional.empty();
     }
 
     private DndDelegate dndDelegate;

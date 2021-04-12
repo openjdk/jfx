@@ -26,10 +26,10 @@ namespace JSC {
 
 class ObjectPrototype;
 
-// Superclass for ErrorPrototype and NativeErrorPrototype.
+// Superclass for ErrorPrototype, NativeErrorPrototype, and AggregateErrorPrototype.
 class ErrorPrototypeBase : public JSNonFinalObject {
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
 
 protected:
     ErrorPrototypeBase(VM&, Structure*);
@@ -38,14 +38,21 @@ protected:
 
 class ErrorPrototype final : public ErrorPrototypeBase {
 public:
-    typedef ErrorPrototypeBase Base;
+    using Base = ErrorPrototypeBase;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(ErrorPrototypeBase, Base);
+        return &vm.plainObjectSpace;
+    }
 
     DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ErrorInstanceType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
     static ErrorPrototype* create(VM& vm, JSGlobalObject*, Structure* structure)
@@ -55,7 +62,7 @@ public:
         return prototype;
     }
 
-protected:
+private:
     ErrorPrototype(VM&, Structure*);
 };
 

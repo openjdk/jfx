@@ -6123,7 +6123,7 @@ public final class Bindings {
      * @param <E> the type of the {@code List} elements
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static <E> ObjectBinding<E> valueAt(final ObservableList<E> op, final int index) {
@@ -6230,7 +6230,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static BooleanBinding booleanValueAt(final ObservableList<Boolean> op, final int index) {
@@ -6345,7 +6345,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static DoubleBinding doubleValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6460,7 +6460,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static FloatBinding floatValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6575,7 +6575,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static IntegerBinding integerValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6690,7 +6690,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static LongBinding longValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6805,7 +6805,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 2.1
      */
     public static StringBinding stringValueAt(final ObservableList<String> op, final int index) {
@@ -7070,7 +7070,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableFloatArray op, final int index) {
@@ -7175,7 +7175,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
-     * @throws IllegalArgumentException if (@code index &lt; 0)
+     * @throws IllegalArgumentException if {@code index < 0}
      * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final int index) {

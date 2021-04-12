@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017, 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,162 +25,197 @@
 
 #pragma once
 
-#include "Color.h"
+#include "ColorTypes.h"
 #include <algorithm>
+#include <cmath>
+#include <functional>
 #include <math.h>
 
 namespace WebCore {
 
-struct FloatComponents {
-    FloatComponents(float a = 0, float b = 0, float c = 0, float d = 0)
-    {
-        components[0] = a;
-        components[1] = b;
-        components[2] = c;
-        components[3] = d;
-    }
+template<typename> struct SRGBA;
 
-    FloatComponents(const Color&);
+float lightness(const SRGBA<float>&);
+float luminance(const SRGBA<float>&);
+float contrastRatio(const SRGBA<float>&, const SRGBA<float>&);
 
-    FloatComponents& operator+=(const FloatComponents& rhs)
-    {
-        components[0] += rhs.components[0];
-        components[1] += rhs.components[1];
-        components[2] += rhs.components[2];
-        components[3] += rhs.components[3];
-        return *this;
-    }
+SRGBA<float> premultiplied(const SRGBA<float>&);
+SRGBA<float> unpremultiplied(const SRGBA<float>&);
 
-    FloatComponents operator+(float rhs) const
-    {
-        FloatComponents result;
-        result.components[0] = components[0] + rhs;
-        result.components[1] = components[1] + rhs;
-        result.components[2] = components[2] + rhs;
-        result.components[3] = components[3] + rhs;
-        return result;
-    }
+SRGBA<uint8_t> premultipliedFlooring(SRGBA<uint8_t>);
+SRGBA<uint8_t> premultipliedCeiling(SRGBA<uint8_t>);
+SRGBA<uint8_t> unpremultiplied(SRGBA<uint8_t>);
 
-    FloatComponents operator/(float denominator) const
-    {
-        FloatComponents result;
-        result.components[0] = components[0] / denominator;
-        result.components[1] = components[1] / denominator;
-        result.components[2] = components[2] / denominator;
-        result.components[3] = components[3] / denominator;
-        return result;
-    }
+uint8_t convertPrescaledToComponentByte(float);
 
-    FloatComponents operator*(float factor) const
-    {
-        FloatComponents result;
-        result.components[0] = components[0] * factor;
-        result.components[1] = components[1] * factor;
-        result.components[2] = components[2] * factor;
-        result.components[3] = components[3] * factor;
-        return result;
-    }
+uint8_t convertToComponentByte(float);
+constexpr float convertToComponentFloat(uint8_t);
 
-    FloatComponents abs() const
-    {
-        FloatComponents result;
-        result.components[0] = fabs(components[0]);
-        result.components[1] = fabs(components[1]);
-        result.components[2] = fabs(components[2]);
-        result.components[3] = fabs(components[3]);
-        return result;
-    }
+template<typename ComponentType> constexpr uint8_t clampToComponentByte(ComponentType);
+template<typename ComponentType> constexpr float clampToComponentFloat(ComponentType);
 
-    float components[4];
-};
+template<typename T> T convertComponentByteTo(uint8_t);
+template<typename T> T convertComponentFloatTo(float);
 
-struct ColorComponents {
-    ColorComponents(const FloatComponents&);
+template<template<typename> typename ColorType> ColorType<uint8_t> convertToComponentBytes(const ColorType<float>&);
+template<template<typename> typename ColorType> constexpr ColorType<float> convertToComponentFloats(const ColorType<uint8_t>&);
 
-    static ColorComponents fromRGBA(unsigned pixel)
-    {
-        return ColorComponents((pixel >> 24) & 0xFF, (pixel >> 16) & 0xFF, (pixel >> 8) & 0xFF, pixel & 0xFF);
-    }
+template<template<typename> typename ColorType, typename... ComponentType> constexpr ColorType<uint8_t> clampToComponentBytes(ComponentType...);
+template<template<typename> typename ColorType, typename... ComponentType> constexpr ColorType<float> clampToComponentFloats(ComponentType...);
 
-    ColorComponents(uint8_t a = 0, uint8_t b = 0, uint8_t c = 0, uint8_t d = 0)
-    {
-        components[0] = a;
-        components[1] = b;
-        components[2] = c;
-        components[3] = d;
-    }
+template<typename ColorType, typename Functor> ColorType colorByModifingEachNonAlphaComponent(const ColorType&, Functor&&);
 
-    unsigned toRGBA() const
-    {
-        return components[0] << 24 | components[1] << 16 | components[2] << 8 | components[3];
-    }
+template<typename ColorType> constexpr ColorType colorWithOverridenAlpha(const ColorType&, uint8_t overrideAlpha);
+template<typename ColorType> ColorType colorWithOverridenAlpha(const ColorType&, float overrideAlpha);
 
-    uint8_t components[4] { };
-};
+template<typename ColorType> constexpr ColorType invertedColorWithOverridenAlpha(const ColorType&, uint8_t overrideAlpha);
+template<typename ColorType> ColorType invertedColorWithOverridenAlpha(const ColorType&, float overrideAlpha);
 
-inline ColorComponents perComponentMax(const ColorComponents& a, const ColorComponents& b)
+template<typename ColorType> constexpr bool isBlack(const ColorType&);
+template<typename ColorType> constexpr bool isWhite(const ColorType&);
+
+constexpr uint16_t fastMultiplyBy255(uint16_t);
+constexpr uint16_t fastDivideBy255(uint16_t);
+
+
+inline uint8_t convertPrescaledToComponentByte(float f)
 {
-    return {
-        std::max(a.components[0], b.components[0]),
-        std::max(a.components[1], b.components[1]),
-        std::max(a.components[2], b.components[2]),
-        std::max(a.components[3], b.components[3])
-    };
+    return std::clamp(std::lround(f), 0l, 255l);
 }
 
-inline ColorComponents perComponentMin(const ColorComponents& a, const ColorComponents& b)
+inline uint8_t convertToComponentByte(float f)
 {
-    return {
-        std::min(a.components[0], b.components[0]),
-        std::min(a.components[1], b.components[1]),
-        std::min(a.components[2], b.components[2]),
-        std::min(a.components[3], b.components[3])
-    };
+    return std::clamp(std::lround(f * 255.0f), 0l, 255l);
 }
 
-inline uint8_t clampedColorComponent(float f)
+constexpr float convertToComponentFloat(uint8_t byte)
 {
-    // See also colorFloatToRGBAByte().
-    return std::max(0, std::min(static_cast<int>(lroundf(255.0f * f)), 255));
+    return byte / 255.0f;
 }
 
-inline unsigned byteOffsetOfPixel(unsigned x, unsigned y, unsigned rowBytes)
+template<typename ComponentType> constexpr uint8_t clampToComponentByte(ComponentType component)
 {
-    const unsigned bytesPerPixel = 4;
-    return x * bytesPerPixel + y * rowBytes;
+    return std::clamp<ComponentType>(component, 0, 255);
 }
 
-// 0-1 components, result is clamped.
-float linearToSRGBColorComponent(float);
-float sRGBToLinearColorComponent(float);
+template<typename ComponentType> constexpr float clampToComponentFloat(ComponentType component)
+{
+    return std::clamp<ComponentType>(component, 0, 1);
+}
 
-FloatComponents sRGBColorToLinearComponents(const Color&);
-FloatComponents sRGBToLinearComponents(const FloatComponents&);
-FloatComponents linearToSRGBComponents(const FloatComponents&);
+template<> constexpr uint8_t convertComponentByteTo<uint8_t>(uint8_t value)
+{
+    return value;
+}
 
-FloatComponents sRGBToHSL(const FloatComponents&);
-FloatComponents HSLToSRGB(const FloatComponents&);
+template<> constexpr float convertComponentByteTo<float>(uint8_t value)
+{
+    return convertToComponentFloat(value);
+}
 
-float luminance(const FloatComponents& sRGBCompontents);
-float contrastRatio(const FloatComponents&, const FloatComponents&);
+template<> inline uint8_t convertComponentFloatTo<uint8_t>(float value)
+{
+    return convertToComponentByte(value);
+}
 
-class ColorMatrix {
-public:
-    static ColorMatrix grayscaleMatrix(float);
-    static ColorMatrix saturationMatrix(float);
-    static ColorMatrix hueRotateMatrix(float angleInDegrees);
-    static ColorMatrix sepiaMatrix(float);
+template<> inline float convertComponentFloatTo<float>(float value)
+{
+    return clampToComponentFloat(value);
+}
 
-    ColorMatrix();
-    ColorMatrix(float[20]);
+template<template<typename> typename ColorType> inline ColorType<uint8_t> convertToComponentBytes(const ColorType<float>& color)
+{
+    auto components = asColorComponents(color);
+    return { convertToComponentByte(components[0]), convertToComponentByte(components[1]), convertToComponentByte(components[2]), convertToComponentByte(components[3]) };
+}
 
-    void transformColorComponents(FloatComponents&) const;
+template<template<typename> typename ColorType> constexpr ColorType<float> convertToComponentFloats(const ColorType<uint8_t>& color)
+{
+    auto components = asColorComponents(color);
+    return { convertToComponentFloat(components[0]), convertToComponentFloat(components[1]), convertToComponentFloat(components[2]), convertToComponentFloat(components[3]) };
+}
 
-private:
-    void makeIdentity();
+template<template<typename> typename ColorType, typename... ComponentType> constexpr ColorType<uint8_t> clampToComponentBytes(ComponentType... components)
+{
+    return { clampToComponentByte(components)... };
+}
 
-    float m_matrix[4][5];
-};
+template<template<typename> typename ColorType, typename... ComponentType> constexpr ColorType<float> clampToComponentFloats(ComponentType... components)
+{
+    return { clampToComponentFloat(components)... };
+}
+
+template<typename ColorType, typename Functor> ColorType colorByModifingEachNonAlphaComponent(const ColorType& color, Functor&& functor)
+{
+    // FIXME: This should be made to work with colors that don't use the names red, green, and blue for their channels.
+    auto copy = color;
+    copy.red = std::invoke(functor, color.red);
+    copy.green = std::invoke(functor, color.green);
+    copy.blue = std::invoke(std::forward<Functor>(functor), color.blue);
+    return copy;
+}
+
+template<typename ColorType> constexpr ColorType colorWithOverridenAlpha(const ColorType& color, uint8_t overrideAlpha)
+{
+    auto copy = color;
+    copy.alpha = convertComponentByteTo<decltype(copy.alpha)>(overrideAlpha);
+    return copy;
+}
+
+template<typename ColorType> ColorType colorWithOverridenAlpha(const ColorType& color, float overrideAlpha)
+{
+    auto copy = color;
+    copy.alpha = convertComponentFloatTo<decltype(copy.alpha)>(overrideAlpha);
+    return copy;
+}
+
+template<typename ColorType> constexpr ColorType invertedColorWithOverridenAlpha(const ColorType& color, uint8_t overrideAlpha)
+{
+    auto copy = colorByModifingEachNonAlphaComponent(color, [] (auto component) {
+        return ComponentTraits<decltype(component)>::maxValue - component;
+    });
+    copy.alpha = convertComponentByteTo<decltype(copy.alpha)>(overrideAlpha);
+    return copy;
+}
+
+template<typename ColorType> ColorType invertedColorWithOverridenAlpha(const ColorType& color, float overrideAlpha)
+{
+    auto copy = colorByModifingEachNonAlphaComponent(color, [] (auto component) {
+        return ComponentTraits<decltype(component)>::maxValue - component;
+    });
+    copy.alpha = convertComponentFloatTo<decltype(copy.alpha)>(overrideAlpha);
+    return copy;
+}
+
+template<typename ColorType> constexpr bool isBlack(const ColorType& color)
+{
+    constexpr auto min = ComponentTraits<typename ColorType::ComponentType>::minValue;
+    constexpr auto max = ComponentTraits<typename ColorType::ComponentType>::maxValue;
+
+    auto [c1, c2, c3, alpha] = color;
+    return c1 == min && c2 == min && c3 == min && alpha == max;
+}
+
+template<typename ColorType> constexpr bool isWhite(const ColorType& color)
+{
+    constexpr auto max = ComponentTraits<typename ColorType::ComponentType>::maxValue;
+
+    auto [c1, c2, c3, alpha] = color;
+    return c1 == max && c2 == max && c3 == max && alpha == max;
+}
+
+constexpr uint16_t fastMultiplyBy255(uint16_t value)
+{
+    return (value << 8) - value;
+}
+
+constexpr uint16_t fastDivideBy255(uint16_t value)
+{
+    // While this is an approximate algorithm for division by 255, it gives perfectly accurate results for 16-bit values.
+    // FIXME: Since this gives accurate results for 16-bit values, we should get this optimization into compilers like clang.
+    uint16_t approximation = value >> 8;
+    uint16_t remainder = value - (approximation * 255) + 1;
+    return approximation + (remainder >> 8);
+}
 
 } // namespace WebCore
-

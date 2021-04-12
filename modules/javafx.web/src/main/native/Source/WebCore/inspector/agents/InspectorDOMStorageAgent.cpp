@@ -76,22 +76,22 @@ void InspectorDOMStorageAgent::willDestroyFrontendAndBackend(Inspector::Disconne
 
 void InspectorDOMStorageAgent::enable(ErrorString& errorString)
 {
-    if (m_instrumentingAgents.inspectorDOMStorageAgent() == this) {
+    if (m_instrumentingAgents.enabledDOMStorageAgent() == this) {
         errorString = "DOMStorage domain already enabled"_s;
         return;
     }
 
-    m_instrumentingAgents.setInspectorDOMStorageAgent(this);
+    m_instrumentingAgents.setEnabledDOMStorageAgent(this);
 }
 
 void InspectorDOMStorageAgent::disable(ErrorString& errorString)
 {
-    if (m_instrumentingAgents.inspectorDOMStorageAgent() != this) {
+    if (m_instrumentingAgents.enabledDOMStorageAgent() != this) {
         errorString = "DOMStorage domain already disabled"_s;
         return;
     }
 
-    m_instrumentingAgents.setInspectorDOMStorageAgent(nullptr);
+    m_instrumentingAgents.setEnabledDOMStorageAgent(nullptr);
 }
 
 void InspectorDOMStorageAgent::getDOMStorageItems(ErrorString& errorString, const JSON::Object& storageId, RefPtr<JSON::ArrayOf<JSON::ArrayOf<String>>>& items)
@@ -143,6 +143,18 @@ void InspectorDOMStorageAgent::removeDOMStorageItem(ErrorString& errorString, co
     }
 
     storageArea->removeItem(frame, key);
+}
+
+void InspectorDOMStorageAgent::clearDOMStorageItems(ErrorString& errorString, const JSON::Object& storageId)
+{
+    Frame* frame;
+    auto storageArea = findStorageArea(errorString, storageId, frame);
+    if (!storageArea) {
+        errorString = "Missing storage for given storageId"_s;
+        return;
+    }
+
+    storageArea->clear(frame);
 }
 
 String InspectorDOMStorageAgent::storageId(Storage& storage)

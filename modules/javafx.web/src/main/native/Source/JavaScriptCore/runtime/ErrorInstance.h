@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -29,7 +29,7 @@ namespace JSC {
 class ErrorInstance : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesAnyFormOfGetPropertyNames;
     static constexpr bool needsDestruction = true;
 
     static void destroy(JSCell* cell)
@@ -56,9 +56,7 @@ public:
     static ErrorInstance* create(JSGlobalObject* globalObject, VM& vm, Structure* structure, const String& message, SourceAppender appender = nullptr, RuntimeType type = TypeNothing, bool useCurrentFrame = true)
     {
         ErrorInstance* instance = new (NotNull, allocateCell<ErrorInstance>(vm.heap)) ErrorInstance(vm, structure);
-        instance->m_sourceAppender = appender;
-        instance->m_runtimeTypeForCause = type;
-        instance->finishCreation(globalObject, vm, message, useCurrentFrame);
+        instance->finishCreation(vm, globalObject, message, appender, type, useCurrentFrame);
         return instance;
     }
 
@@ -92,14 +90,15 @@ public:
 protected:
     explicit ErrorInstance(VM&, Structure*);
 
-    void finishCreation(JSGlobalObject*, VM&, const String&, bool useCurrentFrame = true);
+    void finishCreation(VM&, JSGlobalObject*, const String&, SourceAppender = nullptr, RuntimeType = TypeNothing, bool useCurrentFrame = true);
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
     static void getStructurePropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
-    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
+    static String toStringName(const JSObject*, JSGlobalObject*);
 
     void computeErrorInfo(VM&);
 

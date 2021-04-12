@@ -58,7 +58,12 @@ public:
     virtual bool cookiesEnabled(const Document&) const;
     virtual std::pair<String, SecureCookiesAccessed> cookieRequestHeaderFieldValue(const URL& firstParty, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const;
     virtual bool getRawCookies(const Document&, const URL&, Vector<Cookie>&) const;
+    virtual void setRawCookie(const Document&, const Cookie&);
     virtual void deleteCookie(const Document&, const URL&, const String& cookieName);
+
+    // Cookie Cache.
+    virtual void clearCache() { }
+    virtual void clearCacheForHost(const String&) { }
 
     virtual ~CookieJar();
 protected:

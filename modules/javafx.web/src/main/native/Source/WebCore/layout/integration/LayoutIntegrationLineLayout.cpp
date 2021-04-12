@@ -98,6 +98,9 @@ void LineLayout::updateStyle()
 
 void LineLayout::layout()
 {
+    if (!rootLayoutBox().hasInFlowOrFloatingChild())
+        return;
+
     prepareLayoutState();
     prepareFloatingState();
 
@@ -107,7 +110,42 @@ void LineLayout::layout()
     auto horizontalConstraints = Layout::HorizontalConstraints { m_flow.borderAndPaddingStart(), m_flow.contentSize().width() };
     auto verticalConstraints = Layout::VerticalConstraints { m_flow.borderAndPaddingBefore(), { } };
 
-    inlineFormattingContext.layoutInFlowContent(invalidationState, horizontalConstraints, verticalConstraints);
+    inlineFormattingContext.layoutInFlowContent(invalidationState, { horizontalConstraints, verticalConstraints });
+    m_inlineFormattingState.shrinkDisplayInlineContent();
+}
+
+void LineLayout::prepareLayoutState()
+{
+    m_layoutState.setViewportSize(m_flow.frame().view()->size());
+}
+
+void LineLayout::prepareFloatingState()
+{
+    auto& floatingState = m_inlineFormattingState.floatingState();
+    floatingState.clear();
+
+    if (!m_flow.containsFloats())
+        return;
+
+    for (auto& floatingObject : *m_flow.floatingObjectSet()) {
+        auto& rect = floatingObject->frameRect();
+        auto position = floatingObject->type() == FloatingObject::FloatRight
+            ? Layout::FloatingState::FloatItem::Position::Right
+            : Layout::FloatingState::FloatItem::Position::Left;
+        auto box = Display::Box { };
+        // FIXME: We are flooring here for legacy compatibility.
+        //        See FloatingObjects::intervalForFloatingObject.
+        auto y = rect.y().floor();
+        auto maxY = rect.maxY().floor();
+        box.setTopLeft({ rect.x(), y });
+        box.setContentBoxWidth(rect.width());
+        box.setContentBoxHeight(maxY - y);
+        box.setBorder({ });
+        box.setPadding({ });
+        box.setHorizontalMargin({ });
+        box.setVerticalMargin({ });
+        floatingState.append({ position, box });
+    }
 }
 
 void LineLayout::prepareLayoutState()
@@ -242,12 +280,12 @@ LineLayoutTraversal::ElementBoxIterator LineLayout::elementBoxFor(const RenderLi
     return { };
 }
 
-const Layout::Container& LineLayout::rootLayoutBox() const
+const Layout::ContainerBox& LineLayout::rootLayoutBox() const
 {
     return m_boxTree.rootLayoutBox();
 }
 
-Layout::Container& LineLayout::rootLayoutBox()
+Layout::ContainerBox& LineLayout::rootLayoutBox()
 {
     return m_boxTree.rootLayoutBox();
 }
@@ -267,11 +305,11 @@ void LineLayout::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     paintRect.moveBy(-paintOffset);
 
     for (auto& run : inlineContent.runsForRect(paintRect)) {
-        if (!run.textContext())
+        if (!run.textContent())
             continue;
 
-        auto& textContext = *run.textContext();
-        if (!textContext.length())
+        auto& textContent = *run.textContent();
+        if (!textContent.length())
             continue;
 
         auto& style = run.style();
@@ -291,14 +329,12 @@ void LineLayout::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 
         auto& lineBox = inlineContent.lineBoxForRun(run);
         auto baselineOffset = paintOffset.y() + lineBox.top() + lineBox.baselineOffset();
-
-        auto behavior = textContext.expansion() ? textContext.expansion()->behavior : DefaultExpansion;
-        auto horizontalExpansion = textContext.expansion() ? textContext.expansion()->horizontalExpansion : 0;
+        auto expansion = run.expansion();
 
         String textWithHyphen;
-        if (textContext.needsHyphen())
-            textWithHyphen = makeString(textContext.content(), style.hyphenString());
-        TextRun textRun { !textWithHyphen.isEmpty() ? textWithHyphen : textContext.content(), run.left() - lineBox.left(), horizontalExpansion, behavior };
+        if (textContent.needsHyphen())
+            textWithHyphen = makeString(textContent.content(), style.hyphenString());
+        TextRun textRun { !textWithHyphen.isEmpty() ? textWithHyphen : textContent.content(), run.left() - lineBox.left(), expansion.horizontalExpansion, expansion.behavior };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
         FloatPoint textOrigin { rect.x() + paintOffset.x(), roundToDevicePixel(baselineOffset, deviceScaleFactor) };
 
@@ -347,7 +383,7 @@ bool LineLayout::hitTest(const HitTestRequest& request, HitTestResult& result, c
         auto& renderer = const_cast<RenderObject&>(*m_boxTree.rendererForLayoutBox(run.layoutBox()));
 
         renderer.updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-        if (result.addNodeToListBasedTestResult(renderer.node(), request, locationInContainer, runRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(renderer.nodeForHitTest(), request, locationInContainer, runRect) == HitTestProgress::Stop)
             return true;
     }
 
@@ -359,7 +395,7 @@ ShadowData* LineLayout::debugTextShadow()
     if (!m_flow.settings().simpleLineLayoutDebugBordersEnabled())
         return nullptr;
 
-    static NeverDestroyed<ShadowData> debugTextShadow(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, Color(0, 0, 150, 150));
+    static NeverDestroyed<ShadowData> debugTextShadow(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, SRGBA<uint8_t> { 0, 0, 150, 150 });
     return &debugTextShadow.get();
 }
 

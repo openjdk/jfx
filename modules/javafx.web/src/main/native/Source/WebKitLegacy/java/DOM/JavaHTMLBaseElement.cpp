@@ -47,7 +47,7 @@ extern "C" {
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->href());
+    return JavaReturn<String>(env, IMPL->href().string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLBaseElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)

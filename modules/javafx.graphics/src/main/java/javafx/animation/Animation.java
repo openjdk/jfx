@@ -48,7 +48,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
 import com.sun.javafx.animation.TickCalculation;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.animation.shared.ClipEnvelope;
 import com.sun.scenario.animation.shared.PulseReceiver;
 
@@ -149,10 +149,10 @@ public abstract class Animation {
     private long startTime;
     private long pauseTime;
     private boolean paused = false;
-    private final AbstractMasterTimer timer;
+    private final AbstractPrimaryTimer timer;
 
     // Access control context, captured whenever we add this pulse receiver to
-    // the master timer (which is called when an animation is played or resumed)
+    // the PrimaryTimer (which is called when an animation is played or resumed)
     private AccessControlContext accessCtrlCtx = null;
 
     private long now() {
@@ -1133,7 +1133,7 @@ public abstract class Animation {
         this.targetFramerate = targetFramerate;
         this.resolution = (int) Math.max(1, Math.round(TickCalculation.TICKS_PER_SECOND / targetFramerate));
         this.clipEnvelope = ClipEnvelope.create(this);
-        this.timer = Toolkit.getToolkit().getMasterTimer();
+        this.timer = Toolkit.getToolkit().getPrimaryTimer();
     }
 
     /**
@@ -1141,13 +1141,13 @@ public abstract class Animation {
      */
     protected Animation() {
         this.resolution = 1;
-        this.targetFramerate = TickCalculation.TICKS_PER_SECOND / Toolkit.getToolkit().getMasterTimer().getDefaultResolution();
+        this.targetFramerate = TickCalculation.TICKS_PER_SECOND / Toolkit.getToolkit().getPrimaryTimer().getDefaultResolution();
         this.clipEnvelope = ClipEnvelope.create(this);
-        this.timer = Toolkit.getToolkit().getMasterTimer();
+        this.timer = Toolkit.getToolkit().getPrimaryTimer();
     }
 
     // These constructors are only for testing purposes
-    Animation(AbstractMasterTimer timer) {
+    Animation(AbstractPrimaryTimer timer) {
         this.resolution = 1;
         this.targetFramerate = TickCalculation.TICKS_PER_SECOND / timer.getDefaultResolution();
         this.clipEnvelope = ClipEnvelope.create(this);
@@ -1155,7 +1155,7 @@ public abstract class Animation {
     }
 
     // These constructors are only for testing purposes
-    Animation(AbstractMasterTimer timer, ClipEnvelope clipEnvelope, int resolution) {
+    Animation(AbstractPrimaryTimer timer, ClipEnvelope clipEnvelope, int resolution) {
         this.resolution = resolution;
         this.targetFramerate = TickCalculation.TICKS_PER_SECOND / resolution;
         this.clipEnvelope = clipEnvelope;

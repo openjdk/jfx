@@ -11,6 +11,8 @@
 		<attributes>
 			<attribute name="test" value="true"/>
 			<attribute name="optional" value="true"/>
+			<attribute name="module" value="true"/>
+			<attribute name="add-reads" value="javafx.base=java.management:javafx.base=jdk.management"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">

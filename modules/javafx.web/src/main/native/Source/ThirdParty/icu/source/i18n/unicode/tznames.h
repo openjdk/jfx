@@ -15,6 +15,8 @@
  */
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/uloc.h"
@@ -137,7 +139,7 @@ public:
     /**
      * Return true if the given TimeZoneNames objects are semantically equal.
      * @param other the object to be compared with.
-     * @return Return TRUE if the given Format objects are semantically equal.
+     * @return Return true if the given Format objects are semantically equal.
      * @stable ICU 50
      */
     virtual UBool operator==(const TimeZoneNames& other) const = 0;
@@ -146,7 +148,7 @@ public:
      * Return true if the given TimeZoneNames objects are not semantically
      * equal.
      * @param other the object to be compared with.
-     * @return Return TRUE if the given Format objects are not semantically equal.
+     * @return Return true if the given Format objects are not semantically equal.
      * @stable ICU 50
      */
     UBool operator!=(const TimeZoneNames& other) const { return !operator==(other); }
@@ -371,7 +373,7 @@ public:
          * Gets the zone ID of a match at the specified index.
          * @param idx The index
          * @param tzID Receives the zone ID.
-         * @return TRUE if the zone ID was set to tzID.
+         * @return true if the zone ID was set to tzID.
          * @internal
          */
         UBool getTimeZoneIDAt(int32_t idx, UnicodeString& tzID) const;
@@ -380,7 +382,7 @@ public:
          * Gets the metazone ID of a match at the specified index.
          * @param idx The index
          * @param mzID Receives the metazone ID
-         * @return TRUE if the meta zone ID was set to mzID.
+         * @return true if the meta zone ID was set to mzID.
          * @internal
          */
         UBool getMetaZoneIDAt(int32_t idx, UnicodeString& mzID) const;
@@ -411,4 +413,7 @@ public:
 U_NAMESPACE_END
 
 #endif
+
+#endif /* U_SHOW_CPLUSPLUS_API */
+
 #endif

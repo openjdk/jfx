@@ -257,6 +257,38 @@ void RenderImage::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
 #endif
 }
 
+bool RenderImage::shouldCollapseToEmpty() const
+{
+    auto imageRepresentsNothing = [&] {
+        if (!element()->hasAttribute(HTMLNames::altAttr))
+            return false;
+        return imageResource().errorOccurred() && m_altText.isEmpty();
+    };
+    if (!element()) {
+        // Images with no associated elements do not fall under the category of unwanted content.
+        return false;
+    }
+    if (!isInline())
+        return false;
+    if (!imageRepresentsNothing())
+        return false;
+    return document().inNoQuirksMode() || (style().logicalWidth().isAuto() && style().logicalHeight().isAuto());
+}
+
+LayoutUnit RenderImage::computeReplacedLogicalWidth(ShouldComputePreferred shouldComputePreferred) const
+{
+    if (shouldCollapseToEmpty())
+        return { };
+    return RenderReplaced::computeReplacedLogicalWidth(shouldComputePreferred);
+}
+
+LayoutUnit RenderImage::computeReplacedLogicalHeight(Optional<LayoutUnit> estimatedUsedWidth) const
+{
+    if (shouldCollapseToEmpty())
+        return { };
+    return RenderReplaced::computeReplacedLogicalHeight(estimatedUsedWidth);
+}
+
 void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 {
     if (renderTreeBeingDestroyed())
@@ -264,6 +296,11 @@ void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
 
     if (hasVisibleBoxDecorations() || hasMask() || hasShapeOutside())
         RenderReplaced::imageChanged(newImage, rect);
+
+    if (shouldCollapseToEmpty()) {
+        // Image might need resizing when we are at the final state.
+        setNeedsLayout();
+    }
 
     if (newImage != imageResource().imagePtr() || !newImage)
         return;
@@ -288,6 +325,11 @@ void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
     repaintOrMarkForLayout(imageSizeChange, rect);
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->deferRecomputeIsIgnoredIfNeeded(element());
+
+#if ENABLE(LAYOUT_FORMATTING_CONTEXT)
+    if (RuntimeEnabledFeatures::sharedFeatures().layoutFormattingContextEnabled())
+        view().frameView().layoutContext().invalidateLayoutTreeContent();
+#endif
 }
 
 void RenderImage::updateIntrinsicSizeIfNeeded(const LayoutSize& newSize)
@@ -361,7 +403,7 @@ void RenderImage::repaintOrMarkForLayout(ImageSizeChangeType imageSizeChange, co
     contentChanged(ImageChanged);
 }
 
-void RenderImage::notifyFinished(CachedResource& newImage)
+void RenderImage::notifyFinished(CachedResource& newImage, const NetworkLoadMetrics& metrics)
 {
     if (renderTreeBeingDestroyed())
         return;
@@ -376,6 +418,8 @@ void RenderImage::notifyFinished(CachedResource& newImage)
 
     if (is<HTMLImageElement>(element()))
         page().didFinishLoadingImageForElement(downcast<HTMLImageElement>(*element()));
+
+    RenderReplaced::notifyFinished(newImage, metrics);
 }
 
 void RenderImage::setImageDevicePixelRatio(float factor)
@@ -426,8 +470,13 @@ void RenderImage::paintIncompleteImageOutline(PaintInfo& paintInfo, LayoutPoint 
     GraphicsContext& context = paintInfo.context();
     context.setStrokeStyle(SolidStroke);
     context.setStrokeColor(Color::lightGray);
-    context.setFillColor(Color::transparent);
+    context.setFillColor(Color::transparentBlack);
     context.drawRect(snapRectToDevicePixels(LayoutRect({ paintOffset.x() + leftBorder + leftPadding, paintOffset.y() + topBorder + topPadding }, contentSize), document().deviceScaleFactor()), borderWidth);
+}
+
+static bool isDeferredImage(Element* element)
+{
+    return is<HTMLImageElement>(element) && downcast<HTMLImageElement>(element)->isDeferred();
 }
 
 void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -443,7 +492,14 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     float deviceScaleFactor = document().deviceScaleFactor();
     LayoutUnit missingImageBorderWidth(1 / deviceScaleFactor);
 
-    if (!imageResource().cachedImage() || shouldDisplayBrokenImageIcon()) {
+    if (context.detectingContentfulPaint()) {
+        if (!context.contenfulPaintDetected() && !isDeferredImage(element()) && cachedImage() && cachedImage()->canRender(this, deviceScaleFactor) && !contentSize.isEmpty())
+            context.setContentfulPaintDetected();
+
+        return;
+    }
+
+    if (!imageResource().cachedImage() || isDeferredImage(element()) || shouldDisplayBrokenImageIcon()) {
         if (paintInfo.phase == PaintPhase::Selection)
             return;
 
@@ -858,15 +914,6 @@ RenderBox* RenderImage::embeddedContentBox() const
         return downcast<SVGImage>(*cachedImage->image()).embeddedContentBox();
 
     return nullptr;
-}
-
-void RenderImage::incrementVisuallyNonEmptyPixelCountIfNeeded(const IntSize& size)
-{
-    if (m_didIncrementVisuallyNonEmptyPixelCount)
-        return;
-
-    view().frameView().incrementVisuallyNonEmptyPixelCount(size);
-    m_didIncrementVisuallyNonEmptyPixelCount = true;
 }
 
 } // namespace WebCore

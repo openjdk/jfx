@@ -51,26 +51,26 @@ enum class LivenessCalculationPoint : uint8_t {
 class BytecodeLivenessPropagation {
 public:
     template<typename CodeBlockType, typename UseFunctor>
-    static void stepOverInstructionUse(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&);
+    static void stepOverBytecodeIndexUse(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&);
     template<typename CodeBlockType, typename UseFunctor>
-    static void stepOverInstructionUseInExceptionHandler(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&);
+    static void stepOverBytecodeIndexUseInExceptionHandler(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&);
     template<typename CodeBlockType, typename DefFunctor>
-    static void stepOverInstructionDef(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const DefFunctor&);
+    static void stepOverBytecodeIndexDef(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const DefFunctor&);
 
     template<typename CodeBlockType, typename UseFunctor, typename DefFunctor>
-    static void stepOverInstruction(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&, const DefFunctor&);
+    static void stepOverBytecodeIndex(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, const UseFunctor&, const DefFunctor&);
 
     template<typename CodeBlockType>
     static void stepOverInstruction(CodeBlockType*, const InstructionStream&, BytecodeGraph&, BytecodeIndex, FastBitVector& out);
 
     template<typename CodeBlockType, typename Instructions>
-    static bool computeLocalLivenessForBytecodeIndex(CodeBlockType*, const Instructions&, BytecodeGraph&, BytecodeBasicBlock&, BytecodeIndex, FastBitVector& result);
+    static bool computeLocalLivenessForInstruction(CodeBlockType*, const Instructions&, BytecodeGraph&, BytecodeBasicBlock&, BytecodeIndex, FastBitVector& result);
 
     template<typename CodeBlockType, typename Instructions>
     static bool computeLocalLivenessForBlock(CodeBlockType*, const Instructions&, BytecodeGraph&, BytecodeBasicBlock&);
 
     template<typename CodeBlockType, typename Instructions>
-    static FastBitVector getLivenessInfoAtBytecodeIndex(CodeBlockType*, const Instructions&, BytecodeGraph&, BytecodeIndex);
+    static FastBitVector getLivenessInfoAtInstruction(CodeBlockType*, const Instructions&, BytecodeGraph&, BytecodeIndex);
 
     template<typename CodeBlockType, typename Instructions>
     static void runLivenessFixpoint(CodeBlockType*, const Instructions&, BytecodeGraph&);
@@ -83,17 +83,14 @@ public:
     friend class BytecodeLivenessPropagation;
     BytecodeLivenessAnalysis(CodeBlock*);
 
-    FastBitVector getLivenessInfoAtBytecodeIndex(CodeBlock*, BytecodeIndex);
+    FastBitVector getLivenessInfoAtInstruction(CodeBlock* codeBlock, BytecodeIndex bytecodeIndex) { return BytecodeLivenessPropagation::getLivenessInfoAtInstruction(codeBlock, codeBlock->instructions(), m_graph, bytecodeIndex); }
 
     void computeFullLiveness(CodeBlock*, FullBytecodeLiveness& result);
-    void computeKills(CodeBlock*, BytecodeKills& result);
 
     BytecodeGraph& graph() { return m_graph; }
 
 private:
     void dumpResults(CodeBlock*);
-
-    void getLivenessInfoAtBytecodeIndex(CodeBlock*, BytecodeIndex, FastBitVector&);
 
     BytecodeGraph m_graph;
 };

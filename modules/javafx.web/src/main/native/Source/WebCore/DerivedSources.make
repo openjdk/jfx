@@ -1,4 +1,4 @@
-# Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+# Copyright (C) 2006-2020 Apple Inc. All rights reserved.
 # Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
 # Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
 #
@@ -25,6 +25,29 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+PYTHON = python
+PERL = perl
+RUBY = ruby
+DELETE = rm -f
+
+ifneq ($(SDKROOT),)
+    SDK_FLAGS = -isysroot $(SDKROOT)
+endif
+
+ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
+    WK_CURRENT_ARCH = $(word 1, $(ARCHS))
+    TARGET_TRIPLE_FLAGS = -target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
+endif
+
+FRAMEWORK_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS) | $(PERL) -e 'print "-F " . join(" -F ", split(" ", <>));')
+HEADER_FLAGS := $(shell echo $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS) | $(PERL) -e 'print "-I" . join(" -I", split(" ", <>));')
+FEATURE_AND_PLATFORM_DEFINES := $(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | $(PERL) -ne "print if s/\#define ((HAVE_|USE_|ENABLE_|WTF_PLATFORM_)\w+) 1/\1/")
+
+# FIXME: This should list Platform.h and all the things it includes. Could do that by using the -MD flag in the CC line above.
+FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES = DerivedSources.make
+
+# --------
 
 VPATH = \
     $(WebCore) \
@@ -64,6 +87,7 @@ VPATH = \
     $(WebCore)/Modules/webdriver \
     $(WebCore)/Modules/webgpu \
     $(WebCore)/Modules/websockets \
+    $(WebCore)/Modules/webxr \
     $(WebCore)/accessibility \
     $(WebCore)/animation \
     $(WebCore)/bindings/js \
@@ -102,6 +126,10 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/applepay/ApplePayError.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorCode.idl \
     $(WebCore)/Modules/applepay/ApplePayErrorContactField.idl \
+    $(WebCore)/Modules/applepay/ApplePayInstallmentConfiguration.idl \
+    $(WebCore)/Modules/applepay/ApplePayInstallmentItem.idl \
+    $(WebCore)/Modules/applepay/ApplePayInstallmentItemType.idl \
+    $(WebCore)/Modules/applepay/ApplePayInstallmentRetailChannel.idl \
     $(WebCore)/Modules/applepay/ApplePayLineItem.idl \
     $(WebCore)/Modules/applepay/ApplePayMerchantCapability.idl \
     $(WebCore)/Modules/applepay/ApplePayPayment.idl \
@@ -117,6 +145,11 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/applepay/ApplePayRequestBase.idl \
     $(WebCore)/Modules/applepay/ApplePaySession.idl \
     $(WebCore)/Modules/applepay/ApplePaySessionError.idl \
+    $(WebCore)/Modules/applepay/ApplePaySetup.idl \
+    $(WebCore)/Modules/applepay/ApplePaySetupConfiguration.idl \
+    $(WebCore)/Modules/applepay/ApplePaySetupFeature.idl \
+    $(WebCore)/Modules/applepay/ApplePaySetupFeatureState.idl \
+    $(WebCore)/Modules/applepay/ApplePaySetupFeatureType.idl \
     $(WebCore)/Modules/applepay/ApplePayShippingContactSelectedEvent.idl \
     $(WebCore)/Modules/applepay/ApplePayShippingContactUpdate.idl \
     $(WebCore)/Modules/applepay/ApplePayShippingMethod.idl \
@@ -345,32 +378,72 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/streams/ReadableStreamSource.idl \
     $(WebCore)/Modules/streams/WritableStream.idl \
     $(WebCore)/Modules/webaudio/AnalyserNode.idl \
+    $(WebCore)/Modules/webaudio/AnalyserOptions.idl \
     $(WebCore)/Modules/webaudio/AudioBuffer.idl \
     $(WebCore)/Modules/webaudio/AudioBufferCallback.idl \
+    $(WebCore)/Modules/webaudio/AudioBufferOptions.idl \
     $(WebCore)/Modules/webaudio/AudioBufferSourceNode.idl \
+    $(WebCore)/Modules/webaudio/AudioBufferSourceOptions.idl \
     $(WebCore)/Modules/webaudio/AudioContext.idl \
+    $(WebCore)/Modules/webaudio/AudioContextLatencyCategory.idl \
+    $(WebCore)/Modules/webaudio/AudioContextOptions.idl \
+    $(WebCore)/Modules/webaudio/AudioContextState.idl \
     $(WebCore)/Modules/webaudio/AudioDestinationNode.idl \
     $(WebCore)/Modules/webaudio/AudioListener.idl \
     $(WebCore)/Modules/webaudio/AudioNode.idl \
+    $(WebCore)/Modules/webaudio/AudioNodeOptions.idl \
     $(WebCore)/Modules/webaudio/AudioParam.idl \
     $(WebCore)/Modules/webaudio/AudioProcessingEvent.idl \
+    $(WebCore)/Modules/webaudio/AudioProcessingEventInit.idl \
+    $(WebCore)/Modules/webaudio/AudioScheduledSourceNode.idl \
+    $(WebCore)/Modules/webaudio/BaseAudioContext.idl \
     $(WebCore)/Modules/webaudio/BiquadFilterNode.idl \
+    $(WebCore)/Modules/webaudio/BiquadFilterOptions.idl \
+    $(WebCore)/Modules/webaudio/BiquadFilterType.idl \
+    $(WebCore)/Modules/webaudio/ChannelCountMode.idl \
+    $(WebCore)/Modules/webaudio/ChannelInterpretation.idl \
     $(WebCore)/Modules/webaudio/ChannelMergerNode.idl \
+    $(WebCore)/Modules/webaudio/ChannelMergerOptions.idl \
     $(WebCore)/Modules/webaudio/ChannelSplitterNode.idl \
+    $(WebCore)/Modules/webaudio/ChannelSplitterOptions.idl \
     $(WebCore)/Modules/webaudio/ConvolverNode.idl \
+    $(WebCore)/Modules/webaudio/ConvolverOptions.idl \
     $(WebCore)/Modules/webaudio/DelayNode.idl \
+    $(WebCore)/Modules/webaudio/DelayOptions.idl \
+    $(WebCore)/Modules/webaudio/DistanceModelType.idl \
     $(WebCore)/Modules/webaudio/DynamicsCompressorNode.idl \
+    $(WebCore)/Modules/webaudio/DynamicsCompressorOptions.idl \
     $(WebCore)/Modules/webaudio/GainNode.idl \
+    $(WebCore)/Modules/webaudio/GainOptions.idl \
     $(WebCore)/Modules/webaudio/MediaElementAudioSourceNode.idl \
+    $(WebCore)/Modules/webaudio/MediaElementAudioSourceOptions.idl \
     $(WebCore)/Modules/webaudio/MediaStreamAudioDestinationNode.idl \
     $(WebCore)/Modules/webaudio/MediaStreamAudioSourceNode.idl \
+    $(WebCore)/Modules/webaudio/MediaStreamAudioSourceOptions.idl \
     $(WebCore)/Modules/webaudio/OfflineAudioCompletionEvent.idl \
+    $(WebCore)/Modules/webaudio/OfflineAudioCompletionEventInit.idl \
     $(WebCore)/Modules/webaudio/OfflineAudioContext.idl \
+    $(WebCore)/Modules/webaudio/OfflineAudioContextOptions.idl \
     $(WebCore)/Modules/webaudio/OscillatorNode.idl \
+    $(WebCore)/Modules/webaudio/OscillatorOptions.idl \
+    $(WebCore)/Modules/webaudio/OscillatorType.idl \
+    $(WebCore)/Modules/webaudio/OverSampleType.idl \
     $(WebCore)/Modules/webaudio/PannerNode.idl \
+    $(WebCore)/Modules/webaudio/PannerOptions.idl \
+    $(WebCore)/Modules/webaudio/PanningModelType.idl \
     $(WebCore)/Modules/webaudio/PeriodicWave.idl \
+    $(WebCore)/Modules/webaudio/PeriodicWaveConstraints.idl \
+    $(WebCore)/Modules/webaudio/PeriodicWaveOptions.idl \
     $(WebCore)/Modules/webaudio/ScriptProcessorNode.idl \
     $(WebCore)/Modules/webaudio/WaveShaperNode.idl \
+    $(WebCore)/Modules/webaudio/WaveShaperOptions.idl \
+    $(WebCore)/Modules/webaudio/WebKitAudioBufferSourceNode.idl \
+    $(WebCore)/Modules/webaudio/WebKitAudioContext.idl \
+    $(WebCore)/Modules/webaudio/WebKitAudioListener.idl \
+    $(WebCore)/Modules/webaudio/WebKitAudioPannerNode.idl \
+    $(WebCore)/Modules/webaudio/WebKitDynamicsCompressorNode.idl \
+    $(WebCore)/Modules/webaudio/WebKitOfflineAudioContext.idl \
+    $(WebCore)/Modules/webaudio/WebKitOscillatorNode.idl \
     $(WebCore)/Modules/webauthn/AttestationConveyancePreference.idl \
     $(WebCore)/Modules/webauthn/AuthenticationExtensionsClientInputs.idl \
     $(WebCore)/Modules/webauthn/AuthenticationExtensionsClientOutputs.idl \
@@ -460,6 +533,39 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/webgpu/WorkerNavigatorGPU.idl \
     $(WebCore)/Modules/websockets/CloseEvent.idl \
     $(WebCore)/Modules/websockets/WebSocket.idl \
+    $(WebCore)/Modules/webxr/NavigatorWebXR.idl \
+    $(WebCore)/Modules/webxr/WebXRBoundedReferenceSpace.idl \
+    $(WebCore)/Modules/webxr/WebXRFrame.idl \
+    $(WebCore)/Modules/webxr/WebXRInputSourceArray.idl \
+    $(WebCore)/Modules/webxr/WebXRInputSource.idl \
+    $(WebCore)/Modules/webxr/WebXRLayer.idl \
+    $(WebCore)/Modules/webxr/WebXRPose.idl \
+    $(WebCore)/Modules/webxr/WebXRReferenceSpace.idl \
+    $(WebCore)/Modules/webxr/WebXRRenderState.idl \
+    $(WebCore)/Modules/webxr/WebXRRigidTransform.idl \
+    $(WebCore)/Modules/webxr/WebXRSession.idl \
+    $(WebCore)/Modules/webxr/WebXRSpace.idl \
+    $(WebCore)/Modules/webxr/WebXRSystem.idl \
+    $(WebCore)/Modules/webxr/WebXRViewerPose.idl \
+    $(WebCore)/Modules/webxr/WebXRView.idl \
+    $(WebCore)/Modules/webxr/WebXRViewport.idl \
+    $(WebCore)/Modules/webxr/WebXRWebGLLayer.idl \
+    $(WebCore)/Modules/webxr/XREnvironmentBlendMode.idl \
+    $(WebCore)/Modules/webxr/XREye.idl \
+    $(WebCore)/Modules/webxr/XRFrameRequestCallback.idl \
+    $(WebCore)/Modules/webxr/XRHandedness.idl \
+    $(WebCore)/Modules/webxr/XRInputSourceEvent.idl \
+    $(WebCore)/Modules/webxr/XRInputSourcesChangeEvent.idl \
+    $(WebCore)/Modules/webxr/XRInteractionMode.idl \
+    $(WebCore)/Modules/webxr/XRReferenceSpaceEvent.idl \
+    $(WebCore)/Modules/webxr/XRReferenceSpaceType.idl \
+    $(WebCore)/Modules/webxr/XRRenderStateInit.idl \
+    $(WebCore)/Modules/webxr/XRSessionEvent.idl \
+    $(WebCore)/Modules/webxr/XRSessionInit.idl \
+    $(WebCore)/Modules/webxr/XRSessionMode.idl \
+    $(WebCore)/Modules/webxr/XRTargetRayMode.idl \
+    $(WebCore)/Modules/webxr/XRVisibilityState.idl \
+    $(WebCore)/Modules/webxr/XRWebGLLayerInit.idl \
     $(WebCore)/accessibility/AccessibilityRole.idl \
     $(WebCore)/accessibility/AriaAttributes.idl \
     $(WebCore)/animation/Animatable.idl \
@@ -547,7 +653,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/css/FontFaceSet.idl \
     $(WebCore)/css/MediaList.idl \
     $(WebCore)/css/MediaQueryList.idl \
-    $(WebCore)/css/MediaQueryListListener.idl \
+    $(WebCore)/css/MediaQueryListEvent.idl \
     $(WebCore)/css/StyleMedia.idl \
     $(WebCore)/css/StyleSheet.idl \
     $(WebCore)/css/StyleSheetList.idl \
@@ -559,7 +665,6 @@ JS_BINDING_IDLS = \
     $(WebCore)/css/typedom/TypedOMCSSUnitValue.idl \
     $(WebCore)/css/typedom/TypedOMCSSUnparsedValue.idl \
     $(WebCore)/css/WebKitCSSMatrix.idl \
-    $(WebCore)/css/WebKitCSSViewportRule.idl \
     $(WebCore)/dom/AbortController.idl \
     $(WebCore)/dom/AbortSignal.idl \
     $(WebCore)/dom/AnimationEvent.idl \
@@ -665,10 +770,9 @@ JS_BINDING_IDLS = \
     $(WebCore)/dom/XMLDocument.idl \
     $(WebCore)/fileapi/Blob.idl \
     $(WebCore)/fileapi/BlobCallback.idl \
-    $(WebCore)/fileapi/BlobLineEndings.idl \
     $(WebCore)/fileapi/BlobPropertyBag.idl \
+    $(WebCore)/fileapi/EndingType.idl \
     $(WebCore)/fileapi/File.idl \
-    $(WebCore)/fileapi/FileError.idl \
     $(WebCore)/fileapi/FileList.idl \
     $(WebCore)/fileapi/FileReader.idl \
     $(WebCore)/fileapi/FileReaderSync.idl \
@@ -798,6 +902,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/html/canvas/CanvasTransform.idl \
     $(WebCore)/html/canvas/CanvasUserInterface.idl \
     $(WebCore)/html/canvas/EXTBlendMinMax.idl \
+    $(WebCore)/html/canvas/EXTColorBufferFloat.idl \
+    $(WebCore)/html/canvas/EXTColorBufferHalfFloat.idl \
     $(WebCore)/html/canvas/EXTFragDepth.idl \
     $(WebCore)/html/canvas/EXTShaderTextureLOD.idl \
     $(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
@@ -818,6 +924,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/html/canvas/WebGL2RenderingContext.idl \
     $(WebCore)/html/canvas/WebGLActiveInfo.idl \
     $(WebCore)/html/canvas/WebGLBuffer.idl \
+    $(WebCore)/html/canvas/WebGLColorBufferFloat.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureASTC.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureATC.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureETC.idl \
@@ -885,6 +992,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/page/NavigatorIsLoggedIn.idl \
     $(WebCore)/page/NavigatorLanguage.idl \
     $(WebCore)/page/NavigatorOnLine.idl \
+    $(WebCore)/page/NavigatorPlugins.idl \
     $(WebCore)/page/NavigatorServiceWorker.idl \
     $(WebCore)/page/NavigatorShare.idl \
     $(WebCore)/page/Performance.idl \
@@ -895,6 +1003,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/page/PerformanceObserver.idl \
     $(WebCore)/page/PerformanceObserverCallback.idl \
     $(WebCore)/page/PerformanceObserverEntryList.idl \
+    $(WebCore)/page/PerformancePaintTiming.idl \
     $(WebCore)/page/PerformanceResourceTiming.idl \
     $(WebCore)/page/PerformanceServerTiming.idl \
     $(WebCore)/page/PerformanceTiming.idl \
@@ -1087,6 +1196,15 @@ JS_BINDING_IDLS = \
     $(WebCore)/testing/MockWebAuthenticationConfiguration.idl \
     $(WebCore)/testing/ServiceWorkerInternals.idl \
     $(WebCore)/testing/TypeConversions.idl \
+    $(WebCore)/testing/FakeXRBoundsPoint.idl \
+    $(WebCore)/testing/FakeXRButtonStateInit.idl \
+    $(WebCore)/testing/FakeXRInputSourceInit.idl \
+    $(WebCore)/testing/FakeXRRigidTransformInit.idl \
+    $(WebCore)/testing/FakeXRViewInit.idl \
+    $(WebCore)/testing/WebFakeXRDevice.idl \
+    $(WebCore)/testing/WebFakeXRInputController.idl \
+    $(WebCore)/testing/WebXRTest.idl \
+    $(WebCore)/testing/XRSimulateUserActivationFunction.idl \
     $(WebCore)/workers/AbstractWorker.idl \
     $(WebCore)/workers/DedicatedWorkerGlobalScope.idl \
     $(WebCore)/workers/Worker.idl \
@@ -1109,6 +1227,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/worklets/PaintWorkletGlobalScope.idl \
     $(WebCore)/worklets/Worklet.idl \
     $(WebCore)/worklets/WorkletGlobalScope.idl \
+    $(WebCore)/xml/CustomXPathNSResolver.idl \
     $(WebCore)/xml/DOMParser.idl \
     $(WebCore)/xml/XMLHttpRequest.idl \
     $(WebCore)/xml/XMLHttpRequestEventTarget.idl \
@@ -1123,101 +1242,25 @@ JS_BINDING_IDLS = \
     InternalSettingsGenerated.idl \
 #
 
-PYTHON = python
-PERL = perl
-RUBY = ruby
-
-ifeq ($(OS),Windows_NT)
-    DELETE = cmd //C del
-else
-    DELETE = rm -f
-endif
 # --------
 
-ifeq ($(OS),MACOS)
-
-FRAMEWORK_FLAGS = $(shell echo $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) $(SYSTEM_FRAMEWORK_SEARCH_PATHS) | perl -e 'print "-F " . join(" -F ", split(" ", <>));')
-HEADER_FLAGS = $(shell echo $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) $(SYSTEM_HEADER_SEARCH_PATHS) | perl -e 'print "-I" . join(" -I", split(" ", <>));')
-
-ifneq ($(SDKROOT),)
-    SDK_FLAGS=-isysroot $(SDKROOT)
-endif
-
-ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
-    WK_CURRENT_ARCH=$(word 1, $(ARCHS))
-    TARGET_TRIPLE_FLAGS=-target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_IOS_FAMILY ' | cut -d' ' -f3), 1)
-    WTF_PLATFORM_IOS_FAMILY = 1
-else
-    WTF_PLATFORM_IOS_FAMILY = 0
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_MAC ' | cut -d' ' -f3), 1)
-    WTF_PLATFORM_MAC = 1
-else
-    WTF_PLATFORM_MAC = 0
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep USE_APPLE_INTERNAL_SDK | cut -d' ' -f3), 1)
-    USE_APPLE_INTERNAL_SDK = 1
-else
-    USE_APPLE_INTERNAL_SDK = 0
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep HAVE_OS_DARK_MODE_SUPPORT | cut -d' ' -f3), 1)
-    HAVE_OS_DARK_MODE_SUPPORT = 1
-else
-    HAVE_OS_DARK_MODE_SUPPORT = 0
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
-    ENABLE_ORIENTATION_EVENTS = 1
-endif
-
-ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_MEDIA_SOURCE | cut -d' ' -f3), 1)
-	ENABLE_MEDIA_SOURCE = 1
-endif
-
-ifeq ($(WTF_PLATFORM_IOS_FAMILY), 1)
-FEATURE_AND_PLATFORM_DEFINES = $(FEATURE_DEFINES) WTF_PLATFORM_IOS_FAMILY
-else ifeq ($(WTF_PLATFORM_MAC), 1)
-FEATURE_AND_PLATFORM_DEFINES = $(FEATURE_DEFINES) WTF_PLATFORM_MAC
-else
-FEATURE_AND_PLATFORM_DEFINES = $(FEATURE_DEFINES)
-endif
-
-ifeq ($(HAVE_OS_DARK_MODE_SUPPORT), 1)
-FEATURE_AND_PLATFORM_DEFINES += HAVE_OS_DARK_MODE_SUPPORT
-endif
-
-ifeq ($(PLATFORM_FEATURE_DEFINES),)
-ifeq ($(OS), Windows_NT)
-PLATFORM_FEATURE_DEFINES = $(WEBKIT_LIBRARIES)/tools/vsprops/FeatureDefines.props
-else
-PLATFORM_FEATURE_DEFINES = Configurations/FeatureDefines.xcconfig
-endif
-endif
-
 ADDITIONAL_BINDING_IDLS =
-ifeq ($(findstring ENABLE_MAC_GESTURE_EVENTS,$(FEATURE_DEFINES)), ENABLE_MAC_GESTURE_EVENTS)
+
+ifeq ($(findstring ENABLE_IOS_GESTURE_EVENTS,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_IOS_GESTURE_EVENTS)
 ADDITIONAL_BINDING_IDLS += GestureEvent.idl
 endif
 
-ifeq ($(findstring ENABLE_IOS_GESTURE_EVENTS,$(FEATURE_DEFINES)), ENABLE_IOS_GESTURE_EVENTS)
-ADDITIONAL_BINDING_IDLS += GestureEvent.idl
-endif
-
-ifeq ($(WTF_PLATFORM_IOS_FAMILY), 1)
-ifeq ($(findstring ENABLE_IOS_TOUCH_EVENTS,$(FEATURE_DEFINES)), ENABLE_IOS_TOUCH_EVENTS)
+ifeq ($(findstring ENABLE_IOS_TOUCH_EVENTS,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_IOS_TOUCH_EVENTS)
 ADDITIONAL_BINDING_IDLS += \
     DocumentTouch.idl \
     Touch.idl \
     TouchEvent.idl \
     TouchList.idl
 endif
-endif # IOS
+
+ifeq ($(findstring ENABLE_MAC_GESTURE_EVENTS,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_MAC_GESTURE_EVENTS)
+ADDITIONAL_BINDING_IDLS += GestureEvent.idl
+endif
 
 vpath %.in $(WEBKITADDITIONS_HEADER_SEARCH_PATHS)
 
@@ -1235,9 +1278,7 @@ vpath %.idl $(BUILT_PRODUCTS_DIR)/usr/local/include $(SDKROOT)/usr/local/include
 $(ADDITIONAL_BINDING_IDLS) : % : WebKitAdditions/%
 	cp $< .
 
-endif # MACOS
-
-ifneq ($(WTF_PLATFORM_IOS_FAMILY), 1)
+ifneq ($(findstring ENABLE_IOS_TOUCH_EVENTS,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_IOS_TOUCH_EVENTS)
 JS_BINDING_IDLS += \
     $(WebCore)/dom/DocumentTouch.idl \
     $(WebCore)/dom/Touch.idl \
@@ -1305,28 +1346,6 @@ all : \
 
 # --------
 
-ADDITIONAL_IDL_DEFINES :=
-
-ifndef ENABLE_ORIENTATION_EVENTS
-    ENABLE_ORIENTATION_EVENTS = 0
-endif
-
-ifndef ENABLE_MEDIA_SOURCE
-	ENABLE_MEDIA_SOURCE = 0
-endif
-
-ifeq ($(ENABLE_ORIENTATION_EVENTS), 1)
-    ADDITIONAL_IDL_DEFINES := $(ADDITIONAL_IDL_DEFINES) ENABLE_ORIENTATION_EVENTS
-endif
-
-ifeq ($(USE_APPLE_INTERNAL_SDK), 1)
-    ADDITIONAL_IDL_DEFINES := $(ADDITIONAL_IDL_DEFINES) USE_APPLE_INTERNAL_SDK
-endif
-
-ifeq ($(ENABLE_MEDIA_SOURCE), 1)
-    ADDITIONAL_IDL_DEFINES := $(ADDITIONAL_IDL_DEFINES) ENABLE_MEDIA_SOURCE
-endif
-
 # CSS property names and value keywords
 
 WEBCORE_CSS_PROPERTY_NAMES := $(WebCore)/css/CSSProperties.json
@@ -1343,7 +1362,7 @@ CSS_PROPERTY_NAME_FILES = \
 CSS_PROPERTY_NAME_FILES_PATTERNS = $(subst .,%,$(CSS_PROPERTY_NAME_FILES))
 
 all : $(CSS_PROPERTY_NAME_FILES)
-$(CSS_PROPERTY_NAME_FILES_PATTERNS) : $(WEBCORE_CSS_PROPERTY_NAMES) css/makeprop.pl $(PLATFORM_FEATURE_DEFINES)
+$(CSS_PROPERTY_NAME_FILES_PATTERNS) : $(WEBCORE_CSS_PROPERTY_NAMES) css/makeprop.pl $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) -pe '' $(WEBCORE_CSS_PROPERTY_NAMES) > CSSProperties.json
 	$(PERL) "$(WebCore)/css/makeprop.pl" --defines "$(FEATURE_AND_PLATFORM_DEFINES)"
 
@@ -1354,7 +1373,7 @@ CSS_VALUE_KEYWORD_FILES = \
 CSS_VALUE_KEYWORD_FILES_PATTERNS = $(subst .,%,$(CSS_VALUE_KEYWORD_FILES))
 
 all : $(CSS_VALUE_KEYWORD_FILES)
-$(CSS_VALUE_KEYWORD_FILES_PATTERNS) : $(WEBCORE_CSS_VALUE_KEYWORDS) css/makevalues.pl bindings/scripts/preprocessor.pm $(PLATFORM_FEATURE_DEFINES)
+$(CSS_VALUE_KEYWORD_FILES_PATTERNS) : $(WEBCORE_CSS_VALUE_KEYWORDS) css/makevalues.pl bindings/scripts/preprocessor.pm $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) -pe '' $(WEBCORE_CSS_VALUE_KEYWORDS) > CSSValueKeywords.in
 	$(PERL) "$(WebCore)/css/makevalues.pl" --defines "$(FEATURE_AND_PLATFORM_DEFINES)"
 
@@ -1362,11 +1381,11 @@ $(CSS_VALUE_KEYWORD_FILES_PATTERNS) : $(WEBCORE_CSS_VALUE_KEYWORDS) css/makevalu
 
 # CSS Selector pseudo type name to value map.
 
-SelectorPseudoClassAndCompatibilityElementMap.cpp : $(WebCore)/css/makeSelectorPseudoClassAndCompatibilityElementMap.py $(WebCore)/css/SelectorPseudoClassAndCompatibilityElementMap.in
-	$(PYTHON) "$(WebCore)/css/makeSelectorPseudoClassAndCompatibilityElementMap.py" $(WebCore)/css/SelectorPseudoClassAndCompatibilityElementMap.in gperf "$(FEATURE_DEFINES)"
+SelectorPseudoClassAndCompatibilityElementMap.cpp : $(WebCore)/css/makeSelectorPseudoClassAndCompatibilityElementMap.py $(WebCore)/css/SelectorPseudoClassAndCompatibilityElementMap.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PYTHON) "$(WebCore)/css/makeSelectorPseudoClassAndCompatibilityElementMap.py" $(WebCore)/css/SelectorPseudoClassAndCompatibilityElementMap.in gperf "$(FEATURE_AND_PLATFORM_DEFINES)"
 
-SelectorPseudoElementTypeMap.cpp : $(WebCore)/css/makeSelectorPseudoElementsMap.py $(WebCore)/css/SelectorPseudoElementTypeMap.in
-	$(PYTHON) "$(WebCore)/css/makeSelectorPseudoElementsMap.py" $(WebCore)/css/SelectorPseudoElementTypeMap.in gperf "$(FEATURE_DEFINES)"
+SelectorPseudoElementTypeMap.cpp : $(WebCore)/css/makeSelectorPseudoElementsMap.py $(WebCore)/css/SelectorPseudoElementTypeMap.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PYTHON) "$(WebCore)/css/makeSelectorPseudoElementsMap.py" $(WebCore)/css/SelectorPseudoElementTypeMap.in gperf "$(FEATURE_AND_PLATFORM_DEFINES)"
 
 # --------
 
@@ -1434,48 +1453,37 @@ ColorData.cpp : platform/ColorData.gperf $(WebCore)/make-hash-tools.pl
 
 USER_AGENT_STYLE_SHEETS = $(WebCore)/css/html.css $(WebCore)/css/dialog.css $(WebCore)/css/quirks.css $(WebCore)/css/plugIns.css $(WebCore)/css/svg.css
 
-ifeq ($(findstring ENABLE_MATHML,$(FEATURE_DEFINES)), ENABLE_MATHML)
+ifeq ($(findstring ENABLE_MATHML,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_MATHML)
     USER_AGENT_STYLE_SHEETS += $(WebCore)/css/mathml.css
 endif
 
-ifeq ($(findstring ENABLE_VIDEO,$(FEATURE_DEFINES)), ENABLE_VIDEO)
+ifeq ($(findstring ENABLE_VIDEO,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_VIDEO)
     USER_AGENT_STYLE_SHEETS += $(WebCore)/css/mediaControls.css
 endif
 
-ifeq ($(findstring ENABLE_FULLSCREEN_API,$(FEATURE_DEFINES)), ENABLE_FULLSCREEN_API)
+ifeq ($(findstring ENABLE_FULLSCREEN_API,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_FULLSCREEN_API)
     USER_AGENT_STYLE_SHEETS += $(WebCore)/css/fullscreen.css
 endif
 
-ifeq ($(findstring ENABLE_SERVICE_CONTROLS,$(FEATURE_DEFINES)), ENABLE_SERVICE_CONTROLS)
+ifeq ($(findstring ENABLE_SERVICE_CONTROLS,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_SERVICE_CONTROLS)
     USER_AGENT_STYLE_SHEETS += $(WebCore)/html/shadow/mac/imageControlsMac.css
 endif
 
-ifeq ($(OS),MACOS)
-    USER_AGENT_STYLE_SHEETS += $(WebCore)/Modules/plugins/QuickTimePluginReplacement.css
-endif
+USER_AGENT_STYLE_SHEETS += $(WebCore)/Modules/plugins/QuickTimePluginReplacement.css
 
-ifeq ($(OS), Windows_NT)
-    USER_AGENT_STYLE_SHEETS += $(WebCore)/css/themeWin.css $(WebCore)/css/themeWinQuirks.css
-endif
-
-ifeq ($(findstring ENABLE_METER_ELEMENT,$(FEATURE_DEFINES)), ENABLE_METER_ELEMENT)
+ifeq ($(findstring ENABLE_METER_ELEMENT,$(FEATURE_AND_PLATFORM_DEFINES)), ENABLE_METER_ELEMENT)
 	USER_AGENT_STYLE_SHEETS += $(WebCore)/html/shadow/meterElementShadow.css
 endif
 
-UserAgentStyleSheets.h : css/make-css-file-arrays.pl bindings/scripts/preprocessor.pm $(USER_AGENT_STYLE_SHEETS) $(PLATFORM_FEATURE_DEFINES)
+UserAgentStyleSheets.h : css/make-css-file-arrays.pl bindings/scripts/preprocessor.pm $(USER_AGENT_STYLE_SHEETS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $@ UserAgentStyleSheetsData.cpp $(USER_AGENT_STYLE_SHEETS)
 
 # --------
 
 # user agent scripts
 
-USER_AGENT_SCRIPTS =
+USER_AGENT_SCRIPTS = $(WebCore)/Modules/plugins/QuickTimePluginReplacement.js
 
-ifeq ($(OS),MACOS)
-    USER_AGENT_SCRIPTS := $(USER_AGENT_SCRIPTS) $(WebCore)/Modules/plugins/QuickTimePluginReplacement.js
-endif
-
-ifdef USER_AGENT_SCRIPTS
 USER_AGENT_SCRIPTS_FILES = \
     UserAgentScripts.h \
     UserAgentScriptsData.cpp \
@@ -1486,15 +1494,14 @@ all : $(USER_AGENT_SCRIPTS_FILES)
 
 $(USER_AGENT_SCRIPTS_FILES_PATTERNS) : $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py $(USER_AGENT_SCRIPTS)
 	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/make-js-file-arrays.py -n WebCore $(USER_AGENT_SCRIPTS_FILES) $(USER_AGENT_SCRIPTS)
-endif
 
 # --------
 
-# plugIns resources
+# plug-ins resources
 
 PLUG_INS_RESOURCES = $(WebCore)/Resources/plugIns.js
 
-PlugInsResources.h : css/make-css-file-arrays.pl bindings/scripts/preprocessor.pm $(PLUG_INS_RESOURCES) $(PLATFORM_FEATURE_DEFINES)
+PlugInsResources.h : css/make-css-file-arrays.pl bindings/scripts/preprocessor.pm $(PLUG_INS_RESOURCES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(PERL) $< --defines "$(FEATURE_AND_PLATFORM_DEFINES)" $@ PlugInsResourcesData.cpp $(PLUG_INS_RESOURCES)
 
 # --------
@@ -1511,38 +1518,6 @@ $(WEBKIT_FONT_FAMILY_NAME_FILES_PATTERNS): dom/make_names.pl bindings/scripts/Ha
 
 # HTML tag and attribute names
 
-ifeq ($(findstring ENABLE_DATALIST_ELEMENT,$(FEATURE_DEFINES)), ENABLE_DATALIST_ELEMENT)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_DATALIST_ELEMENT=1
-endif
-
-ifeq ($(findstring ENABLE_METER_ELEMENT,$(FEATURE_DEFINES)), ENABLE_METER_ELEMENT)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_METER_ELEMENT=1
-endif
-
-ifeq ($(findstring ENABLE_VIDEO,$(FEATURE_DEFINES)), ENABLE_VIDEO)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_VIDEO=1
-endif
-
-ifeq ($(findstring ENABLE_VIDEO_TRACK,$(FEATURE_DEFINES)), ENABLE_VIDEO_TRACK)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_VIDEO_TRACK=0
-endif
-
-ifeq ($(findstring ENABLE_DATACUE_VALUE,$(FEATURE_DEFINES)), ENABLE_DATACUE_VALUE)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_DATACUE_VALUE=0
-endif
-
-ifeq ($(findstring ENABLE_MEDIA_STREAM,$(FEATURE_DEFINES)), ENABLE_MEDIA_STREAM)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_MEDIA_STREAM=1
-endif
-
-ifeq ($(findstring ENABLE_LEGACY_ENCRYPTED_MEDIA,$(FEATURE_DEFINES)), ENABLE_LEGACY_ENCRYPTED_MEDIA)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_LEGACY_ENCRYPTED_MEDIA=1
-endif
-
-ifeq ($(findstring ENABLE_ENCRYPTED_MEDIA,$(FEATURE_DEFINES)), ENABLE_ENCRYPTED_MEDIA)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_ENCRYPTED_MEDIA=1
-endif
-
 HTML_TAG_FILES = \
     JSHTMLElementWrapperFactory.cpp \
     JSHTMLElementWrapperFactory.h \
@@ -1556,8 +1531,8 @@ HTML_TAG_FILES_PATTERNS = $(subst .,%,$(HTML_TAG_FILES))
 
 all : $(HTML_TAG_FILES)
 
-$(HTML_TAG_FILES_PATTERNS) : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm html/HTMLTagNames.in html/HTMLAttributeNames.in
-	$(PERL) $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --factory --wrapperFactory $(if $(HTML_FLAGS), --extraDefines "$(HTML_FLAGS)")
+$(HTML_TAG_FILES_PATTERNS) : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm html/HTMLTagNames.in html/HTMLAttributeNames.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PERL) $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --factory --wrapperFactory --extraDefines "$(FEATURE_AND_PLATFORM_DEFINES)"
 
 XMLNSNames.cpp : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm xml/xmlnsattrs.in
 	$(PERL) $< --attrs $(WebCore)/xml/xmlnsattrs.in
@@ -1568,12 +1543,6 @@ XMLNames.cpp : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/Sta
 # --------
 
 # SVG tag and attribute names, and element factory
-
-ifeq ($(findstring ENABLE_SVG_FONTS,$(FEATURE_DEFINES)), ENABLE_SVG_FONTS)
-    SVG_FLAGS := $(SVG_FLAGS) ENABLE_SVG_FONTS=1
-endif
-
-# SVG tag and attribute names (need to pass an extra flag if svg experimental features are enabled)
 
 SVG_TAG_FILES = \
     JSSVGElementWrapperFactory.cpp \
@@ -1588,8 +1557,8 @@ SVG_TAG_FILES_PATTERNS = $(subst .,%,$(SVG_TAG_FILES))
 
 all : $(SVG_TAG_FILES)
 
-$(SVG_TAG_FILES_PATTERNS) : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm svg/svgtags.in svg/svgattrs.in
-	$(PERL) $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --factory --wrapperFactory $(if $(SVG_FLAGS), --extraDefines "$(SVG_FLAGS)")
+$(SVG_TAG_FILES_PATTERNS) : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm svg/svgtags.in svg/svgattrs.in $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PERL) $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --factory --wrapperFactory --extraDefines "$(FEATURE_AND_PLATFORM_DEFINES)"
 
 XLinkNames.cpp : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm svg/xlinkattrs.in
 	$(PERL) $< --attrs $(WebCore)/svg/xlinkattrs.in
@@ -1719,6 +1688,7 @@ JS_BINDINGS_SCRIPTS = $(COMMON_BINDINGS_SCRIPTS) bindings/scripts/CodeGeneratorJ
 
 SUPPLEMENTAL_DEPENDENCY_FILE = SupplementalDependencies.txt
 SUPPLEMENTAL_MAKEFILE_DEPS = SupplementalDependencies.dep
+ISO_SUBSPACES_HEADER_FILE = DOMIsoSubspaces.h
 WINDOW_CONSTRUCTORS_FILE = DOMWindowConstructors.idl
 WORKERGLOBALSCOPE_CONSTRUCTORS_FILE = WorkerGlobalScopeConstructors.idl
 DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE = DedicatedWorkerGlobalScopeConstructors.idl
@@ -1739,6 +1709,7 @@ endef
 IDL_INTERMEDIATE_FILES = \
     $(SUPPLEMENTAL_MAKEFILE_DEPS) \
     $(SUPPLEMENTAL_DEPENDENCY_FILE) \
+    $(ISO_SUBSPACES_HEADER_FILE) \
     $(WINDOW_CONSTRUCTORS_FILE) \
     $(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE) \
     $(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) \
@@ -1748,13 +1719,13 @@ IDL_INTERMEDIATE_FILES = \
 #
 IDL_INTERMEDIATE_PATTERNS = $(subst .,%,$(IDL_INTERMEDIATE_FILES))
 
-$(IDL_INTERMEDIATE_PATTERNS) : $(PREPROCESS_IDLS_SCRIPTS) $(JS_BINDING_IDLS) $(PLATFORM_FEATURE_DEFINES) DerivedSources.make
+$(IDL_INTERMEDIATE_PATTERNS) : $(PREPROCESS_IDLS_SCRIPTS) $(JS_BINDING_IDLS) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES) DerivedSources.make $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
 	$(foreach f,$(JS_BINDING_IDLS),@echo $(f)>>$(IDL_FILES_TMP)$(NL))
-	$(PERL) $(WebCore)/bindings/scripts/preprocess-idls.pl --defines "$(FEATURE_AND_PLATFORM_DEFINES) $(ADDITIONAL_IDL_DEFINES) LANGUAGE_JAVASCRIPT" --idlFilesList $(IDL_FILES_TMP) --supplementalDependencyFile $(SUPPLEMENTAL_DEPENDENCY_FILE) --windowConstructorsFile $(WINDOW_CONSTRUCTORS_FILE) --workerGlobalScopeConstructorsFile $(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --dedicatedWorkerGlobalScopeConstructorsFile $(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --serviceWorkerGlobalScopeConstructorsFile $(SERVICEWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --workletGlobalScopeConstructorsFile $(WORKLETGLOBALSCOPE_CONSTRUCTORS_FILE) --paintWorkletGlobalScopeConstructorsFile $(PAINTWORKLETGLOBALSCOPE_CONSTRUCTORS_FILE) --supplementalMakefileDeps $(SUPPLEMENTAL_MAKEFILE_DEPS)
+	$(PERL) $(WebCore)/bindings/scripts/preprocess-idls.pl --defines "$(FEATURE_AND_PLATFORM_DEFINES) LANGUAGE_JAVASCRIPT" --idlFilesList $(IDL_FILES_TMP) --supplementalDependencyFile $(SUPPLEMENTAL_DEPENDENCY_FILE) --isoSubspacesHeaderFile $(ISO_SUBSPACES_HEADER_FILE) --windowConstructorsFile $(WINDOW_CONSTRUCTORS_FILE) --workerGlobalScopeConstructorsFile $(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --dedicatedWorkerGlobalScopeConstructorsFile $(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --serviceWorkerGlobalScopeConstructorsFile $(SERVICEWORKERGLOBALSCOPE_CONSTRUCTORS_FILE) --workletGlobalScopeConstructorsFile $(WORKLETGLOBALSCOPE_CONSTRUCTORS_FILE) --paintWorkletGlobalScopeConstructorsFile $(PAINTWORKLETGLOBALSCOPE_CONSTRUCTORS_FILE) --supplementalMakefileDeps $(SUPPLEMENTAL_MAKEFILE_DEPS)
 	$(DELETE) $(IDL_FILES_TMP)
 
-JS%.cpp JS%.h : %.idl $(JS_BINDINGS_SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(IDL_INTERMEDIATE_FILES) $(PLATFORM_FEATURE_DEFINES)
-	$(PERL) $(WebCore)/bindings/scripts/generate-bindings.pl $(IDL_COMMON_ARGS) --defines "$(FEATURE_AND_PLATFORM_DEFINES) $(ADDITIONAL_IDL_DEFINES) LANGUAGE_JAVASCRIPT" --generator JS --idlAttributesFile $(IDL_ATTRIBUTES_FILE) --supplementalDependencyFile $(SUPPLEMENTAL_DEPENDENCY_FILE) $<
+JS%.cpp JS%.h : %.idl $(JS_BINDINGS_SCRIPTS) $(IDL_ATTRIBUTES_FILE) $(IDL_INTERMEDIATE_FILES) $(FEATURE_AND_PLATFORM_DEFINE_DEPENDENCIES)
+	$(PERL) $(WebCore)/bindings/scripts/generate-bindings.pl $(IDL_COMMON_ARGS) --defines "$(FEATURE_AND_PLATFORM_DEFINES) LANGUAGE_JAVASCRIPT" --generator JS --idlAttributesFile $(IDL_ATTRIBUTES_FILE) --supplementalDependencyFile $(SUPPLEMENTAL_DEPENDENCY_FILE) $<
 
 ifneq ($(NO_SUPPLEMENTAL_FILES),1)
 -include $(SUPPLEMENTAL_MAKEFILE_DEPS)

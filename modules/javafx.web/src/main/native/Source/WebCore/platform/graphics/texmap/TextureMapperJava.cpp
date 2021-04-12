@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ IntSize TextureMapperJava::maxTextureSize() const
     return IntSize(s_maximumAllowedImageBufferDimension, s_maximumAllowedImageBufferDimension);
 }
 
-void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const FloatRect& rect)
+void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const FloatRoundedRect& rect)
 {
     GraphicsContext* context = currentContext();
     if (!context)
@@ -62,7 +62,7 @@ void TextureMapperJava::beginClip(const TransformationMatrix& matrix, const Floa
     auto previousTransform = context->getCTM();
     context->save();
     context->concatCTM(matrix.toAffineTransform());
-    context->clip(rect);
+    context->clip(rect.rect());
     context->setCTM(previousTransform);
 }
 

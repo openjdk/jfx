@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "ActiveDOMObject.h"
 #include "CanvasBase.h"
 #include "FloatRect.h"
 #include "HTMLElement.h"
@@ -57,7 +58,7 @@ namespace DisplayList {
 using AsTextFlags = unsigned;
 }
 
-class HTMLCanvasElement final : public HTMLElement, public CanvasBase {
+class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
     WTF_MAKE_ISO_ALLOCATED(HTMLCanvasElement);
 public:
     static Ref<HTMLCanvasElement> create(Document&);
@@ -128,10 +129,23 @@ public:
 
     WEBCORE_EXPORT static void setMaxPixelMemoryForTesting(size_t);
 
+    bool needsPreparationForDisplay();
+    void prepareForDisplay();
+
+    void setIsSnapshotting(bool isSnapshotting) { m_isSnapshotting = isSnapshotting; }
+    bool isSnapshotting() const { return m_isSnapshotting; }
+
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
     bool isHTMLCanvasElement() const final { return true; }
+
+    // ActiveDOMObject.
+    const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
+
+    // EventTarget.
+    void eventListenersDidChange() final;
 
     void parseAttribute(const QualifiedName&, const AtomString&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
@@ -157,11 +171,15 @@ private:
 
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+    Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
+
     FloatRect m_dirtyRect;
 
     bool m_ignoreReset { false };
 
-    bool m_usesDisplayListDrawing { false };
+    Optional<bool> m_usesDisplayListDrawing;
     bool m_tracksDisplayListReplay { false };
 
     std::unique_ptr<CanvasRenderingContext> m_context;
@@ -169,6 +187,11 @@ private:
     // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
     mutable bool m_hasCreatedImageBuffer { false };
     mutable bool m_didClearImageBuffer { false };
+#if ENABLE(WEBGL)
+    bool m_hasRelevantWebGLEventListener { false };
+#endif
+
+    bool m_isSnapshotting { false };
 
     mutable RefPtr<Image> m_presentedImage;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).

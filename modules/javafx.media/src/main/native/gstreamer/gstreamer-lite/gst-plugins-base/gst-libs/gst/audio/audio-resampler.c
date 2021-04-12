@@ -1622,8 +1622,6 @@ gst_audio_resampler_update (GstAudioResampler * resampler,
  * @resampler: a #GstAudioResampler
  *
  * Free a previously allocated #GstAudioResampler @resampler.
- *
- * Since: 1.6
  */
 void
 gst_audio_resampler_free (GstAudioResampler * resampler)
@@ -1648,7 +1646,7 @@ gst_audio_resampler_free (GstAudioResampler * resampler)
  * Get the number of output frames that would be currently available when
  * @in_frames are given to @resampler.
  *
- * Returns: The number of frames that would be availabe after giving
+ * Returns: The number of frames that would be available after giving
  * @in_frames as input to @resampler.
  */
 gsize

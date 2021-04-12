@@ -35,12 +35,13 @@
 namespace WebCore {
 
 class AudioContext;
+struct MediaStreamAudioSourceOptions;
 class MultiChannelResampler;
 
 class MediaStreamAudioSourceNode final : public AudioNode, public AudioSourceProviderClient {
     WTF_MAKE_ISO_ALLOCATED(MediaStreamAudioSourceNode);
 public:
-    static Ref<MediaStreamAudioSourceNode> create(AudioContext&, MediaStream&, MediaStreamTrack&);
+    static ExceptionOr<Ref<MediaStreamAudioSourceNode>> create(BaseAudioContext&, MediaStreamAudioSourceOptions&&);
 
     virtual ~MediaStreamAudioSourceNode();
 
@@ -54,7 +55,7 @@ public:
     void setFormat(size_t numberOfChannels, float sampleRate) override;
 
 private:
-    MediaStreamAudioSourceNode(AudioContext&, MediaStream&, MediaStreamTrack&);
+    MediaStreamAudioSourceNode(BaseAudioContext&, MediaStream&, MediaStreamTrack&);
 
     double tailTime() const override { return 0; }
     double latencyTime() const override { return 0; }

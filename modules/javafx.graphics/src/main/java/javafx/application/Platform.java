@@ -25,10 +25,12 @@
 
 package javafx.application;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Optional;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import com.sun.javafx.application.PlatformImpl;
+import javafx.scene.input.KeyCode;
 
 /**
  * Application platform support class.
@@ -89,6 +91,14 @@ public final class Platform {
      * {@link IllegalStateException} being thrown - it is only valid to request
      * that the JavaFX runtime be started once.
      * </p>
+     *
+     * <p><b>Note:</b> The JavaFX classes must be loaded from a set of
+     * named {@code javafx.*} modules on the <em>module path</em>.
+     * Loading the JavaFX classes from the classpath is not supported.
+     * A warning is logged when the JavaFX runtime is started if the JavaFX
+     * classes are not loaded from the expected named module.
+     * This warning is logged regardless of whether the JavaFX runtime was
+     * started by calling this method or automatically as described above.
      *
      * @throws IllegalStateException if the JavaFX runtime is already running
      *
@@ -319,6 +329,43 @@ public final class Platform {
      */
     public static void exitNestedEventLoop(Object key, Object rval) {
         Toolkit.getToolkit().exitNestedEventLoop(key, rval);
+    }
+
+    /**
+     * Returns a flag indicating whether the key corresponding to {@code keyCode}
+     * is in the locked (or "on") state.
+     * {@code keyCode} must be one of: {@link KeyCode#CAPS} or
+     * {@link KeyCode#NUM_LOCK}.
+     * If the underlying system is not able to determine the state of the
+     * specified {@code keyCode}, an empty {@code Optional} is returned.
+     * If the keyboard attached to the system doesn't have the specified key,
+     * an {@code Optional} containing {@code false} is returned.
+     * This method must be called on the JavaFX Application thread.
+     *
+     * @param keyCode the {@code KeyCode} of the lock state to query
+     *
+     * @return the lock state of the key corresponding to {@code keyCode},
+     * or an empty {@code Optional} if the system cannot determine its state
+     *
+     * @throws IllegalArgumentException if {@code keyCode} is not one of the
+     * valid {@code KeyCode} values
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     * other than the JavaFX Application Thread
+     *
+     * @since 17
+     */
+    public static Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        switch (keyCode) {
+            case CAPS:
+            case NUM_LOCK:
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid KeyCode");
+        }
+        return Toolkit.getToolkit().isKeyLocked(keyCode);
     }
 
     /**

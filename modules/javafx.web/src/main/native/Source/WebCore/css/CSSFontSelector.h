@@ -30,7 +30,7 @@
 #include "CachedResourceHandle.h"
 #include "Font.h"
 #include "FontSelector.h"
-#include "Timer.h"
+#include "SuspendableTimer.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -80,6 +80,8 @@ public:
     Document* document() const { return m_document.get(); }
 
     void beginLoadingFontSoon(CachedFont&);
+    void suspendFontLoadingTimer();
+    void restartFontLoadingTimer();
 
     FontFaceSet* fontFaceSetIfExists();
     FontFaceSet& fontFaceSet();
@@ -112,13 +114,14 @@ private:
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
     HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
     HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
-    Timer m_beginLoadingTimer;
+    SuspendableTimer m_beginLoadingTimer;
 
     unsigned m_uniqueId;
     unsigned m_version;
     unsigned m_computingRootStyleFontCount { 0 };
     bool m_creatingFont { false };
     bool m_buildIsUnderway { false };
+    bool m_fontLoadingTimerIsSuspended { false };
 };
 
 } // namespace WebCore

@@ -79,7 +79,6 @@ public:
     void streamEndedWithError(Optional<EndOfStreamError>);
 
     MediaTime duration() const final;
-    void durationChanged(const MediaTime&) final;
     std::unique_ptr<PlatformTimeRanges> buffered() const final;
 
     bool attachToElement(HTMLMediaElement&);
@@ -104,14 +103,12 @@ public:
     SourceBufferList* activeSourceBuffers() { return m_activeSourceBuffers.get(); }
     ExceptionOr<Ref<SourceBuffer>> addSourceBuffer(const String& type);
     ExceptionOr<void> removeSourceBuffer(SourceBuffer&);
-    static bool isTypeSupported(const String& type);
+    static bool isTypeSupported(ScriptExecutionContext&, const String& type);
 
     ScriptExecutionContext* scriptExecutionContext() const final;
 
     using RefCounted::ref;
     using RefCounted::deref;
-
-    bool hasPendingActivity() const final;
 
     static const MediaTime& currentTimeFudgeFactor();
     static bool contentTypeShouldGenerateTimestamps(const ContentType&);
@@ -124,11 +121,16 @@ public:
     void setLogIdentifier(const void*) final;
 #endif
 
+    void failedToCreateRenderer(RendererType) final;
+
 private:
     explicit MediaSource(ScriptExecutionContext&);
 
+    // ActiveDOMObject.
     void stop() final;
     const char* activeDOMObjectName() const final;
+    bool virtualHasPendingActivity() const final;
+    static bool isTypeSupported(ScriptExecutionContext&, const String& type, Vector<ContentType>&& contentTypesRequiringHardwareSupport);
 
     void setPrivateAndOpen(Ref<MediaSourcePrivate>&&) final;
     void seekToTime(const MediaTime&) final;

@@ -54,7 +54,10 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
+static BOOL isNormalTaskbarApp = NO;
 static BOOL disableSyncRendering = NO;
+static BOOL firstActivation = YES;
+static BOOL shouldReactivate = NO;
 
 #ifdef STATIC_BUILD
 jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
@@ -271,6 +274,13 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (isNormalTaskbarApp && firstActivation) {
+        LOG("-> deactivate (hide)  app");
+        firstActivation = NO;
+        shouldReactivate = YES;
+        [NSApp hide:NSApp];
+    }
 }
 
 - (void)applicationWillResignActive:(NSNotification *)aNotification
@@ -297,6 +307,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);
+
+    if (isNormalTaskbarApp && shouldReactivate) {
+        LOG("-> reactivate  app");
+        shouldReactivate = NO;
+        [NSApp activateIgnoringOtherApps:YES];
+    }
 }
 
 - (void)applicationWillHide:(NSNotification *)aNotification
@@ -515,8 +531,16 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
         if (!isEmbedded)
         {
+            // Not embedded in another toolkit, so disable automatic tabbing for all windows
+            // We use a guarded call to preserve the ability to run on 10.10 or 10.11.
+            // Using a guard, instead of reflection, assumes the Xcode used to
+            // build includes MacOSX SDK 10.12 or later
+            if (@available(macOS 10.12, *)) {
+                [NSWindow setAllowsAutomaticWindowTabbing:NO];
+            }
             if (self->jTaskBarApp == JNI_TRUE)
             {
+                isNormalTaskbarApp = YES;
                 // move process from background only to full on app with visible Dock icon
                 ProcessSerialNumber psn;
                 if (GetCurrentProcess(&psn) == noErr)
@@ -1048,6 +1072,18 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1supportsSy
 (JNIEnv *env, jobject japplication)
 {
     return !isEmbedded;
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _isNormalTaskbarApp
+ * Signature: ()Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp
+(JNIEnv *env, jobject japplication)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1isNormalTaskbarApp");
+    return isNormalTaskbarApp;
 }
 
 /*

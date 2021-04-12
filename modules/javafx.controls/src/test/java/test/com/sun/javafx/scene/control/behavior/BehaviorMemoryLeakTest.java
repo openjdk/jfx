@@ -28,7 +28,6 @@ package test.com.sun.javafx.scene.control.behavior;
 import java.lang.ref.WeakReference;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
@@ -42,14 +41,11 @@ import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
 import javafx.scene.control.Control;
-import javafx.scene.control.ListView;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.control.TreeView;
-import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 
 /**
  * Test for memory leaks in Behavior implementations.
@@ -59,6 +55,7 @@ import test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory;
 @RunWith(Parameterized.class)
 public class BehaviorMemoryLeakTest {
 
+    private Class<Control> controlClass;
     private Control control;
 
     /**
@@ -88,20 +85,15 @@ public class BehaviorMemoryLeakTest {
                 TableView.class,
                 TextArea.class,
                 TextField.class,
-                TreeTableView.class,
-                TreeView.class
+                TreeTableView.class
          );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
-        // instantiate controls
-        List<Control> controls = controlClasses.stream()
-                .map(ControlSkinFactory::createControl)
-                .collect(Collectors.toList());
-        return asArrays(controls);
+        return asArrays(controlClasses);
     }
 
-    public BehaviorMemoryLeakTest(Control control) {
-        this.control = control;
+    public BehaviorMemoryLeakTest(Class<Control> controlClass) {
+        this.controlClass = controlClass;
     }
 
 //------------------- setup
@@ -120,6 +112,7 @@ public class BehaviorMemoryLeakTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
+        control = createControl(controlClass);
         assertNotNull(control);
     }
 

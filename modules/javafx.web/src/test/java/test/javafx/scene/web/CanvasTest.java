@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,6 +122,38 @@ public class CanvasTest extends TestBase {
                     (int) getEngine().executeScript("document.getElementById('canvas').getContext('2d').getImageData(260,213,1,1).data[0]"));
             assertEquals("Arc endAngle", redColor,
                     (int) getEngine().executeScript("document.getElementById('canvas').getContext('2d').getImageData(300,75,1,1).data[0]"));
+        });
+    }
+
+    // JDK-8234471
+    @Test public void testCanvasPattern() throws Exception {
+        final String htmlCanvasContent = "\n"
+            + "<canvas id='canvaspattern' width='100' height='100'></canvas>\n"
+            + "<svg id='svgpattern'></svg>\n"
+            + "<script>\n"
+            + "var patternCanvas = document.createElement('canvas');\n"
+            + "var patternCtx = patternCanvas.getContext('2d');\n"
+            + "patternCanvas.width = patternCanvas.height = 30;\n"
+            + "patternCtx.fillStyle = 'red';\n"
+            + "patternCtx.fillRect(0, 0, 20, 20);\n"
+            + "\n"
+            + "var ctx = document.getElementById('canvaspattern').getContext('2d');\n"
+            + "var pattern = ctx.createPattern(patternCanvas, 'repeat');\n"
+            + "var matrix = document.getElementById('svgpattern').createSVGMatrix();\n"
+            + "pattern.setTransform(matrix.translate(10, 10));\n"
+            + "ctx.fillStyle = pattern;\n"
+            + "ctx.fillRect(0, 0, 100, 100);\n"
+            + "</script>\n";
+
+        loadContent(htmlCanvasContent);
+        submit(() -> {
+            int redColor = 255;
+            assertEquals("Pattern top-left corner", 0, (int) getEngine().executeScript(
+                "document.getElementById('canvaspattern').getContext('2d').getImageData(1, 1, 1, 1).data[0]"));
+            assertEquals("First rect top-left", redColor, (int) getEngine().executeScript(
+                "document.getElementById('canvaspattern').getContext('2d').getImageData(11, 11, 1, 1).data[0]"));
+            assertEquals("First rect center", redColor, (int) getEngine().executeScript(
+                "document.getElementById('canvaspattern').getContext('2d').getImageData(21, 21, 1, 1).data[0]"));
         });
     }
 

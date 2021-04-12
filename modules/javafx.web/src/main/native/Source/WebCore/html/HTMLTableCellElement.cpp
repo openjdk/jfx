@@ -131,9 +131,9 @@ void HTMLTableCellElement::parseAttribute(const QualifiedName& name, const AtomS
 
 const StyleProperties* HTMLTableCellElement::additionalPresentationAttributeStyle() const
 {
-    if (RefPtr<HTMLTableElement> table = findParentTable())
+    if (auto table = findParentTable())
         return table->additionalCellStyle();
-    return 0;
+    return nullptr;
 }
 
 bool HTMLTableCellElement::isURLAttribute(const Attribute& attribute) const
@@ -169,10 +169,10 @@ void HTMLTableCellElement::setRowSpanForBindings(unsigned n)
 const AtomString& HTMLTableCellElement::scope() const
 {
     // https://html.spec.whatwg.org/multipage/tables.html#attr-th-scope
-    static NeverDestroyed<const AtomString> row("row", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> col("col", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> rowgroup("rowgroup", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> colgroup("colgroup", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> row("row", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> col("col", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> rowgroup("rowgroup", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> colgroup("colgroup", AtomString::ConstructFromLiteral);
 
     const AtomString& value = attributeWithoutSynchronization(HTMLNames::scopeAttr);
 

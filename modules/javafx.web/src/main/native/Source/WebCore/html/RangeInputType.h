@@ -56,7 +56,7 @@ private:
     void createShadowSubtree() final;
     Decimal parseToNumber(const String&, const Decimal&) const final;
     String serialize(const Decimal&) const final;
-    void accessKeyAction(bool sendMouseEvents) final;
+    bool accessKeyAction(bool sendMouseEvents) final;
     void attributeChanged(const QualifiedName&) final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
     String fallbackValue() const final;
@@ -68,7 +68,7 @@ private:
     SliderThumbElement& typedSliderThumbElement() const;
 
 #if ENABLE(DATALIST_ELEMENT)
-    void listAttributeTargetChanged() final;
+    void dataListMayHaveChanged() final;
     void updateTickMarkValues();
     Optional<Decimal> findClosestTickMarkValue(const Decimal&) final;
 

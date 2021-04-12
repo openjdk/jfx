@@ -46,12 +46,8 @@ HashMap<WebGLProgram*, WebGLRenderingContextBase*>& WebGLProgram::instances(cons
 
 Lock& WebGLProgram::instancesMutex()
 {
-    static LazyNeverDestroyed<Lock> mutex;
-    static std::once_flag initializeMutex;
-    std::call_once(initializeMutex, [] {
-        mutex.construct();
-    });
-    return mutex.get();
+    static Lock mutex;
+    return mutex;
 }
 
 Ref<WebGLProgram> WebGLProgram::create(WebGLRenderingContextBase& ctx)
@@ -228,8 +224,10 @@ void WebGLProgram::cacheInfoIfNeeded()
     GCGLint linkStatus = 0;
     context->getProgramiv(object(), GraphicsContextGL::LINK_STATUS, &linkStatus);
     m_linkStatus = linkStatus;
-    if (m_linkStatus)
+    if (m_linkStatus) {
         cacheActiveAttribLocations(context);
+        m_requiredTransformFeedbackBufferCount = m_requiredTransformFeedbackBufferCountAfterNextLink;
+    }
     m_infoValid = true;
 }
 

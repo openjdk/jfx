@@ -102,7 +102,7 @@ void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& pai
 
     std::unique_ptr<ShadowData> debugShadow = nullptr;
     if (flow.settings().simpleLineLayoutDebugBordersEnabled()) {
-        debugShadow = makeUnique<ShadowData>(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, Color(0, 255, 0, 200));
+        debugShadow = makeUnique<ShadowData>(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, Color::green.colorWithAlphaByte(200));
         textPainter.setShadow(debugShadow.get());
     }
 
@@ -170,7 +170,7 @@ bool hitTestFlow(const RenderBlockFlow& flow, const Layout& layout, const HitTes
         if (!locationInContainer.intersects(lineRect))
             continue;
         renderer.updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-        if (result.addNodeToListBasedTestResult(renderer.node(), request, locationInContainer, lineRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(renderer.nodeForHitTest(), request, locationInContainer, lineRect) == HitTestProgress::Stop)
             return true;
     }
     return false;
@@ -277,12 +277,12 @@ static void initializeInlineTextBox(RenderBlockFlow& flow, InlineTextBox& inline
     inlineTextBox.setExpansionWithoutGrowing(run.expansion());
 
     auto expansionBehavior = run.expansionBehavior();
-    inlineTextBox.setCanHaveLeadingExpansion(expansionBehavior & AllowLeadingExpansion);
-    inlineTextBox.setCanHaveTrailingExpansion(expansionBehavior & AllowTrailingExpansion);
-    if (expansionBehavior & ForceTrailingExpansion)
-        inlineTextBox.setForceTrailingExpansion();
-    if (expansionBehavior & ForceLeadingExpansion)
-        inlineTextBox.setForceLeadingExpansion();
+    inlineTextBox.setCanHaveLeftExpansion(expansionBehavior & AllowLeftExpansion);
+    inlineTextBox.setCanHaveRightExpansion(expansionBehavior & AllowRightExpansion);
+    if (expansionBehavior & ForceRightExpansion)
+        inlineTextBox.setForceRightExpansion();
+    if (expansionBehavior & ForceLeftExpansion)
+        inlineTextBox.setForceLeftExpansion();
 }
 
 void generateLineBoxTree(RenderBlockFlow& flow, const Layout& layout)

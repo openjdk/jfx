@@ -29,7 +29,10 @@
 
 #include "AbstractFrame.h"
 #include "AdjustViewSizeOrNot.h"
+#include "Document.h"
+#include "FrameIdentifier.h"
 #include "FrameTree.h"
+#include "PageIdentifier.h"
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
 #include <wtf/HashSet.h>
@@ -57,6 +60,10 @@ namespace JSC { namespace Yarr {
 class RegularExpression;
 } }
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class CSSAnimationController;
@@ -82,7 +89,6 @@ class IntSize;
 class NavigationScheduler;
 class Node;
 class Page;
-class Range;
 class RenderLayer;
 class RenderView;
 class RenderWidget;
@@ -91,6 +97,8 @@ class SecurityOrigin;
 class Settings;
 class VisiblePosition;
 class Widget;
+
+struct SimpleRange;
 
 #if PLATFORM(IOS_FAMILY)
 enum {
@@ -124,7 +132,7 @@ typedef unsigned LayerTreeFlags;
 // FIXME: Rename Frame to LocalFrame and AbstractFrame to Frame.
 class Frame final : public AbstractFrame {
 public:
-    WEBCORE_EXPORT static Ref<Frame> create(Page*, HTMLFrameOwnerElement*, FrameLoaderClient*);
+    WEBCORE_EXPORT static Ref<Frame> create(Page*, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&);
 
     WEBCORE_EXPORT void init();
 #if PLATFORM(IOS_FAMILY)
@@ -157,19 +165,22 @@ public:
     Document* document() const;
     FrameView* view() const;
 
-    Editor& editor() { return m_editor; }
-    const Editor& editor() const { return m_editor; }
+    Editor& editor() { return document()->editor(); }
+    const Editor& editor() const { return document()->editor(); }
     EventHandler& eventHandler() { return m_eventHandler; }
     const EventHandler& eventHandler() const { return m_eventHandler; }
     FrameLoader& loader() const;
     NavigationScheduler& navigationScheduler() const;
-    FrameSelection& selection() { return m_selection; }
-    const FrameSelection& selection() const { return m_selection; }
+    FrameSelection& selection() { return document()->selection(); }
+    const FrameSelection& selection() const { return document()->selection(); }
     FrameTree& tree() const;
-    CSSAnimationController& animation() { return m_animationController; }
-    const CSSAnimationController& animation() const { return m_animationController; }
+    CSSAnimationController& legacyAnimation() { return m_animationController; }
+    const CSSAnimationController& legacyAnimation() const { return m_animationController; }
     ScriptController& script() { return m_script; }
     const ScriptController& script() const { return m_script; }
+
+    WEBCORE_EXPORT Optional<PageIdentifier> pageID() const;
+    WEBCORE_EXPORT Optional<FrameIdentifier> frameID() const;
 
     WEBCORE_EXPORT RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
     WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -181,10 +192,15 @@ public:
 
     bool requestDOMPasteAccess();
 
+    String debugDescription() const;
+
 // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
     WEBCORE_EXPORT void injectUserScriptImmediately(DOMWrapperWorld&, const UserScript&);
+
+    void injectUserScriptsAwaitingNotification();
+    void addUserScriptAwaitingNotification(DOMWrapperWorld&, const UserScript&);
 
     WEBCORE_EXPORT String layerTreeAsText(LayerTreeFlags = 0) const;
     WEBCORE_EXPORT String trackedRepaintRectsAsText() const;
@@ -256,7 +272,7 @@ public:
 
     WEBCORE_EXPORT VisiblePosition visiblePositionForPoint(const IntPoint& framePoint) const;
     Document* documentAtPoint(const IntPoint& windowPoint);
-    WEBCORE_EXPORT RefPtr<Range> rangeForPoint(const IntPoint& framePoint);
+    WEBCORE_EXPORT Optional<SimpleRange> rangeForPoint(const IntPoint& framePoint);
 
     WEBCORE_EXPORT String searchForLabelsAboveCell(const JSC::Yarr::RegularExpression&, HTMLTableCellElement*, size_t* resultDistanceFromStartOfCell);
     String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
@@ -294,6 +310,8 @@ public:
     void didPrewarmLocalStorage();
     bool mayPrewarmLocalStorage() const;
 
+    void invalidateContentEventRegionsIfNeeded();
+
 // ========
 
     void selfOnlyRef();
@@ -302,7 +320,7 @@ public:
 private:
     friend class NavigationDisabler;
 
-    Frame(Page&, HTMLFrameOwnerElement*, FrameLoaderClient&);
+    Frame(Page&, HTMLFrameOwnerElement*, UniqueRef<FrameLoaderClient>&&);
 
     void dropChildren();
 
@@ -312,6 +330,8 @@ private:
     AbstractDOMWindow* virtualWindow() const final;
 
     HashSet<FrameDestructionObserver*> m_destructionObservers;
+
+    Vector<std::pair<Ref<DOMWrapperWorld>, UniqueRef<UserScript>>> m_userScriptsAwaitingNotification;
 
     Frame& m_mainFrame;
     Page* m_page;
@@ -325,8 +345,6 @@ private:
     RefPtr<Document> m_doc;
 
     UniqueRef<ScriptController> m_script;
-    UniqueRef<Editor> m_editor;
-    UniqueRef<FrameSelection> m_selection;
     UniqueRef<CSSAnimationController> m_animationController;
 
 #if ENABLE(DATA_DETECTION)
@@ -358,7 +376,6 @@ private:
     bool m_hasHadUserInteraction { false };
     unsigned m_localStoragePrewarmingCount { 0 };
 
-protected:
     UniqueRef<EventHandler> m_eventHandler;
 };
 
@@ -406,6 +423,8 @@ inline Frame& Frame::mainFrame() const
 {
     return m_mainFrame;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const Frame&);
 
 } // namespace WebCore
 

@@ -20,18 +20,19 @@
 #include "config.h"
 #include "FEDropShadow.h"
 
+#include "ColorSerialization.h"
 #include "FEGaussianBlur.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
+#include "ImageData.h"
 #include "ShadowBlur.h"
-#include <JavaScriptCore/Uint8ClampedArray.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
 FEDropShadow::FEDropShadow(Filter& filter, float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::DropShadow)
     , m_stdX(stdX)
     , m_stdY(stdY)
     , m_dx(dx)
@@ -99,14 +100,15 @@ void FEDropShadow::platformApplySoftware()
     ShadowBlur contextShadow(blurRadius, offset, m_shadowColor);
 
     // TODO: Direct pixel access to ImageBuffer would avoid copying the ImageData.
-    IntRect shadowArea(IntPoint(), resultImage->internalSize());
-    auto srcPixelArray = resultImage->getPremultipliedImageData(shadowArea, nullptr, ImageBuffer::BackingStoreCoordinateSystem);
-    if (!srcPixelArray)
+    IntRect shadowArea(IntPoint(), resultImage->logicalSize());
+    auto imageData = resultImage->getImageData(AlphaPremultiplication::Premultiplied, shadowArea);
+    if (!imageData)
         return;
 
-    contextShadow.blurLayerImage(srcPixelArray->data(), shadowArea.size(), 4 * shadowArea.size().width());
+    auto* srcPixelArray = imageData->data();
+    contextShadow.blurLayerImage(srcPixelArray->data(), imageData->size(), 4 * imageData->size().width());
 
-    resultImage->putByteArray(*srcPixelArray, AlphaPremultiplication::Premultiplied, shadowArea.size(), shadowArea, IntPoint(), ImageBuffer::BackingStoreCoordinateSystem);
+    resultImage->putImageData(AlphaPremultiplication::Premultiplied, *imageData, shadowArea);
 
     resultContext.setCompositeOperation(CompositeOperator::SourceIn);
     resultContext.fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()), m_shadowColor);
@@ -130,7 +132,7 @@ TextStream& FEDropShadow::externalRepresentation(TextStream& ts, RepresentationT
 {
     ts << indent <<"[feDropShadow";
     FilterEffect::externalRepresentation(ts, representation);
-    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\" dx=\"" << m_dx << "\" dy=\"" << m_dy << "\" flood-color=\"" << m_shadowColor.nameForRenderTreeAsText() <<"\" flood-opacity=\"" << m_shadowOpacity << "]\n";
+    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\" dx=\"" << m_dx << "\" dy=\"" << m_dy << "\" flood-color=\"" << serializationForRenderTreeAsText(m_shadowColor) <<"\" flood-opacity=\"" << m_shadowOpacity << "]\n";
 
     TextStream::IndentScope indentScope(ts);
     inputEffect(0)->externalRepresentation(ts, representation);

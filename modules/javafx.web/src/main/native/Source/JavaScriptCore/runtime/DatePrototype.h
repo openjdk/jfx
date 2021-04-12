@@ -27,12 +27,16 @@ namespace JSC {
 class ObjectPrototype;
 
 class DatePrototype final : public JSNonFinalObject {
-private:
-    DatePrototype(VM&, Structure*);
-
 public:
-    typedef JSNonFinalObject Base;
+    using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType, SubspaceAccess>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(DatePrototype, Base);
+        return &vm.plainObjectSpace;
+    }
 
     static DatePrototype* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     {
@@ -48,7 +52,8 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
     }
 
-protected:
+private:
+    DatePrototype(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*);
 };
 

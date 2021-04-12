@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *
  *  This library is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@
 #include "config.h"
 #include "Heap.h"
 
-#include "BlockDirectoryInlines.h"
 #include "BuiltinExecutables.h"
 #include "CodeBlock.h"
 #include "CodeBlockSetInlines.h"
@@ -33,6 +32,7 @@
 #include "FullGCActivityCallback.h"
 #include "FunctionExecutableInlines.h"
 #include "GCActivityCallback.h"
+#include "GCIncomingRefCountedInlines.h"
 #include "GCIncomingRefCountedSetInlines.h"
 #include "GCSegmentedArrayInlines.h"
 #include "GCTypeMap.h"
@@ -43,14 +43,11 @@
 #include "HeapSnapshot.h"
 #include "HeapVerifier.h"
 #include "IncrementalSweeper.h"
-#include "InferredValueInlines.h"
 #include "Interpreter.h"
 #include "IsoCellSetInlines.h"
 #include "JITStubRoutineSet.h"
 #include "JITWorklist.h"
-#include "JSCInlines.h"
-#include "JSGlobalObject.h"
-#include "JSLock.h"
+#include "JSFinalizationRegistry.h"
 #include "JSVirtualMachineInternal.h"
 #include "JSWeakMap.h"
 #include "JSWeakObjectRef.h"
@@ -58,6 +55,7 @@
 #include "JSWebAssemblyCodeBlock.h"
 #include "MachineStackMarker.h"
 #include "MarkStackMergingConstraint.h"
+#include "MarkedJSValueRefArray.h"
 #include "MarkedSpaceInlines.h"
 #include "MarkingConstraintSet.h"
 #include "PreventCollectionScope.h"
@@ -73,19 +71,14 @@
 #include "SynchronousStopTheWorldMutatorScheduler.h"
 #include "TypeProfiler.h"
 #include "TypeProfilerLog.h"
-#include "UnlinkedCodeBlock.h"
 #include "VM.h"
-#include "VisitCounter.h"
-#include "WasmMemory.h"
 #include "WeakMapImplInlines.h"
 #include "WeakSetInlines.h"
 #include <algorithm>
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/ListDump.h>
-#include <wtf/MainThread.h>
-#include <wtf/ParallelVectorIterator.h>
-#include <wtf/ProcessID.h>
 #include <wtf/RAMSize.h>
+#include <wtf/Scope.h>
 #include <wtf/SimpleStats.h>
 #include <wtf/Threading.h>
 
@@ -105,7 +98,7 @@ namespace JSC {
 
 namespace {
 
-bool verboseStop = false;
+static constexpr bool verboseStop = false;
 
 double maxPauseMS(double thisPauseMS)
 {
@@ -235,7 +228,7 @@ private:
 
 } // anonymous namespace
 
-class Heap::HeapThread : public AutomaticThread {
+class Heap::HeapThread final : public AutomaticThread {
 public:
     HeapThread(const AbstractLocker& locker, Heap& heap)
         : AutomaticThread(locker, heap.m_threadLock, heap.m_threadCondition.copyRef())
@@ -243,13 +236,13 @@ public:
     {
     }
 
-    const char* name() const override
+    const char* name() const final
     {
         return "JSC Heap Collector Thread";
     }
 
-protected:
-    PollResult poll(const AbstractLocker& locker) override
+private:
+    PollResult poll(const AbstractLocker& locker) final
     {
         if (m_heap.m_threadShouldStop) {
             m_heap.notifyThreadStopping(locker);
@@ -263,23 +256,22 @@ protected:
         return PollResult::Wait;
     }
 
-    WorkResult work() override
+    WorkResult work() final
     {
         m_heap.collectInCollectorThread();
         return WorkResult::Continue;
     }
 
-    void threadDidStart() override
+    void threadDidStart() final
     {
         Thread::registerGCThread(GCThreadType::Main);
     }
 
-    void threadIsStopping(const AbstractLocker&) override
+    void threadIsStopping(const AbstractLocker&) final
     {
         m_heap.m_collectorThreadIsRunning = false;
     }
 
-private:
     Heap& m_heap;
 };
 
@@ -523,7 +515,7 @@ void Heap::deprecatedReportExtraMemorySlowCase(size_t size)
 {
     // FIXME: Change this to use SaturatedArithmetic when available.
     // https://bugs.webkit.org/show_bug.cgi?id=170411
-    Checked<size_t, RecordOverflow> checkedNewSize = m_deprecatedExtraMemorySize;
+    CheckedSize checkedNewSize = m_deprecatedExtraMemorySize;
     checkedNewSize += size;
     m_deprecatedExtraMemorySize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.unsafeGet();
     reportExtraMemoryAllocatedSlowCase(size);
@@ -621,6 +613,10 @@ void Heap::finalizeUnconditionalFinalizers()
     if (vm().m_errorInstanceSpace)
         finalizeMarkedUnconditionalFinalizers<ErrorInstance>(*vm().m_errorInstanceSpace);
 
+    // FinalizationRegistries currently rely on serial finalization because they can post tasks to the deferredWorkTimer, which normally expects tasks to only be posted by the API lock holder.
+    if (vm().m_finalizationRegistrySpace)
+        finalizeMarkedUnconditionalFinalizers<JSFinalizationRegistry>(*vm().m_finalizationRegistrySpace);
+
 #if ENABLE(WEBASSEMBLY)
     if (vm().m_webAssemblyCodeBlockSpace)
         finalizeMarkedUnconditionalFinalizers<JSWebAssemblyCodeBlock>(*vm().m_webAssemblyCodeBlockSpace);
@@ -639,7 +635,7 @@ void Heap::didFinishIterating()
 
 void Heap::completeAllJITPlans()
 {
-    if (!VM::canUseJIT())
+    if (!Options::useJIT())
         return;
 #if ENABLE(JIT)
     JITWorklist::ensureGlobalWorklist().completeAllForVM(m_vm);
@@ -651,7 +647,7 @@ template<typename Func>
 void Heap::iterateExecutingAndCompilingCodeBlocks(const Func& func)
 {
     m_codeBlocks->iterateCurrentlyExecuting(func);
-    if (VM::canUseJIT())
+    if (Options::useJIT())
         DFG::iterateCodeBlocksForGC(m_vm, func);
 }
 
@@ -710,7 +706,7 @@ void Heap::gatherJSStackRoots(ConservativeRoots& roots)
 void Heap::gatherScratchBufferRoots(ConservativeRoots& roots)
 {
 #if ENABLE(DFG_JIT)
-    if (!VM::canUseJIT())
+    if (!Options::useJIT())
         return;
     m_vm.gatherScratchBufferRoots(roots);
     m_vm.scanSideState(roots);
@@ -730,7 +726,7 @@ void Heap::beginMarking()
 void Heap::removeDeadCompilerWorklistEntries()
 {
 #if ENABLE(DFG_JIT)
-    if (!VM::canUseJIT())
+    if (!Options::useJIT())
         return;
     for (unsigned i = DFG::numberOfWorklists(); i--;)
         DFG::existingWorklistForIndex(i).removeDeadPlans(m_vm);
@@ -834,7 +830,7 @@ size_t Heap::extraMemorySize()
 {
     // FIXME: Change this to use SaturatedArithmetic when available.
     // https://bugs.webkit.org/show_bug.cgi?id=170411
-    Checked<size_t, RecordOverflow> checkedTotal = m_extraMemorySize;
+    CheckedSize checkedTotal = m_extraMemorySize;
     checkedTotal += m_deprecatedExtraMemorySize;
     checkedTotal += m_arrayBuffers.size();
     size_t total = UNLIKELY(checkedTotal.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedTotal.unsafeGet();
@@ -981,7 +977,9 @@ void Heap::deleteAllUnlinkedCodeBlocks(DeleteAllCodeEffort effort)
 void Heap::deleteUnmarkedCompiledCode()
 {
     vm().forEachScriptExecutableSpace([] (auto& space) { space.space.sweep(); });
-    vm().forEachCodeBlockSpace([] (auto& space) { space.space.sweep(); }); // Sweeping must occur before deleting stubs, otherwise the stubs might still think they're alive as they get deleted.
+    // Sweeping must occur before deleting stubs, otherwise the stubs might still think they're alive as they get deleted.
+    // And CodeBlock destructor is assuming that CodeBlock gets destroyed before UnlinkedCodeBlock gets destroyed.
+    vm().forEachCodeBlockSpace([] (auto& space) { space.space.sweep(); });
     m_jitStubRoutines->deleteUnmarkedJettisonedStubRoutines();
 }
 
@@ -1070,8 +1068,8 @@ void Heap::collect(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     switch (synchronousness) {
     case Async: {
@@ -1103,8 +1101,8 @@ void Heap::collectNow(Synchronousness synchronousness, GCRequest request)
 
 void Heap::collectAsync(GCRequest request)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     if (!m_isSafeToCollect)
         return;
@@ -1127,8 +1125,8 @@ void Heap::collectAsync(GCRequest request)
 
 void Heap::collectSync(GCRequest request)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     if (!m_isSafeToCollect)
         return;
@@ -1310,7 +1308,7 @@ NEVER_INLINE bool Heap::runBeginPhase(GCConductor conn)
 
             {
                 ParallelModeEnabler parallelModeEnabler(*slotVisitor);
-                slotVisitor->drainFromShared(SlotVisitor::SlaveDrain);
+                slotVisitor->drainFromShared(SlotVisitor::HelperDrain);
             }
 
             {
@@ -1500,17 +1498,25 @@ NEVER_INLINE bool Heap::runEndPhase(GCConductor conn)
         m_verifier->verify(HeapVerifier::Phase::AfterMarking);
     }
 
-    if (vm().typeProfiler())
-        vm().typeProfiler()->invalidateTypeSetCache(vm());
+    {
+        auto* previous = Thread::current().setCurrentAtomStringTable(nullptr);
+        auto scopeExit = makeScopeExit([&] {
+            Thread::current().setCurrentAtomStringTable(previous);
+        });
 
-    m_structureIDTable.flushOldTables();
+        if (vm().typeProfiler())
+            vm().typeProfiler()->invalidateTypeSetCache(vm());
 
-    reapWeakHandles();
-    pruneStaleEntriesFromWeakGCMaps();
-    sweepArrayBuffers();
-    snapshotUnswept();
-    finalizeUnconditionalFinalizers(); // We rely on these unconditional finalizers running before clearCurrentlyExecuting since CodeBlock's finalizer relies on querying currently executing.
-    removeDeadCompilerWorklistEntries();
+        m_structureIDTable.flushOldTables();
+
+        reapWeakHandles();
+        pruneStaleEntriesFromWeakGCMaps();
+        sweepArrayBuffers();
+        snapshotUnswept();
+        finalizeUnconditionalFinalizers(); // We rely on these unconditional finalizers running before clearCurrentlyExecuting since CodeBlock's finalizer relies on querying currently executing.
+        removeDeadCompilerWorklistEntries();
+    }
+
     notifyIncrementalSweeper();
 
     m_codeBlocks->iterateCurrentlyExecuting(
@@ -1639,7 +1645,7 @@ void Heap::stopThePeriphery(GCConductor conn)
         });
 
 #if ENABLE(JIT)
-    if (VM::canUseJIT()) {
+    if (Options::useJIT()) {
         DeferGCForAWhile awhile(*this);
         if (JITWorklist::ensureGlobalWorklist().completeAllForVM(m_vm)
             && conn == GCConductor::Collector)
@@ -1782,8 +1788,8 @@ NEVER_INLINE void Heap::resumeTheMutator()
 
 void Heap::stopIfNecessarySlow()
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     while (stopIfNecessarySlow(m_worldState.load())) { }
 
@@ -1797,8 +1803,8 @@ void Heap::stopIfNecessarySlow()
 
 bool Heap::stopIfNecessarySlow(unsigned oldState)
 {
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     RELEASE_ASSERT(oldState & hasAccessBit);
     RELEASE_ASSERT(!(oldState & stoppedBit));
@@ -2155,7 +2161,7 @@ void Heap::suspendCompilerThreads()
     // We ensure the worklists so that it's not possible for the mutator to start a new worklist
     // after we have suspended the ones that he had started before. That's not very expensive since
     // the worklists use AutomaticThreads anyway.
-    if (!VM::canUseJIT())
+    if (!Options::useJIT())
         return;
     for (unsigned i = DFG::numberOfWorklists(); i--;)
         DFG::ensureWorklistForIndex(i).suspendAllThreads();
@@ -2243,7 +2249,7 @@ void Heap::notifyIncrementalSweeper()
 
 void Heap::updateAllocationLimits()
 {
-    static constexpr bool verbose = false;
+    constexpr bool verbose = false;
 
     if (verbose) {
         dataLog("\n");
@@ -2270,7 +2276,7 @@ void Heap::updateAllocationLimits()
     // extra memory reporting.
     currentHeapSize += extraMemorySize();
     if (ASSERT_ENABLED) {
-        Checked<size_t, RecordOverflow> checkedCurrentHeapSize = m_totalBytesVisited;
+        CheckedSize checkedCurrentHeapSize = m_totalBytesVisited;
         checkedCurrentHeapSize += extraMemorySize();
         ASSERT(!checkedCurrentHeapSize.hasOverflowed() && checkedCurrentHeapSize.unsafeGet() == currentHeapSize);
     }
@@ -2366,7 +2372,7 @@ void Heap::didFinishCollection()
 void Heap::resumeCompilerThreads()
 {
 #if ENABLE(DFG_JIT)
-    if (!VM::canUseJIT())
+    if (!Options::useJIT())
         return;
     for (unsigned i = DFG::numberOfWorklists(); i--;)
         DFG::existingWorklistForIndex(i).resumeAllThreads();
@@ -2422,7 +2428,7 @@ void Heap::addFinalizer(JSCell* cell, CFinalizer finalizer)
 
 void Heap::addFinalizer(JSCell* cell, LambdaFinalizer function)
 {
-    WeakSet::allocate(cell, &m_lambdaFinalizerOwner, function.leakImpl()); // Balanced by LambdaFinalizerOwner::finalize().
+    WeakSet::allocate(cell, &m_lambdaFinalizerOwner, function.leak()); // Balanced by LambdaFinalizerOwner::finalize().
 }
 
 void Heap::CFinalizerOwner::finalize(Handle<Unknown> handle, void* context)
@@ -2435,8 +2441,7 @@ void Heap::CFinalizerOwner::finalize(Handle<Unknown> handle, void* context)
 
 void Heap::LambdaFinalizerOwner::finalize(Handle<Unknown> handle, void* context)
 {
-    LambdaFinalizer::Impl* impl = bitwise_cast<LambdaFinalizer::Impl*>(context);
-    LambdaFinalizer finalizer(impl);
+    auto finalizer = WTF::adopt(static_cast<LambdaFinalizer::Impl*>(context));
     HandleSlot slot = handle.slot();
     finalizer(slot->asCell());
     WeakSet::deallocate(WeakImpl::asWeakImpl(slot));
@@ -2575,7 +2580,7 @@ void Heap::reportExtraMemoryVisited(size_t size)
         size_t oldSize = *counter;
         // FIXME: Change this to use SaturatedArithmetic when available.
         // https://bugs.webkit.org/show_bug.cgi?id=170411
-        Checked<size_t, RecordOverflow> checkedNewSize = oldSize;
+        CheckedSize checkedNewSize = oldSize;
         checkedNewSize += size;
         size_t newSize = UNLIKELY(checkedNewSize.hasOverflowed()) ? std::numeric_limits<size_t>::max() : checkedNewSize.unsafeGet();
         if (WTF::atomicCompareExchangeWeakRelaxed(counter, oldSize, newSize))
@@ -2599,8 +2604,8 @@ void Heap::reportExternalMemoryVisited(size_t size)
 void Heap::collectIfNecessaryOrDefer(GCDeferralContext* deferralContext)
 {
     ASSERT(deferralContext || isDeferred() || !DisallowGC::isInEffectOnCurrentThread());
-    if (validateDFGDoesGC)
-        RELEASE_ASSERT(expectDoesGC());
+    if constexpr (validateDFGDoesGC)
+        verifyCanGC();
 
     if (!m_isSafeToCollect)
         return;
@@ -2716,7 +2721,7 @@ void Heap::addCoreConstraints()
                 SetRootMarkReasonScope rootScope(slotVisitor, SlotVisitor::RootMarkReason::ConservativeScan);
                 slotVisitor.append(conservativeRoots);
             }
-            if (VM::canUseJIT()) {
+            if (Options::useJIT()) {
                 // JITStubRoutines must be visited after scanning ConservativeRoots since JITStubRoutines depend on the hook executed during gathering ConservativeRoots.
                 SetRootMarkReasonScope rootScope(slotVisitor, SlotVisitor::RootMarkReason::JITStubRoutines);
                 m_jitStubRoutines->traceMarkedStubRoutines(slotVisitor);
@@ -2748,6 +2753,10 @@ void Heap::addCoreConstraints()
                 SetRootMarkReasonScope rootScope(slotVisitor, SlotVisitor::RootMarkReason::ConservativeScan);
                 MarkedArgumentBuffer::markLists(slotVisitor, *m_markListSet);
             }
+
+            m_markedJSValueRefArrays.forEach([&] (MarkedJSValueRefArray* array) {
+                array->visitAggregate(slotVisitor);
+            });
 
             {
                 SetRootMarkReasonScope rootScope(slotVisitor, SlotVisitor::RootMarkReason::VMExceptions);
@@ -2820,7 +2829,7 @@ void Heap::addCoreConstraints()
         ConstraintParallelism::Parallel);
 
 #if ENABLE(DFG_JIT)
-    if (VM::canUseJIT()) {
+    if (Options::useJIT()) {
         m_constraintSet->add(
             "Dw", "DFG Worklists",
             [this] (SlotVisitor& slotVisitor) {
@@ -2885,7 +2894,8 @@ void Heap::notifyIsSafeToCollect()
             [this] () {
                 MonotonicTime initialTime = MonotonicTime::now();
                 Seconds period = Seconds::fromMilliseconds(Options::collectContinuouslyPeriodMS());
-                while (!m_shouldStopCollectingContinuously) {
+                while (true) {
+                    LockHolder locker(m_collectContinuouslyLock);
                     {
                         LockHolder locker(*m_threadLock);
                         if (m_requests.isEmpty()) {
@@ -2895,19 +2905,18 @@ void Heap::notifyIsSafeToCollect()
                         }
                     }
 
-                    {
-                        LockHolder locker(m_collectContinuouslyLock);
-                        Seconds elapsed = MonotonicTime::now() - initialTime;
-                        Seconds elapsedInPeriod = elapsed % period;
-                        MonotonicTime timeToWakeUp =
-                            initialTime + elapsed - elapsedInPeriod + period;
-                        while (!hasElapsed(timeToWakeUp) && !m_shouldStopCollectingContinuously) {
-                            m_collectContinuouslyCondition.waitUntil(
-                                m_collectContinuouslyLock, timeToWakeUp);
-                        }
+                    Seconds elapsed = MonotonicTime::now() - initialTime;
+                    Seconds elapsedInPeriod = elapsed % period;
+                    MonotonicTime timeToWakeUp =
+                        initialTime + elapsed - elapsedInPeriod + period;
+                    while (!hasElapsed(timeToWakeUp) && !m_shouldStopCollectingContinuously) {
+                        m_collectContinuouslyCondition.waitUntil(
+                            m_collectContinuouslyLock, timeToWakeUp);
                     }
+                    if (m_shouldStopCollectingContinuously)
+                        break;
                 }
-            });
+            }, ThreadType::GarbageCollection);
     }
 
     dataLogIf(Options::logGC(), (MonotonicTime::now() - before).milliseconds(), "ms]\n");
@@ -2991,6 +3000,12 @@ void Heap::setBonusVisitorTask(RefPtr<SharedTask<void(SlotVisitor&)>> task)
     auto locker = holdLock(m_markingMutex);
     m_bonusVisitorTask = task;
     m_markingConditionVariable.notifyAll();
+}
+
+
+void Heap::addMarkedJSValueRefArray(MarkedJSValueRefArray* array)
+{
+    m_markedJSValueRefArrays.append(array);
 }
 
 void Heap::runTaskInParallel(RefPtr<SharedTask<void(SlotVisitor&)>> task)

@@ -66,7 +66,8 @@ import static com.sun.scenario.effect.impl.Renderer.RendererState.*;
 
 public class PPSRenderer extends PrRenderer {
 
-    private final ResourceFactory rf;
+    private ResourceFactory rf;
+    private Screen screen;
     private final ShaderSource shaderSource;
     private RendererState state;
     private boolean needsSWDispMap;
@@ -85,16 +86,57 @@ public class PPSRenderer extends PrRenderer {
 
     private PPSRenderer(Screen screen, ShaderSource shaderSource) {
         this.shaderSource = shaderSource;
+        this.screen = screen;
         synchronized (this) {
-            state = OK;
+            state = NOTREADY;
         }
-        rf = GraphicsPipeline.getPipeline().getResourceFactory(screen);
-        rf.addFactoryListener(listener);
-        needsSWDispMap = !rf.isFormatSupported(PixelFormat.FLOAT_XYZW);
+    }
+
+    // Must be called on the renderer thread
+    private boolean validate() {
+        RendererState st = getRendererState();
+        switch (st) {
+            case NOTREADY:
+                if (rf == null) {
+                    rf = GraphicsPipeline.getPipeline().getResourceFactory(screen);
+                    if (rf == null) {
+                        return false;
+                    }
+                }
+                if (rf.isDisposed()) {
+                    // This case happens if the ResourceFactory has already been
+                    // disposed the first time we try to validate it, meaning
+                    // this Renderer was never in the "OK" state. As a result,
+                    // we have never added this Renderer as an RF listener, so
+                    // we need to explicitly dispose.
+                    dispose();
+
+                    return false;
+                }
+
+                // Device is now ready, transition to OK.
+                rf.addFactoryListener(listener);
+                needsSWDispMap = !rf.isFormatSupported(PixelFormat.FLOAT_XYZW);
+                synchronized (this) {
+                    state = OK;
+                }
+                return true;
+
+            case OK:
+            case LOST:
+                return true;
+
+            case DISPOSED:
+            default:
+                return false;
+        }
     }
 
     @Override
     public PrDrawable createDrawable(RTTexture rtt) {
+        if (!validate()) {
+            return null;
+        }
         return PPSDrawable.create(rtt);
     }
 
@@ -135,6 +177,8 @@ public class PPSRenderer extends PrRenderer {
             state = DISPOSED;
         }
         rf.removeFactoryListener(listener);
+        rf = null;
+        screen = null;
     }
 
     /**
@@ -143,28 +187,40 @@ public class PPSRenderer extends PrRenderer {
      * Warning: may be called on the rendering thread
      */
     protected final synchronized void markLost() {
-        if (state == OK) {
+        if (state == NOTREADY || state == OK) {
             state = LOST;
         }
     }
 
     @Override
     public int getCompatibleWidth(int w) {
+        if (!validate()) {
+            return -1;
+        }
         return PPSDrawable.getCompatibleWidth(rf, w);
     }
 
     @Override
     public int getCompatibleHeight(int h) {
+        if (!validate()) {
+            return -1;
+        }
         return PPSDrawable.getCompatibleHeight(rf, h);
     }
 
     @Override
     public final PPSDrawable createCompatibleImage(int w, int h) {
+        if (!validate()) {
+            return null;
+        }
         return PPSDrawable.create(rf, w, h);
     }
 
     @Override
     public PPSDrawable getCompatibleImage(int w, int h) {
+        if (!validate()) {
+            return null;
+        }
         PPSDrawable im = (PPSDrawable)super.getCompatibleImage(w, h);
         // either we ran out of vram or the device is lost
         if (im == null) {
@@ -175,12 +231,18 @@ public class PPSRenderer extends PrRenderer {
 
     @Override
     public LockableResource createFloatTexture(int w, int h) {
+        if (!validate()) {
+            return null;
+        }
         Texture prismTex = rf.createFloatTexture(w, h);
         return new PrTexture(prismTex);
     }
 
     @Override
     public void updateFloatTexture(LockableResource texture, FloatMap map) {
+        if (!validate()) {
+            return;
+        }
         FloatBuffer buf = map.getBuffer();
         int w = map.getWidth();
         int h = map.getHeight();
@@ -194,6 +256,9 @@ public class PPSRenderer extends PrRenderer {
                                Map<String, Integer> params,
                                boolean isPixcoordUsed)
     {
+        if (!validate()) {
+            return null;
+        }
         if (PrismSettings.verbose) {
             System.out.println("PPSRenderer: scenario.effect - createShader: " + name);
         }
@@ -296,6 +361,9 @@ public class PPSRenderer extends PrRenderer {
 
     @Override
     public ImageData createImageData(FilterContext fctx, Filterable src) {
+        if (!validate()) {
+            return null;
+        }
         if (!(src instanceof PrImage)) {
             throw new IllegalArgumentException("Identity source must be PrImage");
         }
@@ -338,6 +406,9 @@ public class PPSRenderer extends PrRenderer {
                                 Rectangle origBounds,
                                 Rectangle xformBounds)
     {
+        if (!validate()) {
+            return null;
+        }
         PPSDrawable dst = (PPSDrawable)
             getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {
@@ -357,6 +428,9 @@ public class PPSRenderer extends PrRenderer {
                                Rectangle origBounds,
                                Rectangle xformBounds)
     {
+        if (!validate()) {
+            return null;
+        }
         PPSDrawable dst = (PPSDrawable)
             getCompatibleImage(xformBounds.width, xformBounds.height);
         if (dst != null) {

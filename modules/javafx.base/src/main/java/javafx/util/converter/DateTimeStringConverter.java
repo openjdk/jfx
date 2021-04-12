@@ -43,18 +43,37 @@ import javafx.util.StringConverter;
 public class DateTimeStringConverter extends StringConverter<Date> {
 
     // ------------------------------------------------------ Private properties
+
+    /**
+     * @deprecated This field was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "17")
     protected final Locale locale;
+
+    /**
+     * @deprecated This field was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "17")
     protected final String pattern;
+
+    /**
+     * @deprecated This field was exposed erroneously and will be removed in a future version.
+     */
+    @Deprecated(forRemoval = true, since = "17")
     protected final DateFormat dateFormat;
 
     /**
+     * @deprecated This field was exposed erroneously and will be removed in a future version.
      * @since JavaFX 8u40
      */
+    @Deprecated(forRemoval = true, since = "17")
     protected final int dateStyle;
 
     /**
+     * @deprecated This field was exposed erroneously and will be removed in a future version.
      * @since JavaFX 8u40
      */
+    @Deprecated(forRemoval = true, since = "17")
     protected final int timeStyle;
 
 
@@ -199,7 +218,10 @@ public class DateTimeStringConverter extends StringConverter<Date> {
      *
      * @return a {@code DateFormat} instance for formatting and parsing in this
      * {@link StringConverter}
+     *
+     * @deprecated This method exposes internal implementation details and will be removed in a future version.
      */
+    @Deprecated(forRemoval = true, since = "17")
     protected DateFormat getDateFormat() {
         DateFormat df = null;
 

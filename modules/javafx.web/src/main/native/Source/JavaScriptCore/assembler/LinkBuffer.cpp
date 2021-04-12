@@ -31,10 +31,8 @@
 #include "CodeBlock.h"
 #include "Disassembler.h"
 #include "JITCode.h"
-#include "JSCInlines.h"
 #include "Options.h"
 #include "WasmCompilationMode.h"
-#include <wtf/CompilationThread.h>
 
 #if OS(LINUX)
 #include "PerfLog.h"
@@ -121,6 +119,101 @@ LinkBuffer::CodeRef<LinkBufferPtrTag> LinkBuffer::finalizeCodeWithDisassemblyImp
 }
 
 #if ENABLE(BRANCH_COMPACTION)
+
+#if CPU(ARM64E)
+#define ENABLE_VERIFY_JIT_HASH 1
+#else
+#define ENABLE_VERIFY_JIT_HASH 0
+#endif
+
+class BranchCompactionLinkBuffer;
+
+using ThreadSpecificBranchCompactionLinkBuffer = ThreadSpecific<BranchCompactionLinkBuffer, WTF::CanBeGCThread::True>;
+
+static ThreadSpecificBranchCompactionLinkBuffer* threadSpecificBranchCompactionLinkBufferPtr;
+
+static ThreadSpecificBranchCompactionLinkBuffer& threadSpecificBranchCompactionLinkBuffer()
+{
+static std::once_flag flag;
+    std::call_once(
+        flag,
+        [] () {
+            threadSpecificBranchCompactionLinkBufferPtr = new ThreadSpecificBranchCompactionLinkBuffer();
+        });
+    return *threadSpecificBranchCompactionLinkBufferPtr;
+}
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BranchCompactionLinkBuffer);
+
+class BranchCompactionLinkBuffer {
+    WTF_MAKE_NONCOPYABLE(BranchCompactionLinkBuffer);
+public:
+    BranchCompactionLinkBuffer()
+    {
+    }
+
+    BranchCompactionLinkBuffer(size_t size, uint8_t* userBuffer = nullptr)
+    {
+        if (userBuffer) {
+            m_data = userBuffer;
+            m_size = size;
+            m_bufferProvided = true;
+            return;
+        }
+
+        auto& threadSpecific = threadSpecificBranchCompactionLinkBuffer();
+
+        if (threadSpecific->size() >= size)
+            takeBufferIfLarger(*threadSpecific);
+        else {
+            m_size = size;
+            m_data = static_cast<uint8_t*>(BranchCompactionLinkBufferMalloc::malloc(size));
+        }
+    }
+
+    ~BranchCompactionLinkBuffer()
+    {
+        if (m_bufferProvided)
+            return;
+
+        auto& threadSpecific = threadSpecificBranchCompactionLinkBuffer();
+        threadSpecific->takeBufferIfLarger(*this);
+
+        if (m_data)
+            BranchCompactionLinkBufferMalloc::free(m_data);
+    }
+
+    uint8_t* data()
+    {
+        return m_data;
+    }
+
+private:
+    void takeBufferIfLarger(BranchCompactionLinkBuffer& other)
+    {
+        if (size() >= other.size())
+            return;
+
+        if (m_data)
+            BranchCompactionLinkBufferMalloc::free(m_data);
+
+        m_data = other.m_data;
+        m_size = other.m_size;
+
+        other.m_data = nullptr;
+        other.m_size = 0;
+    }
+
+    size_t size()
+    {
+        return m_size;
+    }
+
+    uint8_t* m_data { nullptr };
+    size_t m_size { 0 };
+    bool m_bufferProvided { false };
+};
+
 static ALWAYS_INLINE void recordLinkOffsets(AssemblerData& assemblerData, int32_t regionStart, int32_t regionEnd, int32_t offset)
 {
     int32_t ptr = regionStart / sizeof(int32_t);
@@ -130,10 +223,17 @@ static ALWAYS_INLINE void recordLinkOffsets(AssemblerData& assemblerData, int32_
         offsets[ptr++] = offset;
 }
 
-template <typename InstructionType>
-void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort)
+// We use this to prevent compile errors on some platforms that are unhappy
+// about the signature of the system's memcpy.
+ALWAYS_INLINE void* memcpyWrapper(void* dst, const void* src, size_t bytes)
 {
-    allocate(macroAssembler, ownerUID, effort);
+    return memcpy(dst, src, bytes);
+}
+
+template <typename InstructionType>
+void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
+{
+    allocate(macroAssembler, effort);
     const size_t initialSize = macroAssembler.m_assembler.codeSize();
     if (didFailToAllocate())
         return;
@@ -143,14 +243,15 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
     uint8_t* inData = reinterpret_cast<uint8_t*>(m_assemblerStorage.buffer());
 
     uint8_t* codeOutData = m_code.dataLocation<uint8_t*>();
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+
+#if ENABLE(VERIFY_JIT_HASH)
     const uint32_t expectedFinalHash = macroAssembler.m_assembler.buffer().hash().finalHash();
     ARM64EHash verifyUncompactedHash;
-    uint8_t* outData = codeOutData;
-#else
-    AssemblerData outBuffer(m_size);
-    uint8_t* outData = reinterpret_cast<uint8_t*>(outBuffer.buffer());
 #endif
+
+    BranchCompactionLinkBuffer outBuffer(m_size, useFastJITPermissions() ? codeOutData : 0);
+    uint8_t* outData = outBuffer.data();
+
 #if CPU(ARM64)
     RELEASE_ASSERT(roundUpToMultipleOf<sizeof(unsigned)>(outData) == outData);
     RELEASE_ASSERT(roundUpToMultipleOf<sizeof(unsigned)>(codeOutData) == codeOutData);
@@ -160,9 +261,8 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
     int writePtr = 0;
     unsigned jumpCount = jumpsToLink.size();
 
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
-    os_thread_self_restrict_rwx_to_rw();
-#endif
+    if (useFastJITPermissions())
+        threadSelfRestrictRWXToRW();
 
     if (m_shouldPerformBranchCompaction) {
         for (unsigned i = 0; i < jumpCount; ++i) {
@@ -179,7 +279,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
             ASSERT(!(writePtr % 2));
             while (copySource != copyEnd) {
                 InstructionType insn = *copySource++;
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+#if ENABLE(VERIFY_JIT_HASH)
                 static_assert(sizeof(InstructionType) == 4, "");
                 verifyUncompactedHash.update(insn);
 #endif
@@ -228,17 +328,19 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
 
         for (size_t i = 0; i < bytes; i += sizeof(InstructionType)) {
             InstructionType insn = *src++;
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+#if ENABLE(VERIFY_JIT_HASH)
             verifyUncompactedHash.update(insn);
 #endif
             *dst++ = insn;
         }
     }
 
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
+#if ENABLE(VERIFY_JIT_HASH)
     if (verifyUncompactedHash.finalHash() != expectedFinalHash) {
+#ifndef NDEBUG
         dataLogLn("Hashes don't match: ", RawPointer(bitwise_cast<void*>(static_cast<uintptr_t>(verifyUncompactedHash.finalHash()))), " ", RawPointer(bitwise_cast<void*>(static_cast<uintptr_t>(expectedFinalHash))));
         dataLogLn("Crashing!");
+#endif
         CRASH();
     }
 #endif
@@ -248,40 +350,38 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
     for (unsigned i = 0; i < jumpCount; ++i) {
         uint8_t* location = codeOutData + jumpsToLink[i].from();
         uint8_t* target = codeOutData + jumpsToLink[i].to() - executableOffsetFor(jumpsToLink[i].to());
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
-        MacroAssembler::link<memcpy>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
-#else
-        MacroAssembler::link<performJITMemcpy>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
-#endif
+        if (useFastJITPermissions())
+            MacroAssembler::link<memcpyWrapper>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
+        else
+            MacroAssembler::link<performJITMemcpy>(jumpsToLink[i], outData + jumpsToLink[i].from(), location, target);
     }
 
     size_t compactSize = writePtr + initialSize - readPtr;
     if (!m_executableMemory) {
         size_t nopSizeInBytes = initialSize - compactSize;
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
-        Assembler::fillNops<memcpy>(outData + compactSize, nopSizeInBytes);
-#else
-        Assembler::fillNops<performJITMemcpy>(outData + compactSize, nopSizeInBytes);
-#endif
+
+        if (useFastJITPermissions())
+            Assembler::fillNops<memcpyWrapper>(outData + compactSize, nopSizeInBytes);
+        else
+            Assembler::fillNops<performJITMemcpy>(outData + compactSize, nopSizeInBytes);
     }
 
-#if CPU(ARM64E) && ENABLE(FAST_JIT_PERMISSIONS)
-    os_thread_self_restrict_rwx_to_rx();
-#endif
+    if (useFastJITPermissions())
+        threadSelfRestrictRWXToRX();
 
     if (m_executableMemory) {
         m_size = compactSize;
         m_executableMemory->shrink(m_size);
     }
 
-#if !CPU(ARM64E) || !ENABLE(FAST_JIT_PERMISSIONS)
-    ASSERT(codeOutData != outData);
-    performJITMemcpy(codeOutData, outData, m_size);
-#else
-    ASSERT(codeOutData == outData);
-    if (UNLIKELY(Options::dumpJITMemoryPath()))
-        dumpJITMemory(outData, outData, m_size);
-#endif
+    if (useFastJITPermissions()) {
+        ASSERT(codeOutData == outData);
+        if (UNLIKELY(Options::dumpJITMemoryPath()))
+            dumpJITMemory(outData, outData, m_size);
+    } else {
+        ASSERT(codeOutData != outData);
+        performJITMemcpy(codeOutData, outData, m_size);
+    }
 
     jumpsToLink.clear();
 
@@ -295,7 +395,7 @@ void LinkBuffer::copyCompactAndLinkCode(MacroAssembler& macroAssembler, void* ow
 #endif // ENABLE(BRANCH_COMPACTION)
 
 
-void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort)
+void LinkBuffer::linkCode(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     // Ensure that the end of the last invalidation point does not extend beyond the end of the buffer.
     macroAssembler.label();
@@ -304,7 +404,7 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCom
 #if defined(ASSEMBLER_HAS_CONSTANT_POOL) && ASSEMBLER_HAS_CONSTANT_POOL
     macroAssembler.m_assembler.buffer().flushConstantPool(false);
 #endif
-    allocate(macroAssembler, ownerUID, effort);
+    allocate(macroAssembler, effort);
     if (!m_didAllocate)
         return;
     ASSERT(m_code);
@@ -318,15 +418,15 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCom
     macroAssembler.m_assembler.relocateJumps(buffer.data(), code);
 #endif
 #elif CPU(ARM_THUMB2)
-    copyCompactAndLinkCode<uint16_t>(macroAssembler, ownerUID, effort);
+    copyCompactAndLinkCode<uint16_t>(macroAssembler, effort);
 #elif CPU(ARM64)
-    copyCompactAndLinkCode<uint32_t>(macroAssembler, ownerUID, effort);
+    copyCompactAndLinkCode<uint32_t>(macroAssembler, effort);
 #endif // !ENABLE(BRANCH_COMPACTION)
 
     m_linkTasks = WTFMove(macroAssembler.m_linkTasks);
 }
 
-void LinkBuffer::allocate(MacroAssembler& macroAssembler, void* ownerUID, JITCompilationEffort effort)
+void LinkBuffer::allocate(MacroAssembler& macroAssembler, JITCompilationEffort effort)
 {
     size_t initialSize = macroAssembler.m_assembler.codeSize();
     if (m_code) {
@@ -344,7 +444,7 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, void* ownerUID, JITCom
         initialSize = macroAssembler.m_assembler.codeSize();
     }
 
-    m_executableMemory = ExecutableAllocator::singleton().allocate(initialSize, ownerUID, effort);
+    m_executableMemory = ExecutableAllocator::singleton().allocate(initialSize, effort);
     if (!m_executableMemory)
         return;
     m_code = MacroAssemblerCodePtr<LinkBufferPtrTag>(m_executableMemory->start().retaggedPtr<LinkBufferPtrTag>());
@@ -358,7 +458,7 @@ void LinkBuffer::performFinalization()
         task->run(*this);
 
 #ifndef NDEBUG
-    ASSERT(!isCompilationThread());
+    ASSERT(m_isJumpIsland || !isCompilationThread());
     ASSERT(!m_completed);
     ASSERT(isValid());
     m_completed = true;

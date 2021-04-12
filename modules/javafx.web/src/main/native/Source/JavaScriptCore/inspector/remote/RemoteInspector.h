@@ -114,9 +114,12 @@ public:
         virtual void requestAutomationSession(const String& sessionIdentifier, const SessionCapabilities&) = 0;
     };
 
+#if PLATFORM(COCOA)
+    static void setNeedMachSandboxExtension(bool needExtension) { needMachSandboxExtension = needExtension; }
+#endif
     static void startDisabled();
     static RemoteInspector& singleton();
-    friend class NeverDestroyed<RemoteInspector>;
+    friend class LazyNeverDestroyed<RemoteInspector>;
 
     void registerTarget(RemoteControllableTarget*);
     void unregisterTarget(RemoteControllableTarget*);
@@ -204,9 +207,9 @@ private:
     void sendAutomaticInspectionCandidateMessage();
 
 #if PLATFORM(COCOA)
-    void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) override;
-    void xpcConnectionFailed(RemoteInspectorXPCConnection*) override;
-    void xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t) override;
+    void xpcConnectionReceivedMessage(RemoteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInfo) final;
+    void xpcConnectionFailed(RemoteInspectorXPCConnection*) final;
+    void xpcConnectionUnhandledMessage(RemoteInspectorXPCConnection*, xpc_object_t) final;
 
     void receivedSetupMessage(NSDictionary *userInfo);
     void receivedDataMessage(NSDictionary *userInfo);
@@ -220,8 +223,8 @@ private:
     void receivedAutomationSessionRequestMessage(NSDictionary *userInfo);
 #endif
 #if USE(INSPECTOR_SOCKET_SERVER)
-    HashMap<String, CallHandler>& dispatchMap() override;
-    void didClose(ConnectionID) override;
+    HashMap<String, CallHandler>& dispatchMap() final;
+    void didClose(ConnectionID) final;
 
     void sendWebInspectorEvent(const String&);
 
@@ -236,6 +239,9 @@ private:
     String backendCommands() const;
 #endif
     static bool startEnabled;
+#if PLATFORM(COCOA)
+    static std::atomic<bool> needMachSandboxExtension;
+#endif
 
     // Targets can be registered from any thread at any time.
     // Any target can send messages over the XPC connection.

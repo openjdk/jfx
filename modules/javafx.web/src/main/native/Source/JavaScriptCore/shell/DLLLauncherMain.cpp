@@ -35,21 +35,6 @@
 #include <vector>
 #include <windows.h>
 
-#if defined _M_IX86
-#define PROCESSORARCHITECTURE "x86"
-#elif defined _M_IA64
-#define PROCESSORARCHITECTURE "ia64"
-#elif defined _M_X64
-#define PROCESSORARCHITECTURE "amd64"
-#else
-#define PROCESSORARCHITECTURE "*"
-#endif
-
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='6595b64144ccf1df' language='*'\"")
-#if defined(_MSC_VER) && (_MSC_VER >= 1600) && !defined(WIN_CAIRO)
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.VC80.CRT' version='8.0.50727.6195' processorArchitecture='" PROCESSORARCHITECTURE "' publicKeyToken='1fc8b3b9a1e18e3b' language='*'\"")
-#endif
-
 static void enableTerminationOnHeapCorruption()
 {
     HEAP_INFORMATION_CLASS heapEnableTerminationOnCorruption = static_cast<HEAP_INFORMATION_CLASS>(1);
@@ -109,7 +94,11 @@ static bool prependPath(const std::wstring& directoryToPrepend)
 static int fatalError(const std::wstring& programName, const std::wstring& message)
 {
     std::wstring caption = programName + L" can't open.";
+#if USE_CONSOLE_ENTRY_POINT
+    fwprintf(stderr, L"%s\n%s\n", caption.c_str(), message.c_str());
+#else
     ::MessageBoxW(0, message.c_str(), caption.c_str(), MB_ICONERROR);
+#endif
     return 1;
 }
 

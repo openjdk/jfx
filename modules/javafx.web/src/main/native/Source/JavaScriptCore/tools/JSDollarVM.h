@@ -39,6 +39,12 @@ class JSDollarVM final : public JSNonFinalObject {
 public:
     typedef JSNonFinalObject Base;
 
+    template<typename CellType, SubspaceAccess>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.cellSpace;
+    }
+
     DECLARE_EXPORT_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)

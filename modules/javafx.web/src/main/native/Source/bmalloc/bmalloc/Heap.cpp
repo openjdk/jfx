@@ -56,12 +56,15 @@ Heap::Heap(HeapKind kind, LockHolder&)
     Gigacage::ensureGigacage();
 #if GIGACAGE_ENABLED
     if (usingGigacage()) {
-        RELEASE_BASSERT(gigacageBasePtr());
+        void* gigacageBasePtr = this->gigacageBasePtr();
+        RELEASE_BASSERT(gigacageBasePtr);
         uint64_t random[2];
         cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
-        size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize() - (random[0] % Gigacage::maximumCageSizeReductionForSlide));
-        ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize() - size));
-        void* base = reinterpret_cast<unsigned char*>(gigacageBasePtr()) + offset;
+        size_t gigacageSize = Gigacage::maxSize(gigacageKind(kind));
+        size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize - (random[0] % Gigacage::maximumCageSizeReductionForSlide));
+        m_gigacageSize = size;
+        ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize - size));
+        void* base = reinterpret_cast<unsigned char*>(gigacageBasePtr) + offset;
         m_largeFree.add(LargeRange(base, size, 0, 0));
     }
 #endif
@@ -71,7 +74,7 @@ Heap::Heap(HeapKind kind, LockHolder&)
 
 bool Heap::usingGigacage()
 {
-    return isGigacage(m_kind) && gigacageBasePtr();
+    return isGigacage(m_kind) && Gigacage::isEnabled(gigacageKind(m_kind));
 }
 
 void* Heap::gigacageBasePtr()
@@ -81,10 +84,10 @@ void* Heap::gigacageBasePtr()
 
 size_t Heap::gigacageSize()
 {
-    return Gigacage::size(gigacageKind(m_kind));
+    return m_gigacageSize;
 }
 
-size_t Heap::freeableMemory(const LockHolder&)
+size_t Heap::freeableMemory(UniqueLockHolder&)
 {
     return m_freeableMemory;
 }
@@ -101,7 +104,7 @@ void Heap::markAllLargeAsEligibile(const LockHolder&)
     m_condition.notify_all();
 }
 
-void Heap::decommitLargeRange(const LockHolder&, LargeRange& range, BulkDecommit& decommitter)
+void Heap::decommitLargeRange(UniqueLockHolder&, LargeRange& range, BulkDecommit& decommitter)
 {
     m_footprint -= range.totalPhysicalSize();
     m_freeableMemory -= range.totalPhysicalSize();
@@ -117,9 +120,9 @@ void Heap::decommitLargeRange(const LockHolder&, LargeRange& range, BulkDecommit
 }
 
 #if BUSE(PARTIAL_SCAVENGE)
-void Heap::scavenge(const LockHolder& lock, BulkDecommit& decommitter)
+void Heap::scavenge(UniqueLockHolder& lock, BulkDecommit& decommitter)
 #else
-void Heap::scavenge(const LockHolder& lock, BulkDecommit& decommitter, size_t& deferredDecommits)
+void Heap::scavenge(UniqueLockHolder& lock, BulkDecommit& decommitter, size_t& deferredDecommits)
 #endif
 {
     for (auto& list : m_freePages) {
@@ -150,7 +153,7 @@ void Heap::scavenge(const LockHolder& lock, BulkDecommit& decommitter, size_t& d
 
     for (auto& list : m_chunkCache) {
         while (!list.isEmpty())
-            deallocateSmallChunk(list.pop(), &list - &m_chunkCache[0]);
+            deallocateSmallChunk(lock, list.pop(), &list - &m_chunkCache[0]);
     }
 
     for (LargeRange& range : m_largeFree) {
@@ -172,7 +175,7 @@ void Heap::scavenge(const LockHolder& lock, BulkDecommit& decommitter, size_t& d
 }
 
 #if BUSE(PARTIAL_SCAVENGE)
-void Heap::scavengeToHighWatermark(const LockHolder& lock, BulkDecommit& decommitter)
+void Heap::scavengeToHighWatermark(UniqueLockHolder& lock, BulkDecommit& decommitter)
 {
     void* newHighWaterMark = nullptr;
     for (LargeRange& range : m_largeFree) {
@@ -213,7 +216,7 @@ void Heap::allocateSmallChunk(UniqueLockHolder& lock, size_t pageClass, FailureA
 
         Chunk* chunk = new (memory) Chunk(pageSize);
 
-        m_objectTypes.set(chunk, ObjectType::Small);
+        m_objectTypes.set(lock, chunk, ObjectType::Small);
 
         size_t accountedInFreeable = 0;
         forEachPage(chunk, pageSize, [&](SmallPage* page) {
@@ -244,9 +247,9 @@ void Heap::allocateSmallChunk(UniqueLockHolder& lock, size_t pageClass, FailureA
         m_freePages[pageClass].push(chunk);
 }
 
-void Heap::deallocateSmallChunk(Chunk* chunk, size_t pageClass)
+void Heap::deallocateSmallChunk(UniqueLockHolder& lock, Chunk* chunk, size_t pageClass)
 {
-    m_objectTypes.set(chunk, ObjectType::Large);
+    m_objectTypes.set(lock, chunk, ObjectType::Large);
 
     size_t size = m_largeAllocated.remove(chunk);
     size_t totalPhysicalSize = size;
@@ -357,7 +360,7 @@ void Heap::deallocateSmallLine(UniqueLockHolder& lock, Object object, LineCache&
         m_freePages[pageClass].remove(chunk);
 
         if (!m_chunkCache[pageClass].isEmpty())
-            deallocateSmallChunk(m_chunkCache[pageClass].pop(), pageClass);
+            deallocateSmallChunk(lock, m_chunkCache[pageClass].pop(), pageClass);
 
         m_chunkCache[pageClass].push(chunk);
     }
@@ -495,7 +498,7 @@ void Heap::allocateSmallBumpRangesByObject(
     }
 }
 
-LargeRange Heap::splitAndAllocate(UniqueLockHolder&, LargeRange& range, size_t alignment, size_t size)
+LargeRange Heap::splitAndAllocate(UniqueLockHolder& lock, LargeRange& range, size_t alignment, size_t size)
 {
     RELEASE_BASSERT(isActiveHeapKind(m_kind));
 
@@ -537,7 +540,7 @@ LargeRange Heap::splitAndAllocate(UniqueLockHolder&, LargeRange& range, size_t a
         m_largeFree.add(next);
     }
 
-    m_objectTypes.set(Chunk::get(range.begin()), ObjectType::Large);
+    m_objectTypes.set(lock, Chunk::get(range.begin()), ObjectType::Large);
 
     m_largeAllocated.set(range.begin(), range.size());
     return range;
@@ -619,11 +622,6 @@ LargeRange Heap::tryAllocateLargeChunk(size_t alignment, size_t size)
 #endif
 
     return LargeRange(memory, size, 0, 0);
-}
-
-bool Heap::isLarge(UniqueLockHolder&, void* object)
-{
-    return m_objectTypes.get(Object(object).chunk()) == ObjectType::Large;
 }
 
 size_t Heap::largeSize(UniqueLockHolder&, void* object)

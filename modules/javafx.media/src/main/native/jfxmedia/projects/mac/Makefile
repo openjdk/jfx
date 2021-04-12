@@ -30,8 +30,7 @@ CFLAGS += -pipe \
          -fPIC                     \
          -Werror=implicit-function-declaration \
          -DTARGET_OS_MAC=1         \
-         -D_GNU_SOURCE             \
-         -msse2
+         -D_GNU_SOURCE
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -39,6 +38,9 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
+ifneq ($(ARCH), arm64)
+    CFLAGS += -msse2
+endif
 
 INCLUDES = -I$(JAVA_HOME)/include \
            -I$(JAVA_HOME)/include/darwin \

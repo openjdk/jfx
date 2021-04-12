@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import com.sun.prism.paint.RadialGradient;
 import com.sun.prism.paint.Stop;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderGraphics;
+import java.util.WeakHashMap;
 
 class PaintHelper {
 
@@ -105,6 +106,16 @@ class PaintHelper {
     private static Texture gradientCacheTexture = null;
     private static Texture gtexCacheTexture = null;
 
+    /**
+     * The keySet of this map is used to track the gradients that have
+     * a valid entry (offset) in the gradient cache. We need this so that we can
+     * invalidate all entries when a device is lost (at which time we recreate
+     * the gradient cache textures). This prevents using a stale offset that is
+     * no longer valid.
+     * The values in this map are unused.
+     */
+    private static final WeakHashMap<Gradient, Void> gradientMap = new WeakHashMap<>();
+
     private static final Affine2D scratchXform2D = new Affine2D();
     private static final Affine3D scratchXform3D = new Affine3D();
 
@@ -115,6 +126,11 @@ class PaintHelper {
     }
 
     static void initGradientTextures(ShaderGraphics g) {
+        // We must clear cached gradient texture and offsets when the
+        // device is removed and recreated
+        cacheOffset = -1;
+        gradientMap.clear();
+
         gradientCacheTexture = g.getResourceFactory().createTexture(
                 PixelFormat.BYTE_BGRA_PRE, Usage.DEFAULT, WrapMode.CLAMP_TO_EDGE,
                 MULTI_TEXTURE_SIZE, MULTI_CACHE_SIZE);
@@ -137,27 +153,27 @@ class PaintHelper {
     }
 
     static Texture getGradientTexture(ShaderGraphics g, Gradient paint) {
-        if (gradientCacheTexture == null) {
+        if (gradientCacheTexture == null || gradientCacheTexture.isSurfaceLost()) {
             initGradientTextures(g);
         }
 
-        // gradientCacheTexture is left permanent and locked so it never
-        // goes away or needs to be checked for isSurfaceLost(), but we
-        // add a lock here so that the caller can unlock without knowing
-        // our inner implementation details
+        // gradientCacheTexture is left permanent and locked, although we still
+        // must check for isSurfaceLost() in case the device is disposed.
+        // We add a lock here so that the caller can unlock without knowing
+        // our inner implementation details.
         gradientCacheTexture.lock();
         return gradientCacheTexture;
     }
 
     static Texture getWrapGradientTexture(ShaderGraphics g) {
-        if (gtexCacheTexture == null) {
+        if (gtexCacheTexture == null || gtexCacheTexture.isSurfaceLost()) {
             initGradientTextures(g);
         }
 
-        // gtexCacheTexture is left permanent and locked so it never
-        // goes away or needs to be checked for isSurfaceLost(), but we
-        // add a lock here so that the caller can unlock without knowing
-        // our inner implementation details
+        // gtexCacheTexture is left permanent and locked, although we still
+        // must check for isSurfaceLost() in case the device is disposed.
+        // We add a lock here so that the caller can unlock without knowing
+        // our inner implementation details.
         gtexCacheTexture.lock();
         return gtexCacheTexture;
     }
@@ -252,7 +268,7 @@ class PaintHelper {
     // the cache in the range [cacheOffset - cacheSize + 1, cacheOffset]..
     public static int initGradient(Gradient paint) {
         long offset = paint.getGradientOffset();
-        if (offset >= 0 && (offset > cacheOffset - MULTI_CACHE_SIZE)) {
+        if (gradientMap.containsKey(paint) && offset >= 0 && (offset > cacheOffset - MULTI_CACHE_SIZE)) {
             return (int) (offset % MULTI_CACHE_SIZE);
         } else {
             List<Stop> stops = paint.getStops();
@@ -267,6 +283,7 @@ class PaintHelper {
             // either or both of them here.
             gradientCacheTexture.update(colorsImg, 0, cacheIdx);
             gtexCacheTexture.update(gtexImg, 0, cacheIdx);
+            gradientMap.put(paint, null);
             return cacheIdx;
         }
     }
@@ -750,6 +767,11 @@ class PaintHelper {
         Affine3D at = scratchXform3D;
         g.getPaintShaderTransform(at);
 
+        BaseTransform paintXform = paint.getPatternTransformNoClone();
+        if (paintXform != null) {
+            at.concatenate(paintXform);
+        }
+
         at.translate(x1, y1);
         at.scale(x2 - x1, y2 - y1);
         // Adjustment for case when WrapMode.REPEAT is simulated
@@ -849,7 +871,8 @@ class PaintHelper {
 
         // calculate plane equation constants
         AffineBase ret;
-        if (renderTx.isIdentity()) {
+        BaseTransform paintXform = paint.getPatternTransformNoClone();
+        if (paintXform.isIdentity() && renderTx.isIdentity()) {
             Affine2D at = scratchXform2D;
 
             at.setToTranslation(px, py);
@@ -858,6 +881,7 @@ class PaintHelper {
         } else {
             Affine3D at = scratchXform3D;
             at.setTransform(renderTx);
+            at.concatenate(paintXform);
 
             at.translate(px, py);
             at.scale(pw, ph);

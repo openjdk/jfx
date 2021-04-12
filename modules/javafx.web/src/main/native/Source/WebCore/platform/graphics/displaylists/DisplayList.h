@@ -81,6 +81,7 @@ enum class ItemType : uint8_t {
     FillRectWithRoundedHole,
     FillPath,
     FillEllipse,
+    PutImageData,
     StrokeRect,
     StrokePath,
     StrokeEllipse,
@@ -177,8 +178,7 @@ public:
         return m_list[index].get();
     }
 
-    void clear();
-    void removeItemsFromIndex(size_t);
+    WEBCORE_EXPORT void clear();
 
     size_t itemCount() const { return m_list.size(); }
     size_t sizeInBytes() const;
@@ -251,6 +251,3 @@ Optional<DisplayList> DisplayList::decode(Decoder& decoder)
 WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList::DisplayList&);
 
 } // WebCore
-
-using WebCore::DisplayList::DisplayList;
-

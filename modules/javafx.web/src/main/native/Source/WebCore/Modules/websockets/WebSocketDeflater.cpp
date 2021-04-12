@@ -31,7 +31,7 @@
 #include "config.h"
 #include "WebSocketDeflater.h"
 
-#if USE(ZLIB)
+#if !PLATFORM(JAVA)
 
 #include "Logging.h"
 #include <wtf/FastMalloc.h>
@@ -207,4 +207,4 @@ void WebSocketInflater::reset()
 
 } // namespace WebCore
 
-#endif // USE(ZLIB)
+#endif

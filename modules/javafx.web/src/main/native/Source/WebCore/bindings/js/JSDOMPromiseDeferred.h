@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "EventLoop.h"
 #include "ExceptionOr.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGuardedObject.h"
@@ -36,6 +35,7 @@
 namespace WebCore {
 
 class JSDOMWindow;
+enum class RejectAsHandled : uint8_t { No, Yes };
 
 class DeferredPromise : public DOMGuarded<JSC::JSPromise> {
 public:
@@ -109,7 +109,7 @@ public:
     }
 
     template<class IDLType>
-    void reject(typename IDLType::ParameterType value)
+    void reject(typename IDLType::ParameterType value, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
         if (shouldIgnoreRequestToFulfill())
             return;
@@ -118,14 +118,14 @@ public:
         ASSERT(globalObject());
         JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
         JSC::JSLockHolder locker(lexicalGlobalObject);
-        reject(*lexicalGlobalObject, toJS<IDLType>(*lexicalGlobalObject, *globalObject(), std::forward<typename IDLType::ParameterType>(value)));
+        reject(*lexicalGlobalObject, toJS<IDLType>(*lexicalGlobalObject, *globalObject(), std::forward<typename IDLType::ParameterType>(value)), rejectAsHandled);
     }
 
-    void reject();
-    void reject(std::nullptr_t);
-    void reject(Exception);
-    WEBCORE_EXPORT void reject(ExceptionCode, const String& = { });
-    void reject(const JSC::PrivateName&);
+    void reject(RejectAsHandled = RejectAsHandled::No);
+    void reject(std::nullptr_t, RejectAsHandled = RejectAsHandled::No);
+    WEBCORE_EXPORT void reject(Exception, RejectAsHandled = RejectAsHandled::No);
+    WEBCORE_EXPORT void reject(ExceptionCode, const String& = { }, RejectAsHandled = RejectAsHandled::No);
+    void reject(const JSC::PrivateName&, RejectAsHandled = RejectAsHandled::No);
 
     template<typename Callback>
     void resolveWithCallback(Callback callback)
@@ -141,7 +141,7 @@ public:
     }
 
     template<typename Callback>
-    void rejectWithCallback(Callback callback)
+    void rejectWithCallback(Callback callback, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
         if (shouldIgnoreRequestToFulfill())
             return;
@@ -150,7 +150,7 @@ public:
         ASSERT(globalObject());
         JSC::JSGlobalObject* lexicalGlobalObject = globalObject();
         JSC::JSLockHolder locker(lexicalGlobalObject);
-        reject(*lexicalGlobalObject, callback(*globalObject()));
+        reject(*lexicalGlobalObject, callback(*globalObject()), rejectAsHandled);
     }
 
     JSC::JSValue promise() const;
@@ -168,11 +168,14 @@ private:
 
     JSC::JSPromise* deferred() const { return guarded(); }
 
-    enum class ResolveMode { Resolve, Reject };
+    enum class ResolveMode { Resolve, Reject, RejectAsHandled };
     WEBCORE_EXPORT void callFunction(JSC::JSGlobalObject&, ResolveMode, JSC::JSValue resolution);
 
     void resolve(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue resolution) { callFunction(lexicalGlobalObject, ResolveMode::Resolve, resolution); }
-    void reject(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue resolution) { callFunction(lexicalGlobalObject, ResolveMode::Reject, resolution); }
+    void reject(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue resolution, RejectAsHandled rejectAsHandled)
+    {
+        callFunction(lexicalGlobalObject, rejectAsHandled == RejectAsHandled::Yes ? ResolveMode::RejectAsHandled : ResolveMode::Reject, resolution);
+    }
 
     Mode m_mode;
 };
@@ -207,9 +210,9 @@ public:
         return *this;
     }
 
-    void reject()
+    void reject(RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
-        m_promise->reject();
+        m_promise->reject(rejectAsHandled);
     }
 
     template<typename... ErrorType>
@@ -219,9 +222,9 @@ public:
     }
 
     template<typename IDLType>
-    void rejectType(typename IDLType::ParameterType value)
+    void rejectType(typename IDLType::ParameterType value, RejectAsHandled rejectAsHandled = RejectAsHandled::No)
     {
-        m_promise->reject<IDLType>(std::forward<typename IDLType::ParameterType>(value));
+        m_promise->reject<IDLType>(std::forward<typename IDLType::ParameterType>(value), rejectAsHandled);
     }
 
     JSC::JSValue promise() const { return m_promise->promise(); };
@@ -286,7 +289,7 @@ Ref<DeferredPromise> createDeferredPromise(JSC::JSGlobalObject&, JSDOMWindow&);
 void fulfillPromiseWithJSON(Ref<DeferredPromise>&&, const String&);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, ArrayBuffer*);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, const void*, size_t);
-WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::JSPromise&);
+WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::JSGlobalObject&, JSDOMGlobalObject&, JSC::JSPromise&, JSC::CatchScope&);
 
 enum class RejectedPromiseWithTypeErrorCause { NativeGetter, InvalidThis };
 JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::JSGlobalObject&, const String&, RejectedPromiseWithTypeErrorCause);
@@ -297,7 +300,7 @@ template<PromiseFunction promiseFunction>
 inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame)
 {
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
-    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
@@ -305,10 +308,10 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
 
     promiseFunction(lexicalGlobalObject, callFrame, DeferredPromise::create(globalObject, *promise));
 
-    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise);
+    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise, catchScope);
     // FIXME: We could have error since any JS call can throw stack-overflow errors.
     // https://bugs.webkit.org/show_bug.cgi?id=203402
-    RETURN_IF_EXCEPTION(scope, JSC::jsUndefined());
+    RETURN_IF_EXCEPTION(catchScope, JSC::jsUndefined());
     return promise;
 }
 
@@ -316,7 +319,7 @@ template<typename PromiseFunctor>
 inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, PromiseFunctor functor)
 {
     JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
-    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
     auto& globalObject = callerGlobalObject(lexicalGlobalObject, callFrame);
     auto* promise = JSC::JSPromise::create(vm, globalObject.promiseStructure());
@@ -324,10 +327,10 @@ inline JSC::JSValue callPromiseFunction(JSC::JSGlobalObject& lexicalGlobalObject
 
     functor(lexicalGlobalObject, callFrame, DeferredPromise::create(globalObject, *promise));
 
-    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise);
+    rejectPromiseWithExceptionIfAny(lexicalGlobalObject, globalObject, *promise, catchScope);
     // FIXME: We could have error since any JS call can throw stack-overflow errors.
     // https://bugs.webkit.org/show_bug.cgi?id=203402
-    RETURN_IF_EXCEPTION(scope, JSC::jsUndefined());
+    RETURN_IF_EXCEPTION(catchScope, JSC::jsUndefined());
     return promise;
 }
 

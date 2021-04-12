@@ -35,19 +35,8 @@ bool shouldRun(const char* filter, const char* testName)
     // FIXME: These tests fail <https://bugs.webkit.org/show_bug.cgi?id=199330>.
     if (!filter && isARM64()) {
         for (auto& failingTest : {
-            "testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead",
             "testNegFloatWithUselessDoubleConversion",
             "testPinRegisters",
-        }) {
-            if (WTF::findIgnoringASCIICaseWithoutLength(testName, failingTest) != WTF::notFound) {
-                dataLogLn("*** Warning: Skipping known-bad test: ", testName);
-                return false;
-            }
-        }
-    }
-    if (!filter && isX86()) {
-        for (auto& failingTest : {
-            "testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead",
         }) {
             if (WTF::findIgnoringASCIICaseWithoutLength(testName, failingTest) != WTF::notFound) {
                 dataLogLn("*** Warning: Skipping known-bad test: ", testName);
@@ -507,6 +496,7 @@ void run(const char* filter)
     RUN(testCheckSubImm());
     RUN(testCheckSubBadImm());
     RUN(testCheckSub());
+    RUN(testCheckSubBitAnd());
     RUN(testCheckSub64());
     RUN(testCheckSubFold(100, 200));
     RUN(testCheckSubFoldFail(-2147483647, 100));
@@ -777,6 +767,11 @@ void run(const char* filter)
     RUN(testLoadBaseIndexShift2());
     RUN(testLoadBaseIndexShift32());
     RUN(testOptimizeMaterialization());
+
+    // FIXME: Re-enable B3 hoistLoopInvariantValues
+    // https://bugs.webkit.org/show_bug.cgi?id=212651
+    Options::useB3HoistLoopInvariantValues() = true;
+
     RUN(testLICMPure());
     RUN(testLICMPureSideExits());
     RUN(testLICMPureWritesPinned());
@@ -910,8 +905,10 @@ int main(int argc, char** argv)
         break;
     }
 
+    JSC::Config::configureForTesting();
+
     WTF::initializeMainThread();
-    JSC::initializeThreading();
+    JSC::initialize();
 
     for (unsigned i = 0; i <= 2; ++i) {
         JSC::Options::defaultB3OptLevel() = i;

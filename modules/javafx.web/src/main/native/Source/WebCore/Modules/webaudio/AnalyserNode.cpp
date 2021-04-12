@@ -36,10 +36,39 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AnalyserNode);
 
-AnalyserNode::AnalyserNode(AudioContext& context, float sampleRate)
-    : AudioBasicInspectorNode(context, sampleRate, 2)
+ExceptionOr<Ref<AnalyserNode>> AnalyserNode::create(BaseAudioContext& context, const AnalyserOptions& options)
+{
+    if (context.isStopped())
+        return Exception { InvalidStateError };
+
+    context.lazyInitialize();
+
+    auto analyser = adoptRef(*new AnalyserNode(context));
+
+    auto result = analyser->handleAudioNodeOptions(options, { 2, ChannelCountMode::Max, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    result = analyser->setMinMaxDecibels(options.minDecibels, options.maxDecibels);
+    if (result.hasException())
+        return result.releaseException();
+
+    result = analyser->setFftSize(options.fftSize);
+    if (result.hasException())
+        return result.releaseException();
+
+    result = analyser->setSmoothingTimeConstant(options.smoothingTimeConstant);
+    if (result.hasException())
+        return result.releaseException();
+
+    return analyser;
+}
+
+AnalyserNode::AnalyserNode(BaseAudioContext& context)
+    : AudioBasicInspectorNode(context)
 {
     setNodeType(NodeTypeAnalyser);
+    addOutput(makeUnique<AudioNodeOutput>(this, 2));
 
     initialize();
 }
@@ -77,14 +106,24 @@ void AnalyserNode::reset()
 ExceptionOr<void> AnalyserNode::setFftSize(unsigned size)
 {
     if (!m_analyser.setFftSize(size))
-        return Exception { IndexSizeError };
+        return Exception { IndexSizeError, "fftSize must be power of 2 in the range 32 to 32768."_s };
+    return { };
+}
+
+ExceptionOr<void> AnalyserNode::setMinMaxDecibels(double minDecibels, double maxDecibels)
+{
+    if (maxDecibels <= minDecibels)
+        return Exception { IndexSizeError, "minDecibels must be less than maxDecibels."_s };
+
+    m_analyser.setMinDecibels(minDecibels);
+    m_analyser.setMaxDecibels(maxDecibels);
     return { };
 }
 
 ExceptionOr<void> AnalyserNode::setMinDecibels(double k)
 {
-    if (k > maxDecibels())
-        return Exception { IndexSizeError };
+    if (k >= maxDecibels())
+        return Exception { IndexSizeError, "minDecibels must be less than maxDecibels."_s };
 
     m_analyser.setMinDecibels(k);
     return { };
@@ -92,8 +131,8 @@ ExceptionOr<void> AnalyserNode::setMinDecibels(double k)
 
 ExceptionOr<void> AnalyserNode::setMaxDecibels(double k)
 {
-    if (k < minDecibels())
-        return Exception { IndexSizeError };
+    if (k <= minDecibels())
+        return Exception { IndexSizeError, "maxDecibels must be greater than minDecibels."_s };
 
     m_analyser.setMaxDecibels(k);
     return { };

@@ -29,17 +29,11 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CCallHelpers.h"
-#include "DisallowMacroScratchRegisterUsage.h"
-#include "FrameTracers.h"
-#include "JSCInlines.h"
-#include "JSWebAssemblyHelpers.h"
+#include "JSCJSValueInlines.h"
 #include "JSWebAssemblyInstance.h"
-#include "JSWebAssemblyRuntimeError.h"
-#include "MaxFrameExtentForSlowPathCall.h"
 #include "WasmCallingConvention.h"
 #include "WasmContextInlines.h"
 #include "WasmOperations.h"
-#include "WasmSignatureInlines.h"
 #include "WasmToJS.h"
 
 namespace JSC { namespace Wasm {
@@ -55,7 +49,7 @@ inline void boxWasmResult(CCallHelpers& jit, Wasm::Type type, Reg src, JSValueRe
         jit.move(src.gpr(), dst.payloadGPR());
         break;
     case Wasm::I32:
-        jit.zeroExtend32ToPtr(src.gpr(), dst.payloadGPR());
+        jit.zeroExtend32ToWord(src.gpr(), dst.payloadGPR());
         jit.boxInt32(dst.payloadGPR(), dst, DoNotHaveTagRegisters);
         break;
     case Wasm::F32:
