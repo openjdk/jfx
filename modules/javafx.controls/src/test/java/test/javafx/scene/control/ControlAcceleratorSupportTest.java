@@ -30,7 +30,6 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 
-import com.sun.javafx.scene.control.ControlAcceleratorSupportShim;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
@@ -39,17 +38,6 @@ import org.junit.BeforeClass;
 import static org.junit.Assert.assertEquals;
 
 public class ControlAcceleratorSupportTest {
-    private static int numListeners;
-
-    @BeforeClass
-    public static void setup() throws Exception {
-        for (int i = 0; i < 4; i++) {
-            System.gc();
-            System.runFinalization();
-            Thread.sleep(500);
-        }
-        numListeners = ControlAcceleratorSupportShim.get_ListenerMapSize();
-    }
 
     @Test
     public void testNumberOfListenersByRemovingAndAddingMenuItems() {
@@ -71,35 +59,30 @@ public class ControlAcceleratorSupportTest {
 
         StageLoader sl = new StageLoader(pane);
 
-        assertEquals(numListeners + 4, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(1, getListenerCount(item11.acceleratorProperty()));
         assertEquals(1, getListenerCount(item12.acceleratorProperty()));
         assertEquals(1, getListenerCount(item21.acceleratorProperty()));
         assertEquals(1, getListenerCount(item22.acceleratorProperty()));
 
         menu1.getItems().clear();
-        assertEquals(numListeners + 2, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(0, getListenerCount(item11.acceleratorProperty()));
         assertEquals(0, getListenerCount(item12.acceleratorProperty()));
         assertEquals(1, getListenerCount(item21.acceleratorProperty()));
         assertEquals(1, getListenerCount(item22.acceleratorProperty()));
 
         menu2.getItems().clear();
-        assertEquals(numListeners + 0, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(0, getListenerCount(item11.acceleratorProperty()));
         assertEquals(0, getListenerCount(item12.acceleratorProperty()));
         assertEquals(0, getListenerCount(item21.acceleratorProperty()));
         assertEquals(0, getListenerCount(item22.acceleratorProperty()));
 
         menu1.getItems().addAll(item11, item12);
-        assertEquals(numListeners + 2, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(1, getListenerCount(item11.acceleratorProperty()));
         assertEquals(1, getListenerCount(item12.acceleratorProperty()));
         assertEquals(0, getListenerCount(item21.acceleratorProperty()));
         assertEquals(0, getListenerCount(item22.acceleratorProperty()));
 
         menu2.getItems().addAll(item21, item22);
-        assertEquals(numListeners + 4, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(1, getListenerCount(item11.acceleratorProperty()));
         assertEquals(1, getListenerCount(item12.acceleratorProperty()));
         assertEquals(1, getListenerCount(item21.acceleratorProperty()));
@@ -108,7 +91,6 @@ public class ControlAcceleratorSupportTest {
         menu2.getItems().clear();
         menu1.getItems().clear();
 
-        assertEquals(numListeners + 0, ControlAcceleratorSupportShim.get_ListenerMapSize());
         assertEquals(0, getListenerCount(item11.acceleratorProperty()));
         assertEquals(0, getListenerCount(item12.acceleratorProperty()));
         assertEquals(0, getListenerCount(item21.acceleratorProperty()));

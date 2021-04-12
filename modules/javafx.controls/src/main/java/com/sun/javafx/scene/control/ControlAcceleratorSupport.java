@@ -236,7 +236,7 @@ public class ControlAcceleratorSupport {
                 // The listener that is added on the 'items' in the method
                 // doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene)
                 // is added to the MenuBarButton.getItems() and not to Menu.getItems().
-                // If a Menu is removed from scenegraph then it's skin get disposed(), which disposes the
+                // If a Menu is removed from scenegraph then it's skin gets disposed(), which disposes the
                 // related MenuBarButton. So it is not required to remove the listener that was added
                 // to MenuBarButton.getItems().
 
@@ -271,10 +271,5 @@ public class ControlAcceleratorSupport {
         }
 
         return null;
-    }
-
-    // --- Test method
-    static int testGetListenerMapSize() {
-        return changeListenerMap.size();
     }
 }
