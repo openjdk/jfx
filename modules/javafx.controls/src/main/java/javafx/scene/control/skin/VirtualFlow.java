@@ -251,7 +251,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * node.
      * The following relation should always be true:
      * 0 <= absoluteOffset <= (estimatedSize - viewportLength)
-     * Based on this relation, he position p is defined as
+     * Based on this relation, the position p is defined as
      * 0 <= absoluteOffset/(estimatedSize - viewportLength) <= 1
      * As a consequence, whenever p, estimatedSize, or viewportLength
      * changes, the absoluteOffset needs to change as well.
@@ -1031,7 +1031,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * match the (new) position.
      */
     void adjustAbsoluteOffset() {
-        absoluteOffset = (estimatedSize - viewportLength)* getPosition();
+        absoluteOffset = (estimatedSize - viewportLength) * getPosition();
     }
 
     /**
@@ -2898,7 +2898,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             recalculateEstimatedSize();
         }
 
-        // if we are at or beyond the edge, correct the absolteOffset
+        // if we are at or beyond the edge, correct the absoluteOffset
         if (newPosition >= 1.d) {
             absoluteOffset = estimatedSize - viewportLength;
         }
@@ -2911,7 +2911,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private int computeCurrentIndex() {
         double total = 0;
         int currentCellCount = getCellCount();
-        double estSize = estimatedSize/currentCellCount;
+        double estSize = estimatedSize / currentCellCount;
         for (int i = 0; i < currentCellCount; i++) {
             double nextSize = getCellSize(i);
             if (nextSize < 0) nextSize = estSize;

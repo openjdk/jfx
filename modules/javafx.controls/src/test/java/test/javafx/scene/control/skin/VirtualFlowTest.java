@@ -1226,11 +1226,11 @@ public class VirtualFlowTest {
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
     }
 
-    private ArrayLinkedListShim<GraphicalCellStub> circlelist= new ArrayLinkedListShim<GraphicalCellStub>();
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
 
     private VirtualFlowShim createCircleFlow() {
-            // The second VirtualFlow we are going to test, with 7 cells. Each cell
-    // contains a Circle whith a radius that varies between cells.
+        // The second VirtualFlow we are going to test, with 7 cells. Each cell
+        // contains a Circle whith a radius that varies between cells.
         VirtualFlowShim<IndexedCell> circleFlow;
         circleFlow = new VirtualFlowShim();
 
@@ -1302,7 +1302,7 @@ public class VirtualFlowTest {
         double s0 = sb.getLayoutY();
         double s1 = s0;
         double position = vf.getPosition();
-        double newPosition =0d;
+        double newPosition = 0d;
         double delta = 0;
         double newDelta = 0;
         vf.layout();
@@ -1331,23 +1331,22 @@ public class VirtualFlowTest {
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {
-    static ArrayList<Circle> circleList = new ArrayList<>();
-    static {
-        circleList.add(new Circle(10));
-        circleList.add(new Circle(20));
-        circleList.add(new Circle(100));
-        circleList.add(new Circle(30));
-        circleList.add(new Circle(50));
-        circleList.add(new Circle(200));
-        circleList.add(new Circle(60));
-    }
+    static List<Circle> circleList = List.of(
+        new Circle(10),
+        new Circle(20),
+        new Circle(100),
+        new Circle(30),
+        new Circle(50),
+        new Circle(200),
+        new Circle(60)
+    );
 
     private int idx = -1;
     Node myItem = null;
 
     public GraphicalCellStub() { init(); }
 
-    private void init( ) {
+    private void init() {
         System.err.println("Init vf cell "+this);
         setSkin(new SkinStub<GraphicalCellStub>(this));
     }
@@ -1377,8 +1376,8 @@ class GraphicalCellStub extends IndexedCellShim<Node> {
     @Override
     protected double computePrefHeight(double width) {
         double answer = super.computePrefHeight(width);
-        if ((idx > -1) && (idx < circleList.size())){
-            answer = 2* circleList.get(idx).getRadius()+ 6;
+        if ((idx > -1) && (idx < circleList.size())) {
+            answer = 2 * circleList.get(idx).getRadius() + 6;
         }
         return answer;
     }
