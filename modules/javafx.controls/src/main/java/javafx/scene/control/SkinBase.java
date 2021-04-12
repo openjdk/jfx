@@ -283,7 +283,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * Registers an operation to perform when the given {@code observableList} sends a list change event.
      * Does nothing if either {@code observableList} or {@code operation} are {@code null}.
-     * If multiple operations are registered on the same observableList, they will be performed in the
+     * If multiple operations are registered on the same observable list, they will be performed in the
      * order in which they were registered.
      *
      * @param observableList the observableList to observe for list change events, may be {@code null}
