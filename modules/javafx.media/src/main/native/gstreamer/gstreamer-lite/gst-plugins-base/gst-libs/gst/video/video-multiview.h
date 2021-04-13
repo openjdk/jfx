@@ -25,6 +25,11 @@
 
 G_BEGIN_DECLS
 
+/**
+ * GstVideoMultiviewFlagsSet:
+ *
+ * See #GstVideoMultiviewFlags.
+ */
 #define GST_TYPE_VIDEO_MULTIVIEW_FLAGSET (gst_video_multiview_flagset_get_type())
 GST_VIDEO_API
 GType gst_video_multiview_flagset_get_type (void);

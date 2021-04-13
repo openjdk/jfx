@@ -193,13 +193,14 @@ gst_audio_info_from_caps (GstAudioInfo * info, const GstCaps * caps)
 {
   GstStructure *str;
   const gchar *s;
-  GstAudioFormat format;
-  gint rate, channels;
-  guint64 channel_mask;
+  GstAudioFormat format = GST_AUDIO_FORMAT_UNKNOWN;
+  gint rate = 0;
+  gint channels = 0;
+  guint64 channel_mask = 0;
   gint i;
   GstAudioChannelPosition position[64];
   GstAudioFlags flags;
-  GstAudioLayout layout;
+  GstAudioLayout layout = GST_AUDIO_LAYOUT_INTERLEAVED;
 
   g_return_val_if_fail (info != NULL, FALSE);
   g_return_val_if_fail (caps != NULL, FALSE);
@@ -211,28 +212,35 @@ gst_audio_info_from_caps (GstAudioInfo * info, const GstCaps * caps)
 
   str = gst_caps_get_structure (caps, 0);
 
-  if (!gst_structure_has_name (str, "audio/x-raw"))
+  if (gst_structure_has_name (str, "audio/x-raw")) {
+    if (!(s = gst_structure_get_string (str, "format")))
+      goto no_format;
+
+    format = gst_audio_format_from_string (s);
+    if (format == GST_AUDIO_FORMAT_UNKNOWN)
+      goto unknown_format;
+  } else if (g_str_has_prefix (gst_structure_get_name (str), "audio/")) {
+    format = GST_AUDIO_FORMAT_ENCODED;
+  } else {
     goto wrong_name;
+  }
 
-  if (!(s = gst_structure_get_string (str, "format")))
-    goto no_format;
+  if (format != GST_AUDIO_FORMAT_ENCODED) {
+    if (!(s = gst_structure_get_string (str, "layout")))
+      goto no_layout;
+    if (g_str_equal (s, "interleaved"))
+      layout = GST_AUDIO_LAYOUT_INTERLEAVED;
+    else if (g_str_equal (s, "non-interleaved"))
+      layout = GST_AUDIO_LAYOUT_NON_INTERLEAVED;
+    else
+      goto unknown_layout;
+  }
 
-  format = gst_audio_format_from_string (s);
-  if (format == GST_AUDIO_FORMAT_UNKNOWN)
-    goto unknown_format;
-
-  if (!(s = gst_structure_get_string (str, "layout")))
-    goto no_layout;
-  if (g_str_equal (s, "interleaved"))
-    layout = GST_AUDIO_LAYOUT_INTERLEAVED;
-  else if (g_str_equal (s, "non-interleaved"))
-    layout = GST_AUDIO_LAYOUT_NON_INTERLEAVED;
-  else
-    goto unknown_layout;
-
-  if (!gst_structure_get_int (str, "rate", &rate))
+  if (!gst_structure_get_int (str, "rate", &rate) &&
+      format != GST_AUDIO_FORMAT_ENCODED)
     goto no_rate;
-  if (!gst_structure_get_int (str, "channels", &channels))
+  if (!gst_structure_get_int (str, "channels", &channels) &&
+      format != GST_AUDIO_FORMAT_ENCODED)
     goto no_channels;
 
   if (!gst_structure_get (str, "channel-mask", GST_TYPE_BITMASK, &channel_mask,
@@ -242,7 +250,7 @@ gst_audio_info_from_caps (GstAudioInfo * info, const GstCaps * caps)
     } else if (channels == 2) {
       position[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
       position[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
-    } else {
+    } else if (format != GST_AUDIO_FORMAT_ENCODED) {
       goto no_channel_mask;
     }
   } else if (channel_mask == 0) {

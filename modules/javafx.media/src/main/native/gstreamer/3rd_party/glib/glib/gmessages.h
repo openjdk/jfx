@@ -30,6 +30,7 @@
 #endif
 
 #include <stdarg.h>
+#include <glib/gatomic.h>
 #include <glib/gtypes.h>
 #include <glib/gmacros.h>
 #include <glib/gvariant.h>
@@ -452,6 +453,43 @@ g_debug (const gchar *format,
   va_end (args);
 }
 #endif  /* !__GNUC__ */
+
+/**
+ * g_warning_once:
+ * @...: format string, followed by parameters to insert
+ *     into the format string (as with printf())
+ *
+ * Logs a warning only once.
+ *
+ * g_warning_once() calls g_warning() with the passed message the first time
+ * the statement is executed; subsequent times it is a no-op.
+ *
+ * Note! On platforms where the compiler doesn't support variadic macros, the
+ * warning is printed each time instead of only once.
+ *
+ * Since: 2.64
+ */
+#if defined(G_HAVE_ISO_VARARGS) && !G_ANALYZER_ANALYZING
+#define g_warning_once(...) \
+  G_STMT_START { \
+    static volatile int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0; \
+    if (g_atomic_int_compare_and_exchange (&G_PASTE (_GWarningOnceBoolean, __LINE__), \
+                                           0, 1)) \
+      g_warning (__VA_ARGS__); \
+  } G_STMT_END \
+  GLIB_AVAILABLE_MACRO_IN_2_64
+#elif defined(G_HAVE_GNUC_VARARGS)  && !G_ANALYZER_ANALYZING
+#define g_warning_once(format...) \
+  G_STMT_START { \
+    static volatile int G_PASTE (_GWarningOnceBoolean, __LINE__) = 0; \
+    if (g_atomic_int_compare_and_exchange (&G_PASTE (_GWarningOnceBoolean, __LINE__), \
+                                           0, 1)) \
+      g_warning (format); \
+  } G_STMT_END \
+  GLIB_AVAILABLE_MACRO_IN_2_64
+#else
+#define g_warning_once g_warning
+#endif
 
 /**
  * GPrintFunc:

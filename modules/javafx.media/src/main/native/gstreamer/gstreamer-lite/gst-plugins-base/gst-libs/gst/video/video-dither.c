@@ -370,7 +370,7 @@ count_power (guint v)
  * algorithm described by @method.
  *
  * Each component will be quantized to a multiple of @quantizer. Better
- * performance is achived when @quantizer is a power of 2.
+ * performance is achieved when @quantizer is a power of 2.
  *
  * @width is the width of the lines that this ditherer will handle.
  *

@@ -562,11 +562,18 @@ final public class WebEngine {
      */
     public void loadContent(String content, String contentType) {
         checkThread();
+        LoadWorker lw = (LoadWorker) getLoadWorker();
+        if (lw != null) {
+            lw.cancelAndReset();
+        }
         _loadContent(view.get().getNativeHandle(), content);
     }
 
     /* Loads the given content directly */
     private native void _loadContent(long handle, String content);
+
+    /* Reloads the current content directly */
+    private native void _reload(long handle);
 
     /**
      * Reloads the current page, whether loaded from URL or directly from a String in
@@ -574,6 +581,7 @@ final public class WebEngine {
      */
     public void reload() {
         checkThread();
+        _reload(view.get().getNativeHandle());
     }
 
     /**
@@ -603,11 +611,12 @@ final public class WebEngine {
         b.append(escapeScript(script));
         b.append("')");
         String retVal = _executeScript(view.get().getNativeHandle(), b.toString());
-
-        try {
-            return js2javaBridge.decode(retVal);
-        } catch (Exception ex) {
-            System.err.println("Couldn't parse arguments. " + ex);
+        if (retVal != null) {
+            try {
+                return js2javaBridge.decode(retVal);
+            } catch (Exception ex) {
+                System.err.println("Couldn't parse arguments. " + ex);
+            }
         }
         return null;
     }
@@ -860,9 +869,9 @@ final public class WebEngine {
                 updateState(Worker.State.SCHEDULED);
                 updateState(Worker.State.RUNNING);
                 pageListener.onLoadStarted();
+                pageListener.onLoadFinished();
                 updateProgress(1.0);
                 updateState(Worker.State.SUCCEEDED);
-                pageListener.onLoadFinished();
             }
         }
     }
@@ -894,7 +903,7 @@ final public class WebEngine {
             document = builder.parse(new InputSource(new StringReader(pageContent)));
         }
         catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error parsing html: " + e.getLocalizedMessage());
         }
         return document;
     }
@@ -903,13 +912,13 @@ final public class WebEngine {
         synchronized (loadedLock) {
             this.pageContent = "<html>"+content+"</html>";
             loaded = true;
-            updateProgress(1.0);
-            updateState(Worker.State.SUCCEEDED);
-            location.set(loc);
-            document.invalidate(true);
             if (pageListener != null) {
                 pageListener.onLoadFinished();
             }
+            updateProgress(1.0);
+            location.set(loc);
+            document.invalidate(true);
+            updateState(Worker.State.SUCCEEDED);
         }
     }
 

@@ -195,14 +195,15 @@ public class PickResult {
                 .append(", point = ").append(getIntersectedPoint())
                 .append(", distance = ").append(getIntersectedDistance());
         if (getIntersectedFace() != FACE_UNDEFINED) {
-                sb.append(", face = ").append(getIntersectedFace());
+            sb.append(", face = ").append(getIntersectedFace());
         }
         if (getIntersectedNormal() != null) {
-                sb.append(", normal = ").append(getIntersectedNormal());
+            sb.append(", normal = ").append(getIntersectedNormal());
         }
         if (getIntersectedTexCoord() != null) {
-                sb.append(", texCoord = ").append(getIntersectedTexCoord());
+            sb.append(", texCoord = ").append(getIntersectedTexCoord());
         }
+        sb.append("]");
         return sb.toString();
     }
 }

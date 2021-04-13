@@ -118,6 +118,13 @@ _priv_gst_caps_features_cleanup (void)
   _gst_caps_features_memory_system_memory = NULL;
 }
 
+/**
+ * gst_is_caps_features:
+ *
+ * Checks if @obj is a #GstCapsFeatures
+ *
+ * Returns: %TRUE if @obj is a #GstCapsFeatures %FALSE otherwise
+ */
 gboolean
 gst_is_caps_features (gconstpointer obj)
 {

@@ -87,7 +87,7 @@ G_BEGIN_DECLS
  * This is expressed in caps by having a channel mask with no bits set.
  *
  * As another special case it is allowed to have two channels without a channel mask.
- * This implicitely means that this is a stereo stream with a front left and front right
+ * This implicitly means that this is a stereo stream with a front left and front right
  * channel.
  */
 typedef enum {

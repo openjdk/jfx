@@ -29,7 +29,7 @@
  * changes).
  *
  * It also provides several background shading effects. These effects are
- * applied to a previous picture before the render() implementation can draw a
+ * applied to a previous picture before the `render()` implementation can draw a
  * new frame.
  */
 
@@ -1270,7 +1270,7 @@ gst_audio_visualizer_src_event (GstPad * pad, GstObject * parent,
       break;
     }
     case GST_EVENT_RECONFIGURE:
-      /* dont't forward */
+      /* don't forward */
       gst_event_unref (event);
       res = TRUE;
       break;
@@ -1308,7 +1308,7 @@ gst_audio_visualizer_sink_event (GstPad * pad, GstObject * parent,
     case GST_EVENT_SEGMENT:
     {
       /* the newsegment values are used to clip the input samples
-       * and to convert the incomming timestamps to running time so
+       * and to convert the incoming timestamps to running time so
        * we can do QoS */
       gst_event_copy_segment (event, &scope->priv->segment);
 

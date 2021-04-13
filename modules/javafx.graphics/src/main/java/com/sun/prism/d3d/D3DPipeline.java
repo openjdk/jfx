@@ -39,6 +39,11 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     private static final boolean d3dEnabled;
 
+    private static final Thread creator;
+    private static D3DPipeline theInstance;
+    private static D3DResourceFactory factories[];
+    private static boolean d3dInitialized;
+
     static {
 
         d3dEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
@@ -49,7 +54,7 @@ public final class D3DPipeline extends GraphicsPipeline {
             if (PrismSettings.verbose) {
                 System.out.println("\tsucceeded.");
             }
-            return Boolean.valueOf(nInit(PrismSettings.class));
+            return Boolean.valueOf(nInit(PrismSettings.class, true));
         });
 
         if (PrismSettings.verbose) {
@@ -67,14 +72,11 @@ public final class D3DPipeline extends GraphicsPipeline {
         creator = Thread.currentThread();
 
         if (d3dEnabled) {
+            d3dInitialized = true;
             theInstance = new D3DPipeline();
             factories = new D3DResourceFactory[nGetAdapterCount()];
         }
     }
-
-    private static Thread creator;
-    private static D3DPipeline theInstance;
-    private static D3DResourceFactory factories[];
 
     public static D3DPipeline getInstance() {
         return theInstance;
@@ -139,9 +141,9 @@ public final class D3DPipeline extends GraphicsPipeline {
         return d3dEnabled;
     }
 
-    private static native boolean nInit(Class psClass);
+    private static native boolean nInit(Class psClass, boolean load);
     private static native String nGetErrorMessage();
-    private static native void nDispose();
+    private static native void nDispose(boolean unload);
 
     private static native int nGetAdapterOrdinal(long hMonitor);
     private static native int nGetAdapterCount();
@@ -154,18 +156,53 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     private static native int nGetMaxSampleSupport(int adapterOrdinal);
 
-    @Override
-    public void dispose() {
+    // Called by dispose and reinitialize methods to reset the pipeline
+    // and free all resources
+    private void reset(boolean unload) {
+        if (!d3dInitialized) {
+            return;
+        }
+
         if (creator != Thread.currentThread()) {
             throw new IllegalStateException(
                     "This operation is not permitted on the current thread ["
                     + Thread.currentThread().getName() + "]");
         }
-        notifyAllResourcesReleased();
-        nDispose();
-        for (int i=0; i!=factories.length; ++i) {
+        for (int i = 0; i != factories.length; ++i) {
+            if (factories[i] != null) {
+                factories[i].dispose();
+            }
             factories[i] = null;
         }
+        factories = null;
+        _default = null;
+        d3dInitialized = false;
+        nDispose(unload);
+    }
+
+    // Reinitialize pipeline
+    void reinitialize() {
+        if (PrismSettings.verbose) {
+            System.err.println("D3DPipeline: reinitialize after device was removed");
+        }
+
+        // Device was removed, reset and reinitialize
+        reset(false);
+
+        boolean success = nInit(PrismSettings.class, false);
+        if (!success) {
+            nDispose(false);
+            return;
+        }
+
+        d3dInitialized = true;
+        factories = new D3DResourceFactory[nGetAdapterCount()];
+    }
+
+    @Override
+    public void dispose() {
+        reset(true);
+        theInstance = null;
         super.dispose();
     }
 
@@ -181,12 +218,6 @@ public final class D3DPipeline extends GraphicsPipeline {
             factories[adapterOrdinal] = factory;
         }
         return factory;
-    }
-
-    private static void notifyAllResourcesReleased() {
-        for (D3DResourceFactory rf : factories) {
-            if (rf != null) rf.notifyReleased();
-        }
     }
 
     /*
@@ -207,6 +238,17 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
+        if (!d3dInitialized) {
+            // If initialization failed, try again
+            D3DPipeline.getInstance().reinitialize();
+
+            // If reinitialization failed, return a null resource factory; we will
+            // try again the next time this method is called.
+            if (!d3dInitialized) {
+                return null;
+            }
+        }
+
         for (int adapter = 0, n = nGetAdapterCount(); adapter != n; ++adapter) {
             D3DResourceFactory rf =
                     getD3DResourceFactory(adapter, getScreenForAdapter(screens, adapter));

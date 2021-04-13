@@ -171,8 +171,11 @@ plugin_loader_free (GstPluginLoader * loader)
 {
   GList *cur;
   gboolean got_plugin_details;
+  gint fsync_ret;
 
-  fsync (loader->fd_w.fd);
+  do {
+    fsync_ret = fsync (loader->fd_w.fd);
+  } while (fsync_ret < 0 && errno == EINTR);
 
   if (loader->child_running) {
     put_packet (loader, PACKET_EXIT, 0, NULL, 0);

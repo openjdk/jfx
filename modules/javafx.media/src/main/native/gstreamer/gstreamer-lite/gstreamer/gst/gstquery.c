@@ -53,7 +53,7 @@
  * ]|
  */
 
-
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "gstinfo.h"
 #include "gstquery.h"
@@ -2726,4 +2726,113 @@ gst_query_parse_bitrate (GstQuery * query, guint * nominal_bitrate)
     value = gst_structure_id_get_value (structure, GST_QUARK (NOMINAL_BITRATE));
     *nominal_bitrate = g_value_get_uint (value);
   }
+}
+
+/**
+ * gst_query_ref:
+ * @q: a #GstQuery to increase the refcount of.
+ *
+ * Increases the refcount of the given query by one.
+ *
+ * Returns: @q
+ */
+GstQuery *
+gst_query_ref (GstQuery * q)
+{
+  return GST_QUERY_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (q)));
+}
+
+/**
+ * gst_query_unref: (skip)
+ * @q: a #GstQuery to decrease the refcount of.
+ *
+ * Decreases the refcount of the query. If the refcount reaches 0, the query
+ * will be freed.
+ */
+void
+gst_query_unref (GstQuery * q)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (q));
+}
+
+/**
+ * gst_clear_query: (skip)
+ * @query_ptr: a pointer to a #GstQuery reference
+ *
+ * Clears a reference to a #GstQuery.
+ *
+ * @query_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the query is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+void
+gst_clear_query (GstQuery ** query_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) query_ptr);
+}
+
+/**
+ * gst_query_copy: (skip)
+ * @q: a #GstQuery to copy.
+ *
+ * Copies the given query using the copy function of the parent #GstStructure.
+ *
+ * Free-function: gst_query_unref
+ *
+ * Returns: (transfer full): a new copy of @q.
+ */
+GstQuery *
+gst_query_copy (const GstQuery * q)
+{
+  return GST_QUERY_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (q)));
+}
+
+/**
+ * gst_query_replace: (skip)
+ * @old_query: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     #GstQuery to be replaced.
+ * @new_query: (allow-none) (transfer none): pointer to a #GstQuery that will
+ *     replace the query pointed to by @old_query.
+ *
+ * Modifies a pointer to a #GstQuery to point to a different #GstQuery. The
+ * modification is done atomically (so this is useful for ensuring thread safety
+ * in some cases), and the reference counts are updated appropriately (the old
+ * query is unreffed, the new one is reffed).
+ *
+ * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
+ *
+ * Returns: %TRUE if @new_query was different from @old_query
+ */
+gboolean
+gst_query_replace (GstQuery ** old_query, GstQuery * new_query)
+{
+  return gst_mini_object_replace ((GstMiniObject **) old_query,
+      (GstMiniObject *) new_query);
+}
+
+/**
+ * gst_query_take:
+ * @old_query: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstQuery to be stolen.
+ * @new_query: (allow-none) (transfer full): pointer to a #GstQuery that will
+ *     replace the query pointed to by @old_query.
+ *
+ * Modifies a pointer to a #GstQuery to point to a different #GstQuery. This
+ * function is similar to gst_query_replace() except that it takes ownership of
+ * @new_query.
+ *
+ * Either @new_query or the #GstQuery pointed to by @old_query may be %NULL.
+ *
+ * Returns: %TRUE if @new_query was different from @old_query
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_query_take (GstQuery ** old_query, GstQuery * new_query)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_query,
+      (GstMiniObject *) new_query);
 }

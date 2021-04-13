@@ -219,7 +219,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
    * features are removed and readded.
    */
   existing_feature = gst_registry_lookup_feature (registry, name);
-  if (existing_feature) {
+  if (existing_feature && existing_feature->plugin == plugin) {
     GST_DEBUG_OBJECT (registry, "update existing feature %p (%s)",
         existing_feature, name);
     factory = GST_ELEMENT_FACTORY_CAST (existing_feature);
@@ -228,6 +228,8 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     g_type_set_qdata (type, __gst_elementclass_factory, factory);
     gst_object_unref (existing_feature);
     return TRUE;
+  } else if (existing_feature) {
+    gst_object_unref (existing_feature);
   }
 
   factory = g_object_new (GST_TYPE_ELEMENT_FACTORY, NULL);
@@ -379,18 +381,21 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
    * an element at the same moment
    */
   oclass = GST_ELEMENT_GET_CLASS (element);
-  if (!g_atomic_pointer_compare_and_exchange (&oclass->elementfactory, NULL,
-          factory))
+  if (!g_atomic_pointer_compare_and_exchange (&oclass->elementfactory,
+          (GstElementFactory *) NULL, factory))
     gst_object_unref (factory);
   else
     /* This ref will never be dropped as the class is never destroyed */
     GST_OBJECT_FLAG_SET (factory, GST_OBJECT_FLAG_MAY_BE_LEAKED);
 
-  /* Ensure that the reference is floating. Bindings might have a hard time
-   * making sure that the reference is indeed still floating after returning
-   * here */
-  if (element)
-    g_object_force_floating ((GObject *) element);
+  if (!g_object_is_floating ((GObject *) element)) {
+    /* The reference we receive here should be floating, but we can't force
+     * it at our level. Simply raise a critical to make the issue obvious to bindings
+     * users / developers */
+    g_critical ("The created element should be floating, "
+        "this is probably caused by faulty bindings");
+  }
+
 
   GST_DEBUG ("created element \"%s\"", GST_OBJECT_NAME (factory));
 
@@ -742,6 +747,9 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
 
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR))
     res = (strstr (klass, "Encryptor") != NULL);
+
+  if (!res && (type & GST_ELEMENT_FACTORY_TYPE_HARDWARE))
+    res = (strstr (klass, "Hardware") != NULL);
 
   /* Filter by media type now, we only test if it
    * matched any of the types above or only checking the media

@@ -67,18 +67,18 @@
 
 
 /* --- prototypes --- */
-static void g_enum_class_init   (GEnumClass *class,
-             gpointer  class_data);
-static void g_flags_class_init    (GFlagsClass  *class,
-             gpointer  class_data);
-static void value_flags_enum_init   (GValue   *value);
-static void value_flags_enum_copy_value (const GValue *src_value,
-             GValue   *dest_value);
-static gchar* value_flags_enum_collect_value  (GValue   *value,
+static void g_enum_class_init       (GEnumClass *class,
+                         gpointer    class_data);
+static void g_flags_class_init      (GFlagsClass    *class,
+                         gpointer    class_data);
+static void value_flags_enum_init       (GValue     *value);
+static void value_flags_enum_copy_value (const GValue   *src_value,
+                         GValue     *dest_value);
+static gchar*   value_flags_enum_collect_value  (GValue     *value,
              guint           n_collect_values,
              GTypeCValue    *collect_values,
              guint           collect_flags);
-static gchar* value_flags_enum_lcopy_value  (const GValue *value,
+static gchar*   value_flags_enum_lcopy_value    (const GValue   *value,
              guint           n_collect_values,
              GTypeCValue    *collect_values,
              guint           collect_flags);
@@ -90,12 +90,12 @@ _g_enum_types_init (void)
   static gboolean initialized = FALSE;
   static const GTypeValueTable flags_enum_value_table = {
     value_flags_enum_init,      /* value_init */
-    NULL,         /* value_free */
+    NULL,               /* value_free */
     value_flags_enum_copy_value,    /* value_copy */
-    NULL,         /* value_peek_pointer */
-    "i",          /* collect_format */
+    NULL,               /* value_peek_pointer */
+    "i",                /* collect_format */
     value_flags_enum_collect_value, /* collect_value */
-    "p",          /* lcopy_format */
+    "p",                /* lcopy_format */
     value_flags_enum_lcopy_value,   /* lcopy_value */
   };
   GTypeInfo info = {
@@ -141,7 +141,7 @@ value_flags_enum_init (GValue *value)
 
 static void
 value_flags_enum_copy_value (const GValue *src_value,
-           GValue   *dest_value)
+                 GValue   *dest_value)
 {
   dest_value->data[0].v_long = src_value->data[0].v_long;
 }
@@ -168,8 +168,7 @@ value_flags_enum_lcopy_value (const GValue *value,
 {
   gint *int_p = collect_values[0].v_pointer;
 
-  if (!int_p)
-    return g_strdup_printf ("value location for '%s' passed as NULL", G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (int_p != NULL, g_strdup_printf ("value location for '%s' passed as NULL", G_VALUE_TYPE_NAME (value)));
 
   *int_p = value->data[0].v_long;
 
@@ -206,7 +205,7 @@ g_enum_register_static (const gchar  *name,
     0,                   /* instance_size */
     0,                   /* n_preallocs */
     NULL,                /* instance_init */
-    NULL,    /* value_table */
+    NULL,        /* value_table */
   };
   GType type;
 
@@ -236,8 +235,8 @@ g_enum_register_static (const gchar  *name,
  * Returns: The new type identifier.
  */
 GType
-g_flags_register_static (const gchar     *name,
-       const GFlagsValue *const_static_values)
+g_flags_register_static (const gchar       *name,
+                         const GFlagsValue *const_static_values)
 {
   GTypeInfo flags_type_info = {
     sizeof (GFlagsClass), /* class_size */
@@ -249,7 +248,7 @@ g_flags_register_static (const gchar     *name,
     0,                    /* instance_size */
     0,                    /* n_preallocs */
     NULL,                 /* instance_init */
-    NULL,     /* value_table */
+    NULL,         /* value_table */
   };
   GType type;
 
@@ -293,9 +292,9 @@ g_flags_register_static (const gchar     *name,
  * ]|
  */
 void
-g_enum_complete_type_info (GType       g_enum_type,
-         GTypeInfo      *info,
-         const GEnumValue *const_values)
+g_enum_complete_type_info (GType         g_enum_type,
+               GTypeInfo        *info,
+                           const GEnumValue *const_values)
 {
   g_return_if_fail (G_TYPE_IS_ENUM (g_enum_type));
   g_return_if_fail (info != NULL);
@@ -322,9 +321,9 @@ g_enum_complete_type_info (GType       g_enum_type,
  * g_enum_complete_type_info() above.
  */
 void
-g_flags_complete_type_info (GType        g_flags_type,
-          GTypeInfo       *info,
-          const GFlagsValue *const_values)
+g_flags_complete_type_info (GType          g_flags_type,
+                GTypeInfo         *info,
+                            const GFlagsValue *const_values)
 {
   g_return_if_fail (G_TYPE_IS_FLAGS (g_flags_type));
   g_return_if_fail (info != NULL);
@@ -366,7 +365,7 @@ g_enum_class_init (GEnumClass *class,
 
 static void
 g_flags_class_init (GFlagsClass *class,
-        gpointer   class_data)
+            gpointer     class_data)
 {
   g_return_if_fail (G_IS_FLAGS_CLASS (class));
 
@@ -516,7 +515,7 @@ g_flags_get_value_by_nick (GFlagsClass *flags_class,
  */
 GEnumValue*
 g_enum_get_value (GEnumClass *enum_class,
-      gint        value)
+          gint        value)
 {
   g_return_val_if_fail (G_IS_ENUM_CLASS (enum_class), NULL);
 
@@ -544,7 +543,7 @@ g_enum_get_value (GEnumClass *enum_class,
  */
 GFlagsValue*
 g_flags_get_first_value (GFlagsClass *flags_class,
-       guint        value)
+             guint        value)
 {
   g_return_val_if_fail (G_IS_FLAGS_CLASS (flags_class), NULL);
 

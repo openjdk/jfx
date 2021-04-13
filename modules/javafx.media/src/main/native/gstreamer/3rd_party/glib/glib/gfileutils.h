@@ -72,6 +72,39 @@ typedef enum
   G_FILE_TEST_EXISTS        = 1 << 4
 } GFileTest;
 
+/**
+ * GFileSetContentsFlags:
+ * @G_FILE_SET_CONTENTS_NONE: No guarantees about file consistency or durability.
+ *    The most dangerous setting, which is slightly faster than other settings.
+ * @G_FILE_SET_CONTENTS_CONSISTENT: Guarantee file consistency: after a crash,
+ *    either the old version of the file or the new version of the file will be
+ *    available, but not a mixture. On Unix systems this equates to an `fsync()`
+ *    on the file and use of an atomic `rename()` of the new version of the file
+ *    over the old.
+ * @G_FILE_SET_CONTENTS_DURABLE: Guarantee file durability: after a crash, the
+ *    new version of the file will be available. On Unix systems this equates to
+ *    an `fsync()` on the file (if %G_FILE_SET_CONTENTS_CONSISTENT is unset), or
+ *    the effects of %G_FILE_SET_CONTENTS_CONSISTENT plus an `fsync()` on the
+ *    directory containing the file after calling `rename()`.
+ * @G_FILE_SET_CONTENTS_ONLY_EXISTING: Only apply consistency and durability
+ *    guarantees if the file already exists. This may speed up file operations
+ *    if the file doesn’t currently exist, but may result in a corrupted version
+ *    of the new file if the system crashes while writing it.
+ *
+ * Flags to pass to g_file_set_contents_full() to affect its safety and
+ * performance.
+ *
+ * Since: 2.66
+ */
+typedef enum
+{
+  G_FILE_SET_CONTENTS_NONE = 0,
+  G_FILE_SET_CONTENTS_CONSISTENT = 1 << 0,
+  G_FILE_SET_CONTENTS_DURABLE = 1 << 1,
+  G_FILE_SET_CONTENTS_ONLY_EXISTING = 1 << 2
+} GFileSetContentsFlags
+GLIB_AVAILABLE_ENUMERATOR_IN_2_66;
+
 GLIB_AVAILABLE_IN_ALL
 GQuark     g_file_error_quark      (void);
 /* So other code can generate a GFileError */
@@ -91,6 +124,15 @@ gboolean g_file_set_contents (const gchar *filename,
                               const gchar *contents,
                               gssize         length,
                               GError       **error);
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_IN_2_66
+gboolean g_file_set_contents_full (const gchar            *filename,
+                                   const gchar            *contents,
+                                   gssize                  length,
+                                   GFileSetContentsFlags   flags,
+                                   int                     mode,
+                                   GError                **error);
+G_GNUC_END_IGNORE_DEPRECATIONS
 GLIB_AVAILABLE_IN_ALL
 gchar   *g_file_read_link    (const gchar  *filename,
                               GError      **error);

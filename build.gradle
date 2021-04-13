@@ -305,7 +305,7 @@ ext.MAVEN_GROUP_ID = "org.openjfx"
 if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
 if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_MAC && OS_ARCH != "x86_64") {
+} else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
@@ -346,6 +346,9 @@ defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
+defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
+
+defineProperty("icuVersion", "68.2")
 
 loadProperties("$projectDir/build.properties")
 
@@ -1902,6 +1905,21 @@ allprojects {
         }
     }
 
+    if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
+        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
+        repositories {
+            ivy {
+                url icuRepositoryURL
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
+                    artifact "download/release-$icuReleaseVersion/[artifact].[ext]"
+                }
+            }
+        }
+    }
+
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
     if (project == rootProject) {
@@ -2089,6 +2107,7 @@ project(":graphics") {
         stubCompile group: "junit", name: "junit", version: "4.8.2"
 
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
+        testCompile project(":base").sourceSets.test.output
         compile project(':base')
     }
 
@@ -3339,6 +3358,8 @@ project(":web") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.web"
 
+    getConfigurations().create("icu");
+
     sourceSets {
         main
         shims {
@@ -3361,6 +3382,9 @@ project(":web") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
 
     dependencies {
+        if (IS_COMPILE_WEBKIT) {
+            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
+        }
         compile project(":base")
         compile project(":graphics")
         compile project(":controls")
@@ -3442,7 +3466,14 @@ project(":web") {
         File nativeBuildDir = new File("${webkitOutputDir}")
         nativeBuildDir.mkdirs()
 
-        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava]) {
+        def getICUFile = task("copyICUFile", type: Copy) {
+            enabled = IS_COMPILE_WEBKIT
+
+            from configurations.icu.files
+            into "$webkitOutputDir/$webkitConfig/icu/data"
+        }
+
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 

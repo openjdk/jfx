@@ -97,7 +97,11 @@ class D3DRTTexture extends D3DTexture
 
     @Override
     public boolean readPixels(Buffer pixels) {
-        getContext().flushVertexBuffer();
+        final D3DContext context = getContext();
+        if (context.isDisposed()) {
+            return false;
+        }
+        context.flushVertexBuffer();
         long ctx = getContext().getContextHandle();
         int res = D3DContext.D3D_OK;
         if (pixels instanceof ByteBuffer) {
@@ -119,7 +123,7 @@ class D3DRTTexture extends D3DTexture
             throw new IllegalArgumentException("Buffer of this type is " +
                                                "not supported: "+pixels);
         }
-        return getContext().validatePresent(res);
+        return context.validatePresent(res);
     }
 
     @Override

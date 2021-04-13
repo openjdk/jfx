@@ -40,4 +40,6 @@ public interface Mesh extends GraphicsResource {
             int faceSmoothingGroups[], int[] faceSmoothingGroupsFromAndLengthIndices);
 
     public int getCount();
+
+    public boolean isValid();
 }

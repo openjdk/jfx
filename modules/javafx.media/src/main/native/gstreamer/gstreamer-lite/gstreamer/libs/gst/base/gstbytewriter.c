@@ -30,6 +30,31 @@
  * @title: GstByteWriter
  * @short_description: Writes different integer, string and floating point
  *     types to a memory buffer and allows reading
+ * @symbols:
+ * - gst_byte_writer_put_uint8_unchecked
+ * - gst_byte_writer_put_uint16_be_unchecked
+ * - gst_byte_writer_put_uint24_be_unchecked
+ * - gst_byte_writer_put_uint32_be_unchecked
+ * - gst_byte_writer_put_uint64_be_unchecked
+ * - gst_byte_writer_put_uint16_le_unchecked
+ * - gst_byte_writer_put_uint24_le_unchecked
+ * - gst_byte_writer_put_uint32_le_unchecked
+ * - gst_byte_writer_put_uint64_le_unchecked
+ * - gst_byte_writer_put_int8_unchecked
+ * - gst_byte_writer_put_int16_be_unchecked
+ * - gst_byte_writer_put_int24_be_unchecked
+ * - gst_byte_writer_put_int32_be_unchecked
+ * - gst_byte_writer_put_int64_be_unchecked
+ * - gst_byte_writer_put_int16_le_unchecked
+ * - gst_byte_writer_put_int24_le_unchecked
+ * - gst_byte_writer_put_int32_le_unchecked
+ * - gst_byte_writer_put_int64_le_unchecked
+ * - gst_byte_writer_put_float32_be_unchecked
+ * - gst_byte_writer_put_float64_be_unchecked
+ * - gst_byte_writer_put_float32_le_unchecked
+ * - gst_byte_writer_put_float64_le_unchecked
+ * - gst_byte_writer_put_data_unchecked
+ * - gst_byte_writer_fill_unchecked
  *
  * #GstByteWriter provides a byte writer and reader that can write/read different
  * integer and floating point types to/from a memory buffer. It provides functions

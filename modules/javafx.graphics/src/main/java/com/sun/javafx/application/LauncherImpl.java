@@ -171,6 +171,9 @@ public class LauncherImpl {
             final Class<? extends Preloader> preloaderClass,
             final String[] args) {
 
+        if (com.sun.glass.ui.Application.isEventThread()) {
+            throw new IllegalStateException("Application launch must not be called on the JavaFX Application Thread");
+        }
         if (launchCalled.getAndSet(true)) {
             throw new IllegalStateException("Application launch must not be called more than once");
         }

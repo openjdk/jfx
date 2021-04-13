@@ -71,6 +71,11 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
+    public boolean isValid() {
+        return gc.isValid();
+    }
+
+    @Override
     public void drawString(WCFont f, int[] glyphs,
                            float[] advanceDXY,
                            float x, float y)

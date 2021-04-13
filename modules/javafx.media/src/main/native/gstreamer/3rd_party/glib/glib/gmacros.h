@@ -89,7 +89,7 @@
  * in a compatible way before this feature was supported in all
  * compilers.  These days, GLib requires inlining support from the
  * compiler, so your GLib-using programs can safely assume that the
- * "inline" keywork works properly.
+ * "inline" keyword works properly.
  *
  * Never use this macro anymore.  Just say "static inline".
  *
@@ -532,7 +532,7 @@
 /**
  * G_GNUC_FALLTHROUGH:
  *
- * Expands to the GNU C `fallthrough` statement attribute if the compiler is gcc.
+ * Expands to the GNU C `fallthrough` statement attribute if the compiler supports it.
  * This allows declaring case statement to explicitly fall through in switch
  * statements. To enable this feature, use `-Wimplicit-fallthrough` during
  * compilation.
@@ -558,6 +558,8 @@
  * Since: 2.60
  */
 #if    __GNUC__ > 6
+#define G_GNUC_FALLTHROUGH __attribute__((fallthrough))
+#elif g_macro__has_attribute (fallthrough)
 #define G_GNUC_FALLTHROUGH __attribute__((fallthrough))
 #else
 #define G_GNUC_FALLTHROUGH
@@ -734,7 +736,7 @@
 #ifndef __GI_SCANNER__ /* The static assert macro really confuses the introspection parser */
 #define G_PASTE_ARGS(identifier1,identifier2) identifier1 ## identifier2
 #define G_PASTE(identifier1,identifier2)      G_PASTE_ARGS (identifier1, identifier2)
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#if !defined(__cplusplus) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #define G_STATIC_ASSERT(expr) _Static_assert (expr, "Expression evaluates to false")
 #elif (defined(__cplusplus) && __cplusplus >= 201103L) || \
       (defined(__cplusplus) && defined (_MSC_VER) && (_MSC_VER >= 1600)) || \
@@ -976,10 +978,12 @@
 #define GLIB_DEPRECATED _GLIB_EXTERN
 #define GLIB_DEPRECATED_FOR(f) _GLIB_EXTERN
 #define GLIB_UNAVAILABLE(maj,min) _GLIB_EXTERN
+#define GLIB_UNAVAILABLE_STATIC_INLINE(maj,min)
 #else
 #define GLIB_DEPRECATED G_DEPRECATED _GLIB_EXTERN
 #define GLIB_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f) _GLIB_EXTERN
 #define GLIB_UNAVAILABLE(maj,min) G_UNAVAILABLE(maj,min) _GLIB_EXTERN
+#define GLIB_UNAVAILABLE_STATIC_INLINE(maj,min) G_UNAVAILABLE(maj,min)
 #endif
 
 #if !defined(GLIB_DISABLE_DEPRECATION_WARNINGS) && \
@@ -987,7 +991,7 @@
      __clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 4))
 #define _GLIB_GNUC_DO_PRAGMA(x) _Pragma(G_STRINGIFY (x))
 #define GLIB_DEPRECATED_MACRO _GLIB_GNUC_DO_PRAGMA(GCC warning "Deprecated pre-processor symbol")
-#define GLIB_DEPRECATED_MACRO_FOR(f) _GLIB_GNUC_DO_PRAGMA(GCC warning #f)
+#define GLIB_DEPRECATED_MACRO_FOR(f) _GLIB_GNUC_DO_PRAGMA(GCC warning "Deprecated pre-processor symbol, replace with " #f)
 #define GLIB_UNAVAILABLE_MACRO(maj,min) _GLIB_GNUC_DO_PRAGMA(GCC warning "Not available before " #maj "." #min)
 #else
 #define GLIB_DEPRECATED_MACRO
@@ -1061,11 +1065,11 @@
   _GLIB_DEFINE_AUTOPTR_CLEANUP_FUNCS(TypeName, TypeName, func)
 #define G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(TypeName, func) \
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS                                                                              \
-  static inline void _GLIB_AUTO_FUNC_NAME(TypeName) (TypeName *_ptr) { (func) (_ptr); }                         \
+  static G_GNUC_UNUSED inline void _GLIB_AUTO_FUNC_NAME(TypeName) (TypeName *_ptr) { (func) (_ptr); }                         \
   G_GNUC_END_IGNORE_DEPRECATIONS
 #define G_DEFINE_AUTO_CLEANUP_FREE_FUNC(TypeName, func, none) \
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS                                                                              \
-  static inline void _GLIB_AUTO_FUNC_NAME(TypeName) (TypeName *_ptr) { if (*_ptr != none) (func) (*_ptr); }     \
+  static G_GNUC_UNUSED inline void _GLIB_AUTO_FUNC_NAME(TypeName) (TypeName *_ptr) { if (*_ptr != none) (func) (*_ptr); }     \
   G_GNUC_END_IGNORE_DEPRECATIONS
 #define g_autoptr(TypeName) _GLIB_CLEANUP(_GLIB_AUTOPTR_FUNC_NAME(TypeName)) _GLIB_AUTOPTR_TYPENAME(TypeName)
 #define g_autolist(TypeName) _GLIB_CLEANUP(_GLIB_AUTOPTR_LIST_FUNC_NAME(TypeName)) _GLIB_AUTOPTR_LIST_TYPENAME(TypeName)
@@ -1095,5 +1099,21 @@
 #define G_DEFINE_AUTO_CLEANUP_FREE_FUNC(TypeName, func, none)
 
 #endif /* __GI_SCANNER__ */
+
+/**
+ * G_SIZEOF_MEMBER:
+ * @struct_type: a structure type, e.g. #GOutputVector
+ * @member: a field in the structure, e.g. `size`
+ *
+ * Returns the size of @member in the struct definition without having a
+ * declared instance of @struct_type.
+ *
+ * Returns: the size of @member in bytes.
+ *
+ * Since: 2.64
+ */
+#define G_SIZEOF_MEMBER(struct_type, member) \
+    GLIB_AVAILABLE_MACRO_IN_2_64 \
+    sizeof (((struct_type *) 0)->member)
 
 #endif /* __G_MACROS_H__ */

@@ -371,9 +371,7 @@ GST_AUDIO_API
 void            gst_audio_encoder_merge_tags (GstAudioEncoder * enc,
                                               const GstTagList * tags, GstTagMergeMode mode);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioEncoder, gst_object_unref)
-#endif
 
 G_END_DECLS
 

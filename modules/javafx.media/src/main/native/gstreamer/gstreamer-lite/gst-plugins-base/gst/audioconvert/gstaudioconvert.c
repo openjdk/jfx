@@ -110,7 +110,6 @@
 #include <string.h>
 
 #include "gstaudioconvert.h"
-#include "plugin.h"
 
 GST_DEBUG_CATEGORY (audio_convert_debug);
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_PERFORMANCE);
@@ -185,6 +184,9 @@ GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_ALWAYS,
     STATIC_CAPS);
 
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_AUDIO meta_tag_audio_quark
+static GQuark meta_tag_audio_quark;
 
 /*** TYPE FUNCTIONS ***********************************************************/
 static void
@@ -249,6 +251,8 @@ gst_audio_convert_class_init (GstAudioConvertClass * klass)
       GST_DEBUG_FUNCPTR (gst_audio_convert_prepare_output_buffer);
 
   basetransform_class->transform_ip_on_passthrough = FALSE;
+
+  meta_tag_audio_quark = g_quark_from_static_string (GST_META_TAG_AUDIO_STR);
 }
 
 static void
@@ -328,7 +332,7 @@ remove_channels_from_structure (GstCapsFeatures * features, GstStructure * s,
 
   /* Only remove the channels and channel-mask for non-NONE layouts,
    * or if a mix matrix was manually specified */
-  if (this->mix_matrix_was_set ||
+  if (this->mix_matrix_is_set ||
       !gst_structure_get (s, "channel-mask", GST_TYPE_BITMASK, &mask, NULL) ||
       (mask != 0 || (gst_structure_get_int (s, "channels", &channels)
               && channels == 1))) {
@@ -763,7 +767,7 @@ gst_audio_convert_set_caps (GstBaseTransform * base, GstCaps * incaps,
       GST_AUDIO_CONVERTER_OPT_NOISE_SHAPING_METHOD,
       GST_TYPE_AUDIO_NOISE_SHAPING_METHOD, this->ns, NULL);
 
-  if (this->mix_matrix_was_set)
+  if (this->mix_matrix_is_set)
     gst_structure_set_value (config, GST_AUDIO_CONVERTER_OPT_MIX_MATRIX,
         &this->mix_matrix);
 
@@ -898,8 +902,7 @@ gst_audio_convert_transform_meta (GstBaseTransform * trans, GstBuffer * outbuf,
   tags = gst_meta_api_type_get_tags (info->api);
 
   if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_AUDIO_STR))))
+          && gst_meta_api_type_has_tag (info->api, META_TAG_AUDIO)))
     return TRUE;
 
   return FALSE;
@@ -976,17 +979,16 @@ gst_audio_convert_set_property (GObject * object, guint prop_id,
       break;
     case PROP_MIX_MATRIX:
       if (!gst_value_array_get_size (value)) {
-        g_value_copy (value, &this->mix_matrix);
-        this->mix_matrix_was_set = TRUE;
+        this->mix_matrix_is_set = FALSE;
       } else {
         const GValue *first_row = gst_value_array_get_value (value, 0);
 
         if (gst_value_array_get_size (first_row)) {
-          if (gst_value_array_get_size (&this->mix_matrix))
-            g_value_unset (&this->mix_matrix);
-
           g_value_copy (value, &this->mix_matrix);
-          this->mix_matrix_was_set = TRUE;
+          this->mix_matrix_is_set = TRUE;
+
+          /* issue a reconfigure upstream */
+          gst_base_transform_reconfigure_sink (GST_BASE_TRANSFORM (this));
         } else {
           g_warning ("Empty mix matrix's first row");
         }
@@ -1012,7 +1014,7 @@ gst_audio_convert_get_property (GObject * object, guint prop_id,
       g_value_set_enum (value, this->ns);
       break;
     case PROP_MIX_MATRIX:
-      if (this->mix_matrix_was_set)
+      if (this->mix_matrix_is_set)
         g_value_copy (&this->mix_matrix, value);
       break;
     default:

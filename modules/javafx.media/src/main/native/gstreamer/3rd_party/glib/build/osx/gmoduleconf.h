@@ -26,7 +26,6 @@ extern "C" {
 #define G_MODULE_IMPL_NONE  0
 #define G_MODULE_IMPL_DL    1
 #define G_MODULE_IMPL_WIN32 3
-#define G_MODULE_IMPL_DYLD  6
 #define G_MODULE_IMPL_AR    7
 
 #define G_MODULE_IMPL       G_MODULE_IMPL_DL
