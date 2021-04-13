@@ -196,8 +196,6 @@ if (!file(FXC).exists()) {
 // Use fxc from host system if it is not possible to run it from target system
 ext.FXC = !isExecutable(FXC) ? cygpath("$hostWinSdkBinDir/fxc.exe") : FXC
 
-ext.MC = cygpath("$winSdkBinDir/mt.exe")
-
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
