@@ -838,6 +838,10 @@ public class ListCellTest {
 
     @Test
     public void testChangeIndexWhileEditing_jdk_8264127() {
+        List<EditEvent> events = new ArrayList<EditEvent>();
+        list.setOnEditCancel(e -> {
+            events.add(e);
+        });
         list.setEditable(true);
         cell.updateListView(list);
         cell.updateIndex(1);
@@ -845,6 +849,7 @@ public class ListCellTest {
         cell.updateIndex(0);
         assertTrue(!cell.isEditing());
         assertEquals("Should still be editing 1", list.getEditingIndex(), 1);
+        assertTrue("cell re-use must trigger cancel events", events.size() == 1);
     }
 
     @Test
@@ -865,6 +870,10 @@ public class ListCellTest {
     }
 
     private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
+        List<EditEvent> events = new ArrayList<EditEvent>();
+        list.setOnEditStart(e -> {
+            events.add(e);
+        });
         list.setEditable(true);
         cell.updateListView(list);
         cell.updateIndex(initialCellIndex);
@@ -875,6 +884,7 @@ public class ListCellTest {
         assertEquals("sanity: index updated ", listEditingIndex, cell.getIndex());
         assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
         assertTrue(cell.isEditing());
+        assertTrue("cell re-use must trigger edit events", events.size() == 1);
     }
 
 }
