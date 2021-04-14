@@ -848,14 +848,33 @@ public class ListCellTest {
     }
 
     @Test
-    public void testChangeIndexWhileNotEditing_jdk_8264127() {
+    public void testChangeIndexToEditing1_jdk_8264127() {
+        list.getFocusModel().focus(-1);
+        assertChangeIndexToEditing(0, 1);
+    }
+
+    @Test
+    public void testChangeIndexToEditing2_jdk_8264127() {
+        assertChangeIndexToEditing(1, 0);
+    }
+
+    @Test
+    public void testChangeIndexToEditing3_jdk_8264127() {
+        //list.getFocusModel().focus(-1);
+        assertChangeIndexToEditing(-1, 0);
+    }
+
+    private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
         list.setEditable(true);
         cell.updateListView(list);
-        cell.updateIndex(1);
-        list.edit(0);
-        cell.updateIndex(0);
+        cell.updateIndex(initialCellIndex);
+        list.edit(listEditingIndex);
+        assertEquals("sanity: list editingIndex ", listEditingIndex, list.getEditingIndex());
+        assertFalse("sanity: cell must not be editing", cell.isEditing());
+        cell.updateIndex(listEditingIndex);
+        assertEquals("sanity: index updated ", listEditingIndex, cell.getIndex());
+        assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
         assertTrue(cell.isEditing());
-        assertEquals("Should still be editing 0", list.getEditingIndex(), 0);
     }
 
 }
