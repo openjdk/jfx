@@ -35,6 +35,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.transform.Rotate;
 import javafx.util.converter.NumberStringConverter;
 
 /**
@@ -60,17 +61,25 @@ public class AttenLightingSample extends LightingSample {
         var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
         var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
 
-        var sliderX = createSlider(-5, 5, 0);
-        var sliderY = createSlider(-5, 5, 0);
-        var sliderZ = createSlider(-5, 5, 1);
+        var transX = new Rotate(0, Rotate.X_AXIS);
+        var transY = new Rotate(0, Rotate.Y_AXIS);
+        var transZ = new Rotate(0, Rotate.Z_AXIS);
+        light.getTransforms().addAll(transX, transY, transZ);
+        var rotX = createSliderControl("rot x", transX.angleProperty(), -180, 180, 0);
+        var rotY = createSliderControl("rot y", transY.angleProperty(), -180, 180, 0);
+        var rotZ = createSliderControl("rot z", transZ.angleProperty(), -180, 180, 0);
+
+        var sliderX = createSlider(-5, 5, light.getDirection().getX());
+        var sliderY = createSlider(-5, 5, light.getDirection().getY());
+        var sliderZ = createSlider(-5, 5, light.getDirection().getZ());
         light.directionProperty().bind(Bindings.createObjectBinding(() ->
             new Point3D(sliderX.getValue(), sliderY.getValue(), sliderZ.getValue()),
             sliderX.valueProperty(), sliderY.valueProperty(), sliderZ.valueProperty()));
+        var dirX = createSliderControl("dir x", sliderX);
+        var dirY = createSliderControl("dir y", sliderY);
+        var dirZ = createSliderControl("dir z", sliderZ);
 
-        var x = createSliderControl("dir x", sliderX);
-        var y = createSliderControl("dir y", sliderY);
-        var z = createSliderControl("dir z", sliderZ);
-        vbox.getChildren().addAll(ia, oa, fo , x, y, z);
+        vbox.getChildren().addAll(ia, oa, fo, rotX, rotY, rotZ, dirX, dirY, dirZ);
         return vbox;
     }
 
