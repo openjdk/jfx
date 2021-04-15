@@ -33,7 +33,7 @@ import org.junit.Test;
 
 /**
  * @test
- * @bug 9069811
+ * @bug 8264990
  * @summary Check if access to local storage works without causing a segfault
  */
 public class LocalStorageAccessTest {
