@@ -145,6 +145,7 @@ import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.EventHandlerProperties;
+import com.sun.javafx.scene.InvalidateLayoutOption;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeEventDispatcher;
 import com.sun.javafx.scene.NodeHelper;
@@ -623,6 +624,16 @@ public abstract class Node implements EventTarget, Styleable {
             public Map<StyleableProperty<?>, List<Style>> findStyles(Node node,
                     Map<StyleableProperty<?>, List<Style>> styleMap) {
                 return node.findStyles(styleMap);
+            }
+
+            @Override
+            public void setLayoutYForcesRootLayout(Node node, boolean value) {
+                node.layoutYForcesRootLayout = value;
+            }
+
+            @Override
+            public boolean isLayoutYForcesRootLayout(Node node) {
+                return node.layoutYForcesRootLayout;
             }
         });
     }
@@ -2777,6 +2788,7 @@ public abstract class Node implements EventTarget, Styleable {
      * @see #layoutBoundsProperty()
      */
     private DoubleProperty layoutY;
+    private boolean layoutYForcesRootLayout = true;
 
     public final void setLayoutY(double value) {
         layoutYProperty().set(value);
@@ -2797,7 +2809,7 @@ public abstract class Node implements EventTarget, Styleable {
                     // Changing layoutY can affect the baseline of the parent node.
                     // Since baseline changes can affect any parent (not only the direct parent), we need
                     // to propagate the layout request down to the layout root.
-                    requestParentLayout(true);
+                    requestParentLayout(layoutYForcesRootLayout);
                 }
 
                 @Override
@@ -3183,7 +3195,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Indicates whether this node is the preferred baseline source for its container.
+     * Indicates to the parent node that it should prefer this node to derive its own baseline offset.
      * Setting this value overrides the value returned by {@link Node#isTextBaseline()}.
      */
     public final BooleanProperty prefBaselineProperty() {
@@ -3432,30 +3444,6 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    enum InvalidateLayoutOption {
-        /**
-         * The current node will be scheduled for layout.
-         */
-        LOCAL_LAYOUT,
-
-        /**
-         * The parent node will be scheduled for layout, except if the parent node is currently
-         * performing layout. In this case, no further layout cycle will be scheduled.
-         */
-        PARENT_LAYOUT,
-
-        /**
-         * The parent node will be scheduled for layout. If the parent node is currently
-         * performing layout, a new layout cycle will be scheduled.
-         */
-        FORCE_PARENT_LAYOUT,
-
-        /**
-         * All parent nodes (up to the layout root) will be scheduled for layout.
-         * If a parent node is currently performing layout, a new layout cycle will be scheduled.
-         */
-        FORCE_ROOT_LAYOUT
-    }
 
     /* *************************************************************************
      *                                                                         *
@@ -8485,7 +8473,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     void markDirtyLayoutBranch() {
         Parent p = getParent();
-        while (p != null && p.layoutFlag == LayoutFlags.CLEAN) {
+        while (p != null && p.isLayoutClean()) {
             p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
             if (p.isSceneRoot()) {
                 Toolkit.getToolkit().requestNextPulse();

@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.perf.LayoutTracker;
+import com.sun.javafx.scene.InvalidateLayoutOption;
+import com.sun.javafx.scene.PropertyHelper;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -378,7 +381,7 @@ public abstract class Parent extends Node {
                         if (node.getViewOrder() != 0) {
                             viewOrderChildrenDirty = true;
                         }
-                        if (node.isManaged() || (node instanceof Parent && ((Parent) node).layoutFlag != LayoutFlags.CLEAN)) {
+                        if (node.isManaged() || (node instanceof Parent && !((Parent) node).isLayoutClean())) {
                             relayout = true;
                         }
                         node.setParent(Parent.this);
@@ -785,7 +788,7 @@ public abstract class Parent extends Node {
             children.get(i).setScenes(newScene, newSubScene);
         }
 
-        final boolean awaitingLayout = layoutFlag != LayoutFlags.CLEAN;
+        final boolean awaitingLayout = !isLayoutClean();
 
         sceneRoot = (newSubScene != null && newSubScene.getRoot() == this) ||
                     (newScene != null && newScene.getRoot() == this);
@@ -883,39 +886,66 @@ public abstract class Parent extends Node {
      *  JavaFX. Includes both public and private API.                      *
      *                                                                     *
      **********************************************************************/
+
+    private int layoutDirtyBits;
+
+    boolean isLayoutClean() {
+        return layoutDirtyBits == 0;
+    }
+
+    void setLayoutFlag(LayoutFlags flag) {
+        if (needsLayout != null) {
+            needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
+        }
+
+        layoutDirtyBits |= flag.getValue();
+    }
+
+    private void clearLayoutFlags() {
+        layoutDirtyBits = 0;
+    }
+
+    private boolean isLayoutFlag(LayoutFlags flag) {
+        return (layoutDirtyBits & flag.getValue()) != 0;
+    }
+
     /**
      * Indicates that this Node and its subnodes requires a layout pass on
      * the next pulse.
      */
     private ReadOnlyBooleanWrapper needsLayout;
-    LayoutFlags layoutFlag = LayoutFlags.CLEAN;
 
     protected final void setNeedsLayout(boolean value) {
         if (value) {
             markDirtyLayout(InvalidateLayoutOption.LOCAL_LAYOUT);
-        } else if (layoutFlag == LayoutFlags.NEEDS_LAYOUT) {
+        } else if (isLayoutFlag(LayoutFlags.NEEDS_LAYOUT)) {
             boolean hasBranch = false;
             for (int i = 0, max = children.size(); i < max; i++) {
                 final Node child = children.get(i);
                 if (child instanceof Parent) {
-                    if (((Parent)child).layoutFlag != LayoutFlags.CLEAN) {
+                    if (!((Parent)child).isLayoutClean()) {
                         hasBranch = true;
                         break;
                     }
 
                 }
             }
-            setLayoutFlag(hasBranch ? LayoutFlags.DIRTY_BRANCH : LayoutFlags.CLEAN);
+
+            if (hasBranch) {
+                setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            } else if (!isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+                clearLayoutFlags();
+            }
         }
     }
 
     public final boolean isNeedsLayout() {
-        return layoutFlag == LayoutFlags.NEEDS_LAYOUT;
+        return isLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
     }
 
     public final ReadOnlyBooleanProperty needsLayoutProperty() {
         if (needsLayout == null) {
-            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
+            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", isLayoutFlag(LayoutFlags.NEEDS_LAYOUT));
         }
         return needsLayout;
     }
@@ -937,13 +967,6 @@ public abstract class Parent extends Node {
     private double minWidthCache = -1;
     private double minHeightCache = -1;
 
-    void setLayoutFlag(LayoutFlags flag) {
-        if (needsLayout != null) {
-            needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
-        }
-        layoutFlag = flag;
-    }
-
     private InvalidateLayoutOption invalidateLayoutOption = InvalidateLayoutOption.PARENT_LAYOUT;
 
     /**
@@ -955,9 +978,20 @@ public abstract class Parent extends Node {
     private void markDirtyLayout(InvalidateLayoutOption option) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
 
+        if (isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+            return;
+        }
+
+        if (option == InvalidateLayoutOption.FORCE_ROOT_LAYOUT) {
+            setLayoutFlag(LayoutFlags.DIRTY_ROOT);
+        }
+
         if (option == InvalidateLayoutOption.LOCAL_LAYOUT || layoutRoot) {
             if (sceneRoot) {
-                Toolkit.getToolkit().requestNextPulse();
+                if (!performingLayout) {
+                    Toolkit.getToolkit().requestNextPulse();
+                }
+
                 if (getSubScene() != null) {
                     getSubScene().setDirtyLayout(this);
                 }
@@ -1032,7 +1066,9 @@ public abstract class Parent extends Node {
                         break;
 
                     case FORCE_ROOT_LAYOUT:
-                        p.requestLayout(InvalidateLayoutOption.FORCE_ROOT_LAYOUT);
+                        if (!p.isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+                            p.requestLayout(InvalidateLayoutOption.FORCE_ROOT_LAYOUT);
+                        }
                         break;
                 }
             }
@@ -1266,9 +1302,16 @@ public abstract class Parent extends Node {
      * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
+        Scene scene = getScene();
+        LayoutTracker layoutTracker = scene != null ? scene.layoutTracker : null;
+
+        if (layoutTracker != null) {
+            layoutTracker.pushNode(this, layoutRoot);
+        }
+
         int pass = 0;
-        while (layoutFlag != LayoutFlags.CLEAN && (layoutRoot || pass == 0)) {
-            if (pass++ == LAYOUT_LIMIT) {
+        while (!isLayoutClean() && (layoutRoot || pass == 0)) {
+            if (pass == LAYOUT_LIMIT) {
                 if (WARN) {
                     System.err.println(
                         "WARNING layout limit exceeded (current limit: " + LAYOUT_LIMIT + " layout passes)\r\n" +
@@ -1277,41 +1320,47 @@ public abstract class Parent extends Node {
                 break;
             }
 
-            // layoutFlag can be accessed or changed during layout processing.
-            // Hence we need to cache and reset it before performing layout.
-            LayoutFlags flag = layoutFlag;
-            setLayoutFlag(LayoutFlags.CLEAN);
+            boolean layoutChildren = isLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
+            boolean dirtyBranch = layoutChildren || isLayoutFlag(LayoutFlags.DIRTY_BRANCH);
 
-            switch (flag) {
-                case NEEDS_LAYOUT:
-                    if (performingLayout) {
-                        /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
-                         * while doing the layout.
-                         * One example might be an invocation from Group layout bounds recalculation
-                         *  (e.g. during the localToScene/localToParent calculation).
-                         * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
-                         * which is likely what the code would expect.
-                         * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
-                         */
-                        break;
-                    }
-                    performingLayout = true;
-                    layoutChildren();
-                    // Intended fall-through
-                case DIRTY_BRANCH:
-                    for (int i = 0, max = children.size(); i < max; i++) {
-                        final Node child = children.get(i);
-                        currentLayoutChild = child;
-                        if (child instanceof Parent) {
-                            ((Parent)child).layout();
-                        } else if (child instanceof SubScene) {
-                            ((SubScene)child).layoutPass();
-                        }
-                    }
-                    currentLayoutChild = null;
-                    performingLayout = false;
+            clearLayoutFlags();
+
+            if (layoutChildren) {
+                if (performingLayout) {
+                    /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
+                     * while doing the layout.
+                     * One example might be an invocation from Group layout bounds recalculation
+                     *  (e.g. during the localToScene/localToParent calculation).
+                     * The layout bounds will thus return layout bounds that are "old" (i.e. before the layout changes, that are just being done),
+                     * which is likely what the code would expect.
+                     * The changes will invalidate the layout bounds again however, so the layout bounds query after layout pass will return correct answer.
+                     */
                     break;
+                }
+
+                performingLayout = true;
+                layoutChildren();
+                pass++;
             }
+
+            if (dirtyBranch) {
+                for (int i = 0, max = children.size(); i < max; i++) {
+                    final Node child = children.get(i);
+                    currentLayoutChild = child;
+                    if (child instanceof Parent) {
+                        ((Parent)child).layout();
+                    } else if (child instanceof SubScene) {
+                        ((SubScene)child).layoutPass();
+                    }
+                }
+
+                currentLayoutChild = null;
+                performingLayout = false;
+            }
+        }
+
+        if (layoutTracker != null) {
+            layoutTracker.popNode(pass);
         }
     }
 
@@ -1509,7 +1558,7 @@ public abstract class Parent extends Node {
      * Constructs a new {@code Parent}.
      */
     protected Parent() {
-        layoutFlag = LayoutFlags.NEEDS_LAYOUT;
+        setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
         setAccessibleRole(AccessibleRole.PARENT);
     }
 

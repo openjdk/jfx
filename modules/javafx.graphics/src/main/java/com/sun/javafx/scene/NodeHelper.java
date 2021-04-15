@@ -315,6 +315,14 @@ public abstract class NodeHelper {
         return nodeAccessor.findStyles(node, styleMap);
     }
 
+    public static void setLayoutYForcesRootLayout(Node node, boolean enabled) {
+        nodeAccessor.setLayoutYForcesRootLayout(node, enabled);
+    }
+
+    public static boolean isLayoutYForcesRootLayout(Node node) {
+        return nodeAccessor.isLayoutYForcesRootLayout(node);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -375,6 +383,8 @@ public abstract class NodeHelper {
         List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable);
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
+        void setLayoutYForcesRootLayout(Node node, boolean enabled);
+        boolean isLayoutYForcesRootLayout(Node node);
     }
 
 }

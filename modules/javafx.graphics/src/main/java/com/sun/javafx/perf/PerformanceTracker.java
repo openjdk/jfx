@@ -68,9 +68,9 @@ public abstract class PerformanceTracker {
         if (sceneAccessor != null) {
             tracker = sceneAccessor.getPerfTracker(scene);
             if (tracker == null) {
-                 tracker = Toolkit.getToolkit().createPerformanceTracker();
+                tracker = Toolkit.getToolkit().createPerformanceTracker();
+                sceneAccessor.setPerfTracker(scene, tracker);
             }
-            sceneAccessor.setPerfTracker(scene, tracker);
         }
         return tracker;
     }

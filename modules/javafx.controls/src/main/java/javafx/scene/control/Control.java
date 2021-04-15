@@ -262,7 +262,6 @@ public abstract class Control extends Region implements Skinnable {
             // the skin.
             skinClassNameProperty().set(currentSkinClassName);
 
-
             // Dispose of the old skin
             if (oldValue != null) oldValue.dispose();
 

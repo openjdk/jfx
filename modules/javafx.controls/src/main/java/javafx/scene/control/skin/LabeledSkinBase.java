@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.LabeledText;
 import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.control.skin.Utils;
@@ -157,8 +158,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Configure the Text node with all of the attributes from the
         // Labeled which apply to it.
         text = new LabeledText(labeled);
-        text.layoutYProperty().addListener(o -> labeled.requestLayout());
 
+        NodeHelper.setLayoutYForcesRootLayout(text, !useLayoutYOptimization());
         updateChildren();
 
         // Labels do not block the mouse by default, unlike most other UI Controls.
@@ -212,6 +213,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // has no effect. Or it is too short (i.e. it all fits) and we don't
             // have to worry about truncation. So just call request layout.
             getSkinnable().requestLayout();
+            NodeHelper.setLayoutYForcesRootLayout(text, !useLayoutYOptimization());
         });
         registerChangeListener(labeled.mnemonicParsingProperty(), o -> {
             containsMnemonic = false;
@@ -410,6 +412,31 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
+        return useLayoutYOptimization() ? computeTopAlignedBaselineOffset(topInset) : computeDefaultBaselineOffset();
+    }
+
+    private double computeTopAlignedBaselineOffset(double topInset) {
+        final Labeled labeled = getSkinnable();
+        double textBaselineOffset = text.getBaselineOffset();
+        double h = textBaselineOffset;
+        final Node g = labeled.getGraphic();
+        if (!isIgnoreGraphic()) {
+            ContentDisplay contentDisplay = labeled.getContentDisplay();
+            if (contentDisplay == ContentDisplay.TOP) {
+                h = g.prefHeight(-1) + labeled.getGraphicTextGap() + textBaselineOffset;
+            } else if (contentDisplay == ContentDisplay.LEFT || contentDisplay == RIGHT) {
+                h = textBaselineOffset + (g.prefHeight(-1) - text.prefHeight(-1)) / 2;
+            }
+        }
+
+        double offset = topInset + h;
+        if (!isIgnoreText()) {
+            offset += topLabelPadding();
+        }
+        return offset;
+    }
+
+    private double computeDefaultBaselineOffset() {
         if (!isIgnoreText()) {
             return text.getLayoutBounds().getMinY() + text.getLayoutY() + text.getBaselineOffset();
         }
@@ -755,6 +782,21 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * If the text is top-aligned within the Labeled, we can use the layoutY optimization,
+     * which causes the text node to elide the layout root invalidation when its layoutY
+     * property changes.
+     * We can do this because in this case, we can compute the Labeled's baseline offset
+     * without requiring layoutY to be known. On the other hand, if the text node is not
+     * top-aligned, the Labeled's baseline offset depends on the exact location of the
+     * text node within the Labeled, which can only be known in a subsequent layout pass.
+     */
+    private boolean useLayoutYOptimization() {
+        Labeled labeled = getSkinnable();
+        Pos alignment = labeled.getAlignment();
+        return alignment != null && alignment.getVpos() == VPos.TOP;
+    }
 
     private double computeMinLabeledPartWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // First compute the minTextWidth by checking the width of the string
