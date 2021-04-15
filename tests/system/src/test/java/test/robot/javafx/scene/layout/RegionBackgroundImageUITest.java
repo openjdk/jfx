@@ -29,7 +29,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
 import org.junit.Ignore;
 import org.junit.Test;
-
+import com.sun.javafx.PlatformUtil;
 import static org.junit.Assume.assumeTrue;
 
 public class RegionBackgroundImageUITest extends RegionUITestBase {
@@ -705,6 +705,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     @Test(timeout = 20000)
     public void unalignedImage_Cover() {
         assumeTrue(checkIntegralUIScale());
+        assumeTrue(!PlatformUtil.isMac()); // JDK-8255679
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-size: cover;");
