@@ -250,6 +250,20 @@ void fail(String msg) {
     throw new GradleException("FAIL: " + msg);
 }
 
+/**
+ * Converts the given OS architecture to unified form
+ *
+ * @param arch OS architecture
+ * @return unified OS architecture which is used for JavaFX building
+ */
+String getConvertedOsArch(String arch) {
+    switch (arch) {
+        case "aarch64" : return "arm64"
+        case "amd64" : return "x64"
+        default: return arch
+    }
+}
+
 /******************************************************************************
  *                                                                            *
  *                   Definition of project properties                         *
@@ -291,6 +305,7 @@ ext.MODULESOURCEPATH = "modulesourcepath.args"
 // this build running on a Mac, Windows, or Linux machine? 32 or 64 bit?
 ext.OS_NAME = System.getProperty("os.name").toLowerCase()
 ext.OS_ARCH = System.getProperty("os.arch")
+ext.CONVERTED_OS_ARCH = getConvertedOsArch(OS_ARCH)
 ext.IS_64 = OS_ARCH.toLowerCase().contains("64")
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
@@ -405,6 +420,7 @@ if (IS_STATIC_BUILD && IS_COMPILE_MEDIA) {
 
 // By default, target architecture = host architecture, but we allow different ones.
 defineProperty("TARGET_ARCH", OS_ARCH)
+ext.CONVERTED_TARGET_ARCH = getConvertedOsArch(TARGET_ARCH)
 
 // BUILD_TOOLS_DOWNLOAD_SCRIPT specifies a path of a gradle script which downloads
 // required build tools.
@@ -1307,6 +1323,9 @@ ext.UPDATE_STUB_CACHE = (BUILD_CLOSED && STUB_RUNTIME != "" && !file(STUB_RUNTIM
 logger.quiet("gradle.gradleVersion: $gradle.gradleVersion")
 logger.quiet("OS_NAME: $OS_NAME")
 logger.quiet("OS_ARCH: $OS_ARCH")
+logger.quiet("TARGET_ARCH: $TARGET_ARCH")
+logger.quiet("CONVERTED_OS_ARCH: $CONVERTED_OS_ARCH")
+logger.quiet("CONVERTED_TARGET_ARCH: $CONVERTED_TARGET_ARCH")
 logger.quiet("JAVA_HOME: $JAVA_HOME")
 logger.quiet("JDK_HOME: $JDK_HOME")
 logger.quiet("java.runtime.version: ${javaRuntimeVersion}")
