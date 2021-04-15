@@ -182,4 +182,8 @@ public class Label extends Labeled {
         return Boolean.FALSE;
     }
 
+    @Override protected Pos getInitialAlignment() {
+        return Pos.TOP_LEFT;
+    }
+
 }
