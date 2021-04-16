@@ -329,31 +329,38 @@ public class RenderRootTest extends NGTestBase {
     // see RectBounds.isEmpty() and RectBounds.makeEmpty()
     // What is the right thing here?
     // 1. Empty dirty region should result in no rendering.
-    //    It means that getRenderRoot() should return an empty NodePath.
-    //    The change in NGNode file enforeces this behavior.
-    //    Following 2 emptyDirtyRegion tests are modified considering this behavior as expected.
+    //    It means that getRenderRoot() should return an empty NodePath when dirty region is an empty rect.
     // OR
     // 2. Empty dirty region should result in rendering entire root tree.(This is current behavior)
     //
     // Changing this behavior may cause rendering glitches for any application that
     // relies on this current behavior to render all root tree.
     // So we need to be extensive in testing before modifying the behavior.
+    @Ignore("New JBS")
     @Test
     public void emptyDirtyRegion1() {
         NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
-        assertRenderRoot(null, rootPath);
+        assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
     }
 
+    @Ignore("New JBS")
     @Test
     public void emptyDirtyRegion2() {
         NodePath rootPath = getRenderRoot(root, -1, -1, -2, -2);
-        assertRenderRoot(null, rootPath);
+        assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
     }
 
+    @Ignore("New JBS")
     @Test
     public void invalidDirtyRegionOutsideOpaqueRegion() {
         NodePath rootPath = getRenderRoot(root, -10, -10, 5, 5);
         assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
     }
 
     // A RectBounds is considered as empty only when maxX < minX or maxY < minY.
