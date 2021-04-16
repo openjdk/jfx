@@ -1642,6 +1642,9 @@ public abstract class NGNode {
         if (cullingIndex < -1 || cullingIndex > 15) {
             throw new IllegalArgumentException("cullingIndex cannot be < -1 or > 15");
         }
+        if (dirtyRegion.isEmpty()) {
+            return;
+        }
 
         // This method must NEVER BE CALLED if the depth buffer is turned on. I don't have a good way to test
         // for that because NGNode doesn't have a reference to the scene it is a part of...
