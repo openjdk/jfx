@@ -655,8 +655,7 @@ public class VirtualFlowTest {
      * Tests the size and position of all the cells to make sure they were
      * laid out properly.
      */
-    @Test
-    public void testCellLayout_CellSizes_AfterLayout() {
+    @Test public void testCellLayout_CellSizes_AfterLayout() {
         double offset = 0.0;
         for (int i = 0; i < VirtualFlowShim.cells_size(flow.cells); i++) {
             IndexedCell cell = VirtualFlowShim.<IndexedCell>cells_get(flow.cells, i);
@@ -1230,7 +1229,7 @@ public class VirtualFlowTest {
 
     private VirtualFlowShim createCircleFlow() {
         // The second VirtualFlow we are going to test, with 7 cells. Each cell
-        // contains a Circle whith a radius that varies between cells.
+        // contains a Circle with a radius that varies between cells.
         VirtualFlowShim<IndexedCell> circleFlow;
         circleFlow = new VirtualFlowShim();
 
@@ -1279,7 +1278,7 @@ public class VirtualFlowTest {
         assertFalse("Moving in positive direction should not decrease position", pos < orig);
         flow.scrollPixels(-50);
         double neg = flow.getPosition();
-        assertFalse("Moving in negative direction should not decrease position", neg > pos);
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
     }
 
     @Test
@@ -1291,7 +1290,7 @@ public class VirtualFlowTest {
         assertFalse("Moving in positive direction should not decrease position", pos < orig);
         vf.scrollPixels(-50);
         double neg = vf.getPosition();
-        assertFalse("Moving in negative direction should not decrease position", neg > pos);
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
     }
 
     @Test

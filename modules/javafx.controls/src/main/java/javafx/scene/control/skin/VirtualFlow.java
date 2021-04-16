@@ -1042,7 +1042,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (viewportLength >= estimatedSize) {
             setPosition(0.);
         } else {
-            setPosition(absoluteOffset/(estimatedSize - viewportLength));
+            setPosition(absoluteOffset / (estimatedSize - viewportLength));
         }
     }
 
@@ -1587,8 +1587,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (! posSet) {
             adjustPositionToIndex(index);
-//            double offset = - computeOffsetForCell(index);
-//            adjustByPixelAmount(offset);
         }
 
         requestLayout();
@@ -1900,7 +1898,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private double viewportLength;
     void setViewportLength(double value) {
         this.viewportLength = value;
-        this.absoluteOffset = getPosition() * (estimatedSize -viewportLength);
+        this.absoluteOffset = getPosition() * (estimatedSize - viewportLength);
     }
     double getViewportLength() {
         return viewportLength;
@@ -2561,7 +2559,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // only a single row and it is bigger than the viewport
                 lengthBar.setVisibleAmount(flowLength / sumCellLength);
             } else {
-                lengthBar.setVisibleAmount(viewportLength/estimatedSize);
+                lengthBar.setVisibleAmount(viewportLength / estimatedSize);
             }
         }
 
@@ -2831,13 +2829,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private double computeViewportOffset(double position) {
         double p = com.sun.javafx.util.Utils.clamp(0, position, 1);
         double bound = 0d;
-        double estSize = estimatedSize/getCellCount();
+        double estSize = estimatedSize / getCellCount();
 
         for (int i = 0; i < getCellCount(); i++) {
             double h = getCellSize(i);
             if (h < 0) h = estSize;
-            if (bound +h > absoluteOffset) {
-                return absoluteOffset-bound;
+            if (bound + h > absoluteOffset) {
+                return absoluteOffset - bound;
             }
             bound += h;
         }
@@ -2851,7 +2849,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         } else {
             double targetOffset = 0;
             double estSize = estimatedSize/cellCount;
-            for (int i = 0; i < index;i++) {
+            for (int i = 0; i < index; i++) {
                 double cz = getCellSize(i);
                 if (cz < 0) cz = estSize;
                 targetOffset = targetOffset+ cz;
@@ -2878,7 +2876,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // start with applying the requested modification
         double origAbsoluteOffset = this.absoluteOffset;
         this.absoluteOffset = Math.max(0.d, this.absoluteOffset + numPixels);
-        double newPosition = Math.min(1.0d, absoluteOffset/(estimatedSize - viewportLength));
+        double newPosition = Math.min(1.0d, absoluteOffset / (estimatedSize - viewportLength));
         // estimatedSize changes may result in opposite effect on position
         // in that case, modify current position 1% in the requested direction
         if ((numPixels > 0) && (newPosition < getPosition())) {
@@ -3032,7 +3030,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 cnt++;
             }
         }
-        this.estimatedSize = cnt == 0 ? 1d: tot * itemCount/cnt;
+        this.estimatedSize = cnt == 0 ? 1d: tot * itemCount / cnt;
     }
 
     private void resetSizeEstimates() {
