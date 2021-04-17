@@ -212,13 +212,15 @@ public class LambdaMultipleObservableHandlerTest {
         IntegerProperty p = new SimpleIntegerProperty();
         int[] count = new int[] {0};
         Consumer<ObservableValue<?>> consumer = c -> count[0]++;
+        LambdaMultiplePropertyChangeListenerHandler handler = new LambdaMultiplePropertyChangeListenerHandler();
         WeakReference<LambdaMultiplePropertyChangeListenerHandler> ref =
-                new WeakReference<>(new LambdaMultiplePropertyChangeListenerHandler());
-        registerListener(ref.get(), p, consumer);
+                new WeakReference<>(handler);
+        registerListener(handler, p, consumer);
         p.setValue(100);
         int notified = count[0];
         assertEquals("sanity: listener invoked", notified, count[0]);
         assertNotNull(ref.get());
+        handler = null;
         attemptGC(ref);
         assertNull("handler must be gc'ed", ref.get());
         p.setValue(200);

@@ -57,13 +57,12 @@ import javafx.collections.WeakListChangeListener;
  * previously registered with this handler will be executed after unregistering.
  * <p>
  * Disposing removes all listeners added by this handler from all registered observables.
- *
  */
 public final class LambdaMultiplePropertyChangeListenerHandler {
-// FIXME: name doesn't fit after widening to support more notification event types
+// FIXME JDK-8265401: name doesn't fit after widening to support more notification event types
 
     @SuppressWarnings("rawtypes")
-    private  static final Consumer EMPTY_CONSUMER = e -> {};
+    private static final Consumer EMPTY_CONSUMER = e -> {};
 
     // support change listeners
     private final Map<ObservableValue<?>, Consumer<ObservableValue<?>>> propertyReferenceMap;

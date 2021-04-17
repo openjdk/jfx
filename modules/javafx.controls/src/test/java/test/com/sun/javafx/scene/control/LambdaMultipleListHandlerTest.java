@@ -48,7 +48,7 @@ import javafx.collections.ObservableList;
 /**
  * Test support of listChange listeners.
  */
-public class LambdaMultipleHandlerTest {
+public class LambdaMultipleListHandlerTest {
 
     private LambdaMultiplePropertyChangeListenerHandler handler;
     private ObservableList<String> items;
@@ -206,11 +206,12 @@ public class LambdaMultipleHandlerTest {
     public void testRegisterMemoryLeak() {
         List<Change<?>> changes = new ArrayList<>();
         Consumer<Change<?>> consumer = change -> changes.add(change);
-        WeakReference<LambdaMultiplePropertyChangeListenerHandler> ref =
-                new WeakReference<>(new LambdaMultiplePropertyChangeListenerHandler());
-        ref.get().registerListChangeListener(items, consumer);
+        LambdaMultiplePropertyChangeListenerHandler handler = new LambdaMultiplePropertyChangeListenerHandler();
+        WeakReference<LambdaMultiplePropertyChangeListenerHandler> ref = new WeakReference<>(handler);
+        handler.registerListChangeListener(items, consumer);
         items.add("added");
         assertEquals(1, changes.size());
+        handler = null;
         attemptGC(ref);
         assertNull("handler must be gc'ed", ref.get());
         items.add("another");
