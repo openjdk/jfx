@@ -52,7 +52,8 @@ public class LayoutCycle {
     }
 
     private void printLayoutTree(StringBuilder text, LayoutFrame frame, String prefix, boolean skin) {
-        text.append(frame.getNode().getClass().getSimpleName());
+        String className = frame.getNode().getClass().getSimpleName();
+        text.append(className.isEmpty() ? "<anonymous>" : className);
 
         String id = frame.getNode().getId();
         boolean bracket = id != null && !id.isEmpty() || frame.isLayoutRoot() || skin;

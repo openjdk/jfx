@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import javafx.geometry.Pos;
 import javafx.scene.control.skin.LabelSkin;
 import com.sun.javafx.scene.NodeHelper;
 
@@ -97,7 +96,6 @@ public class Label extends Labeled {
         // override. Initializing focusTraversable by calling set on the
         // CssMetaData ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
-        ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.TOP_LEFT);
     }
 
     /* *************************************************************************
@@ -180,10 +178,6 @@ public class Label extends Labeled {
      */
     @Override protected Boolean getInitialFocusTraversable() {
         return Boolean.FALSE;
-    }
-
-    @Override protected Pos getInitialAlignment() {
-        return Pos.TOP_LEFT;
     }
 
 }
