@@ -25,13 +25,16 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests baseline offsets on various classes
@@ -66,4 +69,89 @@ public class BaselineTest {
         p.layout();
         assertEquals(180, p.getBaselineOffset(),1e-100);
     }
+
+    /**
+     * A Parent that contains multiple children will, by default, compute its baseline
+     * based on the first child node that returns isTextBaseline()==true.
+     */
+    @Test public void testParentSelectsFirstTextNodeAsBaselineSource() {
+        Pane p = new Pane();
+        p.getChildren().add(new Rectangle());
+        p.getChildren().add(new MockTextResizable(100, 100, 1234));
+        p.getChildren().add(new Rectangle());
+
+        assertEquals(1234, p.getBaselineOffset(), 1e-100);
+    }
+
+    /**
+     * A Parent that contains multiple children will select the first child that returns
+     * isPrefBaseline()==true, even if other children return isTextBaseline()==true.
+     */
+    @Test public void testPrefBaselineOverridesTextBaselineSource() {
+        Pane p = new Pane();
+        p.getChildren().add(new Rectangle() {
+            { setPrefBaseline(true); }
+            @Override public double getBaselineOffset() { return 1234; }
+        });
+        p.getChildren().add(new MockTextResizable(100, 100, 200));
+        p.getChildren().add(new Rectangle());
+
+        assertEquals(1234, p.getBaselineOffset(), 1e-100);
+    }
+
+    /**
+     * A Parent that computes its baseline offset based on a text child will also
+     * return isTextBaseline()==true.
+     */
+    @Test public void testIsTextBaselinePropagatesToParent() {
+        Pane p = new Pane();
+        p.getChildren().add(new HBox() {
+            { getChildren().add(new MockTextResizable(100, 100, 1234)); }
+        });
+
+        assertTrue(p.isTextBaseline());
+        assertEquals(1234, p.getBaselineOffset(), 1e-100);
+    }
+
+    /**
+     * A Parent returns isTextBaseline()==false if a non-text child has been manually
+     * selected by setting prefBaseline on the child.
+     */
+    @Test public void testIsTextBaselineDoesNotPropagateToParentWhenOverriddenByPrefBaseline() {
+        Pane p = new Pane();
+        p.getChildren().add(new HBox() {
+            {
+                getChildren().add(new MockTextResizable(100, 100, 1234));
+                getChildren().add(new MockResizable(100, 100) {{ setPrefBaseline(true); }});
+            }
+        });
+
+        assertFalse(p.isTextBaseline());
+        assertEquals(90, p.getBaselineOffset(), 1e-100);
+    }
+
+    /**
+     * A Parent that computes its baseline from a manually selected child node will automatically
+     * update its isTextBaseline() and getBaselineOffset() when prefBaseline is set to 'false'
+     * and an alternative text node is available.
+     */
+    @Test public void testPrefBaselineChangedUpdatesParentIsTextBaseline() {
+        Pane p = new Pane();
+        MockResizable[] r = new MockResizable[1];
+        p.getChildren().add(new HBox() {
+            {
+                getChildren().add(new MockTextResizable(100, 100, 1234));
+                getChildren().add(r[0] = new MockResizable(100, 100));
+            }
+        });
+
+        r[0].setPrefBaseline(true);
+        assertFalse(p.isTextBaseline());
+        assertEquals(90, p.getBaselineOffset(), 1e-100);
+
+        r[0].setPrefBaseline(false);
+        assertTrue(p.isTextBaseline());
+        assertEquals(1234, p.getBaselineOffset(), 1e-100);
+    }
+
 }
