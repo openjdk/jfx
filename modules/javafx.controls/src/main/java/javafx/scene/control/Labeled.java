@@ -661,7 +661,7 @@ public abstract class Labeled extends Control {
             contentDisplay = new StyleableObjectProperty<ContentDisplay>(ContentDisplay.LEFT) {
                 @Override
                 protected void invalidated() {
-                    ParentHelper.notifyTextBaselineChanged(Labeled.this);
+                    ParentHelper.notifyBaselineSourceChanged(Labeled.this);
                     ParentHelper.notifyBaselineOffsetChanged(Labeled.this);
                 }
 

@@ -121,8 +121,8 @@ public class ParentHelper extends NodeHelper {
         return parentAccessor.getTraversalEngine(parent);
     }
 
-    public static void notifyTextBaselineChanged(Parent parent) {
-        parentAccessor.notifyTextBaselineChanged(parent);
+    public static void notifyBaselineSourceChanged(Parent parent) {
+        parentAccessor.notifyBaselineSourceChanged(parent);
     }
 
     public static void setParentAccessor(final ParentAccessor newAccessor) {
@@ -144,7 +144,7 @@ public class ParentHelper extends NodeHelper {
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
-        void notifyTextBaselineChanged(Parent parent);
+        void notifyBaselineSourceChanged(Parent parent);
     }
 
 }

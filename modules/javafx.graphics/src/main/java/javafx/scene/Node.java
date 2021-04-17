@@ -149,6 +149,7 @@ import com.sun.javafx.scene.InvalidateLayoutOption;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeEventDispatcher;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.SceneUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -3201,6 +3202,15 @@ public abstract class Node implements EventTarget, Styleable {
     public final BooleanProperty prefBaselineProperty() {
         if (prefBaseline == null) {
             prefBaseline = new BooleanPropertyBase() {
+                @Override
+                protected void invalidated() {
+                    Parent parent = getParent();
+                    if (parent != null) {
+                        ParentHelper.notifyBaselineSourceChanged(parent);
+                        requestParentLayout(true);
+                    }
+                }
+
                 @Override
                 public Object getBean() {
                     return Node.this;

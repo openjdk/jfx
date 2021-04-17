@@ -161,8 +161,8 @@ public abstract class Parent extends Node {
             }
 
             @Override
-            public void notifyTextBaselineChanged(Parent parent) {
-                parent.notifyTextBaselineChanged();
+            public void notifyBaselineSourceChanged(Parent parent) {
+                parent.notifyBaselineSourceChanged();
             }
         });
     }
@@ -1276,12 +1276,12 @@ public abstract class Parent extends Node {
         return null;
     }
 
-    private void notifyTextBaselineChanged() {
+    private void notifyBaselineSourceChanged() {
         cachedBaselineSourceValid = false;
         cachedBaselineSource = null;
         Parent parent = getParent();
         if (parent != null) {
-            parent.notifyTextBaselineChanged();
+            parent.notifyBaselineSourceChanged();
         }
     }
 
