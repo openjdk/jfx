@@ -422,14 +422,14 @@ public class MenuItemTest {
         assertEquals(kc, menuItem.getAccelerator());
     }
 
-    public void setSpecifiedAccelerator1() {
+    @Test public void setSpecifiedAccelerator1() {
         Modifier[] modifierArray = {};
         KeyCombination kc = new KeyCodeCombination(KeyCode.A, modifierArray);
         menuItem.setAccelerator(kc);
         assertEquals(kc, menuItem.getAccelerator());
     }
 
-    public void setSpecifiedAccelerator2() {
+    @Test public void setSpecifiedAccelerator2() {
         Modifier[] modifierArray = {};
         KeyCombination kc = new KeyCharacterCombination("A", modifierArray);
         menuItem.setAccelerator(kc);
@@ -454,7 +454,7 @@ public class MenuItemTest {
         assertNotNull(menuItem.acceleratorProperty());
     }
 
-    public void acceleratorCanBeBound() {
+    @Test public void acceleratorCanBeBound() {
         KeyCombination kc = new KeyCharacterCombination("A", KeyCombination.ALT_DOWN);
         SimpleObjectProperty<KeyCombination> other = new SimpleObjectProperty<KeyCombination>(menuItem, "accelerator", kc);
         menuItem.acceleratorProperty().bind(other);
