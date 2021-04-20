@@ -336,7 +336,7 @@ public class RenderRootTest extends NGTestBase {
     // Changing this behavior may cause rendering glitches for any application that
     // relies on this current behavior to render all root tree.
     // So we need to be extensive in testing before modifying the behavior.
-    @Ignore("New JBS")
+    @Ignore("JDK-8265510")
     @Test
     public void emptyDirtyRegion1() {
         NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
@@ -345,7 +345,7 @@ public class RenderRootTest extends NGTestBase {
         // assertRenderRoot(null, rootPath);
     }
 
-    @Ignore("New JBS")
+    @Ignore("JDK-8265510")
     @Test
     public void emptyDirtyRegion2() {
         NodePath rootPath = getRenderRoot(root, -1, -1, -2, -2);
@@ -354,7 +354,7 @@ public class RenderRootTest extends NGTestBase {
         // assertRenderRoot(null, rootPath);
     }
 
-    @Ignore("New JBS")
+    @Ignore("JDK-8265510")
     @Test
     public void invalidDirtyRegionOutsideOpaqueRegion() {
         NodePath rootPath = getRenderRoot(root, -10, -10, 5, 5);
