@@ -286,7 +286,7 @@ public class DurationTest {
 
     @Test public void add_ZERO_and_INDEFINITE_ResultsInIndefinite() {
         //assertTrue(0.0 + Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.POSITIVE_INFINITY), new Double(0.0 + Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.POSITIVE_INFINITY), Double.valueOf(0.0 + Double.POSITIVE_INFINITY)); // sanity check
 
         assertTrue(Duration.ZERO.add(Duration.INDEFINITE).isIndefinite());
         assertFalse(Duration.ZERO.add(Duration.INDEFINITE).isUnknown());
@@ -294,7 +294,7 @@ public class DurationTest {
 
     @Test public void add_ONE_and_INDEFINITE_ResultsInIndefinite() {
         //assertTrue(1.0 + Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.POSITIVE_INFINITY), new Double(1.0 + Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.POSITIVE_INFINITY), Double.valueOf(1.0 + Double.POSITIVE_INFINITY)); // sanity check
 
         assertTrue(Duration.ONE.add(Duration.INDEFINITE).isIndefinite());
         assertFalse(Duration.ONE.add(Duration.INDEFINITE).isUnknown());
@@ -302,7 +302,7 @@ public class DurationTest {
 
     @Test public void add_INDEFINITE_and_INDEFINITE_ResultsInIndefinite() {
         //assertTrue(Double.POSITIVE_INFINITY + Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.POSITIVE_INFINITY), new Double(Double.POSITIVE_INFINITY + Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.POSITIVE_INFINITY), Double.valueOf(Double.POSITIVE_INFINITY + Double.POSITIVE_INFINITY)); // sanity check
 
         assertTrue(Duration.INDEFINITE.add(Duration.INDEFINITE).isIndefinite());
         assertFalse(Duration.INDEFINITE.add(Duration.INDEFINITE).isUnknown());
@@ -310,7 +310,7 @@ public class DurationTest {
 
     @Test public void add_UNKNOWN_and_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.NaN + Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.NaN + Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.NaN + Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.UNKNOWN.add(Duration.INDEFINITE).isIndefinite());
         assertTrue(Duration.UNKNOWN.add(Duration.INDEFINITE).isUnknown());
@@ -318,7 +318,7 @@ public class DurationTest {
 
     @Test public void add_ZERO_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(0.0 + Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(0.0 + Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(0.0 + Double.NaN)); // sanity check
 
         assertFalse(Duration.ZERO.add(Duration.UNKNOWN).isIndefinite());
         assertTrue(Duration.ZERO.add(Duration.UNKNOWN).isUnknown());
@@ -326,7 +326,7 @@ public class DurationTest {
 
     @Test public void add_ONE_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(1.0 + Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(1.0 + Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(1.0 + Double.NaN)); // sanity check
 
         assertFalse(Duration.ONE.add(Duration.UNKNOWN).isIndefinite());
         assertTrue(Duration.ONE.add(Duration.UNKNOWN).isUnknown());
@@ -381,7 +381,7 @@ public class DurationTest {
 
     @Test public void subtract_ZERO_and_INDEFINITE_ResultsInNegativeInfinity() {
         //assertTrue(0.0 - Double.POSITIVE_INFINITY == Double.NEGATIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.NEGATIVE_INFINITY), new Double(0.0 - Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NEGATIVE_INFINITY), Double.valueOf(0.0 - Double.POSITIVE_INFINITY)); // sanity check
 
         final Duration result = Duration.ZERO.subtract(Duration.INDEFINITE);
         assertFalse(result.isIndefinite());
@@ -391,7 +391,7 @@ public class DurationTest {
 
     @Test public void subtract_ONE_and_INDEFINITE_ResultsInNegativeInfinity() {
         //assertTrue(1.0 - Double.POSITIVE_INFINITY == Double.NEGATIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.NEGATIVE_INFINITY), new Double(1.0 - Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NEGATIVE_INFINITY), Double.valueOf(1.0 - Double.POSITIVE_INFINITY)); // sanity check
 
         final Duration result = Duration.ONE.subtract(Duration.INDEFINITE);
         assertFalse(result.isIndefinite());
@@ -401,7 +401,7 @@ public class DurationTest {
 
     @Test public void subtract_INDEFINITE_and_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.POSITIVE_INFINITY - Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.POSITIVE_INFINITY - Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.POSITIVE_INFINITY - Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.INDEFINITE.subtract(Duration.INDEFINITE).isIndefinite());
         assertTrue(Duration.INDEFINITE.subtract(Duration.INDEFINITE).isUnknown());
@@ -409,7 +409,7 @@ public class DurationTest {
 
     @Test public void subtract_UNKNOWN_and_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.NaN - Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.NaN - Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.NaN - Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.UNKNOWN.subtract(Duration.INDEFINITE).isIndefinite());
         assertTrue(Duration.UNKNOWN.subtract(Duration.INDEFINITE).isUnknown());
@@ -417,7 +417,7 @@ public class DurationTest {
 
     @Test public void subtract_ZERO_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(0 - Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(0.0 - Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(0.0 - Double.NaN)); // sanity check
 
         assertFalse(Duration.ZERO.subtract(Duration.UNKNOWN).isIndefinite());
         assertTrue(Duration.ZERO.subtract(Duration.UNKNOWN).isUnknown());
@@ -425,7 +425,7 @@ public class DurationTest {
 
     @Test public void subtract_ONE_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(1.0 - Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(1.0 - Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(1.0 - Double.NaN)); // sanity check
 
         assertFalse(Duration.ONE.subtract(Duration.UNKNOWN).isIndefinite());
         assertTrue(Duration.ONE.subtract(Duration.UNKNOWN).isUnknown());
@@ -472,7 +472,7 @@ public class DurationTest {
 
     @Test public void multiply_ZERO_and_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(0.0 * Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(0.0 * Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(0.0 * Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.ZERO.multiply(Double.POSITIVE_INFINITY).isIndefinite());
         assertTrue(Duration.ZERO.multiply(Double.POSITIVE_INFINITY).isUnknown());
@@ -480,7 +480,7 @@ public class DurationTest {
 
     @Test public void multiply_ONE_and_INDEFINITE_ResultsInIndefinite() {
         //assertTrue(1.0 * Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.POSITIVE_INFINITY), new Double(1.0 * Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.POSITIVE_INFINITY), Double.valueOf(1.0 * Double.POSITIVE_INFINITY)); // sanity check
 
         assertTrue(Duration.ONE.multiply(Double.POSITIVE_INFINITY).isIndefinite());
         assertFalse(Duration.ONE.multiply(Double.POSITIVE_INFINITY).isUnknown());
@@ -488,7 +488,7 @@ public class DurationTest {
 
     @Test public void multiply_INDEFINITE_and_INDEFINITE_ResultsInIndefinite() {
         //assertTrue(Double.POSITIVE_INFINITY * Double.POSITIVE_INFINITY == Double.POSITIVE_INFINITY); // sanity check
-        assertEquals(new Double(Double.POSITIVE_INFINITY), new Double(Double.POSITIVE_INFINITY * Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.POSITIVE_INFINITY), Double.valueOf(Double.POSITIVE_INFINITY * Double.POSITIVE_INFINITY)); // sanity check
 
         assertTrue(Duration.INDEFINITE.multiply(Double.POSITIVE_INFINITY).isIndefinite());
         assertFalse(Duration.INDEFINITE.multiply(Double.POSITIVE_INFINITY).isUnknown());
@@ -496,7 +496,7 @@ public class DurationTest {
 
     @Test public void multiply_UNKNOWN_and_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.NaN * Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.NaN * Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.NaN * Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.UNKNOWN.multiply(Double.POSITIVE_INFINITY).isIndefinite());
         assertTrue(Duration.UNKNOWN.multiply(Double.POSITIVE_INFINITY).isUnknown());
@@ -504,7 +504,7 @@ public class DurationTest {
 
     @Test public void multiply_ZERO_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(0 * Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(0.0 * Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(0.0 * Double.NaN)); // sanity check
 
         assertFalse(Duration.ZERO.multiply(Double.NaN).isIndefinite());
         assertTrue(Duration.ZERO.multiply(Double.NaN).isUnknown());
@@ -512,7 +512,7 @@ public class DurationTest {
 
     @Test public void multiply_ONE_and_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(1.0 * Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(1.0 * Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(1.0 * Double.NaN)); // sanity check
 
         assertFalse(Duration.ONE.multiply(Double.NaN).isIndefinite());
         assertTrue(Duration.ONE.multiply(Double.NaN).isUnknown());
@@ -560,21 +560,21 @@ public class DurationTest {
 
     @Test public void divide_ZERO_by_INDEFINITE_ResultsIn_ZERO() {
         //assertTrue(0.0 / Double.POSITIVE_INFINITY == 0.0); // sanity check
-        assertEquals(new Double(0.0), new Double(0.0 / Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(0.0), Double.valueOf(0.0 / Double.POSITIVE_INFINITY)); // sanity check
 
         assertSame(Duration.ZERO, Duration.ZERO.divide(Double.POSITIVE_INFINITY));
     }
 
     @Test public void divide_ONE_by_INDEFINITE_ResultsIn_ZERO() {
         //assertTrue(1.0 / Double.POSITIVE_INFINITY == 0.0); // sanity check
-        assertEquals(new Double(0.0), new Double(1.0 / Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(0.0), Double.valueOf(1.0 / Double.POSITIVE_INFINITY)); // sanity check
 
         assertSame(Duration.ZERO, Duration.ONE.divide(Double.POSITIVE_INFINITY));
     }
 
     @Test public void divide_INDEFINITE_by_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.POSITIVE_INFINITY / Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.POSITIVE_INFINITY / Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.POSITIVE_INFINITY / Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.INDEFINITE.divide(Double.POSITIVE_INFINITY).isIndefinite());
         assertTrue(Duration.INDEFINITE.divide(Double.POSITIVE_INFINITY).isUnknown());
@@ -582,7 +582,7 @@ public class DurationTest {
 
     @Test public void divide_UNKNOWN_by_INDEFINITE_ResultsInUnknown() {
         assertTrue(Double.isNaN(Double.NaN / Double.POSITIVE_INFINITY)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(Double.NaN / Double.POSITIVE_INFINITY)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(Double.NaN / Double.POSITIVE_INFINITY)); // sanity check
 
         assertFalse(Duration.UNKNOWN.divide(Double.POSITIVE_INFINITY).isIndefinite());
         assertTrue(Duration.UNKNOWN.divide(Double.POSITIVE_INFINITY).isUnknown());
@@ -590,7 +590,7 @@ public class DurationTest {
 
     @Test public void divide_ZERO_by_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(0.0 / Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(0.0 / Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(0.0 / Double.NaN)); // sanity check
 
         assertFalse(Duration.ZERO.divide(Double.NaN).isIndefinite());
         assertTrue(Duration.ZERO.divide(Double.NaN).isUnknown());
@@ -598,7 +598,7 @@ public class DurationTest {
 
     @Test public void divide_ONE_by_UNKNOWN_ResultsInUnknown() {
         assertTrue(Double.isNaN(1.0 / Double.NaN)); // sanity check
-        assertEquals(new Double(Double.NaN), new Double(1.0 / Double.NaN)); // sanity check
+        assertEquals(Double.valueOf(Double.NaN), Double.valueOf(1.0 / Double.NaN)); // sanity check
 
         assertFalse(Duration.ONE.divide(Double.NaN).isIndefinite());
         assertTrue(Duration.ONE.divide(Double.NaN).isUnknown());

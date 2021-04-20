@@ -24,6 +24,8 @@
 #include <gst/gst.h>
 #include <gst/base/gstadapter.h>
 #include <gst/base/gstflowcombiner.h>
+#include <gst/base/gstbytereader.h>
+#include <gst/video/video.h>
 #include "gstisoff.h"
 
 G_BEGIN_DECLS
@@ -48,6 +50,10 @@ G_BEGIN_DECLS
 typedef struct _GstQTDemux GstQTDemux;
 typedef struct _GstQTDemuxClass GstQTDemuxClass;
 typedef struct _QtDemuxStream QtDemuxStream;
+typedef struct _QtDemuxSample QtDemuxSample;
+typedef struct _QtDemuxSegment QtDemuxSegment;
+typedef struct _QtDemuxRandomAccessEntry QtDemuxRandomAccessEntry;
+typedef struct _QtDemuxStreamStsdEntry QtDemuxStreamStsdEntry;
 
 enum QtDemuxState
 {
@@ -69,7 +75,7 @@ struct _GstQTDemux {
   /* TRUE if pull-based */
   gboolean pullbased;
 
-  gboolean posted_redirect;
+  gchar *redirect_location;
 
   /* Protect pad exposing from flush event */
   GMutex expose_lock;
@@ -117,6 +123,9 @@ struct _GstQTDemux {
 
   /* configured playback region */
   GstSegment segment;
+
+  /* State for key_units trickmode */
+  GstClockTime trickmode_interval;
 
   /* PUSH-BASED only: If the initial segment event, or a segment consequence of
    * a seek or incoming TIME segment from upstream needs to be pushed. This
@@ -257,6 +266,244 @@ struct _GstQTDemuxClass {
 };
 
 GType gst_qtdemux_get_type (void);
+
+struct _QtDemuxStreamStsdEntry
+{
+  GstCaps *caps;
+  guint32 fourcc;
+  gboolean sparse;
+
+  /* video info */
+  gint width;
+  gint height;
+  gint par_w;
+  gint par_h;
+  /* Numerator/denominator framerate */
+  gint fps_n;
+  gint fps_d;
+  GstVideoColorimetry colorimetry;
+  guint16 bits_per_sample;
+  guint16 color_table_id;
+  GstMemory *rgb8_palette;
+  guint interlace_mode;
+  guint field_order;
+
+  /* audio info */
+  gdouble rate;
+  gint n_channels;
+  guint samples_per_packet;
+  guint samples_per_frame;
+  guint bytes_per_packet;
+  guint bytes_per_sample;
+  guint bytes_per_frame;
+  guint compression;
+
+  /* if we use chunks or samples */
+  gboolean sampled;
+  guint padding;
+
+};
+
+struct _QtDemuxSample
+{
+  guint32 size;
+  gint32 pts_offset;            /* Add this value to timestamp to get the pts */
+  guint64 offset;
+  guint64 timestamp;            /* DTS In mov time */
+  guint32 duration;             /* In mov time */
+  gboolean keyframe;            /* TRUE when this packet is a keyframe */
+};
+
+struct _QtDemuxStream
+{
+  GstPad *pad;
+
+  GstQTDemux *demux;
+  gchar *stream_id;
+
+  QtDemuxStreamStsdEntry *stsd_entries;
+  guint stsd_entries_length;
+  guint cur_stsd_entry_index;
+
+  /* stream type */
+  guint32 subtype;
+
+  gboolean new_caps;            /* If TRUE, caps need to be generated (by
+                                 * calling _configure_stream()) This happens
+                                 * for MSS and fragmented streams */
+
+  gboolean new_stream;          /* signals that a stream_start is required */
+  gboolean on_keyframe;         /* if this stream last pushed buffer was a
+                                 * keyframe. This is important to identify
+                                 * where to stop pushing buffers after a
+                                 * segment stop time */
+
+  /* if the stream has a redirect URI in its headers, we store it here */
+  gchar *redirect_uri;
+
+  /* track id */
+  guint track_id;
+#ifdef GSTREAMER_LITE
+  gboolean track_enabled;
+#endif // GSTREAMER_LITE
+
+  /* duration/scale */
+  guint64 duration;             /* in timescale units */
+  guint32 timescale;
+
+  /* language */
+  gchar lang_id[4];             /* ISO 639-2T language code */
+
+  /* our samples */
+  guint32 n_samples;
+  QtDemuxSample *samples;
+  gboolean all_keyframe;        /* TRUE when all samples are keyframes (no stss) */
+  guint32 n_samples_moof;       /* sample count in a moof */
+  guint64 duration_moof;        /* duration in timescale of a moof, used for figure out
+                                 * the framerate of fragmented format stream */
+  guint64 duration_last_moof;
+
+  guint32 offset_in_sample;     /* Offset in the current sample, used for
+                                 * streams which have got exceedingly big
+                                 * sample size (such as 24s of raw audio).
+                                 * Only used when max_buffer_size is non-NULL */
+  guint32 min_buffer_size;      /* Minimum allowed size for output buffers.
+                                 * Currently only set for raw audio streams*/
+  guint32 max_buffer_size;      /* Maximum allowed size for output buffers.
+                                 * Currently only set for raw audio streams*/
+
+  /* video info */
+  /* aspect ratio */
+  gint display_width;
+  gint display_height;
+
+  /* allocation */
+  gboolean use_allocator;
+  GstAllocator *allocator;
+  GstAllocationParams params;
+
+  gsize alignment;
+
+  /* when a discontinuity is pending */
+  gboolean discont;
+
+  /* list of buffers to push first */
+  GSList *buffers;
+
+  /* if we need to clip this buffer. This is only needed for uncompressed
+   * data */
+  gboolean need_clip;
+
+  /* buffer needs some custom processing, e.g. subtitles */
+  gboolean need_process;
+  /* buffer needs potentially be split, e.g. CEA608 subtitles */
+  gboolean need_split;
+
+  /* current position */
+  guint32 segment_index;
+  guint32 sample_index;
+  GstClockTime time_position;   /* in gst time */
+  guint64 accumulated_base;
+
+  /* the Gst segment we are processing out, used for clipping */
+  GstSegment segment;
+
+  /* quicktime segments */
+  guint32 n_segments;
+  QtDemuxSegment *segments;
+  gboolean dummy_segment;
+  guint32 from_sample;
+  guint32 to_sample;
+
+  gboolean sent_eos;
+  GstTagList *stream_tags;
+  gboolean send_global_tags;
+
+  GstEvent *pending_event;
+
+  GstByteReader stco;
+  GstByteReader stsz;
+  GstByteReader stsc;
+  GstByteReader stts;
+  GstByteReader stss;
+  GstByteReader stps;
+  GstByteReader ctts;
+
+  gboolean chunks_are_samples;  /* TRUE means treat chunks as samples */
+  gint64 stbl_index;
+  /* stco */
+  guint co_size;
+  GstByteReader co_chunk;
+  guint32 first_chunk;
+  guint32 current_chunk;
+  guint32 last_chunk;
+  guint32 samples_per_chunk;
+  guint32 stsd_sample_description_id;
+  guint32 stco_sample_index;
+  /* stsz */
+  guint32 sample_size;          /* 0 means variable sizes are stored in stsz */
+  /* stsc */
+  guint32 stsc_index;
+  guint32 n_samples_per_chunk;
+  guint32 stsc_chunk_index;
+  guint32 stsc_sample_index;
+  guint64 chunk_offset;
+  /* stts */
+  guint32 stts_index;
+  guint32 stts_samples;
+  guint32 n_sample_times;
+  guint32 stts_sample_index;
+  guint64 stts_time;
+  guint32 stts_duration;
+  /* stss */
+  gboolean stss_present;
+  guint32 n_sample_syncs;
+  guint32 stss_index;
+  /* stps */
+  gboolean stps_present;
+  guint32 n_sample_partial_syncs;
+  guint32 stps_index;
+  QtDemuxRandomAccessEntry *ra_entries;
+  guint n_ra_entries;
+
+  const QtDemuxRandomAccessEntry *pending_seek;
+
+  /* ctts */
+  gboolean ctts_present;
+  guint32 n_composition_times;
+  guint32 ctts_index;
+  guint32 ctts_sample_index;
+  guint32 ctts_count;
+  gint32 ctts_soffset;
+
+  /* cslg */
+  guint32 cslg_shift;
+
+  /* fragmented */
+  gboolean parsed_trex;
+  guint32 def_sample_description_index; /* index is 1-based */
+  guint32 def_sample_duration;
+  guint32 def_sample_size;
+  guint32 def_sample_flags;
+
+  gboolean disabled;
+
+  /* stereoscopic video streams */
+  GstVideoMultiviewMode multiview_mode;
+  GstVideoMultiviewFlags multiview_flags;
+
+  /* protected streams */
+  gboolean protected;
+  guint32 protection_scheme_type;
+  guint32 protection_scheme_version;
+  gpointer protection_scheme_info;      /* specific to the protection scheme */
+  GQueue protection_scheme_event_queue;
+
+  /* KEY_UNITS trickmode with an interval */
+  GstClockTime last_keyframe_dts;
+
+  gint ref_count;               /* atomic */
+};
 
 G_END_DECLS
 

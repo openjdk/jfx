@@ -32,15 +32,29 @@ import com.sun.prism.shape.ShapeRep;
 public interface ResourceFactory extends GraphicsResource {
 
     /**
-     * Returns status of this graphics device.
+     * Returns whether this resource factory has been disposed.
+     * If this resource factory has been disposed, it is no longer valid and
+     * will need to be recreated before any new resources can be created.
+     * Any attempt to create a resource will be ignored and will return null.
+     *
+     * @return true if this resource factory has been disposed.
+     */
+    public boolean isDisposed();
+
+    /**
+     * Returns status of this graphics device, possibly reinitializing it.
      * If the device is not ready the createRTTexture and
      * present operations will fail.
-     * Creation of shaders and regular textures will succeed and
-     * return valid resources.
+     * As long as the device has not been disposed, creation of shaders and
+     * regular textures will succeed and return valid resources.
      * All hardware resources (RenderTargets and SwapChains) have to be recreated
      * after a device-lost event notification.
-     **/
-
+     *
+     * NOTE: since this method can reinitialize the graphics device if it has
+     * been released, it should only be called at the start of a rendering pass.
+     *
+     * @return true if this graphics device is ready for use.
+     */
     public boolean isDeviceReady();
 
     public TextureResourcePool getTextureResourcePool();
@@ -251,8 +265,6 @@ public interface ResourceFactory extends GraphicsResource {
     public void setGlyphTexture(Texture texture);
     public Texture getGlyphTexture();
     public boolean isSuperShaderAllowed();
-
-    public void dispose();
 
     /*
      * 3D stuff

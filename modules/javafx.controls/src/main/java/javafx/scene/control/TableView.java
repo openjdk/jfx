@@ -559,6 +559,8 @@ public class TableView<S> extends Control {
             }
         });
 
+        pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
+
         isInited = true;
     }
 

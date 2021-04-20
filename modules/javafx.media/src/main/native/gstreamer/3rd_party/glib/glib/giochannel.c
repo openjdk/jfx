@@ -37,6 +37,7 @@
 #include "giochannel.h"
 
 #include "gstrfuncs.h"
+#include "gstrfuncsprivate.h"
 #include "gtestutils.h"
 #include "glibintl.h"
 
@@ -135,7 +136,7 @@
  * @G_IO_STATUS_EOF: End of file.
  * @G_IO_STATUS_AGAIN: Resource temporarily unavailable.
  *
- * Stati returned by most of the #GIOFuncs functions.
+ * Statuses returned by most of the #GIOFuncs functions.
  **/
 
 /**
@@ -152,22 +153,22 @@
 #define G_IO_NICE_BUF_SIZE  1024
 
 /* This needs to be as wide as the largest character in any possible encoding */
-#define MAX_CHAR_SIZE   10
+#define MAX_CHAR_SIZE       10
 
 /* Some simplifying macros, which reduce the need to worry whether the
  * buffers have been allocated. These also make USE_BUF () an lvalue,
  * which is used in g_io_channel_read_to_end ().
  */
-#define USE_BUF(channel)  ((channel)->encoding ? (channel)->encoded_read_buf \
+#define USE_BUF(channel)    ((channel)->encoding ? (channel)->encoded_read_buf \
          : (channel)->read_buf)
-#define BUF_LEN(string)   ((string) ? (string)->len : 0)
+#define BUF_LEN(string)     ((string) ? (string)->len : 0)
 
-static GIOError   g_io_error_get_from_g_error (GIOStatus    status,
+static GIOError     g_io_error_get_from_g_error (GIOStatus    status,
                GError      *err);
-static void   g_io_channel_purge    (GIOChannel  *channel);
-static GIOStatus  g_io_channel_fill_buffer  (GIOChannel  *channel,
+static void     g_io_channel_purge      (GIOChannel  *channel);
+static GIOStatus    g_io_channel_fill_buffer    (GIOChannel  *channel,
                GError     **err);
-static GIOStatus  g_io_channel_read_line_backend  (GIOChannel  *channel,
+static GIOStatus    g_io_channel_read_line_backend  (GIOChannel  *channel,
                gsize       *length,
                gsize       *terminator_pos,
                GError     **error);
@@ -596,6 +597,9 @@ g_io_channel_purge (GIOChannel *channel)
  * given @channel. For example, if condition is #G_IO_IN, the source will
  * be dispatched when there's data available for reading.
  *
+ * The callback function invoked by the #GSource should be added with
+ * g_source_set_callback(), but it has type #GIOFunc (not #GSourceFunc).
+ *
  * g_io_add_watch() is a simpler interface to this same functionality, for
  * the case where you want to add the source to the default main loop context
  * at the default priority.
@@ -883,17 +887,26 @@ g_io_channel_set_line_term (GIOChannel  *channel,
                             const gchar *line_term,
           gint         length)
 {
+  guint length_unsigned;
+
   g_return_if_fail (channel != NULL);
   g_return_if_fail (line_term == NULL || length != 0); /* Disallow "" */
 
   if (line_term == NULL)
-    length = 0;
-  else if (length < 0)
-    length = strlen (line_term);
+    length_unsigned = 0;
+  else if (length >= 0)
+    length_unsigned = (guint) length;
+  else
+    {
+      /* FIXME: We’re constrained by line_term_len being a guint here */
+      gsize length_size = strlen (line_term);
+      g_return_if_fail (length_size <= G_MAXUINT);
+      length_unsigned = (guint) length_size;
+    }
 
   g_free (channel->line_term);
-  channel->line_term = line_term ? g_memdup (line_term, length) : NULL;
-  channel->line_term_len = length;
+  channel->line_term = line_term ? g_memdup2 (line_term, length_unsigned) : NULL;
+  channel->line_term_len = length_unsigned;
 }
 
 /**
@@ -1306,7 +1319,7 @@ g_io_channel_get_buffered (GIOChannel *channel)
  * Return Value: %G_IO_STATUS_NORMAL if the encoding was successfully set
  */
 GIOStatus
-g_io_channel_set_encoding (GIOChannel *channel,
+g_io_channel_set_encoding (GIOChannel   *channel,
                            const gchar  *encoding,
          GError      **error)
 {
@@ -1666,8 +1679,16 @@ g_io_channel_read_line (GIOChannel  *channel,
 
   if (status == G_IO_STATUS_NORMAL)
     {
+      gchar *line;
+
+      /* Copy the read bytes (including any embedded nuls) and nul-terminate.
+       * `USE_BUF (channel)->str` is guaranteed to be nul-terminated as it’s a
+       * #GString, so it’s safe to call g_memdup2() with +1 length to allocate
+       * a nul-terminator. */
       g_assert (USE_BUF (channel));
-      *str_return = g_strndup (USE_BUF (channel)->str, got_length);
+      line = g_memdup2 (USE_BUF (channel)->str, got_length + 1);
+      line[got_length] = '\0';
+      *str_return = g_steal_pointer (&line);
       g_string_erase (USE_BUF (channel), 0, got_length);
     }
   else
@@ -1693,8 +1714,8 @@ g_io_channel_read_line (GIOChannel  *channel,
 GIOStatus
 g_io_channel_read_line_string (GIOChannel  *channel,
                                GString     *buffer,
-             gsize       *terminator_pos,
-                               GError   **error)
+                               gsize       *terminator_pos,
+                               GError     **error)
 {
   gsize length;
   GIOStatus status;
@@ -1843,7 +1864,7 @@ read_again:
                         goto done;
                       }
                     break;
-                  case '\0': /* Embeded null in input */
+                  case '\0': /* Embedded null in input */
                     line_length = nextchar - use_buf->str;
                     got_term_len = 1;
                     goto done;
@@ -1975,7 +1996,7 @@ g_io_channel_read_to_end (GIOChannel  *channel,
  * @buf: (out caller-allocates) (array length=count) (element-type guint8):
  *     a buffer to read data into
  * @count: (in): the size of the buffer. Note that the buffer may not be
- *     complelely filled even if there is data in the buffer if the
+ *     completely filled even if there is data in the buffer if the
  *     remaining data is not a complete character.
  * @bytes_read: (out) (optional): The number of bytes read. This may be
  *     zero even on success if count < 6 and the channel's encoding
@@ -2363,7 +2384,7 @@ reconvert:
                       default:
                         g_assert_not_reached ();
                         err = (gsize) -1;
-                        errnum = 0; /* Don't confunse the compiler */
+                        errnum = 0; /* Don't confuse the compiler */
                     }
                 }
               else

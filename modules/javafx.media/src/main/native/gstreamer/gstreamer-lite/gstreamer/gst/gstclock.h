@@ -164,7 +164,7 @@ typedef gpointer GstClockID;
  * GST_TIMEVAL_TO_TIME:
  * @tv: the timeval to convert
  *
- * Convert a #GTimeVal to a #GstClockTime.
+ * Convert a GTimeVal to a #GstClockTime.
  */
 #define GST_TIMEVAL_TO_TIME(tv)         (GstClockTime)((tv).tv_sec * GST_SECOND + (tv).tv_usec * GST_USECOND)
 
@@ -173,7 +173,7 @@ typedef gpointer GstClockID;
  * @t: The #GstClockTime to convert
  * @tv: The target timeval
  *
- * Convert a #GstClockTime to a #GTimeVal
+ * Convert a #GstClockTime to a GTimeVal
  *
  * > on 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
  * > which is about 68 years.  Expect trouble if you want to schedule stuff
@@ -641,9 +641,7 @@ gboolean                gst_clock_periodic_id_reinit    (GstClock * clock,
                                                          GstClockTime start_time,
                                                          GstClockTime interval);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstClock, gst_object_unref)
-#endif
 
 G_END_DECLS
 

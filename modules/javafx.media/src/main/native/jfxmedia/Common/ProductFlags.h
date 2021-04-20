@@ -30,6 +30,11 @@
 #ifndef TARGET_OS_MAC
 #define TARGET_OS_MAC   1
 #endif
+#if defined(__arm64__)
+#ifndef TARGET_OS_MAC_ARM64
+#define TARGET_OS_MAC_ARM64   1
+#endif
+#endif // __arm64__
 #elif defined(LINUX)
 #ifndef TARGET_OS_LINUX
 #define TARGET_OS_LINUX 1

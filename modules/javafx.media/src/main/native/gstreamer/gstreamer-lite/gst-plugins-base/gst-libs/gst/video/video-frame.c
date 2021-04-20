@@ -286,6 +286,9 @@ gst_video_frame_unmap (GstVideoFrame * frame)
  *
  * Copy the plane with index @plane from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -309,8 +312,8 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
 
   finfo = dinfo->finfo;
 
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
   g_return_val_if_fail (finfo->n_planes > plane, FALSE);
 
   sp = src->data[plane];
@@ -395,6 +398,9 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
  *
  * Copy the contents from @src to @dest.
  *
+ * Note: Since: 1.18, @dest dimensions are allowed to be
+ * smaller than @src dimensions.
+ *
  * Returns: TRUE if the contents could be copied.
  */
 gboolean
@@ -411,8 +417,8 @@ gst_video_frame_copy (GstVideoFrame * dest, const GstVideoFrame * src)
   dinfo = &dest->info;
 
   g_return_val_if_fail (dinfo->finfo->format == sinfo->finfo->format, FALSE);
-  g_return_val_if_fail (dinfo->width == sinfo->width
-      && dinfo->height == sinfo->height, FALSE);
+  g_return_val_if_fail (dinfo->width <= sinfo->width
+      && dinfo->height <= sinfo->height, FALSE);
 
   n_planes = dinfo->finfo->n_planes;
 

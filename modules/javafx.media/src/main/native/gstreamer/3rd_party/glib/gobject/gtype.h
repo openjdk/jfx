@@ -1179,16 +1179,12 @@ struct _GInterfaceInfo
  *  a look at an exemplary implementation for collect_value() of
  *  #GObject:
  *  |[<!-- language="C" -->
- *  if (collect_values[0].v_pointer)
- *  {
  *    GObject *object = G_OBJECT (collect_values[0].v_pointer);
+ *    g_return_val_if_fail (object != NULL,
+ *       g_strdup_printf ("Object passed as invalid NULL pointer"));
  *    // never honour G_VALUE_NOCOPY_CONTENTS for ref-counted types
  *    value->data[0].v_pointer = g_object_ref (object);
  *    return NULL;
- *  }
- *  else
- *    return g_strdup_printf ("Object passed as invalid NULL pointer");
- *  }
  *  ]|
  *  The reference count for valid objects is always incremented,
  *  regardless of @collect_flags. For invalid objects, the example
@@ -1220,8 +1216,8 @@ struct _GInterfaceInfo
  *  To complete the string example:
  *  |[<!-- language="C" -->
  *  gchar **string_p = collect_values[0].v_pointer;
- *  if (!string_p)
- *    return g_strdup_printf ("string location passed as NULL");
+ *  g_return_val_if_fail (string_p != NULL,
+ *      g_strdup_printf ("string location passed as NULL"));
  *  if (collect_flags & G_VALUE_NOCOPY_CONTENTS)
  *    *string_p = value->data[0].v_pointer;
  *  else
@@ -1231,8 +1227,8 @@ struct _GInterfaceInfo
  *  reference-counted types:
  *  |[<!-- language="C" -->
  *  GObject **object_p = collect_values[0].v_pointer;
- *  if (!object_p)
- *    return g_strdup_printf ("object location passed as NULL");
+ *  g_return_val_if_fail (object_p != NULL,
+ *    g_strdup_printf ("object location passed as NULL"));
  *  if (!value->data[0].v_pointer)
  *    *object_p = NULL;
  *  else if (collect_flags & G_VALUE_NOCOPY_CONTENTS) // always honour
@@ -1406,10 +1402,11 @@ guint     g_type_get_type_registration_serial (void);
   typedef struct { ParentName##Class parent_class; } ModuleObjName##Class;                               \
                                                                                                          \
   _GLIB_DEFINE_AUTOPTR_CHAINUP (ModuleObjName, ParentName)                                               \
+  G_DEFINE_AUTOPTR_CLEANUP_FUNC (ModuleObjName##Class, g_type_class_unref)                               \
                                                                                                          \
-  static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                                     \
+  G_GNUC_UNUSED static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                       \
     return G_TYPE_CHECK_INSTANCE_CAST (ptr, module_obj_name##_get_type (), ModuleObjName); }             \
-  static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                                         \
+  G_GNUC_UNUSED static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                           \
     return G_TYPE_CHECK_INSTANCE_TYPE (ptr, module_obj_name##_get_type ()); }                            \
   G_GNUC_END_IGNORE_DEPRECATIONS
 
@@ -1497,16 +1494,17 @@ guint     g_type_get_type_registration_serial (void);
   struct _##ModuleObjName { ParentName parent_instance; };                                               \
                                                                                                          \
   _GLIB_DEFINE_AUTOPTR_CHAINUP (ModuleObjName, ParentName)                                               \
+  G_DEFINE_AUTOPTR_CLEANUP_FUNC (ModuleObjName##Class, g_type_class_unref)                               \
                                                                                                          \
-  static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                                     \
+  G_GNUC_UNUSED static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                       \
     return G_TYPE_CHECK_INSTANCE_CAST (ptr, module_obj_name##_get_type (), ModuleObjName); }             \
-  static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_CLASS (gpointer ptr) {                      \
+  G_GNUC_UNUSED static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_CLASS (gpointer ptr) {        \
     return G_TYPE_CHECK_CLASS_CAST (ptr, module_obj_name##_get_type (), ModuleObjName##Class); }         \
-  static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                                         \
+  G_GNUC_UNUSED static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                           \
     return G_TYPE_CHECK_INSTANCE_TYPE (ptr, module_obj_name##_get_type ()); }                            \
-  static inline gboolean MODULE##_IS_##OBJ_NAME##_CLASS (gpointer ptr) {                                 \
+  G_GNUC_UNUSED static inline gboolean MODULE##_IS_##OBJ_NAME##_CLASS (gpointer ptr) {                   \
     return G_TYPE_CHECK_CLASS_TYPE (ptr, module_obj_name##_get_type ()); }                               \
-  static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_GET_CLASS (gpointer ptr) {                  \
+  G_GNUC_UNUSED static inline ModuleObjName##Class * MODULE##_##OBJ_NAME##_GET_CLASS (gpointer ptr) {    \
     return G_TYPE_INSTANCE_GET_CLASS (ptr, module_obj_name##_get_type (), ModuleObjName##Class); }       \
   G_GNUC_END_IGNORE_DEPRECATIONS
 
@@ -1576,11 +1574,11 @@ guint     g_type_get_type_registration_serial (void);
                                                                                                            \
   _GLIB_DEFINE_AUTOPTR_CHAINUP (ModuleObjName, PrerequisiteName)                                           \
                                                                                                            \
-  static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                                       \
+  G_GNUC_UNUSED static inline ModuleObjName * MODULE##_##OBJ_NAME (gpointer ptr) {                         \
     return G_TYPE_CHECK_INSTANCE_CAST (ptr, module_obj_name##_get_type (), ModuleObjName); }               \
-  static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                                           \
+  G_GNUC_UNUSED static inline gboolean MODULE##_IS_##OBJ_NAME (gpointer ptr) {                             \
     return G_TYPE_CHECK_INSTANCE_TYPE (ptr, module_obj_name##_get_type ()); }                              \
-  static inline ModuleObjName##Interface * MODULE##_##OBJ_NAME##_GET_IFACE (gpointer ptr) {                \
+  G_GNUC_UNUSED static inline ModuleObjName##Interface * MODULE##_##OBJ_NAME##_GET_IFACE (gpointer ptr) {  \
     return G_TYPE_INSTANCE_GET_INTERFACE (ptr, module_obj_name##_get_type (), ModuleObjName##Interface); } \
   G_GNUC_END_IGNORE_DEPRECATIONS
 

@@ -92,8 +92,8 @@ public class CustomTilePane extends TilePane {
 //    @Override protected void layoutChildren() {
 //        List<Node> sortedChidlren = new ArrayList<>(getChildren());
 //        Collections.sort(sortedChidlren, (c1, c2)
-//                -> new Double(c2.prefHeight(-1)).compareTo(
-//                        new Double(c1.prefHeight(-1))));
+//                -> Double.valueOf(c2.prefHeight(-1)).compareTo(
+//                        Double.valueOf(c1.prefHeight(-1))));
 //        double currentX = pad;
 //        for (Node c : sortedChidlren) {
 //            double width = c.prefWidth(-1);
@@ -172,8 +172,8 @@ public class CustomTilePane extends TilePane {
 
         List<Node> sortedManagedChidlren = new ArrayList<>(getManagedChildren());
         Collections.sort(sortedManagedChidlren, (c1, c2)
-                -> new Double(c2.prefHeight(-1)).compareTo(
-                        new Double(c1.prefHeight(-1))));
+                -> Double.valueOf(c2.prefHeight(-1)).compareTo(
+                        Double.valueOf(c1.prefHeight(-1))));
         List<Node> managed = sortedManagedChidlren;
         HPos hpos = getAlignmentInternal().getHpos();
         VPos vpos = getAlignmentInternal().getVpos();

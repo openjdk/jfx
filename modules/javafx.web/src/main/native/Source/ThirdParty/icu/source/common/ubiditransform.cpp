@@ -31,11 +31,11 @@
 #define SHAPE_LOGICAL           U_SHAPE_TEXT_DIRECTION_LOGICAL
 #define SHAPE_VISUAL            U_SHAPE_TEXT_DIRECTION_VISUAL_LTR
 
-#define CHECK_LEN(STR, LEN, ERROR) { \
-        if (LEN == 0) return 0; \
-        if (LEN < -1) { *(ERROR) = U_ILLEGAL_ARGUMENT_ERROR; return 0; } \
-        if (LEN == -1) LEN = u_strlen(STR); \
-    }
+#define CHECK_LEN(STR, LEN, ERROR) UPRV_BLOCK_MACRO_BEGIN { \
+    if (LEN == 0) return 0; \
+    if (LEN < -1) { *(ERROR) = U_ILLEGAL_ARGUMENT_ERROR; return 0; } \
+    if (LEN == -1) LEN = u_strlen(STR); \
+} UPRV_BLOCK_MACRO_END
 
 #define MAX_ACTIONS     7
 
@@ -89,7 +89,7 @@ struct UBiDiTransform {
     uint32_t                letters;            /* letter option for ArabicShaping */
 };
 
-U_DRAFT UBiDiTransform* U_EXPORT2
+U_CAPI UBiDiTransform* U_EXPORT2
 ubiditransform_open(UErrorCode *pErrorCode)
 {
     UBiDiTransform *pBiDiTransform = NULL;
@@ -102,7 +102,7 @@ ubiditransform_open(UErrorCode *pErrorCode)
     return pBiDiTransform;
 }
 
-U_DRAFT void U_EXPORT2
+U_CAPI void U_EXPORT2
 ubiditransform_close(UBiDiTransform *pBiDiTransform)
 {
     if (pBiDiTransform != NULL) {
@@ -434,7 +434,7 @@ findMatchingScheme(UBiDiLevel inLevel, UBiDiLevel outLevel,
     return NULL;
 }
 
-U_DRAFT uint32_t U_EXPORT2
+U_CAPI uint32_t U_EXPORT2
 ubiditransform_transform(UBiDiTransform *pBiDiTransform,
             const UChar *src, int32_t srcLength,
             UChar *dest, int32_t destSize,

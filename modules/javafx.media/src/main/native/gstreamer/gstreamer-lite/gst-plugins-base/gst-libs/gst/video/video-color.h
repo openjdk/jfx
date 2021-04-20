@@ -45,10 +45,12 @@ typedef enum {
 /**
  * GstVideoColorMatrix:
  * @GST_VIDEO_COLOR_MATRIX_UNKNOWN: unknown matrix
- * @GST_VIDEO_COLOR_MATRIX_RGB: identity matrix
- * @GST_VIDEO_COLOR_MATRIX_FCC: FCC color matrix
- * @GST_VIDEO_COLOR_MATRIX_BT709: ITU-R BT.709 color matrix
- * @GST_VIDEO_COLOR_MATRIX_BT601: ITU-R BT.601 color matrix
+ * @GST_VIDEO_COLOR_MATRIX_RGB: identity matrix. Order of coefficients is
+ * actually GBR, also IEC 61966-2-1 (sRGB)
+ * @GST_VIDEO_COLOR_MATRIX_FCC: FCC Title 47 Code of Federal Regulations 73.682 (a)(20)
+ * @GST_VIDEO_COLOR_MATRIX_BT709: ITU-R BT.709 color matrix, also ITU-R BT1361
+ * / IEC 61966-2-4 xvYCC709 / SMPTE RP177 Annex B
+ * @GST_VIDEO_COLOR_MATRIX_BT601: ITU-R BT.601 color matrix, also SMPTE170M / ITU-R BT1358 525 / ITU-R BT1700 NTSC
  * @GST_VIDEO_COLOR_MATRIX_SMPTE240M: SMPTE 240M color matrix
  * @GST_VIDEO_COLOR_MATRIX_BT2020: ITU-R BT.2020 color matrix. Since: 1.6
  *
@@ -76,20 +78,35 @@ gboolean gst_video_color_matrix_get_Kr_Kb (GstVideoColorMatrix matrix, gdouble *
  * @GST_VIDEO_TRANSFER_GAMMA20: Gamma 2.0 curve
  * @GST_VIDEO_TRANSFER_GAMMA22: Gamma 2.2 curve
  * @GST_VIDEO_TRANSFER_BT709: Gamma 2.2 curve with a linear segment in the lower
- *                           range
+ *                           range, also ITU-R BT470M / ITU-R BT1700 625 PAL &
+ *                           SECAM / ITU-R BT1361
  * @GST_VIDEO_TRANSFER_SMPTE240M: Gamma 2.2 curve with a linear segment in the
  *                               lower range
  * @GST_VIDEO_TRANSFER_SRGB: Gamma 2.4 curve with a linear segment in the lower
- *                          range
- * @GST_VIDEO_TRANSFER_GAMMA28: Gamma 2.8 curve
+ *                          range. IEC 61966-2-1 (sRGB or sYCC)
+ * @GST_VIDEO_TRANSFER_GAMMA28: Gamma 2.8 curve, also ITU-R BT470BG
  * @GST_VIDEO_TRANSFER_LOG100: Logarithmic transfer characteristic
  *                             100:1 range
  * @GST_VIDEO_TRANSFER_LOG316: Logarithmic transfer characteristic
- *                             316.22777:1 range
+ *                             316.22777:1 range (100 * sqrt(10) : 1)
  * @GST_VIDEO_TRANSFER_BT2020_12: Gamma 2.2 curve with a linear segment in the lower
  *                                range. Used for BT.2020 with 12 bits per
  *                                component. Since: 1.6
  * @GST_VIDEO_TRANSFER_ADOBERGB: Gamma 2.19921875. Since: 1.8
+ * @GST_VIDEO_TRANSFER_BT2020_10: Rec. ITU-R BT.2020-2 with 10 bits per component.
+ *                                (functionally the same as the values
+ *                                GST_VIDEO_TRANSFER_BT709 and GST_VIDEO_TRANSFER_BT601).
+ *                                Since: 1.18
+ * @GST_VIDEO_TRANSFER_SMPTE2084: SMPTE ST 2084 for 10, 12, 14, and 16-bit systems.
+ *                                Known as perceptual quantization (PQ)
+ *                                Since: 1.18
+ * @GST_VIDEO_TRANSFER_ARIB_STD_B67: Association of Radio Industries and Businesses (ARIB)
+ *                                   STD-B67 and Rec. ITU-R BT.2100-1 hybrid loggamma (HLG) system
+ *                                   Since: 1.18
+ * @GST_VIDEO_TRANSFER_BT601: also known as SMPTE170M / ITU-R BT1358 525 or 625 / ITU-R BT1700 NTSC
+ *                            Functionally the same as the values
+ *                            GST_VIDEO_TRANSFER_BT709, and GST_VIDEO_TRANSFER_BT2020_10.
+ *                            Since: 1.18
  *
  * The video transfer function defines the formula for converting between
  * non-linear RGB (R'G'B') and linear RGB
@@ -107,7 +124,18 @@ typedef enum {
   GST_VIDEO_TRANSFER_LOG100,
   GST_VIDEO_TRANSFER_LOG316,
   GST_VIDEO_TRANSFER_BT2020_12,
-  GST_VIDEO_TRANSFER_ADOBERGB
+  GST_VIDEO_TRANSFER_ADOBERGB,
+  GST_VIDEO_TRANSFER_BT2020_10,
+  GST_VIDEO_TRANSFER_SMPTE2084,
+  GST_VIDEO_TRANSFER_ARIB_STD_B67,
+  /**
+   * GST_VIDEO_TRANSFER_BT601:
+   *
+   * also known as SMPTE170M / ITU-R BT1358 525 or 625 / ITU-R BT1700 NTSC
+   *
+   * Since: 1.18
+   */
+  GST_VIDEO_TRANSFER_BT601
 } GstVideoTransferFunction;
 
 GST_VIDEO_API
@@ -119,18 +147,27 @@ gdouble      gst_video_color_transfer_decode (GstVideoTransferFunction func, gdo
 /**
  * GstVideoColorPrimaries:
  * @GST_VIDEO_COLOR_PRIMARIES_UNKNOWN: unknown color primaries
- * @GST_VIDEO_COLOR_PRIMARIES_BT709: BT709 primaries
- * @GST_VIDEO_COLOR_PRIMARIES_BT470M: BT470M primaries
- * @GST_VIDEO_COLOR_PRIMARIES_BT470BG: BT470BG primaries
- * @GST_VIDEO_COLOR_PRIMARIES_SMPTE170M: SMPTE170M primaries
+ * @GST_VIDEO_COLOR_PRIMARIES_BT709: BT709 primaries, also ITU-R BT1361 / IEC
+ * 61966-2-4 / SMPTE RP177 Annex B
+ * @GST_VIDEO_COLOR_PRIMARIES_BT470M: BT470M primaries, also FCC Title 47 Code
+ * of Federal Regulations 73.682 (a)(20)
+ * @GST_VIDEO_COLOR_PRIMARIES_BT470BG: BT470BG primaries, also ITU-R BT601-6
+ * 625 / ITU-R BT1358 625 / ITU-R BT1700 625 PAL & SECAM
+ * @GST_VIDEO_COLOR_PRIMARIES_SMPTE170M: SMPTE170M primaries, also ITU-R
+ * BT601-6 525 / ITU-R BT1358 525 / ITU-R BT1700 NTSC
  * @GST_VIDEO_COLOR_PRIMARIES_SMPTE240M: SMPTE240M primaries
- * @GST_VIDEO_COLOR_PRIMARIES_FILM: Generic film
- * @GST_VIDEO_COLOR_PRIMARIES_BT2020: BT2020 primaries. Since: 1.6
+ * @GST_VIDEO_COLOR_PRIMARIES_FILM: Generic film (colour filters using
+ * Illuminant C)
+ * @GST_VIDEO_COLOR_PRIMARIES_BT2020: ITU-R BT2020 primaries. Since: 1.6
  * @GST_VIDEO_COLOR_PRIMARIES_ADOBERGB: Adobe RGB primaries. Since: 1.8
- * @GST_VIDEO_COLOR_PRIMARIES_SMPTEST428: SMPTE ST 428 primaries. Since: 1.16
- * @GST_VIDEO_COLOR_PRIMARIES_SMPTERP431: SMPTE RP 431 primaries. Since: 1.16
- * @GST_VIDEO_COLOR_PRIMARIES_SMPTEEG432: SMPTE EG 432 primaries. Since: 1.16
- * @GST_VIDEO_COLOR_PRIMARIES_EBU3213: EBU 3213 primaries. Since: 1.16
+ * @GST_VIDEO_COLOR_PRIMARIES_SMPTEST428: SMPTE ST 428 primaries (CIE 1931
+ * XYZ). Since: 1.16
+ * @GST_VIDEO_COLOR_PRIMARIES_SMPTERP431: SMPTE RP 431 primaries (ST 431-2
+ * (2011) / DCI P3). Since: 1.16
+ * @GST_VIDEO_COLOR_PRIMARIES_SMPTEEG432: SMPTE EG 432 primaries (ST 432-1
+ * (2010) / P3 D65). Since: 1.16
+ * @GST_VIDEO_COLOR_PRIMARIES_EBU3213: EBU 3213 primaries (JEDEC P22
+ * phosphors). Since: 1.16
  *
  * The color primaries define the how to transform linear RGB values to and from
  * the CIE XYZ colorspace.
@@ -205,6 +242,9 @@ typedef struct {
 #define GST_VIDEO_COLORIMETRY_SMPTE240M   "smpte240m"
 #define GST_VIDEO_COLORIMETRY_SRGB        "sRGB"
 #define GST_VIDEO_COLORIMETRY_BT2020      "bt2020"
+#define GST_VIDEO_COLORIMETRY_BT2020_10   "bt2020-10"
+#define GST_VIDEO_COLORIMETRY_BT2100_PQ   "bt2100-pq"
+#define GST_VIDEO_COLORIMETRY_BT2100_HLG  "bt2100-hlg"
 
 GST_VIDEO_API
 gboolean     gst_video_colorimetry_matches     (const GstVideoColorimetry *cinfo, const gchar *color);
@@ -226,6 +266,34 @@ void         gst_video_color_range_offsets     (GstVideoColorRange range,
                                                 gint offset[GST_VIDEO_MAX_COMPONENTS],
                                                 gint scale[GST_VIDEO_MAX_COMPONENTS]);
 
+/* conversion between GStreamer color{matrix,transfer,primaries} enum and
+ * values defined by ISO/IEC 23001-8 and ITU-T H.273 specification.
+ * Also H264 and H265 specifications follow the color{matrix,transfer,primaries}
+ * values */
+
+GST_VIDEO_API
+guint                     gst_video_color_matrix_to_iso      (GstVideoColorMatrix matrix);
+
+GST_VIDEO_API
+guint                     gst_video_transfer_function_to_iso    (GstVideoTransferFunction func);
+
+GST_VIDEO_API
+guint                     gst_video_color_primaries_to_iso   (GstVideoColorPrimaries primaries);
+
+GST_VIDEO_API
+GstVideoColorMatrix       gst_video_color_matrix_from_iso    (guint value);
+
+GST_VIDEO_API
+GstVideoTransferFunction  gst_video_transfer_function_from_iso  (guint value);
+
+GST_VIDEO_API
+GstVideoColorPrimaries    gst_video_color_primaries_from_iso (guint value);
+
+GST_VIDEO_API
+gboolean                  gst_video_transfer_function_is_equivalent (GstVideoTransferFunction from_func,
+                                                                    guint from_bpp,
+                                                                    GstVideoTransferFunction to_func,
+                                                                    guint to_bpp);
 
 G_END_DECLS
 

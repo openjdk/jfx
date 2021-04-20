@@ -94,7 +94,8 @@ echo windows.vs.LIB=%LIB%@@ENDOFLINE@@
 echo windows.vs.LIBPATH=%LIBPATH%@@ENDOFLINE@@
 echo windows.vs.PATH=%PARFAIT_PATH%;%PATH%@@ENDOFLINE@@
 echo windows.vs.VER=%VSVER%@@ENDOFLINE@@
+echo windows.vs.VC_TOOLS_INSTALL_DIR=%VCToolsInstallDir%@@ENDOFLINE@@
+echo windows.vs.VC_TOOLS_REDIST_DIR=%VCToolsRedistDir%@@ENDOFLINE@@
 echo WINDOWS_SDK_DIR=%WindowsSdkDir%@@ENDOFLINE@@
 echo WINDOWS_SDK_VERSION=%WindowsSDKVersion%@@ENDOFLINE@@
 echo ############################################################
-

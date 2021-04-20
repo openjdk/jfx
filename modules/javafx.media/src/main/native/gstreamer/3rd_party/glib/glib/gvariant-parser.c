@@ -29,6 +29,7 @@
 #include "gstrfuncs.h"
 #include "gtestutils.h"
 #include "gvariant.h"
+#include "gvariant-internal.h"
 #include "gvarianttype.h"
 #include "gslice.h"
 #include "gthread.h"
@@ -66,6 +67,7 @@
  * @G_VARIANT_PARSE_ERROR_UNKNOWN_KEYWORD: an unknown keyword was encountered
  * @G_VARIANT_PARSE_ERROR_UNTERMINATED_STRING_CONSTANT: unterminated string constant
  * @G_VARIANT_PARSE_ERROR_VALUE_EXPECTED: no value given
+ * @G_VARIANT_PARSE_ERROR_RECURSION: variant was too deeply nested; #GVariant is only guaranteed to handle nesting up to 64 levels (Since: 2.64)
  *
  * Error codes returned by parsing text-format GVariants.
  **/
@@ -640,6 +642,7 @@ ast_resolve (AST     *ast,
 
 
 static AST *parse (TokenStream  *stream,
+                   guint         max_depth,
                    va_list      *app,
                    GError      **error);
 
@@ -825,6 +828,7 @@ maybe_free (AST *ast)
 
 static AST *
 maybe_parse (TokenStream  *stream,
+             guint         max_depth,
              va_list      *app,
              GError      **error)
 {
@@ -838,7 +842,7 @@ maybe_parse (TokenStream  *stream,
 
   if (token_stream_consume (stream, "just"))
     {
-      child = parse (stream, app, error);
+      child = parse (stream, max_depth - 1, app, error);
       if (child == NULL)
         return NULL;
     }
@@ -955,6 +959,7 @@ array_free (AST *ast)
 
 static AST *
 array_parse (TokenStream  *stream,
+             guint         max_depth,
              va_list      *app,
              GError      **error)
 {
@@ -982,7 +987,7 @@ array_parse (TokenStream  *stream,
                                  error))
         goto error;
 
-      child = parse (stream, app, error);
+      child = parse (stream, max_depth - 1, app, error);
 
       if (!child)
         goto error;
@@ -1093,6 +1098,7 @@ tuple_free (AST *ast)
 
 static AST *
 tuple_parse (TokenStream  *stream,
+             guint         max_depth,
              va_list      *app,
              GError      **error)
 {
@@ -1121,7 +1127,7 @@ tuple_parse (TokenStream  *stream,
                                  error))
         goto error;
 
-      child = parse (stream, app, error);
+      child = parse (stream, max_depth - 1, app, error);
 
       if (!child)
         goto error;
@@ -1199,6 +1205,7 @@ variant_free (AST *ast)
 
 static AST *
 variant_parse (TokenStream  *stream,
+               guint         max_depth,
                va_list      *app,
                GError      **error)
 {
@@ -1211,7 +1218,7 @@ variant_parse (TokenStream  *stream,
   AST *value;
 
   token_stream_assert (stream, "<");
-  value = parse (stream, app, error);
+  value = parse (stream, max_depth - 1, app, error);
 
   if (!value)
     return NULL;
@@ -1385,6 +1392,7 @@ dictionary_free (AST *ast)
 
 static AST *
 dictionary_parse (TokenStream  *stream,
+                  guint         max_depth,
                   va_list      *app,
                   GError      **error)
 {
@@ -1412,7 +1420,7 @@ dictionary_parse (TokenStream  *stream,
       return (AST *) dict;
     }
 
-  if ((first = parse (stream, app, error)) == NULL)
+  if ((first = parse (stream, max_depth - 1, app, error)) == NULL)
     goto error;
 
   ast_array_append (&dict->keys, &n_keys, first);
@@ -1424,7 +1432,7 @@ dictionary_parse (TokenStream  *stream,
                              error))
     goto error;
 
-  if ((first = parse (stream, app, error)) == NULL)
+  if ((first = parse (stream, max_depth - 1, app, error)) == NULL)
     goto error;
 
   ast_array_append (&dict->values, &n_values, first);
@@ -1449,7 +1457,7 @@ dictionary_parse (TokenStream  *stream,
                                  " or '}' to follow dictionary entry", error))
         goto error;
 
-      child = parse (stream, app, error);
+      child = parse (stream, max_depth - 1, app, error);
 
       if (!child)
         goto error;
@@ -1460,7 +1468,7 @@ dictionary_parse (TokenStream  *stream,
                                  " to follow dictionary entry key", error))
         goto error;
 
-      child = parse (stream, app, error);
+      child = parse (stream, max_depth - 1, app, error);
 
       if (!child)
         goto error;
@@ -2192,6 +2200,7 @@ typedecl_free (AST *ast)
 
 static AST *
 typedecl_parse (TokenStream  *stream,
+                guint         max_depth,
                 va_list      *app,
                 GError      **error)
 {
@@ -2286,7 +2295,7 @@ typedecl_parse (TokenStream  *stream,
         }
     }
 
-  if ((child = parse (stream, app, error)) == NULL)
+  if ((child = parse (stream, max_depth - 1, app, error)) == NULL)
     {
       g_variant_type_free (type);
       return NULL;
@@ -2302,26 +2311,35 @@ typedecl_parse (TokenStream  *stream,
 
 static AST *
 parse (TokenStream  *stream,
+       guint         max_depth,
        va_list      *app,
        GError      **error)
 {
   SourceRef source_ref;
   AST *result;
 
+  if (max_depth == 0)
+    {
+      token_stream_set_error (stream, error, FALSE,
+                              G_VARIANT_PARSE_ERROR_RECURSION,
+                              "variant nested too deeply");
+      return NULL;
+    }
+
   token_stream_prepare (stream);
   token_stream_start_ref (stream, &source_ref);
 
   if (token_stream_peek (stream, '['))
-    result = array_parse (stream, app, error);
+    result = array_parse (stream, max_depth, app, error);
 
   else if (token_stream_peek (stream, '('))
-    result = tuple_parse (stream, app, error);
+    result = tuple_parse (stream, max_depth, app, error);
 
   else if (token_stream_peek (stream, '<'))
-    result = variant_parse (stream, app, error);
+    result = variant_parse (stream, max_depth, app, error);
 
   else if (token_stream_peek (stream, '{'))
-    result = dictionary_parse (stream, app, error);
+    result = dictionary_parse (stream, max_depth, app, error);
 
   else if (app && token_stream_peek (stream, '%'))
     result = positional_parse (stream, app, error);
@@ -2339,11 +2357,11 @@ parse (TokenStream  *stream,
 
   else if (token_stream_peek (stream, 'n') ||
            token_stream_peek (stream, 'j'))
-    result = maybe_parse (stream, app, error);
+    result = maybe_parse (stream, max_depth, app, error);
 
   else if (token_stream_peek (stream, '@') ||
            token_stream_is_keyword (stream))
-    result = typedecl_parse (stream, app, error);
+    result = typedecl_parse (stream, max_depth, app, error);
 
   else if (token_stream_peek (stream, '\'') ||
            token_stream_peek (stream, '"'))
@@ -2410,6 +2428,10 @@ parse (TokenStream  *stream,
  * Officially, the language understood by the parser is "any string
  * produced by g_variant_print()".
  *
+ * There may be implementation specific restrictions on deeply nested values,
+ * which would result in a %G_VARIANT_PARSE_ERROR_RECURSION error. #GVariant is
+ * guaranteed to handle nesting up to at least 64 levels.
+ *
  * Returns: a non-floating reference to a #GVariant, or %NULL
  **/
 GVariant *
@@ -2430,7 +2452,7 @@ g_variant_parse (const GVariantType  *type,
   stream.stream = text;
   stream.end = limit;
 
-  if ((ast = parse (&stream, NULL, error)))
+  if ((ast = parse (&stream, G_VARIANT_MAX_RECURSION_DEPTH, NULL, error)))
     {
       if (type == NULL)
         result = ast_resolve (ast, error);
@@ -2515,17 +2537,19 @@ g_variant_new_parsed_va (const gchar *format,
   stream.stream = format;
   stream.end = NULL;
 
-  if ((ast = parse (&stream, app, &error)))
+  if ((ast = parse (&stream, G_VARIANT_MAX_RECURSION_DEPTH, app, &error)))
     {
       result = ast_resolve (ast, &error);
       ast_free (ast);
     }
 
-  if (result == NULL)
+  if (error != NULL)
     g_error ("g_variant_new_parsed: %s", error->message);
 
   if (*stream.stream)
     g_error ("g_variant_new_parsed: trailing text after value");
+
+  g_clear_error (&error);
 
   return result;
 }

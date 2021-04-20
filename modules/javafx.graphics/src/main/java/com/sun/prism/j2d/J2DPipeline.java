@@ -61,7 +61,7 @@ public class J2DPipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        Integer index = new Integer(screen.getAdapterOrdinal());
+        Integer index = Integer.valueOf(screen.getAdapterOrdinal());
         J2DResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new J2DResourceFactory(screen);

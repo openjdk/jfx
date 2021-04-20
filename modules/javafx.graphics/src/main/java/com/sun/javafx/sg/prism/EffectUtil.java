@@ -128,7 +128,7 @@ class EffectUtil {
     static void renderRectInnerShadow(Graphics g, InnerShadow shadow, float alpha,
                                       float rx, float ry, float rw, float rh)
     {
-        if (itex == null) {
+        if (itex == null || itex.isSurfaceLost()) {
             byte[] sdata = new byte[TEX_SIZE * TEX_SIZE];
             fillGaussian(sdata, TEX_SIZE, TEX_SIZE/2, shadow.getChoke(), true);
             Image img = Image.fromByteAlphaData(sdata, TEX_SIZE, TEX_SIZE);
@@ -242,7 +242,7 @@ class EffectUtil {
     static void renderRectDropShadow(Graphics g, DropShadow shadow, float alpha,
                                      float rx, float ry, float rw, float rh)
     {
-        if (dtex == null) {
+        if (dtex == null || dtex.isSurfaceLost()) {
             byte[] sdata = new byte[TEX_SIZE * TEX_SIZE];
             fillGaussian(sdata, TEX_SIZE, TEX_SIZE / 2, shadow.getSpread(), false);
             //fillTestPattern(sdata, imgsize);

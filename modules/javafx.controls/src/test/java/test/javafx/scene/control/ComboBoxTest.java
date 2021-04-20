@@ -640,7 +640,7 @@ public class ComboBoxTest {
     @Test public void defaultConverterCanHandleIncorrectType_1() {
         ComboBox cb = new ComboBox();
         StringConverter sc = cb.getConverter();
-        assertEquals("42", sc.toString(new Integer(42)));
+        assertEquals("42", sc.toString(Integer.valueOf(42)));
     }
 
     @Test(expected=ClassCastException.class)

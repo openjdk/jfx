@@ -29,7 +29,8 @@
  *
  * The #GQueue structure and its associated functions provide a standard
  * queue data structure. Internally, GQueue uses the same data structure
- * as #GList to store elements.
+ * as #GList to store elements with the same complexity over
+ * insertion/deletion (O(1)) and access/search (O(n)) operations.
  *
  * The data contained in each element can be either integer values, by
  * using one of the [Type Conversion Macros][glib-Type-Conversion-Macros],

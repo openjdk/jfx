@@ -26,6 +26,13 @@
 
 G_BEGIN_DECLS
 
+/**
+ * GstTracerRecord:
+ *
+ * The opaque GstTracerRecord instance structure
+ *
+ * Since: 1.8
+ */
 typedef struct _GstTracerRecord GstTracerRecord;
 typedef struct _GstTracerRecordClass GstTracerRecordClass;
 
@@ -40,9 +47,7 @@ typedef struct _GstTracerRecordClass GstTracerRecordClass;
 GST_API
 GType gst_tracer_record_get_type          (void);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTracerRecord, gst_object_unref)
-#endif
 
 /**
  * GstTracerValueScope:
@@ -86,8 +91,6 @@ typedef enum
   GST_TRACER_VALUE_FLAGS_AGGREGATED = (1 << 1),
 } GstTracerValueFlags;
 
-#ifdef GST_USE_UNSTABLE_API
-
 GST_API
 GstTracerRecord * gst_tracer_record_new (const gchar * name, const gchar * firstfield, ...);
 
@@ -96,8 +99,6 @@ GST_API
 void              gst_tracer_record_log (GstTracerRecord *self, ...);
 #else
 #define gst_tracer_record_log(...) G_STMT_START {} G_STMT_END
-#endif
-
 #endif
 
 G_END_DECLS

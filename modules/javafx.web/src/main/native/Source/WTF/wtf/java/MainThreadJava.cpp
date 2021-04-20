@@ -30,26 +30,19 @@
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 
+#if OS(UNIX)
+#include <pthread.h>
+#endif
+
 namespace WTF {
 static JGClass jMainThreadCls;
-static jmethodID fwkIsMainThread;
 static jmethodID fwkScheduleDispatchFunctions;
 
-static void initRefs(JNIEnv* env)
-{
-    if (!jMainThreadCls) {
-        static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
-        jMainThreadCls = jMainThreadRef;
-
-        fwkIsMainThread = env->GetStaticMethodID(jMainThreadCls,
-            "fwkIsMainThread", "()Z");
-        ASSERT(fwkIsMainThread);
-
-        fwkScheduleDispatchFunctions = env->GetStaticMethodID(jMainThreadCls,
-            "fwkScheduleDispatchFunctions", "()V");
-        ASSERT(fwkScheduleDispatchFunctions);
-    }
-}
+#if OS(UNIX)
+static pthread_t mainThread;
+#elif OS(WINDOWS)
+static ThreadIdentifier mainThread { 0 };
+#endif
 
 void scheduleDispatchFunctionsOnMainThread()
 {
@@ -82,28 +75,36 @@ void initializeMainThreadPlatform()
 
     AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
-    initRefs(env);
 
-#if OS(WINDOWS)
+    static JGClass jMainThreadRef(env->FindClass("com/sun/webkit/MainThread"));
+    jMainThreadCls = jMainThreadRef;
+
+    fwkScheduleDispatchFunctions = env->GetStaticMethodID(
+            jMainThreadCls,
+            "fwkScheduleDispatchFunctions",
+            "()V");
+
+    ASSERT(fwkScheduleDispatchFunctions);
+
+#if OS(UNIX)
+    mainThread = pthread_self();
+#elif OS(WINDOWS)
+    mainThread = Thread::currentID();
     RunLoop::registerRunLoopMessageWindowClass();
 #endif
 }
 
-bool isMainThreadIfInitialized()
-{
-    return isMainThread();
-}
-
+#if OS(UNIX)
 bool isMainThread()
 {
-    AttachThreadAsNonDaemonToJavaEnv autoAttach;
-    JNIEnv* env = autoAttach.env();
-    initRefs(env);
-
-    jboolean isMainThread = env->CallStaticBooleanMethod(jMainThreadCls, fwkIsMainThread);
-    WTF::CheckAndClearException(env);
-    return isMainThread == JNI_TRUE;
+    return pthread_equal(pthread_self(), mainThread);
 }
+#elif OS(WINDOWS)
+bool isMainThread()
+{
+    return mainThread == Thread::currentID();
+}
+#endif
 
 extern "C" {
 

@@ -41,11 +41,12 @@
 
 #include "gthread.h"
 
-#include "gthreadprivate.h"
-#include "gslice.h"
-#include "gmessages.h"
-#include "gstrfuncs.h"
 #include "gmain.h"
+#include "gmessages.h"
+#include "gslice.h"
+#include "gstrfuncs.h"
+#include "gtestutils.h"
+#include "gthreadprivate.h"
 #include "gutils.h"
 
 #include <stdlib.h>
@@ -65,6 +66,10 @@
 #endif
 #ifdef G_OS_WIN32
 #include <windows.h>
+#endif
+
+#if defined(HAVE_SYS_SCHED_GETATTR)
+#include <sys/syscall.h>
 #endif
 
 /* clang defines __ATOMIC_SEQ_CST but doesn't support the GCC extension */
@@ -1111,11 +1116,12 @@ g_private_replace (GPrivate *key,
   gint status;
 
   old = pthread_getspecific (*impl);
-  if (old && key->notify)
-    key->notify (old);
 
   if G_UNLIKELY ((status = pthread_setspecific (*impl, value)) != 0)
     g_thread_abort (status, "pthread_setspecific");
+
+  if (old && key->notify)
+    key->notify (old);
 }
 
 /* {{{1 GThread */
@@ -1137,6 +1143,11 @@ typedef struct
   pthread_t system_thread;
   gboolean  joined;
   GMutex    lock;
+
+  void *(*proxy) (void *);
+
+  /* Must be statically allocated and valid forever */
+  const GThreadSchedulerSettings *scheduler_settings;
 } GThreadPosix;
 
 void
@@ -1152,13 +1163,111 @@ g_system_thread_free (GRealThread *thread)
   g_slice_free (GThreadPosix, pt);
 }
 
+gboolean
+g_system_thread_get_scheduler_settings (GThreadSchedulerSettings *scheduler_settings)
+{
+  /* FIXME: Implement the same for macOS and the BSDs so it doesn't go through
+   * the fallback code using an additional thread. */
+#if defined(HAVE_SYS_SCHED_GETATTR)
+  pid_t tid;
+  int res;
+  /* FIXME: The struct definition does not seem to be possible to pull in
+   * via any of the normal system headers and it's only declared in the
+   * kernel headers. That's why we hardcode 56 here right now. */
+  guint size = 56; /* Size as of Linux 5.3.9 */
+  guint flags = 0;
+
+  tid = (pid_t) syscall (SYS_gettid);
+
+  scheduler_settings->attr = g_malloc0 (size);
+
+  do
+    {
+      int errsv;
+
+      res = syscall (SYS_sched_getattr, tid, scheduler_settings->attr, size, flags);
+      errsv = errno;
+      if (res == -1)
+        {
+          if (errsv == EAGAIN)
+            {
+              continue;
+            }
+          else if (errsv == E2BIG)
+            {
+              g_assert (size < G_MAXINT);
+              size *= 2;
+              scheduler_settings->attr = g_realloc (scheduler_settings->attr, size);
+              /* Needs to be zero-initialized */
+              memset (scheduler_settings->attr, 0, size);
+            }
+          else
+            {
+              g_debug ("Failed to get thread scheduler attributes: %s", g_strerror (errsv));
+              g_free (scheduler_settings->attr);
+
+              return FALSE;
+            }
+        }
+    }
+  while (res == -1);
+
+  /* Try setting them on the current thread to see if any system policies are
+   * in place that would disallow doing so */
+  res = syscall (SYS_sched_setattr, tid, scheduler_settings->attr, flags);
+  if (res == -1)
+    {
+      int errsv = errno;
+
+      g_debug ("Failed to set thread scheduler attributes: %s", g_strerror (errsv));
+      g_free (scheduler_settings->attr);
+
+      return FALSE;
+    }
+
+  return TRUE;
+#else
+  return FALSE;
+#endif
+}
+
+#if defined(HAVE_SYS_SCHED_GETATTR)
+static void *
+linux_pthread_proxy (void *data)
+{
+  GThreadPosix *thread = data;
+  static gboolean printed_scheduler_warning = FALSE;  /* (atomic) */
+
+  /* Set scheduler settings first if requested */
+  if (thread->scheduler_settings)
+    {
+      pid_t tid = 0;
+      guint flags = 0;
+      int res;
+      int errsv;
+
+      tid = (pid_t) syscall (SYS_gettid);
+      res = syscall (SYS_sched_setattr, tid, thread->scheduler_settings->attr, flags);
+      errsv = errno;
+      if (res == -1 && g_atomic_int_compare_and_exchange (&printed_scheduler_warning, FALSE, TRUE))
+        g_critical ("Failed to set scheduler settings: %s", g_strerror (errsv));
+      else if (res == -1)
+        g_debug ("Failed to set scheduler settings: %s", g_strerror (errsv));
+      printed_scheduler_warning = TRUE;
+    }
+
+  return thread->proxy (data);
+}
+#endif
+
 GRealThread *
-g_system_thread_new (GThreadFunc   proxy,
-                     gulong        stack_size,
-                     const char   *name,
-                     GThreadFunc   func,
-                     gpointer      data,
-                     GError      **error)
+g_system_thread_new (GThreadFunc proxy,
+                     gulong stack_size,
+                     const GThreadSchedulerSettings *scheduler_settings,
+                     const char *name,
+                     GThreadFunc func,
+                     gpointer data,
+                     GError **error)
 {
   GThreadPosix *thread;
   GRealThread *base_thread;
@@ -1173,6 +1282,8 @@ g_system_thread_new (GThreadFunc   proxy,
   base_thread->thread.func = func;
   base_thread->thread.data = data;
   base_thread->name = g_strdup (name);
+  thread->scheduler_settings = scheduler_settings;
+  thread->proxy = proxy;
 
   posix_check_cmd (pthread_attr_init (&attr));
 
@@ -1190,7 +1301,19 @@ g_system_thread_new (GThreadFunc   proxy,
     }
 #endif /* HAVE_PTHREAD_ATTR_SETSTACKSIZE */
 
+#ifdef HAVE_PTHREAD_ATTR_SETINHERITSCHED
+  if (!scheduler_settings)
+    {
+      /* While this is the default, better be explicit about it */
+      pthread_attr_setinheritsched (&attr, PTHREAD_INHERIT_SCHED);
+    }
+#endif /* HAVE_PTHREAD_ATTR_SETINHERITSCHED */
+
+#if defined(HAVE_SYS_SCHED_GETATTR)
+  ret = pthread_create (&thread->system_thread, &attr, linux_pthread_proxy, thread);
+#else
   ret = pthread_create (&thread->system_thread, &attr, (void* (*)(void*))proxy, thread);
+#endif
 
   posix_check_cmd (pthread_attr_destroy (&attr));
 
@@ -1416,7 +1539,7 @@ void
 g_cond_wait (GCond  *cond,
              GMutex *mutex)
 {
-  guint sampled = g_atomic_int_get (&cond->i[0]);
+  guint sampled = (guint) g_atomic_int_get (&cond->i[0]);
 
   g_mutex_unlock (mutex);
   syscall (__NR_futex, &cond->i[0], (gsize) FUTEX_WAIT_PRIVATE, (gsize) sampled, NULL);

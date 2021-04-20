@@ -107,7 +107,7 @@ public class NGExternalNode extends NGNode {
 
     private Texture createTexture(Graphics g, RenderData rd) {
         ResourceFactory factory = g.getResourceFactory();
-        if (!factory.isDeviceReady()) {
+        if (factory.isDisposed()) {
             return null;
         }
         Texture txt = factory.createTexture(PixelFormat.INT_ARGB_PRE,

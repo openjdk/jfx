@@ -405,3 +405,97 @@ gst_plugin_feature_rank_compare_func (gconstpointer p1, gconstpointer p2)
 
   return diff;
 }
+
+static gboolean
+parse_feature_name (gchar * str, const gchar ** feature)
+{
+  if (!str)
+    return FALSE;
+
+  /* works in place */
+  g_strstrip (str);
+
+  if (str[0] != '\0') {
+    *feature = str;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static gboolean
+parse_feature_rank (gchar * str, GstRank * rank)
+{
+  if (!str)
+    return FALSE;
+
+  /* works in place */
+  g_strstrip (str);
+
+  if (g_ascii_isdigit (str[0])) {
+    unsigned long l;
+    char *endptr;
+    l = strtoul (str, &endptr, 10);
+    if (endptr > str && endptr[0] == 0) {
+      *rank = (GstRank) l;
+    } else {
+      return FALSE;
+    }
+  } else if (g_ascii_strcasecmp (str, "NONE") == 0) {
+    *rank = GST_RANK_NONE;
+  } else if (g_ascii_strcasecmp (str, "MARGINAL") == 0) {
+    *rank = GST_RANK_MARGINAL;
+  } else if (g_ascii_strcasecmp (str, "SECONDARY") == 0) {
+    *rank = GST_RANK_SECONDARY;
+  } else if (g_ascii_strcasecmp (str, "PRIMARY") == 0) {
+    *rank = GST_RANK_PRIMARY;
+  } else if (g_ascii_strcasecmp (str, "MAX") == 0) {
+    *rank = (GstRank) G_MAXINT;
+  } else {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+void
+_priv_gst_plugin_feature_rank_initialize (void)
+{
+  const gchar *env;
+  gchar **split;
+  gchar **walk;
+
+  env = g_getenv ("GST_PLUGIN_FEATURE_RANK");
+
+  if (!env)
+    return;
+
+  split = g_strsplit (env, ",", 0);
+
+  for (walk = split; *walk; walk++) {
+    if (strchr (*walk, ':')) {
+      gchar **values = g_strsplit (*walk, ":", 2);
+
+      if (values[0] && values[1]) {
+        GstRank rank;
+        const gchar *str;
+
+        if (parse_feature_name (values[0], &str)
+            && parse_feature_rank (values[1], &rank)) {
+          GstPluginFeature *feature;
+
+          feature = gst_registry_find_feature (gst_registry_get (), str,
+              GST_TYPE_ELEMENT_FACTORY);
+          if (feature) {
+            gst_plugin_feature_set_rank (feature, rank);
+            GST_DEBUG ("Update rank of plugin feature \"%s\" to %d", str, rank);
+          }
+        }
+      }
+
+      g_strfreev (values);
+    }
+  }
+
+  g_strfreev (split);
+}
