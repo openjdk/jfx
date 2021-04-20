@@ -406,22 +406,6 @@ public class MenuItemTest {
         assertEquals(other.get(), menuItem.isVisible());
     }
 
-    @Test(expected=NullPointerException.class)
-    public void setSpecifiedAccelerator_nullKeyCombination1() {
-        Modifier[] modifierArray = {};
-        KeyCombination kc = new KeyCodeCombination(null, modifierArray);
-        menuItem.setAccelerator(kc);
-        assertEquals(kc, menuItem.getAccelerator());
-    }
-
-    @Test(expected=NullPointerException.class)
-    public void setSpecifiedAccelerator_nullKeyCombination2() {
-        Modifier[] modifierArray = {};
-        KeyCombination kc = new KeyCharacterCombination(null, modifierArray);
-        menuItem.setAccelerator(kc);
-        assertEquals(kc, menuItem.getAccelerator());
-    }
-
     @Test public void setSpecifiedAccelerator1() {
         Modifier[] modifierArray = {};
         KeyCombination kc = new KeyCodeCombination(KeyCode.A, modifierArray);
