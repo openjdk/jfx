@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
@@ -99,7 +100,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void traverse(Event event, Node node, Direction dir) {
-        if (NodeHelper.traverse(node, dir)) {
+        if (NodeHelper.traverse(node, dir, TraversalMethod.KEY)) {
             event.consume();
         }
     }

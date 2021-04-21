@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
@@ -86,27 +87,27 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.PREVIOUS, TraversalMethod.KEY);
                           }
                           else {
-                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT);
+                              NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.NEXT, TraversalMethod.KEY);
                           }
                           event.consume();
                           break;
                       case UP :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.UP, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case DOWN :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.DOWN, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case LEFT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.LEFT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case RIGHT :
-                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          NodeHelper.traverse((Node) obj, com.sun.javafx.scene.traversal.Direction.RIGHT, TraversalMethod.KEY);
                           event.consume();
                           break;
                       case ENTER :

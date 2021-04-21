@@ -29,6 +29,7 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -756,8 +757,8 @@ public class SubScene extends Node {
 
     private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
 
-    boolean traverse(Node node, Direction dir) {
-        return traversalEngine.trav(node, dir) != null;
+    boolean traverse(Node node, Direction dir, TraversalMethod method) {
+        return traversalEngine.trav(node, dir, method) != null;
     }
 
     private enum SubSceneDirtyBits {

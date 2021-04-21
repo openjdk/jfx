@@ -31,6 +31,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
@@ -114,7 +115,7 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
     }
 
     @Override public void transferFocus(boolean forward) {
-        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS);
+        NodeHelper.traverse(accessor.getView(), forward ? Direction.NEXT : Direction.PREVIOUS, TraversalMethod.DEFAULT);
     }
 
     @Override public WCRectangle getScreenBounds(boolean available) {
