@@ -865,11 +865,16 @@ public class ListCellTest {
 
     @Test
     public void testChangeIndexToEditing3_jdk_8264127() {
-        //list.getFocusModel().focus(-1);
+        assertChangeIndexToEditing(1, -1);
+    }
+
+    @Test
+    public void testChangeIndexToEditing4_jdk_8264127() {
         assertChangeIndexToEditing(-1, 0);
     }
 
     private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
+        list.getFocusModel().focus(-1);
         List<EditEvent> events = new ArrayList<EditEvent>();
         list.setOnEditStart(e -> {
             events.add(e);
@@ -883,8 +888,14 @@ public class ListCellTest {
         cell.updateIndex(listEditingIndex);
         assertEquals("sanity: index updated ", listEditingIndex, cell.getIndex());
         assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
-        assertTrue(cell.isEditing());
-        assertTrue("cell re-use must trigger edit events", events.size() == 1);
+        if(listEditingIndex != -1) {
+            assertTrue(cell.isEditing());
+            assertTrue("cell re-use must trigger edit events", events.size() == 1);
+        } else {
+            // -1 represents "not editing" for the listview and "no index" for the list cell.
+            assertTrue(!cell.isEditing());
+            assertTrue("cell re-use must trigger edit events", events.size() == 0);
+        }
     }
 
 }
