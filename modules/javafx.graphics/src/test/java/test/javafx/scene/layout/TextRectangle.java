@@ -25,11 +25,13 @@
 
 package test.javafx.scene.layout;
 
-public class MockTextResizable extends MockResizable {
+import javafx.scene.shape.Rectangle;
+
+public class TextRectangle extends Rectangle {
     private final double baselineOffset;
 
-    public MockTextResizable(double prefWidth, double prefHeight, double baselineOffset) {
-        super(prefWidth, prefHeight);
+    public TextRectangle(double width, double height, double baselineOffset) {
+        super(width, height);
         this.baselineOffset = baselineOffset;
     }
 
