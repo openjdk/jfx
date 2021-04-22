@@ -854,7 +854,6 @@ public class ListCellTest {
 
     @Test
     public void testChangeIndexToEditing1_jdk_8264127() {
-        list.getFocusModel().focus(-1);
         assertChangeIndexToEditing(0, 1);
     }
 
@@ -896,6 +895,20 @@ public class ListCellTest {
             assertTrue(!cell.isEditing());
             assertTrue("cell re-use must trigger edit events", events.size() == 0);
         }
+    }
+
+    @Test
+    public void testUpdateCellIndexOffEditing() {
+        list.getFocusModel().focus(-1);
+        list.setEditable(true);
+        cell.updateListView(list);
+        int editingIndex = 1; // list editing
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        // here we are certain that the cell is in editing state
+        assertTrue("sanity: cell must be editing", cell.isEditing());
+        cell.updateIndex(-1); // change cell index to negative
+        assertFalse("cell must not be editing if cell index is " + cell.getIndex(), cell.isEditing());
     }
 
 }

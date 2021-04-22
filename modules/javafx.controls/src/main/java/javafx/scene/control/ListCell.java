@@ -542,7 +542,11 @@ public class ListCell<T> extends IndexedCell<T> {
         final boolean editing = isEditing();
 
         // Check that the list is specified, and my index is not -1
-        if (index != -1 && list != null) {
+        if (index == -1 || list == null) {
+            if(isEditing()) {
+                cancelEdit();
+            }
+        } else {
             // If my index is the index being edited and I'm not currently in
             // the edit mode, then I need to enter the edit mode
             if (index == editIndex && !editing) {
