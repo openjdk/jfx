@@ -859,7 +859,7 @@ public class Tooltip extends PopupControl {
 
         private boolean hideOnExit;
         private boolean cssForced = false;
-        private boolean mouseInsideTooltip = true;
+        private boolean mouseInsideTooltip = false;
 
         TooltipBehavior(final boolean hideOnExit) {
             this.hideOnExit = hideOnExit;
@@ -1031,8 +1031,7 @@ public class Tooltip extends PopupControl {
          * stop the HIDE_TIMER, hide the tooltip, and start the LEFT_TIMER.
          */
         private EventHandler<MouseEvent> LEAVING_HANDLER = (MouseEvent event) -> {
-            if( mouseInsideTooltip )
-            {
+            if(mouseInsideTooltip) {
                 return;
             }
 
@@ -1080,7 +1079,7 @@ public class Tooltip extends PopupControl {
 
         private EventHandler<MouseEvent> TOOLTIP_MOUSE_EXITED = (MouseEvent event) -> {
             mouseInsideTooltip = false;
-            KILL_HANDLER.handle( null );
+            KILL_HANDLER.handle(null);
         };
 
         private void install(Node node, Tooltip t) {
@@ -1092,9 +1091,9 @@ public class Tooltip extends PopupControl {
             node.addEventHandler(MouseEvent.MOUSE_MOVED, MOVE_HANDLER);
             node.addEventHandler(MouseEvent.MOUSE_EXITED, LEAVING_HANDLER);
             node.addEventHandler(MouseEvent.MOUSE_PRESSED, KILL_HANDLER);
-            t.addEventFilter( MouseEvent.MOUSE_ENTERED_TARGET, TOOLTIP_MOUSE_ENTERED );
-            t.addEventFilter( MouseEvent.MOUSE_EXITED_TARGET, TOOLTIP_MOUSE_EXITED );
-            t.addEventFilter( MouseEvent.MOUSE_PRESSED, KILL_HANDLER );
+            t.addEventFilter(MouseEvent.MOUSE_ENTERED_TARGET, TOOLTIP_MOUSE_ENTERED);
+            t.addEventFilter(MouseEvent.MOUSE_EXITED_TARGET, TOOLTIP_MOUSE_EXITED);
+            t.addEventFilter(MouseEvent.MOUSE_PRESSED, KILL_HANDLER);
             node.getProperties().put(TOOLTIP_PROP_KEY, t);
         }
 
@@ -1105,9 +1104,9 @@ public class Tooltip extends PopupControl {
             node.removeEventHandler(MouseEvent.MOUSE_PRESSED, KILL_HANDLER);
             Tooltip t = (Tooltip)node.getProperties().get(TOOLTIP_PROP_KEY);
             if (t != null) {
-                t.removeEventFilter( MouseEvent.MOUSE_ENTERED_TARGET, TOOLTIP_MOUSE_ENTERED );
-                t.removeEventFilter( MouseEvent.MOUSE_EXITED_TARGET, TOOLTIP_MOUSE_EXITED );
-                t.removeEventFilter( MouseEvent.MOUSE_PRESSED, KILL_HANDLER );
+                t.removeEventFilter(MouseEvent.MOUSE_ENTERED_TARGET, TOOLTIP_MOUSE_ENTERED);
+                t.removeEventFilter(MouseEvent.MOUSE_EXITED_TARGET, TOOLTIP_MOUSE_EXITED);
+                t.removeEventFilter(MouseEvent.MOUSE_PRESSED, KILL_HANDLER);
                 node.getProperties().remove(TOOLTIP_PROP_KEY);
                 if (t.equals(visibleTooltip) || t.equals(activatedTooltip)) {
                     KILL_HANDLER.handle(null);
