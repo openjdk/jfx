@@ -113,15 +113,27 @@ public class FocusTest {
     private void assertIsFocused(Scene s, Node n) {
         assertEquals(n, s.getFocusOwner());
         assertTrue(n.isFocused());
+        assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
     }
 
     private void assertNotFocused(Scene s, Node n) {
         assertTrue(n != s.getFocusOwner());
         assertFalse(n.isFocused());
+        assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focused")));
     }
 
     private void assertNullFocus(Scene s) {
         assertNull(s.getFocusOwner());
+    }
+
+    private void assertIsFocusVisible(Node n) {
+        assertTrue(n.isFocusVisible());
+        assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-visible")));
+    }
+
+    private void assertNotFocusVisible(Node n) {
+        assertFalse(n.isFocusVisible());
+        assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-visible")));
     }
 
     /**
@@ -745,12 +757,12 @@ public class FocusTest {
         scene.setRoot(new Group(node));
 
         assertNotFocused(scene, node);
-        assertFalse(node.isFocusVisible());
+        assertNotFocusVisible(node);
 
         node.requestFocus();
 
         assertIsFocused(scene, node);
-        assertFalse(node.isFocusVisible());
+        assertNotFocusVisible(node);
     }
 
     /**
@@ -762,12 +774,12 @@ public class FocusTest {
         scene.setRoot(g);
 
         assertNotFocused(scene, node);
-        assertFalse(node.isFocusVisible());
+        assertNotFocusVisible(node);
 
         fireTabKeyEvent(g);
 
         assertIsFocused(scene, node);
-        assertTrue(node.isFocusVisible());
+        assertIsFocusVisible(node);
     }
 
     /**
@@ -781,12 +793,12 @@ public class FocusTest {
         fireTabKeyEvent(g);
 
         assertIsFocused(scene, node);
-        assertTrue(node.isFocusVisible());
+        assertIsFocusVisible(node);
 
         node.requestFocus();
 
         assertIsFocused(scene, node);
-        assertFalse(node.isFocusVisible());
+        assertNotFocusVisible(node);
     }
 
     /**
@@ -800,12 +812,12 @@ public class FocusTest {
         fireTabKeyEvent(g);
 
         assertIsFocused(scene, node1);
-        assertTrue(node1.isFocusVisible());
+        assertIsFocusVisible(node1);
 
         node2.requestFocus();
 
         assertNotFocused(scene, node1);
-        assertFalse(node1.isFocusVisible());
+        assertNotFocusVisible(node1);
     }
 
     // TODO: tests for moving nodes between scenes

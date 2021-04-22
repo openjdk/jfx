@@ -4036,6 +4036,12 @@ public class Scene implements EventTarget {
             focusOwner.set(value);
         }
 
+        private void setFocusVisible(Node node, boolean focusVisible) {
+            Node.FocusPropertyBase property = (Node.FocusPropertyBase)node.focusVisibleProperty();
+            property.set(focusVisible);
+            property.notifyListeners();
+        }
+
         private boolean windowFocused;
         protected boolean isWindowFocused() { return windowFocused; }
         protected void setWindowFocused(boolean value) {
@@ -4084,7 +4090,7 @@ public class Scene implements EventTarget {
                     this.focusVisible = focusVisible;
                     setFocusOwner(node);
                 } else {
-                    ((Node.FocusPropertyBase)node.focusVisibleProperty()).set(focusVisible);
+                    setFocusVisible(node, focusVisible);
                 }
             }
         }
