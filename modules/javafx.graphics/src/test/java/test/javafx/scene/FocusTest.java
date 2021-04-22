@@ -27,6 +27,10 @@ package test.javafx.scene;
 
 
 import com.sun.javafx.scene.SceneHelper;
+import javafx.event.Event;
+import javafx.event.EventType;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
@@ -122,6 +126,10 @@ public class FocusTest {
 
     private void assertNullFocus(Scene s) {
         assertNull(s.getFocusOwner());
+    }
+
+    private KeyEvent createKeyEvent(EventType<KeyEvent> type) {
+        return new KeyEvent(type, null, null, KeyCode.TAB, false, false, false, false);
     }
 
     /**
@@ -730,6 +738,80 @@ public class FocusTest {
 
         assertSame(n2, scene.getFocusOwner());
         assertTrue(actionTaken);
+    }
+
+    /**
+     * If a node acquires focus by calling {@link Node#requestFocus()}, it does not acquire visible focus.
+     */
+    @Test public void defaultFocusTraversalDoesNotSetFocusVisible() {
+        Node node = n();
+        scene.setRoot(new Group(node));
+
+        assertNotFocused(scene, node);
+        assertFalse(node.isFocusVisible());
+
+        node.requestFocus();
+
+        assertIsFocused(scene, node);
+        assertFalse(node.isFocusVisible());
+    }
+
+    /**
+     * If a node acquires focus when the TAB key is pressed, it also acquires visible focus.
+     */
+    @Test public void keyFocusTraversalSetsFocusVisible() {
+        Node node = n();
+        Group g = new Group(node);
+        scene.setRoot(g);
+
+        assertNotFocused(scene, node);
+        assertFalse(node.isFocusVisible());
+
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+
+        assertIsFocused(scene, node);
+        assertTrue(node.isFocusVisible());
+    }
+
+    /**
+     * If {@link Node#requestFocus()} is called on a node that has acquired visible focus,
+     * visible focus is removed from the node.
+     */
+    @Test public void focusVisibleIsRemovedByDefaultRequestFocus() {
+        Node node = n();
+        Group g = new Group(node);
+        scene.setRoot(g);
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+
+        assertIsFocused(scene, node);
+        assertTrue(node.isFocusVisible());
+
+        node.requestFocus();
+
+        assertIsFocused(scene, node);
+        assertFalse(node.isFocusVisible());
+    }
+
+    /**
+     * When a node loses focus, it also loses visible focus.
+     */
+    @Test public void visibleFocusIsRemovedWhenFocusIsRemoved() {
+        Node node1 = n();
+        Node node2 = n();
+        Group g = new Group(node1, node2);
+        scene.setRoot(g);
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
+        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+
+        assertIsFocused(scene, node1);
+        assertTrue(node1.isFocusVisible());
+
+        node2.requestFocus();
+
+        assertNotFocused(scene, node1);
+        assertFalse(node1.isFocusVisible());
     }
 
     // TODO: tests for moving nodes between scenes

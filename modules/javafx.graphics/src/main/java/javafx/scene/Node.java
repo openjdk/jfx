@@ -8325,11 +8325,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public void requestFocus() {
         if (getScene() != null) {
-            if (getScene().getFocusOwner() == this) {
-                pseudoClassStateChanged(FOCUS_VISIBLE_PSEUDOCLASS_STATE, false);
-            } else {
-                getScene().requestFocus(this, false);
-            }
+            getScene().requestFocus(this, false);
         }
     }
 
@@ -8339,11 +8335,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private void requestFocusVisible() {
         if (getScene() != null) {
-            if (getScene().getFocusOwner() == this) {
-                pseudoClassStateChanged(FOCUS_VISIBLE_PSEUDOCLASS_STATE, true);
-            } else {
-                getScene().requestFocus(this, true);
-            }
+            getScene().requestFocus(this, true);
         }
     }
 
