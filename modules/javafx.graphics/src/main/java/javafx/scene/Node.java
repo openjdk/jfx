@@ -8331,7 +8331,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Requests focus as if by calling {@link Node#requestFocus()}, and additionally
-     * sets the :focus-visible pseudoclass for the current node.
+     * sets the {@code Node#isFocusVisible} flag.
      */
     private void requestFocusVisible() {
         if (getScene() != null) {

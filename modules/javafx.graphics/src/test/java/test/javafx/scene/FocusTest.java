@@ -28,7 +28,6 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
 import javafx.event.Event;
-import javafx.event.EventType;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import test.com.sun.javafx.pgstub.StubScene;
@@ -43,10 +42,7 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.List;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
@@ -126,10 +122,6 @@ public class FocusTest {
 
     private void assertNullFocus(Scene s) {
         assertNull(s.getFocusOwner());
-    }
-
-    private KeyEvent createKeyEvent(EventType<KeyEvent> type) {
-        return new KeyEvent(type, null, null, KeyCode.TAB, false, false, false, false);
     }
 
     /**
@@ -740,6 +732,11 @@ public class FocusTest {
         assertTrue(actionTaken);
     }
 
+    private void fireTabKeyEvent(Node node) {
+        Event.fireEvent(node, new KeyEvent(KeyEvent.KEY_PRESSED, null, null, KeyCode.TAB, false, false, false, false));
+        Event.fireEvent(node, new KeyEvent(KeyEvent.KEY_RELEASED, null, null, KeyCode.TAB, false, false, false, false));
+    }
+
     /**
      * If a node acquires focus by calling {@link Node#requestFocus()}, it does not acquire visible focus.
      */
@@ -767,8 +764,7 @@ public class FocusTest {
         assertNotFocused(scene, node);
         assertFalse(node.isFocusVisible());
 
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+        fireTabKeyEvent(g);
 
         assertIsFocused(scene, node);
         assertTrue(node.isFocusVisible());
@@ -782,8 +778,7 @@ public class FocusTest {
         Node node = n();
         Group g = new Group(node);
         scene.setRoot(g);
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+        fireTabKeyEvent(g);
 
         assertIsFocused(scene, node);
         assertTrue(node.isFocusVisible());
@@ -802,8 +797,7 @@ public class FocusTest {
         Node node2 = n();
         Group g = new Group(node1, node2);
         scene.setRoot(g);
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_PRESSED));
-        Event.fireEvent(g, createKeyEvent(KeyEvent.KEY_RELEASED));
+        fireTabKeyEvent(g);
 
         assertIsFocused(scene, node1);
         assertTrue(node1.isFocusVisible());
