@@ -3461,8 +3461,6 @@ project(":web") {
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
         def webkitProperties = targetProperties.webkit
-        def classifier = (t.name != "linux" && t.name != "win") ? t.name :
-                          IS_64 ? IS_AARCH64 ? "${t.name}-aarch64" : "${t.name}-amd64" : "${t.name}-i586"
 
         def webkitOutputDir = cygpath("$buildDir/${t.name}")
         def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
