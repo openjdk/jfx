@@ -342,6 +342,31 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(6));
     }
 
+    @Test public void clearAndSelectFiresDisjointRemovedChanges() {
+        List<List<?>> removed = new ArrayList<>();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectAll();
+        model.getSelectedItems().addListener((ListChangeListener<?>) change -> {
+            while (change.next()) {
+                if (change.wasRemoved()) {
+                    removed.add(new ArrayList<>(change.getRemoved()));
+                }
+            }
+        });
+
+        model.clearAndSelect(1);
+
+        assertEquals(2, removed.size());
+        List<?> firstRange = removed.get(0);
+        List<?> secondRange = removed.get(1);
+
+        assertEquals(1, firstRange.size());
+        assertEquals("Row 1", isTree() ? ((TreeItem<String>)firstRange.get(0)).getValue() : firstRange.get(0));
+
+        assertEquals(18, secondRange.size());
+        assertEquals("Long Row 3", isTree() ? ((TreeItem<String>)secondRange.get(0)).getValue() : secondRange.get(0));
+    }
+
     @Test public void testSelectedIndicesObservableListIsEmpty() {
         assertTrue(msModel().getSelectedIndices().isEmpty());
     }
