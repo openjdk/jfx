@@ -79,6 +79,8 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
+
+import org.junit.After;
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -101,6 +103,20 @@ public class CssMetaDataTest {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
         return null;
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @After
+    public void cleanup() {
+        resetStyleManager();
     }
 
     /**
@@ -268,7 +284,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -371,10 +387,9 @@ public class CssMetaDataTest {
     @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
-
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -498,7 +513,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -622,7 +637,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -750,7 +765,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -961,7 +976,6 @@ public class CssMetaDataTest {
     @Ignore("JDK-8234142")
     @Test
     public void testGetMatchingStylesReturnsInheritedProperty() {
-
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
