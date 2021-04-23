@@ -64,6 +64,7 @@ public class ProgressIndicatorLeakTest {
     @Test
     public void leakDeterminationIndicator() throws Exception {
         JMemoryBuddy.memoryTest((checker) -> {
+            CountDownLatch showingLatch = new CountDownLatch(1);
             Util.runAndWait(() -> {
                 Stage stage = new Stage();
                 ProgressIndicator indicator = new ProgressIndicator(-1);
@@ -76,8 +77,16 @@ public class ProgressIndicatorLeakTest {
                 indicator.setProgress(-1.0);
                 indicator.setProgress(1.0);
                 checker.assertCollectable(detIndicator);
+                stage.setOnShown(l -> {
+                    Platform.runLater(() -> showingLatch.countDown());
+                });
                 stage.show();
             });
+            try {
+                Assert.assertTrue("Timeout waiting for setOnShown", showingLatch.await(15, TimeUnit.SECONDS));
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 
