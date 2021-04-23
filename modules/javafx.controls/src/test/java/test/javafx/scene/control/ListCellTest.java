@@ -853,6 +853,11 @@ public class ListCellTest {
 
     @Test
     public void testChangeIndexToEditing4_jdk_8264127() {
+        assertChangeIndexToEditing(0, -1);
+    }
+
+    @Test
+    public void testChangeIndexToEditing5_jdk_8264127() {
         assertChangeIndexToEditing(-1, 0);
     }
 
