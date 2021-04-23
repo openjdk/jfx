@@ -23,7 +23,7 @@
  * questions.
  */
 
-package test.javafx.css;
+package test.javafx.scene.control.css;
 
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
