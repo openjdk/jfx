@@ -837,22 +837,6 @@ public class ListCellTest {
     }
 
     @Test
-    public void testChangeIndexWhileEditing_jdk_8264127() {
-        List<EditEvent> events = new ArrayList<EditEvent>();
-        list.setOnEditCancel(e -> {
-            events.add(e);
-        });
-        list.setEditable(true);
-        cell.updateListView(list);
-        cell.updateIndex(1);
-        list.edit(1);
-        cell.updateIndex(0);
-        assertTrue(!cell.isEditing());
-        assertEquals("Should still be editing 1", list.getEditingIndex(), 1);
-        assertTrue("cell re-use must trigger cancel events", events.size() == 1);
-    }
-
-    @Test
     public void testChangeIndexToEditing1_jdk_8264127() {
         assertChangeIndexToEditing(0, 1);
     }
@@ -889,26 +873,46 @@ public class ListCellTest {
         assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
         if(listEditingIndex != -1) {
             assertTrue(cell.isEditing());
-            assertTrue("cell re-use must trigger edit events", events.size() == 1);
+            assertEquals(1, events.size());
         } else {
             // -1 represents "not editing" for the listview and "no index" for the list cell.
-            assertTrue(!cell.isEditing());
-            assertTrue("cell re-use must trigger edit events", events.size() == 0);
+            assertFalse(cell.isEditing());
+            assertEquals(0, events.size());
         }
     }
 
     @Test
-    public void testUpdateCellIndexOffEditing() {
+    public void testChangeIndexOffEditing0_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(1, 0);
+    }
+    @Test
+    public void testChangeIndexOffEditing1_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(1, -1);
+    }
+    @Test
+    public void testChangeIndexOffEditing2_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(0, 1);
+    }
+    @Test
+    public void testChangeIndexOffEditing3_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(0, -1);
+    }
+
+    public void assertUpdateCellIndexOffEditing(int editingIndex, int cancelIndex) {
         list.getFocusModel().focus(-1);
+        List<EditEvent> events = new ArrayList<EditEvent>();
+        list.setOnEditCancel(e -> {
+            events.add(e);
+        });
         list.setEditable(true);
         cell.updateListView(list);
-        int editingIndex = 1; // list editing
         cell.updateIndex(editingIndex);
         list.edit(editingIndex);
         // here we are certain that the cell is in editing state
         assertTrue("sanity: cell must be editing", cell.isEditing());
-        cell.updateIndex(-1); // change cell index to negative
+        cell.updateIndex(cancelIndex); // change cell index to negative
         assertFalse("cell must not be editing if cell index is " + cell.getIndex(), cell.isEditing());
+        assertEquals(1, events.size());
     }
 
 }

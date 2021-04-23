@@ -541,10 +541,11 @@ public class ListCell<T> extends IndexedCell<T> {
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
 
-        // Check that the list is specified, and my index is not -1
         if (index == -1 || list == null) {
-            if(isEditing()) {
+            if(editing) {
+                updateEditingIndex = false;
                 cancelEdit();
+                updateEditingIndex = true;
             }
         } else {
             // If my index is the index being edited and I'm not currently in
