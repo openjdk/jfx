@@ -206,21 +206,19 @@ class ControlUtils {
         if (removed.isEmpty()) return;
 
         int startPos = 0;
-        int endPos = 1;
-        boolean firedOnce = false;
-        while (endPos < removed.size()) {
-            if (removed.get(startPos) == removed.get(endPos) - 1) {
-                endPos++;
-                continue;
-            }
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(startPos)), removed.subList(startPos, endPos));
-            startPos = endPos;
-            endPos = startPos + 1;
-            firedOnce = true;
-        }
+        int totalRemoved = 0;
 
-        if (!firedOnce) {
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
+        for (int endPos = 0, max = removed.size(); endPos < max; ++endPos) {
+            while (endPos < max - 1 && removed.get(endPos) == removed.get(endPos + 1) - 1) {
+                ++endPos;
+            }
+
+            selectedIndices._nextRemove(
+                selectedIndices.indexOf(removed.get(startPos)) - totalRemoved,
+                removed.subList(startPos, endPos + 1));
+
+            totalRemoved += endPos - startPos + 1;
+            startPos = endPos + 1;
         }
     }
 }
