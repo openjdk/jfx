@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -32,13 +33,10 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 class ControlUtils {
-    private ControlUtils() { }
 
     public static void scrollToIndex(final Control control, int index) {
         Utils.executeOnceWhenPropertyIsNonNull(control.skinProperty(), (Skin<?> skin) -> {
@@ -204,7 +202,7 @@ class ControlUtils {
 
     // Given a listen of removed elements, we create the minimal number of changes by coalescing elements that are
     // adjacent
-    static void reducingChange(MultipleSelectionModelBase<?>.SelectedIndicesList selectedIndices, List<Integer> removed) {
+    static void reducingChange(ReadOnlyUnbackedObservableList<Integer> selectedIndices, List<Integer> removed) {
         if (removed.isEmpty()) return;
 
         int startPos = 0;

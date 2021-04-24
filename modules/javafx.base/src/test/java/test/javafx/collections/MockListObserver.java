@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,6 +157,11 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     public void check1() {
         assertFalse(tooManyCalls);
         assertEquals(1, calls.size());
+    }
+
+    public void checkN(int n) {
+        assertFalse(tooManyCalls);
+        assertEquals(n, calls.size());
     }
 
     public void clear() {
