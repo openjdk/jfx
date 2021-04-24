@@ -28,7 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import java.util.List;
 
-public class ControlUtilsShim extends ControlUtils {
+public class ControlUtilsShim {
 
     public static void reducingChange(ReadOnlyUnbackedObservableList<Integer> selectedIndices, List<Integer> removed) {
         ControlUtils.reducingChange(selectedIndices, removed);

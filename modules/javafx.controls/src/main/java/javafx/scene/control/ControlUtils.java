@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 class ControlUtils {
+    private ControlUtils() {}
 
     public static void scrollToIndex(final Control control, int index) {
         Utils.executeOnceWhenPropertyIsNonNull(control.skinProperty(), (Skin<?> skin) -> {
