@@ -35,11 +35,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Region;
+import javafx.scene.robot.Robot;
 import test.robot.testharness.VisualTestBase;
 
 /**
@@ -59,10 +61,12 @@ public abstract class RegionUITestBase extends VisualTestBase {
     protected Scene scene;
     protected Group root;
     protected Region region;
+    private volatile WritableImage screenCapture;
 
     @Override
     public void doSetup() {
         super.doSetup();
+        screenCapture = null;
         runAndWait(() -> {
             stage = getStage();
             region = new Region();
@@ -71,6 +75,7 @@ public abstract class RegionUITestBase extends VisualTestBase {
             scene = new Scene(root = new Group(region), WIDTH, HEIGHT);
             scene.setFill(SCENE_FILL);
             stage.setScene(scene);
+            stage.setAlwaysOnTop(true);
             stage.show();
         });
     }
@@ -98,17 +103,35 @@ public abstract class RegionUITestBase extends VisualTestBase {
     }
 
     protected void assertColorEquals(Color expected, int x, int y, double tolerance) {
-        Color actual = getColorThreadSafe(x, y);
+        Color actual = getColorFromScreenCapture(x, y);
         try {
             assertColorEquals(expected, actual, tolerance);
         } catch (AssertionError error) {
-            throw new AssertionError(error.getMessage() + " at position x=" + x + ", y=" + y);
+            actual = getColorThreadSafe(x, y);
+            try {
+                assertColorEquals(expected, actual, tolerance);
+            } catch (AssertionError ex) {
+                throw new AssertionError(ex.getMessage() + " at position x=" + x + ", y=" + y);
+            }
         }
     }
 
     protected void assertColorDoesNotEqual(Color notExpected, int x, int y, double tolerance) {
         Color actual = getColorThreadSafe(x, y);
         assertColorDoesNotEqual(notExpected, actual, tolerance);
+    }
+
+    private Color getColorFromScreenCapture(int x, int y) {
+        if (screenCapture == null) {
+            runAndWait(() -> {
+                screenCapture = new WritableImage((int)scene.getWidth(), (int)scene.getHeight());
+                getRobot().getScreenCapture(screenCapture,
+                    scene.getX() + scene.getWindow().getX(),
+                    scene.getY() + scene.getWindow().getY(),
+                    scene.getWidth(), scene.getHeight());
+            });
+        }
+        return screenCapture.getPixelReader().getColor(x, y);
     }
 
     private Color getColorThreadSafe(int x, int y) {

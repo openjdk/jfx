@@ -1,4 +1,4 @@
-/* Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,13 @@
  * questions.
  */
 #include "com_sun_glass_ui_monocle_EGLAcceleratedScreen.h"
+#include "com_sun_glass_ui_monocle_EGLPlatform.h"
+#include "com_sun_glass_ui_monocle_EGLScreen.h"
 #include "Monocle.h"
 #include "egl_ext.h"
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nPlatformGetNativeWindow
-    (JNIEnv *env, jobject obj, jstring cardId) {
+    (JNIEnv *env, jobject UNUSED(obj), jstring cardId) {
     const char *ccid = (*env)->GetStringUTFChars(env, cardId, NULL);
     long answer = getNativeWindowHandle(ccid);
     (*env)->ReleaseStringUTFChars(env, cardId, ccid);
@@ -34,25 +36,25 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nPlat
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nGetEglDisplayHandle
-    (JNIEnv *env, jobject obj) {
+    (JNIEnv *UNUSED(env), jobject UNUSED(obj)) {
     long answer = getEglDisplayHandle();
     return (jlong)answer;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglInitialize
-    (JNIEnv *env, jclass clazz, jlong eglDisplay) {
+    (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong eglDisplay) {
     jboolean answer = doEglInitialize(asPtr(eglDisplay));
     return answer;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglBindApi
-    (JNIEnv *env, jclass clazz, jint api) {
+    (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint api) {
     jboolean answer = doEglBindApi((int)api);
     return answer;
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglChooseConfig
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jintArray attribs) {
+    (JNIEnv *env, jobject UNUSED(obj), jlong eglDisplay, jintArray attribs) {
     jint *attrArray = (*env)->GetIntArrayElements(env, attribs, JNI_FALSE);
     if (attrArray == 0) {
         fprintf(stderr, "Fatal error getting int* from int[]\n");
@@ -64,27 +66,76 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglC
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglCreateWindowSurface
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jlong config, jlong nativeWindow) {
+    (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong eglDisplay, jlong config, jlong nativeWindow) {
     jlong answer = doEglCreateWindowSurface(eglDisplay, config, nativeWindow);
     return answer;
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglCreateContext
- (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong config) {
+ (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong eglDisplay, jlong config) {
     jlong answer = doEglCreateContext(eglDisplay, config);
     return answer;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglMakeCurrent
-   (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong drawSurface,
+   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong eglDisplay, jlong drawSurface,
     jlong readSurface, jlong eglContext) {
     jlong answer = doEglMakeCurrent(eglDisplay, drawSurface, readSurface, eglContext);
     return answer;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGLAcceleratedScreen_nEglSwapBuffers
-    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong eglSurface)  {
+    (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong eglDisplay, jlong eglSurface)  {
     jlong answer = doEglSwapBuffers(eglDisplay, eglSurface);
     return answer;
 }
 
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetHandle
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetHandle(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetDepth
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetDepth(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetWidth
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetWidth(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetHeight
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetHeight(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetOffsetX
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetOffsetX(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetOffsetY
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetOffsetY(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetDpi
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetDpi(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetNativeFormat
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetNativeFormat(idx);
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetScale
+(JNIEnv *UNUSED(env), jobject UNUSED(obj), jint idx)  {
+    return doGetScale(idx);
+}
+
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLPlatform_nGetNumberOfScreens
+(JNIEnv *UNUSED(env), jobject UNUSED(obj)) {
+    return doGetNumberOfScreens();
+}

@@ -40,8 +40,13 @@ class LinkTask extends DefaultTask {
         project.exec({
             commandLine(linker);
             if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
-              args("rcs");
-              args("$lib");
+                if (linker.equals("ld")) {
+                    args("-r");
+                    args("-o");
+                } else {
+                    args("rcs");
+                }
+                args("$lib");
             }
             // Exclude parfait files (.bc)
             args(objectDir.listFiles().findAll{ !it.getAbsolutePath().endsWith(".bc") });

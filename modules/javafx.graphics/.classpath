@@ -38,7 +38,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/com.sun.javafx.property=javafx.graphics"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx.property=javafx.graphics:javafx.base/test.util.memory=javafx.graphics"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">

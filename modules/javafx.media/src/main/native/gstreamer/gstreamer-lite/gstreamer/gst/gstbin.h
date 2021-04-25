@@ -160,7 +160,7 @@ struct _GstBin {
  * added to any bin inside this bin, so it will also be called if a new child
  * was added to a sub-bin of this bin. #GstBin implementations that override
  * this message should chain up to the parent class implementation so the
- * element-added-deep signal is emitted on all parents.
+ * #GstBin::deep-element-added signal is emitted on all parents.
  */
 struct _GstBinClass {
   GstElementClass parent_class;
@@ -237,6 +237,9 @@ GstIterator*  gst_bin_iterate_sources    (GstBin *bin);
 GST_API
 GstIterator*  gst_bin_iterate_all_by_interface (GstBin *bin, GType iface);
 
+GST_API
+GstIterator*    gst_bin_iterate_all_by_element_factory_name (GstBin * bin, const gchar * factory_name);
+
 /* latency */
 
 GST_API
@@ -250,9 +253,7 @@ void            gst_bin_set_suppressed_flags (GstBin * bin, GstElementFlags flag
 GST_API
 GstElementFlags gst_bin_get_suppressed_flags (GstBin * bin);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBin, gst_object_unref)
-#endif
 
 G_END_DECLS
 

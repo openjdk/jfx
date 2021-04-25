@@ -26,6 +26,8 @@
  * GstDynamicTypeFactory:
  *
  * The opaque #GstDynamicTypeFactory data structure.
+ *
+ * Since: 1.12
  */
 typedef struct _GstDynamicTypeFactory GstDynamicTypeFactory;
 typedef struct _GstDynamicTypeFactoryClass GstDynamicTypeFactoryClass;

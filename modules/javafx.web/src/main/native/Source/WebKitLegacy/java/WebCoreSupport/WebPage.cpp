@@ -82,6 +82,7 @@
 #include <WebCore/GraphicsLayerTextureMapper.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/LogInitialization.h>
 #include <WebCore/NodeTraversal.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageConfiguration.h>
@@ -853,7 +854,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
-    WebKitInitializeLogChannelsIfNecessary();
+    initializeLogChannelsIfNecessary();
 #endif
     WebCore::PlatformStrategiesJava::initialize();
 

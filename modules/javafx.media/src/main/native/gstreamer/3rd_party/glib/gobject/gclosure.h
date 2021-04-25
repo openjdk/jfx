@@ -202,7 +202,7 @@ struct _GClosure
 
   /* invariants/constraints:
    * - ->marshal and ->data are _invalid_ as soon as ->is_invalid==TRUE
-   * - invocation of all inotifiers occours prior to fnotifiers
+   * - invocation of all inotifiers occurs prior to fnotifiers
    * - order of inotifiers is random
    *   inotifiers may _not_ free/invalidate parameter values (e.g. ->data)
    * - order of fnotifiers is random

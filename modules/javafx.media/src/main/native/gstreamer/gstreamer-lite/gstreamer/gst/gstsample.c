@@ -28,6 +28,7 @@
  * A #GstSample is a small object containing data, a type, timing and
  * extra arbitrary information.
  */
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 
 #include "gstsample.h"
@@ -431,4 +432,49 @@ gst_sample_set_info (GstSample * sample, GstStructure * info)
 had_parent:
   g_warning ("structure is already owned by another object");
   return FALSE;
+}
+
+/**
+ * gst_sample_ref: (skip)
+ * @sample: a #GstSample
+ *
+ * Increases the refcount of the given sample by one.
+ *
+ * Returns: (transfer full): @sample
+ */
+GstSample *
+gst_sample_ref (GstSample * sample)
+{
+  return GST_SAMPLE_CAST (gst_mini_object_ref (GST_MINI_OBJECT_CAST (sample)));
+}
+
+/**
+ * gst_sample_unref: (skip)
+ * @sample: (transfer full): a #GstSample
+ *
+ * Decreases the refcount of the sample. If the refcount reaches 0, the
+ * sample will be freed.
+ */
+void
+gst_sample_unref (GstSample * sample)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (sample));
+}
+
+/**
+ * gst_sample_copy: (skip)
+ * @buf: a #GstSample.
+ *
+ * Create a copy of the given sample. This will also make a newly allocated
+ * copy of the data the source sample contains.
+ *
+ * Returns: (transfer full): a new copy of @buf.
+ *
+ * Since: 1.2
+ */
+GstSample *
+gst_sample_copy (const GstSample * buf)
+{
+  return
+      GST_SAMPLE_CAST (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (buf)));
 }

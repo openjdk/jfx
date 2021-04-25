@@ -116,7 +116,7 @@ public:
      * @return    return a polymorphic copy of this calendar.
      * @internal
      */
-    virtual Calendar* clone(void) const;
+    virtual JapaneseCalendar* clone() const;
 
     /**
      * Return the extended year defined by the current fields.  In the
@@ -167,7 +167,7 @@ public:
     virtual const char * getType() const;
 
     /**
-     * @return FALSE - no default century in Japanese
+     * @return false - no default century in Japanese
      * @internal
      */
     virtual UBool haveDefaultCentury() const;

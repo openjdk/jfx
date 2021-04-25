@@ -309,6 +309,9 @@ add_executable(LLIntOffsetsExtractor
 
 target_link_libraries(LLIntSettingsExtractor WebKit::WTF)
 add_dependencies(LLIntSettingsExtractor JavaScriptCore_CopyHeaders)
+if (UNIX AND NOT APPLE AND CMAKE_BUILD_TYPE STREQUAL "Debug" AND PORT STREQUAL "Java")
+    target_link_libraries(LLIntOffsetsExtractor icuuc icui18n icudata)
+endif()
 target_link_libraries(LLIntOffsetsExtractor WebKit::WTF)
 add_dependencies(LLIntOffsetsExtractor JavaScriptCore_CopyHeaders)
 
@@ -1382,7 +1385,16 @@ endif ()
 if (CMAKE_COMPILER_IS_GNUCXX AND GCC_OFFLINEASM_SOURCE_MAP)
     message(STATUS "Enabling asm postprocessing")
 
-    set(LowLevelInterpreter_LAUNCHER "${JavaScriptCore_SCRIPTS_SOURCES_DIR}/postprocess-asm")
+    if (PORT STREQUAL "Java")
+        file(
+            COPY ${JavaScriptCore_SCRIPTS_SOURCES_DIR}/postprocess-asm ${JavaScriptCore_SCRIPTS_SOURCES_DIR}/resolve-asm-file-conflicts.rb
+            FILE_PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_READ GROUP_WRITE GROUP_READ WORLD_READ
+            DESTINATION ${JavaScriptCore_SCRIPTS_DIR}
+        )
+        set(LowLevelInterpreter_LAUNCHER "${JavaScriptCore_SCRIPTS_DIR}/postprocess-asm")
+    else ()
+        set(LowLevelInterpreter_LAUNCHER "${JavaScriptCore_SCRIPTS_SOURCES_DIR}/postprocess-asm")
+    endif ()
     get_target_property(PROP_RULE_LAUNCH_COMPILE LowLevelInterpreterLib RULE_LAUNCH_COMPILE)
     if (PROP_RULE_LAUNCH_COMPILE)
         set(LowLevelInterpreter_LAUNCHER "${LowLevelInterpreter_LAUNCHER} ${PROP_RULE_LAUNCH_COMPILE}")

@@ -203,6 +203,18 @@ public class TableViewTest {
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
+    @Test public void noArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>();
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
+    @Test public void singleArgConstructorSetsDefaultColumnResizePolicyPseudoclass() {
+        TableView<?> view = new TableView<>(FXCollections.observableArrayList());
+        assertTrue(view.getPseudoClassStates().stream().anyMatch(
+            c -> c.getPseudoClassName().equals(TableView.UNCONSTRAINED_RESIZE_POLICY.toString())));
+    }
+
     /*********************************************************************
      * Tests for selection model                                         *
      ********************************************************************/
@@ -1447,14 +1459,14 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        assertEquals(14, rt_31200_count);
+        assertEquals(17, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(14, rt_31200_count);
+        assertEquals(17, rt_31200_count);
 
         sl.dispose();
     }

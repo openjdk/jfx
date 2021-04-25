@@ -241,7 +241,7 @@ struct _GOptionContext
 {
   GList           *groups;
 
-  gchar           *parameter_string;
+  gchar           *parameter_string;  /* (nullable) */
   gchar           *summary;
   gchar           *description;
 
@@ -363,6 +363,11 @@ g_option_context_new (const gchar *parameter_string)
   GOptionContext *context;
 
   context = g_new0 (GOptionContext, 1);
+
+  /* Clear the empty string to NULL, otherwise we end up calling gettext(""),
+   * which returns the translation header. */
+  if (parameter_string != NULL && *parameter_string == '\0')
+    parameter_string = NULL;
 
   context->parameter_string = g_strdup (parameter_string);
   context->strict_posix = FALSE;
@@ -640,7 +645,7 @@ g_option_context_get_main_group (GOptionContext *context)
 /**
  * g_option_context_add_main_entries:
  * @context: a #GOptionContext
- * @entries: a %NULL-terminated array of #GOptionEntrys
+ * @entries: (array zero-terminated=1): a %NULL-terminated array of #GOptionEntrys
  * @translation_domain: (nullable): a translation domain to use for translating
  *    the `--help` output for the options in @entries
  *    with gettext(), or %NULL
@@ -1833,8 +1838,10 @@ platform_get_argv0 (void)
           NULL))
     return NULL;
 
-  /* Sanity check for a NUL terminator. */
-  g_assert (memchr (cmdline, 0, len));
+  /* g_file_get_contents() guarantees to put a NUL immediately after the
+   * file's contents (at cmdline[len] here), even if the file itself was
+   * not NUL-terminated. */
+  g_assert (memchr (cmdline, 0, len + 1));
 
   /* We could just return cmdline, but I think it's better
    * to hold on to a smaller malloc block; the arguments
@@ -2398,7 +2405,7 @@ g_option_group_unref (GOptionGroup *group)
 /**
  * g_option_group_add_entries:
  * @group: a #GOptionGroup
- * @entries: a %NULL-terminated array of #GOptionEntrys
+ * @entries: (array zero-terminated=1): a %NULL-terminated array of #GOptionEntrys
  *
  * Adds the options specified in @entries to @group.
  *
@@ -2414,6 +2421,8 @@ g_option_group_add_entries (GOptionGroup       *group,
   g_return_if_fail (entries != NULL);
 
   for (n_entries = 0; entries[n_entries].long_name != NULL; n_entries++) ;
+
+  g_return_if_fail (n_entries <= G_MAXSIZE - group->n_entries);
 
   group->entries = g_renew (GOptionEntry, group->entries, group->n_entries + n_entries);
 

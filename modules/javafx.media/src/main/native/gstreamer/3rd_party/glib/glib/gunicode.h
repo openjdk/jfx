@@ -424,6 +424,10 @@ typedef enum
  * @G_UNICODE_SCRIPT_NANDINAGARI:          Nand. Since: 2.62
  * @G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG: Rohg. Since: 2.62
  * @G_UNICODE_SCRIPT_WANCHO:               Wcho. Since: 2.62
+ * @G_UNICODE_SCRIPT_CHORASMIAN:           Chorasmian. Since: 2.66
+ * @G_UNICODE_SCRIPT_DIVES_AKURU:          Dives Akuru. Since: 2.66
+ * @G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT:  Khitan small script. Since: 2.66
+ * @G_UNICODE_SCRIPT_YEZIDI:               Yezidi. Since: 2.66
  *
  * The #GUnicodeScript enumeration identifies different writing
  * systems. The values correspond to the names as defined in the
@@ -615,7 +619,13 @@ typedef enum
   G_UNICODE_SCRIPT_ELYMAIC,                /* Elym */
   G_UNICODE_SCRIPT_NANDINAGARI,            /* Nand */
   G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG, /* Rohg */
-  G_UNICODE_SCRIPT_WANCHO                  /* Wcho */
+  G_UNICODE_SCRIPT_WANCHO,                 /* Wcho */
+
+  /* Unicode 13.0 additions */
+  G_UNICODE_SCRIPT_CHORASMIAN,             /* Chrs */
+  G_UNICODE_SCRIPT_DIVES_AKURU,            /* Diak */
+  G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT,    /* Kits */
+  G_UNICODE_SCRIPT_YEZIDI                  /* Yezi */
 } GUnicodeScript;
 
 GLIB_AVAILABLE_IN_ALL

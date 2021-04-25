@@ -330,9 +330,7 @@ GstClockTime    gst_object_get_control_rate       (GstObject * object);
 GST_API
 void            gst_object_set_control_rate       (GstObject * object, GstClockTime control_rate);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstObject, gst_object_unref)
-#endif
 
 G_END_DECLS
 

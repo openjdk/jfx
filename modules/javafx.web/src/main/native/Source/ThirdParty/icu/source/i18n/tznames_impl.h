@@ -92,9 +92,9 @@ struct CharacterNode {
     UBool    fHasValuesVector;
     UBool    fPadding;
 
-    // No value:   fValues == NULL               and  fHasValuesVector == FALSE
-    // One value:  fValues == value              and  fHasValuesVector == FALSE
-    // >=2 values: fValues == UVector of values  and  fHasValuesVector == TRUE
+    // No value:   fValues == NULL               and  fHasValuesVector == false
+    // One value:  fValues == value              and  fHasValuesVector == false
+    // >=2 values: fValues == UVector of values  and  fHasValuesVector == true
 };
 
 inline UBool CharacterNode::hasValues() const {
@@ -174,7 +174,7 @@ public:
     virtual ~TimeZoneNamesImpl();
 
     virtual UBool operator==(const TimeZoneNames& other) const;
-    virtual TimeZoneNames* clone() const;
+    virtual TimeZoneNamesImpl* clone() const;
 
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
     StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;
@@ -236,7 +236,7 @@ public:
     virtual ~TZDBTimeZoneNames();
 
     virtual UBool operator==(const TimeZoneNames& other) const;
-    virtual TimeZoneNames* clone() const;
+    virtual TZDBTimeZoneNames* clone() const;
 
     StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const;
     StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const;

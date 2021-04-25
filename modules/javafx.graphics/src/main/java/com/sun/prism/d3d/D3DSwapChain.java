@@ -81,6 +81,9 @@ class D3DSwapChain
     @Override
     public boolean present() {
         D3DContext context = getContext();
+        if (context.isDisposed()) {
+            return false;
+        }
         int res = nPresent(context.getContextHandle(), d3dResRecord.getResource());
         return context.validatePresent(res);
     }

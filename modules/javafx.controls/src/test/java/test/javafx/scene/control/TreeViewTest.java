@@ -906,7 +906,9 @@ public class TreeViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
     @Test public void test_rt27180_collapseBranch_childSelected_singleSelection() {

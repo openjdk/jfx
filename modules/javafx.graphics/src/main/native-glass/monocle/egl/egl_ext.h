@@ -40,4 +40,16 @@ extern jboolean doEglMakeCurrent(jlong eglDisplay, jlong drawSurface,
      jlong readSurface, jlong eglContext);
 
 extern jboolean doEglSwapBuffers(jlong eglDisplay, jlong eglSurface);
+
+extern jlong doGetHandle(jint idx);
+extern jint doGetDepth(jint idx);
+extern jint doGetWidth(jint idx);
+extern jint doGetHeight(jint idx);
+extern jint doGetOffsetX(jint idx);
+extern jint doGetOffsetY(jint idx);
+extern jint doGetDpi(jint idx);
+extern jint doGetNativeFormat(jint idx);
+extern jfloat doGetScale(jint idx);
+extern jint doGetNumberOfScreens();
+
 #endif // EGL_EXT

@@ -85,8 +85,8 @@ public class XYChartDataTest {
     @Test
     public void testSeriesAddDelete() {
         XYChart.Series<String, Number> series = new XYChart.Series<String, Number>();
-        Number value1 = new Integer(5);
-        Number value2 = new Integer(6);
+        Number value1 = 5;
+        Number value2 = 6;
         XYChart.Data<String, Number> point1 = new XYChart.Data<String, Number>("Something", value1);
         XYChart.Data<String, Number> point2 = new XYChart.Data<String, Number>("Something", value2);
         series.getData().add(point1);

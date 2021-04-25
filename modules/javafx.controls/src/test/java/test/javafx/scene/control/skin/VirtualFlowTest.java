@@ -39,6 +39,9 @@ import java.util.LinkedList;
 import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
+import javafx.scene.Node;
+import javafx.scene.shape.Circle;
+
 import test.javafx.scene.control.SkinStub;
 import javafx.scene.input.ScrollEvent;
 
@@ -46,8 +49,11 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+
+import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.control.IndexedCellShim;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.skin.VirtualFlowShim;
 import javafx.scene.control.skin.VirtualFlowShim.ArrayLinkedListShim;
 
@@ -66,7 +72,7 @@ public class VirtualFlowTest {
     // and each cell is 100 wide and 25 tall, except for the 30th cell, which
     // is 200 wide and 100 tall.
     private VirtualFlowShim<IndexedCell> flow;
-//    private Scene scene;
+
 
     @Before public void setUp() {
         list = new ArrayLinkedListShim<CellStub>();
@@ -776,8 +782,7 @@ public class VirtualFlowTest {
     }
 
 
-    @Test
-    public void testCellLayout_BiasedCellAndLengthBar() {
+    @Test public void testCellLayout_BiasedCellAndLengthBar() {
         flow.setCellFactory(param -> new CellStub(flow) {
             @Override
             protected double computeMinWidth(double height) {
@@ -1005,8 +1010,7 @@ public class VirtualFlowTest {
         assertTrue(originalValue != flow.getPosition());
     }
 
-    @Test
-    public void test_RT_36507() {
+    @Test public void test_RT_36507() {
         flow = new VirtualFlowShim();
         flow.setVertical(true);
         // Worst case scenario is that the cells have height = 0.
@@ -1041,8 +1045,7 @@ public class VirtualFlowTest {
     }
 
     private int rt36556_instanceCount;
-    @Test
-    public void test_rt36556() {
+    @Test public void test_rt36556() {
         rt36556_instanceCount = 0;
         flow = new VirtualFlowShim();
         flow.setVertical(true);
@@ -1061,8 +1064,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_rt36556_scrollto() {
+    @Test public void test_rt36556_scrollto() {
         rt36556_instanceCount = 0;
         flow = new VirtualFlowShim();
         flow.setVertical(true);
@@ -1081,8 +1083,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT39035() {
+    @Test public void test_RT39035() {
         flow.scrollPixels(250);
         pulse();
         flow.scrollPixels(500);
@@ -1091,8 +1092,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT37421() {
+    @Test public void test_RT37421() {
         flow.setPosition(0.98);
         pulse();
         flow.scrollPixels(100);
@@ -1101,8 +1101,7 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
     }
 
-    @Test
-    public void test_RT39568() {
+    @Test public void test_RT39568() {
         flow.shim_getHbar().setPrefHeight(16);
         flow.resize(50, flow.getHeight());
         flow.setPosition(1);
@@ -1207,17 +1206,174 @@ public class VirtualFlowTest {
         assertEquals("Wrong number of sheet children after removing all items", 12, sheetChildrenSize);
     }
 
+    private ArrayLinkedListShim<GraphicalCellStub> circlelist = new ArrayLinkedListShim<GraphicalCellStub>();
+
+    private VirtualFlowShim createCircleFlow() {
+        // The second VirtualFlow we are going to test, with 7 cells. Each cell
+        // contains a Circle with a radius that varies between cells.
+        VirtualFlowShim<IndexedCell> circleFlow;
+        circleFlow = new VirtualFlowShim();
+
+        circleFlow.setVertical(true);
+        circleFlow.setCellFactory(p -> new GraphicalCellStub() {
+            @Override
+            protected double computeMinWidth(double height) {
+                return computePrefWidth(height);
+            }
+
+            @Override
+            protected double computeMaxWidth(double height) {
+                return computePrefWidth(height);
+            }
+
+            @Override
+            protected double computePrefWidth(double height) {
+                return super.computePrefWidth(height);
+            }
+
+            @Override
+            protected double computeMinHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+            @Override
+            protected double computeMaxHeight(double width) {
+                return computePrefHeight(width);
+            }
+
+        });
+        circleFlow.setCellCount(7);
+        circleFlow.resize(300, 300);
+        circleFlow.layout();
+        circleFlow.layout();
+        return circleFlow;
+    }
+
+    // when moving the flow in one direction, the position of the flow
+    // should not increase in the opposite direction
+    @Test public void testReverseOrder() {
+        double orig = flow.getPosition();
+        flow.scrollPixels(10);
+        double pos = flow.getPosition();
+        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        flow.scrollPixels(-50);
+        double neg = flow.getPosition();
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
+    }
+
+    @Test public void testReverseOrderForCircleFlow() {
+        VirtualFlowShim vf = createCircleFlow();
+        double orig = vf.getPosition();
+        vf.scrollPixels(10);
+        double pos = vf.getPosition();
+        assertFalse("Moving in positive direction should not decrease position", pos < orig);
+        vf.scrollPixels(-50);
+        double neg = vf.getPosition();
+        assertFalse("Moving in negative direction should not increase position", neg > pos);
+    }
+
+    @Test public void testGradualMoveForCircleFlow() {
+        VirtualFlowShim vf = createCircleFlow();
+        vf.resize(600,400);
+        ScrollBar sb = vf.shim_getVbar();
+        double s0 = sb.getLayoutY();
+        double s1 = s0;
+        double position = vf.getPosition();
+        double newPosition = 0d;
+        double delta = 0;
+        double newDelta = 0;
+        vf.layout();
+        for (int i = 0; i < 50; i++) {
+            vf.scrollPixels(10);
+            vf.layout();
+            newPosition = vf.getPosition();
+            s1 = sb.getLayoutY();
+            newDelta = newPosition - position;
+            // System.err.println("s0 = "+s0+", s1 = "+s1);
+            // System.err.println("newDelta = "+newDelta+", delta = "+delta);
+            if (i > 0) {
+                double diff = Math.abs((newDelta-delta)/newDelta);
+                // System.err.println("diff = "+diff);
+                // maximum 10% difference allowed
+                assertTrue("Too much variation while scrolling (from "+s0+" to "+s1+")", diff < 0.1);
+            }
+            // System.err.println("S1 = "+s1);
+            // System.err.println("pos = "+vf.getPosition());
+            assertFalse("Thumb moving in the wrong direction at index ", s1 < s0);
+            s0 = s1;
+            delta = newDelta;
+            position = newPosition;
+        }
+    }
+}
+
+class GraphicalCellStub extends IndexedCellShim<Node> {
+    static List<Circle> circleList = List.of(
+        new Circle(10),
+        new Circle(20),
+        new Circle(100),
+        new Circle(30),
+        new Circle(50),
+        new Circle(200),
+        new Circle(60)
+    );
+
+    private int idx = -1;
+    Node myItem = null;
+
+    public GraphicalCellStub() { init(); }
+
+    private void init() {
+        // System.err.println("Init vf cell "+this);
+        setSkin(new SkinStub<GraphicalCellStub>(this));
+    }
+
+    @Override
+    public void updateItem(Node item, boolean empty) {
+        super.updateItem(item, empty);
+        if (empty || item == null) {
+            setText(null);
+            setGraphic(null);
+        } else {
+            setGraphic(item);
+        }
+    }
+
+    @Override
+    public void updateIndex(int i) {
+        super.updateIndex(i);
+        if ((i > -1) && (circleList.size() > i)) {
+            this.idx = i;
+            updateItem(circleList.get(i), false);
+        } else {
+            updateItem(null, true);
+        }
+    }
+
+    @Override
+    protected double computePrefHeight(double width) {
+        double answer = super.computePrefHeight(width);
+        if ((idx > -1) && (idx < circleList.size())) {
+            answer = 2 * circleList.get(idx).getRadius() + 6;
+        }
+        return answer;
+    }
+
+    @Override
+    public String toString() {
+        return "GraphicCell with item = "+myItem+" at "+super.toString();
+    }
 }
 
 class CellStub extends IndexedCellShim {
     String s;
-    VirtualFlowShim flow;
+   // VirtualFlowShim flow;
 
     public CellStub(VirtualFlowShim flow) { init(flow); }
     public CellStub(VirtualFlowShim flow, String s) { init(flow); this.s = s; }
 
     private void init(VirtualFlowShim flow) {
-        this.flow = flow;
+     //   this.flow = flow;
         setSkin(new SkinStub<CellStub>(this));
         updateItem(this, false);
     }

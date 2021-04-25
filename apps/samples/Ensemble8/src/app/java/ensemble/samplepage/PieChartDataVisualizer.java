@@ -89,7 +89,7 @@ public class PieChartDataVisualizer extends TableView<Data> {
                         return null;
                     }
                     try {
-                        return (Double) new Double(string);
+                        return Double.valueOf(string);
                     } catch (Exception ignored) {
                         return 0;
                     }

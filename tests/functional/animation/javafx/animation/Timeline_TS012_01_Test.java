@@ -34,7 +34,7 @@ import org.junit.Test;
 public class Timeline_TS012_01_Test extends AnimationFunctionalTestBase {
     private Timeline t;
     private SimpleKeyValueTarget target = new SimpleKeyValueTarget(1);
-    private Integer newVal = new Integer(3);
+    private Integer newVal = 3;
 
     public Timeline_TS012_01_Test() {
         super("Timeline with repeatCount=0 should never start");

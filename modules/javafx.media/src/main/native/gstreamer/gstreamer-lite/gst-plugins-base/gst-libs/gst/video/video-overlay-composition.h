@@ -119,10 +119,7 @@ typedef enum {
  *
  * Since: 1.2
  */
-#define GST_VIDEO_OVERLAY_COMPOSITION_BLEND_FORMATS \
-    "{ BGRx, RGBx, xRGB, xBGR, RGBA, BGRA, ARGB, ABGR, RGB, BGR," \
-     " I420, YV12, AYUV, YUY2, UYVY, v308, Y41B, Y42B, Y444," \
-     " NV12, NV21, A420, YUV9, YVU9, IYU1, GRAY8 }"
+#define GST_VIDEO_OVERLAY_COMPOSITION_BLEND_FORMATS GST_VIDEO_FORMATS_ALL
 
 GST_VIDEO_API
 GType                        gst_video_overlay_rectangle_get_type (void);
@@ -304,13 +301,9 @@ GstVideoOverlayCompositionMeta * gst_buffer_add_video_overlay_composition_meta (
 #define gst_buffer_remove_video_overlay_composition_meta(b,m) \
   gst_buffer_remove_meta((b),((GstMeta *) m))
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoOverlayComposition, gst_video_overlay_composition_unref)
-#endif
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoOverlayRectangle, gst_video_overlay_rectangle_unref)
-#endif
 
 G_END_DECLS
 

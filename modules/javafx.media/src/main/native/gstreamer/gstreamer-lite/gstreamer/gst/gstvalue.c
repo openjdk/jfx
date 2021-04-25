@@ -46,6 +46,7 @@
 #include <gst/gst.h>
 #include <gobject/gvaluecollector.h>
 #include "gstutils.h"
+#include "gstquark.h"
 
 /* GstValueUnionFunc:
  * @dest: a #GValue for the result
@@ -141,14 +142,32 @@ struct _GstValueAbbreviation
   GType type;
 };
 
+/* Actual internal implementation of "GstValueList" and
+ * "GstValueArray" */
+typedef struct _GstValueList GstValueList;
+
+struct _GstValueList
+{
+  /* These 2 fields must remain the same so that they match the public
+   * GArray structure (which was the former implementation) just in
+   * case someone calls `gst_value_peek_pointer` to access the
+   * array/list (such as in gststructure.c) */
+  GValue *fields;
+  guint len;
+
+  guint allocated;
+  GValue arr[1];
+};
+
 #define FUNDAMENTAL_TYPE_ID_MAX \
     (G_TYPE_FUNDAMENTAL_MAX >> G_TYPE_FUNDAMENTAL_SHIFT)
 #define FUNDAMENTAL_TYPE_ID(type) \
     ((type) >> G_TYPE_FUNDAMENTAL_SHIFT)
 
-#define VALUE_LIST_ARRAY(v) ((GArray *) (v)->data[0].v_pointer)
+#define VALUE_LIST_ARRAY(v) ((GstValueList *) (v)->data[0].v_pointer)
 #define VALUE_LIST_SIZE(v) (VALUE_LIST_ARRAY(v)->len)
-#define VALUE_LIST_GET_VALUE(v, index) ((const GValue *) &g_array_index (VALUE_LIST_ARRAY(v), GValue, (index)))
+#define VALUE_LIST_GET_VALUE(v, index) ((const GValue *) &(VALUE_LIST_ARRAY(v)->fields[index]))
+#define VALUE_LIST_IS_USING_DYNAMIC_ARRAY(array) ((array)->fields != &(array)->arr[0])
 
 static GArray *gst_value_table;
 static GHashTable *gst_value_hash;
@@ -159,10 +178,10 @@ static GArray *gst_value_subtract_funcs;
 
 /* Forward declarations */
 static gchar *gst_value_serialize_fraction (const GValue * value);
+static gint gst_value_compare_fraction (const GValue * value1,
+    const GValue * value2);
 
 static GstValueCompareFunc gst_value_get_compare_func (const GValue * value1);
-static gint gst_value_compare_with_func (const GValue * value1,
-    const GValue * value2, GstValueCompareFunc compare);
 
 static gchar *gst_string_wrap (const gchar * s);
 static gchar *gst_string_unwrap (const gchar * s);
@@ -195,6 +214,135 @@ gst_value_hash_add_type (GType type, const GstValueTable * table)
  * list *
  ********/
 
+static void
+resize_value_list (GstValueList * vlist)
+{
+  guint want_alloc;
+
+  if (G_UNLIKELY (vlist->allocated > (G_MAXUINT / 2)))
+    g_error ("Growing GstValueList would result in overflow");
+
+  want_alloc = MAX (GST_ROUND_UP_8 (vlist->len + 1), vlist->allocated * 2);
+
+  if (VALUE_LIST_IS_USING_DYNAMIC_ARRAY (vlist)) {
+    vlist->fields = g_renew (GValue, vlist->fields, want_alloc);
+  } else {
+    vlist->fields = g_new0 (GValue, want_alloc);
+    memcpy (vlist->fields, &vlist->arr[0], vlist->len * sizeof (GValue));
+    GST_CAT_LOG (GST_CAT_PERFORMANCE, "Exceeding pre-allocated array");
+  }
+  vlist->allocated = want_alloc;
+}
+
+/* Replacement for g_array_append_val */
+static void
+_gst_value_list_append_val (GstValueList * vlist, GValue * val)
+{
+  /* resize if needed */
+  if (G_UNLIKELY (vlist->len == vlist->allocated))
+    resize_value_list (vlist);
+
+  /* Finally set value */
+  vlist->fields[vlist->len++] = *val;
+}
+
+/* Replacement for g_array_prepend_val */
+static void
+_gst_value_list_prepend_val (GstValueList * vlist, GValue * val)
+{
+  /* resize if needed */
+  if (G_UNLIKELY (vlist->len == vlist->allocated))
+    resize_value_list (vlist);
+
+  /* Shift everything */
+  memmove (&vlist->fields[1], &vlist->fields[0],
+      (vlist->len) * sizeof (GValue));
+
+  vlist->fields[0] = *val;
+  vlist->len++;
+}
+
+static GstValueList *
+_gst_value_list_new (guint prealloc)
+{
+  guint n_alloc;
+  GstValueList *res;
+
+  if (prealloc == 0)
+    prealloc = 1;
+
+  n_alloc = GST_ROUND_UP_8 (prealloc);
+  res = g_malloc0 (sizeof (GstValueList) + (n_alloc - 1) * sizeof (GValue));
+
+  res->len = 0;
+  res->allocated = n_alloc;
+  res->fields = &res->arr[0];
+
+  return res;
+}
+
+static void
+_gst_value_list_init (GValue * value, guint prealloc)
+{
+  value->g_type = GST_TYPE_LIST;
+  memset (value->data, 0, sizeof (value->data));
+  value->data[0].v_pointer = _gst_value_list_new (prealloc);
+}
+
+/**
+ * gst_value_list_init:
+ * @value: A zero-filled (uninitialized) #GValue structure
+ * @prealloc: The number of entries to pre-allocate in the list
+ *
+ * Initializes and pre-allocates a #GValue of type #GST_VALUE_LIST.
+ *
+ * Returns: (transfer none): The #GValue structure that has been passed in
+ *
+ * Since: 1.18
+ */
+
+GValue *
+gst_value_list_init (GValue * value, guint prealloc)
+{
+  g_return_val_if_fail (value != NULL, NULL);
+  g_return_val_if_fail (G_VALUE_TYPE (value) == 0, NULL);
+
+  _gst_value_list_init (value, prealloc);
+
+  return value;
+}
+
+static void
+_gst_value_array_init (GValue * value, guint prealloc)
+{
+  value->g_type = GST_TYPE_ARRAY;
+  memset (value->data, 0, sizeof (value->data));
+  value->data[0].v_pointer = _gst_value_list_new (prealloc);
+}
+
+/**
+ * gst_value_array_init:
+ * @value: A zero-filled (uninitialized) #GValue structure
+ * @prealloc: The number of entries to pre-allocate in the array
+ *
+ * Initializes and pre-allocates a #GValue of type #GST_VALUE_ARRAY.
+ *
+ * Returns: (transfer none): The #GValue structure that has been passed in
+ *
+ * Since: 1.18
+ */
+
+GValue *
+gst_value_array_init (GValue * value, guint prealloc)
+{
+  g_return_val_if_fail (value != NULL, NULL);
+  g_return_val_if_fail (G_VALUE_TYPE (value) == 0, NULL);
+
+  _gst_value_array_init (value, prealloc);
+
+  return value;
+}
+
 /* two helper functions to serialize/stringify any type of list
  * regular lists are done with { }, arrays with < >
  */
@@ -203,17 +351,17 @@ _priv_gst_value_serialize_any_list (const GValue * value, const gchar * begin,
     const gchar * end, gboolean print_type)
 {
   guint i;
-  GArray *array = value->data[0].v_pointer;
+  GstValueList *vlist = value->data[0].v_pointer;
   GString *s;
   GValue *v;
   gchar *s_val;
-  guint alen = array->len;
+  guint alen = vlist->len;
 
   /* estimate minimum string length to minimise re-allocs in GString */
   s = g_string_sized_new (2 + (6 * alen) + 2);
   g_string_append (s, begin);
   for (i = 0; i < alen; i++) {
-    v = &g_array_index (array, GValue, i);
+    v = &vlist->fields[i];
     s_val = gst_value_serialize (v);
     if (s_val != NULL) {
       if (print_type) {
@@ -240,7 +388,7 @@ gst_value_transform_any_list_string (const GValue * src_value,
     GValue * dest_value, const gchar * begin, const gchar * end)
 {
   GValue *list_value;
-  GArray *array;
+  GstValueList *array;
   GString *s;
   guint i;
   gchar *list_s;
@@ -253,7 +401,7 @@ gst_value_transform_any_list_string (const GValue * src_value,
   s = g_string_sized_new (2 + (10 * alen) + 2);
   g_string_append (s, begin);
   for (i = 0; i < alen; i++) {
-    list_value = &g_array_index (array, GValue, i);
+    list_value = &array->fields[i];
 
     if (i != 0) {
       g_string_append_len (s, ", ", 2);
@@ -370,21 +518,20 @@ gst_type_is_fixed (GType type)
 static void
 gst_value_init_list_or_array (GValue * value)
 {
-  value->data[0].v_pointer = g_array_new (FALSE, TRUE, sizeof (GValue));
+  value->data[0].v_pointer = _gst_value_list_new (0);
 }
 
-static GArray *
-copy_garray_of_gstvalue (const GArray * src)
+static GstValueList *
+copy_gst_value_list (const GstValueList * src)
 {
-  GArray *dest;
+  GstValueList *dest;
   guint i, len;
 
   len = src->len;
-  dest = g_array_sized_new (FALSE, TRUE, sizeof (GValue), len);
-  g_array_set_size (dest, len);
+  dest = _gst_value_list_new (len);
+  dest->len = len;
   for (i = 0; i < len; i++) {
-    gst_value_init_and_copy (&g_array_index (dest, GValue, i),
-        &g_array_index (src, GValue, i));
+    gst_value_init_and_copy (&dest->fields[i], &src->fields[i]);
   }
 
   return dest;
@@ -394,21 +541,24 @@ static void
 gst_value_copy_list_or_array (const GValue * src_value, GValue * dest_value)
 {
   dest_value->data[0].v_pointer =
-      copy_garray_of_gstvalue ((GArray *) src_value->data[0].v_pointer);
+      copy_gst_value_list (VALUE_LIST_ARRAY (src_value));
 }
 
 static void
 gst_value_free_list_or_array (GValue * value)
 {
   guint i, len;
-  GArray *src = (GArray *) value->data[0].v_pointer;
+  GstValueList *src = VALUE_LIST_ARRAY (value);
   len = src->len;
 
   if ((value->data[1].v_uint & G_VALUE_NOCOPY_CONTENTS) == 0) {
     for (i = 0; i < len; i++) {
-      g_value_unset (&g_array_index (src, GValue, i));
+      g_value_unset (&src->fields[i]);
     }
-    g_array_free (src, TRUE);
+    if (VALUE_LIST_IS_USING_DYNAMIC_ARRAY (src)) {
+      g_free (src->fields);
+    }
+    g_free (src);
   }
 }
 
@@ -427,7 +577,7 @@ gst_value_collect_list_or_array (GValue * value, guint n_collect_values,
     value->data[1].v_uint = G_VALUE_NOCOPY_CONTENTS;
   } else {
     value->data[0].v_pointer =
-        copy_garray_of_gstvalue ((GArray *) collect_values[0].v_pointer);
+        copy_gst_value_list ((GstValueList *) collect_values[0].v_pointer);
   }
   return NULL;
 }
@@ -436,18 +586,19 @@ static gchar *
 gst_value_lcopy_list_or_array (const GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  GArray **dest = collect_values[0].v_pointer;
+  GstValueList **dest = collect_values[0].v_pointer;
 
-  if (!dest)
-    return g_strdup_printf ("value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!value->data[0].v_pointer)
-    return g_strdup_printf ("invalid value given for `%s'",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (dest != NULL,
+      g_strdup_printf ("value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (value->data[0].v_pointer != NULL,
+      g_strdup_printf ("invalid value given for `%s'",
+          G_VALUE_TYPE_NAME (value)));
+
   if (collect_flags & G_VALUE_NOCOPY_CONTENTS) {
-    *dest = (GArray *) value->data[0].v_pointer;
+    *dest = (GstValueList *) value->data[0].v_pointer;
   } else {
-    *dest = copy_garray_of_gstvalue ((GArray *) value->data[0].v_pointer);
+    *dest = copy_gst_value_list (VALUE_LIST_ARRAY (value));
   }
   return NULL;
 }
@@ -458,18 +609,11 @@ gst_value_list_or_array_get_basic_type (const GValue * value, GType * type)
   if (G_UNLIKELY (value == NULL))
     return FALSE;
 
-  if (GST_VALUE_HOLDS_LIST (value)) {
+  if (GST_VALUE_HOLDS_LIST (value) || GST_VALUE_HOLDS_ARRAY (value)) {
     if (VALUE_LIST_SIZE (value) == 0)
       return FALSE;
     return gst_value_list_or_array_get_basic_type (VALUE_LIST_GET_VALUE (value,
             0), type);
-  }
-  if (GST_VALUE_HOLDS_ARRAY (value)) {
-    const GArray *array = (const GArray *) value->data[0].v_pointer;
-    if (array->len == 0)
-      return FALSE;
-    return gst_value_list_or_array_get_basic_type (&g_array_index (array,
-            GValue, 0), type);
   }
 
   *type = G_VALUE_TYPE (value);
@@ -512,7 +656,7 @@ gst_value_list_or_array_are_compatible (const GValue * value1,
 static inline void
 _gst_value_list_append_and_take_value (GValue * value, GValue * append_value)
 {
-  g_array_append_vals ((GArray *) value->data[0].v_pointer, append_value, 1);
+  _gst_value_list_append_val (VALUE_LIST_ARRAY (value), append_value);
   memset (append_value, 0, sizeof (GValue));
 }
 
@@ -554,7 +698,7 @@ gst_value_list_append_value (GValue * value, const GValue * append_value)
           append_value));
 
   gst_value_init_and_copy (&val, append_value);
-  g_array_append_vals ((GArray *) value->data[0].v_pointer, &val, 1);
+  _gst_value_list_append_val (VALUE_LIST_ARRAY (value), &val);
 }
 
 /**
@@ -575,7 +719,7 @@ gst_value_list_prepend_value (GValue * value, const GValue * prepend_value)
           prepend_value));
 
   gst_value_init_and_copy (&val, prepend_value);
-  g_array_prepend_vals ((GArray *) value->data[0].v_pointer, &val, 1);
+  _gst_value_list_prepend_val (VALUE_LIST_ARRAY (value), &val);
 }
 
 /**
@@ -593,7 +737,7 @@ gst_value_list_concat (GValue * dest, const GValue * value1,
     const GValue * value2)
 {
   guint i, value1_length, value2_length;
-  GArray *array;
+  GstValueList *vlist;
 
   g_return_if_fail (dest != NULL);
   g_return_if_fail (G_VALUE_TYPE (dest) == 0);
@@ -605,27 +749,27 @@ gst_value_list_concat (GValue * dest, const GValue * value1,
       (GST_VALUE_HOLDS_LIST (value1) ? VALUE_LIST_SIZE (value1) : 1);
   value2_length =
       (GST_VALUE_HOLDS_LIST (value2) ? VALUE_LIST_SIZE (value2) : 1);
-  g_value_init (dest, GST_TYPE_LIST);
-  array = (GArray *) dest->data[0].v_pointer;
-  g_array_set_size (array, value1_length + value2_length);
+
+  _gst_value_list_init (dest, value1_length + value2_length);
+  vlist = VALUE_LIST_ARRAY (dest);
+  vlist->len = value1_length + value2_length;
 
   if (GST_VALUE_HOLDS_LIST (value1)) {
     for (i = 0; i < value1_length; i++) {
-      gst_value_init_and_copy (&g_array_index (array, GValue, i),
+      gst_value_init_and_copy (&vlist->fields[i],
           VALUE_LIST_GET_VALUE (value1, i));
     }
   } else {
-    gst_value_init_and_copy (&g_array_index (array, GValue, 0), value1);
+    gst_value_init_and_copy (&vlist->fields[0], value1);
   }
 
   if (GST_VALUE_HOLDS_LIST (value2)) {
     for (i = 0; i < value2_length; i++) {
-      gst_value_init_and_copy (&g_array_index (array, GValue,
-              i + value1_length), VALUE_LIST_GET_VALUE (value2, i));
+      gst_value_init_and_copy (&vlist->fields[i + value1_length],
+          VALUE_LIST_GET_VALUE (value2, i));
     }
   } else {
-    gst_value_init_and_copy (&g_array_index (array, GValue, value1_length),
-        value2);
+    gst_value_init_and_copy (&vlist->fields[value1_length], value2);
   }
 }
 
@@ -637,7 +781,7 @@ gst_value_list_concat_and_take_values (GValue * dest, GValue * val1,
   guint i, val1_length, val2_length;
   gboolean val1_is_list;
   gboolean val2_is_list;
-  GArray *array;
+  GstValueList *vlist;
 
   g_assert (dest != NULL);
   g_assert (G_VALUE_TYPE (dest) == 0);
@@ -651,30 +795,32 @@ gst_value_list_concat_and_take_values (GValue * dest, GValue * val1,
   val2_is_list = GST_VALUE_HOLDS_LIST (val2);
   val2_length = (val2_is_list ? VALUE_LIST_SIZE (val2) : 1);
 
-  g_value_init (dest, GST_TYPE_LIST);
-  array = (GArray *) dest->data[0].v_pointer;
-  g_array_set_size (array, val1_length + val2_length);
+  /* Overidding the default initialization to have a list of the target size */
+  _gst_value_list_init (dest, val1_length + val2_length);
+  vlist = VALUE_LIST_ARRAY (dest);
+  vlist->len = val1_length + val2_length;
 
   if (val1_is_list) {
     for (i = 0; i < val1_length; i++) {
-      g_array_index (array, GValue, i) = *VALUE_LIST_GET_VALUE (val1, i);
+      vlist->fields[i] = *VALUE_LIST_GET_VALUE (val1, i);
     }
-    g_array_set_size (VALUE_LIST_ARRAY (val1), 0);
+    VALUE_LIST_ARRAY (val1)->len = 0;
     g_value_unset (val1);
   } else {
-    g_array_index (array, GValue, 0) = *val1;
+    vlist->fields[0] = *val1;
     G_VALUE_TYPE (val1) = G_TYPE_INVALID;
   }
 
   if (val2_is_list) {
     for (i = 0; i < val2_length; i++) {
       const GValue *v2 = VALUE_LIST_GET_VALUE (val2, i);
-      g_array_index (array, GValue, i + val1_length) = *v2;
+      vlist->fields[i + val1_length] = *v2;
     }
-    g_array_set_size (VALUE_LIST_ARRAY (val2), 0);
+
+    VALUE_LIST_ARRAY (val2)->len = 0;
     g_value_unset (val2);
   } else {
-    g_array_index (array, GValue, val1_length) = *val2;
+    vlist->fields[val1_length] = *val2;
     G_VALUE_TYPE (val2) = G_TYPE_INVALID;
   }
 }
@@ -699,7 +845,7 @@ gst_value_list_merge (GValue * dest, const GValue * value1,
   guint i, j, k, value1_length, value2_length, skipped;
   const GValue *src;
   gboolean skip;
-  GArray *array;
+  GstValueList *vlist;
 
   g_return_if_fail (dest != NULL);
   g_return_if_fail (G_VALUE_TYPE (dest) == 0);
@@ -711,17 +857,18 @@ gst_value_list_merge (GValue * dest, const GValue * value1,
       (GST_VALUE_HOLDS_LIST (value1) ? VALUE_LIST_SIZE (value1) : 1);
   value2_length =
       (GST_VALUE_HOLDS_LIST (value2) ? VALUE_LIST_SIZE (value2) : 1);
-  g_value_init (dest, GST_TYPE_LIST);
-  array = (GArray *) dest->data[0].v_pointer;
-  g_array_set_size (array, value1_length + value2_length);
+
+  _gst_value_list_init (dest, value1_length + value2_length);
+  vlist = VALUE_LIST_ARRAY (dest);
+  vlist->len = value1_length + value2_length;
 
   if (GST_VALUE_HOLDS_LIST (value1)) {
     for (i = 0; i < value1_length; i++) {
-      gst_value_init_and_copy (&g_array_index (array, GValue, i),
-          VALUE_LIST_GET_VALUE (value1, i));
+      gst_value_init_and_copy (&vlist->fields[i], VALUE_LIST_GET_VALUE (value1,
+              i));
     }
   } else {
-    gst_value_init_and_copy (&g_array_index (array, GValue, 0), value1);
+    gst_value_init_and_copy (&vlist->fields[0], value1);
   }
 
   j = value1_length;
@@ -731,30 +878,28 @@ gst_value_list_merge (GValue * dest, const GValue * value1,
       skip = FALSE;
       src = VALUE_LIST_GET_VALUE (value2, i);
       for (k = 0; k < value1_length; k++) {
-        if (gst_value_compare (&g_array_index (array, GValue, k),
-                src) == GST_VALUE_EQUAL) {
+        if (gst_value_compare (&vlist->fields[k], src) == GST_VALUE_EQUAL) {
           skip = TRUE;
           skipped++;
           break;
         }
       }
       if (!skip) {
-        gst_value_init_and_copy (&g_array_index (array, GValue, j), src);
+        gst_value_init_and_copy (&vlist->fields[j], src);
         j++;
       }
     }
   } else {
     skip = FALSE;
     for (k = 0; k < value1_length; k++) {
-      if (gst_value_compare (&g_array_index (array, GValue, k),
-              value2) == GST_VALUE_EQUAL) {
+      if (gst_value_compare (&vlist->fields[k], value2) == GST_VALUE_EQUAL) {
         skip = TRUE;
         skipped++;
         break;
       }
     }
     if (!skip) {
-      gst_value_init_and_copy (&g_array_index (array, GValue, j), value2);
+      gst_value_init_and_copy (&vlist->fields[j], value2);
     }
   }
   if (skipped) {
@@ -762,17 +907,17 @@ gst_value_list_merge (GValue * dest, const GValue * value1,
 
     if (new_size > 1) {
       /* shrink list */
-      g_array_set_size (array, new_size);
+      vlist->len = new_size;
     } else {
       GValue single_dest;
 
       /* size is 1, take single value in list and make it new dest */
-      single_dest = g_array_index (array, GValue, 0);
+      single_dest = vlist->fields[0];
 
       /* clean up old value allocations: must set array size to 0, because
        * allocated values are not inited meaning g_value_unset() will not
        * work on them */
-      g_array_set_size (array, 0);
+      vlist->len = 0;
       g_value_unset (dest);
 
       /* the single value is our new result */
@@ -794,7 +939,7 @@ gst_value_list_get_size (const GValue * value)
 {
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (value), 0);
 
-  return ((GArray *) value->data[0].v_pointer)->len;
+  return VALUE_LIST_SIZE (value);
 }
 
 /**
@@ -813,8 +958,7 @@ gst_value_list_get_value (const GValue * value, guint index)
   g_return_val_if_fail (GST_VALUE_HOLDS_LIST (value), NULL);
   g_return_val_if_fail (index < VALUE_LIST_SIZE (value), NULL);
 
-  return (const GValue *) &g_array_index ((GArray *) value->data[0].v_pointer,
-      GValue, index);
+  return VALUE_LIST_GET_VALUE (value, index);
 }
 
 /**
@@ -835,13 +979,13 @@ gst_value_array_append_value (GValue * value, const GValue * append_value)
           append_value));
 
   gst_value_init_and_copy (&val, append_value);
-  g_array_append_vals ((GArray *) value->data[0].v_pointer, &val, 1);
+  _gst_value_list_append_val (VALUE_LIST_ARRAY (value), &val);
 }
 
 static inline void
 _gst_value_array_append_and_take_value (GValue * value, GValue * append_value)
 {
-  g_array_append_vals ((GArray *) value->data[0].v_pointer, append_value, 1);
+  _gst_value_list_append_val (VALUE_LIST_ARRAY (value), append_value);
   memset (append_value, 0, sizeof (GValue));
 }
 
@@ -884,7 +1028,7 @@ gst_value_array_prepend_value (GValue * value, const GValue * prepend_value)
           prepend_value));
 
   gst_value_init_and_copy (&val, prepend_value);
-  g_array_prepend_vals ((GArray *) value->data[0].v_pointer, &val, 1);
+  _gst_value_list_prepend_val (VALUE_LIST_ARRAY (value), &val);
 }
 #endif // GSTREAMER_LITE
 
@@ -901,7 +1045,7 @@ gst_value_array_get_size (const GValue * value)
 {
   g_return_val_if_fail (GST_VALUE_HOLDS_ARRAY (value), 0);
 
-  return ((GArray *) value->data[0].v_pointer)->len;
+  return VALUE_LIST_SIZE (value);
 }
 
 /**
@@ -918,10 +1062,9 @@ const GValue *
 gst_value_array_get_value (const GValue * value, guint index)
 {
   g_return_val_if_fail (GST_VALUE_HOLDS_ARRAY (value), NULL);
-  g_return_val_if_fail (index < gst_value_array_get_size (value), NULL);
+  g_return_val_if_fail (index < VALUE_LIST_SIZE (value), NULL);
 
-  return (const GValue *) &g_array_index ((GArray *) value->data[0].v_pointer,
-      GValue, index);
+  return VALUE_LIST_GET_VALUE (value, index);
 }
 
 static void
@@ -948,20 +1091,20 @@ gst_value_transform_g_value_array_any_list (const GValue * src_value,
     GValue * dest_value)
 {
   const GValueArray *varray;
-  GArray *array;
+  GstValueList *vlist;
   gint i;
+
+  varray = g_value_get_boxed (src_value);
 
   /* GLib will unset the value, memset to 0 the data instead of doing a proper
    * reset. That's why we need to allocate the array here */
-  gst_value_init_list_or_array (dest_value);
-
-  varray = g_value_get_boxed (src_value);
-  array = dest_value->data[0].v_pointer;
+  vlist = dest_value->data[0].v_pointer =
+      _gst_value_list_new (varray->n_values);
 
   for (i = 0; i < varray->n_values; i++) {
     GValue val = G_VALUE_INIT;
     gst_value_init_and_copy (&val, &varray->values[i]);
-    g_array_append_vals (array, &val, 1);
+    _gst_value_list_append_val (vlist, &val);
   }
 }
 
@@ -970,14 +1113,14 @@ gst_value_transform_any_list_g_value_array (const GValue * src_value,
     GValue * dest_value)
 {
   GValueArray *varray;
-  const GArray *array;
+  GstValueList *vlist;
   gint i;
 
-  array = src_value->data[0].v_pointer;
-  varray = g_value_array_new (array->len);
+  vlist = VALUE_LIST_ARRAY (src_value);
+  varray = g_value_array_new (vlist->len);
 
-  for (i = 0; i < array->len; i++)
-    g_value_array_append (varray, &g_array_index (array, GValue, i));
+  for (i = 0; i < vlist->len; i++)
+    g_value_array_append (varray, &vlist->fields[i]);
 
   g_value_take_boxed (dest_value, varray);
 }
@@ -987,8 +1130,8 @@ static gint
 gst_value_compare_value_list (const GValue * value1, const GValue * value2)
 {
   guint i, j;
-  GArray *array1 = value1->data[0].v_pointer;
-  GArray *array2 = value2->data[0].v_pointer;
+  GstValueList *vlist1 = VALUE_LIST_ARRAY (value1);
+  GstValueList *vlist2 = VALUE_LIST_ARRAY (value2);
   GValue *v1;
   GValue *v2;
   gint len, to_remove;
@@ -996,8 +1139,20 @@ gst_value_compare_value_list (const GValue * value1, const GValue * value2)
   GstValueCompareFunc compare;
 
   /* get length and do initial length check. */
-  len = array1->len;
-  if (len != array2->len)
+  len = vlist1->len;
+  if (len != vlist2->len)
+    return GST_VALUE_UNORDERED;
+
+  /* Empty lists are equal */
+  if (len == 0)
+    return GST_VALUE_EQUAL;
+
+  /* We know lists are not empty. do sanity check on first values */
+  if (G_VALUE_TYPE (&vlist1->fields[0]) != G_VALUE_TYPE (&vlist2->fields[0]))
+    return GST_VALUE_UNORDERED;
+
+  /* Get the compare function */
+  if (!(compare = gst_value_get_compare_func (&vlist1->fields[0])))
     return GST_VALUE_UNORDERED;
 
   /* place to mark removed value indices of array2 */
@@ -1008,25 +1163,25 @@ gst_value_compare_value_list (const GValue * value1, const GValue * value2)
   /* loop over array1, all items should be in array2. When we find an
    * item in array2, remove it from array2 by marking it as removed */
   for (i = 0; i < len; i++) {
-    v1 = &g_array_index (array1, GValue, i);
-    if ((compare = gst_value_get_compare_func (v1))) {
-      for (j = 0; j < len; j++) {
-        /* item is removed, we can skip it */
-        if (removed[j])
-          continue;
-        v2 = &g_array_index (array2, GValue, j);
-        if (gst_value_compare_with_func (v1, v2, compare) == GST_VALUE_EQUAL) {
-          /* mark item as removed now that we found it in array2 and
-           * decrement the number of remaining items in array2. */
-          removed[j] = 1;
-          to_remove--;
-          break;
-        }
+    v1 = &vlist1->fields[i];
+
+    for (j = 0; j < len; j++) {
+      /* item is removed, we can skip it */
+      if (removed[j])
+        continue;
+      v2 = &vlist2->fields[j];
+      /* Note: compare function can be called directly since we know the types
+       * are identical */
+      if (compare (v1, v2) == GST_VALUE_EQUAL) {
+        /* mark item as removed now that we found it in array2 and
+         * decrement the number of remaining items in array2. */
+        removed[j] = 1;
+        to_remove--;
+        break;
       }
-      /* item in array1 and not in array2, UNORDERED */
-      if (j == len)
-        return GST_VALUE_UNORDERED;
-    } else
+    }
+    /* item in array1 and not in array2, UNORDERED */
+    if (j == len)
       return GST_VALUE_UNORDERED;
   }
   /* if not all items were removed, array2 contained something not in array1 */
@@ -1042,18 +1197,18 @@ static gint
 gst_value_compare_value_array (const GValue * value1, const GValue * value2)
 {
   guint i;
-  GArray *array1 = value1->data[0].v_pointer;
-  GArray *array2 = value2->data[0].v_pointer;
-  guint len = array1->len;
+  GstValueList *vlist1 = VALUE_LIST_ARRAY (value1);
+  GstValueList *vlist2 = VALUE_LIST_ARRAY (value2);
+  guint len = vlist1->len;
   GValue *v1;
   GValue *v2;
 
-  if (len != array2->len)
+  if (len != vlist2->len)
     return GST_VALUE_UNORDERED;
 
   for (i = 0; i < len; i++) {
-    v1 = &g_array_index (array1, GValue, i);
-    v2 = &g_array_index (array2, GValue, i);
+    v1 = &vlist1->fields[i];
+    v2 = &vlist2->fields[i];
     if (gst_value_compare (v1, v2) != GST_VALUE_EQUAL)
       return GST_VALUE_UNORDERED;
   }
@@ -1067,11 +1222,11 @@ gst_value_compare_g_value_array (const GValue * value1, const GValue * value2)
   guint i;
   GValueArray *array1 = value1->data[0].v_pointer;
   GValueArray *array2 = value2->data[0].v_pointer;
-  guint len = array1->n_values;
+  guint len = array1 ? array1->n_values : 0;
   GValue *v1;
   GValue *v2;
 
-  if (len != array2->n_values)
+  if (len != (array2 ? array2->n_values : 0))
     return GST_VALUE_UNORDERED;
 
   for (i = 0; i < len; i++) {
@@ -1159,12 +1314,12 @@ static gchar *
 gst_value_collect_int_range (GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  if (n_collect_values != 2)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[0].v_int >= collect_values[1].v_int)
-    return g_strdup_printf ("range start is not smaller than end for `%s'",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 2,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[0].v_int < collect_values[1].v_int,
+      g_strdup_printf ("range start is not smaller than end for `%s'",
+          G_VALUE_TYPE_NAME (value)));
 
   gst_value_set_int_range_step (value, collect_values[0].v_int,
       collect_values[1].v_int, 1);
@@ -1179,12 +1334,12 @@ gst_value_lcopy_int_range (const GValue * value, guint n_collect_values,
   guint32 *int_range_start = collect_values[0].v_pointer;
   guint32 *int_range_end = collect_values[1].v_pointer;
 
-  if (!int_range_start)
-    return g_strdup_printf ("start value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!int_range_end)
-    return g_strdup_printf ("end value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (int_range_start != NULL,
+      g_strdup_printf ("start value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (int_range_end != NULL,
+      g_strdup_printf ("end value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
 
   *int_range_start = INT_RANGE_MIN (value);
   *int_range_end = INT_RANGE_MAX (value);
@@ -1297,33 +1452,28 @@ gst_value_transform_int_range_string (const GValue * src_value,
 static gint
 gst_value_compare_int_range (const GValue * value1, const GValue * value2)
 {
-  /* calculate the number of values in each range */
-  gint n1 = INT_RANGE_MAX (value1) - INT_RANGE_MIN (value1) + 1;
-  gint n2 = INT_RANGE_MAX (value2) - INT_RANGE_MIN (value2) + 1;
-
-  /* they must be equal */
-  if (n1 != n2)
+#if 0
+  /* Compare the ranges. (Kept for clarity for the below comparision) */
+  if (INT_RANGE_MIN (value1) != INT_RANGE_MIN (value2) ||
+      INT_RANGE_MAX (value1) != INT_RANGE_MAX (value2))
     return GST_VALUE_UNORDERED;
+#else
+  /* The MIN and MAX of the range are actually stored packed into one 64bit
+   * value. We can therefore compare them directly */
+  if (value1->data[0].v_uint64 != value2->data[0].v_uint64)
+    return GST_VALUE_UNORDERED;
+#endif
 
-  /* if empty, equal */
-  if (n1 == 0)
+  /* The extents are equal */
+  /* If there is only one value (min == max), we ignore the step for
+   * comparison */
+  if (INT_RANGE_MIN (value1) == INT_RANGE_MAX (value1))
     return GST_VALUE_EQUAL;
 
-  /* if more than one value, then it is only equal if the step is equal
-     and bounds lie on the same value */
-  if (n1 > 1) {
-    if (INT_RANGE_STEP (value1) == INT_RANGE_STEP (value2) &&
-        INT_RANGE_MIN (value1) == INT_RANGE_MIN (value2) &&
-        INT_RANGE_MAX (value1) == INT_RANGE_MAX (value2)) {
-      return GST_VALUE_EQUAL;
-    }
-    return GST_VALUE_UNORDERED;
-  } else {
-    /* if just one, only if the value is equal */
-    if (INT_RANGE_MIN (value1) == INT_RANGE_MIN (value2))
-      return GST_VALUE_EQUAL;
-    return GST_VALUE_UNORDERED;
-  }
+  /* Else the ranges are only equal if their step is also equal */
+  if (INT_RANGE_STEP (value1) == INT_RANGE_STEP (value2))
+    return GST_VALUE_EQUAL;
+  return GST_VALUE_UNORDERED;
 }
 
 static gchar *
@@ -1398,12 +1548,13 @@ gst_value_collect_int64_range (GValue * value, guint n_collect_values,
 {
   gint64 *vals = value->data[0].v_pointer;
 
-  if (n_collect_values != 2)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[0].v_int64 >= collect_values[1].v_int64)
-    return g_strdup_printf ("range start is not smaller than end for `%s'",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 2,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+
+  g_return_val_if_fail (collect_values[0].v_int64 < collect_values[1].v_int64,
+      g_strdup_printf ("range start is not smaller than end for `%s'",
+          G_VALUE_TYPE_NAME (value)));
 
   if (vals == NULL) {
     gst_value_init_int64_range (value);
@@ -1424,20 +1575,18 @@ gst_value_lcopy_int64_range (const GValue * value, guint n_collect_values,
   guint64 *int_range_step = collect_values[2].v_pointer;
   gint64 *vals = (gint64 *) value->data[0].v_pointer;
 
-  if (!int_range_start)
-    return g_strdup_printf ("start value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!int_range_end)
-    return g_strdup_printf ("end value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!int_range_step)
-    return g_strdup_printf ("step value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (int_range_start != NULL,
+      g_strdup_printf ("start value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (int_range_end != NULL,
+      g_strdup_printf ("end value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (int_range_step != NULL,
+      g_strdup_printf ("step value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
 
-  if (G_UNLIKELY (vals == NULL)) {
-    return g_strdup_printf ("Uninitialised `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  }
+  g_return_val_if_fail (vals != NULL,
+      g_strdup_printf ("Uninitialised `%s' passed", G_VALUE_TYPE_NAME (value)));
 
   *int_range_start = INT64_RANGE_MIN (value);
   *int_range_end = INT64_RANGE_MAX (value);
@@ -1552,33 +1701,21 @@ gst_value_transform_int64_range_string (const GValue * src_value,
 static gint
 gst_value_compare_int64_range (const GValue * value1, const GValue * value2)
 {
-  /* calculate the number of values in each range */
-  gint64 n1 = INT64_RANGE_MAX (value1) - INT64_RANGE_MIN (value1) + 1;
-  gint64 n2 = INT64_RANGE_MAX (value2) - INT64_RANGE_MIN (value2) + 1;
-
-  /* they must be equal */
-  if (n1 != n2)
+  /* Compare the ranges. */
+  if (INT64_RANGE_MIN (value1) != INT64_RANGE_MIN (value2) ||
+      INT64_RANGE_MAX (value1) != INT64_RANGE_MAX (value2))
     return GST_VALUE_UNORDERED;
 
-  /* if empty, equal */
-  if (n1 == 0)
+  /* The extents are equal */
+  /* If there is only one value (min == max), we ignore the step for
+   * comparison */
+  if (INT64_RANGE_MIN (value1) == INT64_RANGE_MAX (value1))
     return GST_VALUE_EQUAL;
 
-  /* if more than one value, then it is only equal if the step is equal
-     and bounds lie on the same value */
-  if (n1 > 1) {
-    if (INT64_RANGE_STEP (value1) == INT64_RANGE_STEP (value2) &&
-        INT64_RANGE_MIN (value1) == INT64_RANGE_MIN (value2) &&
-        INT64_RANGE_MAX (value1) == INT64_RANGE_MAX (value2)) {
-      return GST_VALUE_EQUAL;
-    }
-    return GST_VALUE_UNORDERED;
-  } else {
-    /* if just one, only if the value is equal */
-    if (INT64_RANGE_MIN (value1) == INT64_RANGE_MIN (value2))
-      return GST_VALUE_EQUAL;
-    return GST_VALUE_UNORDERED;
-  }
+  /* Else the ranges are only equal if their step is also equal */
+  if (INT64_RANGE_STEP (value1) == INT64_RANGE_STEP (value2))
+    return GST_VALUE_EQUAL;
+  return GST_VALUE_UNORDERED;
 }
 
 static gchar *
@@ -1624,12 +1761,12 @@ static gchar *
 gst_value_collect_double_range (GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  if (n_collect_values != 2)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[0].v_double >= collect_values[1].v_double)
-    return g_strdup_printf ("range start is not smaller than end for `%s'",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 2,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[0].v_double < collect_values[1].v_double,
+      g_strdup_printf ("range start is not smaller than end for `%s'",
+          G_VALUE_TYPE_NAME (value)));
 
   value->data[0].v_double = collect_values[0].v_double;
   value->data[1].v_double = collect_values[1].v_double;
@@ -1644,12 +1781,12 @@ gst_value_lcopy_double_range (const GValue * value, guint n_collect_values,
   gdouble *double_range_start = collect_values[0].v_pointer;
   gdouble *double_range_end = collect_values[1].v_pointer;
 
-  if (!double_range_start)
-    return g_strdup_printf ("start value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!double_range_end)
-    return g_strdup_printf ("end value location for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (double_range_start != NULL,
+      g_strdup_printf ("start value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (double_range_end != NULL,
+      g_strdup_printf ("end value location for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
 
   *double_range_start = value->data[0].v_double;
   *double_range_end = value->data[1].v_double;
@@ -1800,20 +1937,20 @@ gst_value_collect_fraction_range (GValue * value, guint n_collect_values,
 {
   GValue *vals = (GValue *) value->data[0].v_pointer;
 
-  if (n_collect_values != 4)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[1].v_int == 0)
-    return g_strdup_printf ("passed '0' as first denominator for `%s'",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[3].v_int == 0)
-    return g_strdup_printf ("passed '0' as second denominator for `%s'",
-        G_VALUE_TYPE_NAME (value));
-  if (gst_util_fraction_compare (collect_values[0].v_int,
+  g_return_val_if_fail (n_collect_values == 4,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[1].v_int != 0,
+      g_strdup_printf ("passed '0' as first denominator for `%s'",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[3].v_int != 0,
+      g_strdup_printf ("passed '0' as second denominator for `%s'",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (gst_util_fraction_compare (collect_values[0].v_int,
           collect_values[1].v_int, collect_values[2].v_int,
-          collect_values[3].v_int) >= 0)
-    return g_strdup_printf ("range start is not smaller than end for `%s'",
-        G_VALUE_TYPE_NAME (value));
+          collect_values[3].v_int) < 0,
+      g_strdup_printf ("range start is not smaller than end for `%s'",
+          G_VALUE_TYPE_NAME (value)));
 
   if (vals == NULL) {
     gst_value_init_fraction_range (value);
@@ -1836,21 +1973,18 @@ gst_value_lcopy_fraction_range (const GValue * value, guint n_collect_values,
   gint *dest_values[4];
   GValue *vals = (GValue *) value->data[0].v_pointer;
 
-  if (G_UNLIKELY (n_collect_values != 4))
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 4,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (vals != NULL,
+      g_strdup_printf ("Uninitialised `%s' passed", G_VALUE_TYPE_NAME (value)));
 
   for (i = 0; i < 4; i++) {
-    if (G_UNLIKELY (collect_values[i].v_pointer == NULL)) {
-      return g_strdup_printf ("value location for `%s' passed as NULL",
-          G_VALUE_TYPE_NAME (value));
-    }
-    dest_values[i] = collect_values[i].v_pointer;
-  }
+    g_return_val_if_fail (collect_values[i].v_pointer != NULL,
+        g_strdup_printf ("value location for `%s' passed as NULL",
+            G_VALUE_TYPE_NAME (value)));
 
-  if (G_UNLIKELY (vals == NULL)) {
-    return g_strdup_printf ("Uninitialised `%s' passed",
-        G_VALUE_TYPE_NAME (value));
+    dest_values[i] = collect_values[i].v_pointer;
   }
 
   dest_values[0][0] = gst_value_get_fraction_numerator (&vals[0]);
@@ -2015,7 +2149,6 @@ static gint
 gst_value_compare_fraction_range (const GValue * value1, const GValue * value2)
 {
   GValue *vals1, *vals2;
-  GstValueCompareFunc compare;
 
   if (value2->data[0].v_pointer == value1->data[0].v_pointer)
     return GST_VALUE_EQUAL;     /* Only possible if both are NULL */
@@ -2025,13 +2158,10 @@ gst_value_compare_fraction_range (const GValue * value1, const GValue * value2)
 
   vals1 = (GValue *) value1->data[0].v_pointer;
   vals2 = (GValue *) value2->data[0].v_pointer;
-  if ((compare = gst_value_get_compare_func (&vals1[0]))) {
-    if (gst_value_compare_with_func (&vals1[0], &vals2[0], compare) ==
-        GST_VALUE_EQUAL &&
-        gst_value_compare_with_func (&vals1[1], &vals2[1], compare) ==
-        GST_VALUE_EQUAL)
-      return GST_VALUE_EQUAL;
-  }
+  if (gst_value_compare_fraction (&vals1[0], &vals2[0]) == GST_VALUE_EQUAL &&
+      gst_value_compare_fraction (&vals1[1], &vals2[1]) == GST_VALUE_EQUAL)
+    return GST_VALUE_EQUAL;
+
   return GST_VALUE_UNORDERED;
 }
 
@@ -2088,6 +2218,12 @@ gst_value_compare_caps (const GValue * value1, const GValue * value2)
 {
   GstCaps *caps1 = GST_CAPS (gst_value_get_caps (value1));
   GstCaps *caps2 = GST_CAPS (gst_value_get_caps (value2));
+
+  if (caps1 == caps2)
+    return GST_VALUE_EQUAL;
+
+  if (!caps1 || !caps2)
+    return GST_VALUE_UNORDERED;
 
   if (gst_caps_is_equal (caps1, caps2))
     return GST_VALUE_EQUAL;
@@ -2432,9 +2568,7 @@ _priv_gst_value_parse_any_list (gchar * s, gchar ** after, GValue * value,
 {
   GValue list_value = { 0 };
   gboolean ret;
-  GArray *array;
-
-  array = g_value_peek_pointer (value);
+  GstValueList *vlist = VALUE_LIST_ARRAY (value);
 
   if (*s != begin)
     return FALSE;
@@ -2442,37 +2576,31 @@ _priv_gst_value_parse_any_list (gchar * s, gchar ** after, GValue * value,
 
   while (g_ascii_isspace (*s))
     s++;
-  if (*s == end) {
-    s++;
-    *after = s;
-    return TRUE;
-  }
-
-  ret = _priv_gst_value_parse_value (s, &s, &list_value, type);
-  if (!ret)
-    return FALSE;
-
-  g_array_append_val (array, list_value);
-
-  while (g_ascii_isspace (*s))
-    s++;
 
   while (*s != end) {
-    if (*s != ',')
-      return FALSE;
-    s++;
-
-    while (g_ascii_isspace (*s))
+    if (*s == ',') {
       s++;
+      while (g_ascii_isspace (*s))
+        s++;
+
+      if (*s == ',')
+        return FALSE;
+
+      continue;
+    }
 
     memset (&list_value, 0, sizeof (list_value));
     ret = _priv_gst_value_parse_value (s, &s, &list_value, type);
     if (!ret)
       return FALSE;
 
-    g_array_append_val (array, list_value);
+    _gst_value_list_append_val (vlist, &list_value);
+
     while (g_ascii_isspace (*s))
       s++;
+
+    if (*s != ',' && *s != end)
+      return FALSE;
   }
 
   s++;
@@ -2579,8 +2707,7 @@ _priv_gst_value_parse_value (gchar * str,
       if (G_UNLIKELY (!_priv_gst_value_parse_string (s, &value_end, &s, TRUE)))
         return FALSE;
       /* Set NULL terminator for deserialization */
-      c = *value_end;
-      *value_end = '\0';
+      value_s = g_strndup (value_s, value_end - value_s);
 
       for (i = 0; i < G_N_ELEMENTS (try_types); i++) {
         g_value_init (value, try_types[i]);
@@ -2596,14 +2723,13 @@ _priv_gst_value_parse_value (gchar * str,
                   (type != G_TYPE_STRING))))
         return FALSE;
       /* Set NULL terminator for deserialization */
-      c = *value_end;
-      *value_end = '\0';
+      value_s = g_strndup (value_s, value_end - value_s);
 
       ret = gst_value_deserialize (value, value_s);
       if (G_UNLIKELY (!ret))
         g_value_unset (value);
     }
-    *value_end = c;
+    g_free (value_s);
   }
 
   *after = s;
@@ -2622,18 +2748,19 @@ gst_value_serialize_segment_internal (const GValue * value, gboolean escape)
   gchar *t, *res;
   GstStructure *s;
 
-  s = gst_structure_new ("GstSegment",
-      "flags", GST_TYPE_SEGMENT_FLAGS, seg->flags,
-      "rate", G_TYPE_DOUBLE, seg->rate,
-      "applied-rate", G_TYPE_DOUBLE, seg->applied_rate,
-      "format", GST_TYPE_FORMAT, seg->format,
-      "base", G_TYPE_UINT64, seg->base,
-      "offset", G_TYPE_UINT64, seg->offset,
-      "start", G_TYPE_UINT64, seg->start,
-      "stop", G_TYPE_UINT64, seg->stop,
-      "time", G_TYPE_UINT64, seg->time,
-      "position", G_TYPE_UINT64, seg->position,
-      "duration", G_TYPE_UINT64, seg->duration, NULL);
+  s = gst_structure_new_id (GST_QUARK (SEGMENT),
+      GST_QUARK (FLAGS), GST_TYPE_SEGMENT_FLAGS, seg->flags,
+      GST_QUARK (RATE), G_TYPE_DOUBLE, seg->rate,
+      GST_QUARK (APPLIED_RATE), G_TYPE_DOUBLE, seg->applied_rate,
+      GST_QUARK (FORMAT), GST_TYPE_FORMAT, seg->format,
+      GST_QUARK (BASE), G_TYPE_UINT64, seg->base,
+      GST_QUARK (OFFSET), G_TYPE_UINT64, seg->offset,
+      GST_QUARK (START), G_TYPE_UINT64, seg->start,
+      GST_QUARK (STOP), G_TYPE_UINT64, seg->stop,
+      GST_QUARK (TIME), G_TYPE_UINT64, seg->time,
+      GST_QUARK (POSITION), G_TYPE_UINT64, seg->position,
+      GST_QUARK (DURATION), G_TYPE_UINT64, seg->duration, NULL);
+
   t = gst_structure_to_string (s);
   if (escape) {
     res = g_strdup_printf ("\"%s\"", t);
@@ -2663,18 +2790,18 @@ gst_value_deserialize_segment (GValue * dest, const gchar * s)
   if (str == NULL)
     return FALSE;
 
-  res = gst_structure_get (str,
-      "flags", GST_TYPE_SEGMENT_FLAGS, &seg.flags,
-      "rate", G_TYPE_DOUBLE, &seg.rate,
-      "applied-rate", G_TYPE_DOUBLE, &seg.applied_rate,
-      "format", GST_TYPE_FORMAT, &seg.format,
-      "base", G_TYPE_UINT64, &seg.base,
-      "offset", G_TYPE_UINT64, &seg.offset,
-      "start", G_TYPE_UINT64, &seg.start,
-      "stop", G_TYPE_UINT64, &seg.stop,
-      "time", G_TYPE_UINT64, &seg.time,
-      "position", G_TYPE_UINT64, &seg.position,
-      "duration", G_TYPE_UINT64, &seg.duration, NULL);
+  res = gst_structure_id_get (str,
+      GST_QUARK (FLAGS), GST_TYPE_SEGMENT_FLAGS, &seg.flags,
+      GST_QUARK (RATE), G_TYPE_DOUBLE, &seg.rate,
+      GST_QUARK (APPLIED_RATE), G_TYPE_DOUBLE, &seg.applied_rate,
+      GST_QUARK (FORMAT), GST_TYPE_FORMAT, &seg.format,
+      GST_QUARK (BASE), G_TYPE_UINT64, &seg.base,
+      GST_QUARK (OFFSET), G_TYPE_UINT64, &seg.offset,
+      GST_QUARK (START), G_TYPE_UINT64, &seg.start,
+      GST_QUARK (STOP), G_TYPE_UINT64, &seg.stop,
+      GST_QUARK (TIME), G_TYPE_UINT64, &seg.time,
+      GST_QUARK (POSITION), G_TYPE_UINT64, &seg.position,
+      GST_QUARK (DURATION), G_TYPE_UINT64, &seg.duration, NULL);
   gst_structure_free (str);
 
   if (res)
@@ -3756,7 +3883,7 @@ gst_value_serialize_enum (const GValue * value)
   }
 
   g_return_val_if_fail (en, NULL);
-  return g_strdup (en->value_name);
+  return g_strdup (en->value_nick);
 }
 
 static gint
@@ -4121,6 +4248,58 @@ gst_value_is_subset_structure_structure (const GValue * value1,
   return gst_structure_is_subset (s1, s2);
 }
 
+static gboolean
+gst_value_is_subset_list_list (const GValue * value1, const GValue * value2)
+{
+  GstValueList *vlist1 = VALUE_LIST_ARRAY (value1);
+  GstValueList *vlist2 = VALUE_LIST_ARRAY (value2);
+  gint it1, len1, it2, len2;
+
+  len1 = vlist1->len;
+  len2 = vlist2->len;
+
+  /* A list can't be a subset of a smaller list */
+  if (len1 > len2)
+    return FALSE;
+
+  /* Check if all elements of the first list are within the 2nd list */
+  for (it1 = 0; it1 < len1; it1++) {
+    const GValue *child1 = &vlist1->fields[it1];
+    gboolean seen = FALSE;
+
+    for (it2 = 0; it2 < len2; it2++) {
+      const GValue *child2 = &vlist2->fields[it2];
+      if (gst_value_compare (child1, child2) == GST_VALUE_EQUAL) {
+        seen = TRUE;
+        break;
+      }
+    }
+    if (!seen)
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+static gboolean
+gst_value_is_subset_list (const GValue * value1, const GValue * value2)
+{
+  GstValueList *vlist2 = VALUE_LIST_ARRAY (value2);
+  gint it2, len2;
+
+  len2 = vlist2->len;
+
+  /* Check whether value1 is within the list */
+  for (it2 = 0; it2 < len2; it2++) {
+    const GValue *child2 = &vlist2->fields[it2];
+    if (gst_value_compare (value1, child2) == GST_VALUE_EQUAL) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
 /**
  * gst_value_is_subset:
  * @value1: a #GValue
@@ -4133,6 +4312,9 @@ gst_value_is_subset_structure_structure (const GValue * value1,
 gboolean
 gst_value_is_subset (const GValue * value1, const GValue * value2)
 {
+  GType type1 = G_VALUE_TYPE (value1);
+  GType type2 = G_VALUE_TYPE (value2);
+
   /* special case for int/int64 ranges, since we cannot compute
      the difference for those when they have different steps,
      and it's actually a lot simpler to compute whether a range
@@ -4148,6 +4330,10 @@ gst_value_is_subset (const GValue * value1, const GValue * value2)
   } else if (GST_VALUE_HOLDS_STRUCTURE (value1)
       && GST_VALUE_HOLDS_STRUCTURE (value2)) {
     return gst_value_is_subset_structure_structure (value1, value2);
+  } else if (type2 == GST_TYPE_LIST) {
+    if (type1 == GST_TYPE_LIST)
+      return gst_value_is_subset_list_list (value1, value2);
+    return gst_value_is_subset_list (value1, value2);
   }
 
   /*
@@ -4586,12 +4772,129 @@ gst_value_intersect_double_range_double_range (GValue * dest,
 }
 
 static gboolean
+gst_value_intersect_list_list (GValue * dest, const GValue * value1,
+    const GValue * value2)
+{
+  guint8 tmpfield[16];          /* Check up to 128 values */
+  guint8 *bitfield;
+  gboolean alloc_bitfield = FALSE;
+  gboolean res = FALSE;
+  GValue *tmp;
+  GType type1, type2;
+  guint it1, len1, start2, it2, len2, itar;
+  GstValueList *vlist = NULL;
+
+  /* If they don't have the same basic type, all bets are off :) */
+  if (!gst_value_list_or_array_get_basic_type (value1, &type1) ||
+      !gst_value_list_or_array_get_basic_type (value2, &type2) ||
+      type1 != type2)
+    return FALSE;
+
+  len1 = VALUE_LIST_SIZE (value1);
+  len2 = VALUE_LIST_SIZE (value2);
+
+  /* Fast-path with no dest (i.e. only interested in knowing whether
+   * both lists intersected without wanting the result) */
+  if (!dest) {
+    for (it1 = 0; it1 < len1; it1++) {
+      const GValue *item1 = VALUE_LIST_GET_VALUE (value1, it1);
+      for (it2 = 0; it2 < len2; it2++) {
+        const GValue *item2 = VALUE_LIST_GET_VALUE (value2, it2);
+        if (gst_value_intersect (NULL, item1, item2)) {
+          res = TRUE;
+          goto beach;
+        }
+      }
+    }
+    goto beach;
+  }
+#define is_visited(idx) (bitfield[(idx) >> 3]    & (1 << ((idx) & 0x7)))
+#define mark_visited(idx) (bitfield[(idx) >> 3] |= (1 << ((idx) & 0x7)))
+
+  /* Bitfield to avoid double-visiting */
+  if (G_UNLIKELY (len2 > 128)) {
+    alloc_bitfield = TRUE;
+    bitfield = g_malloc0 ((len2 / 8) + 1);
+    GST_CAT_LOG (GST_CAT_PERFORMANCE,
+        "Allocation for GstValueList with more than 128 members");
+  } else {
+    bitfield = &tmpfield[0];
+    memset (bitfield, 0, 16);
+  }
+
+
+  /* When doing list<->list intersections, there is a greater
+   * probability of ending up with a list than with a single value.
+   * Furthermore, the biggest that list can be will the smallest list
+   * (i.e. intersects fully).
+   * Therefore we pre-allocate a GstValueList of that size. */
+  vlist = _gst_value_list_new (MIN (len1, len2));
+
+  itar = 0;
+  tmp = &vlist->fields[0];
+  start2 = 0;
+
+  for (it1 = 0; it1 < len1; it1++) {
+    const GValue *item1 = VALUE_LIST_GET_VALUE (value1, it1);
+    for (it2 = start2; it2 < len2; it2++) {
+      const GValue *item2;
+      if (is_visited (it2))
+        continue;
+      item2 = VALUE_LIST_GET_VALUE (value2, it2);
+
+      if (gst_value_intersect (tmp, item1, item2)) {
+        res = TRUE;
+        mark_visited (it2);
+        /* Increment our inner-loop starting point */
+        if (it2 == start2)
+          start2++;
+
+        /* Move our collection value */
+        itar += 1;
+        tmp = &vlist->fields[itar];
+        vlist->len += 1;
+
+        /* We can stop iterating the second part now that we've matched */
+        break;
+      }
+    }
+  }
+
+#undef is_visited
+#undef mark_visited
+
+  if (res) {
+    /* If we end up with a single value in the list, just use that
+     * value. Else use the list */
+    if (vlist->len == 1) {
+      gst_value_move (dest, &vlist->fields[0]);
+      g_free (vlist);
+    } else {
+      dest->g_type = GST_TYPE_LIST;
+      dest->data[0].v_pointer = vlist;
+    }
+  } else {
+    g_free (vlist);
+  }
+
+beach:
+  if (alloc_bitfield)
+    g_free (bitfield);
+  return res;
+}
+
+static gboolean
 gst_value_intersect_list (GValue * dest, const GValue * value1,
     const GValue * value2)
 {
   guint i, size;
   GValue intersection = { 0, };
   gboolean ret = FALSE;
+
+  /* Use optimized list-list intersection */
+  if (G_VALUE_TYPE (value2) == GST_TYPE_LIST) {
+    return gst_value_intersect_list_list (dest, value1, value2);
+  }
 
   size = VALUE_LIST_SIZE (value1);
   for (i = 0; i < size; i++) {
@@ -4671,25 +4974,21 @@ gst_value_intersect_fraction_fraction_range (GValue * dest, const GValue * src1,
 {
   gint res1, res2;
   GValue *vals;
-  GstValueCompareFunc compare;
 
   vals = src2->data[0].v_pointer;
 
   if (vals == NULL)
     return FALSE;
 
-  if ((compare = gst_value_get_compare_func (src1))) {
-    res1 = gst_value_compare_with_func (&vals[0], src1, compare);
-    res2 = gst_value_compare_with_func (&vals[1], src1, compare);
+  res1 = gst_value_compare_fraction (&vals[0], src1);
+  res2 = gst_value_compare_fraction (&vals[1], src1);
 
-    if ((res1 == GST_VALUE_EQUAL || res1 == GST_VALUE_LESS_THAN) &&
-        (res2 == GST_VALUE_EQUAL || res2 == GST_VALUE_GREATER_THAN)) {
-      if (dest)
-        gst_value_init_and_copy (dest, src1);
-      return TRUE;
-    }
+  if ((res1 == GST_VALUE_EQUAL || res1 == GST_VALUE_LESS_THAN) &&
+      (res2 == GST_VALUE_EQUAL || res2 == GST_VALUE_GREATER_THAN)) {
+    if (dest)
+      gst_value_init_and_copy (dest, src1);
+    return TRUE;
   }
-
   return FALSE;
 }
 
@@ -4701,45 +5000,42 @@ gst_value_intersect_fraction_range_fraction_range (GValue * dest,
   GValue *max;
   gint res;
   GValue *vals1, *vals2;
-  GstValueCompareFunc compare;
 
   vals1 = src1->data[0].v_pointer;
   vals2 = src2->data[0].v_pointer;
   g_return_val_if_fail (vals1 != NULL && vals2 != NULL, FALSE);
 
-  if ((compare = gst_value_get_compare_func (&vals1[0]))) {
-    /* min = MAX (src1.start, src2.start) */
-    res = gst_value_compare_with_func (&vals1[0], &vals2[0], compare);
-    g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
-    if (res == GST_VALUE_LESS_THAN)
-      min = &vals2[0];          /* Take the max of the 2 */
-    else
-      min = &vals1[0];
+  /* min = MAX (src1.start, src2.start) */
+  res = gst_value_compare_fraction (&vals1[0], &vals2[0]);
+  g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
+  if (res == GST_VALUE_LESS_THAN)
+    min = &vals2[0];            /* Take the max of the 2 */
+  else
+    min = &vals1[0];
 
-    /* max = MIN (src1.end, src2.end) */
-    res = gst_value_compare_with_func (&vals1[1], &vals2[1], compare);
-    g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
-    if (res == GST_VALUE_GREATER_THAN)
-      max = &vals2[1];          /* Take the min of the 2 */
-    else
-      max = &vals1[1];
+  /* max = MIN (src1.end, src2.end) */
+  res = gst_value_compare_fraction (&vals1[1], &vals2[1]);
+  g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
+  if (res == GST_VALUE_GREATER_THAN)
+    max = &vals2[1];            /* Take the min of the 2 */
+  else
+    max = &vals1[1];
 
-    res = gst_value_compare_with_func (min, max, compare);
-    g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
-    if (res == GST_VALUE_LESS_THAN) {
-      if (dest) {
-        g_value_init (dest, GST_TYPE_FRACTION_RANGE);
-        vals1 = dest->data[0].v_pointer;
-        g_value_copy (min, &vals1[0]);
-        g_value_copy (max, &vals1[1]);
-      }
-      return TRUE;
+  res = gst_value_compare_fraction (min, max);
+  g_return_val_if_fail (res != GST_VALUE_UNORDERED, FALSE);
+  if (res == GST_VALUE_LESS_THAN) {
+    if (dest) {
+      g_value_init (dest, GST_TYPE_FRACTION_RANGE);
+      vals1 = dest->data[0].v_pointer;
+      g_value_copy (min, &vals1[0]);
+      g_value_copy (max, &vals1[1]);
     }
-    if (res == GST_VALUE_EQUAL) {
-      if (dest)
-        gst_value_init_and_copy (dest, min);
-      return TRUE;
-    }
+    return TRUE;
+  }
+  if (res == GST_VALUE_EQUAL) {
+    if (dest)
+      gst_value_init_and_copy (dest, min);
+    return TRUE;
   }
 
   return FALSE;
@@ -5272,21 +5568,17 @@ gst_value_subtract_fraction_fraction_range (GValue * dest,
 {
   const GValue *min = gst_value_get_fraction_range_min (subtrahend);
   const GValue *max = gst_value_get_fraction_range_max (subtrahend);
-  GstValueCompareFunc compare;
 
-  if ((compare = gst_value_get_compare_func (minuend))) {
-    /* subtracting a range from an fraction only works if the fraction
-     * is not in the range */
-    if (gst_value_compare_with_func (minuend, min, compare) ==
-        GST_VALUE_LESS_THAN ||
-        gst_value_compare_with_func (minuend, max, compare) ==
-        GST_VALUE_GREATER_THAN) {
-      /* and the result is the value */
-      if (dest)
-        gst_value_init_and_copy (dest, minuend);
-      return TRUE;
-    }
+  /* subtracting a range from an fraction only works if the fraction
+   * is not in the range */
+  if (gst_value_compare_fraction (minuend, min) == GST_VALUE_LESS_THAN ||
+      gst_value_compare_fraction (minuend, max) == GST_VALUE_GREATER_THAN) {
+    /* and the result is the value */
+    if (dest)
+      gst_value_init_and_copy (dest, minuend);
+    return TRUE;
   }
+
   return FALSE;
 }
 
@@ -5315,7 +5607,6 @@ gst_value_subtract_fraction_range_fraction_range (GValue * dest,
   GValue v1 = { 0, };
   GValue v2 = { 0, };
   GValue *pv1, *pv2;            /* yeah, hungarian! */
-  GstValueCompareFunc compare;
 
   g_return_val_if_fail (min1 != NULL && max1 != NULL, FALSE);
   g_return_val_if_fail (min2 != NULL && max2 != NULL, FALSE);
@@ -5324,20 +5615,17 @@ gst_value_subtract_fraction_range_fraction_range (GValue * dest,
     return FALSE;
 #endif // GSTREAMER_LITE
 
-  compare = gst_value_get_compare_func (min1);
-  g_return_val_if_fail (compare, FALSE);
-
-  cmp1 = gst_value_compare_with_func (max2, max1, compare);
+  cmp1 = gst_value_compare_fraction (max2, max1);
   g_return_val_if_fail (cmp1 != GST_VALUE_UNORDERED, FALSE);
   if (cmp1 == GST_VALUE_LESS_THAN)
     max1 = max2;
-  cmp1 = gst_value_compare_with_func (min1, min2, compare);
+  cmp1 = gst_value_compare_fraction (min1, min2);
   g_return_val_if_fail (cmp1 != GST_VALUE_UNORDERED, FALSE);
   if (cmp1 == GST_VALUE_GREATER_THAN)
     min2 = min1;
 
-  cmp1 = gst_value_compare_with_func (min1, max1, compare);
-  cmp2 = gst_value_compare_with_func (min2, max2, compare);
+  cmp1 = gst_value_compare_fraction (min1, max1);
+  cmp2 = gst_value_compare_fraction (min2, max2);
 
   if (cmp1 == GST_VALUE_LESS_THAN && cmp2 == GST_VALUE_LESS_THAN) {
     pv1 = &v1;
@@ -5447,10 +5735,6 @@ gst_value_list_equals_range (const GValue * list, const GValue * value)
   const GValue *first;
   guint list_size, n;
 
-  g_assert (G_IS_VALUE (list));
-  g_assert (G_IS_VALUE (value));
-  g_assert (GST_VALUE_HOLDS_LIST (list));
-
   /* TODO: compare against an empty list ? No type though... */
   list_size = VALUE_LIST_SIZE (list);
   if (list_size == 0)
@@ -5459,7 +5743,7 @@ gst_value_list_equals_range (const GValue * list, const GValue * value)
   /* compare the basic types - they have to match */
   first = VALUE_LIST_GET_VALUE (list, 0);
 #define CHECK_TYPES(type,prefix) \
-  (prefix##_VALUE_HOLDS_##type(first) && GST_VALUE_HOLDS_##type##_RANGE (value))
+  ((first) && G_VALUE_TYPE(first) == prefix##_TYPE_##type && GST_VALUE_HOLDS_##type##_RANGE (value))
   if (CHECK_TYPES (INT, G)) {
     const gint rmin = gst_value_get_int_range_min (value);
     const gint rmax = gst_value_get_int_range_max (value);
@@ -5598,30 +5882,6 @@ gst_value_compare (const GValue * value1, const GValue * value2)
 
   /* And now handle the generic case */
   return _gst_value_compare_nolist (value1, value2);
-}
-
-/*
- * gst_value_compare_with_func:
- * @value1: a value to compare
- * @value2: another value to compare
- * @compare: compare function
- *
- * Compares @value1 and @value2 using the @compare function. Works like
- * gst_value_compare() but allows to save time determining the compare function
- * a multiple times.
- *
- * Returns: comparison result
- */
-static gint
-gst_value_compare_with_func (const GValue * value1, const GValue * value2,
-    GstValueCompareFunc compare)
-{
-  g_assert (compare);
-
-  if (G_VALUE_TYPE (value1) != G_VALUE_TYPE (value2))
-    return GST_VALUE_UNORDERED;
-
-  return compare (value1, value2);
 }
 
 /* union */
@@ -5768,19 +6028,18 @@ gst_value_can_intersect (const GValue * value1, const GValue * value2)
 
   if (G_UNLIKELY (GST_VALUE_HOLDS_FLAG_SET (value1) &&
           GST_VALUE_HOLDS_FLAG_SET (value2))) {
-    GType type1, type2, flagset_type;
+    GType flagset_type;
 
-    type1 = G_VALUE_TYPE (value1);
-    type2 = G_VALUE_TYPE (value2);
     flagset_type = GST_TYPE_FLAG_SET;
 
     /* Allow intersection with the generic FlagSet type, on one
      * side, but not 2 different subtypes - that makes no sense */
-    if (type1 == type2 || type1 == flagset_type || type2 == flagset_type)
+    if (type1 == flagset_type || type2 == flagset_type)
       return TRUE;
   }
 
-  /* check registered intersect functions */
+  /* check registered intersect functions (only different gtype are checked at
+   * this point) */
   len = gst_value_intersect_funcs->len;
   for (i = 0; i < len; i++) {
     intersect_info = &g_array_index (gst_value_intersect_funcs,
@@ -5835,15 +6094,36 @@ gst_value_intersect (GValue * dest, const GValue * value1,
     return TRUE;
   }
 
-  len = gst_value_intersect_funcs->len;
-  for (i = 0; i < len; i++) {
-    intersect_info = &g_array_index (gst_value_intersect_funcs,
-        GstValueIntersectInfo, i);
-    if (intersect_info->type1 == type1 && intersect_info->type2 == type2) {
-      return intersect_info->func (dest, value1, value2);
-    }
-    if (intersect_info->type1 == type2 && intersect_info->type2 == type1) {
-      return intersect_info->func (dest, value2, value1);
+  if (type1 == type2) {
+    /* Equal type comparison */
+    if (type1 == GST_TYPE_INT_RANGE)
+      return gst_value_intersect_int_range_int_range (dest, value1, value2);
+    if (type1 == GST_TYPE_INT64_RANGE)
+      return gst_value_intersect_int64_range_int64_range (dest, value1, value2);
+    if (type1 == GST_TYPE_DOUBLE_RANGE)
+      return gst_value_intersect_double_range_double_range (dest, value1,
+          value2);
+    if (type1 == GST_TYPE_ARRAY)
+      return gst_value_intersect_array (dest, value1, value2);
+    if (type1 == GST_TYPE_FRACTION_RANGE)
+      return gst_value_intersect_fraction_range_fraction_range (dest, value1,
+          value2);
+    if (type1 == GST_TYPE_FLAG_SET)
+      return gst_value_intersect_flagset_flagset (dest, value1, value2);
+    if (type1 == GST_TYPE_STRUCTURE)
+      return gst_value_intersect_structure_structure (dest, value1, value2);
+  } else {
+    /* Different type comparison */
+    len = gst_value_intersect_funcs->len;
+    for (i = 0; i < len; i++) {
+      intersect_info = &g_array_index (gst_value_intersect_funcs,
+          GstValueIntersectInfo, i);
+      if (intersect_info->type1 == type1 && intersect_info->type2 == type2) {
+        return intersect_info->func (dest, value1, value2);
+      }
+      if (intersect_info->type1 == type2 && intersect_info->type2 == type1) {
+        return intersect_info->func (dest, value2, value1);
+      }
     }
   }
 
@@ -6055,6 +6335,8 @@ gst_value_register (const GstValueTable * table)
 void
 gst_value_init_and_copy (GValue * dest, const GValue * src)
 {
+  GType type;
+
   g_return_if_fail (G_IS_VALUE (src));
   g_return_if_fail (dest != NULL);
 #ifdef GSTREAMER_LITE
@@ -6062,7 +6344,19 @@ gst_value_init_and_copy (GValue * dest, const GValue * src)
     return;
 #endif // GSTREAMER_LITE
 
-  g_value_init (dest, G_VALUE_TYPE (src));
+  type = G_VALUE_TYPE (src);
+  /* We need to shortcut GstValueList/GstValueArray copying because:
+   * * g_value_init would end up allocating something
+   * * which g_value_copy would then free and re-alloc.
+   *
+   * Instead directly call the copy */
+  if (type == GST_TYPE_LIST || type == GST_TYPE_ARRAY) {
+    dest->g_type = type;
+    gst_value_copy_list_or_array (src, dest);
+    return;
+  }
+
+  g_value_init (dest, type);
   g_value_copy (src, dest);
 }
 
@@ -6339,22 +6633,20 @@ static gchar *
 gst_value_collect_fraction (GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  if (n_collect_values != 2)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[1].v_int == 0)
-    return g_strdup_printf ("passed '0' as denominator for `%s'",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[0].v_int < -G_MAXINT)
-    return
-        g_strdup_printf
-        ("passed value smaller than -G_MAXINT as numerator for `%s'",
-        G_VALUE_TYPE_NAME (value));
-  if (collect_values[1].v_int < -G_MAXINT)
-    return
-        g_strdup_printf
-        ("passed value smaller than -G_MAXINT as denominator for `%s'",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 2,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[1].v_int != 0,
+      g_strdup_printf ("passed '0' as denominator for `%s'",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[0].v_int >= -G_MAXINT,
+      g_strdup_printf
+      ("passed value smaller than -G_MAXINT as numerator for `%s'",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (collect_values[1].v_int >= -G_MAXINT,
+      g_strdup_printf
+      ("passed value smaller than -G_MAXINT as denominator for `%s'",
+          G_VALUE_TYPE_NAME (value)));
 
   gst_value_set_fraction (value,
       collect_values[0].v_int, collect_values[1].v_int);
@@ -6369,12 +6661,12 @@ gst_value_lcopy_fraction (const GValue * value, guint n_collect_values,
   gint *numerator = collect_values[0].v_pointer;
   gint *denominator = collect_values[1].v_pointer;
 
-  if (!numerator)
-    return g_strdup_printf ("numerator for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
-  if (!denominator)
-    return g_strdup_printf ("denominator for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (numerator != NULL,
+      g_strdup_printf ("numerator for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
+  g_return_val_if_fail (denominator != NULL,
+      g_strdup_printf ("denominator for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
 
   *numerator = value->data[0].v_int;
   *denominator = value->data[1].v_int;
@@ -6825,9 +7117,9 @@ static gchar *
 gst_value_collect_bitmask (GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  if (n_collect_values != 1)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 1,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
 
   gst_value_set_bitmask (value, (guint64) collect_values[0].v_int64);
 
@@ -6840,9 +7132,9 @@ gst_value_lcopy_bitmask (const GValue * value, guint n_collect_values,
 {
   guint64 *bitmask = collect_values[0].v_pointer;
 
-  if (!bitmask)
-    return g_strdup_printf ("value for `%s' passed as NULL",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (bitmask != NULL,
+      g_strdup_printf ("value for `%s' passed as NULL",
+          G_VALUE_TYPE_NAME (value)));
 
   *bitmask = value->data[0].v_uint64;
 
@@ -6978,9 +7270,9 @@ static gchar *
 gst_value_collect_flagset (GValue * value, guint n_collect_values,
     GTypeCValue * collect_values, guint collect_flags)
 {
-  if (n_collect_values != 2)
-    return g_strdup_printf ("not enough value locations for `%s' passed",
-        G_VALUE_TYPE_NAME (value));
+  g_return_val_if_fail (n_collect_values == 2,
+      g_strdup_printf ("not enough value locations for `%s' passed",
+          G_VALUE_TYPE_NAME (value)));
 
   gst_value_set_flagset (value,
       (guint) collect_values[0].v_int, (guint) collect_values[1].v_int);
@@ -7510,7 +7802,7 @@ G_STMT_START {                                                          \
 
 static const gint GST_VALUE_TABLE_DEFAULT_SIZE = 40;
 static const gint GST_VALUE_UNION_TABLE_DEFAULT_SIZE = 8;
-static const gint GST_VALUE_INTERSECT_TABLE_DEFAULT_SIZE = 16;
+static const gint GST_VALUE_INTERSECT_TABLE_DEFAULT_SIZE = 4;
 static const gint GST_VALUE_SUBTRACT_TABLE_DEFAULT_SIZE = 16;
 
 void
@@ -7633,29 +7925,17 @@ _priv_gst_value_initialize (void)
       gst_value_transform_string_flagset);
 #endif // GSTREAMER_LITE
 
+  /* Only register intersection functions for *different* types.
+   * Identical type intersection should be specified directly in
+   * gst_value_intersect() */
   gst_value_register_intersect_func (G_TYPE_INT, GST_TYPE_INT_RANGE,
       gst_value_intersect_int_int_range);
-  gst_value_register_intersect_func (GST_TYPE_INT_RANGE, GST_TYPE_INT_RANGE,
-      gst_value_intersect_int_range_int_range);
   gst_value_register_intersect_func (G_TYPE_INT64, GST_TYPE_INT64_RANGE,
       gst_value_intersect_int64_int64_range);
-  gst_value_register_intersect_func (GST_TYPE_INT64_RANGE,
-      GST_TYPE_INT64_RANGE, gst_value_intersect_int64_range_int64_range);
   gst_value_register_intersect_func (G_TYPE_DOUBLE, GST_TYPE_DOUBLE_RANGE,
       gst_value_intersect_double_double_range);
-  gst_value_register_intersect_func (GST_TYPE_DOUBLE_RANGE,
-      GST_TYPE_DOUBLE_RANGE, gst_value_intersect_double_range_double_range);
-  gst_value_register_intersect_func (GST_TYPE_ARRAY, GST_TYPE_ARRAY,
-      gst_value_intersect_array);
   gst_value_register_intersect_func (GST_TYPE_FRACTION,
       GST_TYPE_FRACTION_RANGE, gst_value_intersect_fraction_fraction_range);
-  gst_value_register_intersect_func (GST_TYPE_FRACTION_RANGE,
-      GST_TYPE_FRACTION_RANGE,
-      gst_value_intersect_fraction_range_fraction_range);
-  gst_value_register_intersect_func (GST_TYPE_FLAG_SET, GST_TYPE_FLAG_SET,
-      gst_value_intersect_flagset_flagset);
-  gst_value_register_intersect_func (GST_TYPE_STRUCTURE, GST_TYPE_STRUCTURE,
-      gst_value_intersect_structure_structure);
 
   gst_value_register_subtract_func (G_TYPE_INT, GST_TYPE_INT_RANGE,
       gst_value_subtract_int_int_range);

@@ -29,17 +29,17 @@
 
 #include <dlfcn.h>
 
-/* Perl includes <nlist.h> and <link.h> instead of <dlfcn.h> on some systmes? */
+/* Perl includes <nlist.h> and <link.h> instead of <dlfcn.h> on some systems? */
 
 
 /* dlerror() is not implemented on all systems
  */
 #ifndef G_MODULE_HAVE_DLERROR
 #  ifdef __NetBSD__
-#    define dlerror() g_strerror (errno)
+#    define dlerror()   g_strerror (errno)
 #  else /* !__NetBSD__ */
 /* could we rely on errno's state here? */
-#    define dlerror() "unknown dl-error"
+#    define dlerror()   "unknown dl-error"
 #  endif /* !__NetBSD__ */
 #endif  /* G_MODULE_HAVE_DLERROR */
 
@@ -50,18 +50,18 @@
  *
  * Mandatory:
  * RTLD_LAZY   - resolve undefined symbols as code from the dynamic library
- *     is executed.
+ *       is executed.
  * RTLD_NOW    - resolve all undefined symbols before dlopen returns, and fail
- *     if this cannot be done.
+ *       if this cannot be done.
  * Optionally:
  * RTLD_GLOBAL - the external symbols defined in the library will be made
- *     available to subsequently loaded libraries.
+ *       available to subsequently loaded libraries.
  */
 #ifndef HAVE_RTLD_LAZY
-#define RTLD_LAZY 1
+#define RTLD_LAZY   1
 #endif  /* RTLD_LAZY */
 #ifndef HAVE_RTLD_NOW
-#define RTLD_NOW  0
+#define RTLD_NOW    0
 #endif  /* RTLD_NOW */
 /* some systems (OSF1 V5.0) have broken RTLD_GLOBAL linkage */
 #ifdef G_MODULE_BROKEN_RTLD_GLOBAL
@@ -131,24 +131,14 @@ _g_module_self (void)
 }
 
 static void
-_g_module_close (gpointer handle,
-     gboolean is_unref)
+_g_module_close (gpointer handle)
 {
-  /* are there any systems out there that have dlopen()/dlclose()
-   * without a reference count implementation?
-   *
-   * See above for the Android special case
-   */
 #if defined(__BIONIC__)
-  is_unref = (handle != RTLD_DEFAULT);
-#else
-  is_unref |= 1;
+  if (handle != RTLD_DEFAULT)
 #endif
-
-  if (is_unref)
     {
       if (dlclose (handle) != 0)
-  g_module_set_error (fetch_dlerror (TRUE));
+        g_module_set_error (fetch_dlerror (TRUE));
     }
 }
 

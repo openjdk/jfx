@@ -80,6 +80,34 @@ typedef enum
   APP_WAITING = 1 << 1,         /* application thread is waiting for streaming thread */
 } GstAppSinkWaitStatus;
 
+typedef struct
+{
+  GstAppSinkCallbacks callbacks;
+  gpointer user_data;
+  GDestroyNotify destroy_notify;
+  gint ref_count;
+} Callbacks;
+
+static Callbacks *
+callbacks_ref (Callbacks * callbacks)
+{
+  g_atomic_int_inc (&callbacks->ref_count);
+
+  return callbacks;
+}
+
+static void
+callbacks_unref (Callbacks * callbacks)
+{
+  if (!g_atomic_int_dec_and_test (&callbacks->ref_count))
+    return;
+
+  if (callbacks->destroy_notify)
+    callbacks->destroy_notify (callbacks->user_data);
+
+  g_free (callbacks);
+}
+
 struct _GstAppSinkPrivate
 {
   GstCaps *caps;
@@ -104,9 +132,7 @@ struct _GstAppSinkPrivate
   gboolean is_eos;
   gboolean buffer_lists_supported;
 
-  GstAppSinkCallbacks callbacks;
-  gpointer user_data;
-  GDestroyNotify notify;
+  Callbacks *callbacks;
 
   GstSample *sample;
 };
@@ -264,7 +290,7 @@ gst_app_sink_class_init (GstAppSinkClass * klass)
   gst_app_sink_signals[SIGNAL_EOS] =
       g_signal_new ("eos", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
       G_STRUCT_OFFSET (GstAppSinkClass, eos),
-      NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0, G_TYPE_NONE);
+      NULL, NULL, NULL, G_TYPE_NONE, 0, G_TYPE_NONE);
   /**
    * GstAppSink::new-preroll:
    * @appsink: the appsink element that emitted the signal
@@ -476,21 +502,18 @@ gst_app_sink_dispose (GObject * obj)
   GstAppSink *appsink = GST_APP_SINK_CAST (obj);
   GstAppSinkPrivate *priv = appsink->priv;
   GstMiniObject *queue_obj;
+  Callbacks *callbacks = NULL;
 
   GST_OBJECT_LOCK (appsink);
   if (priv->caps) {
     gst_caps_unref (priv->caps);
     priv->caps = NULL;
   }
-  if (priv->notify) {
-    priv->notify (priv->user_data);
-  }
-  priv->user_data = NULL;
-  priv->notify = NULL;
-
   GST_OBJECT_UNLOCK (appsink);
 
   g_mutex_lock (&priv->mutex);
+  if (priv->callbacks)
+    callbacks = g_steal_pointer (&priv->callbacks);
   while ((queue_obj = gst_queue_array_pop_head (priv->queue)))
     gst_mini_object_unref (queue_obj);
   gst_buffer_replace (&priv->preroll_buffer, NULL);
@@ -501,6 +524,8 @@ gst_app_sink_dispose (GObject * obj)
     priv->sample = NULL;
   }
   g_mutex_unlock (&priv->mutex);
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
@@ -645,6 +670,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
         GstEvent *event = GST_EVENT_CAST (obj);
         gst_event_parse_caps (event, &caps);
         gst_caps_replace (&priv->last_caps, caps);
+        gst_sample_set_caps(priv->sample, priv->last_caps);
       }
     }
     gst_mini_object_unref (obj);
@@ -735,6 +761,7 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
       break;
     case GST_EVENT_EOS:{
       gboolean emit = TRUE;
+      Callbacks *callbacks = NULL;
 
       g_mutex_lock (&priv->mutex);
       GST_DEBUG_OBJECT (appsink, "receiving EOS");
@@ -768,14 +795,19 @@ gst_app_sink_event (GstBaseSink * sink, GstEvent * event)
       }
       if (priv->flushing)
         emit = FALSE;
+
+      if (emit && priv->callbacks)
+        callbacks = callbacks_ref (priv->callbacks);
       g_mutex_unlock (&priv->mutex);
 
       if (emit) {
         /* emit EOS now */
-        if (priv->callbacks.eos)
-          priv->callbacks.eos (appsink, priv->user_data);
+        if (callbacks && callbacks->callbacks.eos)
+          callbacks->callbacks.eos (appsink, callbacks->user_data);
         else
           g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_EOS], 0);
+
+        g_clear_pointer (&callbacks, callbacks_unref);
       }
 
       break;
@@ -804,6 +836,7 @@ gst_app_sink_preroll (GstBaseSink * psink, GstBuffer * buffer)
   GstAppSink *appsink = GST_APP_SINK_CAST (psink);
   GstAppSinkPrivate *priv = appsink->priv;
   gboolean emit;
+  Callbacks *callbacks = NULL;
 
   g_mutex_lock (&priv->mutex);
   if (priv->flushing)
@@ -816,16 +849,20 @@ gst_app_sink_preroll (GstBaseSink * psink, GstBuffer * buffer)
     g_cond_signal (&priv->cond);
 
   emit = priv->emit_signals;
+  if (priv->callbacks)
+    callbacks = callbacks_ref (priv->callbacks);
   g_mutex_unlock (&priv->mutex);
 
-  if (priv->callbacks.new_preroll) {
-    res = priv->callbacks.new_preroll (appsink, priv->user_data);
+  if (callbacks && callbacks->callbacks.new_preroll) {
+    res = callbacks->callbacks.new_preroll (appsink, callbacks->user_data);
   } else {
     res = GST_FLOW_OK;
     if (emit)
       g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_NEW_PREROLL], 0,
           &res);
   }
+
+  g_clear_pointer (&callbacks, callbacks_unref);
 
   return res;
 
@@ -890,6 +927,7 @@ gst_app_sink_render_common (GstBaseSink * psink, GstMiniObject * data,
   GstAppSink *appsink = GST_APP_SINK_CAST (psink);
   GstAppSinkPrivate *priv = appsink->priv;
   gboolean emit;
+  Callbacks *callbacks = NULL;
 
 restart:
   g_mutex_lock (&priv->mutex);
@@ -949,15 +987,19 @@ restart:
     g_cond_signal (&priv->cond);
 
   emit = priv->emit_signals;
+  if (priv->callbacks)
+    callbacks = callbacks_ref (priv->callbacks);
   g_mutex_unlock (&priv->mutex);
 
-  if (priv->callbacks.new_sample) {
-    ret = priv->callbacks.new_sample (appsink, priv->user_data);
+  if (callbacks && callbacks->callbacks.new_sample) {
+    ret = callbacks->callbacks.new_sample (appsink, callbacks->user_data);
   } else {
     ret = GST_FLOW_OK;
     if (emit)
       g_signal_emit (appsink, gst_app_sink_signals[SIGNAL_NEW_SAMPLE], 0, &ret);
   }
+  g_clear_pointer (&callbacks, callbacks_unref);
+
   return ret;
 
 flushing:
@@ -1090,7 +1132,7 @@ gst_app_sink_query (GstBaseSink * bsink, GstQuery * query)
 /**
  * gst_app_sink_set_caps:
  * @appsink: a #GstAppSink
- * @caps: caps to set
+ * @caps: (nullable): caps to set
  *
  * Set the capabilities on the appsink element.  This function takes
  * a copy of the caps structure. After calling this method, the sink will only
@@ -1221,7 +1263,7 @@ gst_app_sink_set_emit_signals (GstAppSink * appsink, gboolean emit)
  *
  * Check if appsink will emit the "new-preroll" and "new-sample" signals.
  *
- * Returns: %TRUE if @appsink is emiting the "new-preroll" and "new-sample"
+ * Returns: %TRUE if @appsink is emitting the "new-preroll" and "new-sample"
  * signals.
  */
 gboolean
@@ -1741,12 +1783,15 @@ not_started:
  *
  * If callbacks are installed, no signals will be emitted for performance
  * reasons.
+ *
+ * Before 1.16.3 it was not possible to change the callbacks in a thread-safe
+ * way.
  */
 void
 gst_app_sink_set_callbacks (GstAppSink * appsink,
     GstAppSinkCallbacks * callbacks, gpointer user_data, GDestroyNotify notify)
 {
-  GDestroyNotify old_notify;
+  Callbacks *old_callbacks, *new_callbacks = NULL;
   GstAppSinkPrivate *priv;
 
   g_return_if_fail (GST_IS_APP_SINK (appsink));
@@ -1754,26 +1799,20 @@ gst_app_sink_set_callbacks (GstAppSink * appsink,
 
   priv = appsink->priv;
 
-  GST_OBJECT_LOCK (appsink);
-  old_notify = priv->notify;
-
-  if (old_notify) {
-    gpointer old_data;
-
-    old_data = priv->user_data;
-
-    priv->user_data = NULL;
-    priv->notify = NULL;
-    GST_OBJECT_UNLOCK (appsink);
-
-    old_notify (old_data);
-
-    GST_OBJECT_LOCK (appsink);
+  if (callbacks) {
+    new_callbacks = g_new0 (Callbacks, 1);
+    new_callbacks->callbacks = *callbacks;
+    new_callbacks->user_data = user_data;
+    new_callbacks->destroy_notify = notify;
+    new_callbacks->ref_count = 1;
   }
-  priv->callbacks = *callbacks;
-  priv->user_data = user_data;
-  priv->notify = notify;
-  GST_OBJECT_UNLOCK (appsink);
+
+  g_mutex_lock (&priv->mutex);
+  old_callbacks = g_steal_pointer (&priv->callbacks);
+  priv->callbacks = g_steal_pointer (&new_callbacks);
+  g_mutex_unlock (&priv->mutex);
+
+  g_clear_pointer (&old_callbacks, callbacks_unref);
 }
 
 /*** GSTURIHANDLER INTERFACE *************************************************/

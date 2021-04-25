@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,18 @@ import static junit.framework.Assert.*;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+
+import java.util.Locale;
+
 import javafx.scene.control.Button;
 import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.Spinner;
@@ -82,6 +87,16 @@ public class SpinnerTest {
     // used in tests for counting events, reset to zero in setup()
     private int eventCount;
 
+    private static Locale defaultLocale;
+
+    @BeforeClass public static void setupOnce() {
+        defaultLocale = Locale.getDefault();
+        Locale.setDefault(Locale.US);
+    }
+
+    @AfterClass public static void tearDownOnce() {
+        Locale.setDefault(defaultLocale);
+    }
 
     @Before public void setup() {
         eventCount = 0;
