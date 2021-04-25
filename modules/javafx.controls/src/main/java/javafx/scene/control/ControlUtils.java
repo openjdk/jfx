@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -199,27 +198,5 @@ class ControlUtils {
         }
 
         sm.selectedIndices._endChange();
-    }
-
-    // Given a listen of removed elements, we create the minimal number of changes by coalescing elements that are
-    // adjacent
-    static void reducingChange(ReadOnlyUnbackedObservableList<Integer> selectedIndices, List<Integer> removed) {
-        if (removed.isEmpty()) return;
-
-        int startPos = 0;
-        int totalRemoved = 0;
-
-        for (int endPos = 0, max = removed.size(); endPos < max; ++endPos) {
-            while (endPos < max - 1 && removed.get(endPos) == removed.get(endPos + 1) - 1) {
-                ++endPos;
-            }
-
-            selectedIndices._nextRemove(
-                selectedIndices.indexOf(removed.get(startPos)) - totalRemoved,
-                removed.subList(startPos, endPos + 1));
-
-            totalRemoved += endPos - startPos + 1;
-            startPos = endPos + 1;
-        }
     }
 }
