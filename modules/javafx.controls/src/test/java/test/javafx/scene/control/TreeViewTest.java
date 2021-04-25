@@ -3681,4 +3681,29 @@ public class TreeViewTest {
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
     }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(new TreeItem<>("bar"));
+        root.getChildren().add(new TreeItem<>("baz"));
+        root.getChildren().add(new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        List<TreeItem<String>> removed = new ArrayList<>();
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener<? super TreeItem<String>>) c -> {
+            while (c.next()) {
+                removed.addAll(new ArrayList<>(c.getRemoved()));
+            }
+        });
+
+        treeView.getSelectionModel().selectAll();
+        root.setExpanded(false);
+
+        assertEquals(3, removed.size());
+        assertEquals("bar", removed.get(0).getValue());
+        assertEquals("baz", removed.get(1).getValue());
+        assertEquals("qux", removed.get(2).getValue());
+    }
 }
