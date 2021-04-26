@@ -60,9 +60,8 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
                     nextAdd(c.getFrom(), c.getTo());
                 } else if (c.wasRemoved()) {
                     int removedSize = c.getRemovedSize();
-                    int adjustedFrom = totalRemovedSize + c.getFrom();
                     if (removedSize == 1) {
-                        nextRemove(c.getFrom(), getRemovedModelItem(adjustedFrom));
+                        nextRemove(c.getFrom(), getRemovedModelItem(totalRemovedSize + c.getFrom()));
                     } else {
                         nextRemove(c.getFrom(), getRemovedElements(c, totalRemovedSize));
                     }
