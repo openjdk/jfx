@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
 
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    List<E> removed = getRemovedElements(c, 0);
+                    List<E> removed = getRemovedElements(c, totalRemovedSize);
                     List<E> added = getAddedElements(c);
                     if (!removed.equals(added)) {
                         nextReplace(c.getFrom(), c.getTo(), removed);
