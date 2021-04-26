@@ -363,14 +363,14 @@ public final class CategoryAxis extends Axis<String> {
             double requiredLengthToDisplay = calculateRequiredSize(side.isVertical(), tickLabelRotation);
             if (requiredLengthToDisplay > length) {
                 if (tickLabelRotation != 90) {
-                    var rotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 90);
+                    double rotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 90);
                     if (rotatedRequiredLengthToDisplay < length) {
                         tickLabelRotation = 90;
                     }
                 }
             } else {
                 if (tickLabelRotation != 0) {
-                    var unrotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 0);
+                    double unrotatedRequiredLengthToDisplay = calculateRequiredSize(side.isVertical(), 0);
                     if (unrotatedRequiredLengthToDisplay < length) {
                         tickLabelRotation = 0;
                     }

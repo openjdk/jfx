@@ -63,6 +63,8 @@ public class ChartXAxisLayoutTest {
             stage = primaryStage;
             rootPane = new VBox();
             stage.setScene(new Scene(rootPane, 600, 800));
+            stage.setX(0);
+            stage.setY(0);
 
             var categories = List.of(
                     "1st very long category name..............",

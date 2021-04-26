@@ -63,6 +63,8 @@ public class ChartYAxisLayoutTest {
             stage = primaryStage;
             rootPane = new VBox();
             stage.setScene(new Scene(rootPane, 800, 600));
+            stage.setX(0);
+            stage.setY(0);
 
             var categories = List.of(
                     "1\ns\nt\nv\ne\nr\ny\nt\na\nl",
