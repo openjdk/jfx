@@ -343,21 +343,15 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
-        List<Integer> clearedIndices = new ArrayList<>();
+        List<String> changes = new ArrayList<>();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
         model.select(5);
-        model.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> {
-            while (c.next()) {
-                if (c.wasRemoved()) {
-                    clearedIndices.addAll(c.getRemoved());
-                }
-            }
-        });
+        model.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> changes.add(c.toString()));
         model.clearSelection(5);
 
-        assertEquals(1, clearedIndices.size());
-        assertEquals(1, (int)clearedIndices.get(0));
+        assertEquals(1, changes.size());
+        assertEquals("{ [5] removed at 1 }", changes.get(0));
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {
