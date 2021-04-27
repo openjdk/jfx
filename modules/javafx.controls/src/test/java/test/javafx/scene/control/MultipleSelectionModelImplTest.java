@@ -38,6 +38,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -343,15 +344,15 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
-        List<String> changes = new ArrayList<>();
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.select(1);
         model.select(5);
-        model.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> changes.add(c.toString()));
+        MockListObserver<Integer> observer = new MockListObserver<>();
+        model.getSelectedIndices().addListener(observer);
         model.clearSelection(5);
 
-        assertEquals(1, changes.size());
-        assertEquals("{ [5] removed at 1 }", changes.get(0));
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {
