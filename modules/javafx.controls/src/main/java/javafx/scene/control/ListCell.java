@@ -189,6 +189,7 @@ public class ListCell<T> extends IndexedCell<T> {
             if (items != null) {
                 items.addListener(weakItemsListener);
             }
+            System.out.println("Update item 333");
             updateItem(-1);
         }
     };
@@ -355,6 +356,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
+        System.out.println("Start edit called!");
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -363,6 +365,7 @@ public class ListCell<T> extends IndexedCell<T> {
         // it makes sense to get the cell into its editing state before firing
         // the event to the ListView below, so that's what we're doing here
         // by calling super.startEdit().
+        System.out.println("super.Start edit called!");
         super.startEdit();
 
          // Inform the ListView of the edit starting.
@@ -532,6 +535,8 @@ public class ListCell<T> extends IndexedCell<T> {
             return;
         }
 
+        System.out.println("calling setFocused (" + fm.isFocused(index) + ")");
+        System.out.println("fm.getFocusedIndex " + fm.getFocusedIndex());
         setFocused(fm.isFocused(index));
     }
 
@@ -541,28 +546,22 @@ public class ListCell<T> extends IndexedCell<T> {
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
 
-        if (index == -1 || list == null) {
-            if(editing) {
-                updateEditingIndex = false;
-                cancelEdit();
-                updateEditingIndex = true;
-            }
-        } else {
+
+        if (editing && (index == -1 || list == null || index != editIndex)) {
+            // If my index is not the one being edited then I need to cancel
+            // the edit. The tricky thing here is that as part of this call
+            // I cannot end up calling list.edit(-1) the way that the standard
+            // cancelEdit method would do. Yet, I need to call cancelEdit
+            // so that subclasses which override cancelEdit can execute. So,
+            // I have to use a kind of hacky flag workaround.
+            updateEditingIndex = false;
+            cancelEdit();
+            updateEditingIndex = true;
+        }
+        if(!editing && list != null && index != -1 && index == editIndex) {
             // If my index is the index being edited and I'm not currently in
             // the edit mode, then I need to enter the edit mode
-            if (index == editIndex && !editing) {
-                startEdit();
-            } else if (index != editIndex && editing) {
-                // If my index is not the one being edited then I need to cancel
-                // the edit. The tricky thing here is that as part of this call
-                // I cannot end up calling list.edit(-1) the way that the standard
-                // cancelEdit method would do. Yet, I need to call cancelEdit
-                // so that subclasses which override cancelEdit can execute. So,
-                // I have to use a kind of hacky flag workaround.
-                updateEditingIndex = false;
-                cancelEdit();
-                updateEditingIndex = true;
-            }
+            startEdit();
         }
     }
 
