@@ -843,23 +843,20 @@ public class ListCellTest {
 
     @Test
     public void testChangeIndexToEditing2_jdk_8264127() {
-        assertChangeIndexToEditing(1, 0);
+        assertChangeIndexToEditing(-1, 1);
     }
 
     @Test
     public void testChangeIndexToEditing3_jdk_8264127() {
-        assertChangeIndexToEditing(1, -1);
+        assertChangeIndexToEditing(1, 0);
     }
 
     @Test
     public void testChangeIndexToEditing4_jdk_8264127() {
-        assertChangeIndexToEditing(0, -1);
-    }
-
-    @Test
-    public void testChangeIndexToEditing5_jdk_8264127() {
         assertChangeIndexToEditing(-1, 0);
     }
+
+
 
     private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
         list.getFocusModel().focus(-1);
@@ -876,14 +873,8 @@ public class ListCellTest {
         cell.updateIndex(listEditingIndex);
         assertEquals("sanity: index updated ", listEditingIndex, cell.getIndex());
         assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
-        if(listEditingIndex != -1) {
-            assertTrue(cell.isEditing());
-            assertEquals(1, events.size());
-        } else {
-            // -1 represents "not editing" for the listview and "no index" for the list cell.
-            assertFalse(cell.isEditing());
-            assertEquals(0, events.size());
-        }
+        assertTrue(cell.isEditing());
+        assertEquals(1, events.size());
     }
 
     @Test
