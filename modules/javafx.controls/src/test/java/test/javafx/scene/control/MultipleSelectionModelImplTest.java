@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -340,6 +340,24 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(4));
         assertFalse(model.isSelected(5));
         assertTrue(model.isSelected(6));
+    }
+
+    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
+        List<Integer> clearedIndices = new ArrayList<>();
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(5);
+        model.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    clearedIndices.addAll(c.getRemoved());
+                }
+            }
+        });
+        model.clearSelection(5);
+
+        assertEquals(1, clearedIndices.size());
+        assertEquals(1, (int)clearedIndices.get(0));
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {
