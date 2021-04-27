@@ -189,7 +189,6 @@ public class ListCell<T> extends IndexedCell<T> {
             if (items != null) {
                 items.addListener(weakItemsListener);
             }
-            System.out.println("Update item 333");
             updateItem(-1);
         }
     };
@@ -356,7 +355,6 @@ public class ListCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        System.out.println("Start edit called!");
         final ListView<T> list = getListView();
         if (!isEditable() || (list != null && ! list.isEditable())) {
             return;
@@ -365,7 +363,6 @@ public class ListCell<T> extends IndexedCell<T> {
         // it makes sense to get the cell into its editing state before firing
         // the event to the ListView below, so that's what we're doing here
         // by calling super.startEdit().
-        System.out.println("super.Start edit called!");
         super.startEdit();
 
          // Inform the ListView of the edit starting.
@@ -534,9 +531,7 @@ public class ListCell<T> extends IndexedCell<T> {
             setFocused(false);
             return;
         }
-
-        System.out.println("calling setFocused (" + fm.isFocused(index) + ")");
-        System.out.println("fm.getFocusedIndex " + fm.getFocusedIndex());
+        
         setFocused(fm.isFocused(index));
     }
 
