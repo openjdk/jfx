@@ -25,7 +25,6 @@
 
 #ifdef GSTREAMER_LITE
 
-#include <stdio.h>
 #include "gstdirectsoundnotify.h"
 
 void* InitNotificator(GSTDSNotfierCallback pCallback, void *pData) {
@@ -79,6 +78,13 @@ GSTDirectSoundNotify::GSTDirectSoundNotify() {
   m_pEnumerator = NULL;
   m_pCallback = NULL;
   m_pData = NULL;
+  m_hrCoInit = CoInitialize(NULL);
+}
+
+GSTDirectSoundNotify::~GSTDirectSoundNotify() {
+  if (SUCCEEDED(m_hrCoInit)) {
+    CoUninitialize();
+  }
 }
 
 HRESULT GSTDirectSoundNotify::OnDefaultDeviceChanged(EDataFlow flow,
