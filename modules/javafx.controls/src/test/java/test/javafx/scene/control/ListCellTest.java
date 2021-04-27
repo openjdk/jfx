@@ -904,9 +904,11 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(editingIndex);
         list.edit(editingIndex);
-        // here we are certain that the cell is in editing state
+        assertEquals("sanity: list editingIndex ", editingIndex, list.getEditingIndex());
         assertTrue("sanity: cell must be editing", cell.isEditing());
         cell.updateIndex(cancelIndex); // change cell index to negative
+        assertEquals("sanity: index updated ", cancelIndex, cell.getIndex());
+        assertEquals("list editingIndex unchanged by cell", editingIndex, list.getEditingIndex());
         assertFalse("cell must not be editing if cell index is " + cell.getIndex(), cell.isEditing());
         assertEquals(1, events.size());
     }
