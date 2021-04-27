@@ -212,7 +212,7 @@ static void
 gst_list_iterator_free (GstListIterator * it)
 {
   if (it->owner)
-    g_object_unref (it->owner);
+    gst_object_unref (it->owner);
 }
 
 /**

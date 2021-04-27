@@ -35,6 +35,10 @@ g_autoptr_cleanup_gstring_free (GString *string)
     g_string_free (string, TRUE);
 }
 
+/* Ignore deprecations in case we refer to a type which was added in a more
+ * recent GLib version than the user’s #GLIB_VERSION_MAX_ALLOWED definition. */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
 /* If adding a cleanup here, please also add a test case to
  * glib/tests/autoptr.c
  */
@@ -43,6 +47,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GBookmarkFile, g_bookmark_file_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GBytes, g_bytes_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GChecksum, g_checksum_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GDateTime, g_date_time_unref)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GDate, g_date_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GDir, g_dir_close)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GError, g_error_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GHashTable, g_hash_table_unref)
@@ -54,6 +59,7 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GArray, g_array_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GPtrArray, g_ptr_array_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GByteArray, g_byte_array_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMainContext, g_main_context_unref)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMainContextPusher, g_main_context_pusher_free)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMainLoop, g_main_loop_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GSource, g_source_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GMappedFile, g_mapped_file_unref)
@@ -93,5 +99,8 @@ G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GVariantDict, g_variant_dict_clear)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GVariantType, g_variant_type_free)
 G_DEFINE_AUTO_CLEANUP_FREE_FUNC(GStrv, g_strfreev, NULL)
 #ifndef GSTREAMER_LITE
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (GRefString, g_ref_string_release)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GRefString, g_ref_string_release)
 #endif // GSTREAMER_LITE
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GUri, g_uri_unref)
+
+G_GNUC_END_IGNORE_DEPRECATIONS

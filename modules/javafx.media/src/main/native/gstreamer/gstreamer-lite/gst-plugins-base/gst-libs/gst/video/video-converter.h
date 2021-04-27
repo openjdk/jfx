@@ -27,7 +27,7 @@ G_BEGIN_DECLS
 /**
  * GST_VIDEO_CONVERTER_OPT_RESAMPLER_METHOD:
  *
- * #GST_TYPE_VIDEO_RESAMPLER_METHOD, The resampler method to use for
+ * #GstVideoResamplerMethod, The resampler method to use for
  * resampling. Other options for the resampler can be used, see
  * the #GstVideoResampler. Default is #GST_VIDEO_RESAMPLER_METHOD_CUBIC
  */
@@ -35,7 +35,7 @@ G_BEGIN_DECLS
 /**
  * GST_VIDEO_CONVERTER_OPT_CHROMA_RESAMPLER_METHOD:
  *
- * #GST_TYPE_VIDEO_RESAMPLER_METHOD, The resampler method to use for
+ * #GstVideoChromaMethod, The resampler method to use for
  * chroma resampling. Other options for the resampler can be used, see
  * the #GstVideoResampler. Default is #GST_VIDEO_RESAMPLER_METHOD_LINEAR
  */
@@ -51,7 +51,7 @@ G_BEGIN_DECLS
 /**
  * GST_VIDEO_CONVERTER_OPT_DITHER_METHOD:
  *
- * #GST_TYPE_VIDEO_DITHER_METHOD, The dither method to use when
+ * #GstVideoDitherMethod, The dither method to use when
  * changing bit depth.
  * Default is #GST_VIDEO_DITHER_BAYER.
  */
@@ -156,7 +156,7 @@ typedef enum {
 /**
  * GST_VIDEO_CONVERTER_OPT_ALPHA_MODE:
  *
- * #GST_TYPE_VIDEO_ALPHA_MODE, the alpha mode to use.
+ * #GstVideoAlphaMode, the alpha mode to use.
  * Default is #GST_VIDEO_ALPHA_MODE_COPY.
  */
 #define GST_VIDEO_CONVERTER_OPT_ALPHA_MODE   "GstVideoConverter.alpha-mode"
@@ -190,7 +190,7 @@ typedef enum {
 /**
  * GST_VIDEO_CONVERTER_OPT_CHROMA_MODE:
  *
- * #GST_TYPE_VIDEO_CHROMA_MODE, set the chroma resample mode subsampled
+ * #GstVideoChromaMode, set the chroma resample mode subsampled
  * formats. Default is #GST_VIDEO_CHROMA_MODE_FULL.
  */
 #define GST_VIDEO_CONVERTER_OPT_CHROMA_MODE   "GstVideoConverter.chroma-mode"
@@ -217,7 +217,7 @@ typedef enum {
 /**
  * GST_VIDEO_CONVERTER_OPT_MATRIX_MODE:
  *
- * #GST_TYPE_VIDEO_MATRIX_MODE, set the color matrix conversion mode for
+ * #GstVideoMatrixMode, set the color matrix conversion mode for
  *  converting between Y'PbPr and non-linear RGB (R'G'B').
  * Default is #GST_VIDEO_MATRIX_MODE_FULL.
  */
@@ -237,7 +237,7 @@ typedef enum {
 /**
  * GST_VIDEO_CONVERTER_OPT_GAMMA_MODE:
  *
- * #GST_TYPE_VIDEO_GAMMA_MODE, set the gamma mode.
+ * #GstVideoGammaMode, set the gamma mode.
  * Default is #GST_VIDEO_GAMMA_MODE_NONE.
  */
 #define GST_VIDEO_CONVERTER_OPT_GAMMA_MODE   "GstVideoConverter.gamma-mode"
@@ -260,7 +260,7 @@ typedef enum {
 /**
  * GST_VIDEO_CONVERTER_OPT_PRIMARIES_MODE:
  *
- * #GST_TYPE_VIDEO_PRIMARIES_MODE, set the primaries conversion mode.
+ * #GstVideoPrimariesMode, set the primaries conversion mode.
  * Default is #GST_VIDEO_PRIMARIES_MODE_NONE.
  */
 #define GST_VIDEO_CONVERTER_OPT_PRIMARIES_MODE   "GstVideoConverter.primaries-mode"

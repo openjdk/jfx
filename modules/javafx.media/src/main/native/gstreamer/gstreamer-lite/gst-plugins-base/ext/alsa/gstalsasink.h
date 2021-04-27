@@ -74,6 +74,11 @@ struct _GstAlsaSink {
 
   GstCaps *cached_caps;
 
+  gboolean is_paused;
+  gboolean after_paused;
+  gboolean hw_support_pause;
+  snd_pcm_sframes_t pos_in_buffer;
+
   GMutex alsa_lock;
   GMutex delay_lock;
 };

@@ -118,10 +118,23 @@ G_BEGIN_DECLS
  * @GST_VIDEO_FORMAT_Y410: packed 4:4:4 YUV, 10 bits per channel(A-V-Y-U...) (Since: 1.16)
  * @GST_VIDEO_FORMAT_VUYA: packed 4:4:4 YUV with alpha channel (V0-U0-Y0-A0...) (Since: 1.16)
  * @GST_VIDEO_FORMAT_BGR10A2_LE: packed 4:4:4 RGB with alpha channel(B-G-R-A), 10 bits for R/G/B channel and MSB 2 bits for alpha channel (Since: 1.16)
+ * @GST_VIDEO_FORMAT_RGB10A2_LE: packed 4:4:4 RGB with alpha channel(R-G-B-A), 10 bits for R/G/B channel and MSB 2 bits for alpha channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y444_16BE: planar 4:4:4 YUV, 16 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y444_16LE: planar 4:4:4 YUV, 16 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_P016_BE: planar 4:2:0 YUV with interleaved UV plane, 16 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_P016_LE: planar 4:2:0 YUV with interleaved UV plane, 16 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_P012_BE: planar 4:2:0 YUV with interleaved UV plane, 12 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_P012_LE: planar 4:2:0 YUV with interleaved UV plane, 12 bits per channel (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y212_BE: packed 4:2:2 YUV, 12 bits per channel (Y-U-Y-V) (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y212_LE: packed 4:2:2 YUV, 12 bits per channel (Y-U-Y-V) (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y412_BE: packed 4:4:4:4 YUV, 12 bits per channel(U-Y-V-A...) (Since: 1.18)
+ * @GST_VIDEO_FORMAT_Y412_LE: packed 4:4:4:4 YUV, 12 bits per channel(U-Y-V-A...) (Since: 1.18)
+ * @GST_VIDEO_FORMAT_NV12_4L4: NV12 with 4x4 tiles in linear order (Since: 1.18)
+ * @GST_VIDEO_FORMAT_NV12_32L32: NV12 with 32x32 tiles in linear order (Since: 1.18)
  *
  * Enum value describing the most common video formats.
  *
- * See the [GStreamer raw video format design document](https://gstreamer.freedesktop.org/documentation/design/mediatype-video-raw.html#formats)
+ * See the [GStreamer raw video format design document](https://gstreamer.freedesktop.org/documentation/additional/design/mediatype-video-raw.html#formats)
  * for details about the layout and packing of these formats in memory.
  */
 typedef enum {
@@ -211,6 +224,34 @@ typedef enum {
   GST_VIDEO_FORMAT_Y410,
   GST_VIDEO_FORMAT_VUYA,
   GST_VIDEO_FORMAT_BGR10A2_LE,
+  GST_VIDEO_FORMAT_RGB10A2_LE,
+  GST_VIDEO_FORMAT_Y444_16BE,
+  GST_VIDEO_FORMAT_Y444_16LE,
+  GST_VIDEO_FORMAT_P016_BE,
+  GST_VIDEO_FORMAT_P016_LE,
+  GST_VIDEO_FORMAT_P012_BE,
+  GST_VIDEO_FORMAT_P012_LE,
+  GST_VIDEO_FORMAT_Y212_BE,
+  GST_VIDEO_FORMAT_Y212_LE,
+  GST_VIDEO_FORMAT_Y412_BE,
+  GST_VIDEO_FORMAT_Y412_LE,
+  /**
+   * GST_VIDEO_FORMAT_NV12_4L4:
+   *
+   * NV12 with 4x4 tiles in linear order.
+   *
+   * Since: 1.18
+   */
+  GST_VIDEO_FORMAT_NV12_4L4,
+  /**
+   * GST_VIDEO_FORMAT_NV12_32L32:
+   *
+   * NV12 with 32x32 tiles in linear order.
+   *
+   * Since: 1.18
+   */
+  GST_VIDEO_FORMAT_NV12_32L32,
+
 } GstVideoFormat;
 
 #define GST_VIDEO_MAX_PLANES 4
@@ -278,7 +319,7 @@ typedef enum
  * @GST_VIDEO_PACK_FLAG_NONE: No flag
  * @GST_VIDEO_PACK_FLAG_TRUNCATE_RANGE: When the source has a smaller depth
  *   than the target format, set the least significant bits of the target
- *   to 0. This is likely sightly faster but less accurate. When this flag
+ *   to 0. This is likely slightly faster but less accurate. When this flag
  *   is not specified, the most significant bits of the source are duplicated
  *   in the least significant bits of the destination.
  * @GST_VIDEO_PACK_FLAG_INTERLACED: The source is interlaced. The unpacked
@@ -516,6 +557,9 @@ struct _GstVideoFormatInfo {
 #define GST_VIDEO_FORMAT_INFO_TILE_WS(info) ((info)->tile_ws)
 #define GST_VIDEO_FORMAT_INFO_TILE_HS(info) ((info)->tile_hs)
 
+GST_VIDEO_API
+void gst_video_format_info_component                  (const GstVideoFormatInfo *info, guint plane, gint components[GST_VIDEO_MAX_COMPONENTS]);
+
 /* format properties */
 
 GST_VIDEO_API
@@ -553,16 +597,53 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
 # define GST_VIDEO_OE(s) G_STRINGIFY(s)"_LE"
 #endif
 
-#define GST_VIDEO_FORMATS_ALL "{ I420, YV12, YUY2, UYVY, AYUV, VUYA, RGBx, "  \
-  "BGRx, xRGB, xBGR, RGBA, BGRA, ARGB, ABGR, RGB, BGR, Y41B, Y42B, YVYU, " \
-  "Y444, v210, v216, Y210, Y410, NV12, NV21, GRAY8, GRAY16_BE, GRAY16_LE, v308, RGB16, " \
-  "BGR16, RGB15, BGR15, UYVP, A420, RGB8P, YUV9, YVU9, IYU1, ARGB64, " \
-  "AYUV64, r210, I420_10BE, I420_10LE, I422_10BE, I422_10LE, Y444_10BE, " \
-  "Y444_10LE, GBR, GBR_10BE, GBR_10LE, NV16, NV24, NV12_64Z32, A420_10BE, " \
-  "A420_10LE, A422_10BE, A422_10LE, A444_10BE, A444_10LE, NV61, P010_10BE, " \
-  "P010_10LE, IYU2, VYUY, GBRA, GBRA_10BE, GBRA_10LE, BGR10A2_LE, GBR_12BE, GBR_12LE, " \
-  "GBRA_12BE, GBRA_12LE, I420_12BE, I420_12LE, I422_12BE, I422_12LE, " \
-  "Y444_12BE, Y444_12LE, GRAY10_LE32, NV12_10LE32, NV16_10LE32, NV12_10LE40 }"
+/**
+ * GST_VIDEO_FORMATS_ALL:
+ *
+ * List of all video formats, for use in template caps strings.
+ *
+ * Formats are sorted by decreasing "quality", using these criteria by priority:
+ *   - number of components
+ *   - depth
+ *   - subsampling factor of the width
+ *   - subsampling factor of the height
+ *   - number of planes
+ *   - native endianness preferred
+ *   - pixel stride
+ *   - poffset
+ *   - prefer non-complex formats
+ *   - prefer YUV formats over RGB ones
+ *   - prefer I420 over YV12
+ *   - format name
+ */
+#if G_BYTE_ORDER == G_BIG_ENDIAN
+#define GST_VIDEO_FORMATS_ALL "{ AYUV64, ARGB64, GBRA_12BE, GBRA_12LE, Y412_BE, " \
+    "Y412_LE, A444_10BE, GBRA_10BE, A444_10LE, GBRA_10LE, A422_10BE, A422_10LE, " \
+    "A420_10BE, A420_10LE, Y410, RGB10A2_LE, BGR10A2_LE, GBRA, ABGR, VUYA, BGRA, " \
+    "AYUV, ARGB, RGBA, A420, Y444_16BE, Y444_16LE, v216, P016_BE, P016_LE, Y444_12BE, " \
+    "GBR_12BE, Y444_12LE, GBR_12LE, I422_12BE, I422_12LE, Y212_BE, Y212_LE, I420_12BE, " \
+    "I420_12LE, P012_BE, P012_LE, Y444_10BE, GBR_10BE, Y444_10LE, GBR_10LE, r210, " \
+    "I422_10BE, I422_10LE, NV16_10LE32, Y210, v210, UYVP, I420_10BE, I420_10LE, " \
+    "P010_10BE, P010_10LE, NV12_10LE32, NV12_10LE40, Y444, GBR, NV24, xBGR, BGRx, " \
+    "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
+    "YV12, NV21, NV12, NV12_64Z32, NV12_4L4, NV12_32L32, Y41B, IYU1, YVU9, YUV9, RGB16, " \
+    "BGR16, RGB15, BGR15, RGB8P, GRAY16_BE, GRAY16_LE, GRAY10_LE32, GRAY8 }"
+#elif G_BYTE_ORDER == G_LITTLE_ENDIAN
+#define GST_VIDEO_FORMATS_ALL "{ AYUV64, ARGB64, GBRA_12LE, GBRA_12BE, Y412_LE, " \
+    "Y412_BE, A444_10LE, GBRA_10LE, A444_10BE, GBRA_10BE, A422_10LE, A422_10BE, " \
+    "A420_10LE, A420_10BE, RGB10A2_LE, BGR10A2_LE, Y410, GBRA, ABGR, VUYA, BGRA, " \
+    "AYUV, ARGB, RGBA, A420, Y444_16LE, Y444_16BE, v216, P016_LE, P016_BE, Y444_12LE, " \
+    "GBR_12LE, Y444_12BE, GBR_12BE, I422_12LE, I422_12BE, Y212_LE, Y212_BE, I420_12LE, " \
+    "I420_12BE, P012_LE, P012_BE, Y444_10LE, GBR_10LE, Y444_10BE, GBR_10BE, r210, " \
+    "I422_10LE, I422_10BE, NV16_10LE32, Y210, v210, UYVP, I420_10LE, I420_10BE, " \
+    "P010_10LE, NV12_10LE32, NV12_10LE40, P010_10BE, Y444, GBR, NV24, xBGR, BGRx, " \
+    "xRGB, RGBx, BGR, IYU2, v308, RGB, Y42B, NV61, NV16, VYUY, UYVY, YVYU, YUY2, I420, " \
+    "YV12, NV21, NV12, NV12_64Z32, NV12_4L4, NV12_32L32, Y41B, IYU1, YVU9, YUV9, RGB16, " \
+    "BGR16, RGB15, BGR15, RGB8P, GRAY16_LE, GRAY16_BE, GRAY10_LE32, GRAY8 }"
+#endif
+
+GST_VIDEO_API
+const GstVideoFormat * gst_video_formats_raw (guint * len);
 
 /**
  * GST_VIDEO_CAPS_MAKE:
@@ -595,6 +676,13 @@ gconstpointer  gst_video_format_get_palette          (GstVideoFormat format, gsi
     "width = " GST_VIDEO_SIZE_RANGE ", "                                \
     "height = " GST_VIDEO_SIZE_RANGE ", "                               \
     "framerate = " GST_VIDEO_FPS_RANGE
+
+GST_VIDEO_API
+GstCaps * gst_video_make_raw_caps (const GstVideoFormat formats[], guint len);
+
+GST_VIDEO_API
+GstCaps * gst_video_make_raw_caps_with_features (const GstVideoFormat formats[], guint len,
+                                                 GstCapsFeatures * features);
 
 G_END_DECLS
 

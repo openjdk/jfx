@@ -428,7 +428,7 @@ g_utf8_collate_key (const gchar *str,
   if (g_get_charset (&charset))
     {
       xfrm_len = strxfrm (NULL, str_norm, 0);
-      if (xfrm_len >= 0 && xfrm_len < G_MAXINT - 2)
+      if (xfrm_len < G_MAXINT - 2)
         {
           result = g_malloc (xfrm_len + 1);
           strxfrm (result, str_norm, xfrm_len + 1);

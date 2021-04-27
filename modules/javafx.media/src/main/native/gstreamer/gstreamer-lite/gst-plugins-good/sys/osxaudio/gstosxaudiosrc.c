@@ -44,15 +44,15 @@
 
 /**
  * SECTION:element-osxaudiosrc
+ * @title: osxaudiosrc
  *
  * This element captures raw audio samples using the CoreAudio api.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
  * gst-launch-1.0 osxaudiosrc ! wavenc ! filesink location=audio.wav
  * ]|
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H

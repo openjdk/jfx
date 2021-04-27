@@ -44,6 +44,16 @@ UnicodeString CurrencySymbols::getNarrowCurrencySymbol(UErrorCode& status) const
     return loadSymbol(UCURR_NARROW_SYMBOL_NAME, status);
 }
 
+UnicodeString CurrencySymbols::getFormalCurrencySymbol(UErrorCode& status) const {
+    // Note: currently no override is available for formal currency symbol
+    return loadSymbol(UCURR_FORMAL_SYMBOL_NAME, status);
+}
+
+UnicodeString CurrencySymbols::getVariantCurrencySymbol(UErrorCode& status) const {
+    // Note: currently no override is available for variant currency symbol
+    return loadSymbol(UCURR_VARIANT_SYMBOL_NAME, status);
+}
+
 UnicodeString CurrencySymbols::getCurrencySymbol(UErrorCode& status) const {
     if (!fCurrencySymbol.isBogus()) {
         return fCurrencySymbol;
@@ -53,13 +63,12 @@ UnicodeString CurrencySymbols::getCurrencySymbol(UErrorCode& status) const {
 
 UnicodeString CurrencySymbols::loadSymbol(UCurrNameStyle selector, UErrorCode& status) const {
     const char16_t* isoCode = fCurrency.getISOCurrency();
-    UBool ignoredIsChoiceFormatFillIn = FALSE;
     int32_t symbolLen = 0;
     const char16_t* symbol = ucurr_getName(
             isoCode,
             fLocaleName.data(),
             selector,
-            &ignoredIsChoiceFormatFillIn,
+            nullptr /* isChoiceFormat */,
             &symbolLen,
             &status);
     // If given an unknown currency, ucurr_getName returns the input string, which we can't alias safely!
@@ -82,12 +91,11 @@ UnicodeString CurrencySymbols::getIntlCurrencySymbol(UErrorCode&) const {
 
 UnicodeString CurrencySymbols::getPluralName(StandardPlural::Form plural, UErrorCode& status) const {
     const char16_t* isoCode = fCurrency.getISOCurrency();
-    UBool isChoiceFormat = FALSE;
     int32_t symbolLen = 0;
     const char16_t* symbol = ucurr_getPluralName(
             isoCode,
             fLocaleName.data(),
-            &isChoiceFormat,
+            nullptr /* isChoiceFormat */,
             StandardPlural::getKeyword(plural),
             &symbolLen,
             &status);

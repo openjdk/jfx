@@ -502,7 +502,7 @@ g_rand_int_range (GRand  *rand,
                   gint32  end)
 {
   guint32 dist = end - begin;
-  guint32 random;
+  guint32 random = 0;
 
   g_return_val_if_fail (rand != NULL, begin);
   g_return_val_if_fail (end > begin, begin);
@@ -563,7 +563,6 @@ g_rand_int_range (GRand  *rand,
   }
       break;
     default:
-      random = 0;   /* Quiet GCC */
       g_assert_not_reached ();
     }
 
@@ -583,7 +582,7 @@ gdouble
 g_rand_double (GRand *rand)
 {
   /* We set all 52 bits after the point for this, not only the first
-     32. Thats why we need two calls to g_rand_int */
+     32. That's why we need two calls to g_rand_int */
   gdouble retval = g_rand_int (rand) * G_RAND_DOUBLE_TRANSFORM;
   retval = (retval + g_rand_int (rand)) * G_RAND_DOUBLE_TRANSFORM;
 

@@ -54,4 +54,3 @@
 #endif
 
 #endif /* __G_PRINTF_H__ */
-

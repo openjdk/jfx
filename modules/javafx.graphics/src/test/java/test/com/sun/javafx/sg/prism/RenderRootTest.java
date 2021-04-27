@@ -325,19 +325,62 @@ public class RenderRootTest extends NGTestBase {
         assertRenderRoot(root, rootPath);
     }
 
-    // What is the right thing here? It seems that an empty dirty region should result in no rendering?
-    @Ignore("JDK-8234077")
+    // A RectBounds is considered as empty only when maxX < minX or maxY < minY.
+    // see RectBounds.isEmpty() and RectBounds.makeEmpty()
+    // What is the right thing here?
+    // 1. Empty dirty region should result in no rendering.
+    //    It means that getRenderRoot() should return an empty NodePath when dirty region is an empty rect.
+    // OR
+    // 2. Empty dirty region should result in rendering entire root tree.(This is current behavior)
+    //
+    // Changing this behavior may cause rendering glitches for any application that
+    // relies on this current behavior to render all root tree.
+    // So we need to be extensive in testing before modifying the behavior.
+    @Ignore("JDK-8265510")
     @Test
-    public void emptyDirtyRegion() {
+    public void emptyDirtyRegion1() {
         NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
         assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
     }
 
-    // Currently fails because isEmpty doesn't take into account width == 0, height == 0")
-    @Ignore("JDK-8234077")
+    @Ignore("JDK-8265510")
+    @Test
+    public void emptyDirtyRegion2() {
+        NodePath rootPath = getRenderRoot(root, -1, -1, -2, -2);
+        assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
+    }
+
+    @Ignore("JDK-8265510")
+    @Test
+    public void invalidDirtyRegionOutsideOpaqueRegion() {
+        NodePath rootPath = getRenderRoot(root, -10, -10, 5, 5);
+        assertRenderRoot(root, rootPath);
+        // OR
+        // assertRenderRoot(null, rootPath);
+    }
+
+    // A RectBounds is considered as empty only when maxX < minX or maxY < minY.
+    // see RectBounds.isEmpty() and RectBounds.makeEmpty()
+    // So a RectBounds with 0 width and 0 height is not considered as an empty rect.
     @Test
     public void zeroSizeDirtyRegionWithinOpaqueRegion() {
         NodePath rootPath = getRenderRoot(root, 20, 20, 0, 0);
+        assertRenderRoot(rect, rootPath);
+    }
+
+    @Test
+    public void zeroSizeDirtyRegionOutsideOpaqueRegion1() {
+        NodePath rootPath = getRenderRoot(root, 0, 0, 0, 0);
+        assertRenderRoot(root, rootPath);
+    }
+
+    @Test
+    public void zeroSizeDirtyRegionOutsideOpaqueRegion2() {
+        NodePath rootPath = getRenderRoot(root, 5, 5, 0, 0);
         assertRenderRoot(root, rootPath);
     }
 

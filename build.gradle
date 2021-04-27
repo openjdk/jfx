@@ -292,6 +292,7 @@ ext.MODULESOURCEPATH = "modulesourcepath.args"
 ext.OS_NAME = System.getProperty("os.name").toLowerCase()
 ext.OS_ARCH = System.getProperty("os.arch")
 ext.IS_64 = OS_ARCH.toLowerCase().contains("64")
+ext.IS_AARCH64 = OS_ARCH.toLowerCase().contains("aarch64")
 ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
@@ -307,7 +308,7 @@ if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 } else if (IS_MAC && OS_ARCH != "x86_64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
+} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64" && OS_ARCH != "aarch64") {
     fail("Unknown and unsupported build architecture: $OS_ARCH")
 }
 
@@ -346,6 +347,9 @@ defineProperty("javaBuildNumber", javaVersionInfo[1])
 
 defineProperty("libAVRepositoryURL", "https://libav.org/releases/")
 defineProperty("FFmpegRepositoryURL", "https://www.ffmpeg.org/releases/")
+defineProperty("icuRepositoryURL", "https://github.com/unicode-org/icu/releases/")
+
+defineProperty("icuVersion", "68.2")
 
 loadProperties("$projectDir/build.properties")
 
@@ -1902,6 +1906,21 @@ allprojects {
         }
     }
 
+    if (JFX_DEPS_URL == "" && IS_COMPILE_WEBKIT) {
+        def icuReleaseVersion = icuVersion.replaceAll('\\.', '-')
+        repositories {
+            ivy {
+                url icuRepositoryURL
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
+                    artifact "download/release-$icuReleaseVersion/[artifact].[ext]"
+                }
+            }
+        }
+    }
+
     // We want to configure all projects as java projects and use the same compile settings
     // etc, except for the root project which we just want to ignore (and for now media)
     if (project == rootProject) {
@@ -2203,7 +2222,9 @@ project(":graphics") {
     addNative(project, "prismSW")
     addNative(project, "font")
     addNative(project, "iio")
-    addNative(project, "prismES2")
+    if (IS_INCLUDE_ES2) {
+        addNative(project, "prismES2")
+    }
 
     if (IS_COMPILE_PANGO) {
         addNative(project, "fontFreetype")
@@ -2843,7 +2864,7 @@ project(":media") {
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
                          "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
                          "COMPILE_PARFAIT=${compileParfait}",
-                         IS_64 ? "ARCH=x64" : "ARCH=x32",
+                         IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
                         "CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}")
 
                     if (t.name == "win") {
@@ -2870,7 +2891,7 @@ project(":media") {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/gstreamer-lite")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=gstreamer-lite",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}",
+                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32", "CC=${mediaProperties.compiler}",
                              "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -2888,7 +2909,7 @@ project(":media") {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins",
-                             IS_64 ? "ARCH=x64" : "ARCH=x32",
+                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 
                         if (t.name == "win") {
@@ -3198,7 +3219,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=", IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32",
+                                             "STATIC=${IS_STATIC_BUILD}")
                                     }
                                 }
                             }
@@ -3212,7 +3234,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=-ffmpeg", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=-ffmpeg",
+                                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
@@ -3226,7 +3249,8 @@ project(":media") {
                                         args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                              "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}",
-                                             "SUFFIX=-ffmpeg", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                             "SUFFIX=-ffmpeg",
+                                             IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
@@ -3236,7 +3260,7 @@ project(":media") {
                                 commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                 args("CC=${mediaProperties.compiler}", "LINKER=${mediaProperties.linker}",
                                      "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}",
-                                     "BASE_NAME=avplugin", IS_64 ? "ARCH=x64" : "ARCH=x32")
+                                     "BASE_NAME=avplugin", IS_64 ? IS_AARCH64 ? "ARCH=aarch64" : "ARCH=x64" : "ARCH=x32")
                             }
                         }
                     }
@@ -3340,6 +3364,8 @@ project(":web") {
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.web"
 
+    getConfigurations().create("icu");
+
     sourceSets {
         main
         shims {
@@ -3362,6 +3388,9 @@ project(":web") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
 
     dependencies {
+        if (IS_COMPILE_WEBKIT) {
+            icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
+        }
         compile project(":base")
         compile project(":graphics")
         compile project(":controls")
@@ -3434,8 +3463,6 @@ project(":web") {
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
         def webkitProperties = targetProperties.webkit
-        def classifier = (t.name != "linux" && t.name != "win") ? t.name :
-                          IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
 
         def webkitOutputDir = cygpath("$buildDir/${t.name}")
         def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
@@ -3443,7 +3470,14 @@ project(":web") {
         File nativeBuildDir = new File("${webkitOutputDir}")
         nativeBuildDir.mkdirs()
 
-        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava]) {
+        def getICUFile = task("copyICUFile", type: Copy) {
+            enabled = IS_COMPILE_WEBKIT
+
+            from configurations.icu.files
+            into "$webkitOutputDir/$webkitConfig/icu/data"
+        }
+
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava, getICUFile]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 
@@ -3469,7 +3503,11 @@ project(":web") {
                     } else if (t.name == "linux") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_SYSTEM_NAME=Linux"
                         if (IS_64) {
-                            cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
+                            if (IS_AARCH64) {
+                                cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=aarch64"
+                            } else {
+                                cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
+                            }
                         } else {
                             cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=i586"
                         }

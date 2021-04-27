@@ -19,6 +19,9 @@
 #define PARSEPOS_H
 
 #include "unicode/utypes.h"
+
+#if U_SHOW_CPLUSPLUS_API
+
 #include "unicode/uobject.h"
 
 
@@ -94,14 +97,14 @@ public:
 
     /**
      * Equality operator.
-     * @return TRUE if the two parse positions are equal, FALSE otherwise.
+     * @return true if the two parse positions are equal, false otherwise.
      * @stable ICU 2.0
      */
     inline UBool              operator==(const ParsePosition& that) const;
 
     /**
      * Equality operator.
-     * @return TRUE if the two parse positions are not equal, FALSE otherwise.
+     * @return true if the two parse positions are not equal, false otherwise.
      * @stable ICU 2.0
      */
     inline UBool              operator!=(const ParsePosition& that) const;
@@ -193,9 +196,9 @@ inline UBool
 ParsePosition::operator==(const ParsePosition& copy) const
 {
   if(index != copy.index || errorIndex != copy.errorIndex)
-  return FALSE;
+  return false;
   else
-  return TRUE;
+  return true;
 }
 
 inline UBool
@@ -228,5 +231,7 @@ ParsePosition::setErrorIndex(int32_t ei)
   this->errorIndex = ei;
 }
 U_NAMESPACE_END
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif
