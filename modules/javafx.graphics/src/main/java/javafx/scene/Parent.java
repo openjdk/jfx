@@ -35,6 +35,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -887,10 +888,10 @@ public abstract class Parent extends Node {
      *                                                                     *
      **********************************************************************/
 
-    private int layoutDirtyBits;
+    private final Set<LayoutFlags> layoutFlags = EnumSet.noneOf(LayoutFlags.class);
 
     boolean isLayoutClean() {
-        return layoutDirtyBits == 0;
+        return layoutFlags.isEmpty();
     }
 
     void setLayoutFlag(LayoutFlags flag) {
@@ -898,15 +899,15 @@ public abstract class Parent extends Node {
             needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
         }
 
-        layoutDirtyBits |= flag.getValue();
+        layoutFlags.add(flag);
     }
 
     private void clearLayoutFlags() {
-        layoutDirtyBits = 0;
+        layoutFlags.clear();
     }
 
     private boolean isLayoutFlag(LayoutFlags flag) {
-        return (layoutDirtyBits & flag.getValue()) != 0;
+        return layoutFlags.contains(flag);
     }
 
     /**

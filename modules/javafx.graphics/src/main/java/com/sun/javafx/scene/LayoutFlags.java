@@ -25,17 +25,7 @@
 package com.sun.javafx.scene;
 
 public enum LayoutFlags {
-    DIRTY_ROOT(1),
-    DIRTY_BRANCH(2),
-    NEEDS_LAYOUT(4);
-
-    LayoutFlags(int value) {
-        this.value = value;
-    }
-
-    private final int value;
-
-    public int getValue() {
-        return value;
-    }
+    DIRTY_ROOT,
+    DIRTY_BRANCH,
+    NEEDS_LAYOUT
 }
