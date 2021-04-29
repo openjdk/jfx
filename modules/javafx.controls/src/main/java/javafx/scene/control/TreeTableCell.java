@@ -535,7 +535,13 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     private void updateEditing() {
         final TreeTableView<S> tv = getTreeTableView();
-        if (getIndex() == -1 || tv == null) return;
+        if (getIndex() == -1 || tv == null) {
+            // JDK-8265206: must cancel edit if index changed to -1 by re-use
+            if (isEditing()) {
+                doCancelEdit();
+            }
+            return;
+        }
 
         TreeTablePosition<S,?> editCell = tv.getEditingCell();
         boolean match = match(editCell);
@@ -543,17 +549,30 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         if (match && ! isEditing()) {
             startEdit();
         } else if (! match && isEditing()) {
-            // If my index is not the one being edited then I need to cancel
-            // the edit. The tricky thing here is that as part of this call
-            // I cannot end up calling list.edit(-1) the way that the standard
-            // cancelEdit method would do. Yet, I need to call cancelEdit
-            // so that subclasses which override cancelEdit can execute. So,
-            // I have to use a kind of hacky flag workaround.
+            doCancelEdit();
+        }
+    }
+
+    /**
+     * Switches an editing cell into not editing without changing control's
+     * editing state.
+     */
+    private void doCancelEdit() {
+        // If my index is not the one being edited then I need to cancel
+        // the edit. The tricky thing here is that as part of this call
+        // I cannot end up calling list.edit(-1) the way that the standard
+        // cancelEdit method would do. Yet, I need to call cancelEdit
+        // so that subclasses which override cancelEdit can execute. So,
+        // I have to use a kind of hacky flag workaround.
+        try {
+            // try-finally to make certain that the flag is reliably reset to true
             updateEditingIndex = false;
             cancelEdit();
+        } finally {
             updateEditingIndex = true;
         }
     }
+
     private boolean updateEditingIndex = true;
 
     private boolean match(TreeTablePosition pos) {
