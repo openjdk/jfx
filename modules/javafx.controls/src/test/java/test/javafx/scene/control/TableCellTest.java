@@ -35,6 +35,7 @@ import javafx.scene.control.TableCellShim;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -50,10 +51,24 @@ public class TableCellTest {
     private ObservableList<String> model;
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         cell = new TableCell<String,String>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
         table = new TableView<String>(model);
     }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -305,5 +320,61 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    /**
+     * Test that cell.cancelEdit can switch table editing off
+     * even if a subclass violates its contract.
+     *
+     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     *
+     */
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        // setup for editing
+        TableCell<String, String> cell = new MisbehavingOnCancelTableCell<>();
+        table.setEditable(true);
+        TableColumn<String, String> editingColumn = new TableColumn<>("TEST");
+        editingColumn.setCellValueFactory(param -> null);
+        table.getColumns().add(editingColumn);
+        cell.updateTableView(table);
+        cell.updateTableColumn(editingColumn);
+        // test editing: first round
+        // switch cell off editing by table api
+        int editingIndex = 1;
+        int intermediate = 0;
+        cell.updateIndex(editingIndex);
+        table.edit(editingIndex, editingColumn);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            table.edit(intermediate, editingColumn);
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table must be editing at intermediate index", intermediate, table.getEditingCell().getRow());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        table.edit(editingIndex, editingColumn);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertNull("table editing must be cancelled by cell", table.getEditingCell());
+        }
+    }
+
+    public static class MisbehavingOnCancelTableCell<S, T> extends TableCell<S, T> {
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+
     }
 }
