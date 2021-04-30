@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,9 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 
 import javafx.scene.control.skin.DatePickerSkin;
 
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -62,6 +64,7 @@ import static org.junit.Assert.assertEquals;
 public class DatePickerTest {
     private DatePicker datePicker;
     private final LocalDate today = LocalDate.now();
+    private static Locale defaultLocale;
 
 
     /*********************************************************************
@@ -82,12 +85,18 @@ public class DatePickerTest {
      *                                                                   *
      ********************************************************************/
 
-    @Before public void setup() {
+    @BeforeClass public static void setupOnce() {
+        defaultLocale = Locale.getDefault();
         Locale.setDefault(Locale.forLanguageTag("en-US"));
-        datePicker = new DatePicker();
     }
 
+    @AfterClass public static void tearDownOnce() {
+        Locale.setDefault(defaultLocale);
+    }
 
+    @Before public void setup() {
+        datePicker = new DatePicker();
+    }
 
     /*********************************************************************
      *                                                                   *

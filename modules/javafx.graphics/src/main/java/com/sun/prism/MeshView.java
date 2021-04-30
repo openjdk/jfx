@@ -32,7 +32,7 @@ import javafx.scene.shape.CullFace;
  * This class represents new retained mode rendering object
  * it has a { mesh, material, position, lights and other common rendering properties
  */
-public interface MeshView {
+public interface MeshView extends GraphicsResource {
 
     public final static int CULL_NONE = CullFace.NONE.ordinal();
     public final static int CULL_BACK = CullFace.BACK.ordinal();
@@ -52,4 +52,6 @@ public interface MeshView {
             float ca, float la, float qa, float maxRange);
 
     public void render(Graphics g);
+
+    public boolean isValid();
 }

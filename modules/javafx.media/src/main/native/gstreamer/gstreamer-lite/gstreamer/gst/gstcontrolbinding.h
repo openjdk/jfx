@@ -48,7 +48,10 @@ typedef struct _GstControlBindingPrivate GstControlBindingPrivate;
 
 #include <gst/gstcontrolsource.h>
 
-/* FIXME(2.0): remove, this is unused */
+/**
+ * GstControlBindingConvert: (attributes doc.skip=true)
+ * FIXME(2.0): remove, this is unused
+ */
 typedef void (* GstControlBindingConvert) (GstControlBinding *binding, gdouble src_value, GValue *dest_value);
 
 /**
@@ -139,9 +142,7 @@ void                gst_control_binding_set_disabled       (GstControlBinding * 
 GST_API
 gboolean            gst_control_binding_is_disabled        (GstControlBinding * binding);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstControlBinding, gst_object_unref)
-#endif
 
 G_END_DECLS
 

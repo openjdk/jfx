@@ -474,7 +474,7 @@ public class NodeTest {
 
         v.set(value);
         NodeTest.syncNode(node);
-        assertTrue(numbersEquals(new Integer(value),
+        assertTrue(numbersEquals(value,
                 (Number)TestUtils.getObjectValue(node, pgPropertyName)));
     }
 
@@ -519,7 +519,7 @@ public class NodeTest {
 
         v.set(value);
         NodeTest.syncNode(node);
-        assertTrue(numbersEquals(new Double(value),
+        assertTrue(numbersEquals(value,
                 (Number)TestUtils.getObjectValue(node, pgPropertyName)));
     }
 

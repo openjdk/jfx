@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
@@ -46,6 +47,7 @@ import javafx.scene.input.KeyCombination;
 
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 public class ControlAcceleratorSupport {
 
@@ -170,22 +172,32 @@ public class ControlAcceleratorSupport {
 
                 // We also listen to the accelerator property for changes, such
                 // that we can update the scene when a menu item accelerator changes.
-                menuitem.acceleratorProperty().addListener((observable, oldValue, newValue) -> {
-                    final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
-
-                    // remove the old KeyCombination from the accelerators map
-                    Runnable _acceleratorRunnable = accelerators.remove(oldValue);
-
-                    // and put in the new accelerator KeyCombination, if it is not null
-                    if (newValue != null) {
-                        accelerators.put(newValue, _acceleratorRunnable);
-                    }
-                });
+                menuitem.acceleratorProperty().addListener(getListener(scene, menuitem));
             }
         }
     }
 
+    private static Map<MenuItem, ChangeListener<KeyCombination>> changeListenerMap = new WeakHashMap<>();
 
+    private static ChangeListener<KeyCombination> getListener(final Scene scene, MenuItem menuItem) {
+
+        ChangeListener<KeyCombination> listener = changeListenerMap.get(menuItem);
+        if (listener == null) {
+            listener = (observable, oldValue, newValue) -> {
+                final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
+
+                // remove the old KeyCombination from the accelerators map
+                Runnable _acceleratorRunnable = accelerators.remove(oldValue);
+
+                // and put in the new accelerator KeyCombination, if it is not null
+                if (newValue != null) {
+                    accelerators.put(newValue, _acceleratorRunnable);
+                }
+            };
+            changeListenerMap.put(menuItem, listener);
+        }
+        return listener;
+    }
 
     // --- Remove
 
@@ -220,7 +232,13 @@ public class ControlAcceleratorSupport {
 
         for (final MenuItem menuitem : items) {
             if (menuitem instanceof Menu) {
-                // TODO remove the menu listener from the menu.items list
+                // MenuBarSkin uses MenuBarButton to display a Menu.
+                // The listener that is added on the 'items' in the method
+                // doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene)
+                // is added to the MenuBarButton.getItems() and not to Menu.getItems().
+                // If a Menu is removed from scenegraph then it's skin gets disposed(), which disposes the
+                // related MenuBarButton. So it is not required to remove the listener that was added
+                // to MenuBarButton.getItems().
 
                 // remove the accelerators of items contained within the menu
                 removeAcceleratorsFromScene(((Menu)menuitem).getItems(), scene);
@@ -229,6 +247,12 @@ public class ControlAcceleratorSupport {
                 // the scene accelerators map
                 final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
                 accelerators.remove(menuitem.getAccelerator());
+
+                ChangeListener<KeyCombination> listener = changeListenerMap.get(menuitem);
+                if (listener != null) {
+                    menuitem.acceleratorProperty().removeListener(listener);
+                    changeListenerMap.remove(menuitem);
+                }
             }
         }
     }

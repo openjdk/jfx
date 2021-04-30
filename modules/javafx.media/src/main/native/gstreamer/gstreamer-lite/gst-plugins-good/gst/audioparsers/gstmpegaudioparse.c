@@ -21,18 +21,18 @@
  */
 /**
  * SECTION:element-mpegaudioparse
+ * @title: mpegaudioparse
  * @short_description: MPEG audio parser
  * @see_also: #GstAmrParse, #GstAACParse
  *
  * Parses and frames mpeg1 audio streams. Provides seeking.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
  * gst-launch-1.0 filesrc location=test.mp3 ! mpegaudioparse ! mpg123audiodec
  *  ! audioconvert ! audioresample ! autoaudiosink
  * ]|
- * </refsect2>
+ *
  */
 
 /* FIXME: we should make the base class (GstBaseParse) aware of the
@@ -199,6 +199,7 @@ gst_mpeg_audio_parse_reset (GstMpegAudioParse * mp3parse)
   mp3parse->freerate = 0;
 
   mp3parse->hdr_bitrate = 0;
+  mp3parse->bitrate_is_constant = TRUE;
 
   mp3parse->xing_flags = 0;
   mp3parse->xing_bitrate = 0;
@@ -766,6 +767,9 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
         (version == 1) ? 10 : 30, 2);
   }
 
+  if (mp3parse->hdr_bitrate && mp3parse->hdr_bitrate != bitrate) {
+    mp3parse->bitrate_is_constant = FALSE;
+  }
   mp3parse->hdr_bitrate = bitrate;
 
   /* For first frame; check for seek tables and output a codec tag */
@@ -1238,6 +1242,14 @@ gst_mpeg_audio_parse_time_to_bytepos (GstMpegAudioParse * mp3parse,
     return TRUE;
   }
 
+  /* If we have had a constant bit rate (so far), use it directly, as it
+   * may give slightly more accurate results than the base class. */
+  if (mp3parse->bitrate_is_constant && mp3parse->hdr_bitrate) {
+    *bytepos = gst_util_uint64_scale (ts, mp3parse->hdr_bitrate,
+        8 * GST_SECOND);
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -1300,6 +1312,14 @@ gst_mpeg_audio_parse_bytepos_to_time (GstMpegAudioParse * mp3parse,
 
     *ts = gst_gdouble_to_guint64 (fa + ((fb - fa) / (b - a)) * (bytepos - a));
 
+    return TRUE;
+  }
+
+  /* If we have had a constant bit rate (so far), use it directly, as it
+   * may give slightly more accurate results than the base class. */
+  if (mp3parse->bitrate_is_constant && mp3parse->hdr_bitrate) {
+    *ts = gst_util_uint64_scale (bytepos, 8 * GST_SECOND,
+        mp3parse->hdr_bitrate);
     return TRUE;
   }
 

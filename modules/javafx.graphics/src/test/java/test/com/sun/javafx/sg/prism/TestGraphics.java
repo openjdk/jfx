@@ -179,6 +179,7 @@ public class TestGraphics extends BaseGraphics {
 
     private static class TestResourceFactory implements ResourceFactory {
         @Override public boolean isDeviceReady() { return true; }
+        @Override public boolean isDisposed() { return false; }
 
         @Override public TextureResourcePool getTextureResourcePool() { return null; }
         @Override public Texture createTexture(Image image, Texture.Usage usageHint, WrapMode wrapMode) { return null; }

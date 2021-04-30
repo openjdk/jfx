@@ -46,6 +46,10 @@
 #define O_BINARY 0
 #endif
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 #include "gfileutils.h"
 
 #include "gstdio.h"
@@ -1036,8 +1040,9 @@ g_file_get_contents (const gchar  *filename,
 
 static gboolean
 rename_file (const char  *old_name,
-       const char  *new_name,
-       GError     **err)
+             const char  *new_name,
+             gboolean     do_fsync,
+             GError     **err)
 {
   errno = 0;
   if (g_rename (old_name, new_name) == -1)
@@ -1060,35 +1065,98 @@ rename_file (const char  *old_name,
       return FALSE;
     }
 
+  /* In order to guarantee that the *new* contents of the file are seen in
+   * future, fsync() the directory containing the file. Otherwise if the file
+   * system was unmounted cleanly now, it would be undefined whether the old
+   * or new contents of the file were visible after recovery.
+   *
+   * This assumes the @old_name and @new_name are in the same directory. */
+#ifdef HAVE_FSYNC
+  if (do_fsync)
+    {
+      gchar *dir = g_path_get_dirname (new_name);
+      int dir_fd = g_open (dir, O_RDONLY, 0);
+
+      if (dir_fd >= 0)
+        {
+          g_fsync (dir_fd);
+          g_close (dir_fd, NULL);
+        }
+
+      g_free (dir);
+    }
+#endif  /* HAVE_FSYNC */
+
   return TRUE;
 }
 
-static gchar *
-write_to_temp_file (const gchar  *contents,
-        gssize        length,
-        const gchar  *dest_file,
-        GError      **err)
+static gboolean
+fd_should_be_fsynced (int                    fd,
+                      const gchar           *test_file,
+                      GFileSetContentsFlags  flags)
 {
-  gchar *tmp_name;
-  gchar *retval;
-  gint fd;
+#ifdef HAVE_FSYNC
+  struct stat statbuf;
 
-  retval = NULL;
+#ifdef BTRFS_SUPER_MAGIC
+  {
+    struct statfs buf;
 
-  tmp_name = g_strdup_printf ("%s.XXXXXX", dest_file);
+    /* On Linux, on btrfs, skip the fsync since rename-over-existing is
+     * guaranteed to be atomic and this is the only case in which we
+     * would fsync() anyway.
+     *
+     * See https://btrfs.wiki.kernel.org/index.php/FAQ#What_are_the_crash_guarantees_of_overwrite-by-rename.3F
+     */
 
-  errno = 0;
-  fd = g_mkstemp_full (tmp_name, O_RDWR | O_BINARY, 0666);
+    if ((flags & G_FILE_SET_CONTENTS_CONSISTENT) &&
+        fstatfs (fd, &buf) == 0 && buf.f_type == BTRFS_SUPER_MAGIC)
+      return FALSE;
+  }
+#endif  /* BTRFS_SUPER_MAGIC */
 
-  if (fd == -1)
+  /* If the final destination exists and is > 0 bytes, we want to sync the
+   * newly written file to ensure the data is on disk when we rename over
+   * the destination. Otherwise if we get a system crash we can lose both
+   * the new and the old file on some filesystems. (I.E. those that don't
+   * guarantee the data is written to the disk before the metadata.)
+   *
+   * There is no difference (in file system terms) if the old file doesn't
+   * already exist, apart from the fact that if the system crashes and the new
+   * data hasn't been fsync()ed, there is only one bit of old data to lose (that
+   * the file didn't exist in the first place). In some situations, such as
+   * trashing files, the old file never exists, so it seems reasonable to avoid
+   * the fsync(). This is not a widely applicable optimisation though.
+   */
+  if ((flags & (G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE)) &&
+      (flags & G_FILE_SET_CONTENTS_ONLY_EXISTING))
     {
-      int saved_errno = errno;
-      set_file_error (err,
-                      tmp_name, _("Failed to create file '%s': %s"),
-                      saved_errno);
-      goto out;
+      errno = 0;
+      if (g_lstat (test_file, &statbuf) == 0)
+        return (statbuf.st_size > 0);
+      else if (errno == ENOENT)
+        return FALSE;
+      else
+        return TRUE;  /* lstat() failed; be cautious */
     }
+  else
+    {
+      return (flags & (G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE));
+    }
+#else  /* if !HAVE_FSYNC */
+  return FALSE;
+#endif  /* !HAVE_FSYNC */
+}
 
+/* closes @fd once it's finished (on success or error) */
+static gboolean
+write_to_file (const gchar  *contents,
+               gsize         length,
+               int           fd,
+               const gchar  *dest_file,
+               gboolean      do_fsync,
+               GError      **err)
+{
 #ifdef HAVE_FALLOCATE
   if (length > 0)
     {
@@ -1102,7 +1170,7 @@ write_to_temp_file (const gchar  *contents,
     {
       gssize s;
 
-      s = write (fd, contents, length);
+      s = write (fd, contents, MIN (length, G_MAXSSIZE));
 
       if (s < 0)
         {
@@ -1111,77 +1179,47 @@ write_to_temp_file (const gchar  *contents,
             continue;
 
           set_file_error (err,
-                          tmp_name, _("Failed to write file '%s': write() failed: %s"),
+                          dest_file, _("Failed to write file '%s': write() failed: %s"),
                           saved_errno);
           close (fd);
-          g_unlink (tmp_name);
 
-          goto out;
+          return FALSE;
         }
 
-      g_assert (s <= length);
+      g_assert ((gsize) s <= length);
 
       contents += s;
       length -= s;
     }
 
-#ifdef BTRFS_SUPER_MAGIC
-  {
-    struct statfs buf;
-
-    /* On Linux, on btrfs, skip the fsync since rename-over-existing is
-     * guaranteed to be atomic and this is the only case in which we
-     * would fsync() anyway.
-     */
-
-    if (fstatfs (fd, &buf) == 0 && buf.f_type == BTRFS_SUPER_MAGIC)
-      goto no_fsync;
-  }
-#endif
 
 #ifdef HAVE_FSYNC
-  {
-    struct stat statbuf;
-
     errno = 0;
-    /* If the final destination exists and is > 0 bytes, we want to sync the
-     * newly written file to ensure the data is on disk when we rename over
-     * the destination. Otherwise if we get a system crash we can lose both
-     * the new and the old file on some filesystems. (I.E. those that don't
-     * guarantee the data is written to the disk before the metadata.)
-     */
-    if (g_lstat (dest_file, &statbuf) == 0 && statbuf.st_size > 0 && fsync (fd) != 0)
+  if (do_fsync && g_fsync (fd) != 0)
       {
         int saved_errno = errno;
         set_file_error (err,
-                        tmp_name, _("Failed to write file '%s': fsync() failed: %s"),
+                        dest_file, _("Failed to write file '%s': fsync() failed: %s"),
                         saved_errno);
         close (fd);
-        g_unlink (tmp_name);
 
-        goto out;
+      return FALSE;
       }
-  }
-#endif
-
-#ifdef BTRFS_SUPER_MAGIC
- no_fsync:
 #endif
 
   errno = 0;
   if (!g_close (fd, err))
-    {
-      g_unlink (tmp_name);
+    return FALSE;
 
-      goto out;
+  return TRUE;
     }
 
-  retval = g_strdup (tmp_name);
-
- out:
-  g_free (tmp_name);
-
-  return retval;
+static inline int
+steal_fd (int *fd_ptr)
+{
+  int fd = *fd_ptr;
+  *fd_ptr = -1;
+  return fd;
 }
 
 /**
@@ -1192,11 +1230,54 @@ write_to_temp_file (const gchar  *contents,
  * @length: length of @contents, or -1 if @contents is a nul-terminated string
  * @error: return location for a #GError, or %NULL
  *
+ * Writes all of @contents to a file named @filename. This is a convenience
+ * wrapper around calling g_file_set_contents() with `flags` set to
+ * `G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_ONLY_EXISTING` and
+ * `mode` set to `0666`.
+ *
+ * Returns: %TRUE on success, %FALSE if an error occurred
+ *
+ * Since: 2.8
+ */
+gboolean
+g_file_set_contents (const gchar  *filename,
+                     const gchar  *contents,
+                     gssize        length,
+                     GError      **error)
+{
+  return g_file_set_contents_full (filename, contents, length,
+                                   G_FILE_SET_CONTENTS_CONSISTENT |
+                                   G_FILE_SET_CONTENTS_ONLY_EXISTING,
+                                   0666, error);
+}
+
+/**
+ * g_file_set_contents_full:
+ * @filename: (type filename): name of a file to write @contents to, in the GLib file name
+ *   encoding
+ * @contents: (array length=length) (element-type guint8): string to write to the file
+ * @length: length of @contents, or -1 if @contents is a nul-terminated string
+ * @flags: flags controlling the safety vs speed of the operation
+ * @mode: file mode, as passed to `open()`; typically this will be `0666`
+ * @error: return location for a #GError, or %NULL
+ *
  * Writes all of @contents to a file named @filename, with good error checking.
  * If a file called @filename already exists it will be overwritten.
  *
- * This write is atomic in the sense that it is first written to a temporary
- * file which is then renamed to the final name. Notes:
+ * @flags control the properties of the write operation: whether it’s atomic,
+ * and what the tradeoff is between returning quickly or being resilient to
+ * system crashes.
+ *
+ * As this function performs file I/O, it is recommended to not call it anywhere
+ * where blocking would cause problems, such as in the main loop of a graphical
+ * application. In particular, if @flags has any value other than
+ * %G_FILE_SET_CONTENTS_NONE then this function may call `fsync()`.
+ *
+ * If %G_FILE_SET_CONTENTS_CONSISTENT is set in @flags, the operation is atomic
+ * in the sense that it is first written to a temporary file which is then
+ * renamed to the final name.
+ *
+ * Notes:
  *
  * - On UNIX, if @filename already exists hard links to @filename will break.
  *   Also since the file is recreated, existing permissions, access control
@@ -1204,15 +1285,17 @@ write_to_temp_file (const gchar  *contents,
  *   the link itself will be replaced, not the linked file.
  *
  * - On UNIX, if @filename already exists and is non-empty, and if the system
- *   supports it (via a journalling filesystem or equivalent), the fsync()
- *   call (or equivalent) will be used to ensure atomic replacement: @filename
+ *   supports it (via a journalling filesystem or equivalent), and if
+ *   %G_FILE_SET_CONTENTS_CONSISTENT is set in @flags, the `fsync()` call (or
+ *   equivalent) will be used to ensure atomic replacement: @filename
  *   will contain either its old contents or @contents, even in the face of
  *   system power loss, the disk being unsafely removed, etc.
  *
  * - On UNIX, if @filename does not already exist or is empty, there is a
  *   possibility that system power loss etc. after calling this function will
  *   leave @filename empty or full of NUL bytes, depending on the underlying
- *   filesystem.
+ *   filesystem, unless %G_FILE_SET_CONTENTS_DURABLE and
+ *   %G_FILE_SET_CONTENTS_CONSISTENT are set in @flags.
  *
  * - On Windows renaming a file will not remove an existing file with the
  *   new name, so on Windows there is a race condition between the existing
@@ -1229,44 +1312,83 @@ write_to_temp_file (const gchar  *contents,
  * Note that the name for the temporary file is constructed by appending up
  * to 7 characters to @filename.
  *
+ * If the file didn't exist before and is created, it will be given the
+ * permissions from @mode. Otherwise, the permissions of the existing file may
+ * be changed to @mode depending on @flags, or they may remain unchanged.
+ *
  * Returns: %TRUE on success, %FALSE if an error occurred
  *
- * Since: 2.8
+ * Since: 2.66
  */
 gboolean
-g_file_set_contents (const gchar  *filename,
-         const gchar  *contents,
-         gssize    length,
-         GError  **error)
+g_file_set_contents_full (const gchar            *filename,
+                          const gchar            *contents,
+                          gssize                  length,
+                          GFileSetContentsFlags   flags,
+                          int                     mode,
+                          GError                **error)
 {
-  gchar *tmp_filename;
-  gboolean retval;
-  GError *rename_error = NULL;
-
   g_return_val_if_fail (filename != NULL, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
   g_return_val_if_fail (contents != NULL || length == 0, FALSE);
   g_return_val_if_fail (length >= -1, FALSE);
 
-  if (length == -1)
+  /* @flags are handled as follows:
+   *  - %G_FILE_SET_CONTENTS_NONE: write directly to @filename, no fsync()s
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT: write to temp file, fsync() it, rename()
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | ONLY_EXISTING: as above, but skip the
+   *    fsync() if @filename doesn't exist or is empty
+   *  - %G_FILE_SET_CONTENTS_DURABLE: write directly to @filename, fsync() it
+   *  - %G_FILE_SET_CONTENTS_DURABLE | ONLY_EXISTING: as above, but skip the
+   *    fsync() if @filename doesn't exist or is empty
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | DURABLE: write to temp file, fsync()
+   *    it, rename(), fsync() containing directory
+   *  - %G_FILE_SET_CONTENTS_CONSISTENT | DURABLE | ONLY_EXISTING: as above, but
+   *    skip both fsync()s if @filename doesn't exist or is empty
+   */
+
+  if (length < 0)
     length = strlen (contents);
 
-  tmp_filename = write_to_temp_file (contents, length, filename, error);
-
-  if (!tmp_filename)
+  if (flags & G_FILE_SET_CONTENTS_CONSISTENT)
     {
+      gchar *tmp_filename = NULL;
+      GError *rename_error = NULL;
+      gboolean retval;
+      int fd;
+      gboolean do_fsync;
+
+      tmp_filename = g_strdup_printf ("%s.XXXXXX", filename);
+
+      errno = 0;
+      fd = g_mkstemp_full (tmp_filename, O_RDWR | O_BINARY, mode);
+
+      if (fd == -1)
+    {
+          int saved_errno = errno;
+          set_file_error (error,
+                          tmp_filename, _("Failed to create file '%s': %s"),
+                          saved_errno);
       retval = FALSE;
-      goto out;
+          goto consistent_out;
     }
 
-  if (!rename_file (tmp_filename, filename, &rename_error))
+      do_fsync = fd_should_be_fsynced (fd, filename, flags);
+      if (!write_to_file (contents, length, steal_fd (&fd), tmp_filename, do_fsync, error))
     {
+          g_unlink (tmp_filename);
+          retval = FALSE;
+          goto consistent_out;
+        }
+
+      if (!rename_file (tmp_filename, filename, do_fsync, &rename_error))
+        {
 #ifndef G_OS_WIN32
 
       g_unlink (tmp_filename);
       g_propagate_error (error, rename_error);
       retval = FALSE;
-      goto out;
+          goto consistent_out;
 
 #else /* G_OS_WIN32 */
 
@@ -1279,7 +1401,7 @@ g_file_set_contents (const gchar  *filename,
     g_unlink (tmp_filename);
     g_propagate_error (error, rename_error);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
       g_error_free (rename_error);
@@ -1293,24 +1415,79 @@ g_file_set_contents (const gchar  *filename,
                           saved_errno);
     g_unlink (tmp_filename);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
-      if (!rename_file (tmp_filename, filename, error))
+          if (!rename_file (tmp_filename, filename, flags, error))
   {
     g_unlink (tmp_filename);
     retval = FALSE;
-    goto out;
+              goto consistent_out;
   }
 
-#endif
+#endif  /* G_OS_WIN32 */
     }
 
   retval = TRUE;
 
- out:
+consistent_out:
   g_free (tmp_filename);
   return retval;
+}
+  else
+    {
+      int direct_fd;
+      int open_flags;
+      gboolean do_fsync;
+
+      open_flags = O_RDWR | O_BINARY | O_CREAT | O_CLOEXEC;
+#ifdef O_NOFOLLOW
+      /* Windows doesn't have symlinks, so O_NOFOLLOW is unnecessary there. */
+      open_flags |= O_NOFOLLOW;
+#endif
+
+      errno = 0;
+      direct_fd = g_open (filename, open_flags, mode);
+
+      if (direct_fd < 0)
+        {
+          int saved_errno = errno;
+
+#ifdef O_NOFOLLOW
+          /* ELOOP indicates that @filename is a symlink, since we used
+           * O_NOFOLLOW (alternately it could indicate that @filename contains
+           * looping or too many symlinks). In either case, try again on the
+           * %G_FILE_SET_CONTENTS_CONSISTENT code path.
+           *
+           * FreeBSD uses EMLINK instead of ELOOP
+           * (https://www.freebsd.org/cgi/man.cgi?query=open&sektion=2#STANDARDS),
+           * and NetBSD uses EFTYPE
+           * (https://netbsd.gw.com/cgi-bin/man-cgi?open+2+NetBSD-current). */
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
+          if (saved_errno == EMLINK)
+#elif defined(__NetBSD__)
+          if (saved_errno == EFTYPE)
+#else
+          if (saved_errno == ELOOP)
+#endif
+            return g_file_set_contents_full (filename, contents, length,
+                                             flags | G_FILE_SET_CONTENTS_CONSISTENT,
+                                             mode, error);
+#endif  /* O_NOFOLLOW */
+
+          set_file_error (error,
+                          filename, _("Failed to open file '%s': %s"),
+                          saved_errno);
+          return FALSE;
+        }
+
+      do_fsync = fd_should_be_fsynced (direct_fd, filename, flags);
+      if (!write_to_file (contents, length, steal_fd (&direct_fd), filename,
+                          do_fsync, error))
+        return FALSE;
+    }
+
+  return TRUE;
 }
 
 /*
@@ -2410,7 +2587,7 @@ g_path_get_basename (const gchar *file_name)
 
   len = last_nonslash - base;
   retval = g_malloc (len + 1);
-  memcpy (retval, file_name + base + 1, len);
+  memcpy (retval, file_name + (base + 1), len);
   retval [len] = '\0';
 
   return retval;

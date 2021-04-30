@@ -25,6 +25,7 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
@@ -37,6 +38,7 @@ import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
+import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -47,9 +49,12 @@ import java.nio.IntBuffer;
 final class RTImage extends PrismImage implements ResourceFactoryListener {
     private RTTexture txt;
     private final int width, height;
-    private boolean listenerAdded = false;
+    private WeakReference<ResourceFactory> registeredWithFactory = null;
     private ByteBuffer pixelBuffer;
     private float pixelScale;
+
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(RTImage.class.getName());
 
     RTImage(int w, int h, float pixelScale) {
         width = w;
@@ -66,23 +71,36 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override
     Graphics getGraphics() {
-        Graphics g = getTexture().createGraphics();
+        RTTexture texture = getTexture();
+        if (texture == null) {
+            return null;
+        }
+        Graphics g = texture.createGraphics();
         g.transform(PrismGraphicsManager.getPixelScaleTransform());
         return g;
     }
 
     private RTTexture getTexture() {
+        if (txt != null && txt.isSurfaceLost()) {
+            log.fine("RTImage::getTexture : surface lost: " + this);
+        }
+
+        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+        if (f == null || f.isDisposed()) {
+            log.fine("RTImage::getTexture : return null because device disposed or not ready");
+            return null;
+        }
+
         if (txt == null) {
-            ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
             txt = f.createRTTexture(
                     (int) Math.ceil(width * pixelScale),
                     (int) Math.ceil(height * pixelScale),
                     Texture.WrapMode.CLAMP_NOT_NEEDED);
             txt.contentsUseful();
             txt.makePermanent();
-            if (! listenerAdded) {
+            if (registeredWithFactory == null || registeredWithFactory.get() != f) {
                 f.addFactoryListener(this);
-                listenerAdded = true;
+                registeredWithFactory = new WeakReference<>(f);
             }
         }
         return txt;
@@ -94,6 +112,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int srcx1, int srcy1, int srcx2, int srcy2)
     {
         if (txt == null && g.getCompositeMode() == CompositeMode.SRC_OVER) {
+            return;
+        }
+        if (g.getResourceFactory().isDisposed()) {
+            log.fine("RTImage::draw : skip because device has been disposed");
             return;
         }
         if (g instanceof PrinterGraphics) {
@@ -160,6 +182,11 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         }
         if (isNew || isDirty()) {
             PrismInvoker.runOnRenderThread(() -> {
+                final ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                if (f == null || f.isDisposed()) {
+                    log.fine("RTImage::getPixelBuffer : skip because device disposed or not ready");
+                    return;
+                }
                 flushRQ();
                 if (txt != null && pixelBuffer != null) {
                     PixelFormat pf = txt.getPixelFormat();
@@ -172,7 +199,6 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
                     RTTexture t = txt;
                     if (pixelScale != 1.0f) {
                         // Convert [txt] to a texture the size of the image
-                        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
                         t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
                         Graphics g = t.createGraphics();
                         g.drawTexture(txt, 0, 0, width, height,
@@ -203,7 +229,7 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
         PrismInvoker.invokeOnRenderThread(new Runnable() {
             public void run() {
                 //[g] field can be null if it is the first paint
-                //from synthetic ImageData.
+                //from synthetic ImageData or if the resource factory is disposed
                 Graphics g = getGraphics();
                 if (g != null && pixelBuffer != null) {
                     pixelBuffer.rewind();//critical!
@@ -228,6 +254,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
     }
 
     @Override public void factoryReleased() {
+        if (txt != null) {
+            txt.dispose();
+            txt = null;
+        }
     }
 
     @Override

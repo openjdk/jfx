@@ -28,12 +28,19 @@
 
 G_BEGIN_DECLS
 
+/**
+ * GstAudioConverter:
+ *
+ * Opaque #GstAudioConverter struct.
+ *
+ * Since: 1.8
+ */
 typedef struct _GstAudioConverter GstAudioConverter;
 
 /**
  * GST_AUDIO_CONVERTER_OPT_RESAMPLER_METHOD:
  *
- * #GST_TYPE_AUDIO_RESAMPLER_METHOD, The resampler method to use when
+ * #GstAudioResamplerMethod, The resampler method to use when
  * changing sample rates.
  * Default is #GST_AUDIO_RESAMPLER_METHOD_BLACKMAN_NUTTALL.
  */
@@ -42,7 +49,7 @@ typedef struct _GstAudioConverter GstAudioConverter;
 /**
  * GST_AUDIO_CONVERTER_OPT_DITHER_METHOD:
  *
- * #GST_TYPE_AUDIO_DITHER_METHOD, The dither method to use when
+ * #GstAudioDitherMethod, The dither method to use when
  * changing bit depth.
  * Default is #GST_AUDIO_DITHER_NONE.
  */
@@ -51,7 +58,7 @@ typedef struct _GstAudioConverter GstAudioConverter;
 /**
  * GST_AUDIO_CONVERTER_OPT_NOISE_SHAPING_METHOD:
  *
- * #GST_TYPE_AUDIO_NOISE_SHAPING_METHOD, The noise shaping method to use
+ * #GstAudioNoiseShapingMethod, The noise shaping method to use
  * to mask noise from quantization errors.
  * Default is #GST_AUDIO_NOISE_SHAPING_NONE.
  */
@@ -69,7 +76,7 @@ typedef struct _GstAudioConverter GstAudioConverter;
 /**
  * GST_AUDIO_CONVERTER_OPT_MIX_MATRIX:
  *
- * #GST_TYPE_VALUE_LIST, The channel mapping matrix.
+ * #GST_TYPE_LIST, The channel mapping matrix.
  *
  * The matrix coefficients must be between -1 and 1: the number of rows is equal
  * to the number of output channels and the number of columns is equal to the

@@ -241,6 +241,11 @@ gst_segment_do_seek (GstSegment * segment, gdouble rate,
   g_return_val_if_fail (segment != NULL, FALSE);
   g_return_val_if_fail (segment->format == format, FALSE);
 
+  /* Elements should not pass instant-rate seeks to gst_segment_do_seek().
+   * This helps catch elements that have not been updated yet */
+  if (flags & GST_SEEK_FLAG_INSTANT_RATE_CHANGE)
+    return FALSE;
+
   update_start = update_stop = TRUE;
 
   position = segment->position;
@@ -354,6 +359,8 @@ gst_segment_do_seek (GstSegment * segment, gdouble rate,
     segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS;
   if ((flags & GST_SEEK_FLAG_TRICKMODE_NO_AUDIO) != 0)
     segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO;
+  if ((flags & GST_SEEK_FLAG_TRICKMODE_FORWARD_PREDICTED) != 0)
+    segment->flags |= GST_SEGMENT_FLAG_TRICKMODE_FORWARD_PREDICTED;
 
   segment->rate = rate;
   segment->applied_rate = 1.0;

@@ -221,6 +221,7 @@ public abstract class Application {
      *             {@link #getParameters()} method.
      *
      * @throws IllegalStateException if this method is called more than once.
+     * @throws IllegalStateException if this method is called from the JavaFX application thread.
      * @throws IllegalArgumentException if <code>appClass</code> is not a
      *         subclass of <code>Application</code>.
      * @throws RuntimeException if there is an error launching the
@@ -264,6 +265,7 @@ public abstract class Application {
      *             {@link #getParameters()} method.
      *
      * @throws IllegalStateException if this method is called more than once.
+     * @throws IllegalStateException if this method is called from the JavaFX application thread.
      * @throws RuntimeException if there is an error launching the
      * JavaFX runtime, or if the application class cannot be constructed
      * (e.g., if the class is not public or is not in an exported package), or

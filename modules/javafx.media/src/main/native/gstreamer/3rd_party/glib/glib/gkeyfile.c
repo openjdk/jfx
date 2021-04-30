@@ -1113,7 +1113,7 @@ g_key_file_load_from_dirs (GKeyFile       *key_file,
  * @full_path.  If the file could not be loaded then an %error is
  * set to either a #GFileError or #GKeyFileError.
  *
- * Returns: %TRUE if a key file could be loaded, %FALSE othewise
+ * Returns: %TRUE if a key file could be loaded, %FALSE otherwise
  * Since: 2.6
  **/
 gboolean
@@ -1711,7 +1711,7 @@ g_key_file_get_keys (GKeyFile     *key_file,
  *
  * Returns the name of the start group of the file.
  *
- * Returns: The start group of the key file.
+ * Returns: (nullable): The start group of the key file.
  *
  * Since: 2.6
  **/
@@ -3369,6 +3369,7 @@ g_key_file_set_key_comment (GKeyFile     *key_file,
   pair->value = g_key_file_parse_comment_as_value (key_file, comment);
 
   key_node = g_list_insert (key_node, pair, 1);
+  (void) key_node;
 
   return TRUE;
 }
@@ -3548,7 +3549,7 @@ g_key_file_get_key_comment (GKeyFile     *key_file,
   string = NULL;
 
   /* Then find all the comments already associated with the
-   * key and concatentate them.
+   * key and concatenate them.
    */
   tmp = key_node->next;
   if (!key_node->next)
@@ -4376,9 +4377,9 @@ g_key_file_parse_value_as_string (GKeyFile     *key_file,
           sequence[2] = '\0';
 
           g_set_error (error, G_KEY_FILE_ERROR,
-           G_KEY_FILE_ERROR_INVALID_VALUE,
-           _("Key file contains invalid escape "
-             "sequence '%s'"), sequence);
+                       G_KEY_FILE_ERROR_INVALID_VALUE,
+                       _("Key file contains invalid escape "
+                       "sequence '%s'"), sequence);
         }
     }
               break;
@@ -4520,9 +4521,9 @@ g_key_file_parse_value_as_integer (GKeyFile     *key_file,
     {
       gchar *value_utf8 = g_utf8_make_valid (value, -1);
       g_set_error (error, G_KEY_FILE_ERROR,
-       G_KEY_FILE_ERROR_INVALID_VALUE,
-       _("Value '%s' cannot be interpreted "
-         "as a number."), value_utf8);
+                   G_KEY_FILE_ERROR_INVALID_VALUE,
+                   _("Value '%s' cannot be interpreted "
+                   "as a number."), value_utf8);
       g_free (value_utf8);
 
       return 0;
@@ -4533,10 +4534,10 @@ g_key_file_parse_value_as_integer (GKeyFile     *key_file,
     {
       gchar *value_utf8 = g_utf8_make_valid (value, -1);
       g_set_error (error,
-       G_KEY_FILE_ERROR,
-       G_KEY_FILE_ERROR_INVALID_VALUE,
-       _("Integer value '%s' out of range"),
-       value_utf8);
+                   G_KEY_FILE_ERROR,
+                   G_KEY_FILE_ERROR_INVALID_VALUE,
+                   _("Integer value '%s' out of range"),
+                   value_utf8);
       g_free (value_utf8);
 
       return 0;
@@ -4567,9 +4568,9 @@ g_key_file_parse_value_as_double  (GKeyFile     *key_file,
     {
       gchar *value_utf8 = g_utf8_make_valid (value, -1);
       g_set_error (error, G_KEY_FILE_ERROR,
-       G_KEY_FILE_ERROR_INVALID_VALUE,
-       _("Value '%s' cannot be interpreted "
-         "as a float number."),
+                   G_KEY_FILE_ERROR_INVALID_VALUE,
+                   _("Value '%s' cannot be interpreted "
+                   "as a float number."),
        value_utf8);
       g_free (value_utf8);
 
@@ -4685,7 +4686,9 @@ g_key_file_parse_comment_as_value (GKeyFile      *key_file,
  * @error: a pointer to a %NULL #GError, or %NULL
  *
  * Writes the contents of @key_file to @filename using
- * g_file_set_contents().
+ * g_file_set_contents(). If you need stricter guarantees about durability of
+ * the written file than are provided by g_file_set_contents(), use
+ * g_file_set_contents_full() with the return value of g_key_file_to_data().
  *
  * This function can fail for any of the reasons that
  * g_file_set_contents() may fail.

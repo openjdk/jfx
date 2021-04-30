@@ -59,14 +59,14 @@ public class UnaryExprTest extends PrimaryExprTest {
     public void positive() throws Exception {
         UnaryExpr tree = parseTreeFor("+72.4");
         assertEquals(tree.getOp(), UnaryOpType.PLUS);
-        assertEquals(((LiteralExpr)tree.getExpr()).getValue(), new Float(72.4));
+        assertEquals(((LiteralExpr)tree.getExpr()).getValue(), Float.valueOf(72.4f));
     }
 
     @Test
     public void negative() throws Exception {
         UnaryExpr tree = parseTreeFor("-72.4");
         assertEquals(tree.getOp(), UnaryOpType.MINUS);
-        assertEquals(((LiteralExpr)tree.getExpr()).getValue(), new Float(72.4));
+        assertEquals(((LiteralExpr)tree.getExpr()).getValue(), Float.valueOf(72.4f));
     }
 
     @Test

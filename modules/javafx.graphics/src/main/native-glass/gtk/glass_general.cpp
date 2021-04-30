@@ -742,7 +742,7 @@ grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
                                                context->window,
                                                GDK_OWNERSHIP_NONE,
                                                TRUE,
-                                               GDK_ALL_EVENTS_MASK,
+                                               GDK_FILTERED_EVENTS_MASK,
                                                NULL,
                                                GDK_CURRENT_TIME);
 #else
@@ -752,7 +752,7 @@ grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
                                                context->window,
                                                GDK_OWNERSHIP_NONE,
                                                TRUE,
-                                               GDK_ALL_EVENTS_MASK,
+                                               GDK_FILTERED_EVENTS_MASK,
                                                NULL,
                                                GDK_CURRENT_TIME);
                                        */

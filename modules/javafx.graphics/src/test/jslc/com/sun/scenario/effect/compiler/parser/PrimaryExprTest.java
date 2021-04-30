@@ -58,14 +58,14 @@ public class PrimaryExprTest extends ParserBase {
     public void intLiteral() throws Exception {
         Expr tree = parseTreeFor("123");
         assertTrue(tree instanceof LiteralExpr);
-        assertEquals(((LiteralExpr)tree).getValue(), new Integer(123));
+        assertEquals(((LiteralExpr)tree).getValue(), Integer.valueOf(123));
     }
 
     @Test
     public void floatLiteral() throws Exception {
         Expr tree = parseTreeFor("1.234");
         assertTrue(tree instanceof LiteralExpr);
-        assertEquals(((LiteralExpr)tree).getValue(), new Float(1.234));
+        assertEquals(((LiteralExpr)tree).getValue(), Float.valueOf(1.234f));
     }
 
     @Test

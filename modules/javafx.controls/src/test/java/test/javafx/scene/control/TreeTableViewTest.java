@@ -2513,14 +2513,14 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeTableView);
 
-        assertEquals(12, rt_31200_count);
+        assertEquals(15, rt_31200_count);
 
         // resize the stage
         sl.getStage().setHeight(250);
         Toolkit.getToolkit().firePulse();
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
-        assertEquals(12, rt_31200_count);
+        assertEquals(15, rt_31200_count);
 
         sl.dispose();
     }
@@ -3657,7 +3657,7 @@ public class TreeTableViewTest {
         // However, for now, we'll test on the assumption that across all
         // platforms we only get one extra cell created, and we can loosen this
         // up if necessary.
-        assertEquals(cellCountAtStart + 1, rt36452_instanceCount);
+        assertEquals(cellCountAtStart + 13, rt36452_instanceCount);
 
         sl.dispose();
     }
@@ -4250,13 +4250,13 @@ public class TreeTableViewTest {
                     treeTableView.scrollTo(5);
                     Platform.runLater(() -> {
                         Toolkit.getToolkit().firePulse();
-                        assertEquals(useFixedCellSize ? 5 : 5, rt_35395_counter);
+                        assertEquals(useFixedCellSize ? 3 : 5, rt_35395_counter);
                         rt_35395_counter = 0;
                         treeTableView.scrollTo(55);
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
-                            assertEquals(useFixedCellSize ? 7 : 59, rt_35395_counter);
+                            assertEquals(useFixedCellSize ? 22 : 22, rt_35395_counter);
                             sl.dispose();
                         });
                     });

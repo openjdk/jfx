@@ -315,7 +315,7 @@ g_get_console_charset (const char **charset)
           g_free (emsg);
         }
     }
-  /* fall-back to UTF-8 if the rest failed (it's a sane and universal default) */
+  /* fall-back to UTF-8 if the rest failed (it's a universal default) */
   if (raw == NULL)
     raw = "UTF-8";
 
@@ -549,10 +549,15 @@ append_locale_variants (GPtrArray *array,
  * Returns a list of derived variants of @locale, which can be used to
  * e.g. construct locale-dependent filenames or search paths. The returned
  * list is sorted from most desirable to least desirable.
- * This function handles territory, charset and extra locale modifiers.
+ * This function handles territory, charset and extra locale modifiers. See
+ * [`setlocale(3)`](man:setlocale) for information about locales and their format.
  *
- * For example, if @locale is "fr_BE", then the returned list
- * is "fr_BE", "fr".
+ * @locale itself is guaranteed to be returned in the output.
+ *
+ * For example, if @locale is `fr_BE`, then the returned list
+ * is `fr_BE`, `fr`. If @locale is `en_GB.UTF-8@euro`, then the returned list
+ * is `en_GB.UTF-8@euro`, `en_GB.UTF-8`, `en_GB@euro`, `en_GB`, `en.UTF-8@euro`,
+ * `en.UTF-8`, `en@euro`, `en`.
  *
  * If you need the list of variants for the current locale,
  * use g_get_language_names().
