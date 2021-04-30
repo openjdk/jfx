@@ -20,80 +20,37 @@
  */
 /**
  * SECTION:element-spectrum
+ * @title: spectrum
  *
  * The Spectrum element analyzes the frequency spectrum of an audio signal.
  * If the #GstSpectrum:post-messages property is %TRUE, it sends analysis results
  * as element messages named
- * <classname>&quot;spectrum&quot;</classname> after each interval of time given
+ * `spectrum` after each interval of time given
  * by the #GstSpectrum:interval property.
  *
  * The message's structure contains some combination of these fields:
- * <itemizedlist>
- * <listitem>
- *   <para>
- *   #GstClockTime
- *   <classname>&quot;timestamp&quot;</classname>:
- *   the timestamp of the buffer that triggered the message.
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstClockTime
- *   <classname>&quot;stream-time&quot;</classname>:
- *   the stream time of the buffer.
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstClockTime
- *   <classname>&quot;running-time&quot;</classname>:
- *   the running_time of the buffer.
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstClockTime
- *   <classname>&quot;duration&quot;</classname>:
- *   the duration of the buffer.
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstClockTime
- *   <classname>&quot;endtime&quot;</classname>:
- *   the end time of the buffer that triggered the message as stream time (this
+ *
+ * * #GstClockTime `timestamp`: the timestamp of the buffer that triggered the message.
+ * * #GstClockTime `stream-time`: the stream time of the buffer.
+ * * #GstClockTime `running-time`: the running_time of the buffer.
+ * * #GstClockTime `duration`: the duration of the buffer.
+ * * #GstClockTime `endtime`: the end time of the buffer that triggered the message as stream time (this
  *   is deprecated, as it can be calculated from stream-time + duration)
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstValueList of #gfloat
- *   <classname>&quot;magnitude&quot;</classname>:
- *   the level for each frequency band in dB. All values below the value of the
+ * * A #GST_TYPE_LIST value of #gfloat `magnitude`: the level for each frequency band in dB.
+ *   All values below the value of the
  *   #GstSpectrum:threshold property will be set to the threshold. Only present
  *   if the #GstSpectrum:message-magnitude property is %TRUE.
- *   </para>
- * </listitem>
- * <listitem>
- *   <para>
- *   #GstValueList of #gfloat
- *   <classname>&quot;phase&quot;</classname>:
- *   The phase for each frequency band. The value is between -pi and pi. Only
+ * * A #GST_TYPE_LIST of #gfloat `phase`: The phase for each frequency band. The value is between -pi and pi. Only
  *   present if the #GstSpectrum:message-phase property is %TRUE.
- *   </para>
- * </listitem>
- * </itemizedlist>
  *
  * If #GstSpectrum:multi-channel property is set to true. magnitude and phase
- * fields will be each a nested #GstValueArray. The first dimension are the
+ * fields will be each a nested #GST_TYPE_ARRAY value. The first dimension are the
  * channels and the second dimension are the values.
  *
- * <refsect2>
- * <title>Example application</title>
- * <informalexample><programlisting language="C">
- * <xi:include xmlns:xi="http://www.w3.org/2003/XInclude" parse="text" href="../../../../tests/examples/spectrum/spectrum-example.c" />
- * </programlisting></informalexample>
- * </refsect2>
+ * ## Example application
+ *
+ * {{ tests/examples/spectrum/spectrum-example.c }}
+ *
  */
 
 #ifdef HAVE_CONFIG_H

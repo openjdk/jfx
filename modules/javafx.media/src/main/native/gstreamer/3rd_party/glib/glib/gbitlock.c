@@ -88,7 +88,7 @@ g_futex_wait (const volatile gint *address,
  * Nominally, wakes one thread that is blocked in g_futex_wait() on
  * @address (if any thread is currently waiting).
  *
- * As mentioned in the documention for g_futex_wait(), spurious
+ * As mentioned in the documentation for g_futex_wait(), spurious
  * wakeups may occur.  As such, this call may result in more than one
  * thread being woken up.
  */
@@ -230,7 +230,7 @@ g_bit_lock (volatile gint *address,
     guint mask = 1u << lock_bit;
     guint v;
 
-    v = g_atomic_int_get (address);
+    v = (guint) g_atomic_int_get (address);
     if (v & mask)
       {
         guint class = ((gsize) address) % G_N_ELEMENTS (g_bit_lock_contended);

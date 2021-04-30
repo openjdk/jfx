@@ -564,7 +564,8 @@ g_variant_new_from_bytes (const GVariantType *type,
                           aligned_size) != 0)
         g_error ("posix_memalign failed");
 
-      memcpy (aligned_data, g_bytes_get_data (bytes, NULL), aligned_size);
+      if (aligned_size != 0)
+        memcpy (aligned_data, g_bytes_get_data (bytes, NULL), aligned_size);
 
       bytes = owned_bytes = g_bytes_new_with_free_func (aligned_data,
                                                         aligned_size,
@@ -678,6 +679,21 @@ gboolean
 g_variant_is_trusted (GVariant *value)
 {
   return (value->state & STATE_TRUSTED) != 0;
+}
+
+/* < internal >
+ * g_variant_get_depth:
+ * @value: a #GVariant
+ *
+ * Gets the nesting depth of a #GVariant. This is 0 for a #GVariant with no
+ * children.
+ *
+ * Returns: nesting depth of @value
+ */
+gsize
+g_variant_get_depth (GVariant *value)
+{
+  return value->depth;
 }
 
 /* -- public -- */
@@ -809,7 +825,7 @@ g_variant_ref_sink (GVariant *value)
  *
  * Using this function on the return value of the user's callback allows
  * the user to do whichever is more convenient for them.  The caller
- * will alway receives exactly one full reference to the value: either
+ * will always receives exactly one full reference to the value: either
  * the one that was returned in the first place, or a floating reference
  * that has been converted to a full reference.
  *
@@ -1045,6 +1061,12 @@ g_variant_n_children (GVariant *value)
  *
  * The returned value is never floating.  You should free it with
  * g_variant_unref() when you're done with it.
+ *
+ * Note that values borrowed from the returned child are not guaranteed to
+ * still be valid after the child is freed even if you still hold a reference
+ * to @value, if @value has not been serialised at the time this function is
+ * called. To avoid this, you can serialize @value by calling
+ * g_variant_get_data() and optionally ignoring the return value.
  *
  * There may be implementation specific restrictions on deeply nested values,
  * which would result in the unit tuple being returned as the child value,

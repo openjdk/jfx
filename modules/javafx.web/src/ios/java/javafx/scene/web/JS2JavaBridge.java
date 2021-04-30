@@ -121,10 +121,10 @@ class JS2JavaBridge {
         sb = sb.append(getJavaBridge()).append(".exportJSObject(").append(
              getJavaBridge()).append("['").append(jsName).append("'])");
 
-        Integer jsId = (Integer) webEngine.executeScript(sb.toString());
-        if (jsId != null) {
-            exportedObjectsByJSIds.put(jsId.toString(), jsObj);
-            jsIdsByExportedObjects.put(jsObj, jsId.toString());
+        String jsId = String.valueOf(webEngine.executeScript(sb.toString()));
+        if (!jsId.equals("null")) {
+            exportedObjectsByJSIds.put(jsId, jsObj);
+            jsIdsByExportedObjects.put(jsObj, jsId);
         }
         else {
             System.out.println("[JVDBG] Error, jsId = null for "+jsName);
@@ -204,12 +204,14 @@ class JS2JavaBridge {
 
         @Override
         public void onLoadStarted() {
-            populateJavaObjects();
+            objectIdCounter.set(0);
+            exportedObjectsByJavaObject.clear();
             // TODO: free all unnamed ExportedJavaObjects
         }
 
         @Override
         public void onLoadFinished() {
+            populateJavaObjects();
         }
 
         @Override

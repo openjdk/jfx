@@ -197,6 +197,7 @@ gpointer g_try_realloc_n  (gpointer  mem,
  *
  * Since: 2.44
  */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_44
 static inline gpointer
 g_steal_pointer (gpointer pp)
 {

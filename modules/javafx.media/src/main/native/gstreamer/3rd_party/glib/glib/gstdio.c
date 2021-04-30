@@ -166,9 +166,13 @@ _g_win32_fix_mode (wchar_t *mode)
  * UT = (FT - 116444736000000000) / 10000000.
  * Converts FILETIME to unix epoch time in form
  * of a signed 64-bit integer (can be negative).
+ *
+ * The function that does the reverse can be found in
+ * gio/glocalfileinfo.c.
  */
 static gint64
-_g_win32_filetime_to_unix_time (FILETIME *ft)
+_g_win32_filetime_to_unix_time (const FILETIME *ft,
+                                gint32         *nsec)
 {
   gint64 result;
   /* 1 unit of FILETIME is 100ns */
@@ -179,7 +183,12 @@ _g_win32_filetime_to_unix_time (FILETIME *ft)
   const gint64 filetime_unix_epoch_offset = 116444736000000000;
 
   result = ((gint64) ft->dwLowDateTime) | (((gint64) ft->dwHighDateTime) << 32);
-  return (result - filetime_unix_epoch_offset) / hundreds_of_usec_per_sec;
+  result -= filetime_unix_epoch_offset;
+
+  if (nsec)
+    *nsec = (result % hundreds_of_usec_per_sec) * 100;
+
+  return result / hundreds_of_usec_per_sec;
 }
 
 #  ifdef _MSC_VER
@@ -206,10 +215,10 @@ _g_win32_filetime_to_unix_time (FILETIME *ft)
  * Tries to reproduce the behaviour and quirks of MS C runtime stat().
  */
 static int
-_g_win32_fill_statbuf_from_handle_info (const wchar_t              *filename,
-                                        const wchar_t              *filename_target,
-                                        BY_HANDLE_FILE_INFORMATION *handle_info,
-                                        struct __stat64            *statbuf)
+_g_win32_fill_statbuf_from_handle_info (const wchar_t                    *filename,
+                                        const wchar_t                    *filename_target,
+                                        const BY_HANDLE_FILE_INFORMATION *handle_info,
+                                        struct __stat64                  *statbuf)
 {
   wchar_t drive_letter_w = 0;
   size_t drive_letter_size = MB_CUR_MAX;
@@ -291,9 +300,9 @@ _g_win32_fill_statbuf_from_handle_info (const wchar_t              *filename,
   statbuf->st_nlink = handle_info->nNumberOfLinks;
   statbuf->st_uid = statbuf->st_gid = 0;
   statbuf->st_size = (((guint64) handle_info->nFileSizeHigh) << 32) | handle_info->nFileSizeLow;
-  statbuf->st_ctime = _g_win32_filetime_to_unix_time (&handle_info->ftCreationTime);
-  statbuf->st_mtime = _g_win32_filetime_to_unix_time (&handle_info->ftLastWriteTime);
-  statbuf->st_atime = _g_win32_filetime_to_unix_time (&handle_info->ftLastAccessTime);
+  statbuf->st_ctime = _g_win32_filetime_to_unix_time (&handle_info->ftCreationTime, NULL);
+  statbuf->st_mtime = _g_win32_filetime_to_unix_time (&handle_info->ftLastWriteTime, NULL);
+  statbuf->st_atime = _g_win32_filetime_to_unix_time (&handle_info->ftLastAccessTime, NULL);
 
   return 0;
 }
@@ -309,6 +318,7 @@ _g_win32_fill_privatestat (const struct __stat64            *statbuf,
                            GWin32PrivateStat                *buf)
 {
   buf->st_dev = statbuf->st_dev;
+  buf->st_ino = statbuf->st_ino;
   buf->st_mode = statbuf->st_mode;
   buf->volume_serial = handle_info->dwVolumeSerialNumber;
   buf->file_index = (((guint64) handle_info->nFileIndexHigh) << 32) | handle_info->nFileIndexLow;
@@ -319,9 +329,9 @@ _g_win32_fill_privatestat (const struct __stat64            *statbuf,
 
   buf->reparse_tag = reparse_tag;
 
-  buf->st_ctime = statbuf->st_ctime;
-  buf->st_atime = statbuf->st_atime;
-  buf->st_mtime = statbuf->st_mtime;
+  buf->st_ctim.tv_sec = _g_win32_filetime_to_unix_time (&handle_info->ftCreationTime, &buf->st_ctim.tv_nsec);
+  buf->st_mtim.tv_sec = _g_win32_filetime_to_unix_time (&handle_info->ftLastWriteTime, &buf->st_mtim.tv_nsec);
+  buf->st_atim.tv_sec = _g_win32_filetime_to_unix_time (&handle_info->ftLastAccessTime, &buf->st_atim.tv_nsec);
 }
 
 /* Read the link data from a symlink/mountpoint represented
@@ -1321,9 +1331,9 @@ g_stat (const gchar *filename,
   buf->st_gid = w32_buf.st_gid;
   buf->st_rdev = w32_buf.st_dev;
   buf->st_size = w32_buf.st_size;
-  buf->st_atime = w32_buf.st_atime;
-  buf->st_mtime = w32_buf.st_mtime;
-  buf->st_ctime = w32_buf.st_ctime;
+  buf->st_atime = w32_buf.st_atim.tv_sec;
+  buf->st_mtime = w32_buf.st_mtim.tv_sec;
+  buf->st_ctime = w32_buf.st_ctim.tv_sec;
 
   return retval;
 #else
@@ -1370,9 +1380,9 @@ g_lstat (const gchar *filename,
   buf->st_gid = w32_buf.st_gid;
   buf->st_rdev = w32_buf.st_dev;
   buf->st_size = w32_buf.st_size;
-  buf->st_atime = w32_buf.st_atime;
-  buf->st_mtime = w32_buf.st_mtime;
-  buf->st_ctime = w32_buf.st_ctime;
+  buf->st_atime = w32_buf.st_atim.tv_sec;
+  buf->st_mtime = w32_buf.st_mtim.tv_sec;
+  buf->st_ctime = w32_buf.st_ctim.tv_sec;
 
   return retval;
 #else
@@ -1528,19 +1538,24 @@ g_rmdir (const gchar *filename)
  *     (UTF-8 on Windows)
  * @mode: a string describing the mode in which the file should be opened
  *
- * A wrapper for the stdio fopen() function. The fopen() function
+ * A wrapper for the stdio `fopen()` function. The `fopen()` function
  * opens a file and associates a new stream with it.
  *
  * Because file descriptors are specific to the C library on Windows,
- * and a file descriptor is part of the FILE struct, the FILE* returned
+ * and a file descriptor is part of the `FILE` struct, the `FILE*` returned
  * by this function makes sense only to functions in the same C library.
  * Thus if the GLib-using code uses a different C library than GLib does,
  * the FILE* returned by this function cannot be passed to C library
- * functions like fprintf() or fread().
+ * functions like `fprintf()` or `fread()`.
  *
- * See your C library manual for more details about fopen().
+ * See your C library manual for more details about `fopen()`.
  *
- * Returns: A FILE* if the file was successfully opened, or %NULL if
+ * As `close()` and `fclose()` are part of the C library, this implies that it is
+ * currently impossible to close a file if the application C library and the C library
+ * used by GLib are different. Convenience functions like g_file_set_contents_full()
+ * avoid this problem.
+ *
+ * Returns: A `FILE*` if the file was successfully opened, or %NULL if
  *     an error occurred
  *
  * Since: 2.6
@@ -1642,6 +1657,44 @@ g_freopen (const gchar *filename,
 }
 
 /**
+ * g_fsync:
+ * @fd: a file descriptor
+ *
+ * A wrapper for the POSIX `fsync()` function. On Windows, `_commit()` will be
+ * used. On macOS, `fcntl(F_FULLFSYNC)` will be used.
+ * The `fsync()` function is used to synchronize a file's in-core
+ * state with that of the disk.
+ *
+ * This wrapper will handle retrying on `EINTR`.
+ *
+ * See the C library manual for more details about fsync().
+ *
+ * Returns: 0 on success, or -1 if an error occurred.
+ * The return value can be used exactly like the return value from fsync().
+ *
+ * Since: 2.64
+ */
+gint
+g_fsync (gint fd)
+{
+#ifdef G_OS_WIN32
+  return _commit (fd);
+#elif defined(HAVE_FSYNC) || defined(HAVE_FCNTL_F_FULLFSYNC)
+  int retval;
+  do
+#ifdef HAVE_FCNTL_F_FULLFSYNC
+    retval = fcntl (fd, F_FULLFSYNC, 0);
+#else
+    retval = fsync (fd);
+#endif
+  while (G_UNLIKELY (retval < 0 && errno == EINTR));
+  return retval;
+#else
+  return 0;
+#endif
+}
+
+/**
  * g_utime:
  * @filename: (type filename): a pathname in the GLib file name encoding
  *     (UTF-8 on Windows)
@@ -1729,4 +1782,3 @@ g_close (gint       fd,
     }
   return TRUE;
 }
-

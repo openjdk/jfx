@@ -44,18 +44,6 @@ typedef enum {
 } GstAudioFlags;
 
 /**
- * GstAudioLayout:
- * @GST_AUDIO_LAYOUT_INTERLEAVED: interleaved audio
- * @GST_AUDIO_LAYOUT_NON_INTERLEAVED: non-interleaved audio
- *
- * Layout of the audio samples for the different channels.
- */
-typedef enum {
-  GST_AUDIO_LAYOUT_INTERLEAVED = 0,
-  GST_AUDIO_LAYOUT_NON_INTERLEAVED
-} GstAudioLayout;
-
-/**
  * GstAudioInfo:
  * @finfo: the format info of the audio
  * @flags: additional audio flags
@@ -145,9 +133,7 @@ GST_AUDIO_API
 gboolean       gst_audio_info_is_equal    (const GstAudioInfo *info,
                                            const GstAudioInfo *other);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioInfo, gst_audio_info_free)
-#endif
 
 G_END_DECLS
 

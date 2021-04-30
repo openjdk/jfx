@@ -223,9 +223,7 @@ void                    gst_bus_enable_sync_message_emission (GstBus * bus);
 GST_API
 void                    gst_bus_disable_sync_message_emission (GstBus * bus);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBus, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,18 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-import javafx.beans.value.ObservableValue;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
+
+import javafx.beans.Observable;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.Styleable;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -206,39 +209,112 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
 
     /**
-     * Subclasses can invoke this method to register that they want to listen to
-     * property change events for the given property. Registered {@link Consumer} instances
-     * will be executed in the order in which they are registered.
-     * @param property the property
-     * @param consumer the consumer
+     * Registers an operation to perform when the given {@code observable} sends a change event.
+     * Does nothing if either {@code observable} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same observable, they will be performed in the
+     * order in which they were registered.
+     *
+     * @param observable the observable to observe for change events, may be {@code null}
+     * @param operation the operation to perform when the observable sends a change event,
+     *  may be {@code null}
      */
-    protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
+    protected final void registerChangeListener(ObservableValue<?> observable, Consumer<ObservableValue<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
             lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         }
-        lambdaChangeListenerHandler.registerChangeListener(property, consumer);
+        lambdaChangeListenerHandler.registerChangeListener(observable, operation);
     }
 
     /**
-     * Unregisters all change listeners that have been registered using {@link #registerChangeListener(ObservableValue, Consumer)}
-     * for the given property. The end result is that the given property is no longer observed by any of the change
-     * listeners, but it may still have additional listeners registered on it through means outside of
-     * {@link #registerChangeListener(ObservableValue, Consumer)}.
+     * Unregisters all operations that have been registered using
+     * {@link #registerChangeListener(ObservableValue, Consumer)}
+     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}.
      *
-     * @param property The property for which all listeners should be removed.
-     * @return A single chained {@link Consumer} consisting of all {@link Consumer consumers} registered through
-     *      {@link #registerChangeListener(ObservableValue, Consumer)}. If no consumers have been registered on this
-     *      property, null will be returned.
+     * @param observable the observable for which the registered operations should be removed,
+     *  may be {@code null}
+     * @return a composed consumer representing all previously registered operations, or
+     *  {@code null} if none have been registered or the observable is {@code null}
      * @since 9
      */
-    protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> property) {
+    protected final Consumer<ObservableValue<?>> unregisterChangeListeners(ObservableValue<?> observable) {
         if (lambdaChangeListenerHandler == null) {
             return null;
         }
-        return lambdaChangeListenerHandler.unregisterChangeListeners(property);
+        return lambdaChangeListenerHandler.unregisterChangeListeners(observable);
+    }
+
+    /**
+     * Registers an operation to perform when the given {@code observable} sends an invalidation event.
+     * Does nothing if either {@code observable} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same observable, they will be performed in the
+     * order in which they were registered.
+     *
+     * @param observable the observable to observe for invalidation events, may be {@code null}
+     * @param operation the operation to perform when the observable sends an invalidation event,
+     *  may be {@code null}
+     * @since 17
+     */
+    protected final void registerInvalidationListener(Observable observable, Consumer<Observable> operation) {
+        if (lambdaChangeListenerHandler == null) {
+            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
+        }
+        lambdaChangeListenerHandler.registerInvalidationListener(observable, operation);
+    }
+
+    /**
+     * Unregisters all operations that have been registered using
+     * {@link #registerInvalidationListener(Observable, Consumer)}
+     * for the given {@code observable}. Does nothing if {@code observable} is {@code null}.
+     *
+     * @param observable the observable for which the registered operations should be removed,
+     *  may be {@code null}
+     * @return a composed consumer representing all previously registered operations, or
+     *  {@code null} if none have been registered or the observable is {@code null}
+     * @since 17
+     */
+    protected final Consumer<Observable> unregisterInvalidationListeners(Observable observable) {
+        if (lambdaChangeListenerHandler == null) {
+            return null;
+        }
+        return lambdaChangeListenerHandler.unregisterInvalidationListeners(observable);
     }
 
 
+    /**
+     * Registers an operation to perform when the given {@code observableList} sends a list change event.
+     * Does nothing if either {@code observableList} or {@code operation} are {@code null}.
+     * If multiple operations are registered on the same observable list, they will be performed in the
+     * order in which they were registered.
+     *
+     * @param observableList the observableList to observe for list change events, may be {@code null}
+     * @param operation the operation to perform when the observableList sends a list change event,
+     *  may be {@code null}
+     * @since 17
+     */
+    protected final void registerListChangeListener(ObservableList<?> observableList, Consumer<Change<?>> operation) {
+        if (lambdaChangeListenerHandler == null) {
+            lambdaChangeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
+        }
+        lambdaChangeListenerHandler.registerListChangeListener(observableList, operation);
+    }
+
+    /**
+     * Unregisters all operations that have been registered using
+     * {@link #registerListChangeListener(ObservableList, Consumer)}
+     * for the given {@code observableList}. Does nothing if {@code observableList} is {@code null}.
+     *
+     * @param observableList the observableList for which the registered operations should be removed,
+     *  may be {@code null}
+     * @return a composed consumer representing all previously registered operations, or
+     *  {@code null} if none have been registered or the observableList is {@code null}
+     * @since 17
+     */
+    protected final Consumer<Change<?>> unregisterListChangeListeners(ObservableList<?> observableList) {
+        if (lambdaChangeListenerHandler == null) {
+            return null;
+        }
+        return lambdaChangeListenerHandler.unregisterListChangeListeners(observableList);
+    }
 
 
     /***************************************************************************

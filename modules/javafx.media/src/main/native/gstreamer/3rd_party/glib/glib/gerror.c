@@ -264,11 +264,7 @@
  *   |[<!-- language="C" -->
  *   #define G_SPAWN_ERROR g_spawn_error_quark ()
  *
- *   GQuark
- *   g_spawn_error_quark (void)
- *   {
- *       return g_quark_from_static_string ("g-spawn-error-quark");
- *   }
+ *   G_DEFINE_QUARK (g-spawn-error-quark, g_spawn_error)
  *   ]|
  *
  * - The quark function for the error domain is called

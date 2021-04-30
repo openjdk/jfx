@@ -33,8 +33,19 @@ typedef struct _GstVideoInfo GstVideoInfo;
 /**
  * GST_CAPS_FEATURE_FORMAT_INTERLACED:
  *
- * Name of the caps feature indicating that the stream is interlaced. Currently
- * it is only used for video.
+ * Name of the caps feature indicating that the stream is interlaced.
+ *
+ * Currently it is only used for video with 'interlace-mode=alternate'
+ * to ensure backwards compatibility for this new mode.
+ * In this mode each buffer carries a single field of interlaced video.
+ * @GST_VIDEO_BUFFER_FLAG_TOP_FIELD and @GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD
+ * indicate whether the buffer carries a top or bottom field. The order of
+ * buffers/fields in the stream and the timestamps on the buffers indicate the
+ * temporal order of the fields.
+ * Top and bottom fields are expected to alternate in this mode.
+ * The frame rate in the caps still signals the frame rate, so the notional field
+ * rate will be twice the frame rate from the caps
+ * (see @GST_VIDEO_INFO_FIELD_RATE_N).
  *
  * Since: 1.16.
  */
@@ -57,7 +68,7 @@ typedef struct _GstVideoInfo GstVideoInfo;
  * @GST_VIDEO_INTERLACE_MODE_ALTERNATE: 1 field is stored in one buffer,
  *     @GST_VIDEO_BUFFER_FLAG_TF or @GST_VIDEO_BUFFER_FLAG_BF indicates if
  *     the buffer is carrying the top or bottom field, respectively. The top and
- *     bottom buffers are expected to alternate in the pipeline, with this mode
+ *     bottom buffers must alternate in the pipeline, with this mode
  *     (Since: 1.16).
  *
  * The possible values of the #GstVideoInterlaceMode describing the interlace
@@ -106,11 +117,11 @@ GstVideoInterlaceMode  gst_video_interlace_mode_from_string  (const gchar * mode
  * @GST_VIDEO_MULTIVIEW_MODE_MULTIVIEW_FRAME_BY_FRAME: Multiple
  * independent views are provided in separate frames in sequence.
  * This method only applies to raw video buffers at the moment.
- * Specific view identification is via the #GstVideoMultiviewMeta
+ * Specific view identification is via the `GstVideoMultiviewMeta`
  * and #GstVideoMeta(s) on raw video buffers.
  * @GST_VIDEO_MULTIVIEW_MODE_SEPARATED: Multiple views are
  * provided as separate #GstMemory framebuffers attached to each
- * #GstBuffer, described by the #GstVideoMultiviewMeta
+ * #GstBuffer, described by the `GstVideoMultiviewMeta`
  * and #GstVideoMeta(s)
  *
  * All possible stereoscopic 3D and multiview representations.
@@ -284,9 +295,9 @@ GstVideoFieldOrder gst_video_field_order_from_string  (const gchar * order);
  * @chroma_site: a #GstVideoChromaSite.
  * @colorimetry: the colorimetry info
  * @par_n: the pixel-aspect-ratio numerator
- * @par_d: the pixel-aspect-ratio demnominator
+ * @par_d: the pixel-aspect-ratio denominator
  * @fps_n: the framerate numerator
- * @fps_d: the framerate demnominator
+ * @fps_d: the framerate denominator
  * @offset: offsets of the planes
  * @stride: strides of the planes
  * @multiview_mode: delivery mode for multiple views. (Since: 1.6)
@@ -323,7 +334,7 @@ struct _GstVideoInfo {
   /* Union preserves padded struct size for backwards compat
    * Consumer code should use the accessor macros for fields */
   union {
-    struct {
+    struct { /* < skip > */
       GstVideoMultiviewMode     multiview_mode;
       GstVideoMultiviewFlags    multiview_flags;
       GstVideoFieldOrder        field_order;
@@ -359,7 +370,7 @@ GType gst_video_info_get_type            (void);
  *
  * Since: 1.16.
  */
-#define GST_VIDEO_INFO_FIELD_HEIGHT(i)   ((i)->interlace_mode == GST_VIDEO_INTERLACE_MODE_ALTERNATE? (i)->height / 2 : (i)->height)
+#define GST_VIDEO_INFO_FIELD_HEIGHT(i)   ((i)->interlace_mode == GST_VIDEO_INTERLACE_MODE_ALTERNATE? GST_ROUND_UP_2 ((i)->height) / 2 : (i)->height)
 #define GST_VIDEO_INFO_SIZE(i)           ((i)->size)
 #define GST_VIDEO_INFO_VIEWS(i)          ((i)->views)
 #define GST_VIDEO_INFO_PAR_N(i)          ((i)->par_n)
@@ -385,6 +396,21 @@ GType gst_video_info_get_type            (void);
 #define GST_VIDEO_INFO_N_PLANES(i)       (GST_VIDEO_FORMAT_INFO_N_PLANES((i)->finfo))
 #define GST_VIDEO_INFO_PLANE_OFFSET(i,p) ((i)->offset[p])
 #define GST_VIDEO_INFO_PLANE_STRIDE(i,p) ((i)->stride[p])
+/**
+ * GST_VIDEO_INFO_PLANE_HEIGHT:
+ *
+ * The padded height in pixels of a plane (padded size divided by the plane stride).
+ * In case of GST_VIDEO_INTERLACE_MODE_ALTERNATE info, this macro returns the
+ * plane heights used to hold a single field, not the full frame.
+ *
+ * The size passed as third argument is the size of the pixel data and should
+ * not contain any extra metadata padding.
+ *
+ * It is not valid to use this macro with a TILED format.
+ *
+ * Since: 1.18
+ */
+#define GST_VIDEO_INFO_PLANE_HEIGHT(i,p,sizes) ((i)->stride[p] == 0 ? 0 : sizes[p] / (i)->stride[p])
 
 /* dealing with components */
 #define GST_VIDEO_INFO_N_COMPONENTS(i)   GST_VIDEO_FORMAT_INFO_N_COMPONENTS((i)->finfo)
@@ -444,10 +470,11 @@ gboolean       gst_video_info_is_equal    (const GstVideoInfo *info,
 GST_VIDEO_API
 gboolean       gst_video_info_align       (GstVideoInfo * info, GstVideoAlignment * align);
 
+GST_VIDEO_API
+gboolean       gst_video_info_align_full  (GstVideoInfo * info, GstVideoAlignment * align, gsize plane_size[GST_VIDEO_MAX_PLANES]);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoInfo, gst_video_info_free)
-#endif
 
 G_END_DECLS
 

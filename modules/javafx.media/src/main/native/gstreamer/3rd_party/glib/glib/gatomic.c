@@ -96,15 +96,6 @@
 
 #if defined (__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)
 
-#if defined(__ATOMIC_SEQ_CST) && !defined(__clang__)
-/* The implementation used in this code path in gatomic.h assumes
- * 4-byte int */
-G_STATIC_ASSERT (sizeof (gint) == 4);
-
-/* The implementations in gatomic.h assume 4- or 8-byte pointers */
-G_STATIC_ASSERT (sizeof (void *) == 4 || sizeof (void *) == 8);
-#endif
-
 /**
  * g_atomic_int_get:
  * @atomic: a pointer to a #gint or #guint

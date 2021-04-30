@@ -927,7 +927,7 @@ struct _GParamSpecObject
  * another paramspec.  All operations other than getting or
  * setting the value are redirected, including accessing the nick and
  * blurb, validating a value, and so forth. See
- * g_param_spec_get_redirect_target() for retrieving the overidden
+ * g_param_spec_get_redirect_target() for retrieving the overridden
  * property. #GParamSpecOverride is used in implementing
  * g_object_class_override_property(), and will not be directly useful
  * unless you are implementing a new base type similar to GObject.
@@ -1150,7 +1150,7 @@ GParamSpec* g_param_spec_variant   (const gchar        *name,
 #    else /* !GOBJECT_STATIC_COMPILATION */
 #      ifdef GOBJECT_COMPILATION
 #        ifdef DLL_EXPORT
-#          define GOBJECT_VAR __declspec(dllexport)
+#          define GOBJECT_VAR extern __declspec(dllexport)
 #        else /* !DLL_EXPORT */
 #          define GOBJECT_VAR extern
 #        endif /* !DLL_EXPORT */

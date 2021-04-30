@@ -94,6 +94,10 @@ struct _GstPluginPrivate {
   GstStructure *cache_data;
 };
 
+/* Private function for getting plugin features directly */
+GList *
+_priv_plugin_get_features(GstRegistry *registry, GstPlugin *plugin);
+
 /* Needed by GstMeta (to access meta seq) and GstBuffer (create/free/iterate) */
 typedef struct _GstMetaItem GstMetaItem;
 struct _GstMetaItem {
@@ -139,6 +143,7 @@ G_GNUC_INTERNAL  void  _priv_gst_debug_init (void);
 G_GNUC_INTERNAL  void  _priv_gst_context_initialize (void);
 G_GNUC_INTERNAL  void  _priv_gst_toc_initialize (void);
 G_GNUC_INTERNAL  void  _priv_gst_date_time_initialize (void);
+G_GNUC_INTERNAL  void  _priv_gst_plugin_feature_rank_initialize (void);
 
 /* cleanup functions called from gst_deinit(). */
 G_GNUC_INTERNAL  void  _priv_gst_allocator_cleanup (void);
@@ -490,7 +495,7 @@ struct _GstDeviceProviderFactory {
 
   GType                      type;              /* unique GType the device factory or 0 if not loaded */
 
-  volatile GstDeviceProvider *provider;
+  GstDeviceProvider         *provider;
   gpointer                   metadata;
 
   gpointer _gst_reserved[GST_PADDING];
@@ -516,6 +521,17 @@ struct _GstDynamicTypeFactoryClass {
 
 /* privat flag used by GstBus / GstMessage */
 #define GST_MESSAGE_FLAG_ASYNC_DELIVERY (GST_MINI_OBJECT_FLAG_LAST << 0)
+
+/* private struct used by GstClock and GstSystemClock */
+struct _GstClockEntryImpl
+{
+  GstClockEntry entry;
+  GWeakRef clock;
+  GDestroyNotify destroy_entry;
+  gpointer padding[21];                 /* padding for allowing e.g. systemclock
+                                         * to add data in lieu of overridable
+                                         * virtual functions on the clock */
+};
 
 G_END_DECLS
 #endif /* __GST_PRIVATE_H__ */

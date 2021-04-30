@@ -1628,7 +1628,7 @@ gst_video_overlay_rectangle_copy (GstVideoOverlayRectangle * rectangle)
  * the per rectangle sequence number, which is misleading for renderers/
  * consumers, that handle global-alpha themselves. For them  the
  * pixel-data returned by gst_video_overlay_rectangle_get_pixels_*()
- * wont be different for different global-alpha values. In this case a
+ * won't be different for different global-alpha values. In this case a
  * renderer could also use the GstBuffer pointers as a hint for changed
  * pixel-data.
  *

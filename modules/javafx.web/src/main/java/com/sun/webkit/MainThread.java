@@ -36,9 +36,5 @@ final class MainThread {
         });
     }
 
-    private static boolean fwkIsMainThread() {
-        return Invoker.getInvoker().isEventThread();
-    }
-
     private static native void twkScheduleDispatchFunctions();
 }

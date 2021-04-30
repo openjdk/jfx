@@ -30,7 +30,10 @@
  *
  * The #GSequence data structure has the API of a list, but is
  * implemented internally with a balanced binary tree. This means that
- * it is possible to maintain a sorted list of n elements in time O(n log n).
+ * most of the operations  (access, search, insertion, deletion, ...) on
+ * #GSequence are O(log(n)) in average and O(n) in worst case for time
+ * complexity. But, note that maintaining a balanced sorted list of n
+ * elements is done in time O(n log(n)).
  * The data contained in each element can be either integer values, by using
  * of the [Type Conversion Macros][glib-Type-Conversion-Macros], or simply
  * pointers to any type of data.

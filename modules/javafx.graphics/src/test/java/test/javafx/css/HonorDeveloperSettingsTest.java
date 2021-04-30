@@ -42,6 +42,7 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 
 import com.sun.javafx.util.Logging;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.sun.javafx.logging.PlatformLogger;
@@ -57,12 +58,18 @@ public class HonorDeveloperSettingsTest {
     private Rectangle rect;
     private Text text;
 
-    // Scene must have a Window for CSS to load the stylesheet.
-    // And Window must have a Scene for StyleManager to find the right scene
-    static class TestWindow extends Window {
-        @Override public void setScene(Scene value) {
-            super.setScene(value);
-        }
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @After
+    public void cleanup() {
+        resetStyleManager();
     }
 
     @Before
@@ -76,18 +83,10 @@ public class HonorDeveloperSettingsTest {
         Group group = new Group();
         group.getChildren().addAll(rect, text);
 
-        scene = new Scene(group);/* {
-            TestWindow window;
-            {
-                window = new TestWindow();
-                window.setScene(HonorDeveloperSettingsTest.this.scene);
-                impl_setWindow(window);
-            }
-        };*/
-
+        scene = new Scene(group);
         System.setProperty("binary.css", "false");
         String url = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(url);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(url);
 
         Stage stage = new Stage();
         stage.setScene(scene);

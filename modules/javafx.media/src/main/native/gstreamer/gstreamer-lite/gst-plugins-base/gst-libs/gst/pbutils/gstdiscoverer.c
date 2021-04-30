@@ -270,8 +270,8 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
    */
   gst_discoverer_signals[SIGNAL_FINISHED] =
       g_signal_new ("finished", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
-      G_STRUCT_OFFSET (GstDiscovererClass, finished),
-      NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0, G_TYPE_NONE);
+      G_STRUCT_OFFSET (GstDiscovererClass, finished), NULL, NULL, NULL,
+      G_TYPE_NONE, 0, G_TYPE_NONE);
 
   /**
    * GstDiscoverer::starting:
@@ -281,8 +281,8 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
    */
   gst_discoverer_signals[SIGNAL_STARTING] =
       g_signal_new ("starting", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
-      G_STRUCT_OFFSET (GstDiscovererClass, starting),
-      NULL, NULL, g_cclosure_marshal_VOID__VOID, G_TYPE_NONE, 0, G_TYPE_NONE);
+      G_STRUCT_OFFSET (GstDiscovererClass, starting), NULL, NULL, NULL,
+      G_TYPE_NONE, 0, G_TYPE_NONE);
 
   /**
    * GstDiscoverer::discovered:
@@ -302,8 +302,7 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
    */
   gst_discoverer_signals[SIGNAL_DISCOVERED] =
       g_signal_new ("discovered", G_TYPE_FROM_CLASS (klass), G_SIGNAL_RUN_LAST,
-      G_STRUCT_OFFSET (GstDiscovererClass, discovered),
-      NULL, NULL, g_cclosure_marshal_generic,
+      G_STRUCT_OFFSET (GstDiscovererClass, discovered), NULL, NULL, NULL,
       G_TYPE_NONE, 2, GST_TYPE_DISCOVERER_INFO,
       G_TYPE_ERROR | G_SIGNAL_TYPE_STATIC_SCOPE);
 
@@ -323,7 +322,7 @@ gst_discoverer_class_init (GstDiscovererClass * klass)
   gst_discoverer_signals[SIGNAL_SOURCE_SETUP] =
       g_signal_new ("source-setup", G_TYPE_FROM_CLASS (klass),
       G_SIGNAL_RUN_LAST, G_STRUCT_OFFSET (GstDiscovererClass, source_setup),
-      NULL, NULL, g_cclosure_marshal_generic, G_TYPE_NONE, 1, GST_TYPE_ELEMENT);
+      NULL, NULL, NULL, G_TYPE_NONE, 1, GST_TYPE_ELEMENT);
 }
 
 static void
@@ -702,13 +701,19 @@ uridecodebin_pad_added_cb (GstElement * uridecodebin, GstPad * pad,
   g_object_set (ps->sink, "silent", TRUE, NULL);
   g_object_set (ps->queue, "max-size-buffers", 1, "silent", TRUE, NULL);
 
-  caps = gst_pad_query_caps (pad, NULL);
-
   sinkpad = gst_element_get_static_pad (ps->queue, "sink");
   if (sinkpad == NULL)
     goto error;
 
-  if (is_subtitle_caps (caps)) {
+  caps = gst_pad_get_current_caps (pad);
+  if (!caps) {
+    GST_WARNING ("Couldn't get negotiated caps from %s:%s",
+        GST_DEBUG_PAD_NAME (pad));
+    caps = gst_pad_query_caps (pad, NULL);
+  }
+
+  if (caps && !gst_caps_is_empty (caps) && !gst_caps_is_any (caps)
+      && is_subtitle_caps (caps)) {
     /* Subtitle streams are sparse and may not provide any information - don't
      * wait for data to preroll */
     ps->probe_id =
@@ -718,7 +723,8 @@ uridecodebin_pad_added_cb (GstElement * uridecodebin, GstPad * pad,
     dc->priv->pending_subtitle_pads++;
   }
 
-  gst_caps_unref (caps);
+  if (caps)
+    gst_caps_unref (caps);
 
   gst_bin_add_many (dc->priv->pipeline, ps->queue, ps->sink, NULL);
 
@@ -1220,7 +1226,7 @@ child_is_raw_stream (const GstCaps * parent, const GstCaps * child)
 }
 
 /* If a parent is non-NULL, collected stream information will be appended to it
- * (and where the information exists, it will be overriden)
+ * (and where the information exists, it will be overridden)
  */
 static GstDiscovererStreamInfo *
 parse_stream_topology (GstDiscoverer * dc, const GstStructure * topology,
@@ -1248,7 +1254,7 @@ parse_stream_topology (GstDiscoverer * dc, const GstStructure * topology,
 
     if (nval == NULL) {
       /* FIXME : aggregate with information from main streams */
-      GST_DEBUG ("Coudn't find 'next' ! might be the last entry");
+      GST_DEBUG ("Couldn't find 'next' ! might be the last entry");
     } else {
       GstPad *srcpad;
 
@@ -1526,6 +1532,7 @@ discoverer_collect (GstDiscoverer * dc)
 
     g_file_set_contents (dc->priv->current_info->cachefile,
         g_variant_get_data (variant), g_variant_get_size (variant), NULL);
+    g_variant_unref (variant);
   }
 
   if (dc->priv->async)
@@ -1813,6 +1820,7 @@ _serialized_info_get_path (GstDiscoverer * dc, gchar * uri)
   res = g_build_filename (cache_dir, &checksum[2], NULL);
 
 done:
+  g_checksum_free (cs);
   g_free (cache_dir);
   g_free (location);
   g_free (tmp);
@@ -1842,6 +1850,7 @@ _get_info_from_cachefile (GstDiscoverer * dc, gchar * cachefile)
     }
 
     GST_INFO_OBJECT (dc, "Got info from cache: %p", info);
+    g_free (data);
 
     return info;
   }
@@ -2033,10 +2042,13 @@ start_discovering (GstDiscoverer * dc)
 
   if (dc->priv->async) {
     if (ready) {
-      g_idle_add_full (G_PRIORITY_DEFAULT_IDLE,
+      GSource *source;
+
+      source = g_idle_source_new ();
+      g_source_set_callback (source,
           (GSourceFunc) emit_discovererd_and_next, gst_object_ref (dc),
           gst_object_unref);
-
+      g_source_attach (source, dc->priv->ctx);
       goto beach;
     }
 
@@ -2267,6 +2279,7 @@ _parse_common_stream_info (GstDiscovererStreamInfo * sinfo, GVariant * common,
     if (g_variant_n_children (nextv) > 0) {
       sinfo->next = _parse_discovery (nextv, info);
     }
+    g_variant_unref (nextv);
   }
 
   g_variant_unref (common);

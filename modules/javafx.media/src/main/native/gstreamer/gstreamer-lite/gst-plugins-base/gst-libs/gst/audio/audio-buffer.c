@@ -22,6 +22,10 @@
 #  include "config.h"
 #endif
 
+#ifdef GSTREAMER_LITE
+#include <string.h>
+#endif // GSTREAMER_LITE
+
 #include "audio-buffer.h"
 
 
@@ -154,16 +158,22 @@ gst_audio_buffer_map (GstAudioBuffer * buffer, const GstAudioInfo * info,
       buffer->map_infos = buffer->priv_map_infos_arr;
     }
 
-    for (i = 0; i < buffer->n_planes; i++) {
-      if (!gst_buffer_find_memory (gstbuffer, meta->offsets[i],
-              GST_AUDIO_BUFFER_PLANE_SIZE (buffer), &idx, &length, &skip))
-        goto no_memory;
+    if (buffer->n_samples == 0) {
+      memset (buffer->map_infos, 0,
+          buffer->n_planes * sizeof (buffer->map_infos[0]));
+      memset (buffer->planes, 0, buffer->n_planes * sizeof (buffer->planes[0]));
+    } else {
+      for (i = 0; i < buffer->n_planes; i++) {
+        if (!gst_buffer_find_memory (gstbuffer, meta->offsets[i],
+                GST_AUDIO_BUFFER_PLANE_SIZE (buffer), &idx, &length, &skip))
+          goto no_memory;
 
-      if (!gst_buffer_map_range (gstbuffer, idx, length, &buffer->map_infos[i],
-              flags))
-        goto cannot_map;
+        if (!gst_buffer_map_range (gstbuffer, idx, length,
+                &buffer->map_infos[i], flags))
+          goto cannot_map;
 
-      buffer->planes[i] = buffer->map_infos[i].data + skip;
+        buffer->planes[i] = buffer->map_infos[i].data + skip;
+      }
     }
   }
 

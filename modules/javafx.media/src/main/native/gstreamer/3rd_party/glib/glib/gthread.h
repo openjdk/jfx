@@ -234,27 +234,36 @@ GLIB_AVAILABLE_IN_ALL
 void            g_once_init_leave               (volatile void  *location,
                                                  gsize           result);
 
-#ifdef G_ATOMIC_OP_MEMORY_BARRIER_NEEDED
-# define g_once(once, func, arg) g_once_impl ((once), (func), (arg))
-#else /* !G_ATOMIC_OP_MEMORY_BARRIER_NEEDED*/
+/* Use C11-style atomic extensions to check the fast path for status=ready. If
+ * they are not available, fall back to using a mutex and condition variable in
+ * g_once_impl().
+ *
+ * On the C11-style codepath, only the load of once->status needs to be atomic,
+ * as the writes to it and once->retval in g_once_impl() are related by a
+ * happens-before relation. Release-acquire semantics are defined such that any
+ * atomic/non-atomic write which happens-before a store/release is guaranteed to
+ * be seen by the load/acquire of the same atomic variable. */
+#if defined(G_ATOMIC_LOCK_FREE) && defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4) && defined(__ATOMIC_SEQ_CST)
 # define g_once(once, func, arg) \
-  (((once)->status == G_ONCE_STATUS_READY) ? \
+  ((__atomic_load_n (&(once)->status, __ATOMIC_ACQUIRE) == G_ONCE_STATUS_READY) ? \
    (once)->retval : \
    g_once_impl ((once), (func), (arg)))
-#endif /* G_ATOMIC_OP_MEMORY_BARRIER_NEEDED */
+#else
+# define g_once(once, func, arg) g_once_impl ((once), (func), (arg))
+#endif
 
 #ifdef __GNUC__
 # define g_once_init_enter(location) \
   (G_GNUC_EXTENSION ({                                               \
     G_STATIC_ASSERT (sizeof *(location) == sizeof (gpointer));       \
-    (void) (0 ? (gpointer) *(location) : 0);                         \
+    (void) (0 ? (gpointer) *(location) : NULL);                      \
     (!g_atomic_pointer_get (location) &&                             \
      g_once_init_enter (location));                                  \
   }))
 # define g_once_init_leave(location, result) \
   (G_GNUC_EXTENSION ({                                               \
     G_STATIC_ASSERT (sizeof *(location) == sizeof (gpointer));       \
-    (void) (0 ? *(location) = (result) : 0);                         \
+    0 ? (void) (*(location) = (result)) : (void) 0;                  \
     g_once_init_leave ((location), (gsize) (result));                \
   }))
 #else
@@ -282,6 +291,8 @@ typedef void GMutexLocker;
  * Lock @mutex and return a new #GMutexLocker. Unlock with
  * g_mutex_locker_free(). Using g_mutex_unlock() on @mutex
  * while a #GMutexLocker exists can lead to undefined behaviour.
+ *
+ * No allocation is performed, it is equivalent to a g_mutex_lock() call.
  *
  * This is intended to be used with g_autoptr().  Note that g_autoptr()
  * is only available when using GCC or clang, so the following example
@@ -315,6 +326,7 @@ typedef void GMutexLocker;
  * Returns: a #GMutexLocker
  * Since: 2.44
  */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_44
 static inline GMutexLocker *
 g_mutex_locker_new (GMutex *mutex)
 {
@@ -328,8 +340,11 @@ g_mutex_locker_new (GMutex *mutex)
  *
  * Unlock @locker's mutex. See g_mutex_locker_new() for details.
  *
+ * No memory is freed, it is equivalent to a g_mutex_unlock() call.
+ *
  * Since: 2.44
  */
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_44
 static inline void
 g_mutex_locker_free (GMutexLocker *locker)
 {
@@ -351,6 +366,8 @@ typedef void GRecMutexLocker;
  * Lock @rec_mutex and return a new #GRecMutexLocker. Unlock with
  * g_rec_mutex_locker_free(). Using g_rec_mutex_unlock() on @rec_mutex
  * while a #GRecMutexLocker exists can lead to undefined behaviour.
+ *
+ * No allocation is performed, it is equivalent to a g_rec_mutex_lock() call.
  *
  * This is intended to be used with g_autoptr().  Note that g_autoptr()
  * is only available when using GCC or clang, so the following example
@@ -384,12 +401,15 @@ typedef void GRecMutexLocker;
  * Returns: a #GRecMutexLocker
  * Since: 2.60
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_60
 static inline GRecMutexLocker *
 g_rec_mutex_locker_new (GRecMutex *rec_mutex)
 {
   g_rec_mutex_lock (rec_mutex);
   return (GRecMutexLocker *) rec_mutex;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_rec_mutex_locker_free:
@@ -397,13 +417,18 @@ g_rec_mutex_locker_new (GRecMutex *rec_mutex)
  *
  * Unlock @locker's recursive mutex. See g_rec_mutex_locker_new() for details.
  *
+ * No memory is freed, it is equivalent to a g_rec_mutex_unlock() call.
+ *
  * Since: 2.60
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_60
 static inline void
 g_rec_mutex_locker_free (GRecMutexLocker *locker)
 {
   g_rec_mutex_unlock ((GRecMutex *) locker);
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * GRWLockWriterLocker:
@@ -421,6 +446,8 @@ typedef void GRWLockWriterLocker;
  * Unlock with g_rw_lock_writer_locker_free(). Using g_rw_lock_writer_unlock()
  * on @rw_lock while a #GRWLockWriterLocker exists can lead to undefined
  * behaviour.
+ *
+ * No allocation is performed, it is equivalent to a g_rw_lock_writer_lock() call.
  *
  * This is intended to be used with g_autoptr().  Note that g_autoptr()
  * is only available when using GCC or clang, so the following example
@@ -484,12 +511,15 @@ typedef void GRWLockWriterLocker;
  * Returns: a #GRWLockWriterLocker
  * Since: 2.62
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_62
 static inline GRWLockWriterLocker *
 g_rw_lock_writer_locker_new (GRWLock *rw_lock)
 {
   g_rw_lock_writer_lock (rw_lock);
   return (GRWLockWriterLocker *) rw_lock;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_rw_lock_writer_locker_free:
@@ -498,13 +528,18 @@ g_rw_lock_writer_locker_new (GRWLock *rw_lock)
  * Release a write lock on @locker's read-write lock. See
  * g_rw_lock_writer_locker_new() for details.
  *
+ * No memory is freed, it is equivalent to a g_rw_lock_writer_unlock() call.
+ *
  * Since: 2.62
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_62
 static inline void
 g_rw_lock_writer_locker_free (GRWLockWriterLocker *locker)
 {
   g_rw_lock_writer_unlock ((GRWLock *) locker);
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * GRWLockReaderLocker:
@@ -523,18 +558,23 @@ typedef void GRWLockReaderLocker;
  * on @rw_lock while a #GRWLockReaderLocker exists can lead to undefined
  * behaviour.
  *
+ * No allocation is performed, it is equivalent to a g_rw_lock_reader_lock() call.
+ *
  * This is intended to be used with g_autoptr(). For a code sample, see
  * g_rw_lock_writer_locker_new().
  *
  * Returns: a #GRWLockReaderLocker
  * Since: 2.62
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_62
 static inline GRWLockReaderLocker *
 g_rw_lock_reader_locker_new (GRWLock *rw_lock)
 {
   g_rw_lock_reader_lock (rw_lock);
   return (GRWLockReaderLocker *) rw_lock;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_rw_lock_reader_locker_free:
@@ -543,13 +583,18 @@ g_rw_lock_reader_locker_new (GRWLock *rw_lock)
  * Release a read lock on @locker's read-write lock. See
  * g_rw_lock_reader_locker_new() for details.
  *
+ * No memory is freed, it is equivalent to a g_rw_lock_reader_unlock() call.
+ *
  * Since: 2.62
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_AVAILABLE_STATIC_INLINE_IN_2_62
 static inline void
 g_rw_lock_reader_locker_free (GRWLockReaderLocker *locker)
 {
   g_rw_lock_reader_unlock ((GRWLock *) locker);
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 G_END_DECLS
 

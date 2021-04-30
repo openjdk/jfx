@@ -24,13 +24,16 @@ CFLAGS = -fPIC                   \
          -fstack-protector       \
          -Werror=implicit-function-declaration \
          -Werror=trampolines     \
-         -msse2                  \
          -fbuiltin               \
          -DHAVE_STDINT_H         \
          -DLINUX                 \
          -DGST_DISABLE_LOADSAVE  \
          -DGSTREAMER_LITE \
          -ffunction-sections -fdata-sections
+
+ifneq ($(ARCH), aarch64)
+    CFLAGS += -msse2
+endif
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os

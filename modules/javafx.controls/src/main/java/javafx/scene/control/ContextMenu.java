@@ -26,6 +26,9 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.util.Utils;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -33,15 +36,14 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
-import javafx.geometry.NodeOrientation;
+import javafx.geometry.HPos;
+import javafx.geometry.Point2D;
 import javafx.geometry.Side;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.stage.Window;
-
-import com.sun.javafx.collections.TrackableObservableList;
 import javafx.scene.control.skin.ContextMenuSkin;
+import javafx.stage.Window;
 
 /**
  * <p>
@@ -244,55 +246,19 @@ public class ContextMenu extends PopupControl {
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        setAnchorLocation(getAnchorLocation(side, anchor.getEffectiveNodeOrientation()));
-        Bounds anchorBounds = anchor.localToScreen(anchor.getLayoutBounds());
-        double x = getXBySide(anchorBounds, side, anchor.getEffectiveNodeOrientation()) + dx;
-        double y = getYBySide(anchorBounds, side) + dy;
-        doShow(anchor, x, y);
+        if (getScene().getStylesheets().isEmpty()) {
+            getScene().getStylesheets().setAll(anchor.getScene().getStylesheets());
+        }
+
+        HPos hpos = side == Side.LEFT ? HPos.LEFT : side == Side.RIGHT ? HPos.RIGHT : HPos.CENTER;
+        VPos vpos = side == Side.TOP ? VPos.TOP : side == Side.BOTTOM ? VPos.BOTTOM : VPos.CENTER;
+
+        // translate from anchor/hpos/vpos/dx/dy into screenX/screenY
+        Point2D point = Utils.pointRelativeTo(anchor,
+                prefWidth(-1), prefHeight(-1),
+                hpos, vpos, dx, dy, true);
+        doShow(anchor, point.getX(), point.getY());
     }
-
-     private AnchorLocation getAnchorLocation(Side side, NodeOrientation orientation) {
-         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-             switch (side) {
-                 case TOP: return AnchorLocation.CONTENT_BOTTOM_RIGHT;
-                 case RIGHT: return AnchorLocation.CONTENT_TOP_RIGHT;
-                 case BOTTOM: return AnchorLocation.CONTENT_TOP_RIGHT;
-                 case LEFT: return AnchorLocation.CONTENT_TOP_LEFT;
-             }
-         } else {
-             switch (side) {
-                 case TOP: return AnchorLocation.CONTENT_BOTTOM_LEFT;
-                 case RIGHT: return AnchorLocation.CONTENT_TOP_LEFT;
-                 case BOTTOM: return AnchorLocation.CONTENT_TOP_LEFT;
-                 case LEFT: return AnchorLocation.CONTENT_TOP_RIGHT;
-             }
-         }
-        return AnchorLocation.CONTENT_TOP_LEFT; // never reached
-     }
-
-     private double getXBySide(Bounds anchorBounds, Side side, NodeOrientation orientation) {
-         if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-             if (side == Side.RIGHT) {
-                 return anchorBounds.getMinX();
-             } else {
-                 return anchorBounds.getMaxX();
-             }
-         } else {
-             if (side == Side.RIGHT) {
-                 return anchorBounds.getMaxX();
-             } else {
-                 return anchorBounds.getMinX();
-             }
-         }
-     }
-
-     private double getYBySide(Bounds anchorBounds, Side side) {
-         if (side == Side.BOTTOM) {
-             return anchorBounds.getMaxY();
-         } else {
-             return anchorBounds.getMinY();
-         }
-     }
 
     /**
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
@@ -309,7 +275,6 @@ public class ContextMenu extends PopupControl {
         if (anchor == null) return;
         if (getItems().size() == 0) return;
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
         doShow(anchor, screenX, screenY);
     }
 

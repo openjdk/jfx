@@ -142,7 +142,7 @@ struct _GstBaseSrc {
  *   segment in that format.
  * @do_seek: Perform seeking on the resource to the indicated segment.
  * @unlock: Unlock any pending access to the resource. Subclasses should unblock
- *    any blocked function ASAP. In particular, any create() function in
+ *    any blocked function ASAP. In particular, any `create()` function in
  *    progress should be unblocked and should return GST_FLOW_FLUSHING. Any
  *    future #GstBaseSrcClass.create() function call should also return
  *    GST_FLOW_FLUSHING until the #GstBaseSrcClass.unlock_stop() function has
@@ -174,7 +174,12 @@ struct _GstBaseSrcClass {
   /*< public >*/
   /* virtual methods for subclasses */
 
-  /* get caps from subclass */
+  /**
+   * GstBaseSrcClass::get_caps:
+   * @filter: (in) (nullable):
+   *
+   * Called to get the caps to report.
+   */
   GstCaps*      (*get_caps)     (GstBaseSrc *src, GstCaps *filter);
   /* decide on caps */
   gboolean      (*negotiate)    (GstBaseSrc *src);
@@ -276,6 +281,9 @@ GST_BASE_API
 gboolean        gst_base_src_is_async         (GstBaseSrc *src);
 
 GST_BASE_API
+gboolean        gst_base_src_negotiate        (GstBaseSrc *src);
+
+GST_BASE_API
 void            gst_base_src_start_complete   (GstBaseSrc * basesrc, GstFlowReturn ret);
 
 GST_BASE_API
@@ -301,6 +309,10 @@ GST_BASE_API
 gboolean        gst_base_src_new_seamless_segment (GstBaseSrc *src, gint64 start, gint64 stop, gint64 time);
 
 GST_BASE_API
+gboolean        gst_base_src_new_segment      (GstBaseSrc *src,
+                                               const GstSegment * segment);
+
+GST_BASE_API
 gboolean        gst_base_src_set_caps         (GstBaseSrc *src, GstCaps *caps);
 
 GST_BASE_API
@@ -315,9 +327,7 @@ GST_BASE_API
 void            gst_base_src_submit_buffer_list (GstBaseSrc    * src,
                                                  GstBufferList * buffer_list);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSrc, gst_object_unref)
-#endif
 
 G_END_DECLS
 

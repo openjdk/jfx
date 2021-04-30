@@ -63,7 +63,17 @@ public class Node_effectiveOrientation_Css_Test {
 
     @After
     public void tearDown() {
+        resetStyleManager();
         stage.hide();
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
     }
 
     public Node_effectiveOrientation_Css_Test() {}
