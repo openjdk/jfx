@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -341,18 +340,6 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(4));
         assertFalse(model.isSelected(5));
         assertTrue(model.isSelected(6));
-    }
-
-    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
-        model.setSelectionMode(SelectionMode.MULTIPLE);
-        model.select(1);
-        model.select(5);
-        MockListObserver<Integer> observer = new MockListObserver<>();
-        model.getSelectedIndices().addListener(observer);
-        model.clearSelection(5);
-
-        observer.check1();
-        observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {
