@@ -6651,15 +6651,15 @@ public class TreeTableViewTest {
         root.getChildren().add(c3 = new TreeItem<>("qux"));
         root.setExpanded(true);
 
-        TreeTableView<String> treeView = new TreeTableView<>(root);
-        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        treeView.getSelectionModel().selectAll();
+        TreeTableView<String> treeTableView = new TreeTableView<>(root);
+        treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeTableView.getSelectionModel().selectAll();
 
         MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
-        treeView.getSelectionModel().getSelectedItems().addListener(observer);
+        treeTableView.getSelectionModel().getSelectedItems().addListener(observer);
         root.setExpanded(false);
 
         observer.check1();
-        observer.checkAddRemove(0, treeView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
+        observer.checkAddRemove(0, treeTableView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
     }
 }
