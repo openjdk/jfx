@@ -942,7 +942,6 @@ public class FXMLLoader {
                         } catch (Exception e) {
                             throw constructLoadException(e);
                         }
-
                     }
                 } else {
                     throw constructLoadException("Invalid attribute.");
