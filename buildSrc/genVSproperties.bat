@@ -1,3 +1,4 @@
+@echo off
 REM Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
 REM DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 REM
@@ -48,6 +49,12 @@ if "%VSVARSDIR%"=="" set VSVARSDIR=%VS120COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=100
 if "%VSVARSDIR%"=="" set VSVARSDIR=%VS100COMNTOOLS%
 
+REM Log file for the Visual Studio batch files, controlled by the following
+REM environment variables:
+REM   VSCMD_DEBUG=n where n = 1 (basic), 2 (detailed), or 3 (trace)
+REM   VSCMD_SKIP_SENDTELEMETRY=1 disables sending telemetry
+set VCVARSALL_LOG=build\vcvarsall.log
+
 REM We shouldn't depend on VSVARS32 as it's 32-bit only.
 REM   However, this var is still used somewhere in FX (e.g.
 REM   to build media), so we set it here.
@@ -55,12 +62,16 @@ REM   to build media), so we set it here.
 if "%VSVER%"=="100" set VSVARS32=%VSVARSDIR%\vsvars32.bat
 if "%VSVER%"=="120" set VSVARS32=%VSVARSDIR%\vsvars32.bat
 if "%VSVER%"=="150" set VSVARS32=%VSVARSDIR%\vcvars32.bat
-call "%VSVARS32%" > NUL
+@echo on
+@call "%VSVARS32%" > %VCVARSALL_LOG% 2>&1
+@echo off
 
 if "%VSVER%"=="100" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
 if "%VSVER%"=="120" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
 if "%VSVER%"=="150" set VCVARSALL=%VSVARSDIR%\vcvarsall.bat
-call "%VCVARSALL%" %VCARCH% > NUL
+@echo on
+@call "%VCVARSALL%" %VCARCH% >> %VCVARSALL_LOG% 2>&1
+@echo off
 
 REM Some vars are reset by vcvarsall.bat, so save them here.
 set TEMPDEVENVDIR=%DEVENVDIR%

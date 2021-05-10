@@ -59,11 +59,8 @@ setupTools("windows_tools",
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
                         "VCARCH"     : IS_CROSS ? "${HOST_ARCH}_${TARGET_ARCH}" : TARGET_ARCH,
                         "SDKARCH"    : "/$TARGET_ARCH",
-                        // Debug logging levels: basic (1), detailed (2), trace (3).
-                        // Use "3" for debugging "FAIL: WINSDK_DIR not defined".
-                        "VSCMD_DEBUG": "",
                 ]);
-                commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
+                commandLine("cmd", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
             });
             BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
