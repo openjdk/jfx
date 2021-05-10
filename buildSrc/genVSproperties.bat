@@ -49,10 +49,8 @@ if "%VSVARSDIR%"=="" set VSVARSDIR=%VS120COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=100
 if "%VSVARSDIR%"=="" set VSVARSDIR=%VS100COMNTOOLS%
 
-REM Log file for the Visual Studio batch files, controlled by the following
-REM environment variables:
+REM Log file for Visual Studio batch files, controlled by environment variable:
 REM   VSCMD_DEBUG=n where n = 1 (basic), 2 (detailed), or 3 (trace)
-REM   VSCMD_SKIP_SENDTELEMETRY=1 disables sending telemetry
 set VCVARSALL_LOG=build\vcvarsall.log
 
 REM We shouldn't depend on VSVARS32 as it's 32-bit only.
@@ -63,14 +61,14 @@ if "%VSVER%"=="100" set VSVARS32=%VSVARSDIR%\vsvars32.bat
 if "%VSVER%"=="120" set VSVARS32=%VSVARSDIR%\vsvars32.bat
 if "%VSVER%"=="150" set VSVARS32=%VSVARSDIR%\vcvars32.bat
 @echo on
-@call "%VSVARS32%" > %VCVARSALL_LOG% 2>&1
+@call "%VSVARS32%" > "%VCVARSALL_LOG%" 2>&1
 @echo off
 
 if "%VSVER%"=="100" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
 if "%VSVER%"=="120" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
 if "%VSVER%"=="150" set VCVARSALL=%VSVARSDIR%\vcvarsall.bat
 @echo on
-@call "%VCVARSALL%" %VCARCH% >> %VCVARSALL_LOG% 2>&1
+@call "%VCVARSALL%" %VCARCH% >> "%VCVARSALL_LOG%" 2>&1
 @echo off
 
 REM Some vars are reset by vcvarsall.bat, so save them here.
