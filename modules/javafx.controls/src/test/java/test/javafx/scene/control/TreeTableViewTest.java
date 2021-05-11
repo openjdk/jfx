@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -6640,5 +6641,25 @@ public class TreeTableViewTest {
                     assertEquals(2, sm.getSelectedCells().size());
                 }
         );
+    }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> c1, c2, c3;
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(c1 = new TreeItem<>("bar"));
+        root.getChildren().add(c2 = new TreeItem<>("baz"));
+        root.getChildren().add(c3 = new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        TreeTableView<String> treeTableView = new TreeTableView<>(root);
+        treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeTableView.getSelectionModel().selectAll();
+
+        MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
+        treeTableView.getSelectionModel().getSelectedItems().addListener(observer);
+        root.setExpanded(false);
+
+        observer.check1();
+        observer.checkAddRemove(0, treeTableView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
     }
 }

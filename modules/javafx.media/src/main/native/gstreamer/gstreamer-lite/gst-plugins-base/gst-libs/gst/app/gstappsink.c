@@ -670,6 +670,7 @@ gst_app_sink_flush_unlocked (GstAppSink * appsink)
         GstEvent *event = GST_EVENT_CAST (obj);
         gst_event_parse_caps (event, &caps);
         gst_caps_replace (&priv->last_caps, caps);
+        gst_sample_set_caps(priv->sample, priv->last_caps);
       }
     }
     gst_mini_object_unref (obj);

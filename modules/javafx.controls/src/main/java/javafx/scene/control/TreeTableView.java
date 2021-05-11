@@ -2551,7 +2551,9 @@ public class TreeTableView<S> extends Control {
                             }
                         }
 
-                        ControlUtils.reducingChange(selectedIndices, removed);
+                        if (!removed.isEmpty()) {
+                            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
+                        }
 
                         for (int index : removed) {
                             startAtomic();

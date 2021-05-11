@@ -63,6 +63,10 @@ public abstract class VisualTestBase {
     // Glass Robot instance
     Robot robot;
 
+    protected Robot getRobot() {
+        return robot;
+    }
+
     // Application class. An instance is created and initialized before running
     // the first test, and it lives through the execution of all tests.
     public static class MyApp extends Application {
