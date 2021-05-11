@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2465,7 +2465,8 @@ public class TableView<S> extends Control {
              *   return the same number - the place where the removed elements were positioned in the list.
              */
             if (wasSelected) {
-                change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
+                change = ControlUtils.buildClearAndSelectChange(
+                        selectedCellsSeq, previousSelection, newTablePosition, Comparator.comparing(TablePosition::getRow));
             } else {
                 final int changeIndex = isCellSelectionEnabled ? 0 : Math.max(0, selectedCellsSeq.indexOf(newTablePosition));
                 final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
