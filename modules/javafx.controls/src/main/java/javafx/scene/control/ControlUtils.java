@@ -98,7 +98,7 @@ class ControlUtils {
 
             @Override public int getTo() {
                 checkState();
-                return getFrom();
+                return from;
             }
 
             @Override public List<T> getRemoved() {
