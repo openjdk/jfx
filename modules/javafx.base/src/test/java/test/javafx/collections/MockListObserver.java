@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiPredicate;
+
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import static org.junit.Assert.* ;
@@ -103,13 +106,24 @@ public class MockListObserver<E> implements ListChangeListener<E> {
                        List<E> removed,
                        int from,
                        int to) {
+        checkAddRemove(idx, list, removed, Objects::equals, from, to);
+    }
+
+    public void checkAddRemove(int idx, ObservableList<E> list,
+                               List<E> removed,
+                               BiPredicate<E, E> equalityComparer,
+                               int from,
+                               int to) {
         if (removed == null) {
-            removed = Collections.<E>emptyList();
+            removed = Collections.emptyList();
         }
         assertFalse(tooManyCalls);
         Call<E> call = calls.get(idx);
         assertSame(list, call.list);
-        assertEquals(removed, call.removed);
+        assertEquals(removed.size(), call.removed.size());
+        for (int i = 0; i < removed.size(); ++i) {
+            assertTrue(equalityComparer.test(removed.get(i), call.removed.get(i)));
+        }
         assertEquals(from, call.from);
         assertEquals(to, call.to);
         assertEquals(0, call.permutation.length);
@@ -157,6 +171,11 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     public void check1() {
         assertFalse(tooManyCalls);
         assertEquals(1, calls.size());
+    }
+
+    public void checkN(int n) {
+        assertFalse(tooManyCalls);
+        assertEquals(n, calls.size());
     }
 
     public void clear() {
