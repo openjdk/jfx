@@ -549,9 +549,13 @@ public class ListCell<T> extends IndexedCell<T> {
             // cancelEdit method would do. Yet, I need to call cancelEdit
             // so that subclasses which override cancelEdit can execute. So,
             // I have to use a kind of hacky flag workaround.
-            updateEditingIndex = false;
-            cancelEdit();
-            updateEditingIndex = true;
+            try {
+                // try-finally to make certain that the flag is reliably reset to true
+                updateEditingIndex = false;
+                cancelEdit();
+            } finally {
+                updateEditingIndex = true;
+            }
         }
         if(!editing && list != null && index != -1 && index == editIndex) {
             // If my index is the index being edited and I'm not currently in
