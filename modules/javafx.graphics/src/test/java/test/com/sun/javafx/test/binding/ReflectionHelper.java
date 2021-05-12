@@ -42,10 +42,8 @@ public final class ReflectionHelper {
 
     public static Object newInstance(final Class<?> cls) {
         try {
-            return cls.newInstance();
-        } catch (final InstantiationException e) {
-            throw convertToRuntimeException(e);
-        } catch (final IllegalAccessException e) {
+            return cls.getDeclaredConstructor().newInstance();
+        } catch (final Exception e) {
             throw convertToRuntimeException(e);
         }
     }

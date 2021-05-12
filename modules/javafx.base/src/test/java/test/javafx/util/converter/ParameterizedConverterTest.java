@@ -93,7 +93,7 @@ public class ParameterizedConverterTest {
 
     @Before public void setup() {
         try {
-            converter = converterClass.newInstance();
+            converter = converterClass.getDeclaredConstructor().newInstance();
         } catch (Exception ex) {
             ex.printStackTrace();
         }

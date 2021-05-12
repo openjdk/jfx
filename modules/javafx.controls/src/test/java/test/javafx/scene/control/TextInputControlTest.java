@@ -86,7 +86,7 @@ public class TextInputControlTest {
     }
 
     @Before public void setup() throws Exception {
-        textInput = (TextInputControl) type.newInstance();
+        textInput = (TextInputControl) type.getDeclaredConstructor().newInstance();
         setUncaughtExceptionHandler();
     }
 

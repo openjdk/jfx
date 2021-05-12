@@ -69,10 +69,8 @@ public class ParameterisedPrebuiltCellTest {
         count = 0;
 
         try {
-            cell = cellClass.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
+            cell = cellClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
