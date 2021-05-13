@@ -71,9 +71,9 @@ public class HonorDeveloperSettingsTest {
 
     @After
     public void cleanup() {
-        resetStyleManager();
         root.getChildren().clear();
         stage.hide();
+        resetStyleManager();
         //stage.setScene(null);
     }
 
