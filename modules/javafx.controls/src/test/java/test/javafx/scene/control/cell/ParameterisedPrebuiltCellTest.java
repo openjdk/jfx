@@ -65,14 +65,9 @@ public class ParameterisedPrebuiltCellTest {
         this.cellClass = cellClass;
     }
 
-    @Before public void setup() {
+    @Before public void setup() throws Exception {
         count = 0;
-
-        try {
-            cell = cellClass.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        cell = cellClass.getDeclaredConstructor().newInstance();
     }
 
 

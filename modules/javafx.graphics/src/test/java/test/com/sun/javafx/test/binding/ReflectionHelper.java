@@ -43,6 +43,8 @@ public final class ReflectionHelper {
     public static Object newInstance(final Class<?> cls) {
         try {
             return cls.getDeclaredConstructor().newInstance();
+        } catch (final RuntimeException e) {
+            throw e;
         } catch (final Exception e) {
             throw convertToRuntimeException(e);
         }
