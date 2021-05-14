@@ -337,8 +337,8 @@ public class ListCell<T> extends IndexedCell<T> {
             updateItem(oldIndex);
             updateSelection();
             updateFocus();
+            updateEditing();
         }
-        updateEditing();
     }
 
     /** {@inheritDoc} */
@@ -540,9 +540,11 @@ public class ListCell<T> extends IndexedCell<T> {
         final ListView<T> list = getListView();
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
+        final boolean match = list != null && index != -1 && index == editIndex;
 
-
-        if (editing && (index == -1 || list == null || index != editIndex)) {
+        if (match && ! editing) {
+            startEdit();
+        } else if (! match && editing) {
             // If my index is not the one being edited then I need to cancel
             // the edit. The tricky thing here is that as part of this call
             // I cannot end up calling list.edit(-1) the way that the standard
@@ -556,11 +558,6 @@ public class ListCell<T> extends IndexedCell<T> {
             } finally {
                 updateEditingIndex = true;
             }
-        }
-        if(!editing && list != null && index != -1 && index == editIndex) {
-            // If my index is the index being edited and I'm not currently in
-            // the edit mode, then I need to enter the edit mode
-            startEdit();
         }
     }
 

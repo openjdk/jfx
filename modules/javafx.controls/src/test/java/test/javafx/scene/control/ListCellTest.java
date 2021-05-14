@@ -913,4 +913,47 @@ public class ListCellTest {
         assertEquals(1, events.size());
     }
 
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        ListCell<String> cell = new MisbehavingOnCancelListCell<>();
+
+        list.setEditable(true);
+        cell.updateListView(list);
+
+        int editingIndex = 1;
+        int intermediate = 0;
+        int notEditingIndex = -1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            list.edit(intermediate);
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table must be editing at intermediate index", intermediate, list.getEditingIndex());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        list.edit(editingIndex);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table editing must be cancelled by cell", notEditingIndex, list.getEditingIndex());
+        }
+    }
+
+    public static class MisbehavingOnCancelListCell<T> extends ListCell<T> {
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+    }
+
 }
