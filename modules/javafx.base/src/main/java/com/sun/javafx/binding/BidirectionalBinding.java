@@ -582,6 +582,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
 
         private TypedGenericBidirectionalBinding(Property<T> property1, Property<T> property2) {
             super(property1, property2);
+            oldValue = property1.getValue();
             propertyRef1 = new WeakReference<>(property1);
             propertyRef2 = new WeakReference<>(property2);
         }
@@ -654,6 +655,7 @@ public abstract class BidirectionalBinding implements InvalidationListener, Weak
 
         private TypedNumberBidirectionalBinding(Property<T> property1, Property<Number> property2) {
             super(property1, property2);
+            oldValue = property1.getValue();
             propertyRef1 = new WeakReference<>(property1);
             propertyRef2 = new WeakReference<>(property2);
         }
