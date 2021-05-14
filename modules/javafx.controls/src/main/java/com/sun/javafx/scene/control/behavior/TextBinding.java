@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.KeyCombination;
+import java.util.Objects;
 
 /**
  * <p>
@@ -64,7 +65,12 @@ public class TextBinding {
     /**
      * the marker symbol used when parsing for mnemonics
      */
-    private String MNEMONIC_SYMBOL = "_";
+    private final char MNEMONIC_SYMBOL = '_';
+
+    /**
+     * The source text before mnemonic markup has been removed.
+     */
+    private String sourceText = null;
 
     /**
      * The text with any markup for the mnemonic and accelerator removed.
@@ -153,7 +159,18 @@ public class TextBinding {
      * @param s the action text string
      */
     public TextBinding(String s) {
-        parseAndSplit(s);
+        update(s);
+    }
+
+    public void update(String s) {
+        if (!Objects.equals(sourceText, s)) {
+            sourceText = s;
+            mnemonic = null;
+            mnemonicKeyCombination = null;
+            mnemonicIndex = -1;
+            extendedMnemonicText = null;
+            parseAndSplit(s);
+        }
     }
 
     /**
@@ -165,45 +182,56 @@ public class TextBinding {
             return;
         }
 
-        // We will use temp as a working copy of the string and will pull
-        // mnemonic and accelerator text out of it as we find those things.
-        //
-        StringBuffer temp = new StringBuffer(s);
+        StringBuilder builder = new StringBuilder(s.length());
 
-        // Find the mnemonic if it exists.
-        //
-        int index = temp.indexOf(MNEMONIC_SYMBOL);
-        while (index >= 0 && index < (temp.length() - 1)) {
-            // Skip two _'s in a row
-            if (MNEMONIC_SYMBOL.equals(temp.substring(index + 1, index + 2))) {
-                temp.delete(index, index + 1); // delete the extra MNEMONIC_SYMBOL
-            } else if (temp.charAt(index + 1) != '('
-                       || index == temp.length() - 2) {
-                mnemonic = temp.substring(index + 1, index + 2);
-                if (mnemonic != null) {
-                    mnemonicIndex = index;
-                }
-                temp.delete(index, index + 1);
-                break;
+        for (int i = 0, length = s.length(); i < length; ++i) {
+            if (isEscapedMnemonicSymbol(s, i)) {
+                builder.append(s.charAt(i++));
+            } else if (isSimpleMnemonic(s, i)) {
+                char c = s.charAt(i + 1);
+                builder.append(c);
+                mnemonic = String.valueOf(c);
+                mnemonicIndex = i;
+                i += 1;
+            } else if (isExtendedMnemonic(s, i)) {
+                mnemonic = String.valueOf(s.charAt(i + 2));
+                extendedMnemonicText = s.substring(i + 1, i + 4);
+                i += 3;
             } else {
-                int endIndex = temp.indexOf(")", index + 3);
-                if (endIndex == -1) { // "(" is actually the mnemonic
-                    mnemonic = temp.substring(index + 1, index + 2);
-                    if (mnemonic != null) {
-                        mnemonicIndex = index;
-                    }
-                    temp.delete(index, index + 1);
-                    break;
-                } else if (endIndex == index + 3) {
-                    mnemonic = temp.substring(index + 2, index + 3);
-                    extendedMnemonicText = temp.substring(index + 1, index + 4);
-                    temp.delete(index, endIndex + 3);
-                    break;
-                }
+                builder.append(s.charAt(i));
             }
-            index = temp.indexOf(MNEMONIC_SYMBOL, index + 1);
         }
-        text = temp.toString();
+
+        text = builder.toString();
+    }
+
+    /**
+     * Determines whether the string contains an escaped mnemonic symbol at the specified position.
+     */
+    private boolean isEscapedMnemonicSymbol(String s, int position) {
+        return s.length() > position + 1
+            && s.charAt(position) == MNEMONIC_SYMBOL
+            && s.charAt(position + 1) == MNEMONIC_SYMBOL;
+    }
+
+    /**
+     * Determines whether the string contains a simple mnemonic at the specified position.
+     */
+    private boolean isSimpleMnemonic(String s, int position) {
+        return s.length() > position + 1
+            && s.charAt(position) == MNEMONIC_SYMBOL
+            && Character.isAlphabetic(s.charAt(position + 1));
+    }
+
+    /**
+     * Determines whether the string contains an extended mnemonic at the specified position.
+     */
+    private boolean isExtendedMnemonic(String s, int position) {
+        return s.length() > position + 3
+            && s.charAt(position) == MNEMONIC_SYMBOL
+            && s.charAt(position + 1) == '('
+            && Character.isAlphabetic(s.charAt(position + 2))
+            && s.charAt(position + 3) == ')';
     }
 
     /**

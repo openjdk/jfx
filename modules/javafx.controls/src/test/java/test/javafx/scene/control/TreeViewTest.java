@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.*;
+import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -3680,5 +3681,25 @@ public class TreeViewTest {
         // and that in the expandedItemCount listener that we get the right values
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
+    }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> c1, c2, c3;
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(c1 = new TreeItem<>("bar"));
+        root.getChildren().add(c2 = new TreeItem<>("baz"));
+        root.getChildren().add(c3 = new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectAll();
+
+        MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
+        treeView.getSelectionModel().getSelectedItems().addListener(observer);
+        root.setExpanded(false);
+
+        observer.check1();
+        observer.checkAddRemove(0, treeView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
     }
 }
