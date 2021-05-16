@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,7 +113,7 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
     @Override public int indexOf(Object o) {
         if (o == null) return -1;
 
-        for (int i = 0; i < size(); i++) {
+        for (int i = 0, max = size(); i < max; i++) {
             Object obj = get(i);
             if (o.equals(obj)) return i;
         }
@@ -185,8 +185,9 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
 
     @Override
     public Object[] toArray() {
-        Object[] arr = new Object[size()];
-        for (int i = 0; i < size(); i++) {
+        int max = size();
+        Object[] arr = new Object[max];
+        for (int i = 0; i < max; i++) {
             arr[i] = get(i);
         }
         return arr;
