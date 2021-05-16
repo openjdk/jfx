@@ -60,8 +60,9 @@ public class HonorDeveloperSettingsTest {
     Stage stage;
     Group root;
 
-    private static void resetStyleManager() {
+    private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
+        sm.forget(scene);
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
         sm.stylesheetContainerMap.clear();
@@ -72,8 +73,8 @@ public class HonorDeveloperSettingsTest {
     @After
     public void cleanup() {
         resetStyleManager();
-        root.getChildren().clear();
-        stage.hide();
+        //root.getChildren().clear();
+        //stage.hide();
     }
 
     @Before
