@@ -693,7 +693,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
         }
 
         //fetch all the missing packages
-        if (fetchedPackages.size > 0) {
+        if (fetchedPackages.size() > 0) {
             destdir.mkdirs()
 
             logger.quiet "fetching missing packages $fetchedPackages"
@@ -752,7 +752,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 errors.add(pkgname)
             }
         }
-        if (errors.size > 0) {
+        if (errors.size() > 0) {
             throw new GradleException("Error: missing tool packages: $errors")
         } else {
             logger.quiet "all tool packages are present $packages"
