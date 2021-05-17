@@ -345,6 +345,18 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(6));
     }
 
+    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(5);
+        MockListObserver<Integer> observer = new MockListObserver<>();
+        model.getSelectedIndices().addListener(observer);
+        model.clearSelection(5);
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
+    }
+
     @Test public void clearAndSelectFiresDisjointRemovedChanges() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.selectAll();

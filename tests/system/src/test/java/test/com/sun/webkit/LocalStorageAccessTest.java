@@ -25,10 +25,13 @@
 
 package test.com.sun.webkit;
 
+import com.sun.javafx.PlatformUtil;
+
 import java.io.File;
 import static java.util.Arrays.asList;
 import java.util.List;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 import org.junit.Test;
 
 /**
@@ -39,6 +42,10 @@ import org.junit.Test;
 public class LocalStorageAccessTest {
     @Test (timeout = 15000)
     public void testMainThreadDoesNotSegfault() throws Exception {
+        if (PlatformUtil.isWindows()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8265661
+        }
+
         // This is an indirect test of the webkit file system implementation.
         // It was observed, that accessing local storage causes a segfault
         // in the JVM. That case is executed by this test.

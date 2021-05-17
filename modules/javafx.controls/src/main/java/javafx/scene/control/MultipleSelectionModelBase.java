@@ -800,9 +800,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         public void clear(int index) {
             if (!bitset.get(index)) return;
 
+            int indicesIndex = indexOf(index);
             _beginChange();
             bitset.clear(index);
-            _nextRemove(index, index);
+            _nextRemove(indicesIndex, index);
             _endChange();
         }
 
