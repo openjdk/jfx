@@ -176,7 +176,7 @@ public class BidirectionalBindingTest<T> {
     }
 
     private int getListenerCount(ObservableValue<T> v) {
-        return ExpressionHelperUtility.getChangeListeners(v).size();
+        return ExpressionHelperUtility.getInvalidationListeners(v).size();
     }
 
     @Test
