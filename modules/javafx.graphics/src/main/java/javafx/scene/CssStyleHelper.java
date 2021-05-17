@@ -454,6 +454,7 @@ final class CssStyleHelper {
     }
 
     private boolean resetInProgress = false;
+
     private void resetToInitialValues(final Styleable styleable) {
 
         if (cacheContainer == null ||
@@ -603,8 +604,9 @@ final class CssStyleHelper {
             //    Each node stores this id in CssStyleHelper.CacheContainer.smapId
             //    CssStyleHelper.getStyleMap(node) gets a StyleMap from StyleManager.styleMapList by using the
             //    CssStyleHelper.CacheContainer.smapId as key.
-            //    So, when resetToInitialValues() is in progress: the StyleManager.styleMapList gets updated
-            //    and getStyleMap(node) may return an incorrect StyleMap for a given node.
+            //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
+            //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
+
             return;
         }
         if (cacheContainer == null) {
