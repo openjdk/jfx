@@ -531,7 +531,7 @@ public class ListCell<T> extends IndexedCell<T> {
             setFocused(false);
             return;
         }
-        
+
         setFocused(fm.isFocused(index));
     }
 
