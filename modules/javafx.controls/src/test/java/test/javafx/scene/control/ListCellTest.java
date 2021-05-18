@@ -41,6 +41,7 @@ import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
 import java.util.List;
 import java.util.ArrayList;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,9 +57,21 @@ public class ListCellTest {
     private ObservableList<String> model;
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         cell = new ListCell<String>();
         model = FXCollections.observableArrayList("Apples", "Oranges", "Pears");
         list = new ListView<String>(model);
+    }
+
+    @After public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************
@@ -932,7 +945,7 @@ public class ListCellTest {
             // just catching to test in finally
         } finally {
             assertFalse("cell must not be editing", cell.isEditing());
-            assertEquals("table must be editing at intermediate index", intermediate, list.getEditingIndex());
+            assertEquals("list must be editing at intermediate index", intermediate, list.getEditingIndex());
         }
         // test editing: second round
         // switch cell off editing by cell api
@@ -944,7 +957,7 @@ public class ListCellTest {
             // just catching to test in finally
         } finally {
             assertFalse("cell must not be editing", cell.isEditing());
-            assertEquals("table editing must be cancelled by cell", notEditingIndex, list.getEditingIndex());
+            assertEquals("list editing must be cancelled by cell", notEditingIndex, list.getEditingIndex());
         }
     }
 
