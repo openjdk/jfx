@@ -453,12 +453,15 @@ final class CssStyleHelper {
         private boolean forceSlowpath = false;
     }
 
+    private boolean resetInProgress = false;
+
     private void resetToInitialValues(final Styleable styleable) {
 
         if (cacheContainer == null ||
                 cacheContainer.cssSetProperties == null ||
                 cacheContainer.cssSetProperties.isEmpty()) return;
 
+        resetInProgress = true;
         // RT-31714 - make a copy of the entry set and clear the cssSetProperties immediately.
         Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
         cacheContainer.cssSetProperties.clear();
@@ -474,6 +477,7 @@ final class CssStyleHelper {
                 styleableProperty.applyStyle(calculatedValue.getOrigin(), calculatedValue.getValue());
             }
         }
+        resetInProgress = false;
     }
 
 
@@ -589,9 +593,20 @@ final class CssStyleHelper {
     // Any modifications to the method transitionToState() should be applied here if needed.
     void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
 
-        if (transitionStateInProgress) {
-            // If transitionToState() is being executed for the current control then all the css properties will get
-            // calculated there, and so we need to do anything here.
+        if (transitionStateInProgress || resetInProgress) {
+            // It is not required to recalculate the relative sized properties,
+            // 1. [transitionStateInProgress]: if transitionToState() is being executed for the current control then all
+            //    the css properties will get calculated there, OR
+            // 2. [resetInProgress]: if resetToInitialValues() is being executed, which sets font to default font.
+            //    The css style set by user if any is applied post this reset which calls
+            //    recalculateRelativeSizeProperties() again.
+            //    JDK-8266966: StyleManager.styleMapList stores the StyleMaps of nodes using an id as key.
+            //    Each node stores this id in CssStyleHelper.CacheContainer.smapId
+            //    CssStyleHelper.getStyleMap(node) gets a StyleMap from StyleManager.styleMapList by using the
+            //    CssStyleHelper.CacheContainer.smapId as key.
+            //    When resetToInitialValues() is in progress, the StyleManager.styleMapList gets updated, therefore
+            //    calls to getStyleMap(node) should be avoided, as it may return an incorrect StyleMap for a given node.
+
             return;
         }
         if (cacheContainer == null) {
