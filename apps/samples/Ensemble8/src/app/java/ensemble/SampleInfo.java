@@ -191,7 +191,7 @@ public class SampleInfo {
             Method play = null;
             Method stop = null;
             Class clz = Class.forName(appClass);
-            final Object app = clz.newInstance();
+            final Object app = clz.getDeclaredConstructor().newInstance();
             Parent root = (Parent) clz.getMethod("createContent").invoke(app);
 
             for (Method m : clz.getMethods()) {

@@ -79,7 +79,7 @@ public class CellTest {
     }
 
     @Before public void setup() throws Exception {
-        cell = (Cell<String>) type.newInstance();
+        cell = (Cell<String>) type.getDeclaredConstructor().newInstance();
 
         // Empty TableCells can be selected, as long as the row they exist in
         // is not empty, so here we set a TableRow to ensure testing works

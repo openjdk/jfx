@@ -57,8 +57,8 @@ public final class EventDispatchChainTest {
     private EventDispatchChain eventDispatchChain;
 
     public EventDispatchChainTest(final Class<EventDispatchChain> chainClass)
-            throws InstantiationException, IllegalAccessException {
-        eventDispatchChain = chainClass.newInstance();
+            throws Exception {
+        eventDispatchChain = chainClass.getDeclaredConstructor().newInstance();
     }
 
     @Test
