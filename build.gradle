@@ -4382,16 +4382,17 @@ compileTargets { t ->
         }
         zips.dependsOn(zipsTask)
 
-        // Use native zip tool so that file permissions are preserved on Windows
-        def zipSdkTask = task("zipSdk$t.capital", dependsOn: publicExportsTask) {
-            doLast {
-                def outZipFile = "${bundlesDir}/${sdkBundleName}.zip"
-                mkdir bundlesDir
-                exec {
-                    workingDir(artifactsDir)
-                    commandLine("zip", "-q", "-r", outZipFile, sdkBundleName)
-                }
+        def zipSdkTask = task("zipSdk$t.capital", type: Zip, dependsOn: publicExportsTask) {
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${sdkBundleName}.zip"
+            includeEmptyDirs = false
+            // Sets directory and file permissions in archive for Windows
+            if (IS_WINDOWS && IS_USE_CYGWIN) {
+                dirMode = 0755
+                fileMode = 0755
             }
+            from sdkArtifactsDir
+            into "${sdkBundleName}"
         }
         zipsTask.dependsOn(zipSdkTask)
 
