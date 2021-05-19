@@ -74,7 +74,7 @@ repositories {
 }
 
 dependencies {
-    testCompile group: "junit",     name: "junit",          version: "4.8.2"
+    testImplementation group: "junit", name: "junit", version: "4.8.2"
 }
 
 // At the moment the ASM library shipped with Gradle that is used to
