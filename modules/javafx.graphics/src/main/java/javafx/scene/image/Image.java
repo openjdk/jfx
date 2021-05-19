@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.DataURI;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyValue;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -1117,6 +1118,8 @@ public class Image {
                     throw new IllegalArgumentException("Invalid URL or resource not found");
                 }
                 return resource.toString();
+            } else if (DataURI.isValid(url)) {
+                return url;
             }
             // Use URL constructor for validation
             return new URL(url).toString();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,9 @@ import com.sun.javafx.iio.gif.GIFImageLoaderFactory;
 import com.sun.javafx.iio.ios.IosImageLoaderFactory;
 import com.sun.javafx.iio.jpeg.JPEGImageLoaderFactory;
 import com.sun.javafx.iio.png.PNGImageLoaderFactory;
+import com.sun.javafx.util.DataURI;
+
 import java.io.ByteArrayInputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -303,7 +304,14 @@ public class ImageStorage {
         try {
             float imgPixelScale = 1.0f;
             try {
-                if (devPixelScale >= 1.5f) {
+                DataURI dataUri = DataURI.tryParse(input);
+                if (dataUri != null) {
+                    if (!"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                        throw new ImageStorageException("Unexpected MIME type: " + dataUri.getMimeType());
+                    }
+
+                    theStream = new ByteArrayInputStream(dataUri.getData());
+                } else if (devPixelScale >= 1.5f) {
                     // Use Mac Retina conventions for >= 1.5f
                     try {
                         String name2x = ImageTools.getScaledImageName(input);

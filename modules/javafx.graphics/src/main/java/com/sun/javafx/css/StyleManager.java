@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.css;
 
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
+import com.sun.javafx.util.DataURI;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
@@ -767,7 +768,12 @@ final public class StyleManager {
                         if (image.isError()) {
                             final PlatformLogger logger = getLogger();
                             if (logger != null && logger.isLoggable(Level.WARNING)) {
-                                logger.warning("Error loading image: " + url);
+                                DataURI dataUri = DataURI.tryParse(url);
+                                if (dataUri != null) {
+                                    logger.warning("Error loading image: " + dataUri);
+                                } else {
+                                    logger.warning("Error loading image: " + url);
+                                }
                             }
                             image = null;
                         }

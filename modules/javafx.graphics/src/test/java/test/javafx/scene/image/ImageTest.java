@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,6 +80,21 @@ public final class ImageTest {
 
         assertEquals(url, image.getUrl());
         verifyLoadedImage(image, 200, 400, true, true, 300, 100);
+    }
+
+    @Test
+    public void loadFromDataURITest() {
+        final String url =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
+            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAAGdYAABnWARjRyu0AAABGSURBVChTpY0BCgAgCAP9/6fNrJYihOZBJGOnxA2cT"
+            + "FTbddtifsrRTCXzxfSZYHYNgB5AouKZ15cHplCWLWZNjt1WGpeZBwO07SHTtA4jAAAAAElFTkSuQmCC";
+
+        registerImage(url, 20, 10);
+
+        final Image image = new Image(url);
+
+        assertEquals(url, image.getUrl());
+        verifyLoadedImage(image, 0, 0, false, false, 20, 10);
     }
 
     @Test
@@ -557,4 +572,10 @@ public final class ImageTest {
     public void createImageAsyncFromUnsupportedUrlTest() {
         new Image("unsupported:image.png", true);
     }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void createImageFromInvalidDataUri() {
+        new Image("data:invalid");
+    }
+
 }
