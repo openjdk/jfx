@@ -244,13 +244,13 @@ public class TreeTableViewKeyInputTest {
      **************************************************************************/
 
     @Test
-    public void testEnterOnFocusedRowDoesNotThrowNP() {
+    public void testEnterOnFocusedRowDoesNotThrowNPE() {
         tableView.setEditable(true);
 
         assertNull(tableView.getSelectionModel().getSelectedItem());
         assertEquals(0, tableView.getFocusModel().getFocusedCell().getRow());
 
-        // Fire an ENTER event on the focused row. This should not throw a NP!
+        // Fire an ENTER event on the focused row. This should not throw a NPE!
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertNotNull(tableView.getSelectionModel().getSelectedItem());

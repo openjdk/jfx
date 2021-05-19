@@ -185,24 +185,24 @@ public class TableViewKeyInputTest {
      * Tests for row-based single selection
      **************************************************************************/
 
-    @Test public void testDownArrowChangesSelection() {
-        sm.clearAndSelect(0);
-        keyboard.doDownArrowPress();
-        assertFalse(sm.isSelected(0));
-        assertTrue(sm.isSelected(1));
-    }
-
     @Test
-    public void testEnterOnFocusedRowDoesNotThrowNP() {
+    public void testEnterOnFocusedRowDoesNotThrowNPE() {
         tableView.setEditable(true);
 
         assertNull(tableView.getSelectionModel().getSelectedItem());
         assertEquals(0, tableView.getFocusModel().getFocusedCell().getRow());
 
-        // Fire an ENTER event on the focused row. This should not throw a NP!
+        // Fire an ENTER event on the focused row. This should not throw a NPE!
         keyboard.doKeyPress(KeyCode.ENTER);
 
         assertNotNull(tableView.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void testDownArrowChangesSelection() {
+        sm.clearAndSelect(0);
+        keyboard.doDownArrowPress();
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
     }
 
     @Test public void testDownArrowDoesNotChangeSelectionWhenAtLastIndex() {
