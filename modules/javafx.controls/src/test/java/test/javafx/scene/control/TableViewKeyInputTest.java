@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -189,6 +190,19 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress();
         assertFalse(sm.isSelected(0));
         assertTrue(sm.isSelected(1));
+    }
+
+    @Test
+    public void testEnterOnFocusedRowDoesNotThrowNP() {
+        tableView.setEditable(true);
+
+        assertNull(tableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, tableView.getFocusModel().getFocusedCell().getRow());
+
+        // Fire an ENTER event on the focused row. This should not throw a NP!
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertNotNull(tableView.getSelectionModel().getSelectedItem());
     }
 
     @Test public void testDownArrowDoesNotChangeSelectionWhenAtLastIndex() {
