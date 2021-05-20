@@ -57,6 +57,8 @@ public class HonorDeveloperSettingsTest {
     private Scene scene;
     private Rectangle rect;
     private Text text;
+    private Stage stage;
+    private Group root;
 
     private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
@@ -71,6 +73,14 @@ public class HonorDeveloperSettingsTest {
     @After
     public void cleanup() {
         resetStyleManager();
+        if (root != null) {
+            root.getChildren().clear();
+            root = null;
+        }
+        if (stage != null) {
+            stage.hide();
+            stage = null;
+        }
     }
 
     @Before
@@ -81,15 +91,15 @@ public class HonorDeveloperSettingsTest {
         text = new Text();
         text.setId("text");
 
-        Group group = new Group();
-        group.getChildren().addAll(rect, text);
+        root = new Group();
+        root.getChildren().addAll(rect, text);
 
-        scene = new Scene(group);
+        scene = new Scene(root);
         System.setProperty("binary.css", "false");
         String url = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
         StyleManager.getInstance().setDefaultUserAgentStylesheet(url);
 
-        Stage stage = new Stage();
+        stage = new Stage();
         stage.setScene(scene);
         stage.show();
     }
