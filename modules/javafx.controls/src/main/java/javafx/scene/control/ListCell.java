@@ -540,11 +540,11 @@ public class ListCell<T> extends IndexedCell<T> {
         final ListView<T> list = getListView();
         final int editIndex = list == null ? -1 : list.getEditingIndex();
         final boolean editing = isEditing();
-        final boolean match = list != null && index != -1 && index == editIndex;
+        final boolean match = (list != null) && (index != -1) && (index == editIndex);
 
-        if (match && ! editing) {
+        if (match && !editing) {
             startEdit();
-        } else if (! match && editing) {
+        } else if (!match && editing) {
             // If my index is not the one being edited then I need to cancel
             // the edit. The tricky thing here is that as part of this call
             // I cannot end up calling list.edit(-1) the way that the standard
