@@ -611,14 +611,16 @@ public class Image {
      * image file. The {@code url} parameter can be one of the following:
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
-     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
-     *         and for which a protocol handler exists
-     *     <li>a Data-URI that contains the image data
+     *     <li>a URL that is a valid argument for {@link java.net.URL#URL(String)}
      * </ol>
-     * If a Data-URI is specified, the data must be base64-encoded and the
-     * MIME type must either be empty or a subtype of the {@code image/} type.
+     * The RFC 2397 "data" scheme for URLs is supported in addition to
+     * the protocol handlers that are registered for the application.
+     * <p>
+     * If a URL uses the "data" scheme, the data must be base64-encoded
+     * and the MIME type must either be empty or a subtype of the
+     * {@code image/} type.
      *
-     * @param url a file path, URL, or Data-URI
+     * @param url a file path or URL
      * @throws NullPointerException if {@code url} is null
      * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
@@ -628,19 +630,20 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters and content
-     * loaded from the specified image file. The {@code url} parameter can be one
-     * of the following:
+     * Constructs an {@code Image} with content loaded from the specified
+     * image file. The {@code url} parameter can be one of the following:
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
-     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
-     *         and for which a protocol handler exists
-     *     <li>a Data-URI that contains the image data
+     *     <li>a URL that is a valid argument for {@link java.net.URL#URL(String)}
      * </ol>
-     * If a Data-URI is specified, the data must be base64-encoded and the
-     * MIME type must either be empty or a subtype of the {@code image/} type.
+     * The RFC 2397 "data" scheme for URLs is supported in addition to
+     * the protocol handlers that are registered for the application.
+     * <p>
+     * If a URL uses the "data" scheme, the data must be base64-encoded
+     * and the MIME type must either be empty or a subtype of the
+     * {@code image/} type.
      *
-     * @param url a file path, URL, or Data-URI
+     * @param url a file path or URL
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if {@code url} is null
@@ -652,17 +655,18 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters and content
-     * loaded from the specified image file. The {@code url} parameter can be one
-     * of the following:
+     * Constructs an {@code Image} with content loaded from the specified
+     * image file. The {@code url} parameter can be one of the following:
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
-     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
-     *         and for which a protocol handler exists
-     *     <li>a Data-URI that contains the image data
+     *     <li>a URL that is a valid argument for {@link java.net.URL#URL(String)}
      * </ol>
-     * If a Data-URI is specified, the data must be base64-encoded and the
-     * MIME type must either be empty or a subtype of the {@code image/} type.
+     * The RFC 2397 "data" scheme for URLs is supported in addition to
+     * the protocol handlers that are registered for the application.
+     * <p>
+     * If a URL uses the "data" scheme, the data must be base64-encoded
+     * and the MIME type must either be empty or a subtype of the
+     * {@code image/} type.
      *
      * @param url a file path, URL, or Data-URI
      * @param requestedWidth the image's bounding box width
@@ -684,17 +688,18 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters and content
-     * loaded from the specified image file. The {@code url} parameter can be one
-     * of the following:
+     * Constructs an {@code Image} with content loaded from the specified
+     * image file. The {@code url} parameter can be one of the following:
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
-     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
-     *         and for which a protocol handler exists
-     *     <li>a Data-URI that contains the image data
+     *     <li>a URL that is a valid argument for {@link java.net.URL#URL(String)}
      * </ol>
-     * If a Data-URI is specified, the data must be base64-encoded and the
-     * MIME type must either be empty or a subtype of the {@code image/} type.
+     * The RFC 2397 "data" scheme for URLs is supported in addition to
+     * the protocol handlers that are registered for the application.
+     * <p>
+     * If a URL uses the "data" scheme, the data must be base64-encoded
+     * and the MIME type must either be empty or a subtype of the
+     * {@code image/} type.
      *
      * @param url a file path, URL, or Data-URI
      * @param requestedWidth the image's bounding box width
