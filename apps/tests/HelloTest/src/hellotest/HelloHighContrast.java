@@ -50,7 +50,7 @@ public class HelloHighContrast extends Application {
             } else {
                 System.clearProperty("com.sun.javafx.highContrastTheme");
             }
-            PlatformImpl.setAccessibilityTheme(null); // Reads the system property
+            // PlatformImpl.setAccessibilityTheme(null); // Reads the system property
         });
 
         ToggleButton disableHighContrast = new ToggleButton("Disable High Contrast");
