@@ -57,7 +57,7 @@ import java.util.Map;
  *     <ul>
  *         <li>Windows.SPI_HighContrastOn
  *         <li>Windows.SPI_HighContrastColorScheme
-*      </ul>
+ *     </ul>
  *     <li>System colors (as reported by GetSysColor):
  *     <ul>
  *         <li>Windows.SysColor.COLOR_3DDKSHADOW
@@ -110,6 +110,7 @@ import java.util.Map;
  *         <li>Windows.UI.ViewManagement.UISettings.ColorValue_AccentLight3
  *     </ul>
  * </ol>
+ * {@code hex-color-string} is a value that can be parsed by {@link javafx.scene.paint.Color#web(String)}
  */
 public interface Theme {
 

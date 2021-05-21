@@ -714,10 +714,18 @@ public class PlatformImpl {
      * name constants.
      */
     public static void setPlatformUserAgentStylesheet(final String stylesheetUrl) {
+        String url;
+
+        switch (stylesheetUrl) {
+            case Application.STYLESHEET_CASPIAN: url = "theme:" + Caspian.class.getName(); break;
+            case Application.STYLESHEET_MODENA: url = "theme:" + Modena.class.getName(); break;
+            default: url = stylesheetUrl;
+        }
+
         if (isFxApplicationThread()) {
-            _setPlatformUserAgentStylesheet(stylesheetUrl);
+            _setPlatformUserAgentStylesheet(url);
         } else {
-            runLater(() -> _setPlatformUserAgentStylesheet(stylesheetUrl));
+            runLater(() -> _setPlatformUserAgentStylesheet(url));
         }
     }
 

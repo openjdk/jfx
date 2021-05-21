@@ -180,13 +180,13 @@ public abstract class Application {
      * is the theme that shipped as default in JavaFX 2.x.
      * @since JavaFX 8.0
      */
-    public static final String STYLESHEET_CASPIAN = "theme:" + Caspian.class.getName();
+    public static final String STYLESHEET_CASPIAN = "CASPIAN";
     /**
      * Constant for user agent stylesheet for the "Modena" theme. Modena
      * is the default theme for JavaFX 8.x.
      * @since JavaFX 8.0
      */
-    public static final String STYLESHEET_MODENA = "theme:" + Modena.class.getName();
+    public static final String STYLESHEET_MODENA = "MODENA";
 
     /**
      * Launch a standalone application. This method is typically called
