@@ -30,7 +30,6 @@
 jint GetJavaKeyModifiers(NSEvent *event);
 jint GetJavaMouseModifiers(NSUInteger buttons);
 jint GetJavaModifiers(NSEvent *event);
-jint GetJavaKeyCodeFor(unsigned short keyCode);
 jint GetJavaKeyCode(NSEvent *event);
 jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event);
 NSString* GetStringForJavaKey(jchar key);
