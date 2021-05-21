@@ -144,7 +144,7 @@ public class Modena implements Theme {
                 case "High Contrast Black":
                     accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css";
                     break;
-                case "Kontrast Nr. 1":
+                case "High Contrast #1":
                 case "High Contrast #2": //TODO #2 should be green on black
                     accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
                     break;
