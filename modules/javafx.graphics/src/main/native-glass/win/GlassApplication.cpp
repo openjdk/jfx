@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@
 #include "GlassScreen.h"
 #include "GlassWindow.h"
 #include "Timer.h"
+#include "ThemeSupport.h"
+#include "RoActivationSupport.h"
 
 #include "com_sun_glass_ui_win_WinApplication.h"
 #include "com_sun_glass_ui_win_WinSystemClipboard.h"
@@ -106,6 +108,7 @@ GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd()
     m_clipboard = NULL;
     m_hNextClipboardView = NULL;
     m_mainThreadId = ::GetCurrentThreadId();
+    m_themeProperties = NULL;
 
     Create(NULL, 0, 0, 400, 300, TEXT(""), 0, 0, NULL);
 }
@@ -125,18 +128,122 @@ LPCTSTR GlassApplication::GetWindowClassNameSuffix()
     return szGlassToolkitWindow;
 }
 
-jstring GlassApplication::GetThemeName(JNIEnv* env)
+/**
+ * Collect all theme properties and return them as a java/util/Map.
+ *
+ * The collected theme properties are:
+ *     1. High contrast color scheme properties (as reported by SystemParametersInfo):
+ *            Windows.SPI_HighContrastOn
+ *            Windows.SPI_HighContrastColorScheme
+ *
+ *     2. System colors (as reported by GetSysColor):
+ *            Windows.SysColor.COLOR_3DDKSHADOW
+ *            Windows.SysColor.COLOR_3DFACE
+ *            Windows.SysColor.COLOR_3DHIGHLIGHT
+ *            Windows.SysColor.COLOR_3DHILIGHT
+ *            Windows.SysColor.COLOR_3DLIGHT
+ *            Windows.SysColor.COLOR_3DSHADOW
+ *            Windows.SysColor.COLOR_ACTIVEBORDER
+ *            Windows.SysColor.COLOR_ACTIVECAPTION
+ *            Windows.SysColor.COLOR_APPWORKSPACE
+ *            Windows.SysColor.COLOR_BACKGROUND
+ *            Windows.SysColor.COLOR_BTNFACE
+ *            Windows.SysColor.COLOR_BTNHIGHLIGHT
+ *            Windows.SysColor.COLOR_BTNHILIGHT
+ *            Windows.SysColor.COLOR_BTNSHADOW
+ *            Windows.SysColor.COLOR_BTNTEXT
+ *            Windows.SysColor.COLOR_CAPTIONTEXT
+ *            Windows.SysColor.COLOR_DESKTOP
+ *            Windows.SysColor.COLOR_GRADIENTACTIVECAPTION
+ *            Windows.SysColor.COLOR_GRADIENTINACTIVECAPTION
+ *            Windows.SysColor.COLOR_GRAYTEXT
+ *            Windows.SysColor.COLOR_HIGHLIGHT
+ *            Windows.SysColor.COLOR_HIGHLIGHTTEXT
+ *            Windows.SysColor.COLOR_HOTLIGHT
+ *            Windows.SysColor.COLOR_INACTIVEBORDER
+ *            Windows.SysColor.COLOR_INACTIVECAPTION
+ *            Windows.SysColor.COLOR_INACTIVECAPTIONTEXT
+ *            Windows.SysColor.COLOR_INFOBK
+ *            Windows.SysColor.COLOR_INFOTEXT
+ *            Windows.SysColor.COLOR_MENU
+ *            Windows.SysColor.COLOR_MENUHILIGHT
+ *            Windows.SysColor.COLOR_MENUBAR
+ *            Windows.SysColor.COLOR_MENUTEXT
+ *            Windows.SysColor.COLOR_SCROLLBAR
+ *            Windows.SysColor.COLOR_WINDOW
+ *            Windows.SysColor.COLOR_WINDOWFRAME
+ *            Windows.SysColor.COLOR_WINDOWTEXT
+ *
+ *     3. Windows 10 theme colors (as reported by UISettings, introduced in Windows 10 build 10240):
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_Background
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_Foreground
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentDark3
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentDark2
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentDark1
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_Accent
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentLight1
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentLight2
+ *            Windows.UI.ViewManagement.UISettings.ColorValue_AccentLight3
+ */
+jobject GlassApplication::GetThemeProperties(JNIEnv* env)
 {
-    HIGHCONTRAST contrastInfo;
-    contrastInfo.cbSize = sizeof(HIGHCONTRAST);
-    ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
-    if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-        jsize length = (jsize) wcslen(contrastInfo.lpszDefaultScheme);
-        jstring jstr = env->NewString((jchar*) contrastInfo.lpszDefaultScheme, length);
-        if (CheckAndClearException(env)) return NULL;
-        return jstr;
+    jclass mapClass = (jclass)env->FindClass("java/util/HashMap");
+    if (CheckAndClearException(env)) return NULL;
+
+    jmethodID constructor = env->GetMethodID(mapClass, "<init>", "()V");
+    jobject properties = env->NewObject(mapClass, constructor);
+    if (CheckAndClearException(env)) { env->DeleteLocalRef(mapClass); return NULL; }
+
+    ThemeSupport themeSupport(env);
+    themeSupport.queryHighContrastScheme(properties);
+    themeSupport.querySystemColors(properties);
+    themeSupport.queryWindows10ThemeColors(properties);
+
+    env->DeleteLocalRef(mapClass);
+    return properties;
+}
+
+/**
+ * Collect all theme properties and notify the JavaFX application if any of the properties has changed.
+ * The change notification includes all properties, not only the changed properties.
+ */
+bool GlassApplication::UpdateThemeProperties()
+{
+    JNIEnv* env = GetEnv();
+    jobject newProperties = GetThemeProperties(env);
+    if (newProperties == NULL) {
+        return false;
     }
-    return NULL;
+
+    jclass objectClass = (jclass)env->FindClass("java/lang/Object");
+    if (CheckAndClearException(env)) return false;
+
+    jmethodID equalsMethod = env->GetMethodID(objectClass, "equals", "(Ljava/lang/Object;)Z");
+    jboolean isEqual = env->CallBooleanMethod(newProperties, equalsMethod, m_themeProperties);
+
+    if (!CheckAndClearException(env) && !isEqual) {
+        if (m_themeProperties != NULL) {
+            env->DeleteGlobalRef(m_themeProperties);
+        }
+
+        m_themeProperties = env->NewGlobalRef(newProperties);
+
+        jclass collectionsClass = (jclass)env->FindClass("java/util/Collections");
+        if (CheckAndClearException(env)) { env->DeleteLocalRef(objectClass); return false; }
+
+        jmethodID method = env->GetStaticMethodID(collectionsClass, "unmodifiableMap", "(Ljava/util/Map;)Ljava/util/Map;");
+        newProperties = env->CallStaticObjectMethod(collectionsClass, method, newProperties);
+        if (!CheckAndClearException(env)) {
+            env->CallVoidMethod(m_grefThis, javaIDs.Application.notifyPlatformThemeChangedMID, newProperties);
+        }
+
+        env->DeleteLocalRef(collectionsClass);
+        env->DeleteLocalRef(objectClass);
+        return true;
+    }
+
+    env->DeleteLocalRef(objectClass);
+    return false;
 }
 
 LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -190,12 +297,10 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_DISPLAYCHANGE:
             GlassScreen::HandleDisplayChange();
             break;
-        case WM_THEMECHANGED: {
-            JNIEnv* env = GetEnv();
-            jstring themeName = GlassApplication::GetThemeName(env);
-            jboolean result = env->CallBooleanMethod(m_grefThis, javaIDs.Application.notifyThemeChangedMID, themeName);
-            if (CheckAndClearException(env)) return 1;
-            return !result;
+        case WM_THEMECHANGED:
+        case WM_SYSCOLORCHANGE:
+        case WM_DWMCOLORIZATIONCOLORCHANGED: {
+            return UpdateThemeProperties() ? 0 : 1;
         }
     }
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
@@ -360,6 +465,9 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH) {
         GlassApplication::SetHInstance((HINSTANCE)hinstDLL);
+        tryInitializeRoActivationSupport();
+    } else if (dwReason == DLL_PROCESS_DETACH) {
+        uninitializeRoActivationSupport();
     }
     return TRUE;
 }
@@ -385,9 +493,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
     ASSERT(javaIDs.Application.reportExceptionMID);
     if (CheckAndClearException(env)) return;
 
-    javaIDs.Application.notifyThemeChangedMID =
-        env->GetMethodID(cls, "notifyThemeChanged", "(Ljava/lang/String;)Z");
-    ASSERT(javaIDs.Application.notifyThemeChangedMID);
+    javaIDs.Application.notifyPlatformThemeChangedMID =
+        env->GetMethodID(cls, "notifyPlatformThemeChanged", "(Ljava/util/Map;)V");
+    ASSERT(javaIDs.Application.notifyPlatformThemeChangedMID);
     if (CheckAndClearException(env)) return;
 
     //NOTE: substitute the cls
@@ -500,13 +608,13 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNested
 
 /*
  * Class:     com_sun_glass_ui_win_WinApplication
- * Method:    _getHighContrastTheme
- * Signature: ()Ljava/lang/String;
+ * Method:    _getPlatformThemeProperties
+ * Signature: ()Ljava/util/Map;
  */
-JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getHighContrastTheme
+JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1getPlatformThemeProperties
   (JNIEnv * env, jobject self)
 {
-    return GlassApplication::GetThemeName(env);
+    return GlassApplication::GetThemeProperties(env);
 }
 
 /*

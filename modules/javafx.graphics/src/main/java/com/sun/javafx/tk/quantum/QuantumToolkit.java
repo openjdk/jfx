@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import javafx.application.ConditionalFeature;
+import javafx.application.Theme;
 import javafx.geometry.Dimension2D;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelBuffer;
@@ -355,8 +356,11 @@ public final class QuantumToolkit extends Toolkit {
                     GlassStage.requestClosingAllWindows();
                 }
 
-                @Override public boolean handleThemeChanged(String themeName) {
-                    return PlatformImpl.setAccessibilityTheme(themeName);
+                @Override public void handlePlatformThemeChanged(Map<String, String> properties) {
+                    Theme currentTheme = PlatformImpl.getCurrentTheme();
+                    if (currentTheme != null) {
+                        currentTheme.platformThemeChanged(properties);
+                    }
                 }
             });
         }
@@ -1793,8 +1797,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public String getThemeName() {
-        return Application.GetApplication().getHighContrastTheme();
+    public Map<String, String> getPlatformThemeProperties() {
+        return Application.GetApplication().getPlatformThemeProperties();
     }
 
     @Override

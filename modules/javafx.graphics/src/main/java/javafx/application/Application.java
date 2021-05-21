@@ -25,19 +25,18 @@
 
 package javafx.application;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Map;
 
 import javafx.application.Preloader.PreloaderNotification;
+import com.sun.javafx.application.theme.Caspian;
+import com.sun.javafx.application.theme.Modena;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import com.sun.javafx.application.LauncherImpl;
 import com.sun.javafx.application.ParametersImpl;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.css.StyleManager;
 
 /**
  * Application class from which JavaFX applications extend.
@@ -181,13 +180,13 @@ public abstract class Application {
      * is the theme that shipped as default in JavaFX 2.x.
      * @since JavaFX 8.0
      */
-    public static final String STYLESHEET_CASPIAN = "CASPIAN";
+    public static final String STYLESHEET_CASPIAN = "theme:" + Caspian.class.getName();
     /**
      * Constant for user agent stylesheet for the "Modena" theme. Modena
      * is the default theme for JavaFX 8.x.
      * @since JavaFX 8.0
      */
-    public static final String STYLESHEET_MODENA = "MODENA";
+    public static final String STYLESHEET_MODENA = "theme:" + Modena.class.getName();
 
     /**
      * Launch a standalone application. This method is typically called
