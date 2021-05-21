@@ -306,7 +306,8 @@ public class ImageStorage {
             try {
                 DataURI dataUri = DataURI.tryParse(input);
                 if (dataUri != null) {
-                    if (!"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                    String mimeType = dataUri.getMimeType();
+                    if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
                         throw new ImageStorageException("Unexpected MIME type: " + dataUri.getMimeType());
                     }
 

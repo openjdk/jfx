@@ -608,12 +608,18 @@ public class Image {
 
     /**
      * Constructs an {@code Image} with content loaded from the specified
-     * url.
+     * image file. The {@code url} parameter can be one of the following:
+     * <ol>
+     *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
+     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *     <li>a Data-URI that contains the image data
+     * </ol>
+     * If a Data-URI is specified, the data must be base64-encoded and the
+     * MIME type must either be empty or a subtype of the {@code image/} type.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @param url a file path, URL, or Data-URI
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url) {
         this(validateUrl(url), null, 0, 0, false, false, false);
@@ -621,14 +627,22 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters and content
+     * loaded from the specified image file. The {@code url} parameter can be one
+     * of the following:
+     * <ol>
+     *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
+     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *     <li>a Data-URI that contains the image data
+     * </ol>
+     * If a Data-URI is specified, the data must be base64-encoded and the
+     * MIME type must either be empty or a subtype of the {@code image/} type.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a file path, URL, or Data-URI
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url, @NamedArg("backgroundLoading") boolean backgroundLoading) {
         this(validateUrl(url), null, 0, 0, false, false, backgroundLoading);
@@ -636,10 +650,18 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters and content
+     * loaded from the specified image file. The {@code url} parameter can be one
+     * of the following:
+     * <ol>
+     *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
+     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *     <li>a Data-URI that contains the image data
+     * </ol>
+     * If a Data-URI is specified, the data must be base64-encoded and the
+     * MIME type must either be empty or a subtype of the {@code image/} type.
      *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a file path, URL, or Data-URI
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -648,8 +670,8 @@ public class Image {
      * @param smooth indicates whether to use a better quality filtering
      *      algorithm or a faster one when scaling this image to fit within
      *      the specified bounding box
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(@NamedArg("url") String url, @NamedArg("requestedWidth") double requestedWidth, @NamedArg("requestedHeight") double requestedHeight,
                  @NamedArg("preserveRatio") boolean preserveRatio, @NamedArg("smooth") boolean smooth) {
@@ -659,14 +681,18 @@ public class Image {
     }
 
     /**
-     * Constructs a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters and content
+     * loaded from the specified image file. The {@code url} parameter can be one
+     * of the following:
+     * <ol>
+     *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
+     *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *     <li>a Data-URI that contains the image data
+     * </ol>
+     * If a Data-URI is specified, the data must be base64-encoded and the
+     * MIME type must either be empty or a subtype of the {@code image/} type.
      *
-     * The <i>url</i> without scheme is threated as relative to classpath,
-     * url with scheme is treated accordingly to the scheme using
-     * {@link URL#openStream()}
-     *
-     * @param url the string representing the URL to use in fetching the pixel
-     *      data
+     * @param url a file path, URL, or Data-URI
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -677,8 +703,8 @@ public class Image {
      *      the specified bounding box
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
-     * @throws NullPointerException if URL is null
-     * @throws IllegalArgumentException if URL is invalid or unsupported
+     * @throws NullPointerException if {@code url} is null
+     * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
     public Image(
             @NamedArg(value="url", defaultValue="\"\"") String url,

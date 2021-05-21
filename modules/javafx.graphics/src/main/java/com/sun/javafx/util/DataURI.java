@@ -36,6 +36,11 @@ import java.util.Objects;
 
 public class DataURI {
 
+    /**
+     * Returns whether the string has the form of a valid data URI, but does not try
+     * to decode the URI data. If this method returns {@code true}, parsing the URI
+     * with {@link #tryParse(String)} might still fail if the data is invalid.
+     */
     public static boolean isValid(String uri) {
         return decode(uri, true) != null;
     }
