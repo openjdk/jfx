@@ -53,12 +53,12 @@ import java.util.Map;
  * <p>
  * Currently, only Windows platforms report theme properties:
  * <ol>
- *     <li>High contrast color scheme (as reported by SystemParametersInfo):</li>
+ *     <li>High contrast color scheme (as reported by SystemParametersInfo):
  *     <ul>
  *         <li>Windows.SPI_HighContrastOn
  *         <li>Windows.SPI_HighContrastColorScheme
 *      </ul>
- *     <li>System colors (as reported by GetSysColor):</li>
+ *     <li>System colors (as reported by GetSysColor):
  *     <ul>
  *         <li>Windows.SysColor.COLOR_3DDKSHADOW
  *         <li>Windows.SysColor.COLOR_3DFACE
@@ -97,7 +97,7 @@ import java.util.Map;
  *         <li>Windows.SysColor.COLOR_WINDOWFRAME
  *         <li>Windows.SysColor.COLOR_WINDOWTEXT
  *     </ul>
- *     <li>Windows 10 theme colors (as reported by UISettings, introduced in Windows 10 build 10240):</li>
+ *     <li>Windows 10 theme colors (as reported by UISettings, introduced in Windows 10 build 10240):
  *     <ul>
  *         <li>Windows.UI.ViewManagement.UISettings.ColorValue_Background
  *         <li>Windows.UI.ViewManagement.UISettings.ColorValue_Foreground
