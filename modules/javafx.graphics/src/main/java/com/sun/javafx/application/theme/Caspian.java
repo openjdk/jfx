@@ -51,15 +51,18 @@ public class Caspian implements Theme {
         this.platformThemeProperties = platformThemeProperties;
 
         baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/caspian.css");
-        
+
         if (Platform.isSupported(ConditionalFeature.INPUT_TOUCH)) {
             baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+
             if (com.sun.javafx.util.Utils.isQVGAScreen()) {
                 baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
             }
+
             if (PlatformUtil.isAndroid()) {
                 baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/android.css");
             }
+
             if (PlatformUtil.isIOS()) {
                 baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/ios.css");
             }
@@ -78,7 +81,7 @@ public class Caspian implements Theme {
         }
 
         updateAccessibilityStylesheets();
-        
+
         allStylesheets = new ListBinding<>() {
             {
                 bind(baseStylesheets, accessibilityStylesheets);

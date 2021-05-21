@@ -51,16 +51,16 @@ class RoException
 {
 public:
     RoException(const char* message);
-	RoException(const char* message, HRESULT);
-	RoException(const RoException&);
-	RoException(RoException&&);
-	~RoException();
+    RoException(const char* message, HRESULT);
+    RoException(const RoException&);
+    RoException(RoException&&);
+    ~RoException();
 
     RoException& operator=(const RoException&);
     RoException& operator=(RoException&&);
 
-	const char* message() const;
+    const char* message() const;
 
 private:
-	const char* message_;
+    const char* message_;
 };

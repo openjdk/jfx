@@ -118,7 +118,7 @@ void tryInitializeRoActivationSupport()
         loadFunction(hLibComBase, pRoActivateInstance, "RoActivateInstance") &&
         loadFunction(hLibComBase, pWindowsCreateString, "WindowsCreateString") &&
         loadFunction(hLibComBase, pWindowsDeleteString, "WindowsDeleteString");
-    
+
     if (!loaded) {
         uninitializeRoActivationSupport();
     } else {

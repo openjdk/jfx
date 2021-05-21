@@ -158,5 +158,5 @@ public class Modena implements Theme {
             accessibilityStylesheets.clear();
         }
     }
-    
+
 }
