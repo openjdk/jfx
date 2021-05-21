@@ -612,6 +612,7 @@ public class Image {
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
      *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *         and for which a protocol handler exists
      *     <li>a Data-URI that contains the image data
      * </ol>
      * If a Data-URI is specified, the data must be base64-encoded and the
@@ -633,6 +634,7 @@ public class Image {
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
      *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *         and for which a protocol handler exists
      *     <li>a Data-URI that contains the image data
      * </ol>
      * If a Data-URI is specified, the data must be base64-encoded and the
@@ -656,6 +658,7 @@ public class Image {
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
      *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *         and for which a protocol handler exists
      *     <li>a Data-URI that contains the image data
      * </ol>
      * If a Data-URI is specified, the data must be base64-encoded and the
@@ -687,6 +690,7 @@ public class Image {
      * <ol>
      *     <li>a file path that is a valid argument for {@link java.io.File#File(String)}
      *     <li>an URL that is a valid argument for {@link java.net.URL#URL(String)}
+     *         and for which a protocol handler exists
      *     <li>a Data-URI that contains the image data
      * </ol>
      * If a Data-URI is specified, the data must be base64-encoded and the
