@@ -29,6 +29,7 @@ import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.ImageStorageException;
 import com.sun.javafx.iio.common.ImageTools;
+import com.sun.javafx.iio.gif.GIFImageLoader2;
 import static org.junit.Assert.*;
 import org.junit.ComparisonFailure;
 import org.junit.Test;
@@ -83,5 +84,12 @@ public class ImageStorageTest {
     public void testCorruptFirstFrame() throws ImageStorageException  {
         String path = getResourcePath("gif/animation/testBad.gif");
         ImageStorage.loadAll(path, null, 0, 0, false, 1.0f, false);
+    }
+
+    @Test
+    public void testLoadAllFramesAnimatedGIF() throws ImageStorageException {
+        String path = "https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif";
+        ImageFrame[] frames = ImageStorage.loadAll(path, null, 0, 0, true, 1.0f, true);
+        assertEquals(44, frames.length);
     }
 }
