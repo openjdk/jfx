@@ -668,7 +668,7 @@ public class Image {
      * and the MIME type must either be empty or a subtype of the
      * {@code image/} type.
      *
-     * @param url a file path, URL, or Data-URI
+     * @param url a file path or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -701,7 +701,7 @@ public class Image {
      * and the MIME type must either be empty or a subtype of the
      * {@code image/} type.
      *
-     * @param url a file path, URL, or Data-URI
+     * @param url a file path or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
