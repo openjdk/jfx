@@ -83,21 +83,6 @@ public final class ImageTest {
     }
 
     @Test
-    public void loadFromDataURITest() {
-        final String url =
-            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
-            + "nQU1BAACxjwv8YQUAAAAJcEhZcwAAGdYAABnWARjRyu0AAABGSURBVChTpY0BCgAgCAP9/6fNrJYihOZBJGOnxA2cT"
-            + "FTbddtifsrRTCXzxfSZYHYNgB5AouKZ15cHplCWLWZNjt1WGpeZBwO07SHTtA4jAAAAAElFTkSuQmCC";
-
-        registerImage(url, 20, 10);
-
-        final Image image = new Image(url);
-
-        assertEquals(url, image.getUrl());
-        verifyLoadedImage(image, 0, 0, false, false, 20, 10);
-    }
-
-    @Test
     public void loadImageFromMissingUrlTest() {
         final Image image = new Image("file:missing.png");
 

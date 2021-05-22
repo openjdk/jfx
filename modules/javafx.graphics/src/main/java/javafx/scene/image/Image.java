@@ -1158,10 +1158,7 @@ public class Image {
             }
             // Use URL constructor for validation
             return new URL(url).toString();
-        } catch (final IllegalArgumentException e) {
-            throw new IllegalArgumentException(
-                    constructDetailedExceptionMessage("Invalid URL", e), e);
-        } catch (final MalformedURLException e) {
+        } catch (final IllegalArgumentException | MalformedURLException e) {
             throw new IllegalArgumentException(
                     constructDetailedExceptionMessage("Invalid URL", e), e);
         }
