@@ -77,7 +77,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
         if (resource != null && !resource.isEmpty()) {
             if (resource.startsWith("url(")) {
-                resource = com.sun.javafx.util.Utils.stripQuotes(resource.substring(4, resource.length() - 1)).trim();
+                resource = com.sun.javafx.util.Utils.stripQuotes(resource.substring(4, resource.length() - 1));
             } else {
                 resource = com.sun.javafx.util.Utils.stripQuotes(resource);
             }
