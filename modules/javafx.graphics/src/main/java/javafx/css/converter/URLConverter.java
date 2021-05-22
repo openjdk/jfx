@@ -82,7 +82,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
                 resource = com.sun.javafx.util.Utils.stripQuotes(resource);
             }
 
-            if (DataURI.isValid(resource)) {
+            if (DataURI.isDataURI(resource)) {
                 url = resource;
             } else if (!resource.isEmpty()) {
                 String stylesheetURL = values.length > 1 && values[1] != null ? (String) values[1].getValue() : null;

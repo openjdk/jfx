@@ -777,21 +777,15 @@ final public class StyleManager {
                             }
                             image = null;
                         }
-                        imageCache.put(url, new SoftReference(image));
-
-                    } catch (IllegalArgumentException iae) {
+                        imageCache.put(url, new SoftReference<>(image));
+                    } catch (IllegalArgumentException | NullPointerException ex) {
                         // url was empty!
                         final PlatformLogger logger = getLogger();
                         if (logger != null && logger.isLoggable(Level.WARNING)) {
-                            logger.warning(iae.getLocalizedMessage());
+                            logger.warning(ex.getLocalizedMessage());
                         }
-                    } catch (NullPointerException npe) {
-                        // url was null!
-                        final PlatformLogger logger = getLogger();
-                        if (logger != null && logger.isLoggable(Level.WARNING)) {
-                            logger.warning(npe.getLocalizedMessage());
-                        }
-                    }
+                    } // url was null!
+
                 }
                 return image;
             }

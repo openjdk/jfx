@@ -1153,7 +1153,7 @@ public class Image {
                     throw new IllegalArgumentException("Invalid URL or resource not found");
                 }
                 return resource.toString();
-            } else if (DataURI.isValid(url)) {
+            } else if (DataURI.isDataURI(url)) {
                 return url;
             }
             // Use URL constructor for validation

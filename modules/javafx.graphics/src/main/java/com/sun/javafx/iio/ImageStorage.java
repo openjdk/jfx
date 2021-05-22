@@ -287,7 +287,7 @@ public class ImageStorage {
 
     /**
      * Load all images present in the specified input. For more details refer to
-     * {@link #loadAll(java.io.InputStream, com.sun.javafx.iio.ImageLoadListener, int, int, boolean, boolean)}.
+     * {@link #loadAll(InputStream, ImageLoadListener, double, double, boolean, float, boolean)}.
      */
     public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
             double width, double height, boolean preserveAspectRatio,
@@ -308,7 +308,7 @@ public class ImageStorage {
                 if (dataUri != null) {
                     String mimeType = dataUri.getMimeType();
                     if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
-                        throw new ImageStorageException("Unexpected MIME type: " + dataUri.getMimeType());
+                        throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
                     }
 
                     theStream = new ByteArrayInputStream(dataUri.getData());
@@ -318,7 +318,7 @@ public class ImageStorage {
                         String name2x = ImageTools.getScaledImageName(input);
                         theStream = ImageTools.createInputStream(name2x);
                         imgPixelScale = 2.0f;
-                    } catch (IOException e) {
+                    } catch (IOException ignored) {
                     }
                 }
                 if (theStream == null) {
@@ -330,7 +330,7 @@ public class ImageStorage {
                 } else {
                     loader = getLoaderBySignature(theStream, listener);
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new ImageStorageException(e.getMessage(), e);
             }
 
@@ -347,7 +347,7 @@ public class ImageStorage {
                 if (theStream != null) {
                     theStream.close();
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
         }
 

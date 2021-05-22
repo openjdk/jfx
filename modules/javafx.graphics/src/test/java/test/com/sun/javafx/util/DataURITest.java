@@ -36,23 +36,22 @@ public class DataURITest {
     public void testMissingDataSeparatorIsInvalid() {
         String data = "data:";
         DataURI uri = DataURI.tryParse(data);
-        assertFalse(DataURI.isValid(data));
+        assertFalse(DataURI.isDataURI(data));
         assertNull(uri);
     }
 
-    @Test
+    @Test(expected = IllegalArgumentException.class)
     public void testParametersListWithoutKeyValuePairsIsInvalid() {
         String data = "data:foo;bar;baz,";
+        assertTrue(DataURI.isDataURI(data));
         DataURI uri = DataURI.tryParse(data);
-        assertFalse(DataURI.isValid(data));
-        assertNull(uri);
     }
 
     @Test
     public void testEmptyDataBase64EncodedIsValid() {
         String data = "data:base64,";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertTrue(uri.isBase64());
         assertEquals(0, uri.getData().length);
@@ -62,7 +61,7 @@ public class DataURITest {
     public void testDataSchemeIsAcceptedCaseInvariant() {
         String data = "DATA:,";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertEquals("text", uri.getMimeType());
         assertEquals("plain", uri.getMimeSubtype());
@@ -74,7 +73,7 @@ public class DataURITest {
     public void testBase64TokenIsAcceptedCaseInvariant() {
         String data = "data:BASE64,";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertTrue(uri.isBase64());
         assertEquals(0, uri.getData().length);
@@ -84,7 +83,7 @@ public class DataURITest {
     public void testParseTextPlain() {
         String data = "data:,Hello%2C%20World!";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertFalse(uri.isBase64());
         assertEquals("text", uri.getMimeType());
@@ -97,7 +96,7 @@ public class DataURITest {
     public void testParseTextPlainBase64Encoded() {
         String data = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertTrue(uri.isBase64());
         assertEquals("text", uri.getMimeType());
@@ -110,7 +109,7 @@ public class DataURITest {
     public void testParseTextHtmlWithParameter() {
         String data = "data:text/html;foo=bar,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertFalse(uri.isBase64());
         assertEquals("text", uri.getMimeType());
@@ -124,7 +123,7 @@ public class DataURITest {
     public void testParseTextHtmlWithMultipleParameters() {
         String data = "data:text/html;foo=bar;baz=qux,%3Ch1%3EHello%2C%20World!%3C%2Fh1%3E";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertFalse(uri.isBase64());
         assertEquals("text", uri.getMimeType());
@@ -139,7 +138,7 @@ public class DataURITest {
     public void testParseTextPlainWithMultipleParametersBase64Encoded() {
         String data = "data:text/plain;foo=bar;baz=qux;base64,SGVsbG8sIFdvcmxkIQ==";
         DataURI uri = DataURI.tryParse(data);
-        assertTrue(DataURI.isValid(data));
+        assertTrue(DataURI.isDataURI(data));
         assertNotNull(uri);
         assertTrue(uri.isBase64());
         assertEquals("text", uri.getMimeType());

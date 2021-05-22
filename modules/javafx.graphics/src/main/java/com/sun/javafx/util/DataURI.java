@@ -37,30 +37,30 @@ import java.util.Objects;
 public class DataURI {
 
     /**
-     * Returns whether the string has the form of a valid data URI, but does not try
-     * to decode the URI data. If this method returns {@code true}, parsing the URI
-     * with {@link #tryParse(String)} might still fail if the data is invalid.
+     * Determines whether the specified URI uses the "data" scheme.
      */
-    public static boolean isValid(String uri) {
-        return decode(uri, true) != null;
-    }
-
-    public static DataURI tryParse(String uri) {
-        return decode(uri, false);
-    }
-
-    private static DataURI decode(String uri, boolean checkValidityOnly) {
+    public static boolean isDataURI(String uri) {
         if (uri == null || uri.length() < 6) {
-            return null;
+            return false;
         }
 
-        if (!"data:".equalsIgnoreCase(uri.substring(0, 5))) {
+        return "data:".equalsIgnoreCase(uri.substring(0, 5));
+    }
+
+    /**
+     * Parses the specified URI if it uses the "data" scheme.
+     *
+     * @return a {@link DataURI} instance if {@code uri} uses the "data" scheme, {@code null} otherwise
+     * @throws IllegalArgumentException if the URI is malformed
+     */
+    public static DataURI tryParse(String uri) {
+        if (!isDataURI(uri)) {
             return null;
         }
 
         int dataSeparator = uri.indexOf(',', 5);
         if (dataSeparator < 0) {
-            return null;
+            throw new IllegalArgumentException("Invalid URI: " + uri);
         }
 
         String mimeType = "text", mimeSubtype = "plain";
@@ -84,11 +84,11 @@ public class DataURI {
                 int separator = header.indexOf('=');
                 if (separator < 0) {
                     if (i < headers.length - 1) {
-                        return null;
+                        throw new IllegalArgumentException("Invalid URI: " + uri);
                     }
 
                     base64 = "base64".equalsIgnoreCase(headers[headers.length - 1]);
-                } else if (!checkValidityOnly) {
+                } else {
                     if (nameValuePairs.isEmpty()) {
                         nameValuePairs = new HashMap<>();
                     }
@@ -96,10 +96,6 @@ public class DataURI {
                     nameValuePairs.put(header.substring(0, separator).toLowerCase(), header.substring(separator + 1));
                 }
             }
-        }
-
-        if (checkValidityOnly) {
-            return VALID_STUB;
         }
 
         String data = uri.substring(dataSeparator + 1);
@@ -116,8 +112,6 @@ public class DataURI {
                 Base64.getDecoder().decode(data) :
                 URLDecoder.decode(data.replace("+", "%2B"), charset).getBytes(charset));
     }
-
-    private static final DataURI VALID_STUB = new DataURI(null, null, null, null, null, false, null);
 
     private final String originalUri;
     private final String originalData;
