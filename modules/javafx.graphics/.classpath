@@ -6,13 +6,21 @@
 			<attribute name="ignore_optional_problems" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" path="build/gensrc/jsl-prism"/>
+	<classpathentry kind="src" path="build/gensrc/jsl-prism">
+		<attributes>
+			<attribute name="ignore_optional_problems" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="src" path="build/hlsl/Decora">
 		<attributes>
 			<attribute name="ignore_optional_problems" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" path="build/gensrc/jsl-decora"/>
+	<classpathentry kind="src" path="build/gensrc/jsl-decora">
+		<attributes>
+			<attribute name="ignore_optional_problems" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>
