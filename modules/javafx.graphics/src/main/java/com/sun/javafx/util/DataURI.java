@@ -44,7 +44,21 @@ public class DataURI {
             return false;
         }
 
-        return "data:".equalsIgnoreCase(uri.substring(0, 5));
+        int firstNonWhitespace = 0, length = uri.length();
+
+        while (firstNonWhitespace < length) {
+            if (!Character.isWhitespace(uri.charAt(firstNonWhitespace))) {
+                break;
+            }
+
+            ++firstNonWhitespace;
+        }
+
+        if (length < firstNonWhitespace + 6) {
+            return false;
+        }
+
+        return "data:".equalsIgnoreCase(uri.substring(firstNonWhitespace, firstNonWhitespace + 5));
     }
 
     /**
@@ -56,6 +70,10 @@ public class DataURI {
     public static DataURI tryParse(String uri) {
         if (!isDataURI(uri)) {
             return null;
+        }
+
+        if (Character.isWhitespace(uri.charAt(0))) {
+            uri = uri.trim();
         }
 
         int dataSeparator = uri.indexOf(',', 5);

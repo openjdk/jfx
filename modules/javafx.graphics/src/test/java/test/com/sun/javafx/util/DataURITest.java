@@ -80,6 +80,15 @@ public class DataURITest {
     }
 
     @Test
+    public void testLeadingOrTrailingWhitespaceIsAcceptable() {
+        String data = "  data:,foo  ";
+        DataURI uri = DataURI.tryParse(data);
+        assertTrue(DataURI.isDataURI(data));
+        assertNotNull(uri);
+        assertEquals(3, uri.getData().length);
+    }
+
+    @Test
     public void testParseTextPlain() {
         String data = "data:,Hello%2C%20World!";
         DataURI uri = DataURI.tryParse(data);
