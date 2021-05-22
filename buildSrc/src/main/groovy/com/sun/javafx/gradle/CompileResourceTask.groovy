@@ -23,9 +23,11 @@
  * questions.
  */
 
+import org.gradle.api.tasks.Input
+
 class CompileResourceTask extends NativeCompileTask {
-    List<String> rcParams = new ArrayList<String>();
-    String compiler;
+    @Input List<String> rcParams = new ArrayList<String>();
+    @Input String compiler;
 
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));

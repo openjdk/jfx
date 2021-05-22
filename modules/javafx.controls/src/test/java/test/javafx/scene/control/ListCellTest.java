@@ -35,9 +35,13 @@ import javafx.scene.control.FocusModel;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListCellShim;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ListView.EditEvent;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
+import java.util.List;
+import java.util.ArrayList;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -53,9 +57,21 @@ public class ListCellTest {
     private ObservableList<String> model;
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         cell = new ListCell<String>();
         model = FXCollections.observableArrayList("Apples", "Oranges", "Pears");
         list = new ListView<String>(model);
+    }
+
+    @After public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     /*********************************************************************
@@ -833,5 +849,124 @@ public class ListCellTest {
                 cell.maxHeight(-1), 1);
     }
 
+    @Test
+    public void testChangeIndexToEditing1_jdk_8264127() {
+        assertChangeIndexToEditing(0, 1);
+    }
+
+    @Test
+    public void testChangeIndexToEditing2_jdk_8264127() {
+        assertChangeIndexToEditing(-1, 1);
+    }
+
+    @Test
+    public void testChangeIndexToEditing3_jdk_8264127() {
+        assertChangeIndexToEditing(1, 0);
+    }
+
+    @Test
+    public void testChangeIndexToEditing4_jdk_8264127() {
+        assertChangeIndexToEditing(-1, 0);
+    }
+
+
+
+    private void assertChangeIndexToEditing(int initialCellIndex, int listEditingIndex) {
+        list.getFocusModel().focus(-1);
+        List<EditEvent> events = new ArrayList<EditEvent>();
+        list.setOnEditStart(e -> {
+            events.add(e);
+        });
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(initialCellIndex);
+        list.edit(listEditingIndex);
+        assertEquals("sanity: list editingIndex ", listEditingIndex, list.getEditingIndex());
+        assertFalse("sanity: cell must not be editing", cell.isEditing());
+        cell.updateIndex(listEditingIndex);
+        assertEquals("sanity: index updated ", listEditingIndex, cell.getIndex());
+        assertEquals("list editingIndex unchanged by cell", listEditingIndex, list.getEditingIndex());
+        assertTrue(cell.isEditing());
+        assertEquals(1, events.size());
+    }
+
+    @Test
+    public void testChangeIndexOffEditing0_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(1, 0);
+    }
+    @Test
+    public void testChangeIndexOffEditing1_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(1, -1);
+    }
+    @Test
+    public void testChangeIndexOffEditing2_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(0, 1);
+    }
+    @Test
+    public void testChangeIndexOffEditing3_jdk_8264127() {
+        assertUpdateCellIndexOffEditing(0, -1);
+    }
+
+    public void assertUpdateCellIndexOffEditing(int editingIndex, int cancelIndex) {
+        list.getFocusModel().focus(-1);
+        List<EditEvent> events = new ArrayList<EditEvent>();
+        list.setOnEditCancel(e -> {
+            events.add(e);
+        });
+        list.setEditable(true);
+        cell.updateListView(list);
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        assertEquals("sanity: list editingIndex ", editingIndex, list.getEditingIndex());
+        assertTrue("sanity: cell must be editing", cell.isEditing());
+        cell.updateIndex(cancelIndex); // change cell index to negative
+        assertEquals("sanity: index updated ", cancelIndex, cell.getIndex());
+        assertEquals("list editingIndex unchanged by cell", editingIndex, list.getEditingIndex());
+        assertFalse("cell must not be editing if cell index is " + cell.getIndex(), cell.isEditing());
+        assertEquals(1, events.size());
+    }
+
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        ListCell<String> cell = new MisbehavingOnCancelListCell<>();
+
+        list.setEditable(true);
+        cell.updateListView(list);
+
+        int editingIndex = 1;
+        int intermediate = 0;
+        int notEditingIndex = -1;
+        cell.updateIndex(editingIndex);
+        list.edit(editingIndex);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            list.edit(intermediate);
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("list must be editing at intermediate index", intermediate, list.getEditingIndex());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        list.edit(editingIndex);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // just catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("list editing must be cancelled by cell", notEditingIndex, list.getEditingIndex());
+        }
+    }
+
+    public static class MisbehavingOnCancelListCell<T> extends ListCell<T> {
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+    }
 
 }
