@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -267,12 +267,12 @@ public class TableColumnHeader extends Region {
     };
 
     private static final EventHandler<MouseEvent> mouseReleasedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
+        header.getTableHeaderRow().columnDragLock = false;
+
         if (me.isPopupTrigger()) return;
         if (me.isConsumed()) return;
         me.consume();
-
-        TableColumnHeader header = (TableColumnHeader) me.getSource();
-        header.getTableHeaderRow().columnDragLock = false;
 
         if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
             header.columnReorderingComplete();

@@ -58,8 +58,9 @@ public class HonorDeveloperSettingsTest {
     private Rectangle rect;
     private Text text;
 
-    private static void resetStyleManager() {
+    private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
+        sm.forget(scene);
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
         sm.stylesheetContainerMap.clear();

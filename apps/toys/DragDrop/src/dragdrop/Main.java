@@ -82,7 +82,7 @@ public class Main extends Application {
             @Override public void handle(MouseEvent event) {
                 Stage stage = new Stage();
                 try {
-                    ((Application) app.newInstance()).start(stage);
+                    ((Application) app.getDeclaredConstructor().newInstance()).start(stage);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
