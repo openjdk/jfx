@@ -39,7 +39,7 @@ public class DataURI {
     /**
      * Determines whether the specified URI uses the "data" scheme.
      */
-    public static boolean isDataURI(String uri) {
+    public static boolean matchScheme(String uri) {
         if (uri == null || uri.length() < 6) {
             return false;
         }
@@ -68,7 +68,7 @@ public class DataURI {
      * @throws IllegalArgumentException if the URI is malformed
      */
     public static DataURI tryParse(String uri) {
-        if (!isDataURI(uri)) {
+        if (!matchScheme(uri)) {
             return null;
         }
 
