@@ -42,8 +42,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
-//import javafx.scene.control.TableColumn;
-//import javafx.scene.control.TreeTableColumn.CellEditEvent;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.TreeView.EditEvent;
 
