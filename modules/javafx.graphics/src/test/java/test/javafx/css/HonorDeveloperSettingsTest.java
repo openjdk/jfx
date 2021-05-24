@@ -45,6 +45,7 @@ import javafx.stage.Window;
 import com.sun.javafx.util.Logging;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import com.sun.javafx.logging.PlatformLogger;
 
@@ -69,6 +70,13 @@ public class HonorDeveloperSettingsTest {
         sm.stylesheetContainerMap.clear();
         sm.cacheContainerMap.clear();
         sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @BeforeClass
+    public static void setUpClass() {
+        if (PlatformUtil.isUnix()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8267425
+        }
     }
 
     @After
@@ -128,9 +136,6 @@ public class HonorDeveloperSettingsTest {
 
     @Test
     public void testOpacityWithManuallyChangedValueAndInlineStyleIsSetToInlineStyle() {
-        if (PlatformUtil.isUnix()) {
-            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8267425
-        }
         rect.applyCss();
         assertEquals(.76, rect.getOpacity(), 0.01);
         rect.setStyle("-fx-opacity: 42%;");
