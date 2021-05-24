@@ -271,7 +271,7 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
         if (newObservable == null) {
             throw new NullPointerException("Cannot bind to null");
         }
-        if (!newObservable.equals(observable)) {
+        if (newObservable != observable) {
             unbind();
             observable = newObservable;
             if (listener == null) {
