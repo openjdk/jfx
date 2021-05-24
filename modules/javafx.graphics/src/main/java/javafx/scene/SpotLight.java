@@ -39,18 +39,32 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A {@code PointLight} that radiates light in a cone in a specific direction. The direction of the {@code SpotLight} is
- * defined by the {@link #directionProperty() direction} property.
+ * A {@code SpotLight} is a {@code PointLight} that radiates light in a cone in a specific direction. The direction is
+ * defined by the {@link #directionProperty() direction} vector property relative to the rotation of the
+ * {@code SpotLight} that is set with the rotation transforms of the node. For example, if the direction vector is
+ * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
+ * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
  * <p>
- * The light cone is defined by 3 factors: an {@link #innerAngleProperty() inner angle}, an {@link #outerAngleProperty()
- * outer angle}, and a {@link #falloffProperty() falloff} factor. For a point whose angle to the light is {@code a}, if
- * {@code a < innerAngle} then that point receives maximum illumination, if {@code a > outerAngle} then that point
- * receives no illumination, and if {@code innerAngle <= a <= outerAngle} then the illumination is determined by the
- * formula
- * <pre>I = pow((cos(a) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
- * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
- * behavior of the drop. The valid ranges for these properties are {@code 0 <= innerAngle <= outerAngle <= 180} and
- * {@code falloff >= 0}; values outside either of these ranges can produce unexpected results.
+ * In addition to the attenuation factors defined in {@code PointLight}, the {@code Spotlight}'s intensity is also
+ * affected by 3 factors:
+ * <ul>
+ * <li> {@link #innerAngleProperty() inner angle}: the angle of the inner cone
+ * <li> {@link #outerAngleProperty() outer angle}: the angle of the outer cone
+ * <li> {@link #falloffProperty() falloff}: the factor that controls the light's intensity drop inside the outer cone
+ * </ul>
+ * The valid ranges for these properties are {@code 0 <= innerAngle <= outerAngle <= 180} and {@code falloff >= 0};
+ * values outside either of these ranges can produce unexpected results.
+ * <p>
+ * For a point whose vector to the light forms an angle {@code theta} with the direction of the light, if
+ * <ul>
+ * <li>{@code theta < innerAngle} then that point receives maximum illumination
+ * <li>{@code theta > outerAngle} then that point receives no illumination
+ * <li>{@code innerAngle <= theta <= outerAngle} then the illumination is determined by the formula
+ *
+ * <pre>I = pow((cos(theta) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
+ *
+ * which represents a drop in illumination from the inner angle to the outer angle.
+ * </ul>
  * <p>
  * <img src="doc-files/spotlight.png" alt="Image of the Spotlight">
  *
@@ -73,7 +87,7 @@ public class SpotLight extends PointLight {
     }
 
     {
-        // To initialize the class helper at the beginning each constructor of this class
+        // To initialize the class helper at the beginning of each constructor of this class
         SpotLightHelper.initHelper(this);
     }
 
@@ -95,7 +109,7 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The direction the spotlight is facing. The vector need not be normalized.
+     * The direction vector of the spotlight. The vector need not be normalized.
      *
      * @defaultValue {@code Point3D(0, 0, 1)}
      */
