@@ -78,15 +78,15 @@ public class ControlAcceleratorSupport {
         if (scene != null) {
             doAcceleratorInstall(items, scene);
         }
-        // listen to the scene property on the anchor until it is set, and
-        // then install the accelerators
-        // Scene change listener is added to the anchor to anchor for scenarios like,
-        // 1. Installing the accelerators when Control is added to Scene
+        // Scene change listener is added to the anchor for scenarios like,
+        // 1. Installing accelerators when Control is added to Scene
         // 2. Removing accelerators when Control is removed from Scene
+        // Remove previously added listener if any
         if (sceneChangeListenerMap.containsKey(anchor)) {
             anchor.sceneProperty().removeListener(sceneChangeListenerMap.get(anchor));
             sceneChangeListenerMap.remove(anchor);
         }
+        // Add a new listener
         anchor.sceneProperty().addListener(getSceneChangeListener(anchor, items));
     }
 
@@ -239,9 +239,10 @@ public class ControlAcceleratorSupport {
     public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
         Scene scene = anchor.getScene();
         if (scene == null) {
-            ChangeListener<Scene> listener = sceneChangeListenerMap.get(anchor);
-            if (listener != null) {
-                anchor.sceneProperty().removeListener(listener);
+            // The Node is not part of a Scene: Remove the Scene listener that was added
+            // at the time of installing the accelerators.
+            if (sceneChangeListenerMap.containsKey(anchor)) {
+                anchor.sceneProperty().removeListener(sceneChangeListenerMap.get(anchor));
                 sceneChangeListenerMap.remove(anchor);
             }
         }
