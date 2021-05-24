@@ -28,6 +28,7 @@ package test.javafx.css;
 import static org.junit.Assert.*;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.PlatformUtil;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -46,6 +47,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import com.sun.javafx.logging.PlatformLogger;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * AKA: RT-7401. Tests that the pattern used works by testing opacity
@@ -125,6 +128,9 @@ public class HonorDeveloperSettingsTest {
 
     @Test
     public void testOpacityWithManuallyChangedValueAndInlineStyleIsSetToInlineStyle() {
+        if (PlatformUtil.isUnix()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8267425
+        }
         rect.applyCss();
         assertEquals(.76, rect.getOpacity(), 0.01);
         rect.setStyle("-fx-opacity: 42%;");
