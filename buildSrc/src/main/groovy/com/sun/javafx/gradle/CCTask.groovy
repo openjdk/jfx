@@ -23,15 +23,16 @@
  * questions.
  */
 
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional
 
 class CCTask extends NativeCompileTask {
-    String compiler;
-    @Optional List<String> linkerOptions = new ArrayList<String>();
+    @Input String compiler;
+    @Optional @Input List<String> linkerOptions = new ArrayList<String>();
     @Optional @InputDirectory File headers;
-    @Optional Closure eachOutputFile; // will be given a File and must return a File
-    @Optional boolean exe = false;
+    @Optional @Input Closure eachOutputFile; // will be given a File and must return a File
+    @Input boolean exe = false;
 
     protected File outputFile(File sourceFile) {
         final String outFileName = sourceFile.getName().substring(0, sourceFile.getName().lastIndexOf("."));

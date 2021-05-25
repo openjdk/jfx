@@ -28,6 +28,7 @@ package test.javafx.css;
 import static org.junit.Assert.*;
 
 import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.PlatformUtil;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -44,8 +45,11 @@ import javafx.stage.Window;
 import com.sun.javafx.util.Logging;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import com.sun.javafx.logging.PlatformLogger;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * AKA: RT-7401. Tests that the pattern used works by testing opacity
@@ -58,13 +62,21 @@ public class HonorDeveloperSettingsTest {
     private Rectangle rect;
     private Text text;
 
-    private static void resetStyleManager() {
+    private void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
+        sm.forget(scene);
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
         sm.stylesheetContainerMap.clear();
         sm.cacheContainerMap.clear();
         sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @BeforeClass
+    public static void setUpClass() {
+        if (PlatformUtil.isUnix()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8267425
+        }
     }
 
     @After

@@ -137,10 +137,19 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
         if (fnames_list_len > 0) {
             jFileNames = env->NewObjectArray((jsize)fnames_list_len, jStringCls, NULL);
             EXCEPTION_OCCURED(env);
+            const jmethodID bytesInit = env->GetMethodID(jStringCls, "<init>", "([B)V");
+            EXCEPTION_OCCURED(env);
             for (guint i = 0; i < fnames_list_len; i++) {
                 filename = (char*)g_slist_nth(fnames_gslist, i)->data;
                 LOG1("Add [%s] into returned filenames\n", filename)
-                jfilename = env->NewStringUTF(filename);
+                int len = strlen(filename);
+                jbyteArray bytes = env->NewByteArray(len);
+                EXCEPTION_OCCURED(env);
+                env->SetByteArrayRegion(bytes, 0, len, (jbyte *)filename);
+                EXCEPTION_OCCURED(env);
+                jfilename = (jstring) env->NewObject(jStringCls, bytesInit, bytes);
+                EXCEPTION_OCCURED(env);
+                env->DeleteLocalRef(bytes);
                 EXCEPTION_OCCURED(env);
                 env->SetObjectArrayElement(jFileNames, (jsize)i, jfilename);
                 EXCEPTION_OCCURED(env);

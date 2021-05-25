@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -377,7 +377,10 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (double) duration {
     if (self.player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
-        return CMTimeGetSeconds(self.player.currentItem.duration);
+        CMTime dur = self.player.currentItem.duration;
+        if (!CMTIME_IS_INDEFINITE(dur)) {
+            return CMTimeGetSeconds(self.player.currentItem.duration);
+        }
     }
     return -1.0;
 }
