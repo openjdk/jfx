@@ -51,6 +51,7 @@ import javafx.stage.Window;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
+import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
 import java.io.IOException;
@@ -920,7 +921,7 @@ final public class StyleManager {
             if (url != null && "file".equals(url.getProtocol())) {
 
                 // not looking for security, just a checksum. MD5 should be faster than SHA
-                try (final InputStream stream = url.openStream();
+                try (final BufferedInputStream stream = new BufferedInputStream(url.openStream());
                     final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5")); ) {
                     dis.getMessageDigest().reset();
                     while (dis.read() != -1) { /* empty loop body is intentional */ }
