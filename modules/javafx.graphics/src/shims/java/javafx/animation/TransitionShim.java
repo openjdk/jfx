@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package javafx.animation;
 
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import javafx.scene.Node;
 
 public abstract class TransitionShim extends Transition {
@@ -38,7 +38,7 @@ public abstract class TransitionShim extends Transition {
         super(targetFramerate);
     }
 
-    protected TransitionShim(AbstractMasterTimer timer) {
+    protected TransitionShim(AbstractPrimaryTimer timer) {
         super(timer);
     }
 

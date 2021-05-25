@@ -26,9 +26,6 @@
 #include "config.h"
 #include "JSDataView.h"
 
-#include "ArrayBufferView.h"
-#include "DataView.h"
-#include "Error.h"
 #include "JSCInlines.h"
 #include "TypeError.h"
 
@@ -71,13 +68,13 @@ JSDataView* JSDataView::create(
 JSDataView* JSDataView::createUninitialized(JSGlobalObject*, Structure*, unsigned)
 {
     UNREACHABLE_FOR_PLATFORM();
-    return 0;
+    return nullptr;
 }
 
 JSDataView* JSDataView::create(JSGlobalObject*, Structure*, unsigned)
 {
     UNREACHABLE_FOR_PLATFORM();
-    return 0;
+    return nullptr;
 }
 
 bool JSDataView::set(JSGlobalObject*, unsigned, JSObject*, unsigned, unsigned)
@@ -152,7 +149,7 @@ bool JSDataView::defineOwnProperty(
 }
 
 bool JSDataView::deleteProperty(
-    JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName)
+    JSCell* cell, JSGlobalObject* globalObject, PropertyName propertyName, DeletePropertySlot& slot)
 {
     VM& vm = globalObject->vm();
     JSDataView* thisObject = jsCast<JSDataView*>(cell);
@@ -160,7 +157,7 @@ bool JSDataView::deleteProperty(
         || propertyName == vm.propertyNames->byteOffset)
         return false;
 
-    return Base::deleteProperty(thisObject, globalObject, propertyName);
+    return Base::deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
 void JSDataView::getOwnNonIndexPropertyNames(

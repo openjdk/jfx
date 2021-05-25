@@ -25,15 +25,14 @@
 
 #include "config.h"
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+#if ENABLE(VIDEO)
 
 #include "MediaControlsHost.h"
 
 #include "CaptionUserPreferences.h"
-#include "Element.h"
 #include "HTMLMediaElement.h"
 #include "Logging.h"
-#include "MediaControlElements.h"
+#include "MediaControlTextTrackContainerElement.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "RenderTheme.h"
@@ -46,44 +45,45 @@ namespace WebCore {
 
 const AtomString& MediaControlsHost::automaticKeyword()
 {
-    static NeverDestroyed<const AtomString> automatic("automatic", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> automatic("automatic", AtomString::ConstructFromLiteral);
     return automatic;
 }
 
 const AtomString& MediaControlsHost::forcedOnlyKeyword()
 {
-    static NeverDestroyed<const AtomString> forcedOn("forced-only", AtomString::ConstructFromLiteral);
-    return forcedOn;
+    static MainThreadNeverDestroyed<const AtomString> forcedOnly("forced-only", AtomString::ConstructFromLiteral);
+    return forcedOnly;
 }
 
-const AtomString& MediaControlsHost::alwaysOnKeyword()
+static const AtomString& alwaysOnKeyword()
 {
-    static NeverDestroyed<const AtomString> alwaysOn("always-on", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("always-on", AtomString::ConstructFromLiteral);
     return alwaysOn;
 }
 
-const AtomString& MediaControlsHost::manualKeyword()
+static const AtomString& manualKeyword()
 {
-    static NeverDestroyed<const AtomString> alwaysOn("manual", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> alwaysOn("manual", AtomString::ConstructFromLiteral);
     return alwaysOn;
 }
 
-
-Ref<MediaControlsHost> MediaControlsHost::create(HTMLMediaElement* mediaElement)
+Ref<MediaControlsHost> MediaControlsHost::create(HTMLMediaElement& mediaElement)
 {
     return adoptRef(*new MediaControlsHost(mediaElement));
 }
 
-MediaControlsHost::MediaControlsHost(HTMLMediaElement* mediaElement)
-    : m_mediaElement(mediaElement)
+MediaControlsHost::MediaControlsHost(HTMLMediaElement& mediaElement)
+    : m_mediaElement(makeWeakPtr(mediaElement))
 {
-    ASSERT(mediaElement);
 }
 
 MediaControlsHost::~MediaControlsHost() = default;
 
 Vector<RefPtr<TextTrack>> MediaControlsHost::sortedTrackListForMenu(TextTrackList& trackList)
 {
+    if (!m_mediaElement)
+        return { };
+
     Page* page = m_mediaElement->document().page();
     if (!page)
         return { };
@@ -93,6 +93,9 @@ Vector<RefPtr<TextTrack>> MediaControlsHost::sortedTrackListForMenu(TextTrackLis
 
 Vector<RefPtr<AudioTrack>> MediaControlsHost::sortedTrackListForMenu(AudioTrackList& trackList)
 {
+    if (!m_mediaElement)
+        return { };
+
     Page* page = m_mediaElement->document().page();
     if (!page)
         return { };
@@ -102,30 +105,33 @@ Vector<RefPtr<AudioTrack>> MediaControlsHost::sortedTrackListForMenu(AudioTrackL
 
 String MediaControlsHost::displayNameForTrack(const Optional<TextOrAudioTrack>& track)
 {
-    if (!track)
+    if (!m_mediaElement || !track)
         return emptyString();
 
     Page* page = m_mediaElement->document().page();
     if (!page)
         return emptyString();
 
-    return WTF::visit([&page](auto& track) {
+    return WTF::visit([page] (auto& track) {
         return page->group().captionPreferences().displayNameForTrack(track.get());
     }, track.value());
 }
 
-TextTrack* MediaControlsHost::captionMenuOffItem()
+TextTrack& MediaControlsHost::captionMenuOffItem()
 {
     return TextTrack::captionMenuOffItem();
 }
 
-TextTrack* MediaControlsHost::captionMenuAutomaticItem()
+TextTrack& MediaControlsHost::captionMenuAutomaticItem()
 {
     return TextTrack::captionMenuAutomaticItem();
 }
 
 AtomString MediaControlsHost::captionDisplayMode() const
 {
+    if (!m_mediaElement)
+        return emptyAtom();
+
     Page* page = m_mediaElement->document().page();
     if (!page)
         return emptyAtom();
@@ -147,15 +153,15 @@ AtomString MediaControlsHost::captionDisplayMode() const
 
 void MediaControlsHost::setSelectedTextTrack(TextTrack* track)
 {
-    m_mediaElement->setSelectedTextTrack(track);
+    if (m_mediaElement)
+        m_mediaElement->setSelectedTextTrack(track);
 }
 
 Element* MediaControlsHost::textTrackContainer()
 {
-    if (!m_textTrackContainer) {
-        m_textTrackContainer = MediaControlTextTrackContainerElement::create(m_mediaElement->document());
-        m_textTrackContainer->setMediaController(m_mediaElement);
-    }
+    if (!m_textTrackContainer && m_mediaElement)
+        m_textTrackContainer = MediaControlTextTrackContainerElement::create(m_mediaElement->document(), *m_mediaElement);
+
     return m_textTrackContainer.get();
 }
 
@@ -163,6 +169,12 @@ void MediaControlsHost::updateTextTrackContainer()
 {
     if (m_textTrackContainer)
         m_textTrackContainer->updateDisplay();
+}
+
+void MediaControlsHost::updateTextTrackRepresentationImageIfNeeded()
+{
+    if (m_textTrackContainer)
+        m_textTrackContainer->updateTextTrackRepresentationImageIfNeeded();
 }
 
 void MediaControlsHost::enteredFullscreen()
@@ -185,42 +197,40 @@ void MediaControlsHost::updateCaptionDisplaySizes(ForceUpdate force)
 
 bool MediaControlsHost::allowsInlineMediaPlayback() const
 {
-    return !m_mediaElement->mediaSession().requiresFullscreenForVideoPlayback();
+    return m_mediaElement && !m_mediaElement->mediaSession().requiresFullscreenForVideoPlayback();
 }
 
 bool MediaControlsHost::supportsFullscreen() const
 {
-    return m_mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
+    return m_mediaElement && m_mediaElement->supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenModeStandard);
 }
 
 bool MediaControlsHost::isVideoLayerInline() const
 {
-    return m_mediaElement->isVideoLayerInline();
+    return m_mediaElement && m_mediaElement->isVideoLayerInline();
 }
 
 bool MediaControlsHost::isInMediaDocument() const
 {
-    return m_mediaElement->document().isMediaDocument();
-}
-
-void MediaControlsHost::setPreparedToReturnVideoLayerToInline(bool value)
-{
-    m_mediaElement->setPreparedToReturnVideoLayerToInline(value);
+    return m_mediaElement && m_mediaElement->document().isMediaDocument();
 }
 
 bool MediaControlsHost::userGestureRequired() const
 {
-    return !m_mediaElement->mediaSession().playbackPermitted();
+    return m_mediaElement && !m_mediaElement->mediaSession().playbackPermitted();
 }
 
 bool MediaControlsHost::shouldForceControlsDisplay() const
 {
-    return m_mediaElement->shouldForceControlsDisplay();
+    return m_mediaElement && m_mediaElement->shouldForceControlsDisplay();
 }
 
 String MediaControlsHost::externalDeviceDisplayName() const
 {
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
+    if (!m_mediaElement)
+        return emptyString();
+
     auto player = m_mediaElement->player();
     if (!player) {
         LOG(Media, "MediaControlsHost::externalDeviceDisplayName - returning \"\" because player is NULL");
@@ -229,7 +239,6 @@ String MediaControlsHost::externalDeviceDisplayName() const
 
     String name = player->wirelessPlaybackTargetName();
     LOG(Media, "MediaControlsHost::externalDeviceDisplayName - returning \"%s\"", name.utf8().data());
-
     return name;
 #else
     return emptyString();
@@ -241,6 +250,9 @@ auto MediaControlsHost::externalDeviceType() const -> DeviceType
 #if !ENABLE(WIRELESS_PLAYBACK_TARGET)
     return DeviceType::None;
 #else
+    if (!m_mediaElement)
+        return DeviceType::None;
+
     auto player = m_mediaElement->player();
     if (!player) {
         LOG(Media, "MediaControlsHost::externalDeviceType - returning \"none\" because player is NULL");
@@ -248,11 +260,11 @@ auto MediaControlsHost::externalDeviceType() const -> DeviceType
     }
 
     switch (player->wirelessPlaybackTargetType()) {
-    case MediaPlayer::TargetTypeNone:
+    case MediaPlayer::WirelessPlaybackTargetType::TargetTypeNone:
         return DeviceType::None;
-    case MediaPlayer::TargetTypeAirPlay:
+    case MediaPlayer::WirelessPlaybackTargetType::TargetTypeAirPlay:
         return DeviceType::Airplay;
-    case MediaPlayer::TargetTypeTVOut:
+    case MediaPlayer::WirelessPlaybackTargetType::TargetTypeTVOut:
         return DeviceType::Tvout;
     }
 
@@ -263,46 +275,44 @@ auto MediaControlsHost::externalDeviceType() const -> DeviceType
 
 bool MediaControlsHost::controlsDependOnPageScaleFactor() const
 {
-    return m_mediaElement->mediaControlsDependOnPageScaleFactor();
+    return m_mediaElement && m_mediaElement->mediaControlsDependOnPageScaleFactor();
 }
 
 void MediaControlsHost::setControlsDependOnPageScaleFactor(bool value)
 {
-    m_mediaElement->setMediaControlsDependOnPageScaleFactor(value);
+    if (m_mediaElement)
+        m_mediaElement->setMediaControlsDependOnPageScaleFactor(value);
 }
 
-String MediaControlsHost::generateUUID() const
+String MediaControlsHost::generateUUID()
 {
     return createCanonicalUUIDString();
 }
 
-String MediaControlsHost::shadowRootCSSText() const
+String MediaControlsHost::shadowRootCSSText()
 {
     return RenderTheme::singleton().modernMediaControlsStyleSheet();
 }
 
-String MediaControlsHost::base64StringForIconNameAndType(const String& iconName, const String& iconType) const
+String MediaControlsHost::base64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
     return RenderTheme::singleton().mediaControlsBase64StringForIconNameAndType(iconName, iconType);
 }
 
-String MediaControlsHost::formattedStringForDuration(double durationInSeconds) const
+String MediaControlsHost::formattedStringForDuration(double durationInSeconds)
 {
     return RenderTheme::singleton().mediaControlsFormattedStringForDuration(durationInSeconds);
 }
 
 bool MediaControlsHost::compactMode() const
 {
-    if (m_simulateCompactMode)
-        return true;
-
 #if PLATFORM(WATCHOS)
     return true;
 #else
-    return false;
+    return m_simulateCompactMode;
 #endif
 }
 
 }
 
-#endif
+#endif // ENABLE(VIDEO)

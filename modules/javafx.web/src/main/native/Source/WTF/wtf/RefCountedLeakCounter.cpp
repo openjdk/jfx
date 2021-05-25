@@ -21,11 +21,8 @@
 #include "config.h"
 #include <wtf/RefCountedLeakCounter.h>
 
-#include <wtf/HashCountedSet.h>
-
-namespace WTF {
-
 #ifdef NDEBUG
+namespace WTF {
 
 void RefCountedLeakCounter::suppressMessages(const char*) { }
 void RefCountedLeakCounter::cancelMessageSuppression(const char*) { }
@@ -36,13 +33,21 @@ RefCountedLeakCounter::~RefCountedLeakCounter() { }
 void RefCountedLeakCounter::increment() { }
 void RefCountedLeakCounter::decrement() { }
 
+} // namespace WTF
 #else
+#include <wtf/HashCountedSet.h>
+
+namespace WTF {
 
 #define LOG_CHANNEL_PREFIX Log
 #if RELEASE_LOG_DISABLED
 static WTFLogChannel LogRefCountedLeaks = { WTFLogChannelState::On, "RefCountedLeaks", WTFLogLevel::Error };
-#else
+#endif
+#if USE(OS_LOG) && !RELEASE_LOG_DISABLED
 static WTFLogChannel LogRefCountedLeaks = { WTFLogChannelState::On, "RefCountedLeaks", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM, OS_LOG_DEFAULT };
+#endif
+#if USE(JOURNALD) && !RELEASE_LOG_DISABLED
+static WTFLogChannel LogRefCountedLeaks = { WTFLogChannelState::On, "RefCountedLeaks", WTFLogLevel::Error, LOG_CHANNEL_WEBKIT_SUBSYSTEM };
 #endif
 
 typedef HashCountedSet<const char*, PtrHash<const char*>> ReasonSet;
@@ -91,6 +96,5 @@ void RefCountedLeakCounter::decrement()
     --m_count;
 }
 
-#endif
-
 } // namespace WTF
+#endif

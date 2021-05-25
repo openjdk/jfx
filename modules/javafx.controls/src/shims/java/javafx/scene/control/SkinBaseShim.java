@@ -28,7 +28,7 @@ package javafx.scene.control;
 import java.util.List;
 import javafx.scene.Node;
 
-public class SkinBaseShim<C extends Control> extends SkinBase {
+public class SkinBaseShim<C extends Control> extends SkinBase<C> {
 
     public SkinBaseShim(final C control) {
         super(control);

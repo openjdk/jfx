@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.*;
+import test.javafx.collections.MockListObserver;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -906,7 +907,9 @@ public class TreeViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
     }
 
     @Test public void test_rt27180_collapseBranch_childSelected_singleSelection() {
@@ -1205,7 +1208,6 @@ public class TreeViewTest {
 
         treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
             while (c.next()) {
-                System.out.println(c);
                 rt_33559_count++;
             }
         });
@@ -1747,7 +1749,6 @@ public class TreeViewTest {
         textFieldTreeView.setCellFactory(TextFieldTreeCell.forTreeView());
         textFieldTreeView.setOnEditCancel(t -> {
             rt_35889_cancel_count++;
-            System.out.println("On Edit Cancel: " + t);
         });
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
@@ -1851,9 +1852,9 @@ public class TreeViewTest {
 
         final TreeView<String> treeView = new TreeView<String>(root);
 
-        treeView.getFocusModel().focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("focusedIndex: " + oldValue + " to " + newValue);
-        });
+        //treeView.getFocusModel().focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+        //    System.out.println("focusedIndex: " + oldValue + " to " + newValue);
+        //});
 
         MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
         FocusModel<TreeItem<String>> fm = treeView.getFocusModel();
@@ -2723,7 +2724,6 @@ public class TreeViewTest {
     private void test_rt_39482_selectRow(String expectedString,
                                          MultipleSelectionModel<TreeItem<String>> sm,
                                          int rowToSelect) {
-        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
@@ -3480,7 +3480,6 @@ public class TreeViewTest {
             // number of items selected
             c.reset();
             c.next();
-            System.out.println("Added items: " + c.getAddedSubList());
             assertEquals(indices.length, c.getAddedSize());
             assertArrayEquals(indices, c.getAddedSubList().stream().mapToInt(i -> i).toArray());
         };
@@ -3625,7 +3624,6 @@ public class TreeViewTest {
         assertEquals(1, itemsEventCount.get());
 
         step.set(1);
-        System.out.println("about to collapse now");
         childNode1.setExpanded(false); // collapse Child Node 1 and expect both children to be deselected
         assertTrue(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
@@ -3663,8 +3661,8 @@ public class TreeViewTest {
 
         view.expandedItemCountProperty().addListener((observable, oldCount, newCount) -> {
             if (childNode1.isExpanded()) return;
-            System.out.println(sm.getSelectedIndices());
-            System.out.println(sm.getSelectedItems());
+            //System.out.println(sm.getSelectedIndices());
+            //System.out.println(sm.getSelectedItems());
             assertTrue(sm.isSelected(1));
             assertFalse(sm.isSelected(2));
             assertFalse(sm.isSelected(3));
@@ -3683,5 +3681,25 @@ public class TreeViewTest {
         // and that in the expandedItemCount listener that we get the right values
         // in the selectedIndices and selectedItems list
         childNode1.setExpanded(false);
+    }
+
+    @Test public void testRemovedSelectedItemsWhenBranchIsCollapsed() {
+        TreeItem<String> c1, c2, c3;
+        TreeItem<String> root = new TreeItem<>("foo");
+        root.getChildren().add(c1 = new TreeItem<>("bar"));
+        root.getChildren().add(c2 = new TreeItem<>("baz"));
+        root.getChildren().add(c3 = new TreeItem<>("qux"));
+        root.setExpanded(true);
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        treeView.getSelectionModel().selectAll();
+
+        MockListObserver<TreeItem<String>> observer = new MockListObserver<>();
+        treeView.getSelectionModel().getSelectedItems().addListener(observer);
+        root.setExpanded(false);
+
+        observer.check1();
+        observer.checkAddRemove(0, treeView.getSelectionModel().getSelectedItems(), List.of(c1, c2, c3), 1, 1);
     }
 }

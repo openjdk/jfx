@@ -201,6 +201,10 @@ static void mergePaymentOptions(const PaymentOptions& options, ApplePaySessionPa
     requiredShippingContactFields.postalAddress |= options.requestShipping;
     request.setRequiredShippingContactFields(requiredShippingContactFields);
 
+    auto requiredBillingContactFields = request.requiredBillingContactFields();
+    requiredBillingContactFields.postalAddress |= options.requestBillingAddress;
+    request.setRequiredBillingContactFields(requiredBillingContactFields);
+
     if (options.requestShipping)
         request.setShippingType(convert(options.shippingType));
 }
@@ -397,7 +401,6 @@ ExceptionOr<void> ApplePayPaymentHandler::computePaymentMethodErrors(JSC::JSObje
     if (!paymentMethodErrors)
         return { };
 
-#if ENABLE(APPLE_PAY_SESSION_V3)
     auto& context = *scriptExecutionContext();
     auto throwScope = DECLARE_THROW_SCOPE(context.vm());
     auto applePayErrors = convert<IDLSequence<IDLInterface<ApplePayError>>>(*context.execState(), paymentMethodErrors);
@@ -408,9 +411,6 @@ ExceptionOr<void> ApplePayPaymentHandler::computePaymentMethodErrors(JSC::JSObje
         if (applePayError)
             errors.append({ applePayError->code(), applePayError->message(), applePayError->contactField() });
     }
-#else
-    UNUSED_PARAM(errors);
-#endif
 
     return { };
 }

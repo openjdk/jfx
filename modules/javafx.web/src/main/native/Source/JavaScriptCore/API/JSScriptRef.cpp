@@ -28,30 +28,28 @@
 #include "APICast.h"
 #include "Completion.h"
 #include "Exception.h"
-#include "JSBasePrivate.h"
-#include "VM.h"
+#include "JSGlobalObjectInlines.h"
 #include "JSScriptRefPrivate.h"
 #include "OpaqueJSString.h"
-#include "JSCInlines.h"
 #include "Parser.h"
 #include "SourceCode.h"
 #include "SourceProvider.h"
 
 using namespace JSC;
 
-struct OpaqueJSScript : public SourceProvider {
+struct OpaqueJSScript final : public SourceProvider {
 public:
-    static WTF::Ref<OpaqueJSScript> create(VM& vm, const SourceOrigin& sourceOrigin, URL&& url, int startingLineNumber, const String& source)
+    static WTF::Ref<OpaqueJSScript> create(VM& vm, const SourceOrigin& sourceOrigin, String filename, int startingLineNumber, const String& source)
     {
-        return WTF::adoptRef(*new OpaqueJSScript(vm, sourceOrigin, WTFMove(url), startingLineNumber, source));
+        return WTF::adoptRef(*new OpaqueJSScript(vm, sourceOrigin, WTFMove(filename), startingLineNumber, source));
     }
 
-    unsigned hash() const override
+    unsigned hash() const final
     {
         return m_source.get().hash();
     }
 
-    StringView source() const override
+    StringView source() const final
     {
         return m_source.get();
     }
@@ -59,14 +57,14 @@ public:
     VM& vm() const { return m_vm; }
 
 private:
-    OpaqueJSScript(VM& vm, const SourceOrigin& sourceOrigin, URL&& url, int startingLineNumber, const String& source)
-        : SourceProvider(sourceOrigin, WTFMove(url), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
+    OpaqueJSScript(VM& vm, const SourceOrigin& sourceOrigin, String&& filename, int startingLineNumber, const String& source)
+        : SourceProvider(sourceOrigin, WTFMove(filename), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
         , m_vm(vm)
         , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
     {
     }
 
-    virtual ~OpaqueJSScript() { }
+    ~OpaqueJSScript() final { }
 
     VM& m_vm;
     Ref<StringImpl> m_source;
@@ -82,19 +80,19 @@ static bool parseScript(VM& vm, const SourceCode& source, ParserError& error)
 
 extern "C" {
 
-JSScriptRef JSScriptCreateReferencingImmortalASCIIText(JSContextGroupRef contextGroup, JSStringRef url, int startingLineNumber, const char* source, size_t length, JSStringRef* errorMessage, int* errorLine)
+JSScriptRef JSScriptCreateReferencingImmortalASCIIText(JSContextGroupRef contextGroup, JSStringRef urlString, int startingLineNumber, const char* source, size_t length, JSStringRef* errorMessage, int* errorLine)
 {
     auto& vm = *toJS(contextGroup);
     JSLockHolder locker(&vm);
     for (size_t i = 0; i < length; i++) {
         if (!isASCII(source[i]))
-            return 0;
+            return nullptr;
     }
 
     startingLineNumber = std::max(1, startingLineNumber);
 
-    auto sourceURLString = url ? url->string() : String();
-    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURLString }, URL({ }, sourceURLString), startingLineNumber, String(StringImpl::createFromLiteral(source, length)));
+    auto sourceURL = urlString ? URL({ }, urlString->string()) : URL();
+    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, String(StringImpl::createFromLiteral(source, length)));
 
     ParserError error;
     if (!parseScript(vm, SourceCode(result.copyRef()), error)) {
@@ -108,15 +106,15 @@ JSScriptRef JSScriptCreateReferencingImmortalASCIIText(JSContextGroupRef context
     return &result.leakRef();
 }
 
-JSScriptRef JSScriptCreateFromString(JSContextGroupRef contextGroup, JSStringRef url, int startingLineNumber, JSStringRef source, JSStringRef* errorMessage, int* errorLine)
+JSScriptRef JSScriptCreateFromString(JSContextGroupRef contextGroup, JSStringRef urlString, int startingLineNumber, JSStringRef source, JSStringRef* errorMessage, int* errorLine)
 {
     auto& vm = *toJS(contextGroup);
     JSLockHolder locker(&vm);
 
     startingLineNumber = std::max(1, startingLineNumber);
 
-    auto sourceURLString = url ? url->string() : String();
-    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURLString }, URL({ }, sourceURLString), startingLineNumber, source->string());
+    auto sourceURL = urlString ? URL({ }, urlString->string()) : URL();
+    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, source->string());
 
     ParserError error;
     if (!parseScript(vm, SourceCode(result.copyRef()), error)) {
@@ -149,7 +147,7 @@ JSValueRef JSScriptEvaluate(JSContextRef context, JSScriptRef script, JSValueRef
     JSLockHolder locker(vm);
     if (&script->vm() != &vm) {
         RELEASE_ASSERT_NOT_REACHED();
-        return 0;
+        return nullptr;
     }
     NakedPtr<Exception> internalException;
     JSValue thisValue = thisValueRef ? toJS(globalObject, thisValueRef) : jsUndefined();
@@ -157,7 +155,7 @@ JSValueRef JSScriptEvaluate(JSContextRef context, JSScriptRef script, JSValueRef
     if (internalException) {
         if (exception)
             *exception = toRef(globalObject, internalException->value());
-        return 0;
+        return nullptr;
     }
     ASSERT(result);
     return toRef(globalObject, result);

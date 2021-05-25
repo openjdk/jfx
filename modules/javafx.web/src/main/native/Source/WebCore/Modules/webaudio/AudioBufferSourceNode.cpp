@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2020, Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,11 +37,13 @@
 #include "FloatConversion.h"
 #include "PannerNode.h"
 #include "ScriptExecutionContext.h"
+#include "WebKitAudioBufferSourceNode.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBufferSourceNode);
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebKitAudioBufferSourceNode);
 
 const double DefaultGrainDuration = 0.020; // 20ms
 
@@ -49,28 +52,36 @@ const double DefaultGrainDuration = 0.020; // 20ms
 // to minimize linear interpolation aliasing.
 const double MaxRate = 1024;
 
-Ref<AudioBufferSourceNode> AudioBufferSourceNode::create(AudioContext& context, float sampleRate)
+ExceptionOr<Ref<AudioBufferSourceNode>> AudioBufferSourceNode::create(BaseAudioContext& context, AudioBufferSourceOptions&& options)
 {
-    return adoptRef(*new AudioBufferSourceNode(context, sampleRate));
+    if (context.isStopped())
+        return Exception { InvalidStateError };
+
+    context.lazyInitialize();
+
+    auto node = adoptRef(*new AudioBufferSourceNode(context));
+
+    node->setBuffer(WTFMove(options.buffer));
+    node->detune().setValue(options.detune);
+    node->setLoop(options.loop);
+    node->setLoopEnd(options.loopEnd);
+    node->setLoopStart(options.loopStart);
+    node->playbackRate().setValue(options.playbackRate);
+
+    // Because this is an AudioScheduledSourceNode, the context keeps a reference until it has finished playing.
+    // When this happens, AudioScheduledSourceNode::finish() calls BaseAudioContext::notifyNodeFinishedProcessing().
+    context.refNode(node);
+
+    return node;
 }
 
-AudioBufferSourceNode::AudioBufferSourceNode(AudioContext& context, float sampleRate)
-    : AudioScheduledSourceNode(context, sampleRate)
-    , m_buffer(nullptr)
-    , m_isLooping(false)
-    , m_loopStart(0)
-    , m_loopEnd(0)
-    , m_virtualReadIndex(0)
-    , m_isGrain(false)
-    , m_grainOffset(0.0)
+AudioBufferSourceNode::AudioBufferSourceNode(BaseAudioContext& context)
+    : AudioScheduledSourceNode(context)
+    , m_detune(AudioParam::create(context, "detune"_s, 0.0, -FLT_MAX, FLT_MAX))
+    , m_playbackRate(AudioParam::create(context, "playbackRate"_s, 1.0, -FLT_MAX, FLT_MAX))
     , m_grainDuration(DefaultGrainDuration)
-    , m_lastGain(1.0)
-    , m_pannerNode(nullptr)
 {
     setNodeType(NodeTypeAudioBufferSource);
-
-    m_gain = AudioParam::create(context, "gain", 1.0, 0.0, 1.0);
-    m_playbackRate = AudioParam::create(context, "playbackRate", 1.0, -MaxRate, MaxRate);
 
     // Default to mono.  A call to setBuffer() will set the number of output channels to that of the buffer.
     addOutput(makeUnique<AudioNodeOutput>(this, 1));
@@ -133,7 +144,7 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
     }
 
     // Apply the gain (in-place) to the output bus.
-    float totalGain = gain()->value() * m_buffer->gain();
+    float totalGain = legacyGainValue() * m_buffer->gain();
     outputBus.copyWithGainFrom(outputBus, &m_lastGain, totalGain);
     outputBus.clearSilentFlag();
 }
@@ -404,7 +415,7 @@ bool AudioBufferSourceNode::renderFromBuffer(AudioBus* bus, unsigned destination
 void AudioBufferSourceNode::reset()
 {
     m_virtualReadIndex = 0;
-    m_lastGain = gain()->value();
+    m_lastGain = legacyGainValue();
 }
 
 void AudioBufferSourceNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
@@ -413,10 +424,10 @@ void AudioBufferSourceNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
     DEBUG_LOG(LOGIDENTIFIER);
 
     // The context must be locked since changing the buffer can re-configure the number of channels that are output.
-    AudioContext::AutoLocker contextLocker(context());
+    BaseAudioContext::AutoLocker contextLocker(context());
 
     // This synchronizes with process().
-    std::lock_guard<Lock> lock(m_processMutex);
+    auto locker = holdLock(m_processMutex);
 
     if (buffer) {
         // Do any necesssary re-configuration to the buffer's number of channels.
@@ -460,45 +471,45 @@ ExceptionOr<void> AudioBufferSourceNode::startPlaying(BufferPlaybackMode playbac
     context().nodeWillBeginPlayback();
 
     if (m_playbackState != UNSCHEDULED_STATE)
-        return Exception { InvalidStateError };
+        return Exception { InvalidStateError, "Cannot call start more than once."_s };
 
     if (!std::isfinite(when) || (when < 0))
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "when value should be positive"_s };
 
     if (!std::isfinite(grainOffset) || (grainOffset < 0))
-        return Exception { InvalidStateError };
+        return Exception { RangeError, "offset value should be positive"_s };
 
     if (!std::isfinite(grainDuration) || (grainDuration < 0))
-        return Exception { InvalidStateError };
-
-    if (!buffer())
-        return { };
+        return Exception { RangeError, "duration value should be positive"_s };
 
     m_isGrain = playbackMode == Partial;
-    if (m_isGrain) {
-        // Do sanity checking of grain parameters versus buffer size.
-        double bufferDuration = buffer()->duration();
-
-        m_grainOffset = std::min(bufferDuration, grainOffset);
-
-        double maxDuration = bufferDuration - m_grainOffset;
-        m_grainDuration = std::min(maxDuration, grainDuration);
-    } else {
-        m_grainOffset = 0.0;
-        m_grainDuration = buffer()->duration();
-    }
-
+    m_grainOffset = grainOffset;
+    m_grainDuration = grainDuration;
     m_startTime = when;
 
-    // We call timeToSampleFrame here since at playbackRate == 1 we don't want to go through linear interpolation
-    // at a sub-sample position since it will degrade the quality.
-    // When aligned to the sample-frame the playback will be identical to the PCM data stored in the buffer.
-    // Since playbackRate == 1 is very common, it's worth considering quality.
-    if (totalPitchRate() < 0)
-        m_virtualReadIndex = AudioUtilities::timeToSampleFrame(m_grainOffset + m_grainDuration, buffer()->sampleRate()) - 1;
-    else
-        m_virtualReadIndex = AudioUtilities::timeToSampleFrame(m_grainOffset, buffer()->sampleRate());
+    if (buffer()) {
+        if (m_isGrain) {
+            // Do sanity checking of grain parameters versus buffer size.
+            double bufferDuration = buffer()->duration();
 
+            m_grainOffset = std::min(bufferDuration, grainOffset);
+
+            double maxDuration = bufferDuration - m_grainOffset;
+            m_grainDuration = std::min(maxDuration, grainDuration);
+        } else {
+            m_grainOffset = 0.0;
+            m_grainDuration = buffer()->duration();
+        }
+
+        // We call timeToSampleFrame here since at playbackRate == 1 we don't want to go through linear interpolation
+        // at a sub-sample position since it will degrade the quality.
+        // When aligned to the sample-frame the playback will be identical to the PCM data stored in the buffer.
+        // Since playbackRate == 1 is very common, it's worth considering quality.
+        if (totalPitchRate() < 0)
+            m_virtualReadIndex = AudioUtilities::timeToSampleFrame(m_grainOffset + m_grainDuration, buffer()->sampleRate()) - 1;
+        else
+            m_virtualReadIndex = AudioUtilities::timeToSampleFrame(m_grainOffset, buffer()->sampleRate());
+    }
     m_playbackState = SCHEDULED_STATE;
 
     return { };
@@ -516,11 +527,12 @@ double AudioBufferSourceNode::totalPitchRate()
     if (buffer())
         sampleRateFactor = buffer()->sampleRate() / sampleRate();
 
-    double basePitchRate = playbackRate()->value();
+    double basePitchRate = playbackRate().value();
+    double detune = pow(2, m_detune->value() / 1200);
 
-    double totalRate = dopplerRate * sampleRateFactor * basePitchRate;
+    double totalRate = dopplerRate * sampleRateFactor * basePitchRate * detune;
 
-    totalRate = std::max(-MaxRate, std::min(MaxRate, totalRate));
+    totalRate = std::clamp(totalRate, -MaxRate, MaxRate);
 
     bool isTotalRateValid = !std::isnan(totalRate) && !std::isinf(totalRate);
     ASSERT(isTotalRateValid);
@@ -530,34 +542,12 @@ double AudioBufferSourceNode::totalPitchRate()
     return totalRate;
 }
 
-bool AudioBufferSourceNode::looping()
-{
-    static bool firstTime = true;
-    if (firstTime) {
-        context().addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
-        firstTime = false;
-    }
-
-    return m_isLooping;
-}
-
-void AudioBufferSourceNode::setLooping(bool looping)
-{
-    static bool firstTime = true;
-    if (firstTime) {
-        context().addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
-        firstTime = false;
-    }
-
-    m_isLooping = looping;
-}
-
 bool AudioBufferSourceNode::propagatesSilence() const
 {
     return !isPlayingOrScheduled() || hasFinished() || !m_buffer;
 }
 
-void AudioBufferSourceNode::setPannerNode(PannerNode* pannerNode)
+void AudioBufferSourceNode::setPannerNode(PannerNodeBase* pannerNode)
 {
     if (m_pannerNode != pannerNode && !hasFinished()) {
         if (pannerNode)

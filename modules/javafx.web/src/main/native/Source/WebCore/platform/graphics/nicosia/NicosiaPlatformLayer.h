@@ -37,6 +37,7 @@
 #include "NicosiaAnimatedBackingStoreClient.h"
 #include "NicosiaAnimation.h"
 #include "NicosiaSceneIntegration.h"
+#include "ScrollTypes.h"
 #include "TransformationMatrix.h"
 #include <wtf/Function.h>
 #include <wtf/Lock.h>
@@ -117,9 +118,12 @@ public:
                     bool childrenTransformChanged : 1;
                     bool contentsRectChanged : 1;
                     bool contentsTilingChanged : 1;
+                    bool contentsClippingRectChanged : 1;
                     bool opacityChanged : 1;
                     bool solidColorChanged : 1;
                     bool filtersChanged : 1;
+                    bool backdropFiltersChanged : 1;
+                    bool backdropFiltersRectChanged : 1;
                     bool animationsChanged : 1;
                     bool childrenChanged : 1;
                     bool maskChanged : 1;
@@ -131,6 +135,7 @@ public:
                     bool animatedBackingStoreClientChanged : 1;
                     bool repaintCounterChanged : 1;
                     bool debugBorderChanged : 1;
+                    bool scrollingNodeChanged : 1;
                 };
                 uint32_t value { 0 };
             };
@@ -166,6 +171,7 @@ public:
         WebCore::FloatRect contentsRect;
         WebCore::FloatSize contentsTilePhase;
         WebCore::FloatSize contentsTileSize;
+        WebCore::FloatRoundedRect contentsClippingRect;
 
         float opacity { 0 };
         WebCore::Color solidColor;
@@ -178,6 +184,8 @@ public:
         Vector<RefPtr<CompositionLayer>> children;
         RefPtr<CompositionLayer> replica;
         RefPtr<CompositionLayer> mask;
+        RefPtr<CompositionLayer> backdropLayer;
+        WebCore::FloatRoundedRect backdropFiltersRect;
 
         RefPtr<ContentLayer> contentLayer;
         RefPtr<BackingStore> backingStore;
@@ -193,6 +201,8 @@ public:
             float width { 0 };
             bool visible { false };
         } debugBorder;
+
+        WebCore::ScrollingNodeID scrollingNodeID { 0 };
     };
 
     template<typename T>
@@ -231,6 +241,8 @@ public:
             staging.contentsTilePhase = pending.contentsTilePhase;
             staging.contentsTileSize = pending.contentsTileSize;
         }
+        if (pending.delta.contentsClippingRectChanged)
+            staging.contentsClippingRect = pending.contentsClippingRect;
 
         if (pending.delta.opacityChanged)
             staging.opacity = pending.opacity;
@@ -239,6 +251,10 @@ public:
 
         if (pending.delta.filtersChanged)
             staging.filters = pending.filters;
+        if (pending.delta.backdropFiltersChanged)
+            staging.backdropLayer = pending.backdropLayer;
+        if (pending.delta.backdropFiltersRectChanged)
+            staging.backdropFiltersRect = pending.backdropFiltersRect;
         if (pending.delta.animationsChanged)
             staging.animations = pending.animations;
 
@@ -256,6 +272,9 @@ public:
             staging.repaintCounter = pending.repaintCounter;
         if (pending.delta.debugBorderChanged)
             staging.debugBorder = pending.debugBorder;
+
+        if (pending.delta.scrollingNodeChanged)
+            staging.scrollingNodeID = pending.scrollingNodeID;
 
         if (pending.delta.backingStoreChanged)
             staging.backingStore = pending.backingStore;
@@ -279,6 +298,13 @@ public:
         m_state.staging.delta = { };
 
         functor(m_state.committed);
+    }
+
+    template<typename T>
+    void accessPending(const T& functor)
+    {
+        LockHolder locker(PlatformLayer::m_state.lock);
+        functor(m_state.pending);
     }
 
     template<typename T>

@@ -41,6 +41,8 @@ class RenderThemeMac final : public RenderThemeCocoa {
 public:
     friend NeverDestroyed<RenderThemeMac>;
 
+    CFStringRef contentSizeCategory() const final;
+
     // A method asking if the control changes its tint when the window has focus or not.
     bool controlSupportsTints(const RenderObject&) const final;
 
@@ -63,10 +65,9 @@ public:
     Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const final;
     Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const final;
     Color platformFocusRingColor(OptionSet<StyleColor::Options>) const final;
-    Color platformActiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
-    Color platformInactiveTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
+    Color platformTextSearchHighlightColor(OptionSet<StyleColor::Options>) const final;
 
-    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return SmallScrollbar; }
+    ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) final { return ScrollbarControlSize::Small; }
 
     int minimumMenuListSize(const RenderStyle&) const final;
 
@@ -90,8 +91,6 @@ public:
 
     // Returns the repeat interval of the animation for the progress bar.
     Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const final;
-    // Returns the duration of the animation for the progress bar.
-    Seconds animationDurationForProgressBar(RenderProgress&) const final;
     IntRect progressBarRectForBounds(const RenderObject&, const IntRect&) const final;
 
     // Controls color values returned from platformFocusRingColor(). systemColor() will be used when false.
@@ -102,15 +101,28 @@ public:
 private:
     RenderThemeMac();
 
-    // System fonts.
-    void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const final;
-
 #if ENABLE(VIDEO)
     // Media controls
     String mediaControlsStyleSheet() final;
     String modernMediaControlsStyleSheet() final;
     String mediaControlsScript() final;
     String mediaControlsBase64StringForIconNameAndType(const String&, const String&) final;
+#endif
+
+#if ENABLE(INPUT_TYPE_DATE)
+    String dateInputStyleSheet() const final;
+#endif
+#if ENABLE(INPUT_TYPE_DATETIMELOCAL)
+    String dateTimeLocalInputStyleSheet() const final;
+#endif
+#if ENABLE(INPUT_TYPE_MONTH)
+    String monthInputStyleSheet() const final;
+#endif
+#if ENABLE(INPUT_TYPE_TIME)
+    String timeInputStyleSheet() const final;
+#endif
+#if ENABLE(INPUT_TYPE_WEEK)
+    String weekInputStyleSheet() const final;
 #endif
 
 #if ENABLE(SERVICE_CONTROLS)

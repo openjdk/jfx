@@ -29,6 +29,7 @@
 #include "ElementChildIterator.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLImageElement.h"
+#include "ImageLoader.h"
 #include "Logging.h"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/IsoMallocInlines.h>
@@ -60,16 +61,16 @@ Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName,
 void HTMLPictureElement::sourcesChanged()
 {
     for (auto& element : childrenOfType<HTMLImageElement>(*this))
-        element.selectImageSource();
+        element.selectImageSource(RelevantMutation::Yes);
 }
 
 #if USE(SYSTEM_PREVIEW)
-bool HTMLPictureElement::isSystemPreviewImage() const
+bool HTMLPictureElement::isSystemPreviewImage()
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
         return false;
 
-    const auto* parent = parentElement();
+    auto* parent = parentElement();
     if (!is<HTMLAnchorElement>(parent))
         return false;
     return downcast<HTMLAnchorElement>(parent)->isSystemPreviewLink();

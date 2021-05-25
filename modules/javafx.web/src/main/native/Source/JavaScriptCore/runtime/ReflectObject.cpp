@@ -26,10 +26,7 @@
 #include "config.h"
 #include "ReflectObject.h"
 
-#include "BuiltinNames.h"
 #include "JSCInlines.h"
-#include "JSGlobalObjectFunctions.h"
-#include "Lookup.h"
 #include "ObjectConstructor.h"
 
 namespace JSC {
@@ -53,7 +50,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ReflectObject);
 
-const ClassInfo ReflectObject::s_info = { "Object", &Base::s_info, &reflectObjectTable, nullptr, CREATE_METHOD_TABLE(ReflectObject) };
+const ClassInfo ReflectObject::s_info = { "Reflect", &Base::s_info, &reflectObjectTable, nullptr, CREATE_METHOD_TABLE(ReflectObject) };
 
 /* Source for ReflectObject.lut.h
 @begin reflectObjectTable
@@ -82,6 +79,7 @@ void ReflectObject::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
+    JSC_TO_STRING_TAG_WITHOUT_TRANSITION();
 }
 
 // ------------------------------ Functions --------------------------------
@@ -96,9 +94,8 @@ EncodedJSValue JSC_HOST_CALL reflectObjectConstruct(JSGlobalObject* globalObject
     if (!target.isObject())
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the first argument be a constructor"_s));
 
-    ConstructData constructData;
-    ConstructType constructType;
-    if (!target.isConstructor(vm, constructType, constructData))
+    auto constructData = getConstructData(vm, target);
+    if (constructData.type == CallData::Type::None)
         return JSValue::encode(throwTypeError(globalObject, scope, "Reflect.construct requires the first argument be a constructor"_s));
 
     JSValue newTarget = target;
@@ -123,7 +120,7 @@ EncodedJSValue JSC_HOST_CALL reflectObjectConstruct(JSGlobalObject* globalObject
         return encodedJSValue();
     }
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(construct(globalObject, target, constructType, constructData, arguments, newTarget)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(construct(globalObject, target, constructData, arguments, newTarget)));
 }
 
 // https://tc39.github.io/ecma262/#sec-reflect.defineproperty

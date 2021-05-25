@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public class ParallelTransitionPlayTest {
     LongProperty xProperty = new SimpleLongProperty();
     LongProperty yProperty = new SimpleLongProperty();
 
-    AbstractMasterTimerMock amt;
+    AbstractPrimaryTimerMock amt;
     ParallelTransition pt;
 
     Transition child1X;
@@ -56,7 +56,7 @@ public class ParallelTransitionPlayTest {
 
     @Before
     public void setUp() {
-        amt = new AbstractMasterTimerMock();
+        amt = new AbstractPrimaryTimerMock();
         pt = ParallelTransitionShim.getParallelTransition(amt);
         child1X = new TransitionShim() {
 

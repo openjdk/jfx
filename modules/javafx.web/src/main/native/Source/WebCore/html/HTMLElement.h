@@ -22,19 +22,17 @@
 
 #pragma once
 
+#include "InputMode.h"
+#include "StyledElement.h"
+
 #if ENABLE(AUTOCAPITALIZE)
 #include "Autocapitalize.h"
 #endif
 
-#include "InputMode.h"
-#include "StyledElement.h"
-
 namespace WebCore {
 
-class DocumentFragment;
 class FormAssociatedElement;
 class FormNamedItem;
-class HTMLCollection;
 class HTMLFormElement;
 
 enum class EnterKeyHint : uint8_t;
@@ -68,7 +66,9 @@ public:
 
     WEBCORE_EXPORT void click();
 
-    void accessKeyAction(bool sendMouseEvents) override;
+    bool accessKeyAction(bool sendMouseEvents) override;
+
+    String accessKeyLabel() const;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     bool rendererIsEverNeeded() final;

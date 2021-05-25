@@ -72,7 +72,7 @@ public:
     WEBCORE_EXPORT IDBKeyData isolatedCopy() const;
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
-    WEBCORE_EXPORT static bool decode(KeyedDecoder&, IDBKeyData&);
+    WEBCORE_EXPORT static WARN_UNUSED_RETURN bool decode(KeyedDecoder&, IDBKeyData&);
 
     // compare() has the same semantics as strcmp().
     //   - Returns negative if this IDBKeyData is less than other.
@@ -238,7 +238,7 @@ void IDBKeyData::encode(Encoder& encoder) const
     if (m_isNull)
         return;
 
-    encoder.encodeEnum(m_type);
+    encoder << m_type;
 
     switch (m_type) {
     case IndexedDB::KeyType::Invalid:
@@ -271,7 +271,7 @@ Optional<IDBKeyData> IDBKeyData::decode(Decoder& decoder)
     if (keyData.m_isNull)
         return keyData;
 
-    if (!decoder.decodeEnum(keyData.m_type))
+    if (!decoder.decode(keyData.m_type))
         return WTF::nullopt;
 
     switch (keyData.m_type) {

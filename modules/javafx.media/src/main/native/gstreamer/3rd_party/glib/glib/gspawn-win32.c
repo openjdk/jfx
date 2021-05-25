@@ -67,17 +67,17 @@
   #define SETUP_DEBUG() /* empty */
 #else
   static int debug = -1;
-  #define SETUP_DEBUG()         \
-    G_STMT_START          \
-      {             \
-  if (debug == -1)        \
-    {           \
-      if (getenv ("G_SPAWN_WIN32_DEBUG") != NULL) \
-        debug = 1;        \
-      else          \
-        debug = 0;        \
-    }           \
-      }             \
+  #define SETUP_DEBUG()                 \
+    G_STMT_START                    \
+      {                         \
+    if (debug == -1)                \
+      {                     \
+        if (g_getenv ("G_SPAWN_WIN32_DEBUG") != NULL)   \
+          debug = 1;                \
+        else                    \
+          debug = 0;                \
+      }                     \
+      }                         \
     G_STMT_END
 #endif
 #endif
@@ -138,7 +138,7 @@ protect_argv_string (const gchar *string)
     {
       if (*p == ' ' || *p == '\t')
   need_dblquotes = TRUE;
-      /* estimate max len, assuming that all escapable chracters will be escaped */
+      /* estimate max len, assuming that all escapable characters will be escaped */
       if (*p == '"' || *p == '\\')
   len += 2;
       else
@@ -151,7 +151,7 @@ protect_argv_string (const gchar *string)
 
   if (need_dblquotes)
     *q++ = '"';
-  /* Only quotes and backslashes preceeding quotes are escaped:
+  /* Only quotes and backslashes preceding quotes are escaped:
    * see "Parsing C Command-Line Arguments" at
    * https://docs.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
    */
@@ -161,12 +161,12 @@ protect_argv_string (const gchar *string)
   {
     /* Add backslash for escaping quote itself */
     *q++ = '\\';
-    /* Add backslash for every preceeding backslash for escaping it */
+      /* Add backslash for every preceding backslash for escaping it */
     for (;pre_bslash > 0; --pre_bslash)
       *q++ = '\\';
   }
 
-      /* Count length of continuous sequence of preceeding backslashes. */
+      /* Count length of continuous sequence of preceding backslashes. */
       if (*p == '\\')
   ++pre_bslash;
       else
@@ -178,7 +178,7 @@ protect_argv_string (const gchar *string)
 
   if (need_dblquotes)
     {
-      /* Add backslash for every preceeding backslash for escaping it,
+      /* Add backslash for every preceding backslash for escaping it,
        * do NOT escape quote itself.
        */
       for (;pre_bslash > 0; --pre_bslash)
@@ -436,13 +436,13 @@ utf8_charv_to_wcharv (char     **utf8_charv,
 
 static gboolean
 do_spawn_directly (gint                 *exit_status,
-       gboolean    do_return_handle,
-       GSpawnFlags           flags,
-       gchar               **argv,
-       char                **envp,
-       char                **protected_argv,
-       GPid                 *child_handle,
-       GError              **error)
+           gboolean      do_return_handle,
+                   GSpawnFlags           flags,
+                   gchar               **argv,
+                   char                **envp,
+                   char                **protected_argv,
+                   GPid                 *child_handle,
+                   GError              **error)
 {
   const int mode = (exit_status == NULL) ? P_NOWAIT : P_WAIT;
   char **new_argv;
@@ -532,18 +532,18 @@ do_spawn_directly (gint                 *exit_status,
 
 static gboolean
 do_spawn_with_fds (gint                 *exit_status,
-       gboolean      do_return_handle,
-       const gchar          *working_directory,
-       gchar               **argv,
-       char                **envp,
-       GSpawnFlags           flags,
-       GSpawnChildSetupFunc  child_setup,
-       GPid                 *child_handle,
-       gint                  stdin_fd,
-       gint                  stdout_fd,
-       gint                  stderr_fd,
-       gint     *err_report,
-       GError              **error)
+           gboolean        do_return_handle,
+                   const gchar          *working_directory,
+                   gchar               **argv,
+                   char                **envp,
+                   GSpawnFlags           flags,
+                   GSpawnChildSetupFunc  child_setup,
+                   GPid                 *child_handle,
+                   gint                  stdin_fd,
+                   gint                  stdout_fd,
+                   gint                  stderr_fd,
+           gint       *err_report,
+                   GError              **error)
 {
   char **protected_argv;
   char args[ARG_COUNT][10];
@@ -861,18 +861,18 @@ do_spawn_with_fds (gint                 *exit_status,
 
 static gboolean
 do_spawn_with_pipes (gint                 *exit_status,
-         gboolean      do_return_handle,
-         const gchar          *working_directory,
-         gchar               **argv,
-         char                **envp,
-         GSpawnFlags           flags,
-         GSpawnChildSetupFunc  child_setup,
-         GPid                 *child_handle,
-         gint                 *standard_input,
-         gint                 *standard_output,
-         gint                 *standard_error,
-         gint     *err_report,
-         GError              **error)
+             gboolean          do_return_handle,
+                     const gchar          *working_directory,
+                     gchar               **argv,
+                     char                **envp,
+                     GSpawnFlags           flags,
+                     GSpawnChildSetupFunc  child_setup,
+                     GPid                 *child_handle,
+                     gint                 *standard_input,
+                     gint                 *standard_output,
+                     gint                 *standard_error,
+             gint         *err_report,
+                     GError              **error)
 {
   int stdin_pipe[2] = { -1, -1 };
   int stdout_pipe[2] = { -1, -1 };

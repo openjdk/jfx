@@ -54,10 +54,12 @@ public:
 
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
-        auto* result = Structure::create(vm, 0, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
+        auto* result = Structure::create(vm, nullptr, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
         result->setTransitionWatchpointIsLikelyToBeFired(true);
         return result;
     }
+
+    static void reportUncaughtExceptionAtEventLoop(JSGlobalObject*, Exception*);
 
     static JSInternalPromise* moduleLoaderImportModule(JSGlobalObject*, JSModuleLoader*, JSString* moduleNameValue, JSValue parameters, const SourceOrigin&);
     static Identifier moduleLoaderResolve(JSGlobalObject*, JSModuleLoader*, JSValue keyValue, JSValue referrerValue, JSValue);

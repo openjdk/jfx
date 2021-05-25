@@ -46,6 +46,8 @@ public:
     static constexpr unsigned numGPRs = 16;
     static constexpr unsigned numFPRs = 16;
 
+    RegisterID scratchRegister() { return dataTempRegister; }
+
     MacroAssemblerARMv7()
         : m_makeJumpPatchable(false)
     {
@@ -69,8 +71,9 @@ public:
     static JumpLinkType computeJumpType(JumpType jumpType, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(jumpType, from, to); }
     static JumpLinkType computeJumpType(LinkRecord& record, const uint8_t* from, const uint8_t* to) { return ARMv7Assembler::computeJumpType(record, from, to); }
     static int jumpSizeDelta(JumpType jumpType, JumpLinkType jumpLinkType) { return ARMv7Assembler::jumpSizeDelta(jumpType, jumpLinkType); }
+
     template <Assembler::CopyFunction copy>
-    static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
+    ALWAYS_INLINE static void link(LinkRecord& record, uint8_t* from, const uint8_t* fromInstruction, uint8_t* to) { return ARMv7Assembler::link<copy>(record, from, fromInstruction, to); }
 
     struct ArmAddress {
         enum AddressType {
@@ -103,8 +106,6 @@ public:
     };
 
 public:
-    static constexpr Scale ScalePtr = TimesFour;
-
     enum RelationalCondition {
         Equal = ARMv7Assembler::ConditionEQ,
         NotEqual = ARMv7Assembler::ConditionNE,
@@ -128,12 +129,12 @@ public:
 
     enum DoubleCondition {
         // These conditions will only evaluate to true if the comparison is ordered - i.e. neither operand is NaN.
-        DoubleEqual = ARMv7Assembler::ConditionEQ,
-        DoubleNotEqual = ARMv7Assembler::ConditionVC, // Not the right flag! check for this & handle differently.
-        DoubleGreaterThan = ARMv7Assembler::ConditionGT,
-        DoubleGreaterThanOrEqual = ARMv7Assembler::ConditionGE,
-        DoubleLessThan = ARMv7Assembler::ConditionLO,
-        DoubleLessThanOrEqual = ARMv7Assembler::ConditionLS,
+        DoubleEqualAndOrdered = ARMv7Assembler::ConditionEQ,
+        DoubleNotEqualAndOrdered = ARMv7Assembler::ConditionVC, // Not the right flag! check for this & handle differently.
+        DoubleGreaterThanAndOrdered = ARMv7Assembler::ConditionGT,
+        DoubleGreaterThanOrEqualAndOrdered = ARMv7Assembler::ConditionGE,
+        DoubleLessThanAndOrdered = ARMv7Assembler::ConditionLO,
+        DoubleLessThanOrEqualAndOrdered = ARMv7Assembler::ConditionLS,
         // If either operand is NaN, these conditions always evaluate to true.
         DoubleEqualOrUnordered = ARMv7Assembler::ConditionVS, // Not the right flag! check for this & handle differently.
         DoubleNotEqualOrUnordered = ARMv7Assembler::ConditionNE,
@@ -361,9 +362,22 @@ public:
         m_assembler.neg(dest, src);
     }
 
-    void or32(RegisterID src, RegisterID dest)
+    void or8(TrustedImm32 imm, AbsoluteAddress address)
     {
-        m_assembler.orr(dest, dest, src);
+        ARMThumbImmediate armImm = ARMThumbImmediate::makeEncodedImm(imm.m_value);
+        if (armImm.isValid()) {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load8(addressTempRegister, dataTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, armImm);
+            store8(dataTempRegister, addressTempRegister);
+        } else {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load8(addressTempRegister, dataTempRegister);
+            move(imm, addressTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, addressTempRegister);
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            store8(dataTempRegister, addressTempRegister);
+        }
     }
 
     void or16(TrustedImm32 imm, AbsoluteAddress dest)
@@ -382,6 +396,11 @@ public:
             move(TrustedImmPtr(dest.m_ptr), addressTempRegister);
             store16(dataTempRegister, addressTempRegister);
         }
+    }
+
+    void or32(RegisterID src, RegisterID dest)
+    {
+        m_assembler.orr(dest, dest, src);
     }
 
     void or32(RegisterID src, AbsoluteAddress dest)
@@ -437,6 +456,19 @@ public:
             move(imm, dataTempRegister);
             m_assembler.orr(dest, src, dataTempRegister);
         }
+    }
+
+    void rotateRight32(RegisterID src, TrustedImm32 imm, RegisterID dest)
+    {
+        if (!imm.m_value)
+            move(src, dest);
+        else
+            m_assembler.ror(dest, src, imm.m_value & 0x1f);
+    }
+
+    void rotateRight32(TrustedImm32 imm, RegisterID srcDst)
+    {
+        rotateRight32(srcDst, imm, srcDst);
     }
 
     void rshift32(RegisterID src, RegisterID shiftAmount, RegisterID dest)
@@ -883,13 +915,13 @@ public:
         store8(src, setupArmAddress(address));
     }
 
-    void store8(RegisterID src, void* address)
+    void store8(RegisterID src, const void *address)
     {
         move(TrustedImmPtr(address), addressTempRegister);
         store8(src, ArmAddress(addressTempRegister, 0));
     }
 
-    void store8(TrustedImm32 imm, void* address)
+    void store8(TrustedImm32 imm, const void *address)
     {
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
         move(imm8, dataTempRegister);
@@ -901,6 +933,11 @@ public:
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
         move(imm8, dataTempRegister);
         store8(dataTempRegister, address);
+    }
+
+    void store8(RegisterID src, RegisterID addrreg)
+    {
+        store8(src, ArmAddress(addrreg, 0));
     }
 
     void store16(RegisterID src, ImplicitAddress address)
@@ -1148,6 +1185,16 @@ public:
         m_assembler.vmul(dest, op1, op2);
     }
 
+    void andDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.vand(op1, op2, dest);
+    }
+
+    void orDouble(FPRegisterID op1, FPRegisterID op2, FPRegisterID dest)
+    {
+        m_assembler.vorr(op1, op2, dest);
+    }
+
     void sqrtDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.vsqrt(dest, src);
@@ -1218,7 +1265,7 @@ public:
         m_assembler.vcmp(left, right);
         m_assembler.vmrs();
 
-        if (cond == DoubleNotEqual) {
+        if (cond == DoubleNotEqualAndOrdered) {
             // ConditionNE jumps if NotEqual *or* unordered - force the unordered cases not to jump.
             Jump unordered = makeBranch(ARMv7Assembler::ConditionVS);
             Jump result = makeBranch(ARMv7Assembler::ConditionNE);
@@ -1411,7 +1458,7 @@ public:
         move(src, dest);
     }
 
-    void zeroExtend32ToPtr(RegisterID src, RegisterID dest)
+    void zeroExtend32ToWord(RegisterID src, RegisterID dest)
     {
         move(src, dest);
     }

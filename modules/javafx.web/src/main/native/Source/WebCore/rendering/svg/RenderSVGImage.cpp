@@ -226,10 +226,12 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
         if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
             return false;
 
+        SVGHitTestCycleDetectionScope hitTestScope(*this);
+
         if (hitRules.canHitFill) {
             if (m_objectBoundingBox.contains(localPoint)) {
                 updateHitTestResult(result, LayoutPoint(localPoint));
-                if (result.addNodeToListBasedTestResult(&imageElement(), request, localPoint) == HitTestProgress::Stop)
+                if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, localPoint) == HitTestProgress::Stop)
                     return true;
             }
         }

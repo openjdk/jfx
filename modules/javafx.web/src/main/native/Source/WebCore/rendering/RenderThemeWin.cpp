@@ -42,10 +42,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/win/GDIObject.h>
 
-#if ENABLE(VIDEO)
-#include "RenderMediaControls.h"
-#endif
-
 #include <tchar.h>
 
 /*
@@ -292,19 +288,19 @@ bool RenderThemeWin::supportsHover(const RenderStyle&) const
 Color RenderThemeWin::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHT);
-    return Color(GetRValue(color), GetGValue(color), GetBValue(color));
+    return SRGBA<uint8_t> { GetRValue(color), GetGValue(color), GetBValue(color) };
 }
 
 Color RenderThemeWin::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     // This color matches Firefox.
-    return Color(176, 176, 176);
+    return SRGBA<uint8_t> { 176, 176, 176 };
 }
 
 Color RenderThemeWin::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHTTEXT);
-    return Color(GetRValue(color), GetGValue(color), GetBValue(color));
+    return SRGBA<uint8_t> { GetRValue(color), GetGValue(color), GetBValue(color) };
 }
 
 Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options> options) const
@@ -845,10 +841,6 @@ void RenderThemeWin::adjustSliderThumbSize(RenderStyle& style, const Element*) c
         style.setWidth(Length(sliderThumbWidth, Fixed));
         style.setHeight(Length(sliderThumbHeight, Fixed));
     }
-#if ENABLE(VIDEO) && USE(CG)
-    else if (part == MediaSliderThumbPart || part == MediaVolumeSliderThumbPart)
-        RenderMediaControls::adjustMediaSliderThumbSize(style);
-#endif
 }
 
 bool RenderThemeWin::paintSearchField(const RenderObject& o, const PaintInfo& i, const IntRect& r)
@@ -1017,7 +1009,7 @@ Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::O
         return RenderTheme::systemColor(cssValueId, options);
 
     COLORREF color = GetSysColor(sysColorIndex);
-    return Color(GetRValue(color), GetGValue(color), GetBValue(color));
+    return SRGBA<uint8_t> { GetRValue(color), GetGValue(color), GetBValue(color) };
 }
 
 #if ENABLE(VIDEO)

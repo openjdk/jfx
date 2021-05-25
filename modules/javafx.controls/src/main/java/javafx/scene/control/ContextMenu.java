@@ -26,6 +26,9 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.util.Utils;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -39,13 +42,8 @@ import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.stage.Window;
-
-import com.sun.javafx.util.Utils;
-import com.sun.javafx.collections.TrackableObservableList;
 import javafx.scene.control.skin.ContextMenuSkin;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
+import javafx.stage.Window;
 
 /**
  * <p>
@@ -226,18 +224,15 @@ public class ContextMenu extends PopupControl {
 
     /**
      * Shows the {@code ContextMenu} relative to the given anchor node, on the side
-     * specified by the {@code hpos} and {@code vpos} parameters, and offset
+     * specified by the {@code side} parameter, and offset
      * by the given {@code dx} and {@code dy} values for the x-axis and y-axis, respectively.
      * If there is not enough room, the menu is moved to the opposite side and
      * the offset is not applied.
      * <p>
-     * To clarify the purpose of the {@code hpos} and {@code vpos} parameters,
-     * consider that they are relative to the anchor node. As such, a {@code hpos}
-     * and {@code vpos} of {@code CENTER} would mean that the ContextMenu appears
-     * on top of the anchor, with the (0,0) position of the {@code ContextMenu}
-     * positioned at (0,0) of the anchor. A {@code hpos} of right would then shift
-     * the {@code ContextMenu} such that its top-left (0,0) position would be attached
-     * to the top-right position of the anchor.
+     * To clarify the purpose of the {@code side} parameter,
+     * consider that it is relative to the anchor node.
+     * As such, a {@code side} of {@code TOP} would mean that the ContextMenu's bottom left corner
+     * is set to the top left corner of the anchor.
      * <p>
      * This function is useful for finely tuning the position of a menu,
      * relative to the parent node to ensure close alignment.
@@ -246,15 +241,15 @@ public class ContextMenu extends PopupControl {
      * @param dx the dx value for the x-axis
      * @param dy the dy value for the y-axis
      */
-    // TODO provide more detail
      public void show(Node anchor, Side side, double dx, double dy) {
         if (anchor == null) return;
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        // FIXME because Side is not yet in javafx.geometry, we have to convert
-        // to the old HPos/VPos API here, as Utils can not refer to Side in the
-        // charting API.
+        if (getScene().getStylesheets().isEmpty()) {
+            getScene().getStylesheets().setAll(anchor.getScene().getStylesheets());
+        }
+
         HPos hpos = side == Side.LEFT ? HPos.LEFT : side == Side.RIGHT ? HPos.RIGHT : HPos.CENTER;
         VPos vpos = side == Side.TOP ? VPos.TOP : side == Side.BOTTOM ? VPos.BOTTOM : VPos.CENTER;
 
@@ -265,7 +260,7 @@ public class ContextMenu extends PopupControl {
         doShow(anchor, point.getX(), point.getY());
     }
 
-     /**
+    /**
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
      * is not enough room at the specified location to show the {@code ContextMenu}
      * given its size requirements, the necessary adjustments are made to bring

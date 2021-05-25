@@ -132,9 +132,9 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                             if (clzX.isAssignableFrom(String.class)) {
                                 return (X) string;
                             } else if (clzX.isAssignableFrom(Double.class)) {
-                                return (X) new Double(string);
+                                return (X) Double.valueOf(string);
                             } else if (clzX.isAssignableFrom(Integer.class)) {
-                                return (X) new Integer(string);
+                                return (X) Integer.valueOf(string);
                             }
                         } catch (NumberFormatException ex) {
                             Logger.getLogger(XYDataVisualizer.class.getName()).log(Level.FINE,
@@ -172,7 +172,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
                 if (string == null) {
                     return null;
                 }
-                Y y = (Y) new Double(string);
+                Y y = (Y) Double.valueOf(string);
                 return y;
             }
         }));

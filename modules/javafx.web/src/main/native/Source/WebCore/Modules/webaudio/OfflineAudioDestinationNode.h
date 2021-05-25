@@ -37,7 +37,7 @@ class AudioContext;
 class OfflineAudioDestinationNode final : public AudioDestinationNode {
     WTF_MAKE_ISO_ALLOCATED(OfflineAudioDestinationNode);
 public:
-    static Ref<OfflineAudioDestinationNode> create(AudioContext& context, AudioBuffer* renderTarget)
+    static Ref<OfflineAudioDestinationNode> create(BaseAudioContext& context, AudioBuffer* renderTarget)
     {
         return adoptRef(*new OfflineAudioDestinationNode(context, renderTarget));
     }
@@ -50,12 +50,12 @@ public:
 
     // AudioDestinationNode
     void enableInput(const String&) override { }
-    void startRendering() override;
+    ExceptionOr<void> startRendering() override;
 
-    float sampleRate() const override { return m_renderTarget->sampleRate(); }
+    float sampleRate() const final { return m_renderTarget->sampleRate(); }
 
 private:
-    OfflineAudioDestinationNode(AudioContext&, AudioBuffer* renderTarget);
+    OfflineAudioDestinationNode(BaseAudioContext&, AudioBuffer* renderTarget);
 
     // This AudioNode renders into this AudioBuffer.
     RefPtr<AudioBuffer> m_renderTarget;

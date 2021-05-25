@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2020 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -67,7 +67,7 @@ macro makeReturnProfiled(opcodeStruct, get, metadata, dispatch, fn)
         move payload, t0
 
         metadata(t5, t2)
-        valueProfile(opcodeStruct, t5, t1, t0)
+        valueProfile(opcodeStruct, m_profile, t5, t1, t0)
         get(m_dst, t2)
         storei t1, TagOffset[cfr, t2, 8]
         storei t0, PayloadOffset[cfr, t2, 8]
@@ -77,16 +77,17 @@ end
 
 
 # After calling, calling bytecode is claiming input registers are not used.
-macro dispatchAfterCall(size, opcodeStruct, dispatch)
+macro dispatchAfterCall(size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch)
     loadi ArgumentCountIncludingThis + TagOffset[cfr], PC
     loadp CodeBlock[cfr], PB
     loadp CodeBlock::m_instructionsRawPointer[PB], PB
-    get(size, opcodeStruct, m_dst, t3)
+    get(size, opcodeStruct, dstVirtualRegister, t3)
     storei r1, TagOffset[cfr, t3, 8]
     storei r0, PayloadOffset[cfr, t3, 8]
     metadata(size, opcodeStruct, t2, t3)
-    valueProfile(opcodeStruct, t2, r1, r0)
+    valueProfile(opcodeStruct, valueProfileName, t2, r1, r0)
     dispatch()
+
 end
 
 macro cCall2(function)
@@ -147,6 +148,9 @@ macro callSlowPath(slowPath)
     restoreStateAfterCCall()
 end
 
+macro cagedPrimitive(ptr, length, scratch, scratch2)
+end
+
 macro doVMEntry(makeCall)
     functionPrologue()
     pushCalleeSaves()
@@ -165,6 +169,9 @@ macro doVMEntry(makeCall)
     # We are using t3, t4 and t5 as temporaries through the function.
     # Since we have the guarantee that tX != aY when X != Y, we are safe from
     # aliasing problems with our arguments.
+
+    loadi VM::disallowVMEntryCount[vm], t4
+    btinz t4, .checkVMEntryPermission
 
     if ARMv7
         vmEntryRecord(cfr, t3)
@@ -312,6 +319,25 @@ macro doVMEntry(makeCall)
         subp cfr, CalleeRegisterSaveSize, sp
     end
 
+    popCalleeSaves()
+    functionEpilogue()
+    ret
+
+.checkVMEntryPermission:
+    move vm, a0
+    move protoCallFrame, a1
+    cCall2(_llint_check_vm_entry_permission)
+
+    # Tag is stored in r1 and payload is stored in r0 in little-endian architectures.
+    move UndefinedTag, r1
+    move 0, r0
+
+    if ARMv7
+        subp cfr, CalleeRegisterSaveSize, t3
+        move t3, sp
+    else
+        subp cfr, CalleeRegisterSaveSize, sp
+    end
     popCalleeSaves()
     functionEpilogue()
     ret
@@ -467,6 +493,9 @@ macro checkSwitchToJITForLoop()
         end)
 end
 
+# loadVariable loads the value of field fieldName using macro get
+# into register tagReg and payloadReg
+# Clobbers: indexReg
 macro loadVariable(get, fieldName, indexReg, tagReg, payloadReg)
     get(fieldName, indexReg)
     loadi TagOffset[cfr, indexReg, 8], tagReg
@@ -629,9 +658,9 @@ macro writeBarrierOnGlobalLexicalEnvironment(size, get, valueFieldName)
         end)
 end
 
-macro valueProfile(opcodeStruct, metadata, tag, payload)
-    storei tag, %opcodeStruct%::Metadata::m_profile.m_buckets + TagOffset[metadata]
-    storei payload, %opcodeStruct%::Metadata::m_profile.m_buckets + PayloadOffset[metadata]
+macro valueProfile(opcodeStruct, profileName, metadata, tag, payload)
+    storei tag, %opcodeStruct%::Metadata::%profileName%.m_buckets + TagOffset[metadata]
+    storei payload, %opcodeStruct%::Metadata::%profileName%.m_buckets + PayloadOffset[metadata]
 end
 
 
@@ -1268,7 +1297,7 @@ llintOpWithReturn(op_is_empty, OpIsEmpty, macro (size, get, dispatch, return)
 end)
 
 
-llintOpWithReturn(op_is_undefined, OpIsUndefined, macro (size, get, dispatch, return)
+llintOpWithReturn(op_typeof_is_undefined, OpTypeofIsUndefined, macro (size, get, dispatch, return)
     get(m_operand, t1)
     loadConstantOrVariable(size, t1, t2, t3)
     bieq t2, CellTag, .opIsUndefinedCell
@@ -1300,6 +1329,12 @@ llintOpWithReturn(op_is_number, OpIsNumber, macro (size, get, dispatch, return)
     addi 1, t0
     cib t0, LowestTag + 1, t1
     return(BooleanTag, t1)
+end)
+
+
+# On 32-bit platforms BIGINT32 is not supported, so we generate op_is_cell_with_type instead of op_is_big_int
+llintOp(op_is_big_int, OpIsBigInt, macro(unused, unused, unused)
+    notSupported()
 end)
 
 
@@ -1375,7 +1410,7 @@ llintOpWithMetadata(op_get_by_id_direct, OpGetByIdDirect, macro (size, get, disp
     loadi OpGetByIdDirect::Metadata::m_offset[t5], t2
     bineq JSCell::m_structureID[t3], t1, .opGetByIdDirectSlow
     loadPropertyAtVariableOffset(t2, t3, t0, t1)
-    valueProfile(OpGetByIdDirect, t5, t0, t1)
+    valueProfile(OpGetByIdDirect, m_profile, t5, t0, t1)
     return(t0, t1)
 
 .opGetByIdDirectSlow:
@@ -1383,6 +1418,53 @@ llintOpWithMetadata(op_get_by_id_direct, OpGetByIdDirect, macro (size, get, disp
     dispatch()
 end)
 
+# Assumption: The base object is in t3
+# FIXME: this is very close to the 64bit version. Consider refactoring.
+macro performGetByIDHelper(opcodeStruct, modeMetadataName, valueProfileName, slowLabel, size, metadata, return)
+    metadata(t2, t1)
+    loadb %opcodeStruct%::Metadata::%modeMetadataName%.mode[t2], t1
+
+.opGetByIdDefault:
+    bbneq t1, constexpr GetByIdMode::Default, .opGetByIdProtoLoad
+    loadi JSCell::m_structureID[t3], t1 # assumes base object in t3
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.structureID[t2], t0
+    bineq t0, t1, slowLabel
+    loadis %opcodeStruct%::Metadata::%modeMetadataName%.defaultMode.cachedOffset[t2], t1
+    loadPropertyAtVariableOffset(t1, t3, t0, t1)
+    valueProfile(opcodeStruct, valueProfileName, t2, t0, t1)
+    return(t0, t1)
+
+.opGetByIdProtoLoad:
+    bbneq t1, constexpr GetByIdMode::ProtoLoad, .opGetByIdArrayLength
+    loadi JSCell::m_structureID[t3], t1
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadMode.structureID[t2], t3
+    bineq t3, t1, slowLabel
+    loadis %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadMode.cachedOffset[t2], t1
+    loadp %opcodeStruct%::Metadata::%modeMetadataName%.protoLoadMode.cachedSlot[t2], t3
+    loadPropertyAtVariableOffset(t1, t3, t0, t1)
+    valueProfile(opcodeStruct, valueProfileName, t2, t0, t1)
+    return(t0, t1)
+
+.opGetByIdArrayLength:
+    bbneq t1, constexpr GetByIdMode::ArrayLength, .opGetByIdUnset
+    move t3, t0
+    arrayProfile(%opcodeStruct%::Metadata::%modeMetadataName%.arrayLengthMode.arrayProfile, t0, t2, t5)
+    btiz t0, IsArray, slowLabel
+    btiz t0, IndexingShapeMask, slowLabel
+    loadp JSObject::m_butterfly[t3], t0
+    loadi -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], t0
+    bilt t0, 0, slowLabel
+    valueProfile(opcodeStruct, valueProfileName, t2, Int32Tag, t0)
+    return(Int32Tag, t0)
+
+.opGetByIdUnset:
+    loadi JSCell::m_structureID[t3], t1
+    loadi %opcodeStruct%::Metadata::%modeMetadataName%.unsetMode.structureID[t2], t0
+    bineq t0, t1, slowLabel
+    valueProfile(opcodeStruct, valueProfileName, t2, UndefinedTag, 0)
+    return(UndefinedTag, 0)
+
+end
 
 llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadata, return)
     metadata(t5, t0)
@@ -1397,7 +1479,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     bineq JSCell::m_structureID[t3], t1, .opGetByIdSlow
     loadp OpGetById::Metadata::m_modeMetadata.protoLoadMode.cachedSlot[t5], t3
     loadPropertyAtVariableOffset(t2, t3, t0, t1)
-    valueProfile(OpGetById, t5, t0, t1)
+    valueProfile(OpGetById, m_profile, t5, t0, t1)
     return(t0, t1)
 
 .opGetByIdArrayLength:
@@ -1410,7 +1492,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     loadp JSObject::m_butterfly[t3], t0
     loadi -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], t0
     bilt t0, 0, .opGetByIdSlow
-    valueProfile(OpGetById, t5, Int32Tag, t0)
+    valueProfile(OpGetById, m_profile, t5, Int32Tag, t0)
     return(Int32Tag, t0)
 
 .opGetByIdUnset:
@@ -1418,7 +1500,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     loadi OpGetById::Metadata::m_modeMetadata.unsetMode.structureID[t5], t1
     loadConstantOrVariablePayload(size, t0, CellTag, t3, .opGetByIdSlow)
     bineq JSCell::m_structureID[t3], t1, .opGetByIdSlow
-    valueProfile(OpGetById, t5, UndefinedTag, 0)
+    valueProfile(OpGetById, m_profile, t5, UndefinedTag, 0)
     return(UndefinedTag, 0)
 
 .opGetByIdDefault:
@@ -1427,7 +1509,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     loadis OpGetById::Metadata::m_modeMetadata.defaultMode.cachedOffset[t5], t2
     bineq JSCell::m_structureID[t3], t1, .opGetByIdSlow
     loadPropertyAtVariableOffset(t2, t3, t0, t1)
-    valueProfile(OpGetById, t5, t0, t1)
+    valueProfile(OpGetById, m_profile, t5, t0, t1)
     return(t0, t1)
 
 .opGetByIdSlow:
@@ -1437,7 +1519,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
 .osrReturnPoint:
     getterSetterOSRExitReturnPoint(op_get_by_id, size)
     metadata(t2, t3)
-    valueProfile(OpGetById, t2, r1, r0)
+    valueProfile(OpGetById, m_profile, t2, r1, r0)
     return(r1, r0)
 
 end)
@@ -1511,6 +1593,23 @@ end)
 
 
 llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metadata, return)
+    macro finishIntGetByVal(resultPayload, scratch)
+        get(m_dst, scratch)
+        storei Int32Tag, TagOffset[cfr, scratch, 8]
+        storei resultPayload, PayloadOffset[cfr, scratch, 8]
+        valueProfile(OpGetByVal, m_profile, t5, Int32Tag, resultPayload)
+        dispatch()
+    end
+
+    macro finishDoubleGetByVal(result, scratch1, scratch2, scratch3)
+        get(m_dst, scratch1)
+        fd2ii result, scratch2, scratch3
+        storei scratch3, TagOffset[cfr, scratch1, 8]
+        storei scratch2, PayloadOffset[cfr, scratch1, 8]
+        valueProfile(OpGetByVal, m_profile, t5, scratch3, scratch2)
+        dispatch()
+    end
+
     metadata(t5, t2)
     get(m_base, t2)
     loadConstantOrVariablePayload(size, t2, CellTag, t0, .opGetByValSlow)
@@ -1541,7 +1640,7 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
 
 .opGetByValNotDouble:
     subi ArrayStorageShape, t2
-    bia t2, SlowPutArrayStorageShape - ArrayStorageShape, .opGetByValSlow
+    bia t2, SlowPutArrayStorageShape - ArrayStorageShape, .opGetByValNotIndexedStorage
     biaeq t1, -sizeof IndexingHeader + IndexingHeader::u.lengths.vectorLength[t3], .opGetByValSlow
     loadi ArrayStorage::m_vector + TagOffset[t3, t1, 8], t2
     loadi ArrayStorage::m_vector + PayloadOffset[t3, t1, 8], t1
@@ -1552,8 +1651,11 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
 .opGetByValNotEmpty:
     storei t2, TagOffset[cfr, t0, 8]
     storei t1, PayloadOffset[cfr, t0, 8]
-    valueProfile(OpGetByVal, t5, t2, t1)
+    valueProfile(OpGetByVal, m_profile, t5, t2, t1)
     dispatch()
+
+.opGetByValNotIndexedStorage:
+    getByValTypedArray(t0, t1, finishIntGetByVal, finishDoubleGetByVal, .opGetByValSlow)
 
 .opGetByValSlow:
     callSlowPath(_llint_slow_path_get_by_val)
@@ -1562,9 +1664,33 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
 .osrReturnPoint:
     getterSetterOSRExitReturnPoint(op_get_by_val, size)
     metadata(t2, t3)
-    valueProfile(OpGetByVal, t2, r1, r0)
+    valueProfile(OpGetByVal, m_profile, t2, r1, r0)
     return(r1, r0)
 
+end)
+
+llintOpWithMetadata(op_get_private_name, OpGetPrivateName, macro (size, get, dispatch, metadata, return)
+    metadata(t5, t0)
+
+    # Slow path if the private field is stale
+    get(m_property, t1)
+    loadConstantOrVariablePayloadUnchecked(size, t1, t0)
+    loadp OpGetPrivateName::Metadata::m_property[t5], t1
+    bpneq t1, t0, .opGetPrivateNameSlow
+
+    get(m_base, t0)
+    loadi OpGetPrivateName::Metadata::m_structureID[t5], t1
+    loadConstantOrVariablePayload(size, t0, CellTag, t3, .opGetPrivateNameSlow)
+    loadi OpGetPrivateName::Metadata::m_offset[t5], t2
+    bineq JSCell::m_structureID[t3], t1, .opGetPrivateNameSlow
+
+    loadPropertyAtVariableOffset(t2, t3, t0, t1)
+    valueProfile(OpGetPrivateName, m_profile, t5, t0, t1)
+    return(t0, t1)
+
+.opGetPrivateNameSlow:
+    callSlowPath(_llint_slow_path_get_private_name)
+    dispatch()
 end)
 
 
@@ -1672,7 +1798,7 @@ end)
 putByValOp(put_by_val_direct, OpPutByValDirect, macro (a, b) end)
 
 
-macro llintJumpTrueOrFalseOp(opcodeName, opcodeStruct, conditionOp)
+macro llintJumpTrueOrFalseOp(opcodeName, opcodeStruct, conditionOp, notUsed)
     llintOpWithJump(op_%opcodeName%, opcodeStruct, macro (size, get, jump, dispatch)
         get(m_condition, t1)
         loadConstantOrVariablePayload(size, t1, BooleanTag, t0, .slow)
@@ -1911,6 +2037,30 @@ macro arrayProfileForCall(opcodeStruct, getu)
 .done:
 end
 
+macro callHelper(opcodeName, slowPath, opcodeStruct, valueProfileName, dstVirtualRegister, prepareCall, size, dispatch, metadata, getCallee, getArgumentStart, getArgumentCountIncludingThis)
+    metadata(t5, t0)
+    getCallee(t0)
+
+    loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_calleeOrLastSeenCalleeWithLinkBit[t5], t2
+    loadConstantOrVariablePayload(size, t0, CellTag, t3, .opCallSlow)
+    bineq t3, t2, .opCallSlow
+    getArgumentStart(t3)
+    lshifti 3, t3
+    negi t3
+    addp cfr, t3  # t3 contains the new value of cfr
+    storei t2, Callee + PayloadOffset[t3]
+    getArgumentCountIncludingThis(t2)
+    storei PC, ArgumentCountIncludingThis + TagOffset[cfr]
+    storei t2, ArgumentCountIncludingThis + PayloadOffset[t3]
+    storei CellTag, Callee + TagOffset[t3]
+    move t3, sp
+    prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], t2, t3, t4, JSEntryPtrTag)
+    callTargetFunction(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, %opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], JSEntryPtrTag)
+
+.opCallSlow:
+    slowPathForCall(opcodeName, size, opcodeStruct, valueProfileName, dstVirtualRegister, dispatch, slowPath, prepareCall)
+end
+
 macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, prologue)
     llintOpWithMetadata(opcodeName, opcodeStruct, macro (size, get, dispatch, metadata, return)
         metadata(t5, t0)
@@ -1919,25 +2069,19 @@ macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, prologue)
             getu(size, opcodeStruct, fieldName, dst)
         end, metadata)
 
-        get(m_callee, t0)
-        loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_calleeOrLastSeenCalleeWithLinkBit[t5], t2
-        loadConstantOrVariablePayload(size, t0, CellTag, t3, .opCallSlow)
-        bineq t3, t2, .opCallSlow
-        getu(size, opcodeStruct, m_argv, t3)
-        lshifti 3, t3
-        negi t3
-        addp cfr, t3  # t3 contains the new value of cfr
-        storei t2, Callee + PayloadOffset[t3]
-        getu(size, opcodeStruct, m_argc, t2)
-        storei PC, ArgumentCountIncludingThis + TagOffset[cfr]
-        storei t2, ArgumentCountIncludingThis + PayloadOffset[t3]
-        storei CellTag, Callee + TagOffset[t3]
-        move t3, sp
-        prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], t2, t3, t4, JSEntryPtrTag)
-        callTargetFunction(opcodeName, size, opcodeStruct, dispatch, %opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], JSEntryPtrTag)
+        macro getCallee(dst)
+           get(m_callee, t0)
+        end
 
-    .opCallSlow:
-        slowPathForCall(opcodeName, size, opcodeStruct, dispatch, slowPath, prepareCall)
+        macro getArgumentStart(dst)
+            getu(size, opcodeStruct, m_argv, dst)
+        end
+
+        macro getArgumentCount(dst)
+            getu(size, opcodeStruct, m_argc, dst)
+        end
+
+        callHelper(opcodeName, slowPath, opcodeStruct, m_profile, m_dst, prepareCall, size, dispatch, metadata, getCallee, getArgumentStart, getArgumentCount)
     end)
 end
 
@@ -2265,7 +2409,7 @@ llintOpWithMetadata(op_get_from_scope, OpGetFromScope, macro (size, get, dispatc
     macro getProperty()
         loadp OpGetFromScope::Metadata::m_operand[t5], t3
         loadPropertyAtVariableOffset(t3, t0, t1, t2)
-        valueProfile(OpGetFromScope, t5, t1, t2)
+        valueProfile(OpGetFromScope, m_profile, t5, t1, t2)
         return(t1, t2)
     end
 
@@ -2274,7 +2418,7 @@ llintOpWithMetadata(op_get_from_scope, OpGetFromScope, macro (size, get, dispatc
         loadp TagOffset[t0], t1
         loadp PayloadOffset[t0], t2
         tdzCheckIfNecessary(t1)
-        valueProfile(OpGetFromScope, t5, t1, t2)
+        valueProfile(OpGetFromScope, m_profile, t5, t1, t2)
         return(t1, t2)
     end
 
@@ -2282,7 +2426,7 @@ llintOpWithMetadata(op_get_from_scope, OpGetFromScope, macro (size, get, dispatc
         loadp OpGetFromScope::Metadata::m_operand[t5], t3
         loadp JSLexicalEnvironment_variables + TagOffset[t0, t3, 8], t1
         loadp JSLexicalEnvironment_variables + PayloadOffset[t0, t3, 8], t2
-        valueProfile(OpGetFromScope, t5, t1, t2)
+        valueProfile(OpGetFromScope, m_profile, t5, t1, t2)
         return(t1, t2)
     end
 
@@ -2571,6 +2715,150 @@ llintOpWithReturn(op_get_rest_length, OpGetRestLength, macro (size, get, dispatc
     return(Int32Tag, t0)
 end)
 
+llintOpWithMetadata(op_iterator_open, OpIteratorOpen, macro (size, get, dispatch, metadata, return)
+    macro fastNarrow()
+        callSlowPath(_iterator_open_try_fast_narrow)
+    end
+    macro fastWide16()
+        callSlowPath(_iterator_open_try_fast_wide16)
+    end
+    macro fastWide32()
+        callSlowPath(_iterator_open_try_fast_wide32)
+    end
+    size(fastNarrow, fastWide16, fastWide32, macro (callOp) callOp() end)
+
+    # FIXME: We should do this with inline assembly since it's the "fast" case.
+    bbeq r1, constexpr IterationMode::Generic, .iteratorOpenGeneric
+    dispatch()
+
+.iteratorOpenGeneric:
+    macro gotoGetByIdCheckpoint()
+        jmp .getByIdStart
+    end
+
+    macro getCallee(dst)
+        get(m_symbolIterator, dst)
+    end
+
+    macro getArgumentIncludingThisStart(dst)
+        getu(size, OpIteratorOpen, m_stackOffset, dst)
+    end
+
+    macro getArgumentIncludingThisCount(dst)
+        move 1, dst
+    end
+
+    callHelper(op_iterator_open, _llint_slow_path_iterator_open_call, OpIteratorOpen, m_iteratorProfile, m_iterator, prepareForRegularCall, size, gotoGetByIdCheckpoint, metadata, getCallee, getArgumentIncludingThisStart, getArgumentIncludingThisCount)
+
+.getByIdStart:
+    macro storeNextAndDispatch(valueTag, valuePayload)
+        move valueTag, t2
+        move valuePayload, t3
+        get(m_next, t1)
+        storei t2, TagOffset[cfr, t1, 8]
+        storei t3, PayloadOffset[cfr, t1, 8]
+        dispatch()
+    end
+
+    # We need to load m_iterator into t3 because that's where
+    # performGetByIDHelper expects the base object
+    loadVariable(get, m_iterator, t3, t0, t3)
+    bineq t0, CellTag, .iteratorOpenGenericGetNextSlow
+    performGetByIDHelper(OpIteratorOpen, m_modeMetadata, m_nextProfile, .iteratorOpenGenericGetNextSlow, size, metadata, storeNextAndDispatch)
+
+.iteratorOpenGenericGetNextSlow:
+    callSlowPath(_llint_slow_path_iterator_open_get_next)
+    dispatch()
+end)
+
+llintOpWithMetadata(op_iterator_next, OpIteratorNext, macro (size, get, dispatch, metadata, return)
+
+    loadVariable(get, m_next, t0, t1, t0)
+    bineq t1, EmptyValueTag, .iteratorNextGeneric
+
+    macro fastNarrow()
+        callSlowPath(_iterator_next_try_fast_narrow)
+    end
+    macro fastWide16()
+        callSlowPath(_iterator_next_try_fast_wide16)
+    end
+    macro fastWide32()
+        callSlowPath(_iterator_next_try_fast_wide32)
+    end
+    size(fastNarrow, fastWide16, fastWide32, macro (callOp) callOp() end)
+
+    # FIXME: We should do this with inline assembly since it's the "fast" case.
+    bbeq r1, constexpr IterationMode::Generic, .iteratorNextGeneric
+    dispatch()
+
+.iteratorNextGeneric:
+    macro gotoGetDoneCheckpoint()
+        jmp .getDoneStart
+    end
+
+    macro getCallee(dst)
+        get(m_next, dst)
+    end
+
+    macro getArgumentIncludingThisStart(dst)
+        getu(size, OpIteratorNext, m_stackOffset, dst)
+    end
+
+    macro getArgumentIncludingThisCount(dst)
+        move 1, dst
+    end
+
+    # Use m_value slot as a tmp since we are going to write to it later.
+    callHelper(op_iterator_next, _llint_slow_path_iterator_next_call, OpIteratorNext, m_nextResultProfile, m_value, prepareForRegularCall, size, gotoGetDoneCheckpoint, metadata, getCallee, getArgumentIncludingThisStart, getArgumentIncludingThisCount)
+
+.getDoneStart:
+    macro storeDoneAndJmpToGetValue(doneValueTag, doneValuePayload)
+        move doneValueTag, t0
+        move doneValuePayload, t1
+        get(m_done, t2)
+        storei t0, TagOffset[cfr, t2, 8]
+        storei t1, PayloadOffset[cfr, t2, 8]
+        jmp .getValueStart
+    end
+
+    loadVariable(get, m_value, t3, t0, t3)
+    bineq t0, CellTag, .getDoneSlow
+    performGetByIDHelper(OpIteratorNext, m_doneModeMetadata, m_doneProfile, .getDoneSlow, size, metadata, storeDoneAndJmpToGetValue)
+
+.getDoneSlow:
+    callSlowPath(_llint_slow_path_iterator_next_get_done)
+    branchIfException(_llint_throw_from_slow_path_trampoline)
+    loadVariable(get, m_done, t1, t0, t1)
+
+    # storeDoneAndJmpToGetValue puts the doneValue into t0
+.getValueStart:
+    # In 32 bits, following slow path if tags is not null, undefined, int32, boolean.
+    # These satisfy the mask ~0x3.
+    # Therefore if the mask is _not_ satisfied, we branch to the slow case.
+    btinz t0, ~0x3, .getValueSlow
+    btiz t1, 0x1, .notDone
+    dispatch()
+
+.notDone:
+    macro storeValueAndDispatch(vTag, vPayload)
+        move vTag, t2
+        move vPayload, t3
+        get(m_value, t1)
+        storei t2, TagOffset[cfr, t1, 8]
+        storei t3, PayloadOffset[cfr, t1, 8]
+        checkStackPointerAlignment(t0, 0xbaddb01e)
+        dispatch()
+    end
+
+    # Reload the next result tmp since the get_by_id above may have clobbered t3.
+    loadVariable(get, m_value, t3, t0, t3)
+    # We don't need to check if the iterator result is a cell here since we will have thrown an error before.
+    performGetByIDHelper(OpIteratorNext, m_valueModeMetadata, m_valueProfile, .getValueSlow, size, metadata, storeValueAndDispatch)
+
+.getValueSlow:
+    callSlowPath(_llint_slow_path_iterator_next_get_value)
+    dispatch()
+end)
 
 llintOpWithProfile(op_get_internal_field, OpGetInternalField, macro (size, get, dispatch, return)
     get(m_base, t0)
@@ -2628,4 +2916,9 @@ llintOp(op_log_shadow_chicken_tail, OpLogShadowChickenTail, macro (size, get, di
 .opLogShadowChickenTailSlow:
     callSlowPath(_llint_slow_path_log_shadow_chicken_tail)
     dispatch()
+end)
+
+
+op(fuzzer_return_early_from_loop_hint, macro ()
+    notSupported()
 end)

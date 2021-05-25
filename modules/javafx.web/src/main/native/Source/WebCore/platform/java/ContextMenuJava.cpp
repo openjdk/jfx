@@ -23,7 +23,7 @@
  * questions.
  */
 
-
+#include "config.h"
 #include "ContextMenuJava.h"
 #include "ContextMenu.h"
 #include "ContextMenuController.h"

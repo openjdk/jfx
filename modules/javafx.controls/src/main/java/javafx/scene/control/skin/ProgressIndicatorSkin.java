@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.TreeShowingExpression;
 import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,6 +105,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     private IndeterminateSpinner spinner;
     private DeterminateIndicator determinateIndicator;
     private ProgressIndicator control;
+    private TreeShowingExpression treeShowingExpression;
 
     Animation indeterminateTransition;
 
@@ -125,12 +127,13 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         super(control);
 
         this.control = control;
+        this.treeShowingExpression = new TreeShowingExpression(control);
 
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
-        registerChangeListener(NodeHelper.treeShowingProperty(control), e -> updateAnimation());
         registerChangeListener(control.sceneProperty(), e->updateAnimation());
+        registerChangeListener(treeShowingExpression, e -> updateAnimation());
 
         initialize();
         updateAnimation();
@@ -231,6 +234,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     /** {@inheritDoc} */
     @Override public void dispose() {
         super.dispose();
+
+        treeShowingExpression.dispose();
 
         if (indeterminateTransition != null) {
             indeterminateTransition.stop();
@@ -737,7 +742,12 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
                 }
 
                 ((Timeline)indeterminateTransition).getKeyFrames().setAll(keyFrames);
-                indeterminateTransition.playFromStart();
+
+                if (NodeHelper.isTreeShowing(control)) {
+                    indeterminateTransition.playFromStart();
+                } else {
+                    indeterminateTransition.jumpTo(Duration.ZERO);
+                }
             } else {
                 if (indeterminateTransition != null) {
                     indeterminateTransition.stop();

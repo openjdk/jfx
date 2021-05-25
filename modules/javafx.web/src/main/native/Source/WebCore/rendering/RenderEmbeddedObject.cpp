@@ -74,29 +74,10 @@ static const float replacementArrowLeftMargin = -4;
 static const float replacementArrowPadding = 4;
 static const float replacementArrowCirclePadding = 3;
 
-static const Color& replacementTextRoundedRectPressedColor()
-{
-    static NeverDestroyed<Color> pressed(105, 105, 105, 242);
-    return pressed;
-}
-
-static const Color& replacementTextRoundedRectColor()
-{
-    static NeverDestroyed<Color> standard(125, 125, 125, 242);
-    return standard;
-}
-
-static const Color& replacementTextColor()
-{
-    static NeverDestroyed<Color> standard(240, 240, 240, 255);
-    return standard;
-}
-
-static const Color& unavailablePluginBorderColor()
-{
-    static NeverDestroyed<Color> standard(255, 255, 255, 216);
-    return standard;
-}
+static constexpr auto replacementTextRoundedRectPressedColor = SRGBA<uint8_t> { 105, 105, 105, 242 };
+static constexpr auto replacementTextRoundedRectColor = SRGBA<uint8_t> { 125, 125, 125, 242 };
+static constexpr auto replacementTextColor = SRGBA<uint8_t> { 240, 240, 240 };
+static constexpr auto unavailablePluginBorderColor = Color::white.colorWithAlphaByte(216);
 
 RenderEmbeddedObject::RenderEmbeddedObject(HTMLFrameOwnerElement& element, RenderStyle&& style)
     : RenderWidget(element, WTFMove(style))
@@ -104,8 +85,6 @@ RenderEmbeddedObject::RenderEmbeddedObject(HTMLFrameOwnerElement& element, Rende
     , m_unavailablePluginIndicatorIsPressed(false)
     , m_mouseDownWasInUnavailablePluginIndicator(false)
 {
-    // Actual size is not known yet, report the default intrinsic size.
-    view().frameView().incrementVisuallyNonEmptyPixelCount(roundedIntSize(intrinsicSize()));
 }
 
 RenderEmbeddedObject::~RenderEmbeddedObject()
@@ -314,7 +293,7 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
 
     GraphicsContextStateSaver stateSaver(context);
     context.clip(contentRect);
-    context.setFillColor(m_unavailablePluginIndicatorIsPressed ? replacementTextRoundedRectPressedColor() : replacementTextRoundedRectColor());
+    context.setFillColor(m_unavailablePluginIndicatorIsPressed ? replacementTextRoundedRectPressedColor : replacementTextRoundedRectColor);
     context.fillPath(background);
 
     Path strokePath;
@@ -322,21 +301,21 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
     strokeRect.inflate(1);
     strokePath.addRoundedRect(strokeRect, FloatSize(replacementTextRoundedRectRadius + 1, replacementTextRoundedRectRadius + 1));
 
-    context.setStrokeColor(unavailablePluginBorderColor());
+    context.setStrokeColor(unavailablePluginBorderColor);
     context.setStrokeThickness(2);
     context.strokePath(strokePath);
 
     const FontMetrics& fontMetrics = font.fontMetrics();
     float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
     float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent() + replacementTextRoundedRectTopTextMargin);
-    context.setFillColor(replacementTextColor());
+    context.setFillColor(replacementTextColor);
     context.drawBidiText(font, run, FloatPoint(labelX, labelY));
 
     if (shouldUnavailablePluginMessageBeButton(page(), m_pluginUnavailabilityReason)) {
         arrowRect.inflate(-replacementArrowCirclePadding);
 
         context.beginTransparencyLayer(1.0);
-        context.setFillColor(replacementTextColor());
+        context.setFillColor(replacementTextColor);
         context.fillEllipse(arrowRect);
 
         context.setCompositeOperation(CompositeOperator::Clear);

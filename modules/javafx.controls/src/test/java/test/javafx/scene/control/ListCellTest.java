@@ -39,7 +39,6 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.MultipleSelectionModelBaseShim;
 import javafx.scene.control.SelectionMode;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static javafx.scene.control.ControlShim.*;
@@ -490,7 +489,7 @@ public class ListCellTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
+    @Test public void replacingTheSelectionModelRemovesTheListenerFromTheOldModel() {
         cell.updateIndex(0);
         cell.updateListView(list);
         MultipleSelectionModel<String> sm = list.getSelectionModel();

@@ -55,7 +55,6 @@ public:
     virtual String stringForType(const String& pasteboardType, const String& pasteboardName) = 0;
     virtual Vector<String> allStringsForType(const String& pasteboardType, const String& pasteboardName) = 0;
     virtual int64_t changeCount(const String& pasteboardName) = 0;
-    virtual String uniqueName() = 0;
     virtual Color color(const String& pasteboardName) = 0;
     virtual URL url(const String& pasteboardName) = 0;
     virtual int getNumberOfFiles(const String& pasteboardName) = 0;
@@ -66,6 +65,9 @@ public:
     virtual int64_t setURL(const PasteboardURL&, const String& pasteboardName) = 0;
     virtual int64_t setColor(const Color&, const String& pasteboardName) = 0;
     virtual int64_t setStringForType(const String&, const String& pasteboardType, const String& pasteboardName) = 0;
+
+    virtual bool containsURLStringSuitableForLoading(const String& pasteboardName) = 0;
+    virtual String urlStringSuitableForLoading(const String& pasteboardName, String& title) = 0;
 #endif
     virtual String readStringFromPasteboard(size_t index, const String& pasteboardType, const String& pasteboardName) = 0;
     virtual RefPtr<SharedBuffer> readBufferFromPasteboard(size_t index, const String& pasteboardType, const String& pasteboardName) = 0;
@@ -76,10 +78,15 @@ public:
 
     virtual Vector<String> typesSafeForDOMToReadAndWrite(const String& pasteboardName, const String& origin) = 0;
     virtual int64_t writeCustomData(const Vector<PasteboardCustomData>&, const String& pasteboardName) = 0;
+    virtual bool containsStringSafeForDOMToReadForType(const String&, const String& pasteboardName) = 0;
 
 #if PLATFORM(GTK)
-    virtual void writeToClipboard(const String& pasteboardName, const SelectionData&) = 0;
-    virtual Ref<SelectionData> readFromClipboard(const String& pasteboardName) = 0;
+    virtual Vector<String> types(const String& pasteboardName) = 0;
+    virtual String readTextFromClipboard(const String& pasteboardName) = 0;
+    virtual Vector<String> readFilePathsFromClipboard(const String& pasteboardName) = 0;
+    virtual RefPtr<SharedBuffer> readBufferFromClipboard(const String& pasteboardName, const String& pasteboardType) = 0;
+    virtual void writeToClipboard(const String& pasteboardName, SelectionData&&) = 0;
+    virtual void clearClipboard(const String& pasteboardName) = 0;
 #endif // PLATFORM(GTK)
 
 #if USE(LIBWPE)

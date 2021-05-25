@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,11 +61,11 @@ void DragClientJava::willPerformDragSourceAction(
 }
 
 //We work in window rather than view coordinates here
-DragSourceAction DragClientJava::dragSourceActionMaskForPoint(const IntPoint&)
+OptionSet<DragSourceAction> DragClientJava::dragSourceActionMaskForPoint(const IntPoint&)
 {
     //TODO: check input element and produce correct respond
     notImplemented();
-    return DragSourceActionAny;
+    return WebCore::anyDragSourceAction();
 }
 
 void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&)
@@ -127,7 +127,7 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     jobject jimage = dragImage.get() && dragImage.get()->javaImage()
                   ? jobject(*(dragImage.get()->javaImage())) : nullptr;
 
-    bool isImageSource = dragSourceAction & DragSourceActionImage;
+    bool isImageSource = dragSourceAction && (*dragSourceAction == DragSourceAction::Image);
 
     env->CallVoidMethod(m_webPage, mid, jimage,
         eventPos.x() - dragImageOrigin.x(),

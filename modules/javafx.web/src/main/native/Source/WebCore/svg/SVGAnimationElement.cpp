@@ -41,6 +41,7 @@
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -77,57 +78,50 @@ fail:
     result.clear();
 }
 
-static void parseKeySplines(const String& parse, Vector<UnitBezier>& result)
+static Optional<Vector<UnitBezier>> parseKeySplines(StringView string)
 {
-    result.clear();
-    if (parse.isEmpty())
-        return;
+    if (string.isEmpty())
+        return WTF::nullopt;
 
-    auto upconvertedCharacters = StringView(parse).upconvertedCharacters();
-    const UChar* cur = upconvertedCharacters;
-    const UChar* end = cur + parse.length();
+    return readCharactersForParsing(string, [&](auto buffer) -> Optional<Vector<UnitBezier>> {
+        skipOptionalSVGSpaces(buffer);
 
-    skipOptionalSVGSpaces(cur, end);
+        Vector<UnitBezier> result;
 
-    bool delimParsed = false;
-    while (cur < end) {
-        delimParsed = false;
-        float posA = 0;
-        if (!parseNumber(cur, end, posA)) {
-            result.clear();
-            return;
+        bool delimParsed = false;
+        while (buffer.hasCharactersRemaining()) {
+            delimParsed = false;
+            auto posA = parseNumber(buffer);
+            if (!posA)
+                return WTF::nullopt;
+
+            auto posB = parseNumber(buffer);
+            if (!posB)
+                return WTF::nullopt;
+
+            auto posC = parseNumber(buffer);
+            if (!posC)
+                return WTF::nullopt;
+
+            auto posD = parseNumber(buffer, SuffixSkippingPolicy::DontSkip);
+            if (!posD)
+                return WTF::nullopt;
+
+            skipOptionalSVGSpaces(buffer);
+
+            if (skipExactly(buffer, ';'))
+                delimParsed = true;
+
+            skipOptionalSVGSpaces(buffer);
+
+            result.append(UnitBezier { *posA, *posB, *posC, *posD });
         }
 
-        float posB = 0;
-        if (!parseNumber(cur, end, posB)) {
-            result.clear();
-            return;
-        }
+        if (!(buffer.atEnd() && !delimParsed))
+            return WTF::nullopt;
 
-        float posC = 0;
-        if (!parseNumber(cur, end, posC)) {
-            result.clear();
-            return;
-        }
-
-        float posD = 0;
-        if (!parseNumber(cur, end, posD, false)) {
-            result.clear();
-            return;
-        }
-
-        skipOptionalSVGSpaces(cur, end);
-
-        if (cur < end && *cur == ';') {
-            delimParsed = true;
-            cur++;
-        }
-        skipOptionalSVGSpaces(cur, end);
-
-        result.append(UnitBezier(posA, posB, posC, posD));
-    }
-    if (!(cur == end && !delimParsed))
-        result.clear();
+        return result;
+    });
 }
 
 bool SVGAnimationElement::isSupportedAttribute(const QualifiedName& attrName)
@@ -180,7 +174,10 @@ void SVGAnimationElement::parseAttribute(const QualifiedName& name, const AtomSt
     }
 
     if (name == SVGNames::keySplinesAttr) {
-        parseKeySplines(value, m_keySplines);
+        if (auto keySplines = parseKeySplines(value))
+            m_keySplines = WTFMove(*keySplines);
+        else
+            m_keySplines.clear();
         return;
     }
 
@@ -276,10 +273,10 @@ void SVGAnimationElement::updateAnimationMode()
 
 void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 {
-    static NeverDestroyed<const AtomString> discrete("discrete", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> linear("linear", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> paced("paced", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> spline("spline", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> discrete("discrete", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> linear("linear", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> paced("paced", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> spline("spline", AtomString::ConstructFromLiteral);
     if (calcMode == discrete)
         setCalcMode(CalcMode::Discrete);
     else if (calcMode == linear)
@@ -294,8 +291,8 @@ void SVGAnimationElement::setCalcMode(const AtomString& calcMode)
 
 void SVGAnimationElement::setAttributeType(const AtomString& attributeType)
 {
-    static NeverDestroyed<const AtomString> css("CSS", AtomString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomString> xml("XML", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> css("CSS", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> xml("XML", AtomString::ConstructFromLiteral);
     if (attributeType == css)
         m_attributeType = AttributeType::CSS;
     else if (attributeType == xml)
@@ -321,14 +318,14 @@ String SVGAnimationElement::fromValue() const
 
 bool SVGAnimationElement::isAdditive() const
 {
-    static NeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::additiveAttr);
     return value == sum || animationMode() == AnimationMode::By;
 }
 
 bool SVGAnimationElement::isAccumulated() const
 {
-    static NeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> sum("sum", AtomString::ConstructFromLiteral);
     const AtomString& value = attributeWithoutSynchronization(SVGNames::accumulateAttr);
     return value == sum && animationMode() != AnimationMode::To;
 }
@@ -606,7 +603,7 @@ void SVGAnimationElement::computeCSSPropertyValue(SVGElement* element, CSSProper
 
 static bool inheritsFromProperty(SVGElement* targetElement, const QualifiedName& attributeName, const String& value)
 {
-    static NeverDestroyed<const AtomString> inherit("inherit", AtomString::ConstructFromLiteral);
+    static MainThreadNeverDestroyed<const AtomString> inherit("inherit", AtomString::ConstructFromLiteral);
 
     if (value.isEmpty() || value != inherit)
         return false;

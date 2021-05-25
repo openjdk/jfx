@@ -2,19 +2,23 @@
                _JNI_OnUnload
                _WTFReportBacktrace
                _WTFReportAssertionFailure
+               _WTFReportAssertionFailureWithMessage
                _WTFCrashWithSecurityImplication
                _WTFReportArgumentAssertionFailure
                _WTFCrash
                __ZN3WTF10fastMallocEm
                __ZN3WTF6StringC1EPKc
-               __ZN3WTF6StringC1EPKtj
+               __ZN3WTF6StringC1EPKDsj
                __ZN3WTF7RunLoop4mainEv
+               __ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE
                __ZN3WTF8fastFreeEPv
                __ZN3WTF4Lock10unlockSlowEv
                __ZN3WTF4Lock8lockSlowEv
                __ZN3WTF8WallTime3nowEv
                __ZN3WTF10fastMallocEm
                __ZN3WTF10StringImpl7destroyEPS0_
+               __ZN3WTF12isMainThreadEv
+               __ZN3WTF14RefCountedBase33areThreadingChecksEnabledGloballyE
                __ZN3WTF16fastZeroedMallocEm
                __ZN3WTF26getAndResetAccumulatedLogsEv
                __ZNK3WTF6String4utf8Ev

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,15 +43,12 @@
 #include "WasmContextInlines.h"
 #include "WasmInstance.h"
 #include "WasmMemory.h"
-#include "WasmNameSection.h"
 #include "WasmOMGForOSREntryPlan.h"
 #include "WasmOMGPlan.h"
 #include "WasmOSREntryData.h"
-#include "WasmSignatureInlines.h"
 #include "WasmWorklist.h"
 #include <wtf/DataLog.h>
 #include <wtf/Locker.h>
-#include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
 
 IGNORE_WARNINGS_BEGIN("frame-address")
@@ -233,6 +230,15 @@ static void doOSREntry(Instance* instance, Probe::Context& context, BBQCallee& c
     context.gpr(GPRInfo::argumentGPR1) = bitwise_cast<UCPURegister>(osrEntryCallee.entrypoint().executableAddress<>());
 }
 
+inline bool shouldJIT(unsigned functionIndex)
+{
+    if (!Options::useOMGJIT())
+        return false;
+    if (!Options::wasmFunctionIndexRangeToCompile().isInRange(functionIndex))
+        return false;
+    return true;
+}
+
 void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
 {
     OSREntryData& osrEntryData = *context.arg<OSREntryData*>();
@@ -253,9 +259,20 @@ void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
     ASSERT(codeBlock.wasmBBQCalleeFromFunctionIndexSpace(functionIndexInSpace).compilationMode() == Wasm::CompilationMode::BBQMode);
     BBQCallee& callee = static_cast<BBQCallee&>(codeBlock.wasmBBQCalleeFromFunctionIndexSpace(functionIndexInSpace));
     TierUpCount& tierUp = *callee.tierUpCount();
+
+    if (!shouldJIT(functionIndex)) {
+        tierUp.deferIndefinitely();
+        return returnWithoutOSREntry();
+    }
+
     dataLogLnIf(Options::verboseOSR(), "Consider OMGForOSREntryPlan for [", functionIndex, "] loopIndex#", loopIndex, " with executeCounter = ", tierUp, " ", RawPointer(callee.replacement()));
 
     if (!Options::useWebAssemblyOSR()) {
+        if (!wasmFunctionSizeCanBeOMGCompiled(instance->module().moduleInformation().functions[functionIndex].data.size())) {
+            tierUp.deferIndefinitely();
+            return returnWithoutOSREntry();
+        }
+
         if (shouldTriggerOMGCompile(tierUp, callee.replacement(), functionIndex))
             triggerOMGReplacementCompile(tierUp, callee.replacement(), instance, codeBlock, functionIndex);
 
@@ -322,6 +339,9 @@ void JIT_OPERATION operationWasmTriggerOSREntryNow(Probe::Context& context)
         return returnWithoutOSREntry();
 
     if (!triggeredSlowPathToStartCompilation) {
+        if (!wasmFunctionSizeCanBeOMGCompiled(instance->module().moduleInformation().functions[functionIndex].data.size()))
+            return returnWithoutOSREntry();
+
         triggerOMGReplacementCompile(tierUp, callee.replacement(), instance, codeBlock, functionIndex);
 
         if (!callee.replacement())
@@ -426,6 +446,12 @@ void JIT_OPERATION operationWasmTriggerTierUpNow(Instance* instance, uint32_t fu
     ASSERT(codeBlock.wasmBBQCalleeFromFunctionIndexSpace(functionIndexInSpace).compilationMode() == Wasm::CompilationMode::BBQMode);
     BBQCallee& callee = static_cast<BBQCallee&>(codeBlock.wasmBBQCalleeFromFunctionIndexSpace(functionIndexInSpace));
     TierUpCount& tierUp = *callee.tierUpCount();
+
+    if (!shouldJIT(functionIndex)) {
+        tierUp.deferIndefinitely();
+        return;
+    }
+
     dataLogLnIf(Options::verboseOSR(), "Consider OMGPlan for [", functionIndex, "] with executeCounter = ", tierUp, " ", RawPointer(callee.replacement()));
 
     if (shouldTriggerOMGCompile(tierUp, callee.replacement(), functionIndex))
@@ -516,7 +542,7 @@ void JIT_OPERATION operationIterateResults(CallFrame* callFrame, Instance* insta
                 unboxedValue = bitwise_cast<uint64_t>(value.toNumber(globalObject));
                 break;
             case Funcref:
-                if (!value.isFunction(vm)) {
+                if (!value.isCallable(vm)) {
                     throwTypeError(globalObject, scope, "Funcref value is not a function"_s);
                     return;
                 }
@@ -705,7 +731,7 @@ bool JIT_OPERATION operationWasmTableFill(Instance* instance, unsigned tableInde
 EncodedJSValue JIT_OPERATION operationWasmRefFunc(Instance* instance, uint32_t index)
 {
     JSValue value = instance->getFunctionWrapper(index);
-    ASSERT(value.isFunction(instance->owner<JSObject>()->vm()));
+    ASSERT(value.isCallable(instance->owner<JSObject>()->vm()));
     return JSValue::encode(value);
 }
 

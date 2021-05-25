@@ -37,7 +37,7 @@
 namespace WebCore {
 
 FEBlend::FEBlend(Filter& filter, BlendMode mode)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::Blend)
     , m_mode(mode)
 {
 }

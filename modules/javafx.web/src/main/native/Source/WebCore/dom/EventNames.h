@@ -148,6 +148,7 @@ namespace WebCore {
     macro(icegatheringstatechange) \
     macro(inactive) \
     macro(input) \
+    macro(inputsourceschange) \
     macro(install) \
     macro(invalid) \
     macro(keydown) \
@@ -231,6 +232,7 @@ namespace WebCore {
     macro(seeked) \
     macro(seeking) \
     macro(select) \
+    macro(selectend) \
     macro(selectionchange) \
     macro(selectstart) \
     macro(shippingaddresschange) \
@@ -247,6 +249,9 @@ namespace WebCore {
     macro(sourceopen) \
     macro(speechend) \
     macro(speechstart) \
+    macro(squeeze) \
+    macro(squeezestart) \
+    macro(squeezeend) \
     macro(stalled) \
     macro(start) \
     macro(started) \
@@ -285,13 +290,6 @@ namespace WebCore {
     macro(versionchange) \
     macro(visibilitychange) \
     macro(volumechange) \
-    macro(vrdisplayactivate) \
-    macro(vrdisplayblur) \
-    macro(vrdisplayconnect) \
-    macro(vrdisplaydeactivate) \
-    macro(vrdisplaydisconnect) \
-    macro(vrdisplayfocus) \
-    macro(vrdisplaypresentchange) \
     macro(waiting) \
     macro(waitingforkey) \
     macro(webglcontextchanged) \

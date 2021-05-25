@@ -59,10 +59,6 @@
 #include "ApplicationManifest.h"
 #endif
 
-#if HAVE(RUNLOOP_TIMER)
-#include <wtf/RunLoopTimer.h>
-#endif
-
 #if PLATFORM(COCOA)
 #include <wtf/SchedulePair.h>
 #endif
@@ -136,6 +132,13 @@ enum class LegacyOverflowScrollingTouchPolicy : uint8_t {
     Default,
     Disable,
     Enable,
+};
+
+enum class MouseEventPolicy : uint8_t {
+    Default,
+#if ENABLE(IOS_TOUCH_EVENTS)
+    SynthesizeTouchEvents,
+#endif
 };
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DocumentLoader);
@@ -267,11 +270,11 @@ public:
     // item were created. This allows WebKit to link history items reflecting
     // redirects into a chain from start to finish.
     String clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; } // null if no client redirect occurred.
-    String clientRedirectDestinationForHistory() const { return urlForHistory(); }
+    String clientRedirectDestinationForHistory() const { return urlForHistory().string(); }
     void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
 
-    String serverRedirectSourceForHistory() const { return (urlForHistory() == url() || url() == WTF::blankURL()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
-    String serverRedirectDestinationForHistory() const { return url(); }
+    String serverRedirectSourceForHistory() const { return (urlForHistory() == url() || url() == aboutBlankURL()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
+    String serverRedirectDestinationForHistory() const { return url().string(); }
 
     bool didCreateGlobalHistoryEntry() const { return m_didCreateGlobalHistoryEntry; }
     void setDidCreateGlobalHistoryEntry(bool didCreateGlobalHistoryEntry) { m_didCreateGlobalHistoryEntry = didCreateGlobalHistoryEntry; }
@@ -327,6 +330,9 @@ public:
 
     LegacyOverflowScrollingTouchPolicy legacyOverflowScrollingTouchPolicy() const { return m_legacyOverflowScrollingTouchPolicy; }
     void setLegacyOverflowScrollingTouchPolicy(LegacyOverflowScrollingTouchPolicy policy) { m_legacyOverflowScrollingTouchPolicy = policy; }
+
+    WEBCORE_EXPORT MouseEventPolicy mouseEventPolicy() const;
+    void setMouseEventPolicy(MouseEventPolicy policy) { m_mouseEventPolicy = policy; }
 
     void addSubresourceLoader(ResourceLoader*);
     void removeSubresourceLoader(LoadCompletionType, ResourceLoader*);
@@ -397,13 +403,15 @@ public:
     void setAllowsDataURLsForMainFrame(bool allowsDataURLsForMainFrame) { m_allowsDataURLsForMainFrame = allowsDataURLsForMainFrame; }
     bool allowsDataURLsForMainFrame() const { return m_allowsDataURLsForMainFrame; }
 
-    void setDownloadAttribute(const String& attribute) { m_downloadAttribute = attribute; }
-    const String& downloadAttribute() const { return m_downloadAttribute; }
+    const AtomString& downloadAttribute() const { return m_triggeringAction.downloadAttribute(); }
 
     WEBCORE_EXPORT void applyPoliciesToSettings();
 
     void setAllowContentChangeObserverQuirk(bool allow) { m_allowContentChangeObserverQuirk = allow; }
     bool allowContentChangeObserverQuirk() const { return m_allowContentChangeObserverQuirk; }
+
+    void setIdempotentModeAutosizingOnlyHonorsPercentages(bool idempotentModeAutosizingOnlyHonorsPercentages) { m_idempotentModeAutosizingOnlyHonorsPercentages = idempotentModeAutosizingOnlyHonorsPercentages; }
+    bool idempotentModeAutosizingOnlyHonorsPercentages() const { return m_idempotentModeAutosizingOnlyHonorsPercentages; }
 
 #if ENABLE(SERVICE_WORKER)
     WEBCORE_EXPORT bool setControllingServiceWorkerRegistration(ServiceWorkerRegistrationData&&);
@@ -417,6 +425,11 @@ protected:
     bool m_deferMainResourceDataLoad { true };
 
 private:
+    class DataLoadToken : public CanMakeWeakPtr<DataLoadToken> {
+    public:
+        void clear() { weakPtrFactory().revokeAll(); }
+    };
+
     Document* document() const;
 
 #if ENABLE(SERVICE_WORKER)
@@ -447,7 +460,7 @@ private:
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     WEBCORE_EXPORT void dataReceived(CachedResource&, const char* data, int length) override;
-    WEBCORE_EXPORT void notifyFinished(CachedResource&) override;
+    WEBCORE_EXPORT void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
 #if USE(QUICK_LOOK)
     WEBCORE_EXPORT void previewResponseReceived(CachedResource&, const ResourceResponse&) override;
 #endif
@@ -477,13 +490,7 @@ private:
     void stopLoadingForPolicyChange();
     ResourceError interruptedForPolicyChangeError() const;
 
-#if HAVE(RUNLOOP_TIMER)
-    typedef RunLoopTimer<DocumentLoader> DocumentLoaderTimer;
-#else
-    typedef Timer DocumentLoaderTimer;
-#endif
     void handleSubstituteDataLoadNow();
-    void startDataLoadTimer();
 
     void deliverSubstituteResourcesAfterDelay();
     void substituteResourceDeliveryTimerFired();
@@ -588,7 +595,7 @@ private:
     MonotonicTime m_timeOfLastDataReceived;
     unsigned long m_identifierForLoadWithoutResourceLoader { 0 };
 
-    DocumentLoaderTimer m_dataLoadTimer;
+    DataLoadToken m_dataLoadToken;
     bool m_waitingForContentPolicy { false };
     bool m_waitingForNavigationPolicy { false };
 
@@ -621,6 +628,7 @@ private:
     String m_customUserAgent;
     String m_customUserAgentAsSiteSpecificQuirks;
     bool m_allowContentChangeObserverQuirk { false };
+    bool m_idempotentModeAutosizingOnlyHonorsPercentages { false };
     String m_customNavigatorPlatform;
     bool m_userContentExtensionsEnabled { true };
 #if ENABLE(DEVICE_ORIENTATION)
@@ -633,6 +641,7 @@ private:
     MediaSourcePolicy m_mediaSourcePolicy { MediaSourcePolicy::Default };
     SimulatedMouseEventsDispatchPolicy m_simulatedMouseEventsDispatchPolicy { SimulatedMouseEventsDispatchPolicy::Default };
     LegacyOverflowScrollingTouchPolicy m_legacyOverflowScrollingTouchPolicy { LegacyOverflowScrollingTouchPolicy::Default };
+    MouseEventPolicy m_mouseEventPolicy { MouseEventPolicy::Default };
 
 #if ENABLE(SERVICE_WORKER)
     Optional<ServiceWorkerRegistrationData> m_serviceWorkerRegistrationData;
@@ -645,7 +654,6 @@ private:
 
     bool m_allowsWebArchiveForMainFrame { false };
     bool m_allowsDataURLsForMainFrame { false };
-    String m_downloadAttribute;
 };
 
 inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)
@@ -733,4 +741,18 @@ inline void DocumentLoader::didTellClientAboutLoad(const String& url)
         m_resourcesClientKnowsAbout.add(url);
 }
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MouseEventPolicy> {
+    using values = EnumValues<
+        WebCore::MouseEventPolicy,
+        WebCore::MouseEventPolicy::Default
+#if ENABLE(IOS_TOUCH_EVENTS)
+        , WebCore::MouseEventPolicy::SynthesizeTouchEvents
+#endif
+    >;
+};
+
+} // namespace WTF

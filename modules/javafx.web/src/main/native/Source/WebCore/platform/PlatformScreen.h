@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 #include <wtf/Function.h>
 #endif
 
-#if PLATFORM(MAC)
-#include <wtf/HashMap.h>
+#include <wtf/EnumTraits.h>
 
+#if PLATFORM(MAC)
 OBJC_CLASS NSScreen;
 OBJC_CLASS NSWindow;
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
@@ -58,13 +58,19 @@ class FloatSize;
 class Widget;
 
 using PlatformDisplayID = uint32_t;
+
+#if PLATFORM(MAC)
+
 using IORegistryGPUID = int64_t; // Global IOKit I/O registryID that can match a GPU across process boundaries.
+
+#endif
 
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
 bool screenIsMonochrome(Widget*);
 
 bool screenHasInvertedColors();
+
 #if USE(GLIB)
 double screenDPI();
 void setScreenDPIObserverHandler(Function<void()>&&, void*);
@@ -75,8 +81,21 @@ FloatRect screenAvailableRect(Widget*);
 
 WEBCORE_EXPORT bool screenSupportsExtendedColor(Widget* = nullptr);
 
+enum class DynamicRangeMode : uint8_t {
+    None,
+    Standard,
+    HLG,
+    HDR10,
+    DolbyVisionPQ,
+};
+#if HAVE(AVPLAYER_VIDEORANGEOVERRIDE)
+WEBCORE_EXPORT DynamicRangeMode preferredDynamicRangeMode(Widget* = nullptr);
+#else
+constexpr DynamicRangeMode preferredDynamicRangeMode(Widget* = nullptr) { return DynamicRangeMode::Standard; }
+#endif
+
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
-bool screenSupportsHighDynamicRange(Widget* = nullptr);
+WEBCORE_EXPORT bool screenSupportsHighDynamicRange(Widget* = nullptr);
 #else
 constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false; }
 #endif
@@ -85,8 +104,16 @@ constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false;
 WEBCORE_EXPORT CGColorSpaceRef screenColorSpace(Widget* = nullptr);
 #endif
 
-#if PLATFORM(MAC)
 struct ScreenProperties;
+struct ScreenData;
+
+WEBCORE_EXPORT ScreenProperties collectScreenProperties();
+WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
+const ScreenProperties& getScreenProperties();
+const ScreenData* screenData(PlatformDisplayID screendisplayID);
+WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
+
+#if PLATFORM(MAC)
 
 WEBCORE_EXPORT PlatformDisplayID displayID(NSScreen *);
 
@@ -102,10 +129,7 @@ WEBCORE_EXPORT NSRect toDeviceSpace(const FloatRect&, NSWindow *source);
 
 NSPoint flipScreenPoint(const NSPoint&, NSScreen *);
 
-WEBCORE_EXPORT ScreenProperties collectScreenProperties();
-WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
-
-WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
+WEBCORE_EXPORT void setShouldOverrideScreenSupportsHighDynamicRange(bool shouldOverride, bool supportsHighDynamicRange);
 
 uint32_t primaryOpenGLDisplayMask();
 uint32_t displayMaskForDisplay(PlatformDisplayID);
@@ -137,3 +161,18 @@ constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
 #endif
 
 } // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::DynamicRangeMode> {
+    using values = EnumValues<
+        WebCore::DynamicRangeMode,
+        WebCore::DynamicRangeMode::None,
+        WebCore::DynamicRangeMode::Standard,
+        WebCore::DynamicRangeMode::HLG,
+        WebCore::DynamicRangeMode::HDR10,
+        WebCore::DynamicRangeMode::DolbyVisionPQ
+    >;
+};
+
+} // namespace WTF

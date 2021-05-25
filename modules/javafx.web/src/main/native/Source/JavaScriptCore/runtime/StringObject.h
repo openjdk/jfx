@@ -28,7 +28,7 @@ namespace JSC {
 class StringObject : public JSWrapperObject {
 public:
     using Base = JSWrapperObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesGetPropertyNames;
+    static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | OverridesAnyFormOfGetPropertyNames;
 
     template<typename, SubspaceAccess mode>
     static IsoSubspace* subspaceFor(VM& vm)
@@ -57,11 +57,12 @@ public:
     JS_EXPORT_PRIVATE static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     JS_EXPORT_PRIVATE static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
 
-    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName);
+    JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
     JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
     JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
+    static String toStringName(const JSObject*, JSGlobalObject*);
 
     DECLARE_EXPORT_INFO;
 
@@ -76,6 +77,7 @@ protected:
     JS_EXPORT_PRIVATE void finishCreation(VM&, JSString*);
     JS_EXPORT_PRIVATE StringObject(VM&, Structure*);
 };
+static_assert(sizeof(StringObject) == sizeof(JSWrapperObject));
 
 JS_EXPORT_PRIVATE StringObject* constructString(VM&, JSGlobalObject*, JSValue);
 

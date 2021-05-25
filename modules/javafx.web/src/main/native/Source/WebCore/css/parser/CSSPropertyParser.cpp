@@ -143,6 +143,7 @@ static CSSPropertyID cssPropertyID(const CharacterType* propertyName, unsigned l
     const Property* hashTableEntry = findProperty(name, length);
     if (hashTableEntry) {
         auto propertyID = static_cast<CSSPropertyID>(hashTableEntry->id);
+        // FIXME: Should take account for flags in settings().
         if (isEnabledCSSProperty(propertyID))
             return propertyID;
     }
@@ -251,12 +252,8 @@ void CSSPropertyParser::addProperty(CSSPropertyID property, CSSPropertyID curren
 
 void CSSPropertyParser::addExpandedPropertyForValue(CSSPropertyID property, Ref<CSSValue>&& value, bool important)
 {
-    const StylePropertyShorthand& shorthand = shorthandForProperty(property);
-    unsigned shorthandLength = shorthand.length();
-    ASSERT(shorthandLength);
-    const CSSPropertyID* longhands = shorthand.properties();
-    for (unsigned i = 0; i < shorthandLength; ++i)
-        addProperty(longhands[i], property, value.copyRef(), important);
+    for (auto longhand : shorthandForProperty(property))
+        addProperty(longhand, property, value.copyRef(), important);
 }
 
 bool CSSPropertyParser::parseValue(CSSPropertyID propertyID, bool important, const CSSParserTokenRange& range, const CSSParserContext& context, ParsedPropertyVector& parsedProperties, StyleRuleType ruleType)
@@ -266,11 +263,6 @@ bool CSSPropertyParser::parseValue(CSSPropertyID propertyID, bool important, con
     CSSPropertyParser parser(range, context, &parsedProperties);
     bool parseSuccess;
 
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-    if (ruleType == StyleRuleType::Viewport)
-        parseSuccess = parser.parseViewportDescriptor(propertyID, important);
-    else
-#endif
     if (ruleType == StyleRuleType::FontFace)
         parseSuccess = parser.parseFontFaceDescriptor(propertyID);
     else
@@ -333,13 +325,11 @@ bool CSSPropertyParser::parseValueStart(CSSPropertyID propertyID, bool important
     }
 
     if (CSSVariableParser::containsValidVariableReferences(originalRange, m_context)) {
-        RefPtr<CSSVariableReferenceValue> variable = CSSVariableReferenceValue::create(originalRange);
-
-        if (isShorthand) {
-            RefPtr<CSSPendingSubstitutionValue> pendingValue = CSSPendingSubstitutionValue::create(propertyID, variable.releaseNonNull());
-            addExpandedPropertyForValue(propertyID, pendingValue.releaseNonNull(), important);
-        } else
-            addProperty(propertyID, CSSPropertyInvalid, variable.releaseNonNull(), important);
+        auto variable = CSSVariableReferenceValue::create(originalRange);
+        if (isShorthand)
+            addExpandedPropertyForValue(propertyID, CSSPendingSubstitutionValue::create(propertyID, WTFMove(variable)), important);
+        else
+            addProperty(propertyID, CSSPropertyInvalid, WTFMove(variable), important);
         return true;
     }
 
@@ -1327,7 +1317,6 @@ static RefPtr<CSSValue> consumeClip(CSSParserTokenRange& range, CSSParserMode cs
     return CSSValuePool::singleton().createValue(WTFMove(rect));
 }
 
-#if ENABLE(POINTER_EVENTS)
 static RefPtr<CSSValue> consumeTouchAction(CSSParserTokenRange& range)
 {
     CSSValueID id = range.peek().id();
@@ -1348,7 +1337,6 @@ static RefPtr<CSSValue> consumeTouchAction(CSSParserTokenRange& range)
         return nullptr;
     return list;
 }
-#endif
 
 static RefPtr<CSSPrimitiveValue> consumeLineClamp(CSSParserTokenRange& range)
 {
@@ -1468,24 +1456,43 @@ static RefPtr<CSSValue> consumeTransitionProperty(CSSParserTokenRange& range)
 
 static RefPtr<CSSValue> consumeSteps(CSSParserTokenRange& range)
 {
+    // https://drafts.csswg.org/css-easing-1/#funcdef-step-easing-function-steps
+
     ASSERT(range.peek().functionId() == CSSValueSteps);
     CSSParserTokenRange rangeCopy = range;
     CSSParserTokenRange args = consumeFunction(rangeCopy);
 
-    RefPtr<CSSPrimitiveValue> steps = consumePositiveInteger(args);
-    if (!steps)
+    RefPtr<CSSPrimitiveValue> stepsValue = consumePositiveInteger(args);
+    if (!stepsValue)
         return nullptr;
 
-    // FIXME-NEWPARSER: Support the middle value and change from a boolean to an enum.
-    bool stepAtStart = false;
+    Optional<StepsTimingFunction::StepPosition> stepPosition;
     if (consumeCommaIncludingWhitespace(args)) {
         switch (args.consumeIncludingWhitespace().id()) {
-            case CSSValueStart:
-                stepAtStart = true;
+        case CSSValueJumpStart:
+            stepPosition = StepsTimingFunction::StepPosition::JumpStart;
             break;
+
+        case CSSValueJumpEnd:
+            stepPosition = StepsTimingFunction::StepPosition::JumpEnd;
+            break;
+
+        case CSSValueJumpNone:
+            stepPosition = StepsTimingFunction::StepPosition::JumpNone;
+            break;
+
+        case CSSValueJumpBoth:
+            stepPosition = StepsTimingFunction::StepPosition::JumpBoth;
+            break;
+
+            case CSSValueStart:
+            stepPosition = StepsTimingFunction::StepPosition::Start;
+            break;
+
             case CSSValueEnd:
-                stepAtStart = false;
+            stepPosition = StepsTimingFunction::StepPosition::End;
                 break;
+
             default:
                 return nullptr;
         }
@@ -1494,8 +1501,12 @@ static RefPtr<CSSValue> consumeSteps(CSSParserTokenRange& range)
     if (!args.atEnd())
         return nullptr;
 
+    auto steps = stepsValue->intValue();
+    if (steps <= 1 && stepPosition == StepsTimingFunction::StepPosition::JumpNone)
+        return nullptr;
+
     range = rangeCopy;
-    return CSSStepsTimingFunctionValue::create(steps->intValue(), stepAtStart);
+    return CSSStepsTimingFunctionValue::create(steps, stepPosition);
 }
 
 static RefPtr<CSSValue> consumeCubicBezier(CSSParserTokenRange& range)
@@ -1558,10 +1569,25 @@ static RefPtr<CSSValue> consumeSpringFunction(CSSParserTokenRange& range)
 
 static RefPtr<CSSValue> consumeAnimationTimingFunction(CSSParserTokenRange& range, const CSSParserContext& context)
 {
-    CSSValueID id = range.peek().id();
-    if (id == CSSValueEase || id == CSSValueLinear || id == CSSValueEaseIn
-        || id == CSSValueEaseOut || id == CSSValueEaseInOut || id == CSSValueStepStart || id == CSSValueStepEnd)
+    switch (range.peek().id()) {
+    case CSSValueLinear:
+    case CSSValueEase:
+    case CSSValueEaseIn:
+    case CSSValueEaseOut:
+    case CSSValueEaseInOut:
         return consumeIdent(range);
+
+    case CSSValueStepStart:
+        range.consumeIncludingWhitespace();
+        return CSSStepsTimingFunctionValue::create(1, StepsTimingFunction::StepPosition::Start);
+
+    case CSSValueStepEnd:
+        range.consumeIncludingWhitespace();
+        return CSSStepsTimingFunctionValue::create(1, StepsTimingFunction::StepPosition::End);
+
+    default:
+        break;
+    }
 
     CSSValueID function = range.peek().functionId();
     if (function == CSSValueCubicBezier)
@@ -3924,10 +3950,8 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
         return consumeScrollBehavior(m_range);
     case CSSPropertyClip:
         return consumeClip(m_range, m_context.mode);
-#if ENABLE(POINTER_EVENTS)
     case CSSPropertyTouchAction:
         return consumeTouchAction(m_range);
-#endif
     case CSSPropertyObjectPosition:
         return consumePosition(m_range, m_context.mode, UnitlessQuirk::Forbid, PositionSyntax::Position);
     case CSSPropertyWebkitLineClamp:
@@ -4341,7 +4365,7 @@ static RefPtr<CSSValue> consumeFontFaceSrcURI(CSSParserTokenRange& range, const 
     if (url.isNull())
         return nullptr;
 
-    RefPtr<CSSFontFaceSrcValue> uriValue = CSSFontFaceSrcValue::create(context.completeURL(url), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
+    RefPtr<CSSFontFaceSrcValue> uriValue = CSSFontFaceSrcValue::create(context.completeURL(url).string(), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
 
     if (range.peek().functionId() != CSSValueFormat)
         return uriValue;
@@ -4665,93 +4689,6 @@ bool CSSPropertyParser::consumeBorderSpacing(bool important)
     addProperty(CSSPropertyWebkitBorderVerticalSpacing, CSSPropertyBorderSpacing, verticalSpacing.releaseNonNull(), important);
     return true;
 }
-
-#if ENABLE(CSS_DEVICE_ADAPTATION)
-
-static RefPtr<CSSValue> consumeSingleViewportDescriptor(CSSParserTokenRange& range, CSSPropertyID propId, CSSParserMode cssParserMode)
-{
-    CSSValueID id = range.peek().id();
-    switch (propId) {
-    case CSSPropertyMinWidth:
-    case CSSPropertyMaxWidth:
-    case CSSPropertyMinHeight:
-    case CSSPropertyMaxHeight:
-        if (id == CSSValueAuto)
-            return consumeIdent(range);
-        return consumeLengthOrPercent(range, cssParserMode, ValueRangeNonNegative);
-    case CSSPropertyMinZoom:
-    case CSSPropertyMaxZoom:
-    case CSSPropertyZoom: {
-        if (id == CSSValueAuto)
-            return consumeIdent(range);
-        RefPtr<CSSValue> parsedValue = consumeNumber(range, ValueRangeNonNegative);
-        if (parsedValue)
-            return parsedValue;
-        return consumePercent(range, ValueRangeNonNegative);
-    }
-    case CSSPropertyUserZoom:
-        return consumeIdent<CSSValueZoom, CSSValueFixed>(range);
-    case CSSPropertyOrientation:
-        return consumeIdent<CSSValueAuto, CSSValuePortrait, CSSValueLandscape>(range);
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-bool CSSPropertyParser::parseViewportDescriptor(CSSPropertyID propId, bool important)
-{
-    switch (propId) {
-    case CSSPropertyWidth: {
-        RefPtr<CSSValue> minWidth = consumeSingleViewportDescriptor(m_range, CSSPropertyMinWidth, m_context.mode);
-        if (!minWidth)
-            return false;
-        RefPtr<CSSValue> maxWidth = minWidth;
-        if (!m_range.atEnd())
-            maxWidth = consumeSingleViewportDescriptor(m_range, CSSPropertyMaxWidth, m_context.mode);
-        if (!maxWidth || !m_range.atEnd())
-            return false;
-        addProperty(CSSPropertyMinWidth, CSSPropertyInvalid, *minWidth, important);
-        addProperty(CSSPropertyMaxWidth, CSSPropertyInvalid, *maxWidth, important);
-        return true;
-    }
-    case CSSPropertyHeight: {
-        RefPtr<CSSValue> minHeight = consumeSingleViewportDescriptor(m_range, CSSPropertyMinHeight, m_context.mode);
-        if (!minHeight)
-            return false;
-        RefPtr<CSSValue> maxHeight = minHeight;
-        if (!m_range.atEnd())
-            maxHeight = consumeSingleViewportDescriptor(m_range, CSSPropertyMaxHeight, m_context.mode);
-        if (!maxHeight || !m_range.atEnd())
-            return false;
-        addProperty(CSSPropertyMinHeight, CSSPropertyInvalid, *minHeight, important);
-        addProperty(CSSPropertyMaxHeight, CSSPropertyInvalid, *maxHeight, important);
-        return true;
-    }
-    case CSSPropertyMinWidth:
-    case CSSPropertyMaxWidth:
-    case CSSPropertyMinHeight:
-    case CSSPropertyMaxHeight:
-    case CSSPropertyMinZoom:
-    case CSSPropertyMaxZoom:
-    case CSSPropertyZoom:
-    case CSSPropertyUserZoom:
-    case CSSPropertyOrientation: {
-        RefPtr<CSSValue> parsedValue = consumeSingleViewportDescriptor(m_range, propId, m_context.mode);
-        if (!parsedValue || !m_range.atEnd())
-            return false;
-        addProperty(propId, CSSPropertyInvalid, parsedValue.releaseNonNull(), important);
-        return true;
-    }
-    default:
-        return false;
-    }
-}
-
-#endif
 
 bool CSSPropertyParser::consumeColumns(bool important)
 {
@@ -5345,7 +5282,7 @@ bool CSSPropertyParser::consumeGridTemplateRowsAndAreasAndColumns(CSSPropertyID 
         bool hasPreviousLineNames = lineNames;
         lineNames = consumeGridLineNames(m_range, lineNames.get());
         if (lineNames && !hasPreviousLineNames)
-            templateRows->append(*lineNames);
+            templateRows->append(lineNames.releaseNonNull());
 
         // Handle a template-area's row.
         if (m_range.peek().type() != StringToken || !parseGridTemplateAreasRow(m_range.consumeIncludingWhitespace().value().toString(), gridAreaMap, rowCount, columnCount))
@@ -5361,7 +5298,7 @@ bool CSSPropertyParser::consumeGridTemplateRowsAndAreasAndColumns(CSSPropertyID 
         // This will handle the trailing/leading <custom-ident>* in the grammar.
         lineNames = consumeGridLineNames(m_range);
         if (lineNames)
-            templateRows->append(lineNames.releaseNonNull());
+            templateRows->append(*lineNames);
     } while (!m_range.atEnd() && !(m_range.peek().type() == DelimiterToken && m_range.peek().delimiter() == '/'));
 
     RefPtr<CSSValue> columnsValue;

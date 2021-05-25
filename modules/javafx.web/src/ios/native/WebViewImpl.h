@@ -24,6 +24,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import <WebKit/WebKit.h>
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
 
@@ -37,13 +38,12 @@
 #define ptr_to_jlong(a) ((jlong)(int)(a))
 #endif
 
-@interface WebViewImpl : NSObject<UIWebViewDelegate> {
-    UIWebView *webView;
+@interface WebViewImpl : NSObject<WKNavigationDelegate> {
+    WKWebView *webView;
     UILabel   *loadingLabel;
     CGFloat width;
     CGFloat height;
     CATransform3D transform;
-    NSString *jsResult;
     BOOL hidden;
 
     JavaVM *jvm;
@@ -65,9 +65,9 @@
 - (void)setHeight:(CGFloat)value;
 - (void)loadUrl:(NSString *)value;
 - (void)loadContent:(NSString *)content;
+- (void)reload;
 - (void)executeScript:(NSString *)script;
-- (NSString *)getScriptResult;
-- (UIWebView *)getWebView;
+- (WKWebView *)getWebView;
 - (UILabel *)getLoadingLabel;
 - (UIWindow *)getWindow;
 - (void) setFXTransform

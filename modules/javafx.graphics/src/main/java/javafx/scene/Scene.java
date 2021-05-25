@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1339,7 +1339,10 @@ public class Scene implements EventTarget {
         context.platformImage = accessor.getTkImageLoader(wimg);
         setAllowPGAccess(false);
         Object tkImage = tk.renderToImage(context);
-        accessor.loadTkImage(wimg, tkImage);
+
+        if (tkImage != null) {
+            accessor.loadTkImage(wimg, tkImage);
+        }
 
         if (camera != null) {
             setAllowPGAccess(true);
@@ -3630,6 +3633,7 @@ public class Scene implements EventTarget {
             currentEventTarget = currentEventTargets.size() > 0
                     ? currentEventTargets.get(0) : null;
             pdrEventTarget.clear();
+            pdrEventTargets.clear();
         }
 
         public void enterFullPDR(EventTarget gestureSource) {
@@ -3782,7 +3786,8 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 if (e.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     if (!(primaryButtonDown || secondaryButtonDown || middleButtonDown ||
-                            backButtonDown || forwardButtonDown)) {
+                            backButtonDown || forwardButtonDown) &&
+                            Scene.this.dndGesture == null) {
                         //old gesture ended and new one started
                         gestureStarted = true;
                         if (!PLATFORM_DRAG_GESTURE_INITIATION) {

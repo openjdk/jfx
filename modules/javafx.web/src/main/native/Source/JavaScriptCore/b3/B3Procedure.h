@@ -119,7 +119,7 @@ public:
     const Vector<Vector<Type>>& tuples() const { return m_tuples; };
     bool isValidTuple(Type tuple) const;
     Type extractFromTuple(Type tuple, unsigned index) const;
-    const Vector<Type>& tupleForType(Type tuple) const;
+    JS_EXPORT_PRIVATE const Vector<Type>& tupleForType(Type tuple) const;
 
     unsigned resultCount(Type type) const { return type.isTuple() ? tupleForType(type).size() : type.isNumeric(); }
     Type typeAtOffset(Type type, unsigned index) const { ASSERT(index < resultCount(type)); return type.isTuple() ? extractFromTuple(type, index) : type; }
@@ -133,13 +133,13 @@ public:
     Value* addIntConstant(Value*, int64_t value);
 
     // bits is a bitwise_cast of the constant you want.
-    Value* addConstant(Origin, Type, uint64_t bits);
+    JS_EXPORT_PRIVATE Value* addConstant(Origin, Type, uint64_t bits);
 
     // You're guaranteed that bottom is zero.
     Value* addBottom(Origin, Type);
     Value* addBottom(Value*);
 
-    // Returns null for MixedTriState.
+    // Returns null for TriState::Indeterminate.
     Value* addBoolConstant(Origin, TriState);
 
     void resetValueOwners();

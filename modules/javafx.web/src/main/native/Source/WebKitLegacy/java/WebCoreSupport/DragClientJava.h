@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ public:
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) override;
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer& clipboard) override;
     //We work in window rather than view coordinates here
-    DragSourceAction dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
+    OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint& windowPoint) override;
 
     void startDrag(DragItem, DataTransfer&, Frame&) override;
 private:

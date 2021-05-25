@@ -303,7 +303,11 @@ sub ProcessSupplementalDependencies
 
                 # Add interface-wide extended attributes to each method.
                 foreach my $extendedAttributeName (keys %{$interface->extendedAttributes}) {
-                    $operation->extendedAttributes->{$extendedAttributeName} = $interface->extendedAttributes->{$extendedAttributeName};
+                    if ($operation->extendedAttributes->{$extendedAttributeName} && $extendedAttributeName eq "Conditional") {
+                        $operation->extendedAttributes->{$extendedAttributeName} = $operation->extendedAttributes->{$extendedAttributeName} . '&' . $interface->extendedAttributes->{$extendedAttributeName};
+                    } else {
+                        $operation->extendedAttributes->{$extendedAttributeName} = $interface->extendedAttributes->{$extendedAttributeName};
+                    }
                 }
                 push(@{$targetDataNode->operations}, $operation);
             }
@@ -1042,7 +1046,6 @@ sub IsBuiltinType
     return 1 if $type->name eq "Promise";
     return 1 if $type->name eq "ScheduledAction";
     return 1 if $type->name eq "SerializedScriptValue";
-    return 1 if $type->name eq "XPathNSResolver";
     return 1 if $type->name eq "any";
     return 1 if $type->name eq "object";
 
@@ -1069,7 +1072,6 @@ sub IsWrapperType
     assert("Not a type") if ref($type) ne "IDLType";
 
     return 1 if $object->IsInterfaceType($type);
-    return 1 if $type->name eq "XPathNSResolver";
 
     return 0;
 }

@@ -143,7 +143,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setAccessKeyI
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getHrefImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr));
+    return JavaReturn<String>(env, IMPL->getURLAttribute(WebCore::HTMLNames::hrefAttr).string());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setHrefImpl(JNIEnv* env, jclass, jlong peer, jstring value)

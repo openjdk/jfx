@@ -28,14 +28,18 @@
 #include "RenderTheme.h"
 #include <wtf/RetainPtr.h>
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
 OBJC_CLASS NSDateComponentsFormatter;
-#endif
 
 namespace WebCore {
 
 class RenderThemeCocoa : public RenderTheme {
+public:
+    static RenderThemeCocoa& singleton();
+
+    virtual CFStringRef contentSizeCategory() const = 0;
+
 private:
+    bool canPaint(const PaintInfo&) const final;
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const final;
 
 #if ENABLE(APPLE_PAY)
@@ -43,13 +47,12 @@ private:
     bool paintApplePayButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
 
+    FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const override;
+    void updateCachedSystemFontDescription(CSSValueID systemFontID, FontCascadeDescription&) const override;
+
 protected:
-#if ENABLE(VIDEO)
     String mediaControlsFormattedStringForDuration(double) override;
-#endif
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
     RetainPtr<NSDateComponentsFormatter> m_durationFormatter;
-#endif
 };
 
 }

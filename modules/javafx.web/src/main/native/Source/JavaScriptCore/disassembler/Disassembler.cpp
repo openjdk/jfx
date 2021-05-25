@@ -32,7 +32,6 @@
 #include <wtf/Deque.h>
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
 
 namespace JSC {
@@ -120,8 +119,12 @@ bool hadAnyAsynchronousDisassembly = false;
 
 AsynchronousDisassembler& asynchronousDisassembler()
 {
-    static NeverDestroyed<AsynchronousDisassembler> disassembler;
-    hadAnyAsynchronousDisassembly = true;
+    static LazyNeverDestroyed<AsynchronousDisassembler> disassembler;
+    static std::once_flag onceKey;
+    std::call_once(onceKey, [&] {
+        disassembler.construct();
+        hadAnyAsynchronousDisassembly = true;
+    });
     return disassembler.get();
 }
 

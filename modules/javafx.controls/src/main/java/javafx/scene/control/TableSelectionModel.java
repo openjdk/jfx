@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * The abstract base class for MultipleSelectionModel implementations that are used within
- * table-like controls (most notably {@link TableView} and {@link TreeTableView}.
+ * table-like controls (most notably {@link TableView} and {@link TreeTableView}).
  *
  * @param <T> The type of the underlying data model for the UI control.
  * @since JavaFX 8.0

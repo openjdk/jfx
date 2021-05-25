@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,13 +99,20 @@ public:
         MediaFoundation,
         MockMSE,
     };
+
+    enum class WirelessPlaybackTargetType : uint8_t {
+        TargetTypeNone,
+        TargetTypeAirPlay,
+        TargetTypeTVOut
+    };
+
 };
 
-WTF::String convertEnumerationToString(MediaPlayerEnums::ReadyState);
-WTF::String convertEnumerationToString(MediaPlayerEnums::NetworkState);
-WTF::String convertEnumerationToString(MediaPlayerEnums::Preload);
-WTF::String convertEnumerationToString(MediaPlayerEnums::SupportsType);
-WTF::String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
+String convertEnumerationToString(MediaPlayerEnums::ReadyState);
+String convertEnumerationToString(MediaPlayerEnums::NetworkState);
+String convertEnumerationToString(MediaPlayerEnums::Preload);
+String convertEnumerationToString(MediaPlayerEnums::SupportsType);
+String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
 
 } // namespace WebCore
 
@@ -221,6 +228,15 @@ template<> struct EnumTraits<WebCore::MediaPlayerEnums::MediaEngineIdentifier> {
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::HolePunch,
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::MediaFoundation,
         WebCore::MediaPlayerEnums::MediaEngineIdentifier::MockMSE
+    >;
+};
+
+template<> struct EnumTraits<WebCore::MediaPlayerEnums::WirelessPlaybackTargetType> {
+using values = EnumValues<
+    WebCore::MediaPlayerEnums::WirelessPlaybackTargetType,
+    WebCore::MediaPlayerEnums::WirelessPlaybackTargetType::TargetTypeNone,
+    WebCore::MediaPlayerEnums::WirelessPlaybackTargetType::TargetTypeAirPlay,
+    WebCore::MediaPlayerEnums::WirelessPlaybackTargetType::TargetTypeTVOut
     >;
 };
 

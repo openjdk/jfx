@@ -30,7 +30,6 @@
 #include "CSSAnimationController.h"
 #include "CachedFramePlatformData.h"
 #include "CachedPage.h"
-#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -80,13 +79,12 @@ CachedFrameBase::~CachedFrameBase()
 
 void CachedFrameBase::pruneDetachedChildFrames()
 {
-    for (size_t i = m_childFrames.size(); i;) {
-        --i;
-        if (m_childFrames[i]->view()->frame().page())
-            continue;
-        m_childFrames[i]->destroy();
-        m_childFrames.remove(i);
-    }
+    m_childFrames.removeAllMatching([] (auto& childFrame) {
+        if (childFrame->view()->frame().page())
+            return false;
+        childFrame->destroy();
+        return true;
+    });
 }
 
 void CachedFrameBase::restore()
@@ -163,7 +161,7 @@ CachedFrame::CachedFrame(Frame& frame)
 
     // Create the CachedFrames for all Frames in the FrameTree.
     for (Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
-        m_childFrames.append(makeUnique<CachedFrame>(*child));
+        m_childFrames.append(makeUniqueRef<CachedFrame>(*child));
 
     RELEASE_ASSERT(m_document->domWindow());
     RELEASE_ASSERT(m_document->frame());
@@ -196,9 +194,6 @@ CachedFrame::CachedFrame(Frame& frame)
     for (unsigned i = 0; i < m_childFrames.size(); ++i)
         frame.tree().removeChild(m_childFrames[i]->view()->frame());
 
-    if (!m_isMainFrame)
-        frame.page()->decrementSubframeCount();
-
 #ifndef NDEBUG
     if (m_isMainFrame)
         LOG(BackForwardCache, "Finished creating CachedFrame for main frame url '%s' and DocumentLoader %p\n", m_url.string().utf8().data(), m_documentLoader.get());
@@ -225,8 +220,6 @@ void CachedFrame::open()
 {
     ASSERT(m_view);
     ASSERT(m_document);
-    if (!m_isMainFrame)
-        m_view->frame().page()->incrementSubframeCount();
 
     m_view->frame().loader().open(*this);
 }
@@ -280,14 +273,14 @@ void CachedFrame::destroy()
 
     Frame::clearTimers(m_view.get(), m_document.get());
 
-    m_view->frame().animation().detachFromDocument(m_document.get());
+    m_view->frame().legacyAnimation().detachFromDocument(m_document.get());
 
     // FIXME: Why do we need to call removeAllEventListeners here? When the document is in back/forward cache, this method won't work
     // fully anyway, because the document won't be able to access its DOMWindow object (due to being frameless).
     m_document->removeAllEventListeners();
 
     m_document->setBackForwardCacheState(Document::NotInBackForwardCache);
-    m_document->prepareForDestruction();
+    m_document->willBeRemovedFromFrame();
 
     clear();
 }
@@ -302,18 +295,42 @@ CachedFramePlatformData* CachedFrame::cachedFramePlatformData()
     return m_cachedFramePlatformData.get();
 }
 
-void CachedFrame::setHasInsecureContent(HasInsecureContent hasInsecureContent)
+size_t CachedFrame::descendantFrameCount() const
 {
-    m_hasInsecureContent = hasInsecureContent;
+    size_t count = m_childFrames.size();
+    for (const auto& childFrame : m_childFrames)
+        count += childFrame->descendantFrameCount();
+    return count;
 }
 
-int CachedFrame::descendantFrameCount() const
+UsedLegacyTLS CachedFrame::usedLegacyTLS() const
 {
-    int count = m_childFrames.size();
-    for (size_t i = 0; i < m_childFrames.size(); ++i)
-        count += m_childFrames[i]->descendantFrameCount();
+    if (auto* document = this->document()) {
+        if (document->usedLegacyTLS())
+            return UsedLegacyTLS::Yes;
+    }
 
-    return count;
+    for (const auto& cachedFrame : m_childFrames) {
+        if (cachedFrame->usedLegacyTLS() == UsedLegacyTLS::Yes)
+            return UsedLegacyTLS::Yes;
+    }
+
+    return UsedLegacyTLS::No;
+}
+
+HasInsecureContent CachedFrame::hasInsecureContent() const
+{
+    if (auto* document = this->document()) {
+        if (!document->isSecureContext() || !document->foundMixedContent().isEmpty())
+            return HasInsecureContent::Yes;
+    }
+
+    for (const auto& cachedFrame : m_childFrames) {
+        if (cachedFrame->hasInsecureContent() == HasInsecureContent::Yes)
+            return HasInsecureContent::Yes;
+    }
+
+    return HasInsecureContent::No;
 }
 
 } // namespace WebCore

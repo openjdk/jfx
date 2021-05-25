@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1009,12 +1009,12 @@ public class PseudoClassTest {
             other.add(pseudoClassesToRemove[n]);
         };
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
+            primary.add(pseudoClasses[n]);
         };
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1025,10 +1025,10 @@ public class PseudoClassTest {
             }
         });
 
-        master.removeAll(other);
+        primary.removeAll(other);
 
         assertEquals(nObservationsExpected, nObservations);
-        assertEquals(pseudoClasses.length-pseudoClassesToRemove.length, master.size());
+        assertEquals(pseudoClasses.length-pseudoClassesToRemove.length, primary.size());
 
     }
 
@@ -1063,12 +1063,12 @@ public class PseudoClassTest {
             other.add(pseudoClassesToRetain[n]);
         };
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
+            primary.add(pseudoClasses[n]);
         };
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1079,10 +1079,10 @@ public class PseudoClassTest {
             }
         });
 
-        master.retainAll(other);
+        primary.retainAll(other);
 
         assertEquals(nObservationsExpected, nObservations);
-        assertEquals(pseudoClassesToRetain.length, master.size());
+        assertEquals(pseudoClassesToRetain.length, primary.size());
 
     }
 
@@ -1100,12 +1100,12 @@ public class PseudoClassTest {
         final int nObservationsExpected = pseudoClasses.length;
         nObservations = 0;
 
-        ObservableSet<PseudoClass> master = new PseudoClassState();
+        ObservableSet<PseudoClass> primary = new PseudoClassState();
         for (int n=0; n<pseudoClasses.length; n++) {
-            master.add(pseudoClasses[n]);
+            primary.add(pseudoClasses[n]);
         };
 
-        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+        primary.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
             if (change.wasRemoved()) {
                 assert (nObservations < nObservationsExpected);
                 PseudoClass observed = change.getElementRemoved();
@@ -1116,22 +1116,22 @@ public class PseudoClassTest {
             }
         });
 
-        master.clear();
+        primary.clear();
 
         assertEquals(nObservationsExpected, nObservations);
-        assertTrue(master.isEmpty());
+        assertTrue(primary.isEmpty());
 
     }
 
     @Test public void testObservablePseudoClass_listener_getSet_unmodifiable() {
 
-        final ObservableSet<PseudoClass> master = new PseudoClassState();
+        final ObservableSet<PseudoClass> primary = new PseudoClassState();
 
-        master.addListener(new SetChangeListener<PseudoClass>() {
+        primary.addListener(new SetChangeListener<PseudoClass>() {
 
             @Override
             public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                master.removeListener(this);
+                primary.removeListener(this);
                 try {
                     ObservableSet set = change.getSet();
                     set.add(PseudoClass.getPseudoClass("TWO"));
@@ -1144,7 +1144,7 @@ public class PseudoClassTest {
             }
         });
 
-        master.add(PseudoClass.getPseudoClass("ONE"));
+        primary.add(PseudoClass.getPseudoClass("ONE"));
 
     }
 

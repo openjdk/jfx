@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -306,10 +306,9 @@ public class SubScene extends Node {
                                 "is already set as root of another scene or subScene");
                     }
 
-                    // disabled, isTreeVisible and isTreeShowing properties are inherited
+                    // disabled and isTreeVisible properties are inherited
                     _value.setTreeVisible(isTreeVisible());
                     _value.setDisabled(isDisabled());
-                    _value.setTreeShowing(isTreeShowing());
 
                     if (oldRoot != null) {
                         StyleManager.getInstance().forget(SubScene.this);

@@ -65,6 +65,7 @@ public:
 
     const Vector<InvalidationRuleSet>* classInvalidationRuleSets(const AtomString& className) const;
     const Vector<InvalidationRuleSet>* attributeInvalidationRuleSets(const AtomString& attributeName) const;
+    const Vector<InvalidationRuleSet>* pseudoClassInvalidationRuleSets(CSSSelector::PseudoClassType) const;
 
     bool hasComplexSelectorsForStyleAttribute() const;
 
@@ -80,7 +81,7 @@ public:
 
     bool hasViewportDependentMediaQueries() const;
 
-    Optional<DynamicMediaQueryEvaluationChanges> evaluteDynamicMediaQueryRules(const MediaQueryEvaluator&);
+    Optional<DynamicMediaQueryEvaluationChanges> evaluateDynamicMediaQueryRules(const MediaQueryEvaluator&);
 
     RuleFeatureSet& mutableFeatures();
 
@@ -101,6 +102,7 @@ private:
     mutable RefPtr<RuleSet> m_uncommonAttributeRuleSet;
     mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_classInvalidationRuleSets;
     mutable HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>> m_attributeInvalidationRuleSets;
+    mutable HashMap<CSSSelector::PseudoClassType, std::unique_ptr<Vector<InvalidationRuleSet>>, WTF::IntHash<CSSSelector::PseudoClassType>, WTF::StrongEnumHashTraits<CSSSelector::PseudoClassType>> m_pseudoClassInvalidationRuleSets;
 
     mutable Optional<bool> m_cachedHasComplexSelectorsForStyleAttribute;
 

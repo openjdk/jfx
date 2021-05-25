@@ -28,7 +28,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "FunctionPrototype.h"
 #include "JSCInlines.h"
 #include "JSWebAssemblyCompileError.h"
 #include "WebAssemblyCompileErrorPrototype.h"
@@ -49,8 +48,13 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyCompileError(JSGlobalO
     auto& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue message = callFrame->argument(0);
-    auto* structure = InternalFunction::createSubclassStructure(globalObject, callFrame->jsCallee(), callFrame->newTarget(), globalObject->webAssemblyCompileErrorStructure());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    JSObject* newTarget = asObject(callFrame->newTarget());
+    Structure* structure = newTarget == callFrame->jsCallee()
+        ? globalObject->webAssemblyCompileErrorStructure()
+        : InternalFunction::createSubclassStructure(globalObject, newTarget, getFunctionRealm(vm, newTarget)->webAssemblyCompileErrorStructure());
+    RETURN_IF_EXCEPTION(scope, { });
+
     RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyCompileError::create(globalObject, vm, structure, message)));
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,6 +64,7 @@ class VM;
 class WatchpointSet;
 
 struct ByValInfo;
+struct ECMAMode;
 struct InlineCallFrame;
 struct Instruction;
 
@@ -133,7 +134,7 @@ using P_JITOperation_VmStZB = char*(JIT_OPERATION *)(VM*, Structure*, int32_t, B
 using P_JITOperation_GStZB = char*(JIT_OPERATION *)(JSGlobalObject*, Structure*, int32_t, Butterfly*);
 using J_JITOperation_GJ = EncodedJSValue(JIT_OPERATION *)(JSGlobalObject*, EncodedJSValue);
 using J_JITOperation_GJI = EncodedJSValue(JIT_OPERATION *)(JSGlobalObject*, EncodedJSValue, UniquedStringImpl*);
-using V_JITOperation_GSsiJJI = void(JIT_OPERATION *)(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, UniquedStringImpl*);
+using V_JITOperation_GSsiJJC = void(JIT_OPERATION *)(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, uintptr_t);
 using C_JITOperation_TT = uintptr_t(JIT_OPERATION *)(StringImpl*, StringImpl*);
 using C_JITOperation_B_GJssJss = uintptr_t(JIT_OPERATION *)(JSGlobalObject*, JSString*, JSString*);
 using S_JITOperation_GJJ = size_t(JIT_OPERATION *)(JSGlobalObject*, EncodedJSValue, EncodedJSValue);
@@ -154,45 +155,50 @@ void JIT_OPERATION operationLookupExceptionHandler(VM*) WTF_INTERNAL;
 void JIT_OPERATION operationLookupExceptionHandlerFromCallerFrame(VM*) WTF_INTERNAL;
 void JIT_OPERATION operationVMHandleException(VM*) WTF_INTERNAL;
 void JIT_OPERATION operationThrowStackOverflowErrorFromThunk(JSGlobalObject*) WTF_INTERNAL;
+void JIT_OPERATION operationThrowIteratorResultIsNotObject(JSGlobalObject*) WTF_INTERNAL;
 
 void JIT_OPERATION operationThrowStackOverflowError(CodeBlock*) WTF_INTERNAL;
 int32_t JIT_OPERATION operationCallArityCheck(JSGlobalObject*) WTF_INTERNAL;
 int32_t JIT_OPERATION operationConstructArityCheck(JSGlobalObject*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationTryGetById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationTryGetByIdGeneric(JSGlobalObject*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationTryGetByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdGeneric(JSGlobalObject*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdWithThis(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdWithThisGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdWithThisOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdDirect(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdDirectGeneric(JSGlobalObject*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationGetByIdDirectOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationInById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationInByIdGeneric(JSGlobalObject*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationInByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationInOptimize(JSGlobalObject*, StructureStubInfo*, JSCell*, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationIn(JSGlobalObject*, StructureStubInfo*, JSCell*, UniquedStringImpl*) WTF_INTERNAL;
+
+EncodedJSValue JIT_OPERATION operationTryGetById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationTryGetByIdGeneric(JSGlobalObject*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationTryGetByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdGeneric(JSGlobalObject*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdWithThis(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdWithThisGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdWithThisOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdDirect(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdDirectGeneric(JSGlobalObject*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetByIdDirectOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+
+EncodedJSValue JIT_OPERATION operationInById(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationInByIdGeneric(JSGlobalObject*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationInByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue, uintptr_t) WTF_INTERNAL;
+
 EncodedJSValue JIT_OPERATION operationInByVal(JSGlobalObject*, JSCell*, EncodedJSValue) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdNonStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectNonStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdNonStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectNonStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdStrictBuildList(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdNonStrictBuildList(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectStrictBuildList(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByIdDirectNonStrictBuildList(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, UniquedStringImpl*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByValOptimize(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*) WTF_INTERNAL;
-void JIT_OPERATION operationDirectPutByValOptimize(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*) WTF_INTERNAL;
-void JIT_OPERATION operationPutByValGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*) WTF_INTERNAL;
-void JIT_OPERATION operationDirectPutByValGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationCallEval(JSGlobalObject*, CallFrame*) WTF_INTERNAL;
+
+void JIT_OPERATION operationPutByIdStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdNonStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDirectStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDirectNonStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdNonStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDirectStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDirectNonStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDefinePrivateFieldStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdDefinePrivateFieldStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdPutPrivateFieldStrict(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+void JIT_OPERATION operationPutByIdPutPrivateFieldStrictOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedValue, EncodedJSValue encodedBase, uintptr_t) WTF_INTERNAL;
+
+void JIT_OPERATION operationPutByValOptimize(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*, ECMAMode) WTF_INTERNAL;
+void JIT_OPERATION operationDirectPutByValOptimize(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*, ECMAMode) WTF_INTERNAL;
+void JIT_OPERATION operationPutByValGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*, ECMAMode) WTF_INTERNAL;
+void JIT_OPERATION operationDirectPutByValGeneric(JSGlobalObject*, EncodedJSValue, EncodedJSValue, EncodedJSValue, ByValInfo*, ECMAMode) WTF_INTERNAL;
+
+EncodedJSValue JIT_OPERATION operationCallEval(JSGlobalObject*, CallFrame*, ECMAMode) WTF_INTERNAL;
 SlowPathReturnType JIT_OPERATION operationLinkCall(CallFrame*, JSGlobalObject*, CallLinkInfo*) WTF_INTERNAL;
 SlowPathReturnType JIT_OPERATION operationLinkPolymorphicCall(CallFrame*, JSGlobalObject*, CallLinkInfo*) WTF_INTERNAL;
 SlowPathReturnType JIT_OPERATION operationVirtualCall(CallFrame*, JSGlobalObject*, CallLinkInfo*) WTF_INTERNAL;
@@ -205,6 +211,7 @@ size_t JIT_OPERATION operationCompareEq(JSGlobalObject*, EncodedJSValue, Encoded
 size_t JIT_OPERATION operationCompareStrictEq(JSGlobalObject*, EncodedJSValue, EncodedJSValue) WTF_INTERNAL;
 #if USE(JSVALUE64)
 EncodedJSValue JIT_OPERATION operationCompareStringEq(JSGlobalObject*, JSCell* left, JSCell* right) WTF_INTERNAL;
+size_t JIT_OPERATION operationCompareEqHeapBigIntToInt32(JSGlobalObject*, JSCell* heapBigInt, int32_t smallInt) WTF_INTERNAL;
 #else
 size_t JIT_OPERATION operationCompareStringEq(JSGlobalObject*, JSCell* left, JSCell* right) WTF_INTERNAL;
 #endif
@@ -251,10 +258,10 @@ EncodedJSValue JIT_OPERATION operationGetByValGeneric(JSGlobalObject*, Structure
 EncodedJSValue JIT_OPERATION operationGetByVal(JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationHasIndexedPropertyDefault(JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedSubscript, ByValInfo*) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationHasIndexedPropertyGeneric(JSGlobalObject*, EncodedJSValue encodedBase, EncodedJSValue encodedSubscript, ByValInfo*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationDeleteByIdJSResult(JSGlobalObject*, EncodedJSValue base, UniquedStringImpl*) WTF_INTERNAL;
-size_t JIT_OPERATION operationDeleteById(JSGlobalObject*, EncodedJSValue base, UniquedStringImpl*) WTF_INTERNAL;
-EncodedJSValue JIT_OPERATION operationDeleteByValJSResult(JSGlobalObject*, EncodedJSValue base, EncodedJSValue target) WTF_INTERNAL;
-size_t JIT_OPERATION operationDeleteByVal(JSGlobalObject*, EncodedJSValue base, EncodedJSValue target) WTF_INTERNAL;
+size_t JIT_OPERATION operationDeleteByIdOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue base, uintptr_t, ECMAMode) WTF_INTERNAL;
+size_t JIT_OPERATION operationDeleteByIdGeneric(JSGlobalObject*, StructureStubInfo*, EncodedJSValue base, uintptr_t, ECMAMode) WTF_INTERNAL;
+size_t JIT_OPERATION operationDeleteByValOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue base, EncodedJSValue target, ECMAMode) WTF_INTERNAL;
+size_t JIT_OPERATION operationDeleteByValGeneric(JSGlobalObject*, StructureStubInfo*, EncodedJSValue base, EncodedJSValue target, ECMAMode) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationPushWithScope(JSGlobalObject*, JSCell* currentScopeCell, EncodedJSValue object) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationPushWithScopeObject(JSGlobalObject* globalObject, JSCell* currentScopeCell, JSObject* object) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationGetPNames(JSGlobalObject*, JSObject*) WTF_INTERNAL;
@@ -265,6 +272,9 @@ int32_t JIT_OPERATION operationSizeFrameForForwardArguments(JSGlobalObject*, Enc
 int32_t JIT_OPERATION operationSizeFrameForVarargs(JSGlobalObject*, EncodedJSValue arguments, int32_t numUsedStackSlots, int32_t firstVarArgOffset) WTF_INTERNAL;
 CallFrame* JIT_OPERATION operationSetupForwardArgumentsFrame(JSGlobalObject*, CallFrame*, EncodedJSValue, int32_t, int32_t length) WTF_INTERNAL;
 CallFrame* JIT_OPERATION operationSetupVarargsFrame(JSGlobalObject*, CallFrame*, EncodedJSValue arguments, int32_t firstVarArgOffset, int32_t length) WTF_INTERNAL;
+
+EncodedJSValue JIT_OPERATION operationGetPrivateName(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedBase, EncodedJSValue encodedFieldName) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationGetPrivateNameOptimize(JSGlobalObject*, StructureStubInfo*, EncodedJSValue encodedBase, EncodedJSValue encodedFieldName) WTF_INTERNAL;
 
 char* JIT_OPERATION operationSwitchCharWithUnknownKeyType(JSGlobalObject*, EncodedJSValue key, size_t tableIndex) WTF_INTERNAL;
 char* JIT_OPERATION operationSwitchImmWithUnknownKeyType(VM*, EncodedJSValue key, size_t tableIndex) WTF_INTERNAL;
@@ -279,9 +289,10 @@ void JIT_OPERATION operationWriteBarrierSlowPath(VM*, JSCell*);
 void JIT_OPERATION operationOSRWriteBarrier(VM*, JSCell*);
 
 void JIT_OPERATION operationExceptionFuzz(JSGlobalObject*);
+void JIT_OPERATION operationExceptionFuzzWithCallFrame(VM*);
 
 int32_t JIT_OPERATION operationCheckIfExceptionIsUncatchableAndNotifyProfiler(VM*);
-int32_t JIT_OPERATION operationInstanceOfCustom(JSGlobalObject*, EncodedJSValue encodedValue, JSObject* constructor, EncodedJSValue encodedHasInstance) WTF_INTERNAL;
+size_t JIT_OPERATION operationInstanceOfCustom(JSGlobalObject*, EncodedJSValue encodedValue, JSObject* constructor, EncodedJSValue encodedHasInstance) WTF_INTERNAL;
 
 EncodedJSValue JIT_OPERATION operationValueAdd(JSGlobalObject*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationValueAddProfiled(JSGlobalObject*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2, BinaryArithProfile*) WTF_INTERNAL;

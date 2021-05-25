@@ -27,23 +27,32 @@ package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
+import javafx.geometry.Insets;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-
+import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.CustomMenuItem;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static com.sun.javafx.scene.control.ContextMenuContentShim.*;
+
 import java.util.Optional;
 import javafx.scene.Node;
 import javafx.scene.input.KeyCode;
@@ -635,5 +644,144 @@ public class ContextMenuTest {
         assertEquals(0, getCurrentFocusedIndex(cm));
         assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
                 item1, focusedItem);
+    }
+
+    @Test public void test_position_showOnScreen() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, 100, 100);
+
+        assertEquals(100, cm.getAnchorX(), 0.0);
+        assertEquals(100, cm.getAnchorY(), 0.0);
+    }
+
+    @Test public void test_position_showOnTop() throws InterruptedException {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.TOP, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
+    }
+
+    @Test public void test_position_showOnTopOffset() throws InterruptedException {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.TOP, 3, 5);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX() + 3, cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY() + 5, cmBounds.getMaxY(), 0.0);
+    }
+
+    @Test public void test_position_withOrientationTop() throws InterruptedException {
+        ContextMenu cm = createContextMenu(false);
+        anchorBtn.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        cm.show(anchorBtn, Side.TOP, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMaxX(), cmBounds.getMaxX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMaxY(), 0.0);
+    }
+
+    @Test public void test_position_withOrientationLeft() throws InterruptedException {
+        ContextMenu cm = createContextMenu(false);
+        anchorBtn.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        cm.show(anchorBtn, Side.LEFT, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMaxX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
+    }
+
+
+    @Test public void test_position_withCSS() throws InterruptedException {
+        anchorBtn.getScene().getStylesheets().add(
+            getClass().getResource("test_position_showOnTopWithCSS.css").toExternalForm()
+        );
+        test_position_showOnTop();
+        test_position_showOnRight();
+        test_position_showOnLeft();
+        test_position_showOnBottom();
+    }
+
+    @Test public void test_position_showOnRight() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.RIGHT, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMaxX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_showOnRightOffset() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.RIGHT, 3, 5);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMaxX() + 3, cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMinY() + 5, cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_showOnBottom() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.BOTTOM, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX(), cmBounds.getMinX(), 0.0);
+        assertEquals(anchorBounds.getMaxY(), cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_showOnLeft() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.LEFT, 0, 0);
+
+        Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        Node cmNode = cm.getScene().getRoot();
+        Bounds cmBounds = cm.getScene().getRoot().localToScreen(cmNode.getLayoutBounds());
+
+        assertEquals(anchorBounds.getMinX(), cmBounds.getMaxX(), 0.0);
+        assertEquals(anchorBounds.getMinY(), cmBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_graphic_padding_onDialogPane() {
+        DialogPane dialogPane = new DialogPane();
+        anchorBtn.setGraphic(dialogPane);
+        // Since DialogPane is not set in a Dialog, PseudoClass is activated manually
+        dialogPane.pseudoClassStateChanged(PseudoClass.getPseudoClass("no-header"), true);
+
+        final ImageView graphic = new ImageView(new Image(ContextMenuTest.class.getResource("icon.png").toExternalForm()));
+        final MenuItem menuItem = new MenuItem("Menu Item Text", graphic);
+        final ContextMenu contextMenu = new ContextMenu(menuItem);
+        contextMenu.show(dialogPane, 0, 0);
+
+        final Insets padding = ((StackPane) graphic.getParent()).getPadding();
+        final double fontSize = Font.getDefault().getSize();
+
+        // -fx-padding: 0em 0.333em 0em 0em;
+        assertEquals(0, padding.getTop(), 0.0);
+        assertEquals(0.333 * fontSize, padding.getRight(), 0.01);
+        assertEquals(0, padding.getBottom(), 0.0);
+        assertEquals(0, padding.getLeft(), 0.0);
+        anchorBtn.setGraphic(null);
     }
 }

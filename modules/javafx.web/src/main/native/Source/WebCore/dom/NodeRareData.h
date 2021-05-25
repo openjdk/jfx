@@ -90,10 +90,10 @@ public:
     struct NodeListCacheMapEntryHash {
         static unsigned hash(const std::pair<unsigned char, AtomString>& entry)
         {
-            return DefaultHash<AtomString>::Hash::hash(entry.second) + entry.first;
+            return DefaultHash<AtomString>::hash(entry.second) + entry.first;
         }
-        static bool equal(const std::pair<unsigned char, AtomString>& a, const std::pair<unsigned char, AtomString>& b) { return a.first == b.first && DefaultHash<AtomString>::Hash::equal(a.second, b.second); }
-        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<AtomString>::Hash::safeToCompareToEmptyOrDeleted;
+        static bool equal(const std::pair<unsigned char, AtomString>& a, const std::pair<unsigned char, AtomString>& b) { return a.first == b.first && DefaultHash<AtomString>::equal(a.second, b.second); }
+        static const bool safeToCompareToEmptyOrDeleted = DefaultHash<AtomString>::safeToCompareToEmptyOrDeleted;
     };
 
     using NodeListCacheMap = HashMap<std::pair<unsigned char, AtomString>, LiveNodeList*, NodeListCacheMapEntryHash>;
@@ -248,7 +248,6 @@ public:
         ConnectedFrameCount = 1 << 0,
         NodeList = 1 << 1,
         MutationObserver = 1 << 2,
-
         TabIndex = 1 << 3,
         MinimumSize = 1 << 4,
         ScrollingPosition = 1 << 5,
@@ -260,6 +259,7 @@ public:
         AttributeMap = 1 << 11,
         InteractionObserver = 1 << 12,
         PseudoElements = 1 << 13,
+        Animations = 1 << 14,
     };
 #endif
 

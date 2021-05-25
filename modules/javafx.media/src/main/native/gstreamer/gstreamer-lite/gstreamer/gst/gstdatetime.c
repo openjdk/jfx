@@ -351,7 +351,7 @@ gst_date_time_get_time_zone_offset (const GstDateTime * datetime)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_y (gint year)
@@ -374,7 +374,7 @@ gst_date_time_new_y (gint year)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_ym (gint year, gint month)
@@ -401,7 +401,7 @@ gst_date_time_new_ym (gint year, gint month)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_ymd (gint year, gint month, gint day)
@@ -418,7 +418,7 @@ gst_date_time_new_ymd (gint year, gint month, gint day)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_from_unix_epoch_local_time (gint64 secs)
@@ -438,7 +438,7 @@ gst_date_time_new_from_unix_epoch_local_time (gint64 secs)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_from_unix_epoch_utc (gint64 secs)
@@ -447,6 +447,54 @@ gst_date_time_new_from_unix_epoch_utc (gint64 secs)
   datetime =
       gst_date_time_new_from_g_date_time (g_date_time_new_from_unix_utc (secs));
   return datetime;
+}
+
+/**
+ * gst_date_time_new_from_unix_epoch_local_time_usecs:
+ * @usecs: microseconds from the Unix epoch
+ *
+ * Creates a new #GstDateTime using the time since Jan 1, 1970 specified by
+ * @usecs. The #GstDateTime is in the local timezone.
+ *
+ * Returns: (transfer full) (nullable): a newly created #GstDateTime
+ *
+ * Since: 1.18
+ */
+GstDateTime *
+gst_date_time_new_from_unix_epoch_local_time_usecs (gint64 usecs)
+{
+  GDateTime *dt, *datetime;
+  gint64 secs = usecs / G_USEC_PER_SEC;
+  gint64 usec_part = usecs % G_USEC_PER_SEC;
+
+  dt = g_date_time_new_from_unix_local (secs);
+  datetime = g_date_time_add_seconds (dt, (gdouble) usec_part / G_USEC_PER_SEC);
+  g_date_time_unref (dt);
+  return gst_date_time_new_from_g_date_time (datetime);
+}
+
+/**
+ * gst_date_time_new_from_unix_epoch_utc_usecs:
+ * @usecs: microseconds from the Unix epoch
+ *
+ * Creates a new #GstDateTime using the time since Jan 1, 1970 specified by
+ * @usecs. The #GstDateTime is in UTC.
+ *
+ * Returns: (transfer full) (nullable): a newly created #GstDateTime
+ *
+ * Since: 1.18
+ */
+GstDateTime *
+gst_date_time_new_from_unix_epoch_utc_usecs (gint64 usecs)
+{
+  GDateTime *dt, *datetime;
+  gint64 secs = usecs / G_USEC_PER_SEC;
+  gint64 usec_part = usecs % G_USEC_PER_SEC;
+
+  dt = g_date_time_new_from_unix_utc (secs);
+  datetime = g_date_time_add_seconds (dt, (gdouble) usec_part / G_USEC_PER_SEC);
+  g_date_time_unref (dt);
+  return gst_date_time_new_from_g_date_time (datetime);
 }
 
 static GstDateTimeFields
@@ -498,7 +546,7 @@ gst_date_time_check_fields (gint * year, gint * month, gint * day,
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_local_time (gint year, gint month, gint day, gint hour,
@@ -523,6 +571,9 @@ gst_date_time_new_local_time (gint year, gint month, gint day, gint hour,
   if (datetime == NULL)
     return NULL;
 #endif // GSTREAMER_LITE
+
+  if (datetime == NULL)
+    return NULL;
 
   datetime->fields = fields;
   return datetime;
@@ -611,7 +662,7 @@ __gst_date_time_compare (const GstDateTime * dt1, const GstDateTime * dt2)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full): the newly created #GstDateTime
+ * Return value: (transfer full) (nullable): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new (gfloat tzoffset, gint year, gint month, gint day, gint hour,
@@ -647,6 +698,9 @@ gst_date_time_new (gfloat tzoffset, gint year, gint month, gint day, gint hour,
 
   dt = g_date_time_new (tz, year, month, day, hour, minute, seconds);
   g_time_zone_unref (tz);
+
+  if (!dt)
+    return NULL;                /* date failed validation */
 
   datetime = gst_date_time_new_from_g_date_time (dt);
 #ifdef GSTREAMER_LITE
@@ -816,7 +870,7 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
       goto ymd;
 
     string += 10;
-    /* Exit if there is no expeceted value on this stage */
+    /* Exit if there is no expected value on this stage */
     if (!(*string == 'T' || *string == '-' || *string == ' '))
       goto ymd;
 

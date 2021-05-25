@@ -125,7 +125,7 @@ import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.DelayedRunnable;
-import com.sun.scenario.animation.AbstractMasterTimer;
+import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
@@ -133,6 +133,7 @@ import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.DragboardHelper;
+import java.util.Optional;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -365,7 +366,7 @@ public final class QuantumToolkit extends Toolkit {
         try {
             Application.invokeAndWait(this.userRunnable);
 
-            if (getMasterTimer().isFullspeed()) {
+            if (getPrimaryTimer().isFullspeed()) {
                 /*
                  * FULLSPEED_INTVERVAL workaround
                  *
@@ -1129,8 +1130,8 @@ public final class QuantumToolkit extends Toolkit {
         return PrFilterContext.getInstance(screen);
     }
 
-    @Override public AbstractMasterTimer getMasterTimer() {
-        return MasterTimer.getInstance();
+    @Override public AbstractPrimaryTimer getPrimaryTimer() {
+        return PrimaryTimer.getInstance();
     }
 
     @Override public FontLoader getFontLoader() {
@@ -1234,6 +1235,24 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public boolean isMSAASupported() {
         return  GraphicsPipeline.getPipeline().isMSAASupported();
+    }
+
+    // Returns the glass keycode for the given JavaFX KeyCode.
+    // This method only converts lock state KeyCode values
+    private int toGlassKeyCode(KeyCode keyCode) {
+        switch (keyCode) {
+            case CAPS:
+                return com.sun.glass.events.KeyEvent.VK_CAPS_LOCK;
+            case NUM_LOCK:
+                return com.sun.glass.events.KeyEvent.VK_NUM_LOCK;
+            default:
+                return com.sun.glass.events.KeyEvent.VK_UNDEFINED;
+        }
+    }
+
+    @Override
+    public Optional<Boolean> isKeyLocked(KeyCode keyCode) {
+        return Application.GetApplication().isKeyLocked(toGlassKeyCode(keyCode));
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {
@@ -1401,8 +1420,17 @@ public final class QuantumToolkit extends Toolkit {
         public double getHeight() { return image.getHeight(); }
         @Override
         public void factoryReset() { dispose(); }
+
         @Override
-        public void factoryReleased() { dispose(); }
+        public void factoryReleased() {
+            dispose();
+
+            // ResourceFactory is being disposed; clear reference to avoid leak
+            if (rf != null) {
+                rf.removeFactoryListener(this);
+                rf = null;
+            }
+        }
     }
 
     @Override public ImageLoader loadPlatformImage(Object platformImage) {

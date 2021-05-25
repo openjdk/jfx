@@ -25,6 +25,8 @@
 
 package com.sun.webkit.graphics;
 
+import com.sun.prism.paint.Color;
+
 public abstract class WCGradient<G> {
 
     /* The GradientSpreadMethod should be compliant with
@@ -56,7 +58,7 @@ public abstract class WCGradient<G> {
         return this.proportional;
     }
 
-    protected abstract void addStop(int argb, float offset);
+    protected abstract void addStop(Color color, float offset);
 
     public abstract G getPlatformGradient();
 }

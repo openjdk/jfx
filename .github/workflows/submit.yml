@@ -1,0 +1,330 @@
+#
+# Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#
+# This code is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 2 only, as
+# published by the Free Software Foundation.  Oracle designates this
+# particular file as subject to the "Classpath" exception as provided
+# by Oracle in the LICENSE file that accompanied this code.
+#
+# This code is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# version 2 for more details (a copy is included in the LICENSE file that
+# accompanied this code).
+#
+# You should have received a copy of the GNU General Public License version
+# 2 along with this work; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+# Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+# or visit www.oracle.com if you need additional information or have any
+# questions.
+#
+
+#
+# This GitHub actions YAML file runs a build and test on each of the three primary platforms:
+# Linux, macOS, Windows. The jobs are run using the default (latest) OS platform for each OS.
+# We download a specific version the boot JDK and gradle. We use the default versions
+# of all other build tools (e.g., compilers and ant) that are available on each platform.
+#
+# The build step is run in the default mode without building the native media or webkit libraries.
+# The test is run with web tests excluded. As a follow-up enhancement, we might consider optionally
+# building the media and webkit libraries.
+#
+
+name: JavaFX pre-submit tests
+
+on:
+  # Run GitHub actions on every push to all branches except the main production branches, also
+  # exclude any branch starting with "WIP".
+  push:
+    branches-ignore:
+      - master
+      - main
+      - 'jfx[0-9]+'
+      - 'WIP*'
+
+jobs:
+  validation:
+    name: "Gradle Wrapper Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: gradle/wrapper-validation-action@v1
+
+
+  linux_x64_build:
+    name: Linux x64
+    needs: validation
+    runs-on: "ubuntu-20.04"
+
+    env:
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      BOOT_JDK_VERSION: "15.0.2"
+      BOOT_JDK_FILENAME: "openjdk-15.0.2_linux-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.2/0d1cfde4252546c6931946de8db48ee2/7/GPL/openjdk-15.0.2_linux-x64_bin.tar.gz"
+      ANT_DIR: "apache-ant-1.10.5"
+      ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@v2
+        with:
+          path: jfx
+
+      - name: Install dependencies
+        run: |
+          set -x
+          sudo apt-get update
+          sudo apt-get install libgl1-mesa-dev libx11-dev libxxf86vm-dev libxt-dev pkg-config libgtk2.0-dev libgtk-3-dev libxtst-dev gcc-10=10.2.0-5ubuntu1~20.04 g++-10=10.2.0-5ubuntu1~20.04
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 --slave /usr/bin/g++ g++ /usr/bin/g++-10
+          mkdir -p "${HOME}/build-tools"
+          wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
+          tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
+
+# FIXME: enable cache for boot JDK
+#      - name: Restore boot JDK from cache
+#        id: bootjdk
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
+#          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
+
+      - name: Download boot JDK
+        run: |
+          set -x
+          mkdir -p "${HOME}/bootjdk"
+          wget -O "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" "${BOOT_JDK_URL}"
+          # FIXME: sha256sum
+          tar -xf "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" -C "${HOME}/bootjdk"
+          # FIXME: enable cache for boot JDK
+
+      - name: Setup environment
+        run: |
+          set -x
+          export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}"
+          echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
+          export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
+          echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          env | sort
+          which java
+          java -version
+          which ant
+          ant -version
+          gcc -v
+
+      - name: Build JavaFX artifacts
+        working-directory: jfx
+        run: |
+          set -x
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew --info all
+
+      - name: Run JavaFX headless tests
+        working-directory: jfx
+        run: |
+          set -x
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
+
+
+  macos_x64_build:
+    name: macOS x64
+    needs: validation
+    runs-on: "macos-10.15"
+
+    env:
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      BOOT_JDK_VERSION: "15.0.2"
+      BOOT_JDK_FILENAME: "openjdk-15.0.2_osx-x64_bin.tar.gz"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.2/0d1cfde4252546c6931946de8db48ee2/7/GPL/openjdk-15.0.2_osx-x64_bin.tar.gz"
+      ANT_DIR: "apache-ant-1.10.5"
+      ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@v2
+        with:
+          path: jfx
+
+      - name: Install dependencies
+        run: |
+          set -x
+          echo "NOT NEEDED: brew install make"
+          mkdir -p "${HOME}/build-tools"
+          wget -O "${HOME}/build-tools/${ANT_FILENAME}" "${ANT_URL}"
+          tar -zxf "${HOME}/build-tools/${ANT_FILENAME}" -C "${HOME}/build-tools"
+
+# FIXME: enable cache for boot JDK
+#      - name: Restore boot JDK from cache
+#        id: bootjdk
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
+#          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
+
+      - name: Download boot JDK
+        run: |
+          set -x
+          mkdir -p "${HOME}/bootjdk"
+          wget -O "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" "${BOOT_JDK_URL}"
+          # FIXME: sha256sum
+          tar -xf "${HOME}/bootjdk/${BOOT_JDK_FILENAME}" -C "${HOME}/bootjdk"
+          # FIXME: enable cache for boot JDK
+
+      - name: Setup environment
+        run: |
+          set -x
+          export JAVA_HOME="${HOME}/bootjdk/jdk-${BOOT_JDK_VERSION}.jdk/Contents/Home"
+          echo "JAVA_HOME=${JAVA_HOME}" >> "${GITHUB_ENV}"
+          export ANT_HOME="${HOME}/build-tools/${ANT_DIR}"
+          echo "ANT_HOME=${ANT_HOME}" >> "${GITHUB_ENV}"
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          env | sort
+          which java
+          java -version
+          which ant
+          ant -version
+          sudo xcode-select --switch /Applications/Xcode_11.3.1.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Build JavaFX artifacts
+        working-directory: jfx
+        run: |
+          set -x
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          bash gradlew -version
+          bash gradlew --info all
+
+      - name: Run JavaFX headless tests
+        working-directory: jfx
+        run: |
+          set -x
+          export PATH="$JAVA_HOME/bin:$ANT_HOME/bin:$PATH"
+          bash gradlew --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test
+
+
+  windows_x64_build:
+    name: Windows x64
+    needs: validation
+    runs-on: "windows-2019"
+
+    env:
+      # FIXME: read this information from a property file
+      # BOOT_JDK_VERSION: "${{ fromJson(needs.prerequisites.outputs.dependencies).BOOT_JDK_VERSION }}"
+      # BOOT_JDK_FILENAME: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_FILENAME }}"
+      # BOOT_JDK_URL: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_URL }}"
+      # BOOT_JDK_SHA256: "${{ fromJson(needs.prerequisites.outputs.dependencies).LINUX_X64_BOOT_JDK_SHA256 }}"
+      BOOT_JDK_VERSION: "15.0.2"
+      BOOT_JDK_FILENAME: "openjdk-15.0.2_windows-x64_bin.zip"
+      BOOT_JDK_URL: "https://download.java.net/java/GA/jdk15.0.2/0d1cfde4252546c6931946de8db48ee2/7/GPL/openjdk-15.0.2_windows-x64_bin.zip"
+      ANT_DIR: "apache-ant-1.10.5"
+      ANT_FILENAME: "apache-ant-1.10.5.tar.gz"
+      ANT_URL: "https://archive.apache.org/dist/ant/binaries/apache-ant-1.10.5-bin.tar.gz"
+      # FIXME: hard-code the location of VS 2019 for now
+      VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Enterprise\\VC\\Auxiliary\\Build"
+
+    steps:
+      - name: Checkout the source
+        uses: actions/checkout@v2
+        with:
+          path: jfx
+
+# FIXME: enable cache for boot JDK
+#      - name: Restore boot JDK from cache
+#        id: bootjdk
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/bootjdk/${{ env.BOOT_JDK_VERSION }}
+#          key: bootjdk-${{ runner.os }}-${{ env.BOOT_JDK_VERSION }}-${{ env.BOOT_JDK_SHA256 }}-v1
+
+      - name: Download boot JDK
+        run: |
+          mkdir -p "$HOME\bootjdk"
+          & curl -L "$env:BOOT_JDK_URL" -o "$HOME/bootjdk/$env:BOOT_JDK_FILENAME"
+          # FIXME: sha256sum
+          tar -xf "$HOME/bootjdk/$env:BOOT_JDK_FILENAME" -C "$HOME/bootjdk"
+          # FIXME: enable cache for boot JDK
+
+      - name: Restore cygwin packages from cache
+        id: cygwin
+        uses: actions/cache@v2
+        with:
+          path: ~/cygwin/packages
+          key: cygwin-packages-${{ runner.os }}-v1
+
+      - name: Install cygwin
+        run: |
+          New-Item -Force -ItemType directory -Path "$HOME\cygwin"
+          & curl -L "https://www.cygwin.com/setup-x86_64.exe" -o "$HOME/cygwin/setup-x86_64.exe"
+          Start-Process -FilePath "$HOME\cygwin\setup-x86_64.exe" -ArgumentList "--quiet-mode --packages make,zip,unzip --root $HOME\cygwin\cygwin64 --local-package-dir $HOME\cygwin\packages --site http://mirrors.kernel.org/sourceware/cygwin --no-desktop --no-shortcuts --no-startmenu --no-admin" -Wait -NoNewWindow
+
+      - name: Install dependencies
+        run: |
+          mkdir -p "$HOME\build-tools"
+          & curl -L "$env:ANT_URL" -o "$HOME/build-tools/$env:ANT_FILENAME"
+          tar -zxf "$HOME/build-tools/$env:ANT_FILENAME" -C "$HOME/build-tools"
+
+      - name: Setup environment
+        run: |
+          echo "VS150COMNTOOLS=$env:VS150COMNTOOLS"
+          echo "dir ...\VC\Tools\MSVC"
+          dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          echo "dir VS150COMNTOOLS"
+          dir "$env:VS150COMNTOOLS"
+          # echo "dir ...\VC\Tools\MSVC"
+          # dir "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC"
+          # echo "dir VS150COMNTOOLS"
+          # dir "$env:VS150COMNTOOLS"
+
+          $env:Path = "$HOME\cygwin\cygwin64\bin;$HOME\cygwin\cygwin64\bin;$env:Path" ;
+          $env:JAVA_HOME = "$HOME\bootjdk\jdk-$env:BOOT_JDK_VERSION" ;
+          echo "JAVA_HOME=$env:JAVA_HOME"
+          $env:ANT_HOME = "${HOME}\build-tools\$env:ANT_DIR"
+          echo "ANT_HOME=$env:ANT_HOME"
+          $env:Path = "$env:JAVA_HOME\bin;$env:ANT_HOME\bin;$env:Path" ;
+          echo "Path=$env:Path"
+          which java
+          java -version
+          which ant
+          ant -version
+
+          # Save JAVA_HOME, ANT_HOME, and Path (renamed to THE_PATH) in env variables
+          echo "JAVA_HOME=$env:JAVA_HOME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "ANT_HOME=$env:ANT_HOME" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "THE_PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build JavaFX artifacts
+        working-directory: jfx
+        run: |
+          echo "JAVA_HOME=$env:JAVA_HOME"
+          echo "ANT_HOME=$env:ANT_HOME"
+          $env:Path = "$env:THE_PATH" ;
+          echo "Path=$env:Path"
+          which java
+          java -version
+          .\gradlew.bat -version
+          .\gradlew.bat --info all
+
+      - name: Run JavaFX headless tests
+        working-directory: jfx
+        run: |
+          echo "JAVA_HOME=$env:JAVA_HOME"
+          echo "ANT_HOME=$env:ANT_HOME"
+          $env:Path = "$env:THE_PATH" ;
+          echo "Path=$env:Path"
+          .\gradlew.bat --info --continue -PBUILD_SDK_FOR_TEST=false test -x :web:test

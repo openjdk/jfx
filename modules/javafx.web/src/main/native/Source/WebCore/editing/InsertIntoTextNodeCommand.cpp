@@ -27,6 +27,8 @@
 #include "InsertIntoTextNodeCommand.h"
 
 #include "Document.h"
+#include "Editor.h"
+#include "EditorClient.h"
 #include "Frame.h"
 #include "RenderText.h"
 #include "Settings.h"
@@ -50,7 +52,8 @@ InsertIntoTextNodeCommand::InsertIntoTextNodeCommand(Ref<Text>&& node, unsigned 
 
 void InsertIntoTextNodeCommand::doApply()
 {
-    bool passwordEchoEnabled = frame().settings().passwordEchoEnabled();
+    bool passwordEchoEnabled = document().settings().passwordEchoEnabled() && !document().editor().client()->shouldSuppressPasswordEcho();
+
     if (passwordEchoEnabled)
         document().updateLayoutIgnorePendingStylesheets();
 

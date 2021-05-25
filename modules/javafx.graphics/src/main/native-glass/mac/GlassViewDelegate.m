@@ -1119,7 +1119,8 @@ static jstring convertNSStringToJString(id aString, int length)
             free(dataBytes);
         }
     } else {
-        jStr = (*env)->NewStringUTF(env, [aString UTF8String]);
+        NSData *data = [aString dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
+        jStr = (*env)->NewString(env, (jchar *)[data bytes], data.length/2);
     }
 
     GLASS_CHECK_EXCEPTION(env);

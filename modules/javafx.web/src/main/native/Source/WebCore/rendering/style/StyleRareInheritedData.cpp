@@ -23,7 +23,6 @@
 #include "StyleRareInheritedData.h"
 
 #include "CursorList.h"
-#include "DataRef.h"
 #include "QuotesData.h"
 #include "RenderStyle.h"
 #include "RenderStyleConstants.h"
@@ -32,6 +31,7 @@
 #include "StyleCustomPropertyData.h"
 #include "StyleFilterData.h"
 #include "StyleImage.h"
+#include <wtf/DataRef.h>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -49,7 +49,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     TextUnderlineOffset offset;
     TextDecorationThickness thickness;
     void* customPropertyDataRefs[1];
-    unsigned bitfields[4];
+    unsigned bitfields[6];
     short pagedMediaShorts[2];
     TabSize tabSize;
     short hyphenationShorts[3];
@@ -133,9 +133,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , joinStyle(RenderStyle::initialJoinStyle())
     , hasSetStrokeWidth(false)
     , hasSetStrokeColor(false)
-#if ENABLE(POINTER_EVENTS)
-    , effectiveTouchActions(static_cast<unsigned>(RenderStyle::initialTouchActions()))
-#endif
+    , effectiveTouchActions(RenderStyle::initialTouchActions())
     , strokeWidth(RenderStyle::initialStrokeWidth())
     , strokeColor(RenderStyle::initialStrokeColor())
     , miterLimit(RenderStyle::initialStrokeMiterLimit())
@@ -229,9 +227,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , joinStyle(o.joinStyle)
     , hasSetStrokeWidth(o.hasSetStrokeWidth)
     , hasSetStrokeColor(o.hasSetStrokeColor)
-#if ENABLE(POINTER_EVENTS)
     , effectiveTouchActions(o.effectiveTouchActions)
-#endif
+    , eventListenerRegionTypes(o.eventListenerRegionTypes)
     , strokeWidth(o.strokeWidth)
     , strokeColor(o.strokeColor)
     , visitedLinkStrokeColor(o.visitedLinkStrokeColor)
@@ -352,9 +349,8 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && joinStyle == o.joinStyle
         && hasSetStrokeWidth == o.hasSetStrokeWidth
         && hasSetStrokeColor == o.hasSetStrokeColor
-#if ENABLE(POINTER_EVENTS)
         && effectiveTouchActions == o.effectiveTouchActions
-#endif
+        && eventListenerRegionTypes == o.eventListenerRegionTypes
         && strokeWidth == o.strokeWidth
         && strokeColor == o.strokeColor
         && visitedLinkStrokeColor == o.visitedLinkStrokeColor

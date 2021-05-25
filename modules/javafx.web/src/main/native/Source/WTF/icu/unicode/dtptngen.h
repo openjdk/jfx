@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2007-2015, International Business Machines Corporation and
+* Copyright (C) 2007-2016, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -16,6 +18,7 @@
 #include "unicode/locid.h"
 #include "unicode/udat.h"
 #include "unicode/udatpg.h"
+#include "unicode/unistr.h"
 
 U_NAMESPACE_BEGIN
 
@@ -25,6 +28,7 @@ U_NAMESPACE_BEGIN
  */
 
 
+class CharString;
 class Hashtable;
 class FormatParser;
 class DateTimeMatcher;
@@ -124,9 +128,28 @@ public:
      * @param status  Output param set to success/failure code on exit,
      *                  which must not indicate a failure before the function call.
      * @return skeleton such as "MMMdd"
+     * @stable ICU 56
+     */
+    static UnicodeString staticGetSkeleton(const UnicodeString& pattern, UErrorCode& status);
+
+    /**
+     * Utility to return a unique skeleton from a given pattern. For example,
+     * both "MMM-dd" and "dd/MMM" produce the skeleton "MMMdd".
+     * getSkeleton() works exactly like staticGetSkeleton().
+     * Use staticGetSkeleton() instead of getSkeleton().
+     *
+     * @param pattern   Input pattern, such as "dd/MMM"
+     * @param status  Output param set to success/failure code on exit,
+     *                  which must not indicate a failure before the function call.
+     * @return skeleton such as "MMMdd"
      * @stable ICU 3.8
      */
-    UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status);
+    UnicodeString getSkeleton(const UnicodeString& pattern, UErrorCode& status); /* {
+        The function is commented out because it is a stable API calling a draft API.
+        After staticGetSkeleton becomes stable, staticGetSkeleton can be used and
+        these comments and the definition of getSkeleton in dtptngen.cpp should be removed.
+        return staticGetSkeleton(pattern, status);
+    }*/
 
     /**
      * Utility to return a unique base skeleton from a given pattern. This is
@@ -138,10 +161,32 @@ public:
      * @param pattern  Input pattern, such as "dd/MMM"
      * @param status  Output param set to success/failure code on exit,
      *               which must not indicate a failure before the function call.
-     * @return base skeleton, such as "Md"
+     * @return base skeleton, such as "MMMd"
+     * @stable ICU 56
+     */
+    static UnicodeString staticGetBaseSkeleton(const UnicodeString& pattern, UErrorCode& status);
+
+    /**
+     * Utility to return a unique base skeleton from a given pattern. This is
+     * the same as the skeleton, except that differences in length are minimized
+     * so as to only preserve the difference between string and numeric form. So
+     * for example, both "MMM-dd" and "d/MMM" produce the skeleton "MMMd"
+     * (notice the single d).
+     * getBaseSkeleton() works exactly like staticGetBaseSkeleton().
+     * Use staticGetBaseSkeleton() instead of getBaseSkeleton().
+     *
+     * @param pattern  Input pattern, such as "dd/MMM"
+     * @param status  Output param set to success/failure code on exit,
+     *               which must not indicate a failure before the function call.
+     * @return base skeleton, such as "MMMd"
      * @stable ICU 3.8
      */
-    UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status);
+    UnicodeString getBaseSkeleton(const UnicodeString& pattern, UErrorCode& status); /* {
+        The function is commented out because it is a stable API calling a draft API.
+        After staticGetBaseSkeleton becomes stable, staticGetBaseSkeleton can be used and
+        these comments and the definition of getBaseSkeleton in dtptngen.cpp should be removed.
+        return staticGetBaseSkeleton(pattern, status);
+    }*/
 
     /**
      * Adds a pattern to the generator. If the pattern has the same skeleton as
@@ -218,13 +263,28 @@ public:
 
     /**
      * Getter corresponding to setAppendItemNames. Values below 0 or at or above
-     * UDATPG_FIELD_COUNT are illegal arguments.
+     * UDATPG_FIELD_COUNT are illegal arguments. Note: The more general method
+     * for getting date/time field display names is getFieldDisplayName.
      *
      * @param field  such as UDATPG_ERA_FIELD.
      * @return name for field
+     * @see getFieldDisplayName
      * @stable ICU 3.8
      */
     const UnicodeString& getAppendItemName(UDateTimePatternField field) const;
+
+#ifndef U_HIDE_DRAFT_API
+    /**
+     * The general interface to get a display name for a particular date/time field,
+     * in one of several possible display widths.
+     *
+     * @param field  The desired UDateTimePatternField, such as UDATPG_ERA_FIELD.
+     * @param width  The desired UDateTimePGDisplayWidth, such as UDATPG_ABBREVIATED.
+     * @return.      The display name for field
+     * @draft ICU 61
+     */
+    UnicodeString getFieldDisplayName(UDateTimePatternField field, UDateTimePGDisplayWidth width) const;
+#endif  // U_HIDE_DRAFT_API
 
     /**
      * The DateTimeFormat is a message format pattern used to compose date and
@@ -462,40 +522,53 @@ private:
      */
     DateTimePatternGenerator& operator=(const DateTimePatternGenerator& other);
 
+    // TODO(ticket:13619): re-enable when UDATPG_NARROW no longer in  draft mode.
+    // static const int32_t UDATPG_WIDTH_COUNT = UDATPG_NARROW + 1;
+
     Locale pLocale;  // pattern locale
     FormatParser *fp;
     DateTimeMatcher* dtMatcher;
     DistanceInfo *distanceInfo;
     PatternMap *patternMap;
     UnicodeString appendItemFormats[UDATPG_FIELD_COUNT];
-    UnicodeString appendItemNames[UDATPG_FIELD_COUNT];
+    // TODO(ticket:13619): [3] -> UDATPG_WIDTH_COUNT
+    UnicodeString fieldDisplayNames[UDATPG_FIELD_COUNT][3];
     UnicodeString dateTimeFormat;
     UnicodeString decimal;
     DateTimeMatcher *skipMatcher;
     Hashtable *fAvailableFormatKeyHash;
-    UnicodeString hackPattern;
     UnicodeString emptyString;
-    UChar fDefaultHourFormatChar;
+    char16_t fDefaultHourFormatChar;
+
+    int32_t fAllowedHourFormats[7];  // Actually an array of AllowedHourFormat enum type, ending with UNKNOWN.
 
     /* internal flags masks for adjustFieldTypes etc. */
     enum {
         kDTPGNoFlags = 0,
         kDTPGFixFractionalSeconds = 1,
         kDTPGSkeletonUsesCapJ = 2
+        // with #13183, no longer need flags for b, B
     };
 
     void initData(const Locale &locale, UErrorCode &status);
-    void addCanonicalItems();
+    void addCanonicalItems(UErrorCode &status);
     void addICUPatterns(const Locale& locale, UErrorCode& status);
     void hackTimes(const UnicodeString& hackPattern, UErrorCode& status);
+    void getCalendarTypeToUse(const Locale& locale, CharString& destination, UErrorCode& err);
+    void consumeShortTimePattern(const UnicodeString& shortTimePattern, UErrorCode& status);
     void addCLDRData(const Locale& locale, UErrorCode& status);
     UDateTimePatternConflict addPatternWithSkeleton(const UnicodeString& pattern, const UnicodeString * skeletonToUse, UBool override, UnicodeString& conflictingPattern, UErrorCode& status);
     void initHashtable(UErrorCode& status);
     void setDateTimeFromCalendar(const Locale& locale, UErrorCode& status);
     void setDecimalSymbols(const Locale& locale, UErrorCode& status);
     UDateTimePatternField getAppendFormatNumber(const char* field) const;
-    UDateTimePatternField getAppendNameNumber(const char* field) const;
+#ifndef U_HIDE_DRAFT_API
+    UDateTimePatternField getFieldAndWidthIndices(const char* key, UDateTimePGDisplayWidth* widthP) const;
+    void setFieldDisplayName(UDateTimePatternField field, UDateTimePGDisplayWidth width, const UnicodeString& value);
+    UnicodeString& getMutableFieldDisplayName(UDateTimePatternField field, UDateTimePGDisplayWidth width);
+#endif  // U_HIDE_DRAFT_API
     void getAppendName(UDateTimePatternField field, UnicodeString& value);
+    UnicodeString mapSkeletonMetacharacters(const UnicodeString& patternForm, int32_t* flags, UErrorCode& status);
     int32_t getCanonicalIndex(const UnicodeString& field);
     const UnicodeString* getBestRaw(DateTimeMatcher& source, int32_t includeMask, DistanceInfo* missingFields, const PtnSkeleton** specifiedSkeletonPtr = 0);
     UnicodeString adjustFieldTypes(const UnicodeString& pattern, const PtnSkeleton* specifiedSkeleton, int32_t flags, UDateTimePatternMatchOptions options = UDATPG_MATCH_NO_OPTIONS);
@@ -505,6 +578,12 @@ private:
     UBool isAvailableFormatSet(const UnicodeString &key) const;
     void copyHashtable(Hashtable *other, UErrorCode &status);
     UBool isCanonicalItem(const UnicodeString& item) const;
+    static void U_CALLCONV loadAllowedHourFormatsData(UErrorCode &status);
+    void getAllowedHourFormats(const Locale &locale, UErrorCode &status);
+
+    struct AppendItemFormatsSink;
+    struct AppendItemNamesSink;
+    struct AvailableFormatsSink;
 } ;// end class DateTimePatternGenerator
 
 U_NAMESPACE_END

@@ -61,7 +61,7 @@ Optional<Exception> WorkerScriptLoader::loadSynchronously(ScriptExecutionContext
     if (isServiceWorkerGlobalScope) {
         if (auto* scriptResource = downcast<ServiceWorkerGlobalScope>(workerGlobalScope).scriptResource(url)) {
             m_script.append(scriptResource->script);
-            m_responseURL = URL { URL { }, scriptResource->responseURL };
+            m_responseURL = scriptResource->responseURL;
             m_responseMIMEType = scriptResource->mimeType;
             return WTF::nullopt;
         }
@@ -127,6 +127,8 @@ void WorkerScriptLoader::loadAsynchronously(ScriptExecutionContext& scriptExecut
     options.credentials = FetchOptions::Credentials::SameOrigin;
     options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.contentSecurityPolicyEnforcement = contentSecurityPolicyEnforcement;
+    if (fetchOptions.destination == FetchOptions::Destination::Serviceworker)
+        options.certificateInfoPolicy = CertificateInfoPolicy::IncludeCertificateInfo;
     // A service worker job can be executed from a worker context or a document context.
     options.serviceWorkersMode = serviceWorkerMode;
 #if ENABLE(SERVICE_WORKER)
@@ -159,7 +161,7 @@ ResourceError WorkerScriptLoader::validateWorkerResponse(const ResourceResponse&
         return ResourceError { errorDomainWebKitInternal, 0, response.url(), "Response is not 2xx"_s, ResourceError::Type::General };
 
     if (!isScriptAllowedByNosniff(response)) {
-        String message = makeString("Refused to execute ", response.url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type: nosniff\" was given and its Content-Type is not a script MIME type.");
+        String message = makeString("Refused to execute ", response.url().stringCenterEllipsizedToLength(), " as script because \"X-Content-Type-Options: nosniff\" was given and its Content-Type is not a script MIME type.");
         return ResourceError { errorDomainWebKitInternal, 0, response.url(), WTFMove(message), ResourceError::Type::General };
     }
 
@@ -180,6 +182,7 @@ void WorkerScriptLoader::didReceiveResponse(unsigned long identifier, const Reso
     }
 
     m_responseURL = response.url();
+    m_certificateInfo = response.certificateInfo() ? *response.certificateInfo() : CertificateInfo();
     m_responseMIMEType = response.mimeType();
     m_responseEncoding = response.textEncodingName();
     m_contentSecurityPolicy = ContentSecurityPolicyResponseHeaders { response };

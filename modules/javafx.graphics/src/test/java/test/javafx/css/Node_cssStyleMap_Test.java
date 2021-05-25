@@ -62,6 +62,7 @@ import javafx.scene.text.Text;
 
 import static org.junit.Assert.*;
 
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -98,6 +99,20 @@ public class Node_cssStyleMap_Test {
 
         assert(style.getDeclaration() == declaration);
 
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @After
+    public void cleanup() {
+        resetStyleManager();
     }
 
     @Ignore("JDK-8234241")

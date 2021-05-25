@@ -612,10 +612,6 @@ public class TextFlow extends Pane {
     }
 
     /* The methods in this section are copied from Region due to package visibility restriction */
-    private static double snapSpace(double value, boolean snapToPixel) {
-        return snapToPixel ? Math.round(value) : value;
-    }
-
     static double boundedSize(double min, double pref, double max) {
         double a = pref >= min ? pref : min;
         double b = min >= max ? min : max;
@@ -627,11 +623,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaWidth(Node child, Insets margin, double height) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             alt = snapSizeY(boundedSize(
@@ -646,11 +641,10 @@ public class TextFlow extends Pane {
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin, double width) {
-        final boolean snap = isSnapToPixel();
-        double top = margin != null? snapSpace(margin.getTop(), snap) : 0;
-        double bottom = margin != null? snapSpace(margin.getBottom(), snap) : 0;
-        double left = margin != null? snapSpace(margin.getLeft(), snap) : 0;
-        double right = margin != null? snapSpace(margin.getRight(), snap) : 0;
+        double top = margin != null? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null? snapSpaceY(margin.getBottom()) : 0;
+        double left = margin != null? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
         if (child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
             alt = snapSizeX(boundedSize(

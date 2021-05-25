@@ -45,7 +45,7 @@ class AudioDestination {
 public:
     // Pass in (numberOfInputChannels > 0) if live/local audio input is desired.
     // Port-specific device identification information for live/local input streams can be passed in the inputDeviceId.
-    static std::unique_ptr<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
+    WEBCORE_EXPORT static std::unique_ptr<AudioDestination> create(AudioIOCallback&, const String& inputDeviceId, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
 
     virtual ~AudioDestination() = default;
 
@@ -56,6 +56,8 @@ public:
     // Sample-rate conversion may happen in AudioDestination to the hardware sample-rate
     virtual float sampleRate() const = 0;
     static float hardwareSampleRate();
+
+    virtual unsigned framesPerBuffer() const = 0;
 
     // maxChannelCount() returns the total number of output channels of the audio hardware.
     // A value of 0 indicates that the number of channels cannot be configured and

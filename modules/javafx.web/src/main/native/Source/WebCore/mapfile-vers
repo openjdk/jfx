@@ -9,8 +9,9 @@ SUNWprivate_1.0 {
                WTFReportAssertionFailure;
                _ZN3WTF5equalEPKNS_10StringImplEPKh;
                _ZN3WTF6StringC1EPKc;
-               _ZN3WTF6StringC1EPKtj;
+               _ZN3WTF6StringC1EPKDsj;
                _ZN3WTF7RunLoop4mainEv;
+               _ZN3WTF7RunLoop8dispatchEONS_8FunctionIFvvEEE;
                _ZN3WTF8fastFreeEPv;
                _ZN3WTF8LockBase8lockSlowEv;
                _ZN3WTF8LockBase10unlockSlowEv;

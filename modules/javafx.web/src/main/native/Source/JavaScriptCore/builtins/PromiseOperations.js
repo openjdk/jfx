@@ -48,10 +48,7 @@ function newPromiseCapabilitySlow(constructor)
         @promise: @undefined,
     };
 
-    if (!@isConstructor(constructor))
-        @throwTypeError("promise capability requires a constructor function");
-
-    var promise = new constructor(function (resolve, reject) {
+    var promise = new constructor((resolve, reject) => {
         if (promiseCapability.@resolve !== @undefined)
             @throwTypeError("resolve function is already set");
         if (promiseCapability.@reject !== @undefined)
@@ -239,28 +236,27 @@ function rejectPromiseWithFirstResolvingFunctionCallCheck(promise, reason)
 function createResolvingFunctions(promise)
 {
     "use strict";
-
     @assert(@isPromise(promise));
 
     var alreadyResolved = false;
 
-    function @resolve(resolution) {
+    var resolve = (0, /* prevent function name inference */ (resolution) => {
         if (alreadyResolved)
             return @undefined;
         alreadyResolved = true;
 
         return @resolvePromise(promise, resolution);
-    }
+    });
 
-    function @reject(reason) {
+    var reject = (0, /* prevent function name inference */ (reason) => {
         if (alreadyResolved)
             return @undefined;
         alreadyResolved = true;
 
         return @rejectPromise(promise, reason);
-    }
+    });
 
-    return { @resolve, @reject };
+    return { @resolve: resolve, @reject: reject };
 }
 
 @globalPrivate
@@ -333,23 +329,23 @@ function createResolvingFunctionsWithoutPromise(onFulfilled, onRejected)
 
     var alreadyResolved = false;
 
-    function @resolve(resolution) {
+    var resolve = (0, /* prevent function name inference */ (resolution) => {
         if (alreadyResolved)
             return @undefined;
         alreadyResolved = true;
 
         @resolveWithoutPromise(resolution, onFulfilled, onRejected);
-    }
+    });
 
-    function @reject(reason) {
+    var reject = (0, /* prevent function name inference */ (reason) => {
         if (alreadyResolved)
             return @undefined;
         alreadyResolved = true;
 
         @rejectWithoutPromise(reason, onFulfilled, onRejected);
-    }
+    });
 
-    return { @resolve, @reject };
+    return { @resolve: resolve, @reject: reject };
 }
 
 @globalPrivate
@@ -369,8 +365,8 @@ function promiseReactionJob(state, reaction, argument)
     var promiseOrCapability = reaction.@promiseOrCapability;
 
     // Case (3).
-    if (!reaction.@onRejected) {
-        @assert(!reaction.@onFulfilled);
+    if (@isUndefinedOrNull(reaction.@onRejected)) {
+        @assert(@isUndefinedOrNull(reaction.@onFulfilled));
         try {
             @assert(@isPromise(promiseOrCapability));
             if (state === @promiseStateFulfilled)

@@ -123,10 +123,10 @@ struct _GstBaseTransform {
  *                  Subclasses can override this method to check if @caps can be
  *                  handled by the element. The default implementation might not be
  *                  the most optimal way to check this in all cases.
- * @set_caps:       allows the subclass to be notified of the actual caps set.
+ * @set_caps:       Allows the subclass to be notified of the actual caps set.
  * @query:          Optional.
  *                  Handle a requested query. Subclasses that implement this
- *                  should must chain up to the parent if they didn't handle the
+ *                  must chain up to the parent if they didn't handle the
  *                  query
  * @decide_allocation: Setup the allocation parameters for allocating output
  *                    buffers. The passed in query contains the result of the
@@ -153,7 +153,7 @@ struct _GstBaseTransform {
  *                  The default implementation uses get_unit_size and keeps
  *                  the number of units the same.
  * @get_unit_size:  Required if the transform is not in-place.
- *                  get the size in bytes of one unit for the given caps.
+ *                  Get the size in bytes of one unit for the given caps.
  * @start:          Optional.
  *                  Called when the element starts processing.
  *                  Allows opening external resources.
@@ -181,7 +181,7 @@ struct _GstBaseTransform {
  *                 offsets of the buffer.
  * @transform_meta: Optional. Transform the metadata on the input buffer to the
  *                  output buffer. By default this method copies all meta without
- *                  tags. subclasses can implement this method and return %TRUE if
+ *                  tags. Subclasses can implement this method and return %TRUE if
  *                  the metadata is to be copied.
  * @before_transform: Optional.
  *                    This method is called right before the base class will
@@ -206,7 +206,7 @@ struct _GstBaseTransform {
  *                   @queued_buf variable, generates an output buffer if needed
  *                   by calling the class @prepare_output_buffer, and then
  *                   calls either @transform or @transform_ip. Elements that don't
- *                   do 1-to-1 transformations on input to output buffers can either
+ *                   do 1-to-1 transformations of input to output buffers can either
  *                   return GST_BASE_TRANSFORM_FLOW_DROPPED or simply not generate
  *                   an output buffer until they are ready to do so. (Since: 1.6)
  *
@@ -350,9 +350,10 @@ GST_BASE_API
 gboolean gst_base_transform_update_src_caps (GstBaseTransform *trans,
                                              GstCaps *updated_caps);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+GST_BASE_API
+gboolean gst_base_transform_reconfigure (GstBaseTransform * trans);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseTransform, gst_object_unref)
-#endif
 
 G_END_DECLS
 

@@ -27,6 +27,7 @@
 
 #include "RegistrableDomain.h"
 #include <wtf/CompletionHandler.h>
+#include <wtf/Forward.h>
 #include <wtf/Optional.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
@@ -239,7 +240,7 @@ public:
     {
     }
 
-    WEBCORE_EXPORT static Optional<Conversion> parseConversionRequest(const URL& redirectURL);
+    WEBCORE_EXPORT static Expected<Conversion, String> parseConversionRequest(const URL& redirectURL);
     WEBCORE_EXPORT Optional<Seconds> convertAndGetEarliestTimeToSend(Conversion&&);
     WEBCORE_EXPORT bool hasHigherPriorityThan(const AdClickAttribution&) const;
     WEBCORE_EXPORT URL url() const;
@@ -351,18 +352,14 @@ Optional<AdClickAttribution::Conversion> AdClickAttribution::Conversion::decode(
 namespace WTF {
 template<typename T> struct DefaultHash;
 
-template<> struct DefaultHash<WebCore::AdClickAttribution::Source> {
-    typedef WebCore::AdClickAttribution::SourceHash Hash;
-};
+template<> struct DefaultHash<WebCore::AdClickAttribution::Source> : WebCore::AdClickAttribution::SourceHash { };
 template<> struct HashTraits<WebCore::AdClickAttribution::Source> : GenericHashTraits<WebCore::AdClickAttribution::Source> {
     static WebCore::AdClickAttribution::Source emptyValue() { return { }; }
     static void constructDeletedValue(WebCore::AdClickAttribution::Source& slot) { WebCore::AdClickAttribution::Source::constructDeletedValue(slot); }
     static bool isDeletedValue(const WebCore::AdClickAttribution::Source& slot) { return slot.isDeletedValue(); }
 };
 
-template<> struct DefaultHash<WebCore::AdClickAttribution::Destination> {
-    typedef WebCore::AdClickAttribution::DestinationHash Hash;
-};
+template<> struct DefaultHash<WebCore::AdClickAttribution::Destination> : WebCore::AdClickAttribution::DestinationHash { };
 template<> struct HashTraits<WebCore::AdClickAttribution::Destination> : GenericHashTraits<WebCore::AdClickAttribution::Destination> {
     static WebCore::AdClickAttribution::Destination emptyValue() { return { }; }
     static void constructDeletedValue(WebCore::AdClickAttribution::Destination& slot) { WebCore::AdClickAttribution::Destination::constructDeletedValue(slot); }

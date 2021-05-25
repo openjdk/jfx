@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@
 
 #define PATH_DELIMITER          '/'
 
-jint JNI_OnLoad_ios_webnode(JavaVM* vm, void * reserved) {
+jint JNI_OnLoad_webview(JavaVM* vm, void * reserved) {
 #ifdef JNI_VERSION_1_8
     //min. returned JNI_VERSION required by JDK8 for builtin libraries
     JNIEnv *env;
@@ -53,17 +53,15 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     if (nsStr == nil) {
         return NULL;
     }
-    jsize resLength = [nsStr length];
-    jchar resBuffer[resLength];
-    [nsStr getCharacters:(unichar *)resBuffer];
-    return (*env)->NewString(env, resBuffer, resLength);
+    const char *cString = [nsStr UTF8String];
+    return (*env)->NewStringUTF(env, cString);
 }
 
 
 @implementation WebViewImpl
 
-@synthesize window;     //known as masterWindow in glass
-@synthesize windowView; //known as masterWindowHost in glass
+@synthesize window;     //known as mainWindow in glass
+@synthesize windowView; //known as mainWindowHost in glass
 
 - (void)setWidth:(CGFloat)value {
     width = value;
@@ -95,12 +93,28 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     [webView loadHTMLString:content baseURL:nil];
 }
 
-- (void)executeScript:(NSString *) script {
-    jsResult = [webView stringByEvaluatingJavaScriptFromString:script];
+- (void)reload {
+    [webView reload];
 }
 
-- (NSString *)getScriptResult {
-    return jsResult;
+- (void)executeScript:(NSMutableDictionary *) info {
+    __block NSString *resultString = nil;
+    __block BOOL finished = NO;
+    [webView evaluateJavaScript:[info objectForKey:@"Script"] completionHandler:^(id result, NSError *error) {
+        if (error == nil) {
+            if (result != nil) {
+                resultString = [NSString stringWithFormat:@"%@", result];
+            }
+        } else {
+            NSLog(@"evaluateJavaScript error in executeScript: %@", error);
+        }
+        NSMutableDictionary *resultDictionary = [info objectForKey:@"ResultDictionary"];
+        [resultDictionary setValue:resultString forKey:@"Result"];
+        finished = YES;
+    }];
+    while (!finished) {
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
+    }
 }
 
 - (WebViewImpl *)create:(JNIEnv *)env :(jobject)object {
@@ -110,7 +124,6 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     jObject = (*env)->NewGlobalRef(env, object);
     jclass cls = (*env)->GetObjectClass(env, object);
     jmidLoadStarted = (*env)->GetMethodID(env, cls, "notifyLoadStarted", "()V");
-    // jmidLoadFinished = (*env)->GetMethodID(env, cls, "notifyLoadFinished", "()V");
     jmidLoadFinished = (*env)->GetMethodID(env, cls, "notifyLoadFinished", "(Ljava/lang/String;Ljava/lang/String;)V");
     jmidLoadFailed = (*env)->GetMethodID(env, cls, "notifyLoadFailed", "()V");
     jmidJavaCall = (*env)->GetMethodID(env, cls, "notifyJavaCall", "(Ljava/lang/String;)V");
@@ -132,17 +145,24 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
         height = screenBounds.size.height;
     }
 
-    webView = [[UIWebView alloc] initWithFrame:CGRectMake(0, 0, width, height)];
+    webView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, width, height)];
     webView.userInteractionEnabled = YES;
-    [webView setDelegate:self];
+    webView.navigationDelegate = self;
     //[webView.layer setAnchorPoint:CGPointMake(0.0f, 0.0f)];
 
     loadingLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, height/2, width, 40)];
     loadingLabel.textAlignment = UITextAlignmentCenter;
     //[loadingLabel.layer setAnchorPoint:CGPointMake(0.0f, 0.0f)];
 
-    window = [self getWindow];                          //known as masterWindow in glass
-    windowView = [[window rootViewController] view];    //known as masterWindowHost in glass
+    window = [self getWindow];                          //known as mainWindow in glass
+    windowView = [[window rootViewController] view];    //known as mainWindowHost in glass
+
+    if (windowView) {
+        [windowView addSubview:webView];
+        // [windowView addSubview:loadingLabel];
+    } else {
+        NSLog(@"WebViewImpl ERROR: main Window is NIL");
+    }
 }
 
 - (JNIEnv *)getJNIEnv {
@@ -156,7 +176,7 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 - (void)releaseJNIEnv:(JNIEnv *)env {
 }
 
-- (UIWebView *)getWebView {
+- (WKWebView *)getWebView {
     return webView;
 }
 
@@ -174,7 +194,7 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 }
 
 - (void) dealloc {
-    webView.delegate = nil;
+    webView.navigationDelegate = nil;
     [webView release];
     [loadingLabel release];
     JNIEnv *env = [self getJNIEnv];
@@ -185,9 +205,10 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     [super dealloc];
 }
 
-- (BOOL)webView:(UIWebView *)wv shouldStartLoadWithRequest:(NSURLRequest *)request
-        navigationType:(UIWebViewNavigationType)navigationType {
-    NSString *url = [[request URL] absoluteString];
+- (void)webView:(WKWebView *)wv decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction
+        decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
+
+    NSString *url = [navigationAction.request.URL absoluteString];
     if ([url hasPrefix:JAVA_CALL_PREFIX]) {
         JNIEnv *env = [self getJNIEnv];
         if (env != NULL) {
@@ -196,13 +217,13 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
             (*env)->DeleteLocalRef(env, jUrl);
             [self releaseJNIEnv:env];
         }
-        return NO;
+        decisionHandler(WKNavigationActionPolicyCancel);
+    } else {
+        decisionHandler(WKNavigationActionPolicyAllow);
     }
-    return YES;
 }
 
-- (void)webViewDidStartLoad:(UIWebView *)webView{
-    [windowView addSubview:loadingLabel];
+- (void)webView:(WKWebView *)wv didStartProvisionalNavigation:(WKNavigation *)navigation {
     loadingLabel.hidden = hidden;
     [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
 
@@ -213,29 +234,30 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
     }
 }
 
-- (void)webViewDidFinishLoad:(UIWebView *)wv{
-    NSString *inner = [wv stringByEvaluatingJavaScriptFromString:
-                                         @"document.documentElement.innerHTML"];
-    NSString *currentUrl = wv.request.URL.absoluteString;
-
+- (void)webView:(WKWebView *)wv didFinishNavigation:(WKNavigation *)navigation {
     loadingLabel.hidden = YES;
     [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
-    if (windowView) {
-        [windowView addSubview:wv];
-    } else {
-        NSLog(@"WebViewImpl ERROR: main Window is NIL");
-    }
-
-    JNIEnv *env = [self getJNIEnv];
-    if (env != NULL) {
-        jstring jInner = createJString(env, inner);
-        jstring jUrl = createJString(env, currentUrl);
-        (*env)->CallVoidMethod(env, jObject, jmidLoadFinished, jUrl, jInner);
-        [self releaseJNIEnv:env];
-    }
+    __block NSString *resultString = nil;
+    [wv evaluateJavaScript:@"document.documentElement.innerHTML" completionHandler:^(id result, NSError *error) {
+        if (error == nil) {
+            if (result != nil) {
+                resultString = [NSString stringWithFormat:@"%@", result];
+            }
+            JNIEnv *env = [self getJNIEnv];
+            if (env != NULL) {
+                jstring jInner = createJString(env, resultString);
+                NSString *currentUrl = [wv.URL absoluteString];
+                jstring jUrl = createJString(env, currentUrl);
+                (*env)->CallVoidMethod(env, jObject, jmidLoadFinished, jUrl, jInner);
+                [self releaseJNIEnv:env];
+            }
+        } else {
+            NSLog(@"evaluateJavaScript error in didFinishNavigation: %@", error);
+        }
+    }];
 }
 
-- (void)webView:(UIWebView *)wv didFailLoadWithError:(NSError *)error {
+- (void)webView:(WKWebView *)wv didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     NSLog(@"WebViewImpl ERROR: didFailLoadWithError");
     NSLog(@" this error => %@ ", [error userInfo] );
     JNIEnv *env = [self getJNIEnv];
@@ -247,13 +269,16 @@ jstring createJString(JNIEnv *env, NSString *nsStr) {
 
 - (void) updateWebView {
     CGRect bounds = webView.bounds;
+    bounds.origin = CGPointMake(transform.m41, transform.m42);
     bounds.size.width = width;
     bounds.size.height = height;
-    CGPoint center = CGPointMake(/*transform.m41 +*/ width/2, /* transform.m42 +*/ height/2);
-    [webView setCenter:center];
-    [webView setBounds:bounds];
-    [loadingLabel setCenter:center];
-    [loadingLabel setBounds:bounds];
+    [webView setFrame:bounds];
+//     [loadingLabel setCenter:center];
+//     [loadingLabel setBounds:bounds];
+    // add subview again if is not present
+    if (![webView isDescendantOfView:windowView]) {
+        [windowView addSubview:webView];
+    }
 }
 
 - (void) updateTransform {
@@ -479,13 +504,26 @@ extern "C" {
 
     /*
      * Class:     javafx_scene_web_WebEngine
+     * Method:    _reload
+     * Signature: (J)V
+     */
+    JNIEXPORT void JNICALL
+    Java_javafx_scene_web_WebEngine__1reload(JNIEnv *env, jobject cl, jlong handle) {
+        WebViewImpl *wvi = jlong_to_ptr(handle);
+        if (wvi) {
+            [wvi reload];
+        }
+    }
+
+    /*
+     * Class:     javafx_scene_web_WebEngine
      * Method:    _executeScript
      * Signature: (JLjava/lang/String;)Ljava/lang/String;
      */
     JNIEXPORT jstring JNICALL
     Java_javafx_scene_web_WebEngine__1executeScript(JNIEnv *env, jobject cl, jlong handle, jstring script) {
         NSString *string = @"";
-        if (script!= NULL)
+        if (script != NULL)
         {
             const jchar* jstrChars = (*env)->GetStringChars(env, script, NULL);
             string = [[[NSString alloc] initWithCharacters: jstrChars length: (*env)->GetStringLength(env, script)] autorelease];
@@ -494,9 +532,12 @@ extern "C" {
 
         WebViewImpl *wvi = jlong_to_ptr(handle);
         if (wvi) {
-            [wvi performSelectorOnMainThread:@selector(executeScript:) withObject:string waitUntilDone:YES];
+            NSMutableDictionary *resultDictionary = [NSMutableDictionary dictionaryWithCapacity:1];
+            NSDictionary *info = [NSDictionary dictionaryWithObjectsAndKeys:
+                                  resultDictionary, @"ResultDictionary", string, @"Script", nil];
+            [wvi performSelectorOnMainThread:@selector(executeScript:) withObject:info waitUntilDone:YES];
 
-            NSString *result = [wvi getScriptResult];
+            NSString *result = [resultDictionary objectForKey:@"Result"];
 
             if (result != nil) {
                 jsize resLength = [result length];

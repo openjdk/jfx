@@ -57,6 +57,7 @@
 #include <WebCore/BridgeUtils.h>
 #include <WebCore/CharacterData.h>
 #include <WebCore/Chrome.h>
+#include <WebCore/ColorTypes.h>
 #include <WebCore/CompositionHighlight.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuController.h>
@@ -81,6 +82,7 @@
 #include <WebCore/GraphicsLayerTextureMapper.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/LogInitialization.h>
 #include <WebCore/NodeTraversal.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageConfiguration.h>
@@ -267,7 +269,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     frameView->paint(gc, IntRect(x, y, w, h));
     if (m_page->settings().showDebugBorders()) {
-        drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 0, 255, 128));
+        drawDebugLed(gc, IntRect(x, y, w, h), SRGBA<uint8_t> { 0, 0, 255, 128 });
     }
 
     gc.platformContext()->rq().flushBuffer();
@@ -292,7 +294,7 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
         }
         renderCompositedLayers(gc, IntRect(x, y, w, h));
         if (m_page->settings().showDebugBorders()) {
-            drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 192, 0, 128));
+            drawDebugLed(gc, IntRect(x, y, w, h), SRGBA<uint8_t> { 0, 192, 0, 128 });
         }
         if (downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer().descendantsOrSelfHaveRunningAnimations()) {
             requestJavaRepaint(pageRect());
@@ -386,7 +388,7 @@ void WebPage::setNeedsOneShotDrawingSynchronization()
 {
 }
 
-void WebPage::scheduleCompositingLayerSync()
+void WebPage::scheduleRenderingUpdate()
 {
     markForSync();
 }
@@ -394,6 +396,7 @@ void WebPage::scheduleCompositingLayerSync()
 void WebPage::markForSync()
 {
     if (!m_rootLayer) {
+        m_page->updateRendering();
         return;
     }
     m_syncLayers = true;
@@ -436,7 +439,7 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     static_cast<TextureMapperJava&>(*m_textureMapper).setGraphicsContext(&context);
     TransformationMatrix matrix;
     m_textureMapper->beginPainting();
-    m_textureMapper->beginClip(matrix, clip);
+    m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
     rootTextureMapperLayer.applyAnimationsRecursively(MonotonicTime::now());
     downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
     rootTextureMapperLayer.paint();
@@ -460,7 +463,7 @@ void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, cons
     context.clip(inClip);
     m_page->mainFrame().view()->paint(context, enclosingIntRect(inClip));
     if (m_page->settings().showDebugBorders()) {
-        drawDebugBorder(context, roundedIntRect(inClip), Color(0, 192, 0), 20);
+        drawDebugBorder(context, roundedIntRect(inClip), SRGBA<uint8_t> { 0, 192, 0 }, 20);
     }
     context.restore();
 }
@@ -839,9 +842,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 {
     // FIXME-java(JDK-8169950): Refactor the following WebCore module
     // initialization flow.
-    JSC::initializeThreading();
+    JSC::initialize();
     WTF::initializeMainThread();
-    RunLoop::initializeMainRunLoop();
     // RT-17330: Allow local loads for substitute data, that is,
     // for content loaded with twkLoad
     WebCore::SecurityPolicy::setLocalLoadPolicy(
@@ -852,7 +854,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
-    WebKitInitializeLogChannelsIfNecessary();
+    initializeLogChannelsIfNecessary();
 #endif
     WebCore::PlatformStrategiesJava::initialize();
 
@@ -879,7 +881,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    pc.loaderClientForMainFrame = new FrameLoaderClientJava(jlself);
+    pc.loaderClientForMainFrame = makeUniqueRef<FrameLoaderClientJava>(jlself);
     pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
@@ -911,6 +913,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setDefaultFixedFontSize(13);
     settings.setDefaultFontSize(16);
     settings.setContextMenuEnabled(true);
+    settings.setInputTypeColorEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
     settings.setXSSAuditorEnabled(true);
@@ -923,7 +926,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     page->setDeviceScaleFactor(devicePixelScale);
 
     RuntimeEnabledFeatures::sharedFeatures().setLinkPrefetchEnabled(true);
-    RuntimeEnabledFeatures::sharedFeatures().setInputTypeColorEnabled(true);
     static_cast<FrameLoaderClientJava&>(page->mainFrame().loader().client())
                                             .setFrame(&page->mainFrame());
 
@@ -1112,10 +1114,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     static const URL emptyParent;
 
     FrameLoadRequest frameLoadRequest(
-        *frame,
-        ResourceRequest(URL(emptyParent, String(env, url))),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow // TODO-java: recheck policy value
-    );
+        *frame, ResourceRequest(URL(emptyParent, String(env, url))));
     frameLoadRequest.setIsRequestFromClientOrUserInput();
     frame->loader().load(WTFMove(frameLoadRequest));
 }
@@ -1137,7 +1136,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     FrameLoadRequest frameLoadRequest(
         *frame,
         ResourceRequest(emptyUrl),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
         SubstituteData(
             WTFMove(buffer),
             URL(),
@@ -1629,7 +1627,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetBackgroundColor
     if (!frame || !frame->view()) {
         return;
     }
-    frame->view()->setBaseBackgroundColor(Color(RGBA32(backgroundColor)));
+    frame->view()->setBaseBackgroundColor(asSRGBA(WebCore::Packed::RGBA { static_cast<uint32_t>(backgroundColor) }));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkPrePaint
@@ -1880,7 +1878,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
                 underlines[x].startOffset = attrs[i++];
                 underlines[x].endOffset = attrs[i++];
                 underlines[x].thick = (attrs[i++] == 1);
-                underlines[x].color = Color(0, 0, 0);
+                underlines[x].color = Color::black;
             }
             env->ReleaseIntArrayElements(jattributes, attrs, JNI_ABORT);
         }
@@ -1956,7 +1954,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
 
     Editor &editor = frame->editor();
     if (editor.hasComposition()) {
-        RefPtr<Range> range = editor.compositionRange();
+        auto range = editor.compositionRange();
         for (Node* node = &range->startContainer(); node; node = NodeTraversal::next(*node)) {
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
@@ -2008,12 +2006,10 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
     jint length = 0;
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
-        // Code derived from Range::toString
-        Node* pastLast = range.get()->pastLastNode();
-        for (Node* n = range.get()->firstNode(); n != pastLast; n = NodeTraversal::next(*n)) {
-            if (n->nodeType() == Node::TEXT_NODE || n->nodeType() == Node::CDATA_SECTION_NODE) {
-                length += static_cast<CharacterData*>(n)->data().length();
+        SimpleRange range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        for (auto& node : intersectingNodes(range)) {
+            if (node.nodeType() == Node::TEXT_NODE || node.nodeType() == Node::CDATA_SECTION_NODE) {
+                length += downcast<CharacterData>(node).data().length();
             }
         }
         // Exclude the composition part if any
@@ -2036,9 +2032,9 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
 
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        RefPtr<Range> range = rangeOfContents(*(Node*)frame->selection().selection().start().element());
-        if (range) {
-            String t = plainText(range.get());
+        auto range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        if (!range.collapsed()) {
+            String t = plainText(range);
             // Exclude the composition text if any
             if (editor.hasComposition()) {
                 String s;
@@ -2084,28 +2080,28 @@ enum JAVA_DND_ACTION {
     ACTION_LINK = 0x40000000
 };
 
-static jint dragOperationToDragCursor(DragOperation op) {
+static jint dragOperationToDragCursor(Optional<DragOperation> operation) {
     unsigned int res = ACTION_NONE;
-    if (op & DragOperationCopy)
+    if (operation == DragOperation::Copy)
         res = ACTION_COPY;
-    else if (op & DragOperationLink)
+    else if (operation == DragOperation::Link)
         res = ACTION_LINK;
-    else if (op & DragOperationMove)
+    else if (operation == DragOperation::Move)
         res = ACTION_MOVE;
-    else if (op & DragOperationGeneric)
+    else if (operation == DragOperation::Generic)
         res = ACTION_MOVE; //This appears to be the Firefox behaviour
     return res;
 }
 
-static DragOperation keyStateToDragOperation(jint javaAction) {
-    unsigned int action = DragOperationNone;
+static OptionSet<DragOperation> keyStateToDragOperation(jint javaAction) {
+    OptionSet<DragOperation> action = { };
     if(javaAction & ACTION_COPY)
-        action = DragOperationCopy;
+        action = { DragOperation::Copy };
     else if(javaAction & ACTION_LINK)
-        action = DragOperationLink;
+        action = { DragOperation::Link };
     else if(javaAction & ACTION_MOVE)
-        action = DragOperationMove;
-    return static_cast<DragOperation>(action);
+        action = { DragOperation::Move };
+    return action;
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
@@ -2224,7 +2220,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkQueryCommandState
         return JNI_FALSE;
     }
     Editor::Command cmd = editor->command(String(env, command));
-    return bool_to_jbool(cmd.state() == TrueTriState);
+    return bool_to_jbool(cmd.state() == TriState::True);
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkQueryCommandValue

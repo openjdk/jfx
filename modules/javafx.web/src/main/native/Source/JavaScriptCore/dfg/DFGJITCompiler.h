@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -123,7 +123,7 @@ public:
 
     CallSiteIndex addCallSite(CodeOrigin codeOrigin)
     {
-        return m_jitCode->common.addCodeOrigin(codeOrigin);
+        return m_jitCode->common.codeOrigins->addCodeOrigin(codeOrigin);
     }
 
     CallSiteIndex emitStoreCodeOrigin(CodeOrigin codeOrigin)
@@ -151,13 +151,6 @@ public:
     void exceptionCheckWithCallFrameRollback()
     {
         m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(vm()));
-    }
-
-    // Add a call out from JIT code, with a fast exception check that tests if the return value is zero.
-    void fastExceptionCheck()
-    {
-        callExceptionFuzz(vm());
-        m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
     }
 
     OSRExitCompilationInfo& appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
@@ -190,6 +183,16 @@ public:
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_putByIds.append(InlineCacheWrapper<JITPutByIdGenerator>(gen, slowPath));
+    }
+
+    void addDelById(const JITDelByIdGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByIds.append(InlineCacheWrapper<JITDelByIdGenerator>(gen, slowPath));
+    }
+
+    void addDelByVal(const JITDelByValGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_delByVals.append(InlineCacheWrapper<JITDelByValGenerator>(gen, slowPath));
     }
 
     void addInstanceOf(const JITInstanceOfGenerator& gen, SlowPathGenerator* slowPath)
@@ -348,6 +351,8 @@ private:
     Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
     Vector<InlineCacheWrapper<JITGetByValGenerator>, 4> m_getByVals;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
+    Vector<InlineCacheWrapper<JITDelByIdGenerator>, 4> m_delByIds;
+    Vector<InlineCacheWrapper<JITDelByValGenerator>, 4> m_delByVals;
     Vector<InlineCacheWrapper<JITInByIdGenerator>, 4> m_inByIds;
     Vector<InlineCacheWrapper<JITInstanceOfGenerator>, 4> m_instanceOfs;
     Vector<JSCallRecord, 4> m_jsCalls;

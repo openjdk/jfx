@@ -50,8 +50,6 @@ WTF_EXPORT_PRIVATE void dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded(void 
 WTF_EXPORT_PRIVATE void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)());
 #endif
 
-WTF_EXPORT_PRIVATE void setMainThreadCallbacksPaused(bool paused);
-
 WTF_EXPORT_PRIVATE bool isMainThread();
 
 WTF_EXPORT_PRIVATE bool canCurrentThreadAccessThreadLocalData(Thread&);
@@ -74,8 +72,9 @@ WTF_EXPORT_PRIVATE bool isMainThreadOrGCThread();
 
 // NOTE: these functions are internal to the callOnMainThread implementation.
 void initializeMainThreadPlatform();
+#if PLATFORM(JAVA)
 void scheduleDispatchFunctionsOnMainThread();
-void dispatchFunctionsFromMainThread();
+#endif
 
 } // namespace WTF
 
@@ -88,7 +87,6 @@ using WTF::isMainThread;
 using WTF::isMainThreadOrGCThread;
 using WTF::isUIThread;
 using WTF::isWebThread;
-using WTF::setMainThreadCallbacksPaused;
 #if PLATFORM(COCOA)
 using WTF::dispatchAsyncOnMainThreadWithWebThreadLockIfNeeded;
 using WTF::callOnWebThreadOrDispatchAsyncOnMainThread;

@@ -39,6 +39,7 @@ using WTF::UniquedStringImpl;
 
 namespace JSC {
 
+class CodeBlock;
 class Identifier;
 class JSCell;
 class SlotVisitor;
@@ -46,8 +47,12 @@ class SlotVisitor;
 class CacheableIdentifier {
 public:
     CacheableIdentifier() = default;
-    inline CacheableIdentifier(const Identifier&);
-    inline CacheableIdentifier(JSCell* identifier);
+
+    static inline CacheableIdentifier createFromCell(JSCell* identifier);
+    static inline CacheableIdentifier createFromIdentifierOwnedByCodeBlock(CodeBlock*, const Identifier&);
+    static inline CacheableIdentifier createFromIdentifierOwnedByCodeBlock(CodeBlock*, UniquedStringImpl*);
+    static inline CacheableIdentifier createFromImmortalIdentifier(UniquedStringImpl*);
+    static constexpr CacheableIdentifier createFromRawBits(uintptr_t rawBits) { return CacheableIdentifier(rawBits); }
 
     CacheableIdentifier(const CacheableIdentifier&) = default;
     CacheableIdentifier(CacheableIdentifier&&) = default;
@@ -68,6 +73,8 @@ public:
 
     explicit operator bool() const { return m_bits; }
 
+    unsigned hash() const { return uid()->symbolAwareHash(); }
+
     CacheableIdentifier& operator=(const CacheableIdentifier&) = default;
     CacheableIdentifier& operator=(CacheableIdentifier&&) = default;
 
@@ -78,11 +85,19 @@ public:
     static inline bool isCacheableIdentifierCell(JSCell*);
     static inline bool isCacheableIdentifierCell(JSValue);
 
+    uintptr_t rawBits() const { return m_bits; }
+
     inline void visitAggregate(SlotVisitor&) const;
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
 private:
+    explicit inline CacheableIdentifier(UniquedStringImpl*);
+    explicit inline CacheableIdentifier(JSCell* identifier);
+    explicit constexpr CacheableIdentifier(uintptr_t rawBits)
+        : m_bits(rawBits)
+    { }
+
     inline void setCellBits(JSCell*);
     inline void setUidBits(UniquedStringImpl*);
 
@@ -92,7 +107,7 @@ private:
     // unpolluted, and therefore, it can be scanned by our conservative GC to keep the
     // cell alive when the CacheableIdentifier is on the stack.
     static constexpr uintptr_t s_uidTag = 1;
-    uintptr_t m_bits;
+    uintptr_t m_bits { 0 };
 };
 
 } // namespace JSC

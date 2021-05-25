@@ -173,7 +173,7 @@ typedef enum
  * @GST_AUDIO_PACK_FLAG_NONE: No flag
  * @GST_AUDIO_PACK_FLAG_TRUNCATE_RANGE: When the source has a smaller depth
  *   than the target format, set the least significant bits of the target
- *   to 0. This is likely sightly faster but less accurate. When this flag
+ *   to 0. This is likely slightly faster but less accurate. When this flag
  *   is not specified, the most significant bits of the source are duplicated
  *   in the least significant bits of the destination.
  *
@@ -326,15 +326,35 @@ void           gst_audio_format_fill_silence     (const GstAudioFormatInfo *info
  * GST_AUDIO_FORMATS_ALL:
  *
  * List of all audio formats, for use in template caps strings.
+ *
+ * Formats are sorted by decreasing "quality", using these criteria by priority:
+ *   - depth
+ *   - width
+ *   - Float > Signed > Unsigned
+ *   - native endianness preferred
  */
-#define GST_AUDIO_FORMATS_ALL " { S8, U8, " \
-    "S16LE, S16BE, U16LE, U16BE, " \
+#if G_BYTE_ORDER == G_BIG_ENDIAN
+#define GST_AUDIO_FORMATS_ALL "{ F64BE, F64LE, " \
+    "F32BE, F32LE, S32BE, S32LE, U32BE, U32LE, " \
+    "S24_32BE, S24_32LE, U24_32BE, U24_32LE, " \
+    "S24BE, S24LE, U24BE, U24LE, " \
+    "S20BE, S20LE, U20BE, U20LE, " \
+    "S18BE, S18LE, U18BE, U18LE, " \
+    "S16BE, S16LE, U16BE, U16LE, " \
+    "S8, U8 }"
+#elif G_BYTE_ORDER == G_LITTLE_ENDIAN
+#define GST_AUDIO_FORMATS_ALL "{ F64LE, F64BE, " \
+    "F32LE, F32BE, S32LE, S32BE, U32LE, U32BE, " \
     "S24_32LE, S24_32BE, U24_32LE, U24_32BE, " \
-    "S32LE, S32BE, U32LE, U32BE, " \
     "S24LE, S24BE, U24LE, U24BE, " \
     "S20LE, S20BE, U20LE, U20BE, " \
     "S18LE, S18BE, U18LE, U18BE, " \
-    "F32LE, F32BE, F64LE, F64BE }"
+    "S16LE, S16BE, U16LE, U16BE, " \
+    "S8, U8 }"
+#endif
+
+GST_AUDIO_API
+const GstAudioFormat * gst_audio_formats_raw (guint * len);
 
 /**
  * GST_AUDIO_CAPS_MAKE:
@@ -367,6 +387,22 @@ void           gst_audio_format_fill_silence     (const GstAudioFormatInfo *info
  * Standard format used in consumer audio.
  */
 #define GST_AUDIO_DEF_FORMAT "S16LE"
+
+/**
+ * GstAudioLayout:
+ * @GST_AUDIO_LAYOUT_INTERLEAVED: interleaved audio
+ * @GST_AUDIO_LAYOUT_NON_INTERLEAVED: non-interleaved audio
+ *
+ * Layout of the audio samples for the different channels.
+ */
+typedef enum {
+  GST_AUDIO_LAYOUT_INTERLEAVED = 0,
+  GST_AUDIO_LAYOUT_NON_INTERLEAVED
+} GstAudioLayout;
+
+GST_AUDIO_API
+GstCaps * gst_audio_make_raw_caps (const GstAudioFormat formats[], guint len,
+                                   GstAudioLayout layout);
 
 G_END_DECLS
 

@@ -83,7 +83,10 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
     return RQRef::create(ref);
 }
 
-
+bool Path::isNull() const
+{
+    return !m_path;
+}
 
 Path::Path()
     : m_path(createEmptyPath())
@@ -137,9 +140,14 @@ bool Path::contains(const FloatPoint& p, WindRule rule) const
     return jbool_to_bool(res);
 }
 
-FloatRect Path::boundingRect() const
+FloatRect Path::boundingRectSlowCase() const
 {
     return strokeBoundingRect(0);
+}
+
+FloatRect Path::fastBoundingRectSlowCase() const
+{
+    return boundingRect();
 }
 
 FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
@@ -200,7 +208,7 @@ void Path::clear()
     WTF::CheckAndClearException(env);
 }
 
-bool Path::isEmpty() const
+bool Path::isEmptySlowCase() const
 {
     ASSERT(m_path);
 
@@ -216,30 +224,14 @@ bool Path::isEmpty() const
     return jbool_to_bool(res);
 }
 
-bool Path::hasCurrentPoint() const
-{
-    ASSERT(m_path);
-
-    JNIEnv* env = WTF::GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
-                                            "hasCurrentPoint", "()Z");
-    ASSERT(mid);
-
-    jboolean res = env->CallBooleanMethod(*m_path, mid);
-    WTF::CheckAndClearException(env);
-
-    return jbool_to_bool(res);
-}
-
-FloatPoint Path::currentPoint() const
+FloatPoint Path::currentPointSlowCase() const
 {
     //utatodo: return current point of subpath.
     float quietNaN = std::numeric_limits<float>::quiet_NaN();
     return FloatPoint(quietNaN, quietNaN);
 }
 
-void Path::moveTo(const FloatPoint &p)
+void Path::moveToSlowCase(const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -253,7 +245,7 @@ void Path::moveTo(const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addLineTo(const FloatPoint &p)
+void Path::addLineToSlowCase(const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -267,7 +259,7 @@ void Path::addLineTo(const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addQuadCurveTo(const FloatPoint &cp, const FloatPoint &p)
+void Path::addQuadCurveToSlowCase(const FloatPoint &cp, const FloatPoint &p)
 {
     ASSERT(m_path);
 
@@ -281,7 +273,7 @@ void Path::addQuadCurveTo(const FloatPoint &cp, const FloatPoint &p)
     WTF::CheckAndClearException(env);
 }
 
-void Path::addBezierCurveTo(const FloatPoint & controlPoint1,
+void Path::addBezierCurveToSlowCase(const FloatPoint & controlPoint1,
                             const FloatPoint & controlPoint2,
                             const FloatPoint & controlPoint3)
 {
@@ -330,7 +322,7 @@ void Path::closeSubpath()
     WTF::CheckAndClearException(env);
 }
 
-void Path::addArc(const FloatPoint & p, float radius, float startAngle,
+void Path::addArcSlowCase(const FloatPoint & p, float radius, float startAngle,
                   float endAngle, bool clockwise)
 {
     ASSERT(m_path);
@@ -418,7 +410,7 @@ void Path::transform(const AffineTransform &at)
     WTF::CheckAndClearException(env);
 }
 
-void Path::apply(const PathApplierFunction& function) const
+void Path::applySlowCase(const PathApplierFunction& function) const
 {
     ASSERT(m_path);
 

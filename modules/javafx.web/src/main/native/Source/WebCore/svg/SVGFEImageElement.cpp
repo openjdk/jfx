@@ -117,9 +117,7 @@ void SVGFEImageElement::buildPendingResource()
 void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::preserveAspectRatioAttr) {
-        SVGPreserveAspectRatioValue preserveAspectRatio;
-        preserveAspectRatio.parse(value);
-        m_preserveAspectRatio->setBaseValInternal(preserveAspectRatio);
+        m_preserveAspectRatio->setBaseValInternal(SVGPreserveAspectRatioValue { value });
         return;
     }
 
@@ -162,7 +160,7 @@ void SVGFEImageElement::removedFromAncestor(RemovalType removalType, ContainerNo
         clearResourceReferences();
 }
 
-void SVGFEImageElement::notifyFinished(CachedResource&)
+void SVGFEImageElement::notifyFinished(CachedResource&, const NetworkLoadMetrics&)
 {
     if (!isConnected())
         return;

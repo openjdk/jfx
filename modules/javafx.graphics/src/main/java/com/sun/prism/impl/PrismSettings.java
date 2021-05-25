@@ -87,7 +87,6 @@ public final class PrismSettings {
     public static final boolean forceNonAntialiasedShape;
 
     public static enum RasterizerType {
-        FloatMarlin("Float Precision Marlin Rasterizer"),
         DoubleMarlin("Double Precision Marlin Rasterizer");
 
         private String publicName;
@@ -233,9 +232,6 @@ public final class PrismSettings {
                     case "doublemarlin":
                         rSpec = RasterizerType.DoubleMarlin;
                         break;
-                    case "floatmarlin":
-                        rSpec = RasterizerType.FloatMarlin;
-                        break;
                     default:
                         continue;
                 }
@@ -243,11 +239,7 @@ public final class PrismSettings {
             }
         }
         if (rSpec == null) {
-            boolean useMarlinRasterizerDP;
-            useMarlinRasterizerDP = getBoolean(systemProperties, "prism.marlin.double", true);
-            rSpec = useMarlinRasterizerDP
-                    ? RasterizerType.DoubleMarlin
-                    : RasterizerType.FloatMarlin;
+            rSpec = RasterizerType.DoubleMarlin;
         }
         rasterizerSpec = rSpec;
 

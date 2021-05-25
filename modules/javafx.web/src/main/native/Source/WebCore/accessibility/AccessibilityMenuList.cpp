@@ -71,7 +71,7 @@ void AccessibilityMenuList::addChildren()
     if (!cache)
         return;
 
-    AccessibilityObject* list = cache->getOrCreate(AccessibilityRole::MenuListPopup);
+    auto list = cache->create(AccessibilityRole::MenuListPopup);
     if (!list)
         return;
 
@@ -99,7 +99,8 @@ void AccessibilityMenuList::childrenChanged()
 bool AccessibilityMenuList::isCollapsed() const
 {
 #if !PLATFORM(IOS_FAMILY)
-    return !static_cast<RenderMenuList*>(renderer())->popupIsVisible();
+    auto* renderer = this->renderer();
+    return !(is<RenderMenuList>(renderer) && downcast<RenderMenuList>(*renderer).popupIsVisible());
 #else
     return true;
 #endif

@@ -1,0 +1,111 @@
+// Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+// DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+//
+// This code is free software; you can redistribute it and/or modify it
+// under the terms of the GNU General Public License version 2 only, as
+// published by the Free Software Foundation.  Oracle designates this
+// particular file as subject to the "Classpath" exception as provided
+// by Oracle in the LICENSE file that accompanied this code.
+//
+// This code is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// version 2 for more details (a copy is included in the LICENSE file that
+// accompanied this code).
+//
+// You should have received a copy of the GNU General Public License version
+// 2 along with this work; if not, write to the Free Software Foundation,
+// Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+//
+// Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+// or visit www.oracle.com if you need additional information or have any
+// questions.
+
+bridge/jni/JNIUtility.cpp
+bridge/jni/JobjectWrapper.cpp
+bridge/jni/jsc/BridgeUtils.cpp
+bridge/jni/jsc/JNIUtilityPrivate.cpp
+bridge/jni/jsc/JavaArrayJSC.cpp
+bridge/jni/jsc/JavaClassJSC.cpp
+bridge/jni/jsc/JavaFieldJSC.cpp
+bridge/jni/jsc/JavaInstanceJSC.cpp
+bridge/jni/jsc/JavaMethodJSC.cpp
+bridge/jni/jsc/JavaRuntimeObject.cpp
+
+editing/java/EditorJava.cpp
+editing/java/SmartReplaceJava.cpp
+
+platform/java/ContextMenuJava.cpp
+platform/java/CursorJava.cpp
+platform/java/DragImageJava.cpp
+platform/java/DragDataJava.cpp
+platform/java/IDNJava.cpp
+platform/java/KeyboardEventJava.cpp
+platform/java/KeyedCodingJava.cpp
+platform/java/LanguageJava.cpp
+platform/java/LocalizedStringsJava.cpp
+platform/java/LoggingJava.cpp
+platform/java/MIMETypeRegistryJava.cpp
+platform/java/MouseEventJava.cpp
+platform/java/PageSupplementJava.cpp
+platform/java/PasteboardJava.cpp
+platform/java/PasteboardUtilitiesJava.cpp
+platform/java/PlatformJavaClasses.cpp
+platform/java/PlatformScreenJava.cpp
+platform/java/PluginDataJava.cpp
+platform/java/PluginInfoStoreJava.cpp
+platform/java/PluginViewJava.cpp
+platform/java/PluginWidgetJava.cpp
+platform/java/RenderThemeJava.cpp
+platform/java/ScrollbarThemeJava.cpp
+platform/java/SharedBufferJava.cpp
+platform/java/MainThreadSharedTimerJava.cpp
+platform/java/StringJava.cpp
+platform/java/TouchEventJava.cpp
+platform/java/WheelEventJava.cpp
+platform/java/WidgetJava.cpp
+platform/graphics/java/BitmapImageJava.cpp
+platform/graphics/java/BufferImageJava.cpp
+platform/graphics/java/ChromiumBridge.cpp
+platform/graphics/java/ComplexTextControllerJava.cpp
+platform/graphics/java/FontCacheJava.cpp
+platform/graphics/java/FontCustomPlatformData.cpp
+platform/graphics/java/FontCascadeJava.cpp
+platform/graphics/java/FontJava.cpp
+platform/graphics/java/FontPlatformDataJava.cpp
+platform/graphics/java/GlyphPageTreeNodeJava.cpp
+platform/graphics/java/GraphicsContextJava.cpp
+platform/graphics/java/IconJava.cpp
+platform/graphics/java/ImageBufferJavaBackend.cpp
+platform/graphics/java/ImageJava.cpp
+platform/graphics/java/ImageDecoderJava.cpp
+platform/graphics/java/MediaPlayerPrivateJava.cpp
+platform/graphics/java/NativeImageJava.cpp
+platform/graphics/java/PathJava.cpp
+platform/graphics/java/RenderingQueue.cpp
+platform/graphics/java/RQRef.cpp
+platform/graphics/texmap/TextureMapperJava.cpp
+platform/graphics/texmap/BitmapTextureJava.cpp
+
+platform/ScrollAnimationKinetic.cpp
+platform/generic/ScrollAnimatorGeneric.cpp
+
+platform/text/LocaleNone.cpp
+platform/text/Hyphenation.cpp
+
+platform/network/java/CertificateInfoJava.cpp
+platform/network/java/DNSResolveQueueJava.cpp
+platform/network/java/NetworkStateNotifierJava.cpp
+platform/network/java/NetworkStorageSessionJava.cpp
+platform/network/java/ResourceHandleJava.cpp
+platform/network/java/ResourceRequestJava.cpp
+platform/network/java/SocketStreamHandleImplJava.cpp
+platform/network/java/SynchronousLoaderClientJava.cpp
+platform/network/java/URLLoader.cpp
+
+bindings/java/JavaDOMUtils.cpp
+bindings/java/JavaEventListener.cpp
+
+platform/java/WebKitLogging.cpp
+page/java/DragControllerJava.cpp
+page/java/EventHandlerJava.cpp

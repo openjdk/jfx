@@ -125,7 +125,7 @@ public:
         int overrideLineNumber, Optional<int> functionConstructorParametersEndPosition);
 
     SourceCode linkedSourceCode(const SourceCode&) const;
-    JS_EXPORT_PRIVATE FunctionExecutable* link(VM&, ScriptExecutable* topLevelExecutable, const SourceCode& parentSource, Optional<int> overrideLineNumber = WTF::nullopt, Intrinsic = NoIntrinsic);
+    JS_EXPORT_PRIVATE FunctionExecutable* link(VM&, ScriptExecutable* topLevelExecutable, const SourceCode& parentSource, Optional<int> overrideLineNumber = WTF::nullopt, Intrinsic = NoIntrinsic, bool isInsideOrdinaryFunction = false);
 
     void clearCode(VM& vm)
     {
@@ -232,6 +232,8 @@ private:
     UnlinkedFunctionExecutable(VM&, Structure*, const SourceCode&, FunctionMetadataNode*, UnlinkedFunctionKind, ConstructAbility, JSParserScriptMode, Optional<CompactVariableMap::Handle>,  JSC::DerivedContextType, JSC::NeedsClassFieldInitializer, bool isBuiltinDefaultClassConstructor);
     UnlinkedFunctionExecutable(Decoder&, const CachedFunctionExecutable&);
 
+    static void visitChildren(JSCell*, SlotVisitor&);
+
     void decodeCachedCodeBlocks(VM&);
 
     bool codeBlockEdgeMayBeWeak() const
@@ -293,9 +295,6 @@ private:
     RareData& ensureRareDataSlow();
 
     std::unique_ptr<RareData> m_rareData;
-
-protected:
-    static void visitChildren(JSCell*, SlotVisitor&);
 
 public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)

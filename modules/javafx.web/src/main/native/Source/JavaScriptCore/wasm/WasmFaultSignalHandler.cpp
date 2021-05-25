@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +36,8 @@
 #include "WasmExceptionType.h"
 #include "WasmMemory.h"
 #include "WasmThunks.h"
-
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/threads/Signals.h>
 
 namespace JSC { namespace Wasm {
@@ -115,11 +113,27 @@ void enableFastMemory()
         if (!Options::useWebAssemblyFastMemory())
             return;
 
-        installSignalHandler(Signal::BadAccess, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
-            return trapHandler(signal, sigInfo, ucontext);
-        });
+        activateSignalHandlersFor(Signal::AccessFault);
 
         fastHandlerInstalled = true;
+    });
+#endif
+}
+
+void prepareFastMemory()
+{
+#if ENABLE(WEBASSEMBLY_FAST_MEMORY)
+    static std::once_flag once;
+    std::call_once(once, [] {
+        if (!Wasm::isSupported())
+            return;
+
+        if (!Options::useWebAssemblyFastMemory())
+            return;
+
+        addSignalHandler(Signal::AccessFault, [] (Signal signal, SigInfo& sigInfo, PlatformRegisters& ucontext) {
+            return trapHandler(signal, sigInfo, ucontext);
+        });
     });
 #endif // ENABLE(WEBASSEMBLY_FAST_MEMORY)
 }

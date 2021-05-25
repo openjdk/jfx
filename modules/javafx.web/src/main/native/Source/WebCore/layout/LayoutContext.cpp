@@ -37,7 +37,7 @@
 #include "InvalidationContext.h"
 #include "InvalidationState.h"
 #include "LayoutBox.h"
-#include "LayoutContainer.h"
+#include "LayoutContainerBox.h"
 #include "LayoutPhase.h"
 #include "LayoutTreeBuilder.h"
 #include "RenderStyleConstants.h"
@@ -45,6 +45,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "TableFormattingContext.h"
 #include "TableFormattingState.h"
+#include "TableWrapperBlockFormattingContext.h"
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
@@ -65,7 +66,6 @@ void LayoutContext::layout(const LayoutSize& rootContentBoxSize, InvalidationSta
     // we could not lay it out even if we wanted to since it's outside of this LayoutContext.
     auto& displayBox = layoutState().displayBoxForRootLayoutBox();
     displayBox.setHorizontalMargin({ });
-    displayBox.setHorizontalComputedMargin({ });
     displayBox.setVerticalMargin({ });
     displayBox.setBorder({ });
     displayBox.setPadding({ });
@@ -89,27 +89,31 @@ void LayoutContext::layoutWithPreparedRootGeometry(InvalidationState& invalidati
         layoutFormattingContextSubtree(formattingContextRoot, invalidationState);
 }
 
-void LayoutContext::layoutFormattingContextSubtree(const Container& formattingContextRoot, InvalidationState& invalidationState)
+void LayoutContext::layoutFormattingContextSubtree(const ContainerBox& formattingContextRoot, InvalidationState& invalidationState)
 {
     RELEASE_ASSERT(formattingContextRoot.establishesFormattingContext());
+    if (!formattingContextRoot.hasChild())
+        return;
+
     auto formattingContext = createFormattingContext(formattingContextRoot, layoutState());
     auto& displayBox = layoutState().displayBoxForLayoutBox(formattingContextRoot);
 
-    auto horizontalConstraints = HorizontalConstraints { displayBox.contentBoxLeft(), displayBox.contentBoxWidth() };
-    auto verticalConstraints = VerticalConstraints { displayBox.contentBoxTop(), { } };
-    formattingContext->layoutInFlowContent(invalidationState, horizontalConstraints, verticalConstraints);
+    if (formattingContextRoot.hasInFlowOrFloatingChild()) {
+        auto constraintsForInFlowContent = FormattingContext::ConstraintsForInFlowContent { { displayBox.contentBoxLeft(), displayBox.contentBoxWidth() }, { displayBox.contentBoxTop(), { } } };
+        formattingContext->layoutInFlowContent(invalidationState, constraintsForInFlowContent);
+    }
 
     // FIXME: layoutFormattingContextSubtree() does not perform layout on the root, rather it lays out the root's content.
     // It constructs an FC for descendant boxes and runs layout on them. The formattingContextRoot is laid out in the FC in which it lives (parent formatting context).
     // It also means that the formattingContextRoot has to have a valid/clean geometry at this point.
     {
-        auto horizontalConstraints = HorizontalConstraints { displayBox.paddingBoxLeft(), displayBox.paddingBoxWidth() };
-        auto verticalConstraints = VerticalConstraints { displayBox.paddingBoxTop(), displayBox.paddingBoxHeight() };
-        formattingContext->layoutOutOfFlowContent(invalidationState, horizontalConstraints, verticalConstraints);
+        auto constraints = FormattingContext::ConstraintsForOutOfFlowContent { { displayBox.paddingBoxLeft(), displayBox.paddingBoxWidth() },
+            { displayBox.paddingBoxTop(), displayBox.paddingBoxHeight() }, displayBox.contentBoxWidth() };
+        formattingContext->layoutOutOfFlowContent(invalidationState, constraints);
     }
 }
 
-std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const Container& formattingContextRoot, LayoutState& layoutState)
+std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const ContainerBox& formattingContextRoot, LayoutState& layoutState)
 {
     ASSERT(formattingContextRoot.establishesFormattingContext());
     if (formattingContextRoot.establishesInlineFormattingContext()) {
@@ -120,6 +124,8 @@ std::unique_ptr<FormattingContext> LayoutContext::createFormattingContext(const 
     if (formattingContextRoot.establishesBlockFormattingContext()) {
         ASSERT(!formattingContextRoot.establishesInlineFormattingContext());
         auto& blockFormattingState = layoutState.ensureBlockFormattingState(formattingContextRoot);
+        if (formattingContextRoot.isTableWrapperBox())
+            return makeUnique<TableWrapperBlockFormattingContext>(formattingContextRoot, blockFormattingState);
         return makeUnique<BlockFormattingContext>(formattingContextRoot, blockFormattingState);
     }
 

@@ -25,9 +25,9 @@
 #include "config.h"
 #include "FEMorphology.h"
 
-#include "ColorUtilities.h"
+#include "ColorComponents.h"
 #include "Filter.h"
-#include <JavaScriptCore/Uint8ClampedArray.h>
+#include "ImageData.h"
 #include <wtf/ParallelJobs.h>
 #include <wtf/Vector.h>
 #include <wtf/text/TextStream.h>
@@ -35,7 +35,7 @@
 namespace WebCore {
 
 FEMorphology::FEMorphology(Filter& filter, MorphologyOperatorType type, float radiusX, float radiusY)
-    : FilterEffect(filter)
+    : FilterEffect(filter, Type::Morphology)
     , m_type(type)
     , m_radiusX(radiusX)
     , m_radiusY(radiusY)
@@ -88,8 +88,19 @@ static inline int pixelArrayIndex(int x, int y, int width)
     return (y * width + x) * 4;
 }
 
+inline ColorComponents<uint8_t> makeColorComponentsfromPixelValue(unsigned pixel)
+{
+    return ColorComponents<uint8_t>((pixel >> 24) & 0xFF, (pixel >> 16) & 0xFF, (pixel >> 8) & 0xFF, pixel & 0xFF);
+}
+
+inline unsigned makePixelValueFromColorComponents(const ColorComponents<uint8_t>& components)
+{
+    auto [r, g, b, a] = components;
+    return r << 24 | g << 16 | b << 8 | a;
+}
+
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents minOrMax(const ColorComponents& a, const ColorComponents& b)
+ALWAYS_INLINE ColorComponents<uint8_t> minOrMax(const ColorComponents<uint8_t>& a, const ColorComponents<uint8_t>& b)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return perComponentMin(a, b);
@@ -98,18 +109,18 @@ ALWAYS_INLINE ColorComponents minOrMax(const ColorComponents& a, const ColorComp
 }
 
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width)
+ALWAYS_INLINE ColorComponents<uint8_t> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width)
 {
-    auto extremum = ColorComponents::fromRGBA(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, yStart, width)));
+    auto extremum = makeColorComponentsfromPixelValue(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, yStart, width)));
 
     for (int y = yStart + 1; y < yEnd; ++y) {
-        auto pixel = ColorComponents::fromRGBA(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, y, width)));
+        auto pixel = makeColorComponentsfromPixelValue(*reinterpret_cast<const unsigned*>(srcPixelArray.data() + pixelArrayIndex(x, y, width)));
         extremum = minOrMax<type>(extremum, pixel);
     }
     return extremum;
 }
 
-ALWAYS_INLINE ColorComponents columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width, MorphologyOperatorType type)
+ALWAYS_INLINE ColorComponents<uint8_t> columnExtremum(const Uint8ClampedArray& srcPixelArray, int x, int yStart, int yEnd, int width, MorphologyOperatorType type)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return columnExtremum<FEMORPHOLOGY_OPERATOR_ERODE>(srcPixelArray, x, yStart, yEnd, width);
@@ -117,10 +128,10 @@ ALWAYS_INLINE ColorComponents columnExtremum(const Uint8ClampedArray& srcPixelAr
     return columnExtremum<FEMORPHOLOGY_OPERATOR_DILATE>(srcPixelArray, x, yStart, yEnd, width);
 }
 
-using ColumnExtrema = Vector<ColorComponents, 16>;
+using ColumnExtrema = Vector<ColorComponents<uint8_t>, 16>;
 
 template<MorphologyOperatorType type>
-ALWAYS_INLINE ColorComponents kernelExtremum(const ColumnExtrema& kernel)
+ALWAYS_INLINE ColorComponents<uint8_t> kernelExtremum(const ColumnExtrema& kernel)
 {
     auto extremum = kernel[0];
     for (size_t i = 1; i < kernel.size(); ++i)
@@ -129,7 +140,7 @@ ALWAYS_INLINE ColorComponents kernelExtremum(const ColumnExtrema& kernel)
     return extremum;
 }
 
-ALWAYS_INLINE ColorComponents kernelExtremum(const ColumnExtrema& kernel, MorphologyOperatorType type)
+ALWAYS_INLINE ColorComponents<uint8_t> kernelExtremum(const ColumnExtrema& kernel, MorphologyOperatorType type)
 {
     if (type == FEMORPHOLOGY_OPERATOR_ERODE)
         return kernelExtremum<FEMORPHOLOGY_OPERATOR_ERODE>(kernel);
@@ -174,7 +185,7 @@ void FEMorphology::platformApplyGeneric(const PaintingData& paintingData, int st
                 extrema.remove(0);
 
             unsigned* destPixel = reinterpret_cast<unsigned*>(dstPixelArray.data() + pixelArrayIndex(x, y, width));
-            *destPixel = kernelExtremum(extrema, m_type).toRGBA();
+            *destPixel = makePixelValueFromColorComponents(kernelExtremum(extrema, m_type));
         }
     }
 }
@@ -223,10 +234,9 @@ bool FEMorphology::platformApplyDegenerate(Uint8ClampedArray& dstPixelArray, con
 {
     if (radiusX < 0 || radiusY < 0 || (!radiusX && !radiusY)) {
         FilterEffect* in = inputEffect(0);
-        in->copyPremultipliedResult(dstPixelArray, imageRect);
+        in->copyPremultipliedResult(dstPixelArray, imageRect, operatingColorSpace());
         return true;
     }
-
     return false;
 }
 
@@ -234,7 +244,8 @@ void FEMorphology::platformApplySoftware()
 {
     FilterEffect* in = inputEffect(0);
 
-    Uint8ClampedArray* dstPixelArray = createPremultipliedImageResult();
+    auto* resultImage = createPremultipliedImageResult();
+    auto* dstPixelArray = resultImage ? resultImage->data() : nullptr;
     if (!dstPixelArray)
         return;
 
@@ -247,7 +258,7 @@ void FEMorphology::platformApplySoftware()
         return;
 
     Filter& filter = this->filter();
-    auto srcPixelArray = in->premultipliedResult(effectDrawingRect);
+    auto srcPixelArray = in->premultipliedResult(effectDrawingRect, operatingColorSpace());
     if (!srcPixelArray)
         return;
 

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformMouseEvent_h
-#define PlatformMouseEvent_h
+#pragma once
 
 #include "IntPoint.h"
 #include "PlatformEvent.h"
@@ -33,11 +32,6 @@
 
 #if PLATFORM(JAVA)
 #include "PlatformJavaClasses.h"
-#endif
-
-#if PLATFORM(GTK)
-typedef struct _GdkEventButton GdkEventButton;
-typedef struct _GdkEventMotion GdkEventMotion;
 #endif
 
 namespace WebCore {
@@ -55,15 +49,6 @@ const double ForceAtForceClick = 2;
     public:
         PlatformMouseEvent()
             : PlatformEvent(PlatformEvent::MouseMoved)
-            , m_button(NoButton)
-            , m_clickCount(0)
-            , m_modifierFlags(0)
-#if PLATFORM(MAC)
-            , m_eventNumber(0)
-            , m_menuTypeForEvent(0)
-#elif PLATFORM(WIN)
-            , m_didActivateWebView(false)
-#endif
         {
         }
 
@@ -74,19 +59,14 @@ const double ForceAtForceClick = 2;
             , m_globalPosition(globalPosition)
             , m_button(button)
             , m_clickCount(clickCount)
-            , m_modifierFlags(0)
             , m_force(force)
             , m_syntheticClickType(syntheticClickType)
             , m_pointerId(pointerId)
-#if PLATFORM(MAC)
-            , m_eventNumber(0)
-            , m_menuTypeForEvent(0)
-#elif PLATFORM(WIN)
-            , m_didActivateWebView(false)
-#endif
         {
         }
 
+        // This position is relative to the enclosing NSWindow in WebKit1, and is WKWebView-relative in WebKit2.
+        // Use ScrollView::windowToContents() to convert it to into the contents of a given view.
         const IntPoint& position() const { return m_position; }
         const IntPoint& globalPosition() const { return m_globalPosition; }
 #if ENABLE(POINTER_LOCK)
@@ -100,12 +80,6 @@ const double ForceAtForceClick = 2;
         double force() const { return m_force; }
         SyntheticClickType syntheticClickType() const { return m_syntheticClickType; }
         PointerID pointerId() const { return m_pointerId; }
-
-#if PLATFORM(GTK)
-        explicit PlatformMouseEvent(GdkEventButton*);
-        explicit PlatformMouseEvent(GdkEventMotion*);
-        void setClickCount(int count) { m_clickCount = count; }
-#endif
 
 #if PLATFORM(MAC)
         int eventNumber() const { return m_eventNumber; }
@@ -124,19 +98,19 @@ const double ForceAtForceClick = 2;
 #if ENABLE(POINTER_LOCK)
         IntPoint m_movementDelta;
 #endif
-        MouseButton m_button;
+        MouseButton m_button { NoButton };
         unsigned short m_buttons { 0 };
-        int m_clickCount;
-        unsigned m_modifierFlags;
+        int m_clickCount { 0 };
+        unsigned m_modifierFlags { 0 };
         double m_force { 0 };
         SyntheticClickType m_syntheticClickType { NoTap };
         PointerID m_pointerId { mousePointerID };
 
 #if PLATFORM(MAC)
-        int m_eventNumber;
-        int m_menuTypeForEvent;
+        int m_eventNumber { 0 };
+        int m_menuTypeForEvent { 0 };
 #elif PLATFORM(WIN)
-        bool m_didActivateWebView;
+        bool m_didActivateWebView { false };
 #endif
     };
 
@@ -160,5 +134,3 @@ const double ForceAtForceClick = 2;
 #endif
 
 } // namespace WebCore
-
-#endif // PlatformMouseEvent_h

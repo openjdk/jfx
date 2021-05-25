@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,14 +154,6 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     public TreeViewBehavior(TreeView<T> control) {
         super(control);
 
-//        // Fix for RT-16565
-//        getNode().selectionModelProperty().addListener(weakSelectionModelListener);
-//        if (control.getSelectionModel() != null) {
-//            control.getSelectionModel().getSelectedIndices().addListener(weakSelectedIndicesListener);
-//        }
-
-
-
         // create a map for treeView-specific mappings
         treeViewInputMap = createInputMap();
 
@@ -255,6 +247,12 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
 
     @Override public void dispose() {
+        getNode().selectionModelProperty().removeListener(weakSelectionModelListener);
+        MultipleSelectionModel<TreeItem<T>> sm = getNode().getSelectionModel();
+        if (sm != null) {
+            sm.getSelectedIndices().removeListener(weakSelectedIndicesListener);
+        }
+        getNode().removeEventFilter(KeyEvent.ANY, keyEventListener);
         TreeCellBehavior.removeAnchor(getNode());
         super.dispose();
     }

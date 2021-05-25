@@ -64,6 +64,9 @@ public:
     virtual bool isJavaEventListener() const { return false; }
 #endif
 
+    virtual JSC::JSObject* jsFunction() const { return nullptr; }
+    virtual JSC::JSObject* wrapper() const { return nullptr; }
+
 protected:
     explicit EventListener(Type type)
         : m_type(type)

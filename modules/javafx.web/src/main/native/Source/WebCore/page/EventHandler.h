@@ -152,24 +152,22 @@ public:
     WEBCORE_EXPORT void dispatchFakeMouseMoveEventSoon();
     void dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad&);
 
-    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&, HitTestRequest::HitTestRequestType, const LayoutSize& padding = LayoutSize()) const;
+    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&, OptionSet<HitTestRequest::RequestType>, const LayoutSize& padding = LayoutSize()) const;
 
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
 
     WEBCORE_EXPORT void setCapturingMouseEventsElement(Element*);
-#if ENABLE(POINTER_EVENTS)
     void pointerCaptureElementDidChange(Element*);
-#endif
 
 #if ENABLE(DRAG_SUPPORT)
     struct DragTargetResponse {
         bool accept { false };
-        Optional<DragOperation> operation;
+        Optional<OptionSet<DragOperation>> operationMask;
     };
-    DragTargetResponse updateDragAndDrop(const PlatformMouseEvent&, const std::function<std::unique_ptr<Pasteboard>()>&, DragOperation sourceOperation, bool draggingFiles);
-    void cancelDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
-    bool performDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, DragOperation, bool draggingFiles);
+    DragTargetResponse updateDragAndDrop(const PlatformMouseEvent&, const std::function<std::unique_ptr<Pasteboard>()>&, OptionSet<DragOperation>, bool draggingFiles);
+    void cancelDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
+    bool performDragAndDrop(const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&&, OptionSet<DragOperation>, bool draggingFiles);
     void updateDragStateAfterEditDragIfNeeded(Element& rootEditableElement);
     RefPtr<Element> draggedElement() const;
 #endif
@@ -181,6 +179,7 @@ public:
 
     void resizeLayerDestroyed();
 
+    // FIXME: Each Frame has an EventHandler, and not every event goes to all frames, so this position can be stale. It should probably be stored on Page.
     IntPoint lastKnownMousePosition() const;
     IntPoint lastKnownMouseGlobalPosition() const { return m_lastKnownMouseGlobalPosition; }
     Cursor currentMouseCursor() const { return m_currentMouseCursor; }
@@ -188,8 +187,8 @@ public:
     IntPoint targetPositionInWindowForSelectionAutoscroll() const;
     bool shouldUpdateAutoscroll();
 
-    static Frame* subframeForTargetNode(Node*);
-    static Frame* subframeForHitTestResult(const MouseEventWithHitTestResults&);
+    static RefPtr<Frame> subframeForTargetNode(Node*);
+    static RefPtr<Frame> subframeForHitTestResult(const MouseEventWithHitTestResults&);
 
     WEBCORE_EXPORT bool scrollOverflow(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
     WEBCORE_EXPORT bool scrollRecursively(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
@@ -204,18 +203,12 @@ public:
     void lostMouseCapture();
 
     WEBCORE_EXPORT bool handleMousePressEvent(const PlatformMouseEvent&);
-    bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* hoveredNode = nullptr, bool onlyUpdateScrollbars = false);
+    bool handleMouseMoveEvent(const PlatformMouseEvent&, HitTestResult* = nullptr, bool onlyUpdateScrollbars = false);
     WEBCORE_EXPORT bool handleMouseReleaseEvent(const PlatformMouseEvent&);
     bool handleMouseForceEvent(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool handleWheelEvent(const PlatformWheelEvent&);
     void defaultWheelEventHandler(Node*, WheelEvent&);
     bool handlePasteGlobalSelection(const PlatformMouseEvent&);
-
-    void platformPrepareForWheelEvents(const PlatformWheelEvent&, const HitTestResult&, RefPtr<Element>& eventTarget, RefPtr<ContainerNode>& scrollableContainer, WeakPtr<ScrollableArea>&, bool& isOverWidget);
-    void platformRecordWheelEvent(const PlatformWheelEvent&);
-    bool platformCompleteWheelEvent(const PlatformWheelEvent&, ContainerNode* scrollableContainer, const WeakPtr<ScrollableArea>&);
-    bool platformCompletePlatformWidgetWheelEvent(const PlatformWheelEvent&, const Widget&, ContainerNode* scrollableContainer);
-    void platformNotifyIfEndGesture(const PlatformWheelEvent&, const WeakPtr<ScrollableArea>&);
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
     using TouchArray = Vector<RefPtr<Touch>>;
@@ -240,6 +233,7 @@ public:
 #elif ENABLE(MAC_GESTURE_EVENTS)
     bool dispatchGestureEvent(const PlatformGestureEvent&, const AtomString&, const EventTargetSet&, float, float);
     WEBCORE_EXPORT bool handleGestureEvent(const PlatformGestureEvent&);
+    WEBCORE_EXPORT void didEndMagnificationGesture();
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -274,7 +268,7 @@ public:
 
     WEBCORE_EXPORT void didStartDrag();
     WEBCORE_EXPORT void dragCancelled();
-    WEBCORE_EXPORT void dragSourceEndedAt(const PlatformMouseEvent&, DragOperation, MayExtendDragSession = MayExtendDragSession::No);
+    WEBCORE_EXPORT void dragSourceEndedAt(const PlatformMouseEvent&, OptionSet<DragOperation>, MayExtendDragSession = MayExtendDragSession::No);
 #endif
 
     void focusDocumentView();
@@ -325,6 +319,7 @@ public:
 #endif
 
     bool useHandCursor(Node*, bool isOverLink, bool shiftKey);
+    void updateCursorIfNeeded();
     void updateCursor();
 
     bool isHandlingWheelEvent() const { return m_isHandlingWheelEvent; }
@@ -345,6 +340,9 @@ public:
 
     WEBCORE_EXPORT Optional<Cursor> selectCursor(const HitTestResult&, bool shiftKey);
 
+#if ENABLE(DRAG_SUPPORT)
+    Element* draggingElement() const;
+#endif
 private:
 #if ENABLE(DRAG_SUPPORT)
     static DragState& dragState();
@@ -378,7 +376,6 @@ private:
     void updateCursor(FrameView&, const HitTestResult&, bool shiftKey);
 
     void hoverTimerFired();
-    void cursorUpdateTimerFired();
 
     bool logicalScrollOverflow(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = nullptr);
 
@@ -407,15 +404,19 @@ private:
     Node* nodeUnderMouse() const;
 
     enum class FireMouseOverOut { No, Yes };
-    void updateMouseEventTargetNode(Node*, const PlatformMouseEvent&, FireMouseOverOut);
+    void updateMouseEventTargetNode(const AtomString& eventType, Node*, const PlatformMouseEvent&, FireMouseOverOut);
+
+    ScrollableArea* enclosingScrollableArea(Node*);
+    void notifyScrollableAreasOfMouseEvents(const AtomString& eventType, Element* lastElementUnderMouse, Element* elementUnderMouse);
 
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const PlatformMouseEvent&);
 
-    bool dispatchMouseEvent(const AtomString& eventType, Node* target, bool cancelable, int clickCount, const PlatformMouseEvent&, bool setUnder);
+    enum class Cancelable { No, Yes };
+    bool dispatchMouseEvent(const AtomString& eventType, Node* target, int clickCount, const PlatformMouseEvent&, FireMouseOverOut);
 
 #if ENABLE(DRAG_SUPPORT)
     bool dispatchDragEvent(const AtomString& eventType, Element& target, const PlatformMouseEvent&, DataTransfer&);
-    DragTargetResponse dispatchDragEnterOrDragOverEvent(const AtomString& eventType, Element& target, const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&& , DragOperation, bool draggingFiles);
+    DragTargetResponse dispatchDragEnterOrDragOverEvent(const AtomString& eventType, Element& target, const PlatformMouseEvent&, std::unique_ptr<Pasteboard>&& , OptionSet<DragOperation>, bool draggingFiles);
     void invalidateDataTransfer();
 
     bool handleDrag(const MouseEventWithHitTestResults&, CheckDragHysteresis);
@@ -436,11 +437,11 @@ private:
 
     bool mouseMovementExceedsThreshold(const FloatPoint&, int pointsThreshold) const;
 
-    bool passMousePressEventToSubframe(MouseEventWithHitTestResults&, Frame* subframe);
-    bool passMouseMoveEventToSubframe(MouseEventWithHitTestResults&, Frame* subframe, HitTestResult* hoveredNode = nullptr);
-    bool passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&, Frame* subframe);
+    bool passMousePressEventToSubframe(MouseEventWithHitTestResults&, Frame&);
+    bool passMouseMoveEventToSubframe(MouseEventWithHitTestResults&, Frame&, HitTestResult* = nullptr);
+    bool passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&, Frame&);
 
-    bool passSubframeEventToSubframe(MouseEventWithHitTestResults&, Frame* subframe, HitTestResult* hoveredNode = nullptr);
+    bool passSubframeEventToSubframe(MouseEventWithHitTestResults&, Frame&, HitTestResult* = nullptr);
 
     bool passMousePressEventToScrollbar(MouseEventWithHitTestResults&, Scrollbar*);
 
@@ -448,8 +449,15 @@ private:
     bool passWidgetMouseDownEventToWidget(RenderWidget*);
 
     bool passMouseDownEventToWidget(Widget*);
-    bool widgetDidHandleWheelEvent(const PlatformWheelEvent&, Widget&);
+
+    bool passWheelEventToWidget(const PlatformWheelEvent&, Widget&);
+    void determineWheelEventTarget(const PlatformWheelEvent&, const HitTestResult&, RefPtr<Element>& eventTarget, RefPtr<ContainerNode>& scrollableContainer, WeakPtr<ScrollableArea>&, bool& isOverWidget);
+    void recordWheelEventForDeltaFilter(const PlatformWheelEvent&);
+    bool processWheelEventForScrolling(const PlatformWheelEvent&, ContainerNode* scrollableContainer, const WeakPtr<ScrollableArea>&);
+    void processWheelEventForScrollSnap(const PlatformWheelEvent&, const WeakPtr<ScrollableArea>&);
     bool completeWidgetWheelEvent(const PlatformWheelEvent&, const WeakPtr<Widget>&, const WeakPtr<ScrollableArea>&, ContainerNode*);
+
+    bool platformCompletePlatformWidgetWheelEvent(const PlatformWheelEvent&, const Widget&, ContainerNode* scrollableContainer);
 
     void defaultSpaceEventHandler(KeyboardEvent&);
     void defaultBackspaceEventHandler(KeyboardEvent&);
@@ -457,7 +465,7 @@ private:
     void defaultArrowEventHandler(FocusDirection, KeyboardEvent&);
 
 #if ENABLE(DRAG_SUPPORT)
-    DragSourceAction updateDragSourceActionsAllowed() const;
+    OptionSet<DragSourceAction> updateDragSourceActionsAllowed() const;
     bool supportsSelectionUpdatesOnMouseDrag() const;
 #endif
 
@@ -496,6 +504,7 @@ private:
 #endif
 
     void clearOrScheduleClearingLatchedStateIfNeeded(const PlatformWheelEvent&);
+    void clearLatchedStateTimerFired();
     void clearLatchedState();
 
     bool shouldSendMouseEventsToInactiveWindows() const;
@@ -515,6 +524,7 @@ private:
     bool m_dragMayStartSelectionInstead { false };
 #endif
 
+    bool m_mouseDownDelegatedFocus { false };
     bool m_mouseDownWasSingleClickInSelection { false };
     enum SelectionInitiationState { HaveNotStartedSelection, PlacedCaret, ExtendedSelection };
     SelectionInitiationState m_selectionInitiationState { HaveNotStartedSelection };
@@ -524,10 +534,10 @@ private:
 #endif
 
     Timer m_hoverTimer;
-    Timer m_cursorUpdateTimer;
+    bool m_hasScheduledCursorUpdate { false };
 
 #if PLATFORM(MAC)
-    Timer m_pendingMomentumWheelEventsTimer;
+    Timer m_clearLatchingStateTimer;
 #endif
 
     std::unique_ptr<AutoscrollController> m_autoscrollController;
@@ -586,14 +596,12 @@ private:
     LayoutSize m_offsetFromResizeCorner; // In the coords of m_resizeLayer.
 
     bool m_mousePositionIsUnknown { true };
-    IntPoint m_lastKnownMousePosition;
+    IntPoint m_lastKnownMousePosition; // Same coordinates as PlatformMouseEvent::position().
     IntPoint m_lastKnownMouseGlobalPosition;
-    IntPoint m_mouseDownPos; // In our view's coords.
+    IntPoint m_mouseDownContentsPosition;
     WallTime m_mouseDownTimestamp;
-    PlatformMouseEvent m_mouseDown;
-#if ENABLE(POINTER_EVENTS)
+    PlatformMouseEvent m_mouseDownEvent;
     PlatformMouseEvent m_lastPlatformMouseEvent;
-#endif
 
 #if PLATFORM(COCOA)
     NSView *m_mouseDownView { nullptr };
@@ -616,7 +624,7 @@ private:
     unsigned touchIdentifierForMouseEvents { 0 };
 #endif
 
-#if ENABLE(POINTER_EVENTS) && ENABLE(IOS_TOUCH_EVENTS)
+#if ENABLE(IOS_TOUCH_EVENTS)
     unsigned m_touchIdentifierForPrimaryTouch { 0 };
 #endif
 
@@ -626,8 +634,9 @@ private:
 
 #if PLATFORM(IOS_FAMILY)
     bool m_shouldAllowMouseDownToStartDrag { false };
-    IntPoint m_targetAutoscrollPositionInWindow;
     bool m_isAutoscrolling { false };
+    IntPoint m_targetAutoscrollPositionInUnscrolledRootViewCoordinates;
+    Optional<IntPoint> m_initialTargetAutoscrollPositionInUnscrolledRootViewCoordinates;
 #endif
 
 #if ENABLE(CURSOR_VISIBILITY)

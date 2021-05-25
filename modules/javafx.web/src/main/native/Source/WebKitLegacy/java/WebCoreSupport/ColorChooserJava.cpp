@@ -44,13 +44,14 @@ ColorChooserJava::ColorChooserJava(JGObject& webPage, ColorChooserClient* client
         "(Lcom/sun/webkit/WebPage;IIIJ)Lcom/sun/webkit/ColorChooser;");
     ASSERT(mid);
 
+
     m_colorChooserRef = JGObject(env->CallStaticObjectMethod(
         PG_GetColorChooserClass(env),
         mid,
         (jobject) webPage,
-        color.red(),
-        color.green(),
-        color.blue(),
+        color.red,
+        color.green,
+        color.blue,
         ptr_to_jlong(this)));
 
     ASSERT(m_colorChooserClient);
@@ -71,9 +72,9 @@ void ColorChooserJava::reattachColorChooser(const Color& color)
     env->CallVoidMethod(
         m_colorChooserRef,
         mid,
-        color.red(),
-        color.green(),
-        color.blue());
+        color.red,
+        color.green,
+        color.blue);
     WTF::CheckAndClearException(env);
 }
 
@@ -111,7 +112,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_ColorChooser_twkSetSelectedColor
     using namespace WebCore;
     ColorChooserJava* cc = static_cast<ColorChooserJava*>jlong_to_ptr(self);
     if (cc) {
-        cc->setSelectedColor(Color(r, g, b));
+        cc->setSelectedColor(clampToComponentBytes<SRGBA>(r, g, b));
     }
 }
 

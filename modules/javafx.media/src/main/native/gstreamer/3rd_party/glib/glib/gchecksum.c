@@ -1344,6 +1344,7 @@ sha512_sum_close (Sha512sum *sha512)
   memset (pad + pad_len, 0x00, zeros / 8);
   pad_len += zeros / 8;
   zeros = zeros % 8;
+  (void) zeros;  /* don’t care about the dead store */
 
   /* put message bit length at the end of padding */
   PUT_UINT64 (sha512->data_len[1], pad, pad_len);

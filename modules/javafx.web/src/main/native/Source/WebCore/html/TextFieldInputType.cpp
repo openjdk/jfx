@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -268,8 +268,8 @@ void TextFieldInputType::handleFocusEvent(Node* oldFocusedNode, FocusDirection)
     ASSERT_UNUSED(oldFocusedNode, oldFocusedNode != element());
     if (RefPtr<Frame> frame = element()->document().frame()) {
         frame->editor().textFieldDidBeginEditing(element());
-#if ENABLE(DATALIST_ELEMENT) && PLATFORM(IOS_FAMILY)
-        if (element()->list() && m_dataListDropdownIndicator)
+#if ENABLE(DATALIST_ELEMENT)
+        if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
             m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, suggestions().size() ? CSSValueBlock : CSSValueNone, true);
 #endif
     }
@@ -280,8 +280,8 @@ void TextFieldInputType::handleBlurEvent()
     InputType::handleBlurEvent();
     ASSERT(element());
     element()->endEditing();
-#if ENABLE(DATALIST_ELEMENT) && PLATFORM(IOS_FAMILY)
-    if (element()->list() && m_dataListDropdownIndicator)
+#if ENABLE(DATALIST_ELEMENT)
+    if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
         m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
 #endif
 }
@@ -348,8 +348,9 @@ void TextFieldInputType::createShadowSubtree()
     }
 
     if (shouldHaveCapsLockIndicator) {
+        static MainThreadNeverDestroyed<const AtomString> webkitCapsLockIndicatorName("-webkit-caps-lock-indicator", AtomString::ConstructFromLiteral);
         m_capsLockIndicator = HTMLDivElement::create(document);
-        m_capsLockIndicator->setPseudo(AtomString("-webkit-caps-lock-indicator", AtomString::ConstructFromLiteral));
+        m_capsLockIndicator->setPseudo(webkitCapsLockIndicatorName);
 
         bool shouldDrawCapsLockIndicator = this->shouldDrawCapsLockIndicator();
         m_capsLockIndicator->setInlineStyleProperty(CSSPropertyDisplay, shouldDrawCapsLockIndicator ? CSSValueBlock : CSSValueNone, true);
@@ -406,7 +407,7 @@ void TextFieldInputType::destroyShadowSubtree()
     m_innerSpinButton = nullptr;
     m_capsLockIndicator = nullptr;
     m_autoFillButton = nullptr;
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     m_dataListDropdownIndicator = nullptr;
 #endif
     m_container = nullptr;
@@ -448,20 +449,31 @@ bool TextFieldInputType::shouldUseInputMethod() const
 }
 
 #if ENABLE(DATALIST_ELEMENT)
+
 void TextFieldInputType::createDataListDropdownIndicator()
 {
     ASSERT(!m_dataListDropdownIndicator);
     if (!m_container)
         createContainer();
 
+    static MainThreadNeverDestroyed<const AtomString> webkitListButtonName("-webkit-list-button", AtomString::ConstructFromLiteral);
     ScriptDisallowedScope::EventAllowedScope allowedScope(*m_container);
     m_dataListDropdownIndicator = DataListButtonElement::create(element()->document(), *this);
     m_container->appendChild(*m_dataListDropdownIndicator);
-    m_dataListDropdownIndicator->setPseudo(AtomString("-webkit-list-button", AtomString::ConstructFromLiteral));
+    m_dataListDropdownIndicator->setPseudo(webkitListButtonName);
     m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
-
 }
+
+bool TextFieldInputType::shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited()
+{
+#if PLATFORM(IOS_FAMILY)
+    return true;
+#else
+    return false;
 #endif
+}
+
+#endif // ENABLE(DATALIST_ELEMENT)
 
 static String limitLength(const String& string, unsigned maxNumGraphemeClusters)
 {
@@ -667,10 +679,9 @@ void TextFieldInputType::didSetValueByUserEdit()
     if (RefPtr<Frame> frame = element()->document().frame())
         frame->editor().textDidChangeInTextField(element());
 #if ENABLE(DATALIST_ELEMENT)
-#if PLATFORM(IOS_FAMILY)
-    if (element()->list() && m_dataListDropdownIndicator)
+    if (shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() && element()->list() && m_dataListDropdownIndicator)
         m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, suggestions().size() ? CSSValueBlock : CSSValueNone, true);
-#endif
+
     if (element()->list())
         displaySuggestions(DataListSuggestionActivationType::TextChanged);
 #endif
@@ -769,11 +780,13 @@ void TextFieldInputType::createContainer()
     ASSERT(!m_container);
     ASSERT(element());
 
+    static MainThreadNeverDestroyed<const AtomString> webkitTextfieldDecorationContainerName("-webkit-textfield-decoration-container", AtomString::ConstructFromLiteral);
+
     ScriptDisallowedScope::EventAllowedScope allowedScope(*element()->userAgentShadowRoot());
 
     m_container = TextControlInnerContainer::create(element()->document());
     element()->userAgentShadowRoot()->appendChild(*m_container);
-    m_container->setPseudo(AtomString("-webkit-textfield-decoration-container", AtomString::ConstructFromLiteral));
+    m_container->setPseudo(webkitTextfieldDecorationContainerName);
 
     m_innerBlock = TextControlInnerElement::create(element()->document());
     m_container->appendChild(*m_innerBlock);
@@ -787,10 +800,11 @@ void TextFieldInputType::createAutoFillButton(AutoFillButtonType autoFillButtonT
     if (autoFillButtonType == AutoFillButtonType::None)
         return;
 
+    static MainThreadNeverDestroyed<const AtomString> buttonName("button", AtomString::ConstructFromLiteral);
     ASSERT(element());
     m_autoFillButton = AutoFillButtonElement::create(element()->document(), *this);
     m_autoFillButton->setPseudo(autoFillButtonTypeToAutoFillButtonPseudoClassName(autoFillButtonType));
-    m_autoFillButton->setAttributeWithoutSynchronization(roleAttr, AtomString("button", AtomString::ConstructFromLiteral));
+    m_autoFillButton->setAttributeWithoutSynchronization(roleAttr, buttonName);
     m_autoFillButton->setAttributeWithoutSynchronization(aria_labelAttr, autoFillButtonTypeToAccessibilityLabel(autoFillButtonType));
     m_autoFillButton->setTextContent(autoFillButtonTypeToAutoFillButtonText(autoFillButtonType));
     m_container->appendChild(*m_autoFillButton);
@@ -826,16 +840,15 @@ void TextFieldInputType::updateAutoFillButton()
 
 #if ENABLE(DATALIST_ELEMENT)
 
-void TextFieldInputType::listAttributeTargetChanged()
+void TextFieldInputType::dataListMayHaveChanged()
 {
-    m_cachedSuggestions = std::make_pair(String(), Vector<String>());
+    m_cachedSuggestions = { };
 
     if (!m_dataListDropdownIndicator)
         createDataListDropdownIndicator();
 
-#if !PLATFORM(IOS_FAMILY)
+    if (!shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited())
     m_dataListDropdownIndicator->setInlineStyleProperty(CSSPropertyDisplay, element()->list() ? CSSValueBlock : CSSValueNone, true);
-#endif
 }
 
 HTMLElement* TextFieldInputType::dataListButtonElement() const
@@ -856,33 +869,39 @@ IntRect TextFieldInputType::elementRectInRootViewCoordinates() const
     return element()->document().view()->contentsToRootView(element()->renderer()->absoluteBoundingBoxRect());
 }
 
-Vector<String> TextFieldInputType::suggestions()
+Vector<DataListSuggestion> TextFieldInputType::suggestions()
 {
-    Vector<String> suggestions;
-    Vector<String> matchesContainingValue;
+    // FIXME: Suggestions are "typing completions" and so should probably use the findPlainText algorithm rather than the simplistic "ignoring ASCII case" rules.
+
+    Vector<DataListSuggestion> suggestions;
+    Vector<DataListSuggestion> matchesContainingValue;
 
     String elementValue = element()->value();
 
     if (!m_cachedSuggestions.first.isNull() && equalIgnoringASCIICase(m_cachedSuggestions.first, elementValue))
         return m_cachedSuggestions.second;
 
+    auto* page = element()->document().page();
+    bool canShowLabels = page && page->chrome().client().canShowDataListSuggestionLabels();
     if (auto dataList = element()->dataList()) {
-        Ref<HTMLCollection> options = dataList->options();
-        for (unsigned i = 0; auto* option = downcast<HTMLOptionElement>(options->item(i)); ++i) {
-            if (!element()->isValidValue(option->value()))
+        for (auto& option : dataList->suggestions()) {
+            DataListSuggestion suggestion;
+            suggestion.value = option.value();
+            if (!element()->isValidValue(suggestion.value))
                 continue;
+            suggestion.value = sanitizeValue(suggestion.value);
+            suggestion.label = option.label();
+            if (suggestion.value == suggestion.label)
+                suggestion.label = { };
 
-            String value = sanitizeValue(option->value());
-            if (elementValue.isEmpty())
-                suggestions.append(value);
-            else if (value.startsWithIgnoringASCIICase(elementValue))
-                suggestions.append(value);
-            else if (value.containsIgnoringASCIICase(elementValue))
-                matchesContainingValue.append(value);
+            if (elementValue.isEmpty() || suggestion.value.startsWithIgnoringASCIICase(elementValue))
+                suggestions.append(WTFMove(suggestion));
+            else if (suggestion.value.containsIgnoringASCIICase(elementValue) || (canShowLabels && suggestion.label.containsIgnoringASCIICase(elementValue)))
+                matchesContainingValue.append(WTFMove(suggestion));
         }
     }
 
-    suggestions.appendVector(matchesContainingValue);
+    suggestions.appendVector(WTFMove(matchesContainingValue));
     m_cachedSuggestions = std::make_pair(elementValue, suggestions);
 
     return suggestions;
@@ -895,7 +914,7 @@ void TextFieldInputType::didSelectDataListOption(const String& selectedOption)
 
 void TextFieldInputType::didCloseSuggestions()
 {
-    m_cachedSuggestions = std::make_pair(String(), Vector<String>());
+    m_cachedSuggestions = { };
     m_suggestionPicker = nullptr;
     if (element()->renderer())
         element()->renderer()->repaint();

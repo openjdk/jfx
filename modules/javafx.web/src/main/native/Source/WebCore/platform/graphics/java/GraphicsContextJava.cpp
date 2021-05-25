@@ -63,7 +63,6 @@
 
 namespace WebCore {
 
-
 static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
 {
     const Vector<Gradient::ColorStop, 2> stops = gradient.stops();
@@ -72,8 +71,10 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     AffineTransform gt = gradient.gradientSpaceTransform();
     FloatPoint p0, p1;
     float startRadius, endRadius;
+    bool isRadialGradient = true;
     WTF::switchOn(gradient.data(),
             [&] (const Gradient::LinearData& data) -> void {
+                isRadialGradient = false;
                 p0 = data.point0;
                 p1 = data.point1;
             },
@@ -91,15 +92,15 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     p0 = gt.mapPoint(p0);
     p1 = gt.mapPoint(p1);
 
-    context->rq().freeSpace(4 * 11 + 8 * nStops)
+    context->rq().freeSpace(4 * 11 + 20 * nStops)
     << id
     << (jfloat)p0.x()
     << (jfloat)p0.y()
     << (jfloat)p1.x()
     << (jfloat)p1.y()
-    << (jint)(gradient.type() == Gradient::Type::Radial);
+    << (jint)isRadialGradient;
 
-    if (gradient.type() == Gradient::Type::Radial) {
+    if (isRadialGradient) {
         context->rq()
         << (jfloat)(gt.xScale() * startRadius)
         << (jfloat)(gt.xScale() * endRadius);
@@ -110,9 +111,9 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     << (jint)nStops;
 
     for (const auto& cs : stops) {
-        int rgba = (int)cs.color.rgb().value();
+        auto [r, g, b, a] = cs.color.toSRGBALossy<float>();
         context->rq()
-        << (jint)rgba << (jfloat)cs.offset;
+        << r << g << b << a << (jfloat)cs.offset;
     }
 }
 
@@ -202,11 +203,12 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(24)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(36)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFFI
     << rect.x() << rect.y()
     << rect.width() << rect.height()
-    << (jint)color.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::fillRect(const FloatRect& rect)
@@ -310,13 +312,14 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
         }
     }
 
-    platformContext()->rq().freeSpace(24 * toDraw.size());
+    platformContext()->rq().freeSpace(36 * toDraw.size());
     for (size_t i = 0; i < toDraw.size(); i++) {
         IntRect focusRect = toDraw[i];
+        auto [r, g, b, a] = color.toSRGBALossy<float>();
         platformContext()->rq() << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
         << (jint)focusRect.x() << (jint)focusRect.y()
         << (jint)focusRect.width() << (jint)focusRect.height()
-        << (jint)color.rgb().value();
+        << r << g << b << a;
     }
 }
 
@@ -428,13 +431,13 @@ void GraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect, DocumentM
     switch (style.mode) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
         case DocumentMarkerLineStyle::Mode::Spelling:
         {
-            static Color red(255, 0, 0);
+            static Color red = SRGBA<uint8_t> { 255, 0, 0 };
             setStrokeColor(red);
         }
         break;
         case DocumentMarkerLineStyle::Mode::Grammar:
         {
-            static Color green(0, 255, 0);
+            static Color green = SRGBA<uint8_t> { 0, 255, 0 };
             setStrokeColor(green);
         }
         break;
@@ -467,14 +470,15 @@ void GraphicsContext::translate(float x, float y)
     << x << y;
 }
 
-void GraphicsContext::setPlatformFillColor(const Color& col)
+void GraphicsContext::setPlatformFillColor(const Color& color)
 {
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(8)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
-    << (jint)col.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
@@ -484,8 +488,8 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
 
     platformContext()->rq().freeSpace(16)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SET_TEXT_MODE
-    << (jint)(mode & TextModeFill)
-    << (jint)(mode & TextModeStroke)
+    << (jint)(mode.contains(TextDrawingMode::Fill))
+    << (jint)(mode.contains(TextDrawingMode::Stroke))
     << (jint)0;
     //utatodo:
     //<< (jint)(mode & TextModeClip);
@@ -501,14 +505,15 @@ void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
     << (jint)style;
 }
 
-void GraphicsContext::setPlatformStrokeColor(const Color& col)
+void GraphicsContext::setPlatformStrokeColor(const Color& color)
 {
     if (paintingDisabled())
         return;
 
-    platformContext()->rq().freeSpace(8)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSTROKECOLOR
-    << (jint)col.rgb().value();
+    << r << g << b << a;
 }
 
 void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
@@ -573,9 +578,10 @@ void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Co
         height = -height;
     }
 
-    platformContext()->rq().freeSpace(20)
+    auto [r, g, b, a] = color.toSRGBALossy<float>();
+    platformContext()->rq().freeSpace(32)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETSHADOW
-    << width << height << blur << (jint)color.rgb().value();
+    << width << height << blur << r << g << b << a;;
 }
 
 void GraphicsContext::clearPlatformShadow()
@@ -884,7 +890,8 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
         rect.radii().topLeft().height() == rect.radii().topRight().height() &&
         rect.radii().topRight().height() == rect.radii().bottomRight().height() &&
         rect.radii().bottomRight().height() == rect.radii().bottomLeft().height()) {
-        platformContext()->rq().freeSpace(56)
+        auto [r, g, b, a] = color.toSRGBALossy<float>();
+        platformContext()->rq().freeSpace(68)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILL_ROUNDED_RECT
         << (jfloat)rect.rect().x() << (jfloat)rect.rect().y()
         << (jfloat)rect.rect().width() << (jfloat)rect.rect().height()
@@ -892,7 +899,7 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
         << (jfloat)rect.radii().topRight().width() << (jfloat)rect.radii().topRight().height()
         << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
         << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
-        << (jint)color.rgb().value();
+        << r << g << b << a;
     }
     else {
         WindRule oldFillRule = fillRule();
@@ -942,7 +949,6 @@ AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
     return m_state.transform;
 }
 
-
 void GraphicsContext::setCTM(const AffineTransform& tm)
 {
     if (paintingDisabled())
@@ -954,7 +960,7 @@ void GraphicsContext::setCTM(const AffineTransform& tm)
     << (float)tm.a() << (float)tm.b() << (float)tm.c() << (float)tm.d() << (float)tm.e() << (float)tm.f();
 }
 
-void Gradient::platformDestroy()
+void Gradient::stopsChanged()
 {
 }
 

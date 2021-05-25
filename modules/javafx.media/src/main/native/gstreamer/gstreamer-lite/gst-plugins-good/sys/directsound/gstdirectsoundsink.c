@@ -28,6 +28,7 @@
 
 /**
  * SECTION:element-directsoundsink
+ * @title: directsoundsink
  *
  * This element lets you output sound using the DirectSound API.
  *
@@ -36,8 +37,7 @@
  * your pipeline works under all circumstances (those conversion elements will
  * act in passthrough-mode if no conversion is necessary).
  *
- * <refsect2>
- * <title>Example pipelines</title>
+ * ## Example pipelines
  * |[
  * gst-launch-1.0 -v audiotestsrc ! audioconvert ! volume volume=0.1 ! directsoundsink
  * ]| will output a sine wave (continuous beep sound) to your sound card (with
@@ -45,7 +45,7 @@
  * |[
  * gst-launch-1.0 -v filesrc location=music.ogg ! decodebin ! audioconvert ! audioresample ! directsoundsink
  * ]| will play an Ogg/Vorbis audio file and output it.
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -54,6 +54,9 @@
 
 #include <gst/base/gstbasesink.h>
 #include "gstdirectsoundsink.h"
+#ifdef GSTREAMER_LITE
+#include "gstdirectsoundnotify.h"
+#endif // GSTREAMER_LITE
 #include <gst/audio/gstaudioiec61937.h>
 
 #include <math.h>
@@ -66,6 +69,11 @@
 #endif
 
 #define DEFAULT_MUTE FALSE
+
+#ifdef GSTREAMER_LITE
+#define DS_RELOAD_TIMEOUT 60000 // 60 seconds
+#define DS_RELOAD_INTERVAL 3000 // 3 seconds
+#endif // GSTREAMER_LITE
 
 GST_DEBUG_CATEGORY_STATIC (directsoundsink_debug);
 #define GST_CAT_DEFAULT directsoundsink_debug
@@ -181,6 +189,10 @@ gst_directsound_sink_finalize (GObject * object)
 {
   GstDirectSoundSink *dsoundsink = GST_DIRECTSOUND_SINK (object);
 
+#ifdef GSTREAMER_LITE
+  ReleaseNotificator(dsoundsink->gst_ds_notifier);
+#endif // GSTREAMER_LITE
+
   g_free (dsoundsink->device_id);
   dsoundsink->device_id = NULL;
 
@@ -263,6 +275,17 @@ gst_directsound_sink_class_init (GstDirectSoundSinkClass * klass)
       &directsoundsink_sink_factory);
 }
 
+#ifdef GSTREAMER_LITE
+static void
+gst_directsound_device_callback (GstDirectSoundSink * dsoundsink)
+{
+  if (dsoundsink->need_reload) {
+    dsoundsink->reload = TRUE;
+    dsoundsink->need_reload = TRUE;
+  }
+}
+#endif // GSTREAMER_LITE
+
 static void
 gst_directsound_sink_init (GstDirectSoundSink * dsoundsink)
 {
@@ -280,6 +303,12 @@ gst_directsound_sink_init (GstDirectSoundSink * dsoundsink)
   dsoundsink->first_buffer_after_reset = FALSE;
 #ifdef GSTREAMER_LITE
   dsoundsink->panorama = 0.0;
+  memset(&dsoundsink->descSecondary, 0, sizeof(DSBUFFERDESC));
+  memset(&dsoundsink->wfx, 0, sizeof(WAVEFORMATEX));
+  dsoundsink->gst_ds_notifier = InitNotificator(&gst_directsound_device_callback,
+                                                dsoundsink);
+  dsoundsink->reload = FALSE;
+  dsoundsink->need_reload = FALSE;
 #endif // GSTREAMER_LITE
 }
 
@@ -662,6 +691,13 @@ gst_directsound_sink_prepare (GstAudioSink * asink,
     return FALSE;
   }
 
+#ifdef GSTREAMER_LITE
+  // Store DSBUFFERDESC and WAVEFORMATEX in case we need to reload DirectSound
+  memcpy(&dsoundsink->descSecondary, &descSecondary, sizeof(DSBUFFERDESC));
+  memcpy(&dsoundsink->wfx, &wfx, sizeof(WAVEFORMATEX));
+  dsoundsink->descSecondary.lpwfxFormat = (WAVEFORMATEX*)&dsoundsink->wfx;
+#endif // GSTREAMER_LITE
+
   gst_directsound_sink_set_volume (dsoundsink,
       gst_directsound_sink_get_volume (dsoundsink), FALSE);
   gst_directsound_sink_set_mute (dsoundsink, dsoundsink->mute);
@@ -709,6 +745,83 @@ gst_directsound_sink_close (GstAudioSink * asink)
   return TRUE;
 }
 
+#ifdef GSTREAMER_LITE
+static void
+gst_directsound_sink_prereload(GstAudioSink* asink)
+{
+  GstDirectSoundSink* dsoundsink;
+  dsoundsink = GST_DIRECTSOUND_SINK(asink);
+
+  if (dsoundsink->pDSBSecondary) {
+    IDirectSoundBuffer_Release(dsoundsink->pDSBSecondary);
+    dsoundsink->pDSBSecondary = NULL;
+  }
+
+  if (dsoundsink->pDS) {
+    IDirectSound_Release(dsoundsink->pDS);
+    dsoundsink->pDS = NULL;
+  }
+}
+
+static gboolean
+gst_directsound_sink_reload(GstAudioSink* asink)
+{
+  GstDirectSoundSink* dsoundsink;
+  HRESULT hRes = S_OK;
+  gint timeout = DS_RELOAD_TIMEOUT;
+
+  dsoundsink = GST_DIRECTSOUND_SINK(asink);
+
+  // To avoid memory leaks in case it gets called again
+  gst_directsound_sink_prereload(asink);
+
+  do {
+    hRes = DirectSoundCreate(NULL, &dsoundsink->pDS, NULL);
+    if (FAILED(hRes)) {
+      Sleep(DS_RELOAD_INTERVAL);
+      timeout -= DS_RELOAD_INTERVAL;
+    }
+  } while (FAILED(hRes) && timeout > 0);
+
+  if (FAILED(hRes)) {
+    return FALSE;
+  }
+
+  hRes = IDirectSound_SetCooperativeLevel(dsoundsink->pDS,
+                                          GetDesktopWindow(), DSSCL_PRIORITY);
+  if (FAILED(hRes)) {
+    IDirectSound_Release(dsoundsink->pDS);
+    dsoundsink->pDS = NULL;
+    return FALSE;
+  }
+
+  hRes = IDirectSound_CreateSoundBuffer(dsoundsink->pDS, &dsoundsink->descSecondary,
+                                        &dsoundsink->pDSBSecondary, NULL);
+  if (FAILED(hRes)) {
+    IDirectSound_Release(dsoundsink->pDS);
+    dsoundsink->pDS = NULL;
+    return FALSE;
+  }
+
+  gst_directsound_sink_set_volume(dsoundsink,
+                            gst_directsound_sink_get_volume(dsoundsink), FALSE);
+  gst_directsound_sink_set_mute(dsoundsink, dsoundsink->mute);
+  gst_directsound_sink_set_pan(dsoundsink);
+
+  hRes = IDirectSoundBuffer_Play(dsoundsink->pDSBSecondary, 0, 0,
+                                 DSBPLAY_LOOPING);
+  if (FAILED(hRes)) {
+    IDirectSound_Release(dsoundsink->pDS);
+    dsoundsink->pDS = NULL;
+    IDirectSoundBuffer_Release(dsoundsink->pDSBSecondary);
+    dsoundsink->pDSBSecondary = NULL;
+    return FALSE;
+  }
+
+  return TRUE;
+}
+#endif // GSTREAMER_LITE
+
 static gint
 gst_directsound_sink_write (GstAudioSink * asink, gpointer data, guint length)
 {
@@ -726,8 +839,16 @@ gst_directsound_sink_write (GstAudioSink * asink, gpointer data, guint length)
   dsoundsink = GST_DIRECTSOUND_SINK (asink);
 
 #ifdef GSTREAMER_LITE
-  if (dsoundsink->pDS == NULL)
-  {
+  if (dsoundsink->reload) {
+    dsoundsink->reload = FALSE;
+    if (!gst_directsound_sink_reload(asink)) {
+      GST_ELEMENT_ERROR (dsoundsink, RESOURCE, OPEN_WRITE,
+                        ("Failed to load audio render device"), (NULL));
+      return -1;
+    }
+  }
+  if (dsoundsink->pDS == NULL) {
+no_device_write:
     GST_DSOUND_LOCK (dsoundsink);
     samples = length/dsoundsink->bytes_per_sample;
     duration = (1000*samples)/dsoundsink->rate;
@@ -818,6 +939,16 @@ gst_directsound_sink_write (GstAudioSink * asink, gpointer data, guint length)
           &dwCurrentPlayCursor, NULL);
       hRes2 =
           IDirectSoundBuffer_GetStatus (dsoundsink->pDSBSecondary, &dwStatus);
+#ifdef GSTREAMER_LITE
+      if (hRes == DSERR_BUFFERLOST || hRes2 == DSERR_BUFFERLOST) {
+        // Audio device gone. Call prereload to free current device and wait for
+        // new device on callback.
+        gst_directsound_sink_prereload(asink);
+        dsoundsink->need_reload = TRUE;
+        GST_DSOUND_UNLOCK (dsoundsink);
+        goto no_device_write;
+      }
+#endif // GSTREAMER_LITE
       if (SUCCEEDED (hRes) && SUCCEEDED (hRes2)
           && (dwStatus & DSBSTATUS_PLAYING))
         goto calculate_freesize;

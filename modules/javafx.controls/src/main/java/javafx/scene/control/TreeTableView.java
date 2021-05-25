@@ -413,6 +413,8 @@ public class TreeTableView<S> extends Control {
             }
         });
 
+        pseudoClassStateChanged(PseudoClass.getPseudoClass(getColumnResizePolicy().toString()), true);
+
         isInited = true;
     }
 
@@ -579,7 +581,7 @@ public class TreeTableView<S> extends Control {
         @Override public Boolean call(TreeTableView table) {
             try {
                 TreeItem rootItem = table.getRoot();
-                if (rootItem == null) return false;
+                if (rootItem == null || rootItem.getChildren().isEmpty()) return false;
 
                 TreeSortMode sortMode = table.getSortMode();
                 if (sortMode == null) return false;
@@ -2549,7 +2551,9 @@ public class TreeTableView<S> extends Control {
                             }
                         }
 
-                        ControlUtils.reducingChange(selectedIndices, removed);
+                        if (!removed.isEmpty()) {
+                            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
+                        }
 
                         for (int index : removed) {
                             startAtomic();

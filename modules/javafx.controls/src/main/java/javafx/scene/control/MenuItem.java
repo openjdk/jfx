@@ -503,24 +503,20 @@ public class MenuItem implements EventTarget, Styleable {
     }
 
     /**
-     * Returns a previously set Object property, or null if no such property
-     * has been set using the {@link MenuItem#setUserData(java.lang.Object)} method.
+     * Returns the {@code Object} that was set by {@link #setUserData(Object)}, or {@code null} if no object has been
+     * set.
      *
-     * @return The Object that was previously set, or null if no property
-     *          has been set or if null was set.
+     * @return the user object that was stored (including {@code null}), or {@code null} if no object has been set
      */
     public Object getUserData() {
         return userData;
     }
 
     /**
-     * Convenience method for setting a single Object property that can be
-     * retrieved at a later date. This is functionally equivalent to calling
-     * the getProperties().put(Object key, Object value) method. This can later
-     * be retrieved by calling {@link Node#getUserData()}.
+     * Stores a user object that contains data at their discretion. It can later be retrieved by calling
+     * {@link #getUserData()}.
      *
-     * @param value The value to be stored - this can later be retrieved by calling
-     *          {@link Node#getUserData()}.
+     * @param value the user object to be stored
      */
     public void setUserData(Object value) {
         this.userData = value;

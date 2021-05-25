@@ -25,22 +25,23 @@
  * @short_description: Generic structure containing fields of names and values
  * @see_also: #GstCaps, #GstMessage, #GstEvent, #GstQuery
  *
- * A #GstStructure is a collection of key/value pairs. The keys are expressed
- * as GQuarks and the values can be of any GType.
+ * A #GstStructure is a collection of key/value pairs. The keys are expressed as
+ * GQuarks and the values can be of any GType.
  *
  * In addition to the key/value pairs, a #GstStructure also has a name. The name
- * starts with a letter and can be filled by letters, numbers and any of "/-_.:".
+ * starts with a letter and can be filled by letters, numbers and any of
+ * "/-_.:".
  *
- * #GstStructure is used by various GStreamer subsystems to store information
- * in a flexible and extensible way. A #GstStructure does not have a refcount
+ * #GstStructure is used by various GStreamer subsystems to store information in
+ * a flexible and extensible way. A #GstStructure does not have a refcount
  * because it usually is part of a higher level object such as #GstCaps,
  * #GstMessage, #GstEvent, #GstQuery. It provides a means to enforce mutability
  * using the refcount of the parent with the gst_structure_set_parent_refcount()
  * method.
  *
  * A #GstStructure can be created with gst_structure_new_empty() or
- * gst_structure_new(), which both take a name and an optional set of
- * key/value pairs along with the types of the values.
+ * gst_structure_new(), which both take a name and an optional set of key/value
+ * pairs along with the types of the values.
  *
  * Field values can be changed with gst_structure_set_value() or
  * gst_structure_set().
@@ -51,14 +52,78 @@
  * Fields can be removed with gst_structure_remove_field() or
  * gst_structure_remove_fields().
  *
- * Strings in structures must be ASCII or UTF-8 encoded. Other encodings are
- * not allowed. Strings may be %NULL however.
+ * Strings in structures must be ASCII or UTF-8 encoded. Other encodings are not
+ * allowed. Strings may be %NULL however.
  *
- * Be aware that the current #GstCaps / #GstStructure serialization into string
- * has limited support for nested #GstCaps / #GstStructure fields. It can only
- * support one level of nesting. Using more levels will lead to unexpected
- * behavior when using serialization features, such as gst_caps_to_string() or
- * gst_value_serialize() and their counterparts.
+ * ## The serialization format
+ *
+ * GstStructure serialization format serialize the GstStructure name,
+ * keys/GType/values in a comma separated list with the structure name as first
+ * field without value followed by separated key/value pairs in the form
+ * `key=value`, for example:
+ *
+ * ```
+ * a-structure, key=value
+ * ````
+ *
+ * The values type will be inferred if not explicitly specified with the
+ * `(GTypeName)value` syntax, for example the following struct will have one
+ * field called 'is-string' which has the string 'true' as a value:
+ *
+ * ```
+ * a-struct, field-is-string=(string)true, field-is-boolean=true
+ * ```
+ *
+ * *Note*: without specifying `(string), `field-is-string` type would have been
+ * inferred as boolean.
+ *
+ * *Note*: we specified `(string)` as a type even if `gchararray` is the actual
+ * GType name as for convenience some well known types have been aliased or
+ * abbreviated.
+ *
+ * To avoid specifying the type, you can give some hints to the "type system".
+ * For example to specify a value as a double, you should add a decimal (ie. `1`
+ * is an `int` while `1.0` is a `double`).
+ *
+ * *Note*: when a structure is serialized with #gst_structure_to_string, all
+ * values are explicitly typed.
+ *
+ * Some types have special delimiters:
+ *
+ * - [GstValueArray](GST_TYPE_ARRAY) are inside curly brackets (`{` and `}`).
+ *   For example `a-structure, array={1, 2, 3}`
+ * - Ranges are inside brackets (`[` and `]`). For example `a-structure,
+ *   range=[1, 6, 2]` 1 being the min value, 6 the maximum and 2 the step. To
+ *   specify a #GST_TYPE_INT64_RANGE you need to explicitly specify it like:
+ *   `a-structure, a-int64-range=(gint64) [1, 5]`
+ * - [GstValueList](GST_TYPE_LIST) are inside "less and greater than" (`<` and
+ *   `>`). For example `a-structure, list=<1, 2, 3>
+ *
+ * Structures are delimited either by a null character `\0` or a semicolumn `;`
+ * the latter allowing to store multiple structures in the same string (see
+ * #GstCaps).
+ *
+ * Quotes are used as "default" delimiters and can be used around any types that
+ * don't use other delimiters (for example `a-struct, i=(int)"1"`). They are use
+ * to allow adding spaces or special characters (such as delimiters,
+ * semicolumns, etc..) inside strings and you can use backslashes `\` to escape
+ * characters inside them, for example:
+ *
+ * ```
+ * a-struct, special="\"{[(;)]}\" can be used inside quotes"
+ * ```
+ *
+ * They also allow for nested structure, such as:
+ *
+ * ```
+ * a-struct, nested=(GstStructure)"nested-struct, nested=true"
+ * ```
+ *
+ * > *Note*: Be aware that the current #GstCaps / #GstStructure serialization
+ * > into string has limited support for nested #GstCaps / #GstStructure fields.
+ * > It can only support one level of nesting. Using more levels will lead to
+ * > unexpected behavior when using serialization features, such as
+ * > gst_caps_to_string() or gst_value_serialize() and their counterparts.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -94,14 +159,24 @@ typedef struct
   /* owned by parent structure, NULL if no parent */
   gint *parent_refcount;
 
-  GArray *fields;
+  guint fields_len;             /* Number of valid items in fields */
+  guint fields_alloc;           /* Allocated items in fields */
+
+  /* Fields are allocated if GST_STRUCTURE_IS_USING_DYNAMIC_ARRAY(),
+   *  else it's a pointer to the arr field. */
+  GstStructureField *fields;
+
+  GstStructureField arr[1];
 } GstStructureImpl;
 
 #define GST_STRUCTURE_REFCOUNT(s) (((GstStructureImpl*)(s))->parent_refcount)
-#define GST_STRUCTURE_FIELDS(s) (((GstStructureImpl*)(s))->fields)
+#define GST_STRUCTURE_LEN(s) (((GstStructureImpl*)(s))->fields_len)
+
+#define GST_STRUCTURE_IS_USING_DYNAMIC_ARRAY(s) \
+  (((GstStructureImpl*)(s))->fields != &((GstStructureImpl*)(s))->arr[0])
 
 #define GST_STRUCTURE_FIELD(structure, index) \
-    &g_array_index(GST_STRUCTURE_FIELDS(structure), GstStructureField, (index))
+  (&((GstStructureImpl*)(structure))->fields[(index)])
 
 #define IS_MUTABLE(structure) \
     (!GST_STRUCTURE_REFCOUNT(structure) || \
@@ -109,6 +184,54 @@ typedef struct
 
 #define IS_TAGLIST(structure) \
     (structure->name == GST_QUARK (TAGLIST))
+
+/* Replacement for g_array_append_val */
+static void
+_structure_append_val (GstStructure * s, GstStructureField * val)
+{
+  GstStructureImpl *impl = (GstStructureImpl *) s;
+
+  /* resize if needed */
+  if (G_UNLIKELY (impl->fields_len == impl->fields_alloc)) {
+    guint want_alloc;
+
+    if (G_UNLIKELY (impl->fields_alloc > (G_MAXUINT / 2)))
+      g_error ("Growing structure would result in overflow");
+
+    want_alloc =
+        MAX (GST_ROUND_UP_8 (impl->fields_len + 1), impl->fields_alloc * 2);
+    if (GST_STRUCTURE_IS_USING_DYNAMIC_ARRAY (s)) {
+      impl->fields = g_renew (GstStructureField, impl->fields, want_alloc);
+    } else {
+      impl->fields = g_new0 (GstStructureField, want_alloc);
+      memcpy (impl->fields, &impl->arr[0],
+          impl->fields_len * sizeof (GstStructureField));
+      GST_CAT_LOG (GST_CAT_PERFORMANCE, "Exceeding pre-allocated array");
+    }
+    impl->fields_alloc = want_alloc;
+  }
+
+  /* Finally set value */
+  impl->fields[impl->fields_len++] = *val;
+}
+
+/* Replacement for g_array_remove_index */
+static inline void
+_structure_remove_index (GstStructure * s, guint idx)
+{
+  GstStructureImpl *impl = (GstStructureImpl *) s;
+
+  /* We never "reduce" the memory footprint. */
+  if (idx >= impl->fields_len)
+    return;
+
+  /* Shift everything if it's not the last item */
+  if (idx != impl->fields_len)
+    memmove (&impl->fields[idx],
+        &impl->fields[idx + 1],
+        (impl->fields_len - idx - 1) * sizeof (GstStructureField));
+  impl->fields_len--;
+}
 
 static void gst_structure_set_field (GstStructure * structure,
     GstStructureField * field);
@@ -142,14 +265,24 @@ _priv_gst_structure_initialize (void)
 static GstStructure *
 gst_structure_new_id_empty_with_size (GQuark quark, guint prealloc)
 {
+  guint n_alloc;
   GstStructureImpl *structure;
 
-  structure = g_slice_new (GstStructureImpl);
+  if (prealloc == 0)
+    prealloc = 1;
+
+  n_alloc = GST_ROUND_UP_8 (prealloc);
+  structure =
+      g_malloc0 (sizeof (GstStructureImpl) + (n_alloc -
+          1) * sizeof (GstStructureField));
+
   ((GstStructure *) structure)->type = _gst_structure_type;
   ((GstStructure *) structure)->name = quark;
   GST_STRUCTURE_REFCOUNT (structure) = NULL;
-  GST_STRUCTURE_FIELDS (structure) =
-      g_array_sized_new (FALSE, FALSE, sizeof (GstStructureField), prealloc);
+
+  structure->fields_len = 0;
+  structure->fields_alloc = n_alloc;
+  structure->fields = &structure->arr[0];
 
   GST_TRACE ("created structure %p", structure);
 
@@ -281,8 +414,25 @@ gst_structure_new_valist (const gchar * name,
     const gchar * firstfield, va_list varargs)
 {
   GstStructure *structure;
+  va_list copy;
+  guint len = 0;
+  const gchar *field_copy = firstfield;
+  GType type_copy;
 
-  structure = gst_structure_new_empty (name);
+  g_return_val_if_fail (gst_structure_validate_name (name), NULL);
+
+  /* Calculate size of varargs */
+  va_copy (copy, varargs);
+  while (field_copy) {
+    type_copy = va_arg (copy, GType);
+    G_VALUE_COLLECT_SKIP (type_copy, copy);
+    field_copy = va_arg (copy, gchar *);
+    len++;
+  }
+  va_end (copy);
+
+  structure =
+      gst_structure_new_id_empty_with_size (g_quark_from_string (name), len);
 
   if (structure)
     gst_structure_set_valist (structure, firstfield, varargs);
@@ -345,7 +495,7 @@ gst_structure_copy (const GstStructure * structure)
 
   g_return_val_if_fail (structure != NULL, NULL);
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
   new_structure = gst_structure_new_id_empty_with_size (structure->name, len);
 
   for (i = 0; i < len; i++) {
@@ -355,7 +505,7 @@ gst_structure_copy (const GstStructure * structure)
 
     new_field.name = field->name;
     gst_value_init_and_copy (&new_field.value, &field->value);
-    g_array_append_val (GST_STRUCTURE_FIELDS (new_structure), new_field);
+    _structure_append_val (new_structure, &new_field);
   }
   GST_CAT_TRACE (GST_CAT_PERFORMANCE, "doing copy %p -> %p",
       structure, new_structure);
@@ -379,7 +529,7 @@ gst_structure_free (GstStructure * structure)
   g_return_if_fail (structure != NULL);
   g_return_if_fail (GST_STRUCTURE_REFCOUNT (structure) == NULL);
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
   for (i = 0; i < len; i++) {
     field = GST_STRUCTURE_FIELD (structure, i);
 
@@ -387,13 +537,15 @@ gst_structure_free (GstStructure * structure)
       g_value_unset (&field->value);
     }
   }
-  g_array_free (GST_STRUCTURE_FIELDS (structure), TRUE);
+  if (GST_STRUCTURE_IS_USING_DYNAMIC_ARRAY (structure))
+    g_free (((GstStructureImpl *) structure)->fields);
+
 #ifdef USE_POISONING
   memset (structure, 0xff, sizeof (GstStructure));
 #endif
   GST_TRACE ("free structure %p", structure);
 
-  g_slice_free1 (sizeof (GstStructureImpl), structure);
+  g_free (structure);
 }
 
 /**
@@ -418,6 +570,47 @@ void
 gst_clear_structure (GstStructure ** structure_ptr)
 {
   g_clear_pointer (structure_ptr, gst_structure_free);
+}
+
+/**
+ * gst_structure_take:
+ * @oldstr_ptr: (inout) (transfer full) (nullable): pointer to a place of
+ *     a #GstStructure to take
+ * @newstr: (transfer full) (allow-none): a new #GstStructure
+ *
+ * Atomically modifies a pointer to point to a new structure.
+ * The #GstStructure @oldstr_ptr is pointing to is freed and
+ * @newstr is taken ownership over.
+ *
+ * Either @newstr and the value pointed to by @oldstr_ptr may be %NULL.
+ *
+ * It is a programming error if both @newstr and the value pointed to by
+ * @oldstr_ptr refer to the same, non-%NULL structure.
+ *
+ * Returns: %TRUE if @newstr was different from @oldstr_ptr
+ *
+ * Since: 1.18
+ */
+gboolean
+gst_structure_take (GstStructure ** oldstr_ptr, GstStructure * newstr)
+{
+  GstStructure *oldstr;
+
+  g_return_val_if_fail (oldstr_ptr != NULL, FALSE);
+
+  do {
+    oldstr = g_atomic_pointer_get ((gpointer *) oldstr_ptr);
+    if (G_UNLIKELY (oldstr == newstr)) {
+      g_return_val_if_fail (newstr == NULL, FALSE);
+      return FALSE;
+    }
+  } while (G_UNLIKELY (!g_atomic_pointer_compare_and_exchange ((gpointer *)
+              oldstr_ptr, (gpointer) oldstr, newstr)));
+
+  if (oldstr)
+    gst_structure_free (oldstr);
+
+  return TRUE;
 }
 
 /**
@@ -773,13 +966,28 @@ gst_structure_new_id (GQuark name_quark, GQuark field_quark, ...)
 {
   GstStructure *s;
   va_list varargs;
+  va_list copy;
+  guint len = 0;
+  GQuark quark_copy = field_quark;
+  GType type_copy;
 
   g_return_val_if_fail (name_quark != 0, NULL);
   g_return_val_if_fail (field_quark != 0, NULL);
 
-  s = gst_structure_new_id_empty (name_quark);
-
   va_start (varargs, field_quark);
+
+  /* Calculate size of varargs */
+  va_copy (copy, varargs);
+  while (quark_copy) {
+    type_copy = va_arg (copy, GType);
+    G_VALUE_COLLECT_SKIP (type_copy, copy);
+    quark_copy = va_arg (copy, GQuark);
+    len++;
+  }
+  va_end (copy);
+
+  s = gst_structure_new_id_empty_with_size (name_quark, len);
+
   gst_structure_id_set_valist_internal (s, field_quark, varargs);
   va_end (varargs);
 
@@ -803,7 +1011,7 @@ gst_structure_set_field (GstStructure * structure, GstStructureField * field)
   GType field_value_type;
   guint i, len;
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   field_value_type = G_VALUE_TYPE (&field->value);
   if (field_value_type == G_TYPE_STRING) {
@@ -864,7 +1072,7 @@ gst_structure_set_field (GstStructure * structure, GstStructureField * field)
     }
   }
 
-  g_array_append_val (GST_STRUCTURE_FIELDS (structure), *field);
+  _structure_append_val (structure, field);
 }
 
 /* If there is no field with the given ID, NULL is returned.
@@ -875,7 +1083,7 @@ gst_structure_id_get_field (const GstStructure * structure, GQuark field_id)
   GstStructureField *field;
   guint i, len;
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   for (i = 0; i < len; i++) {
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -970,7 +1178,7 @@ gst_structure_remove_field (GstStructure * structure, const gchar * fieldname)
   g_return_if_fail (IS_MUTABLE (structure));
 
   id = g_quark_from_string (fieldname);
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   for (i = 0; i < len; i++) {
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -979,8 +1187,7 @@ gst_structure_remove_field (GstStructure * structure, const gchar * fieldname)
       if (G_IS_VALUE (&field->value)) {
         g_value_unset (&field->value);
       }
-      GST_STRUCTURE_FIELDS (structure) =
-          g_array_remove_index (GST_STRUCTURE_FIELDS (structure), i);
+      _structure_remove_index (structure, i);
       return;
     }
   }
@@ -1049,14 +1256,13 @@ gst_structure_remove_all_fields (GstStructure * structure)
   g_return_if_fail (structure != NULL);
   g_return_if_fail (IS_MUTABLE (structure));
 
-  for (i = GST_STRUCTURE_FIELDS (structure)->len - 1; i >= 0; i--) {
+  for (i = GST_STRUCTURE_LEN (structure) - 1; i >= 0; i--) {
     field = GST_STRUCTURE_FIELD (structure, i);
 
     if (G_IS_VALUE (&field->value)) {
       g_value_unset (&field->value);
     }
-    GST_STRUCTURE_FIELDS (structure) =
-        g_array_remove_index (GST_STRUCTURE_FIELDS (structure), i);
+    _structure_remove_index (structure, i);
   }
 }
 
@@ -1100,7 +1306,7 @@ gst_structure_n_fields (const GstStructure * structure)
 {
   g_return_val_if_fail (structure != NULL, 0);
 
-  return GST_STRUCTURE_FIELDS (structure)->len;
+  return GST_STRUCTURE_LEN (structure);
 }
 
 /**
@@ -1118,7 +1324,7 @@ gst_structure_nth_field_name (const GstStructure * structure, guint index)
   GstStructureField *field;
 
   g_return_val_if_fail (structure != NULL, NULL);
-  g_return_val_if_fail (index < GST_STRUCTURE_FIELDS (structure)->len, NULL);
+  g_return_val_if_fail (index < GST_STRUCTURE_LEN (structure), NULL);
 
   field = GST_STRUCTURE_FIELD (structure, index);
 
@@ -1149,7 +1355,7 @@ gst_structure_foreach (const GstStructure * structure,
   g_return_val_if_fail (structure != NULL, FALSE);
   g_return_val_if_fail (func != NULL, FALSE);
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   for (i = 0; i < len; i++) {
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -1186,7 +1392,7 @@ gst_structure_map_in_place (GstStructure * structure,
   g_return_val_if_fail (structure != NULL, FALSE);
   g_return_val_if_fail (IS_MUTABLE (structure), FALSE);
   g_return_val_if_fail (func != NULL, FALSE);
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   for (i = 0; i < len; i++) {
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -1224,7 +1430,7 @@ gst_structure_filter_and_map_in_place (GstStructure * structure,
   g_return_if_fail (structure != NULL);
   g_return_if_fail (IS_MUTABLE (structure));
   g_return_if_fail (func != NULL);
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
 
   for (i = 0; i < len;) {
     field = GST_STRUCTURE_FIELD (structure, i);
@@ -1235,9 +1441,8 @@ gst_structure_filter_and_map_in_place (GstStructure * structure,
       if (G_IS_VALUE (&field->value)) {
         g_value_unset (&field->value);
       }
-      GST_STRUCTURE_FIELDS (structure) =
-          g_array_remove_index (GST_STRUCTURE_FIELDS (structure), i);
-      len = GST_STRUCTURE_FIELDS (structure)->len;
+      _structure_remove_index (structure, i);
+      len = GST_STRUCTURE_LEN (structure);
     } else {
       i++;
     }
@@ -1797,6 +2002,9 @@ gst_structure_value_get_generic_type (const GValue * val)
       || G_VALUE_TYPE (val) == GST_TYPE_ARRAY) {
     GArray *array = g_value_peek_pointer (val);
 
+    /* Note, we can do this because the internal
+     * GstValueList/GstValueArray implementation is API/ABI compatible
+     * with GArray */
     if (array->len > 0) {
       GValue *value = &g_array_index (array, GValue, 0);
 
@@ -1825,7 +2033,7 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
 
   g_return_val_if_fail (s != NULL, FALSE);
 
-  len = GST_STRUCTURE_FIELDS (structure)->len;
+  len = GST_STRUCTURE_LEN (structure);
   for (i = 0; i < len; i++) {
     char *t;
     GType type;
@@ -2104,7 +2312,7 @@ gst_structure_new_from_string (const gchar * string)
 }
 
 /**
- * gst_structure_from_string:
+ * gst_structure_from_string: (constructor):
  * @string: a string representation of a #GstStructure.
  * @end: (out) (allow-none) (transfer none) (skip): pointer to store the end of the string in.
  *
@@ -2752,7 +2960,7 @@ wrong_type:
  * The last variable argument should be %NULL.
  *
  * For refcounted (mini)objects you will receive a new reference which
- * you must release with a suitable _unref() when no longer needed. For
+ * you must release with a suitable _unref\() when no longer needed. For
  * strings and boxed types you will receive a copy which you will need to
  * release with either g_free() or the suitable function for the boxed type.
  *
@@ -2795,7 +3003,7 @@ gst_structure_get (const GstStructure * structure, const char *first_fieldname,
  * quark hashtable.
  *
  * For refcounted (mini)objects you will receive a new reference which
- * you must release with a suitable _unref() when no longer needed. For
+ * you must release with a suitable _unref\() when no longer needed. For
  * strings and boxed types you will receive a copy which you will need to
  * release with either g_free() or the suitable function for the boxed type.
  *
@@ -2858,52 +3066,12 @@ gst_structure_is_equal (const GstStructure * structure1,
   if (structure1->name != structure2->name) {
     return FALSE;
   }
-  if (GST_STRUCTURE_FIELDS (structure1)->len !=
-      GST_STRUCTURE_FIELDS (structure2)->len) {
+  if (GST_STRUCTURE_LEN (structure1) != GST_STRUCTURE_LEN (structure2)) {
     return FALSE;
   }
 
   return gst_structure_foreach (structure1, gst_structure_is_equal_foreach,
       (gpointer) structure2);
-}
-
-
-typedef struct
-{
-  GstStructure *dest;
-  const GstStructure *intersect;
-}
-IntersectData;
-
-static gboolean
-gst_structure_intersect_field1 (GQuark id, const GValue * val1, gpointer data)
-{
-  IntersectData *idata = (IntersectData *) data;
-  const GValue *val2 = gst_structure_id_get_value (idata->intersect, id);
-
-  if (G_UNLIKELY (val2 == NULL)) {
-    gst_structure_id_set_value (idata->dest, id, val1);
-  } else {
-    GValue dest_value = { 0 };
-    if (gst_value_intersect (&dest_value, val1, val2)) {
-      gst_structure_id_take_value (idata->dest, id, &dest_value);
-    } else {
-      return FALSE;
-    }
-  }
-  return TRUE;
-}
-
-static gboolean
-gst_structure_intersect_field2 (GQuark id, const GValue * val1, gpointer data)
-{
-  IntersectData *idata = (IntersectData *) data;
-  const GValue *val2 = gst_structure_id_get_value (idata->intersect, id);
-
-  if (G_UNLIKELY (val2 == NULL)) {
-    gst_structure_id_set_value (idata->dest, id, val1);
-  }
-  return TRUE;
 }
 
 /**
@@ -2919,7 +3087,8 @@ GstStructure *
 gst_structure_intersect (const GstStructure * struct1,
     const GstStructure * struct2)
 {
-  IntersectData data;
+  guint it1, len1, it2, len2;
+  GstStructure *dest;
 
   g_assert (struct1 != NULL);
   g_assert (struct2 != NULL);
@@ -2927,24 +3096,59 @@ gst_structure_intersect (const GstStructure * struct1,
   if (G_UNLIKELY (struct1->name != struct2->name))
     return NULL;
 
+  len1 = GST_STRUCTURE_LEN (struct1);
+  len2 = GST_STRUCTURE_LEN (struct2);
+
+  /* Resulting structure will be at most the size of the smallest structure */
+  dest = gst_structure_new_id_empty_with_size (struct1->name, MIN (len1, len2));
+
   /* copy fields from struct1 which we have not in struct2 to target
    * intersect if we have the field in both */
-  data.dest = gst_structure_new_id_empty (struct1->name);
-  data.intersect = struct2;
-  if (G_UNLIKELY (!gst_structure_foreach ((GstStructure *) struct1,
-              gst_structure_intersect_field1, &data)))
-    goto error;
+  for (it1 = 0; it1 < len1; it1++) {
+    GstStructureField *field1 = GST_STRUCTURE_FIELD (struct1, it1);
+    gboolean seenother = FALSE;
+    for (it2 = 0; it2 < len2; it2++) {
+      GstStructureField *field2 = GST_STRUCTURE_FIELD (struct2, it2);
+      if (field1->name == field2->name) {
+        GValue dest_value = { 0 };
+        seenother = TRUE;
+        /* Get the intersection if any */
+        if (gst_value_intersect (&dest_value, &field1->value, &field2->value)) {
+          gst_structure_id_take_value (dest, field1->name, &dest_value);
+          break;
+        } else {
+          /* No intersection, return nothing */
+          goto error;
+        }
+      }
+    }
+    /* Field1 was only present in struct1, copy it over */
+    if (!seenother)
+      gst_structure_id_set_value (dest, field1->name, &field1->value);
+  }
 
-  /* copy fields from struct2 which we have not in struct1 to target */
-  data.intersect = struct1;
-  if (G_UNLIKELY (!gst_structure_foreach ((GstStructure *) struct2,
-              gst_structure_intersect_field2, &data)))
-    goto error;
+  /* Now iterate over the 2nd struct and copy over everything which
+   * isn't present in the 1st struct (we've already taken care of
+   * values being present in both just above) */
+  for (it2 = 0; it2 < len2; it2++) {
+    GstStructureField *field2 = GST_STRUCTURE_FIELD (struct2, it2);
+    gboolean seenother = FALSE;
+    for (it1 = 0; it1 < len1; it1++) {
+      GstStructureField *field1 = GST_STRUCTURE_FIELD (struct1, it1);
+      if (field1->name == field2->name) {
+        seenother = TRUE;
+        break;
+      }
+    }
+    if (!seenother)
+      gst_structure_id_set_value (dest, field2->name, &field2->value);
 
-  return data.dest;
+  }
+
+  return dest;
 
 error:
-  gst_structure_free (data.dest);
+  gst_structure_free (dest);
   return NULL;
 }
 
@@ -2999,30 +3203,6 @@ gst_structure_can_intersect (const GstStructure * struct1,
       gst_caps_structure_can_intersect_field, (gpointer) struct2);
 }
 
-static gboolean
-gst_caps_structure_is_superset_field (GQuark field_id, const GValue * value,
-    gpointer user_data)
-{
-  GstStructure *subset = user_data;
-  const GValue *other;
-  int comparison;
-
-  if (!(other = gst_structure_id_get_value (subset, field_id)))
-    /* field is missing in the subset => no subset */
-    return FALSE;
-
-  comparison = gst_value_compare (value, other);
-
-  /* equal values are subset */
-  if (comparison == GST_VALUE_EQUAL)
-    return TRUE;
-
-  /* ordered, but unequal, values are not */
-  if (comparison != GST_VALUE_UNORDERED)
-    return FALSE;
-
-  return gst_value_is_subset (other, value);
-}
 
 /**
  * gst_structure_is_subset:
@@ -3039,12 +3219,51 @@ gboolean
 gst_structure_is_subset (const GstStructure * subset,
     const GstStructure * superset)
 {
-  if ((superset->name != subset->name) ||
-      (gst_structure_n_fields (superset) > gst_structure_n_fields (subset)))
+  guint it1, len1, it2, len2;
+
+  g_assert (superset);
+
+  if (G_UNLIKELY (superset->name != subset->name))
     return FALSE;
 
-  return gst_structure_foreach ((GstStructure *) superset,
-      gst_caps_structure_is_superset_field, (gpointer) subset);
+  len1 = GST_STRUCTURE_LEN (subset);
+  len2 = GST_STRUCTURE_LEN (superset);
+  if (len2 > len1)
+    return FALSE;
+
+  for (it2 = 0; it2 < len2; it2++) {
+    GstStructureField *superfield = GST_STRUCTURE_FIELD (superset, it2);
+    gboolean seenother = FALSE;
+    for (it1 = 0; it1 < len1; it1++) {
+      GstStructureField *subfield = GST_STRUCTURE_FIELD (subset, it1);
+      if (subfield->name == superfield->name) {
+        int comparison =
+            gst_value_compare (&subfield->value, &superfield->value);
+        seenother = TRUE;
+
+        /* If present and equal, stop iterating */
+        if (comparison == GST_VALUE_EQUAL)
+          break;
+
+        /* Stop everything if ordered but unequal */
+        if (comparison != GST_VALUE_UNORDERED)
+          return FALSE;
+
+        /* Stop everything if not a subset */
+        if (!gst_value_is_subset (&subfield->value, &superfield->value))
+          return FALSE;
+
+        break;
+      }
+    }
+
+    /* We did not see superfield in subfield */
+    if (!seenother)
+      return FALSE;
+  }
+
+  /* We saw everything from subset in the superset */
+  return TRUE;
 }
 
 
@@ -3104,6 +3323,8 @@ _gst_structure_get_any_list (GstStructure * structure, GType type,
  * Returns: %TRUE if the value could be set correctly. If there was no field
  * with @fieldname or the existing field did not contain a %GST_TYPE_ARRAY,
  * this function returns %FALSE.
+ *
+ * Since: 1.12
  */
 gboolean
 gst_structure_get_array (GstStructure * structure, const gchar * fieldname,

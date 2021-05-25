@@ -256,7 +256,7 @@ class ExportedJavaObject {
     }
 
     private Method[] getPublicMethods(final Class clz) {
-        Method[] m = clz.getMethods();
+        Method[] m = clz.getDeclaredMethods();
         ArrayList<Method> am = new ArrayList<Method>();
         for (int i = 0; i < m.length; i++) {
             if (Modifier.isPublic(m[i].getModifiers())){

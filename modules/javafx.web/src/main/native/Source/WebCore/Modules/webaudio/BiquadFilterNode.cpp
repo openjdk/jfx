@@ -33,13 +33,35 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(BiquadFilterNode);
 
-BiquadFilterNode::BiquadFilterNode(AudioContext& context, float sampleRate)
-    : AudioBasicProcessorNode(context, sampleRate)
+ExceptionOr<Ref<BiquadFilterNode>> BiquadFilterNode::create(BaseAudioContext& context, const BiquadFilterOptions& options)
+{
+    if (context.isStopped())
+        return Exception { InvalidStateError };
+
+    context.lazyInitialize();
+
+    auto node = adoptRef(*new BiquadFilterNode(context));
+
+    auto result = node->handleAudioNodeOptions(options, { 2, ChannelCountMode::Max, ChannelInterpretation::Speakers });
+    if (result.hasException())
+        return result.releaseException();
+
+    node->setType(options.type);
+    node->q().setValue(options.Q);
+    node->detune().setValue(options.detune);
+    node->frequency().setValue(options.frequency);
+    node->gain().setValue(options.gain);
+
+    return node;
+}
+
+BiquadFilterNode::BiquadFilterNode(BaseAudioContext& context)
+    : AudioBasicProcessorNode(context)
 {
     setNodeType(NodeTypeBiquadFilter);
 
     // Initially setup as lowpass filter.
-    m_processor = makeUnique<BiquadProcessor>(context, sampleRate, 1, false);
+    m_processor = makeUnique<BiquadProcessor>(context, context.sampleRate(), 1, false);
 }
 
 BiquadFilterType BiquadFilterNode::type() const
@@ -52,15 +74,15 @@ void BiquadFilterNode::setType(BiquadFilterType type)
     biquadProcessor()->setType(type);
 }
 
-void BiquadFilterNode::getFrequencyResponse(const RefPtr<Float32Array>& frequencyHz, const RefPtr<Float32Array>& magResponse, const RefPtr<Float32Array>& phaseResponse)
+ExceptionOr<void> BiquadFilterNode::getFrequencyResponse(const Ref<Float32Array>& frequencyHz, const Ref<Float32Array>& magResponse, const Ref<Float32Array>& phaseResponse)
 {
-    if (!frequencyHz || !magResponse || !phaseResponse)
-        return;
+    auto length = frequencyHz->length();
+    if (magResponse->length() != length || phaseResponse->length() != length)
+        return Exception { InvalidStateError, "The arrays passed as arguments must have the same length" };
 
-    int n = std::min(frequencyHz->length(), std::min(magResponse->length(), phaseResponse->length()));
-
-    if (n)
-        biquadProcessor()->getFrequencyResponse(n, frequencyHz->data(), magResponse->data(), phaseResponse->data());
+    if (length)
+        biquadProcessor()->getFrequencyResponse(length, frequencyHz->data(), magResponse->data(), phaseResponse->data());
+    return { };
 }
 
 } // namespace WebCore

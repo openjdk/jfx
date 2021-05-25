@@ -31,16 +31,17 @@
 
 namespace WTF {
 
-class StringPrintStream : public PrintStream {
+class StringPrintStream final : public PrintStream {
 public:
     WTF_EXPORT_PRIVATE StringPrintStream();
-    WTF_EXPORT_PRIVATE virtual ~StringPrintStream();
+    WTF_EXPORT_PRIVATE ~StringPrintStream() final;
 
-    WTF_EXPORT_PRIVATE void vprintf(const char* format, va_list) override WTF_ATTRIBUTE_PRINTF(2, 0);
+    WTF_EXPORT_PRIVATE void vprintf(const char* format, va_list) final WTF_ATTRIBUTE_PRINTF(2, 0);
 
     size_t length() const { return m_next; }
 
     WTF_EXPORT_PRIVATE CString toCString();
+    WTF_EXPORT_PRIVATE Expected<String, UTF8ConversionError> tryToString();
     WTF_EXPORT_PRIVATE String toString();
     WTF_EXPORT_PRIVATE String toStringWithLatin1Fallback();
     WTF_EXPORT_PRIVATE void reset();

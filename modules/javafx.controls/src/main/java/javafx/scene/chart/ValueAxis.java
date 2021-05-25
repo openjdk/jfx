@@ -517,7 +517,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     @Override public T toRealValue(double value) {
         //noinspection unchecked
-        return (T)new Double(value);
+        return (T)Double.valueOf(value);
     }
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------

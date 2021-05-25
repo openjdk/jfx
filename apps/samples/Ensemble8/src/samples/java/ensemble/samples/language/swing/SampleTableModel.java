@@ -49,9 +49,9 @@ public class SampleTableModel extends AbstractTableModel {
     private static ObservableList<BarChart.Series> bcData;
     private final String[] names = {"2007", "2008", "2009"};
     private Object[][] data = {
-        {new Double(567), new Double(956), new Double(1154)},
-        {new Double(1292), new Double(1665), new Double(1927)},
-        {new Double(1292), new Double(2559), new Double(2774)}
+        {Double.valueOf(567), Double.valueOf(956), Double.valueOf(1154)},
+        {Double.valueOf(1292), Double.valueOf(1665), Double.valueOf(1927)},
+        {Double.valueOf(1292), Double.valueOf(2559), Double.valueOf(2774)}
     };
 
     public double getTickUnit() {

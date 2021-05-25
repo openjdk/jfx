@@ -88,7 +88,9 @@ InspectorCanvasAgent::InspectorCanvasAgent(PageAgentContext& context)
     , m_injectedScriptManager(context.injectedScriptManager)
     , m_inspectedPage(context.inspectedPage)
     , m_canvasDestroyedTimer(*this, &InspectorCanvasAgent::canvasDestroyedTimerFired)
+#if ENABLE(WEBGL) || ENABLE(WEBGPU)
     , m_programDestroyedTimer(*this, &InspectorCanvasAgent::programDestroyedTimerFired)
+#endif // ENABLE(WEBGL) || ENABLE(WEBGPU)
 {
 }
 
@@ -111,10 +113,10 @@ void InspectorCanvasAgent::discardAgent()
 
 void InspectorCanvasAgent::enable(ErrorString&)
 {
-    if (m_instrumentingAgents.inspectorCanvasAgent() == this)
+    if (m_instrumentingAgents.enabledCanvasAgent() == this)
         return;
 
-    m_instrumentingAgents.setInspectorCanvasAgent(this);
+    m_instrumentingAgents.setEnabledCanvasAgent(this);
 
     const auto existsInCurrentPage = [&] (ScriptExecutionContext* scriptExecutionContext) {
         if (!is<Document>(scriptExecutionContext))
@@ -132,7 +134,7 @@ void InspectorCanvasAgent::enable(ErrorString&)
             // The actual "context" for WebGPU is the `WebGPUDevice`, not the <canvas>.
             if (is<GPUCanvasContext>(context))
                 continue;
-#endif
+#endif // ENABLE(WEBGPU)
 
             if (existsInCurrentPage(context->canvasBase().scriptExecutionContext()))
                 bindCanvas(*context, false);
@@ -147,7 +149,7 @@ void InspectorCanvasAgent::enable(ErrorString&)
                 bindCanvas(*device, false);
         }
     }
-#endif
+#endif // ENABLE(WEBGPU)
 
 #if ENABLE(WEBGL)
     {
@@ -157,7 +159,7 @@ void InspectorCanvasAgent::enable(ErrorString&)
                 didCreateWebGLProgram(*contextWebGLBase, *program);
         }
     }
-#endif
+#endif // ENABLE(WEBGL)
 
 #if ENABLE(WEBGPU)
     {
@@ -167,12 +169,12 @@ void InspectorCanvasAgent::enable(ErrorString&)
                 didCreateWebGPUPipeline(*device, *pipeline);
         }
     }
-#endif
+#endif // ENABLE(WEBGPU)
 }
 
 void InspectorCanvasAgent::disable(ErrorString&)
 {
-    m_instrumentingAgents.setInspectorCanvasAgent(nullptr);
+    m_instrumentingAgents.setEnabledCanvasAgent(nullptr);
 
     reset();
 
@@ -191,13 +193,14 @@ void InspectorCanvasAgent::requestNode(ErrorString& errorString, const String& c
         return;
     }
 
-    int documentNodeId = m_instrumentingAgents.inspectorDOMAgent()->boundNodeId(&node->document());
+    // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
+    int documentNodeId = m_instrumentingAgents.persistentDOMAgent()->boundNodeId(&node->document());
     if (!documentNodeId) {
         errorString = "Document must have been requested"_s;
         return;
     }
 
-    *nodeId = m_instrumentingAgents.inspectorDOMAgent()->pushNodeToFrontend(errorString, documentNodeId, node);
+    *nodeId = m_instrumentingAgents.persistentDOMAgent()->pushNodeToFrontend(errorString, documentNodeId, node);
 }
 
 void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String& canvasId, String* content)
@@ -211,7 +214,7 @@ void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String
 
 void InspectorCanvasAgent::requestClientNodes(ErrorString& errorString, const String& canvasId, RefPtr<JSON::ArrayOf<int>>& clientNodeIds)
 {
-    auto* domAgent = m_instrumentingAgents.inspectorDOMAgent();
+    auto* domAgent = m_instrumentingAgents.persistentDOMAgent();
     if (!domAgent) {
         errorString = "DOM domain must be enabled"_s;
         return;
@@ -223,6 +226,7 @@ void InspectorCanvasAgent::requestClientNodes(ErrorString& errorString, const St
 
     clientNodeIds = JSON::ArrayOf<int>::create();
     for (auto& clientNode : inspectorCanvas->clientNodes()) {
+        // FIXME: <https://webkit.org/b/213499> Web Inspector: allow DOM nodes to be instrumented at any point, regardless of whether the main document has also been instrumented
         if (auto documentNodeId = domAgent->boundNodeId(&clientNode->document()))
             clientNodeIds->addItem(domAgent->pushNodeToFrontend(errorString, documentNodeId, clientNode));
     }
@@ -303,6 +307,7 @@ void InspectorCanvasAgent::stopRecording(ErrorString& errorString, const String&
     didFinishRecordingCanvasFrame(*context, true);
 }
 
+#if ENABLE(WEBGL) || ENABLE(WEBGPU)
 void InspectorCanvasAgent::requestShaderSource(ErrorString& errorString, const String& programId, const String& shaderTypeString, String* outSource)
 {
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
@@ -340,6 +345,7 @@ void InspectorCanvasAgent::updateShader(ErrorString& errorString, const String& 
         errorString = "Failed to update shader of given shaderType for given programId"_s;
 }
 
+#if ENABLE(WEBGL)
 void InspectorCanvasAgent::setShaderProgramDisabled(ErrorString& errorString, const String& programId, bool disabled)
 {
     auto inspectorProgram = assertInspectorProgram(errorString, programId);
@@ -357,6 +363,8 @@ void InspectorCanvasAgent::setShaderProgramHighlighted(ErrorString& errorString,
 
     inspectorProgram->setHighlighted(highlighted);
 }
+#endif // ENABLE(WEBGL)
+#endif // ENABLE(WEBGL) || ENABLE(WEBGPU)
 
 void InspectorCanvasAgent::frameNavigated(Frame& frame)
 {
@@ -625,7 +633,7 @@ bool InspectorCanvasAgent::isWebGLProgramHighlighted(WebGLProgram& program)
 
     return inspectorProgram->highlighted();
 }
-#endif
+#endif // ENABLE(WEBGL)
 
 #if ENABLE(WEBGPU)
 void InspectorCanvasAgent::didCreateWebGPUDevice(WebGPUDevice& device)
@@ -688,7 +696,7 @@ void InspectorCanvasAgent::willDestroyWebGPUPipeline(WebGPUPipeline& pipeline)
 
     unbindProgram(*inspectorProgram);
 }
-#endif
+#endif // ENABLE(WEBGPU)
 
 void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Inspector::Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
 {
@@ -700,10 +708,10 @@ void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Insp
         && !is<ImageBitmapRenderingContext>(context)
 #if ENABLE(WEBGL)
         && !is<WebGLRenderingContext>(context)
-#endif
+#endif // ENABLE(WEBGL)
 #if ENABLE(WEBGL2)
         && !is<WebGL2RenderingContext>(context)
-#endif
+#endif // ENABLE(WEBGL2)
     )
         return;
 
@@ -733,6 +741,7 @@ void InspectorCanvasAgent::canvasDestroyedTimerFired()
     m_removedCanvasIdentifiers.clear();
 }
 
+#if ENABLE(WEBGL) || ENABLE(WEBGPU)
 void InspectorCanvasAgent::programDestroyedTimerFired()
 {
     if (!m_removedProgramIdentifiers.size())
@@ -743,6 +752,7 @@ void InspectorCanvasAgent::programDestroyedTimerFired()
 
     m_removedProgramIdentifiers.clear();
 }
+#endif // ENABLE(WEBGL) || ENABLE(WEBGPU)
 
 void InspectorCanvasAgent::reset()
 {
@@ -756,10 +766,12 @@ void InspectorCanvasAgent::reset()
     if (m_canvasDestroyedTimer.isActive())
         m_canvasDestroyedTimer.stop();
 
+#if ENABLE(WEBGL) || ENABLE(WEBGPU)
     m_identifierToInspectorProgram.clear();
     m_removedProgramIdentifiers.clear();
     if (m_programDestroyedTimer.isActive())
         m_programDestroyedTimer.stop();
+#endif // ENABLE(WEBGL) || ENABLE(WEBGPU)
 
     m_recordingCanvasIdentifiers.clear();
 }
@@ -798,7 +810,7 @@ InspectorCanvas& InspectorCanvasAgent::bindCanvas(WebGPUDevice& device, bool cap
 
     return inspectorCanvas;
 }
-#endif
+#endif // ENABLE(WEBGPU)
 
 void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
 {
@@ -811,7 +823,7 @@ void InspectorCanvasAgent::unbindCanvas(InspectorCanvas& inspectorCanvas)
 
     for (auto* inspectorProgram : programsToRemove)
         unbindProgram(*inspectorProgram);
-#endif
+#endif // ENABLE(WEBGL)
 
     if (auto* context = inspectorCanvas.canvasContext())
         context->canvasBase().removeObserver(*this);
@@ -856,8 +868,9 @@ RefPtr<InspectorCanvas> InspectorCanvasAgent::findInspectorCanvas(WebGPUDevice& 
     }
     return nullptr;
 }
-#endif
+#endif // ENABLE(WEBGPU)
 
+#if ENABLE(WEBGL) || ENABLE(WEBGPU)
 void InspectorCanvasAgent::unbindProgram(InspectorShaderProgram& inspectorProgram)
 {
     String identifier = inspectorProgram.identifier();
@@ -891,7 +904,7 @@ RefPtr<InspectorShaderProgram> InspectorCanvasAgent::findInspectorProgram(WebGLP
     }
     return nullptr;
 }
-#endif
+#endif // ENABLE(WEBGL)
 
 #if ENABLE(WEBGPU)
 RefPtr<InspectorShaderProgram> InspectorCanvasAgent::findInspectorProgram(WebGPUPipeline& pipeline)
@@ -902,6 +915,7 @@ RefPtr<InspectorShaderProgram> InspectorCanvasAgent::findInspectorProgram(WebGPU
     }
     return nullptr;
 }
-#endif
+#endif // ENABLE(WEBGPU)
+#endif // ENABLE(WEBGL) || ENABLE(WEBGPU)
 
 } // namespace WebCore

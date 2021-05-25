@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package javafx.scene;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -176,7 +177,7 @@ final class CssStyleHelper {
 
         helper.cacheContainer = new CacheContainer(node, styleMap, depth);
 
-        helper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+        helper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
         // If this node had a style helper, then reset properties to their initial value
         // since the style map might now be different
@@ -209,7 +210,7 @@ final class CssStyleHelper {
                 // TODO : check why calling createStyleHelper(parentNode) does not work here?
                 if (parentNode.styleHelper == null) {
                     parentNode.styleHelper = new CssStyleHelper();
-                    parentNode.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(parentNode) ;
+                    parentNode.styleHelper.firstStyleableAncestor = new WeakReference(findFirstStyleableAncestor(parentNode)) ;
                 }
                 parentNode.styleHelper.triggerStates.addAll(triggerState);
 
@@ -232,8 +233,8 @@ final class CssStyleHelper {
             if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
         }
 
-        Styleable styleableParent = firstStyleableAncestor;
-        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor);
+        Styleable styleableParent = firstStyleableAncestor.get();
+        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor.get());
 
         if (parentStyleHelper != null) {
             return parentStyleHelper.isUserSetFont(styleableParent);
@@ -300,7 +301,7 @@ final class CssStyleHelper {
         }
 
         //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
-        node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+        node.styleHelper.firstStyleableAncestor = new WeakReference<>(findFirstStyleableAncestor(node));
 
         // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
         // Under this condition, there are no styles for this node _and_ no styles inherit.
@@ -322,7 +323,7 @@ final class CssStyleHelper {
             return true;
         }
 
-        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor);
+        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor.get());
 
         if (parentHelper != null && parentHelper.cacheContainer != null) {
 
@@ -349,9 +350,11 @@ final class CssStyleHelper {
         return false;
     }
 
+    private static final WeakReference<Node> EMPTY_NODE = new WeakReference<>(null);
+
     /* This is the first Styleable parent (of Node this StyleHelper belongs to)
      * having a valid StyleHelper */
-    private Node firstStyleableAncestor;
+    private WeakReference<Node> firstStyleableAncestor = EMPTY_NODE;
 
     private CacheContainer cacheContainer;
 
@@ -571,6 +574,151 @@ final class CssStyleHelper {
 
     }
 
+    // The font size property of Controls that are inherited from class Labeled is a shared property,
+    // it is shared with a child LabeledText control.
+    // This font size is first computed when applying CSS to the Control and then the relative sized
+    // CSS properties of the Control are computed relative to this font size.
+    // This shared font size may get changed if a different font size is computed for child LabeledText control.
+    // So in such scenario if font size gets changed then the relative sized css properties of the Control
+    // no longer remain relative to its font size.
+    // This method is a remedy to above problem. It is executed when LabeledText changes the shared
+    // font size property and it recalculates the relative sized properties of Control.
+    // Currently this method is executed only by Labeled.fontProperty().set(), when its font size
+    // is changed by LabeledText.
+    // This method is a reduced version of transitionToState() method, it is added as a fix for JDK-8204568.
+    // Any modifications to the method transitionToState() should be applied here if needed.
+    void recalculateRelativeSizeProperties(final Node node, Font fontForRelativeSizes) {
+
+        if (transitionStateInProgress) {
+            // If transitionToState() is being executed for the current control then all the css properties will get
+            // calculated there, and so we need to do anything here.
+            return;
+        }
+        if (cacheContainer == null) {
+            return;
+        }
+        final StyleMap styleMap = getStyleMap(node);
+        if (styleMap == null) {
+            return;
+        }
+        // if the style-map is empty, then we are only looking for inherited styles.
+        final boolean inheritOnly = styleMap.isEmpty();
+
+        final Set<PseudoClass>[] transitionStates = getTransitionStates(node);
+        CalculatedValue cachedFont = new CalculatedValue(fontForRelativeSizes, null, false);
+
+        final List<CssMetaData<? extends Styleable,  ?>> styleables = node.getCssMetaData();
+        final int numStyleables = styleables.size();
+
+        for (int n = 0; n < numStyleables; n++) {
+
+            @SuppressWarnings("unchecked") // this is a widening conversion
+            final CssMetaData<Styleable,Object> cssMetaData =
+                    (CssMetaData<Styleable,Object>)styleables.get(n);
+
+            // Don't bother looking up styles that don't inherit.
+            if (inheritOnly && cssMetaData.isInherits() == false) {
+                continue;
+            }
+
+            // Skip the lookup if we know there isn't a chance for this property
+            // to be set (usually due to a "bind").
+            if (!cssMetaData.isSettable(node)) {
+                continue;
+            }
+
+            final String property = cssMetaData.getProperty();
+            boolean isFontProperty = property.equals("-fx-font") || property.equals("-fx-font-size");
+            // This method is executed as a result of change in font size of the control,
+            // hence font property should be skipped.
+            if (isFontProperty) {
+                continue;
+            }
+
+            CascadingStyle style = getStyle(node, property, styleMap, transitionStates[0]);
+            if (style != null) {
+                final ParsedValue cssValue = style.getParsedValue();
+                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
+                ParsedValue resolved = resolveLookups(node, cssValue, styleMap, transitionStates[0], whence, new HashSet<>());
+                boolean isRelative = ParsedValueImpl.containsFontRelativeSize(resolved, false);
+                if (!isRelative) {
+                    continue;
+                }
+            } else {
+                final List<CssMetaData<? extends Styleable, ?>> subProperties = cssMetaData.getSubProperties();
+                final int numSubProperties = (subProperties != null) ? subProperties.size() : 0;
+                if (numSubProperties == 0) {
+                    continue;
+                } else {
+                    // TODO: further optimization
+                    // Determine a way to find if any of the sub properties are specified with relative size.
+                    // if none is relatively sized then continue;
+                }
+            }
+
+            // If code flow reaches here then it means that the property is
+            // explicitly specified in css style by user with a relative size.
+            // We should not use the cached value as relative
+            // sized properties must be recalculated when font size changes.
+
+            CalculatedValue calculatedValue = lookup(node, cssMetaData, styleMap, transitionStates[0],
+                        node, cachedFont);
+
+            // lookup is not supposed to return null.
+            if (calculatedValue == null || calculatedValue == SKIP) {
+                continue;
+            }
+
+            try {
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+                final StyleOrigin originOfCurrentValue = styleableProperty.getStyleOrigin();
+                final StyleOrigin originOfCalculatedValue = calculatedValue.getOrigin();
+
+                if (originOfCalculatedValue == null) {
+                    continue;
+                }
+
+                if (originOfCurrentValue == StyleOrigin.USER) {
+                    if (originOfCalculatedValue == StyleOrigin.USER_AGENT) {
+                        continue;
+                    }
+                }
+
+                final Object value = calculatedValue.getValue();
+                final Object currentValue = styleableProperty.getValue();
+
+                if ((originOfCurrentValue != originOfCalculatedValue)
+                        || (currentValue != null
+                        ? currentValue.equals(value) == false
+                        : value != null)) {
+
+                    if (LOGGER.isLoggable(Level.FINER)) {
+                        LOGGER.finer(property + ", call applyStyle: " + styleableProperty + ", value =" +
+                                String.valueOf(value) + ", originOfCalculatedValue=" + originOfCalculatedValue);
+                    }
+                    styleableProperty.applyStyle(originOfCalculatedValue, value);
+
+                    CalculatedValue initialValue = new CalculatedValue(currentValue, originOfCurrentValue, true);
+                    cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
+                }
+            } catch (Exception e) {
+                // This exception should have been handled by transitionToState().
+                // Here, we will not try to reset the value but only log the warning.
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+
+                final String msg = String.format("Failed to recalculate and set css [%s] on [%s] due to '%s'\n",
+                        cssMetaData.getProperty(), styleableProperty, e.getMessage());
+
+                PlatformLogger logger = Logging.getCSSLogger();
+                if (logger.isLoggable(Level.WARNING)) {
+                    logger.warning(msg);
+                }
+            }
+        }
+    }
+
+    private boolean transitionStateInProgress = false;
+
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
@@ -653,6 +801,7 @@ final class CssStyleHelper {
 
         // For each property that is settable, we need to do a lookup and
         // transition to that value.
+        transitionStateInProgress = true;
         for(int n=0; n<max; n++) {
 
             @SuppressWarnings("unchecked") // this is a widening conversion
@@ -838,6 +987,7 @@ final class CssStyleHelper {
             }
 
         }
+        transitionStateInProgress = false;
     }
 
     /**
@@ -1074,7 +1224,7 @@ final class CssStyleHelper {
             final Styleable styleable,
             final String property) {
 
-        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
         CssStyleHelper parentStyleHelper = getStyleHelper((Node) parent);
 
         if (parent != null && parentStyleHelper != null) {
@@ -1119,7 +1269,7 @@ final class CssStyleHelper {
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
 
-                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor.get();
                 CssStyleHelper parentStyleHelper = getStyleHelper((Node) styleableParent);
 
                 if (styleableParent == null || parentStyleHelper == null) {
@@ -1435,7 +1585,7 @@ final class CssStyleHelper {
                 // did we get a fontValue from the preceding block?
                 // if not, get it from our cacheEntry or choose the default
                 if (fontForFontRelativeSizes == null) {
-                    if (fontFromCacheEntry != null && fontFromCacheEntry.isRelative() == false) {
+                    if (fontFromCacheEntry != null && (!fontFromCacheEntry.isRelative() || !isFontProperty)) {
                         fontForFontRelativeSizes = (Font)fontFromCacheEntry.getValue();
                     } else {
                         fontForFontRelativeSizes = Font.getDefault();

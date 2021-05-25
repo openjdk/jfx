@@ -44,7 +44,7 @@ namespace WebCore {
 class FrameLoaderClientJava final : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
-    void frameLoaderDestroyed() override;
+    ~FrameLoaderClientJava();
 
     bool hasWebView() const override;
 
@@ -81,7 +81,7 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidCommitLoad(Optional<HasInsecureContent>) override;
+    void dispatchDidCommitLoad(Optional<HasInsecureContent>, Optional<WebCore::UsedLegacyTLS>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
@@ -106,8 +106,7 @@ public:
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement,
-                               const String& referrer) override;
+    RefPtr<Frame> createFrame(const String& name, HTMLFrameOwnerElement& ownerElement) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
     void redirectDataToPlugin(Widget&) override;
@@ -139,17 +138,17 @@ public:
     void didRunInsecureContent(SecurityOrigin&, const URL&) override;
     void didDetectXSS(const URL&, bool) override;
 
-    ResourceError cancelledError(const ResourceRequest&) override;
-    ResourceError blockedByContentBlockerError(const ResourceRequest& request) override;
-    ResourceError blockedError(const ResourceRequest&) override;
-    ResourceError cannotShowURLError(const ResourceRequest&) override;
-    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override;
+    ResourceError cancelledError(const ResourceRequest&) const override;
+    ResourceError blockedByContentBlockerError(const ResourceRequest& request) const override;
+    ResourceError blockedError(const ResourceRequest&) const override;
+    ResourceError cannotShowURLError(const ResourceRequest&) const override;
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) const override;
 
-    ResourceError cannotShowMIMETypeError(const ResourceResponse&) override;
-    ResourceError fileDoesNotExistError(const ResourceResponse&) override;
-    ResourceError pluginWillHandleLoadError(const ResourceResponse&) override;
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) const override;
+    ResourceError fileDoesNotExistError(const ResourceResponse&) const override;
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) const override;
 
-    bool shouldFallBack(const ResourceError&) override;
+    bool shouldFallBack(const ResourceError&) const override;
 
     bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
     void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
@@ -174,7 +173,7 @@ public:
     void didReplaceMultipartContent() override;
     void updateCachedDocumentLoader(DocumentLoader&) override;
 
-    String userAgent(const URL&) override;
+    String userAgent(const URL&) const override;
 
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
@@ -184,8 +183,6 @@ public:
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) override;
 
-    void dispatchDidBecomeFrameset(bool) override; // Can change due to navigation or DOM modification override.
-
     Ref<FrameNetworkingContext> createNetworkingContext() override;
 
     void registerForIconNotification() override;
@@ -194,6 +191,7 @@ public:
 
     bool isJavaFrameLoaderClient() override { return true; }
     void prefetchDNS(const String&) override;
+    void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) override;
 private:
     Page* m_page;
     Frame* m_frame;

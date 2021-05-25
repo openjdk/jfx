@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -134,13 +134,13 @@ void BlobRegistryImpl::registerBlobURL(const URL& url, Vector<BlobPart>&& blobPa
 
     for (BlobPart& part : blobParts) {
         switch (part.type()) {
-        case BlobPart::Data: {
+        case BlobPart::Type::Data: {
             auto movedData = part.moveData();
             auto data = ThreadSafeDataBuffer::create(WTFMove(movedData));
             blobData->appendData(data);
             break;
         }
-        case BlobPart::Blob: {
+        case BlobPart::Type::Blob: {
             if (auto blob = m_blobs.get(part.url().string())) {
                 for (const BlobDataItem& item : blob->items())
                     blobData->m_items.append(item);
@@ -330,7 +330,7 @@ void BlobRegistryImpl::writeBlobsToTemporaryFiles(const Vector<String>& blobURLs
 void BlobRegistryImpl::writeBlobToFilePath(const URL& blobURL, const String& path, Function<void(bool success)>&& completionHandler)
 {
     Vector<BlobForFileWriting> blobsForWriting;
-    if (!populateBlobsForFileWriting({ blobURL }, blobsForWriting) || blobsForWriting.size() != 1) {
+    if (!populateBlobsForFileWriting({ blobURL.string() }, blobsForWriting) || blobsForWriting.size() != 1) {
         completionHandler(false);
         return;
     }
