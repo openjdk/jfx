@@ -924,7 +924,8 @@ final public class StyleManager {
                 try (final BufferedInputStream stream = new BufferedInputStream(url.openStream());
                     final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5")); ) {
                     dis.getMessageDigest().reset();
-                    while (dis.read() != -1) { /* empty loop body is intentional */ }
+                    byte[] buffer = new byte[4096];
+                    while (dis.read(buffer) != -1) { /* empty loop body is intentional */ }
                     return dis.getMessageDigest().digest();
                 }
 
