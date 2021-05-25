@@ -622,6 +622,10 @@ try {
             def jdkVersionInfo = parseJavaVersion(ver)
             defineProperty("jdkVersion", jdkVersionInfo[0])
             defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+
+            // Define global properties based on the version of Java
+            def status = compareJdkVersion(jdkVersion, "12")
+            ext.jdk12OrLater = (status >= 0)
         }
     }
 } finally {
@@ -3456,6 +3460,9 @@ project(":web") {
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
+        }
     }
 
     task compileJavaDOMBinding()
@@ -3830,6 +3837,10 @@ project(":systemTests") {
 
         if (rootProject.hasProperty("ClipShapeTest.numTests")) {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
+        }
+
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
         }
 
         if (!IS_USE_ROBOT) {
