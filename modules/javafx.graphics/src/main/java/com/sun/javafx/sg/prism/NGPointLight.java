@@ -45,7 +45,7 @@ public class NGPointLight extends NGLightBase {
 
     /**
      * The direction of a {@code SpotLight} that simulates a {@code PointLight}.
-     * Since the light radiates equaly in all directions, this value is meaningless.
+     * Since the light radiates equally in all directions, this value is meaningless.
      **/
     private static final Point3D SIMULATED_DIRECTION = new Point3D(0, 0, 1);
     /** The inner angle value of a {@code SpotLight} that simulates a {@code PointLight} */

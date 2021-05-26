@@ -169,11 +169,12 @@ public abstract class NGShape3D extends NGNode {
                  * would be set.
                  * The approximate intensity a light will have on a given
                  * shape, could be defined by:
-                 */
-//                // Where d is distance from point light
-//                float attenuationFactor = 1/(c + cL * d + cQ * d * d);
-//                float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
-//                intensity *= attenuationFactor;
+                 *
+                 * Where d is distance from point light
+                 * float attenuationFactor = 1/(c + cL * d + cQ * d * d);
+                 * float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
+                 * intensity *= attenuationFactor;
+                */
                 if (lightBase instanceof NGPointLight) {
                     var light = (NGPointLight) lightBase;
                     Affine3D lightWT = light.getWorldTransform();
