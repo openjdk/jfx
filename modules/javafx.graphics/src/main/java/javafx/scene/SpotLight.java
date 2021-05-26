@@ -59,7 +59,7 @@ import javafx.scene.paint.PhongMaterial;
  * <ul>
  * <li>{@code theta < innerAngle} then {@code spot = 1}
  * <li>{@code theta > outerAngle} then {@code spot = 0}
- * <li>{@code innerAngle <= theta <= outerAngle} then 
+ * <li>{@code innerAngle <= theta <= outerAngle} then
  *
  * <pre>spot = pow((cos(theta) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
  *
