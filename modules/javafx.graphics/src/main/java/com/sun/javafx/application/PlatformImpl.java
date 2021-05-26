@@ -50,6 +50,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.application.Application;
@@ -715,6 +716,34 @@ public class PlatformImpl {
         }
     }
 
+    public enum HighContrastScheme {
+        HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
+        HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
+        HIGH_CONTRAST_1("high.contrast.1.theme"),
+        HIGH_CONTRAST_2("high.contrast.2.theme");
+
+        private final String themeKey;
+        HighContrastScheme(String themeKey) {
+            this.themeKey = themeKey;
+        }
+
+        public String getThemeKey() {
+            return themeKey;
+        }
+
+        public static String fromThemeName(Function<String, String> keyFunction, String themeName) {
+            if (keyFunction == null || themeName == null) {
+                return null;
+            }
+            for (HighContrastScheme item : values()) {
+                if (themeName.equalsIgnoreCase(keyFunction.apply(item.getThemeKey()))) {
+                    return item.toString();
+                }
+            }
+            return null;
+        }
+    }
+
     private static String accessibilityTheme;
     public static boolean setAccessibilityTheme(String platformTheme) {
 
@@ -762,15 +791,15 @@ public class PlatformImpl {
             } else {
                 if (platformTheme != null) {
                     // The following names are Platform specific (Windows 7 and 8)
-                    switch (platformTheme) {
-                        case "High Contrast White":
+                    switch (HighContrastScheme.valueOf(platformTheme)) {
+                        case HIGH_CONTRAST_WHITE:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
                             break;
-                        case "High Contrast Black":
+                        case HIGH_CONTRAST_BLACK:
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css";
                             break;
-                        case "High Contrast #1":
-                        case "High Contrast #2": //TODO #2 should be green on black
+                        case HIGH_CONTRAST_1:
+                        case HIGH_CONTRAST_2: //TODO #2 should be green on black
                             accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
                             break;
                         default:
