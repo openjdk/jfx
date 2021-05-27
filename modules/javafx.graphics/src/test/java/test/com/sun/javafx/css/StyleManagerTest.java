@@ -1109,4 +1109,15 @@ public class StyleManagerTest {
         assertFalse("Exception during CSS processing on BG thread", err.get());
     }
 
+   @Test
+    public void testCalculateCheckSum() {
+        StyleManagerShim sm = StyleManagerShim.getInstance();
+        String expectedChecksum = "03eadaed6c9269d273c3ffa670d14ff8"; // Generated using command 'md5sum checksum.css'
+        String actualChecksum = "";
+        byte[] checksum = sm.calculateCheckSum(getClass().getResource("checksum.css").toExternalForm());
+        for (byte b : checksum) {
+            actualChecksum += Integer.toString((b & 0xff) + 0x100, 16).substring(1);
+        }
+        assertEquals(expectedChecksum, actualChecksum);
+    }
 }
