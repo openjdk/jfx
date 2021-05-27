@@ -47,6 +47,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -1112,12 +1113,11 @@ public class StyleManagerTest {
     @Test
     public void testCalculateCheckSum() {
         StyleManagerShim sm = StyleManagerShim.getInstance();
-        String expectedChecksum = "03eadaed6c9269d273c3ffa670d14ff8"; // Generated using command 'md5sum checksum.css'
-        String actualChecksum = "";
         byte[] checksum = sm.calculateCheckSum(getClass().getResource("checksum.css").toExternalForm());
-        for (byte b : checksum) {
-            actualChecksum += Integer.toString((b & 0xff) + 0x100, 16).substring(1);
-        }
-        assertEquals(expectedChecksum, actualChecksum);
+
+        byte[] expectedChecksum = {60, 26, 67, 14, 103, -63, -62, 42, 14, 40, -44, -103, 1, -60, -90, 18};
+        // "3c1a430e67c1c22a0e28d49901c4a612" // Generated using command 'md5sum checksum.css'
+
+        assertTrue(Arrays.equals(expectedChecksum, checksum));
     }
 }
