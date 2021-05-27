@@ -438,7 +438,7 @@ final public class WebEngine {
 
 
     /*
-     * The page title.
+     * The page title. This gets updated asynchronously.
      */
     private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper(this, "title");
 
