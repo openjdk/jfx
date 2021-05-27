@@ -25,6 +25,18 @@
 
 package test.javafx.scene.control;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import static javafx.scene.control.ControlShim.*;
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.FocusModel;
@@ -34,14 +46,9 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.TreeView.EditEvent;
 import javafx.scene.control.skin.TreeCellSkin;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import static javafx.scene.control.ControlShim.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TreeCellTest {
     private TreeCell<String> cell;
@@ -56,6 +63,7 @@ public class TreeCellTest {
     private TreeItem<String> apples;
     private TreeItem<String> oranges;
     private TreeItem<String> pears;
+    private StageLoader stageLoader;
 
     @Before public void setup() {
         cell = new TreeCell<String>();
@@ -68,6 +76,11 @@ public class TreeCellTest {
 
         tree = new TreeView<String>(root);
         root.setExpanded(true);
+    }
+
+    @After
+    public void cleanup() {
+        if (stageLoader != null) stageLoader.dispose();
     }
 
     /*********************************************************************
@@ -684,6 +697,79 @@ public class TreeCellTest {
 
         assertTrue(other.isEditing());
         assertFalse(cell.isEditing());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnCell() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        cell.cancelEdit();
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCancelOnTree() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        tree.edit(null);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCellReuse() {
+        tree.setEditable(true);
+        cell.updateTreeView(tree);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        cell.updateIndex(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        cell.updateIndex(0);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterCollapse() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        int editingIndex = 1;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        root.setExpanded(false);
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
+    }
+
+    @Test
+    public void testEditCancelEventAfterModifyItems() {
+        stageLoader = new StageLoader(tree);
+        tree.setEditable(true);
+        int editingIndex = 2;
+        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
+        tree.edit(editingItem);
+        List<EditEvent<String>> events = new ArrayList<>();
+        tree.setOnEditCancel(events::add);
+        root.getChildren().add(0, new TreeItem<>("added"));
+        assertEquals(1, events.size());
+        assertEquals("editing location of cancel event", editingItem, events.get(0).getTreeItem());
     }
 
     // When the tree view item's change and affects a cell that is editing, then what?
