@@ -30,6 +30,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
@@ -98,40 +99,26 @@ public class SelectedItemsReadOnlyObservableListTest {
     }
 
     /**
-     * Note that using non-atomic swap operations on 'selectedIndices' doesn't work for
-     * SelectedItemsReadOnlyObservableList, since it results in intermediate states where
-     * 'selectedIndices' contains duplicates. This results in incorrect change notifications,
-     * which can be seen in this test:
-     *
      * { [foo, bar] added at 0 }
-     * { [foo] replaced by [bar] at 0 }, but should be: [foo, bar] replaced by [bar, foo]
-     *
-     * This test is a documentation of that fact, and it will start to fail if replaceAll
-     * is implemented as an atomic operation.
+     * { [foo, bar] replaced by [bar, foo] at 0 }
      */
     @Test
+    @Ignore("see JDK-8267951")
     public void testReplaceTwoItems() {
         selectedIndices.addAll(0, 1);
         changes.clear();
         selectedIndices.replaceAll(i -> i == 0 ? 1 : 0);
         assertEquals(1, changes.size());
-        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
+        assertEquals(change(replaced(0, range("foo", "bar"), range("bar", "foo"))), changes.get(0));
     }
 
     /**
-     * Note that using non-atomic swap operations on 'selectedIndices' doesn't work for
-     * SelectedItemsReadOnlyObservableList, since it results in intermediate states where
-     * 'selectedIndices' contains duplicates. This results in incorrect change notifications,
-     * which can be seen in this test:
-     *
      * { [foo, bar, baz, qux, quz] added at 0 }
-     * { [foo] replaced by [bar] at 0 }, but should be [foo, bar] replaced by [bar, foo]
-     * { [qux] replaced by [quz] at 3 }, but should be [qux, quz] replaced by [quz, qux]
-     *
-     * This test is a documentation of that fact, and it will start to fail if replaceAll
-     * is implemented as an atomic operation.
+     * { [foo, bar] replaced by [bar, foo] at 0 }
+     * { [qux, quz] replaced by [quz, qux] at 3 }
      */
     @Test
+    @Ignore("see JDK-8267951")
     public void testReplaceDisjointRanges() {
         selectedIndices.addAll(0, 1, 2, 3, 4);
         changes.clear();
@@ -146,8 +133,8 @@ public class SelectedItemsReadOnlyObservableListTest {
         });
 
         assertEquals(2, changes.size());
-        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
-        assertEquals(change(replaced(3, range("qux"), range("quz"))), changes.get(1));
+        assertEquals(change(replaced(0, range("foo", "bar"), range("bar", "foo"))), changes.get(0));
+        assertEquals(change(replaced(3, range("qux", "quz"), range("quz", "qux"))), changes.get(1));
     }
 
     /**
