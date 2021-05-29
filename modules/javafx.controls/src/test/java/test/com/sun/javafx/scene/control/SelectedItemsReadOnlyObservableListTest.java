@@ -100,7 +100,8 @@ public class SelectedItemsReadOnlyObservableListTest {
 
     /**
      * { [foo, bar] added at 0 }
-     * { [foo, bar] replaced by [bar, foo] at 0 }
+     * { [foo] replaced by [bar] at 0 }
+     * { [bar] replaced by [foo] at 1 }
      */
     @Test
     @Ignore("see JDK-8267951")
@@ -108,14 +109,17 @@ public class SelectedItemsReadOnlyObservableListTest {
         selectedIndices.addAll(0, 1);
         changes.clear();
         selectedIndices.replaceAll(i -> i == 0 ? 1 : 0);
-        assertEquals(1, changes.size());
-        assertEquals(change(replaced(0, range("foo", "bar"), range("bar", "foo"))), changes.get(0));
+        assertEquals(2, changes.size());
+        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
+        assertEquals(change(replaced(1, range("bar"), range("foo"))), changes.get(1));
     }
 
     /**
      * { [foo, bar, baz, qux, quz] added at 0 }
-     * { [foo, bar] replaced by [bar, foo] at 0 }
-     * { [qux, quz] replaced by [quz, qux] at 3 }
+     * { [foo] replaced by [bar] at 0 }
+     * { [bar] replaced by [foo] at 1 }
+     * { [qux] replaced by [quz] at 3 }
+     * { [quz] replaced by [qux] at 4 }
      */
     @Test
     @Ignore("see JDK-8267951")
@@ -132,9 +136,11 @@ public class SelectedItemsReadOnlyObservableListTest {
             }
         });
 
-        assertEquals(2, changes.size());
-        assertEquals(change(replaced(0, range("foo", "bar"), range("bar", "foo"))), changes.get(0));
-        assertEquals(change(replaced(3, range("qux", "quz"), range("quz", "qux"))), changes.get(1));
+        assertEquals(4, changes.size());
+        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
+        assertEquals(change(replaced(1, range("bar"), range("foo"))), changes.get(1));
+        assertEquals(change(replaced(3, range("qux"), range("quz"))), changes.get(2));
+        assertEquals(change(replaced(4, range("quz"), range("qux"))), changes.get(3));
     }
 
     /**
