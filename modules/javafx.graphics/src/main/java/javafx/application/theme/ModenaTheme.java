@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.application.theme;
+package javafx.application.theme;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.application.ConditionalFeature;
@@ -37,7 +37,7 @@ import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.Objects;
 
-public class Modena implements Theme {
+public class ModenaTheme implements Theme {
 
     private static final String WINDOWS_HIGH_CONTRAST_THEME_KEY = "Windows.SPI_HighContrastColorScheme";
 
@@ -46,7 +46,7 @@ public class Modena implements Theme {
     private final ObservableList<String> allStylesheets;
     private Map<String, String> platformThemeProperties;
 
-    public Modena(Map<String, String> platformThemeProperties) {
+    public ModenaTheme(Map<String, String> platformThemeProperties) {
         this.platformThemeProperties = platformThemeProperties;
 
         baseStylesheets.add("com/sun/javafx/scene/control/skin/modena/modena.css");

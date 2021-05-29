@@ -48,7 +48,7 @@ class ThemeUtil {
         Class<?> themeClass = loadClass(className);
 
         if (!Theme.class.isAssignableFrom(themeClass)) {
-            throw new RuntimeException(className + " cannot be loaded because it does not implement " + Theme.class.getName());
+            throw new RuntimeException(className + " does not implement " + Theme.class.getName());
         }
 
         Constructor<?> constructor;
@@ -59,8 +59,7 @@ class ThemeUtil {
             try {
                 constructor = themeClass.getConstructor();
             } catch (NoSuchMethodException ex2) {
-                throw new RuntimeException(
-                    className + " must have a no-arg constructor or a single-argument constructor accepting a java.util.Map");
+                throw new RuntimeException(className + " does not have a suitable public constructor.");
             }
         }
 

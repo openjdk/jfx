@@ -54,8 +54,8 @@ import java.util.function.Predicate;
 
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
-import com.sun.javafx.application.theme.Caspian;
-import com.sun.javafx.application.theme.Modena;
+import javafx.application.theme.CaspianTheme;
+import javafx.application.theme.ModenaTheme;
 import javafx.application.Theme;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -686,27 +686,27 @@ public class PlatformImpl {
     }
 
     /**
-     * Current Platform User Agent Stylesheet is Modena.
+     * Current theme is Modena.
      *
      * Note: Please think hard before using this as we really want to avoid special cases in the platform for specific
-     * themes. This was added to allow tempory work arounds in the platform for bugs.
+     * themes. This was added to allow temporary workarounds in the platform for bugs.
      *
-     * @return true if using modena stylesheet
+     * @return true if using modena theme
      */
     public static boolean isModena() {
-        return currentTheme != null && currentTheme.getClass() == Modena.class;
+        return currentTheme != null && ModenaTheme.class.isAssignableFrom(currentTheme.getClass());
     }
 
     /**
-     * Current Platform User Agent Stylesheet is Caspian.
+     * Current theme is Caspian.
      *
      * Note: Please think hard before using this as we really want to avoid special cases in the platform for specific
-     * themes. This was added to allow tempory work arounds in the platform for bugs.
+     * themes. This was added to allow temporary workarounds in the platform for bugs.
      *
-     * @return true if using caspian stylesheet
+     * @return true if using caspian theme
      */
     public static boolean isCaspian() {
-        return currentTheme != null && currentTheme.getClass() == Caspian.class;
+        return currentTheme != null && CaspianTheme.class.isAssignableFrom(currentTheme.getClass());
     }
 
     /**
@@ -717,8 +717,8 @@ public class PlatformImpl {
         String url;
 
         switch (stylesheetUrl) {
-            case Application.STYLESHEET_CASPIAN: url = "theme:" + Caspian.class.getName(); break;
-            case Application.STYLESHEET_MODENA: url = "theme:" + Modena.class.getName(); break;
+            case Application.STYLESHEET_CASPIAN: url = "theme:" + CaspianTheme.class.getName(); break;
+            case Application.STYLESHEET_MODENA: url = "theme:" + ModenaTheme.class.getName(); break;
             default: url = stylesheetUrl;
         }
 

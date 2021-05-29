@@ -939,4 +939,9 @@ public class StubToolkit extends Toolkit {
     public GlassRobot createRobot() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public Map<String, String> getPlatformThemeProperties() {
+        return Map.of("prop1", "true", "prop2", "false");
+    }
 }

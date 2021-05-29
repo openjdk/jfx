@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.application.theme;
+package javafx.application.theme;
 
 import com.sun.javafx.PlatformUtil;
 import javafx.application.ConditionalFeature;
@@ -38,7 +38,7 @@ import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.Objects;
 
-public class Caspian implements Theme {
+public class CaspianTheme implements Theme {
 
     private static final String WINDOWS_HIGH_CONTRAST_ON_KEY = "Windows.SPI_HighContrastOn";
 
@@ -47,7 +47,7 @@ public class Caspian implements Theme {
     private final ObservableList<String> allStylesheets;
     private Map<String, String> platformThemeProperties;
 
-    public Caspian(Map<String, String> platformThemeProperties) {
+    public CaspianTheme(Map<String, String> platformThemeProperties) {
         this.platformThemeProperties = platformThemeProperties;
 
         baseStylesheets.add("com/sun/javafx/scene/control/skin/caspian/caspian.css");
