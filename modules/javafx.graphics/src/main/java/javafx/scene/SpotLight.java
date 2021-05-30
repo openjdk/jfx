@@ -63,7 +63,7 @@ import javafx.scene.paint.PhongMaterial;
  *
  * <pre>spot = pow((cos(theta) - cos(outer)) / (cos(inner) - cos(outer)), falloff)</pre>
  *
- * which represents a drop in illumination from the inner angle to the outer angle.
+ * which represents a drop in intensity from the inner angle to the outer angle.
  * </ul>
  * As a result, {@code 0 <= spot <= 1}. The overall intensity of the light is {@code I = lambert * atten * spot}.
  * <p>
