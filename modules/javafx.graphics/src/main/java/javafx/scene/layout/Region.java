@@ -26,13 +26,7 @@
 package javafx.scene.layout;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectPropertyBase;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.CssMetaData;
@@ -3387,21 +3381,17 @@ public class Region extends Parent {
 
     /**
      * An implementation may specify its own user-agent styles for this Region, and its children,
-     * by overriding this method. These styles are used in addition to whatever user-agent stylesheets
+     * by setting this property. These styles are used in addition to whatever user-agent stylesheets
      * are in use. This provides a mechanism for third parties to introduce styles for custom controls.
+     * <p>
+     * If a custom control changes its user-agent stylesheet at runtime the property will automatically
+     * reapply the CSS therefore allowing dynamic implementations.
+     * </p>
      * <p>
      * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
-     * </p>
-     * <p>
-     * Subclasses overriding this method should not assume any particular implementation approach as to
-     * the number and frequency with which it is called. For this reason, attempting any kind of
-     * dynamic implementation (i.e. returning different user agent stylesheet values) based on some
-     * state change is highly discouraged, as there is no guarantee when, or even if, this method will
-     * be called. Some JavaFX CSS implementations may choose to cache this response for an indefinite
-     * period of time, and therefore there should be no expectation around when this method is called.
      * </p>
      *
      * <pre><code>
@@ -3429,12 +3419,24 @@ public class Region extends Parent {
      * </code></pre>
      * For additional information about using CSS with the scene graph,
      * see the <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
-     *
-     * @return A string URL
-     * @since JavaFX 8u40
      */
+    private final StringProperty userAgentStylesheet = new SimpleStringProperty() {
+        @Override
+        protected void invalidated() {
+            NodeHelper.reapplyCSS(Region.this);
+        }
+    };
+
     public String getUserAgentStylesheet() {
-        return null;
+        return userAgentStylesheet.get();
+    }
+
+    public StringProperty userAgentStylesheetProperty() {
+        return userAgentStylesheet;
+    }
+
+    public void setUserAgentStylesheet(String userAgentStylesheet) {
+        this.userAgentStylesheet.set(userAgentStylesheet);
     }
 
     /*

@@ -1667,6 +1667,11 @@ final public class StyleManager {
                     regionUserAgentStylesheet = weakRegionUserAgentStylesheetMap.computeIfAbsent(
                             (Region)region, Region::getUserAgentStylesheet);
 
+                    if (((Region) region).getUserAgentStylesheet() != null && !((Region) region).getUserAgentStylesheet().equals(regionUserAgentStylesheet)) {
+                        weakRegionUserAgentStylesheetMap.put((Region) region, ((Region) region).getUserAgentStylesheet());
+                        regionUserAgentStylesheet = ((Region) region).getUserAgentStylesheet();
+                    }
+
                     if (regionUserAgentStylesheet != null) {
                         // We want 'region' to be the node that has the user agent stylesheet.
                         // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
