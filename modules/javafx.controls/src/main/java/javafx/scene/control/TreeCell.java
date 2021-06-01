@@ -427,6 +427,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */
@@ -456,6 +457,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                     value,
                     null));
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */
