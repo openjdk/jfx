@@ -42,6 +42,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.WebPage;
 import java.security.Permission;
 
+@SuppressWarnings("removal")
 final class NetworkContext {
 
     private static final PlatformLogger logger =

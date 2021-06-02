@@ -43,6 +43,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
+@SuppressWarnings("removal")
 class ScrollGestureRecognizer implements GestureRecognizer {
     // gesture will be activated if |scroll amount| > SCROLL_THRESHOLD
     private static double SCROLL_THRESHOLD = 10; //in pixels

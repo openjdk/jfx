@@ -29,6 +29,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
 
+@SuppressWarnings("removal")
 class OSPango {
 
     static {

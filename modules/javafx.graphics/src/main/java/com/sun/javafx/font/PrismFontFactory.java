@@ -46,6 +46,7 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
 import static com.sun.javafx.FXPermissions.LOAD_FONT_PERMISSION;
 
+@SuppressWarnings("removal")
 public abstract class PrismFontFactory implements FontFactory {
 
     public static final boolean debugFonts;

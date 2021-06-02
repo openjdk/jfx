@@ -54,6 +54,7 @@ class FontFileReader implements FontConstants {
      *  already or if it failed to open the file.
      * @throws PrivilegedActionException
      */
+    @SuppressWarnings("removal")
     public synchronized boolean openFile() throws PrivilegedActionException {
         if (raFile != null) {
             return false;

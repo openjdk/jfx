@@ -31,6 +31,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 
+@SuppressWarnings("removal")
 abstract class GLFactory {
 
     private static native boolean

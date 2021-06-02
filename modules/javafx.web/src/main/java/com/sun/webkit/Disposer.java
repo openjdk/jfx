@@ -52,6 +52,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * @see DisposerRecord
  */
+@SuppressWarnings("removal")
 public final class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Disposer disposerInstance = new Disposer();

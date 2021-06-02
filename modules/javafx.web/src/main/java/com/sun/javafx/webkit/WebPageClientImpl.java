@@ -48,6 +48,7 @@ import com.sun.webkit.graphics.WCPageBackBuffer;
 import com.sun.webkit.graphics.WCPoint;
 import com.sun.webkit.graphics.WCRectangle;
 
+@SuppressWarnings("removal")
 public final class WebPageClientImpl implements WebPageClient<WebView> {
     private static final boolean backBufferSupported;
     private static WebConsoleListener consoleListener = null;

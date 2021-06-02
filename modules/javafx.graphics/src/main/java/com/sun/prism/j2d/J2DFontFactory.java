@@ -123,6 +123,7 @@ final class J2DFontFactory implements FontFactory {
      * printing begins, so grabs a copy of the file holding an
      * embedded font to 2D on first use.
      */
+    @SuppressWarnings("removal")
     public static void registerFont(final FontResource fr) {
 
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
@@ -146,6 +147,7 @@ final class J2DFontFactory implements FontFactory {
         });
     }
 
+    @SuppressWarnings("removal")
     public PGFont[] loadEmbeddedFont(String name, String path,
                                      float size,
                                      boolean register,
@@ -189,6 +191,7 @@ final class J2DFontFactory implements FontFactory {
      * subject to change.
      * ALso this may be just a stop gap measure.
      */
+    @SuppressWarnings("removal")
     static java.awt.Font getCompositeFont(final java.awt.Font srcFont) {
         if (PlatformUtil.isMac()) {
             return srcFont;

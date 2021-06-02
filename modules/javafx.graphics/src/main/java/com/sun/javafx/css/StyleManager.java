@@ -939,6 +939,7 @@ final public class StyleManager {
         return new byte[0];
     }
 
+    @SuppressWarnings("removal")
     public static Stylesheet loadStylesheet(final String fname) {
         try {
             return loadStylesheetUnPrivileged(fname);
@@ -1065,6 +1066,7 @@ final public class StyleManager {
     private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
 
         synchronized (styleLock) {
+            @SuppressWarnings("removal")
             Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
 
                 final String bss = System.getProperty("binary.css");

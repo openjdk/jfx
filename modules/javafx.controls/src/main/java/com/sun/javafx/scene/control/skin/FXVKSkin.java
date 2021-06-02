@@ -76,6 +76,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 
+@SuppressWarnings("removal")
 public class FXVKSkin extends SkinBase<FXVK> {
 
     private static final int GAP = 6;

@@ -93,6 +93,7 @@ import java.security.PrivilegedAction;
  * @see TextFieldSkin
  * @see TextAreaSkin
  */
+@SuppressWarnings("removal")
 public abstract class TextInputControlSkin<T extends TextInputControl> extends SkinBase<T> {
 
     /**************************************************************************

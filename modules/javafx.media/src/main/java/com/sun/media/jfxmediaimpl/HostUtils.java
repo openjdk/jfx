@@ -31,6 +31,7 @@ import java.security.PrivilegedAction;
 /**
  * Common functions that involve the host platform
  */
+@SuppressWarnings("removal")
 public class HostUtils {
     private static String osName;
     private static String osArch;

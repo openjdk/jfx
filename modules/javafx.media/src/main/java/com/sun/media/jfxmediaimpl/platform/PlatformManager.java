@@ -43,6 +43,7 @@ import java.lang.reflect.Method;
 /**
  * Core media platform management code.
  */
+@SuppressWarnings("removal")
 public final class PlatformManager {
     private static String enabledPlatforms;
     static {

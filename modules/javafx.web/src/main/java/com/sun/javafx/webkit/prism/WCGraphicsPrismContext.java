@@ -81,6 +81,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
+    @SuppressWarnings("removal")
     private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
             AccessController.doPrivileged((PrivilegedAction<String>) () ->
             System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));

@@ -61,6 +61,7 @@ class KeyInput {
      *
      * @param newState The updated key state
      */
+    @SuppressWarnings("removal")
     void setState(KeyState newState) {
         if (MonocleSettings.settings.traceEvents) {
             MonocleTrace.traceEvent("Set %s", newState);

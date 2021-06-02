@@ -95,10 +95,12 @@ public class PlatformImpl {
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
     private static CountDownLatch allNestedLoopsExitedLatch = new CountDownLatch(1);
 
+    @SuppressWarnings("removal")
     private static final boolean verbose
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
                 Boolean.getBoolean("javafx.verbose"));
 
+    @SuppressWarnings("removal")
     private static final boolean DEBUG
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
                     -> Boolean.getBoolean("com.sun.javafx.application.debug"));
@@ -170,6 +172,7 @@ public class PlatformImpl {
      * @param r
      * @param preventDuplicateCalls
      */
+    @SuppressWarnings("removal")
     public static void startup(final Runnable r, boolean preventDuplicateCalls) {
 
         // NOTE: if we ever support re-launching an application and/or
@@ -301,6 +304,7 @@ public class PlatformImpl {
         // Read the javafx.embed.eventProc system property and store
         // it in an entry in the glass Application device details map
         final String eventProcProperty = "javafx.embed.eventProc";
+        @SuppressWarnings("removal")
         final long eventProc = AccessController.doPrivileged((PrivilegedAction<Long>) () ->
                 Long.getLong(eventProcProperty, 0));
         if (eventProc != 0L) {
@@ -344,6 +348,7 @@ public class PlatformImpl {
     // FXCanvas-specific initialization
     private static void initFXCanvas() {
         // Verify that we have the appropriate permission
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             try {
@@ -360,6 +365,7 @@ public class PlatformImpl {
                 !f.getClassName().startsWith("javafx.application.")
                         && !f.getClassName().startsWith("com.sun.javafx.application.");
 
+        @SuppressWarnings("removal")
         final StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
                 StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
         Optional<StackWalker.StackFrame> frame = walker.walk(
@@ -424,6 +430,7 @@ public class PlatformImpl {
         runLater(r, false);
     }
 
+    @SuppressWarnings("removal")
     private static void runLater(final Runnable r, boolean exiting) {
         if (!initialized.get()) {
             throw new IllegalStateException("Toolkit not initialized");
@@ -648,6 +655,7 @@ public class PlatformImpl {
             // some features require the application to have the corresponding
             // permissions, if the application doesn't have them, the platform
             // will behave as if the feature wasn't supported
+            @SuppressWarnings("removal")
             final SecurityManager securityManager =
                     System.getSecurityManager();
             if (securityManager != null) {
@@ -736,6 +744,7 @@ public class PlatformImpl {
     private static void _setAccessibilityTheme(String platformTheme) {
 
         // check to see if there is an override to enable a high-contrast theme
+        @SuppressWarnings("removal")
         final String userTheme = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty("com.sun.javafx.highContrastTheme"));
 
@@ -780,6 +789,7 @@ public class PlatformImpl {
         }
     }
 
+    @SuppressWarnings("removal")
     private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
@@ -871,6 +881,7 @@ public class PlatformImpl {
 
     }
 
+    @SuppressWarnings("removal")
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {
         if (PlatformImpl.isCaspian()) {
             AccessController.doPrivileged((PrivilegedAction) () -> {
@@ -887,6 +898,7 @@ public class PlatformImpl {
         }
     }
 
+    @SuppressWarnings("removal")
     private static boolean isSupportedImpl(ConditionalFeature feature) {
         switch (feature) {
             case GRAPHICS:

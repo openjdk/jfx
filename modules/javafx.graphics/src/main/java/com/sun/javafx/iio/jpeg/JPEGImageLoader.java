@@ -37,6 +37,7 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 public class JPEGImageLoader extends ImageLoaderImpl {
 
     // IJG Color codes.

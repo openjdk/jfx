@@ -63,6 +63,7 @@ import javafx.scene.input.ZoomEvent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 class GlassViewEventHandler extends View.EventHandler {
 
     static boolean zoomGestureEnabled;

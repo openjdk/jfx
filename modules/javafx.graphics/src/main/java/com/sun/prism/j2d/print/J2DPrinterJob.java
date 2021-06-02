@@ -89,6 +89,7 @@ import java.lang.reflect.Constructor;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 public class J2DPrinterJob implements PrinterJobImpl {
 
     static {

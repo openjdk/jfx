@@ -104,6 +104,7 @@ import com.sun.javafx.reflect.ReflectUtil;
  *
  * @since JavaFX 2.0
  */
+@SuppressWarnings("removal")
 public class FXMLLoader {
 
     // Indicates permission to get the ClassLoader

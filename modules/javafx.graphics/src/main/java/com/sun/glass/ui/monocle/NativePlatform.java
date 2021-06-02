@@ -46,6 +46,7 @@ public abstract class NativePlatform {
     protected AcceleratedScreen accScreen;
 
 
+    @SuppressWarnings("removal")
     protected static final boolean useCursor =
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             final String str =

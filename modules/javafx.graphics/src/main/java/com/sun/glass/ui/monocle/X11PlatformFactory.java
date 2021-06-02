@@ -35,6 +35,7 @@ class X11PlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
+        @SuppressWarnings("removal")
         String display = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getenv("DISPLAY"));
         return display != null;

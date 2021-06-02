@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.lang.annotation.Native;
 
+@SuppressWarnings("removal")
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
     private static final String SWT_INTERNAL_CLASS =

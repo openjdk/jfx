@@ -116,6 +116,7 @@ import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
  * </pre>
  * @since JavaFX 8.0
  */
+@SuppressWarnings("removal")
 public class SwingNode extends Node {
     private static boolean isThreadMerged;
 

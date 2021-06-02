@@ -73,6 +73,7 @@ import java.io.Writer;
  * Note: This file a copy for sun.misc.PerformanceLogger before it was moved to
  * sun.awt.util and JavaFX do not want to be dependent on awt if possible.
  */
+@SuppressWarnings("removal")
 public class PerformanceLogger {
 
     // Timing values of global interest

@@ -33,6 +33,7 @@ import java.util.Locale;
 
 import com.sun.glass.utils.NativeLibLoader;
 
+@SuppressWarnings("removal")
 class MacFontFinder {
 
     static {

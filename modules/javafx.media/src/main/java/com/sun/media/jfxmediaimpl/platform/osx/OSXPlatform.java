@@ -67,6 +67,7 @@ public final class OSXPlatform extends Platform {
         "https"
     };
 
+    @SuppressWarnings("removal")
     private static final class OSXPlatformInitializer {
         private static final OSXPlatform globalInstance;
         static {

@@ -180,6 +180,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             System.err.println("WARNING: resolveRuntimeImport cannot resolve: " + resourcePath);
 
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm == null) {
                 // If the SecurityManager is not null, then just look up the resource on the class-path.
@@ -193,6 +194,7 @@ public final class URLConverter extends StyleConverter<ParsedValue[], String> {
 
             // check whether the path is file from our runtime jar
             try {
+                @SuppressWarnings("removal")
                 final URL rtJarURL = AccessController.doPrivileged((PrivilegedExceptionAction<URL>) () -> {
                     // getProtectionDomain either throws a SecurityException or returns a non-null value
                     final ProtectionDomain protectionDomain = Application.class.getProtectionDomain();

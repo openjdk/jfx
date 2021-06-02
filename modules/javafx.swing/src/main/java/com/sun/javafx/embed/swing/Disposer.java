@@ -43,6 +43,7 @@ import java.util.Hashtable;
  *
  * @see DisposerRecord
  */
+@SuppressWarnings("removal")
 public class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Hashtable records = new Hashtable();

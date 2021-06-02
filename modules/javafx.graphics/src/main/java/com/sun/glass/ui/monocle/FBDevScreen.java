@@ -54,6 +54,7 @@ class FBDevScreen implements NativeScreen {
     private LinuxFrameBuffer linuxFB;
     private final String fbDevPath;
 
+    @SuppressWarnings("removal")
     FBDevScreen() {
         fbDevPath = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () ->

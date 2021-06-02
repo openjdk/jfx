@@ -42,6 +42,7 @@ import com.sun.scenario.effect.impl.Renderer;
  * it intended to be used with using
  * {@link #validate(com.sun.scenario.effect.FilterContext)} method.
  */
+@SuppressWarnings("removal")
 public class ImageData {
 
     private static HashSet<ImageData> alldatas;

@@ -30,6 +30,7 @@ import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 public class ModuleHelper {
     private static final Method getModuleMethod;
     private static final Method addReadsMethod;

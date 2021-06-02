@@ -35,6 +35,7 @@ import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.HashMap;
 
+@SuppressWarnings("removal")
 public final class SWPipeline extends GraphicsPipeline {
 
     static {

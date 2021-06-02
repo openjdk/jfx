@@ -80,6 +80,7 @@ public final class URLs {
      * @throws MalformedURLException if no protocol is specified, or an
      *         unknown protocol is found.
      */
+    @SuppressWarnings("removal")
     public static URL newURL(final URL context, final String spec)
         throws MalformedURLException
     {

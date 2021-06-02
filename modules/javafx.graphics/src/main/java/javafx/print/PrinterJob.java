@@ -111,6 +111,7 @@ public final class PrinterJob {
      * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob() {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();
@@ -134,6 +135,7 @@ public final class PrinterJob {
      * to initiate a printer job.
      */
     public static final PrinterJob createPrinterJob(Printer printer) {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();

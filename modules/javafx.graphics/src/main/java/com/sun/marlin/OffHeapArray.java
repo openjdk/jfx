@@ -34,6 +34,7 @@ import sun.misc.Unsafe;
 /**
  *
  */
+@SuppressWarnings("removal")
 final class OffHeapArray  {
 
     // unsafe reference

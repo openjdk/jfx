@@ -29,6 +29,7 @@ import java.lang.annotation.Native;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 class GLPixelFormat {
     final private Attributes attributes;
     final private long nativeScreen;

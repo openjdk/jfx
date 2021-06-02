@@ -57,6 +57,7 @@ public class BufferUtil {
     private BufferUtil() {
     }
 
+    @SuppressWarnings("removal")
     public static void nativeOrder(ByteBuffer buf) {
         if (!isCDCFP) {
             try {

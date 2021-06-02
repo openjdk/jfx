@@ -33,6 +33,7 @@ class PropertyHelper {
     // this runs within a doPrivilege block so this function must be package-private.
     static boolean getBooleanProperty(final String propName) {
         try {
+            @SuppressWarnings("removal")
             boolean answer =
                 AccessController.doPrivileged((java.security.PrivilegedAction<Boolean>) () -> {
                         String propVal = System.getProperty(propName);

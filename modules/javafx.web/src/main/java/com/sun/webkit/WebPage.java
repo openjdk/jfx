@@ -77,6 +77,7 @@ import org.w3c.dom.Element;
  * </ul>
  */
 
+@SuppressWarnings("removal")
 public final class WebPage {
     private final static PlatformLogger log = PlatformLogger.getLogger(WebPage.class.getName());
     private final static PlatformLogger paintLog = PlatformLogger.getLogger(WebPage.class.getName() + ".paint");

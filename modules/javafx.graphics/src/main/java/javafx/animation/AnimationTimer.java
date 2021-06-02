@@ -48,6 +48,7 @@ import java.security.PrivilegedAction;
 public abstract class AnimationTimer {
 
     private class AnimationTimerReceiver implements TimerReceiver {
+        @SuppressWarnings("removal")
         @Override public void handle(final long now) {
             if (accessCtrlCtx == null) {
                 throw new IllegalStateException("Error: AccessControlContext not captured");
@@ -65,6 +66,7 @@ public abstract class AnimationTimer {
     private boolean active;
 
     // Access control context, captured in start()
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     /**
@@ -97,6 +99,7 @@ public abstract class AnimationTimer {
      *
      * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
      */
+    @SuppressWarnings("removal")
     public void start() {
         if (!active) {
             // Capture the Access Control Context to be used during the animation pulse

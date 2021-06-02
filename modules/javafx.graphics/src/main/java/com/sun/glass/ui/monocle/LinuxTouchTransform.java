@@ -52,6 +52,7 @@ class LinuxTouchTransform {
     private int[] mins = new int[2];
     private int[] maxs = new int[2];
 
+    @SuppressWarnings("removal")
     LinuxTouchTransform(LinuxInputDevice device) {
         this.device = device;
         Arrays.fill(axes, -1);
@@ -113,6 +114,7 @@ class LinuxTouchTransform {
         }
     }
 
+    @SuppressWarnings("removal")
     private void initTransform(int axis, int index) {
         double range;
         String axisName;

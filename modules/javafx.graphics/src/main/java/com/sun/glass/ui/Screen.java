@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@SuppressWarnings("removal")
 public final class Screen {
 
     // the list of attached screens provided by native.

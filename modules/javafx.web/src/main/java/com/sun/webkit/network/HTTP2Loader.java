@@ -102,6 +102,7 @@ final class HTTP2Loader extends URLLoaderBase {
 
     private final CompletableFuture<Void> response;
     // Use singleton instance of HttpClient to get the maximum benefits
+    @SuppressWarnings("removal")
     private final static HttpClient HTTP_CLIENT =
         AccessController.doPrivileged((PrivilegedAction<HttpClient>) () -> HttpClient.newBuilder()
                 .version(Version.HTTP_2)  // this is the default
@@ -114,6 +115,7 @@ final class HTTP2Loader extends URLLoaderBase {
     private static final int DEFAULT_BUFSIZE = 40 * 1024;
     private final static ByteBuffer BUFFER;
     static {
+       @SuppressWarnings("removal")
        int bufSize  = AccessController.doPrivileged(
                         (PrivilegedAction<Integer>) () ->
                             Integer.valueOf(System.getProperty("jdk.httpclient.bufsize", Integer.toString(DEFAULT_BUFSIZE))));
@@ -367,6 +369,7 @@ final class HTTP2Loader extends URLLoaderBase {
                   createNormalBodySubscriber() : createZIPEncodedBodySubscriber(contentEncoding);
     }
 
+    @SuppressWarnings("removal")
     private HTTP2Loader(WebPage webPage,
               ByteBufferPool byteBufferPool,
               boolean asynchronous,
@@ -584,7 +587,7 @@ final class HTTP2Loader extends URLLoaderBase {
                 throw th;
             } catch (MalformedURLException ex) {
                 errorCode = LoadListenerClient.MALFORMED_URL;
-            } catch (AccessControlException ex) {
+            } catch (@SuppressWarnings("removal") AccessControlException ex) {
                 errorCode = LoadListenerClient.PERMISSION_DENIED;
             } catch (UnknownHostException ex) {
                 errorCode = LoadListenerClient.UNKNOWN_HOST;

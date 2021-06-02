@@ -259,6 +259,7 @@ public class FXCanvas extends Canvas {
             }
         } else if (SWT.getPlatform().equals("win32")) {
             try {
+                @SuppressWarnings("removal")
                 String autoScale = AccessController.doPrivileged((PrivilegedAction<String>)() -> System.getProperty("swt.autoScale"));
                 if (autoScale == null || ! "false".equalsIgnoreCase(autoScale)) {
                     Class dpiUtilClass = Class.forName("org.eclipse.swt.internal.DPIUtil");
@@ -309,6 +310,7 @@ public class FXCanvas extends Canvas {
         return null;
     }
 
+    @SuppressWarnings("removal")
     private static void initFx() {
         // NOTE: no internal "com.sun.*" packages can be accessed until after
         // the JavaFX platform is initialized. The list of needed internal

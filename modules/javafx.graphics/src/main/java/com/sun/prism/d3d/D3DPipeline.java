@@ -35,6 +35,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
 
+@SuppressWarnings("removal")
 public final class D3DPipeline extends GraphicsPipeline {
 
     private static final boolean d3dEnabled;

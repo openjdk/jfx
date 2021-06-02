@@ -36,6 +36,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 
+@SuppressWarnings("removal")
 public class ES2Pipeline extends GraphicsPipeline {
 
     public static final GLFactory glFactory;

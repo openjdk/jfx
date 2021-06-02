@@ -31,6 +31,7 @@ import java.security.PrivilegedAction;
 
 import com.sun.glass.utils.NativeLibLoader;
 
+@SuppressWarnings("removal")
 class DFontDecoder extends FontFileWriter {
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {

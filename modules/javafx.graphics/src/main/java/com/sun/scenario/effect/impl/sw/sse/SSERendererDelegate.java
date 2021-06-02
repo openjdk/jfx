@@ -32,6 +32,7 @@ import com.sun.scenario.effect.Effect.AccelType;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.sw.RendererDelegate;
 
+@SuppressWarnings("removal")
 public class SSERendererDelegate implements RendererDelegate {
 
     public static native boolean isSupported();

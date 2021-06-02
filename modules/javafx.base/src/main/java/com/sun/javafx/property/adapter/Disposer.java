@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * When the object becomes phantom-reachable, the run() method
  * of the associated Runnable object will be called.
  */
+@SuppressWarnings("removal")
 public class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Map<Object, Runnable> records = new ConcurrentHashMap<>();

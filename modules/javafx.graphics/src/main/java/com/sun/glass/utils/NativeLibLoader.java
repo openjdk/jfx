@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
+@SuppressWarnings("removal")
 public class NativeLibLoader {
 
     private static final HashSet<String> loaded = new HashSet<String>();

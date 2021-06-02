@@ -47,6 +47,7 @@ import java.net.MalformedURLException;
 /**
  * A loader for images on iOS platform.
  */
+@SuppressWarnings("removal")
 public class IosImageLoader extends ImageLoaderImpl {
 
     /** These constants must match with those in native */

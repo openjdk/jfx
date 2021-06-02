@@ -35,6 +35,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 public final class IosApplication extends Application {
 
     private static native void _initIDs(); // init IDs for java callbacks from native

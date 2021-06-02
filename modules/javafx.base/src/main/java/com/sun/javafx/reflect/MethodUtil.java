@@ -58,6 +58,7 @@ class Trampoline {
         }
     }
 
+    @SuppressWarnings("removal")
     private static void ensureInvocableMethod(Method m)
         throws InvocationTargetException
     {
@@ -107,6 +108,7 @@ public final class MethodUtil extends SecureClassLoader {
      * we're done.
      */
     /*public*/
+    @SuppressWarnings("removal")
     static Method[] getPublicMethods(Class<?> cls) {
         // compatibility for update release
         if (System.getSecurityManager() == null) {
@@ -291,6 +293,7 @@ public final class MethodUtil extends SecureClassLoader {
         }
     }
 
+    @SuppressWarnings("removal")
     private static Method getTrampoline() {
         try {
             return AccessController.doPrivileged(

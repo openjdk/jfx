@@ -56,6 +56,7 @@ import java.util.Optional;
 import com.sun.javafx.stage.StageHelper;
 
 
+@SuppressWarnings("removal")
 public class LauncherImpl {
     /**
      * When passed as launchMode to launchApplication, tells the method that

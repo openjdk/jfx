@@ -35,6 +35,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
 
+@SuppressWarnings("removal")
 public class PlatformUtil {
 
     // NOTE: since this class can be initialized by application code in some

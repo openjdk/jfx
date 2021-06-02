@@ -44,6 +44,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
+@SuppressWarnings("removal")
 class RotateGestureRecognizer implements GestureRecognizer {
     private ViewScene scene;
 

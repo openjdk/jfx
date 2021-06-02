@@ -43,6 +43,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
+@SuppressWarnings("removal")
 class ZoomGestureRecognizer implements GestureRecognizer {
     // gesture will be activated if |zoomFactor - 1| > ZOOM_FACTOR_THRESHOLD
     private static double ZOOM_FACTOR_THRESHOLD = 0.1;

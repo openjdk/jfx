@@ -39,6 +39,7 @@ import java.security.PrivilegedAction;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("removal")
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     private native static void _initIDs(boolean disableSyncRendering);

@@ -42,6 +42,7 @@ public class Timer {
         SEPARATE_THREAD
     }
 
+    @SuppressWarnings("removal")
     public synchronized static Mode getMode() {
         if (mode == null) {
             mode = Boolean.valueOf(AccessController.doPrivileged(
