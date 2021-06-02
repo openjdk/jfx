@@ -1624,7 +1624,7 @@ public class DragAndDropTest {
         private double offsetY;
 
         @Override
-        public void setSecurityContext(AccessControlContext ctx) {
+        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
         }
 
         @Override
