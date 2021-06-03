@@ -62,7 +62,7 @@ extern jboolean doEglSwapBuffers(jlong eglDisplay, jlong eglSurface);
 extern jint doGetNumberOfScreens();
 
 // get specific information about each screen
-// the idx parameter specifies which screen needs to be queried 
+// the idx parameter specifies which screen needs to be queried
 extern jlong doGetHandle(jint idx);
 extern jint doGetDepth(jint idx);
 extern jint doGetWidth(jint idx);
