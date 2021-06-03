@@ -39,9 +39,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A {@code SpotLight} is a {@code PointLight} that radiates light in a cone in a specific direction. The direction is
- * defined by the {@link #directionProperty() direction} vector property relative to the rotation of the
- * {@code SpotLight} that is set with the rotation transforms of the node. For example, if the direction vector is
+ * A {@code SpotLight} is a {@code PointLight} that radiates light in a cone in a specific direction.
+ * The direction is defined by the {@link #directionProperty() direction} vector property of the light. The direction
+ * can be rotated by setting a rotation transform on the {@code SpotLight}. For example, if the direction vector is
  * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
  * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
  * <p>
@@ -55,7 +55,7 @@ import javafx.scene.paint.PhongMaterial;
  * The valid ranges for these properties are {@code 0 <= innerAngle <= outerAngle <= 180} and {@code falloff >= 0};
  * values outside either of these ranges can produce unexpected results.
  * <p>
- * For a point whose vector to the light source forms an angle {@code theta} with the direction of the light, if
+ * For a point whose vector to the light position forms an angle {@code theta} with the direction of the light, if
  * <ul>
  * <li>{@code theta < innerAngle} then {@code spot = 1}
  * <li>{@code theta > outerAngle} then {@code spot = 0}
@@ -140,9 +140,9 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The angle of the spotlight's inner cone (as shown in the class doc image). A point whose angle to the light's
-     * origin is less than this angle is not attenuated by the spotlight factor ({@code spot = 1}). At larger angles,
-     * the light intensity starts to drop.
+     * The angle of the spotlight's inner cone, in degrees (as shown in the class doc image). A point whose angle to the
+     * light's position is less than this angle is not attenuated by the spotlight factor ({@code spot = 1}). At larger
+     * angles, the light intensity starts to drop.
      * <p>
      * The valid range is {@code 0 <= innerAngle <= outerAngle}; values outside of this range can produce unexpected
      * results.
@@ -170,9 +170,10 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The angle of the spotlight's outer cone (as shown in the class doc image). A point whose angle to the light's
-     * origin is greater than this angle receive no light ({@code spot = 0}). At smaller angles, the light intensity
-     * starts to increase.
+     * The angle of the spotlight's outer cone, in degrees (as shown in the class doc image). A point whose angle to the
+     * light's position is greater than this angle receives no light ({@code spot = 0}). A point whose angle to the
+     * light's position is less than the outer angle but greater than the inner angle receives partial intensity
+     * governed by the falloff factor.
      * <p>
      * The valid range is {@code innerAngle <= outerAngle <= 180}; values outside of this range can produce unexpected
      * results.
@@ -200,11 +201,11 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The intensity falloff factor of the spotlight's outer cone. A point whose angle to the light's origin is greater
-     * than the inner angle but less than the outer angle receives partial intensity governed by this factor. The larger
-     * the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a linear drop in
-     * intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave drop. See the class
-     * docs for the mathematical definitions.
+     * The intensity falloff factor of the spotlight's outer cone. A point whose angle to the light's position is
+     * greater than the inner angle but less than the outer angle receives partial intensity governed by this factor.
+     * The larger the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a
+     * linear drop in intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave
+     * drop. See the class docs for the mathematical definitions.
      * <p>
      * The valid range is {@code 0 <= falloff}; values outside of this range can produce unexpected results.
      *
