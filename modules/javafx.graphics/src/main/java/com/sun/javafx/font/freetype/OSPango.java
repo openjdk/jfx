@@ -29,11 +29,11 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
 
-@SuppressWarnings("removal")
 class OSPango {
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("javafx_font_pango");
             return null;
         });

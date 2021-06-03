@@ -42,13 +42,13 @@ import com.sun.scenario.effect.impl.Renderer;
  * it intended to be used with using
  * {@link #validate(com.sun.scenario.effect.FilterContext)} method.
  */
-@SuppressWarnings("removal")
 public class ImageData {
 
     private static HashSet<ImageData> alldatas;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             if (System.getProperty("decora.showleaks") != null) {
                 alldatas = new HashSet<ImageData>();
                 Runtime.getRuntime().addShutdownHook(new Thread() {

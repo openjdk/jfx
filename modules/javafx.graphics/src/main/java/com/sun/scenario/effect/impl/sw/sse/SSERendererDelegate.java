@@ -32,13 +32,13 @@ import com.sun.scenario.effect.Effect.AccelType;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.sw.RendererDelegate;
 
-@SuppressWarnings("removal")
 public class SSERendererDelegate implements RendererDelegate {
 
     public static native boolean isSupported();
 
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             NativeLibLoader.loadLibrary("decora_sse");
             return null;
         });

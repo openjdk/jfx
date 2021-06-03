@@ -56,7 +56,6 @@ import java.util.Optional;
 import com.sun.javafx.stage.StageHelper;
 
 
-@SuppressWarnings("removal")
 public class LauncherImpl {
     /**
      * When passed as launchMode to launchApplication, tells the method that
@@ -119,8 +118,10 @@ public class LauncherImpl {
     private static ClassLoader savedMainCcl = null;
 
     static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
                 Boolean.getBoolean("javafx.verbose"));
+        verbose = tmp;
     }
 
     /**
@@ -140,6 +141,7 @@ public class LauncherImpl {
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
 
         if (preloaderClass == null) {
+            @SuppressWarnings("removal")
             String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
                     System.getProperty("javafx.preloader"));
             if (preloaderByProperty != null) {

@@ -30,11 +30,11 @@ import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.geom.Path2D;
 
-@SuppressWarnings("removal")
 class OSFreetype {
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("javafx_font_freetype");
             return null;
         });

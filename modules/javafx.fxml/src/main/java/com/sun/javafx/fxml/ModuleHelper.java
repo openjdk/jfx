@@ -31,7 +31,6 @@ import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-@SuppressWarnings("removal")
 public class ModuleHelper {
     private static final Method getModuleMethod;
     private static final Method getResourceAsStreamMethod;
@@ -39,8 +38,10 @@ public class ModuleHelper {
     private static final boolean verbose;
 
     static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
                 Boolean.getBoolean("javafx.verbose"));
+        verbose = tmp;
 
         if (verbose) {
             System.err.println("" + ModuleHelper.class.getName() + " : <clinit>");

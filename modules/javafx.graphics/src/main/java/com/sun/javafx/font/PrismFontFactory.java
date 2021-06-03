@@ -46,7 +46,6 @@ import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.text.GlyphLayout;
 import static com.sun.javafx.FXPermissions.LOAD_FONT_PERMISSION;
 
-@SuppressWarnings("removal")
 public abstract class PrismFontFactory implements FontFactory {
 
     public static final boolean debugFonts;
@@ -94,7 +93,8 @@ public abstract class PrismFontFactory implements FontFactory {
         isEmbedded = PlatformUtil.isEmbedded();
         int[] tempCacheLayoutSize = {0x10000};
 
-        debugFonts = AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     String dbg = System.getProperty("prism.debugfonts", "");
@@ -154,6 +154,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     return debug;
                 }
         );
+        debugFonts = tmp;
         cacheLayoutSize = tempCacheLayoutSize[0];
     }
 
@@ -1234,6 +1235,7 @@ public abstract class PrismFontFactory implements FontFactory {
             return sysFontDir+"\\"+filename;
         }
 
+        @SuppressWarnings("removal")
         String path = AccessController.doPrivileged(
             new PrivilegedAction<String>() {
                 public String run() {
@@ -1412,7 +1414,8 @@ public abstract class PrismFontFactory implements FontFactory {
                     }
                 }
             };
-            java.security.AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = java.security.AccessController.doPrivileged(
                     (PrivilegedAction<Object>) () -> {
                         /* The thread must be a member of a thread group
                          * which will not get GCed before VM exit.
@@ -1818,6 +1821,7 @@ public abstract class PrismFontFactory implements FontFactory {
         return fontToFileMap;
     }
 
+    @SuppressWarnings("removal")
     public final boolean hasPermission() {
         try {
             SecurityManager sm = System.getSecurityManager();
@@ -1888,9 +1892,11 @@ public abstract class PrismFontFactory implements FontFactory {
         final File dir = new File(fontDir);
         String[] files = null;
         try {
-            files = AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            String[] tmp = AccessController.doPrivileged(
                     (PrivilegedExceptionAction<String[]>) () -> dir.list(TTFilter.getInstance())
             );
+            files = tmp;
         } catch (Exception e) {
         }
 

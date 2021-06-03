@@ -198,13 +198,13 @@ public abstract class Toolkit {
         throw new UnsupportedOperationException(System.getProperty("os.name") + " is not supported");
     }
 
-    @SuppressWarnings("removal")
     public static synchronized Toolkit getToolkit() {
         if (TOOLKIT != null) {
             return TOOLKIT;
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             // Get the javafx.version and javafx.runtime.version from a preconstructed
             // java class, VersionInfo, created at build time.
             VersionInfo.setupSystemProperties();

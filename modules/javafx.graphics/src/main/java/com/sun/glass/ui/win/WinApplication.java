@@ -36,7 +36,6 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-@SuppressWarnings("removal")
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
     static float   overrideUIScale;
 
@@ -80,7 +79,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static native void initIDs(float overrideUIScale);
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
             public Void run() {
                 verbose = Boolean.getBoolean("javafx.verbose");
                 if (PrismSettings.allowHiDPIScaling) {
@@ -109,6 +109,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
     WinApplication() {
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -135,6 +136,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         if (!PrismSettings.allowHiDPIScaling) {
             return Process_DPI_Unaware;
         }
+        @SuppressWarnings("removal")
         String awareRequested = AccessController
             .doPrivileged((PrivilegedAction<String>) () ->
                           System.getProperty("javafx.glass.winDPIawareness"));
@@ -156,6 +158,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void runLoop(final Runnable launchable) {
+        @SuppressWarnings("removal")
         boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         int awareness = getDesiredAwarenesslevel();
@@ -169,6 +172,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
             return;
         }
+        @SuppressWarnings("removal")
         final Thread toolkitThread =
             AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
                 _init(awareness);
@@ -350,6 +354,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     public String getDataDirectory() {
         checkEventThread();
+        @SuppressWarnings("removal")
         String baseDirectory = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv("APPDATA"));
         if (baseDirectory == null || baseDirectory.length() == 0) {
             return super.getDataDirectory();

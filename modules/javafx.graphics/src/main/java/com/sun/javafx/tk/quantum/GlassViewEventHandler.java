@@ -63,14 +63,14 @@ import javafx.scene.input.ZoomEvent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-@SuppressWarnings("removal")
 class GlassViewEventHandler extends View.EventHandler {
 
     static boolean zoomGestureEnabled;
     static boolean rotateGestureEnabled;
     static boolean scrollGestureEnabled;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             zoomGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.zoom", "false"));
             rotateGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.rotate", "false"));
             scrollGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.scroll", "false"));
@@ -235,6 +235,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleKeyEvent(View view, long time, int type, int key,
                                          char[] chars, int modifiers)
     {
@@ -427,6 +428,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleMouseEvent(View view, long time, int type, int button,
                                  int x, int y, int xAbs, int yAbs,
@@ -449,6 +451,7 @@ class GlassViewEventHandler extends View.EventHandler {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleMenuEvent(final View view,
                                           final int x, final int y, final int xAbs, final int yAbs,
                                           final boolean isKeyboardTrigger)
@@ -500,6 +503,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleScrollEvent(final View view, final long time,
                                             final int x, final int y, final int xAbs, final int yAbs,
                                             final double deltaX, final double deltaY, final int modifiers,
@@ -624,6 +628,7 @@ class GlassViewEventHandler extends View.EventHandler {
         return composed;
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleInputMethodEvent(final long time, final String text,
                                                  final int[] clauseBoundary,
                                                  final int[] attrBoundary, final byte[] attrValue,
@@ -913,6 +918,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleViewEvent(View view, long time, final int type) {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.newInput("VIEW_EVENT: "+ViewEvent.getTypeString(type));
@@ -932,6 +938,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleScrollGestureEvent(
             View view, final long time, final int type,
             final int modifiers, final boolean isDirect, final boolean isInertia, final int touchCount,
@@ -1009,6 +1016,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleZoomGestureEvent(
             View view, final long time, final int type,
             final int modifiers, final boolean isDirect, final boolean isInertia,
@@ -1085,6 +1093,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleRotateGestureEvent(
             View view, final long time, final int type,
             final int modifiers, final boolean isDirect, final boolean isInertia,
@@ -1159,6 +1168,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleSwipeGestureEvent(
             View view, final long time, int type,
             final int modifiers, final boolean isDirect,
@@ -1235,6 +1245,7 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleBeginTouchEvent(
             View view, final long time, final int modifiers,
             final boolean isDirect, final int touchEventCount)
@@ -1272,6 +1283,7 @@ class GlassViewEventHandler extends View.EventHandler {
         gestures.notifyBeginTouchEvent(time, modifiers, isDirect, touchEventCount);
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleNextTouchEvent(
             View view, final long time, final int type, final long touchId,
             final int x, final int y, final int xAbs, final int yAbs)
@@ -1342,6 +1354,7 @@ class GlassViewEventHandler extends View.EventHandler {
         gestures.notifyNextTouchEvent(time, type, touchId, x, y, xAbs, yAbs);
     }
 
+    @SuppressWarnings("removal")
     @Override public void handleEndTouchEvent(View view, long time) {
         if (PULSE_LOGGING_ENABLED) {
             PulseLogger.newInput("END_TOUCH_EVENT");

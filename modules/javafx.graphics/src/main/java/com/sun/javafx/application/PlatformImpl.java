@@ -172,7 +172,6 @@ public class PlatformImpl {
      * @param r
      * @param preventDuplicateCalls
      */
-    @SuppressWarnings("removal")
     public static void startup(final Runnable r, boolean preventDuplicateCalls) {
 
         // NOTE: if we ever support re-launching an application and/or
@@ -209,7 +208,8 @@ public class PlatformImpl {
             Logging.getJavaFXLogger().warning(warningStr);
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             applicationType = System.getProperty("com.sun.javafx.application.type");
             if (applicationType == null) applicationType = "";
 
@@ -264,7 +264,8 @@ public class PlatformImpl {
         }
 
         if (!taskbarApplication) {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            @SuppressWarnings("removal")
+            var dummy2 = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 System.setProperty("glass.taskbarApplication", "false");
                 return null;
             });
@@ -430,7 +431,6 @@ public class PlatformImpl {
         runLater(r, false);
     }
 
-    @SuppressWarnings("removal")
     private static void runLater(final Runnable r, boolean exiting) {
         if (!initialized.get()) {
             throw new IllegalStateException("Toolkit not initialized");
@@ -446,11 +446,13 @@ public class PlatformImpl {
                 return;
             }
 
+            @SuppressWarnings("removal")
             final AccessControlContext acc = AccessController.getContext();
             // Don't catch exceptions, they are handled by Toolkit.defer()
             Toolkit.getToolkit().defer(() -> {
                 try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    @SuppressWarnings("removal")
+                    var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                         r.run();
                         return null;
                     }, acc);
@@ -789,10 +791,10 @@ public class PlatformImpl {
         }
     }
 
-    @SuppressWarnings("removal")
     private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
+        @SuppressWarnings("removal")
         final String overrideStylesheetUrl = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty("javafx.userAgentStylesheetUrl"));
 
@@ -874,7 +876,8 @@ public class PlatformImpl {
             uaStylesheets.add(accessibilityTheme);
         }
 
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             StyleManager.getInstance().setUserAgentStylesheets(uaStylesheets);
             return null;
         });
@@ -898,7 +901,6 @@ public class PlatformImpl {
         }
     }
 
-    @SuppressWarnings("removal")
     private static boolean isSupportedImpl(ConditionalFeature feature) {
         switch (feature) {
             case GRAPHICS:
@@ -917,7 +919,8 @@ public class PlatformImpl {
                     isMediaSupported = checkForClass(
                             "javafx.scene.media.MediaView");
                     if (isMediaSupported && PlatformUtil.isEmbedded()) {
-                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        @SuppressWarnings("removal")
+                        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                             String s = System.getProperty(
                                     "com.sun.javafx.experimental.embedded.media",
                                     "false");
@@ -932,7 +935,8 @@ public class PlatformImpl {
                 if (isWebSupported == null) {
                     isWebSupported = checkForClass("javafx.scene.web.WebView");
                     if (isWebSupported && PlatformUtil.isEmbedded()) {
-                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        @SuppressWarnings("removal")
+                        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                             String s = System.getProperty(
                                     "com.sun.javafx.experimental.embedded.web",
                                     "false");

@@ -53,7 +53,6 @@ import com.sun.glass.utils.NativeLibLoader;
  * defines some basic mappings based on best guess which fonts are mandatory on
  * platforms lower than 4.0 and how they map to typefaces.
  */
-@SuppressWarnings("removal")
 class AndroidFontFinder {
 
     private final static String SYSTEM_FONT_NAME    = "sans serif";
@@ -64,7 +63,8 @@ class AndroidFontFinder {
     final static String systemFontsDir = "/system/fonts";
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("javafx_font");
             return null;
         });

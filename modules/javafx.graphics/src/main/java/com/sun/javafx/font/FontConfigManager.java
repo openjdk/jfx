@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Properties;
 
-@SuppressWarnings("removal")
 class FontConfigManager {
 
     static boolean debugFonts = false;
@@ -45,7 +44,8 @@ class FontConfigManager {
     static boolean useEmbeddedFontSupport = false;
 
     static {
-        AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(
                 (PrivilegedAction<Void>) () -> {
                     String dbg = System.getProperty("prism.debugfonts", "");
                     debugFonts = "true".equals(dbg);
@@ -348,7 +348,8 @@ class FontConfigManager {
         private static boolean fontDirFromJRE = false;
 
         static {
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         initEmbeddedFonts();
                     return null;
@@ -398,6 +399,7 @@ class FontConfigManager {
         }
 
 
+        @SuppressWarnings("removal")
         private static boolean exists(final File f) {
             return AccessController.doPrivileged(
                     (PrivilegedAction<Boolean>) () -> f.exists()
@@ -543,7 +545,8 @@ class FontConfigManager {
              Locale locale)
         {
             final Properties props = new Properties();
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     (PrivilegedAction<Void>) () -> {
                         try {
                             String lFile = fontDir+"/allfonts.properties";

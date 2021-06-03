@@ -36,7 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 
-@SuppressWarnings("removal")
 public class ES2Pipeline extends GraphicsPipeline {
 
     public static final GLFactory glFactory;
@@ -49,7 +48,8 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean isEglfb = false;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_es2";
 
             String eglType = PlatformUtil.getEmbeddedType();

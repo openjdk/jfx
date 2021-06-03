@@ -31,10 +31,10 @@ import java.security.PrivilegedAction;
 
 import com.sun.glass.utils.NativeLibLoader;
 
-@SuppressWarnings("removal")
 class DFontDecoder extends FontFileWriter {
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("javafx_font");
             return null;
         });

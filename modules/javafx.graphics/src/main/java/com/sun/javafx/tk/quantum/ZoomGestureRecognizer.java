@@ -43,7 +43,6 @@ import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
-@SuppressWarnings("removal")
 class ZoomGestureRecognizer implements GestureRecognizer {
     // gesture will be activated if |zoomFactor - 1| > ZOOM_FACTOR_THRESHOLD
     private static double ZOOM_FACTOR_THRESHOLD = 0.1;
@@ -55,7 +54,8 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private static double MAX_ZOOM_OUT_FACTOR = 0.1;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.zoom.threshold");
             if (s != null) {
                 ZOOM_FACTOR_THRESHOLD = Double.valueOf(s);
@@ -291,6 +291,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomStartedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -309,6 +310,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomEvent(boolean isInertia) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -326,6 +328,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendZoomFinishedEvent() {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

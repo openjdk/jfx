@@ -76,7 +76,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 
-@SuppressWarnings("removal")
 public class FXVKSkin extends SkinBase<FXVK> {
 
     private static final int GAP = 6;
@@ -191,7 +190,8 @@ public class FXVKSkin extends SkinBase<FXVK> {
     static boolean vkLookup = false;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
             if (s != null) {
                 vkAdjustWindow = Boolean.valueOf(s);

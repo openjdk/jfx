@@ -73,7 +73,6 @@ import java.io.Writer;
  * Note: This file a copy for sun.misc.PerformanceLogger before it was moved to
  * sun.awt.util and JavaFX do not want to be dependent on awt if possible.
  */
-@SuppressWarnings("removal")
 public class PerformanceLogger {
 
     // Timing values of global interest
@@ -88,6 +87,7 @@ public class PerformanceLogger {
     private static long baseTime;
 
     static {
+        @SuppressWarnings("removal")
         String perfLoggingProp =
             java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
@@ -99,6 +99,7 @@ public class PerformanceLogger {
             perfLoggingOn = true;
 
             // Check if we should use nanoTime
+            @SuppressWarnings("removal")
             String perfNanoProp =
                 java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<String>() {
@@ -116,7 +117,8 @@ public class PerformanceLogger {
             }
             if (logFileName != null) {
                 if (logWriter == null) {
-                    java.security.AccessController.doPrivileged(
+                    @SuppressWarnings("removal")
+                    var dummy = java.security.AccessController.doPrivileged(
                     new java.security.PrivilegedAction<Void>() {
                         public Void run() {
                             try {

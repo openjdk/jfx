@@ -47,7 +47,6 @@ import java.net.MalformedURLException;
 /**
  * A loader for images on iOS platform.
  */
-@SuppressWarnings("removal")
 public class IosImageLoader extends ImageLoaderImpl {
 
     /** These constants must match with those in native */
@@ -110,7 +109,8 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("nativeiio");
             return null;
         });

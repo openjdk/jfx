@@ -31,7 +31,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 
-@SuppressWarnings("removal")
 abstract class GLFactory {
 
     private static native boolean
@@ -83,8 +82,10 @@ abstract class GLFactory {
         if (PrismSettings.verbose) {
             System.out.println("GLFactory using " + factoryClassName);
         }
-        platformFactory = factoryClassName == null ? null :
+        @SuppressWarnings("removal")
+        GLFactory tmp = factoryClassName == null ? null :
             AccessController.doPrivileged(new FactoryLoader(factoryClassName));
+        platformFactory = tmp;
     }
 
     private static class FactoryLoader implements PrivilegedAction<GLFactory> {

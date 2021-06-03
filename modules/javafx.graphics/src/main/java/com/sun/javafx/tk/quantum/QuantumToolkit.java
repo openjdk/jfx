@@ -247,7 +247,6 @@ public final class QuantumToolkit extends Toolkit {
 
     private final PerformanceTracker perfTracker = new PerformanceTrackerImpl();
 
-    @SuppressWarnings("removal")
     @Override public boolean init() {
         /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
@@ -264,7 +263,8 @@ public final class QuantumToolkit extends Toolkit {
                 dispose();
             }
         };
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             return null;
         });

@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@SuppressWarnings("removal")
 public final class Screen {
 
     // the list of attached screens provided by native.
@@ -41,7 +40,9 @@ public final class Screen {
     private static final int dpiOverride;
 
     static {
-        dpiOverride = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("com.sun.javafx.screenDPI", 0)).intValue();
+        @SuppressWarnings("removal")
+        int tmp = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("com.sun.javafx.screenDPI", 0)).intValue();
+        dpiOverride = tmp;
     }
 
     public static class EventHandler {

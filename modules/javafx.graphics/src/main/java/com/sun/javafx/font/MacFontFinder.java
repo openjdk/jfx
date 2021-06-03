@@ -33,11 +33,11 @@ import java.util.Locale;
 
 import com.sun.glass.utils.NativeLibLoader;
 
-@SuppressWarnings("removal")
 class MacFontFinder {
 
     static {
-        AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(
                 (PrivilegedAction<Void>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     return null;

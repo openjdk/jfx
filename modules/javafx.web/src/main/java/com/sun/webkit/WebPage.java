@@ -77,7 +77,6 @@ import org.w3c.dom.Element;
  * </ul>
  */
 
-@SuppressWarnings("removal")
 public final class WebPage {
     private final static PlatformLogger log = PlatformLogger.getLogger(WebPage.class.getName());
     private final static PlatformLogger paintLog = PlatformLogger.getLogger(WebPage.class.getName() + ".paint");
@@ -101,6 +100,7 @@ public final class WebPage {
     private final Set<Long> frames = new HashSet<Long>();
 
     // The access control context associated with this object
+    @SuppressWarnings("removal")
     private final AccessControlContext accessControlContext;
 
     // Maps load request identifiers to URLs
@@ -130,7 +130,8 @@ public final class WebPage {
     private int updateContentCycleID;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("jfxwebkit");
             log.finer("jfxwebkit loaded");
 
@@ -192,7 +193,9 @@ public final class WebPage {
             this.scrollbarTheme = null;
         }
 
-        accessControlContext = AccessController.getContext();
+        @SuppressWarnings("removal")
+        AccessControlContext tmpAcc = AccessController.getContext();
+        accessControlContext = tmpAcc;
 
         hostWindow = new WCFrameView(this);
         pPage = twkCreatePage(editable);
@@ -226,6 +229,7 @@ public final class WebPage {
      * May be called on any thread.
      * @return the access control context associated with this object
      */
+    @SuppressWarnings("removal")
     public AccessControlContext getAccessControlContext() {
         return accessControlContext;
     }

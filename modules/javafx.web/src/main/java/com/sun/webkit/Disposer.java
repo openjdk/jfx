@@ -52,7 +52,6 @@ import java.util.concurrent.LinkedBlockingQueue;
  *
  * @see DisposerRecord
  */
-@SuppressWarnings("removal")
 public final class Disposer implements Runnable {
     private static final ReferenceQueue queue = new ReferenceQueue();
     private static final Disposer disposerInstance = new Disposer();
@@ -60,7 +59,8 @@ public final class Disposer implements Runnable {
             new HashSet<WeakDisposerRecord>();
 
     static {
-        java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             /*
              * The thread must be a member of a thread group
              * which will not get GCed before VM exit.

@@ -43,11 +43,11 @@ import java.lang.reflect.Method;
 /**
  * Core media platform management code.
  */
-@SuppressWarnings("removal")
 public final class PlatformManager {
     private static String enabledPlatforms;
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             getPlatformSettings();
             return null;
         });

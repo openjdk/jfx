@@ -369,7 +369,6 @@ final class HTTP2Loader extends URLLoaderBase {
                   createNormalBodySubscriber() : createZIPEncodedBodySubscriber(contentEncoding);
     }
 
-    @SuppressWarnings("removal")
     private HTTP2Loader(WebPage webPage,
               ByteBufferPool byteBufferPool,
               boolean asynchronous,
@@ -412,11 +411,13 @@ final class HTTP2Loader extends URLLoaderBase {
         };
 
         // Run the HttpClient in the page's access control context
-        this.response = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
+        @SuppressWarnings("removal")
+        CompletableFuture<Void> tmpResponse = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
             return HTTP_CLIENT.sendAsync(request, bodyHandler)
                               .thenAccept($ -> {})
                               .exceptionally(ex -> didFail(ex.getCause()));
         }, webPage.getAccessControlContext());
+        this.response = tmpResponse;
 
         if (!asynchronous) {
             waitForRequestToComplete();

@@ -48,16 +48,17 @@ import com.sun.webkit.graphics.WCPageBackBuffer;
 import com.sun.webkit.graphics.WCPoint;
 import com.sun.webkit.graphics.WCRectangle;
 
-@SuppressWarnings("removal")
 public final class WebPageClientImpl implements WebPageClient<WebView> {
     private static final boolean backBufferSupported;
     private static WebConsoleListener consoleListener = null;
     private final Accessor accessor;
 
     static {
-        backBufferSupported = Boolean.valueOf(
+        @SuppressWarnings("removal")
+        boolean tmp = Boolean.valueOf(
                 AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
                         "com.sun.webkit.pagebackbuffer", "true")));
+        backBufferSupported = tmp;
     }
 
     static void setConsoleListener(WebConsoleListener consoleListener) {

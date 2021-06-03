@@ -39,7 +39,6 @@ import com.sun.scenario.effect.Filterable;
  * a fairly expensive operation (in terms of footprint and performance),
  * especially for the GPU backends, so image reuse is critical.
  */
-@SuppressWarnings("removal")
 public class ImagePool {
 
     public static long numEffects;
@@ -49,7 +48,8 @@ public class ImagePool {
     static long pixelsAccessed;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             if (System.getProperty("decora.showstats") != null) {
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override public void run() {

@@ -29,7 +29,6 @@ import java.lang.annotation.Native;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-@SuppressWarnings("removal")
 class GLPixelFormat {
     final private Attributes attributes;
     final private long nativeScreen;
@@ -38,7 +37,8 @@ class GLPixelFormat {
     private static int defaultBufferSize;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
            defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
            defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
             return null;

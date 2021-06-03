@@ -114,7 +114,6 @@ class LinuxTouchTransform {
         }
     }
 
-    @SuppressWarnings("removal")
     private void initTransform(int axis, int index) {
         double range;
         String axisName;
@@ -140,7 +139,8 @@ class LinuxTouchTransform {
         }
         LinuxAbsoluteInputCapabilities caps = device.getAbsoluteInputCapabilities(axis);
         String product = device.getProduct();
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             int minimum = Integer.getInteger(
                     "monocle.input." + product + ".min" + axisName,
                     caps.getMinimum());

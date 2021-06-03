@@ -54,11 +54,12 @@ class FBDevScreen implements NativeScreen {
     private LinuxFrameBuffer linuxFB;
     private final String fbDevPath;
 
-    @SuppressWarnings("removal")
     FBDevScreen() {
-        fbDevPath = AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        String tmp = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () ->
                         System.getProperty("monocle.screen.fb", "/dev/fb0"));
+        fbDevPath = tmp;
         try {
             linuxFB = new LinuxFrameBuffer(fbDevPath);
             nativeHandle = 1l;

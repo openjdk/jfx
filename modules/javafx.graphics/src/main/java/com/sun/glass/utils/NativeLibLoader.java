@@ -41,13 +41,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 
-@SuppressWarnings("removal")
 public class NativeLibLoader {
 
     private static final HashSet<String> loaded = new HashSet<String>();
 
     public static synchronized void loadLibrary(String libname) {
         if (!loaded.contains(libname)) {
+            @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
             Class caller = walker.getCallerClass();
@@ -58,6 +58,7 @@ public class NativeLibLoader {
 
     public static synchronized void loadLibrary(String libname, List<String> dependencies) {
         if (!loaded.contains(libname)) {
+            @SuppressWarnings("removal")
             StackWalker walker = AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
             Class caller = walker.getCallerClass();
@@ -74,7 +75,8 @@ public class NativeLibLoader {
     private static String libSuffix = "";
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             verbose = Boolean.getBoolean("javafx.verbose");
             return null;
         });

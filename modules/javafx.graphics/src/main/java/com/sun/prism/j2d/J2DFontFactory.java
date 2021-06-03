@@ -147,7 +147,6 @@ final class J2DFontFactory implements FontFactory {
         });
     }
 
-    @SuppressWarnings("removal")
     public PGFont[] loadEmbeddedFont(String name, String path,
                                      float size,
                                      boolean register,
@@ -167,7 +166,8 @@ final class J2DFontFactory implements FontFactory {
         // REMIND: this needs to be upgraded to use JDK9 createFont
         // which can handle a collection.
         final FontResource fr = fonts[0].getFontResource();
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 try {
                     File file = new File(fr.getFileName());
@@ -191,14 +191,14 @@ final class J2DFontFactory implements FontFactory {
      * subject to change.
      * ALso this may be just a stop gap measure.
      */
-    @SuppressWarnings("removal")
     static java.awt.Font getCompositeFont(final java.awt.Font srcFont) {
         if (PlatformUtil.isMac()) {
             return srcFont;
         }
         synchronized (J2DFontFactory.class) {
             if (!compositeFontMethodsInitialized) {
-                AccessController.doPrivileged(
+                @SuppressWarnings("removal")
+                var dummy = AccessController.doPrivileged(
                         (PrivilegedAction<Void>) () -> {
                             compositeFontMethodsInitialized = true;
                             Class<?> fontMgrCls;

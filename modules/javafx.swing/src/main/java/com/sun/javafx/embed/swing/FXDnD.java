@@ -41,13 +41,13 @@ import com.sun.javafx.embed.swing.newimpl.FXDnDInteropN;
  * A utility class to connect DnD mechanism of Swing and FX.
  * It allows Swing content to use the FX machinery for performing DnD.
  */
-@SuppressWarnings("removal")
 final public class FXDnD {
     public static boolean fxAppThreadIsDispatchThread;
     private FXDnDInteropN fxdndiop;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 fxAppThreadIsDispatchThread =
                         "true".equals(System.getProperty("javafx.embed.singleThread"));
