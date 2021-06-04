@@ -187,8 +187,11 @@
 
 static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
 {
-    LOG("   url: %s", [[url path] UTF8String]);
-    jstring path = (*env)->NewStringUTF(env, [[url path] UTF8String]);
+#ifdef VERBOSE
+    NSLog(@"   url: %@", [url path]);
+#endif // VERBOSE
+    NSData *data = [[url path] dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
+    jstring path = (*env)->NewString(env, (jchar *)[data bytes], data.length/2);
 
     jobject ret = NULL;
 

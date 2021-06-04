@@ -70,7 +70,7 @@ public class FireButtonBaseTest {
     }
 
     @Before public void setup() throws Exception {
-        btn = (ButtonBase) type.newInstance();
+        btn = (ButtonBase) type.getDeclaredConstructor().newInstance();
     }
 
     @Test public void onActionCalledWhenButtonIsFired() {

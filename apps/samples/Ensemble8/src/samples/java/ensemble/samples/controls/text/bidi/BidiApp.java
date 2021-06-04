@@ -53,7 +53,7 @@ import javafx.stage.Stage;
  * @playground text1.rotate (name="He said... rotate", min=-180, max=180)
  * @playground text1.translateX (name="He said... translateX")
  * @playground text1.translateY (name="He said... translateY")
- * @playground text2.strikethrough (name="He said... strikethrough")
+ * @playground text2.strikethrough (name="...to me. strikethrough")
  * @playground text2.underline (name="...to me. underline")
  * @playground text2.fill (name="...to me. fill")
  * @playground text2.rotate (name="...to me. rotate", min=-180, max=180)

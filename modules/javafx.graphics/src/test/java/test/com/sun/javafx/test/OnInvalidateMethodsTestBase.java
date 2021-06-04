@@ -79,21 +79,21 @@ public abstract class OnInvalidateMethodsTestBase {
             sb.setCharAt(0, Character.toUpperCase(propertyName.charAt(0)));
 
             if (clazz.getSuperclass().equals(PathElement.class)) {
-                PathElement e = (PathElement)clazz.newInstance();
+                PathElement e = (PathElement)clazz.getDeclaredConstructor().newInstance();
                 Path path = new Path();
                 path.getElements().addAll(new MoveTo(0,0), e);
                 NodeTest.syncNode(path);
                 getSetter(clazz, sb.toString()).invoke(e, this.inValue);
                 assertTrue(NodeTest.isDirty(path, (DirtyBits[])this.expectedDirtyBits));
             } else if (clazz.getSuperclass().equals(Transform.class)) {
-                Transform tr = (Transform)clazz.newInstance();
+                Transform tr = (Transform)clazz.getDeclaredConstructor().newInstance();
                 Rectangle rect = new Rectangle();
                 rect.getTransforms().add(tr);
                 NodeTest.syncNode(rect);
                 getSetter(clazz, sb.toString()).invoke(tr, this.inValue);
                 assertTrue(NodeTest.isDirty(rect, (DirtyBits[])this.expectedDirtyBits));
             } else {
-                Node node = (Node)clazz.newInstance();
+                Node node = (Node)clazz.getDeclaredConstructor().newInstance();
                 NodeTest.syncNode(node);
                 getSetter(clazz, sb.toString()).invoke(node, this.inValue);
                 if (this.expectedDirtyBits instanceof DirtyBits[]) {
@@ -109,7 +109,7 @@ public abstract class OnInvalidateMethodsTestBase {
 
         private Path getPathNode(Class<? extends PathElement> pathElementClazz) throws Exception {
             Path p = new Path();
-            p.getElements().addAll(new MoveTo(0,0), pathElementClazz.newInstance());
+            p.getElements().addAll(new MoveTo(0,0), pathElementClazz.getDeclaredConstructor().newInstance());
             return p;
         }
 

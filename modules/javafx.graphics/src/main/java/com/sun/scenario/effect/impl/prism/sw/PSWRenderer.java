@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,7 +89,7 @@ public class PSWRenderer extends PrRenderer {
         PSWRenderer ret = null;
         try {
             Class klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
-            RendererDelegate delegate = (RendererDelegate)klass.newInstance();
+            RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(screen, delegate);
         } catch (Throwable e) {}
         return ret;
@@ -104,7 +104,7 @@ public class PSWRenderer extends PrRenderer {
         PSWRenderer ret = null;
         try {
             Class klass = Class.forName(rootPkg + ".impl.sw.java.JSWRendererDelegate");
-            RendererDelegate delegate = (RendererDelegate)klass.newInstance();
+            RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(factory, delegate);
         } catch (Throwable e) {}
         return ret;
@@ -128,7 +128,7 @@ public class PSWRenderer extends PrRenderer {
         PSWRenderer ret = null;
         try {
             Class klass = Class.forName(rootPkg + ".impl.sw.sse.SSERendererDelegate");
-            RendererDelegate delegate = (RendererDelegate)klass.newInstance();
+            RendererDelegate delegate = (RendererDelegate)klass.getDeclaredConstructor().newInstance();
             ret = new PSWRenderer(screen, delegate);
         } catch (Throwable e) {}
         return ret;

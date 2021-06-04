@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,7 +73,7 @@ class TouchPipeline {
                             + filterName + "TouchFilter";
                 }
                 ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                addFilter((TouchFilter) loader.loadClass(filterName).newInstance());
+                addFilter((TouchFilter) loader.loadClass(filterName).getDeclaredConstructor().newInstance());
             }
         } catch (Exception e) {
             System.err.println(

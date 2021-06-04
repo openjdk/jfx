@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -450,7 +450,7 @@ public class PPSRenderer extends PrRenderer {
         Class klass = null;
         try {
             klass = Class.forName(name);
-            return (ShaderSource)klass.newInstance();
+            return (ShaderSource)klass.getDeclaredConstructor().newInstance();
         } catch (ClassNotFoundException e) {
             System.err.println(name + " class not found");
             return null;
