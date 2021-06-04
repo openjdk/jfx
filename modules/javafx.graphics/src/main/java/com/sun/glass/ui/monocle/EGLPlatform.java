@@ -52,7 +52,7 @@ public class EGLPlatform extends LinuxPlatform {
         // Fallback to software cursor will be used in case monocle.egl.swcursor is set to true
         boolean swcursor = Boolean.getBoolean("monocle.egl.swcursor");
         final NativeCursor c = useCursor ? (swcursor ? new SoftwareCursor() : new EGLCursor()) : new NullCursor();
-        return c;
+        return logSelectedCursor(c);
     }
 
 

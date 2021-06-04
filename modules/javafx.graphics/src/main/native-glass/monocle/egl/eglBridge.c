@@ -161,7 +161,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_EGLCursor__1setImage
     int length = (*env)->GetArrayLength(env, jarr);
     jbyte *attrArray = (*env)->GetByteArrayElements(env, jarr, JNI_FALSE);
     if (attrArray == 0) {
-        fprintf(stderr, "Fatal error getting char* from jbyteArray\n");
+        fprintf(stderr, "Fatal error getting jbyte* from jbyteArray\n");
         return;
     }
     doSetCursorImage(attrArray, length);
