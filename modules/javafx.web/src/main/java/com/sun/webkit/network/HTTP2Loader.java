@@ -412,7 +412,7 @@ final class HTTP2Loader extends URLLoaderBase {
 
         // Run the HttpClient in the page's access control context
         @SuppressWarnings("removal")
-        CompletableFuture<Void> tmpResponse = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
+        var tmpResponse = AccessController.doPrivileged((PrivilegedAction<CompletableFuture<Void>>) () -> {
             return HTTP_CLIENT.sendAsync(request, bodyHandler)
                               .thenAccept($ -> {})
                               .exceptionally(ex -> didFail(ex.getCause()));

@@ -242,8 +242,8 @@ final class NetworkContext {
         private static final Permission modifyThreadGroupPerm = new RuntimePermission("modifyThreadGroup");
         private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
 
-        @SuppressWarnings("removal")
         private URLLoaderThreadFactory() {
+            @SuppressWarnings("removal")
             SecurityManager sm = System.getSecurityManager();
             group = (sm != null) ? sm.getThreadGroup()
                     : Thread.currentThread().getThreadGroup();
