@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.TableRow;
 import javafx.scene.control.skin.TableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -320,6 +321,26 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        table.setEditable(true);
+        TableRow row = new TableRow();
+        row.setEditable(false);
+
+        TableColumn<String, String> treeTableColumn = new TableColumn<>();
+        table.getColumns().add(treeTableColumn);
+
+        cell.updateTableColumn(treeTableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
     }
 
     /**

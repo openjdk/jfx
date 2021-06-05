@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -306,9 +306,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
         final TreeTableView<S> table = getTreeTableView();
         final TreeTableColumn<S,T> column = getTableColumn();
-        if (! isEditable() ||
-                (table != null && ! table.isEditable()) ||
-                (column != null && ! getTableColumn().isEditable())) {
+        final TreeTableRow<S> row = getTreeTableRow();
+        if (!isEditable() ||
+                (table != null && !table.isEditable()) ||
+                (column != null && !column.isEditable()) ||
+                (row != null && !row.isEditable())) {
             return;
         }
 

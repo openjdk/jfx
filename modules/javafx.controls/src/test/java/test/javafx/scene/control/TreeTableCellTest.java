@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -631,6 +631,25 @@ public class TreeTableCellTest {
     @Test public void test_jdk_8151524() {
         TreeTableCell cell = new TreeTableCell();
         cell.setSkin(new TreeTableCellSkin(cell));
+    }
+
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        tree.setEditable(true);
+        row.setEditable(false);
+
+        TreeTableColumn treeTableColumn = new TreeTableColumn();
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTreeTableColumn(treeTableColumn);
+        cell.updateTreeTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
     }
 
     /**
