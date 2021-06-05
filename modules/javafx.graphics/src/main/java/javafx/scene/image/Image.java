@@ -65,9 +65,7 @@ import javafx.beans.property.SimpleIntegerProperty;
  * The {@code Image} class represents graphical images and is used for loading
  * images from a specified URL.
  *
- * <p>
- * Supported image formats are:
- * </p>
+ * <p>Supported image formats are:
  * <ul>
  * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
  * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
@@ -75,24 +73,32 @@ import javafx.beans.property.SimpleIntegerProperty;
  * <li><a href="http://www.libpng.org/pub/png/spec/">PNG</a></li>
  * </ul>
  *
- * <p>
- * Images can be resized as they are loaded (for example to reduce the amount of
+ * <p>Images can be resized as they are loaded (for example to reduce the amount of
  * memory consumed by the image). The application can specify the quality of
  * filtering used when scaling, and whether or not to preserve the original
  * image's aspect ratio.
- * </p>
  *
- * <p>
- * All URLs supported by {@link URL} can be passed to the constructor.
- * If the passed string is not a valid URL, but a path instead, the Image is
- * searched on the classpath in that case.
- * </p>
+ * <p>If a URL string is passed to a constructor, it be any of the following:
+ * <ol>
+ *     <li>the name of a resource that can be resolved by the context
+ *         {@link ClassLoader} for this thread
+ *     <li>a file path that can be resolved by {@link java.io.File}
+ *     <li>a URL that can be resolved by {@link java.net.URL} and for
+ *         which a protocol handler exists
+ * </ol>
+ *
+ * <p>The RFC 2397 "data" scheme for URLs is supported in addition to
+ * the protocol handlers that are registered for the application.
+ *
+ * <p>If a URL uses the "data" scheme, the data must be base64-encoded
+ * and the MIME type must either be empty or a subtype of the
+ * {@code image} type.
  *
  * <p>Use {@link ImageView} for displaying images loaded with this
  * class. The same {@code Image} instance can be displayed by multiple
- * {@code ImageView}s.</p>
+ * {@code ImageView}s.
  *
- *<p>Example code for loading images.</p>
+ *<p>Example code for loading images:
 
 <PRE>
 import javafx.scene.image.Image;
@@ -608,23 +614,9 @@ public class Image {
     }
 
     /**
-     * Constructs an {@code Image} with content loaded from the specified
-     * image file. The {@code url} parameter can be one of the following:
-     * <ol>
-     *     <li>the name of a resource that can be resolved by the context
-     *         {@link ClassLoader} for this thread
-     *     <li>a file path that can be resolved by {@link java.io.File}
-     *     <li>a URL that can be resolved by {@link java.net.URL} and for
-     *         which a protocol handler exists
-     * </ol>
-     * The RFC 2397 "data" scheme for URLs is supported in addition to
-     * the protocol handlers that are registered for the application.
-     * <p>
-     * If a URL uses the "data" scheme, the data must be base64-encoded
-     * and the MIME type must either be empty or a subtype of the
-     * {@code image} type.
+     * Constructs an {@code Image} with content loaded from the specified URL.
      *
-     * @param url a file path or URL
+     * @param url a resource path, file path or URL
      * @throws NullPointerException if {@code url} is null
      * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
@@ -634,23 +626,10 @@ public class Image {
     }
 
     /**
-     * Constructs an {@code Image} with content loaded from the specified
-     * image file. The {@code url} parameter can be one of the following:
-     * <ol>
-     *     <li>the name of a resource that can be resolved by the context
-     *         {@link ClassLoader} for this thread
-     *     <li>a file path that can be resolved by {@link java.io.File}
-     *     <li>a URL that can be resolved by {@link java.net.URL} and for
-     *         which a protocol handler exists
-     * </ol>
-     * The RFC 2397 "data" scheme for URLs is supported in addition to
-     * the protocol handlers that are registered for the application.
-     * <p>
-     * If a URL uses the "data" scheme, the data must be base64-encoded
-     * and the MIME type must either be empty or a subtype of the
-     * {@code image} type.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * @param url a file path or URL
+     * @param url a resource path, file path or URL
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if {@code url} is null
@@ -662,23 +641,10 @@ public class Image {
     }
 
     /**
-     * Constructs an {@code Image} with content loaded from the specified
-     * image file. The {@code url} parameter can be one of the following:
-     * <ol>
-     *     <li>the name of a resource that can be resolved by the context
-     *         {@link ClassLoader} for this thread
-     *     <li>a file path that can be resolved by {@link java.io.File}
-     *     <li>a URL that can be resolved by {@link java.net.URL} and for
-     *         which a protocol handler exists
-     * </ol>
-     * The RFC 2397 "data" scheme for URLs is supported in addition to
-     * the protocol handlers that are registered for the application.
-     * <p>
-     * If a URL uses the "data" scheme, the data must be base64-encoded
-     * and the MIME type must either be empty or a subtype of the
-     * {@code image} type.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * @param url a file path or URL
+     * @param url a resource path, file path or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -698,23 +664,10 @@ public class Image {
     }
 
     /**
-     * Constructs an {@code Image} with content loaded from the specified
-     * image file. The {@code url} parameter can be one of the following:
-     * <ol>
-     *     <li>the name of a resource that can be resolved by the context
-     *         {@link ClassLoader} for this thread
-     *     <li>a file path that can be resolved by {@link java.io.File}
-     *     <li>a URL that can be resolved by {@link java.net.URL} and for
-     *         which a protocol handler exists
-     * </ol>
-     * The RFC 2397 "data" scheme for URLs is supported in addition to
-     * the protocol handlers that are registered for the application.
-     * <p>
-     * If a URL uses the "data" scheme, the data must be base64-encoded
-     * and the MIME type must either be empty or a subtype of the
-     * {@code image} type.
+     * Constructs an {@code Image} with content loaded from the specified URL
+     * using the specified parameters.
      *
-     * @param url a file path or URL
+     * @param url a resource path, file path or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of

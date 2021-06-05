@@ -155,22 +155,41 @@ public class DataURI {
         this.data = decodedData;
     }
 
+    /**
+     * Returns the MIME type that was specified in the URI.
+     * If no MIME type was specified, returns "text".
+     */
     public String getMimeType() {
         return mimeType;
     }
 
+    /**
+     * Returns the MIME subtype that was specified in the URI.
+     * If no MIME subtype was specified, returns "plain".
+     */
     public String getMimeSubtype() {
         return mimeSubtype;
     }
 
+    /**
+     * Returns the key-value parameter pairs that were specified in the URI.
+     */
     public Map<String, String> getParameters() {
         return parameters;
     }
 
+    /**
+     * Returns whether the data in the URI is Base64-encoded.
+     * If {@code false}, the data is implied to be URL-encoded.
+     */
     public boolean isBase64() {
         return base64;
     }
 
+    /**
+     * Returns the data that is encoded in this URI.
+     * <p>Note that repeated calls to this method will return the same array instance.
+     */
     public byte[] getData() {
         return data;
     }
@@ -188,7 +207,7 @@ public class DataURI {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof DataURI)) return false;
         DataURI dataURI = (DataURI)o;
         return base64 == dataURI.base64
             && Objects.equals(mimeType, dataURI.mimeType)
