@@ -768,6 +768,9 @@ final public class StyleManager {
                         if (image.isError()) {
                             final PlatformLogger logger = getLogger();
                             if (logger != null && logger.isLoggable(Level.WARNING)) {
+                                // If we have a "data" URL, we should use DataURI.toString() instead
+                                // of just logging the entire URL. This truncates the data contained
+                                // in the URL and prevents cluttering the log.
                                 DataURI dataUri = DataURI.tryParse(url);
                                 if (dataUri != null) {
                                     logger.warning("Error loading image: " + dataUri);

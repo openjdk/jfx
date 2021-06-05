@@ -44,21 +44,9 @@ public class DataURI {
             return false;
         }
 
-        int firstNonWhitespace = 0, length = uri.length();
+        uri = uri.stripLeading();
 
-        while (firstNonWhitespace < length) {
-            if (!Character.isWhitespace(uri.charAt(firstNonWhitespace))) {
-                break;
-            }
-
-            ++firstNonWhitespace;
-        }
-
-        if (length < firstNonWhitespace + 6) {
-            return false;
-        }
-
-        return "data:".equalsIgnoreCase(uri.substring(firstNonWhitespace, firstNonWhitespace + 5));
+        return uri.length() > 5 && "data:".equalsIgnoreCase(uri.substring(0, 5));
     }
 
     /**
@@ -72,9 +60,7 @@ public class DataURI {
             return null;
         }
 
-        if (Character.isWhitespace(uri.charAt(0))) {
-            uri = uri.trim();
-        }
+        uri = uri.trim();
 
         int dataSeparator = uri.indexOf(',', 5);
         if (dataSeparator < 0) {
