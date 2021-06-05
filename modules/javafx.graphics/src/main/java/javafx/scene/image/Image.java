@@ -65,7 +65,8 @@ import javafx.beans.property.SimpleIntegerProperty;
  * The {@code Image} class represents graphical images and is used for loading
  * images from a specified URL.
  *
- * <p>Supported image formats are:
+ * <p>
+ * Supported image formats are:
  * <ul>
  * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
  * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
@@ -73,7 +74,8 @@ import javafx.beans.property.SimpleIntegerProperty;
  * <li><a href="http://www.libpng.org/pub/png/spec/">PNG</a></li>
  * </ul>
  *
- * <p>Images can be resized as they are loaded (for example to reduce the amount of
+ * <p>
+ * Images can be resized as they are loaded (for example to reduce the amount of
  * memory consumed by the image). The application can specify the quality of
  * filtering used when scaling, and whether or not to preserve the original
  * image's aspect ratio.
@@ -616,7 +618,7 @@ public class Image {
     /**
      * Constructs an {@code Image} with content loaded from the specified URL.
      *
-     * @param url a resource path, file path or URL
+     * @param url a resource path, file path, or URL
      * @throws NullPointerException if {@code url} is null
      * @throws IllegalArgumentException if {@code url} is invalid or unsupported
      */
@@ -629,7 +631,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      *
-     * @param url a resource path, file path or URL
+     * @param url a resource path, file path, or URL
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if {@code url} is null
@@ -644,7 +646,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      *
-     * @param url a resource path, file path or URL
+     * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
@@ -667,7 +669,7 @@ public class Image {
      * Constructs an {@code Image} with content loaded from the specified URL
      * using the specified parameters.
      *
-     * @param url a resource path, file path or URL
+     * @param url a resource path, file path, or URL
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of
