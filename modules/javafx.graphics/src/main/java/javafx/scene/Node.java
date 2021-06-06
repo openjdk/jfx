@@ -8166,9 +8166,9 @@ public abstract class Node implements EventTarget, Styleable {
     private FocusPropertyBase focused;
 
     /**
-     * Indicates whether this {@code Node} currently has a visible focus
-     * indicator. This usually happens when a node acquired input focus
-     * via keyboard navigation.
+     * Indicates whether this {@code Node} should visibly indicate focus.
+     * This flag is set when a node acquired input focus via keyboard navigation,
+     * and it is cleared when {@link #requestFocus()} is called.
      */
     private FocusPropertyBase focusVisible;
 
@@ -8322,6 +8322,7 @@ public abstract class Node implements EventTarget, Styleable {
      * node. The focus owner will not actually have the input focus, however,
      * unless the scene belongs to a {@code Stage} that is both visible
      * and active.
+     * <p>This method will clear the {@link #focusVisible} flag.
      */
     public void requestFocus() {
         if (getScene() != null) {
@@ -8330,8 +8331,8 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Requests focus as if by calling {@link Node#requestFocus()}, and additionally
-     * sets the {@code Node#isFocusVisible} flag.
+     * Requests focus as if by calling {@link #requestFocus()}, and additionally
+     * sets the {@link #focusVisible} flag.
      */
     private void requestFocusVisible() {
         if (getScene() != null) {
