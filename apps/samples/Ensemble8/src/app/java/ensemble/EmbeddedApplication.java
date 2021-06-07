@@ -52,7 +52,7 @@ public class EmbeddedApplication {
 //            Class appClass = EmbeddedApplication.class.getClassLoader().loadClass(className);
             Class appClass = InterpolatorApp.class;
             System.out.println("appClass = " + appClass);
-            Application app = (Application)appClass.newInstance();
+            Application app = (Application)appClass.getDeclaredConstructor().newInstance();
             System.out.println("app = " + app);
             app.init();
             app.start(TEMP_STAGE);

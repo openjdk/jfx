@@ -22,6 +22,7 @@
  * questions.
  */
 #include "com_sun_glass_ui_monocle_EGLAcceleratedScreen.h"
+#include "com_sun_glass_ui_monocle_EGLCursor.h"
 #include "com_sun_glass_ui_monocle_EGLPlatform.h"
 #include "com_sun_glass_ui_monocle_EGLScreen.h"
 #include "Monocle.h"
@@ -138,4 +139,32 @@ JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_monocle_EGLScreen_nGetScale
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_EGLPlatform_nGetNumberOfScreens
 (JNIEnv *UNUSED(env), jobject UNUSED(obj)) {
     return doGetNumberOfScreens();
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_EGLCursor__1initEGLCursor
+  (JNIEnv *env, jobject obj, jint width, jint height) {
+    doInitCursor(width, height);
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_EGLCursor__1setVisible
+  (JNIEnv *env, jobject obj, jboolean val) {
+    doSetCursorVisibility(val);
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_EGLCursor__1setLocation
+  (JNIEnv *env, jobject obj, jint x, jint y) {
+    doSetLocation(x, y);
+}
+
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_EGLCursor__1setImage
+  (JNIEnv *env, jobject obj, jbyteArray jarr) {
+    int length = (*env)->GetArrayLength(env, jarr);
+    jbyte *attrArray = (*env)->GetByteArrayElements(env, jarr, JNI_FALSE);
+    if (attrArray == 0) {
+        fprintf(stderr, "Fatal error getting jbyte* from jbyteArray\n");
+        return;
+    }
+    doSetCursorImage(attrArray, length);
+    (*env)->ReleaseByteArrayElements(env, jarr, attrArray, JNI_ABORT);
+
 }

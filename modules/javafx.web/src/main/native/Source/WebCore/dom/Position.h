@@ -88,7 +88,9 @@ public:
     // Inline O(1) access for Positions which callers know to be parent-anchored
     int offsetInContainerNode() const
     {
+#if !PLATFORM(JAVA)
         ASSERT(anchorType() == PositionIsOffsetInAnchor);
+#endif
         return m_offset;
     }
 

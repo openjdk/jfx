@@ -113,8 +113,8 @@ public class EffectInputTest {
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
-        Effect effect1 = (Effect) effect1Class.newInstance();
-        Effect effect2 = (Effect) effect2Class.newInstance();
+        Effect effect1 = (Effect) effect1Class.getDeclaredConstructor().newInstance();
+        Effect effect2 = (Effect) effect2Class.getDeclaredConstructor().newInstance();
         final Method getInput1 = effect1Class.getMethod("getInput");
         final Method setInput1 = effect1Class.getMethod("setInput", Effect.class);
         final Method getInput2 = effect2Class.getMethod("getInput");
@@ -158,8 +158,8 @@ public class EffectInputTest {
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
-        Effect effect1 = (Effect) effect1Class.newInstance();
-        Effect effect2 = (Effect) effect2Class.newInstance();
+        Effect effect1 = (Effect) effect1Class.getDeclaredConstructor().newInstance();
+        Effect effect2 = (Effect) effect2Class.getDeclaredConstructor().newInstance();
         final Method getInput1 = effect1Class.getMethod("getInput");
         final Method setInput1 = effect1Class.getMethod("setInput", Effect.class);
         final Method getInput2 = effect2Class.getMethod("getInput");
@@ -198,8 +198,8 @@ public class EffectInputTest {
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
-        Effect effect1 = (Effect) effect1Class.newInstance();
-        Effect effect2 = (Effect) effect2Class.newInstance();
+        Effect effect1 = (Effect) effect1Class.getDeclaredConstructor().newInstance();
+        Effect effect2 = (Effect) effect2Class.getDeclaredConstructor().newInstance();
         final Method getInput1 = effect1Class.getMethod("getInput");
         final Method setInput2 = effect2Class.getMethod("setInput", Effect.class);
 

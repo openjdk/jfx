@@ -107,10 +107,13 @@ elseif (WIN32)
 
     list(APPEND WTF_PUBLIC_HEADERS
         text/win/WCharStringExtras.h
+
+        win/DbgHelperWin.h
         win/Win32Handle.h
     )
 
     list(APPEND WTF_LIBRARIES
+        DbgHelp
         winmm
     )
 endif ()

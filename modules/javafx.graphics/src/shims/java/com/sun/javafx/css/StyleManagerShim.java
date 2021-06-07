@@ -161,6 +161,10 @@ public class StyleManagerShim {
         return sm.findMatchingStyles(node, subScene, triggerStates);
     }
 
+    public byte[] calculateCheckSum(String fname) {
+        return sm.calculateCheckSum(fname);
+    }
+
     public boolean stylesheetContainerMap_containsKey(String k) {
         return sm.stylesheetContainerMap.containsKey(k);
     }

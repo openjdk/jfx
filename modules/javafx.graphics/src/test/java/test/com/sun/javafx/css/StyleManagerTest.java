@@ -47,6 +47,7 @@ import org.junit.Test;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -1109,4 +1110,14 @@ public class StyleManagerTest {
         assertFalse("Exception during CSS processing on BG thread", err.get());
     }
 
+    @Test
+    public void testCalculateCheckSum() {
+        StyleManagerShim sm = StyleManagerShim.getInstance();
+        byte[] checksum = sm.calculateCheckSum(getClass().getResource("checksum.css").toExternalForm());
+
+        byte[] expectedChecksum = {60, 26, 67, 14, 103, -63, -62, 42, 14, 40, -44, -103, 1, -60, -90, 18};
+        // "3c1a430e67c1c22a0e28d49901c4a612" // Generated using command 'md5sum checksum.css'
+
+        assertTrue(Arrays.equals(expectedChecksum, checksum));
+    }
 }

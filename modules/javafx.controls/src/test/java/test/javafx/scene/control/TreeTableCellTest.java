@@ -35,6 +35,8 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.util.Callback;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -58,6 +60,14 @@ public class TreeTableCellTest {
     private TreeItem<String> pears;
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         cell = new TreeTableCell<String, String>();
 
         root = new TreeItem<>(ROOT);
@@ -71,6 +81,12 @@ public class TreeTableCellTest {
 
         row = new TreeTableRow<>();
     }
+
+    @After
+    public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
+
 
     /*********************************************************************
      * Tests for the constructors                                        *
@@ -616,4 +632,61 @@ public class TreeTableCellTest {
         TreeTableCell cell = new TreeTableCell();
         cell.setSkin(new TreeTableCellSkin(cell));
     }
+
+    /**
+     * Test that cell.cancelEdit can switch table editing off
+     * even if a subclass violates its contract.
+     *
+     * For details, see https://bugs.openjdk.java.net/browse/JDK-8265206
+     *
+     */
+    @Test
+    public void testMisbehavingCancelEditTerminatesEdit() {
+        // setup for editing
+        TreeTableCell<String, String> cell = new MisbehavingOnCancelTreeTableCell<>();
+        tree.setEditable(true);
+        TreeTableColumn<String, String> editingColumn = new TreeTableColumn<>("TEST");
+        editingColumn.setCellValueFactory(param -> null);
+        tree.getColumns().add(editingColumn);
+        cell.updateTreeTableView(tree);
+        cell.updateTreeTableColumn(editingColumn);
+        // test editing: first round
+        // switch cell off editing by table api
+        int editingIndex = 1;
+        int intermediate = 0;
+        cell.updateIndex(editingIndex);
+        tree.edit(editingIndex, editingColumn);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            tree.edit(intermediate, editingColumn);
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertEquals("table must be editing at intermediate index", intermediate, tree.getEditingCell().getRow());
+        }
+        // test editing: second round
+        // switch cell off editing by cell api
+        tree.edit(editingIndex, editingColumn);
+        assertTrue("sanity: ", cell.isEditing());
+        try {
+            cell.cancelEdit();
+        } catch (Exception ex) {
+            // catching to test in finally
+        } finally {
+            assertFalse("cell must not be editing", cell.isEditing());
+            assertNull("table editing must be cancelled by cell", tree.getEditingCell());
+        }
+    }
+
+    public static class MisbehavingOnCancelTreeTableCell<S, T> extends TreeTableCell<S, T> {
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            throw new RuntimeException("violating contract");
+        }
+
+    }
+
 }

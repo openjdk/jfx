@@ -47,6 +47,16 @@ public class EGLPlatform extends LinuxPlatform {
     }
 
     @Override
+    protected NativeCursor createCursor() {
+        // By default, hardware cursor will be used
+        // Fallback to software cursor will be used in case monocle.egl.swcursor is set to true
+        boolean swcursor = Boolean.getBoolean("monocle.egl.swcursor");
+        final NativeCursor c = useCursor ? (swcursor ? new SoftwareCursor() : new EGLCursor()) : new NullCursor();
+        return logSelectedCursor(c);
+    }
+
+
+    @Override
     protected NativeScreen createScreen() {
         return new EGLScreen(0);
     }

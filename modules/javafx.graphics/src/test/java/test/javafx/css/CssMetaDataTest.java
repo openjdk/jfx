@@ -79,6 +79,8 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
+
+import org.junit.After;
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -101,6 +103,20 @@ public class CssMetaDataTest {
             if (prop.equals(styleable.getProperty())) return styleable;
         }
         return null;
+    }
+
+    private static void resetStyleManager() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @After
+    public void cleanup() {
+        resetStyleManager();
     }
 
     /**
@@ -268,7 +284,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -371,10 +387,9 @@ public class CssMetaDataTest {
     @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
-
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -498,7 +513,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -622,7 +637,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -750,7 +765,7 @@ public class CssMetaDataTest {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        StyleManager.getInstance().getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         final List<Rule> rules = stylesheet.getRules();
 
@@ -962,7 +977,6 @@ public class CssMetaDataTest {
     @Test
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
-
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
@@ -1153,10 +1167,8 @@ public class CssMetaDataTest {
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public
-                //                Constructor ctor = someClass.getConstructor((Class[])null);
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
-                //                Node node = (Node)ctor.newInstance((Object[])null);
-                Node node = (Node)someClass.newInstance();
+                Node node = (Node)someClass.getDeclaredConstructor().newInstance();
                 List<CssMetaData<? extends Styleable, ?>> list = (List<CssMetaData<? extends Styleable, ?>>)m.invoke(null);
                 if(list == null || list.isEmpty()) return;
 
@@ -1167,7 +1179,7 @@ public class CssMetaDataTest {
                     assertNotNull(what, writable);
 
                     Object defaultValue = writable.getValue();
-                    Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
+                    Object initialValue = styleable.getInitialValue((Node) someClass.getDeclaredConstructor().newInstance());
 
                     if (defaultValue instanceof Number) {
                         // 5 and 5.0 are not the same according to equals,

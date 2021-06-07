@@ -201,20 +201,20 @@ class JavaRuntimeMethod : public RuntimeMethod {
 public:
     typedef RuntimeMethod Base;
 
-    static JavaRuntimeMethod* create(JSGlobalObject* globalObject, const String& name, Bindings::Method *method)
+    static JavaRuntimeMethod* create(JSGlobalObject* lexicalGlobalObject, JSGlobalObject* globalObject, const String& name, Bindings::Method* method)
     {
         VM& vm = globalObject->vm();
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
-        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(globalObject);
+        Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(lexicalGlobalObject);
         JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(vm.heap)) JavaRuntimeMethod(vm, domStructure, method);
-        _method->finishCreation(globalObject->vm(), name);
+        _method->finishCreation(vm, name);
         return _method;
     }
 
-    static Structure* createStructure(VM& globalData, JSGlobalObject* globalObject, JSValue prototype)
+    static Structure* createStructure(VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
     {
-        return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), &s_info);
     }
 
     static const ClassInfo s_info;
@@ -225,20 +225,20 @@ private:
     {
     }
 
-    void finishCreation(VM& globalData, const String& name)
+    void finishCreation(VM& vm, const String& name)
     {
-        Base::finishCreation(globalData, name);
-        ASSERT(inherits(globalData, &s_info));
+        Base::finishCreation(vm, name);
+        ASSERT(inherits(vm, &s_info));
     }
 };
 
 const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
 
-JSValue JavaInstance::getMethod(JSGlobalObject* globalObject, PropertyName propertyName)
+JSValue JavaInstance::getMethod(JSGlobalObject* lexicalGlobalObject, PropertyName propertyName)
 {
     JavaClass* aClass = static_cast<JavaClass*>(getClass());
     Method *method = aClass->methodNamed(propertyName, this);
-    return JavaRuntimeMethod::create(globalObject, propertyName.publicName(), method);
+    return JavaRuntimeMethod::create(lexicalGlobalObject, lexicalGlobalObject, propertyName.publicName(), method);
 }
 
 JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* callFrame, RuntimeMethod* runtimeMethod)
@@ -309,7 +309,7 @@ JSValue JavaInstance::invokeMethod(JSGlobalObject* globalObject, CallFrame* call
         jvalue jarg = convertValueToJValue(globalObject, m_rootObject.get(),
             callFrame->argument(i), jtype, javaClassName.data());
         jArgs[i] = jvalueToJObject(jarg, jtype);
-        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, globalObject->argument(i).toString(globalObject)->value(globalObject).ascii().data());
+        LOG(LiveConnect, "JavaInstance::invokeMethod arg[%d] = %s", i, callFrame->argument(i).toString(globalObject)->value(globalObject).ascii().data());
     }
 
     jvalue result;

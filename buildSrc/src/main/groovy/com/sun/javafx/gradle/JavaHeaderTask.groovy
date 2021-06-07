@@ -26,6 +26,7 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.FileTree
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.util.PatternFilterable
@@ -33,8 +34,8 @@ import org.gradle.api.tasks.util.PatternSet
 
 class JavaHeaderTask extends DefaultTask {
     @OutputDirectory File output;
-    List sourceRoots = new ArrayList();
-    FileCollection classpath;
+    @Input List sourceRoots = new ArrayList();
+    @Input FileCollection classpath;
     private final PatternFilterable patternSet = new PatternSet();
 
 //    @InputFiles public void setSource(Object source) {

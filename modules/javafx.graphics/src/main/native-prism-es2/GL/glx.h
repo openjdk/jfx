@@ -32,11 +32,6 @@
 #include <GL/gl.h>
 
 
-#if defined(USE_MGL_NAMESPACE)
-#include "glx_mangle.h"
-#endif
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
