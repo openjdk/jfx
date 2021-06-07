@@ -122,7 +122,6 @@ public class SliderBehavior extends BehaviorBase<Slider> {
       *       track and 1.0 being the end
      */
     public void thumbPressed(MouseEvent e, double position) {
-        // If not already focused, request focus
         final Slider slider = getNode();
         slider.requestFocus();
         slider.setValueChanging(true);
