@@ -48,14 +48,15 @@ import javafx.scene.paint.PhongMaterial;
  * In addition to the factors that control the light intensity of a {@code PointLight}, a {@code SpotLight} has a
  * light-cone attenuation factor, {@code spot}, that is determined by 3 properties:
  * <ul>
- * <li> {@link #innerAngleProperty() inner angle}: the angle of the inner cone (see image below)
- * <li> {@link #outerAngleProperty() outer angle}: the angle of the outer cone (see image below)
+ * <li> {@link #innerAngleProperty() innerAngle}: the angle of the inner cone (see image below)
+ * <li> {@link #outerAngleProperty() outerAngle}: the angle of the outer cone (see image below)
  * <li> {@link #falloffProperty() falloff}: the factor that controls the light's intensity drop inside the outer cone
  * </ul>
  * The valid ranges for these properties are {@code 0 <= innerAngle <= outerAngle <= 180} and {@code falloff >= 0};
  * values outside either of these ranges can produce unexpected results.
  * <p>
- * For a point whose vector to the light position forms an angle {@code theta} with the direction of the light, if
+ * The angle of a point to the light is defined as the angle between its vector to the light's position and the
+ * direction of the light. For such an angle {@code theta}, if
  * <ul>
  * <li>{@code theta < innerAngle} then {@code spot = 1}
  * <li>{@code theta > outerAngle} then {@code spot = 0}
@@ -140,9 +141,9 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The angle of the spotlight's inner cone, in degrees (as shown in the class doc image). A point whose angle to the
-     * light's position is less than this angle is not attenuated by the spotlight factor ({@code spot = 1}). At larger
-     * angles, the light intensity starts to drop.
+     * The angle of the spotlight's inner cone, in degrees. A point whose angle to the light is less than this angle is
+     * not attenuated by the spotlight factor ({@code spot = 1}). At larger angles, the light intensity starts to drop.
+     * See the class doc for more information.
      * <p>
      * The valid range is {@code 0 <= innerAngle <= outerAngle}; values outside of this range can produce unexpected
      * results.
@@ -171,9 +172,9 @@ public class SpotLight extends PointLight {
 
     /**
      * The angle of the spotlight's outer cone, in degrees (as shown in the class doc image). A point whose angle to the
-     * light's position is greater than this angle receives no light ({@code spot = 0}). A point whose angle to the
-     * light's position is less than the outer angle but greater than the inner angle receives partial intensity
-     * governed by the falloff factor.
+     * light is greater than this angle receives no light ({@code spot = 0}). A point whose angle to the light is less
+     * than the outer angle but greater than the inner angle receives partial intensity governed by the falloff factor.
+     * See the class doc for more information.
      * <p>
      * The valid range is {@code innerAngle <= outerAngle <= 180}; values outside of this range can produce unexpected
      * results.
@@ -201,11 +202,11 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The intensity falloff factor of the spotlight's outer cone. A point whose angle to the light's position is
+     * The intensity falloff factor of the spotlight's outer cone. A point whose angle to the light is
      * greater than the inner angle but less than the outer angle receives partial intensity governed by this factor.
      * The larger the falloff, the sharper the drop in intensity from the inner cone. A falloff factor of 1 gives a
      * linear drop in intensity, values greater than 1 give a convex drop, and values smaller than 1 give a concave
-     * drop. See the class docs for the mathematical definitions.
+     * drop. See the class doc for more information.
      * <p>
      * The valid range is {@code 0 <= falloff}; values outside of this range can produce unexpected results.
      *
