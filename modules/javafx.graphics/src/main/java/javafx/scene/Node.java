@@ -8172,17 +8172,41 @@ public abstract class Node implements EventTarget, Styleable {
      */
     private FocusPropertyBase focusVisible;
 
+    /**
+     * Indicates whether this {@code Node} or any of its children currently
+     * has the input focus.
+     */
+    private FocusPropertyBase focusWithin;
+
     protected final void setFocused(boolean value) {
-        setFocused(value, false);
+        setFocusQuietly(value, false);
+        notifyFocus();
     }
 
-    final void setFocused(boolean focused, boolean focusVisible) {
-        FocusPropertyBase focusedProperty = (FocusPropertyBase)focusedProperty();
-        FocusPropertyBase focusVisibleProperty = (FocusPropertyBase)focusVisibleProperty();
-        focusedProperty.set(focused);
-        focusVisibleProperty.set(focused && focusVisible);
-        focusedProperty.notifyListeners();
-        focusVisibleProperty.notifyListeners();
+    /**
+     * Sets the value of the {@link #focused} and {@link #focusVisible} properties
+     * without firing change events. The value of {@link #focusWithin} is set
+     * by the implementation of {@link #focused}.
+     */
+    final void setFocusQuietly(boolean focused, boolean focusVisible) {
+        ((FocusPropertyBase)focusedProperty()).set(focused);
+        ((FocusPropertyBase)focusVisibleProperty()).set(focused && focusVisible);
+    }
+
+    /**
+     * Fires change notifications if the value of {@link #focused}, {@link #focusVisible}
+     * or {@link #focusWithin} has changed. Change notifications for {@link #focusWithin}
+     * are fired on the current node and on all of its parents, if necessary.
+     */
+    final void notifyFocus() {
+        ((FocusPropertyBase)focusedProperty()).notifyListeners();
+        ((FocusPropertyBase)focusVisibleProperty()).notifyListeners();
+
+        Node node = this;
+        do {
+            ((FocusPropertyBase)node.focusWithinProperty()).notifyListeners();
+            node = node.getParent();
+        } while (node != null);
     }
 
     public final boolean isFocused() {
@@ -8210,6 +8234,19 @@ public abstract class Node implements EventTarget, Styleable {
                     }
                     return false;
                 }
+
+                @Override
+                public void set(boolean value) {
+                    if (get() != value) {
+                        super.set(value);
+
+                        Node node = Node.this;
+                        do {
+                            ((FocusPropertyBase)node.focusWithinProperty()).set(value);
+                            node = node.getParent();
+                        } while (node != null);
+                    }
+                }
             };
         }
         return focused;
@@ -8234,6 +8271,27 @@ public abstract class Node implements EventTarget, Styleable {
             };
         }
         return focusVisible;
+    }
+
+    public final boolean isFocusWithin() {
+        return focusWithin != null && focusWithin.get();
+    }
+
+    public final ReadOnlyBooleanProperty focusWithinProperty() {
+        if (focusWithin == null) {
+            focusWithin = new FocusPropertyBase() {
+                @Override
+                protected PseudoClass getPseudoClass() {
+                    return FOCUS_WITHIN_PSEUDOCLASS_STATE;
+                }
+
+                @Override
+                public String getName() {
+                    return "focusWithin";
+                }
+            };
+        }
+        return focusWithin;
     }
 
     /**
@@ -9642,6 +9700,7 @@ public abstract class Node implements EventTarget, Styleable {
     private static final PseudoClass DISABLED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("disabled");
     private static final PseudoClass FOCUSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focused");
     private static final PseudoClass FOCUS_VISIBLE_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-visible");
+    private static final PseudoClass FOCUS_WITHIN_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("focus-within");
     private static final PseudoClass SHOW_MNEMONICS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("show-mnemonics");
 
     private static abstract class LazyTransformProperty

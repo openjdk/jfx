@@ -136,6 +136,32 @@ public class FocusTest {
         assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-visible")));
     }
 
+    private void assertIsFocusWithin(Node n) {
+        assertTrue(n.isFocusWithin());
+        assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-within")));
+    }
+
+    private void assertNotFocusWithin(Node n) {
+        assertFalse(n.isFocusWithin());
+        assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-within")));
+    }
+
+    private void assertIsFocusWithinParents(Node n) {
+        do {
+            assertTrue(n.isFocusWithin());
+            assertTrue(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-within")));
+            n = n.getParent();
+        } while (n != null);
+    }
+
+    private void assertNotFocusWithinParents(Node n) {
+        do {
+            assertFalse(n.isFocusWithin());
+            assertFalse(n.getPseudoClassStates().stream().anyMatch(pc -> pc.getPseudoClassName().equals("focus-within")));
+            n = n.getParent();
+        } while (n != null);
+    }
+
     /**
      * Test setting of initial focus.
      */
@@ -752,7 +778,7 @@ public class FocusTest {
     /**
      * If a node acquires focus by calling {@link Node#requestFocus()}, it does not acquire visible focus.
      */
-    @Test public void defaultFocusTraversalDoesNotSetFocusVisible() {
+    @Test public void testDefaultFocusTraversalDoesNotSetFocusVisible() {
         Node node = n();
         scene.setRoot(new Group(node));
 
@@ -768,7 +794,7 @@ public class FocusTest {
     /**
      * If a node acquires focus when the TAB key is pressed, it also acquires visible focus.
      */
-    @Test public void keyFocusTraversalSetsFocusVisible() {
+    @Test public void testKeyFocusTraversalSetsFocusVisible() {
         Node node = n();
         Group g = new Group(node);
         scene.setRoot(g);
@@ -786,7 +812,7 @@ public class FocusTest {
      * If {@link Node#requestFocus()} is called on a node that has acquired visible focus,
      * visible focus is removed from the node.
      */
-    @Test public void focusVisibleIsRemovedByDefaultRequestFocus() {
+    @Test public void testFocusVisibleIsRemovedByDefaultRequestFocus() {
         Node node = n();
         Group g = new Group(node);
         scene.setRoot(g);
@@ -804,7 +830,7 @@ public class FocusTest {
     /**
      * When a node loses focus, it also loses visible focus.
      */
-    @Test public void visibleFocusIsRemovedWhenFocusIsRemoved() {
+    @Test public void testVisibleFocusIsRemovedWhenFocusIsRemoved() {
         Node node1 = n();
         Node node2 = n();
         Group g = new Group(node1, node2);
@@ -818,6 +844,48 @@ public class FocusTest {
 
         assertNotFocused(scene, node1);
         assertNotFocusVisible(node1);
+    }
+
+    /**
+     * When a node acquires focus, the focusWithin property is set on the node
+     * and all of its parents.
+     */
+    @Test public void testFocusWithinIsTrueOnAllParents() {
+        Node node1 = n();
+        Group g = new Group(new Group(new Group(node1)));
+        scene.setRoot(g);
+
+        assertNotFocusWithinParents(node1);
+
+        node1.requestFocus();
+
+        assertIsFocusWithinParents(node1);
+    }
+
+    /**
+     * When a node loses focus, the focusWithin property of its parents is cleared.
+     */
+    @Test public void testFocusWithinIsRemovedFromParentsAfterChangingFocusOwner() {
+        Node node1 = n(), node2 = n();
+        Group g = new Group(new Group(new Group(node1)), new Group(new Group(node2)));
+        scene.setRoot(g);
+
+        assertNotFocusWithinParents(node1);
+        assertNotFocusWithinParents(node2);
+
+        node1.requestFocus();
+
+        assertIsFocusWithinParents(node1);
+        assertNotFocusWithin(node2);
+        assertNotFocusWithin(node2.getParent());
+        assertNotFocusWithin(node2.getParent().getParent());
+
+        node2.requestFocus();
+
+        assertIsFocusWithinParents(node2);
+        assertNotFocusWithin(node1);
+        assertNotFocusWithin(node1.getParent());
+        assertNotFocusWithin(node1.getParent().getParent());
     }
 
     // TODO: tests for moving nodes between scenes

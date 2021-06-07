@@ -2144,13 +2144,11 @@ public class Scene implements EventTarget {
         @Override
         protected void invalidated() {
             if (oldFocusOwner != null) {
-                ((Node.FocusPropertyBase)oldFocusOwner.focusedProperty()).set(false);
-                ((Node.FocusPropertyBase)oldFocusOwner.focusVisibleProperty()).set(false);
+                oldFocusOwner.setFocusQuietly(false, false);
             }
             Node value = get();
             if (value != null) {
-                ((Node.FocusPropertyBase)value.focusedProperty()).set(keyHandler.windowFocused);
-                ((Node.FocusPropertyBase)value.focusVisibleProperty()).set(keyHandler.focusVisible);
+                value.setFocusQuietly(keyHandler.windowFocused, keyHandler.focusVisible);
                 if (value != oldFocusOwner) {
                     value.getScene().enableInputMethodEvents(
                             value.getInputMethodRequests() != null
@@ -2163,12 +2161,10 @@ public class Scene implements EventTarget {
             Node localOldOwner = oldFocusOwner;
             oldFocusOwner = value;
             if (localOldOwner != null) {
-                ((Node.FocusPropertyBase)localOldOwner.focusedProperty()).notifyListeners();
-                ((Node.FocusPropertyBase)localOldOwner.focusVisibleProperty()).notifyListeners();
+                localOldOwner.notifyFocus();
             }
             if (value != null) {
-                ((Node.FocusPropertyBase)value.focusedProperty()).notifyListeners();
-                ((Node.FocusPropertyBase)value.focusVisibleProperty()).notifyListeners();
+                value.notifyFocus();
             }
             PlatformLogger logger = Logging.getFocusLogger();
             if (logger.isLoggable(Level.FINE)) {
@@ -4047,7 +4043,8 @@ public class Scene implements EventTarget {
         protected void setWindowFocused(boolean value) {
             windowFocused = value;
             if (getFocusOwner() != null) {
-                getFocusOwner().setFocused(windowFocused, focusVisible);
+                getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
+                getFocusOwner().notifyFocus();
             }
             if (windowFocused) {
                 if (accessible != null) {
