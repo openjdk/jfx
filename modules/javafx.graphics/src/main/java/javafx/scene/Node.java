@@ -8180,7 +8180,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     protected final void setFocused(boolean value) {
         setFocusQuietly(value, false);
-        notifyFocus();
+        notifyFocusListeners();
     }
 
     /**
@@ -8198,7 +8198,7 @@ public abstract class Node implements EventTarget, Styleable {
      * or {@link #focusWithin} has changed. Change notifications for {@link #focusWithin}
      * are fired on the current node and on all of its parents, if necessary.
      */
-    final void notifyFocus() {
+    final void notifyFocusListeners() {
         ((FocusPropertyBase)focusedProperty()).notifyListeners();
         ((FocusPropertyBase)focusVisibleProperty()).notifyListeners();
 

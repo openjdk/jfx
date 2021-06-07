@@ -2161,10 +2161,10 @@ public class Scene implements EventTarget {
             Node localOldOwner = oldFocusOwner;
             oldFocusOwner = value;
             if (localOldOwner != null) {
-                localOldOwner.notifyFocus();
+                localOldOwner.notifyFocusListeners();
             }
             if (value != null) {
-                value.notifyFocus();
+                value.notifyFocusListeners();
             }
             PlatformLogger logger = Logging.getFocusLogger();
             if (logger.isLoggable(Level.FINE)) {
@@ -4044,7 +4044,7 @@ public class Scene implements EventTarget {
             windowFocused = value;
             if (getFocusOwner() != null) {
                 getFocusOwner().setFocusQuietly(windowFocused, focusVisible);
-                getFocusOwner().notifyFocus();
+                getFocusOwner().notifyFocusListeners();
             }
             if (windowFocused) {
                 if (accessible != null) {
