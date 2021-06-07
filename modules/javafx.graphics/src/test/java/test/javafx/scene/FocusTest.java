@@ -888,6 +888,31 @@ public class FocusTest {
         assertNotFocusWithin(node1.getParent().getParent());
     }
 
+    /**
+     * When a node loses focus, all of its parents also lose focusWithin.
+     * However, if focus transitions to a new node, and the new node is also a child of the
+     * parent that just lost focusWithin, the parent will re-gain focusWithin.
+     *
+     * Since focus traversal is specified to be an atomic operation, the fact that
+     * the parent technically lost and re-gained focusWithin must not be observable.
+     */
+    @Test public void testFocusWithinListenerIsNotInvokedIfPropertyDidNotEffectivelyChange() {
+        Node node1 = n(), node2 = n();
+        Group g = new Group(new Group(new Group(node1)), new Group(new Group(node2)));
+        scene.setRoot(g);
+
+        List<Boolean> focusWithinValues = new ArrayList<>();
+        g.focusWithinProperty().addListener((observable, oldValue, newValue) -> focusWithinValues.add(newValue));
+
+        node1.requestFocus();
+        assertEquals(1, focusWithinValues.size());
+        assertEquals(Boolean.TRUE, focusWithinValues.get(0));
+
+        node2.requestFocus();
+        assertEquals(1, focusWithinValues.size());
+        assertEquals(Boolean.TRUE, focusWithinValues.get(0));
+    }
+
     // TODO: tests for moving nodes between scenes
     // and active and inactive stages
 }
