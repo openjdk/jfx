@@ -8115,7 +8115,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
     abstract class FocusPropertyBase extends ReadOnlyBooleanPropertyBase {
         private boolean value;
-        private boolean changed;
+        private boolean lastNotifiedValue;
 
         protected abstract PseudoClass getPseudoClass();
 
@@ -8130,18 +8130,15 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         public void set(boolean value) {
-            if (this.value != value) {
-                this.value = value;
-                this.changed = true;
-            }
+            this.value = value;
         }
 
         protected boolean notifyListeners() {
-            if (!changed) {
+            if (lastNotifiedValue == value) {
                 return false;
             }
 
-            changed = false;
+            lastNotifiedValue = value;
             pseudoClassStateChanged(getPseudoClass(), value);
 
             PlatformLogger logger = Logging.getFocusLogger();
