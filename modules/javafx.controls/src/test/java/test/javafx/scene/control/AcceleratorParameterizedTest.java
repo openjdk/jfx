@@ -349,7 +349,7 @@ public class AcceleratorParameterizedTest {
         assertEquals(2, eventCounter);
     }
 
-    @Ignore("Passes only for Button")
+    @Ignore("JDK-8268374")
     @Test public void testAcceleratorShouldNotGetFiredWhenControlsIsRemovedFromSceneThenContextMenuIsSetToNullAndControlIsAddedBackToScene() {
         KeyEventFirer kb = new KeyEventFirer(item1, scene);
         kb.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
