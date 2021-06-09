@@ -91,8 +91,7 @@ import javafx.beans.property.SimpleIntegerProperty;
  *
  * <p>The RFC 2397 "data" scheme for URLs is supported in addition to
  * the protocol handlers that are registered for the application.
- *
- * <p>If a URL uses the "data" scheme, the data must be base64-encoded
+ * If a URL uses the "data" scheme, the data must be base64-encoded
  * and the MIME type must either be empty or a subtype of the
  * {@code image} type.
  *
