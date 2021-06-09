@@ -8152,35 +8152,6 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Indicates whether this {@code Node} currently has the input focus.
-     * To have the input focus, a node must be the {@code Scene}'s focus
-     * owner, and the scene must be in a {@code Stage} that is visible
-     * and active. See {@link #requestFocus()} for more information.
-     *
-     * @see #requestFocus()
-     * @defaultValue false
-     */
-    private FocusPropertyBase focused;
-
-    /**
-     * Indicates whether this {@code Node} should visibly indicate focus.
-     * This flag is set when a node acquired input focus via keyboard navigation,
-     * and it is cleared when {@link #requestFocus()} is called.
-     */
-    private FocusPropertyBase focusVisible;
-
-    /**
-     * Indicates whether this {@code Node} or any of its children currently
-     * has the input focus.
-     */
-    private FocusPropertyBase focusWithin;
-
-    protected final void setFocused(boolean value) {
-        setFocusQuietly(value, false);
-        notifyFocusListeners();
-    }
-
-    /**
      * Sets the value of the {@link #focused} and {@link #focusVisible} properties
      * without firing change events. The value of {@link #focusWithin} is set
      * by the implementation of {@link #focused}.
@@ -8204,6 +8175,22 @@ public abstract class Node implements EventTarget, Styleable {
             ((FocusPropertyBase)node.focusWithinProperty()).notifyListeners();
             node = node.getParent();
         } while (node != null);
+    }
+
+    /**
+     * Indicates whether this {@code Node} currently has the input focus.
+     * To have the input focus, a node must be the {@code Scene}'s focus
+     * owner, and the scene must be in a {@code Stage} that is visible
+     * and active. See {@link #requestFocus()} for more information.
+     *
+     * @see #requestFocus()
+     * @defaultValue false
+     */
+    private FocusPropertyBase focused;
+
+    protected final void setFocused(boolean value) {
+        setFocusQuietly(value, false);
+        notifyFocusListeners();
     }
 
     public final boolean isFocused() {
@@ -8249,6 +8236,16 @@ public abstract class Node implements EventTarget, Styleable {
         return focused;
     }
 
+    /**
+     * Indicates whether this {@code Node} should visibly indicate focus.
+     * This flag is set when a node acquired input focus via keyboard navigation,
+     * and it is cleared when {@link #requestFocus()} is called.
+     *
+     * @defaultValue false
+     * @since 17
+     */
+    private FocusPropertyBase focusVisible;
+
     public final boolean isFocusVisible() {
         return focusVisible != null && focusVisible.get();
     }
@@ -8269,6 +8266,15 @@ public abstract class Node implements EventTarget, Styleable {
         }
         return focusVisible;
     }
+
+    /**
+     * Indicates whether this {@code Node} or any of its children currently
+     * has the input focus.
+     *
+     * @defaultValue false
+     * @since 17
+     */
+    private FocusPropertyBase focusWithin;
 
     public final boolean isFocusWithin() {
         return focusWithin != null && focusWithin.get();

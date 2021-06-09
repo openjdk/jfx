@@ -178,7 +178,6 @@ public class ButtonBehavior<C extends ButtonBase> extends BehaviorBase<C> {
      * potentially arming the Button, this will transfer focus to the button
      */
     protected void mousePressed(MouseEvent e) {
-        // if the button is not already focused, then request the focus
         if (getNode().isFocusTraversable()) {
             getNode().requestFocus();
         }
