@@ -8238,7 +8238,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Indicates whether this {@code Node} should visibly indicate focus.
-     * This flag is set when a node acquired input focus via keyboard navigation,
+     * This flag is set when a node acquires input focus via keyboard navigation,
      * and it is cleared when {@link #requestFocus()} is called.
      *
      * @defaultValue false
