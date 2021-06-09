@@ -206,6 +206,10 @@ public class NGSubScene extends NGNode {
                                               msaa);
             }
             Graphics rttGraphics = rtt.createGraphics();
+            // The pixel scale factors must be set to the rttGraphics, otherwise the position
+            // of the lights will not be scaled correctly on retina displays
+            // See https://bugs.openjdk.java.net/browse/JDK-8255015
+            rttGraphics.setPixelScaleFactors(g.getPixelScaleFactorX(), g.getPixelScaleFactorY());
             rttGraphics.scale((float) scaleX, (float) scaleY);
             rttGraphics.setLights(lights);
 
