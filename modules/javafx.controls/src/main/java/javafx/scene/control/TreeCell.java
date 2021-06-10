@@ -351,6 +351,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+    // treeItem at time of startEdit - fix for JDK-8267094
+    private TreeItem<T> treeItemAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
@@ -384,6 +386,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             tree.requestFocus();
         }
+        treeItemAtStartEdit = getTreeItem();
     }
 
      /** {@inheritDoc} */
@@ -424,6 +427,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */
@@ -435,6 +439,9 @@ public class TreeCell<T> extends IndexedCell<T> {
         super.cancelEdit();
 
         if (tree != null) {
+            TreeItem<T> editingItem = treeItemAtStartEdit;
+            T value = editingItem != null ? editingItem.getValue() : null;
+
             // reset the editing index on the TreeView
             if (updateEditingIndex) tree.edit(null);
 
@@ -446,10 +453,11 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             tree.fireEvent(new TreeView.EditEvent<T>(tree,
                     TreeView.<T>editCancelEvent(),
-                    getTreeItem(),
-                    getItem(),
+                    editingItem,
+                    value,
                     null));
         }
+        treeItemAtStartEdit = null;
     }
 
     /** {@inheritDoc} */

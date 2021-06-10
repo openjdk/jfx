@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -85,21 +84,6 @@ public class TreeCellEditingTest {
         assertEquals("sanity: tree editing unchanged", editingItem, tree.getEditingItem());
         assertEquals("sanity: editingIndex unchanged", editingIndex, tree.getRow(editingItem));
         assertEquals("cell must have fired edit cancel", 1, events.size());
-    }
-
-    /**
-     * Extracted from testCancelOffEditingIndex to formally ignore
-     * FIXME: move the assert to the other method, once the issue is solved
-     */
-    @Ignore("JDK-8267094")
-    @Test
-    public void testCancelOffEditingIndexEventIndex() {
-        cell.updateIndex(editingIndex);
-        TreeItem<String> editingItem = tree.getTreeItem(editingIndex);
-        tree.edit(editingItem);
-        List<EditEvent<String>> events = new ArrayList<>();
-        tree.setOnEditCancel(events::add);
-        cell.updateIndex(cellIndex);
         assertEquals("cancel on updateIndex from " + editingIndex + " to " + cellIndex + "\n  ",
                 editingItem, events.get(0).getTreeItem());
     }
