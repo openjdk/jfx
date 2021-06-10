@@ -1883,8 +1883,14 @@ gst_audio_base_sink_render (GstBaseSink * bsink, GstBuffer * buf)
   /* Last ditch attempt to ensure that we only play silence if
    * we are in trickmode no-audio mode (or if a buffer is marked as a GAP)
    * by dropping the buffer contents and rendering as a gap event instead */
+#ifndef GSTREAMER_LITE
   if (G_UNLIKELY ((bsink->segment.flags & GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO)
           || (buf && GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_GAP)))) {
+#else // GSTREAMER_LITE
+  if (G_UNLIKELY ((bsink->segment.flags & GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO)
+          || (buf && GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_GAP)))
+          && GST_BUFFER_TIMESTAMP_IS_VALID(buf)) {
+#endif // GSTREAMER_LITE
     GstClockTime duration;
     GstEvent *event;
     GstBaseSinkClass *bclass;

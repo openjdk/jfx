@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,7 +105,7 @@ public abstract class NativePlatformFactory {
                         throw new IllegalArgumentException("Unrecognized Monocle platform: "
                                 + factoryClassName);
                     }
-                    NativePlatformFactory npf = (NativePlatformFactory) clazz.newInstance();
+                    NativePlatformFactory npf = (NativePlatformFactory) clazz.getDeclaredConstructor().newInstance();
                     if (npf.matches() &&
                         npf.getMajorVersion() == majorVersion &&
                         npf.getMinorVersion() == minorVersion) {

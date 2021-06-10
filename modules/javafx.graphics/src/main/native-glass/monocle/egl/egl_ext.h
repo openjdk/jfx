@@ -25,22 +25,44 @@
 #ifndef __EGL_EXT__
 #define __EGL_EXT__
 #include <jni.h>
+
+// This header file declares functions that need to be provided by low-level
+// drivers or libraries.
+
+// get a handle to the native window (without specifying what window is)
 extern jlong getNativeWindowHandle(const char *v);
+
+// get a handle to the EGL display
 extern jlong getEglDisplayHandle();
+
+// initialize the EGL system with the specified handle
 extern jboolean doEglInitialize(void* handle);
+
+// bind a specific API to the EGL system
 extern jboolean doEglBindApi(int api);
+
+// instruct the system to choose an EGL configuration matching the provided attributes
 extern jlong doEglChooseConfig (jlong eglDisplay, int* attribs);
 
+// create an EGL Surface for the given display, configuration and window
 extern jlong doEglCreateWindowSurface(jlong eglDisplay, jlong config,
      jlong nativeWindow);
 
+// create an EGL Context for the given display and configuration
 extern jlong doEglCreateContext(jlong eglDisplay, jlong config);
 
+// enable the specified EGL system
 extern jboolean doEglMakeCurrent(jlong eglDisplay, jlong drawSurface,
      jlong readSurface, jlong eglContext);
 
+// swap buffers (and render frontbuffer)
 extern jboolean doEglSwapBuffers(jlong eglDisplay, jlong eglSurface);
 
+// get the number of native screens in the current configuration
+extern jint doGetNumberOfScreens();
+
+// get specific information about each screen
+// the idx parameter specifies which screen needs to be queried
 extern jlong doGetHandle(jint idx);
 extern jint doGetDepth(jint idx);
 extern jint doGetWidth(jint idx);
@@ -50,6 +72,17 @@ extern jint doGetOffsetY(jint idx);
 extern jint doGetDpi(jint idx);
 extern jint doGetNativeFormat(jint idx);
 extern jfloat doGetScale(jint idx);
-extern jint doGetNumberOfScreens();
+
+// initialize a hardware cursor with specified dimensions
+extern void doInitCursor(jint width, jint height);
+
+// show/hide the hardware cursor
+extern void doSetCursorVisibility(jboolean val);
+
+// point the hardware cursor to the provided location
+extern void doSetLocation(jint x, jint y);
+
+// use the specified image as cursor image
+extern void doSetCursorImage(jbyte* img, int length);
 
 #endif // EGL_EXT

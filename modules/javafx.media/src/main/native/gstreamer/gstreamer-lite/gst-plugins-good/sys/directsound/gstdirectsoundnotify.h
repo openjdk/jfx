@@ -46,7 +46,6 @@ class GSTDirectSoundNotify : IMMNotificationClient
 {
 public:
   GSTDirectSoundNotify();
-  ~GSTDirectSoundNotify();
 
   bool Init(GSTDSNotfierCallback pCallback, void *pData);
   void Dispose();
@@ -67,7 +66,6 @@ private:
   IMMDeviceEnumerator* m_pEnumerator;
   GSTDSNotfierCallback m_pCallback;
   void *m_pData;
-  HRESULT m_hrCoInit;
 
   // IUnknown
   IFACEMETHODIMP QueryInterface(const IID& iid, void** ppUnk);

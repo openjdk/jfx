@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -935,14 +935,12 @@ public class FXMLLoader {
                         try {
                             if (controllerFactory == null) {
                                 ReflectUtil.checkPackageAccess(type);
-                                setController(type.newInstance());
+                                setController(type.getDeclaredConstructor().newInstance());
                             } else {
                                 setController(controllerFactory.call(type));
                             }
-                        } catch (InstantiationException exception) {
-                            throw constructLoadException(exception);
-                        } catch (IllegalAccessException exception) {
-                            throw constructLoadException(exception);
+                        } catch (Exception e) {
+                            throw constructLoadException(e);
                         }
                     }
                 } else {
@@ -1018,11 +1016,9 @@ public class FXMLLoader {
                 if (value == null) {
                     try {
                         ReflectUtil.checkPackageAccess(type);
-                        value = type.newInstance();
-                    } catch (InstantiationException exception) {
-                        throw constructLoadException(exception);
-                    } catch (IllegalAccessException exception) {
-                        throw constructLoadException(exception);
+                        value = type.getDeclaredConstructor().newInstance();
+                    } catch (Exception e) {
+                        throw constructLoadException(e);
                     }
                 }
             }
@@ -1328,11 +1324,9 @@ public class FXMLLoader {
                     if (value == null) {
                         try {
                             ReflectUtil.checkPackageAccess(type);
-                            value = type.newInstance();
-                        } catch (InstantiationException exception) {
-                            throw constructLoadException(exception);
-                        } catch (IllegalAccessException exception) {
-                            throw constructLoadException(exception);
+                            value = type.getDeclaredConstructor().newInstance();
+                        } catch (Exception e) {
+                            throw constructLoadException(e);
                         }
                     }
                     root = value;

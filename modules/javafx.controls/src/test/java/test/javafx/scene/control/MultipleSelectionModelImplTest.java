@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,6 +73,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.javafx.collections.MockListObserver;
 
 /**
  * Unit tests for the SelectionModel abstract class used by ListView
@@ -340,6 +341,18 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(4));
         assertFalse(model.isSelected(5));
         assertTrue(model.isSelected(6));
+    }
+
+    @Test public void selectedIndicesListenerReportsCorrectIndexOnClearSelection() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(5);
+        MockListObserver<Integer> observer = new MockListObserver<>();
+        model.getSelectedIndices().addListener(observer);
+        model.clearSelection(5);
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {

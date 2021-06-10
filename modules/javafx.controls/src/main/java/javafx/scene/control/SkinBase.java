@@ -217,6 +217,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @param observable the observable to observe for change events, may be {@code null}
      * @param operation the operation to perform when the observable sends a change event,
      *  may be {@code null}
+     * @since 9
      */
     protected final void registerChangeListener(ObservableValue<?> observable, Consumer<ObservableValue<?>> operation) {
         if (lambdaChangeListenerHandler == null) {
