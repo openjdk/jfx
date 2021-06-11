@@ -75,21 +75,19 @@ public class ControlAcceleratorSupport {
         }
 
         final Scene scene = anchor.getScene();
-        if (scene == null) {
-            // listen to the scene property on the anchor until it is set, and
-            // then install the accelerators
-            anchor.sceneProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    Scene scene = anchor.getScene();
-                    if (scene != null) {
-                        anchor.sceneProperty().removeListener(this);
-                        doAcceleratorInstall(items, scene);
-                    }
-                }
-            });
-        } else {
+        if (scene != null) {
             doAcceleratorInstall(items, scene);
         }
+        // Scene change listener is added to the anchor for scenarios like,
+        // 1. Installing accelerators when Control is added to Scene
+        // 2. Removing accelerators when Control is removed from Scene
+        // Remove previously added listener if any
+        if (sceneChangeListenerMap.containsKey(anchor)) {
+            anchor.sceneProperty().removeListener(sceneChangeListenerMap.get(anchor));
+            sceneChangeListenerMap.remove(anchor);
+        }
+        // Add a new listener
+        anchor.sceneProperty().addListener(getSceneChangeListener(anchor, items));
     }
 
     private static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Object anchor) {
@@ -113,6 +111,24 @@ public class ControlAcceleratorSupport {
         } else {
             addAcceleratorsIntoScene(items, control);
         }
+    }
+
+    private static Map<Object, ChangeListener<Scene>> sceneChangeListenerMap = new WeakHashMap<>();
+
+    private static ChangeListener<Scene> getSceneChangeListener(Object anchor, ObservableList<MenuItem> items) {
+        ChangeListener<Scene> sceneChangeListener = sceneChangeListenerMap.get(anchor);
+        if (sceneChangeListener == null) {
+             sceneChangeListener = (ov, oldScene, newScene) -> {
+                if (oldScene != null) {
+                    removeAcceleratorsFromScene(items, oldScene);
+                }
+                if (newScene != null) {
+                    doAcceleratorInstall(items, newScene);
+                }
+            };
+            sceneChangeListenerMap.put(anchor, sceneChangeListener);
+        }
+        return sceneChangeListener;
     }
 
     private static void doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene) {
@@ -222,6 +238,14 @@ public class ControlAcceleratorSupport {
 
     public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
         Scene scene = anchor.getScene();
+        if (scene == null) {
+            // The Node is not part of a Scene: Remove the Scene listener that was added
+            // at the time of installing the accelerators.
+            if (sceneChangeListenerMap.containsKey(anchor)) {
+                anchor.sceneProperty().removeListener(sceneChangeListenerMap.get(anchor));
+                sceneChangeListenerMap.remove(anchor);
+            }
+        }
         removeAcceleratorsFromScene(items, scene);
     }
 
