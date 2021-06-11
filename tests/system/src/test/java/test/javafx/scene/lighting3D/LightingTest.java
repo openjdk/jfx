@@ -56,13 +56,13 @@ import javafx.stage.WindowEvent;
 //  | /
 //  |/
 //
-public class LightingTest {
+public abstract class LightingTest {
 
     // 1d/255 is the smallest color resolution, but we use 10d/255 to avoid precision problems
     protected static final double DELTA = 10d/255;
     protected static final String FAIL_MESSAGE = "Wrong color value";
 
-    protected static final int LIGTH_DIST = 60;
+    protected static final int LIGHT_DIST = 60;
 
     protected static LightBase light;
 
@@ -76,7 +76,7 @@ public class LightingTest {
         @Override
         public void start(Stage mainStage) {
             stage = mainStage;
-            light.setTranslateZ(-LIGTH_DIST);
+            light.setTranslateZ(-LIGHT_DIST);
             stage.setScene(new Scene(new Group(light, BOX)));
             stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(startupLatch::countDown));
             stage.show();
@@ -88,7 +88,7 @@ public class LightingTest {
     }
 
     protected double calculateLambertTerm(double x) {
-        return Math.cos(Math.atan(x/LIGTH_DIST));
+        return Math.cos(Math.atan(x/LIGHT_DIST));
     }
 
     @AfterClass

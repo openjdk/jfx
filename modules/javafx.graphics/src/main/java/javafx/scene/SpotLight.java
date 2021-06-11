@@ -111,7 +111,8 @@ public class SpotLight extends PointLight {
 
 
     /**
-     * The direction vector of the spotlight. The vector need not be normalized.
+     * The direction vector of the spotlight. It can be rotated by setting a rotation transform on the
+     * {@code SpotLight}. The vector need not be normalized.
      *
      * @defaultValue {@code Point3D(0, 0, 1)}
      */

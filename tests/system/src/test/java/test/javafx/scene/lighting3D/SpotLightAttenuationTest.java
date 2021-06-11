@@ -52,7 +52,7 @@ public class SpotLightAttenuationTest extends LightingTest {
     private static final int MIDDLE_ANGLE_SAMPLE = 30;
     private static final int OUTSIDE_ANGLE_SAMPLE = 42;
 
-    private static final double[] FALLOFF_FACTORS = new double[] {0.5, 1, 1};
+    private static final double[] FALLOFF_FACTORS = new double[] {0.5, 1, 1.5};
 
     private static final SpotLight LIGHT = new SpotLight(Color.BLUE);
 
@@ -65,7 +65,7 @@ public class SpotLightAttenuationTest extends LightingTest {
         startupLatch = new CountDownLatch(1);
         LightingTest.light = LIGHT;
         new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(5, TimeUnit.SECONDS));
+        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Before
@@ -112,6 +112,6 @@ public class SpotLightAttenuationTest extends LightingTest {
     }
 
     private int angleToDist(double degrees) {
-        return (int) (LIGTH_DIST * Math.tan(Math.toRadians(degrees)));
+        return (int) (LIGHT_DIST * Math.tan(Math.toRadians(degrees)));
     }
 }
