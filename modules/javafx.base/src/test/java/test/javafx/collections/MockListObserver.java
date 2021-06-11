@@ -97,8 +97,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
                        List<E> removed,
                        int from,
                        int to) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkAddRemove(0, list, removed, from, to);
     }
 
@@ -130,14 +129,12 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1Permutation(ObservableList<E> list, int[] perm) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkPermutation(0, list, 0, list.size(), perm);
     }
 
     public void check1Permutation(ObservableList<E> list, int from, int to, int[] perm) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkPermutation(0, list, from, to, perm);
     }
 
@@ -152,8 +149,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1Update(ObservableList<E> list, int from, int to) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkUpdate(0, list, from, to);
     }
 
@@ -169,8 +165,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1() {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
     }
 
     public void checkN(int n) {

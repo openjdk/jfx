@@ -63,11 +63,11 @@ public class SelectedItemsReadOnlyObservableListTest {
     public void testAddAndRemoveEntireRange() {
         selectedIndices.addAll(0, 1, 2, 3, 4);
         assertEquals(1, changes.size());
-        assertEquals(change(added(0, "foo", "bar", "baz", "qux", "quz")), changes.get(0));
+        assertEquals("{ [foo, bar, baz, qux, quz] added at 0 }", changes.get(0));
         changes.clear();
         selectedIndices.removeAll(0, 1, 2, 3, 4);
         assertEquals(1, changes.size());
-        assertEquals(change(removed(0, "foo", "bar", "baz", "qux", "quz")), changes.get(0));
+        assertEquals("{ [foo, bar, baz, qux, quz] removed at 0 }", changes.get(0));
     }
 
     /**
@@ -80,7 +80,7 @@ public class SelectedItemsReadOnlyObservableListTest {
         changes.clear();
         selectedIndices.removeAll(1, 2, 3);
         assertEquals(1, changes.size());
-        assertEquals(change(removed(1, "bar", "baz", "qux")), changes.get(0));
+        assertEquals("{ [bar, baz, qux] removed at 1 }", changes.get(0));
     }
 
     /**
@@ -93,9 +93,7 @@ public class SelectedItemsReadOnlyObservableListTest {
         changes.clear();
         selectedIndices.removeAll(0, 1, 3, 4);
         assertEquals(1, changes.size());
-        assertEquals(change(
-            removed(0, "foo", "bar"),
-            removed(1, "qux", "quz")), changes.get(0));
+        assertEquals("{ [foo, bar] removed at 0, [qux, quz] removed at 1 }", changes.get(0));
     }
 
     /**
@@ -110,8 +108,8 @@ public class SelectedItemsReadOnlyObservableListTest {
         changes.clear();
         selectedIndices.replaceAll(i -> i == 0 ? 1 : 0);
         assertEquals(2, changes.size());
-        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
-        assertEquals(change(replaced(1, range("bar"), range("foo"))), changes.get(1));
+        assertEquals("{ [foo] replaced by [bar] at 0 }", changes.get(0));
+        assertEquals("{ [bar] replaced by [foo] at 1 }", changes.get(1));
     }
 
     /**
@@ -122,7 +120,7 @@ public class SelectedItemsReadOnlyObservableListTest {
      * { [quz] replaced by [qux] at 4 }
      */
     @Test
-    @Ignore("see JDK-8267951")
+    @Ignore("JDK-8267951")
     public void testReplaceDisjointRanges() {
         selectedIndices.addAll(0, 1, 2, 3, 4);
         changes.clear();
@@ -137,10 +135,10 @@ public class SelectedItemsReadOnlyObservableListTest {
         });
 
         assertEquals(4, changes.size());
-        assertEquals(change(replaced(0, range("foo"), range("bar"))), changes.get(0));
-        assertEquals(change(replaced(1, range("bar"), range("foo"))), changes.get(1));
-        assertEquals(change(replaced(3, range("qux"), range("quz"))), changes.get(2));
-        assertEquals(change(replaced(4, range("quz"), range("qux"))), changes.get(3));
+        assertEquals("{ [foo] replaced by [bar] at 0 }", changes.get(0));
+        assertEquals("{ [bar] replaced by [foo] at 1 }", changes.get(1));
+        assertEquals("{ [qux] replaced by [quz] at 3 }", changes.get(2));
+        assertEquals("{ [quz] replaced by [qux] at 4 }", changes.get(3));
     }
 
     /**
@@ -158,10 +156,7 @@ public class SelectedItemsReadOnlyObservableListTest {
         selectedIndices._endChange();
 
         assertEquals(1, changes.size());
-        assertEquals(change(
-            replaced(0, range("foo", "bar"), range("bar", "foo")),
-            removed(3, "qux", "quz")
-        ), changes.get(0));
+        assertEquals("{ [foo, bar] replaced by [bar, foo] at 0, [qux, quz] removed at 3 }", changes.get(0));
     }
 
     /**
@@ -179,30 +174,7 @@ public class SelectedItemsReadOnlyObservableListTest {
         selectedIndices._endChange();
 
         assertEquals(1, changes.size());
-        assertEquals(change(
-                removed(0, "foo", "bar"),
-                replaced(1, range("qux", "quz"), range("quz", "qux"))
-        ), changes.get(0));
-    }
-
-    private String change(String... subChanges) {
-        return "{ " + String.join(", ", subChanges) + " }";
-    }
-
-    private String added(int index, String... items) {
-        return range(items) + " added at " + index;
-    }
-
-    private String removed(int index, String... items) {
-        return range(items) + " removed at " + index;
-    }
-
-    private String replaced(int index, String items, String replacedBy) {
-        return items + " replaced by " + replacedBy + " at " + index;
-    }
-
-    private String range(String... items) {
-        return "[" + String.join(", ", items) + "]";
+        assertEquals("{ [foo, bar] removed at 0, [qux, quz] replaced by [quz, qux] at 1 }", changes.get(0));
     }
 
     private static class TestObservableList<T> extends ObservableListWrapper<T> {
