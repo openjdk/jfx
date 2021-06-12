@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,17 +161,17 @@ public abstract class LongPropertyBase extends LongProperty {
      * {@inheritDoc}
      */
     @Override
-    public void bind(final ObservableValue<? extends Number> rawObservable) {
-        if (rawObservable == null) {
+    public void bind(final ObservableValue<? extends Number> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
         ObservableLongValue newObservable;
-        if (rawObservable instanceof ObservableLongValue) {
-            newObservable = (ObservableLongValue)rawObservable;
-        } else if (rawObservable instanceof ObservableNumberValue) {
-            final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new ValueWrapper(rawObservable) {
+        if (source instanceof ObservableLongValue) {
+            newObservable = (ObservableLongValue)source;
+        } else if (source instanceof ObservableNumberValue) {
+            final ObservableNumberValue numberValue = (ObservableNumberValue)source;
+            newObservable = new ValueWrapper(source) {
 
                 @Override
                 protected long computeValue() {
@@ -179,11 +179,11 @@ public abstract class LongPropertyBase extends LongProperty {
                 }
             };
         } else {
-            newObservable = new ValueWrapper(rawObservable) {
+            newObservable = new ValueWrapper(source) {
 
                 @Override
                 protected long computeValue() {
-                    final Number value = rawObservable.getValue();
+                    final Number value = source.getValue();
                     return (value == null)? 0L : value.longValue();
                 }
             };

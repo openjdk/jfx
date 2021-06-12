@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,76 +40,95 @@ import javafx.beans.value.WritableValue;
 public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
 
     /**
-     * Create a unidirection binding for this {@code Property}.
+     * Establishes a unidirectional binding between this property (the <i>bound property</i>)
+     * and an {@link ObservableValue} (the <i>binding source</i>).
      * <p>
-     * Note that JavaFX has all the bind calls implemented through weak listeners. This means the bound property
-     * can be garbage collected and stopped from being updated.
+     * After establishing the binding, the value of the bound property is synchronized with the value
+     * of the binding source. If the value of the binding source changes, the change is immediately
+     * reflected in the value of the bound property. Furthermore, the bound property becomes effectively
+     * read-only: any call to {@link #setValue(Object)} will fail with an exception.
+     * <p>
+     * The bound property <i>strongly</i> references the binding source; this means that, as long as
+     * the bound property is alive, the binding source will not be garbage-collected. As a consequence,
+     * a bound property will not unexpectedly be unbound if its binding source would otherwise become
+     * unreachable.
+     * <p>
+     * Conversely, the binding source only <i>weakly</i> references the bound property. In order to be
+     * eligible for garbage collection, a bound property need not be unbound from its binding source.
+     * <p>
+     * If this method is called when the property is already bound, the previous binding is removed
+     * as if by calling {@link #unbind()} before establishing the new binding.
      *
-     * @param observable
-     *            The observable this {@code Property} should be bound to.
-     * @throws NullPointerException
-     *             if {@code observable} is {@code null}
+     * @param source the binding source
+     * @throws NullPointerException if {@code source} is {@code null}
      */
-    void bind(ObservableValue<? extends T> observable);
+    void bind(ObservableValue<? extends T> source);
 
     /**
-     * Remove the unidirectional binding for this {@code Property}.
-     *
-     * If the {@code Property} is not bound, calling this method has no effect.
-     * @see #bind(javafx.beans.value.ObservableValue)
+     * Removes a unidirectional binding that was established with {@link #bind(ObservableValue)}.
+     * <p>
+     * The value of this property will remain unchanged.
+     * If this property is not bound, calling this method has no effect.
      */
     void unbind();
 
     /**
-     * Can be used to check, if a {@code Property} is bound.
-     * @see #bind(javafx.beans.value.ObservableValue)
+     * Returns whether this property is bound by a unidirectional binding that was
+     * established by calling {@link #bind(ObservableValue)}.
+     * <p>
+     * Note that this method does <b>not</b> account for bidirectional bindings that were
+     * established by calling {@link #bindBidirectional(Property)}.
      *
-     * @return {@code true} if the {@code Property} is bound, {@code false}
-     *         otherwise
+     * @return whether this property is unidirectionally bound
      */
     boolean isBound();
 
     /**
-     * Create a bidirectional binding between this {@code Property} and another
-     * one.
-     * Bidirectional bindings exists independently of unidirectional bindings. So it is possible to
-     * add unidirectional binding to a property with bidirectional binding and vice-versa. However, this practice is
-     * discouraged.
+     * Establishes a bidirectional binding between this property and another {@link Property}.
      * <p>
-     * It is possible to have multiple bidirectional bindings of one Property.
+     * After establishing the binding, the values of both properties are synchronized: any change
+     * to the value of one property will immediately result in the value of the other property being
+     * changed accordingly.
      * <p>
-     * JavaFX bidirectional binding implementation use weak listeners. This means bidirectional binding does not prevent
-     * properties from being garbage collected.
+     * While it is not possible for a property to be bound by more than one unidirectional binding,
+     * it is legal to establish multiple bidirectional bindings for the same property. However,
+     * since a bidirectional binding allows for the values of both properties to be changed
+     * by calling {@link #setValue(Object)}, neither of the properties is considered to be a
+     * <i>bound property</i> that returns {@code true} from {@link #isBound()}.
+     * <p>
+     * Both properties of a bidirectional binding <i>weakly</i> reference their counterparts.
+     * This is different from a unidirectional binding, where the bound property <i>strongly</i>
+     * references its binding source. In practice, this means that if any of the bidirectionally
+     * bound properties become unreachable, the binding is eligible for garbage collection.
+     * Furthermore, neither of the bidirectionally bound properties will keep its counterpart
+     * alive if the counterpart would otherwise become unreachable.
+     * <p>
+     * Bidirectional bindings are independent from unidirectional bindings. As a consequence,
+     * establishing a bidirectional binding does not remove a unidirectional binding that has
+     * already been established, nor does it prevent a unidirectional binding from being
+     * established. However, doing so is not a meaningful use of this API, because the
+     * unidirectionally bound property will cause any attempt to change the value of any of
+     * the properties to fail with an exception.
      *
-     * @param other
-     *            the other {@code Property}
-     * @throws NullPointerException
-     *             if {@code other} is {@code null}
-     * @throws IllegalArgumentException
-     *             if {@code other} is {@code this}
+     * @param other the other property
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is {@code this}
      */
     void bindBidirectional(Property<T> other);
 
     /**
-     * Remove a bidirectional binding between this {@code Property} and another
-     * one.
+     * Removes a bidirectional binding that was established with {@link #bindBidirectional(Property)}.
+     * <p>
+     * Bidirectional bindings can be removed by calling this method on either of the two properties:
+     * <pre><code>
+     * property1.bindBidirectional(property2);
+     * property2.unbindBidirectional(property1);
+     * </code></pre>
+     * If the properties are not bidirectionally bound, calling this method has no effect.
      *
-     * If no bidirectional binding between the properties exists, calling this
-     * method has no effect.
-     *
-     * It is possible to unbind by a call on the second property. This code will work:
-     *
-     * <blockquote><pre>
-     *     property1.bindBirectional(property2);
-     *     property2.unbindBidirectional(property1);
-     * </pre></blockquote>
-     *
-     * @param other
-     *            the other {@code Property}
-     * @throws NullPointerException
-     *             if {@code other} is {@code null}
-     * @throws IllegalArgumentException
-     *             if {@code other} is {@code this}
+     * @param other the other property
+     * @throws NullPointerException if {@code other} is {@code null}
+     * @throws IllegalArgumentException if {@code other} is {@code this}
      */
     void unbindBidirectional(Property<T> other);
 

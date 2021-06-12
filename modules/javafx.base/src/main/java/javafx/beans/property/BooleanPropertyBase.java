@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -159,13 +159,13 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
      * Note:
      */
     @Override
-    public void bind(final ObservableValue<? extends Boolean> rawObservable) {
-        if (rawObservable == null) {
+    public void bind(final ObservableValue<? extends Boolean> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        final ObservableBooleanValue newObservable = (rawObservable instanceof ObservableBooleanValue) ? (ObservableBooleanValue) rawObservable
-                : new ValueWrapper(rawObservable);
+        final ObservableBooleanValue newObservable = (source instanceof ObservableBooleanValue) ? (ObservableBooleanValue) source
+                : new ValueWrapper(source);
 
         if (!newObservable.equals(observable)) {
             unbind();
