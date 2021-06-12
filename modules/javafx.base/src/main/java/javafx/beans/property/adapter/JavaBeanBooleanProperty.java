@@ -158,15 +158,15 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
      * {@inheritDoc}
      */
     @Override
-    public void bind(ObservableValue<? extends Boolean> observable) {
-        if (observable == null) {
+    public void bind(ObservableValue<? extends Boolean> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!observable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            set(observable.getValue());
-            this.observable = observable;
+            set(source.getValue());
+            this.observable = source;
             this.observable.addListener(listener);
         }
     }

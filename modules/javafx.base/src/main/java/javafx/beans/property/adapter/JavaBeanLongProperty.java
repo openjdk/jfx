@@ -158,15 +158,15 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
      * {@inheritDoc}
      */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
-        if (observable == null) {
+    public void bind(ObservableValue<? extends Number> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!observable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            set(observable.getValue().longValue());
-            this.observable = observable;
+            set(source.getValue().longValue());
+            this.observable = source;
             this.observable.addListener(listener);
         }
     }

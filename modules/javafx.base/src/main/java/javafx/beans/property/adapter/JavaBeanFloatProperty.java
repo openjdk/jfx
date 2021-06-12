@@ -158,15 +158,15 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      * {@inheritDoc}
      */
     @Override
-    public void bind(ObservableValue<? extends Number> observable) {
-        if (observable == null) {
+    public void bind(ObservableValue<? extends Number> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!observable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            set(observable.getValue().floatValue());
-            this.observable = observable;
+            set(source.getValue().floatValue());
+            this.observable = source;
             this.observable.addListener(listener);
         }
     }

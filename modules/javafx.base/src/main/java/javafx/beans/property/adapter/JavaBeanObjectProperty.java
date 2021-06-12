@@ -161,15 +161,15 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
      * {@inheritDoc}
      */
     @Override
-    public void bind(ObservableValue<? extends T> observable) {
-        if (observable == null) {
+    public void bind(ObservableValue<? extends T> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!observable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            set(observable.getValue());
-            this.observable = observable;
+            set(source.getValue());
+            this.observable = source;
             this.observable.addListener(listener);
         }
     }
