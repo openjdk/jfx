@@ -149,26 +149,26 @@ void D3DMeshView::render() {
         status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[i].position, 1));
     }
 
-    float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 coords + 1 padding)
+    float lightsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 coords + 1 padding)
     for (int i = 0, d = 0; i < MAX_NUM_LIGHTS; i++) {
         if (lights[i].isPointLight()) {
-            lighsNormDirection[d++] = 0;
-            lighsNormDirection[d++] = 0;
-            lighsNormDirection[d++] = 1;
-            lighsNormDirection[d++] = 0;
+            lightsNormDirection[d++] = 0;
+            lightsNormDirection[d++] = 0;
+            lightsNormDirection[d++] = 1;
+            lightsNormDirection[d++] = 0;
         } else {
             float dirX = lights[i].direction[0];
             float dirY = lights[i].direction[1];
             float dirZ = lights[i].direction[2];
             float length = sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-            lighsNormDirection[d++] = dirX / length;
-            lighsNormDirection[d++] = dirY / length;
-            lighsNormDirection[d++] = dirZ / length;
-            lighsNormDirection[d++] = 0;
+            lightsNormDirection[d++] = dirX / length;
+            lightsNormDirection[d++] = dirY / length;
+            lightsNormDirection[d++] = dirZ / length;
+            lightsNormDirection[d++] = 0;
         }
     }
 
-    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_DIRS, lighsNormDirection, MAX_NUM_LIGHTS));
+    status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_DIRS, lightsNormDirection, MAX_NUM_LIGHTS));
     if (!status) {
         cout << "D3DMeshView.render() - SetVertexShaderConstantF (VSR_DIRS) failed !!!" << endl;
         return;

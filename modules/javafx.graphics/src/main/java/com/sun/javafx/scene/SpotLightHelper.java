@@ -64,7 +64,7 @@ public class SpotLightHelper extends PointLightHelper {
 
     public static void setSpotLightAccessor(final SpotLightAccessor newAccessor) {
         if (spotLightAccessor != null) {
-            throw new IllegalStateException("Accesor already exists");
+            throw new IllegalStateException("Accessor already exists");
         }
 
         spotLightAccessor = newAccessor;
