@@ -315,18 +315,20 @@ public class ImageStorage {
                 }
 
                 if (theStream == null) {
-                    theStream = ImageTools.createInputStream(input);
-                }
+                    try {
+                        theStream = ImageTools.createInputStream(input);
+                    } catch (IOException ex) {
+                        DataURI dataUri = DataURI.tryParse(input);
+                        if (dataUri != null) {
+                            String mimeType = dataUri.getMimeType();
+                            if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                                throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
+                            }
 
-                if (theStream == null) {
-                    DataURI dataUri = DataURI.tryParse(input);
-                    if (dataUri != null) {
-                        String mimeType = dataUri.getMimeType();
-                        if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
-                            throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
+                            theStream = new ByteArrayInputStream(dataUri.getData());
+                        } else {
+                            throw ex;
                         }
-
-                        theStream = new ByteArrayInputStream(dataUri.getData());
                     }
                 }
 
