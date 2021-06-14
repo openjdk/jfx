@@ -73,7 +73,7 @@ varying vec3 eyePos;
 varying vec4 lightTangentSpacePositions[3];
 varying vec4 lightTangentSpaceDirections[3];
 
-// Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
+// Because pow(0, 0) is undefined (https://www.khronos.org/registry/OpenGL-Refpages/es3.0/html/pow.xhtml),
 // we need special treatment for falloff == 0 cases
 float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
     if (falloff == 0.0 && cosOuter == -1.0) { // point light optimization (cosOuter == -1 is outerAngle == 180)
