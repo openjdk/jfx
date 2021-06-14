@@ -62,6 +62,7 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -961,8 +962,8 @@ public abstract class Toolkit {
         return imageAccessor;
     }
 
-    public String getThemeName() {
-        return null;
+    public Map<String, String> getPlatformThemeProperties() {
+        return Collections.emptyMap();
     }
 
     public abstract GlassRobot createRobot();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
@@ -84,8 +85,7 @@ public abstract class Application {
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
         }
-        public boolean handleThemeChanged(String themeName) {
-            return false;
+        public void handlePlatformThemeChanged(Map<String, String> properties) {
         }
     }
 
@@ -257,12 +257,11 @@ public abstract class Application {
         }
     }
 
-    protected boolean notifyThemeChanged(String themeName) {
+    protected void notifyPlatformThemeChanged(Map<String, String> properties) {
         EventHandler handler = getEventHandler();
         if (handler != null) {
-            return handler.handleThemeChanged(themeName);
+            handler.handlePlatformThemeChanged(properties);
         }
-        return false;
     }
 
     protected void notifyDidResignActive() {
@@ -674,13 +673,8 @@ public abstract class Application {
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
 
-    /**
-     * Gets the Name of the currently active high contrast theme.
-     * If null, then high contrast is not enabled.
-     */
-    public String getHighContrastTheme() {
-        checkEventThread();
-        return null;
+    public Map<String, String> getPlatformThemeProperties() {
+        return Collections.emptyMap();
     }
 
     protected boolean _supportsInputMethods() {

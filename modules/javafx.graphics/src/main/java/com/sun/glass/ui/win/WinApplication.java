@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
     static float   overrideUIScale;
@@ -329,10 +330,10 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         }
     }
 
-    private native String _getHighContrastTheme();
-    @Override public String getHighContrastTheme() {
+    @Override
+    public Map<String, String> getPlatformThemeProperties() {
         checkEventThread();
-        return _getHighContrastTheme();
+        return _getPlatformThemeProperties();
     }
 
     @Override
@@ -361,4 +362,6 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected native int _isKeyLocked(int keyCode);
+
+    private native Map<String, String> _getPlatformThemeProperties();
 }
