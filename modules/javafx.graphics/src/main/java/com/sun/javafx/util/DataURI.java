@@ -182,7 +182,7 @@ public class DataURI {
 
     @Override
     public String toString() {
-        if (originalData.length() < 30) {
+        if (originalData.length() < 32) {
             return originalUri;
         }
 

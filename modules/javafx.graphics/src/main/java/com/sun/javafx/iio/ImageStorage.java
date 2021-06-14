@@ -304,15 +304,7 @@ public class ImageStorage {
         try {
             float imgPixelScale = 1.0f;
             try {
-                DataURI dataUri = DataURI.tryParse(input);
-                if (dataUri != null) {
-                    String mimeType = dataUri.getMimeType();
-                    if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
-                        throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
-                    }
-
-                    theStream = new ByteArrayInputStream(dataUri.getData());
-                } else if (devPixelScale >= 1.5f) {
+                if (devPixelScale >= 1.5f) {
                     // Use Mac Retina conventions for >= 1.5f
                     try {
                         String name2x = ImageTools.getScaledImageName(input);
@@ -321,8 +313,21 @@ public class ImageStorage {
                     } catch (IOException ignored) {
                     }
                 }
+
                 if (theStream == null) {
                     theStream = ImageTools.createInputStream(input);
+                }
+
+                if (theStream == null) {
+                    DataURI dataUri = DataURI.tryParse(input);
+                    if (dataUri != null) {
+                        String mimeType = dataUri.getMimeType();
+                        if (mimeType != null && !"image".equalsIgnoreCase(dataUri.getMimeType())) {
+                            throw new IllegalArgumentException("Unexpected MIME type: " + dataUri.getMimeType());
+                        }
+
+                        theStream = new ByteArrayInputStream(dataUri.getData());
+                    }
                 }
 
                 if (isIOS) {
