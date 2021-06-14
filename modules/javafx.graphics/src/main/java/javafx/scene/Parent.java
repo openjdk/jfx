@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.perf.LayoutTracker;
+import com.sun.javafx.scene.InvalidateLayoutOption;
+import com.sun.javafx.scene.PropertyHelper;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -32,6 +35,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -80,9 +84,15 @@ public abstract class Parent extends Node {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
-    // If set to true, generate a warning message whenever adding a node to a
-    // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    // If set to true, generate a warning message whenever:
+    // 1. adding a node to a parent if it is currently a child of another parent
+    // 2. the layout limit has been exceeded
+    private static final boolean WARN = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+
+    /**
+     * Limits the number of layout passes in a single call to {@link Parent#layout()}.
+     */
+    private static final int LAYOUT_LIMIT = PropertyHelper.getIntegerProperty("javafx.sg.layoutLimit", 100);
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -149,6 +159,11 @@ public abstract class Parent extends Node {
             @Override
             public List<String> doGetAllParentStylesheets(Parent parent) {
                 return parent.doGetAllParentStylesheets();
+            }
+
+            @Override
+            public void notifyBaselineSourceChanged(Parent parent) {
+                parent.notifyBaselineSourceChanged();
             }
         });
     }
@@ -320,6 +335,8 @@ public abstract class Parent extends Node {
 
         protected void onChanged(Change<Node> c) {
             // proceed with updating the scene graph
+            cachedBaselineSourceValid = false;
+            cachedBaselineSource = null;
             unmodifiableManagedChildren = null;
             boolean relayout = false;
             boolean viewOrderChildrenDirty = false;
@@ -331,13 +348,13 @@ public abstract class Parent extends Node {
                     for (int i = from; i < to; ++i) {
                         Node n = children.get(i);
                         if (n.getParent() != null && n.getParent() != Parent.this) {
-                            if (warnOnAutoMove) {
+                            if (WARN) {
                                 java.lang.System.err.println("WARNING added to a new parent without first removing it from its current");
                                 java.lang.System.err.println("    parent. It will be automatically removed from its current parent.");
                                 java.lang.System.err.println("    node=" + n + " oldparent= " + n.getParent() + " newparent=" + this);
                             }
                             n.getParent().children.remove(n);
-                            if (warnOnAutoMove) {
+                            if (WARN) {
                                 Thread.dumpStack();
                             }
                         }
@@ -365,7 +382,7 @@ public abstract class Parent extends Node {
                         if (node.getViewOrder() != 0) {
                             viewOrderChildrenDirty = true;
                         }
-                        if (node.isManaged() || (node instanceof Parent && ((Parent) node).layoutFlag != LayoutFlags.CLEAN)) {
+                        if (node.isManaged() || (node instanceof Parent && !((Parent) node).isLayoutClean())) {
                             relayout = true;
                         }
                         node.setParent(Parent.this);
@@ -772,7 +789,7 @@ public abstract class Parent extends Node {
             children.get(i).setScenes(newScene, newSubScene);
         }
 
-        final boolean awaitingLayout = layoutFlag != LayoutFlags.CLEAN;
+        final boolean awaitingLayout = !isLayoutClean();
 
         sceneRoot = (newSubScene != null && newSubScene.getRoot() == this) ||
                     (newScene != null && newScene.getRoot() == this);
@@ -870,39 +887,66 @@ public abstract class Parent extends Node {
      *  JavaFX. Includes both public and private API.                      *
      *                                                                     *
      **********************************************************************/
+
+    private final Set<LayoutFlags> layoutFlags = EnumSet.noneOf(LayoutFlags.class);
+
+    boolean isLayoutClean() {
+        return layoutFlags.isEmpty();
+    }
+
+    void setLayoutFlag(LayoutFlags flag) {
+        if (needsLayout != null) {
+            needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
+        }
+
+        layoutFlags.add(flag);
+    }
+
+    private void clearLayoutFlags() {
+        layoutFlags.clear();
+    }
+
+    private boolean isLayoutFlag(LayoutFlags flag) {
+        return layoutFlags.contains(flag);
+    }
+
     /**
      * Indicates that this Node and its subnodes requires a layout pass on
      * the next pulse.
      */
     private ReadOnlyBooleanWrapper needsLayout;
-    LayoutFlags layoutFlag = LayoutFlags.CLEAN;
 
     protected final void setNeedsLayout(boolean value) {
         if (value) {
-            markDirtyLayout(true, false);
-        } else if (layoutFlag == LayoutFlags.NEEDS_LAYOUT) {
+            markDirtyLayout(InvalidateLayoutOption.LOCAL_LAYOUT);
+        } else if (isLayoutFlag(LayoutFlags.NEEDS_LAYOUT)) {
             boolean hasBranch = false;
             for (int i = 0, max = children.size(); i < max; i++) {
                 final Node child = children.get(i);
                 if (child instanceof Parent) {
-                    if (((Parent)child).layoutFlag != LayoutFlags.CLEAN) {
+                    if (!((Parent)child).isLayoutClean()) {
                         hasBranch = true;
                         break;
                     }
 
                 }
             }
-            setLayoutFlag(hasBranch ? LayoutFlags.DIRTY_BRANCH : LayoutFlags.CLEAN);
+
+            if (hasBranch) {
+                setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+            } else if (!isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+                clearLayoutFlags();
+            }
         }
     }
 
     public final boolean isNeedsLayout() {
-        return layoutFlag == LayoutFlags.NEEDS_LAYOUT;
+        return isLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
     }
 
     public final ReadOnlyBooleanProperty needsLayoutProperty() {
         if (needsLayout == null) {
-            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
+            needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", isLayoutFlag(LayoutFlags.NEEDS_LAYOUT));
         }
         return needsLayout;
     }
@@ -919,24 +963,36 @@ public abstract class Parent extends Node {
         return performingLayout;
     }
 
-    private boolean sizeCacheClear = true;
     private double prefWidthCache = -1;
     private double prefHeightCache = -1;
     private double minWidthCache = -1;
     private double minHeightCache = -1;
 
-    void setLayoutFlag(LayoutFlags flag) {
-        if (needsLayout != null) {
-            needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
-        }
-        layoutFlag = flag;
-    }
+    private InvalidateLayoutOption invalidateLayoutOption = InvalidateLayoutOption.PARENT_LAYOUT;
 
-    private void markDirtyLayout(boolean local, boolean forceParentLayout) {
+    /**
+     * Sets the {@link LayoutFlags#NEEDS_LAYOUT} flag on the current node, and walks up
+     * the scene graph to also set the {@link LayoutFlags#DIRTY_BRANCH} flag on all parents
+     * that are layout-clean. This is done to ensure that the layout system will actually
+     * reach this node on the next layout pass.
+     */
+    private void markDirtyLayout(InvalidateLayoutOption option) {
         setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
-        if (local || layoutRoot) {
+
+        if (isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+            return;
+        }
+
+        if (option == InvalidateLayoutOption.FORCE_ROOT_LAYOUT) {
+            setLayoutFlag(LayoutFlags.DIRTY_ROOT);
+        }
+
+        if (option == InvalidateLayoutOption.LOCAL_LAYOUT || layoutRoot) {
             if (sceneRoot) {
-                Toolkit.getToolkit().requestNextPulse();
+                if (!performingLayout) {
+                    Toolkit.getToolkit().requestNextPulse();
+                }
+
                 if (getSubScene() != null) {
                     getSubScene().setDirtyLayout(this);
                 }
@@ -944,7 +1000,7 @@ public abstract class Parent extends Node {
                 markDirtyLayoutBranch();
             }
         } else {
-            requestParentLayout(forceParentLayout);
+            requestParentLayout(option);
         }
     }
 
@@ -960,20 +1016,19 @@ public abstract class Parent extends Node {
      */
     public void requestLayout() {
         clearSizeCache();
-        markDirtyLayout(false, forceParentLayout);
+        markDirtyLayout(invalidateLayoutOption);
     }
 
-    private boolean forceParentLayout = false;
     /**
      * A package scope method used by Node and serves as a helper method for
      * requestLayout() (see above). If forceParentLayout is true it will
      * propagate this force layout flag to its parent.
      */
-    void requestLayout(boolean forceParentLayout) {
-        boolean savedForceParentLayout = this.forceParentLayout;
-        this.forceParentLayout = forceParentLayout;
+    void requestLayout(InvalidateLayoutOption option) {
+        InvalidateLayoutOption current = invalidateLayoutOption;
+        this.invalidateLayoutOption = option;
         requestLayout();
-        this.forceParentLayout = savedForceParentLayout;
+        this.invalidateLayoutOption = current;
     }
 
     /**
@@ -986,28 +1041,42 @@ public abstract class Parent extends Node {
      * when it's parent recomputes the layout with the new hints.
      */
     protected final void requestParentLayout() {
-       requestParentLayout(false);
+       requestParentLayout(InvalidateLayoutOption.PARENT_LAYOUT);
     }
 
     /**
-     * A package scope method used by Node and serves as a helper method for
-     * requestParentLayout() (see above). If forceParentLayout is true it will
-     * force a request layout call on its parent if its parent is not null.
+     * A package scope method used by Node and serves as a helper method for requestParentLayout()
+     * (see above). The {@code option} argument specifies the details on whether the parent node
+     * (or the entire scene graph up to the layout root) will be scheduled for layout.
+     * <p>
+     * If {@link InvalidateLayoutOption#LOCAL_LAYOUT} is specified, this is a no-op.
      */
-    void requestParentLayout(boolean forceParentLayout) {
+    void requestParentLayout(InvalidateLayoutOption option) {
         if (!layoutRoot) {
             final Parent p = getParent();
-            if (p != null && (!p.performingLayout || forceParentLayout)) {
-                p.requestLayout();
+            if (p != null) {
+                switch (option) {
+                    case PARENT_LAYOUT:
+                        if (!p.performingLayout) {
+                            p.requestLayout(InvalidateLayoutOption.PARENT_LAYOUT);
+                        }
+                        break;
+
+                    case FORCE_PARENT_LAYOUT:
+                        p.requestLayout(InvalidateLayoutOption.PARENT_LAYOUT);
+                        break;
+
+                    case FORCE_ROOT_LAYOUT:
+                        if (!p.isLayoutFlag(LayoutFlags.DIRTY_ROOT)) {
+                            p.requestLayout(InvalidateLayoutOption.FORCE_ROOT_LAYOUT);
+                        }
+                        break;
+                }
             }
         }
     }
 
     void clearSizeCache() {
-        if (sizeCacheClear) {
-            return;
-        }
-        sizeCacheClear = true;
         prefWidthCache = -1;
         prefHeightCache = -1;
         minWidthCache = -1;
@@ -1019,7 +1088,6 @@ public abstract class Parent extends Node {
             if (prefWidthCache == -1) {
                 prefWidthCache = computePrefWidth(-1);
                 if (Double.isNaN(prefWidthCache) || prefWidthCache < 0) prefWidthCache = 0;
-                sizeCacheClear = false;
             }
             return prefWidthCache;
         } else {
@@ -1033,7 +1101,6 @@ public abstract class Parent extends Node {
             if (prefHeightCache == -1) {
                 prefHeightCache = computePrefHeight(-1);
                 if (Double.isNaN(prefHeightCache) || prefHeightCache < 0) prefHeightCache = 0;
-                sizeCacheClear = false;
             }
             return prefHeightCache;
         } else {
@@ -1047,7 +1114,6 @@ public abstract class Parent extends Node {
             if (minWidthCache == -1) {
                 minWidthCache = computeMinWidth(-1);
                 if (Double.isNaN(minWidthCache) || minWidthCache < 0) minWidthCache = 0;
-                sizeCacheClear = false;
             }
             return minWidthCache;
         } else {
@@ -1061,7 +1127,6 @@ public abstract class Parent extends Node {
             if (minHeightCache == -1) {
                 minHeightCache = computeMinHeight(-1);
                 if (Double.isNaN(minHeightCache) || minHeightCache < 0) minHeightCache = 0;
-                sizeCacheClear = false;
             }
             return minHeightCache;
         } else {
@@ -1147,24 +1212,78 @@ public abstract class Parent extends Node {
         return prefHeight(width);
     }
 
-    /**
-     * Calculates the baseline offset based on the first managed child. If there
-     * is no such child, returns {@link Node#getBaselineOffset()}.
-     *
-     * @return baseline offset
-     */
     @Override public double getBaselineOffset() {
-        for (int i=0, max=children.size(); i<max; i++) {
-            final Node child = children.get(i);
-            if (child.isManaged()) {
-                double offset = child.getBaselineOffset();
-                if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                    continue;
-                }
-                return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
+        Node baselineSource = getBaselineSource();
+        if (baselineSource == null) {
+            return super.getBaselineOffset();
+        }
+
+        return baselineSource.getLayoutBounds().getMinY()
+            + baselineSource.getLayoutY()
+            + baselineSource.getBaselineOffset();
+    }
+
+    @Override public boolean isTextBaseline() {
+        Node baselineSource = getBaselineSource();
+        return baselineSource != null && baselineSource.isTextBaseline();
+    }
+
+    private boolean cachedBaselineSourceValid;
+    private Node cachedBaselineSource;
+
+    /**
+     * Returns the managed child that is the source of this node's baseline offset.
+     * See {@link Node#getBaselineOffset()} for a description of the selection algorithm.
+     */
+    private Node getBaselineSource() {
+        if (cachedBaselineSourceValid) {
+            return cachedBaselineSource;
+        }
+
+        Node firstTextNode = null;
+        Node firstManagedNode = null;
+
+        for (int i = 0, max = children.size(); i < max; ++i) {
+            Node child = children.get(i);
+
+            if (!child.isManaged()) {
+                continue;
+            }
+
+            if (child.isPrefBaseline()) {
+                cachedBaselineSourceValid = true;
+                return cachedBaselineSource = child;
+            }
+
+            if (firstTextNode == null && child.isTextBaseline()) {
+                firstTextNode = child;
+            }
+
+            if (firstManagedNode == null && child.getBaselineOffset() != BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                firstManagedNode = child;
             }
         }
-        return super.getBaselineOffset();
+
+        if (firstTextNode != null) {
+            cachedBaselineSourceValid = true;
+            return cachedBaselineSource = firstTextNode;
+        }
+
+        if (firstManagedNode != null) {
+            cachedBaselineSourceValid = true;
+            return cachedBaselineSource = firstManagedNode;
+        }
+
+        return null;
+    }
+
+    private void notifyBaselineSourceChanged() {
+        cachedBaselineSourceValid = false;
+        cachedBaselineSource = null;
+        Parent parent = getParent();
+        if (parent != null) {
+            parent.notifyBaselineSourceChanged();
+        }
     }
 
     /***
@@ -1184,14 +1303,30 @@ public abstract class Parent extends Node {
      * Calling this method while the Parent is doing layout is a no-op.
      */
     public final void layout() {
-        // layoutFlag can be accessed or changed during layout processing.
-        // Hence we need to cache and reset it before performing layout.
-        LayoutFlags flag = layoutFlag;
-        setLayoutFlag(LayoutFlags.CLEAN);
-        switch(flag) {
-            case CLEAN:
+        Scene scene = getScene();
+        LayoutTracker layoutTracker = scene != null ? scene.layoutTracker : null;
+
+        if (layoutTracker != null) {
+            layoutTracker.pushNode(this, layoutRoot);
+        }
+
+        int pass = 0;
+        while (!isLayoutClean() && (layoutRoot || pass == 0)) {
+            if (pass == LAYOUT_LIMIT) {
+                if (WARN) {
+                    System.err.println(
+                        "WARNING layout limit exceeded (current limit: " + LAYOUT_LIMIT + " layout passes)\r\n" +
+                        "    You can change the limit by setting the javafx.sg.layoutLimit system property.");
+                }
                 break;
-            case NEEDS_LAYOUT:
+            }
+
+            boolean layoutChildren = isLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
+            boolean dirtyBranch = layoutChildren || isLayoutFlag(LayoutFlags.DIRTY_BRANCH);
+
+            clearLayoutFlags();
+
+            if (layoutChildren) {
                 if (performingLayout) {
                     /* This code is here mainly to avoid infinite loops as layout() is public and the call might be (indirectly) invoked accidentally
                      * while doing the layout.
@@ -1203,10 +1338,13 @@ public abstract class Parent extends Node {
                      */
                     break;
                 }
+
                 performingLayout = true;
                 layoutChildren();
-                // Intended fall-through
-            case DIRTY_BRANCH:
+                pass++;
+            }
+
+            if (dirtyBranch) {
                 for (int i = 0, max = children.size(); i < max; i++) {
                     final Node child = children.get(i);
                     currentLayoutChild = child;
@@ -1216,9 +1354,14 @@ public abstract class Parent extends Node {
                         ((SubScene)child).layoutPass();
                     }
                 }
+
                 currentLayoutChild = null;
                 performingLayout = false;
-                break;
+            }
+        }
+
+        if (layoutTracker != null) {
+            layoutTracker.popNode(pass);
         }
     }
 
@@ -1416,7 +1559,7 @@ public abstract class Parent extends Node {
      * Constructs a new {@code Parent}.
      */
     protected Parent() {
-        layoutFlag = LayoutFlags.NEEDS_LAYOUT;
+        setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
         setAccessibleRole(AccessibleRole.PARENT);
     }
 

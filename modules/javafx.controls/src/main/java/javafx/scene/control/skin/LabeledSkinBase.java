@@ -25,6 +25,7 @@
 
 package javafx.scene.control.skin;
 
+import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.LabeledText;
 import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.control.skin.Utils;
@@ -48,6 +49,7 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.Mnemonic;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -157,6 +159,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Labeled which apply to it.
         text = new LabeledText(labeled);
 
+        NodeHelper.setLayoutYForcesRootLayout(text, !useLayoutYOptimization());
         updateChildren();
 
         // Labels do not block the mouse by default, unlike most other UI Controls.
@@ -210,6 +213,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // has no effect. Or it is too short (i.e. it all fits) and we don't
             // have to worry about truncation. So just call request layout.
             getSkinnable().requestLayout();
+            NodeHelper.setLayoutYForcesRootLayout(text, !useLayoutYOptimization());
         });
         registerChangeListener(labeled.mnemonicParsingProperty(), o -> {
             containsMnemonic = false;
@@ -408,9 +412,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
     /** {@inheritDoc} */
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
+        return useLayoutYOptimization() ? computeTopAlignedBaselineOffset(topInset) : computeDefaultBaselineOffset();
+    }
+
+    private double computeTopAlignedBaselineOffset(double topInset) {
+        final Labeled labeled = getSkinnable();
         double textBaselineOffset = text.getBaselineOffset();
         double h = textBaselineOffset;
-        final Labeled labeled = getSkinnable();
         final Node g = labeled.getGraphic();
         if (!isIgnoreGraphic()) {
             ContentDisplay contentDisplay = labeled.getContentDisplay();
@@ -426,6 +434,14 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             offset += topLabelPadding();
         }
         return offset;
+    }
+
+    private double computeDefaultBaselineOffset() {
+        if (!isIgnoreText()) {
+            return text.getLayoutBounds().getMinY() + text.getLayoutY() + text.getBaselineOffset();
+        }
+
+        return Region.BASELINE_OFFSET_SAME_AS_HEIGHT;
     }
 
     /**
@@ -766,6 +782,21 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * If the text is top-aligned within the Labeled, we can use the layoutY optimization,
+     * which causes the text node to elide the layout root invalidation when its layoutY
+     * property changes.
+     * We can do this because in this case, we can compute the Labeled's baseline offset
+     * without requiring layoutY to be known. On the other hand, if the text node is not
+     * top-aligned, the Labeled's baseline offset depends on the exact location of the
+     * text node within the Labeled, which can only be known in a subsequent layout pass.
+     */
+    private boolean useLayoutYOptimization() {
+        Labeled labeled = getSkinnable();
+        Pos alignment = labeled.getAlignment();
+        return alignment != null && alignment.getVpos() == VPos.TOP;
+    }
 
     private double computeMinLabeledPartWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // First compute the minTextWidth by checking the width of the string

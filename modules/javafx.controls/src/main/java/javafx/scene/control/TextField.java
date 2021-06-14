@@ -42,6 +42,7 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.binding.ExpressionHelper;

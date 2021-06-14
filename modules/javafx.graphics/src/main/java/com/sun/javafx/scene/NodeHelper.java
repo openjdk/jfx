@@ -142,6 +142,10 @@ public abstract class NodeHelper {
         getHelper(node).notifyLayoutBoundsChangedImpl(node);
     }
 
+    public static void notifyBaselineOffsetChanged(Node node) {
+        getHelper(node).notifyBaselineOffsetChangedImpl(node);
+    }
+
     public static void processCSS(Node node) {
         getHelper(node).processCSSImpl(node);
     }
@@ -187,6 +191,10 @@ public abstract class NodeHelper {
 
     protected void notifyLayoutBoundsChangedImpl(Node node) {
         nodeAccessor.doNotifyLayoutBoundsChanged(node);
+    }
+
+    protected void notifyBaselineOffsetChangedImpl(Node node) {
+        nodeAccessor.doNotifyBaselineOffsetChanged(node);
     }
 
     protected void processCSSImpl(Node node) {
@@ -307,6 +315,14 @@ public abstract class NodeHelper {
         return nodeAccessor.findStyles(node, styleMap);
     }
 
+    public static void setLayoutYForcesRootLayout(Node node, boolean enabled) {
+        nodeAccessor.setLayoutYForcesRootLayout(node, enabled);
+    }
+
+    public static boolean isLayoutYForcesRootLayout(Node node) {
+        return nodeAccessor.isLayoutYForcesRootLayout(node);
+    }
+
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
             throw new IllegalStateException();
@@ -337,6 +353,7 @@ public abstract class NodeHelper {
                 PickResultChooser pickResult);
         void doGeomChanged(Node node);
         void doNotifyLayoutBoundsChanged(Node node);
+        void doNotifyBaselineOffsetChanged(Node node);
         void doProcessCSS(Node node);
         boolean isDirty(Node node, DirtyBits dirtyBit);
         boolean isDirtyEmpty(Node node);
@@ -366,6 +383,8 @@ public abstract class NodeHelper {
         List<Style> getMatchingStyles(CssMetaData cssMetaData, Styleable styleable);
         Map<StyleableProperty<?>,List<Style>> findStyles(Node node,
                 Map<StyleableProperty<?>,List<Style>> styleMap);
+        void setLayoutYForcesRootLayout(Node node, boolean enabled);
+        boolean isLayoutYForcesRootLayout(Node node);
     }
 
 }

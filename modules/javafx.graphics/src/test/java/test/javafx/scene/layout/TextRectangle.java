@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,25 @@
  * questions.
  */
 
-package javafx.scene;
+package test.javafx.scene.layout;
 
-import java.security.AccessController;
+import javafx.scene.shape.Rectangle;
 
-class PropertyHelper {
+public class TextRectangle extends Rectangle {
+    private final double baselineOffset;
 
-    // Function to return whether a system property is set to true. Note that
-    // this runs within a doPrivilege block so this function must be package-private.
-    static boolean getBooleanProperty(final String propName) {
-        try {
-            boolean answer =
-                AccessController.doPrivileged((java.security.PrivilegedAction<Boolean>) () -> {
-                        String propVal = System.getProperty(propName);
-                        return "true".equals(propVal.toLowerCase());
-                    });
-            return answer;
-        } catch (Exception any) {
-        }
-        return false;
+    public TextRectangle(double width, double height, double baselineOffset) {
+        super(width, height);
+        this.baselineOffset = baselineOffset;
     }
 
+    @Override
+    public boolean isTextBaseline() {
+        return true;
+    }
+
+    @Override
+    public double getBaselineOffset() {
+        return baselineOffset;
+    }
 }

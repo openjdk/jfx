@@ -45,6 +45,7 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
@@ -499,8 +500,9 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * Calculates the baseline offset based on the first managed child. If there
-     * is no such child, returns {@link Node#getBaselineOffset()}.
+     * Calculates the baseline offset of this {@code SkinBase}.
+     * By default, this returns {@link Double#NaN}, which causes {@link Control} to
+     * call the default implementation {@link Parent#getBaselineOffset()}.
      *
      * @param topInset the pixel snapped top inset
      * @param rightInset the pixel snapped right inset
@@ -509,18 +511,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return baseline offset
      */
     protected double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        int size = children.size();
-        for (int i = 0; i < size; ++i) {
-            Node child = children.get(i);
-            if (child.isManaged()) {
-                double offset = child.getBaselineOffset();
-                if (offset == Node.BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                    continue;
-                }
-                return child.getLayoutBounds().getMinY() + child.getLayoutY() + offset;
-            }
-        }
-        return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
+        return Double.NaN;
     }
 
 

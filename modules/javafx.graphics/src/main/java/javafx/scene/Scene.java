@@ -37,6 +37,7 @@ import com.sun.javafx.event.EventQueue;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.perf.LayoutTracker;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.LayoutFlags;
@@ -362,13 +363,21 @@ public class Scene implements EventTarget {
             PerformanceTracker.setSceneAccessor(new PerformanceTracker.SceneAccessor() {
                 public void setPerfTracker(Scene scene, PerformanceTracker tracker) {
                     synchronized (trackerMonitor) {
-                        scene.tracker = tracker;
+                        scene.perfTracker = tracker;
                     }
                 }
                 public PerformanceTracker getPerfTracker(Scene scene) {
                     synchronized (trackerMonitor) {
-                        return scene.tracker;
+                        return scene.perfTracker;
                     }
+                }
+            });
+            LayoutTracker.setSceneAccessor(new LayoutTracker.SceneAccessor() {
+                @Override public void setPerfTracker(Scene scene, LayoutTracker tracker) {
+                    scene.layoutTracker = tracker;
+                }
+                @Override public LayoutTracker getPerfTracker(Scene scene) {
+                    return scene.layoutTracker;
                 }
             });
             SceneHelper.setSceneAccessor(
@@ -573,6 +582,10 @@ public class Scene implements EventTarget {
     void doLayoutPass() {
         final Parent r = getRoot();
         if (r != null) {
+            if (layoutTracker != null) {
+                layoutTracker.beginSceneLayout();
+            }
+
             r.layout();
         }
     }
@@ -1739,6 +1752,11 @@ public class Scene implements EventTarget {
         if (PerformanceTracker.isLoggingEnabled()) {
             PerformanceTracker.logEvent("Scene.init for [" + this + "] - finished");
         }
+
+        if (LayoutTracker.isLoggingEnabled()) {
+            LayoutTracker.getSceneTracker(this).setLayoutFinished(layoutCycle ->
+                Logging.getLayoutLogger().info(layoutCycle.toString()));
+        }
     }
 
     void preferredSize() {
@@ -1818,7 +1836,8 @@ public class Scene implements EventTarget {
                                 root.maxHeight(normalizedWidth));
     }
 
-    private PerformanceTracker tracker;
+    LayoutTracker layoutTracker;
+    private PerformanceTracker perfTracker;
     private static final Object trackerMonitor = new Object();
 
     // mouse events handling
@@ -2218,9 +2237,7 @@ public class Scene implements EventTarget {
      */
     boolean isQuiescent() {
         final Parent r = getRoot();
-        return !isFocusDirty()
-               && (r == null || (r.cssFlag == CssFlags.CLEAN &&
-                r.layoutFlag == LayoutFlags.CLEAN));
+        return !isFocusDirty() && (r == null || (r.cssFlag == CssFlags.CLEAN && r.isLayoutClean()));
     }
 
     /**
@@ -2449,8 +2466,8 @@ public class Scene implements EventTarget {
 
         @Override
         public void pulse() {
-            if (Scene.this.tracker != null) {
-                Scene.this.tracker.pulse();
+            if (Scene.this.perfTracker != null) {
+                Scene.this.perfTracker.pulse();
             }
             if (firstPulse) {
                 PerformanceTracker.logEvent("Scene - first repaint");
@@ -2476,6 +2493,11 @@ public class Scene implements EventTarget {
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newPhase("Layout Pass");
             }
+
+            if (Scene.this.layoutTracker != null) {
+                Scene.this.layoutTracker.beginPulseLayout();
+            }
+
             Scene.this.doLayoutPass();
 
             // run any scene post pulse listeners immediately _after_ css / layout,
@@ -2872,8 +2894,8 @@ public class Scene implements EventTarget {
         public void frameRendered() {
             // must use tracker with synchronization since this method is called on render thread
             synchronized (trackerMonitor) {
-                if (Scene.this.tracker != null) {
-                    Scene.this.tracker.frameRendered();
+                if (Scene.this.perfTracker != null) {
+                    Scene.this.perfTracker.frameRendered();
                 }
             }
         }

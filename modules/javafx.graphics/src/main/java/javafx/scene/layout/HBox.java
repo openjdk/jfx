@@ -595,10 +595,7 @@ public class HBox extends Pane {
                 for (int i =0, sz = managed.size(); i < sz; ++i) {
                     final Node child = managed.get(i);
                     double offset = child.getBaselineOffset();
-                    if (offset == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                        baselineOffset = BASELINE_OFFSET_SAME_AS_HEIGHT;
-                        break;
-                    } else {
+                    if (offset != BASELINE_OFFSET_SAME_AS_HEIGHT) {
                         Insets margin = getMargin(child);
                         double top = margin != null ? margin.getTop() : 0;
                         max = Math.max(max, top + child.getLayoutBounds().getMinY() + offset);
@@ -606,7 +603,7 @@ public class HBox extends Pane {
                 }
                 baselineOffset = max + snappedTopInset();
             } else {
-                baselineOffset = BASELINE_OFFSET_SAME_AS_HEIGHT;
+                baselineOffset = super.getBaselineOffset();
             }
         }
         return baselineOffset;
