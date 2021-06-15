@@ -32,6 +32,7 @@ import java.security.PrivilegedAction;
 
 class MonocleGLDrawable extends GLDrawable {
 
+    @SuppressWarnings("removal")
     private static final boolean transparentFramebuffer =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.transparentFramebuffer"));
 

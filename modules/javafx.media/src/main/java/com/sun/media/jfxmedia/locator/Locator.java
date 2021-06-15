@@ -167,6 +167,7 @@ public class Locator {
     }
 
     private static long getContentLengthLong(URLConnection connection) {
+        @SuppressWarnings("removal")
         Method method = AccessController.doPrivileged((PrivilegedAction<Method>) () -> {
             try {
                 return URLConnection.class.getMethod("getContentLengthLong");

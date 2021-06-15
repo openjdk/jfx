@@ -99,13 +99,15 @@ public final class URLs {
             try {
                 // We should be able to specify one of our stream handlers for the URL
                 // when running as an applet or a web start app.
-                return AccessController.doPrivileged((PrivilegedAction<URL>) () -> {
+                @SuppressWarnings("removal")
+                URL result = AccessController.doPrivileged((PrivilegedAction<URL>) () -> {
                     try {
                         return new URL(context, spec, handler);
                     } catch (MalformedURLException muex) {
                         throw new RuntimeException(muex);
                     }
                 }, null, streamHandlerPermission);
+                return result;
 
             } catch (RuntimeException re) {
                 if (re.getCause() instanceof MalformedURLException) {

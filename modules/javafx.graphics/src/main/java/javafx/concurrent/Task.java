@@ -1008,6 +1008,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     @Override public boolean cancel(boolean mayInterruptIfRunning) {
         // Delegate to the super implementation to actually attempt to cancel this thing
         // Assert the modifyThread permission
+        @SuppressWarnings("removal")
         boolean flag = AccessController.doPrivileged(
             (PrivilegedAction<Boolean>) () -> super.cancel(mayInterruptIfRunning),
             null,

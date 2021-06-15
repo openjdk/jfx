@@ -52,7 +52,8 @@ public class Disposer implements Runnable {
         disposerInstance = new Disposer();
 
         ThreadGroup tg = Thread.currentThread().getThreadGroup();
-        java.security.AccessController.doPrivileged(
+        @SuppressWarnings("removal")
+        var dummy = java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction() {
                 public Object run() {
                     /* The thread must be a member of a thread group

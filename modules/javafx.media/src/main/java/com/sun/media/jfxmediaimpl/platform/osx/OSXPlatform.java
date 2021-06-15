@@ -74,7 +74,8 @@ public final class OSXPlatform extends Platform {
             // Do this early so we can report the correct content types
             boolean isLoaded = false;
             try {
-                isLoaded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                @SuppressWarnings("removal")
+                boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                     boolean avf = false;
                     boolean qtk = false;
                     // attempt to load the AVFoundation based player first
@@ -90,6 +91,7 @@ public final class OSXPlatform extends Platform {
 
                     return avf || qtk;
                 });
+                isLoaded = tmp;
             } catch (Exception e) {
                 // Ignore
             }

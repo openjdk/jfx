@@ -74,6 +74,7 @@ class X11Screen implements NativeScreen {
         int w = xLib.WidthOfScreen(screen);
         int h = xLib.HeightOfScreen(screen);
         boolean fullScreen = true;
+        @SuppressWarnings("removal")
         String geometry =
                 AccessController.doPrivileged((PrivilegedAction<String>) () ->
                         System.getProperty("x11.geometry"));

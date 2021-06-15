@@ -96,6 +96,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
     private ObservableValue<? extends Boolean> observable = null;
     private ExpressionHelper<Boolean> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanBooleanProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public boolean get() {
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
@@ -132,6 +134,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final boolean value) {
         if (isBound()) {

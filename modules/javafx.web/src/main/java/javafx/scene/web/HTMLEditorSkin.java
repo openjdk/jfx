@@ -830,6 +830,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
 //        button.setGraphic(new ImageView(icon));
         ((StyleableProperty)button.graphicProperty()).applyStyle(null, new ImageView(icon));
@@ -854,6 +855,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             toggleButton.setToggleGroup(toggleGroup);
         }
 
+        @SuppressWarnings("removal")
         Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null, new ImageView(icon));
 //        toggleButton.setGraphic(new ImageView(icon));

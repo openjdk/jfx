@@ -111,6 +111,7 @@ public class FXMLLoader {
         new RuntimePermission("getClassLoader");
 
     // Instance of StackWalker used to get caller class (must be private)
+    @SuppressWarnings("removal")
     private static final StackWalker walker =
         AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
             StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
@@ -2122,12 +2123,14 @@ public class FXMLLoader {
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
-        JAVAFX_VERSION = AccessController.doPrivileged(new PrivilegedAction<String>() {
+        @SuppressWarnings("removal")
+        String tmp = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override
             public String run() {
                 return System.getProperty("javafx.version");
             }
         });
+        JAVAFX_VERSION = tmp;
 
         FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
             @Override
@@ -2428,6 +2431,7 @@ public class FXMLLoader {
      */
     public ClassLoader getClassLoader() {
         if (classLoader == null) {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             final Class caller = (sm != null) ?
                     walker.getCallerClass() :
@@ -2507,6 +2511,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public <T> T load() throws IOException {
         return loadImpl((System.getSecurityManager() != null)
                             ? walker.getCallerClass()
@@ -2522,6 +2527,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public <T> T load(InputStream inputStream) throws IOException {
         return loadImpl(inputStream, (System.getSecurityManager() != null)
                                          ? walker.getCallerClass()
@@ -3130,6 +3136,7 @@ public class FXMLLoader {
 
     private static ClassLoader getDefaultClassLoader(Class caller) {
         if (defaultClassLoader == null) {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 if (needsClassLoaderPermissionCheck(caller)) {
@@ -3147,6 +3154,7 @@ public class FXMLLoader {
      * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         final Class caller = (sm != null) ?
                 walker.getCallerClass() :
@@ -3165,6 +3173,7 @@ public class FXMLLoader {
         if (defaultClassLoader == null) {
             throw new NullPointerException();
         }
+        @SuppressWarnings("removal")
         final SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
             sm.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
@@ -3182,6 +3191,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location) throws IOException {
         return loadImpl(location, (System.getSecurityManager() != null)
                                       ? walker.getCallerClass()
@@ -3203,6 +3213,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
         return loadImpl(location, resources,
@@ -3228,6 +3239,7 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
                                      throws IOException {
@@ -3257,6 +3269,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory)
@@ -3290,6 +3303,7 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
+    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory,
@@ -3396,6 +3410,7 @@ public class FXMLLoader {
     }
 
     private static void checkClassLoaderPermission() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
@@ -3516,7 +3531,8 @@ public class FXMLLoader {
                                  membersType);
 
             final int finalAllowedMemberAccess = allowedMemberAccess;
-            AccessController.doPrivileged(
+            @SuppressWarnings("removal")
+            var dummy = AccessController.doPrivileged(
                     new PrivilegedAction<Void>() {
                         @Override
                         public Void run() {

@@ -43,7 +43,7 @@ public interface TKClipboard {
     /**
      * This method is used to set security context of the Stage.
      */
-    public void setSecurityContext(AccessControlContext ctx);
+    public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx);
 
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have

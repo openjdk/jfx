@@ -112,6 +112,7 @@ public final class PrismSettings {
     }
 
     static {
+        @SuppressWarnings("removal")
         final Properties systemProperties =
                 (Properties) AccessController.doPrivileged(
                         (PrivilegedAction) () -> System.getProperties());

@@ -46,6 +46,7 @@ abstract class PerformanceTrackerHelper {
     }
 
     private static PerformanceTrackerHelper createInstance() {
+        @SuppressWarnings("removal")
         PerformanceTrackerHelper trackerImpl = AccessController.doPrivileged(
                 new PrivilegedAction<PerformanceTrackerHelper>() {
 
@@ -129,6 +130,7 @@ abstract class PerformanceTrackerHelper {
                 // Attempt to log launchTime, if not set already
                 if (PerformanceLogger.getStartTime() <= 0) {
                     // Standalone apps record launch time as sysprop
+                    @SuppressWarnings("removal")
                     String launchTimeString = AccessController.doPrivileged(
                             (PrivilegedAction<String>) () -> System.getProperty("launchTime"));
 

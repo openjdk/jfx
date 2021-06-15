@@ -38,9 +38,11 @@ class DispmanAcceleratedScreen extends AcceleratedScreen {
 
     @Override
     protected long platformGetNativeWindow() {
+        @SuppressWarnings("removal")
         int displayID = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>)
                         () -> Integer.getInteger("dispman.display", 0 /* LCD */));
+        @SuppressWarnings("removal")
         int layerID = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>)
                         () -> Integer.getInteger("dispman.layer", 1));

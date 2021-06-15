@@ -1569,6 +1569,7 @@ final public class WebEngine {
         }
 
 
+        @SuppressWarnings("removal")
         @Override
         public boolean sendMessageToFrontend(final String message) {
             boolean result = false;

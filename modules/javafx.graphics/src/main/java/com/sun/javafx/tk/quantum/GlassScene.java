@@ -75,6 +75,7 @@ abstract class GlassScene implements TKScene {
 
     SceneState sceneState;
 
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     protected GlassScene(boolean depthBuffer, boolean msaa) {
@@ -99,6 +100,7 @@ abstract class GlassScene implements TKScene {
     }
 
     // To be used by subclasses to enforce context check
+    @SuppressWarnings("removal")
     @Override
     public final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
@@ -107,6 +109,7 @@ abstract class GlassScene implements TKScene {
         return accessCtrlCtx;
     }
 
+    @SuppressWarnings("removal")
     public final void setSecurityContext(AccessControlContext ctx) {
         if (accessCtrlCtx != null) {
             throw new RuntimeException("Scene security context has been already set!");
@@ -239,6 +242,7 @@ abstract class GlassScene implements TKScene {
 
     @Override
     public TKClipboard createDragboard(boolean isDragSource) {
+        @SuppressWarnings("removal")
         ClipboardAssistance assistant = new ClipboardAssistance(Clipboard.DND) {
             @Override
             public void actionPerformed(final int performedAction) {

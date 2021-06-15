@@ -418,6 +418,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             throw new IllegalArgumentException("Shader name must be non-null");
         }
         try {
+            @SuppressWarnings("removal")
             InputStream stream = AccessController.doPrivileged(
                     (PrivilegedAction<InputStream>) () -> D3DResourceFactory.class.
                            getResourceAsStream("hlsl/" + name + ".obj")

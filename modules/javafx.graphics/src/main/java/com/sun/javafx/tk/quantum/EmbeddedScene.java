@@ -199,6 +199,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         return false;
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void setSize(final int width, final int height) {
         Platform.runLater(() -> {
@@ -268,6 +269,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         return super.getClearColor();
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void mouseEvent(final int type, final int button,
                            final boolean primaryBtnDown, final boolean middleBtnDown, final boolean secondaryBtnDown,
@@ -296,6 +298,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void scrollEvent(final int type,
                             final double scrollX, final double scrollY,
@@ -319,6 +322,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void inputMethodEvent(final EventType<InputMethodEvent> type,
                                  final ObservableList<InputMethodTextRun> composed, final String committed,
@@ -333,6 +337,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void menuEvent(final int x, final int y, final int xAbs, final int yAbs, final boolean isKeyboardTrigger) {
         Platform.runLater(() -> {
@@ -345,6 +350,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void keyEvent(final int type, final int key, final char[] ch, final int modifiers) {
         Platform.runLater(() -> {
@@ -369,6 +375,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void zoomEvent(final int type, final double zoomFactor, final double totalZoomFactor,
                           final double x, final double y, final double screenX, final double screenY,
@@ -388,6 +395,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void rotateEvent(final int type, final double angle, final double totalAngle,
                           final double x, final double y, final double screenX, final double screenY,
@@ -407,6 +415,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void swipeEvent(final int type, final double x, final double y, final double screenX, final double screenY,
                             boolean shift, boolean ctrl, boolean alt, boolean meta)

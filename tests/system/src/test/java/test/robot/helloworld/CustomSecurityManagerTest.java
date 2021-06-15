@@ -62,6 +62,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
     private static final int WIDTH = 400;
     private static final int HEIGHT = 300;
 
+    @SuppressWarnings("removal")
     static class MySecurityManager extends SecurityManager {
         private final boolean permissive;
 
@@ -91,11 +92,13 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     @After
     public void cleanup() {
         System.setSecurityManager(null);
     }
 
+    @SuppressWarnings("removal")
     private void doTestOnTopCommon(SecurityManager sm, boolean expectedOnTop) {
         // Skip on Linux due to 8145152
         assumeTrue(!PlatformUtil.isLinux());
@@ -139,6 +142,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         });
     }
 
+    @SuppressWarnings("removal")
     private void doTestFullScreenCommon(SecurityManager sm,
                                         boolean initFullScreen,
                                         boolean expectedFullScreen)
@@ -205,6 +209,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         });
     }
 
+    @SuppressWarnings("removal")
     private void doTestRobotCommon(SecurityManager sm, boolean expectedCreateRobot) {
         final AtomicReference<Robot> robot = new AtomicReference<>();
         System.setSecurityManager(sm);

@@ -52,6 +52,7 @@ public abstract class Accessible {
         public void executeAction(AccessibleAction action, Object... parameters) {
         }
 
+        @SuppressWarnings("removal")
         public abstract AccessControlContext getAccessControlContext();
     }
 
@@ -125,6 +126,7 @@ public abstract class Accessible {
      * IMPORTANT: Calling to the user code should not proceed if
      * this method returns NULL.
      */
+    @SuppressWarnings("removal")
     private final AccessControlContext getAccessControlContext() {
         AccessControlContext acc = null;
         try {
@@ -160,6 +162,7 @@ public abstract class Accessible {
 
     private GetAttribute getAttribute = new GetAttribute();
 
+    @SuppressWarnings("removal")
     public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
         AccessControlContext acc = getAccessControlContext();
         if (acc == null) return null;
@@ -181,6 +184,7 @@ public abstract class Accessible {
 
     private ExecuteAction executeAction = new ExecuteAction();
 
+    @SuppressWarnings("removal")
     public void executeAction(AccessibleAction action, Object... parameters) {
         AccessControlContext acc = getAccessControlContext();
         if (acc == null) return;

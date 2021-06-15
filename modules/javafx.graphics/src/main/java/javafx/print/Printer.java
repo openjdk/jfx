@@ -70,6 +70,7 @@ public final class Printer {
      * have permission to browse printers.
      */
     public static ObservableSet<Printer> getAllPrinters() {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();
@@ -80,6 +81,7 @@ public final class Printer {
     private static ReadOnlyObjectWrapper<Printer> defaultPrinter;
 
     private static ReadOnlyObjectWrapper<Printer> defaultPrinterImpl() {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();

@@ -153,12 +153,14 @@ public abstract class Animation {
 
     // Access control context, captured whenever we add this pulse receiver to
     // the PrimaryTimer (which is called when an animation is played or resumed)
+    @SuppressWarnings("removal")
     private AccessControlContext accessCtrlCtx = null;
 
     private long now() {
         return TickCalculation.fromNano(timer.nanos());
     }
 
+    @SuppressWarnings("removal")
     private void addPulseReceiver() {
         // Capture the Access Control Context to be used during the animation pulse
         accessCtrlCtx = AccessController.getContext();
@@ -190,6 +192,7 @@ public abstract class Animation {
     }
 
     // package private only for the sake of testing
+    @SuppressWarnings("removal")
     final PulseReceiver pulseReceiver = new PulseReceiver() {
         @Override public void timePulse(long now) {
             final long elapsedTime = now - startTime;

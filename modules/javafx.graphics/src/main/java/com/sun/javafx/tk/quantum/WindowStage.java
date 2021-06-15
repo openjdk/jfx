@@ -259,7 +259,7 @@ class WindowStage extends GlassStage {
         return style;
     }
 
-    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, AccessControlContext acc) {
+    @Override public TKScene createTKScene(boolean depthBuffer, boolean msaa, @SuppressWarnings("removal") AccessControlContext acc) {
         ViewScene scene = new ViewScene(depthBuffer, msaa);
         scene.setSecurityContext(acc);
         return scene;
@@ -630,6 +630,7 @@ class WindowStage extends GlassStage {
 
     private boolean hasPermission(Permission perm) {
         try {
+            @SuppressWarnings("removal")
             final SecurityManager sm = System.getSecurityManager();
             if (sm != null) {
                 sm.checkPermission(perm, getAccessControlContext());
@@ -762,6 +763,7 @@ class WindowStage extends GlassStage {
         }
     }
 
+    @SuppressWarnings("removal")
     void fullscreenChanged(final boolean fs) {
         if (!fs) {
             if (activeFSWindow.compareAndSet(this, null)) {

@@ -204,6 +204,7 @@ class EPDSettings {
      *
      * @return a new {@code EPDSettings} instance
      */
+    @SuppressWarnings("removal")
     static EPDSettings newInstance() {
         return AccessController.doPrivileged(
                 (PrivilegedAction<EPDSettings>) () -> new EPDSettings());

@@ -199,6 +199,7 @@ public class Window implements EventTarget {
                         return window.screenProperty();
                     }
 
+                    @SuppressWarnings("removal")
                     @Override
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
@@ -214,6 +215,7 @@ public class Window implements EventTarget {
      * @since 9
      */
     public static ObservableList<Window> getWindows() {
+        @SuppressWarnings("removal")
         final SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkPermission(ACCESS_WINDOW_LIST_PERMISSION);
@@ -222,6 +224,7 @@ public class Window implements EventTarget {
         return unmodifiableWindows;
     }
 
+    @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
     protected Window() {
