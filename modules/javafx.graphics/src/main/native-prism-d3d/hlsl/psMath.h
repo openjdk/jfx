@@ -60,6 +60,12 @@ float4 retr(float x) { return float4(x.xxx,1); }
 
 // Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
 // we need special treatment for falloff == 0 cases
+
+/*
+ * The methods 'computeSpotlightFactor' and 'computeSpotlightFactor2' are alternatives to the 'computeSpotlightFactor3'
+ * method that was chosen for its better performance. They are kept for the case that a future changes will make them
+ * more performant.
+ *
 float computeSpotlightFactor(float3 l, float3 lightDir, float cosOuter, float denom, float falloff) {
     if (falloff == 0 && cosOuter == -1) { // point light optimization (cosOuter == -1 is outerAngle == 180)
         return 1;
@@ -85,6 +91,7 @@ float computeSpotlightFactor2(float3 l, float3 lightDir, float cosOuter, float d
     float cutoff = cosAngle - cosOuter;
     return cutoff >= 0 ? 1 : 0;
 }
+*/
 
 float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float denom, float falloff) {
     float cosAngle = dot(normalize(-lightDir), l);

@@ -87,6 +87,11 @@ float computeSpotlightFactor(vec3 l, vec3 lightDir, float cosOuter, float denom,
     return cutoff >= 0.0 ? 1.0 : 0.0;
 }
 
+/*
+ * The methods 'computeSpotlightFactor2' and 'computeSpotlightFactor3' are alternatives to the 'computeSpotlightFactor'
+ * method that was chosen for its better performance. They are kept for the case that a future changes will make them
+ * more performant.
+ *
 float computeSpotlightFactor2(vec3 l, vec3 lightDir, float cosOuter, float denom, float falloff) {
     if (falloff != 0.0) {
         float cosAngle = dot(normalize(-lightDir), l);
@@ -109,8 +114,9 @@ float computeSpotlightFactor3(vec3 l, vec3 lightDir, float cosOuter, float denom
     }
     return cutoff >= 0.0 ? 1.0 : 0.0;
 }
+*/
 
-void computeLight(int i, vec3 n, vec3 refl, float specPower, out vec3 d, out vec3 s) {
+void computeLight(int i, vec3 n, vec3 refl, float specPower, inout vec3 d, inout vec3 s) {
     Light light = lights[i];
     vec3 pos = lightTangentSpacePositions[i].xyz;
     float dist = length(pos);
