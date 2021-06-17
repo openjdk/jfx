@@ -126,7 +126,7 @@ void computeLight(int i, vec3 n, vec3 refl, float specPower, inout vec3 d, inout
     vec3 l = normalize(pos);
 
     vec3 lightDir = lightTangentSpaceDirections[i].xyz;
-    float spotlightFactor = computeSpotlightFactor2(l, lightDir, light.cosOuter, light.denom, light.falloff);
+    float spotlightFactor = computeSpotlightFactor(l, lightDir, light.cosOuter, light.denom, light.falloff);
 
     float invAttnFactor = light.attn.x + light.attn.y * dist + light.attn.z * dist * dist;
 
