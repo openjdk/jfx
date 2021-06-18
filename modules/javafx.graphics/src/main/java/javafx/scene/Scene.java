@@ -68,6 +68,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
+import javafx.css.Stylesheet;
 import javafx.event.*;
 import javafx.geometry.*;
 import javafx.scene.image.WritableImage;
@@ -83,6 +84,7 @@ import javafx.util.Duration;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
+import java.io.File;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -1621,6 +1623,12 @@ public class Scene implements EventTarget {
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      * </p>
+     * The RFC 2397 "data" scheme for URLs is supported in addition to the protocol handlers that
+     * are registered for the application.
+     * If a URL uses the "data" scheme and the MIME type is either empty, "text/plain", or "text/css",
+     * the payload will be interpreted as a CSS file.
+     * If the MIME type is "application/octet-stream", the payload will be interpreted as a binary
+     * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
      * <pre><code>
      *
      * package com.example.javafx.app;

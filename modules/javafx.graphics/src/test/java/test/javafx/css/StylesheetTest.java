@@ -25,6 +25,7 @@
 
 package test.javafx.css;
 
+import com.sun.javafx.css.StyleManager;
 import javafx.css.StyleConverter.StringStore;
 import javafx.css.converter.EnumConverter;
 import javafx.css.converter.StringConverter;
@@ -38,6 +39,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -644,6 +647,121 @@ public class StylesheetTest {
         } catch (IOException e) {
             fail(e.toString());
         }
+    }
+
+    @Test
+    public void testLoadStylesheetFromDataURI() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        // Stylesheet content: .rect { -fx-fill: blue; }
+        root.getStylesheets().add("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
+    }
+
+    @Test
+    public void testLoadStylesheetFromTextCssDataURI() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        // Stylesheet content: .rect { -fx-fill: blue; }
+        root.getStylesheets().add("data:text/css;charset=utf-8;base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
+    }
+
+    @Test
+    public void testLoadStylesheetFromBinaryDataURI() throws IOException {
+        File inputFile = null, outputFile = null;
+        byte[] stylesheetData;
+
+        try {
+            inputFile = File.createTempFile("testLoadStylesheetFromBinaryDataURI", ".css");
+            outputFile = File.createTempFile("testLoadStylesheetFromBinaryDataURI", ".bss");
+            Files.writeString(inputFile.toPath(), ".rect { -fx-fill: blue; }");
+            Stylesheet.convertToBinary(inputFile, outputFile);
+            stylesheetData = Files.readAllBytes(outputFile.toPath());
+        } finally {
+            if (inputFile != null) {
+                inputFile.delete();
+            }
+
+            if (outputFile != null) {
+                outputFile.delete();
+            }
+        }
+
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+        root.getStylesheets().add("data:application/octet-stream;base64," + Base64.getEncoder().encodeToString(stylesheetData));
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
+    }
+
+    @Test
+    public void testLoadStylesheetFromDataURIFailsForUnsupportedMimeType() {
+        var errors = StyleManager.errorsProperty();
+        errors.clear();
+
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+        root.getStylesheets().add("data:text/html;base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).getMessage().startsWith("Unexpected MIME type \"text/html\""));
+    }
+
+    @Test
+    public void testLoadStylesheetFromDataURIFailsForUnsupportedCharset() {
+        var errors = StyleManager.errorsProperty();
+        errors.clear();
+
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+        root.getStylesheets().add("data:charset=ABC-321;base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(1, errors.size());
+        assertTrue(errors.get(0).getMessage().startsWith("Unsupported charset \"ABC-321\""));
+    }
+
+    @Test
+    public void testStyleRevertsWhenDataURIStylesheetIsRemoved() {
+        var rect = new Rectangle();
+        var root = new StackPane(rect);
+        rect.getStyleClass().add("rect");
+
+        // Stylesheet content: .rect { -fx-fill: blue; }
+        root.getStylesheets().add("data:base64,LnJlY3QgeyAtZngtZmlsbDogYmx1ZTsgfQ==");
+
+        // Stylesheet content: .rect { -fx-fill: red; }
+        String stylesheet = "data:base64,LnJlY3QgeyAtZngtZmlsbDogcmVkOyB9";
+        root.getStylesheets().add(stylesheet);
+
+        Scene scene = new Scene(root);
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.RED, rect.getFill());
+
+        root.getStylesheets().remove(stylesheet);
+        scene.getRoot().applyCss();
+
+        assertEquals(Color.BLUE, rect.getFill());
     }
 
 }
