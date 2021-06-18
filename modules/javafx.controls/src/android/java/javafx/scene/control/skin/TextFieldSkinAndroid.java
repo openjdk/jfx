@@ -79,7 +79,7 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
         if (getSkinnable() instanceof PasswordField) {
             return String.valueOf(BULLET).repeat(txt.length());
         } else {
-            return txt;
+            return super.maskText(txt);
         }
     }
 
