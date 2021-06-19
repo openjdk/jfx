@@ -38,6 +38,8 @@ struct Light {
     float4 color;
 };
 
+// See D3DPhongShader.h for register assignments
+
 // camera
 float4x4    mViewProj   : register(c0);
 float4      gCameraPos  : register(c4);
@@ -55,4 +57,4 @@ float4      gAmbinetData[10]  : register(c25);
 float4x3    mWorld            : register(c35);
 float4x3    mBones[MAX_BONES] : register(c35);
 
-float4      gReserved240[16] : register(c240);
+float4      gReserved245[11] : register(c245);

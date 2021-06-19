@@ -23,15 +23,15 @@
  * questions.
  */
 
-// see D3DPhongShader.h
+// see D3DPhongShader.h for register assignments
 
-static const int numMaxLights = 3;
+static const int numMaxLights = 5;
 
 float4 gDiffuseColor : register(c0);
 float4 gSpecularColor : register(c1); // specular power is in the alpha
 float4 gLightColor[numMaxLights] : register(c4);
 float4 gLightAttenuation[numMaxLights] : register(c9);
-float4 gLightRange[numMaxLights] : register(c14);
+float4 gLightRange[numMaxLights] : register(c14);       // {max range, reserved min range, _, _}
 float4 gSpotLightFactors[numMaxLights] : register(c19); // {cos(outer), cos(inner) - cos(outer), falloff, _}
 
 float4 gSomethingElse : register(c24);
