@@ -649,6 +649,44 @@ public class StylesheetTest {
         }
     }
 
+    private byte[] convertCssTextToBinary(String cssText) throws IOException {
+        File inputFile = null, outputFile = null;
+        byte[] stylesheetData;
+
+        try {
+            inputFile = File.createTempFile("convertCssTextToBinary", ".css");
+            outputFile = File.createTempFile("convertCssTextToBinary", ".bss");
+            Files.writeString(inputFile.toPath(), cssText);
+            Stylesheet.convertToBinary(inputFile, outputFile);
+            stylesheetData = Files.readAllBytes(outputFile.toPath());
+        } finally {
+            if (inputFile != null) {
+                inputFile.delete();
+            }
+
+            if (outputFile != null) {
+                outputFile.delete();
+            }
+        }
+
+        return stylesheetData;
+    }
+
+    @Test
+    public void testLoadBinaryStylesheetFromStream() throws IOException {
+        byte[] stylesheetData = convertCssTextToBinary(".rect { -fx-fill: blue; }");
+
+        var rules = Stylesheet.loadBinary(new ByteArrayInputStream(stylesheetData)).getRules();
+        assertEquals(1, rules.size());
+
+        var rule = rules.get(0);
+        assertEquals(1, rule.getDeclarations().size());
+
+        var decl = rule.getDeclarations().get(0);
+        assertEquals("-fx-fill", decl.getProperty());
+        assertEquals("0x0000ffff", decl.getParsedValue().getValue().toString());
+    }
+
     @Test
     public void testLoadStylesheetFromDataURI() {
         var rect = new Rectangle();
@@ -679,24 +717,7 @@ public class StylesheetTest {
 
     @Test
     public void testLoadStylesheetFromBinaryDataURI() throws IOException {
-        File inputFile = null, outputFile = null;
-        byte[] stylesheetData;
-
-        try {
-            inputFile = File.createTempFile("testLoadStylesheetFromBinaryDataURI", ".css");
-            outputFile = File.createTempFile("testLoadStylesheetFromBinaryDataURI", ".bss");
-            Files.writeString(inputFile.toPath(), ".rect { -fx-fill: blue; }");
-            Stylesheet.convertToBinary(inputFile, outputFile);
-            stylesheetData = Files.readAllBytes(outputFile.toPath());
-        } finally {
-            if (inputFile != null) {
-                inputFile.delete();
-            }
-
-            if (outputFile != null) {
-                outputFile.delete();
-            }
-        }
+        byte[] stylesheetData = convertCssTextToBinary(".rect { -fx-fill: blue; }");
 
         var rect = new Rectangle();
         var root = new StackPane(rect);

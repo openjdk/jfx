@@ -297,6 +297,8 @@ public class Stylesheet {
      * @return the loaded {@code Stylesheet}
      * @throws IOException if the binary stream corresponds to a more recent binary
      * css version or if an I/O error occurs while reading from the stream
+     *
+     * @since 17
      */
     public static Stylesheet loadBinary(InputStream stream) throws IOException {
         return loadBinary(stream, null);
