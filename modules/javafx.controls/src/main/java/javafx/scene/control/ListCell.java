@@ -353,7 +353,7 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     // index at time of startEdit - fix for JDK-8165214
-    int indexAtStartEdit;
+    private int indexAtStartEdit;
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
