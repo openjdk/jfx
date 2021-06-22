@@ -1127,38 +1127,16 @@ final public class StyleManager {
                     }
 
                     if (dataUri != null) {
-                        String mimeType = dataUri.getMimeType();
-                        parse = true;
+                        boolean isText =
+                            "text".equalsIgnoreCase(dataUri.getMimeType())
+                                && ("css".equalsIgnoreCase(dataUri.getMimeSubtype())
+                                    || "plain".equalsIgnoreCase(dataUri.getMimeSubtype()));
 
-                        if (mimeType != null) {
-                            boolean isText =
-                                "text".equalsIgnoreCase(dataUri.getMimeType())
-                                    && ("css".equalsIgnoreCase(dataUri.getMimeSubtype())
-                                        || "plain".equalsIgnoreCase(dataUri.getMimeSubtype()));
+                        boolean isBinary =
+                            "application".equalsIgnoreCase(dataUri.getMimeType())
+                                && "octet-stream".equalsIgnoreCase(dataUri.getMimeSubtype());
 
-                            boolean isBinary =
-                                "application".equalsIgnoreCase(dataUri.getMimeType())
-                                    && "octet-stream".equalsIgnoreCase(dataUri.getMimeSubtype());
-
-                            if (!isText && !isBinary) {
-                                String message = String.format("Unexpected MIME type \"%s/%s\" in stylesheet URI \"%s\"",
-                                    dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri);
-
-                                if (errors != null) {
-                                    errors.add(new CssParser.ParseError(message));
-                                }
-
-                                if (getLogger().isLoggable(Level.WARNING)) {
-                                    getLogger().warning(message);
-                                }
-
-                                return null;
-                            }
-
-                            parse = isText;
-                        }
-
-                        if (parse) {
+                        if (isText) {
                             String charsetName = dataUri.getParameters().get("charset");
                             Charset charset;
 
@@ -1181,10 +1159,23 @@ final public class StyleManager {
 
                             var stylesheetText = new String(dataUri.getData(), charset);
                             stylesheet = new CssParser().parse(stylesheetText);
-                        } else {
+                        } else if (isBinary) {
                             try (InputStream stream = new ByteArrayInputStream(dataUri.getData())) {
                                 stylesheet = Stylesheet.loadBinary(stream);
                             }
+                        } else {
+                            String message = String.format("Unexpected MIME type \"%s/%s\" in stylesheet URI \"%s\"",
+                                dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri);
+
+                            if (errors != null) {
+                                errors.add(new CssParser.ParseError(message));
+                            }
+
+                            if (getLogger().isLoggable(Level.WARNING)) {
+                                getLogger().warning(message);
+                            }
+
+                            return null;
                         }
                     }
                 }
