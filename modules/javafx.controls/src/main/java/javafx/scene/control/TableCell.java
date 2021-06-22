@@ -307,7 +307,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (!isEditable() ||
                 (table != null && !table.isEditable()) ||
                 (column != null && !column.isEditable()) ||
-                (row != null) && !row.isEditable()) {
+                (row != null && !row.isEditable())) {
             return;
         }
 
