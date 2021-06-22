@@ -42,7 +42,7 @@
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    GET_MAIN_JENV_NOWARN;
     if (env != NULL) {
         (*env)->DeleteGlobalRef(env, jAccessible);
         GLASS_CHECK_EXCEPTION(env);
