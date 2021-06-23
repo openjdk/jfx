@@ -615,6 +615,7 @@ public class StylesheetTest {
        }
    }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void testRT_37301() {
         try {
