@@ -96,6 +96,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanIntegerProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public int get() {
         return AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
@@ -133,6 +135,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final int value) {
         if (isBound()) {

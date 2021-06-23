@@ -122,6 +122,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("removal")
     @Override
     public void run() {
         // Run the loader in the page's access control context
@@ -185,7 +186,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         } catch (MalformedURLException ex) {
             error = ex;
             errorCode = LoadListenerClient.MALFORMED_URL;
-        } catch (AccessControlException ex) {
+        } catch (@SuppressWarnings("removal") AccessControlException ex) {
             error = ex;
             errorCode = LoadListenerClient.PERMISSION_DENIED;
         } catch (UnknownHostException ex) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.javafx.scene.control;
 
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.skin.TableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -48,6 +50,7 @@ import static org.junit.Assert.assertEquals;
 public class TableCellTest {
     private TableCell<String,String> cell;
     private TableView<String> table;
+    private TableRow<String> row;
     private ObservableList<String> model;
 
     @Before public void setup() {
@@ -62,6 +65,8 @@ public class TableCellTest {
         cell = new TableCell<String,String>();
         model = FXCollections.observableArrayList("Four", "Five", "Fear"); // "Flop", "Food", "Fizz"
         table = new TableView<String>(model);
+
+        row = new TableRow<>();
     }
 
     @After
@@ -320,6 +325,81 @@ public class TableCellTest {
     @Test public void test_jdk_8151524() {
         TableCell cell = new TableCell();
         cell.setSkin(new TableCellSkin(cell));
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Not editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the row is not editable.
+     */
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        table.setEditable(true);
+        row.setEditable(false);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Not editable<br>
+     * Row: Editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the table is not editable.
+     */
+    @Test
+    public void testCellInUneditableTableIsNotEditable() {
+        table.setEditable(false);
+        row.setEditable(true);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(true);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Editable<br>
+     * Column: Not editable<br>
+     * Expected: Cell can not be edited because the column is not editable.
+     */
+    @Test
+    public void testCellInUneditableColumnIsNotEditable() {
+        table.setEditable(true);
+        row.setEditable(true);
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setEditable(false);
+        table.getColumns().add(tableColumn);
+
+        cell.updateTableColumn(tableColumn);
+        cell.updateTableRow(row);
+        cell.updateTableView(table);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
     }
 
     /**

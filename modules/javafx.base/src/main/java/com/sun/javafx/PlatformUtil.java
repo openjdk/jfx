@@ -52,13 +52,28 @@ public class PlatformUtil {
     private static String javafxPlatform;
 
     static {
-        javafxPlatform = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+        @SuppressWarnings("removal")
+        String str1 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+        javafxPlatform = str1;
+
         loadProperties();
-        embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
-        embeddedType = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
-        useEGL = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
+
+        @SuppressWarnings("removal")
+        boolean bool1 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
+        embedded = bool1;
+
+        @SuppressWarnings("removal")
+        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
+        embeddedType = str2;
+
+        @SuppressWarnings("removal")
+        boolean bool2 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
+        useEGL = bool2;
+
         if (useEGL) {
-            doEGLCompositing = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
+            @SuppressWarnings("removal")
+            boolean bool3 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
+            doEGLCompositing = bool3;
         } else
             doEGLCompositing = false;
     }
@@ -134,8 +149,8 @@ public class PlatformUtil {
     }
 
     public static boolean useGLES2() {
-        String useGles2 = "false";
-        useGles2 =
+        @SuppressWarnings("removal")
+        String useGles2 =
                 AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("use.gles2"));
         if ("true".equals(useGles2))
             return true;
@@ -244,6 +259,7 @@ public class PlatformUtil {
         }
     }
 
+    @SuppressWarnings("removal")
     private static void loadProperties() {
         final String vmname = System.getProperty("java.vm.name");
         final String arch = System.getProperty("os.arch");

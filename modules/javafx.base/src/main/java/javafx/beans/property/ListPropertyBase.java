@@ -270,7 +270,7 @@ public abstract class ListPropertyBase<E> extends ListProperty<E> {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!newObservable.equals(observable)) {
+        if (newObservable != observable) {
             unbind();
             observable = newObservable;
             if (listener == null) {

@@ -28,6 +28,7 @@ package javafx.scene.control.skin;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventHandler;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 
@@ -38,6 +39,8 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
      * Private fields
      *
      **************************************************************************/
+
+    private static final char BULLET = '\u2022';
 
     private final EventHandler<MouseEvent> mouseEventListener = e -> {
         if (getSkinnable().isEditable() && getSkinnable().isFocused()) {
@@ -70,6 +73,15 @@ public class TextFieldSkinAndroid extends TextFieldSkin {
      * Public API                                                              *
      *                                                                         *
      **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override protected String maskText(String txt) {
+        if (getSkinnable() instanceof PasswordField) {
+            return String.valueOf(BULLET).repeat(txt.length());
+        } else {
+            return super.maskText(txt);
+        }
+    }
 
     /** {@inheritDoc} */
     @Override public void dispose() {

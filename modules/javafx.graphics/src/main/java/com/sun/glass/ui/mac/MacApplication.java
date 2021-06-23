@@ -43,10 +43,12 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     private native static void _initIDs(boolean disableSyncRendering);
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });
+        @SuppressWarnings("removal")
         boolean disableSyncRendering = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () ->
                         Boolean.getBoolean("glass.disableSyncRendering"));
@@ -60,6 +62,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     MacApplication() {
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -88,11 +91,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
         };
 
-        isTaskbarApplication =
+        @SuppressWarnings("removal")
+        boolean tmp =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 String taskbarAppProp = System.getProperty("glass.taskbarApplication");
                 return  !"false".equalsIgnoreCase(taskbarAppProp);
             });
+        isTaskbarApplication = tmp;
 
         ClassLoader classLoader = MacApplication.class.getClassLoader();
         _runLoop(classLoader, wrappedRunnable, isTaskbarApplication);

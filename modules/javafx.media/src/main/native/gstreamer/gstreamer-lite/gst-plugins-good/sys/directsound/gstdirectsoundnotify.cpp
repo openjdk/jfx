@@ -51,6 +51,12 @@ void ReleaseNotificator(void *pObject) {
 bool GSTDirectSoundNotify::Init(GSTDSNotfierCallback pCallback, void *pData) {
   m_pCallback = pCallback;
   m_pData = pData;
+  bool bCallCoUninitialize = true;
+  bool bResult = false;
+
+  if (FAILED(CoInitialize(NULL))) {
+    bCallCoUninitialize = false;
+  }
 
   HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator),
                                 NULL,
@@ -59,11 +65,15 @@ bool GSTDirectSoundNotify::Init(GSTDSNotfierCallback pCallback, void *pData) {
   if (SUCCEEDED(hr)) {
     hr = m_pEnumerator->RegisterEndpointNotificationCallback(this);
     if (SUCCEEDED(hr)) {
-      return true;
+      bResult = true;
     }
   }
 
-  return false;
+  if (bCallCoUninitialize) {
+    CoUninitialize();
+  }
+
+  return bResult;
 }
 
 void GSTDirectSoundNotify::Dispose() {
@@ -78,13 +88,6 @@ GSTDirectSoundNotify::GSTDirectSoundNotify() {
   m_pEnumerator = NULL;
   m_pCallback = NULL;
   m_pData = NULL;
-  m_hrCoInit = CoInitialize(NULL);
-}
-
-GSTDirectSoundNotify::~GSTDirectSoundNotify() {
-  if (SUCCEEDED(m_hrCoInit)) {
-    CoUninitialize();
-  }
 }
 
 HRESULT GSTDirectSoundNotify::OnDefaultDeviceChanged(EDataFlow flow,
@@ -112,7 +115,7 @@ HRESULT GSTDirectSoundNotify::QueryInterface(REFIID iid, void** ppUnk) {
 
   AddRef();
 
- return S_OK;
+  return S_OK;
 }
 
 ULONG GSTDirectSoundNotify::AddRef() {

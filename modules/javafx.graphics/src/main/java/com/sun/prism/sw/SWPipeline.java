@@ -38,7 +38,8 @@ import java.util.HashMap;
 public final class SWPipeline extends GraphicsPipeline {
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("prism_sw");
             return null;
         });

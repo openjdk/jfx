@@ -400,6 +400,7 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityError() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -417,6 +418,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertHasNoLocalStorage(webEngine);
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityErrorWithPassiveHandler() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -438,6 +440,7 @@ public class UserDataDirectoryTest extends TestBase {
         assertOccurred(USER_DATA_DIRECTORY_SECURITY_ERROR, handler);
     }
 
+    @SuppressWarnings("removal")
     @Test
     public void testSecurityErrorWithRecoveringHandler() {
         String url = new File("src/test/resources/test/html/ipsum.html")
@@ -718,6 +721,7 @@ public class UserDataDirectoryTest extends TestBase {
         }
     }
 
+    @SuppressWarnings("removal")
     private static final class CustomSecurityManager extends SecurityManager {
         private final String path;
 

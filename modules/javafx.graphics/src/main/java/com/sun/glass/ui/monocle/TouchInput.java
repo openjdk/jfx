@@ -46,6 +46,7 @@ class TouchInput {
      * events with a delta smaller then the value of this property will be
      * filtered out.The value of the property is in pixels.
      */
+    @SuppressWarnings("removal")
     private final int touchRadius = AccessController.doPrivileged(
             (PrivilegedAction<Integer>) () -> Integer.getInteger(
                     "monocle.input.touchRadius", 20)
@@ -70,6 +71,7 @@ class TouchInput {
     TouchPipeline getBasePipeline() {
         if (basePipeline == null) {
             basePipeline = new TouchPipeline();
+            @SuppressWarnings("removal")
             String[] touchFilterNames = AccessController.doPrivileged(
                     (PrivilegedAction<String>) () -> System.getProperty(
                             "monocle.input.touchFilters",

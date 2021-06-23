@@ -81,7 +81,9 @@ public class LauncherImpl {
     private static final boolean trace = false;
 
     // set system property javafx.verbose to true to make the launcher noisy
-    private static final boolean verbose;
+    @SuppressWarnings("removal")
+    private static final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        Boolean.getBoolean("javafx.verbose"));
 
     private static final String MF_MAIN_CLASS = "Main-Class";
     private static final String MF_JAVAFX_MAIN = "JavaFX-Application-Class";
@@ -117,11 +119,6 @@ public class LauncherImpl {
     // is started.
     private static ClassLoader savedMainCcl = null;
 
-    static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
-                Boolean.getBoolean("javafx.verbose"));
-    }
-
     /**
      * This method is called by the Application.launch method.
      * It must not be called more than once or an exception will be thrown.
@@ -139,6 +136,7 @@ public class LauncherImpl {
         Class<? extends Preloader> preloaderClass = savedPreloaderClass;
 
         if (preloaderClass == null) {
+            @SuppressWarnings("removal")
             String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
                     System.getProperty("javafx.preloader"));
             if (preloaderByProperty != null) {

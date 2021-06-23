@@ -179,6 +179,7 @@ public class Scene implements EventTarget {
 
     private EnumSet<DirtyBits> dirtyBits = EnumSet.noneOf(DirtyBits.class);
 
+    @SuppressWarnings("removal")
     final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
@@ -1386,6 +1387,7 @@ public class Scene implements EventTarget {
     private static List<Runnable> snapshotRunnableListB;
     private static List<Runnable> snapshotRunnableList;
 
+    @SuppressWarnings("removal")
     static void addSnapshotRunnable(final Runnable runnable) {
         Toolkit.getToolkit().checkFxUserThread();
 
@@ -6235,6 +6237,7 @@ public class Scene implements EventTarget {
      *                                                                         *
      **************************************************************************/
 
+    @SuppressWarnings("removal")
     private static final NodeOrientation defaultNodeOrientation =
         AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
@@ -6438,6 +6441,7 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
+                @SuppressWarnings("removal")
                 @Override public AccessControlContext getAccessControlContext() {
                     return getPeer().getAccessControlContext();
                 }

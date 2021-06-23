@@ -117,6 +117,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
 
     /* This is called only for fonts where a temp file was created
      */
+    @SuppressWarnings("removal")
     protected synchronized void disposeOnShutdown() {
         if (isCopy || isDecoded) {
             AccessController.doPrivileged(
@@ -227,6 +228,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
             this.refKey = refKey;
         }
 
+        @SuppressWarnings("removal")
         public synchronized void dispose() {
             if (fileName != null) {
                 AccessController.doPrivileged(

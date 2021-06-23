@@ -38,8 +38,10 @@ public class ModuleHelper {
     private static final boolean verbose;
 
     static {
-        verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+        @SuppressWarnings("removal")
+        boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
                 Boolean.getBoolean("javafx.verbose"));
+        verbose = tmp;
 
         if (verbose) {
             System.err.println("" + ModuleHelper.class.getName() + " : <clinit>");

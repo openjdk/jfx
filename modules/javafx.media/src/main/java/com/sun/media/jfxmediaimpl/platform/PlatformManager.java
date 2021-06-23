@@ -46,7 +46,8 @@ import java.lang.reflect.Method;
 public final class PlatformManager {
     private static String enabledPlatforms;
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             getPlatformSettings();
             return null;
         });

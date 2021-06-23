@@ -96,6 +96,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanFloatProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public float get() {
         return AccessController.doPrivileged((PrivilegedAction<Float>) () -> {
@@ -133,6 +135,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final float value) {
         if (isBound()) {

@@ -35,6 +35,7 @@ class X11Platform extends NativePlatform {
 
     private final boolean x11Input;
 
+    @SuppressWarnings("removal")
     X11Platform() {
         LinuxSystem.getLinuxSystem().loadLibrary();
         x11Input = AccessController.doPrivileged((PrivilegedAction<Boolean>)

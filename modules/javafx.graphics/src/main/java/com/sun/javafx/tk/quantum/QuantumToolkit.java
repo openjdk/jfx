@@ -137,12 +137,15 @@ import java.util.Optional;
 
 public final class QuantumToolkit extends Toolkit {
 
+    @SuppressWarnings("removal")
     public static final boolean verbose =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.verbose"));
 
+    @SuppressWarnings("removal")
     public static final boolean pulseDebug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
 
+    @SuppressWarnings("removal")
     private static final boolean multithreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 // If it is not specified, or it is true, then it should
@@ -156,12 +159,15 @@ public final class QuantumToolkit extends Toolkit {
                 return result;
             });
 
+    @SuppressWarnings("removal")
     private static boolean debug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.debug"));
 
+    @SuppressWarnings("removal")
     private static Integer pulseHZ =
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.animation.pulse"));
 
+    @SuppressWarnings("removal")
     static final boolean liveResize =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
@@ -169,12 +175,14 @@ public final class QuantumToolkit extends Toolkit {
                 return "true".equals(System.getProperty("javafx.live.resize", result));
             });
 
+    @SuppressWarnings("removal")
     static final boolean drawInPaint =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 boolean isSWT = "swt".equals(System.getProperty("glass.platform"));
                 String result = PlatformUtil.isMac() && isSWT ? "true" : "false";
                 return "true".equals(System.getProperty("javafx.draw.in.paint", result));});
 
+    @SuppressWarnings("removal")
     private static boolean singleThreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.singlethreaded");
@@ -184,6 +192,7 @@ public final class QuantumToolkit extends Toolkit {
                 return result;
             });
 
+    @SuppressWarnings("removal")
     private static boolean noRenderJobs =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 Boolean result = Boolean.getBoolean("quantum.norenderjobs");
@@ -254,7 +263,8 @@ public final class QuantumToolkit extends Toolkit {
                 dispose();
             }
         };
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             return null;
         });
@@ -596,7 +606,7 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
-    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
+    @Override public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         WindowStage stage = new WindowStage(peerWindow, securityDialog, stageStyle, modality, owner);
         stage.setSecurityContext(acc);
@@ -669,7 +679,7 @@ public final class QuantumToolkit extends Toolkit {
     @Override public TKStage createTKPopupStage(Window peerWindow,
                                                 StageStyle popupStyle,
                                                 TKStage owner,
-                                                AccessControlContext acc) {
+                                                @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         boolean securityDialog = owner instanceof WindowStage ?
                 ((WindowStage)owner).isSecurityDialog() : false;
@@ -680,7 +690,7 @@ public final class QuantumToolkit extends Toolkit {
         return stage;
     }
 
-    @Override public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
+    @Override public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
         assertToolkitRunning();
         EmbeddedStage stage = new EmbeddedStage(host);
         stage.setSecurityContext(acc);
@@ -838,6 +848,7 @@ public final class QuantumToolkit extends Toolkit {
         super.exit();
     }
 
+    @SuppressWarnings("removal")
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
             pulseTimer.stop();

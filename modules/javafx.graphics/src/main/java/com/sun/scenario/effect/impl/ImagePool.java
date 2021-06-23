@@ -48,7 +48,8 @@ public class ImagePool {
     static long pixelsAccessed;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
             if (System.getProperty("decora.showstats") != null) {
                 Runtime.getRuntime().addShutdownHook(new Thread() {
                     @Override public void run() {

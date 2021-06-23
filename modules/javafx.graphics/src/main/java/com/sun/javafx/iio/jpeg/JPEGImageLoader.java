@@ -103,7 +103,8 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("javafx_iio");
             return null;
         });

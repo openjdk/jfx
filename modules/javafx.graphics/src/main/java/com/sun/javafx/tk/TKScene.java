@@ -87,5 +87,6 @@ public interface TKScene {
 
     public TKClipboard createDragboard(boolean isDragSource);
 
+    @SuppressWarnings("removal")
     public AccessControlContext getAccessControlContext();
 }
