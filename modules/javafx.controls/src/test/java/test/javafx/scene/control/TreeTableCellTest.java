@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -631,6 +631,81 @@ public class TreeTableCellTest {
     @Test public void test_jdk_8151524() {
         TreeTableCell cell = new TreeTableCell();
         cell.setSkin(new TreeTableCellSkin(cell));
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Not editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the row is not editable.
+     */
+    @Test
+    public void testCellInUneditableRowIsNotEditable() {
+        tree.setEditable(true);
+        row.setEditable(false);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(true);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTreeTableColumn(treeTableColumn);
+        cell.updateTreeTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Not editable<br>
+     * Row: Editable<br>
+     * Column: Editable<br>
+     * Expected: Cell can not be edited because the table is not editable.
+     */
+    @Test
+    public void testCellInUneditableTableIsNotEditable() {
+        tree.setEditable(false);
+        row.setEditable(true);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(true);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTreeTableColumn(treeTableColumn);
+        cell.updateTreeTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
+    }
+
+    /**
+     * Table: Editable<br>
+     * Row: Editable<br>
+     * Column: Not editable<br>
+     * Expected: Cell can not be edited because the column is not editable.
+     */
+    @Test
+    public void testCellInUneditableColumnIsNotEditable() {
+        tree.setEditable(true);
+        row.setEditable(true);
+
+        TreeTableColumn<String, String> treeTableColumn = new TreeTableColumn<>();
+        treeTableColumn.setEditable(false);
+        tree.getColumns().add(treeTableColumn);
+
+        cell.updateTreeTableColumn(treeTableColumn);
+        cell.updateTreeTableRow(row);
+        cell.updateTreeTableView(tree);
+
+        cell.updateIndex(0);
+        cell.startEdit();
+
+        assertFalse(cell.isEditing());
     }
 
     /**
