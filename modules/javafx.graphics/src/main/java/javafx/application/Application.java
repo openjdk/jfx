@@ -520,7 +520,7 @@ public abstract class Application {
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
-     * </p>
+     * <p>
      * The RFC 2397 "data" scheme for URLs is supported in addition to the protocol handlers that
      * are registered for the application.
      * If a URL uses the "data" scheme and the MIME type is either empty, "text/plain", or "text/css",
@@ -529,8 +529,6 @@ public abstract class Application {
      * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
      * <p>
      * NOTE: This method must be called on the JavaFX Application Thread.
-     * </p>
-     *
      *
      * @param url The URL to the stylesheet as a String.
      * @since JavaFX 8.0
