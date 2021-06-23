@@ -42,6 +42,7 @@ public class GestureEventShim {
                pickResult);
     }
 
+    @SuppressWarnings("deprecation")
     public static GestureEvent getGestureEvent(
             Object source, EventTarget target,
             final EventType<? extends GestureEvent> eventType) {

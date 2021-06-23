@@ -764,8 +764,8 @@ public class LabeledTest {
 
     @Test public void canSpecifyLabelPaddingFromCSS() {
         Insets insets = new Insets(5, 4, 3, 2);
-        CssMetaData styleable = ((StyleableProperty)labeled.labelPaddingProperty()).getCssMetaData();
-        styleable.set(labeled, insets, null);
+        StyleableProperty prop = ((StyleableProperty)labeled.labelPaddingProperty());
+        prop.applyStyle(null, insets);
         assertEquals(insets, labeled.getLabelPadding());
         assertEquals(insets, labeled.labelPaddingProperty().get());
     }
