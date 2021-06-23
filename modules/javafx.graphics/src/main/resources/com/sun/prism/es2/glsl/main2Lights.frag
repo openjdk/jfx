@@ -59,8 +59,8 @@ struct Light {
     vec4 pos;
     vec3 color;
     vec3 attn;
-    float range;
     vec3 dir;
+    float range;
     float cosOuter;
     float denom; // cosInner - cosOuter
     float falloff;
