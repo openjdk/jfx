@@ -492,7 +492,7 @@ public final class JobSettings {
      * which means output is sent to the printer.
      *
      * @return the name of a printer spool file
-     * @since 13
+     * @since 17
      */
     public final StringProperty outputFileProperty() {
         if (outputFile == null) {
@@ -536,7 +536,7 @@ public final class JobSettings {
     /**
      * Get the output file path name.
      * @return the output file as a string encoded {@code java.net.URL}
-     * @since 13
+     * @since 17
      */
     public String getOutputFile() {
         return outputFileProperty().get();
@@ -546,7 +546,7 @@ public final class JobSettings {
     /**
      * Set the output file.
      * @param urlString the output file as a string encoded {@code java.net.URL}
-     * @since 13
+     * @since 17
      */
     public void setOutputFile(String urlString) {
         outputFileProperty().set(urlString);
