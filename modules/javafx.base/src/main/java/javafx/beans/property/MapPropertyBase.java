@@ -27,6 +27,7 @@ package javafx.beans.property;
 
 import com.sun.javafx.binding.MapExpressionHelper;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -268,9 +269,8 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
     @Override
     public void bind(final ObservableValue<? extends ObservableMap<K, V>> source) {
-        if (source == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+        Objects.requireNonNull(source, "Cannot bind to null");
+
         if (source != observable) {
             unbind();
             observable = source;

@@ -27,12 +27,13 @@ package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
+import java.util.Objects;
 
 /**
  * The class {@code StringPropertyBase} is the base class for a property
@@ -159,9 +160,8 @@ public abstract class StringPropertyBase extends StringProperty {
      */
     @Override
     public void bind(ObservableValue<? extends String> source) {
-        if (source == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+        Objects.requireNonNull(source, "Cannot bind to null");
+
         if (!source.equals(observable)) {
             unbind();
             observable = source;
