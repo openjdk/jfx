@@ -1226,15 +1226,15 @@ final public class StyleManager {
                     getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
                 }
             } catch (IOException ioe) {
-                    if (errors != null) {
-                        CssParser.ParseError error =
-                            new CssParser.ParseError(
-                                "Could not load stylesheet: " + fname
-                            );
-                        errors.add(error);
-                    }
+                // For data URIs, use the pretty-printed version for logging
+                var dataUri = DataURI.tryParse(fname);
+                String stylesheetName = dataUri != null ? dataUri.toString() : fname;
+
+                if (errors != null) {
+                    errors.add(new CssParser.ParseError("Could not load stylesheet: " + stylesheetName));
+                }
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().info("Could not load stylesheet: " + fname);//, ioe);
+                    getLogger().info("Could not load stylesheet: " + stylesheetName);
                 }
             }
             return null;

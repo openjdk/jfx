@@ -650,26 +650,17 @@ public class StylesheetTest {
     }
 
     private byte[] convertCssTextToBinary(String cssText) throws IOException {
-        File inputFile = null, outputFile = null;
-        byte[] stylesheetData;
-
-        try {
-            inputFile = File.createTempFile("convertCssTextToBinary", ".css");
-            outputFile = File.createTempFile("convertCssTextToBinary", ".bss");
-            Files.writeString(inputFile.toPath(), cssText);
-            Stylesheet.convertToBinary(inputFile, outputFile);
-            stylesheetData = Files.readAllBytes(outputFile.toPath());
-        } finally {
-            if (inputFile != null) {
-                inputFile.delete();
-            }
-
-            if (outputFile != null) {
-                outputFile.delete();
-            }
-        }
-
-        return stylesheetData;
+        var stylesheet = new CssParser().parse(cssText);
+        var stream = new ByteArrayOutputStream();
+        var stringStore = new StringStore();
+        StylesheetShim.writeBinary(stylesheet, new DataOutputStream(stream), stringStore);
+        var stylesheetData = stream.toByteArray();
+        stream = new ByteArrayOutputStream();
+        var dataStream = new DataOutputStream(stream);
+        dataStream.writeShort(StylesheetShim.BINARY_CSS_VERSION);
+        stringStore.writeBinary(dataStream);
+        dataStream.write(stylesheetData);
+        return stream.toByteArray();
     }
 
     @Test

@@ -313,9 +313,10 @@ public class Stylesheet {
             // read file version
             final int bssVersion = dataInputStream.readShort();
             if (bssVersion > Stylesheet.BINARY_CSS_VERSION) {
-                throw new IOException("Wrong binary CSS version: "
-                        + bssVersion + ". Expected version less than or equal to" +
-                        Stylesheet.BINARY_CSS_VERSION);
+                throw new IOException(
+                    String.format("Wrong binary CSS version %s, expected version less than or equal to %s",
+                        uri != null ? bssVersion + " in stylesheet \"" + uri + "\"" : bssVersion,
+                        Stylesheet.BINARY_CSS_VERSION));
             }
             // read strings
             final String[] strings = StringStore.readBinary(dataInputStream);
