@@ -27,6 +27,7 @@ package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
@@ -34,7 +35,7 @@ import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
+import java.util.Objects;
 
 /**
  * The class {@code BooleanPropertyBase} is the base class for a property
@@ -160,12 +161,10 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
      */
     @Override
     public void bind(final ObservableValue<? extends Boolean> source) {
-        if (source == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+        Objects.requireNonNull(source, "Cannot bind to null");
 
-        final ObservableBooleanValue newObservable = (source instanceof ObservableBooleanValue) ? (ObservableBooleanValue) source
-                : new ValueWrapper(source);
+        final ObservableBooleanValue newObservable = (source instanceof ObservableBooleanValue) ?
+                (ObservableBooleanValue) source : new ValueWrapper(source);
 
         if (!newObservable.equals(observable)) {
             unbind();

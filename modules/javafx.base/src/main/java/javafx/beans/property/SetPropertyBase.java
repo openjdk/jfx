@@ -27,6 +27,7 @@ package javafx.beans.property;
 
 import com.sun.javafx.binding.SetExpressionHelper;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -268,9 +269,7 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
     @Override
     public void bind(final ObservableValue<? extends ObservableSet<E>> source) {
-        if (source == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+        Objects.requireNonNull(source, "Cannot bind to null");
 
         if (source != this.observable) {
             unbind();

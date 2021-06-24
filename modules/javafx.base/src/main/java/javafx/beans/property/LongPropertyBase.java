@@ -27,15 +27,16 @@ package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.binding.LongBinding;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableLongValue;
+import javafx.beans.value.ObservableNumberValue;
 import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
-import javafx.beans.value.ObservableLongValue;
-import javafx.beans.value.ObservableNumberValue;
+import java.util.Objects;
 
 /**
  * The class {@code LongPropertyBase} is the base class for a property wrapping
@@ -162,9 +163,7 @@ public abstract class LongPropertyBase extends LongProperty {
      */
     @Override
     public void bind(final ObservableValue<? extends Number> source) {
-        if (source == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+        Objects.requireNonNull(source, "Cannot bind to null");
 
         ObservableLongValue newObservable;
         if (source instanceof ObservableLongValue) {

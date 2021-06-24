@@ -44,9 +44,9 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * and an {@link ObservableValue} (the <i>binding source</i>).
      * <p>
      * After establishing the binding, the value of the bound property is synchronized with the value
-     * of the binding source. If the value of the binding source changes, the change is immediately
-     * reflected in the value of the bound property. Furthermore, the bound property becomes effectively
-     * read-only: any call to {@link #setValue(Object)} will fail with an exception.
+     * of the binding source: any change to the value of the binding source will immediately result in
+     * the value of the bound property being changed accordingly. Furthermore, the bound property becomes
+     * effectively read-only: any call to {@link #setValue(Object)} will fail with an exception.
      * <p>
      * The bound property <i>strongly</i> references the binding source; this means that, as long as
      * the bound property is alive, the binding source will not be garbage-collected. As a consequence,
@@ -113,6 +113,8 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * @param other the other property
      * @throws NullPointerException if {@code other} is {@code null}
      * @throws IllegalArgumentException if {@code other} is {@code this}
+     *
+     * @see #bind(ObservableValue)
      */
     void bindBidirectional(Property<T> other);
 
