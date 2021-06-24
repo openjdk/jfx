@@ -346,7 +346,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private void updateOutputFile() {
         Destination dest =
             (Destination)printReqAttrSet.get(Destination.class);
-System.out.println("DEST="+dest);
         if (dest != null) {
             try {
                 settings.setOutputFile(dest.getURI().toURL().toString());
