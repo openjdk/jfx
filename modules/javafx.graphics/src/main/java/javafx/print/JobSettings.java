@@ -462,6 +462,97 @@ public final class JobSettings {
     }
     ///////////////////////  END JOBNAME /////////////////////
 
+    ///////////////////////  START OUTPUTFILE /////////////////////
+
+    private static final String DEFAULT_OUTPUTFILE = "";
+    private SimpleStringProperty outputFile;
+
+    /**
+     * A {@code StringProperty} representing the {@code java.net.URL}
+     * encoded name of a filesystem file, to which the platform printer
+     * driver should spool the rendered print data.
+     * <p>
+     * Applications can use this to request print-to-file behaviour where
+     * the native print system is capabale of spooling the output to a
+     * filesystem file, rather than the printer device.
+     * <p>
+     * This is often useful where the printer driver generates a format
+     * such as Postscript or PDF, and the application intends to distribute
+     * the result instead of printing it, or for some other reason the
+     * application does not want physical media (paper) emitted by the printer.
+     * <p>
+     * If the application does not have permission to write to the specified
+     * file, a {@code SecurityException} may be thrown when printing.
+     * If the print system does not support print-to-file, then this
+     * <p>
+     * setting will be ignored.
+     * If the URL specifies a non-existent path, or does not specify
+     * a writable file it may be ignored, or a SecurityException may be thrown.
+     * The default value is an empty string, which is interpreted as unset,
+     * which means output is sent to the printer.
+     *
+     * @return the name of a printer spool file
+     * @since 13
+     */
+    public final StringProperty outputFileProperty() {
+        if (outputFile == null) {
+            outputFile =
+                new SimpleStringProperty(JobSettings.this, "outputFile",
+                                         DEFAULT_OUTPUTFILE) {
+
+                @Override
+                public void set(String value) {
+                    if (!isJobNew()) {
+                        return;
+                    }
+                    if (value == null) {
+                        value = DEFAULT_OUTPUTFILE;
+                    }
+                    super.set(value);
+                }
+
+                @Override
+                public void bind(ObservableValue<? extends String>
+                                 rawObservable) {
+                    throw new
+                        RuntimeException("OutputFile property cannot be bound");
+                }
+
+                @Override
+                public void bindBidirectional(Property<String> other) {
+                    throw new
+                        RuntimeException("OutputFile property cannot be bound");
+                }
+
+                @Override
+                public String toString() {
+                     return get();
+                }
+            };
+        }
+        return outputFile;
+    }
+
+    /**
+     * Get the output file path name.
+     * @return the output file as a string encoded {@code java.net.URL}
+     * @since 13
+     */
+    public String getOutputFile() {
+        return outputFileProperty().get();
+    }
+
+
+    /**
+     * Set the output file.
+     * @param urlString the output file as a string encoded {@code java.net.URL}
+     * @since 13
+     */
+    public void setOutputFile(String urlString) {
+        outputFileProperty().set(urlString);
+    }
+    ///////////////////////  END OUTPUTFILE /////////////////////
+
     //////////////////////// START COPIES ////////////////////////
 
     private IntegerProperty copies;
