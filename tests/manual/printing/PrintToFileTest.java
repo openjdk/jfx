@@ -121,9 +121,9 @@ public class PrintToFileTest extends Application {
                 settings.outputFileProperty().set(urlStr);
             } catch (MalformedURLException e) {
                 System.out.println(e);
-                failed = true; 
+                failed = true;
             }
- 
+
             Platform.runLater(() -> {
                 Text t = new Text("file="+settings.getOutputFile());
                 root.getChildren().add(t);
@@ -148,7 +148,7 @@ public class PrintToFileTest extends Application {
                 }
             }
             Platform.runLater(() -> displayMessage());
-            
+
         }).start();
     }
 
