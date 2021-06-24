@@ -472,8 +472,8 @@ public final class JobSettings {
      * encoded name of a filesystem file, to which the platform printer
      * driver should spool the rendered print data.
      * <p>
-     * Applications can use this to request print-to-file behaviour where
-     * the native print system is capabale of spooling the output to a
+     * Applications can use this to request print-to-file behavior where
+     * the native print system is capable of spooling the output to a
      * filesystem file, rather than the printer device.
      * <p>
      * This is often useful where the printer driver generates a format
@@ -484,8 +484,8 @@ public final class JobSettings {
      * If the application does not have permission to write to the specified
      * file, a {@code SecurityException} may be thrown when printing.
      * If the print system does not support print-to-file, then this
-     * <p>
      * setting will be ignored.
+     * <p>
      * If the URL specifies a non-existent path, or does not specify
      * a writable file it may be ignored, or a SecurityException may be thrown.
      * The default value is an empty string, which is interpreted as unset,
