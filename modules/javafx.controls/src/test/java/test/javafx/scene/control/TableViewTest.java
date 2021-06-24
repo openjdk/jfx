@@ -5540,4 +5540,13 @@ public class TableViewTest {
 
         sl.dispose();
     }
+
+    // see JDK-8194924
+    @Test
+    public void test_noExceptionIsFiredIfClearSelectionOnChangeEvent(){
+        table.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue)
+                -> table.getSelectionModel().clearSelection());
+        table.getSelectionModel().select(0);
+        assertNull(table.getSelectionModel().getSelectedItem());
+    }
 }

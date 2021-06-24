@@ -2468,7 +2468,9 @@ public class TableView<S> extends Control {
                 change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
             } else {
                 final int changeIndex = isCellSelectionEnabled ? 0 : Math.max(0, selectedCellsSeq.indexOf(newTablePosition));
-                final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : 1;
+                // It is possible that during selection it was cleared - for example called clearSelection() on change
+                // So we should check if selectedCellsSeq is not empty
+                final int changeSize = isCellSelectionEnabled ? getSelectedCells().size() : Math.min(1, selectedCellsSeq.size());
                 change = new NonIterableChange.GenericAddRemoveChange<>(
                         changeIndex, changeIndex + changeSize, previousSelection, selectedCellsSeq);
 //                selectedCellsSeq._beginChange();
