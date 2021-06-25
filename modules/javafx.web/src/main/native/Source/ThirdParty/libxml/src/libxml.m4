@@ -159,7 +159,7 @@ main()
           echo "*** Could not run libxml test program, checking why..."
           CPPFLAGS="$CPPFLAGS $XML_CPPFLAGS"
           LIBS="$LIBS $XML_LIBS"
-      AC_LINK_IFELSE(
+	  AC_LINK_IFELSE(
             [AC_LANG_PROGRAM([[
 #include <libxml/xmlversion.h>
 #include <stdio.h>
