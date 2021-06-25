@@ -1158,7 +1158,6 @@ public class StyleManagerTest {
         var rect = new Rectangle();
         var root = new StackPane(rect);
         rect.getStyleClass().add("rect");
-        String uaStylesheet = Application.getUserAgentStylesheet();
 
         try {
             // Stylesheet content: .rect { -fx-fill: blue; }
@@ -1168,7 +1167,7 @@ public class StyleManagerTest {
 
             assertEquals(Color.BLUE, rect.getFill());
         } finally {
-            Application.setUserAgentStylesheet(uaStylesheet);
+            Application.setUserAgentStylesheet("data:,");
         }
     }
 }
