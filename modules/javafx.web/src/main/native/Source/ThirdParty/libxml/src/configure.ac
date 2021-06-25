@@ -717,9 +717,9 @@ if test $enable_ipv6 = yes; then
       AC_MSG_RESULT($have_broken_ss_family)
       if test x$have_broken_ss_family = xyes ; then
         AC_DEFINE(HAVE_BROKEN_SS_FAMILY, [],
-	  [Whether struct sockaddr::__ss_family exists]) 
+      [Whether struct sockaddr::__ss_family exists])
         AC_DEFINE(ss_family, __ss_family,
-	  [ss_family is not defined here, use __ss_family instead])
+      [ss_family is not defined here, use __ss_family instead])
       else
         AC_MSG_WARN(ss_family and __ss_family not found)
       fi
@@ -765,23 +765,23 @@ dnl
 if test "${GCC}" != "yes" ; then
     case "${host}" in
           hppa*-*-hpux* )
-	       EXTRA_CFLAGS="${EXTRA_CFLAGS} -Wp,-H30000"
-	       ;;
+           EXTRA_CFLAGS="${EXTRA_CFLAGS} -Wp,-H30000"
+           ;;
           *-dec-osf* )
                EXTRA_CFLAGS="${EXTRA_CFLAGS} -ieee"
                ;;
-	  alpha*-*-linux* )
-	       EXTRA_CFLAGS="${EXTRA_CFLAGS} -ieee"
-	       ;;
+      alpha*-*-linux* )
+           EXTRA_CFLAGS="${EXTRA_CFLAGS} -ieee"
+           ;;
     esac
 else
     if test "$with_fexceptions" = "yes"
     then
         #
-	# Not activated by default because this inflates the code size
-	# Used to allow propagation of C++ exceptions through the library
-	#
-	EXTRA_CFLAGS="${EXTRA_CFLAGS} -fexceptions"
+    # Not activated by default because this inflates the code size
+    # Used to allow propagation of C++ exceptions through the library
+    #
+    EXTRA_CFLAGS="${EXTRA_CFLAGS} -fexceptions"
     fi
 
     # warnings we'd like to see
@@ -790,11 +790,11 @@ else
     EXTRA_CFLAGS="${EXTRA_CFLAGS} -Wno-long-long -Wno-format-extra-args"
     case "${host}" in
           alpha*-*-linux* )
-	       EXTRA_CFLAGS="${EXTRA_CFLAGS} -mieee"
-	       ;;
-	  alpha*-*-osf* )
-	       EXTRA_CFLAGS="${EXTRA_CFLAGS} -mieee"
-	       ;;
+           EXTRA_CFLAGS="${EXTRA_CFLAGS} -mieee"
+           ;;
+      alpha*-*-osf* )
+           EXTRA_CFLAGS="${EXTRA_CFLAGS} -mieee"
+           ;;
     esac
 fi
 case ${host} in
@@ -803,7 +803,7 @@ case ${host} in
         ;;
     hppa*-hp-mpeix)
         NEED_TRIO=1
-	;;
+    ;;
     *-*-mingw* | *-*-cygwin* | *-*-msvc* )
         # If the host is Windows, and shared libraries are disabled, we
         # need to add -DLIBXML_STATIC to EXTRA_CFLAGS in order for linking to
@@ -849,60 +849,60 @@ if test "$with_python" != "no" ; then
                     with_python=`$PYTHON -c "import sys; print(sys.exec_prefix)"`
                 else
                     AC_PATH_PROG(PYTHON, python python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 python1.6 python1.5)
-		fi
-	    fi
-	fi
+        fi
+        fi
+    fi
     fi
     if test "$PYTHON" != ""
     then
         PYTHON_VERSION=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_version())"`
-	PYTHON_INCLUDES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_inc())"`
+    PYTHON_INCLUDES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_inc())"`
 # does not work as it produce a /usr/lib/python path instead of/usr/lib64/python
 #
-#	PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
-	echo Found Python version $PYTHON_VERSION
+#    PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
+    echo Found Python version $PYTHON_VERSION
     fi
     if test "$PYTHON_VERSION" != "" -a "$PYTHON_INCLUDES" = ""
     then
-	if test -r $with_python/include/python$PYTHON_VERSION/Python.h
-	then
-	    PYTHON_INCLUDES=$with_python/include/python$PYTHON_VERSION
-	else
-	    if test -r $prefix/include/python$PYTHON_VERSION/Python.h
-	    then
-	        PYTHON_INCLUDES=$prefix/include/python$PYTHON_VERSION
-	    else
-		if test -r /usr/include/python$PYTHON_VERSION/Python.h
-		then
-		    PYTHON_INCLUDES=/usr/include/python$PYTHON_VERSION
-		else
-	            if test -r $with_python/include/Python.h
-	            then
-	                PYTHON_INCLUDES=$with_python/include
-	            else
-		        echo could not find python$PYTHON_VERSION/Python.h or $with_python/include/Python.h
-		    fi
-		fi
-	    fi
-	fi
+    if test -r $with_python/include/python$PYTHON_VERSION/Python.h
+    then
+        PYTHON_INCLUDES=$with_python/include/python$PYTHON_VERSION
+    else
+        if test -r $prefix/include/python$PYTHON_VERSION/Python.h
+        then
+            PYTHON_INCLUDES=$prefix/include/python$PYTHON_VERSION
+        else
+        if test -r /usr/include/python$PYTHON_VERSION/Python.h
+        then
+            PYTHON_INCLUDES=/usr/include/python$PYTHON_VERSION
+        else
+                if test -r $with_python/include/Python.h
+                then
+                    PYTHON_INCLUDES=$with_python/include
+                else
+                echo could not find python$PYTHON_VERSION/Python.h or $with_python/include/Python.h
+            fi
+        fi
+        fi
+    fi
     fi
     if test "$with_python_install_dir" != ""
     then
-	PYTHON_SITE_PACKAGES="$with_python_install_dir"
+    PYTHON_SITE_PACKAGES="$with_python_install_dir"
     fi
     if test "$PYTHON_VERSION" != "" -a "$PYTHON_SITE_PACKAGES" = ""
     then
-	if test -d $libdir/python$PYTHON_VERSION/site-packages
-	then
-	    PYTHON_SITE_PACKAGES=$libdir/python$PYTHON_VERSION/site-packages
-	else
-	    if test -d $with_python/lib/site-packages
-	    then
-		PYTHON_SITE_PACKAGES=$with_python/lib/site-packages
-	    else
-		PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
-	    fi
-	fi
+    if test -d $libdir/python$PYTHON_VERSION/site-packages
+    then
+        PYTHON_SITE_PACKAGES=$libdir/python$PYTHON_VERSION/site-packages
+    else
+        if test -d $with_python/lib/site-packages
+        then
+        PYTHON_SITE_PACKAGES=$with_python/lib/site-packages
+        else
+        PYTHON_SITE_PACKAGES=`$PYTHON -c "from distutils import sysconfig; print(sysconfig.get_python_lib())"`
+        fi
+    fi
     fi
     pythondir='$(PYTHON_SITE_PACKAGES)'
     PYTHON_LIBS=`python$PYTHON_VERSION-config --ldflags`
@@ -957,11 +957,11 @@ if test "$with_modules" != "no" ; then
   if test "${libxml_have_dlopen}" = "yes"; then
     case "${host}" in
       *-*-hpux* )
-	MODULE_EXTENSION=".sl"
-	;;
+    MODULE_EXTENSION=".sl"
+    ;;
       * )
-	MODULE_EXTENSION=".so"
-	;;
+    MODULE_EXTENSION=".so"
+    ;;
     esac
 
     WITH_MODULES=1
@@ -994,14 +994,14 @@ if [[ "${LOGNAME}" = "veillard" -a "`pwd`" = "/u/veillard/XML" ]] || \
    then
     if test "$with_minimum" != "yes"
     then
-	if test "${with_mem_debug}" = "" ; then
-	    echo Activating memory debugging
-	    with_mem_debug="yes"
-	    with_run_debug="yes"
-	fi
-	if test "${with_docbook}" = "" ; then
-	    with_docbook="yes"
-	fi
+    if test "${with_mem_debug}" = "" ; then
+        echo Activating memory debugging
+        with_mem_debug="yes"
+        with_run_debug="yes"
+    fi
+    if test "${with_docbook}" = "" ; then
+        with_docbook="yes"
+    fi
     fi
     if test "${GCC}" = "yes" ; then
     EXTRA_CFLAGS="-g -O -pedantic -W -Wformat -Wno-format-extra-args -Wunused -Wimplicit -Wreturn-type -Wswitch -Wcomment -Wtrigraphs -Wchar-subscripts -Wuninitialized -Wparentheses -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wnested-externs -Winline -Wredundant-decls -Wall"
@@ -1073,34 +1073,34 @@ else
        *cygwin*) THREAD_LIBS=""
        ;;
        *beos*) WITH_THREADS="1"
-	   THREAD_CFLAGS="$THREAD_CFLAGS -DHAVE_BEOS_THREADS"
+       THREAD_CFLAGS="$THREAD_CFLAGS -DHAVE_BEOS_THREADS"
        ;;
        *linux*)
            if test "${GCC}" = "yes" ; then
-	       GCC_VERSION=`${CC} --version | head -1 | awk '{print $3}'`
-	       GCC_MAJOR=`echo ${GCC_VERSION} | sed 's+\..*++'`
-	       GCC_MEDIUM=`echo ${GCC_VERSION} | sed 's+[[0-9]]*\.++' | sed 's+\..*++'`
-	       if test "${THREAD_LIBS}" = "-lpthread" ; then
-	           if expr ${GCC_MEDIUM} \> 2 \& ${GCC_MAJOR} = 3 > /dev/null
-		   then
-		       THREAD_LIBS=""
-		       BASE_THREAD_LIBS="-lpthread"
-		   else
-		   if expr ${GCC_MAJOR} \> 3 > /dev/null
-		   then
-		       THREAD_LIBS=""
-		       BASE_THREAD_LIBS="-lpthread"
-		   else
-		       echo old GCC disabling weak symbols for pthread
-		   fi
-		   fi
-	       fi
-	   fi
+           GCC_VERSION=`${CC} --version | head -1 | awk '{print $3}'`
+           GCC_MAJOR=`echo ${GCC_VERSION} | sed 's+\..*++'`
+           GCC_MEDIUM=`echo ${GCC_VERSION} | sed 's+[[0-9]]*\.++' | sed 's+\..*++'`
+           if test "${THREAD_LIBS}" = "-lpthread" ; then
+               if expr ${GCC_MEDIUM} \> 2 \& ${GCC_MAJOR} = 3 > /dev/null
+           then
+               THREAD_LIBS=""
+               BASE_THREAD_LIBS="-lpthread"
+           else
+           if expr ${GCC_MAJOR} \> 3 > /dev/null
+           then
+               THREAD_LIBS=""
+               BASE_THREAD_LIBS="-lpthread"
+           else
+               echo old GCC disabling weak symbols for pthread
+           fi
+           fi
+           fi
+       fi
        ;;
     esac
     if test "$WITH_THREADS" = "1" ; then
-	THREAD_CFLAGS="$THREAD_CFLAGS -D_REENTRANT"
-	TEST_THREADS="Threadtests"
+    THREAD_CFLAGS="$THREAD_CFLAGS -D_REENTRANT"
+    TEST_THREADS="Threadtests"
     fi
 fi
 if test "$with_thread_alloc" = "yes" -a "$WITH_THREADS" = "1" ; then
@@ -1124,21 +1124,21 @@ if test "$with_history" = "yes" ; then
     dnl from octave's configure.in
     unset tcap
     for termlib in ncurses curses termcap terminfo termlib; do
-	AC_CHECK_LIB(${termlib}, tputs, [tcap="-l$termlib"])
-	test -n "$tcap" && break
+    AC_CHECK_LIB(${termlib}, tputs, [tcap="-l$termlib"])
+    test -n "$tcap" && break
     done
 
     AC_CHECK_HEADER(readline/history.h,
-	AC_CHECK_LIB(history, append_history,[
-	   RDL_LIBS="-lhistory"
-	   AC_DEFINE([HAVE_LIBHISTORY], [], [Define if history library is there (-lhistory)])]))
+    AC_CHECK_LIB(history, append_history,[
+       RDL_LIBS="-lhistory"
+       AC_DEFINE([HAVE_LIBHISTORY], [], [Define if history library is there (-lhistory)])]))
     AC_CHECK_HEADER(readline/readline.h,
-	AC_CHECK_LIB(readline, readline,[
-	   RDL_LIBS="-lreadline $RDL_LIBS $tcap"
-	   AC_DEFINE([HAVE_LIBREADLINE], [], [Define if readline library is there (-lreadline)])], , $tcap))
+    AC_CHECK_LIB(readline, readline,[
+       RDL_LIBS="-lreadline $RDL_LIBS $tcap"
+       AC_DEFINE([HAVE_LIBREADLINE], [], [Define if readline library is there (-lreadline)])], , $tcap))
     if test -n "$RDL_DIR" -a -n "$RDL_LIBS"; then
-	CPPFLAGS="$CPPFLAGS -I${RDL_DIR}/include"
-	RDL_LIBS="-L${RDL_DIR}/lib $RDL_LIBS"
+    CPPFLAGS="$CPPFLAGS -I${RDL_DIR}/include"
+    RDL_LIBS="-L${RDL_DIR}/lib $RDL_LIBS"
     fi
 fi
 
@@ -1192,7 +1192,7 @@ else
     READER_TEST=Readertests
     if test "$with_push" = "no" ; then
         echo xmlReader requires Push interface - enabling it
-	with_push=yes
+    with_push=yes
     fi
 fi
 AC_SUBST(WITH_READER)
@@ -1207,11 +1207,11 @@ else
 #    WRITER_TEST=Writertests
     if test "$with_push" = "no" ; then
         echo xmlWriter requires Push interface - enabling it
-	with_push=yes
+    with_push=yes
     fi
     if test "$with_output" = "no" ; then
         echo xmlWriter requires Output interface - enabling it
-	with_output=yes
+    with_output=yes
     fi
 fi
 AC_SUBST(WITH_WRITER)
@@ -1322,7 +1322,7 @@ else
     TEST_XPTR=XPtrtests
     if test "$with_xpath" = "no" ; then
         echo XPointer requires XPath support - enabling it
-	with_xpath=yes
+    with_xpath=yes
     fi
 fi
 AC_SUBST(WITH_XPTR)
@@ -1340,7 +1340,7 @@ else
     TEST_C14N=C14Ntests
     if test "$with_xpath" = "no" ; then
         echo C14N requires XPath support - enabling it
-	with_xpath=yes
+    with_xpath=yes
     fi
 fi
 AC_SUBST(WITH_C14N)
@@ -1359,7 +1359,7 @@ else
     TEST_XINCLUDE=XIncludetests
     if test "$with_xpath" = "no" ; then
         echo XInclude requires XPath support - enabling it
-	with_xpath=yes
+    with_xpath=yes
     fi
 fi
 AC_SUBST(WITH_XINCLUDE)
@@ -1419,45 +1419,45 @@ if test "$with_iconv" = "no" ; then
     echo Disabling ICONV support
 else
     if test "$with_iconv" != "yes" -a "$with_iconv" != "" ; then
-	CPPFLAGS="${CPPFLAGS} -I$with_iconv/include"
-	# Export this since our headers include iconv.h
-	XML_INCLUDEDIR="${XML_INCLUDEDIR} -I$with_iconv/include"
-	ICONV_LIBS="-L$with_iconv/lib"
+    CPPFLAGS="${CPPFLAGS} -I$with_iconv/include"
+    # Export this since our headers include iconv.h
+    XML_INCLUDEDIR="${XML_INCLUDEDIR} -I$with_iconv/include"
+    ICONV_LIBS="-L$with_iconv/lib"
     fi
 
     AC_CHECK_HEADER(iconv.h,
-	AC_MSG_CHECKING(for iconv)
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+    AC_MSG_CHECKING(for iconv)
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #include <iconv.h>]],[[
 iconv_t cd = iconv_open ("","");
 iconv (cd, NULL, NULL, NULL, NULL);]])],[
-	    AC_MSG_RESULT(yes)
-	    WITH_ICONV=1],[
-	    AC_MSG_RESULT(no)
-	    AC_MSG_CHECKING(for iconv in -liconv)
+        AC_MSG_RESULT(yes)
+        WITH_ICONV=1],[
+        AC_MSG_RESULT(no)
+        AC_MSG_CHECKING(for iconv in -liconv)
 
-	    _ldflags="${LDFLAGS}"
-	    _libs="${LIBS}"
-	    LDFLAGS="${LDFLAGS} ${ICONV_LIBS}"
-	    LIBS="${LIBS} -liconv"
+        _ldflags="${LDFLAGS}"
+        _libs="${LIBS}"
+        LDFLAGS="${LDFLAGS} ${ICONV_LIBS}"
+        LIBS="${LIBS} -liconv"
 
-	    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #include <iconv.h>]],[[
 iconv_t cd = iconv_open ("","");
 iconv (cd, NULL, NULL, NULL, NULL);]])],[
-		AC_MSG_RESULT(yes)
-		WITH_ICONV=1
-		ICONV_LIBS="${ICONV_LIBS} -liconv"
-		LIBS="${_libs}"
-		LDFLAGS="${_ldflags}"],[
-		AC_MSG_RESULT(no)
-		LIBS="${_libs}"
-		LDFLAGS="${_ldflags}"])]))
+        AC_MSG_RESULT(yes)
+        WITH_ICONV=1
+        ICONV_LIBS="${ICONV_LIBS} -liconv"
+        LIBS="${_libs}"
+        LDFLAGS="${_ldflags}"],[
+        AC_MSG_RESULT(no)
+        LIBS="${_libs}"
+        LDFLAGS="${_ldflags}"])]))
 
-	if test "$WITH_ICONV" = "1" ; then
-		AC_MSG_CHECKING([for iconv declaration])
-		AC_CACHE_VAL(xml_cv_iconv_arg2, [
-			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+    if test "$WITH_ICONV" = "1" ; then
+        AC_MSG_CHECKING([for iconv declaration])
+        AC_CACHE_VAL(xml_cv_iconv_arg2, [
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
 #include <iconv.h>
 extern
 #ifdef __cplusplus
@@ -1470,22 +1470,22 @@ size_t iconv();
 #endif
 ]], [])], xml_cv_iconv_arg2="", xml_cv_iconv_arg2="const")])
 
-		xml_cv_iconv_decl="extern size_t iconv (iconv_t cd, $xml_cv_iconv_arg2 char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);"
-		AC_MSG_RESULT([${xml_xxx:-
-	}$xml_cv_iconv_decl])
-		AC_DEFINE_UNQUOTED(ICONV_CONST, $xml_cv_iconv_arg2,
-			[Define as const if the declaration of iconv() needs const.])
-	fi
+        xml_cv_iconv_decl="extern size_t iconv (iconv_t cd, $xml_cv_iconv_arg2 char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);"
+        AC_MSG_RESULT([${xml_xxx:-
+    }$xml_cv_iconv_decl])
+        AC_DEFINE_UNQUOTED(ICONV_CONST, $xml_cv_iconv_arg2,
+            [Define as const if the declaration of iconv() needs const.])
+    fi
 fi
 case "$host" in
-	*mingw*) M_LIBS=""
-	;;
-	*beos*) M_LIBS=""
-	;;
+    *mingw*) M_LIBS=""
+    ;;
+    *beos*) M_LIBS=""
+    ;;
         *haiku*) M_LIBS=""
         ;;
-	*) M_LIBS="-lm"
-	;;
+    *) M_LIBS="-lm"
+    ;;
 esac
 AC_SUBST(WITH_ICONV)
 
@@ -1607,7 +1607,7 @@ AC_SUBST(TEST_DEBUG)
 if test "$with_mem_debug" = "yes" ; then
     if test "$with_thread_alloc" = "yes" ; then
         echo Disabling memory debug - cannot use mem-debug with thread-alloc!
-	WITH_MEM_DEBUG=0
+    WITH_MEM_DEBUG=0
     else
         echo Enabling memory debug support
         WITH_MEM_DEBUG=1
@@ -1677,7 +1677,7 @@ dnl  AC_DEFINE([vsnprintf],[_vsnprintf],[Win32 Std C name mangling work-around])
 dnl and do not redefine those functions is C-source files.
 dnl
 AC_CHECK_FUNCS(printf sprintf fprintf snprintf vfprintf vsprintf vsnprintf sscanf,,
-	NEED_TRIO=1)
+    NEED_TRIO=1)
 
 if test "$with_coverage" = "yes" -a "${GCC}" = "yes"
 then

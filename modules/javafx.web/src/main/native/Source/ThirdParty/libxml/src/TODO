@@ -3,7 +3,7 @@
 123564 xmllint --html --format
 
            TODO for the XML parser and stuff:
-	   ==================================
+       ==================================
 
       $Id$
 
@@ -251,8 +251,8 @@ Done:
   => Rather than progressive parsing, give more power to the SAX-like
      interface. Currently the DOM-like representation is built but
      => it should be possible to define that only as a set of SAX callbacks
-	and remove the tree creation from the parser code.
-	DONE
+    and remove the tree creation from the parser code.
+    DONE
 
 - DOM support, instead of using a proprietary in memory
   format for the document representation, the parser should

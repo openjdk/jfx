@@ -86,17 +86,17 @@ AC_ARG_VAR([PKG_CONFIG_PATH], [directories to add to pkg-config's search path])
 AC_ARG_VAR([PKG_CONFIG_LIBDIR], [path overriding pkg-config's built-in search path])
 
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
-	AC_PATH_TOOL([PKG_CONFIG], [pkg-config])
+    AC_PATH_TOOL([PKG_CONFIG], [pkg-config])
 fi
 if test -n "$PKG_CONFIG"; then
-	_pkg_min_version=m4_default([$1], [0.9.0])
-	AC_MSG_CHECKING([pkg-config is at least version $_pkg_min_version])
-	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
-		AC_MSG_RESULT([yes])
-	else
-		AC_MSG_RESULT([no])
-		PKG_CONFIG=""
-	fi
+    _pkg_min_version=m4_default([$1], [0.9.0])
+    AC_MSG_CHECKING([pkg-config is at least version $_pkg_min_version])
+    if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+        AC_MSG_RESULT([yes])
+    else
+        AC_MSG_RESULT([no])
+        PKG_CONFIG=""
+    fi
 fi[]dnl
 ])dnl PKG_PROG_PKG_CONFIG
 
@@ -130,8 +130,8 @@ m4_define([_PKG_CONFIG],
  elif test -n "$PKG_CONFIG"; then
     PKG_CHECK_EXISTS([$3],
                      [pkg_cv_[]$1=`$PKG_CONFIG --[]$2 "$3" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes ],
-		     [pkg_failed=yes])
+              test "x$?" != "x0" && pkg_failed=yes ],
+             [pkg_failed=yes])
  else
     pkg_failed=untried
 fi[]dnl
@@ -174,17 +174,17 @@ and $1[]_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details.])
 
 if test $pkg_failed = yes; then
-   	AC_MSG_RESULT([no])
+       AC_MSG_RESULT([no])
         _PKG_SHORT_ERRORS_SUPPORTED
         if test $_pkg_short_errors_supported = yes; then
-	        $1[]_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$2" 2>&1`
+            $1[]_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "$2" 2>&1`
         else 
-	        $1[]_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$2" 2>&1`
+            $1[]_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "$2" 2>&1`
         fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$$1[]_PKG_ERRORS" >&AS_MESSAGE_LOG_FD
+    # Put the nasty error message in config.log where it belongs
+    echo "$$1[]_PKG_ERRORS" >&AS_MESSAGE_LOG_FD
 
-	m4_default([$4], [AC_MSG_ERROR(
+    m4_default([$4], [AC_MSG_ERROR(
 [Package requirements ($2) were not met:
 
 $$1_PKG_ERRORS
@@ -195,8 +195,8 @@ installed software in a non-standard prefix.
 _PKG_TEXT])[]dnl
         ])
 elif test $pkg_failed = untried; then
-     	AC_MSG_RESULT([no])
-	m4_default([$4], [AC_MSG_FAILURE(
+         AC_MSG_RESULT([no])
+    m4_default([$4], [AC_MSG_FAILURE(
 [The pkg-config script could not be found or is too old.  Make sure it
 is in your PATH or set the PKG_CONFIG environment variable to the full
 path to pkg-config.
@@ -206,10 +206,10 @@ _PKG_TEXT
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.])[]dnl
         ])
 else
-	$1[]_CFLAGS=$pkg_cv_[]$1[]_CFLAGS
-	$1[]_LIBS=$pkg_cv_[]$1[]_LIBS
+    $1[]_CFLAGS=$pkg_cv_[]$1[]_CFLAGS
+    $1[]_LIBS=$pkg_cv_[]$1[]_LIBS
         AC_MSG_RESULT([yes])
-	$3
+    $3
 fi[]dnl
 ])dnl PKG_CHECK_MODULES
 
@@ -591,9 +591,9 @@ AC_CACHE_CHECK([dependency style of $depcc],
       # After this tag, mechanisms are not by side-effect, so they'll
       # only be used when explicitly requested.
       if test "x$enable_dependency_tracking" = xyes; then
-	continue
+    continue
       else
-	break
+    break
       fi
       ;;
     msvc7 | msvc7msys | msvisualcpp | msvcmsys)
@@ -838,25 +838,25 @@ AC_REQUIRE([AC_PROG_AWK])dnl
 AC_REQUIRE([AC_PROG_MAKE_SET])dnl
 AC_REQUIRE([AM_SET_LEADING_DOT])dnl
 _AM_IF_OPTION([tar-ustar], [_AM_PROG_TAR([ustar])],
-	      [_AM_IF_OPTION([tar-pax], [_AM_PROG_TAR([pax])],
-			     [_AM_PROG_TAR([v7])])])
+          [_AM_IF_OPTION([tar-pax], [_AM_PROG_TAR([pax])],
+                 [_AM_PROG_TAR([v7])])])
 _AM_IF_OPTION([no-dependencies],,
 [AC_PROVIDE_IFELSE([AC_PROG_CC],
-		  [_AM_DEPENDENCIES([CC])],
-		  [m4_define([AC_PROG_CC],
-			     m4_defn([AC_PROG_CC])[_AM_DEPENDENCIES([CC])])])dnl
+          [_AM_DEPENDENCIES([CC])],
+          [m4_define([AC_PROG_CC],
+                 m4_defn([AC_PROG_CC])[_AM_DEPENDENCIES([CC])])])dnl
 AC_PROVIDE_IFELSE([AC_PROG_CXX],
-		  [_AM_DEPENDENCIES([CXX])],
-		  [m4_define([AC_PROG_CXX],
-			     m4_defn([AC_PROG_CXX])[_AM_DEPENDENCIES([CXX])])])dnl
+          [_AM_DEPENDENCIES([CXX])],
+          [m4_define([AC_PROG_CXX],
+                 m4_defn([AC_PROG_CXX])[_AM_DEPENDENCIES([CXX])])])dnl
 AC_PROVIDE_IFELSE([AC_PROG_OBJC],
-		  [_AM_DEPENDENCIES([OBJC])],
-		  [m4_define([AC_PROG_OBJC],
-			     m4_defn([AC_PROG_OBJC])[_AM_DEPENDENCIES([OBJC])])])dnl
+          [_AM_DEPENDENCIES([OBJC])],
+          [m4_define([AC_PROG_OBJC],
+                 m4_defn([AC_PROG_OBJC])[_AM_DEPENDENCIES([OBJC])])])dnl
 AC_PROVIDE_IFELSE([AC_PROG_OBJCXX],
-		  [_AM_DEPENDENCIES([OBJCXX])],
-		  [m4_define([AC_PROG_OBJCXX],
-			     m4_defn([AC_PROG_OBJCXX])[_AM_DEPENDENCIES([OBJCXX])])])dnl
+          [_AM_DEPENDENCIES([OBJCXX])],
+          [m4_define([AC_PROG_OBJCXX],
+                 m4_defn([AC_PROG_OBJCXX])[_AM_DEPENDENCIES([OBJCXX])])])dnl
 ])
 AC_REQUIRE([AM_SILENT_RULES])dnl
 dnl The testsuite driver may need to know about EXEEXT, so add the
@@ -952,7 +952,7 @@ AC_DEFUN([AM_PROG_INSTALL_SH],
 [AC_REQUIRE([AM_AUX_DIR_EXPAND])dnl
 if test x"${install_sh+set}" != xset; then
   case $am_aux_dir in
-  *\ * | *\	*)
+  *\ * | *\    *)
     install_sh="\${SHELL} '$am_aux_dir/install-sh'" ;;
   *)
     install_sh="\${SHELL} $am_aux_dir/install-sh"
@@ -1015,7 +1015,7 @@ AC_MSG_CHECKING([whether to enable maintainer-specific portions of Makefiles])
 ]
 )
 
-# Check to see how 'make' treats includes.	            -*- Autoconf -*-
+# Check to see how 'make' treats includes.                -*- Autoconf -*-
 
 # Copyright (C) 2001-2018 Free Software Foundation, Inc.
 #
@@ -1031,7 +1031,7 @@ AC_DEFUN([AM_MAKE_INCLUDE],
 [AC_MSG_CHECKING([whether ${MAKE-make} supports the include directive])
 cat > confinc.mk << 'END'
 am__doit:
-	@echo this is the am__doit target >confinc.out
+    @echo this is the am__doit target >confinc.out
 .PHONY: am__doit
 END
 am__include="#"
@@ -1082,7 +1082,7 @@ AC_DEFUN([AM_MISSING_HAS_RUN],
 AC_REQUIRE_AUX_FILE([missing])dnl
 if test x"${MISSING+set}" != xset; then
   case $am_aux_dir in
-  *\ * | *\	*)
+  *\ * | *\    *)
     MISSING="\${SHELL} \"$am_aux_dir/missing\"" ;;
   *)
     MISSING="\${SHELL} $am_aux_dir/missing" ;;
@@ -1213,7 +1213,7 @@ case `pwd` in
     AC_MSG_ERROR([unsafe absolute working directory name]);;
 esac
 case $srcdir in
-  *[[\\\"\#\$\&\'\`$am_lf\ \	]]*)
+  *[[\\\"\#\$\&\'\`$am_lf\ \    ]]*)
     AC_MSG_ERROR([unsafe srcdir value: '$srcdir']);;
 esac
 
@@ -1228,17 +1228,17 @@ if (
      echo "timestamp, slept: $am_has_slept" > conftest.file
      set X `ls -Lt "$srcdir/configure" conftest.file 2> /dev/null`
      if test "$[*]" = "X"; then
-	# -L didn't work.
-	set X `ls -t "$srcdir/configure" conftest.file`
+    # -L didn't work.
+    set X `ls -t "$srcdir/configure" conftest.file`
      fi
      if test "$[*]" != "X $srcdir/configure conftest.file" \
-	&& test "$[*]" != "X conftest.file $srcdir/configure"; then
+    && test "$[*]" != "X conftest.file $srcdir/configure"; then
 
-	# If neither matched, then we have a broken ls.  This can happen
-	# if, for instance, CONFIG_SHELL is bash and it inherits a
-	# broken ls alias from the environment.  This has actually
-	# happened.  Such a system could not be considered "sane".
-	AC_MSG_ERROR([ls -t appears to fail.  Make sure there is not a broken
+    # If neither matched, then we have a broken ls.  This can happen
+    # if, for instance, CONFIG_SHELL is bash and it inherits a
+    # broken ls alias from the environment.  This has actually
+    # happened.  Such a system could not be considered "sane".
+    AC_MSG_ERROR([ls -t appears to fail.  Make sure there is not a broken
   alias in your environment])
      fi
      if test "$[2]" = conftest.file || test $am_try -eq 2; then
@@ -1311,7 +1311,7 @@ BAR0=false
 BAR1=true
 V=1
 am__doit:
-	@$(TRUE)
+    @$(TRUE)
 .PHONY: am__doit']]) | $am_make -f - >/dev/null 2>&1; then
   am_cv_make_support_nested_variables=yes
 else
