@@ -14,10 +14,10 @@ v2.9.9: Jan 03 2019:
    - Security:
   CVE-2018-9251 CVE-2018-14567 Fix infinite loop in LZMA decompression (Nick Wellnhofer),
   CVE-2018-14404 Fix nullptr deref with XPath logic ops (Nick Wellnhofer),
-
+  
    - Documentation:
   reader: Fix documentation comment (Mohammed Sadiq)
-
+  
    - Portability:
   Fix MSVC build with lzma (Nick Wellnhofer),
   Variables need 'extern' in static lib on Cygwin (Michael Haubenwallner),
@@ -26,7 +26,7 @@ v2.9.9: Jan 03 2019:
   Change dir to $THEDIR after ACLOCAL_PATH check autoreconf creates aclocal.m4 in $srcdir (Vitaly Buka),
   Improve error message if pkg.m4 couldn't be found (Nick Wellnhofer),
   NaN and Inf fixes for pre-C99 compilers (Nick Wellnhofer)
-
+  
    - Bug Fixes:
   Revert "Support xmlTextReaderNextSibling w/o preparsed doc" (Nick Wellnhofer),
   Fix building relative URIs (Thomas Holder),
@@ -48,7 +48,7 @@ v2.9.9: Jan 03 2019:
   Don't change context node in xmlXPathRoot (Nick Wellnhofer),
   Stop using XPATH_OP_RESET (Nick Wellnhofer),
   Revert "Change calls to xmlCharEncInput to set flush false" (Nick Wellnhofer)
-
+  
    - Improvements:
   Fix "Problem with data in interleave in RelaxNG validation" (Nikolai Weibull),
   cleanup: remove some unreachable code (Thomas Holder),
@@ -67,9 +67,9 @@ v2.9.9: Jan 03 2019:
   Simplify and harden nodeset filtering (Nick Wellnhofer),
   Avoid unnecessary backups of the context node (Nick Wellnhofer),
   Fix inconsistency in xmlXPathIsInf (Nick Wellnhofer)
-
+  
    - Cleanups:
-
+  
 
 
 v2.9.8: Mar 05 2018:
@@ -79,7 +79,7 @@ v2.9.8: Mar 05 2018:
   Stop including ansidecl.h (Nick Wellnhofer),
   Fix libz and liblzma detection (Nick Wellnhofer),
   Revert "Compile testapi with -Wno-unused-function" (Nick Wellnhofer)
-
+  
    - Bug Fixes:
   Fix xmlParserEntityCheck (Nick Wellnhofer),
   Halt parser in case of encoding error (Nick Wellnhofer),
@@ -98,7 +98,7 @@ v2.9.8: Mar 05 2018:
   Refactor name and type signature for xmlNop (Vlad Tsyrklevich),
   Fixed ICU to set flush correctly and provide pivot buffer. (Joel Hockey),
   Skip EBCDIC tests if EBCDIC isn't supported (Nick Wellnhofer)
-
+  
    - Improvements:
   Disable pointer-overflow UBSan checks under Travis (Nick Wellnhofer),
   Improve handling of context input_id (Daniel Veillard),
@@ -115,13 +115,13 @@ v2.9.8: Mar 05 2018:
   Introduce xmlPosixStrdup and update xmlMemStrdup (Nick Wellnhofer),
   Add test for ICU flush and pivot buffer (Nick Wellnhofer),
   Compile testapi with -Wno-unused-function (Nick Wellnhofer)
-
+  
 
 
 2.9.7: Nov 02 2017:
    - Documentation:
   xmlcatalog: refresh man page wrt. quering system catalog easily (Jan Pokorný)
-
+  
    - Portability:
   Fix deprecated Travis compiler flag (Nick Wellnhofer),
   Add declaration for DllMain (J. Peter Mugaas),
@@ -135,11 +135,11 @@ v2.9.8: Mar 05 2018:
   Don't redefine socket error codes on Windows (Nick Wellnhofer),
   Fix pointer/int cast warnings on 64-bit Windows (Nick Wellnhofer),
   Fix Windows compiler warnings in xmlCanonicPath (Nick Wellnhofer)
-
+  
    - Bug Fixes:
   xmlcatalog: restore ability to query system catalog easily (Jan Pokorný),
   Fix comparison of nodesets to strings (Nick Wellnhofer)
-
+  
    - Improvements:
   Add Makefile rules to rebuild HTML man pages (Nick Wellnhofer),
   Fix mixed decls and code in timsort.h (Nick Wellnhofer),
@@ -155,13 +155,13 @@ v2.9.8: Mar 05 2018:
   Don't include winsock2.h in xmllint.c (Nick Wellnhofer),
   Remove generated file python/setup.py from version control (Nick Wellnhofer),
   Use __linux__ macro in generated code (Nick Wellnhofer)
-
+  
 
 
 v2.9.6: Oct 06 2017:
    - Portability:
   Change preprocessor OS tests to __linux__ (Nick Wellnhofer)
-
+  
    - Bug Fixes:
   Fix XPath stack frame logic (Nick Wellnhofer),
   Report undefined XPath variable error message (Nick Wellnhofer),
@@ -174,7 +174,7 @@ v2.9.6: Oct 06 2017:
   Fix debug dump of streaming XPath expressions (Nick Wellnhofer),
   Fix memory leak in nanoftp (Nick Wellnhofer),
   Fix memory leaks in SAX1 parser (Nick Wellnhofer)
-
+  
 
 
 v2.9.5: Sep 04 2017:
@@ -183,18 +183,18 @@ v2.9.5: Sep 04 2017:
   Fix handling of parameter-entity references (Nick Wellnhofer),
   Disallow namespace nodes in XPointer ranges (Nick Wellnhofer),
   Fix XPointer paths beginning with range-to (Nick Wellnhofer)
-
+  
    - Documentation:
   Documentation fixes (Nick Wellnhofer),
   Spelling and grammar fixes (Nick Wellnhofer)
-
+  
    - Portability:
   Adding README.zOS to list of extra files for the release (Daniel Veillard),
   Description of work needed to compile on zOS (Stéphane Michaut),
   Porting libxml2 on zOS encoding of code (Stéphane Michaut),
   small changes for OS/400 (Patrick Monnerat),
   relaxng.c, xmlschemas.c: Fix build on pre-C99 compilers (Chun-wei Fan)
-
+  
    - Bug Fixes:
   Problem resolving relative URIs (Daniel Veillard),
   Fix unwanted warnings when switching encodings (Nick Wellnhofer),
@@ -246,7 +246,7 @@ v2.9.5: Sep 04 2017:
   Fix comparison with root node in xmlXPathCmpNodes (Nick Wellnhofer),
   Fix attribute decoding during XML schema validation (Alex Henrie),
   Fix NULL pointer deref in XPointer range-to (Nick Wellnhofer)
-
+  
    - Improvements:
   Updating the spec file to reflect Fedora 24 (Daniel Veillard),
   Add const in five places to move 1 KiB to .rdata (Bruce Dawson),
@@ -290,11 +290,11 @@ v2.9.5: Sep 04 2017:
   Make xmlXPathEvalExpression call xmlXPathEval (Nick Wellnhofer),
   Remove unused variables (Nick Wellnhofer),
   Don't print generic error messages in XPath tests (Nick Wellnhofer)
-
+  
    - Cleanups:
   Fix a couple of misleading indentation errors (Daniel Veillard),
   Remove unnecessary calls to xmlPopInput (Nick Wellnhofer)
-
+  
 
 
 2.9.4: May 23 2016:
@@ -313,13 +313,13 @@ v2.9.5: Sep 04 2017:
   Bug 758588: Heap-based buffer overread in xmlParserPrintFileContextInternal <https://bugzilla.gnome.org/show_bug.cgi?id=758588> (David Kilzer),
   Bug 757711: heap-buffer-overflow in xmlFAParsePosCharGroup <https://bugzilla.gnome.org/show_bug.cgi?id=757711> (Pranjal Jumde),
   Add missing increments of recursion depth counter to XML parser. (Peter Simons)
-
+  
    - Documentation:
   Fix typo: s{ ec -> cr }cipt (Jan Pokorný),
   Fix typos: dictio{ nn -> n }ar{y,ies} (Jan Pokorný),
   Fix typos: PATH_{ SEAPARATOR -> SEPARATOR } (Jan Pokorný),
   Correct a typo. (Shlomi Fish)
-
+  
    - Portability:
   Correct the usage of LDFLAGS (Mattias Hansson),
   Revert the use of SAVE_LDFLAGS in configure.ac (Mattias Hansson),
@@ -346,7 +346,7 @@ v2.9.5: Sep 04 2017:
   Bug 760190: configure.ac should be able to build --with-icu without icu-config tool <https://bugzilla.gnome.org/show_bug.cgi?id=760190> (David Kilzer),
   win32\VC10\config.h and VS 2015 (Bruce Dawson),
   Add configure maintainer mode (orzen)
-
+  
    - Bug Fixes:
   Avoid an out of bound access when serializing malformed strings (Daniel Veillard),
   Unsigned addition may overflow in xmlMallocAtomicLoc() (David Kilzer),
@@ -377,12 +377,12 @@ v2.9.5: Sep 04 2017:
   python 3: libxml2.c wrappers create Unicode str already (Michael Stahl),
   Add autogen.sh to distrib (orzen),
   Heap-based buffer overread in xmlNextChar (Daniel Veillard)
-
+  
    - Improvements:
   Add more debugging info to runtest (Daniel Veillard),
   Implement "runtest -u" mode (David Kilzer),
   Add a make rule to rebuild for ASAN (Daniel Veillard)
-
+  
 
 
 v2.9.3: Nov 20 2015:
@@ -400,16 +400,16 @@ v2.9.3: Nov 20 2015:
   CVE-2015-1819 Enforce the reader to run in constant memory (Daniel Veillard)
   CVE-2015-7941_2 Cleanup conditional section error handling (Daniel Veillard),
   CVE-2015-7941_1 Stop parsing on entities boundaries errors (Daniel Veillard),
-
+  
    - Documentation:
   Correct spelling of "calling" (Alex Henrie),
   Fix a small error in xmllint --format description (Fabien Degomme),
   Avoid XSS on the search of xmlsoft.org (Daniel Veillard)
-
+  
    - Portability:
   threads: use forward declarations only for glibc (Michael Heimpold),
   Update Win32 configure.js to search for configure.ac (Daniel Veillard)
-
+  
    - Bug Fixes:
   Bug on creating new stream from entity (Daniel Veillard),
   Fix some loop issues embedding NEXT (Daniel Veillard),
@@ -436,7 +436,7 @@ v2.9.3: Nov 20 2015:
   Remove various unused value assignments (Philip Withnall),
   Fix missing entities after CVE-2014-3660 fix (Daniel Veillard),
   Revert "Missing initialization for the catalog module" (Daniel Veillard)
-
+  
    - Improvements:
   Reuse xmlHaltParser() where it makes sense (Daniel Veillard),
   xmlStopParser reset errNo (Daniel Veillard),
@@ -448,9 +448,9 @@ v2.9.3: Nov 20 2015:
   Add Python 3 rpm subpackage (Tomas Radej),
   libxml2-config.cmake.in: update include directories (Samuel Martin),
   Adding example from bugs 738805 to regression tests (Daniel Veillard)
-
+  
    - Cleanups:
-
+  
 
 
 2.9.2: Oct 16 2014:
