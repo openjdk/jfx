@@ -102,7 +102,7 @@ public class SelectedItemsReadOnlyObservableListTest {
      * { [bar] replaced by [foo] at 1 }
      */
     @Test
-    @Ignore("see JDK-8267951")
+    @Ignore("JDK-8267951")
     public void testReplaceTwoItems() {
         selectedIndices.addAll(0, 1);
         changes.clear();
