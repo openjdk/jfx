@@ -60,6 +60,7 @@ final class GtkApplication extends Application implements
 
     static  {
         //check for SWT-GTK lib presence
+        @SuppressWarnings("removal")
         Class<?> OS = AccessController.
                 doPrivileged((PrivilegedAction<Class<?>>) () -> {
                     try {
@@ -75,6 +76,7 @@ final class GtkApplication extends Application implements
         if (OS != null) {
             PlatformLogger logger = Logging.getJavaFXLogger();
             logger.fine("SWT-GTK library found. Try to obtain GTK version.");
+            @SuppressWarnings("removal")
             Method method = AccessController.
                     doPrivileged((PrivilegedAction<Method>) () -> {
                         try {
@@ -105,7 +107,8 @@ final class GtkApplication extends Application implements
             forcedGtkVersion = 0;
         }
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });
@@ -144,6 +147,7 @@ final class GtkApplication extends Application implements
 
     GtkApplication() {
 
+        @SuppressWarnings("removal")
         final int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","3");
@@ -155,20 +159,24 @@ final class GtkApplication extends Application implements
                 }
                 return ret;
             }) : forcedGtkVersion;
+        @SuppressWarnings("removal")
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
         });
         if (PrismSettings.allowHiDPIScaling) {
-            overrideUIScale = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
+            @SuppressWarnings("removal")
+            float tmp = AccessController.doPrivileged((PrivilegedAction<Float>) () ->
                     getFloat("glass.gtk.uiScale", -1.0f, "Forcing UI scaling factor: "));
+            overrideUIScale = tmp;
         } else {
             overrideUIScale = -1.0f;
         }
 
         int libraryToLoad = _queryLibrary(gtkVersion, gtkVersionVerbose);
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (libraryToLoad == QUERY_NO_DISPLAY) {
                 throw new UnsupportedOperationException("Unable to open DISPLAY");
             } else if (libraryToLoad == QUERY_USE_CURRENT) {
@@ -198,6 +206,7 @@ final class GtkApplication extends Application implements
         }
 
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -249,6 +258,7 @@ final class GtkApplication extends Application implements
             eventProc = result == null ? 0 : result;
         }
 
+        @SuppressWarnings("removal")
         final boolean disableGrab = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("sun.awt.disablegrab") ||
                Boolean.getBoolean("glass.disableGrab"));
 
@@ -258,6 +268,7 @@ final class GtkApplication extends Application implements
     @Override
     protected void runLoop(final Runnable launchable) {
         // Embedded in SWT, with shared event thread
+        @SuppressWarnings("removal")
         final boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
 
@@ -268,9 +279,11 @@ final class GtkApplication extends Application implements
             return;
         }
 
+        @SuppressWarnings("removal")
         final boolean noErrorTrap = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("glass.noErrorTrap"));
 
+        @SuppressWarnings("removal")
         final Thread toolkitThread =
             AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
                 init();

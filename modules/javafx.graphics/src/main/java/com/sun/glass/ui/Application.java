@@ -96,6 +96,7 @@ public abstract class Application {
     private static boolean loaded = false;
     private static Application application;
     private static Thread eventThread;
+    @SuppressWarnings("removal")
     private static final boolean disableThreadChecks =
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             final String str =
@@ -214,6 +215,7 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
+        @SuppressWarnings("removal")
         String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
         return userHome + File.separator + "." + name + File.separator;
     }

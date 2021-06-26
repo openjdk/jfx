@@ -120,18 +120,18 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc) {
         return new StubPopupStage();
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host, AccessControlContext acc) {
+    public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
         return new StubStage();
     }
 
@@ -388,7 +388,7 @@ public class StubToolkit extends Toolkit {
         private double offsetY;
 
         @Override
-        public void setSecurityContext(AccessControlContext ctx) {
+        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
         }
 
         @Override public Set<DataFormat> getContentTypes() {

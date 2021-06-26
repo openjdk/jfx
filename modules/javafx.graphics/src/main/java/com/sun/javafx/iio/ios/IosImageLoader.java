@@ -109,7 +109,8 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("nativeiio");
             return null;
         });

@@ -96,6 +96,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
     private ObservableValue<? extends Number> observable = null;
     private ExpressionHelper<Number> helper = null;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     JavaBeanDoubleProperty(PropertyDescriptor descriptor, Object bean) {
@@ -112,6 +113,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public double get() {
         return AccessController.doPrivileged((PrivilegedAction<Double>) () -> {
@@ -133,6 +135,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public void set(final double value) {
         if (isBound()) {

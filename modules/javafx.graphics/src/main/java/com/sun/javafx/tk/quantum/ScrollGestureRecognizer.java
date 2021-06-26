@@ -50,7 +50,8 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private static double MAX_INITIAL_VELOCITY = 1000;
     private static double SCROLL_INERTIA_MILLIS = 1500;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.scroll.threshold");
             if (s != null) {
                 SCROLL_THRESHOLD = Double.valueOf(s);
@@ -262,6 +263,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }
     }
 
+    @SuppressWarnings("removal")
     private void sendScrollStartedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -283,6 +285,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendScrollEvent(boolean isInertia, double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
@@ -304,6 +307,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
+    @SuppressWarnings("removal")
     private void sendScrollFinishedEvent(double xAbs, double yAbs, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {

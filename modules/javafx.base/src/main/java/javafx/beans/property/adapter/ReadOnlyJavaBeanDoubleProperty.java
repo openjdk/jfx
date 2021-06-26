@@ -85,6 +85,7 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
     private final ReadOnlyPropertyDescriptor descriptor;
     private final ReadOnlyPropertyDescriptor.ReadOnlyListener<Number> listener;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanDoubleProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
@@ -101,6 +102,7 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public double get() {
         return AccessController.doPrivileged((PrivilegedAction<Double>) () -> {

@@ -622,6 +622,10 @@ try {
             def jdkVersionInfo = parseJavaVersion(ver)
             defineProperty("jdkVersion", jdkVersionInfo[0])
             defineProperty("jdkBuildNumber", jdkVersionInfo[1])
+
+            // Define global properties based on the version of Java
+            def status = compareJdkVersion(jdkVersion, "12")
+            ext.jdk12OrLater = (status >= 0)
         }
     }
 } finally {
@@ -693,7 +697,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
         }
 
         //fetch all the missing packages
-        if (fetchedPackages.size > 0) {
+        if (fetchedPackages.size() > 0) {
             destdir.mkdirs()
 
             logger.quiet "fetching missing packages $fetchedPackages"
@@ -752,7 +756,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 errors.add(pkgname)
             }
         }
-        if (errors.size > 0) {
+        if (errors.size() > 0) {
             throw new GradleException("Error: missing tool packages: $errors")
         } else {
             logger.quiet "all tool packages are present $packages"
@@ -1819,7 +1823,7 @@ void addJCov(p, test) {
                 "exclude=\"**.*Test\"," +
                 "file=build/reports/jcov/report.xml," +
                 "merge=merge";
-        test.jvmArgs("-javaagent:${p.configurations.testCompile.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
+        test.jvmArgs("-javaagent:${p.configurations.testClasspath.files.find { it.name.startsWith('jcov') }}=$jcovJVMArgument");
         p.mkdir p.file("build/reports/jcov")
     }
     test.doLast {
@@ -1827,7 +1831,7 @@ void addJCov(p, test) {
         if (reportFile.exists()) {
             p.javaexec {
                 workingDir = p.file("build/reports/jcov")
-                classpath = p.files(p.configurations.testCompile.files.find { it.name.startsWith('jcov') })
+                classpath = p.files(p.configurations.testClasspath.files.find { it.name.startsWith('jcov') })
                 main = "com.sun.tdk.jcov.Helper"
                 args = [
                         "RepGen",
@@ -1940,9 +1944,9 @@ allprojects {
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
     dependencies {
-        testCompile group: "junit", name: "junit", version: "4.8.2"
+        testImplementation group: "junit", name: "junit", version: "4.8.2"
         if (BUILD_CLOSED && DO_JCOV)  {
-            testCompile name: "jcov"
+            testImplementation name: "jcov"
         }
     }
 
@@ -2029,9 +2033,9 @@ project(":base") {
     }
 
     dependencies {
-        testCompile group: "junit", name: "junit", version: "4.8.2"
-        testCompile sourceSets.main.output
-        testCompile sourceSets.shims.output
+        testImplementation group: "junit", name: "junit", version: "4.8.2"
+        testImplementation sourceSets.main.output
+        testImplementation sourceSets.shims.output
     }
 
     commonModuleSetup(project, [ 'base' ])
@@ -2105,11 +2109,11 @@ project(":graphics") {
     }
 
     dependencies {
-        stubCompile group: "junit", name: "junit", version: "4.8.2"
+        stubImplementation group: "junit", name: "junit", version: "4.8.2"
 
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
-        testCompile project(":base").sourceSets.test.output
-        compile project(':base')
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(':base')
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath_GraphicsOne
@@ -2191,7 +2195,7 @@ project(":graphics") {
     project.task("compileFullJava", type: JavaCompile, dependsOn: processShaders) {
         description = "Compile all of the graphics java classes - main and shaders"
 
-        classpath = configurations.compile
+        classpath = configurations.compileClasspath
 
         source = project.sourceSets.main.java.srcDirs
         source += "$buildDir/gensrc/java"
@@ -2360,7 +2364,7 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = settings.generator
-                classpath = configurations.compile + configurations.antlr
+                classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.outputDir)
 
                 classpath += files("${project.projectDir}/src/jslc/resources")
@@ -2449,7 +2453,7 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = "CompileJSL"
-                classpath = configurations.compile + configurations.antlr
+                classpath = configurations.compileClasspath + configurations.antlr
                 classpath += files(project.sourceSets.jslc.java.outputDir)
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
@@ -2504,7 +2508,7 @@ project(":graphics") {
             }
             if (allLibsPresent) return;
 
-            for (File f : [configurations.compile.files, configurations.antlr.files].flatten()) {
+            for (File f : [configurations.compileClasspath.files, configurations.antlr.files].flatten()) {
                 copy {
                     into libsDir
                     from f.getParentFile()
@@ -2548,10 +2552,10 @@ project(":controls") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls' ])
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        compile project(':base')
-        compile project(':graphics')
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(':base')
+        implementation project(':graphics')
     }
 
     test {
@@ -2627,8 +2631,8 @@ project(":swing") {
     commonModuleSetup(project, [ 'base', 'graphics', 'swing' ])
 
     dependencies {
-        compile project(":base")
-        compile project(":graphics")
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     test {
@@ -2653,7 +2657,7 @@ project(":swt") {
     commonModuleSetup(project, [ 'base', 'graphics' ])
 
     dependencies {
-        compile name: SWT_FILE_NAME
+        implementation name: SWT_FILE_NAME
     }
 
     classes {
@@ -2666,7 +2670,7 @@ project(":swt") {
             // Skip copy if file is present.
             if (swtLib.exists()) return;
 
-            for (File f : configurations.compile.files) {
+            for (File f : configurations.compileClasspath.files) {
                 // Have to rename the swt jar because it is some platform specific name but
                 // for the sake of the IDEs we need to have a single stable name that works
                 // on every platform
@@ -2732,10 +2736,10 @@ project(":fxml") {
 
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        compile project(":base")
-        compile project(":graphics")
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     test {
@@ -2784,8 +2788,8 @@ project(":media") {
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
             media name: "ffmpeg-4.0.2", ext: "tar.gz"
         }
-        compile project(":base")
-        compile project(":graphics")
+        implementation project(":base")
+        implementation project(":graphics")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -3391,10 +3395,10 @@ project(":web") {
         if (IS_COMPILE_WEBKIT) {
             icu name: "icu4c-${icuVersion}-data-bin-l", ext: "zip"
         }
-        compile project(":base")
-        compile project(":graphics")
-        compile project(":controls")
-        compile project(":media")
+        implementation project(":base")
+        implementation project(":graphics")
+        implementation project(":controls")
+        implementation project(":media")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -3403,8 +3407,8 @@ project(":web") {
         from (project.file("$projectDir/src/test/resources/test/html")) {
             include "**/archive-*.*"
         }
-        archiveName = "webArchiveJar.jar"
-        destinationDir = file("$buildDir/testing/resources")
+        archiveFileName = "webArchiveJar.jar"
+        destinationDirectory = file("$buildDir/testing/resources")
     }
 
     def gensrcDir = "${buildDir}/gensrc/java"
@@ -3456,6 +3460,9 @@ project(":web") {
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
+        }
     }
 
     task compileJavaDOMBinding()
@@ -3589,7 +3596,7 @@ project(":web") {
         def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
             destinationDir = file("$buildDir/classes/java/main")
-            classpath = configurations.compile
+            classpath = configurations.compileClasspath
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
                 '-implicit:none',
@@ -3607,8 +3614,8 @@ project(":web") {
 
     def drtClasses = "**/com/sun/javafx/webkit/drt/**"
     task drtJar(type: Jar, dependsOn: compileJava) {
-        archiveName = "drt.jar"
-        destinationDir = file("$buildDir/test")
+        archiveFileName = "drt.jar"
+        destinationDirectory = file("$buildDir/test")
         from "$buildDir/classes/java/main/javafx.web/"
         include drtClasses
         includeEmptyDirs = false
@@ -3668,10 +3675,10 @@ project(":systemTests") {
     project.ext.moduleName = "systemTests"
 
     dependencies {
-        testCompile project(":graphics").sourceSets.test.output
-        testCompile project(":base").sourceSets.test.output
-        testCompile project(":controls").sourceSets.test.output
-        testCompile project(":swing").sourceSets.test.output
+        testImplementation project(":graphics").sourceSets.test.output
+        testImplementation project(":base").sourceSets.test.output
+        testImplementation project(":controls").sourceSets.test.output
+        testImplementation project(":swing").sourceSets.test.output
     }
 
     def dependentProjects = [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ]
@@ -3726,8 +3733,8 @@ project(":systemTests") {
         dependsOn compileTestapp1Java
         enabled = IS_FULL_TEST
 
-        destinationDir = file("$buildDir/testapp1")
-        archiveName = testapp1JarName
+        destinationDirectory = file("$buildDir/testapp1")
+        archiveFileName = testapp1JarName
         includeEmptyDirs = false
         from project.sourceSets.testapp1.java.outputDir
         include("testapp/**")
@@ -3747,8 +3754,8 @@ project(":systemTests") {
         dependsOn compileTestapp1Java
         enabled = IS_FULL_TEST
 
-        destinationDir = file("$buildDir/testapp1")
-        archiveName = "jar2.jar";
+        destinationDirectory = file("$buildDir/testapp1")
+        archiveFileName = "jar2.jar";
         includeEmptyDirs = false
         from project.sourceSets.testapp1.java.outputDir
         include("pkg2/**")
@@ -3830,6 +3837,10 @@ project(":systemTests") {
 
         if (rootProject.hasProperty("ClipShapeTest.numTests")) {
             systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
+        }
+
+        if (jdk12OrLater) {
+            systemProperty 'java.security.manager', 'allow'
         }
 
         if (!IS_USE_ROBOT) {
@@ -4188,8 +4199,8 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        destinationDir = file("${project(":swt").buildDir}/libs")
-        archiveName = "javafx-swt.jar"
+        destinationDirectory = file("${project(":swt").buildDir}/libs")
+        archiveFileName = "javafx-swt.jar"
         includeEmptyDirs = false
         from("${project(":swt").buildDir}/classes/java/main");
         include("**/javafx/embed/swt/**")
@@ -4209,7 +4220,9 @@ compileTargets { t ->
         dependsOn(javafxSwtTask)
 
         doLast() {
-            ant.jar (update: true, index: true, destfile: "${javafxSwtTask.destinationDir}/${javafxSwtTask.archiveName}")
+            def destDir = javafxSwtTask.destinationDirectory.get()
+            def afName = javafxSwtTask.archiveFileName.get()
+            ant.jar (update: true, index: true, destfile: "${destDir}/${afName}")
         }
     }
 
@@ -4376,8 +4389,8 @@ compileTargets { t ->
         zipsTask.dependsOn(zipSdkTask)
 
         def zipDocsTask = task("zipDocs$t.capital", type: Zip, dependsOn: zipSdkTask) {
-            destinationDir = file("${bundlesDir}")
-            archiveName = "${docsBundleName}.zip"
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${docsBundleName}.zip"
             includeEmptyDirs = false
             from docsArtifactsDir
             into "${docsBundleName}"
@@ -4385,8 +4398,8 @@ compileTargets { t ->
         zipsTask.dependsOn(zipDocsTask)
 
         def zipJmodsTask = task("zipJmods$t.capital", type: Zip, dependsOn: zipDocsTask) {
-            destinationDir = file("${bundlesDir}")
-            archiveName = "${jmodsBundleName}.zip"
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${jmodsBundleName}.zip"
             includeEmptyDirs = false
             from jmodsArtifactsDir
             into "${jmodsBundleName}"
@@ -4684,8 +4697,8 @@ compileTargets { t ->
         def dstModularJarDir = "${standaloneLibDir}"
         def modularJarName = "${moduleName}.jar"
         def modularJarTask = project.task("modularJarStandalone$t.capital", type: Jar, dependsOn: project.assemble) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularJarName
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularJarName
             includeEmptyDirs = false
             from srcClassesDir
         }
@@ -4741,8 +4754,8 @@ compileTargets { t ->
     // and the standalone sdk should be independent of one another, but seems
     // better than the alternatives.
     def zipSourceFilesTask = project.task("zipSourceFilesStandalone$t.capital", type: Zip, dependsOn: buildModulesTask) {
-        destinationDir = file("${standaloneLibDir}")
-        archiveName = standaloneSrcZipName
+        destinationDirectory = file("${standaloneLibDir}")
+        archiveFileName = standaloneSrcZipName
         includeEmptyDirs = false
         from modulesSrcDir
         include "**/*.java"
@@ -4767,19 +4780,14 @@ compileTargets { t ->
 
         def modularEmptyPublicationJarName = "${moduleName}.jar"
         def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularEmptyPublicationJarName
-            manifest {
-                attributes(
-                    'Automatic-Module-Name':"${moduleName}Empty"
-                )
-            }
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularEmptyPublicationJarName
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
         def modularPublicationJarTask = project.task("modularPublicationJar${t.capital}", type: Jar, dependsOn: modularEmptyPublicationJarTask) {
-            destinationDir = file("${dstModularJarDir}")
-            archiveName = modularPublicationJarName
+            destinationDirectory = file("${dstModularJarDir}")
+            archiveFileName = modularPublicationJarName
             from srcLibsDir
             from srcClassesDir
         }
@@ -5113,8 +5121,8 @@ compileTargets { t ->
             file("${rootProject.buildDir}/${jfxBundle}").delete()
         }
 
-        archiveName = jfxBundle
-        destinationDir = file("${rootProject.buildDir}")
+        archiveFileName = jfxBundle
+        destinationDirectory = file("${rootProject.buildDir}")
         includeEmptyDirs = false
         from "${bundledSdkDir}"
     }

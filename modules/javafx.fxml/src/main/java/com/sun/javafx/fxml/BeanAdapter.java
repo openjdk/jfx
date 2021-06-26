@@ -119,6 +119,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
             if (Modifier.isPublic(type.getModifiers())) {
                 // only interested in public methods in public classes in
                 // non-restricted packages
+                @SuppressWarnings("removal")
                 final Method[] declaredMethods =
                         AccessController.doPrivileged(
                                 new PrivilegedAction<Method[]>() {

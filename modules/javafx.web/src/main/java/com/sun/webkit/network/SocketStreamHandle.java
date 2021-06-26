@@ -101,6 +101,7 @@ final class SocketStreamHandle {
         return ssh;
     }
 
+    @SuppressWarnings("removal")
     private void run() {
         if (webPage == null) {
             logger.finest("{0} is not associated with any web "
@@ -197,6 +198,7 @@ final class SocketStreamHandle {
     }
 
     private void connect() throws IOException {
+        @SuppressWarnings("removal")
         SecurityManager securityManager = System.getSecurityManager();
         if (securityManager != null) {
             securityManager.checkConnect(host, port);
@@ -207,6 +209,7 @@ final class SocketStreamHandle {
         boolean success = false;
         IOException lastException = null;
         boolean triedDirectConnection = false;
+        @SuppressWarnings("removal")
         ProxySelector proxySelector = AccessController.doPrivileged(
                 (PrivilegedAction<ProxySelector>) () -> ProxySelector.getDefault());
         if (proxySelector != null) {
@@ -419,6 +422,7 @@ final class SocketStreamHandle {
         private final AtomicInteger index = new AtomicInteger(1);
 
         private CustomThreadFactory() {
+            @SuppressWarnings("removal")
             SecurityManager sm = System.getSecurityManager();
             group = (sm != null) ? sm.getThreadGroup()
                     : Thread.currentThread().getThreadGroup();

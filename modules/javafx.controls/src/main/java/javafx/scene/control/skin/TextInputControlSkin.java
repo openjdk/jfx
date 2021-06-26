@@ -117,7 +117,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     static boolean preload = false;
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
             if (s != null) {
                 if (s.equalsIgnoreCase("PRERENDER")) {

@@ -135,6 +135,7 @@ public class StubScene implements TKScene {
         return camera;
     }
 
+    @SuppressWarnings("removal")
     @Override
     public AccessControlContext getAccessControlContext() {
         return null;

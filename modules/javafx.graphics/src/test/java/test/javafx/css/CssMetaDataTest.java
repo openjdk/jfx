@@ -1167,10 +1167,8 @@ public class CssMetaDataTest {
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public
-                //                Constructor ctor = someClass.getConstructor((Class[])null);
                 Method m = someClass.getMethod("getClassCssMetaData", (Class[]) null);
-                //                Node node = (Node)ctor.newInstance((Object[])null);
-                Node node = (Node)someClass.newInstance();
+                Node node = (Node)someClass.getDeclaredConstructor().newInstance();
                 List<CssMetaData<? extends Styleable, ?>> list = (List<CssMetaData<? extends Styleable, ?>>)m.invoke(null);
                 if(list == null || list.isEmpty()) return;
 
@@ -1181,7 +1179,7 @@ public class CssMetaDataTest {
                     assertNotNull(what, writable);
 
                     Object defaultValue = writable.getValue();
-                    Object initialValue = styleable.getInitialValue((Node) someClass.newInstance());
+                    Object initialValue = styleable.getInitialValue((Node) someClass.getDeclaredConstructor().newInstance());
 
                     if (defaultValue instanceof Number) {
                         // 5 and 5.0 are not the same according to equals,

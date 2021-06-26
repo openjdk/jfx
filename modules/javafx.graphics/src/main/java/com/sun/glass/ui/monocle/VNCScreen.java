@@ -54,6 +54,7 @@ class VNCScreen extends HeadlessScreen {
         super(1024, 600, 32);
         try {
             server = ServerSocketChannel.open();
+            @SuppressWarnings("removal")
             int vncPort = AccessController.doPrivileged(
                     (PrivilegedAction<Integer>)
                             () -> Integer.getInteger("vnc.port", 5901));

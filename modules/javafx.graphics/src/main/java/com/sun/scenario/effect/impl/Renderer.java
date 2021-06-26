@@ -92,6 +92,7 @@ public abstract class Renderer {
         Collections.synchronizedMap(new HashMap<String, EffectPeer>(5));
     private final ImagePool imagePool;
 
+    @SuppressWarnings("removal")
     protected static final boolean verbose = AccessController.doPrivileged(
             (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.verbose"));
 

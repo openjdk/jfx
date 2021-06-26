@@ -71,6 +71,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeCell<
     // is set to true. This is done in order to make TreeView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
+    @SuppressWarnings("removal")
     private static final boolean IS_PANNABLE =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TreeViewSkin.pannable"));
 

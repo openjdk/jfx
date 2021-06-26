@@ -33,7 +33,8 @@ import com.sun.glass.utils.NativeLibLoader;
 
 class DFontDecoder extends FontFileWriter {
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             NativeLibLoader.loadLibrary("javafx_font");
             return null;
         });

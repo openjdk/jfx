@@ -37,7 +37,8 @@ class GLPixelFormat {
     private static int defaultBufferSize;
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
            defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
            defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
             return null;

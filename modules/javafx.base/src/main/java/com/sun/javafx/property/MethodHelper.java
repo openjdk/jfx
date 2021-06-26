@@ -36,6 +36,7 @@ import com.sun.javafx.reflect.ReflectUtil;
  * Utility class to wrap method invocation.
  */
 public class MethodHelper {
+    @SuppressWarnings("removal")
     private static final boolean logAccessErrors
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
                     -> Boolean.getBoolean("sun.reflect.debugModuleAccessChecks"));

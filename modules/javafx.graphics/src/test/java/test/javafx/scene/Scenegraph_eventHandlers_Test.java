@@ -339,7 +339,7 @@ public final class Scenegraph_eventHandlers_Test {
     private static final Group TEST_ROOT_NODE =
             new Group(TEST_L_NODE, TEST_R_NODE);
     private static final Scene TEST_SCENE = new Scene(TEST_ROOT_NODE);
-    private static final Event TEST_EVENT = new Event(new EventType<Event>());
+    private static final Event TEST_EVENT = new Event(new EventType<Event>("Test Event"));
 
     private static final EventHandler<Event> EVENT_CONSUMING_HANDLER =
             event -> event.consume();

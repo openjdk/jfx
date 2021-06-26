@@ -1305,6 +1305,18 @@ public class VirtualFlowTest {
             position = newPosition;
         }
     }
+
+    @Test public void testAccumCellInvisible() {
+        VirtualFlowShim vf = createCircleFlow();
+        Node cell = vf.get_accumCell();
+        if (cell != null) assertFalse(cell.isVisible());
+        vf.resize(600,400);
+        for (int i = 0; i < 50; i++) {
+            vf.scrollPixels(1);
+            cell = vf.get_accumCell();
+            if (cell != null) assertFalse(cell.isVisible());
+        }
+    }
 }
 
 class GraphicalCellStub extends IndexedCellShim<Node> {

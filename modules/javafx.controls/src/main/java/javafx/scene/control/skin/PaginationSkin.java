@@ -838,7 +838,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             leftArrowButton.prefHeightProperty().bind(leftArrowButton.minHeightProperty());
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
-            HBox.setMargin(leftArrowButton, new Insets(0, snapSize(arrowButtonGap.get()), 0, 0));
+            HBox.setMargin(leftArrowButton, new Insets(0, snapSizeX(arrowButtonGap.get()), 0, 0));
             leftArrow = new StackPane();
             leftArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
             leftArrowButton.setGraphic(leftArrow);
@@ -851,7 +851,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             rightArrowButton.prefHeightProperty().bind(rightArrowButton.minHeightProperty());
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
-            HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(arrowButtonGap.get())));
+            HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSizeX(arrowButtonGap.get())));
             rightArrow = new StackPane();
             rightArrow.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
             rightArrowButton.setGraphic(rightArrow);
@@ -874,8 +874,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     HBox.setMargin(rightArrowButton, null);
 
                 } else {
-                    HBox.setMargin(leftArrowButton, new Insets(0, snapSize(newValue.doubleValue()), 0, 0));
-                    HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(newValue.doubleValue())));
+                    HBox.setMargin(leftArrowButton, new Insets(0, snapSizeX(newValue.doubleValue()), 0, 0));
+                    HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSizeX(newValue.doubleValue())));
                 }
             });
         }
@@ -970,18 +970,18 @@ public class PaginationSkin extends SkinBase<Pagination> {
         private void layoutPageIndicators() {
             final double left = snappedLeftInset();
             final double right = snappedRightInset();
-            final double width = snapSize(getWidth()) - (left + right);
+            final double width = snapSizeX(getWidth()) - (left + right);
             final double controlBoxleft = controlBox.snappedLeftInset();
             final double controlBoxRight = controlBox.snappedRightInset();
-            final double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
-            final double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
-            final double spacing = snapSize(controlBox.getSpacing());
+            final double leftArrowWidth = snapSizeX(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
+            final double rightArrowWidth = snapSizeX(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
+            final double spacing = snapSizeX(controlBox.getSpacing());
             double w = width - (controlBoxleft + leftArrowWidth + 2* arrowButtonGap.get() + spacing + rightArrowWidth + controlBoxRight);
 
             if (isPageInformationVisible() &&
                     (Side.LEFT.equals(getPageInformationAlignment()) ||
                     Side.RIGHT.equals(getPageInformationAlignment()))) {
-                w -= snapSize(pageInformation.prefWidth(-1));
+                w -= snapSizeX(pageInformation.prefWidth(-1));
             }
 
             double x = 0;
@@ -991,7 +991,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 double iw = minButtonSize;
                 if (index != -1) {
                     IndicatorButton ib = (IndicatorButton)indicatorButtons.getToggles().get(index);
-                    iw = snapSize(Utils.boundedSize(ib.prefWidth(-1), ib.minWidth(-1), ib.maxWidth(-1)));
+                    iw = snapSizeX(Utils.boundedSize(ib.prefWidth(-1), ib.minWidth(-1), ib.maxWidth(-1)));
                 }
 
                 x += (iw + spacing);
@@ -1159,13 +1159,13 @@ public class PaginationSkin extends SkinBase<Pagination> {
         @Override protected double computeMinWidth(double height) {
             double left = snappedLeftInset();
             double right = snappedRightInset();
-            double leftArrowWidth = snapSize(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
-            double rightArrowWidth = snapSize(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
-            double spacing = snapSize(controlBox.getSpacing());
+            double leftArrowWidth = snapSizeX(Utils.boundedSize(leftArrowButton.prefWidth(-1), leftArrowButton.minWidth(-1), leftArrowButton.maxWidth(-1)));
+            double rightArrowWidth = snapSizeX(Utils.boundedSize(rightArrowButton.prefWidth(-1), rightArrowButton.minWidth(-1), rightArrowButton.maxWidth(-1)));
+            double spacing = snapSizeX(controlBox.getSpacing());
             double pageInformationWidth = 0;
             Side side = getPageInformationAlignment();
             if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-                pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
+                pageInformationWidth = snapSizeX(pageInformation.prefWidth(-1));
             }
             double arrowGap = arrowButtonGap.get();
 
@@ -1180,11 +1180,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
         @Override protected double computePrefWidth(double height) {
             final double left = snappedLeftInset();
             final double right = snappedRightInset();
-            final double controlBoxWidth = snapSize(controlBox.prefWidth(height));
+            final double controlBoxWidth = snapSizeX(controlBox.prefWidth(height));
             double pageInformationWidth = 0;
             Side side = getPageInformationAlignment();
             if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-                pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
+                pageInformationWidth = snapSizeX(pageInformation.prefWidth(-1));
             }
 
             return left + controlBoxWidth + right + pageInformationWidth;
@@ -1193,11 +1193,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
         @Override protected double computePrefHeight(double width) {
             final double top = snappedTopInset();
             final double bottom = snappedBottomInset();
-            final double boxHeight = snapSize(controlBox.prefHeight(width));
+            final double boxHeight = snapSizeY(controlBox.prefHeight(width));
             double pageInformationHeight = 0;
             Side side = getPageInformationAlignment();
             if (Side.TOP.equals(side) || Side.BOTTOM.equals(side)) {
-                pageInformationHeight = snapSize(pageInformation.prefHeight(-1));
+                pageInformationHeight = snapSizeY(pageInformation.prefHeight(-1));
             }
 
             return top + boxHeight + pageInformationHeight + bottom;
@@ -1208,12 +1208,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
             final double bottom = snappedBottomInset();
             final double left = snappedLeftInset();
             final double right = snappedRightInset();
-            final double width = snapSize(getWidth()) - (left + right);
-            final double height = snapSize(getHeight()) - (top + bottom);
-            final double controlBoxWidth = snapSize(controlBox.prefWidth(-1));
-            final double controlBoxHeight = snapSize(controlBox.prefHeight(-1));
-            final double pageInformationWidth = snapSize(pageInformation.prefWidth(-1));
-            final double pageInformationHeight = snapSize(pageInformation.prefHeight(-1));
+            final double width = snapSizeX(getWidth()) - (left + right);
+            final double height = snapSizeY(getHeight()) - (top + bottom);
+            final double controlBoxWidth = snapSizeX(controlBox.prefWidth(-1));
+            final double controlBoxHeight = snapSizeY(controlBox.prefHeight(-1));
+            final double pageInformationWidth = snapSizeX(pageInformation.prefWidth(-1));
+            final double pageInformationHeight = snapSizeY(pageInformation.prefHeight(-1));
 
             leftArrowButton.setDisable(false);
             rightArrowButton.setDisable(false);

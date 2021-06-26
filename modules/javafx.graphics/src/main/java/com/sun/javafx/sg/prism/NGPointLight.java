@@ -25,6 +25,8 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.geometry.Point3D;
+
 /**
  * The peer of the {@code PointLight} class. Holds the default values of {@code PointLight}'s
  * properties and updates the visuals via {@link NGNode#visualsChanged} when one of the current
@@ -40,6 +42,18 @@ public class NGPointLight extends NGLightBase {
     private static final float DEFAULT_QA = 0;
     /** Max range default value */
     private static final float DEFAULT_MAX_RANGE = Float.POSITIVE_INFINITY;
+
+    /**
+     * The direction of a {@code SpotLight} that simulates a {@code PointLight}.
+     * Since the light radiates equally in all directions, this value is meaningless.
+     **/
+    private static final Point3D SIMULATED_DIRECTION = new Point3D(0, 0, 1);
+    /** The inner angle value of a {@code SpotLight} that simulates a {@code PointLight} */
+    private static final float SIMULATED_INNER_ANGLE = 0;
+    /** The outer angle value of a {@code SpotLight} that simulates a {@code PointLight} */
+    private static final float SIMULATED_OUTER_ANGLE = 180;
+    /** The falloff value of a {@code SpotLight} that simulates a {@code PointLight} */
+    private static final float SIMULATED_FALLOFF = 0;
 
     public NGPointLight() {
     }
@@ -58,6 +72,38 @@ public class NGPointLight extends NGLightBase {
 
     public static float getDefaultMaxRange() {
         return DEFAULT_MAX_RANGE;
+    }
+
+    public static Point3D getSimulatedDirection() {
+        return SIMULATED_DIRECTION;
+    }
+
+    public static float getSimulatedInnerAngle() {
+        return SIMULATED_INNER_ANGLE;
+    }
+
+    public static float getSimulatedOuterAngle() {
+        return SIMULATED_OUTER_ANGLE;
+    }
+
+    public static float getSimulatedFalloff() {
+        return SIMULATED_FALLOFF;
+    }
+
+    public Point3D getDirection() {
+        return SIMULATED_DIRECTION;
+    }
+
+    public float getInnerAngle() {
+        return SIMULATED_INNER_ANGLE;
+    }
+
+    public float getOuterAngle() {
+        return SIMULATED_OUTER_ANGLE;
+    }
+
+    public float getFalloff() {
+        return SIMULATED_FALLOFF;
     }
 
 

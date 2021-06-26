@@ -52,6 +52,8 @@ C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
             gstreamer/plugins/elements/gsttypefindelement.c \
             projects/plugins/gstplugins-lite.c
 
+CPP_SOURCES = gst-plugins-good/sys/directsound/gstdirectsoundnotify.cpp
+
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -analyze- -errorReport:queue \
                  -wd"4018" -wd"4244" -wd"4005" -wd"4018" -wd"4101" -wd"4146" -wd"4244" -wd"4996"
@@ -102,7 +104,7 @@ else
     LIBFLAGS += -MACHINE:x64
 endif
 
-OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
+OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 
 .PHONY: default
 
@@ -115,6 +117,9 @@ $(OBJECTS): | $(DEP_DIRS)
 
 $(DEP_DIRS):
 	@mkdir -p $(DEP_DIRS)
+
+$(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
+	$(CC) $(CFLAGS) -TP -c -Fo$(shell cygpath -ma $@) $<
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
 	$(CC) $(CFLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<

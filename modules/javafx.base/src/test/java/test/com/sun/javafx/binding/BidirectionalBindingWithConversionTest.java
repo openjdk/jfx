@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -281,13 +281,13 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         }
 
         @Override
-        public void addListener(ChangeListener<? super T> listener) {
+        public void addListener(InvalidationListener listener) {
             super.addListener(listener);
             listenerCount++;
         }
 
         @Override
-        public void removeListener(ChangeListener<? super T> listener) {
+        public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
             listenerCount--;
         }
@@ -303,13 +303,13 @@ public class BidirectionalBindingWithConversionTest<S, T> {
         }
 
         @Override
-        public void addListener(ChangeListener<? super String> listener) {
+        public void addListener(InvalidationListener listener) {
             super.addListener(listener);
             listenerCount++;
         }
 
         @Override
-        public void removeListener(ChangeListener<? super String> listener) {
+        public void removeListener(InvalidationListener listener) {
             super.removeListener(listener);
             listenerCount--;
         }
