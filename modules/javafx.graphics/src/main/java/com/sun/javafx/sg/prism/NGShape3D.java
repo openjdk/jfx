@@ -200,20 +200,16 @@ public abstract class NGShape3D extends NGNode {
                             light.getFalloff());
                 } else if (lightBase instanceof NGDirectionalLight) {
                     var light = (NGDirectionalLight) lightBase;
-                    Point3D direction = light.getDirection();
                     meshView.setLight(lightIndex++,
-                            0,
-                            0,
-                            0,
+                            0, 0, 0,                 // position is irrelevant
                             rL, gL, bL, 1.0f,
-                            1, 0, 0, 0,
-                            Float.POSITIVE_INFINITY,
-                            (float) direction.getX(),
-                            (float) direction.getY(),
-                            (float) direction.getZ(),
-                            NGPointLight.getSimulatedInnerAngle(),
-                            NGPointLight.getSimulatedOuterAngle(),
-                            NGPointLight.getSimulatedFalloff());
+                            1, 0, 0,                 // attenuation is irrelevant
+                            0,
+                            Float.POSITIVE_INFINITY, // range is irrelevant
+                            (float) light.getDirection().getX(),
+                            (float) light.getDirection().getY(),
+                            (float) light.getDirection().getZ(),
+                            0, 0, 0);                // spotlight factors are irrelevant
                 } else if (lightBase instanceof NGAmbientLight) {
                     // Accumulate ambient lights
                     ambientRed   += rL;
