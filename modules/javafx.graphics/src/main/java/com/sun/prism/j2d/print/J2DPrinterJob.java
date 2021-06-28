@@ -69,10 +69,8 @@ import java.awt.print.PageFormat;
 import java.awt.print.Pageable;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.net.MalformedURLException;
+import java.io.File;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
@@ -347,10 +345,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
         Destination dest =
             (Destination)printReqAttrSet.get(Destination.class);
         if (dest != null) {
-            try {
-                settings.setOutputFile(dest.getURI().toURL().toString());
-            } catch (MalformedURLException e) {
-            }
+            settings.setOutputFile(dest.getURI().getPath());
         } else {
             settings.setOutputFile("");
         }
@@ -631,16 +626,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
         printReqAttrSet.remove(Destination.class);
         String file = settings.getOutputFile();
         if (file != null && !file.isEmpty()) {
-            try {
-                 URL url = new URL(file);
-                 if (!"file".equals(url.getProtocol())) {
-                     return;
-                 }
-                 URI uri = url.toURI();
-                 Destination d = new Destination(uri);
-                 printReqAttrSet.add(d);
-            } catch (MalformedURLException | URISyntaxException e) {
-            }
+             // check SE, check access ?
+             URI uri = (new File(file)).toURI();
+             Destination d = new Destination(uri);
+             printReqAttrSet.add(d);
         }
     }
 
@@ -836,11 +825,8 @@ public class J2DPrinterJob implements PrinterJobImpl {
         if (security != null) {
             security.checkPrintJobAccess();
             String file = settings.getOutputFile();
-            if (!file.isEmpty()) {
-                try {
-                     security.checkWrite((new URL(file)).getPath());
-                } catch (MalformedURLException e) {
-                }
+            if (file != null && !file.isEmpty()) {
+                security.checkWrite(file);
             }
         }
     }

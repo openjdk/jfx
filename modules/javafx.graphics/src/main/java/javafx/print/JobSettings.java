@@ -464,32 +464,43 @@ public final class JobSettings {
 
     ///////////////////////  START OUTPUTFILE /////////////////////
 
-    private static final String DEFAULT_OUTPUTFILE = "";
     private SimpleStringProperty outputFile;
 
     /**
-     * A {@code StringProperty} representing the {@code java.net.URL}
-     * encoded name of a filesystem file, to which the platform printer
+     * A {@code StringProperty} representing the 
+     * name of a filesystem file, to which the platform printer
      * driver should spool the rendered print data.
      * <p>
-     * Applications can use this to request print-to-file behavior where
-     * the native print system is capable of spooling the output to a
-     * filesystem file, rather than the printer device.
+     * Applications can use this to programmatically request print-to-file
+     * behavior where the native print system is capable of spooling the
+     * output to a filesystem file, rather than the printer device.
      * <p>
      * This is often useful where the printer driver generates a format
      * such as Postscript or PDF, and the application intends to distribute
      * the result instead of printing it, or for some other reason the
      * application does not want physical media (paper) emitted by the printer.
      * <p>
-     * If the application does not have permission to write to the specified
-     * file, a {@code SecurityException} may be thrown when printing.
+     * The default value is an empty string, which is interpreted as unset,
+     * equivalent to null, which means output is sent to the printer.
+     * So in order to reset to print to the printer, clear the value of
+     * this property by setting it to null or an empty string.
+     * <p>
+     * Additionally if the application displays a printer dialog which allows
+     * the user to specify a file destination including altering an application
+     * specified file destination, the value of this property will reflect that
+     * user-specified choice, including clearing it to re-set to print to
+     * the printer, if the user does so.
+     * <p>
      * If the print system does not support print-to-file, then this
      * setting will be ignored.
      * <p>
-     * If the URL specifies a non-existent path, or does not specify
-     * a writable file it may be ignored, or a SecurityException may be thrown.
-     * The default value is an empty string, which is interpreted as unset,
-     * which means output is sent to the printer.
+     * If the specified name specifies a non-existent path, or does not specify
+     * a user writable file, when printing the results are platform-dependent, including
+     * replacement with a default output file location, printing to the printer instead,
+     * or a platform printing error.
+     * If a {@code SecurityManager} is installed and it denies access to the
+     * specified file a {@code SecurityException} may be thrown.
+     * @defaultValue an empty String
      *
      * @return the name of a printer spool file
      * @since 17
@@ -497,8 +508,7 @@ public final class JobSettings {
     public final StringProperty outputFileProperty() {
         if (outputFile == null) {
             outputFile =
-                new SimpleStringProperty(JobSettings.this, "outputFile",
-                                         DEFAULT_OUTPUTFILE) {
+                new SimpleStringProperty(JobSettings.this, "outputFile", "") {
 
                 @Override
                 public void set(String value) {
@@ -506,7 +516,7 @@ public final class JobSettings {
                         return;
                     }
                     if (value == null) {
-                        value = DEFAULT_OUTPUTFILE;
+                        value = "";
                     }
                     super.set(value);
                 }
@@ -533,23 +543,13 @@ public final class JobSettings {
         return outputFile;
     }
 
-    /**
-     * Get the output file path name.
-     * @return the output file as a string encoded {@code java.net.URL}
-     * @since 17
-     */
     public String getOutputFile() {
         return outputFileProperty().get();
     }
 
 
-    /**
-     * Set the output file.
-     * @param urlString the output file as a string encoded {@code java.net.URL}
-     * @since 17
-     */
-    public void setOutputFile(String urlString) {
-        outputFileProperty().set(urlString);
+    public void setOutputFile(String filePath) {
+        outputFileProperty().set(filePath);
     }
     ///////////////////////  END OUTPUTFILE /////////////////////
 

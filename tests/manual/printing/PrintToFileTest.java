@@ -24,8 +24,6 @@
  */
 
 import java.io.File;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -113,17 +111,12 @@ public class PrintToFileTest extends Application {
             System.out.println("START OF PRINT JOB");
             PrinterJob job = PrinterJob.createPrinterJob();
             JobSettings settings = job.getJobSettings();
-            File f = new File("printtofiletest.prn");
+            String fileName = "printtofiletest.prn";
+            settings.outputFileProperty().set(fileName);
+            String destFileName =  settings.outputFileProperty().get();
+            System.out.println("dest="+ destFileName);
+            File f = new File(destFileName);
             f.delete();
-            try {
-                URL url = f.toURL();
-                String urlStr = url.toString();
-                settings.outputFileProperty().set(urlStr);
-            } catch (MalformedURLException e) {
-                System.out.println(e);
-                failed = true;
-            }
-
             Platform.runLater(() -> {
                 Text t = new Text("file="+settings.getOutputFile());
                 root.getChildren().add(t);
@@ -131,10 +124,14 @@ public class PrintToFileTest extends Application {
             Text printNode = new Text("\n\nTEST\nabc\ndef");
             job.printPage(printNode);
             job.endJob();
+            try {
+                 // wait for printer spooler to create the file.
+                 Thread.sleep(3000);
+            } catch (InterruptedException e) {
+            }
             if (f.exists()) {
-                System.out.println("created file");
+                System.out.println("created file " + f);
                 passed = true;
-                f.delete();
             } else {
                 failed = true;
             }
@@ -148,7 +145,7 @@ public class PrintToFileTest extends Application {
                 }
             }
             Platform.runLater(() -> displayMessage());
-
+            
         }).start();
     }
 
