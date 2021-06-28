@@ -736,14 +736,13 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         if (on_top_inherited()) {
             gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
         }
+    } else if (modal) {
+        //this is used for APPLICATION_MODAL
+        gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
     }
 
     if (type == UTILITY) {
         gtk_window_set_type_hint(GTK_WINDOW(gtk_widget), GDK_WINDOW_TYPE_HINT_UTILITY);
-    }
-
-    if (modal) {
-        gtk_window_set_keep_above(GTK_WINDOW(gtk_widget), TRUE);
     }
 
 //    glong xdisplay = (glong)mainEnv->GetStaticLongField(jApplicationCls, jApplicationDisplay);
