@@ -73,14 +73,13 @@ public class DirectionalLight extends LightBase {
     }
 
     /**
-     * Creates a new instance of {@code SpotLight} class with a default {@code Color.WHITE} light source.
+     * Creates a new {@code DirectionalLight} with a default {@code Color.WHITE} color.
      */
     public DirectionalLight() {
-        super();
     }
 
     /**
-     * Creates a new instance of {@code SpotLight} class using the specified color.
+     * Creates a new {@code DirectionalLight} with the specified color.
      *
      * @param color the color of the light source
      */
@@ -90,8 +89,8 @@ public class DirectionalLight extends LightBase {
 
 
     /**
-     * The direction vector of the spotlight. It can be rotated by setting a rotation transform on the
-     * {@code SpotLight}. The vector need not be normalized.
+     * The direction vector of the directional light. It can be rotated by setting a rotation transform on the
+     * {@code DirectionalLight}. The vector need not be normalized.
      *
      * @defaultValue {@code Point3D(0, 0, 1)}
      */
