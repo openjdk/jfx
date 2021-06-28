@@ -214,19 +214,22 @@ class ES2PhongShader {
     private static void setLightConstants(int i, ES2Shader shader, ES2Light light) {
         shader.setConstant("lights[" + i + "].pos", light.x, light.y, light.z, light.w);
         shader.setConstant("lights[" + i + "].color", light.r, light.g, light.b);
-        shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa);
+        shader.setConstant("lights[" + i + "].attn", light.ca, light.la, light.qa, light.isAttenuated);
         shader.setConstant("lights[" + i + "].range", light.maxRange);
         if (light.isPointLight()) {
             shader.setConstant("lights[" + i + "].dir", 0f, 0f, 1f);
-            shader.setConstant("lights[" + i + "].cosOuter", -1f); // cos(180)
-            shader.setConstant("lights[" + i + "].denom", 2f);     // cos(0) - cos(180)
-            shader.setConstant("lights[" + i + "].falloff", 0f);
         } else {
             float dirX = light.dirX;
             float dirY = light.dirY;
             float dirZ = light.dirZ;
             float length = (float) Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
             shader.setConstant("lights[" + i + "].dir", dirX / length, dirY / length, dirZ / length);
+        }
+        if (light.isPointLight() || light.isDirectionalLight()) {
+            shader.setConstant("lights[" + i + "].cosOuter", -1f); // cos(180)
+            shader.setConstant("lights[" + i + "].denom", 2f);     // cos(0) - cos(180)
+            shader.setConstant("lights[" + i + "].falloff", 0f);
+        } else {
             // preparing for: I = pow((cosAngle - cosOuter) / (cosInner - cosOuter), falloff);
             float cosOuter = (float) Math.cos(Math.toRadians(light.outerAngle));
             float cosInner = (float) Math.cos(Math.toRadians(light.innerAngle));
