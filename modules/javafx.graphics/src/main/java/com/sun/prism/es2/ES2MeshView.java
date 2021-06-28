@@ -102,7 +102,7 @@ class ES2MeshView extends BaseMeshView {
 
     @Override
     public void setLight(int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff) {
         // NOTE: We only support up to 3 point lights at the present
         if (index >= 0 && index <= 2) {

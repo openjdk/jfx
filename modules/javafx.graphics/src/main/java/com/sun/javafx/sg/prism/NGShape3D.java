@@ -25,17 +25,20 @@
 
 package com.sun.javafx.sg.prism;
 
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.scene.shape.CullFace;
-import javafx.scene.shape.DrawMode;
 import com.sun.javafx.geom.Vec3d;
+import com.sun.javafx.geom.Vec3f;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.util.Utils;
 import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
 import com.sun.prism.ResourceFactory;
+
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.geometry.Point3D;
+import javafx.scene.shape.CullFace;
+import javafx.scene.shape.DrawMode;
 
 /**
  * TODO: 3D - Need documentation
@@ -130,6 +133,7 @@ public abstract class NGShape3D extends NGNode {
                     NGPointLight.getDefaultCa(),
                     NGPointLight.getDefaultLa(),
                     NGPointLight.getDefaultQa(),
+                    1,
                     NGPointLight.getDefaultMaxRange(),
                     (float) NGPointLight.getSimulatedDirection().getX(),
                     (float) NGPointLight.getSimulatedDirection().getY(),
@@ -186,6 +190,7 @@ public abstract class NGShape3D extends NGNode {
                             light.getCa(),
                             light.getLa(),
                             light.getQa(),
+                            1,
                             light.getMaxRange(),
                             (float) light.getDirection().getX(),
                             (float) light.getDirection().getY(),
@@ -193,6 +198,22 @@ public abstract class NGShape3D extends NGNode {
                             light.getInnerAngle(),
                             light.getOuterAngle(),
                             light.getFalloff());
+                } else if (lightBase instanceof NGDirectionalLight) {
+                    var light = (NGDirectionalLight) lightBase;
+                    Point3D direction = light.getDirection();
+                    meshView.setLight(lightIndex++,
+                            0,
+                            0,
+                            0,
+                            rL, gL, bL, 1.0f,
+                            1, 0, 0, 0,
+                            Float.POSITIVE_INFINITY,
+                            (float) direction.getX(),
+                            (float) direction.getY(),
+                            (float) direction.getZ(),
+                            NGPointLight.getSimulatedInnerAngle(),
+                            NGPointLight.getSimulatedOuterAngle(),
+                            NGPointLight.getSimulatedFalloff());
                 } else if (lightBase instanceof NGAmbientLight) {
                     // Accumulate ambient lights
                     ambientRed   += rL;
@@ -211,8 +232,8 @@ public abstract class NGShape3D extends NGNode {
             meshView.setLight(lightIndex++,
                     0, 0, 0,    // x y z
                     0, 0, 0, 0, // r g b w
-                    1, 0, 0, 0, // ca la qa maxRange
-                    0, 0, 0,    // dirX Y Z
+                    1, 0, 0, 1, 0, // ca la qa isAttenuated maxRange
+                    0, 0, 1,    // dirX Y Z
                     0, 0, 0);   // inner outer falloff
         }
 

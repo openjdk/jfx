@@ -35,13 +35,14 @@ public:
     D3DLight();
     virtual ~D3DLight();
     bool isPointLight();
+    bool isDirectionalLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
 
     float position[3];
     float color[3];
     float w;
-    float attenuation[3]; // ca, la, qa
+    float attenuation[4]; // ca, la, qa, isAttenuated
     float maxRange;
     float direction[3];
     float innerAngle;

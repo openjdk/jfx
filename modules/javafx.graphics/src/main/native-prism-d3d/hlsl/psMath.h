@@ -103,6 +103,11 @@ float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float d
 }
 
 void computeLight(float i, float3 n, float3 refl, float specPower, float3 L, float3 lightDir, in out float3 d, in out float3 s) {
+    if (gLightAttenuation[i].w < 0.5) {
+        d += saturate(dot(n, -lightDir)) * gLightColor[i].xyz;
+        s += pow(saturate(dot(-refl, -lightDir)), specPower) * gLightColor[i].xyz;
+        return;
+    }
     float dist = length(L);
     if (dist > gLightRange[i].x) {
         return;
