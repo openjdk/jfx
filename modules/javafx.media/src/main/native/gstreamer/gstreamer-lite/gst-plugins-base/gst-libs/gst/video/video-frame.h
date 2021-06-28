@@ -72,7 +72,7 @@ typedef enum {
  * @buffer: the mapped buffer
  * @meta: pointer to metadata if any
  * @id: id of the mapped frame. the id can for example be used to
- *   indentify the frame in case of multiview video.
+ *   identify the frame in case of multiview video.
  * @data: pointers to the plane data
  * @map: mappings of the planes
  *
@@ -125,7 +125,12 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
 #define GST_VIDEO_FRAME_IS_RFF(f)          (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_RFF))
 #define GST_VIDEO_FRAME_IS_ONEFIELD(f)     (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_ONEFIELD))
 #define GST_VIDEO_FRAME_IS_TOP_FIELD(f)    (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_TOP_FIELD))
-#define GST_VIDEO_FRAME_IS_BOTTOM_FIELD(f) (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD))
+
+/*  GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD is a subset of
+ *  GST_VIDEO_FRAME_FLAG_TOP_FIELD so needs to be checked accordingly. */
+#define _GST_VIDEO_FRAME_FLAG_FIELD_MASK GST_VIDEO_FRAME_FLAG_TOP_FIELD
+
+#define GST_VIDEO_FRAME_IS_BOTTOM_FIELD(f) (((f)->flags & _GST_VIDEO_FRAME_FLAG_FIELD_MASK) == GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD)
 
 /* dealing with planes */
 #define GST_VIDEO_FRAME_N_PLANES(f)       (GST_VIDEO_INFO_N_PLANES(&(f)->info))
@@ -165,7 +170,7 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
  *                                     such as left or right eye view. This flags is set on
  *                                     any buffer that contains non-mono content - even for
  *                                     streams that contain only a single viewpoint. In mixed
- *                                     mono / non-mono streams, the absense of the flag marks
+ *                                     mono / non-mono streams, the absence of the flag marks
  *                                     mono buffers.
  * @GST_VIDEO_BUFFER_FLAG_FIRST_IN_BUNDLE: When conveying stereo/multiview content with
  *                                     frame-by-frame methods, this flag marks the first buffer
@@ -173,15 +178,19 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
  * @GST_VIDEO_BUFFER_FLAG_TOP_FIELD:   The video frame has the top field only. This is the
  *                                     same as GST_VIDEO_BUFFER_FLAG_TFF |
  *                                     GST_VIDEO_BUFFER_FLAG_ONEFIELD (Since: 1.16).
+ *                                     Use GST_VIDEO_BUFFER_IS_TOP_FIELD() to check for this flag.
  * @GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD: The video frame has the bottom field only. This is
  *                                     the same as GST_VIDEO_BUFFER_FLAG_ONEFIELD
  *                                     (GST_VIDEO_BUFFER_FLAG_TFF flag unset) (Since: 1.16).
+ *                                     Use GST_VIDEO_BUFFER_IS_BOTTOM_FIELD() to check for this flag.
+ * @GST_VIDEO_BUFFER_FLAG_MARKER:      The #GstBuffer contains the end of a video field or frame
+ *                                     boundary such as the last subframe or packet (Since: 1.18).
  * @GST_VIDEO_BUFFER_FLAG_LAST:        Offset to define more flags
  *
  * Additional video buffer flags. These flags can potentially be used on any
- * buffers carrying video data - even encoded data.
+ * buffers carrying closed caption data, or video data - even encoded data.
  *
- * Note that these are only valid for #GstCaps of type: video/...
+ * Note that these are only valid for #GstCaps of type: video/... and caption/...
  * They can conflict with other extended buffer flags.
  */
 typedef enum {
@@ -197,8 +206,30 @@ typedef enum {
                                       GST_VIDEO_BUFFER_FLAG_ONEFIELD,
   GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD = GST_VIDEO_BUFFER_FLAG_ONEFIELD,
 
+  GST_VIDEO_BUFFER_FLAG_MARKER       = GST_BUFFER_FLAG_MARKER,
+
   GST_VIDEO_BUFFER_FLAG_LAST        = (GST_BUFFER_FLAG_LAST << 8)
 } GstVideoBufferFlags;
+
+/* GST_VIDEO_BUFFER_FLAG_TOP_FIELD is a subset of
+ * GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD so needs to be checked accordingly. */
+#define _GST_VIDEO_BUFFER_FLAG_FIELD_MASK GST_VIDEO_BUFFER_FLAG_TOP_FIELD
+
+/**
+ * GST_VIDEO_BUFFER_IS_TOP_FIELD:
+ * @buf: a #GstBuffer
+ *
+ * Check if GST_VIDEO_BUFFER_FLAG_TOP_FIELD is set on @buf (Since: 1.18).
+ */
+#define GST_VIDEO_BUFFER_IS_TOP_FIELD(buf) ((GST_BUFFER_FLAGS (buf) & _GST_VIDEO_BUFFER_FLAG_FIELD_MASK) == GST_VIDEO_BUFFER_FLAG_TOP_FIELD)
+
+/**
+ * GST_VIDEO_BUFFER_IS_BOTTOM_FIELD:
+ * @buf: a #GstBuffer
+ *
+ * Check if GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD is set on @buf (Since: 1.18).
+ */
+#define GST_VIDEO_BUFFER_IS_BOTTOM_FIELD(buf) ((GST_BUFFER_FLAGS (buf) & _GST_VIDEO_BUFFER_FLAG_FIELD_MASK) == GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD)
 
 /**
  * GstVideoFrameMapFlags:

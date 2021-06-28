@@ -85,6 +85,7 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
     private final ReadOnlyPropertyDescriptor descriptor;
     private final ReadOnlyPropertyDescriptor.ReadOnlyListener<Boolean> listener;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanBooleanProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
@@ -101,6 +102,7 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public boolean get() {
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {

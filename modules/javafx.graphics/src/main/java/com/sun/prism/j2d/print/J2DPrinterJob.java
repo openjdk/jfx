@@ -92,7 +92,8 @@ import java.security.PrivilegedAction;
 public class J2DPrinterJob implements PrinterJobImpl {
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String libName = "prism_common";
 
             if (PrismSettings.verbose) {
@@ -116,6 +117,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private volatile Object elo = null;
 
     private static Class onTopClass = null;
+    @SuppressWarnings("removal")
     PrintRequestAttribute getAlwaysOnTop(final long id) {
         return AccessController.doPrivileged(
             (PrivilegedAction<PrintRequestAttribute>) () -> {
@@ -791,6 +793,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
      * to be made before we start the underlying native job.
      */
     private void checkPermissions() {
+        @SuppressWarnings("removal")
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();

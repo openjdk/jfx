@@ -49,7 +49,6 @@
 
 #include "gstalsa.h"
 #include "gstalsasink.h"
-#include "gstalsadeviceprobe.h"
 
 #include <gst/audio/gstaudioiec61937.h>
 #include <gst/gst-i18n-plugin.h>
@@ -95,7 +94,9 @@ static gboolean gst_alsasink_close (GstAudioSink * asink);
 static gint gst_alsasink_write (GstAudioSink * asink, gpointer data,
     guint length);
 static guint gst_alsasink_delay (GstAudioSink * asink);
-static void gst_alsasink_reset (GstAudioSink * asink);
+static void gst_alsasink_pause (GstAudioSink * asink);
+static void gst_alsasink_resume (GstAudioSink * asink);
+static void gst_alsasink_stop (GstAudioSink * asink);
 static gboolean gst_alsasink_acceptcaps (GstAlsaSink * alsa, GstCaps * caps);
 static GstBuffer *gst_alsasink_payload (GstAudioBaseSink * sink,
     GstBuffer * buf);
@@ -182,7 +183,9 @@ gst_alsasink_class_init (GstAlsaSinkClass * klass)
   gstaudiosink_class->close = GST_DEBUG_FUNCPTR (gst_alsasink_close);
   gstaudiosink_class->write = GST_DEBUG_FUNCPTR (gst_alsasink_write);
   gstaudiosink_class->delay = GST_DEBUG_FUNCPTR (gst_alsasink_delay);
-  gstaudiosink_class->reset = GST_DEBUG_FUNCPTR (gst_alsasink_reset);
+  gstaudiosink_class->stop = GST_DEBUG_FUNCPTR (gst_alsasink_stop);
+  gstaudiosink_class->pause = GST_DEBUG_FUNCPTR (gst_alsasink_pause);
+  gstaudiosink_class->resume = GST_DEBUG_FUNCPTR (gst_alsasink_resume);
 
   g_object_class_install_property (gobject_class, PROP_DEVICE,
       g_param_spec_string ("device", "Device",
@@ -197,7 +200,8 @@ gst_alsasink_class_init (GstAlsaSinkClass * klass)
   g_object_class_install_property (gobject_class, PROP_CARD_NAME,
       g_param_spec_string ("card-name", "Card name",
           "Human-readable name of the sound card", DEFAULT_CARD_NAME,
-          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS |
+          GST_PARAM_DOC_SHOW_DEFAULT));
 }
 
 static void
@@ -259,6 +263,9 @@ gst_alsasink_init (GstAlsaSink * alsasink)
   alsasink->device = g_strdup (DEFAULT_DEVICE);
   alsasink->handle = NULL;
   alsasink->cached_caps = NULL;
+  alsasink->is_paused = FALSE;
+  alsasink->after_paused = FALSE;
+  alsasink->hw_support_pause = FALSE;
   g_mutex_init (&alsasink->alsa_lock);
   g_mutex_init (&alsasink->delay_lock);
 
@@ -544,6 +551,11 @@ retry:
 
   GST_DEBUG_OBJECT (alsa, "buffer size %lu, period size %lu", alsa->buffer_size,
       alsa->period_size);
+
+  /* Check if hardware supports pause */
+  alsa->hw_support_pause = snd_pcm_hw_params_can_pause (params);
+  GST_DEBUG_OBJECT (alsa, "Hw support pause: %s",
+      alsa->hw_support_pause ? "yes" : "no");
 
   snd_pcm_hw_params_free (params);
   return 0;
@@ -1084,12 +1096,23 @@ gst_alsasink_delay (GstAudioSink * asink)
 {
   GstAlsaSink *alsa;
   snd_pcm_sframes_t delay;
-  int res;
+  int res = 0;
 
   alsa = GST_ALSA_SINK (asink);
 
   GST_DELAY_SINK_LOCK (asink);
-  res = snd_pcm_delay (alsa->handle, &delay);
+  if (alsa->is_paused == TRUE) {
+    delay = alsa->pos_in_buffer;
+    alsa->is_paused = FALSE;
+    alsa->after_paused = TRUE;
+  } else {
+    if (alsa->after_paused == TRUE) {
+      delay = alsa->pos_in_buffer;
+      alsa->after_paused = FALSE;
+    } else {
+      res = snd_pcm_delay (alsa->handle, &delay);
+    }
+  }
   GST_DELAY_SINK_UNLOCK (asink);
   if (G_UNLIKELY (res < 0)) {
     /* on errors, report 0 delay */
@@ -1106,7 +1129,65 @@ gst_alsasink_delay (GstAudioSink * asink)
 }
 
 static void
-gst_alsasink_reset (GstAudioSink * asink)
+gst_alsasink_pause (GstAudioSink * asink)
+{
+  GstAlsaSink *alsa;
+  gint err;
+  snd_pcm_sframes_t delay;
+
+  alsa = GST_ALSA_SINK (asink);
+
+  if (alsa->hw_support_pause == TRUE) {
+    GST_ALSA_SINK_LOCK (asink);
+    snd_pcm_delay (alsa->handle, &delay);
+    alsa->pos_in_buffer = delay;
+    CHECK (snd_pcm_pause (alsa->handle, 1), pause_error);
+    GST_DEBUG_OBJECT (alsa, "pause done");
+    alsa->is_paused = TRUE;
+    GST_ALSA_SINK_UNLOCK (asink);
+  } else {
+    gst_alsasink_stop (asink);
+  }
+
+  return;
+
+pause_error:
+  {
+    GST_ERROR_OBJECT (alsa, "alsa-pause: pcm pause error: %s",
+        snd_strerror (err));
+    GST_ALSA_SINK_UNLOCK (asink);
+    return;
+  }
+}
+
+static void
+gst_alsasink_resume (GstAudioSink * asink)
+{
+  GstAlsaSink *alsa;
+  gint err;
+
+  alsa = GST_ALSA_SINK (asink);
+
+  if (alsa->hw_support_pause == TRUE) {
+    GST_ALSA_SINK_LOCK (asink);
+    CHECK (snd_pcm_pause (alsa->handle, 0), resume_error);
+    GST_DEBUG_OBJECT (alsa, "resume done");
+    GST_ALSA_SINK_UNLOCK (asink);
+  }
+
+  return;
+
+resume_error:
+  {
+    GST_ERROR_OBJECT (alsa, "alsa-resume: pcm resume error: %s",
+        snd_strerror (err));
+    GST_ALSA_SINK_UNLOCK (asink);
+    return;
+  }
+}
+
+static void
+gst_alsasink_stop (GstAudioSink * asink)
 {
   GstAlsaSink *alsa;
   gint err;
@@ -1118,7 +1199,7 @@ gst_alsasink_reset (GstAudioSink * asink)
   CHECK (snd_pcm_drop (alsa->handle), drop_error);
   GST_DEBUG_OBJECT (alsa, "prepare");
   CHECK (snd_pcm_prepare (alsa->handle), prepare_error);
-  GST_DEBUG_OBJECT (alsa, "reset done");
+  GST_DEBUG_OBJECT (alsa, "stop done");
   GST_ALSA_SINK_UNLOCK (asink);
 
   return;
@@ -1126,14 +1207,14 @@ gst_alsasink_reset (GstAudioSink * asink)
   /* ERRORS */
 drop_error:
   {
-    GST_ERROR_OBJECT (alsa, "alsa-reset: pcm drop error: %s",
+    GST_ERROR_OBJECT (alsa, "alsa-stop: pcm drop error: %s",
         snd_strerror (err));
     GST_ALSA_SINK_UNLOCK (asink);
     return;
   }
 prepare_error:
   {
-    GST_ERROR_OBJECT (alsa, "alsa-reset: pcm prepare error: %s",
+    GST_ERROR_OBJECT (alsa, "alsa-stop: pcm prepare error: %s",
         snd_strerror (err));
     GST_ALSA_SINK_UNLOCK (asink);
     return;

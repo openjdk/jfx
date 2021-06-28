@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -200,29 +198,5 @@ class ControlUtils {
         }
 
         sm.selectedIndices._endChange();
-    }
-
-    // Given a listen of removed elements, we create the minimal number of changes by coalescing elements that are
-    // adjacent
-    static void reducingChange(MultipleSelectionModelBase<?>.SelectedIndicesList selectedIndices, List<Integer> removed) {
-        if (removed.isEmpty()) return;
-
-        int startPos = 0;
-        int endPos = 1;
-        boolean firedOnce = false;
-        while (endPos < removed.size()) {
-            if (removed.get(startPos) == removed.get(endPos) - 1) {
-                endPos++;
-                continue;
-            }
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(startPos)), removed.subList(startPos, endPos));
-            startPos = endPos;
-            endPos = startPos + 1;
-            firedOnce = true;
-        }
-
-        if (!firedOnce) {
-            selectedIndices._nextRemove(selectedIndices.indexOf(removed.get(0)), removed);
-        }
     }
 }

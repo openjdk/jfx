@@ -58,7 +58,6 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -228,18 +227,12 @@ public class MenuItemTest {
     @Test public void getUnspecifiedTextProperty1() {
         MenuItem mi2 = new MenuItem();
         assertNotNull(mi2.textProperty());
+        assertNull(mi2.getText());
     }
 
     @Test public void getUnspecifiedTextProperty2() {
         MenuItem mi2 = new MenuItem("");
         assertEquals("", mi2.getText());
-    }
-
-    @Ignore // calling textProperty will no ensure text value is non null
-    @Test public void unsetTextButNotNull() {
-        MenuItem mi2 = new MenuItem();
-        mi2.textProperty();
-        assertNotNull(mi2.getText());
     }
 
     @Test public void textCanBeBound() {
@@ -275,19 +268,13 @@ public class MenuItemTest {
     @Test public void getUnspecifiedGraphicProperty1() {
         MenuItem mi2 = new MenuItem();
         assertNotNull(mi2.graphicProperty());
+        assertNull(mi2.getGraphic());
     }
 
     @Test public void getUnspecifiedGraphicProperty2() {
         MenuItem mi2 = new MenuItem("",null);
         assertNotNull(mi2.graphicProperty());
-    }
-
-    @Ignore // Again, calling graphicPropery() is not ensuring a non null graphic
-    // node.
-    @Test public void unsetGraphicButNotNull() {
-        MenuItem mi2 = new MenuItem();
-        mi2.graphicProperty();
-        assertNotNull(mi2.getGraphic());
+        assertNull(mi2.getGraphic());
     }
 
     @Test public void graphicCanBeBound() {
@@ -419,18 +406,16 @@ public class MenuItemTest {
         assertEquals(other.get(), menuItem.isVisible());
     }
 
-    @Ignore // keyCharacter for keyCodeCombination cannot be null
     @Test public void setSpecifiedAccelerator1() {
         Modifier[] modifierArray = {};
-        KeyCombination kc = new KeyCodeCombination(null, modifierArray);
+        KeyCombination kc = new KeyCodeCombination(KeyCode.A, modifierArray);
         menuItem.setAccelerator(kc);
         assertEquals(kc, menuItem.getAccelerator());
     }
 
-    @Ignore // keyCharacter for keyCodeCombination cannot be null
     @Test public void setSpecifiedAccelerator2() {
         Modifier[] modifierArray = {};
-        KeyCombination kc = new KeyCharacterCombination(null, modifierArray);
+        KeyCombination kc = new KeyCharacterCombination("A", modifierArray);
         menuItem.setAccelerator(kc);
         assertEquals(kc, menuItem.getAccelerator());
     }
@@ -453,18 +438,15 @@ public class MenuItemTest {
         assertNotNull(menuItem.acceleratorProperty());
     }
 
-    @Ignore // keyCharacter cannot be null for keyCharacterCombination
     @Test public void acceleratorCanBeBound() {
-        Modifier[] modifierArray = {};
-        KeyCombination kc = new KeyCharacterCombination(null, modifierArray);
+        KeyCombination kc = new KeyCharacterCombination("A", KeyCombination.ALT_DOWN);
         SimpleObjectProperty<KeyCombination> other = new SimpleObjectProperty<KeyCombination>(menuItem, "accelerator", kc);
         menuItem.acceleratorProperty().bind(other);
         assertEquals(kc, menuItem.getAccelerator());
     }
 
-    @Ignore
     @Test public void getUnspecifiedMnemonicParsing() {
-        assertEquals(false, menuItem.isMnemonicParsing());
+        assertEquals(true, menuItem.isMnemonicParsing());
     }
 
     @Test public void setTrueMnemonicParsing() {

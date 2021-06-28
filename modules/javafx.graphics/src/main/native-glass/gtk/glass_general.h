@@ -42,6 +42,13 @@
 #define GLASS_GTK3
 #endif
 
+#ifndef GDK_TOUCH_MASK
+#define GDK_TOUCH_MASK (1 << 22)
+#endif
+
+#define GDK_FILTERED_EVENTS_MASK static_cast<GdkEventMask>(GDK_ALL_EVENTS_MASK \
+                & ~GDK_TOUCH_MASK)
+
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
 

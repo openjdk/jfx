@@ -1,0 +1,18 @@
+Updating icu4c in OpenJFX:
+
+1) Update the modules/javafx.web/src/main/legal/icu_web.md LICENSE file.
+Update the version at the top. Copy the license from icu4c/LICENSE.
+Update modules/javafx.web/src/main/native/Source/ThirdParty/icu/LICENSE as well.
+
+2) Copy the files from common, i18n, stubdata and tools/toolutil directories.
+Remove Makefile.in files.
+
+3) Update modules/javafx.web/src/main/native/Source/ThirdParty/icu/CMakeLists.txt.
+Update ICU_*_SOURCES using sources.txt file.
+Set ICU_DATA_FILE_NAME variable to the correct icudt*l.dat file.
+
+4) Update the ICU version in build.gradle.
+
+5) Expand tabs and remove trailing white spaces from source files.
+
+6) Verification: FX sdk build and all test run, on all supported platforms.

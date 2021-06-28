@@ -159,7 +159,7 @@ PluralFormat::copyObjects(const PluralFormat& other) {
     if (other.numberFormat == NULL) {
         numberFormat = NumberFormat::createInstance(locale, status);
     } else {
-        numberFormat = (NumberFormat*)other.numberFormat->clone();
+        numberFormat = other.numberFormat->clone();
     }
     if (other.pluralRulesWrapper.pluralRules == NULL) {
         pluralRulesWrapper.pluralRules = PluralRules::forLocale(locale, status);
@@ -277,7 +277,14 @@ PluralFormat::format(const Formattable& numberObject, double number,
     UnicodeString numberString;
     auto *decFmt = dynamic_cast<DecimalFormat *>(numberFormat);
     if(decFmt != nullptr) {
-        decFmt->toNumberFormatter().formatImpl(&data, status); // mutates &data
+        const number::LocalizedNumberFormatter* lnf = decFmt->toNumberFormatter(status);
+        if (U_FAILURE(status)) {
+            return appendTo;
+        }
+        lnf->formatImpl(&data, status); // mutates &data
+        if (U_FAILURE(status)) {
+            return appendTo;
+        }
         numberString = data.getStringRef().toUnicodeString();
     } else {
         if (offset == 0) {
@@ -346,7 +353,7 @@ PluralFormat::setNumberFormat(const NumberFormat* format, UErrorCode& status) {
     if (U_FAILURE(status)) {
         return;
     }
-    NumberFormat* nf = (NumberFormat*)format->clone();
+    NumberFormat* nf = format->clone();
     if (nf != NULL) {
         delete numberFormat;
         numberFormat = nf;
@@ -355,7 +362,7 @@ PluralFormat::setNumberFormat(const NumberFormat* format, UErrorCode& status) {
     }
 }
 
-Format*
+PluralFormat*
 PluralFormat::clone() const
 {
     return new PluralFormat(*this);
@@ -542,9 +549,15 @@ void PluralFormat::parseType(const UnicodeString& source, const NFRule *rbnfLeni
 
         UnicodeString currArg = pattern.tempSubString(partStart->getLimit(), partLimit->getIndex() - partStart->getLimit());
         if (rbnfLenientScanner != NULL) {
-            // If lenient parsing is turned ON, we've got some time consuming parsing ahead of us.
-            int32_t length = -1;
-            currMatchIndex = rbnfLenientScanner->findTextLenient(source, currArg, startingAt, &length);
+            // Check if non-lenient rule finds the text before call lenient parsing
+            int32_t tempIndex = source.indexOf(currArg, startingAt);
+            if (tempIndex >= 0) {
+                currMatchIndex = tempIndex;
+            } else {
+                // If lenient parsing is turned ON, we've got some time consuming parsing ahead of us.
+                int32_t length = -1;
+                currMatchIndex = rbnfLenientScanner->findTextLenient(source, currArg, startingAt, &length);
+            }
         }
         else {
             currMatchIndex = source.indexOf(currArg, startingAt);

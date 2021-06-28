@@ -85,7 +85,8 @@ class KeyInput {
                 } else if (key == KeyEvent.VK_NUM_LOCK) {
                     numLock = !numLock;
                 } else if (key == KeyEvent.VK_C && newState.isControlPressed()) {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    @SuppressWarnings("removal")
+                    var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                         if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
                             System.exit(0);
                         }

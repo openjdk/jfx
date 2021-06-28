@@ -263,7 +263,7 @@ condition_to_string (GIOCondition condition)
 static gboolean
 g_io_win32_get_debug_flag (void)
 {
-  return (getenv ("G_IO_WIN32_DEBUG") != NULL);
+  return (g_getenv ("G_IO_WIN32_DEBUG") != NULL);
 }
 
 static void

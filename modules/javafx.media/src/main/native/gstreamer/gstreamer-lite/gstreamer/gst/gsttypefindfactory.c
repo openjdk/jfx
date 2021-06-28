@@ -159,7 +159,7 @@ gst_type_find_factory_get_list (void)
  *
  * Gets the #GstCaps associated with a typefind factory.
  *
- * Returns: (transfer none): the #GstCaps associated with this factory
+ * Returns: (transfer none) (nullable): the #GstCaps associated with this factory
  */
 GstCaps *
 gst_type_find_factory_get_caps (GstTypeFindFactory * factory)

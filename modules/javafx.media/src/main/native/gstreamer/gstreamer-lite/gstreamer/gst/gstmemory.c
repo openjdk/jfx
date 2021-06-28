@@ -67,6 +67,7 @@
 #include "config.h"
 #endif
 
+#define GST_DISABLE_MINIOBJECT_INLINE_FUNCTIONS
 #include "gst_private.h"
 #include "gstmemory.h"
 
@@ -169,7 +170,7 @@ gst_memory_is_type (GstMemory * mem, const gchar * mem_type)
  *
  * Get the current @size, @offset and @maxsize of @mem.
  *
- * Returns: the current sizes of @mem
+ * Returns: the current size of @mem
  */
 gsize
 gst_memory_get_sizes (GstMemory * mem, gsize * offset, gsize * maxsize)
@@ -463,4 +464,30 @@ void
 _priv_gst_memory_initialize (void)
 {
   _gst_memory_type = gst_memory_get_type ();
+}
+
+/**
+ * gst_memory_ref: (skip)
+ * @memory: The memory to refcount
+ *
+ * Increase the refcount of this memory.
+ *
+ * Returns: (transfer full): @memory (for convenience when doing assignments)
+ */
+GstMemory *
+gst_memory_ref (GstMemory * memory)
+{
+  return (GstMemory *) gst_mini_object_ref (GST_MINI_OBJECT_CAST (memory));
+}
+
+/**
+ * gst_memory_unref: (skip)
+ * @memory: (transfer full): the memory to refcount
+ *
+ * Decrease the refcount of a memory, freeing it if the refcount reaches 0.
+ */
+void
+gst_memory_unref (GstMemory * memory)
+{
+  gst_mini_object_unref (GST_MINI_OBJECT_CAST (memory));
 }

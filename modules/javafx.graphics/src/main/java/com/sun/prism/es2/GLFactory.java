@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,8 +82,10 @@ abstract class GLFactory {
         if (PrismSettings.verbose) {
             System.out.println("GLFactory using " + factoryClassName);
         }
-        platformFactory = factoryClassName == null ? null :
+        @SuppressWarnings("removal")
+        GLFactory tmp = factoryClassName == null ? null :
             AccessController.doPrivileged(new FactoryLoader(factoryClassName));
+        platformFactory = tmp;
     }
 
     private static class FactoryLoader implements PrivilegedAction<GLFactory> {
@@ -96,7 +98,7 @@ abstract class GLFactory {
         public GLFactory run() {
             GLFactory factory = null;
             try {
-                factory = (GLFactory) Class.forName(factoryClassName).newInstance();
+                factory = (GLFactory) Class.forName(factoryClassName).getDeclaredConstructor().newInstance();
             } catch (Throwable t) {
                 System.err.println("GLFactory.static - Platform: "
                         + System.getProperty("os.name")

@@ -39,26 +39,35 @@ G_BEGIN_DECLS
 
 typedef signed char gint8;
 typedef unsigned char guint8;
+
 typedef signed short gint16;
 typedef unsigned short guint16;
+
 #define G_GINT16_MODIFIER "h"
 #define G_GINT16_FORMAT "hi"
 #define G_GUINT16_FORMAT "hu"
+
+
 typedef signed int gint32;
 typedef unsigned int guint32;
+
 #define G_GINT32_MODIFIER ""
 #define G_GINT32_FORMAT "i"
 #define G_GUINT32_FORMAT "u"
+
+
 #define G_HAVE_GINT64 1          /* deprecated, always true */
 
-typedef signed long gint64;
-typedef unsigned long guint64;
+G_GNUC_EXTENSION typedef signed long long gint64;
+G_GNUC_EXTENSION typedef unsigned long long guint64;
 
-#define G_GINT64_CONSTANT(val)  (val##L)
-#define G_GUINT64_CONSTANT(val) (val##UL)
-#define G_GINT64_MODIFIER "l"
-#define G_GINT64_FORMAT "li"
-#define G_GUINT64_FORMAT "lu"
+#define G_GINT64_CONSTANT(val)  (G_GNUC_EXTENSION (val##LL))
+#define G_GUINT64_CONSTANT(val) (G_GNUC_EXTENSION (val##ULL))
+
+#define G_GINT64_MODIFIER "ll"
+#define G_GINT64_FORMAT "lli"
+#define G_GUINT64_FORMAT "llu"
+
 
 #define GLIB_SIZEOF_VOID_P 8
 #define GLIB_SIZEOF_LONG   8
@@ -84,6 +93,7 @@ typedef gint64 goffset;
 #define G_GOFFSET_FORMAT        G_GINT64_FORMAT
 #define G_GOFFSET_CONSTANT(val) G_GINT64_CONSTANT(val)
 
+#define G_POLLFD_FORMAT "%d"
 
 #define GPOINTER_TO_INT(p)  ((gint)  (glong) (p))
 #define GPOINTER_TO_UINT(p) ((guint) (gulong) (p))
@@ -97,24 +107,21 @@ typedef unsigned long guintptr;
 #define G_GINTPTR_MODIFIER      "l"
 #define G_GINTPTR_FORMAT        "li"
 #define G_GUINTPTR_FORMAT       "lu"
-#ifndef G_DISABLE_DEPRECATED
-#define g_ATEXIT(proc)  (atexit (proc))
-#define g_memmove(dest,src,len) G_STMT_START { memmove ((dest), (src), (len)); } G_STMT_END
-#endif
 
 #define GLIB_MAJOR_VERSION 2
-#define GLIB_MINOR_VERSION 62
-#define GLIB_MICRO_VERSION 2
+#define GLIB_MINOR_VERSION 66
+#define GLIB_MICRO_VERSION 7
 
 #define G_OS_UNIX
 
-
-#define G_VA_COPY   va_copy
+#define G_VA_COPY va_copy
 #define G_VA_COPY_AS_ARRAY 1
+
 
 #ifndef __cplusplus
 # define G_HAVE_ISO_VARARGS 1
 #endif
+
 #ifdef __cplusplus
 # define G_HAVE_ISO_VARARGS 1
 #endif
@@ -127,8 +134,12 @@ typedef unsigned long guintptr;
 #  undef G_HAVE_ISO_VARARGS
 #endif
 
-#define G_HAVE_GNUC_VARARGS 1
 #define G_HAVE_GROWING_STACK 0
+#define G_HAVE_GNUC_VISIBILITY 1
+
+#ifndef _MSC_VER
+# define G_HAVE_GNUC_VARARGS 1
+#endif
 
 #if defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
 #define G_GNUC_INTERNAL __attribute__((visibility("hidden")))
@@ -149,14 +160,17 @@ typedef unsigned long guintptr;
 #define GUINT16_TO_LE(val)  ((guint16) (val))
 #define GINT16_TO_BE(val)   ((gint16) GUINT16_SWAP_LE_BE (val))
 #define GUINT16_TO_BE(val)  (GUINT16_SWAP_LE_BE (val))
+
 #define GINT32_TO_LE(val)   ((gint32) (val))
 #define GUINT32_TO_LE(val)  ((guint32) (val))
 #define GINT32_TO_BE(val)   ((gint32) GUINT32_SWAP_LE_BE (val))
 #define GUINT32_TO_BE(val)  (GUINT32_SWAP_LE_BE (val))
+
 #define GINT64_TO_LE(val)   ((gint64) (val))
 #define GUINT64_TO_LE(val)  ((guint64) (val))
 #define GINT64_TO_BE(val)   ((gint64) GUINT64_SWAP_LE_BE (val))
 #define GUINT64_TO_BE(val)  (GUINT64_SWAP_LE_BE (val))
+
 #define GLONG_TO_LE(val)    ((glong) GINT64_TO_LE (val))
 #define GULONG_TO_LE(val)   ((gulong) GUINT64_TO_LE (val))
 #define GLONG_TO_BE(val)    ((glong) GINT64_TO_BE (val))
@@ -181,6 +195,7 @@ typedef unsigned long guintptr;
 #define G_MODULE_SUFFIX "dylib"
 
 typedef int GPid;
+#define G_PID_FORMAT "i"
 
 #define GLIB_SYSDEF_AF_UNIX 1
 #define GLIB_SYSDEF_AF_INET 2

@@ -589,6 +589,11 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
+            public void recalculateRelativeSizeProperties(Node node, Font fontForRelativeSizes) {
+                node.recalculateRelativeSizeProperties(fontForRelativeSizes);
+            }
+
+            @Override
             public boolean isTreeVisible(Node node) {
                 return node.isTreeVisible();
             }
@@ -9312,6 +9317,12 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    final void recalculateRelativeSizeProperties(Font fontForRelativeSizes) {
+        if (styleHelper != null) {
+            styleHelper.recalculateRelativeSizeProperties(this, fontForRelativeSizes);
+        }
+    }
+
     final void reapplyCSS() {
 
         if (getScene() == null) return;
@@ -9955,7 +9966,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @SuppressWarnings("deprecation")
+                @SuppressWarnings("removal")
                 @Override public AccessControlContext getAccessControlContext() {
                     Scene scene = getScene();
                     if (scene == null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Accordion;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -317,8 +316,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Get the preferred width of the text
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
-        String string = labeled.getText();
-        boolean emptyText = string == null || string.isEmpty();
+        String cleanText = getCleanText();
+        boolean emptyText = cleanText == null || cleanText.isEmpty();
         double widthPadding = leftInset + rightInset;
 
         if (!isIgnoreText()) {
@@ -327,12 +326,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
         double textWidth = 0.0;
         if (!emptyText) {
-            if (labeled.isMnemonicParsing()) {
-                if (string.contains("_") && (string.indexOf("_") != string.length()-1)) {
-                    string = string.replaceFirst("_", "");
-                }
-            }
-            textWidth = Utils.computeTextWidth(font, string, 0);
+            textWidth = Utils.computeTextWidth(font, cleanText, 0);
         }
 
         // Fix for RT-39889
@@ -365,10 +359,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             width -= leftLabelPadding() + rightLabelPadding();
         }
 
-        String str = labeled.getText();
-        if (str != null && str.endsWith("\n")) {
+        String cleanText = getCleanText();
+        if (cleanText != null && cleanText.endsWith("\n")) {
             // Strip ending newline so we don't count another row.
-            str = str.substring(0, str.length() - 1);
+            cleanText = cleanText.substring(0, cleanText.length() - 1);
         }
 
         double textWidth = width;
@@ -378,7 +372,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         }
 
         // TODO figure out how to cache this effectively.
-        final double textHeight = Utils.computeTextHeight(font, str,
+        final double textHeight = Utils.computeTextHeight(font, cleanText,
                 labeled.isWrapText() ? textWidth : 0,
                 labeled.getLineSpacing(), text.getBoundsType());
 
@@ -739,16 +733,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 String accText = labeled.getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 
-                /* Use the text in the binding if available to handle mnemonics */
-                if (bindings != null) {
-                    String text = bindings.getText();
-                    if (text != null && !text.isEmpty()) return text;
+                /* Use the clean text, in which mnemonic symbols have been removed. */
+                String cleanText = getCleanText();
+                if (cleanText != null && !cleanText.isEmpty()) {
+                    return cleanText;
                 }
-                /* Avoid the content in text.getText() as it can contain ellipses
-                 * for clipping
-                 */
-                String text = labeled.getText();
-                if (text != null && !text.isEmpty()) return text;
 
                 /* Use the graphic as last resource. Note that this implementation
                  * does not attempt to combine the label and graphics if both
@@ -790,20 +779,20 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Font font = text.getFont();
         OverrunStyle truncationStyle = labeled.getTextOverrun();
         String ellipsisString = labeled.getEllipsisString();
-        final String string = labeled.getText();
-        final boolean emptyText = string == null || string.isEmpty();
+        final String cleanText = getCleanText();
+        final boolean emptyText = cleanText == null || cleanText.isEmpty();
 
         if (!emptyText) {
             // We only want to recompute the full text width if the font or text changed
             if (truncationStyle == CLIP) {
                 if (textWidth == Double.NEGATIVE_INFINITY) {
                     // Show at minimum the first character
-                    textWidth = Utils.computeTextWidth(font, string.substring(0, 1), 0);
+                    textWidth = Utils.computeTextWidth(font, cleanText.substring(0, 1), 0);
                 }
                 minTextWidth = textWidth;
             } else {
                 if (textWidth == Double.NEGATIVE_INFINITY) {
-                    textWidth = Utils.computeTextWidth(font, string, 0);
+                    textWidth = Utils.computeTextWidth(font, cleanText, 0);
                 }
                 // We only want to recompute the ellipsis width if the font has changed
                 if (ellipsisWidth == Double.NEGATIVE_INFINITY) {
@@ -838,18 +827,18 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
 
-        String str = labeled.getText();
-        if (str != null && str.length() > 0) {
-            int newlineIndex = str.indexOf('\n');
+        String cleanText = getCleanText();
+        if (cleanText != null && cleanText.length() > 0) {
+            int newlineIndex = cleanText.indexOf('\n');
             if (newlineIndex >= 0) {
-                str = str.substring(0, newlineIndex);
+                cleanText = cleanText.substring(0, newlineIndex);
             }
         }
 
         // TODO figure out how to cache this effectively.
         // Base minimum height on one line (ignoring wrapping here).
         double s = labeled.getLineSpacing();
-        final double textHeight = Utils.computeTextHeight(font, str, 0, s, text.getBoundsType());
+        final double textHeight = Utils.computeTextHeight(font, cleanText, 0, s, text.getBoundsType());
 
         double h = textHeight;
 
@@ -904,7 +893,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     ** swap them over, and tidy up.
     */
     void mnemonicTargetChanged() {
-        if (containsMnemonic == true) {
+        if (containsMnemonic) {
             /*
             ** was there previously a labelFor
             */
@@ -955,34 +944,29 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     private void updateDisplayedText(double w, double h) {
         if (invalidText) {
             final Labeled labeled = getSkinnable();
-            String s = labeled.getText();
-
+            String cleanText = getCleanText();
             int mnemonicIndex = -1;
 
-            /*
-            ** if there's a valid string then parse it
-            */
-            if (s != null && s.length() > 0) {
-                bindings = new TextBinding(s);
-
-                if (!com.sun.javafx.PlatformUtil.isMac() && getSkinnable().isMnemonicParsing() == true) {
-                    /*
-                    ** the Labeled has a MnemonicParsing property,
-                    ** if set true, then auto-parsing will check for
-                    ** a mnemonic
-                    */
-                    if (labeled instanceof Label) {
-                        // buttons etc
-                        labeledNode = ((Label)labeled).getLabelFor();
-                    } else {
-                        labeledNode = labeled;
-                    }
-
-                    if (labeledNode == null) {
-                        labeledNode = labeled;
-                    }
-                    mnemonicIndex = bindings.getMnemonicIndex() ;
+            if (cleanText != null && cleanText.length() > 0
+                    && bindings != null
+                    && !com.sun.javafx.PlatformUtil.isMac()
+                    && getSkinnable().isMnemonicParsing()) {
+                /*
+                ** the Labeled has a MnemonicParsing property,
+                ** if set true, then auto-parsing will check for
+                ** a mnemonic
+                */
+                if (labeled instanceof Label) {
+                    // buttons etc
+                    labeledNode = ((Label)labeled).getLabelFor();
+                } else {
+                    labeledNode = labeled;
                 }
+
+                if (labeledNode == null) {
+                    labeledNode = labeled;
+                }
+                mnemonicIndex = bindings.getMnemonicIndex() ;
             }
 
             /*
@@ -1011,16 +995,14 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             /*
             ** check we have a labeled
             */
-            if (s != null && s.length() > 0) {
-                if (mnemonicIndex >= 0 && containsMnemonic == false) {
-                    containsMnemonic = true;
-                    mnemonicCode = bindings.getMnemonicKeyCombination();
-                    addMnemonic();
-                }
+            if (cleanText != null && cleanText.length() > 0
+                    && mnemonicIndex >= 0 && !containsMnemonic) {
+                containsMnemonic = true;
+                mnemonicCode = bindings.getMnemonicKeyCombination();
+                addMnemonic();
             }
 
-            if (containsMnemonic == true) {
-                s = bindings.getText();
+            if (containsMnemonic) {
                 if (mnemonic_underscore == null) {
                     mnemonic_underscore = new Line();
                     mnemonic_underscore.setStartX(0.0f);
@@ -1032,31 +1014,18 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 if (!getChildren().contains(mnemonic_underscore)) {
                     getChildren().add(mnemonic_underscore);
                 }
-            } else {
-                /*
-                ** we don't need a mnemonic....
-                */
-                if (getSkinnable().isMnemonicParsing() == true && com.sun.javafx.PlatformUtil.isMac() && bindings != null) {
-                    s = bindings.getText();
-                }
-                else {
-                    s = labeled.getText();
-                }
-                if (mnemonic_underscore != null) {
-                    if (getChildren().contains(mnemonic_underscore)) {
-                        Platform.runLater(() -> {
-                              getChildren().remove(mnemonic_underscore);
-                              mnemonic_underscore = null;
-                        });
-                    }
-                }
+            } else if (mnemonic_underscore != null && getChildren().contains(mnemonic_underscore)) {
+                Platform.runLater(() -> {
+                      getChildren().remove(mnemonic_underscore);
+                      mnemonic_underscore = null;
+                });
             }
 
-            int len = s != null ? s.length() : 0;
+            int len = cleanText != null ? cleanText.length() : 0;
             boolean multiline = false;
 
-            if (s != null && len > 0) {
-                int i = s.indexOf('\n');
+            if (cleanText != null && len > 0) {
+                int i = cleanText.indexOf('\n');
                 if (i > -1 && i < len - 1) {
                     // Multiline text with embedded newlines - not
                     // taking into account a potential trailing newline.
@@ -1118,11 +1087,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             String ellipsisString = labeled.getEllipsisString();
 
             if (labeled.isWrapText()) {
-                result = Utils.computeClippedWrappedText(font, s, wrapWidth, wrapHeight, labeled.getLineSpacing(), truncationStyle, ellipsisString, text.getBoundsType());
+                result = Utils.computeClippedWrappedText(font, cleanText, wrapWidth, wrapHeight, labeled.getLineSpacing(), truncationStyle, ellipsisString, text.getBoundsType());
             } else if (multiline) {
                 StringBuilder sb = new StringBuilder();
 
-                String[] splits = s.split("\n");
+                String[] splits = cleanText.split("\n");
                 for (int i = 0; i < splits.length; i++) {
                     sb.append(Utils.computeClippedText(font, splits[i], wrapWidth, truncationStyle, ellipsisString));
                     if (i < splits.length - 1) {
@@ -1150,7 +1119,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
                 result = sb.toString();
             } else {
-                result = Utils.computeClippedText(font, s, wrapWidth, truncationStyle, ellipsisString);
+                result = Utils.computeClippedText(font, cleanText, wrapWidth, truncationStyle, ellipsisString);
             }
 
             if (result != null && result.endsWith("\n")) {
@@ -1162,6 +1131,26 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             updateWrappingWidth();
             invalidText = false;
         }
+    }
+
+    /**
+     * Gets the clean text, which is the source text after mnemonic symbols have been removed.
+     */
+    private String getCleanText() {
+        Labeled labeled = getSkinnable();
+        String sourceText = labeled.getText();
+
+        if (sourceText != null && labeled.isMnemonicParsing()) {
+            if (bindings == null) {
+                bindings = new TextBinding(sourceText);
+            } else {
+                bindings.update(sourceText);
+            }
+
+            return bindings.getText();
+        }
+
+        return sourceText;
     }
 
     private void addMnemonic() {
@@ -1215,7 +1204,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
      */
     boolean isIgnoreText() {
         final Labeled labeled = getSkinnable();
-        final String txt = labeled.getText();
+        final String txt = getCleanText();
         return (txt == null ||
                 txt.equals("") ||
                 labeled.getContentDisplay() == ContentDisplay.GRAPHIC_ONLY);

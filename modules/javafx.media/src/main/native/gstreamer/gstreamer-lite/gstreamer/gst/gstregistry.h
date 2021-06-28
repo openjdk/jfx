@@ -124,9 +124,7 @@ gboolean                gst_registry_check_feature_version (GstRegistry *registr
                                                             guint        min_minor,
                                                             guint        min_micro);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstRegistry, gst_object_unref)
-#endif
 
 G_END_DECLS
 

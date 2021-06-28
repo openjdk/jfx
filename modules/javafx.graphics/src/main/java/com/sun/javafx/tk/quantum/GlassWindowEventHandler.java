@@ -155,6 +155,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         return null;
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleLevelEvent(int level) {
         QuantumToolkit.runWithoutRenderLock(() -> {
@@ -166,6 +167,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleWindowEvent(final Window window, final long time, final int type) {
         this.window = window;
@@ -177,6 +179,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         });
     }
 
+    @SuppressWarnings("removal")
     @Override
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();

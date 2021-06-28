@@ -71,8 +71,8 @@ public class NonFocusableJFXPanelTest {
         robot.mouseMove(pt.x + WIDTH/2, pt.y + HEIGHT/2);
         robot.waitForIdle();
         for (int i = 0; i < 5; i++) {
-            robot.mousePress(InputEvent.BUTTON1_MASK);
-            robot.mouseRelease(InputEvent.BUTTON1_MASK);
+            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
         }
         Assert.assertFalse("Extra MouseEvent generated", clickCount > 5);
     }

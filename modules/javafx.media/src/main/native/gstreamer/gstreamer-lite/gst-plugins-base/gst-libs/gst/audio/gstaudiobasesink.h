@@ -270,9 +270,7 @@ gst_audio_base_sink_set_custom_slaving_callback        (GstAudioBaseSink * sink,
 GST_AUDIO_API
 void gst_audio_base_sink_report_device_failure         (GstAudioBaseSink * sink);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioBaseSink, gst_object_unref)
-#endif
 
 G_END_DECLS
 

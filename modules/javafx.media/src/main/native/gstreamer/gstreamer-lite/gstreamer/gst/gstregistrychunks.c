@@ -48,7 +48,18 @@
 #define GST_CAT_DEFAULT GST_CAT_REGISTRY
 
 /* count string length, but return -1 if we hit the eof */
-static gint
+#ifdef HAVE_STRNLEN
+static inline gint
+_strnlen (const gchar * str, gint maxlen)
+{
+  gint len = strnlen (str, maxlen);
+
+  if (G_UNLIKELY (len == maxlen))
+    return -1;
+  return len;
+}
+#else
+static inline gint
 _strnlen (const gchar * str, gint maxlen)
 {
   gint len = 0;
@@ -60,6 +71,7 @@ _strnlen (const gchar * str, gint maxlen)
   }
   return -1;
 }
+#endif
 
 /* Macros */
 #define unpack_element(inptr, outptr, element, endptr, error_label) G_STMT_START{ \
@@ -452,8 +464,7 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
   }
 
   /* pack plugin features */
-  plugin_features =
-      gst_registry_get_feature_list_by_plugin (registry, plugin->desc.name);
+  plugin_features = _priv_plugin_get_features (registry, plugin);
   for (walk = plugin_features; walk; walk = g_list_next (walk), pe->nfeatures++) {
     GstPluginFeature *feature = GST_PLUGIN_FEATURE (walk->data);
 
@@ -487,8 +498,8 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
 
   *list = g_list_prepend (*list, chk);
 
-  GST_DEBUG ("Found %d features in plugin \"%s\"", pe->nfeatures,
-      plugin->desc.name);
+  GST_DEBUG ("Found %d features in plugin %p (%s)", pe->nfeatures,
+      plugin, plugin->desc.name);
   return TRUE;
 
   /* Errors */
@@ -580,11 +591,11 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
         plugin_name);
     return FALSE;
   }
-  if (G_UNLIKELY ((feature = g_object_new (type, NULL)) == NULL)) {
+  if (G_UNLIKELY ((feature =
+              g_object_new (type, "name", feature_name, NULL)) == NULL)) {
     GST_ERROR ("Can't create feature from type");
     return FALSE;
   }
-  gst_plugin_feature_set_name (feature, feature_name);
 
   if (G_UNLIKELY (!GST_IS_PLUGIN_FEATURE (feature))) {
     GST_ERROR ("typename : '%s' is not a plugin feature", type_name);
@@ -741,10 +752,7 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
 fail:
   GST_INFO ("Reading plugin feature failed");
   if (feature) {
-    if (GST_IS_OBJECT (feature))
-      gst_object_unref (feature);
-    else
-      g_object_unref (feature);
+    gst_object_unref (feature);
   }
   return FALSE;
 }

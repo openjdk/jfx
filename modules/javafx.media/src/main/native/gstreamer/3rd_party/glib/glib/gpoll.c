@@ -450,7 +450,7 @@ g_poll (GPollFD *fds,
     ready = MsgWaitForMultipleObjectsEx (nthreads, thread_handles, timeout,
                                          QS_ALLINPUT, MWMO_ALERTABLE);
   else
-    ready = WaitForMultipleObjects (nthreads, thread_handles, timeout > 0, timeout);
+    ready = WaitForMultipleObjects (nthreads, thread_handles, FALSE, timeout);
 
   /* Signal the stop in case any of the threads did not stop yet */
   if (!SetEvent ((HANDLE)stop_event.fd))

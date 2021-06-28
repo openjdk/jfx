@@ -25,11 +25,8 @@
 
 package com.sun.javafx.property;
 
-import static java.security.AccessController.doPrivileged;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.security.PrivilegedAction;
 
 import javafx.beans.property.ReadOnlyProperty;
 

@@ -102,6 +102,7 @@ public class PulseLogger {
      * @return true if the user requested pulse logging by setting the system
      *         property javafx.pulseLogger to true, false otherwise.
      */
+    @SuppressWarnings("removal")
     public static boolean isPulseLoggingRequested() {
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.pulseLogger"));
     }

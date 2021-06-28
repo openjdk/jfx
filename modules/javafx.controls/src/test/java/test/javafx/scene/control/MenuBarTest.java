@@ -579,7 +579,7 @@ public class MenuBarTest {
         double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
 
         boolean click = true;
-        final Boolean firstClick = new Boolean(click);
+        final Boolean firstClick = click;
 
         menu.setOnShowing(t -> {
             // we should not get here when the menu is hidden

@@ -41,6 +41,11 @@ typedef struct _GstTracerClass GstTracerClass;
 #define GST_TRACER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_TRACER,GstTracerClass))
 #define GST_TRACER_CAST(obj)       ((GstTracer *)(obj))
 
+/**
+ * GstTracer:
+ *
+ * The opaque GstTracer instance structure
+ */
 struct _GstTracer {
   GstObject        parent;
   /*< private >*/
@@ -58,8 +63,6 @@ struct _GstTracerClass {
 GST_API
 GType gst_tracer_get_type          (void);
 
-#ifdef GST_USE_UNSTABLE_API
-
 GST_API
 void gst_tracing_register_hook (GstTracer *tracer, const gchar *detail,
   GCallback func);
@@ -69,11 +72,10 @@ void gst_tracing_register_hook (GstTracer *tracer, const gchar *detail,
 GST_API
 gboolean gst_tracer_register (GstPlugin * plugin, const gchar * name, GType type);
 
-#endif
+GST_API
+GList* gst_tracing_get_active_tracers (void);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTracer, gst_object_unref)
-#endif
 
 G_END_DECLS
 

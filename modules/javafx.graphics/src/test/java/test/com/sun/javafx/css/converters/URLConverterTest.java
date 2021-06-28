@@ -119,4 +119,15 @@ public class URLConverterTest {
         assertEquals(expResult, result);
     }
 
+    @Test
+    public void testConvertWithDataURI() {
+        String dataUri = "data:text/plain;charset=utf-8;base64,SGVsbG8sIFdvcmxkIQ==";
+
+        ParsedValue[] values = new ParsedValue[] { new ParsedValueImpl<String,String>(dataUri, null) };
+        ParsedValueImpl<ParsedValue[], String> value = new ParsedValueImpl<>(values, URLConverter.getInstance());
+
+        String result = value.convert(null);
+        assertEquals(dataUri, result);
+    }
+
 }

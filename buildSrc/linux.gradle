@@ -278,8 +278,8 @@ LINUX.iio.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-iio"),
     file("${project("graphics").projectDir}/src/main/native-iio/libjpeg")]
 LINUX.iio.compiler = compiler
-LINUX.iio.ccFlags = [cFlags].flatten()
-LINUX.iio.linker = linker
+LINUX.iio.ccFlags = [cFlags, "-fvisibility=hidden"].flatten()
+LINUX.iio.linker = IS_STATIC_BUILD ? "ld" : linker
 LINUX.iio.linkFlags = [linkFlags].flatten()
 LINUX.iio.lib = "javafx_iio"
 

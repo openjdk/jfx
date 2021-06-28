@@ -43,7 +43,7 @@ import javafx.scene.transform.Translate;
 class CameraScene3D extends Pane {
 
     public DoubleProperty xPan = new SimpleDoubleProperty();
-    public DoubleProperty yPan = new SimpleDoubleProperty(-10);
+    public DoubleProperty yPan = new SimpleDoubleProperty();
     public DoubleProperty zoom = new SimpleDoubleProperty();
     public DoubleProperty zAngle = new SimpleDoubleProperty();
     public DoubleProperty isometricAngle = new SimpleDoubleProperty();
@@ -51,6 +51,7 @@ class CameraScene3D extends Pane {
     public DoubleProperty panSensitivity = new SimpleDoubleProperty(1);
     public DoubleProperty zoomSensitivity = new SimpleDoubleProperty(1);
     public DoubleProperty zRotationSensitivity = new SimpleDoubleProperty(1);
+    public DoubleProperty isoRotationSensitivity = new SimpleDoubleProperty(1);
     public BooleanProperty isZoomTotal = new SimpleBooleanProperty();
 
     protected PerspectiveCamera camera = new PerspectiveCamera(true);
@@ -144,6 +145,8 @@ class CameraScene3D extends Pane {
                 deltaX = positiveY ? -deltaX : deltaX;
                 deltaY = positiveX ? deltaY : -deltaY;
                 rotate((deltaX + deltaY)/2);
+            } else if (e.getButton() == MouseButton.MIDDLE) {
+                swivle(deltaY);
             }
         });
     }
@@ -169,5 +172,9 @@ class CameraScene3D extends Pane {
 
     private void rotate(double amount) {
         zAngle.set(zAngle.get() - amount * zRotationSensitivity.get());
+    }
+
+    private void swivle(double amount) {
+        isometricAngle.set(isometricAngle.get() - amount * isoRotationSensitivity.get());
     }
 }

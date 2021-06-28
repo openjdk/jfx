@@ -187,6 +187,7 @@ public class Clipboard {
      * the system will invoke the provided callback to stream the image data over to the client.
      */
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     /**

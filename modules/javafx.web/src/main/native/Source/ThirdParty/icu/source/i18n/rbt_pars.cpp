@@ -1111,7 +1111,7 @@ void TransliteratorParser::parseRules(const UnicodeString& rule,
             int32_t p = UHASH_FIRST;
             const UHashElement* he = variableNames.nextElement(p);
             while (he != NULL) {
-                UnicodeString* tempus = (UnicodeString*)(((UnicodeString*)(he->value.pointer))->clone());
+                UnicodeString* tempus = ((UnicodeString*)(he->value.pointer))->clone();
                 if (tempus == NULL) {
                     status = U_MEMORY_ALLOCATION_ERROR;
                     return;
@@ -1557,7 +1557,7 @@ UChar TransliteratorParser::getSegmentStandin(int32_t seg, UErrorCode& status) {
             return 0;
         }
         c = variableNext++;
-        // Set a placeholder in the master variables vector that will be
+        // Set a placeholder in the primary variables vector that will be
         // filled in later by setSegmentObject().  We know that we will get
         // called first because setSegmentObject() will call us.
         variablesVector.addElement((void*) NULL, status);

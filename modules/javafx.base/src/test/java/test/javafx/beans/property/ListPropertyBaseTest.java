@@ -628,6 +628,43 @@ public class ListPropertyBaseTest {
     }
 
     @Test
+    public void testRebind_Identity() {
+        final ListProperty<Object> v1 = new SimpleListProperty<>(FXCollections.observableArrayList());
+        final ListProperty<Object> v2 = new SimpleListProperty<>(FXCollections.observableArrayList());
+        attachListChangeListener();
+
+        // bind
+        property.bind(v1);
+        property.check(1);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 0);
+        listChangeListener.clear();
+
+        // rebind to same
+        property.bind(v1);
+        property.check(0);
+        listChangeListener.check0();
+
+        // rebind to other, without explicitly unbinding
+        property.bind(v2);
+        property.check(1);
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 0);
+        listChangeListener.clear();
+
+        v2.add("One");
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 0, 1);
+        listChangeListener.clear();
+
+        v2.add("Two");
+        listChangeListener.check1AddRemove(property, EMPTY_LIST, 1, 2);
+        listChangeListener.clear();
+
+        property.check(4);
+        assertTrue(property.isBound());
+        assertEquals(2, property.toArray().length);
+        assertEquals("ListProperty [bound, value: [One, Two]]", property.toString());
+    }
+
+    @Test
     public void testUnbind() {
         attachInvalidationListener();
         final ListProperty<Object> v = new SimpleListProperty<Object>(VALUE_1a);

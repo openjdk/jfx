@@ -71,6 +71,7 @@ public abstract class LinearConvolveRenderState implements RenderState {
          * The default value is set to 64 if platform is an embedded system and 128 otherwise.
          */
         final int defSize = PlatformUtil.isEmbedded() ? 64 : MAX_COMPILED_KERNEL_SIZE;
+        @SuppressWarnings("removal")
         int size = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>) () -> Integer.getInteger(
                         "decora.maxLinearConvolveKernelSize", defSize));

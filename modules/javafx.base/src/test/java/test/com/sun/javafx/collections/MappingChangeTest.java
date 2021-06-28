@@ -49,7 +49,7 @@ public class MappingChangeTest {
 
     @Test
     public void testAddRemove() {
-        Change<Integer> change = new NonIterableChange.SimpleRemovedChange<Integer>(0, 1, new Integer(5), originalList);
+        Change<Integer> change = new NonIterableChange.SimpleRemovedChange<Integer>(0, 1, Integer.valueOf(5), originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
                 e -> e.toString(), list);
 

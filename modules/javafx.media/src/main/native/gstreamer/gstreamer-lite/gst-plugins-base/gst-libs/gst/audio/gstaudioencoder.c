@@ -245,6 +245,10 @@ struct _GstAudioEncoderPrivate
 static GstElementClass *parent_class = NULL;
 static gint private_offset = 0;
 
+/* cached quark to avoid contention on the global quark table lock */
+#define META_TAG_AUDIO meta_tag_audio_quark
+static GQuark meta_tag_audio_quark;
+
 static void gst_audio_encoder_class_init (GstAudioEncoderClass * klass);
 static void gst_audio_encoder_init (GstAudioEncoder * parse,
     GstAudioEncoderClass * klass);
@@ -395,6 +399,8 @@ gst_audio_encoder_class_init (GstAudioEncoderClass * klass)
   klass->decide_allocation = gst_audio_encoder_decide_allocation_default;
   klass->negotiate = gst_audio_encoder_negotiate_default;
   klass->transform_meta = gst_audio_encoder_transform_meta_default;
+
+  meta_tag_audio_quark = g_quark_from_static_string (GST_META_TAG_AUDIO_STR);
 }
 
 static void
@@ -668,15 +674,24 @@ gst_audio_encoder_transform_meta_default (GstAudioEncoder *
 {
   const GstMetaInfo *info = meta->info;
   const gchar *const *tags;
+  const gchar *const supported_tags[] = {
+    GST_META_TAG_AUDIO_STR,
+    GST_META_TAG_AUDIO_CHANNELS_STR,
+    NULL,
+  };
 
   tags = gst_meta_api_type_get_tags (info->api);
 
-  if (!tags || (g_strv_length ((gchar **) tags) == 1
-          && gst_meta_api_type_has_tag (info->api,
-              g_quark_from_string (GST_META_TAG_AUDIO_STR))))
+  if (!tags)
     return TRUE;
 
-  return FALSE;
+  while (*tags) {
+    if (!g_strv_contains (supported_tags, *tags))
+      return FALSE;
+    tags++;
+  }
+
+  return TRUE;
 }
 
 typedef struct
@@ -721,7 +736,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
 /**
  * gst_audio_encoder_finish_frame:
  * @enc: a #GstAudioEncoder
- * @buffer: encoded data
+ * @buffer: (transfer full) (allow-none): encoded data
  * @samples: number of samples (per channel) represented by encoded data
  *
  * Collects encoded data and pushes encoded data downstream.
@@ -1228,7 +1243,7 @@ gst_audio_encoder_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
       GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (buffer)),
       GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)));
 
-  /* input shoud be whole number of sample frames */
+  /* input should be whole number of sample frames */
   if (size % ctx->info.bpf)
     goto wrong_buffer;
 
@@ -1254,7 +1269,7 @@ gst_audio_encoder_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 
   discont = GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DISCONT);
   if (G_UNLIKELY (discont)) {
-    GST_LOG_OBJECT (buffer, "marked discont");
+    GST_LOG_OBJECT (enc, "marked discont");
     enc->priv->discont = discont;
   }
 
@@ -1555,6 +1570,7 @@ gst_audio_encoder_sink_event_default (GstAudioEncoder * enc, GstEvent * event)
         GST_DEBUG_OBJECT (enc, "received SEGMENT %" GST_SEGMENT_FORMAT, &seg);
         GST_DEBUG_OBJECT (enc, "unsupported format; ignoring");
         res = TRUE;
+        gst_event_unref (event);
         break;
       }
 

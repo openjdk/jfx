@@ -46,7 +46,8 @@ final public class FXDnD {
     private FXDnDInteropN fxdndiop;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 fxAppThreadIsDispatchThread =
                         "true".equals(System.getProperty("javafx.embed.singleThread"));

@@ -15,6 +15,7 @@ DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 
 
 C_SOURCES = \
+        garcbox.c \
 	garray.c \
 	gasyncqueue.c \
 	gatomic.c \
@@ -90,7 +91,7 @@ C_SOURCES = \
 	gunicollate.c \
 	gunidecomp.c \
 	guniprop.c \
-	gurifuncs.c \
+	guri.c \
 	gutf8.c \
 	gutils.c \
 	gvariant-core.c \

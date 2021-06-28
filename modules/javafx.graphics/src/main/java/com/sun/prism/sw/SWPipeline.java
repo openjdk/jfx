@@ -38,7 +38,8 @@ import java.util.HashMap;
 public final class SWPipeline extends GraphicsPipeline {
 
     static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             NativeLibLoader.loadLibrary("prism_sw");
             return null;
         });
@@ -69,7 +70,7 @@ public final class SWPipeline extends GraphicsPipeline {
     }
 
     @Override public ResourceFactory getResourceFactory(Screen screen) {
-        Integer index = new Integer(screen.getAdapterOrdinal());
+        Integer index = Integer.valueOf(screen.getAdapterOrdinal());
         SWResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new SWResourceFactory(screen);

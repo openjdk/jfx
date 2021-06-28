@@ -28,7 +28,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/test.com.sun.javafx.binding=javafx.controls:javafx.base/test.util.memory=javafx.controls"/>
+			<attribute name="add-exports" value="javafx.base/test.com.sun.javafx.binding=javafx.controls:javafx.base/test.util.memory=javafx.controls:javafx.base/test.javafx.collections=javafx.controls"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">

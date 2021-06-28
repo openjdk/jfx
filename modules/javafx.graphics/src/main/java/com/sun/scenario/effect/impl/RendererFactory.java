@@ -179,6 +179,7 @@ class RendererFactory {
         return r;
     }
 
+    @SuppressWarnings("removal")
     static Renderer createRenderer(final FilterContext fctx) {
         return AccessController.doPrivileged((PrivilegedAction<Renderer>) () -> {
             Renderer r = null;

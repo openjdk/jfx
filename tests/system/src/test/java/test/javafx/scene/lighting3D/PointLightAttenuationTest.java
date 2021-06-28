@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,13 @@
 
 package test.javafx.scene.lighting3D;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
-import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,26 +39,19 @@ import org.junit.Test;
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.scene.Group;
 import javafx.scene.PointLight;
-import javafx.scene.Scene;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Box;
-import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 import test.util.Util;
 
-public class PointLightAttenuationTest {
+public class PointLightAttenuationTest extends LightingTest {
 
-    // 1d/255 is the smallest color resolution, but we use 10d/255 to avoid precision problems
-    private static final double DELTA = 10d/255;
-    private static final int LIGTH_DIST = 60;
-    private static final int SAMPLE_DIST = 60;
+    // X coordinates for the point used in Lambert tests
+    private static final int[] LAMBERT_SAMPLE_DISTS = new int[] {0, 30, 60};
 
-    private static CountDownLatch startupLatch;
-    private static Stage stage;
-    private static PointLight light = new PointLight(Color.BLUE);
-    private static Box box = new Box(150, 150, 1);
+    // X coordinate for the point used in attenuation tests
+    private static final int ATTN_SAMPLE_DIST = LIGHT_DIST;
+
+    private static final PointLight LIGHT = new PointLight(Color.BLUE);
 
     public static void main(String[] args) throws Exception {
         initFX();
@@ -68,78 +60,76 @@ public class PointLightAttenuationTest {
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
+        LightingTest.light = LIGHT;
+        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
         assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Before
     public void setupEach() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        LIGHT.setLinearAttenuation(0);
+        LIGHT.setQuadraticAttenuation(0);
+        LIGHT.setMaxRange(Double.POSITIVE_INFINITY);
     }
 
-    public static class TestApp extends Application {
-
-        @Override
-        public void start(Stage mainStage) {
-            stage = mainStage;
-            light.setTranslateZ(-LIGTH_DIST);
-            var root = new Group(light, box);
-            var scene = new Scene(root);
-            stage.setScene(scene);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> Platform.runLater(startupLatch::countDown));
-            stage.show();
-        }
+    // The Lambert term is dot(N,L) = cos(a)
+    @Test
+    public void testLambert() {
+        Util.runAndWait(() -> {
+            var snapshot = snapshot();
+            for (int x : LAMBERT_SAMPLE_DISTS) {
+                double sampledBlue = snapshot.getPixelReader().getColor(x, 0).getBlue();
+                assertEquals(FAIL_MESSAGE + " for " + x, calculateLambertTerm(x), sampledBlue, DELTA);
+            }
+        });
     }
 
     @Test
     public void testAttenuation() {
         Util.runAndWait(() -> {
-            // Since there appears to be a bug in snapshot with subscene, we are taking a snapshot of the scene and not
-            // the box, so the center of the box will be at the top left, (0, 0), of the image, and the light is
-            // straight in front. Without attenuation, at (0, 0) it will give its full color. At (SAMPLE_DIST, 0) and
-            // LIGTH_DIST == SAMPLE_DIST, it will give cos(45) = 1/sqrt(2) of its color.
-            var snapshot = box.getScene().snapshot(null);
-            double nonAttenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
-            double nonAttenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
-            assertEquals("Wrong color value", 1, nonAttenBlueCenter, DELTA);
-            assertEquals("Wrong color value", 1/Math.sqrt(2), nonAttenBlueDiag, DELTA);
+            double diagDist = Math.sqrt(LIGHT_DIST * LIGHT_DIST + ATTN_SAMPLE_DIST * ATTN_SAMPLE_DIST);
+            double lambertCenter = calculateLambertTerm(0);
+            double lambertSample = calculateLambertTerm(ATTN_SAMPLE_DIST);
 
-            double diagDist = Math.sqrt(LIGTH_DIST * LIGTH_DIST + SAMPLE_DIST * SAMPLE_DIST);
+            LIGHT.setLinearAttenuation(0.01);
+            doAttenuationTest(diagDist, lambertCenter, lambertSample);
 
-            light.setLinearAttenuation(0.01);
-            double attnCenter = 1 / (1 + 0.01 * LIGTH_DIST);
-            double attnDiag = 1 / (1 + 0.01 * diagDist);
-            snapshot = box.getScene().snapshot(null);
-            double attenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
-            double attenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
-            assertEquals("Wrong color value", nonAttenBlueCenter * attnCenter, attenBlueCenter, DELTA);
-            assertEquals("Wrong color value", nonAttenBlueDiag * attnDiag, attenBlueDiag, DELTA);
-
-            light.setLinearAttenuation(0);
-            light.setQuadraticAttenuation(0.01);
-            attnCenter = 1 / (1 + 0.01 * LIGTH_DIST * LIGTH_DIST);
-            attnDiag = 1 / (1 + 0.01 * diagDist * diagDist);
-            snapshot = box.getScene().snapshot(null);
-            attenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
-            attenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
-            assertEquals("Wrong color value", nonAttenBlueCenter * attnCenter, attenBlueCenter, DELTA);
-            assertEquals("Wrong color value", nonAttenBlueDiag * attnDiag, attenBlueDiag, DELTA);
-
-            light.setQuadraticAttenuation(0);
-            light.setMaxRange((LIGTH_DIST + diagDist) / 2);
-            snapshot = box.getScene().snapshot(null);
-            nonAttenBlueCenter = snapshot.getPixelReader().getColor(0, 0).getBlue();
-            nonAttenBlueDiag = snapshot.getPixelReader().getColor(SAMPLE_DIST, 0).getBlue();
-            assertEquals("Wrong color value, should be in range", 1, nonAttenBlueCenter, DELTA);
-            assertEquals("Wrong color value, should be out of range", 0, nonAttenBlueDiag, DELTA);
+            LIGHT.setLinearAttenuation(0);
+            LIGHT.setQuadraticAttenuation(0.01);
+            doAttenuationTest(diagDist, lambertCenter, lambertSample);
         });
     }
 
-    @AfterClass
-    public static void teardown() {
-        Platform.runLater(() -> {
-            stage.hide();
-            Platform.exit();
+    private void doAttenuationTest(double diagDist, double lambertCenter, double lambertSample) {
+        var snapshot = snapshot();
+
+        var attn = calculateAttenuationFactor(LIGHT_DIST);
+        var sampledBlue = snapshot.getPixelReader().getColor(0, 0).getBlue();
+        assertEquals(FAIL_MESSAGE, lambertCenter * attn, sampledBlue, DELTA);
+
+        attn = calculateAttenuationFactor(diagDist);
+        sampledBlue = snapshot.getPixelReader().getColor(ATTN_SAMPLE_DIST, 0).getBlue();
+        assertEquals(FAIL_MESSAGE, lambertSample * attn, sampledBlue, DELTA);
+    }
+
+    @Test
+    public void testRange() {
+        Util.runAndWait(() -> {
+            double diagDist = Math.sqrt(LIGHT_DIST * LIGHT_DIST + ATTN_SAMPLE_DIST * ATTN_SAMPLE_DIST);
+            LIGHT.setMaxRange((LIGHT_DIST + diagDist) / 2);
+            var snapshot = snapshot();
+
+            double sampledBlue = snapshot.getPixelReader().getColor(0, 0).getBlue();
+            assertEquals(FAIL_MESSAGE + ", should be in range", 1, sampledBlue, DELTA);
+
+            sampledBlue = snapshot.getPixelReader().getColor(ATTN_SAMPLE_DIST, 0).getBlue();
+            assertEquals(FAIL_MESSAGE + ", should be out of range", 0, sampledBlue, DELTA);
         });
+    }
+
+    private double calculateAttenuationFactor(double dist) {
+        return 1 / (LIGHT.getConstantAttenuation() + LIGHT.getLinearAttenuation() * dist
+                      + LIGHT.getQuadraticAttenuation() * dist * dist);
     }
 }

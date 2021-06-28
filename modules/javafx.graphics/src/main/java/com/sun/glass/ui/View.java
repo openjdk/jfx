@@ -44,6 +44,7 @@ public abstract class View {
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
+    @SuppressWarnings("removal")
     final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);

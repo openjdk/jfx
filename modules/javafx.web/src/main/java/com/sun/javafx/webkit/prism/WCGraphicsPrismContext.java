@@ -81,6 +81,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
+    @SuppressWarnings("removal")
     private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
             AccessController.doPrivileged((PrivilegedAction<String>) () ->
             System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
@@ -126,6 +127,18 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         return getGraphics(false);
     }
 
+    @Override
+    public boolean isValid() {
+        Object platformGraphics = getPlatformGraphics();
+
+        // Ensure that graphics is non-null and of the right type
+        if (! (platformGraphics instanceof Graphics)) {
+            return false;
+        }
+        Graphics g = (Graphics)platformGraphics;
+        return !g.getResourceFactory().isDisposed();
+    }
+
     Graphics getGraphics(boolean checkClip) {
         if (cachedGraphics == null) {
             Layer l = state.getLayerNoClone();
@@ -133,7 +146,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     ? l.getGraphics()
                     : baseGraphics;
 
-            state.apply(cachedGraphics);
+            ResourceFactory rf = cachedGraphics.getResourceFactory();
+            if (!rf.isDisposed()) {
+                state.apply(cachedGraphics);
+            }
 
             if (log.isLoggable(Level.FINE)) {
                 log.fine("getPlatformGraphics for " + this + " : " +
@@ -845,9 +861,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
         new Composite() {
             @Override void doPaint(Graphics g) {
+                ResourceFactory rf = g.getResourceFactory();
+                if (rf.isDisposed()) {
+                    log.fine("WCGraphicsPrismContext::doPaint skip because device has been disposed");
+                    return;
+                }
                 image.order(ByteOrder.nativeOrder());
                 Image img = Image.fromByteBgraPreData(image, w, h);
-                ResourceFactory rf = g.getResourceFactory();
                 Texture txt = rf.createTexture(img, Texture.Usage.STATIC, Texture.WrapMode.REPEAT);
                 g.drawTexture(txt, x, y, x + w, y + h, 0, 0, w, h);
                 txt.dispose();
@@ -1345,16 +1365,22 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             fctx = getFilterContext(g);
             if (permanent) {
                 ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
-                rtt.makePermanent();
-                buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                if (f != null && !f.isDisposed()) {
+                    RTTexture rtt = f.createRTTexture(w, h, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                    rtt.makePermanent();
+                    buffer = ((PrRenderer)Renderer.getRenderer(fctx)).createDrawable(rtt);
+                } else {
+                    log.fine("Layer :: cannot construct RTT because device disposed or not ready");
+                    fctx = null;
+                    buffer = null;
+                }
             } else {
                 buffer = (PrDrawable) Effect.getCompatibleImage(fctx, w, h);
             }
         }
 
         Graphics getGraphics() {
-            if (graphics == null) {
+            if (graphics == null && buffer != null) {
                 graphics = buffer.createGraphics();
             }
             return graphics;
@@ -1820,6 +1846,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void flush() {
+        if (!isValid()) {
+            log.fine("WCGraphicsPrismContext::flush : GC is invalid");
+            return;
+        }
         flushAllLayers();
     }
 

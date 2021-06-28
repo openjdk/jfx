@@ -39,7 +39,8 @@ public final class IosApplication extends Application {
 
     private static native void _initIDs(); // init IDs for java callbacks from native
     static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+        @SuppressWarnings("removal")
+        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });

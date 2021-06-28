@@ -157,6 +157,18 @@ public class ListViewTest {
         assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
+    @Test public void noArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<String>();
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+    }
+
+    @Test public void singleArgConstructorSetsVerticalPseudoclass() {
+        ListView<?> listView = new ListView<>(FXCollections.observableArrayList());
+        assertTrue(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("vertical")));
+        assertFalse(listView.getPseudoClassStates().stream().anyMatch(c -> c.getPseudoClassName().equals("horizontal")));
+    }
+
     /*********************************************************************
      * Tests for selection model                                         *
      ********************************************************************/
@@ -632,7 +644,10 @@ public class ListViewTest {
 
         // this next test is likely to be brittle, but we'll see...If it is the
         // cause of failure then it can be commented out
-        assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        // assertEquals(0.125, scrollBar.getVisibleAmount(), 0.0);
+        assertTrue(scrollBar.getVisibleAmount() > 0.15);
+        assertTrue(scrollBar.getVisibleAmount() < 0.17);
+
     }
 
     @Test public void test_rt30400() {
@@ -1126,7 +1141,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 53, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 21 : 23, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });

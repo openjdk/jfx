@@ -155,9 +155,7 @@ GST_API
 gint            gst_plugin_feature_rank_compare_func    (gconstpointer p1,
                gconstpointer p2);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPluginFeature, gst_object_unref)
-#endif
 
 G_END_DECLS
 

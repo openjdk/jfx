@@ -151,7 +151,12 @@ struct _GstBaseSink {
 struct _GstBaseSinkClass {
   GstElementClass parent_class;
 
-  /* get caps from subclass */
+  /**
+   * GstBaseSink::get_caps:
+   * @filter: (in) (nullable):
+   *
+   * Called to get sink pad caps from the subclass.
+   */
   GstCaps*      (*get_caps)     (GstBaseSink *sink, GstCaps *filter);
   /* notify subclass of new caps */
   gboolean      (*set_caps)     (GstBaseSink *sink, GstCaps *caps);
@@ -324,9 +329,10 @@ GST_BASE_API
 GstFlowReturn   gst_base_sink_wait              (GstBaseSink *sink, GstClockTime time,
                                                  GstClockTimeDiff *jitter);
 
-#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+GST_BASE_API
+GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSink, gst_object_unref)
-#endif
 
 G_END_DECLS
 

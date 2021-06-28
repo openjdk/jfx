@@ -110,6 +110,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     static {
         final Predicate<Window> findStage = (w) -> w instanceof Stage;
+        @SuppressWarnings("removal")
         ObservableList<Window> windows = AccessController.doPrivileged(
             (PrivilegedAction<ObservableList<Window>>) () -> Window.getWindows(),
             null,

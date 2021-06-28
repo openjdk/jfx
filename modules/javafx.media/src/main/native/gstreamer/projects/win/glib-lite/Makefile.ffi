@@ -20,7 +20,8 @@ C_SOURCES = src/closures.c \
 COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue
 
-INCLUDES = -I$(SRCBASE_DIR)/include
+INCLUDES = -I$(SRCBASE_DIR)/include \
+           -I$(SRCBASE_DIR)/src/x86
 
 CFLAGS = -DFFI_BUILDING \
          -DGSTREAMER_LITE \

@@ -31,6 +31,8 @@
 
 #include "unicode/utypes.h"
 
+#if U_SHOW_CPLUSPLUS_API
+
 /**
  * \file
  * \brief C++ API: TimeZone object
@@ -315,15 +317,24 @@ public:
      */
     static TimeZone* U_EXPORT2 createDefault(void);
 
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     * If the locale contains the timezone keyword, creates a copy of that TimeZone.
+     * Otherwise, create the default timezone.
+     *
+     * @param locale a locale which may contains 'timezone' keyword/value.
+     * @return   A TimeZone. Clients are responsible for deleting the time zone
+     *           object returned.
+     * @internal
+     */
+    static TimeZone* U_EXPORT2 forLocaleOrDefault(const Locale& locale);
+#endif  /* U_HIDE_INTERNAL_API */
+
     /**
      * Sets the default time zone (i.e., what's returned by createDefault()) to be the
      * specified time zone.  If NULL is specified for the time zone, the default time
      * zone is set to the default host time zone.  This call adopts the TimeZone object
      * passed in; the client is no longer responsible for deleting it.
-     *
-     * <p>This function is not thread safe. It is an error for multiple threads
-     * to concurrently attempt to set the default time zone, or for any thread
-     * to attempt to reference the default zone while another thread is setting it.
      *
      * @param zone  A pointer to the new TimeZone object to use as the default.
      * @stable ICU 2.0
@@ -334,8 +345,6 @@ public:
     /**
      * Same as adoptDefault(), except that the TimeZone object passed in is NOT adopted;
      * the caller remains responsible for deleting it.
-     *
-     * <p>See the thread safety note under adoptDefault().
      *
      * @param zone  The given timezone.
      * @system
@@ -396,7 +405,7 @@ public:
     *
     * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
     * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
-    * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
+    * please read the ICU user guide section <a href="https://unicode-org.github.io/icu/userguide/datetime/timezone#updating-the-time-zone-data">
     * Updating the Time Zone Data</a>.
     *
     * @param id        A system time zone ID.
@@ -424,7 +433,7 @@ public:
     *
     * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
     * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
-    * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
+    * please read the ICU user guide section <a href="https://unicode-org.github.io/icu/userguide/datetime/timezone#updating-the-time-zone-data">
     * Updating the Time Zone Data</a>.
     *
     * @param winid     A Windows time zone ID.
@@ -700,8 +709,8 @@ public:
      * there are time zones that used daylight savings time in the
      * past, but no longer used currently. For example, Asia/Tokyo has
      * never used daylight savings time since 1951. Most clients would
-     * expect that this method to return <code>FALSE</code> for such case.
-     * The default implementation of this method returns <code>TRUE</code>
+     * expect that this method to return <code>false</code> for such case.
+     * The default implementation of this method returns <code>true</code>
      * when the time zone uses daylight savings time in the current
      * (Gregorian) calendar year.
      * <p>In Java 7, <code>observesDaylightTime()</code> was added in
@@ -726,6 +735,7 @@ public:
      */
     virtual UBool useDaylightTime(void) const = 0;
 
+#ifndef U_FORCE_HIDE_DEPRECATED_API
     /**
      * Queries if the given date is in daylight savings time in
      * this time zone.
@@ -740,6 +750,7 @@ public:
      * @deprecated ICU 2.4. Use Calendar::inDaylightTime() instead.
      */
     virtual UBool inDaylightTime(UDate date, UErrorCode& status) const = 0;
+#endif  // U_FORCE_HIDE_DEPRECATED_API
 
     /**
      * Returns true if this zone has the same rule and offset as another zone.
@@ -758,7 +769,7 @@ public:
      * @return   A new copy of this TimeZone object.
      * @stable ICU 2.0
      */
-    virtual TimeZone* clone(void) const = 0;
+    virtual TimeZone* clone() const = 0;
 
     /**
      * Return the class ID for this class.  This is useful only for
@@ -916,7 +927,7 @@ private:
      * @param hour Receives parsed hour field
      * @param minute Receives parsed minute field
      * @param second Receives parsed second field
-     * @return Returns TRUE when the given custom id is valid.
+     * @return Returns true when the given custom id is valid.
      */
     static UBool parseCustomID(const UnicodeString& id, int32_t& sign, int32_t& hour,
         int32_t& minute, int32_t& second);
@@ -939,7 +950,7 @@ private:
      * @param hour offset hours
      * @param min offset minutes
      * @param sec offset seconds
-     * @param negative sign of the offset, TRUE for negative offset.
+     * @param negative sign of the offset, true for negative offset.
      * @param id Receves the format result (normalized custom ID)
      * @return The reference to id
      */
@@ -971,6 +982,8 @@ TimeZone::setID(const UnicodeString& ID)
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
+
+#endif /* U_SHOW_CPLUSPLUS_API */
 
 #endif //_TIMEZONE
 //eof

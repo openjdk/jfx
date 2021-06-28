@@ -85,6 +85,7 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
     private final ReadOnlyPropertyDescriptor descriptor;
     private final ReadOnlyPropertyDescriptor.ReadOnlyListener<String> listener;
 
+    @SuppressWarnings("removal")
     private final AccessControlContext acc = AccessController.getContext();
 
     ReadOnlyJavaBeanStringProperty(ReadOnlyPropertyDescriptor descriptor, Object bean) {
@@ -101,6 +102,7 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
+    @SuppressWarnings("removal")
     @Override
     public String get() {
         return AccessController.doPrivileged((PrivilegedAction<String>) () -> {

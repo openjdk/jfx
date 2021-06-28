@@ -72,6 +72,7 @@ final class PublicSuffixes {
     /**
      * The public suffix list file.
      */
+    @SuppressWarnings("removal")
     private static final File pslFile = AccessController.doPrivileged((PrivilegedAction<File>)
         () -> new File(System.getProperty("java.home"), "lib/security/public_suffix_list.dat"));
 
@@ -79,6 +80,7 @@ final class PublicSuffixes {
     /*
      * Determines whether the public suffix list file is available.
      */
+    @SuppressWarnings("removal")
     private static final boolean pslFileExists = AccessController.doPrivileged(
         (PrivilegedAction<Boolean>) () -> {
             if (!pslFile.exists()) {
@@ -195,6 +197,7 @@ final class PublicSuffixes {
         }
 
         private static InputStream getPubSuffixStream() {
+            @SuppressWarnings("removal")
             InputStream is = AccessController.doPrivileged(
                 (PrivilegedAction<InputStream>) () -> {
                     try {

@@ -1,28 +1,42 @@
 To update to a new version of Lucene:
 
 1. Change the version number in the following files:
+
+    build.gradle
     apps/samples/.classpath
     apps/samples/Ensemble8/build.gradle
     apps/samples/Ensemble8/legal/lucene.md
     apps/samples/Ensemble8/nbproject/project.properties
-    build.gradle
 
+2. Update the Gradle dependency verification file
+   (gradle/verification-metadata.xml):
 
-2. Do a clean build of apps:
+    $ gradle --write-verification-metadata sha256 help
 
-    gradle clean
-    gradle sdk apps
+    Edit the file to remove the old Lucene dependencies and run the
+    command again to test your changes. For alternative ways to update
+    the file, see "Cleaning up the verification file" on the page:
 
-NOTE: if upgrading to a new major version there are usually compilation or runtime errors that need to be fixed.
+    Verifying dependencies - Gradle User Guide
+    https://docs.gradle.org/current/userguide/dependency_verification.html
 
+3. Do a clean build of apps:
 
-3. Regenerate the index files. This step can be skipped if only the "bugfix" number (the third digit) of the release changes:
+    $ gradle clean
+    $ gradle sdk apps
 
-$ cd apps/samples/Ensemble8
-$ rm -rf src/generated/resources/ensemble/search/index
-$ ant -Dplatforms.JDK_1.9.home=$JAVA_HOME clean ensemble-generate-search-index jar
-$ rm src/generated/resources/ensemble/search/index/write.lock
-$ git add --all src/generated/resources/ensemble/search/index
+    NOTE: If upgrading to a new major version, there are usually
+    compilation or runtime errors that need to be fixed.
 
+4. Regenerate the index files. This step can be skipped if only the
+   "bugfix" number (the third digit) of the release changes:
 
-4. Test it by running Ensemble and entering text into the search box (upper right)
+    $ cd apps/samples/Ensemble8
+    $ rm -r src/generated/resources/ensemble/search/index
+    $ ant -Dplatforms.JDK_1.9.home=$JAVA_HOME \
+        clean ensemble-generate-search-index jar
+    $ rm src/generated/resources/ensemble/search/index/write.lock
+    $ git add --all src/generated/resources/ensemble/search/index
+
+5. Test it by running Ensemble and entering text into the search box
+   (upper right).

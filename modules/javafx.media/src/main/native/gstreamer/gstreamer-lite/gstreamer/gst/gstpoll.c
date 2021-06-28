@@ -28,7 +28,7 @@
  *                     to wait on them in a cancellable way
  *
  * A #GstPoll keeps track of file descriptors much like fd_set (used with
- * select()) or a struct pollfd array (used with poll()). Once created with
+ * select ()) or a struct pollfd array (used with poll ()). Once created with
  * gst_poll_new(), the set can be used to wait for file descriptors to be
  * readable and/or writable. It is possible to make this wait be controlled
  * by specifying %TRUE for the @controllable flag when creating the set (or

@@ -112,6 +112,7 @@ public final class UIClientImpl implements UIClient {
         return accessor.getEngine();
     }
 
+    @SuppressWarnings("removal")
     private AccessControlContext getAccessContext() {
         return accessor.getPage().getAccessControlContext();
     }
@@ -122,6 +123,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getCreatePopupHandler() != null) {
             final PopupFeatures pf =
                     new PopupFeatures(menu, status, toolbar, resizable);
+            @SuppressWarnings("removal")
             WebEngine popup = AccessController.doPrivileged(
                     (PrivilegedAction<WebEngine>) () -> w.getCreatePopupHandler().call(pf), getAccessContext());
             return Accessor.getPageFor(popup);
@@ -129,6 +131,7 @@ public final class UIClientImpl implements UIClient {
         return null;
     }
 
+    @SuppressWarnings("removal")
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             handler.handle(ev);
@@ -195,6 +198,7 @@ public final class UIClientImpl implements UIClient {
         }
     }
 
+    @SuppressWarnings("removal")
     @Override public boolean confirm(final String text) {
         final WebEngine w = getWebEngine();
         if (w != null && w.getConfirmHandler() != null) {
@@ -204,6 +208,7 @@ public final class UIClientImpl implements UIClient {
         return false;
     }
 
+    @SuppressWarnings("removal")
     @Override public String prompt(String text, String defaultValue) {
         final WebEngine w = getWebEngine();
         if (w != null && w.getPromptHandler() != null) {

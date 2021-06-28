@@ -50,6 +50,7 @@
 #include "gstmeta.h"
 #include "gstinfo.h"
 #include "gstutils.h"
+#include "gstquark.h"
 
 static GHashTable *metainfo = NULL;
 static GRWLock lock;
@@ -98,8 +99,7 @@ gst_meta_api_type_register (const gchar * api, const gchar ** tags)
     }
   }
 
-  g_type_set_qdata (type, g_quark_from_string ("tags"),
-      g_strdupv ((gchar **) tags));
+  g_type_set_qdata (type, GST_QUARK (TAGS), g_strdupv ((gchar **) tags));
 
   return type;
 }
@@ -136,7 +136,7 @@ gst_meta_api_type_get_tags (GType api)
   const gchar **tags;
   g_return_val_if_fail (api != 0, FALSE);
 
-  tags = g_type_get_qdata (api, g_quark_from_string ("tags"));
+  tags = g_type_get_qdata (api, GST_QUARK (TAGS));
 
   if (!tags[0])
     return NULL;
@@ -198,7 +198,8 @@ gst_meta_register (GType api, const gchar * impl, gsize size,
       g_type_name (api), size);
 
   g_rw_lock_writer_lock (&lock);
-  g_hash_table_insert (metainfo, (gpointer) impl, (gpointer) info);
+  g_hash_table_insert (metainfo, (gpointer) g_intern_string (impl),
+      (gpointer) info);
   g_rw_lock_writer_unlock (&lock);
 
   return info;
