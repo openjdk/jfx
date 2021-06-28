@@ -721,7 +721,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             map_received(false),
             visible_received(false),
             on_top(false),
-            requested_bounds()
+            is_maximized(false),
+            is_fullscreen(false)
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -1249,7 +1250,6 @@ void WindowContextTop::set_alpha(double alpha) {
 
 void WindowContextTop::set_enabled(bool enabled) {
     if (enabled != geometry.enabled) {
-        gtk_widget_set_sensitive(gtk_widget, enabled);
         geometry.enabled = enabled;
         apply_geometry();
     }
