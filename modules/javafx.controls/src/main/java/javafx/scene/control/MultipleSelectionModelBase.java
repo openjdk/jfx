@@ -372,7 +372,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
          *   return the same number - the place where the removed elements were positioned in the list.
          */
         if (wasSelected) {
-            change = ControlUtils.buildClearAndSelectChange(selectedIndices, previousSelectedIndices, row);
+            change = ControlUtils.buildClearAndSelectChange(
+                    selectedIndices, previousSelectedIndices, row, Comparator.naturalOrder());
         } else {
             int changeIndex = Math.max(0, selectedIndices.indexOf(row));
             change = new NonIterableChange.GenericAddRemoveChange<>(
