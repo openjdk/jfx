@@ -46,7 +46,7 @@ import test.util.Util;
 
 public class DirectionalLightTest extends LightingTest {
 
-    private static final Point3D[] DIRECTIONS = { new Point3D(0, 0, 1), new Point3D(0, 1, 1), new Point3D(0, 0, -1) }; 
+    private static final Point3D[] DIRECTIONS = { new Point3D(0, 0, 1), new Point3D(0, 1, 1), new Point3D(0, 0, -1) };
 
     private static final DirectionalLight LIGHT = new DirectionalLight(Color.BLUE);
 
