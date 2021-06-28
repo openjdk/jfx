@@ -29,6 +29,7 @@ import javafx.animation.Animation;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.beans.binding.When;
+import javafx.scene.DirectionalLight;
 import javafx.scene.Group;
 import javafx.scene.LightBase;
 import javafx.scene.Node;
@@ -84,8 +85,12 @@ public class LightingSample extends Application {
                 vBox = addSpotLightControls((SpotLight) light);
             } else if (light instanceof PointLight) {
                 vBox = addPointLightControls((PointLight) light);
+            } else if (light instanceof DirectionalLight) {
+                vBox = addDirectionalLightControls((DirectionalLight) light);
             }
-            controls.getChildren().add(new TitledPane(light.getUserData() + " " + light.getClass().getSimpleName(), vBox));
+            var titlePane = new TitledPane(light.getUserData() + " " + light.getClass().getSimpleName(), vBox);
+            titlePane.setExpanded(false);
+            controls.getChildren().add(titlePane);
         }
 
         var hBox = new HBox(new ScrollPane(controls), environment);
@@ -152,6 +157,10 @@ public class LightingSample extends Application {
     }
 
     protected VBox addSpotLightControls(SpotLight light) {
+        return addLightControls(light);
+    }
+
+    protected VBox addDirectionalLightControls(DirectionalLight light) {
         return addLightControls(light);
     }
 
