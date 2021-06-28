@@ -38,14 +38,16 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 
 /**
- * A light that radiates light in parallel in a specific direction.
+ * A light that illuminates an object from a specific direction.
  * The direction is defined by the {@link #directionProperty() direction} vector property of the light. The direction
  * can be rotated by setting a rotation transform on the {@code SpotLight}. For example, if the direction vector is
  * {@code (1, 1, 1)} and the light is not rotated, it will point in the {@code (1, 1, 1)} direction, and if the light is
  * rotated 90 degrees on the y axis, it will point in the {@code (1, 1, -1)} direction.
  * <p>
- * {@code DirectionalLight}s can represent light sources that are far enough for their light rays to appear to come in parallel
- * such as the sun.
+ * {@code DirectionalLight}s can represent strong light sources that are far enough from the objects they illuminate
+ * that their light rays appear to be parallel. Because these light sources are considered to be infinitely far, they
+ * cannot be attenuated. A decrease in intensity can be achieved by using a darker color. The sun is a common light
+ * source that can be simulated with this light type.
  *
  * @since 17
  * @see PhongMaterial
