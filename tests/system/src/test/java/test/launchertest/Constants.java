@@ -67,5 +67,5 @@ public class Constants {
 
     static final int ERROR_ASSERTION_FAILURE = 28;
 
-    static final int ERROR_TIMEOUT = 28;
+    static final int ERROR_TIMEOUT = 29;
 }
