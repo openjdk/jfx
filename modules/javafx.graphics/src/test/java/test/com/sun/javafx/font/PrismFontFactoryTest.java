@@ -78,7 +78,7 @@ public class PrismFontFactoryTest {
     }
 
     @Test
-    public void testFontFactoryWithHelveticaTTC() {
+    public void testFontFactoryWithSystemFontRegular() {
         // System Font Regular is only on Mac
         assumeTrue(PrismFontFactory.isMacOSX);
         PrismFontFactory factory = PrismFontFactory.getFontFactory();
