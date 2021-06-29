@@ -34,18 +34,22 @@ class D3DLight {
 public:
     D3DLight();
     virtual ~D3DLight();
+    bool isPointLight();
     void setColor(float r, float g, float b);
     void setPosition(float x, float y, float z);
-//  void setRange(float r);
-    float position[4]; // Only need x, y, z. The last float is needed for padding when upload to shader.
+
+    float position[3];
     float color[3];
     float w;
     float attenuation[3]; // ca, la, qa
     float maxRange;
+    float direction[3];
+    float innerAngle;
+    float outerAngle;
+    float falloff;
 
 private:
 
 };
 
 #endif  /* D3DLIGHT_H */
-

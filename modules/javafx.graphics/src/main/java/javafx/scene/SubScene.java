@@ -33,11 +33,13 @@ import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.*;
+import javafx.css.Stylesheet;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Paint;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -681,13 +683,22 @@ public class SubScene extends Node {
      * the platform-default user-agent stylesheet. If the URL does not resolve to a valid location,
      * the platform-default user-agent stylesheet will be used.
      * <p>
-     * For additional information about using CSS with the scene graph,
-     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
-     * </p>
-     * @param url The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
+     * <p>
+     * The RFC 2397 "data" scheme for URLs is supported in addition to the protocol handlers that
+     * are registered for the application.
+     * If a URL uses the "data" scheme and the MIME type is either empty, "text/plain", or "text/css",
+     * the payload will be interpreted as a CSS file.
+     * If the MIME type is "application/octet-stream", the payload will be interpreted as a binary
+     * CSS file (see {@link Stylesheet#convertToBinary(File, File)}).
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     *
+     * @param url the URL of the user-agent stylesheet
      * @since  JavaFX 8u20
      */
     public final void setUserAgentStylesheet(String url) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,11 +46,12 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
         this.itemsRefList = new ArrayList<>();
 
         selectedIndices.addListener((ListChangeListener<Integer>)c -> {
+            int totalRemovedSize = 0;
             beginChange();
 
             while (c.next()) {
                 if (c.wasReplaced()) {
-                    List<E> removed = getRemovedElements(c);
+                    List<E> removed = getRemovedElements(c, totalRemovedSize);
                     List<E> added = getAddedElements(c);
                     if (!removed.equals(added)) {
                         nextReplace(c.getFrom(), c.getTo(), removed);
@@ -60,10 +61,11 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
                 } else if (c.wasRemoved()) {
                     int removedSize = c.getRemovedSize();
                     if (removedSize == 1) {
-                        nextRemove(c.getFrom(), getRemovedModelItem(c.getFrom()));
+                        nextRemove(c.getFrom(), getRemovedModelItem(totalRemovedSize + c.getFrom()));
                     } else {
-                        nextRemove(c.getFrom(), getRemovedElements(c));
+                        nextRemove(c.getFrom(), getRemovedElements(c, totalRemovedSize));
                     }
+                    totalRemovedSize += removedSize;
                 } else if (c.wasPermutated()) {
                     int[] permutation = new int[size()];
                     for (int i = 0; i < size(); i++) {
@@ -117,11 +119,11 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
         return index < 0 || index >= itemsRefList.size() ? null : itemsRefList.get(index).get();
     }
 
-    private List<E> getRemovedElements(ListChangeListener.Change<? extends Integer> c) {
+    private List<E> getRemovedElements(ListChangeListener.Change<? extends Integer> c, int totalRemovedSize) {
         List<E> removed = new ArrayList<>(c.getRemovedSize());
         final int startPos = c.getFrom();
         for (int i = startPos, max = startPos + c.getRemovedSize(); i < max; i++) {
-            removed.add(getRemovedModelItem(i));
+            removed.add(getRemovedModelItem(i + totalRemovedSize));
         }
         return removed;
     }

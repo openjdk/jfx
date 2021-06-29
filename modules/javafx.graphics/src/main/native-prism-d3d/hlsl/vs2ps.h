@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,14 +32,15 @@ struct LocalBump {
 
     static const float nLights = 3;
 
-    float3  eye             : texcoord2;
-    float4  lights[nLights] : texcoord3; // 3, 4,5 [6]
-    float3  debug           : texcoord7;
+    float3 eye                : texcoord2;
+    float4 lights[nLights]    : texcoord3; // 3, 4, 5 [6]
+    float4 lightDirs[nLights] : texcoord7; // 7, 8, 9 [10]
+//  float3 debug              : texcoord11;
 };
 
 struct LocalBumpOut {
     float4  pos  : position;
-    float   oFog  : fog;
+    float   oFog : fog;
 
     LocalBump lBump;
 };
@@ -49,4 +50,3 @@ struct ObjVsOutput {
     LocalBumpOut light;
     ObjectPsIn   objAttr;
 };
-

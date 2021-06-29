@@ -52,6 +52,7 @@ import javafx.stage.Window;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
+import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
 import java.io.IOException;
@@ -65,6 +66,9 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.DigestInputStream;
@@ -1087,7 +1091,6 @@ final public class StyleManager {
                 // check if url has extension, if not then just url as is and always parse as css text
                 if (!(fname.endsWith(".css") || fname.endsWith(".bss"))) {
                     url = getURL(fname);
-                    parse = true;
                 } else {
                     final String name = fname.substring(0, fname.length() - 4);
 
@@ -1100,27 +1103,81 @@ final public class StyleManager {
                     }
 
                     if ((url != null) && !parse) {
-
                         try {
                             // RT-36332: if loadBinary throws an IOException, make sure to try .css
                             stylesheet = Stylesheet.loadBinary(url);
-                        } catch (IOException ioe) {
-                            stylesheet = null;
+                        } catch (IOException ignored) {
                         }
 
-                        if (stylesheet == null && (parse = !parse)) {
+                        if (stylesheet == null) {
                             // If we failed to load the .bss file,
                             // fall back to the .css file.
-                            // Note that 'parse' is toggled in the test.
                             url = getURL(fname);
                         }
                     }
                 }
 
-                // either we failed to load the .bss file, or parse
-                // was set to true.
-                if ((url != null) && parse) {
-                    stylesheet = new CssParser().parse(url);
+                if (stylesheet == null) {
+                    DataURI dataUri = null;
+
+                    if (url != null) {
+                        stylesheet = new CssParser().parse(url);
+                    } else {
+                        dataUri = DataURI.tryParse(fname);
+                    }
+
+                    if (dataUri != null) {
+                        boolean isText =
+                            "text".equalsIgnoreCase(dataUri.getMimeType())
+                                && ("css".equalsIgnoreCase(dataUri.getMimeSubtype())
+                                    || "plain".equalsIgnoreCase(dataUri.getMimeSubtype()));
+
+                        boolean isBinary =
+                            "application".equalsIgnoreCase(dataUri.getMimeType())
+                                && "octet-stream".equalsIgnoreCase(dataUri.getMimeSubtype());
+
+                        if (isText) {
+                            String charsetName = dataUri.getParameters().get("charset");
+                            Charset charset;
+
+                            try {
+                                charset = charsetName != null ? Charset.forName(charsetName) : Charset.defaultCharset();
+                            } catch (IllegalCharsetNameException | UnsupportedCharsetException ex) {
+                                String message = String.format(
+                                    "Unsupported charset \"%s\" in stylesheet URI \"%s\"", charsetName, dataUri);
+
+                                if (errors != null) {
+                                    errors.add(new CssParser.ParseError(message));
+                                }
+
+                                if (getLogger().isLoggable(Level.WARNING)) {
+                                    getLogger().warning(message);
+                                }
+
+                                return null;
+                            }
+
+                            var stylesheetText = new String(dataUri.getData(), charset);
+                            stylesheet = new CssParser().parse(stylesheetText);
+                        } else if (isBinary) {
+                            try (InputStream stream = new ByteArrayInputStream(dataUri.getData())) {
+                                stylesheet = Stylesheet.loadBinary(stream);
+                            }
+                        } else {
+                            String message = String.format("Unexpected MIME type \"%s/%s\" in stylesheet URI \"%s\"",
+                                dataUri.getMimeType(), dataUri.getMimeSubtype(), dataUri);
+
+                            if (errors != null) {
+                                errors.add(new CssParser.ParseError(message));
+                            }
+
+                            if (getLogger().isLoggable(Level.WARNING)) {
+                                getLogger().warning(message);
+                            }
+
+                            return null;
+                        }
+                    }
                 }
 
                 if (stylesheet == null) {
@@ -1169,15 +1226,15 @@ final public class StyleManager {
                     getLogger().info("Could not find stylesheet: " + fname);//, fnfe);
                 }
             } catch (IOException ioe) {
-                    if (errors != null) {
-                        CssParser.ParseError error =
-                            new CssParser.ParseError(
-                                "Could not load stylesheet: " + fname
-                            );
-                        errors.add(error);
-                    }
+                // For data URIs, use the pretty-printed version for logging
+                var dataUri = DataURI.tryParse(fname);
+                String stylesheetName = dataUri != null ? dataUri.toString() : fname;
+
+                if (errors != null) {
+                    errors.add(new CssParser.ParseError("Could not load stylesheet: " + stylesheetName));
+                }
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().info("Could not load stylesheet: " + fname);//, ioe);
+                    getLogger().info("Could not load stylesheet: " + stylesheetName);
                 }
             }
             return null;

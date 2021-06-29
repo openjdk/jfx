@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,19 +74,19 @@ void calcLocalBump(float4 ipos, float4 iTn, in float4x3 mW, out LocalBumpOut r) 
 
     for (int k=0; k<LocalBump::nLights; ++k) {
         float3 L = sLights[k].pos.xyz - pos;
+        float3 D = gLightsNormDir[k].xyz;
         r.lBump.lights[k] = float4(getLocalVector(L, n), 1);
+        r.lBump.lightDirs[k] = float4(getLocalVector(D, n), 1);
     }
 
     r.pos  = mul(float4(pos,1), mViewProj);
 
-    // r.Debug = r.Pos;
+//    r.Debug = r.Pos;
 
-    r.lBump.debug = n[0];
+//    r.lBump.debug = n[0];
 
     r.oFog  = 1; // getFogExp2(pos);
 
 }
 
 float4 retFloat(float x) { return float4(x.xxx,1); }
-
-

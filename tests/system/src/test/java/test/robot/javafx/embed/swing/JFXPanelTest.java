@@ -92,8 +92,8 @@ public class JFXPanelTest {
             }
             while (!stop) {
                 robot.mouseMove(300, 10);
-                robot.mousePress(InputEvent.BUTTON1_MASK);
-                robot.mouseRelease(InputEvent.BUTTON1_MASK);
+                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
             }
         }).start();
         beginLatch.countDown();

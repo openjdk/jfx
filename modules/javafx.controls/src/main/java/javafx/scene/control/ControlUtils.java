@@ -32,6 +32,9 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -68,7 +71,7 @@ class ControlUtils {
     }
 
     static <T> ListChangeListener.Change<T> buildClearAndSelectChange(
-            ObservableList<T> list, List<T> removed, int retainedRow) {
+            ObservableList<T> list, List<T> removed, T retainedRow, Comparator<T> rowComparator) {
         return new ListChangeListener.Change<T>(list) {
             private final int[] EMPTY_PERM = new int[0];
 
@@ -83,9 +86,7 @@ class ControlUtils {
             private int from = -1;
 
             {
-                int midIndex = retainedRow >= removedSize ? removedSize :
-                               retainedRow < 0 ? 0 :
-                               retainedRow;
+                int midIndex = -Collections.binarySearch(removed, retainedRow, rowComparator) - 1;
                 firstRemovedRange = removed.subList(0, midIndex);
                 secondRemovedRange = removed.subList(midIndex, removedSize);
             }
@@ -105,6 +106,7 @@ class ControlUtils {
             }
 
             @Override public int getRemovedSize() {
+                checkState();
                 return atFirstRange ? firstRemovedRange.size() : secondRemovedRange.size();
             }
 
@@ -114,12 +116,12 @@ class ControlUtils {
             }
 
             @Override public boolean next() {
-                if (invalid && atFirstRange) {
+                if (invalid) {
                     invalid = false;
 
                     // point 'from' to the first position, relative to
                     // the underlying selectedCells index.
-                    from = 0;
+                    from = atFirstRange ? 0 : 1;
                     return true;
                 }
 
@@ -137,7 +139,7 @@ class ControlUtils {
 
             @Override public void reset() {
                 invalid = true;
-                atFirstRange = true;
+                atFirstRange = !firstRemovedRange.isEmpty();
             }
 
             private void checkState() {

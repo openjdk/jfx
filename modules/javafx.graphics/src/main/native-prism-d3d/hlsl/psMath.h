@@ -58,22 +58,76 @@ float4 retNormal(float3 n) { return float4( n*0.5+0.5,1); }
 
 float4 retr(float x) { return float4(x.xxx,1); }
 
-void phong(
-    float3 n, float3 e, float power, in float4 L[LocalBump::nLights],
-    in out float3 d, in out float3 s, int _s, int _e)
-{
+// Because pow(0, 0) is undefined (https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-pow),
+// we need special treatment for falloff == 0 cases
+
+/*
+ * The methods 'computeSpotlightFactor' and 'computeSpotlightFactor2' are alternatives to the 'computeSpotlightFactor3'
+ * method that was chosen for its better performance. They are kept for the case that a future changes will make them
+ * more performant.
+ *
+float computeSpotlightFactor(float3 l, float3 lightDir, float cosOuter, float denom, float falloff) {
+    if (falloff == 0 && cosOuter == -1) { // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1;
+    }
+    float cosAngle = dot(normalize(-lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    if (falloff != 0) {
+        return pow(saturate(cutoff / denom), falloff);
+    }
+    return cutoff >= 0 ? 1 : 0;
+}
+
+float computeSpotlightFactor2(float3 l, float3 lightDir, float cosOuter, float denom, float falloff) {
+    if (falloff != 0) {
+        float cosAngle = dot(normalize(-lightDir), l);
+        float cutoff = cosAngle - cosOuter;
+        return pow(saturate(cutoff / denom), falloff);
+    }
+    if (cosOuter == -1) {  // point light optimization (cosOuter == -1 is outerAngle == 180)
+        return 1;
+    }
+    float cosAngle = dot(normalize(-lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    return cutoff >= 0 ? 1 : 0;
+}
+*/
+
+float computeSpotlightFactor3(float3 l, float3 lightDir, float cosOuter, float denom, float falloff) {
+    float cosAngle = dot(normalize(-lightDir), l);
+    float cutoff = cosAngle - cosOuter;
+    if (falloff != 0) {
+        return pow(saturate(cutoff / denom), falloff);
+    }
+    return cutoff >= 0 ? 1 : 0;
+}
+
+void computeLight(float i, float3 n, float3 refl, float specPower, float3 L, float3 lightDir, in out float3 d, in out float3 s) {
+    float dist = length(L);
+    if (dist > gLightRange[i].x) {
+        return;
+    }
+    float3 l = normalize(L);
+
+    float cosOuter = gSpotLightFactors[i].x;
+    float denom = gSpotLightFactors[i].y;
+    float falloff = gSpotLightFactors[i].z;
+    float spotlightFactor = computeSpotlightFactor3(l, lightDir, cosOuter, denom, falloff);
+
+    float ca = gLightAttenuation[i].x;
+    float la = gLightAttenuation[i].y;
+    float qa = gLightAttenuation[i].z;
+    float invAttnFactor = ca + la * dist + qa * dist * dist;
+
+    float3 attenuatedColor = gLightColor[i].xyz * spotlightFactor / invAttnFactor;
+    d += saturate(dot(n, l)) * attenuatedColor;
+    s += pow(saturate(dot(-refl, l)), specPower) * attenuatedColor;
+}
+
+void phong(float3 n, float3 e, float specPower, in float4 L[LocalBump::nLights], in float4 lightDirs[LocalBump::nLights],
+        in out float3 d, in out float3 s, int _s, int _e) {
     float3 refl = reflect(e, n);
     for (int i = _s; i < _e; i++) {
-        float dist = length(L[i].xyz);
-        if (dist <= gLightRange[i].x) {
-            float ca = gLightAttenuation[i].x;
-            float la = gLightAttenuation[i].y;
-            float qa = gLightAttenuation[i].z;
-            float3 attenuatedColor = gLightColor[i].xyz / (ca + la * dist + qa * dist * dist);
-
-            float3 l = normalize(L[i].xyz);
-            d += saturate(dot(n, l)) * attenuatedColor;
-            s += pow(saturate(dot(-refl, l)), power) * attenuatedColor;
-        }
+        computeLight(i, n, refl, specPower, L[i].xyz, lightDirs[i].xyz, d, s);
     }
 }

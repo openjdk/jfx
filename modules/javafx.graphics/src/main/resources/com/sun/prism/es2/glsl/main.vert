@@ -36,13 +36,18 @@ struct Light {
     vec4 pos;
     vec3 color;
     vec3 attn;
+    vec3 dir;
     float range;
+    float cosOuter;
+    float denom; // cosInner - cosOuter
+    float falloff;
 };
 
 //3 lights used
 uniform Light lights[3];
 
 varying vec4 lightTangentSpacePositions[3];
+varying vec4 lightTangentSpaceDirections[3];
 varying vec2 oTexCoords;
 varying vec3 eyePos;
 
@@ -96,6 +101,15 @@ void main()
 
     L = lights[2].pos.xyz - worldPos.xyz;
     lightTangentSpacePositions[2] = vec4( getLocalVector(L,tangentFrame)*lights[2].pos.w, 1.0);
+
+    vec3 D = lights[0].dir.xyz;
+    lightTangentSpaceDirections[0] = vec4( getLocalVector(D,tangentFrame), 1.0);
+
+    D = lights[1].dir.xyz;
+    lightTangentSpaceDirections[1] = vec4( getLocalVector(D,tangentFrame), 1.0);
+
+    D = lights[2].dir.xyz;
+    lightTangentSpaceDirections[2] = vec4( getLocalVector(D,tangentFrame), 1.0);
 
     mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
 

@@ -28,17 +28,25 @@ package attenuation;
 import javafx.animation.Animation;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
+import javafx.beans.binding.When;
+import javafx.scene.Group;
+import javafx.scene.LightBase;
+import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
+import javafx.scene.SpotLight;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Shape3D;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Box;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.converter.NumberStringConverter;
@@ -59,18 +67,38 @@ public class LightingSample extends Application {
     public void start(Stage stage) throws Exception {
         environment.setStyle("-fx-background-color: teal");
 
-        var subdivisionSlider = new Slider(10, 200, 60);
-        subdivisionSlider.setMajorTickUnit(10);
-        setupSlier(subdivisionSlider);
+        var sphereControls = createSphereControls();
+        var meshControls = createMeshControls();
+        var boxesControls = createBoxesControls();
 
-        var subdivisionLabel = new Label();
-        subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
+        var playButton = new Button("Start");
+        playButton.setOnAction(e -> startMeasurement());
 
-        var sphere = new Button("Sphere");
-        sphere.setOnAction(e -> switchTo(environment.createSphere((int) subdivisionSlider.getValue())));
+        var stopButton = new Button("Stop");
+        stopButton.setOnAction(e -> stopMeasurement());
 
-        var quadSlider = new Slider(500, 10_000, 1000);
-        quadSlider.setMajorTickUnit(500);
+        var controls = new VBox(3, sphereControls, meshControls, boxesControls, new HBox(5, playButton, stopButton));
+        for (var light : environment.lights) {
+            VBox vBox = null;
+            if (light instanceof SpotLight) {
+                vBox = addSpotLightControls((SpotLight) light);
+            } else if (light instanceof PointLight) {
+                vBox = addPointLightControls((PointLight) light);
+            }
+            controls.getChildren().add(new TitledPane(light.getUserData() + " " + light.getClass().getSimpleName(), vBox));
+        }
+
+        var hBox = new HBox(new ScrollPane(controls), environment);
+        HBox.setHgrow(environment, Priority.ALWAYS);
+        stage.setScene(new Scene(hBox));
+        stage.setWidth(1100);
+        stage.setHeight(735);
+        stage.show();
+    }
+
+    private HBox createMeshControls() {
+        var quadSlider = new Slider(100, 5000, 1000);
+        quadSlider.setMajorTickUnit(100);
         setupSlier(quadSlider);
 
         var quadLabel = new Label();
@@ -79,20 +107,37 @@ public class LightingSample extends Application {
         var mesh = new Button("Mesh");
         mesh.setOnAction(e -> switchTo(environment.createMeshView((int) quadSlider.getValue())));
 
-        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
         var meshBox = new HBox(mesh, quadSlider, quadLabel);
+        return meshBox;
+    }
 
-        var controls = new VBox(sphereBox, meshBox);
-        for (var light : environment.lights) {
-            controls.getChildren().add(addLightControls(light));
-        }
+    private HBox createSphereControls() {
+        var subdivisionSlider = new Slider(10, 1000, 60);
+        subdivisionSlider.setMajorTickUnit(50);
+        setupSlier(subdivisionSlider);
 
-        var hBox = new HBox(controls, environment);
-        HBox.setHgrow(environment, Priority.ALWAYS);
-        stage.setScene(new Scene(hBox));
-        stage.setWidth(1100);
-        stage.setHeight(735);
-        stage.show();
+        var subdivisionLabel = new Label();
+        subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
+
+        var sphere = new Button("Sphere");
+        sphere.setOnAction(e -> switchTo(environment.createSphere((int) subdivisionSlider.getValue())));
+
+        var sphereBox = new HBox(sphere, subdivisionSlider, subdivisionLabel);
+        return sphereBox;
+    }
+
+    private HBox createBoxesControls() {
+        var box = new Button("Boxes (static)");
+        var specular = new CheckBox("Specular");
+        var specularBinding = new When(specular.selectedProperty()).then(Color.WHITE).otherwise(Color.BLACK);
+        var mat = new PhongMaterial(Color.WHITE);
+        mat.specularColorProperty().bind(specularBinding);
+        box.setOnAction(e -> {
+            Group boxes = environment.createBoxes();
+            boxes.getChildren().forEach(n -> ((Box) n).setMaterial(mat));
+            switchTo(boxes);
+        });
+        return new HBox(5, box, specular);
     }
 
     private void setupSlier(Slider slider) {
@@ -102,11 +147,18 @@ public class LightingSample extends Application {
         slider.setSnapToTicks(true);
     }
 
-    protected VBox addLightControls(PointLight light) {
+    protected VBox addPointLightControls(PointLight light) {
+        return addLightControls(light);
+    }
+
+    protected VBox addSpotLightControls(SpotLight light) {
+        return addLightControls(light);
+    }
+
+    protected VBox addLightControls(LightBase light) {
         var lightOn = new CheckBox("On/Off");
-        lightOn.setSelected(true);
         light.lightOnProperty().bind(lightOn.selectedProperty());
-        return new VBox(new Separator(), new Label(light.getUserData() + " light"), lightOn);
+        return new VBox(lightOn);
     }
 
    private TranslateTransition createAnimation() {
@@ -118,13 +170,21 @@ public class LightingSample extends Application {
         return anim;
     }
 
-    private void switchTo(Shape3D node) {
-        fpsCouner.stop();
-        fpsCouner.reset();
+    private void switchTo(Node node) {
+        stopMeasurement();
         environment.switchTo(node);
         animation.setNode(node);
+    }
+
+    private void startMeasurement() {
         animation.playFromStart();
         fpsCouner.start();
+    }
+
+    private void stopMeasurement() {
+        fpsCouner.stop();
+        fpsCouner.reset();
+        animation.stop();
     }
 
     public static void main(String[] args) {

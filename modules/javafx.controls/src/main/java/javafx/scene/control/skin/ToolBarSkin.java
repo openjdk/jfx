@@ -792,10 +792,10 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
         }
 
         @Override protected void layoutChildren() {
-            double w = snapSize(downArrow.prefWidth(-1));
-            double h = snapSize(downArrow.prefHeight(-1));
-            double x = (snapSize(getWidth()) - w)/2;
-            double y = (snapSize(getHeight()) - h)/2;
+            double w = snapSizeX(downArrow.prefWidth(-1));
+            double h = snapSizeY(downArrow.prefHeight(-1));
+            double x = (snapSizeX(getWidth()) - w)/2;
+            double y = (snapSizeY(getHeight()) - h)/2;
 
             // TODO need to provide support for when the toolbar is on the right
             // or bottom

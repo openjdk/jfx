@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -278,25 +279,49 @@ public class Stylesheet {
      * css version or if an I/O error occurs while reading from the stream
      */
     public static Stylesheet loadBinary(URL url) throws IOException {
+        if (url == null) {
+            return null;
+        }
 
-        if (url == null) return null;
+        try (InputStream stream = url.openStream()) {
+            return loadBinary(stream, url.toExternalForm());
+        } catch (FileNotFoundException ex) {
+            return null;
+        }
+    }
 
+    /**
+     * Loads a binary stylesheet from a stream.
+     *
+     * @param stream the input stream
+     * @return the loaded {@code Stylesheet}
+     * @throws IOException if the binary stream corresponds to a more recent binary
+     * css version or if an I/O error occurs while reading from the stream
+     *
+     * @since 17
+     */
+    public static Stylesheet loadBinary(InputStream stream) throws IOException {
+        return loadBinary(stream, null);
+    }
+
+    private static Stylesheet loadBinary(InputStream stream, String uri) throws IOException {
         Stylesheet stylesheet = null;
 
         try (DataInputStream dataInputStream =
-                     new DataInputStream(new BufferedInputStream(url.openStream(), 40 * 1024))) {
+                     new DataInputStream(new BufferedInputStream(stream, 40 * 1024))) {
 
             // read file version
             final int bssVersion = dataInputStream.readShort();
             if (bssVersion > Stylesheet.BINARY_CSS_VERSION) {
-                throw new IOException(url.toString() + " wrong binary CSS version: "
-                        + bssVersion + ". Expected version less than or equal to" +
-                        Stylesheet.BINARY_CSS_VERSION);
+                throw new IOException(
+                    String.format("Wrong binary CSS version %s, expected version less than or equal to %s",
+                        uri != null ? bssVersion + " in stylesheet \"" + uri + "\"" : bssVersion,
+                        Stylesheet.BINARY_CSS_VERSION));
             }
             // read strings
             final String[] strings = StringStore.readBinary(dataInputStream);
             // read binary data
-            stylesheet = new Stylesheet(url.toExternalForm());
+            stylesheet = new Stylesheet(uri);
 
             try {
 
@@ -305,7 +330,7 @@ public class Stylesheet {
 
             } catch (Exception e) {
 
-                stylesheet = new Stylesheet(url.toExternalForm());
+                stylesheet = new Stylesheet(uri);
 
                 dataInputStream.reset();
 
@@ -317,9 +342,6 @@ public class Stylesheet {
                 }
             }
 
-        } catch (FileNotFoundException fnfe) {
-            // This comes from url.openStream() and is expected.
-            // It just means that the .bss file doesn't exist.
         }
 
         // return stylesheet
