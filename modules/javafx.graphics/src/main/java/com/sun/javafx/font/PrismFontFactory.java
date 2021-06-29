@@ -647,6 +647,16 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
+    /**
+     * Retrieve the <code></code>FontResource</code> that corresponds to the provided name.
+     * It is guaranteed that invoking <code>FontResource.getFullName()</code> on
+     * the resulting FontResource returns the <code>name</code> parameter, unless
+     * a <code>null</code> value is returned.
+     * @param name the unique identifier for the requested font.
+     * @param file the file holding this font. This can be null, in which case the available fonts are checked.
+     * @param wantComp use composite font
+     * @return the requested <code>FontResource</code>, or <code>null</code> in case no matching font is found.
+     */
     public synchronized FontResource getFontResource(String name, String file,
                                                      boolean wantComp) {
         FontResource fr = null;

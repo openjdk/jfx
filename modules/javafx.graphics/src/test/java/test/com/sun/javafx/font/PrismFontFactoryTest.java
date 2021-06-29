@@ -30,11 +30,13 @@
 
 package test.com.sun.javafx.font;
 
+import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.PrismFontFactory;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -74,5 +76,15 @@ public class PrismFontFactoryTest {
         expResult = PrismFontFactory.getFontFactory();
         assertEquals("Creates different instance of FontFactory", expResult, result);
     }
+
+    @Test
+    public void testFontFactoryWithHelveticaTTC() {
+        // System Font Regular is only on Mac
+        assumeTrue(PrismFontFactory.isMacOSX);
+        PrismFontFactory factory = PrismFontFactory.getFontFactory();
+        FontResource font = factory.getFontResource("System Font Regular", null, false);
+        assertEquals("System Font Regular", font.getFullName());
+    }
+
 
 }
