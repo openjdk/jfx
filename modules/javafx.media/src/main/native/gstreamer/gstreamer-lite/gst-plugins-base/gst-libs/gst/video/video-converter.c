@@ -2916,7 +2916,7 @@ do_upsample_lines (GstLineCache * cache, gint idx, gint out_line, gint in_line,
       gst_line_cache_get_lines (cache->prev, idx, out_line, start_line,
       n_lines);
 
-  if (convert->upsample) {
+  if (convert->upsample[idx]) {
     GST_DEBUG ("doing upsample %d-%d %p", start_line, start_line + n_lines - 1,
         lines[0]);
     gst_video_chroma_resample (convert->upsample[idx], lines,
@@ -3117,7 +3117,7 @@ do_downsample_lines (GstLineCache * cache, gint idx, gint out_line,
       gst_line_cache_get_lines (cache->prev, idx, out_line, start_line,
       n_lines);
 
-  if (convert->downsample) {
+  if (convert->downsample[idx]) {
     GST_DEBUG ("downsample line %d %d-%d %p", in_line, start_line,
         start_line + n_lines - 1, lines[0]);
     gst_video_chroma_resample (convert->downsample[idx], lines,
@@ -3140,7 +3140,7 @@ do_dither_lines (GstLineCache * cache, gint idx, gint out_line, gint in_line,
   lines = gst_line_cache_get_lines (cache->prev, idx, out_line, in_line, 1);
   destline = lines[0];
 
-  if (convert->dither) {
+  if (convert->dither[idx]) {
     GST_DEBUG ("Dither line %d %p", in_line, destline);
     gst_video_dither_line (convert->dither[idx], destline, 0, out_line,
         convert->out_width);

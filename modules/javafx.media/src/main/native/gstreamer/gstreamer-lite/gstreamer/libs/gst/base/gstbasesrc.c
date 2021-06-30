@@ -3133,7 +3133,7 @@ pause:
 
 static gboolean
 gst_base_src_set_allocation (GstBaseSrc * basesrc, GstBufferPool * pool,
-    GstAllocator * allocator, GstAllocationParams * params)
+    GstAllocator * allocator, const GstAllocationParams * params)
 {
   GstAllocator *oldalloc;
   GstBufferPool *oldpool;
