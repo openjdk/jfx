@@ -467,7 +467,7 @@ public final class JobSettings {
     private SimpleStringProperty outputFile;
 
     /**
-     * A {@code StringProperty} representing the 
+     * A {@code StringProperty} representing the
      * name of a filesystem file, to which the platform printer
      * driver should spool the rendered print data.
      * <p>
@@ -500,7 +500,8 @@ public final class JobSettings {
      * or a platform printing error.
      * If a {@code SecurityManager} is installed and it denies access to the
      * specified file a {@code SecurityException} may be thrown.
-     * @defaultValue an empty String
+     *
+     * @defaultValue an empty string
      *
      * @return the name of a printer spool file
      * @since 17
