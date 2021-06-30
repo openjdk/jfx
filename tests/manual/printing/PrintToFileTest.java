@@ -145,7 +145,7 @@ public class PrintToFileTest extends Application {
                 }
             }
             Platform.runLater(() -> displayMessage());
-            
+ 
         }).start();
     }
 
