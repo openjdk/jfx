@@ -216,7 +216,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether the Canonicalization support is configured in
  */
-#if 1
+#if 0
 #define LIBXML_C14N_ENABLED
 #endif
 
@@ -279,7 +279,7 @@ XMLPUBFUN void XMLCALL xmlCheckVersion(int version);
  *
  * Whether icu support is available
  */
-#if 0
+#if 1
 #define LIBXML_ICU_ENABLED
 #endif
 
