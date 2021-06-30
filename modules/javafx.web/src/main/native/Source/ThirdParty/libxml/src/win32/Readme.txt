@@ -23,8 +23,8 @@ CONTENTS
    2.1 GNU C/C++, Mingw Edition
    2.2 Borland C++ Builder
        2.2.1 Building with iconv support
-	   2.2.2 Compatibility problems with MSVC (and probably CYGWIN)
-	   2.2.3 Other caveats
+       2.2.2 Compatibility problems with MSVC (and probably CYGWIN)
+       2.2.3 Other caveats
 
 
 
