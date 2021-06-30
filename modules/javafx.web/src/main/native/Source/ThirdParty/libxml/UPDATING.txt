@@ -33,3 +33,10 @@ Updating libxml in OpenJFX:
 6.1 Copy `libxml\src\include\libxml\xmlversion.h` to `libxml\linux\include\libxml\xmlversion.h` and follow same guidelines as Windows to retain changes from our repo.
 6.2 Copy libxml\src\config.h to libxml\linux\config.h
 
+7. Helper commands for removing leading tabs and trailing whitespaces.
+7.1 > cd modules/javafx.web/src/main/native/Source/ThirdParty/libxml
+7.2 Remove leading tabs:
+    > sudo apt install moreutils
+    > find src/ -type f -exec bash -c 'expand -t 4 "$0" | sponge "$0"' {} \;
+7.3 Remove trailing whitespaces:
+    > find . -type f -exec sed -i '' 's/[[:space:]]\{1,\}$//' {} \+
