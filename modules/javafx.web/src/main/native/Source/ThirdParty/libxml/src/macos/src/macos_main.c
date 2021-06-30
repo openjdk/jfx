@@ -11,7 +11,7 @@ REGISTER_MAIN_END
 
 int main()
 {
- (void) exec_commands();
-    
-   return 0;
+    (void) exec_commands();
+
+    return 0;
 }
