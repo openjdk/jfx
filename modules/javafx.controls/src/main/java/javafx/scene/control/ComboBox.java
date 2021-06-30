@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -240,8 +240,9 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         // selection model to indicate that this is the selected item
         valueProperty().addListener((ov, t, t1) -> {
             if (getItems() == null) return;
-
             SelectionModel<T> sm = getSelectionModel();
+            if (sm == null) return;
+
             int index = getItems().indexOf(t1);
 
             if (index == -1) {

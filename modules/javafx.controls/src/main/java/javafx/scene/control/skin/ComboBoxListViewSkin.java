@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,6 +53,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
+import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.TextField;
 import javafx.scene.input.*;
 import javafx.util.Callback;
@@ -396,6 +397,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     }
 
     private void updateValue() {
+        SingleSelectionModel<T> comboBoxSM = comboBox.getSelectionModel();
+        if (comboBoxSM == null) {
+            return;
+        }
+
         T newValue = comboBox.getValue();
 
         SelectionModel<T> listViewSM = listView.getSelectionModel();
@@ -413,7 +419,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 listViewSM.clearSelection();
                 listSelectionLock = false;
             } else {
-                int index = comboBox.getSelectionModel().getSelectedIndex();
+                int index = comboBoxSM.getSelectedIndex();
                 if (index >= 0 && index < comboBoxItems.size()) {
                     T itemsObj = comboBoxItems.get(index);
                     if ((itemsObj != null && itemsObj.equals(newValue)) || (itemsObj == null && newValue == null)) {

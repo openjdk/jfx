@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,12 +56,13 @@ import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
 public class ChoiceBoxTest {
     private final ChoiceBox<String> box = new ChoiceBox<String>();
@@ -152,6 +153,26 @@ public class ChoiceBoxTest {
     @Test public void selectionModelCanBeNull() {
         box.setSelectionModel(null);
         assertNull(box.getSelectionModel());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        PrintStream defaultErrorStream = System.err;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(out, true));
+
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        box.setSkin(new ChoiceBoxSkin<>(box));
+        box.setItems(items);
+        box.setSelectionModel(null);
+
+        box.setValue(items.get(1));
+
+        String text = ChoiceBoxSkinNodesShim.getChoiceBoxSelectedText((ChoiceBoxSkin<?>) box.getSkin());
+        assertEquals(items.get(1), text);
+
+        System.setErr(defaultErrorStream);
+        assertEquals("No NPE should be thrown", "", out.toString());
     }
 
     @Test public void selectionModelCanBeBound() {

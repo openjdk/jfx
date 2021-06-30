@@ -46,6 +46,8 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -283,6 +285,32 @@ public class ComboBoxTest {
     @Test public void selectionModelCanBeNull() {
         comboBox.setSelectionModel(null);
         assertNull(comboBox.getSelectionModel());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        PrintStream defaultErrorStream = System.err;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(out, true));
+
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+
+        System.setErr(defaultErrorStream);
+        assertEquals("No NPE should be thrown", "", out.toString());
     }
 
     @Test public void selectionModelCanBeBound() {
