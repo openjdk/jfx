@@ -114,7 +114,7 @@ import javafx.event.EventHandler;
  * and the cycle is to be played again, the event handler registered with the
  * {@link #onRepeatProperty onRepeat} property is invoked. If the stop time is
  * reached, then the event handler registered with the {@link #onEndOfMediaProperty onEndOfMedia}
- * property is invoked regardless if the cycle is to be repeated or not.
+ * property is invoked regardless of whether the cycle is to be repeated or not.
  * A zero-relative index of which cycle is presently being played is maintained
  * by {@link #currentCountProperty currentCount}.
  * </p>
