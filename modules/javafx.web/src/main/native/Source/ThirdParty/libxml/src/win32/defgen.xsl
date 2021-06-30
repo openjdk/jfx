@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
-<!-- 
+<!--
 	win32/defgen.xsl
 	This stylesheet is used to transform doc/libxml2-api.xml into a pseudo-source,
 	which can then be preprocessed to get the .DEF file for the Microsoft's linker.
-	
+
 	Use any XSLT processor to produce a file called libxml2.def.src in the win32
 	subdirectory, for example, run xsltproc from the win32 subdirectory:
-	
+
 	  xsltproc -o libxml2.def.src defgen.xsl ../doc/libxml2-api.xml
-	  
+
 	Once that finishes, rest assured, the Makefile will know what to do with the
-	generated file. 
+	generated file.
 
 	April 2003, Igor Zlatkovic <igor@zlatkovic.com>
 -->
@@ -37,7 +37,7 @@
 			<xsl:if test="@file = 'DOCBparser'">
 				<xsl:text>#ifdef LIBXML_DOCB_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'HTMLparser') 
+			<xsl:if test="(@file = 'HTMLparser')
 					or (@file = 'HTMLtree')">
 				<xsl:text>#ifdef LIBXML_HTML_ENABLED&nl;</xsl:text>
 			</xsl:if>
@@ -47,8 +47,8 @@
 			<xsl:if test="@file = 'nanoftp'">
 				<xsl:text>#ifdef LIBXML_FTP_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'relaxng') 
-					or (@file = 'xmlschemas') 
+			<xsl:if test="(@file = 'relaxng')
+					or (@file = 'xmlschemas')
 					or (@file = 'xmlschemastypes')">
 				<xsl:text>#ifdef LIBXML_SCHEMAS_ENABLED&nl;</xsl:text>
 			</xsl:if>
@@ -61,11 +61,11 @@
 			<xsl:if test="@file = 'xmlautomata'">
 				<xsl:text>#ifdef LIBXML_AUTOMATA_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'xmlregexp') 
+			<xsl:if test="(@file = 'xmlregexp')
 					or (@file = 'xmlunicode')">
 				<xsl:text>#ifdef LIBXML_REGEXP_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'xpath') 
+			<xsl:if test="(@file = 'xpath')
 					or (@file = 'xpathInternals')">
 				<xsl:text>#ifdef LIBXML_XPATH_ENABLED&nl;</xsl:text>
 			</xsl:if>
@@ -73,52 +73,52 @@
 				<xsl:text>#ifdef LIBXML_XPTR_ENABLED&nl;</xsl:text>
 			</xsl:if>
 			<!-- Extended tests -->
-			<xsl:if test="(@name = 'htmlDefaultSAXHandlerInit') 
-					or (@name = 'htmlInitAutoClose') 
-					or (@name = 'htmlCreateFileParserCtxt') 
+			<xsl:if test="(@name = 'htmlDefaultSAXHandlerInit')
+					or (@name = 'htmlInitAutoClose')
+					or (@name = 'htmlCreateFileParserCtxt')
 					or (@name = 'inithtmlDefaultSAXHandler')
-					or (@name = 'xmlIsXHTML') 
-					or (@name = 'xmlIOHTTPOpenW') 
-					or (@name = 'xmlRegisterHTTPPostCallbacks') 
+					or (@name = 'xmlIsXHTML')
+					or (@name = 'xmlIOHTTPOpenW')
+					or (@name = 'xmlRegisterHTTPPostCallbacks')
 					or (@name = 'xmlIOHTTPMatch')
-					or (@name = 'xmlIOHTTPOpen') 
-					or (@name = 'xmlIOHTTPRead') 
+					or (@name = 'xmlIOHTTPOpen')
+					or (@name = 'xmlIOHTTPRead')
 					or (@name = 'xmlIOHTTPClose')">
 				<xsl:text>#ifdef LIBXML_HTML_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'docbDefaultSAXHandlerInit') 
+			<xsl:if test="(@name = 'docbDefaultSAXHandlerInit')
 					or (@name = 'initdocbDefaultSAXHandler')">
 				<xsl:text>#ifdef LIBXML_DOCB_ENABLED&nl;</xsl:text>
 			</xsl:if>
 			<xsl:if test="@name = 'xmlValidBuildContentModel'">
 				<xsl:text>#ifdef LIBXML_REGEXP_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlIOFTPMatch') 
-					or (@name = 'xmlIOFTPOpen') 
-					or (@name = 'xmlIOFTPRead') 
+			<xsl:if test="(@name = 'xmlIOFTPMatch')
+					or (@name = 'xmlIOFTPOpen')
+					or (@name = 'xmlIOFTPRead')
 					or (@name = 'xmlIOFTPClose')">
 				<xsl:text>#ifdef LIBXML_FTP_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlTextReaderRelaxNGValidate') 
+			<xsl:if test="(@name = 'xmlTextReaderRelaxNGValidate')
 					or (@name = 'xmlTextReaderRelaxNGSetSchema')">
 				<xsl:text>#ifdef LIBXML_SCHEMAS_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlXPathDebugDumpObject') 
+			<xsl:if test="(@name = 'xmlXPathDebugDumpObject')
 					or (@name = 'xmlXPathDebugDumpCompExpr')">
 				<xsl:text>#ifdef LIBXML_DEBUG_ENABLED&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlMallocLoc') 
-					or (@name = 'xmlMallocAtomicLoc') 
-					or (@name = 'xmlReallocLoc') 
+			<xsl:if test="(@name = 'xmlMallocLoc')
+					or (@name = 'xmlMallocAtomicLoc')
+					or (@name = 'xmlReallocLoc')
 					or (@name = 'xmlMemStrdupLoc')">
 				<xsl:text>#ifdef DEBUG_MEMORY_LOCATION&nl;</xsl:text>
 			</xsl:if>
 			<!-- Symbol -->
 			<xsl:choose>
-				<xsl:when test="(@name = 'xmlMalloc') 
-						or (@name = 'xmlMallocAtomic') 
-						or (@name = 'xmlRealloc') 
-						or (@name = 'xmlFree') 
+				<xsl:when test="(@name = 'xmlMalloc')
+						or (@name = 'xmlMallocAtomic')
+						or (@name = 'xmlRealloc')
+						or (@name = 'xmlFree')
 						or (@name = 'xmlMemStrdup')">
 					<xsl:text>#ifdef LIBXML_THREAD_ALLOC_ENABLED&nl;</xsl:text>
 					<xsl:text>__</xsl:text>
@@ -129,28 +129,28 @@
 					<xsl:text> DATA&nl;</xsl:text>
 					<xsl:text>#endif&nl;</xsl:text>
 				</xsl:when>
-				<xsl:when test="(@name = 'docbDefaultSAXHandler') 
-						or (@name = 'htmlDefaultSAXHandler') 
-						or (@name = 'oldXMLWDcompatibility') 
-						or (@name = 'xmlBufferAllocScheme') 
-						or (@name = 'xmlDefaultBufferSize') 
-						or (@name = 'xmlDefaultSAXHandler') 
-						or (@name = 'xmlDefaultSAXLocator') 
-						or (@name = 'xmlDoValidityCheckingDefaultValue') 
-						or (@name = 'xmlGenericError') 
-						or (@name = 'xmlGenericErrorContext') 
-						or (@name = 'xmlGetWarningsDefaultValue') 
-						or (@name = 'xmlIndentTreeOutput') 
-						or (@name = 'xmlTreeIndentString') 
-						or (@name = 'xmlKeepBlanksDefaultValue') 
-						or (@name = 'xmlLineNumbersDefaultValue') 
-						or (@name = 'xmlLoadExtDtdDefaultValue') 
-						or (@name = 'xmlParserDebugEntities') 
-						or (@name = 'xmlParserVersion') 
-						or (@name = 'xmlPedanticParserDefaultValue') 
-						or (@name = 'xmlSaveNoEmptyTags') 
-						or (@name = 'xmlSubstituteEntitiesDefaultValue') 
-						or (@name = 'xmlRegisterNodeDefaultValue') 
+				<xsl:when test="(@name = 'docbDefaultSAXHandler')
+						or (@name = 'htmlDefaultSAXHandler')
+						or (@name = 'oldXMLWDcompatibility')
+						or (@name = 'xmlBufferAllocScheme')
+						or (@name = 'xmlDefaultBufferSize')
+						or (@name = 'xmlDefaultSAXHandler')
+						or (@name = 'xmlDefaultSAXLocator')
+						or (@name = 'xmlDoValidityCheckingDefaultValue')
+						or (@name = 'xmlGenericError')
+						or (@name = 'xmlGenericErrorContext')
+						or (@name = 'xmlGetWarningsDefaultValue')
+						or (@name = 'xmlIndentTreeOutput')
+						or (@name = 'xmlTreeIndentString')
+						or (@name = 'xmlKeepBlanksDefaultValue')
+						or (@name = 'xmlLineNumbersDefaultValue')
+						or (@name = 'xmlLoadExtDtdDefaultValue')
+						or (@name = 'xmlParserDebugEntities')
+						or (@name = 'xmlParserVersion')
+						or (@name = 'xmlPedanticParserDefaultValue')
+						or (@name = 'xmlSaveNoEmptyTags')
+						or (@name = 'xmlSubstituteEntitiesDefaultValue')
+						or (@name = 'xmlRegisterNodeDefaultValue')
 						or (@name = 'xmlDeregisterNodeDefaultValue')">
 					<xsl:text>#ifdef LIBXML_THREAD_ENABLED&nl;</xsl:text>
 					<xsl:if test="@name = 'docbDefaultSAXHandler'">
@@ -206,7 +206,7 @@
 			<xsl:if test="@file = 'DOCBparser'">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'HTMLparser') 
+			<xsl:if test="(@file = 'HTMLparser')
 					or (@file = 'HTMLtree')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
@@ -216,8 +216,8 @@
 			<xsl:if test="@file = 'nanoftp'">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'relaxng') 
-					or (@file = 'xmlschemas') 
+			<xsl:if test="(@file = 'relaxng')
+					or (@file = 'xmlschemas')
 					or (@file = 'xmlschemastypes')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
@@ -230,11 +230,11 @@
 			<xsl:if test="@file = 'xmlautomata'">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'xmlregexp') 
+			<xsl:if test="(@file = 'xmlregexp')
 					or (@file = 'xmlunicode')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@file = 'xpath') 
+			<xsl:if test="(@file = 'xpath')
 					or (@file = 'xpathInternals')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
@@ -242,43 +242,43 @@
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
 			<!-- Extended tests (close) -->
-			<xsl:if test="(@name = 'htmlDefaultSAXHandlerInit') 
-					or (@name = 'htmlInitAutoClose') 
-					or (@name = 'htmlCreateFileParserCtxt') 
+			<xsl:if test="(@name = 'htmlDefaultSAXHandlerInit')
+					or (@name = 'htmlInitAutoClose')
+					or (@name = 'htmlCreateFileParserCtxt')
 					or (@name = 'inithtmlDefaultSAXHandler')
-					or (@name = 'xmlIsXHTML') 
-					or (@name = 'xmlIOHTTPOpenW') 
-					or (@name = 'xmlRegisterHTTPPostCallbacks') 
+					or (@name = 'xmlIsXHTML')
+					or (@name = 'xmlIOHTTPOpenW')
+					or (@name = 'xmlRegisterHTTPPostCallbacks')
 					or (@name = 'xmlIOHTTPMatch')
-					or (@name = 'xmlIOHTTPOpen') 
-					or (@name = 'xmlIOHTTPRead') 
+					or (@name = 'xmlIOHTTPOpen')
+					or (@name = 'xmlIOHTTPRead')
 					or (@name = 'xmlIOHTTPClose')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'docbDefaultSAXHandlerInit') 
+			<xsl:if test="(@name = 'docbDefaultSAXHandlerInit')
 					or (@name = 'initdocbDefaultSAXHandler')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
 			<xsl:if test="@name = 'xmlValidBuildContentModel'">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlIOFTPMatch') 
-					or (@name = 'xmlIOFTPOpen') 
-					or (@name = 'xmlIOFTPRead') 
+			<xsl:if test="(@name = 'xmlIOFTPMatch')
+					or (@name = 'xmlIOFTPOpen')
+					or (@name = 'xmlIOFTPRead')
 					or (@name = 'xmlIOFTPClose')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlTextReaderRelaxNGValidate') 
+			<xsl:if test="(@name = 'xmlTextReaderRelaxNGValidate')
 					or (@name = 'xmlTextReaderRelaxNGSetSchema')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlXPathDebugDumpObject') 
+			<xsl:if test="(@name = 'xmlXPathDebugDumpObject')
 					or (@name = 'xmlXPathDebugDumpCompExpr')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>
-			<xsl:if test="(@name = 'xmlMallocLoc') 
-					or (@name = 'xmlMallocAtomicLoc') 
-					or (@name = 'xmlReallocLoc') 
+			<xsl:if test="(@name = 'xmlMallocLoc')
+					or (@name = 'xmlMallocAtomicLoc')
+					or (@name = 'xmlReallocLoc')
 					or (@name = 'xmlMemStrdupLoc')">
 				<xsl:text>#endif&nl;</xsl:text>
 			</xsl:if>

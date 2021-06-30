@@ -1,5 +1,5 @@
 /* Configure script for libxml, specific for Windows with Scripting Host.
- * 
+ *
  * This script will configure the libxml build process and create necessary files.
  * Run it with an 'help', or an invalid option and it will tell you what options
  * it accepts.
@@ -19,7 +19,7 @@ var versionFile = ".\\config.msvc";
 /* Input and output files regarding the libxml features. */
 var optsFileIn = srcDirXml + "\\include\\libxml\\xmlversion.h.in";
 var optsFile = srcDirXml + "\\include\\libxml\\xmlversion.h";
-/* Version strings for the binary distribution. Will be filled later 
+/* Version strings for the binary distribution. Will be filled later
    in the code. */
 var verMajor;
 var verMinor;
@@ -163,7 +163,7 @@ function usage()
 	txt += "              (" + buildIncPrefix + ")\n";
 	txt += "  libdir:     Directory where static and import libraries should be\n";
 	txt += "              installed (" + buildLibPrefix + ")\n";
-	txt += "  sodir:      Directory where shared libraries should be installed\n"; 
+	txt += "  sodir:      Directory where shared libraries should be installed\n";
 	txt += "              (" + buildSoPrefix + ")\n";
 	txt += "  include:    Additional search path for the compiler, particularly\n";
 	txt += "              where iconv headers can be found (" + buildInclude + ")\n";
@@ -306,10 +306,10 @@ function configureLibxml()
 		ln = ofi.ReadLine();
 		s = new String(ln);
 		if (s.search(/\@VERSION\@/) != -1) {
-			of.WriteLine(s.replace(/\@VERSION\@/, 
+			of.WriteLine(s.replace(/\@VERSION\@/,
 				verMajor + "." + verMinor + "." + verMicro + verMicroSuffix));
 		} else if (s.search(/\@LIBXML_VERSION_NUMBER\@/) != -1) {
-			of.WriteLine(s.replace(/\@LIBXML_VERSION_NUMBER\@/, 
+			of.WriteLine(s.replace(/\@LIBXML_VERSION_NUMBER\@/,
 				verMajor*10000 + verMinor*100 + verMicro*1));
 		} else if (s.search(/\@LIBXML_VERSION_EXTRA\@/) != -1) {
 			of.WriteLine(s.replace(/\@LIBXML_VERSION_EXTRA\@/, verCvs));
@@ -402,7 +402,7 @@ function configureLibxmlPy()
 		ln = ofi.ReadLine();
 		s = new String(ln);
 		if (s.search(/\@LIBXML_VERSION\@/) != -1) {
-			of.WriteLine(s.replace(/\@LIBXML_VERSION\@/, 
+			of.WriteLine(s.replace(/\@LIBXML_VERSION\@/,
 				verMajor + "." + verMinor + "." + verMicro));
 		} else if (s.search(/\@prefix\@/) != -1) {
 			of.WriteLine(s.replace(/\@prefix\@/, buildPrefix));
@@ -438,7 +438,7 @@ function genReadme(bname, ver, file)
 	f.WriteLine("environment variable.");
 	f.WriteLine("  If you want to make programmes in C which use " + bname + ", you'll");
 	f.WriteLine("likely know how to use the contents of this package. If you don't, please");
-	f.WriteLine("refer to your compiler's documentation."); 
+	f.WriteLine("refer to your compiler's documentation.");
 	f.WriteBlankLines(1);
 	f.WriteLine("  If there is something you cannot keep for yourself, such as a problem,");
 	f.WriteLine("a cheer of joy, a comment or a suggestion, feel free to contact me using");
@@ -657,7 +657,7 @@ fso.CopyFile(confighsrc, configh, true);
 WScript.Echo("Created config.h.");
 
 
-// Display the final configuration. 
+// Display the final configuration.
 var txtOut = "\nXML processor configuration\n";
 txtOut += "---------------------------\n";
 txtOut += "              Trio: " + boolToStr(withTrio) + "\n";

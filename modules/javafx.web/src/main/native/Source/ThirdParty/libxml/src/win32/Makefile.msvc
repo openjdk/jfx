@@ -1,6 +1,6 @@
 # Makefile for libxml2, specific for Windows, MSVC and NMAKE.
 #
-# Take a look at the beginning and modify the variables to suit your 
+# Take a look at the beginning and modify the variables to suit your
 # environment. Having done that, you can do a
 #
 # nmake [all]     to build the libxml and the accompanying utilities.
@@ -37,7 +37,7 @@ UTILS_INTDIR = int.utils.msvc
 
 # The preprocessor and its options.
 CPP = cl.exe /EP
-CPPFLAGS = /nologo /I$(XML_SRCDIR)\include /D "NOLIBTOOL" 
+CPPFLAGS = /nologo /I$(XML_SRCDIR)\include /D "NOLIBTOOL"
 !if "$(WITH_THREADS)" != "no"
 CPPFLAGS = $(CPPFLAGS) /D "_REENTRANT"
 !endif
@@ -65,10 +65,10 @@ LDFLAGS = $(LDFLAGS) /LIBPATH:$(BINDIR) /LIBPATH:$(LIBPREFIX)
 LIBS =
 !if "$(WITH_FTP)" == "1" || "$(WITH_HTTP)" == "1"
 LIBS = $(LIBS) wsock32.lib ws2_32.lib
-!endif 
+!endif
 !if "$(WITH_ICONV)" == "1"
 LIBS = $(LIBS) iconv.lib
-!endif 
+!endif
 !if "$(WITH_ICU)" == "1"
 !if "$(STATIC)" == "1"
 LIBS = $(LIBS) advapi32.lib sicuuc.lib sicuin.lib sicudt.lib
@@ -100,7 +100,7 @@ ARFLAGS = /nologo
 CFLAGS = $(CFLAGS) /D "_DEBUG" /Od /Z7
 LDFLAGS = $(LDFLAGS) /DEBUG
 !else
-CFLAGS = $(CFLAGS) /D "NDEBUG" /O2 
+CFLAGS = $(CFLAGS) /D "NDEBUG" /O2
 # commented out as this break VC10 c.f. 634846
 # LDFLAGS = $(LDFLAGS) /OPT:NOWIN98
 LDFLAGS = $(LDFLAGS)
@@ -278,7 +278,7 @@ UTILS = $(BINDIR)\xmllint.exe\
 	$(BINDIR)\testdict.exe\
 	$(BINDIR)\testlimits.exe\
 	$(BINDIR)\testrecurse.exe
-	
+
 !if "$(WITH_THREADS)" != "no"
 UTILS = $(UTILS) $(BINDIR)\testThreads.exe
 !endif
@@ -293,7 +293,7 @@ _VC_MANIFEST_EMBED_DLL=
 
 all : libxml libxmla libxmladll utils
 
-libxml : $(BINDIR)\$(XML_SO) 
+libxml : $(BINDIR)\$(XML_SO)
 
 libxmla : $(BINDIR)\$(XML_A)
 
@@ -326,11 +326,11 @@ install-libs : all
 	copy $(BINDIR)\$(XML_A_DLL) $(LIBPREFIX)
 	copy $(BINDIR)\$(XML_IMP) $(LIBPREFIX)
 
-install : install-libs 
+install : install-libs
 	copy $(BINDIR)\*.exe $(BINPREFIX)
 	-copy $(BINDIR)\*.pdb $(BINPREFIX)
 
-install-dist : install-libs 
+install-dist : install-libs
 	copy $(BINDIR)\xml*.exe $(BINPREFIX)
 	-copy $(BINDIR)\xml*.pdb $(BINPREFIX)
 
@@ -373,13 +373,13 @@ $(XML_INTDIR_A_DLL) :
 	$(CC) $(CFLAGS) /D "LIBXML_STATIC" /D "LIBXML_STATIC_FOR_DLL" /Fo$(XML_INTDIR_A_DLL)\ /c $<
 
 # Compiles libxml source. Uses the implicit rule for commands.
-$(XML_OBJS) : $(XML_INTDIR) 
+$(XML_OBJS) : $(XML_INTDIR)
 
 # Compiles static libxml source. Uses the implicit rule for commands.
-$(XML_OBJS_A) : $(XML_INTDIR_A) 
+$(XML_OBJS_A) : $(XML_INTDIR_A)
 
 # Compiles static for dll libxml source. Uses the implicit rule for commands.
-$(XML_OBJS_A_DLL) : $(XML_INTDIR_A_DLL) 
+$(XML_OBJS_A_DLL) : $(XML_INTDIR_A_DLL)
 
 # Creates the export definition file (DEF) for libxml.
 $(XML_INTDIR)\$(XML_DEF) : $(XML_INTDIR) $(XML_DEF).src
@@ -412,12 +412,12 @@ $(UTILS_INTDIR) :
 # An implicit rule for xmllint and friends.
 !if "$(STATIC)" == "1"
 {$(UTILS_SRCDIR)}.c{$(BINDIR)}.exe:
-	$(CC) /D "LIBXML_STATIC" $(CFLAGS) /Fo$(UTILS_INTDIR)\ /c $< 
+	$(CC) /D "LIBXML_STATIC" $(CFLAGS) /Fo$(UTILS_INTDIR)\ /c $<
 	$(LD) $(LDFLAGS) /OUT:$@ $(XML_A) $(LIBS) $(UTILS_INTDIR)\$(<B).obj
 	@$(_VC_MANIFEST_EMBED_EXE)
 !else
 {$(UTILS_SRCDIR)}.c{$(BINDIR)}.exe:
-	$(CC) $(CFLAGS) /Fo$(UTILS_INTDIR)\ /c $< 
+	$(CC) $(CFLAGS) /Fo$(UTILS_INTDIR)\ /c $<
 	$(LD) $(LDFLAGS) /OUT:$@ $(XML_IMP) $(LIBS) $(UTILS_INTDIR)\$(<B).obj
 	@$(_VC_MANIFEST_EMBED_EXE)
 !endif
@@ -493,10 +493,10 @@ XMLtests : $(BINDIR)\xmllint.exe
 			fc result.%%~nxI result2.%%~nxI & \
 			del result.%%~nxI result2.%%~nxI\
 		) \
-	)	
-
-				
+	)
 
 
 
-	
+
+
+

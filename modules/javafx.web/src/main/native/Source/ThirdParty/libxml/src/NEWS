@@ -4,20 +4,20 @@
   Note that this is automatically generated from the news webpage at:
        http://xmlsoft.org/news.html
 
-The change log at 
+The change log at
 ChangeLog.html
  describes the recents commits
-to the GIT at 
+to the GIT at
 https://gitlab.gnome.org/GNOME/libxml2
  code base.Here is the list of public releases:
 v2.9.9: Jan 03 2019:
    - Security:
   CVE-2018-9251 CVE-2018-14567 Fix infinite loop in LZMA decompression (Nick Wellnhofer),
   CVE-2018-14404 Fix nullptr deref with XPath logic ops (Nick Wellnhofer),
-  
+
    - Documentation:
   reader: Fix documentation comment (Mohammed Sadiq)
-  
+
    - Portability:
   Fix MSVC build with lzma (Nick Wellnhofer),
   Variables need 'extern' in static lib on Cygwin (Michael Haubenwallner),
@@ -26,7 +26,7 @@ v2.9.9: Jan 03 2019:
   Change dir to $THEDIR after ACLOCAL_PATH check autoreconf creates aclocal.m4 in $srcdir (Vitaly Buka),
   Improve error message if pkg.m4 couldn't be found (Nick Wellnhofer),
   NaN and Inf fixes for pre-C99 compilers (Nick Wellnhofer)
-  
+
    - Bug Fixes:
   Revert "Support xmlTextReaderNextSibling w/o preparsed doc" (Nick Wellnhofer),
   Fix building relative URIs (Thomas Holder),
@@ -48,7 +48,7 @@ v2.9.9: Jan 03 2019:
   Don't change context node in xmlXPathRoot (Nick Wellnhofer),
   Stop using XPATH_OP_RESET (Nick Wellnhofer),
   Revert "Change calls to xmlCharEncInput to set flush false" (Nick Wellnhofer)
-  
+
    - Improvements:
   Fix "Problem with data in interleave in RelaxNG validation" (Nikolai Weibull),
   cleanup: remove some unreachable code (Thomas Holder),
@@ -67,9 +67,9 @@ v2.9.9: Jan 03 2019:
   Simplify and harden nodeset filtering (Nick Wellnhofer),
   Avoid unnecessary backups of the context node (Nick Wellnhofer),
   Fix inconsistency in xmlXPathIsInf (Nick Wellnhofer)
-  
+
    - Cleanups:
-  
+
 
 
 v2.9.8: Mar 05 2018:
@@ -79,7 +79,7 @@ v2.9.8: Mar 05 2018:
   Stop including ansidecl.h (Nick Wellnhofer),
   Fix libz and liblzma detection (Nick Wellnhofer),
   Revert "Compile testapi with -Wno-unused-function" (Nick Wellnhofer)
-  
+
    - Bug Fixes:
   Fix xmlParserEntityCheck (Nick Wellnhofer),
   Halt parser in case of encoding error (Nick Wellnhofer),
@@ -98,7 +98,7 @@ v2.9.8: Mar 05 2018:
   Refactor name and type signature for xmlNop (Vlad Tsyrklevich),
   Fixed ICU to set flush correctly and provide pivot buffer. (Joel Hockey),
   Skip EBCDIC tests if EBCDIC isn't supported (Nick Wellnhofer)
-  
+
    - Improvements:
   Disable pointer-overflow UBSan checks under Travis (Nick Wellnhofer),
   Improve handling of context input_id (Daniel Veillard),
@@ -115,13 +115,13 @@ v2.9.8: Mar 05 2018:
   Introduce xmlPosixStrdup and update xmlMemStrdup (Nick Wellnhofer),
   Add test for ICU flush and pivot buffer (Nick Wellnhofer),
   Compile testapi with -Wno-unused-function (Nick Wellnhofer)
-  
+
 
 
 2.9.7: Nov 02 2017:
    - Documentation:
   xmlcatalog: refresh man page wrt. quering system catalog easily (Jan Pokorný)
-  
+
    - Portability:
   Fix deprecated Travis compiler flag (Nick Wellnhofer),
   Add declaration for DllMain (J. Peter Mugaas),
@@ -135,11 +135,11 @@ v2.9.8: Mar 05 2018:
   Don't redefine socket error codes on Windows (Nick Wellnhofer),
   Fix pointer/int cast warnings on 64-bit Windows (Nick Wellnhofer),
   Fix Windows compiler warnings in xmlCanonicPath (Nick Wellnhofer)
-  
+
    - Bug Fixes:
   xmlcatalog: restore ability to query system catalog easily (Jan Pokorný),
   Fix comparison of nodesets to strings (Nick Wellnhofer)
-  
+
    - Improvements:
   Add Makefile rules to rebuild HTML man pages (Nick Wellnhofer),
   Fix mixed decls and code in timsort.h (Nick Wellnhofer),
@@ -155,13 +155,13 @@ v2.9.8: Mar 05 2018:
   Don't include winsock2.h in xmllint.c (Nick Wellnhofer),
   Remove generated file python/setup.py from version control (Nick Wellnhofer),
   Use __linux__ macro in generated code (Nick Wellnhofer)
-  
+
 
 
 v2.9.6: Oct 06 2017:
    - Portability:
   Change preprocessor OS tests to __linux__ (Nick Wellnhofer)
-  
+
    - Bug Fixes:
   Fix XPath stack frame logic (Nick Wellnhofer),
   Report undefined XPath variable error message (Nick Wellnhofer),
@@ -174,7 +174,7 @@ v2.9.6: Oct 06 2017:
   Fix debug dump of streaming XPath expressions (Nick Wellnhofer),
   Fix memory leak in nanoftp (Nick Wellnhofer),
   Fix memory leaks in SAX1 parser (Nick Wellnhofer)
-  
+
 
 
 v2.9.5: Sep 04 2017:
@@ -183,18 +183,18 @@ v2.9.5: Sep 04 2017:
   Fix handling of parameter-entity references (Nick Wellnhofer),
   Disallow namespace nodes in XPointer ranges (Nick Wellnhofer),
   Fix XPointer paths beginning with range-to (Nick Wellnhofer)
-  
+
    - Documentation:
   Documentation fixes (Nick Wellnhofer),
   Spelling and grammar fixes (Nick Wellnhofer)
-  
+
    - Portability:
   Adding README.zOS to list of extra files for the release (Daniel Veillard),
   Description of work needed to compile on zOS (Stéphane Michaut),
   Porting libxml2 on zOS encoding of code (Stéphane Michaut),
   small changes for OS/400 (Patrick Monnerat),
   relaxng.c, xmlschemas.c: Fix build on pre-C99 compilers (Chun-wei Fan)
-  
+
    - Bug Fixes:
   Problem resolving relative URIs (Daniel Veillard),
   Fix unwanted warnings when switching encodings (Nick Wellnhofer),
@@ -246,7 +246,7 @@ v2.9.5: Sep 04 2017:
   Fix comparison with root node in xmlXPathCmpNodes (Nick Wellnhofer),
   Fix attribute decoding during XML schema validation (Alex Henrie),
   Fix NULL pointer deref in XPointer range-to (Nick Wellnhofer)
-  
+
    - Improvements:
   Updating the spec file to reflect Fedora 24 (Daniel Veillard),
   Add const in five places to move 1 KiB to .rdata (Bruce Dawson),
@@ -290,11 +290,11 @@ v2.9.5: Sep 04 2017:
   Make xmlXPathEvalExpression call xmlXPathEval (Nick Wellnhofer),
   Remove unused variables (Nick Wellnhofer),
   Don't print generic error messages in XPath tests (Nick Wellnhofer)
-  
+
    - Cleanups:
   Fix a couple of misleading indentation errors (Daniel Veillard),
   Remove unnecessary calls to xmlPopInput (Nick Wellnhofer)
-  
+
 
 
 2.9.4: May 23 2016:
@@ -313,13 +313,13 @@ v2.9.5: Sep 04 2017:
   Bug 758588: Heap-based buffer overread in xmlParserPrintFileContextInternal <https://bugzilla.gnome.org/show_bug.cgi?id=758588> (David Kilzer),
   Bug 757711: heap-buffer-overflow in xmlFAParsePosCharGroup <https://bugzilla.gnome.org/show_bug.cgi?id=757711> (Pranjal Jumde),
   Add missing increments of recursion depth counter to XML parser. (Peter Simons)
-  
+
    - Documentation:
   Fix typo: s{ ec -> cr }cipt (Jan Pokorný),
   Fix typos: dictio{ nn -> n }ar{y,ies} (Jan Pokorný),
   Fix typos: PATH_{ SEAPARATOR -> SEPARATOR } (Jan Pokorný),
   Correct a typo. (Shlomi Fish)
-  
+
    - Portability:
   Correct the usage of LDFLAGS (Mattias Hansson),
   Revert the use of SAVE_LDFLAGS in configure.ac (Mattias Hansson),
@@ -346,7 +346,7 @@ v2.9.5: Sep 04 2017:
   Bug 760190: configure.ac should be able to build --with-icu without icu-config tool <https://bugzilla.gnome.org/show_bug.cgi?id=760190> (David Kilzer),
   win32\VC10\config.h and VS 2015 (Bruce Dawson),
   Add configure maintainer mode (orzen)
-  
+
    - Bug Fixes:
   Avoid an out of bound access when serializing malformed strings (Daniel Veillard),
   Unsigned addition may overflow in xmlMallocAtomicLoc() (David Kilzer),
@@ -377,12 +377,12 @@ v2.9.5: Sep 04 2017:
   python 3: libxml2.c wrappers create Unicode str already (Michael Stahl),
   Add autogen.sh to distrib (orzen),
   Heap-based buffer overread in xmlNextChar (Daniel Veillard)
-  
+
    - Improvements:
   Add more debugging info to runtest (Daniel Veillard),
   Implement "runtest -u" mode (David Kilzer),
   Add a make rule to rebuild for ASAN (Daniel Veillard)
-  
+
 
 
 v2.9.3: Nov 20 2015:
@@ -400,16 +400,16 @@ v2.9.3: Nov 20 2015:
   CVE-2015-1819 Enforce the reader to run in constant memory (Daniel Veillard)
   CVE-2015-7941_2 Cleanup conditional section error handling (Daniel Veillard),
   CVE-2015-7941_1 Stop parsing on entities boundaries errors (Daniel Veillard),
-  
+
    - Documentation:
   Correct spelling of "calling" (Alex Henrie),
   Fix a small error in xmllint --format description (Fabien Degomme),
   Avoid XSS on the search of xmlsoft.org (Daniel Veillard)
-  
+
    - Portability:
   threads: use forward declarations only for glibc (Michael Heimpold),
   Update Win32 configure.js to search for configure.ac (Daniel Veillard)
-  
+
    - Bug Fixes:
   Bug on creating new stream from entity (Daniel Veillard),
   Fix some loop issues embedding NEXT (Daniel Veillard),
@@ -436,7 +436,7 @@ v2.9.3: Nov 20 2015:
   Remove various unused value assignments (Philip Withnall),
   Fix missing entities after CVE-2014-3660 fix (Daniel Veillard),
   Revert "Missing initialization for the catalog module" (Daniel Veillard)
-  
+
    - Improvements:
   Reuse xmlHaltParser() where it makes sense (Daniel Veillard),
   xmlStopParser reset errNo (Daniel Veillard),
@@ -448,16 +448,16 @@ v2.9.3: Nov 20 2015:
   Add Python 3 rpm subpackage (Tomas Radej),
   libxml2-config.cmake.in: update include directories (Samuel Martin),
   Adding example from bugs 738805 to regression tests (Daniel Veillard)
-  
+
    - Cleanups:
-  
+
 
 
 2.9.2: Oct 16 2014:
    - Security:
   Fix for CVE-2014-3660 billion laugh variant (Daniel Veillard),
   CVE-2014-0191 Do not fetch external parameter entities (Daniel Veillard)
-  
+
    - Bug Fixes:
   fix memory leak xml header encoding field with XML_PARSE_IGNORE_ENC (Bart De Schuymer),
   xmlmemory: handle realloc properly (Yegor Yefremov),
@@ -539,7 +539,7 @@ v2.9.3: Nov 20 2015:
   Fix missing break on last() function for attributes (dcb),
   Do not URI escape in server side includes (Romain Bondue),
   Fix an error in xmlCleanupParser (Alexander Pastukhov)
-  
+
    - Documentation:
   typo in error messages "colon are forbidden from..." (Daniel Veillard),
   Fix a link to James SAX documentation old page (Daniel Veillard),
@@ -550,7 +550,7 @@ v2.9.3: Nov 20 2015:
   Fix typos in xmlschemas{,types}.c (Jan Pokorný),
   Fix incorrect spelling entites->entities (Jan Pokorný),
   Forgot to document 2.9.1 release, regenerate docs (Daniel Veillard)
-  
+
    - Portability:
   AC_CONFIG_FILES and executable bit (Roumen Petrov),
   remove HAVE_CONFIG_H dependency in testlimits.c (Roumen Petrov),
@@ -597,7 +597,7 @@ v2.9.3: Nov 20 2015:
   python: fix drv_libxml2.py for python3 compatibility (Alexandre Rostovtsev),
   python: Fix compiler warnings when building python3 bindings (Armin K),
   Fix for compilation with python 2.6.8 (Petr Sumbera)
-  
+
    - Improvements:
   win32/libxml2.def.src after rebuild in doc (Roumen Petrov),
   elfgcchack.h: more legacy needs xmlSAX2StartElement() and xmlSAX2EndElement() (Roumen Petrov),
@@ -619,7 +619,7 @@ v2.9.3: Nov 20 2015:
   Two small namespace tweaks (Daniel Veillard),
   xmllint --memory should fail on empty files (Daniel Veillard),
   Cast encoding name to char pointer to match arg type (Nikolay Sivov)
-  
+
    - Cleanups:
   Removal of old configure.in (Daniel Veillard),
   Unreachable code in tree.c (Gaurav Gupta),
@@ -627,19 +627,19 @@ v2.9.3: Nov 20 2015:
   Avoid some dead code and cleanup in relaxng.c (Gaurav),
   Drop not needed checks (Denis Pauk),
   Fix a wrong test (Daniel Veillard)
-  
+
 
 
 2.9.1: Apr 19 2013:
    -  Features:
     Support for Python3 (Daniel Veillard),
     Add xmlXPathSetContextNode and xmlXPathNodeEval (Alex Bligh)
-  
+
    -  Documentation:
     Add documentation for xmllint --xpath (Daniel Veillard),
     Fix the URL of the SAX documentation from James (Daniel Veillard),
     Fix spelling of "length". (Michael Wood)
-  
+
    -  Portability:
     Fix python bindings with versions older than 2.7 (Daniel Veillard),
     rebuild docs:Makefile.am (Roumen Petrov),
@@ -654,7 +654,7 @@ v2.9.3: Nov 20 2015:
     Windows build fixes (Daniel Richard),
     Fix a thread portability problem (Friedrich Haubensak),
     Downgrade autoconf requirement to 2.63 (Daniel Veillard)
-  
+
    -  Bug Fixes:
     Fix a linking error for python bindings (Daniel Veillard),
     Fix a couple of return without value (Jüri Aedla),
@@ -684,7 +684,7 @@ Veillard),
     Fix a regression in 2.9.0 breaking validation while streaming (Daniel,
 Veillard),
     Remove potential calls to exit() (Daniel Veillard)
-  
+
    -  Improvements:
     Regenerated API, and testapi, rebuild documentation (Daniel Veillard),
     Fix tree iterators broken by 2to3 script (Daniel Veillard),
@@ -703,7 +703,7 @@ Veillard),
     Define LIBXML_THREAD_ALLOC_ENABLED via xmlversion.h (Tim Starling),
     Adding streaming validation to runtest checks (Daniel Veillard),
     Add a --pushsmall option to xmllint (Daniel Veillard)
-  
+
    -  Cleanups:
     Switched comment in file to UTF-8 encoding (Daniel Veillard),
     Extend gitignore (Daniel Veillard),
@@ -717,7 +717,7 @@ Gansterer),
     Cleanup the Copyright to be pure MIT Licence wording (Daniel Veillard),
     rand_seed should be static in dict.c (Wouter Van Rooy),
     Fix typos in parser comments (Jan Pokorný)
-  
+
 
 
 2.9.0: Sep 11 2012:
@@ -726,12 +726,12 @@ Gansterer),
     More resilient push parser mode,
     A lot of portability improvement,
     Faster XPath evaluation
-  
+
    -  Documentation:
     xml2-config.1 markup error (Christian Weisgerber),
     libxml(3) manpage typo fix (John Bradshaw),
     More cleanups to the documentation part of libxml2 (Daniel Richard G)
-  
+
    -  Portability:
     Bug 676544 - fails to build with --without-sax1 (Akira TAGOH),
     fix builds not having stdint.h (Rob Richards),
@@ -749,7 +749,7 @@ Gansterer),
     Various "make distcheck" and portability fixups 2nd part (Daniel Richard G),
     Various "make distcheck" and portability fixups (Daniel Richard G),
     Fix compilation on older Visual Studio (Daniel Veillard)
-  
+
    -  Bug Fixes:
     Change the XPath code to percolate allocation errors (Daniel Veillard),
     Fix reuse of xmlInitParser (Daniel Veillard),
@@ -775,7 +775,7 @@ Gansterer),
     Fix entities local buffers size problems (Daniel Veillard),
     Fix parser local buffers size problems (Daniel Veillard),
     Fix a failure to report xmlreader parsing failures (Daniel Veillard)
-  
+
    -  Improvements:
     Keep libxml2.syms when running "make distclean" (Daniel Veillard),
     Allow to set the quoting character of an xmlWriter (Csaba Raduly),
@@ -832,7 +832,7 @@ Gansterer),
     Adding a new buf module for buffers (Daniel Veillard),
     Memory error within SAX2 reuse common framework (Daniel Veillard),
     Fix xmllint --xpath node initialization (Daniel Veillard)
-  
+
    -  Cleanups:
     Various cleanups to avoid compiler warnings (Daniel Veillard),
     Big space and tab cleanup (Daniel Veillard),
@@ -848,13 +848,13 @@ Gansterer),
     Regenerating docs and API files (Daniel Veillard),
     Small cleanup of unused variables in test (Daniel Veillard),
     Expand .gitignore with more files (Daniel Veillard)
-  
+
 
 
 2.8.0: May 23 2012:
    - Features:
   add lzma compression support (Anders F Bjorklund)
-  
+
    - Documentation:
     xmlcatalog: Add uri and delegateURI to possible add types in man page. (Ville Skyttä),
     Update README.tests (Daniel Veillard),
@@ -866,7 +866,7 @@ Gansterer),
     Clarify the need to use xmlFreeNode after xmlUnlinkNode (Daniel Veillard),
     Improve documentation a bit (Daniel Veillard),
     Updated URL for lxml python bindings (Daniel Veillard)
-  
+
    - Portability:
     Restore code for Windows compilation (Daniel Veillard),
     Remove git error message during configure (Christian Dywan),
@@ -886,7 +886,7 @@ Gansterer),
     634846 Remove a linking option breaking Windows VC10 (Daniel Veillard),
     599241 fix an initialization problem on Win64 (Andrew W. Nosenko),
     fix win build (Rob Richards)
-  
+
    - Bug fixes:
     Part for rand_r checking missing (Daniel Veillard),
     Cleanup on randomization (Daniel Veillard),
@@ -938,7 +938,7 @@ Gansterer),
     Fix a potential freeing error in XPath (Daniel Veillard),
     Fix a potential memory access error (Daniel Veillard),
     Reactivate the shared library versionning script (Daniel Veillard)
-  
+
    - Improvements:
     use mingw C99 compatible functions {v}snprintf instead those from MSVC runtime (Roumen Petrov),
     New symbols added for the next release (Daniel Veillard),
@@ -970,7 +970,7 @@ Gansterer),
     xmlmemory: add a cast as size_t has no portable printf modifier (Stefan Kost),
     __xmlRaiseError: remove redundant schannel initialization (Dmitry V. Levin),
     __xmlRaiseError: do cheap code check early (Dmitry V. Levin)
-  
+
    - Cleanups:
     Cleanups before 2.8.0-rc2 (Daniel Veillard),
     Avoid an extra operation (Daniel Veillard),
@@ -985,26 +985,26 @@ Gansterer),
     python: flag two unused args (Stefan Kost),
     configure: acconfig.h is deprecated since autoconf-2.50 (Stefan Kost),
     xpath: remove unused variable (Stefan Kost)
-  
+
 
 
 2.7.8: Nov 4 2010:
    -  Features:
     480323 add code to plug in ICU converters by default (Giuseppe Iuculano),
     Add xmlSaveOption XML_SAVE_WSNONSIG (Adam Spragg)
-  
+
    -  Documentation:
     Fix devhelp documentation installation (Mike Hommey),
     Fix web site encoding problems (Daniel Veillard),
     Fix a couple of typo in HTML parser error messages (Michael Day),
     Forgot to update the news page for 0.7.7 (Daniel Veillard)
-  
+
    -  Portability:
     607273 Fix python detection on MSys/Windows (LRN),
     614087 Fix Socket API usage to allow Windows64 compilation (Ozkan Sezer),
     Fix compilation with Clang (Koop Mast),
     Fix Win32 build (Rob Richards)
-  
+
    -  Bug Fixes:
     595789 fix a remaining potential Solaris problem (Daniel Veillard),
     617468 fix progressive HTML parsing with style using "'" (Denis Pauk),
@@ -1025,12 +1025,12 @@ Gansterer),
     Fix handling of apos in URIs (Daniel Veillard),
     xmlTextReaderReadOuterXml should handle DTD (Rob Richards),
     Autogen.sh needs to create m4 directory (Rob Richards)
-  
+
    -  Improvements:
     606592 update language ID parser to RFC 5646 (Daniel Veillard),
     Sort python generated stubs (Mike Hommey),
     Add an HTML parser option to avoid a default doctype (Daniel Veillard)
-  
+
    -  Cleanups:
     618831 don't ship generated files in git (Adrian Bunk),
     Switch from the obsolete mkinstalldirs to AC_PROG_MKDIR_P (Adrian Bunk),
@@ -1039,14 +1039,14 @@ Gansterer),
     Force _xmlSaveCtxt.format to be 0 or 1 (Adam Spragg),
     Cleanup encoding pointer comparison (Nikolay Sivov),
     Small code cleanup on previous patch (Daniel Veillard)
-  
+
 
 
 2.7.7: Mar 15 2010:
    -  Improvements:
     Adding a --xpath option to xmllint (Daniel Veillard),
     Make HTML parser non-recursive (Eugene Pimenov)
-  
+
    -  Portability:
     relaxng.c: cast to allow compilation with sun studio 11 (Ben Walton),
     Fix build failure on Sparc solaris (Roumen Petrov),
@@ -1058,7 +1058,7 @@ Gansterer),
     Fix python generator to not use deprecated xmllib (Daniel Veillard),
     Update some automake files (Daniel Veillard),
     598785 Fix nanohttp on Windows (spadix)
-  
+
    -  Bug Fixes:
     libxml violates the zlib interface and crashes (Mark Adler),
     Fix broken escape behaviour in regexp ranges (Daniel Veillard),
@@ -1082,10 +1082,10 @@ Gansterer),
     Fix broken escape behaviour in regexp ranges (Daniel Veillard),
     Don't give default HTML boolean attribute values in parser (Daniel Veillard),
     xmlCtxtResetLastError should reset ctxt-errNo (Daniel Veillard)
-  
+
    -  Cleanups:
     Cleanup a couple of weirdness in HTML parser (Eugene Pimenov)
-  
+
 
 
 2.7.6: Oct  6 2009:
@@ -1093,7 +1093,7 @@ Gansterer),
      Restore thread support in default configuration (Andrew W. Nosenko),
      URI with no path parsing problem (Daniel Veillard),
      Minor patch for conditional defines in threads.c (Eric Zurcher)
-  
+
 
 
 2.7.5: Sep 24 2009:
@@ -1105,17 +1105,17 @@ Gansterer),
     Fix a parsing problem with little data at startup (Daniel Veillard),
     link python module with python library (Frederic Crozat),
     594874 Forgot an fclose in xmllint (Daniel Veillard)
-  
+
    -  Cleanup:
     Adding symbols.xml to EXTRA_DIST (Daniel Veillard)
-  
+
 
 
 2.7.4: Sep 10 2009:
    - Improvements:
     Switch to GIT (GNOME),
     Add symbol versioning to libxml2 shared libs (Daniel Veillard)
-  
+
    - Portability:
     593857 try to work around thread pbm MinGW 4.4 (Daniel Veillard),
     594250 rename ATTRIBUTE_ALLOC_SIZE to avoid clashes (Daniel Veillard),
@@ -1136,7 +1136,7 @@ Gansterer),
     Bug 571059 â MSVC doesn't work with the bakefile (Intron),
     fix ATTRIBUTE_PRINTF header clash (Belgabor and Mike Hommey),
     fixes for Borland/CodeGear/Embarcadero compilers (Eric Zurcher)
-  
+
    - Documentation:
     544910 typo: "renciliateNs" (Leonid Evdokimov),
     Add VxWorks to list of OSes (Daniel Veillard),
@@ -1145,7 +1145,7 @@ Gansterer),
     Added sponsoring by AOE media for the server (Daniel Veillard),
     updated URLs for GNOME (Vincent Lefevre),
     more warnings about xmlCleanupThreads and xmlCleanupParser (Daniel Veillard)
-  
+
    - Bug fixes:
     594514 memory leaks - duplicate initialization (MOD),
     Wrong block opening in htmlNodeDumpOutputInternal (Daniel Veillard),
@@ -1215,7 +1215,7 @@ Gansterer),
     xmlXPathRegisterNs should not allow enpty prefixes (Daniel Veillard),
     add a missing check in xmlAddSibling (Kris Breuker),
     avoid leaks on errors (Jinmei Tatuya)
-  
+
    - Cleanup:
     Chasing dead assignments reported by clang-scan (Daniel Veillard),
     A few more safety cleanup raised by scan (Daniel Veillard),
@@ -1231,7 +1231,7 @@ Gansterer),
     hide the nbParse* variables used for debugging (Mike Hommey),
     570806 changed include of config.h (William M. Brack),
     cleanups and error reports when xmlTextWriterVSprintf fails (Jinmei Tatuya)
-  
+
 
 
 2.7.3: Jan 18 2009:
@@ -1255,7 +1255,7 @@ Gansterer),
    - Bug fixes: nasty entity bug introduced in 2.7.0, restore old behaviour
         when saving an HTML doc with an xml dump function, HTML UTF-8 parsing
         bug, fix reader custom error handlers (Riccardo Scussat)
-    
+
    - Improvement: xmlSave options for more flexibility to save as
         XML/HTML/XHTML, handle leading BOM in HTML documents
 
@@ -1274,7 +1274,7 @@ Gansterer),
    - Portability fixes: Older Win32 platforms (Rob Richards), MSVC
       porting fix (Rob Richards), Mac OS X regression tests (Sven Herzberg),
       non GNUCC builds (Rob Richards), compilation on Haiku (Andreas FÃ¤rber)
-      
+
    - Bug fixes: various realloc problems (Ashwin), potential double-free
       (Ashwin), regexp crash, icrash with invalid whitespace facets (Rob
       Richards), pattern fix when streaming (William Brack), various XML
@@ -1341,14 +1341,14 @@ Gansterer),
       parsing if attribute redeclared, avoid crash in hash list scanner if
       deleting elements, column counter bug fix (Christian Schmidt),
       HTML embed element saving fix (Stefan Behnel), avoid -L/usr/lib
-      output from xml2-config (Fred Crozat), avoid an xmllint crash 
+      output from xml2-config (Fred Crozat), avoid an xmllint crash
       (Stefan Kost), don't stop HTML parsing on out of range chars.
-      
+
    - Code cleanup: fix open() call third argument, regexp cut'n paste
       copy error, unused variable in __xmlGlobalInitMutexLock (Hannes Eder),
       some make distcheck realted fixes (John Carr)
    - Improvements: HTTP Header: includes port number (William Brack),
-      testURI --debug option, 
+      testURI --debug option,
 
 
 2.6.30: Aug 23 2007:
@@ -1370,7 +1370,7 @@ Gansterer),
       (Wendy Doyle and Mark Rowe), Windows compilation and threading
       improvements (Rob Richards), compilation against old Python versions,
       new GNU tar changes (Ryan Hill)
-   - Documentation: xmlURIUnescapeString comment, 
+   - Documentation: xmlURIUnescapeString comment,
    - Bugfixes: xmlBufferAdd problem (Richard Jones), 'make valgrind'
       flag fix (Richard Jones), regexp interpretation of \,
       htmlCreateDocParserCtxt (Jean-Daniel Dupas), configure.in
@@ -1383,11 +1383,11 @@ Gansterer),
       dups in the writer (Rob Richards), xmlCtxtReset bug, UTF-8 encoding
       error handling, recustion on next in catalogs, fix a Relax-NG crash,
       workaround wrong file: URIs, htmlNodeDumpFormatOutput on attributes,
-      invalid character in attribute detection bug, big comments before 
+      invalid character in attribute detection bug, big comments before
       internal subset streaming bug, HTML parsing of attributes with : in
-      the name, IDness of name in HTML (Dagfinn I. MannsÃ¥ker) 
+      the name, IDness of name in HTML (Dagfinn I. MannsÃ¥ker)
    - Improvement: keep URI query parts in raw form (Richard Jones),
-      embed tag support in HTML (Michael Day) 
+      embed tag support in HTML (Michael Day)
 
 
 2.6.28: Apr 17 2007:
@@ -1417,21 +1417,21 @@ Gansterer),
 
 
 2.6.27: Oct 25 2006:
-   - Portability fixes: file names on windows (Roland Schwingel, 
-      Emelyanov Alexey), windows compile fixup (Rob Richards), 
+   - Portability fixes: file names on windows (Roland Schwingel,
+      Emelyanov Alexey), windows compile fixup (Rob Richards),
       AIX iconv() is apparently case sensitive
    - improvements: Python XPath types mapping (Nic Ferrier), XPath optimization
       (Kasimier), add xmlXPathCompiledEvalToBoolean (Kasimier), Python node
       equality and comparison (Andreas Pakulat), xmlXPathCollectAndTest
-      improvememt (Kasimier), expose if library was compiled with zlib 
+      improvememt (Kasimier), expose if library was compiled with zlib
       support (Andrew Nosenko), cache for xmlSchemaIDCMatcher structs
       (Kasimier), xmlTextConcat should work with comments and PIs (Rob
       Richards), export htmlNewParserCtxt needed by Michael Day, refactoring
-      of catalog entity loaders (Michael Day), add XPointer support to 
-      python bindings (Ross Reedstrom, Brian West and Stefan Anca), 
+      of catalog entity loaders (Michael Day), add XPointer support to
+      python bindings (Ross Reedstrom, Brian West and Stefan Anca),
       try to sort out most file path to URI conversions and xmlPathToUri,
       add --html --memory case to xmllint
-   - building fix: fix --with-minimum (Felipe Contreras), VMS fix, 
+   - building fix: fix --with-minimum (Felipe Contreras), VMS fix,
       const'ification of HTML parser structures (Matthias Clasen),
       portability fix (Emelyanov Alexey), wget autodetection (Peter
       Breitenlohner),  remove the build path recorded in the python
@@ -1439,7 +1439,7 @@ Gansterer),
       (Mikhail Zabaluev), fix --with-minimum --with-sax1 builds, fix
       --with-minimum --with-schemas builds
    - bug fix: xmlGetNodePath fix (Kasimier), xmlDOMWrapAdoptNode and
-      attribute (Kasimier), crash when using the recover mode, 
+      attribute (Kasimier), crash when using the recover mode,
       xmlXPathEvalExpr problem (Kasimier), xmlXPathCompExprAdd bug (Kasimier),
       missing destry in xmlFreeRMutex (Andrew Nosenko), XML Schemas fixes
       (Kasimier), warning on entities processing, XHTML script and style
@@ -1448,21 +1448,21 @@ Gansterer),
       allocation bug (Marton Illes), error message end of line (Rob Richards),
       fix attribute serialization in writer (Rob Richards), PHP4 DTD validation
       crasher, parser safety patch (Ben Darnell), _private context propagation
-      when parsing entities (with Michael Day), fix entities behaviour when 
+      when parsing entities (with Michael Day), fix entities behaviour when
       using SAX, URI to file path fix (Mikhail Zabaluev), disappearing validity
       context, arg error in SAX callback (Mike Hommey), fix mixed-content
       autodetect when using --noblanks, fix xmlIOParseDTD error handling,
       fix bug in xmlSplitQName on special Names, fix Relax-NG element content
-      validation bug, fix xmlReconciliateNs bug, fix potential attribute 
+      validation bug, fix xmlReconciliateNs bug, fix potential attribute
       XML parsing bug, fix line/column accounting in XML parser, chunking bug
       in the HTML parser on script, try to detect obviously buggy HTML
-      meta encoding indications, bugs with encoding BOM and xmlSaveDoc, 
+      meta encoding indications, bugs with encoding BOM and xmlSaveDoc,
       HTML entities in attributes parsing, HTML minimized attribute values,
       htmlReadDoc and htmlReadIO were broken, error handling bug in
       xmlXPathEvalExpression (Olaf Walkowiak), fix a problem in
       htmlCtxtUseOptions, xmlNewInputFromFile could leak (Marius Konitzer),
       bug on misformed SSD regexps (Christopher Boumenot)
-      
+
    - documentation: warning about XML_PARSE_COMPACT (Kasimier Buchcik),
       fix xmlXPathCastToString documentation, improve man pages for
       xmllitn and xmlcatalog (Daniel Leidert), fixed comments of a few
@@ -1490,7 +1490,7 @@ Do not use or package 2.6.25
       HP-UX compiler workaround (Rick Jones), xml2-config bugfix, gcc-4.1
       cleanups, Python detection scheme (Joseph Sacco), UTF-8 file paths on
       Windows (Roland Schwingel).
-      
+
    - Improvements: xmlDOMWrapReconcileNamespaces xmlDOMWrapCloneNode (Kasimier
       Buchcik), XML catalog debugging (Rick Jones), update to Unicode 4.01.
    - Bug fixes: xmlParseChunk() problem in 2.6.23, xmlParseInNodeContext()
@@ -1503,10 +1503,10 @@ Do not use or package 2.6.25
       xmlSetProp fixes (Rob Richards), HTML IDness (Rob Richards), a large
       number of cleanups and small fixes based on Coverity reports, bug
       in character ranges, Unicode tables const (Aivars Kalvans), schemas
-      fix (Stefan Kost), xmlRelaxNGParse error deallocation, 
+      fix (Stefan Kost), xmlRelaxNGParse error deallocation,
       xmlSchemaAddSchemaDoc error deallocation, error handling on unallowed
       code point, ixmllint --nonet to never reach the net (Gary Coady),
-      line break in writer after end PI (Jason Viers). 
+      line break in writer after end PI (Jason Viers).
    - Documentation: man pages updates and cleanups (Daniel Leidert).
    - New features: Relax NG structure error handlers.
 
@@ -1666,7 +1666,7 @@ Do not use or package 2.6.25
     serialization time
    - improvements: lot of work on Schemas by Kasimier Buchcik on facets
     checking and also mixed handling.
-   - 
+   -
 
 
 2.6.18: Mar 13 2005:
@@ -2229,7 +2229,7 @@ A bugfixes only release   - Windows Makefiles (William Brack)
     namespaces,
     2 serialization bugs, node info generation problems, a DTD regexp
     generation problem.
-  
+
    - Portability: windows updates and path canonicalization (Igor)
    - A few typo fixes (Kjartan Maraas)
    - Python bindings generator fixes (Stephane Bidoul)
@@ -2391,9 +2391,9 @@ A bugfixes only release   - Windows Makefiles (William Brack)
 
 2.4.21: Apr 29 2002:
 This release is both a bug fix release and also contains the early XML
-Schemas structures at 
+Schemas structures at
 http://www.w3.org/TR/xmlschema-1/
- and datatypes at 
+ and datatypes at
 http://www.w3.org/TR/xmlschema-2/
  code, beware, all
 interfaces are likely to change, there is huge holes, it is clearly a work in
@@ -2884,7 +2884,7 @@ Lots of bugfixes, and added a basic SGML catalog support:
     about &#38; charref parsing
    - 2.1.0 also ease the upgrade from libxml v1 to the recent version. it
     also contains numerous fixes and enhancements:
-    
+
       added xmlStopParser() to stop parsing
       improved a lot parsing speed when there is large CDATA blocs
       includes XPath patches provided by Picdar Technology
@@ -2892,8 +2892,8 @@ Lots of bugfixes, and added a basic SGML catalog support:
         related problems
       output to a given encoding has been added/tested
       lot of various fixes
-    
-  
+
+
    - added xmlStopParser() to stop parsing
    - improved a lot parsing speed when there is large CDATA blocs
    - includes XPath patches provided by Picdar Technology
@@ -2913,7 +2913,7 @@ Lots of bugfixes, and added a basic SGML catalog support:
     #include <libxml/xxx.h>
     instead of
     #include "xxx.h"
-  
+
    - a new URI module for parsing URIs and following strictly RFC 2396
    - the memory allocation routines used by libxml can now be overloaded
     dynamically by using xmlMemSetup()
@@ -2942,7 +2942,7 @@ Lots of bugfixes, and added a basic SGML catalog support:
     upgrade page
    - Some interfaces may changes (especially a bit about encoding).
    - the updates includes:
-    
+
       fix I18N support. ISO-Latin-x/UTF-8/UTF-16 (nearly) seems correctly
         handled now
       Better handling of entities, especially well-formedness checking
@@ -2951,8 +2951,8 @@ Lots of bugfixes, and added a basic SGML catalog support:
       Validation now correctly handle entities content
       change
         structures to accommodate DOM
-    
-  
+
+
    - fix I18N support. ISO-Latin-x/UTF-8/UTF-16 (nearly) seems correctly
         handled now
    - Better handling of entities, especially well-formedness checking
@@ -3081,5 +3081,5 @@ Lots of bugfixes, and added a basic SGML catalog support:
     implementation
    - Added an HTML parser front-end
 
-Daniel Veillard at 
+Daniel Veillard at
 bugs.html

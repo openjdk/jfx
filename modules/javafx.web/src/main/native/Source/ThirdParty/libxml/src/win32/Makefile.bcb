@@ -1,6 +1,6 @@
 # Makefile for libxml2, specific for Windows, BCB6 and Borland make.
 #
-# Take a look at the beginning and modify the variables to suit your 
+# Take a look at the beginning and modify the variables to suit your
 # environment. Having done that, you can do a
 #
 # make [all]     to build the libxml and the accompanying utilities.
@@ -43,7 +43,7 @@ UTILS_INTDIR = int.utils.bcb
 
 # The preprocessor and its options.
 CPP = cpp32.exe -P- -DWIN32
-CPPFLAGS = -I"$(XML_SRCDIR)\include" -DNOLIBTOOL 
+CPPFLAGS = -I"$(XML_SRCDIR)\include" -DNOLIBTOOL
 !if "$(WITH_THREADS)" != "no"
 CPPFLAGS = $(CPPFLAGS) -D_REENTRANT -D__MT__
 !endif
@@ -82,10 +82,10 @@ LIBS = $(LIBS) cw32.lib
 !endif
 !if "$(WITH_FTP)" == "1" || "$(WITH_HTTP)" == "1"
 LIBS = $(LIBS) wsock32.lib ws2_32.lib
-!endif 
+!endif
 !if "$(WITH_ICONV)" == "1"
 LIBS = $(LIBS) iconvomf.lib
-!endif 
+!endif
 !if "$(WITH_ZLIB)" == "1"
 LIBS = $(LIBS) zlibomf.lib
 !endif
@@ -108,7 +108,7 @@ ARFLAGS = /P64 /0
 CFLAGS = $(CFLAGS) -D_DEBUG -Od -v
 LDFLAGS = $(LDFLAGS) -v
 !else
-CFLAGS = $(CFLAGS) -DNDEBUG -O2 
+CFLAGS = $(CFLAGS) -DNDEBUG -O2
 LDFLAGS = $(LDFLAGS)
 !endif
 
@@ -232,7 +232,7 @@ UTILS = $(UTILS) $(BINDIR)\testThreads.exe
 
 all : libxml libxmla utils
 
-libxml : $(BINDIR)\$(XML_SO) 
+libxml : $(BINDIR)\$(XML_SO)
 
 libxmla : $(BINDIR)\$(XML_A)
 
@@ -303,7 +303,7 @@ $(XML_INTDIR_A)\$(DUMMY) :
 $(XML_OBJS) : $(XML_INTDIR)\$(DUMMY)
 
 # Compiles static libxml source. Uses the implicit rule for commands.
-$(XML_OBJS_A) : $(XML_INTDIR_A)\$(DUMMY) 
+$(XML_OBJS_A) : $(XML_INTDIR_A)\$(DUMMY)
 
 #def4bcb.exe : def4bcb.c
 
@@ -331,12 +331,12 @@ $(UTILS_INTDIR)\$(DUMMY) :
 # An implicit rule for xmllint and friends.
 !if "$(STATIC)" == "1"
 {$(UTILS_SRCDIR)}.c{$(BINDIR)}.exe:
-	$(CC) -DLIBXML_STATIC -w -tWC $(CFLAGS) -o$(UTILS_INTDIR)\$&.obj -c $< 
+	$(CC) -DLIBXML_STATIC -w -tWC $(CFLAGS) -o$(UTILS_INTDIR)\$&.obj -c $<
 	$(LD) $(LDFLAGS) c0x32.obj $(UTILS_INTDIR)\$&.obj,$@,,$(LIBS) $(XML_A)
 !else
 {$(UTILS_SRCDIR)}.c{$(BINDIR)}.exe:
-	$(CC) $(CFLAGS) -tWC -o$(UTILS_INTDIR)\$&.obj -c $< 
-	$(LD) $(LDFLAGS) c0x32.obj $(UTILS_INTDIR)\$&.obj $(XML_IMP),$@,,$(LIBS) 
+	$(CC) $(CFLAGS) -tWC -o$(UTILS_INTDIR)\$&.obj -c $<
+	$(LD) $(LDFLAGS) c0x32.obj $(UTILS_INTDIR)\$&.obj $(XML_IMP),$@,,$(LIBS)
 !endif
 
 # Builds xmllint and friends. Uses the implicit rule for commands.

@@ -21,7 +21,7 @@ libxml2.la: $(libxml2_la_OBJECTS) $(libxml2_la_DEPENDENCIES)
         done
 
 	with <PDS NAME> stands for the name of my PDS and
-	
+
 libxml2_OBJECTS = SAX.o entities.o encoding.o error.o \
 	parserInternals.o parser.o tree.o hash.o list.o xmlIO.o \
 	xmlmemory.o uri.o valid.o xlink.o HTMLparser.o \
@@ -31,7 +31,7 @@ libxml2_OBJECTS = SAX.o entities.o encoding.o error.o \
 	xmlsche.o xmlschet.o xmlunicode.o \
 	xmlreader.o relaxng.o dict.o SAX2.o \
 	xmlwriter.o legacy.o chvalid.o pattern.o xmlsave.o \
-	xmlmodule.o schematron.o xzlib.o 
+	xmlmodule.o schematron.o xzlib.o
 
 In order to handle the support of zOS without breaking the existing
 Makefile maybe a new option/flag zOs would copy xmlschemas.c and
@@ -125,33 +125,33 @@ July 2017
  testdso_la_LDFLAGS = -module -no-undefined -avoid-version -rpath $(libdir)
 -BUILT_SOURCES = testapi.c
 -testapi_SOURCES = testapi.c
--testapi_LDFLAGS = 
+-testapi_LDFLAGS =
 -testapi_DEPENDENCIES = $(DEPS)
 -testapi_LDADD = $(LDADDS)
  runxmlconf_SOURCES = runxmlconf.c
- runxmlconf_LDFLAGS = 
+ runxmlconf_LDFLAGS =
  runxmlconf_DEPENDENCIES = $(DEPS)
 @@ -854,6 +859,12 @@
  	done
- libxml2.la: $(libxml2_la_OBJECTS) $(libxml2_la_DEPENDENCIES) 
+ libxml2.la: $(libxml2_la_OBJECTS) $(libxml2_la_DEPENDENCIES)
  	$(AM_V_CCLD)$(libxml2_la_LINK) -rpath $(libdir) $(libxml2_la_OBJECTS) $(libxml2_la_LIBADD) $(LIBS)
 +        # Copie des obj
 +	@list='$(libxml2_OBJECTS)' ; for p in $$list; do \
 +	  echo "copy to PDS: $$p"; \
 +	  cp -ACMv $$p "//'A009153.XRDEV230.FIC.OBJLIB.LIBXML'"; \
-+	done 
++	done
 +
- testdso.la: $(testdso_la_OBJECTS) $(testdso_la_DEPENDENCIES) 
+ testdso.la: $(testdso_la_OBJECTS) $(testdso_la_DEPENDENCIES)
  	$(AM_V_CCLD)$(testdso_la_LINK)  $(testdso_la_OBJECTS) $(testdso_la_LIBADD) $(LIBS)
  install-binPROGRAMS: $(bin_PROGRAMS)
 @@ -953,9 +964,6 @@
- testXPath$(EXEEXT): $(testXPath_OBJECTS) $(testXPath_DEPENDENCIES) 
+ testXPath$(EXEEXT): $(testXPath_OBJECTS) $(testXPath_DEPENDENCIES)
  	@rm -f testXPath$(EXEEXT)
  	$(AM_V_CCLD)$(testXPath_LINK) $(testXPath_OBJECTS) $(testXPath_LDADD) $(LIBS)
--testapi$(EXEEXT): $(testapi_OBJECTS) $(testapi_DEPENDENCIES) 
+-testapi$(EXEEXT): $(testapi_OBJECTS) $(testapi_DEPENDENCIES)
 -	@rm -f testapi$(EXEEXT)
 -	$(AM_V_CCLD)$(testapi_LINK) $(testapi_OBJECTS) $(testapi_LDADD) $(LIBS)
- testchar$(EXEEXT): $(testchar_OBJECTS) $(testchar_DEPENDENCIES) 
+ testchar$(EXEEXT): $(testchar_OBJECTS) $(testchar_DEPENDENCIES)
  	@rm -f testchar$(EXEEXT)
  	$(AM_V_CCLD)$(testchar_LINK) $(testchar_OBJECTS) $(testchar_LDADD) $(LIBS)
 @@ -1056,7 +1064,6 @@
@@ -165,7 +165,7 @@ July 2017
 @@ -1755,18 +1762,6 @@
  	uninstall-local uninstall-m4dataDATA uninstall-man \
  	uninstall-man1 uninstall-man3 uninstall-pkgconfigDATA
- 
+
 -
 -# that one forces the rebuild when "make rebuild" is run on doc/
 -rebuild_testapi:
@@ -179,7 +179,7 @@ July 2017
 -	    $(PYTHON) $(srcdir)/gentest.py $(srcdir) ; fi )
 -
  #testOOM_SOURCES=testOOM.c testOOMlib.h testOOMlib.c
- #testOOM_LDFLAGS = 
+ #testOOM_LDFLAGS =
  #testOOM_DEPENDENCIES = $(DEPS)
 @@ -1775,7 +1770,7 @@
  runtests:
@@ -189,11 +189,11 @@ July 2017
 +	$(CHECKER) ./runtest$(EXEEXT) && $(CHECKER) ./testrecurse$(EXEEXT) &&$(CHECKER) && $(CHECKER) ./testchar$(EXEEXT)&& $(CHECKER) ./testdict$(EXEEXT) && $(CHECKER) ./runxmlconf$(EXEEXT)
  	@(if [ "$(PYTHON_SUBDIR)" != "" ] ; then cd python ; \
  	    $(MAKE) tests ; fi)
- 
+
 @@ -1797,10 +1792,6 @@
  	    $(MAKE) tests ; fi)
  	@(cd doc/examples ; $(MAKE) tests)
- 
+
 -APItests: testapi$(EXEEXT)
 -	@echo "## Running the API regression tests this may take a little while"
 -	-@($(CHECKER) $(top_builddir)/testapi -q)
@@ -208,5 +208,5 @@ July 2017
 -	tar -cf - $(distdir)/test $(distdir)/result $(distdir)/xstc/Tests  $(distdir)/Makefile.tests $(distdir)/README $(distdir)/README.tests $(distdir)/AUTHORS $(distdir)/testapi.c $(distdir)/runtest.c $(distdir)/runsuite.c | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-tests+"`.tar.gz
 +	tar -cf - $(distdir)/test $(distdir)/result $(distdir)/xstc/Tests  $(distdir)/Makefile.tests $(distdir)/README $(distdir)/README.tests $(distdir)/AUTHORS $(distdir)/runtest.c $(distdir)/runsuite.c | GZIP=$(GZIP_ENV) gzip -c >`echo "$(distdir)" | sed "s+libxml2+libxml2-tests+"`.tar.gz
  	@(rm -rf $(distdir)/xstc/Test)
- 
+
  cleantar:

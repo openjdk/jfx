@@ -1,6 +1,6 @@
 # Makefile for libxml2, specific for Windows, GCC (mingw) and GNU make.
 #
-# Take a look at the beginning and modify the variables to suit your 
+# Take a look at the beginning and modify the variables to suit your
 # environment. Having done that, you can do a
 #
 # nmake [all]     to build the libxml and the accompanying utilities.
@@ -33,19 +33,19 @@ UTILS_INTDIR = int.utils.mingw
 
 # The preprocessor and its options.
 CPP = gcc.exe -E
-CPPFLAGS += -I$(XML_SRCDIR)/include -DNOLIBTOOL 
+CPPFLAGS += -I$(XML_SRCDIR)/include -DNOLIBTOOL
 ifeq ($(WITH_THREADS),1)
 CPPFLAGS += -D_REENTRANT
 endif
 
 # The compiler and its options.
 CC = gcc.exe
-CFLAGS += -DWIN32 -D_WINDOWS -D_MBCS -DNOLIBTOOL 
+CFLAGS += -DWIN32 -D_WINDOWS -D_MBCS -DNOLIBTOOL
 CFLAGS += -I$(XML_SRCDIR) -I$(XML_SRCDIR)/include -I$(INCPREFIX) $(INCLUDE)
 ifneq ($(WITH_THREADS),no)
 CFLAGS += -D_REENTRANT
 endif
-ifeq ($(WITH_THREADS),yes) 
+ifeq ($(WITH_THREADS),yes)
 CFLAGS += -DHAVE_WIN32_THREADS -DHAVE_COMPILER_TLS
 endif
 ifeq ($(WITH_THREADS),ctls)
@@ -66,13 +66,13 @@ LDFLAGS += -Wl,-L,$(BINDIR) -Wl,-L,$(LIBPREFIX)
 LIBS =
 ifeq ($(WITH_FTP),1)
 LIBS += -lwsock32 -lws2_32
-endif 
+endif
 ifeq ($(WITH_HTTP),1)
 LIBS += -lwsock32 -lws2_32
-endif 
+endif
 ifeq ($(WITH_ICONV),1)
 LIBS += -liconv
-endif 
+endif
 ifeq ($(WITH_ZLIB),1)
 # Could be named differently
 # LIBS += -lzdll
@@ -97,10 +97,10 @@ ARFLAGS = -r
 # Optimisation and debug symbols.
 ifeq ($(DEBUG),1)
 CFLAGS += -D_DEBUG -g
-LDFLAGS += 
+LDFLAGS +=
 else
-CFLAGS += -DNDEBUG -O2 
-LDFLAGS += 
+CFLAGS += -DNDEBUG -O2
+LDFLAGS +=
 endif
 
 
@@ -226,7 +226,7 @@ endif
 
 all : dep libxml libxmla utils
 
-libxml : $(BINDIR)/$(XML_SO) 
+libxml : $(BINDIR)/$(XML_SO)
 
 libxmla : $(BINDIR)/$(XML_A)
 
@@ -302,7 +302,7 @@ $(XML_INTDIR_A)/%.o : $(XML_SRCDIR)/%.c
 $(XML_OBJS) : $(XML_INTDIR)
 
 # Compiles static libxml source. Uses the implicit rule for commands.
-$(XML_OBJS_A) : $(XML_INTDIR_A) 
+$(XML_OBJS_A) : $(XML_INTDIR_A)
 
 # Creates the libxml shared object.
 XMLSO_LDFLAGS = $(LDFLAGS) -shared -Wl,--dll -Wl,--out-implib,$(BINDIR)/$(XML_IMP)
@@ -321,12 +321,12 @@ $(UTILS_INTDIR) :
 # An implicit rule for xmllint and friends.
 ifeq ($(STATIC),1)
 $(BINDIR)/%.exe : $(UTILS_SRCDIR)/%.c
-	$(CC) -DLIBXML_STATIC $(CFLAGS) -o $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -c $< 
-	$(LD) $(LDFLAGS) -o $@ $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -l$(XML_BASENAME) $(LIBS) 
+	$(CC) -DLIBXML_STATIC $(CFLAGS) -o $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -c $<
+	$(LD) $(LDFLAGS) -o $@ $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -l$(XML_BASENAME) $(LIBS)
 else
 $(BINDIR)/%.exe : $(UTILS_SRCDIR)/%.c
-	$(CC) $(CFLAGS) -o $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -c $< 
-	$(LD) $(LDFLAGS) -o $@ $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -l$(XML_BASENAME) $(LIBS) 
+	$(CC) $(CFLAGS) -o $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -c $<
+	$(LD) $(LDFLAGS) -o $@ $(subst .c,.o,$(UTILS_INTDIR)/$(<F)) -l$(XML_BASENAME) $(LIBS)
 endif
 
 # Builds xmllint and friends. Uses the implicit rule for commands.
