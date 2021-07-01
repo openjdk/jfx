@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,16 +36,7 @@ namespace JSC {
 
 const ClassInfo WebAssemblyWrapperFunction::s_info = { "WebAssemblyWrapperFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyWrapperFunction) };
 
-static EncodedJSValue JSC_HOST_CALL callWebAssemblyWrapperFunction(JSGlobalObject* globalObject, CallFrame* callFrame)
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    WebAssemblyWrapperFunction* wasmFunction = jsCast<WebAssemblyWrapperFunction*>(callFrame->jsCallee());
-    JSObject* function = wasmFunction->function();
-    auto callData = getCallData(vm, function);
-    RELEASE_ASSERT(callData.type != CallData::Type::None);
-    RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, function, callData, jsUndefined(), ArgList(callFrame))));
-}
+static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunction);
 
 WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, Wasm::WasmToWasmImportableFunction importableFunction)
     : Base(vm, executable, globalObject, structure)
@@ -76,13 +67,27 @@ Structure* WebAssemblyWrapperFunction::createStructure(VM& vm, JSGlobalObject* g
     return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
 }
 
-void WebAssemblyWrapperFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void WebAssemblyWrapperFunction::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     WebAssemblyWrapperFunction* thisObject = jsCast<WebAssemblyWrapperFunction*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
 
     visitor.append(thisObject->m_function);
+}
+
+DEFINE_VISIT_CHILDREN(WebAssemblyWrapperFunction);
+
+JSC_DEFINE_HOST_FUNCTION(callWebAssemblyWrapperFunction, (JSGlobalObject* globalObject, CallFrame* callFrame))
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    WebAssemblyWrapperFunction* wasmFunction = jsCast<WebAssemblyWrapperFunction*>(callFrame->jsCallee());
+    JSObject* function = wasmFunction->function();
+    auto callData = getCallData(vm, function);
+    RELEASE_ASSERT(callData.type != CallData::Type::None);
+    RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, function, callData, jsUndefined(), ArgList(callFrame))));
 }
 
 } // namespace JSC

@@ -64,7 +64,7 @@ namespace JSC { namespace LLInt {
     } while (false)
 
 #define WASM_CALL_RETURN(targetInstance, callTarget, callTargetTag) do { \
-        WASM_RETURN_TWO(retagCodePtr(callTarget, callTargetTag, SlowPathPtrTag), targetInstance); \
+        WASM_RETURN_TWO((retagCodePtr<callTargetTag, JSEntrySlowPathPtrTag>(callTarget)), targetInstance); \
     } while (false)
 
 #define CODE_BLOCK() \
@@ -75,6 +75,7 @@ namespace JSC { namespace LLInt {
         ? JSValue::decode(CODE_BLOCK()->getConstant(virtualRegister)) \
         : callFrame->r(virtualRegister))
 
+#if ENABLE(WEBASSEMBLY_B3JIT)
 enum class RequiredWasmJIT { Any, OMG };
 
 inline bool shouldJIT(Wasm::FunctionCodeBlock* codeBlock, RequiredWasmJIT requiredJIT = RequiredWasmJIT::Any)
@@ -254,7 +255,7 @@ WASM_SLOW_PATH_DECL(epilogue_osr)
     jitCompileAndSetHeuristics(callee, codeBlock, instance);
     WASM_END_IMPL();
 }
-
+#endif
 
 WASM_SLOW_PATH_DECL(trace)
 {
@@ -309,10 +310,30 @@ WASM_SLOW_PATH_DECL(table_get)
 WASM_SLOW_PATH_DECL(table_set)
 {
     auto instruction = pc->as<WasmTableSet, WasmOpcodeTraits>();
-    int32_t index = READ(instruction.m_index).unboxedInt32();
+    uint32_t index = READ(instruction.m_index).unboxedUInt32();
     EncodedJSValue value = READ(instruction.m_value).encodedJSValue();
     if (!Wasm::operationSetWasmTableElement(instance, instruction.m_tableIndex, index, value))
         WASM_THROW(Wasm::ExceptionType::OutOfBoundsTableAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(table_init)
+{
+    auto instruction = pc->as<WasmTableInit, WasmOpcodeTraits>();
+    uint32_t dstOffset = READ(instruction.m_dstOffset).unboxedUInt32();
+    uint32_t srcOffset = READ(instruction.m_srcOffset).unboxedUInt32();
+    uint32_t length = READ(instruction.m_length).unboxedUInt32();
+    if (!Wasm::operationWasmTableInit(instance, instruction.m_elementIndex, instruction.m_tableIndex, dstOffset, srcOffset, length))
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsTableAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(elem_drop)
+{
+    UNUSED_PARAM(callFrame);
+
+    auto instruction = pc->as<WasmElemDrop, WasmOpcodeTraits>();
+    Wasm::operationWasmElemDrop(instance, instruction.m_elementIndex);
     WASM_END();
 }
 
@@ -325,10 +346,21 @@ WASM_SLOW_PATH_DECL(table_size)
 WASM_SLOW_PATH_DECL(table_fill)
 {
     auto instruction = pc->as<WasmTableFill, WasmOpcodeTraits>();
-    int32_t offset = READ(instruction.m_offset).unboxedInt32();
+    uint32_t offset = READ(instruction.m_offset).unboxedUInt32();
     EncodedJSValue fill = READ(instruction.m_fill).encodedJSValue();
-    int32_t size = READ(instruction.m_size).unboxedInt32();
+    uint32_t size = READ(instruction.m_size).unboxedUInt32();
     if (!Wasm::operationWasmTableFill(instance, instruction.m_tableIndex, offset, fill, size))
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsTableAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(table_copy)
+{
+    auto instruction = pc->as<WasmTableCopy, WasmOpcodeTraits>();
+    int32_t dstOffset = READ(instruction.m_dstOffset).unboxedInt32();
+    int32_t srcOffset = READ(instruction.m_srcOffset).unboxedInt32();
+    int32_t length = READ(instruction.m_length).unboxedInt32();
+    if (!Wasm::operationWasmTableCopy(instance, instruction.m_dstTableIndex, instruction.m_srcTableIndex, dstOffset, srcOffset, length))
         WASM_THROW(Wasm::ExceptionType::OutOfBoundsTableAccess);
     WASM_END();
 }
@@ -337,7 +369,7 @@ WASM_SLOW_PATH_DECL(table_grow)
 {
     auto instruction = pc->as<WasmTableGrow, WasmOpcodeTraits>();
     EncodedJSValue fill = READ(instruction.m_fill).encodedJSValue();
-    int32_t size = READ(instruction.m_size).unboxedInt32();
+    uint32_t size = READ(instruction.m_size).unboxedUInt32();
     WASM_RETURN(Wasm::operationWasmTableGrow(instance, instruction.m_tableIndex, fill, size));
 }
 
@@ -346,6 +378,48 @@ WASM_SLOW_PATH_DECL(grow_memory)
     auto instruction = pc->as<WasmGrowMemory, WasmOpcodeTraits>();
     int32_t delta = READ(instruction.m_delta).unboxedInt32();
     WASM_RETURN(Wasm::operationGrowMemory(callFrame, instance, delta));
+}
+
+WASM_SLOW_PATH_DECL(memory_fill)
+{
+    auto instruction = pc->as<WasmMemoryFill, WasmOpcodeTraits>();
+    uint32_t dstAddress = READ(instruction.m_dstAddress).unboxedUInt32();
+    uint32_t targetValue = READ(instruction.m_targetValue).unboxedUInt32();
+    uint32_t count = READ(instruction.m_count).unboxedUInt32();
+    if (!Wasm::operationWasmMemoryFill(instance, dstAddress, targetValue, count))
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsTableAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(memory_copy)
+{
+    auto instruction = pc->as<WasmMemoryCopy, WasmOpcodeTraits>();
+    uint32_t dstAddress = READ(instruction.m_dstAddress).unboxedUInt32();
+    uint32_t srcAddress = READ(instruction.m_srcAddress).unboxedUInt32();
+    uint32_t count = READ(instruction.m_count).unboxedUInt32();
+    if (!Wasm::operationWasmMemoryCopy(instance, dstAddress, srcAddress, count))
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsMemoryAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(memory_init)
+{
+    auto instruction = pc->as<WasmMemoryInit, WasmOpcodeTraits>();
+    uint32_t dstAddress = READ(instruction.m_dstAddress).unboxedUInt32();
+    uint32_t srcAddress = READ(instruction.m_srcAddress).unboxedUInt32();
+    uint32_t length = READ(instruction.m_length).unboxedUInt32();
+    if (!Wasm::operationWasmMemoryInit(instance, instruction.m_dataSegmentIndex, dstAddress, srcAddress, length))
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsMemoryAccess);
+    WASM_END();
+}
+
+WASM_SLOW_PATH_DECL(data_drop)
+{
+    UNUSED_PARAM(callFrame);
+
+    auto instruction = pc->as<WasmDataDrop, WasmOpcodeTraits>();
+    Wasm::operationWasmDataDrop(instance, instruction.m_dataSegmentIndex);
+    WASM_END();
 }
 
 inline SlowPathReturnType doWasmCall(Wasm::Instance* instance, unsigned functionIndex)
@@ -436,6 +510,44 @@ WASM_SLOW_PATH_DECL(set_global_ref_portable_binding)
     auto instruction = pc->as<WasmSetGlobalRefPortableBinding, WasmOpcodeTraits>();
     instance->setGlobal(instruction.m_globalIndex, READ(instruction.m_value).jsValue());
     WASM_END_IMPL();
+}
+
+WASM_SLOW_PATH_DECL(memory_atomic_wait32)
+{
+    auto instruction = pc->as<WasmMemoryAtomicWait32, WasmOpcodeTraits>();
+    unsigned base = READ(instruction.m_pointer).unboxedInt32();
+    unsigned offset = instruction.m_offset;
+    uint32_t value = READ(instruction.m_value).unboxedInt32();
+    int64_t timeout = READ(instruction.m_timeout).unboxedInt64();
+    int32_t result = Wasm::operationMemoryAtomicWait32(instance, base, offset, value, timeout);
+    if (result < 0)
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsMemoryAccess);
+    WASM_RETURN(result);
+}
+
+WASM_SLOW_PATH_DECL(memory_atomic_wait64)
+{
+    auto instruction = pc->as<WasmMemoryAtomicWait64, WasmOpcodeTraits>();
+    unsigned base = READ(instruction.m_pointer).unboxedInt32();
+    unsigned offset = instruction.m_offset;
+    uint64_t value = READ(instruction.m_value).unboxedInt64();
+    int64_t timeout = READ(instruction.m_timeout).unboxedInt64();
+    int32_t result = Wasm::operationMemoryAtomicWait64(instance, base, offset, value, timeout);
+    if (result < 0)
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsMemoryAccess);
+    WASM_RETURN(result);
+}
+
+WASM_SLOW_PATH_DECL(memory_atomic_notify)
+{
+    auto instruction = pc->as<WasmMemoryAtomicNotify, WasmOpcodeTraits>();
+    unsigned base = READ(instruction.m_pointer).unboxedInt32();
+    unsigned offset = instruction.m_offset;
+    int32_t count = READ(instruction.m_count).unboxedInt32();
+    int32_t result = Wasm::operationMemoryAtomicNotify(instance, base, offset, count);
+    if (result < 0)
+        WASM_THROW(Wasm::ExceptionType::OutOfBoundsMemoryAccess);
+    WASM_RETURN(result);
 }
 
 extern "C" SlowPathReturnType slow_path_wasm_throw_exception(CallFrame* callFrame, const Instruction* pc, Wasm::Instance* instance, Wasm::ExceptionType exceptionType)

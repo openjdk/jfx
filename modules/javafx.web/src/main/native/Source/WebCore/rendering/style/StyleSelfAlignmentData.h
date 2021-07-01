@@ -27,6 +27,10 @@
 
 #include "RenderStyleConstants.h"
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class StyleSelfAlignmentData {
@@ -63,5 +67,7 @@ private:
     unsigned m_positionType: 1; // Whether or not alignment uses the 'legacy' keyword.
     unsigned m_overflow : 2; // OverflowAlignment
 };
+
+WTF::TextStream& operator<<(WTF::TextStream&, const StyleSelfAlignmentData&);
 
 } // namespace WebCore

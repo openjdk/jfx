@@ -25,6 +25,7 @@
 #include "config.h"
 #include "ImageDocument.h"
 
+#include "AddEventListenerOptions.h"
 #include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
@@ -197,7 +198,7 @@ void ImageDocumentParser::finish()
 }
 
 ImageDocument::ImageDocument(Frame& frame, const URL& url)
-    : HTMLDocument(&frame, url, ImageDocumentClass)
+    : HTMLDocument(&frame, frame.settings(), url, ImageDocumentClass)
     , m_imageElement(nullptr)
     , m_imageSizeIsKnown(false)
 #if !PLATFORM(IOS_FAMILY)

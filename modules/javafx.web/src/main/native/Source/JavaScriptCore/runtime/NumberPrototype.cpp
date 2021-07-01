@@ -40,10 +40,10 @@ typedef WTF::double_conversion::StringBuilder DoubleConversionStringBuilder;
 
 namespace JSC {
 
-static EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(JSGlobalObject*, CallFrame*);
-static EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(JSGlobalObject*, CallFrame*);
+static JSC_DECLARE_HOST_FUNCTION(numberProtoFuncToLocaleString);
+static JSC_DECLARE_HOST_FUNCTION(numberProtoFuncToFixed);
+static JSC_DECLARE_HOST_FUNCTION(numberProtoFuncToExponential);
+static JSC_DECLARE_HOST_FUNCTION(numberProtoFuncToPrecision);
 
 }
 
@@ -104,7 +104,7 @@ static ALWAYS_INLINE bool toThisNumber(VM& vm, JSValue thisValue, double& x)
 
 static ALWAYS_INLINE EncodedJSValue throwVMToThisNumberError(JSGlobalObject* globalObject, ThrowScope& scope, JSValue thisValue)
 {
-    auto typeString = asString(jsTypeStringForValue(globalObject->vm(), globalObject, thisValue))->value(globalObject);
+    auto typeString = jsTypeStringForValue(globalObject, thisValue)->value(globalObject);
     scope.assertNoException();
     return throwVMTypeError(globalObject, scope, WTF::makeString("thisNumberValue called on incompatible ", typeString));
 }
@@ -382,7 +382,7 @@ String toStringWithRadix(double doubleValue, int32_t radix)
 // This method takes an optional argument specifying a number of *decimal places*
 // to round the significand to (or, put another way, this method optionally rounds
 // to argument-plus-one significant figures).
-EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToExponential, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -393,7 +393,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(JSGlobalObject* global
 
     JSValue arg = callFrame->argument(0);
     // Perform ToInteger on the argument before remaining steps.
-    int decimalPlaces = static_cast<int>(arg.toInteger(globalObject));
+    int decimalPlaces = static_cast<int>(arg.toIntegerOrInfinity(globalObject));
     RETURN_IF_EXCEPTION(scope, { });
 
     // Handle NaN and Infinity.
@@ -419,7 +419,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToExponential(JSGlobalObject* global
 // This method takes an argument specifying a number of decimal places to round the
 // significand to. However when converting large values (1e+21 and above) this
 // method will instead fallback to calling ToString.
-EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToFixed, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -428,7 +428,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(JSGlobalObject* globalObject
     if (!toThisNumber(vm, callFrame->thisValue(), x))
         return throwVMToThisNumberError(globalObject, scope, callFrame->thisValue());
 
-    int decimalPlaces = static_cast<int>(callFrame->argument(0).toInteger(globalObject));
+    int decimalPlaces = static_cast<int>(callFrame->argument(0).toIntegerOrInfinity(globalObject));
     RETURN_IF_EXCEPTION(scope, { });
     if (decimalPlaces < 0 || decimalPlaces > 100)
         return throwVMRangeError(globalObject, scope, "toFixed() argument must be between 0 and 100"_s);
@@ -453,7 +453,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToFixed(JSGlobalObject* globalObject
 // decimal, whilst 1000 is converted to the exponential representation 1.00e+3.
 // For negative exponents values >= 1e-6 are formated as decimal fractions,
 // with smaller values converted to exponential representation.
-EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToPrecision, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -468,7 +468,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToPrecision(JSGlobalObject* globalOb
         return JSValue::encode(jsString(vm, String::number(x)));
 
     // Perform ToInteger on the argument before remaining steps.
-    int significantFigures = static_cast<int>(arg.toInteger(globalObject));
+    int significantFigures = static_cast<int>(arg.toIntegerOrInfinity(globalObject));
     RETURN_IF_EXCEPTION(scope, { });
 
     // Handle NaN and Infinity.
@@ -549,7 +549,7 @@ JSString* numberToString(VM& vm, double doubleValue, int32_t radix)
     return numberToStringInternal(vm, doubleValue, radix);
 }
 
-EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -564,7 +564,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToString(JSGlobalObject* globalObjec
     return JSValue::encode(numberToStringInternal(vm, doubleValue, radix));
 }
 
-EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncToLocaleString, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -579,7 +579,7 @@ EncodedJSValue JSC_HOST_CALL numberProtoFuncToLocaleString(JSGlobalObject* globa
     RELEASE_AND_RETURN(scope, JSValue::encode(numberFormat->format(globalObject, x)));
 }
 
-EncodedJSValue JSC_HOST_CALL numberProtoFuncValueOf(JSGlobalObject* globalObject, CallFrame* callFrame)
+JSC_DEFINE_HOST_FUNCTION(numberProtoFuncValueOf, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -601,7 +601,7 @@ int32_t extractToStringRadixArgument(JSGlobalObject* globalObject, JSValue radix
         if (radix >= 2 && radix <= 36)
             return radix;
     } else {
-        double radixDouble = radixValue.toInteger(globalObject);
+        double radixDouble = radixValue.toIntegerOrInfinity(globalObject);
         RETURN_IF_EXCEPTION(throwScope, 0);
         if (radixDouble >= 2 && radixDouble <= 36)
             return static_cast<int32_t>(radixDouble);

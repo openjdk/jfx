@@ -25,10 +25,13 @@
 
 #pragma once
 
+#include <wtf/text/WTFString.h>
+
 namespace WebCore {
 
 class MediaRecorderPrivate;
 class MediaStreamPrivate;
+struct MediaRecorderPrivateOptions;
 
 class WEBCORE_EXPORT MediaRecorderProvider {
     WTF_MAKE_FAST_ALLOCATED;
@@ -37,13 +40,9 @@ public:
     virtual ~MediaRecorderProvider() = default;
 
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
-    virtual std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&);
+    virtual std::unique_ptr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&, const MediaRecorderPrivateOptions&);
+    virtual bool isSupported(const String&);
 #endif
-
-    void setUseGPUProcess(bool value) { m_useGPUProcess = value; }
-
-protected:
-    bool m_useGPUProcess { false };
 };
 
 }

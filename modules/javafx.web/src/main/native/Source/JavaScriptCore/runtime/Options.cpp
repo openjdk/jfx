@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,6 +48,12 @@
 
 #if PLATFORM(COCOA)
 #include <crt_externs.h>
+#endif
+
+#if ENABLE(JIT_CAGE)
+#include <WebKitAdditions/JITCageAdditions.h>
+#include <machine/cpu_capabilities.h>
+#include <wtf/cocoa/Entitlements.h>
 #endif
 
 namespace JSC {
@@ -232,11 +238,7 @@ static unsigned computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers)
 
 static bool defaultTCSMValue()
 {
-#if CPU(X86_64) && ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 110000) || (PLATFORM(MACCATALYST) && __IPHONE_OS_VERSION_MIN_REQUIRED < 140000))
     return true;
-#else
-    return false;
-#endif
 }
 
 const char* const OptionRange::s_nullRangeStr = "<null>";
@@ -364,8 +366,9 @@ static void overrideDefaults()
     Options::usePollingTraps() = true;
 #endif
 
-#if !ENABLE(WEBASSEMBLY_FAST_MEMORY)
+#if !ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
     Options::useWebAssemblyFastMemory() = false;
+    Options::useSharedArrayBuffer() = false;
 #endif
 
 #if !HAVE(MACH_EXCEPTIONS)
@@ -396,6 +399,7 @@ static void disableAllJITOptions()
     Options::useOMGJIT() = false;
     Options::useDOMJIT() = false;
     Options::useRegExpJIT() = false;
+    Options::useJITCage() = false;
 }
 
 void Options::recomputeDependentOptions()
@@ -536,6 +540,9 @@ void Options::recomputeDependentOptions()
     else if (Options::randomIntegrityAuditRate() > 1.0)
         Options::randomIntegrityAuditRate() = 1.0;
 
+    if (Options::usePrivateMethods())
+        Options::usePrivateClassFields() = true;
+
     if (!Options::allowUnsupportedTiers()) {
 #define DISABLE_TIERS(option, flags, ...) do { \
             if (!Options::option())            \
@@ -548,6 +555,12 @@ void Options::recomputeDependentOptions()
 
         FOR_EACH_JSC_EXPERIMENTAL_OPTION(DISABLE_TIERS);
     }
+
+    if (Options::usePrivateStaticClassFields())
+        Options::usePrivateClassFields() = true;
+
+    if (Options::verboseVerifyGC())
+        Options::verifyGC() = true;
 }
 
 inline void* Options::addressOfOption(Options::ID id)
@@ -656,14 +669,15 @@ void Options::initialize()
             }
 #endif
 
-#if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_FAST_MEMORY)
-            if (Options::useWebAssemblyFastMemory()) {
+#if ASAN_ENABLED && OS(LINUX) && ENABLE(WEBASSEMBLY_SIGNALING_MEMORY)
+            if (Options::useWebAssemblyFastMemory() || Options::useSharedArrayBuffer()) {
                 const char* asanOptions = getenv("ASAN_OPTIONS");
                 bool okToUseWebAssemblyFastMemory = asanOptions
                     && (strstr(asanOptions, "allow_user_segv_handler=1") || strstr(asanOptions, "handle_segv=0"));
                 if (!okToUseWebAssemblyFastMemory) {
-                    dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWebAssemblyFastMemory will be disabled.");
+                    dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWebAssemblyFastMemory and useSharedArrayBuffer will be disabled.");
                     Options::useWebAssemblyFastMemory() = false;
+                    Options::useSharedArrayBuffer() = false;
                 }
             }
 #endif
@@ -1117,5 +1131,14 @@ bool OptionReader::Option::operator==(const Option& other) const
     }
     return false;
 }
+
+#if ENABLE(JIT_CAGE)
+bool canUseJITCage()
+{
+    return JSC_JIT_CAGE_VERSION() && WTF::processHasEntitlement("com.apple.private.verified-jit");
+}
+#else
+bool canUseJITCage() { return false; }
+#endif
 
 } // namespace JSC

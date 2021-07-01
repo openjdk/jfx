@@ -25,19 +25,37 @@
 
 #pragma once
 
+#if ENABLE(OFFSCREEN_CANVAS)
+
 #include "CanvasRenderingContext.h"
 
 namespace WebCore {
+
+class ImageBufferPipe;
+class OffscreenCanvas;
 
 class PlaceholderRenderingContext final : public CanvasRenderingContext {
     WTF_MAKE_ISO_ALLOCATED(PlaceholderRenderingContext);
 public:
     PlaceholderRenderingContext(CanvasBase&);
 
+    HTMLCanvasElement* canvas() const;
+
+    const RefPtr<ImageBufferPipe>& imageBufferPipe() const { return m_imageBufferPipe; }
+
 private:
     bool isPlaceholder() const final { return true; }
+
+    PlatformLayer* platformLayer() const final;
+
+    bool isAccelerated() const final { return !!m_imageBufferPipe; }
+    bool isGPUBased() const final { return !!m_imageBufferPipe; }
+
+    RefPtr<ImageBufferPipe> m_imageBufferPipe;
 };
 
 }
 
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::PlaceholderRenderingContext, isPlaceholder())
+
+#endif

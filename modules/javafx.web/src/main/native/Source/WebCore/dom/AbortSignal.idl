@@ -25,9 +25,12 @@
 
 [
     CustomIsReachable,
-    Exposed=(Window,Worker)
+    Exposed=(Window,Worker),
+    PrivateIdentifier,
+    PublicIdentifier
 ] interface AbortSignal : EventTarget {
-    readonly attribute boolean aborted;
+    [ PrivateIdentifier ] static undefined whenSignalAborted(AbortSignal object, AbortAlgorithm algorithm);
 
+    readonly attribute boolean aborted;
     attribute EventHandler onabort;
 };

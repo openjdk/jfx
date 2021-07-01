@@ -40,7 +40,7 @@ public:
         DOM_DELTA_PAGE
     };
 
-    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    static Ref<WheelEvent> create(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable = IsCancelable::Yes);
     static Ref<WheelEvent> createForBindings();
 
     struct Init : MouseEventInit {
@@ -69,14 +69,14 @@ public:
     bool webkitDirectionInvertedFromDevice() const { return m_underlyingPlatformEvent && m_underlyingPlatformEvent.value().directionInvertedFromDevice(); }
 
 #if PLATFORM(MAC)
-    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhaseNone; }
-    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhaseNone; }
+    PlatformWheelEventPhase phase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().phase() : PlatformWheelEventPhase::None; }
+    PlatformWheelEventPhase momentumPhase() const { return m_underlyingPlatformEvent ? m_underlyingPlatformEvent.value().momentumPhase() : PlatformWheelEventPhase::None; }
 #endif
 
 private:
     WheelEvent();
     WheelEvent(const AtomString&, const Init&);
-    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&);
+    WheelEvent(const PlatformWheelEvent&, RefPtr<WindowProxy>&&, IsCancelable);
 
     EventInterface eventInterface() const final;
 

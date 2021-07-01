@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,12 @@
 #include "config.h"
 #include "JSWorkletGlobalScopeBase.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "DOMWrapperWorld.h"
 #include "JSDOMGlobalObjectTask.h"
 #include "JSDOMGuardedObject.h"
 #include "JSWorkletGlobalScope.h"
+#include "WorkerOrWorkletScriptController.h"
 #include "WorkletGlobalScope.h"
-#include "WorkletScriptController.h"
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSCJSValueInlines.h>
 #include <wtf/Language.h>
@@ -51,16 +49,23 @@ const GlobalObjectMethodTable JSWorkletGlobalScopeBase::s_globalObjectMethodTabl
     &javaScriptRuntimeFlags,
     nullptr, // queueMicrotaskToEventLoop
     &shouldInterruptScriptBeforeTimeout,
-    nullptr, // moduleLoaderImportModule
-    nullptr, // moduleLoaderResolve
-    nullptr, // moduleLoaderFetch
-    nullptr, // moduleLoaderCreateImportMetaProperties
-    nullptr, // moduleLoaderEvaluate
+    &moduleLoaderImportModule,
+    &moduleLoaderResolve,
+    &moduleLoaderFetch,
+    &moduleLoaderCreateImportMetaProperties,
+    &moduleLoaderEvaluate,
     &promiseRejectionTracker,
     &reportUncaughtExceptionAtEventLoop,
+    &currentScriptExecutionOwner,
+    &scriptExecutionStatus,
     &defaultLanguage,
-    nullptr, // compileStreaming
-    nullptr, // instantiateStreaming
+#if ENABLE(WEBASSEMBLY)
+    &compileStreaming,
+    &instantiateStreaming,
+#else
+    nullptr,
+    nullptr,
+#endif
 };
 
 JSWorkletGlobalScopeBase::JSWorkletGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkletGlobalScope>&& impl)
@@ -77,20 +82,16 @@ void JSWorkletGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
     ASSERT(inherits(vm, info()));
 }
 
-void JSWorkletGlobalScopeBase::clearDOMGuardedObjects()
-{
-    auto guardedObjects = m_guardedObjects;
-    for (auto& guarded : guardedObjects)
-        guarded->clear();
-}
-
-void JSWorkletGlobalScopeBase::visitChildren(JSCell* cell, SlotVisitor& visitor)
+template<typename Visitor>
+void JSWorkletGlobalScopeBase::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     auto* thisObject = jsCast<JSWorkletGlobalScopeBase*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_proxy);
 }
+
+DEFINE_VISIT_CHILDREN(JSWorkletGlobalScopeBase);
 
 void JSWorkletGlobalScopeBase::destroy(JSCell* cell)
 {
@@ -100,6 +101,12 @@ void JSWorkletGlobalScopeBase::destroy(JSCell* cell)
 ScriptExecutionContext* JSWorkletGlobalScopeBase::scriptExecutionContext() const
 {
     return m_wrapped.get();
+}
+
+JSC::ScriptExecutionStatus JSWorkletGlobalScopeBase::scriptExecutionStatus(JSC::JSGlobalObject* globalObject, JSC::JSObject* owner)
+{
+    ASSERT_UNUSED(owner, globalObject == owner);
+    return jsCast<JSWorkletGlobalScopeBase*>(globalObject)->scriptExecutionContext()->jscScriptExecutionStatus();
 }
 
 bool JSWorkletGlobalScopeBase::supportsRichSourceInfo(const JSGlobalObject* object)
@@ -132,10 +139,10 @@ JSValue toJS(JSGlobalObject*, WorkletGlobalScope& workletGlobalScope)
 {
     if (!workletGlobalScope.script())
         return jsUndefined();
-    auto* contextWrapper = workletGlobalScope.script()->workletGlobalScopeWrapper();
+    auto* contextWrapper = workletGlobalScope.script()->globalScopeWrapper();
     if (!contextWrapper)
         return jsUndefined();
-    return contextWrapper->proxy();
+    return &contextWrapper->proxy();
 }
 
 JSWorkletGlobalScope* toJSWorkletGlobalScope(VM& vm, JSValue value)
@@ -151,4 +158,3 @@ JSWorkletGlobalScope* toJSWorkletGlobalScope(VM& vm, JSValue value)
 }
 
 } // namespace WebCore
-#endif

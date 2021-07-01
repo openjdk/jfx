@@ -23,14 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-[
-    NoInterfaceObject,
-    Exposed=Window
-] interface CanvasUserInterface {
-    void drawFocusIfNeeded(Element element);
-    void drawFocusIfNeeded(Path2D path, Element element);
+// https://html.spec.whatwg.org/multipage/canvas.html#canvasuserinterface
+interface mixin CanvasUserInterface {
+    undefined drawFocusIfNeeded(Element element);
+    undefined drawFocusIfNeeded(Path2D path, Element element);
 
     // FIXME: Implement scrollPathIntoView.
-    // void scrollPathIntoView();
-    // void scrollPathIntoView(Path2D path);
+    // undefined scrollPathIntoView();
+    // undefined scrollPathIntoView(Path2D path);
 };

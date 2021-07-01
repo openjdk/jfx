@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -84,12 +84,6 @@ extern JS_EXPORT_PRIVATE const ASCIILiteral UnconfigurablePropertyChangeConfigur
 extern JS_EXPORT_PRIVATE const ASCIILiteral UnconfigurablePropertyChangeEnumerabilityError;
 extern JS_EXPORT_PRIVATE const ASCIILiteral UnconfigurablePropertyChangeWritabilityError;
 
-COMPILE_ASSERT(PropertyAttribute::None < FirstInternalAttribute, None_is_below_FirstInternalAttribute);
-COMPILE_ASSERT(PropertyAttribute::ReadOnly < FirstInternalAttribute, ReadOnly_is_below_FirstInternalAttribute);
-COMPILE_ASSERT(PropertyAttribute::DontEnum < FirstInternalAttribute, DontEnum_is_below_FirstInternalAttribute);
-COMPILE_ASSERT(PropertyAttribute::DontDelete < FirstInternalAttribute, DontDelete_is_below_FirstInternalAttribute);
-COMPILE_ASSERT(PropertyAttribute::Accessor < FirstInternalAttribute, Accessor_is_below_FirstInternalAttribute);
-
 class JSFinalObject;
 
 #if ASSERT_ENABLED
@@ -114,8 +108,9 @@ class JSObject : public JSCell {
 public:
     using Base = JSCell;
 
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
+
     JS_EXPORT_PRIVATE static size_t estimatedSize(JSCell*, VM&);
-    JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
     JS_EXPORT_PRIVATE static void analyzeHeap(JSCell*, HeapAnalyzer&);
 
     JS_EXPORT_PRIVATE static String className(const JSObject*, VM&);
@@ -188,8 +183,10 @@ public:
 
     static bool getPrivateFieldSlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     inline bool getPrivateField(JSGlobalObject*, PropertyName, PropertySlot&);
-    inline void putPrivateField(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    inline void setPrivateField(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     inline void definePrivateField(JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
+    inline bool checkPrivateBrand(JSGlobalObject*, JSValue brand);
+    inline void setPrivateBrand(JSGlobalObject*, JSValue brand);
 
     unsigned getArrayLength() const
     {
@@ -661,8 +658,8 @@ public:
     JS_EXPORT_PRIVATE bool hasProperty(JSGlobalObject*, PropertyName) const;
     JS_EXPORT_PRIVATE bool hasProperty(JSGlobalObject*, unsigned propertyName) const;
     bool hasProperty(JSGlobalObject*, uint64_t propertyName) const;
-    bool hasPropertyGeneric(JSGlobalObject*, PropertyName, PropertySlot::InternalMethodType) const;
-    bool hasPropertyGeneric(JSGlobalObject*, unsigned propertyName, PropertySlot::InternalMethodType) const;
+    bool hasEnumerableProperty(JSGlobalObject*, PropertyName) const;
+    bool hasEnumerableProperty(JSGlobalObject*, unsigned propertyName) const;
     bool hasOwnProperty(JSGlobalObject*, PropertyName, PropertySlot&) const;
     bool hasOwnProperty(JSGlobalObject*, PropertyName) const;
     bool hasOwnProperty(JSGlobalObject*, unsigned) const;
@@ -680,16 +677,17 @@ public:
     JS_EXPORT_PRIVATE bool hasInstance(JSGlobalObject*, JSValue);
     static bool defaultHasInstance(JSGlobalObject*, JSValue, JSValue prototypeProperty);
 
-    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
-    JS_EXPORT_PRIVATE static void getOwnNonIndexPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
-    JS_EXPORT_PRIVATE static void getPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
+    static constexpr unsigned maximumPrototypeChainDepth = 40000;
+    JS_EXPORT_PRIVATE void getPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE void getOwnIndexedPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE void getOwnNonIndexPropertyNames(JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    void getNonReifiedStaticPropertyNames(VM&, PropertyNameArray&, DontEnumPropertiesMode);
 
     JS_EXPORT_PRIVATE static uint32_t getEnumerableLength(JSGlobalObject*, JSObject*);
-    JS_EXPORT_PRIVATE static void getStructurePropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
-    JS_EXPORT_PRIVATE static void getGenericPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, EnumerationMode);
 
     JS_EXPORT_PRIVATE JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType = NoPreference) const;
-    bool getPrimitiveNumber(JSGlobalObject*, double& number, JSValue&) const;
     JS_EXPORT_PRIVATE double toNumber(JSGlobalObject*) const;
     JS_EXPORT_PRIVATE JSString* toString(JSGlobalObject*) const;
 
@@ -824,7 +822,7 @@ public:
     bool needsSlowPutIndexing(VM&) const;
 
 private:
-    NonPropertyTransition suggestedArrayStorageTransition(VM&) const;
+    TransitionKind suggestedArrayStorageTransition(VM&) const;
 public:
     // You should only call isStructureExtensible() when:
     // - Performing this check in a way that isn't described in the specification
@@ -857,6 +855,7 @@ public:
     void setStructure(VM&, Structure*);
 
     JS_EXPORT_PRIVATE void convertToDictionary(VM&);
+    JS_EXPORT_PRIVATE void convertToUncacheableDictionary(VM&);
 
     void flattenDictionaryObject(VM& vm)
     {
@@ -984,11 +983,11 @@ protected:
     JSObject(VM&, Structure*, Butterfly* = nullptr);
 
     // Visits the butterfly unless there is a race. Returns the structure if there was no race.
-    Structure* visitButterfly(SlotVisitor&);
+    template<typename Visitor> Structure* visitButterfly(Visitor&);
 
-    Structure* visitButterflyImpl(SlotVisitor&);
+    template<typename Visitor> Structure* visitButterflyImpl(Visitor&);
 
-    void markAuxiliaryAndVisitOutOfLineProperties(SlotVisitor&, Butterfly*, Structure*, PropertyOffset maxOffset);
+    template<typename Visitor> void markAuxiliaryAndVisitOutOfLineProperties(Visitor&, Butterfly*, Structure*, PropertyOffset maxOffset);
 
     // Call this if you know that the object is in a mode where it has array
     // storage. This will assert otherwise.
@@ -1032,19 +1031,19 @@ protected:
     ContiguousJSValues convertUndecidedToInt32(VM&);
     ContiguousDoubles convertUndecidedToDouble(VM&);
     ContiguousJSValues convertUndecidedToContiguous(VM&);
-    ArrayStorage* convertUndecidedToArrayStorage(VM&, NonPropertyTransition);
+    ArrayStorage* convertUndecidedToArrayStorage(VM&, TransitionKind);
     ArrayStorage* convertUndecidedToArrayStorage(VM&);
 
     ContiguousDoubles convertInt32ToDouble(VM&);
     ContiguousJSValues convertInt32ToContiguous(VM&);
-    ArrayStorage* convertInt32ToArrayStorage(VM&, NonPropertyTransition);
+    ArrayStorage* convertInt32ToArrayStorage(VM&, TransitionKind);
     ArrayStorage* convertInt32ToArrayStorage(VM&);
 
     ContiguousJSValues convertDoubleToContiguous(VM&);
-    ArrayStorage* convertDoubleToArrayStorage(VM&, NonPropertyTransition);
+    ArrayStorage* convertDoubleToArrayStorage(VM&, TransitionKind);
     ArrayStorage* convertDoubleToArrayStorage(VM&);
 
-    ArrayStorage* convertContiguousToArrayStorage(VM&, NonPropertyTransition);
+    ArrayStorage* convertContiguousToArrayStorage(VM&, TransitionKind);
     ArrayStorage* convertContiguousToArrayStorage(VM&);
 
 
@@ -1176,8 +1175,6 @@ protected:
     }
 };
 
-class JSFinalObject;
-
 // JSFinalObject is a type of JSObject that contains sufficient internal
 // storage to fully make use of the collector cell containing it.
 class JSFinalObject final : public JSObject {
@@ -1216,14 +1213,12 @@ public:
         return Structure::create(vm, globalObject, prototype, typeInfo(), info(), defaultIndexingType, inlineCapacity);
     }
 
-    JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 
     DECLARE_EXPORT_INFO;
 
 private:
     friend class LLIntOffsetsExtractor;
-
-    void visitChildrenCommon(SlotVisitor&);
 
     explicit JSFinalObject(VM& vm, Structure* structure, Butterfly* butterfly)
         : JSObject(vm, structure, butterfly)
@@ -1239,7 +1234,7 @@ private:
     }
 };
 
-JS_EXPORT_PRIVATE EncodedJSValue JSC_HOST_CALL objectPrivateFuncInstanceOf(JSGlobalObject*, CallFrame*);
+JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(objectPrivateFuncInstanceOf);
 
 inline JSFinalObject* JSFinalObject::createWithButterfly(VM& vm, Structure* structure, Butterfly* butterfly)
 {
@@ -1417,16 +1412,16 @@ ALWAYS_INLINE void JSObject::fillCustomGetterPropertySlot(VM& vm, PropertySlot& 
     if (customGetterSetter->inherits<DOMAttributeGetterSetter>(vm)) {
         auto* domAttribute = jsCast<DOMAttributeGetterSetter*>(customGetterSetter);
         if (structure->isUncacheableDictionary())
-            slot.setCustom(this, attributes, domAttribute->getter(), domAttribute->domAttribute());
+            slot.setCustom(this, attributes, domAttribute->getter(), domAttribute->setter(), domAttribute->domAttribute());
         else
-            slot.setCacheableCustom(this, attributes, domAttribute->getter(), domAttribute->domAttribute());
+            slot.setCacheableCustom(this, attributes, domAttribute->getter(), domAttribute->setter(), domAttribute->domAttribute());
         return;
     }
 
     if (structure->isUncacheableDictionary())
-        slot.setCustom(this, attributes, customGetterSetter->getter());
+        slot.setCustom(this, attributes, customGetterSetter->getter(), customGetterSetter->setter());
     else
-        slot.setCacheableCustom(this, attributes, customGetterSetter->getter());
+        slot.setCacheableCustom(this, attributes, customGetterSetter->getter(), customGetterSetter->setter());
 }
 
 // It may seem crazy to inline a function this large, especially a virtual function,

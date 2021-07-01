@@ -31,8 +31,11 @@
 #include "ExtensionsGL.h"
 #include "RuntimeEnabledFeatures.h"
 #include "WebGLRenderingContextBase.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLCompressedTextureASTC);
 
 WebGLCompressedTextureASTC::WebGLCompressedTextureASTC(WebGLRenderingContextBase& context)
     : WebGLExtension(context)

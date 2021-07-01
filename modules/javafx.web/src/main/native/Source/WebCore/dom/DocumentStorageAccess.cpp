@@ -36,7 +36,9 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "JSDOMPromiseDeferred.h"
+#include "NetworkStorageSession.h"
 #include "Page.h"
+#include "Quirks.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -167,10 +169,6 @@ Optional<StorageAccessQuickResult> DocumentStorageAccess::requestStorageAccessQu
     if (m_document.sandboxFlags() != SandboxNone && m_document.isSandboxed(SandboxStorageAccessByUserActivation))
         return StorageAccessQuickResult::Reject;
 
-    // The iframe has to be a direct child of the top document.
-    if (&topDocument != m_document.parentDocument())
-        return StorageAccessQuickResult::Reject;
-
     if (!UserGestureIndicator::processingUserGesture())
         return StorageAccessQuickResult::Reject;
 
@@ -201,8 +199,8 @@ void DocumentStorageAccess::requestStorageAccess(Ref<DeferredPromise>&& promise)
         return;
     }
 
-    if (page->settings().storageAccessAPIPerPageScopeEnabled())
-        m_storageAccessScope = StorageAccessScope::PerPage;
+    if (!page->settings().storageAccessAPIPerPageScopeEnabled())
+        m_storageAccessScope = StorageAccessScope::PerFrame;
 
     page->chrome().client().requestStorageAccess(RegistrableDomain::uncheckedCreateFromHost(m_document.securityOrigin().host()), RegistrableDomain::uncheckedCreateFromHost(m_document.topDocument().securityOrigin().host()), *frame, m_storageAccessScope, [this, weakThis = makeWeakPtr(*this), promise = WTFMove(promise)] (RequestStorageAccessResult result) mutable {
         if (!weakThis)
@@ -269,7 +267,9 @@ void DocumentStorageAccess::requestStorageAccessQuirk(RegistrableDomain&& reques
     ASSERT(m_document.settings().storageAccessAPIEnabled());
     RELEASE_ASSERT(m_document.frame() && m_document.frame()->page());
 
-    m_document.frame()->page()->chrome().client().requestStorageAccess(WTFMove(requestingDomain), RegistrableDomain::uncheckedCreateFromHost(m_document.topDocument().securityOrigin().host()), *m_document.frame(), m_storageAccessScope, [this, weakThis = makeWeakPtr(*this), completionHandler = WTFMove(completionHandler)] (RequestStorageAccessResult result) mutable {
+    auto topFrameDomain = Quirks::mapToTopDomain(m_document.topDocument().url());
+
+    m_document.frame()->page()->chrome().client().requestStorageAccess(WTFMove(requestingDomain), WTFMove(topFrameDomain), *m_document.frame(), m_storageAccessScope, [this, weakThis = makeWeakPtr(*this), completionHandler = WTFMove(completionHandler)] (RequestStorageAccessResult result) mutable {
         if (!weakThis)
             return;
 

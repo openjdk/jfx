@@ -48,13 +48,14 @@ public:
     WEBCORE_EXPORT void clearAllTestDeferrals();
 
     enum DeferReason {
-        HandlingWheelEvent              = 1 << 0,
-        HandlingWheelEventOnMainThread  = 1 << 1,
-        RubberbandInProgress            = 1 << 2,
-        ScrollSnapInProgress            = 1 << 3,
-        ScrollingThreadSyncNeeded       = 1 << 4,
-        ContentScrollInProgress         = 1 << 5,
-        RequestedScrollPosition         = 1 << 6,
+        HandlingWheelEvent                  = 1 << 0,
+        HandlingWheelEventOnMainThread      = 1 << 1,
+        PostMainThreadWheelEventHandling    = 1 << 2,
+        RubberbandInProgress                = 1 << 3,
+        ScrollSnapInProgress                = 1 << 4,
+        ScrollingThreadSyncNeeded           = 1 << 5,
+        ContentScrollInProgress             = 1 << 6,
+        RequestedScrollPosition             = 1 << 7,
     };
     typedef const void* ScrollableAreaIdentifier;
 
@@ -90,6 +91,13 @@ public:
     {
         if (m_monitor)
             m_monitor->deferForReason(m_identifier, m_reason);
+    }
+
+    WheelEventTestMonitorCompletionDeferrer(WheelEventTestMonitorCompletionDeferrer&& other)
+        : m_monitor(WTFMove(other.m_monitor))
+        , m_identifier(other.m_identifier)
+        , m_reason(other.m_reason)
+    {
     }
 
     ~WheelEventTestMonitorCompletionDeferrer()

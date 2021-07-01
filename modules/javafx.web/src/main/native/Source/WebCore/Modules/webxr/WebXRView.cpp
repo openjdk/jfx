@@ -28,30 +28,49 @@
 
 #if ENABLE(WEBXR)
 
+#include "WebXRFrame.h"
 #include "WebXRRigidTransform.h"
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 
+// Arbitrary value for minimum viewport scaling.
+// Below this threshold the resulting viewport would be too pixelated.
+static constexpr double kMinViewportScale = 0.1;
+
 WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRView);
 
-Ref<WebXRView> WebXRView::create()
+Ref<WebXRView> WebXRView::create(Ref<WebXRFrame>&& frame, XREye eye, Ref<WebXRRigidTransform>&& transform, Ref<Float32Array>&& projection)
 {
-    return adoptRef(*new WebXRView);
+    return adoptRef(*new WebXRView(WTFMove(frame), eye, WTFMove(transform), WTFMove(projection)));
 }
 
-WebXRView::WebXRView()
-    : m_eye(XREye::None)
+WebXRView::WebXRView(Ref<WebXRFrame>&& frame, XREye eye, Ref<WebXRRigidTransform>&& transform, Ref<Float32Array>&& projection)
+    : m_frame(WTFMove(frame))
+    , m_eye(eye)
+    , m_transform(WTFMove(transform))
+    , m_projection(WTFMove(projection))
 {
 }
 
 WebXRView::~WebXRView() = default;
 
-void WebXRView::setProjectionMatrix(const Vector<float>& matrix)
+// https://immersive-web.github.io/webxr/#dom-xrview-recommendedviewportscale
+Optional<double> WebXRView::recommendedViewportScale() const
 {
-    m_projectionMatrix = Float32Array::create(matrix.data(), matrix.size());
+    // Return null if the system does not implement a heuristic or method for determining a recommended scale.
+    return WTF::nullopt;
 }
+
+// https://immersive-web.github.io/webxr/#dom-xrview-requestviewportscale
+void WebXRView::requestViewportScale(Optional<double> value)
+{
+    if (!value || *value <= 0.0)
+        return;
+    m_requestedViewportScale = std::clamp(*value, kMinViewportScale, 1.0);
+}
+
 
 } // namespace WebCore
 
