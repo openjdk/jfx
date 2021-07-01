@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(tableView);
 
-        List<S> items = tableView.getItems();
+        List<S> items = tableView != null ? tableView.getItems() : null;
         this.itemRef = new WeakReference<>(
                 items != null && row >= 0 && row < items.size() ? items.get(row) : null);
 
