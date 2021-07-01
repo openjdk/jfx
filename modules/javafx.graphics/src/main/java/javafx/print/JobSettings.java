@@ -486,18 +486,18 @@ public final class JobSettings {
      * this property by setting it to null or an empty string.
      * <p>
      * Additionally if the application displays a printer dialog which allows
-     * the user to specify a file destination including altering an application
+     * the user to specify a file destination, including altering an application
      * specified file destination, the value of this property will reflect that
-     * user-specified choice, including clearing it to re-set to print to
+     * user-specified choice, including clearing it to reset to print to
      * the printer, if the user does so.
      * <p>
      * If the print system does not support print-to-file, then this
      * setting will be ignored.
      * <p>
      * If the specified name specifies a non-existent path, or does not specify
-     * a user writable file, when printing the results are platform-dependent, including
-     * replacement with a default output file location, printing to the printer instead,
-     * or a platform printing error.
+     * a user writable file, when printing the results are platform-dependent.
+     * Possible behaviours might include replacement with a default output file location,
+     * printing to the printer instead, or a platform printing error.
      * If a {@code SecurityManager} is installed and it denies access to the
      * specified file a {@code SecurityException} may be thrown.
      *
