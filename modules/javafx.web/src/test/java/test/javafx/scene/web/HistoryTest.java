@@ -96,21 +96,6 @@ public class HistoryTest extends TestBase {
         ensureValueChanged(entriesChanged, "entries not changed after load");
 
         //
-        // check the title update
-        //
-        history.getEntries().get(history.getCurrentIndex()).titleProperty().addListener(new ChangeListener<String>() {
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                assertEquals("entries: old title is wrong", "3", oldValue);
-                assertEquals("entries: new title is wrong", "hello", newValue);
-                observable.removeListener(this);
-                titleChanged.set(true);
-            }
-        });
-        executeScript("document.title='hello'");
-
-        ensureValueChanged(titleChanged, "title not changed from JS");
-
-        //
         // check the date & index updates
         //
         history.getEntries().get(history.getCurrentIndex() - 1).lastVisitedDateProperty().addListener(newDateListener());
@@ -267,7 +252,6 @@ public class HistoryTest extends TestBase {
         assertEquals("entries: size is wrong", size, history.getEntries().size());
         assertEquals("currentIndex: index is wrong", index, history.getCurrentIndex());
         assertEquals("entries: url is wrong", file.toURI().toString(), history.getEntries().get(index).getUrl());
-        assertEquals("entries: title is wrong", title, history.getEntries().get(index).getTitle());
     }
 
     void ensureValueChanged(AtomicBoolean value, String errMsg) {

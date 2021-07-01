@@ -131,7 +131,6 @@ public class LoadNotificationsTest extends TestBase {
                             worker.getMessage().matches("Loading .*" + currentUrl));
 
                     assertNull("WebEngine.document should be null", web.getDocument());
-                    assertNull("WebEngine.title should be null", web.getTitle());
                     assertTrue("WebEngine.location should be set",
                             web.getLocation().endsWith(currentUrl));
                     break;
@@ -147,11 +146,6 @@ public class LoadNotificationsTest extends TestBase {
                     assertNotNull("WebEngine.document should be set", web.getDocument());
                     assertTrue("WebEngine.location should be set",
                             web.getLocation().endsWith(currentUrl));
-                    if (currentUrl == "about:blank") {
-                        assertNull("WebEngine.title should be null", web.getTitle());
-                    } else {
-                        assertNotNull("WebEngine.title should be set", web.getTitle());
-                    }
                     break;
                 case FAILED:
                     assertEquals("LoadWorker.state", RUNNING, oldValue);
