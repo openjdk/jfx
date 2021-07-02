@@ -47,10 +47,11 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 /**
  * Parameterized tests for the {@link TableCell#startEdit()} method of {@link TableCell} and all sub implementations.
+ * The {@link CheckBoxTableCell} is special as in there the checkbox will be disabled
+ * based of the editability.
  */
 @RunWith(Parameterized.class)
 public class TableCellStartEditTest {
@@ -91,11 +92,7 @@ public class TableCellStartEditTest {
     @Test
     public void testStartEdit() {
         // First test startEdit() without anything set yet.
-        try {
-            tableCell.startEdit();
-        } catch (NullPointerException e) {
-            fail("startEdit() should never throw an NPE");
-        }
+        tableCell.startEdit();
 
         tableCell.updateIndex(0);
 
@@ -121,8 +118,10 @@ public class TableCellStartEditTest {
      * @param isTableEditable true, when the table should be editable, false otherwise
      * @param isColumnEditable true, when the column should be editable, false otherwise
      * @param isRowEditable true, when the row should be editable, false otherwise
+     * @param isCellEditable true, when the cell should be editable, false otherwise
      */
-    private void testStartEditImpl(boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable, boolean isCellEditable) {
+    private void testStartEditImpl(boolean isTableEditable, boolean isColumnEditable, boolean isRowEditable,
+            boolean isCellEditable) {
         assertFalse(tableCell.isEditing());
 
         table.setEditable(isTableEditable);
@@ -135,6 +134,12 @@ public class TableCellStartEditTest {
         // Only when the table, column, row and the cell itself is editable, it can get in editing state.
         boolean expectedEditingState = isTableEditable && isColumnEditable && isRowEditable && isCellEditable;
         assertEquals(expectedEditingState, tableCell.isEditing());
+
+        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+        // Special check for CheckBoxTableCell.
+//        if (tableCell instanceof CheckBoxTableCell) {
+//            assertEquals(expectedEditingState, !tableCell.getGraphic().isDisabled());
+//        }
 
         // Restore the editing state.
         tableCell.cancelEdit();

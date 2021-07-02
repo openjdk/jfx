@@ -26,10 +26,7 @@
 package test.javafx.scene.control;
 
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.control.TreeCell;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.CheckBoxTreeCell;
@@ -47,10 +44,11 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 /**
  * Parameterized tests for the {@link TreeCell#startEdit()} method of {@link TreeCell} and all sub implementations.
+ * The {@link CheckBoxTreeCell} is special as in there the checkbox will be disabled
+ * based of the editability.
  */
 @RunWith(Parameterized.class)
 public class TreeCellStartEditTest {
@@ -84,11 +82,7 @@ public class TreeCellStartEditTest {
     @Test
     public void testStartEdit() {
         // First test startEdit() without anything set yet.
-        try {
-            treeCell.startEdit();
-        } catch (NullPointerException e) {
-            fail("startEdit() should never throw an NPE");
-        }
+        treeCell.startEdit();
 
         treeCell.updateIndex(0);
 
@@ -116,9 +110,14 @@ public class TreeCellStartEditTest {
 
         treeCell.startEdit();
 
-        // Only when the tree view and the cell itself is editable, it can get in editing state.
         boolean expectedEditingState = isTreeViewEditable && isCellEditable;
         assertEquals(expectedEditingState, treeCell.isEditing());
+
+        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+        // Special check for CheckBoxTreeCell.
+//        if (treeCell instanceof CheckBoxTreeCell) {
+//            assertEquals(expectedEditingState, !treeCell.getGraphic().isDisabled());
+//        }
 
         // Restore the editing state.
         treeCell.cancelEdit();

@@ -45,10 +45,11 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 /**
  * Parameterized tests for the {@link ListCell#startEdit()} method of {@link ListCell} and all sub implementations.
+ * The {@link CheckBoxListCell} is special as in there the checkbox will be disabled
+ * based of the editability.
  */
 @RunWith(Parameterized.class)
 public class ListCellStartEditTest {
@@ -81,19 +82,15 @@ public class ListCellStartEditTest {
     @Test
     public void testStartEdit() {
         // First test startEdit() without anything set yet.
-        try {
-            listCell.startEdit();
-        } catch (NullPointerException e) {
-            fail("startEdit() should never throw an NPE");
-        }
+        listCell.startEdit();
 
         listCell.updateIndex(0);
 
         listCell.updateListView(listView);
 
-        for (boolean isListEditable : EDITABLE_STATES) {
+        for (boolean isListViewEditable : EDITABLE_STATES) {
             for (boolean isCellEditable : EDITABLE_STATES) {
-                testStartEditImpl(isListEditable, isCellEditable);
+                testStartEditImpl(isListViewEditable, isCellEditable);
             }
         }
     }
@@ -102,7 +99,8 @@ public class ListCellStartEditTest {
      * A {@link ListCell} (or sub implementation) should be editable (thus, can be in editing state), if the
      * corresponding list view and cell is editable.
      *
-     * @param isListViewEditable true, when the table should be editable, false otherwise
+     * @param isListViewEditable true, when the list view should be editable, false otherwise
+     * @param isCellEditable true, when the cell should be editable, false otherwise
      */
     private void testStartEditImpl(boolean isListViewEditable, boolean isCellEditable) {
         assertFalse(listCell.isEditing());
@@ -112,9 +110,14 @@ public class ListCellStartEditTest {
 
         listCell.startEdit();
 
-        // Only when the list view and the cell itself is editable, it can get in editing state.
         boolean expectedEditingState = isListViewEditable && isCellEditable;
         assertEquals(expectedEditingState, listCell.isEditing());
+
+        // Ignored until https://bugs.openjdk.java.net/browse/JDK-8270042 is resolved.
+        // Special check for CheckBoxListCell.
+//        if (listCell instanceof CheckBoxListCell) {
+//            assertEquals(expectedEditingState, !listCell.getGraphic().isDisabled());
+//        }
 
         // Restore the editing state.
         listCell.cancelEdit();
