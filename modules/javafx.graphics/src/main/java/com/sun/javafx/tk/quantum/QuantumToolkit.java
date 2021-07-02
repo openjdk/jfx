@@ -366,7 +366,8 @@ public final class QuantumToolkit extends Toolkit {
                 }
 
                 @Override public boolean handleThemeChanged(String themeName) {
-                    return PlatformImpl.setAccessibilityTheme(themeName);
+                    String highContrastSchemeName = Application.GetApplication().getHighContrastScheme(themeName);
+                    return PlatformImpl.setAccessibilityTheme(highContrastSchemeName);
                 }
             });
         }
