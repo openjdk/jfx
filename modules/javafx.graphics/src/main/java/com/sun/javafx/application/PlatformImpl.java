@@ -716,6 +716,15 @@ public class PlatformImpl {
         }
     }
 
+    /**
+     * Enumeration of possible high contrast scheme values.
+     *
+     * For each scheme, a theme key is defined. These keys can be
+     * used, for instance, in a resource bundle that defines the theme name values
+     * for supported locales.
+     *
+     * The high contrast feature may not be available on all platforms.
+     */
     public enum HighContrastScheme {
         HIGH_CONTRAST_BLACK("high.contrast.black.theme"),
         HIGH_CONTRAST_WHITE("high.contrast.white.theme"),
@@ -731,6 +740,18 @@ public class PlatformImpl {
             return themeKey;
         }
 
+        /**
+         * Given a theme name string, this method finds the possible enum constant
+         * for which the result of a function, applying its theme key, matches the theme name.
+         *
+         * An example of such function can be {@code ResourceBundle::getString},
+         * as {@link java.util.ResourceBundle#getString(String)} returns a string for
+         * the given key.
+         *
+         * @param keyFunction a {@link Function} that returns a string for a given theme key string.
+         * @param themeName a string with the theme name
+         * @return the name of the enum constant or null if not found
+         */
         public static String fromThemeName(Function<String, String> keyFunction, String themeName) {
             if (keyFunction == null || themeName == null) {
                 return null;
