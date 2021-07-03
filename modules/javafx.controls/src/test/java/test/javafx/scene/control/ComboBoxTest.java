@@ -46,8 +46,6 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 

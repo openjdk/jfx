@@ -62,9 +62,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-
 public class ChoiceBoxTest {
     private final ChoiceBox<String> box = new ChoiceBox<String>();
     private Toolkit tk;
