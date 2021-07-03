@@ -288,10 +288,6 @@ public class ComboBoxTest {
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
-        PrintStream defaultErrorStream = System.err;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(out, true));
-
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
         ListCell<String> buttonCell = new ListCell<>() {
@@ -305,12 +301,13 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
 
-        comboBox.setValue(items.get(1));
+        try {
+            comboBox.setValue(items.get(1));
+        } catch (Exception e) {
+            fail("ComboBox.setValue() should not throw an exception.");
+        }
 
         assertEquals(items.get(1), comboBox.getButtonCell().getText());
-
-        System.setErr(defaultErrorStream);
-        assertEquals("No NPE should be thrown", "", out.toString());
     }
 
     @Test public void selectionModelCanBeBound() {

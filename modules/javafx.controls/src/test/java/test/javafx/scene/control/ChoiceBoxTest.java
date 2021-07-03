@@ -29,6 +29,7 @@ import javafx.scene.control.Separator;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
+import static org.junit.Assert.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -73,6 +74,14 @@ public class ChoiceBoxTest {
     @Before public void setup() {
         //This step is not needed (Just to make sure StubToolkit is loaded into VM)
         tk = (StubToolkit)Toolkit.getToolkit();
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
     }
 
     protected void startApp(Parent root) {
@@ -156,23 +165,20 @@ public class ChoiceBoxTest {
     }
 
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
-        PrintStream defaultErrorStream = System.err;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(out, true));
-
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
         box.setSkin(new ChoiceBoxSkin<>(box));
         box.setItems(items);
         box.setSelectionModel(null);
 
-        box.setValue(items.get(1));
+        try {
+            box.setValue(items.get(1));
+        } catch (Exception e) {
+            fail("ChoiceBox.setValue() should not throw an exception.");
+        }
 
         String text = ChoiceBoxSkinNodesShim.getChoiceBoxSelectedText((ChoiceBoxSkin<?>) box.getSkin());
         assertEquals(items.get(1), text);
-
-        System.setErr(defaultErrorStream);
-        assertEquals("No NPE should be thrown", "", out.toString());
     }
 
     @Test public void selectionModelCanBeBound() {
