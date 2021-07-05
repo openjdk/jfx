@@ -722,11 +722,9 @@ public class TreeTableCellTest {
         assertFalse(cell.isEditing());
     }
 
-//------------ testing editCancel event: location on event - JDK-8187229
-
     /**
      * Basic config of treeTable-/cell to allow testing of editEvents:
-     * table has editingColumn and cell is configured with table and column.
+     * table is editable, has editingColumn and cell is configured with table and column.
      */
     private void setupForEditing() {
         tree.setEditable(true);
@@ -738,9 +736,6 @@ public class TreeTableCellTest {
         cell.updateTreeTableColumn(editingColumn);
     }
 
-    /**
-     * Sanity test: passes before fix of JDK-8187229, must pass after.
-     */
     @Test
     public void testEditCancelEventAfterCancelOnCell() {
         setupForEditing();
@@ -769,9 +764,6 @@ public class TreeTableCellTest {
         assertEquals("editing location of cancel event", editingPosition, events.get(0).getTreeTablePosition());
     }
 
-    /**
-     * Sanity test: passes before fix of JDK-8187229, must pass after.
-     */
     @Test
     public void testEditCancelEventAfterCellReuse() {
         setupForEditing();
@@ -838,9 +830,7 @@ public class TreeTableCellTest {
     }
 
     /**
-     * Sanity test: fix must not introduce a memory leak.
-     * Note: not an issue for Tree/TableCell because we store the Tree/TablePosition which
-     * takes care of wrapping everything into weakRefs.
+     * Test that removing the editing item does not cause a memory leak.
      */
     @Test
     public void testEditCancelMemoryLeakAfterRemoveEditingItem() {

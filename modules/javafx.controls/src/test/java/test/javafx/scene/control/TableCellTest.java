@@ -415,11 +415,9 @@ public class TableCellTest {
         assertFalse(cell.isEditing());
     }
 
-//------------ testing editCancel event: location on event - JDK-8187229
-
     /**
      * Basic config of table-/cell to allow testing of editEvents:
-     * table has editingColumn and cell is configured with table and column.
+     * table is editable, has editingColumn and cell is configured with table and column.
      */
     private void setupForEditing() {
         table.setEditable(true);
@@ -431,10 +429,6 @@ public class TableCellTest {
         cell.updateTableColumn(editingColumn);
     }
 
-
-    /**
-     * Passes before fix of JDK-8187229, must pass after.
-     */
     @Test
     public void testEditCancelEventAfterCancelOnCell() {
         setupForEditing();
@@ -449,9 +443,6 @@ public class TableCellTest {
         assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
     }
 
-    /**
-     * Fails before fix of JDK-8187229.
-     */
     @Test
     public void testEditCancelEventAfterCancelOnTable() {
         setupForEditing();
@@ -466,9 +457,6 @@ public class TableCellTest {
         assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
     }
 
-    /**
-     * Passes before fix of JDK-8187229, must pass after.
-     */
     @Test
     public void testEditCancelEventAfterCellReuse() {
         setupForEditing();
@@ -483,9 +471,6 @@ public class TableCellTest {
         assertEquals("editing location of cancel event", editingPosition, events.get(0).getTablePosition());
     }
 
-    /**
-     * Fails before fix of JDK-8187229.
-     */
     @Test
     public void testEditCancelEventAfterModifyItems() {
         setupForEditing();
@@ -522,9 +507,7 @@ public class TableCellTest {
     }
 
     /**
-     * Sanity test: fix must not introduce a memory leak.
-     * Note: not an issue for Tree/TableCell because we store the Tree/TablePosition which
-     * takes care of wrapping everything into weakRefs.
+     * Test that removing the editing item does not cause a memory leak.
      */
     @Test
     public void testEditCancelMemoryLeakAfterRemoveEditingItem() {
