@@ -285,7 +285,7 @@ public class ComboBoxTest {
         assertNull(comboBox.getSelectionModel());
     }
 
-    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnValueChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
         ListCell<String> buttonCell = new ListCell<>() {
@@ -299,13 +299,30 @@ public class ComboBoxTest {
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
 
-        try {
-            comboBox.setValue(items.get(1));
-        } catch (Exception e) {
-            fail("ComboBox.setValue() should not throw an exception.");
-        }
+        comboBox.setValue(items.get(1));
 
         assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+
+        comboBox.setValue(items.get(1));
+
+        assertEquals(items.get(1), comboBox.getValue());
     }
 
     @Test public void selectionModelCanBeBound() {

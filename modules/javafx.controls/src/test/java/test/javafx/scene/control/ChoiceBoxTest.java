@@ -26,10 +26,10 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.Separator;
+import org.junit.After;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 
-import static org.junit.Assert.fail;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -69,9 +69,6 @@ public class ChoiceBoxTest {
     private Stage stage;
 
     @Before public void setup() {
-        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
-        tk = (StubToolkit)Toolkit.getToolkit();
-
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException) throwable;
@@ -79,6 +76,13 @@ public class ChoiceBoxTest {
                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
             }
         });
+
+        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        tk = (StubToolkit)Toolkit.getToolkit();
+    }
+
+    @After public void cleanUp() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     protected void startApp(Parent root) {
@@ -168,11 +172,7 @@ public class ChoiceBoxTest {
         box.setItems(items);
         box.setSelectionModel(null);
 
-        try {
-            box.setValue(items.get(1));
-        } catch (Exception e) {
-            fail("ChoiceBox.setValue() should not throw an exception.");
-        }
+        box.setValue(items.get(1));
 
         String text = ChoiceBoxSkinNodesShim.getChoiceBoxSelectedText((ChoiceBoxSkin<?>) box.getSkin());
         assertEquals(items.get(1), text);
