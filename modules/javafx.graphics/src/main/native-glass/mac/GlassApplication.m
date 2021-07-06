@@ -821,43 +821,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
             env, jClass, "notifyApplicationDidTerminate", "()V");
     if ((*env)->ExceptionCheck(env)) return;
 
-    // Check minimum OS version
-    NSOperatingSystemVersion osVer;
-    osVer = [[NSProcessInfo processInfo] operatingSystemVersion];
-    NSInteger osVerMajor = osVer.majorVersion;
-    NSInteger osVerMinor = osVer.minorVersion;
-
-    // KCR: begin debug
-    NSLog(@"macOSMinVersion = %d . %d", MACOS_MIN_VERSION_MAJOR, MACOS_MIN_VERSION_MINOR);
-    NSLog(@"    osVer (raw)      = %d . %d", (int)osVerMajor, (int)osVerMinor);
-    // KCR: end debug
-
-    // Map 10.16 to 11.0, since macOS will return 10.16 by default (for compatibility)
-    if (osVerMajor == 10 && osVerMinor >= 16) {
-        // FIXME: if we ever need to know which minor version of macOS 11.x we
-        // are running on, we will need to look it up using a similar technique
-        // to what the JDK does.
-        osVerMajor = 11;
-        osVerMinor = 0;
-    }
-
-    // KCR: begin debug
-    NSLog(@"    osVer (adjusted) = %d . %d", (int)osVerMajor, (int)osVerMinor);
-    // KCR: end debug
-
-    if (osVerMajor < MACOS_MIN_VERSION_MAJOR ||
-            (osVerMajor == MACOS_MIN_VERSION_MAJOR &&
-             osVerMinor < MACOS_MIN_VERSION_MINOR))
-    {
-        NSLog(@"ERROR: macOS version is %d.%d, which is below the minimum of %d.%d",
-              (int)osVerMajor, (int)osVerMinor, MACOS_MIN_VERSION_MAJOR, MACOS_MIN_VERSION_MINOR);
-        jclass exceptionClass = (*env)->FindClass(env, "java/lang/RuntimeException");
-        if (exceptionClass != 0) {
-            (*env)->ThrowNew(env, exceptionClass, "Unsupported macOS version");
-        }
-        return;
-    }
-
     if (jRunnableRun == NULL)
     {
         jclass jcls = (*env)->FindClass(env, "java/lang/Runnable");
