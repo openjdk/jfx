@@ -56,7 +56,7 @@ def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOS
 // Set the minimum API version that we require (developers do not need to override this)
 // Note that this is not necessarily the same as the preferred SDK version
 def isAarch64 = TARGET_ARCH == "aarch64" || TARGET_ARCH == "arm64";
-def macOSMinVersion = isAarch64 ? "11.0" : "10.12";
+def macOSMinVersion = isAarch64 ? "11.0" : "10.10";
 defineProperty("MACOSX_MIN_VERSION", macOSMinVersion);
 
 // Create $buildDir/mac_tools.properties file and load props from it
