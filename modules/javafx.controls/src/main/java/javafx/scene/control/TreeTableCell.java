@@ -300,6 +300,9 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    // editing location at start of edit - fix for JDK-8187229
+    private TreeTablePosition<S, T> editingCellAtStartEdit = null;
+
     /** {@inheritDoc} */
     @Override public void startEdit() {
         if (isEditing()) return;
@@ -336,6 +339,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
             Event.fireEvent(column, editEvent);
         }
+        editingCellAtStartEdit = new TreeTablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
@@ -390,9 +394,6 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
         // reset the editing index on the TableView
         if (table != null) {
-            @SuppressWarnings("unchecked")
-            TreeTablePosition<S,T> editingCell = (TreeTablePosition<S,T>) table.getEditingCell();
-
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -403,7 +404,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
             CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TreeTableColumn.<S,T>editCancelEvent(),
                 null
             );
