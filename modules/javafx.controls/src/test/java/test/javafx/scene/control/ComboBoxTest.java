@@ -307,16 +307,7 @@ public class ComboBoxTest {
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 
-        ListCell<String> buttonCell = new ListCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(item);
-            }
-        };
-
         ComboBox<String> comboBox = new ComboBox<>();
-        comboBox.setButtonCell(buttonCell);
         comboBox.setItems(items);
         comboBox.setSelectionModel(null);
 
