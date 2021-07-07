@@ -51,6 +51,7 @@ import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.Size2DSyntax;
 import javax.print.attribute.standard.Chromaticity;
 import javax.print.attribute.standard.Copies;
+import javax.print.attribute.standard.Destination;
 import javax.print.attribute.standard.DialogTypeSelection;
 import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaPrintableArea;
@@ -68,6 +69,8 @@ import java.awt.print.PageFormat;
 import java.awt.print.Pageable;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
+import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
@@ -332,11 +335,22 @@ public class J2DPrinterJob implements PrinterJobImpl {
      * equivalent FX public API JobSettings.
      */
     private void updateJobName() {
-        String name =  pJob2D.getJobName();
+        String name = pJob2D.getJobName();
         if (!name.equals(settings.getJobName())) {
             settings.setJobName(name);
         }
     }
+
+    private void updateOutputFile() {
+        Destination dest =
+            (Destination)printReqAttrSet.get(Destination.class);
+        if (dest != null) {
+            settings.setOutputFile(dest.getURI().getPath());
+        } else {
+            settings.setOutputFile("");
+        }
+    }
+
     private void updateCopies() {
         int nCopies = pJob2D.getCopies();
         if (settings.getCopies() != nCopies) {
@@ -393,7 +407,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
      * collation, then its been set by the user at some point,
      * even if the current value is the printer default.
      * If there is no value for collation in the attribute set,
-     * it means that we are u  sing the printer default.
+     * it means that we are using the printer default.
      */
     private void updateCollation() {
         SheetCollate collate =
@@ -578,6 +592,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private void updateSettingsFromDialog() {
         updatePrinter();
         updateJobName();
+        updateOutputFile();
         updateCopies();
         updatePageRanges();
         updateSides();
@@ -591,6 +606,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
     private void syncSettingsToAttributes() {
         syncJobName();
+        syncOutputFile();
         syncCopies();
         syncPageRanges();
         syncSides();
@@ -604,6 +620,17 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
     private void syncJobName() {
         pJob2D.setJobName(settings.getJobName());
+    }
+
+    private void syncOutputFile() {
+        printReqAttrSet.remove(Destination.class);
+        String file = settings.getOutputFile();
+        if (file != null && !file.isEmpty()) {
+             // check SE, check access ?
+             URI uri = (new File(file)).toURI();
+             Destination d = new Destination(uri);
+             printReqAttrSet.add(d);
+        }
     }
 
     private void syncCopies() {
@@ -797,6 +824,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
         SecurityManager security = System.getSecurityManager();
         if (security != null) {
             security.checkPrintJobAccess();
+            String file = settings.getOutputFile();
+            if (file != null && !file.isEmpty()) {
+                security.checkWrite(file);
+            }
         }
     }
 
