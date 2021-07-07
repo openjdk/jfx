@@ -279,7 +279,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             if (!isEditable()) {
                 // check if value is in items list
                 if (getItems() != null && !getItems().contains(getValue())) {
-                    getSelectionModel().clearSelection();
+                    SingleSelectionModel<T> selectionModel = getSelectionModel();
+                    if (selectionModel != null) {
+                        selectionModel.clearSelection();
+                    }
                 }
             }
         });

@@ -304,6 +304,38 @@ public class ComboBoxTest {
         assertEquals(items.get(1), comboBox.getButtonCell().getText());
     }
 
+    @Test public void testNullSelectionModelDoesNotThrowNPEInSkinOnLayout() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        ListCell<String> buttonCell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(item);
+            }
+        };
+        comboBox.setButtonCell(buttonCell);
+        comboBox.setItems(items);
+
+        comboBox.setValue(items.get(1));
+        comboBox.setSelectionModel(null);
+
+        comboBox.layout();
+
+        assertEquals(items.get(1), comboBox.getButtonCell().getText());
+    }
+
+    @Test public void testNullSelectionModelDoesNotThrowNPEOnEditableChange() {
+        ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
+
+        comboBox.setEditable(true);
+        comboBox.setItems(items);
+        comboBox.setSelectionModel(null);
+        comboBox.setEditable(false);
+
+        assertNull(comboBox.getValue());
+    }
+
     @Test public void testNullSelectionModelDoesNotThrowNPEOnValueChange() {
         ObservableList<String> items = FXCollections.observableArrayList("ITEM1", "ITEM2");
 

@@ -322,9 +322,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (listViewSelectionDirty) {
             try {
                 listSelectionLock = true;
-                T item = comboBox.getSelectionModel().getSelectedItem();
-                listView.getSelectionModel().clearSelection();
-                listView.getSelectionModel().select(item);
+                SingleSelectionModel<T> selectionModel = comboBox.getSelectionModel();
+
+                if (selectionModel != null) {
+                    T item = selectionModel.getSelectedItem();
+                    listView.getSelectionModel().clearSelection();
+                    listView.getSelectionModel().select(item);
+                }
             } finally {
                 listSelectionLock = false;
                 listViewSelectionDirty = false;
