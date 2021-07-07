@@ -74,10 +74,10 @@ public class BehaviorCleanupTest {
     public void testFocusListener() {
         TextField control = new TextField("some text");
         showControl(control, true);
-        assertTrue(isCaretBlinking(control));
+        assertTrue("caret must be blinking if focused", isCaretBlinking(control));
         Button button = new Button("dummy");
         showControl(button, true);
-        assertFalse("caret must be blinking on focus gained", isCaretBlinking(control));
+        assertFalse("caret must not be blinking if not focused", isCaretBlinking(control));
     }
 
     @Test
@@ -159,7 +159,6 @@ public class BehaviorCleanupTest {
             // cleanup
             secondStage.hide();
         }
-
     }
 
 //---------- TextInputControl
@@ -171,7 +170,7 @@ public class BehaviorCleanupTest {
         InputMap<?> inputMap = behavior.getInputMap();
         assertFalse("sanity: inputMap has child maps", inputMap.getChildInputMaps().isEmpty());
         behavior.dispose();
-        assertEquals("default child maps be cleared", 0, inputMap.getChildInputMaps().size());
+        assertEquals("default child maps must be cleared", 0, inputMap.getChildInputMaps().size());
     }
 
     @Test

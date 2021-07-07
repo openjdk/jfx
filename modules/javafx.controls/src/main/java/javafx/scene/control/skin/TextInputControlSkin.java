@@ -367,7 +367,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     @Override
     public void dispose() {
         if (getSkinnable() == null) return;
-        // the inputMethodEvent handler installed by this skin must be removed prevent a memory leak
+        // the inputMethodEvent handler installed by this skin must be removed to prevent a memory leak
         // while a handler installed by the control must not be removed
         if (getSkinnable().getOnInputMethodTextChanged() == inputMethodTextChangedHandler) {
             getSkinnable().setOnInputMethodTextChanged(null);
