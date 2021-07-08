@@ -153,6 +153,21 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
+    public void setOpaque(boolean opaque) {
+        logger.resumeCount("SET_OPAQUE");
+        gc.setOpaque(opaque);
+        logger.suspendCount("SET_OPAQUE");
+    }
+
+    @Override
+    public boolean isOpaque() {
+        logger.resumeCount("IS_OPAQUE");
+        boolean o = gc.isOpaque();
+        logger.suspendCount("IS_OPAQUE");
+        return o;
+    }
+
+    @Override
     public void setStrokeStyle(int style) {
         logger.resumeCount("SETSTROKESTYLE");
         gc.setStrokeStyle(style);
