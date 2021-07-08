@@ -827,11 +827,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
     NSInteger osVerMajor = osVer.majorVersion;
     NSInteger osVerMinor = osVer.minorVersion;
 
-    // KCR: begin debug
-    NSLog(@"macOSMinVersion = %d . %d", MACOS_MIN_VERSION_MAJOR, MACOS_MIN_VERSION_MINOR);
-    NSLog(@"    osVer (raw)      = %d . %d", (int)osVerMajor, (int)osVerMinor);
-    // KCR: end debug
-
     // Map 10.16 to 11.0, since macOS will return 10.16 by default (for compatibility)
     if (osVerMajor == 10 && osVerMinor >= 16) {
         // FIXME: if we ever need to know which minor version of macOS 11.x we
@@ -840,10 +835,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
         osVerMajor = 11;
         osVerMinor = 0;
     }
-
-    // KCR: begin debug
-    NSLog(@"    osVer (adjusted) = %d . %d", (int)osVerMajor, (int)osVerMinor);
-    // KCR: end debug
 
     if (osVerMajor < MACOS_MIN_VERSION_MAJOR ||
             (osVerMajor == MACOS_MIN_VERSION_MAJOR &&
