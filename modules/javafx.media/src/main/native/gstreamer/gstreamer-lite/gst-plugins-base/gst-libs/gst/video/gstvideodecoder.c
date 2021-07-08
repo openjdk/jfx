@@ -4258,8 +4258,19 @@ gst_video_decoder_allocate_output_frame_with_params (GstVideoDecoder *
   needs_reconfigure = gst_pad_check_reconfigure (decoder->srcpad);
   if (G_UNLIKELY (decoder->priv->output_state_changed || needs_reconfigure)) {
     if (!gst_video_decoder_negotiate_unlocked (decoder)) {
-      GST_DEBUG_OBJECT (decoder, "Failed to negotiate, fallback allocation");
       gst_pad_mark_reconfigure (decoder->srcpad);
+      if (GST_PAD_IS_FLUSHING (decoder->srcpad)) {
+        GST_DEBUG_OBJECT (decoder,
+            "Failed to negotiate a pool: pad is flushing");
+        goto flushing;
+      } else if (!decoder->priv->pool || decoder->priv->output_state_changed) {
+        GST_DEBUG_OBJECT (decoder,
+            "Failed to negotiate a pool and no previous pool to reuse");
+        goto error;
+      } else {
+        GST_DEBUG_OBJECT (decoder,
+            "Failed to negotiate a pool, falling back to the previous pool");
+      }
     }
   }
 
@@ -4271,6 +4282,10 @@ gst_video_decoder_allocate_output_frame_with_params (GstVideoDecoder *
   GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
 
   return flow_ret;
+
+flushing:
+  GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);
+  return GST_FLOW_FLUSHING;
 
 error:
   GST_VIDEO_DECODER_STREAM_UNLOCK (decoder);

@@ -58,8 +58,8 @@ final class FPSCounter extends AnimationTimer {
         totalElapsedTime += currTime - lastTime;
         totalElapsedFrames += 1;
 
-        double elapsedSeconds = (double) elapsedTime / 1e9;
-        double totalElapsedSeconds = (double) totalElapsedTime / 1e9;
+        double elapsedSeconds = elapsedTime / 1e9;
+        double totalElapsedSeconds = totalElapsedTime / 1e9;
         if (elapsedSeconds >= 5.0) {
             double fps = elapsedFrames / elapsedSeconds;
             System.out.println();

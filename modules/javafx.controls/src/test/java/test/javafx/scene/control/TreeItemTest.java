@@ -196,11 +196,13 @@ public class TreeItemTest {
         assertEquals(child1, root.getChildren().get(0));
     }
 
+    @SuppressWarnings("deprecation")
     @Test public void ensureRootNodeHas0Level() {
         final TreeItem root = new TreeItem("Node");
         assertEquals(0, TreeView.getNodeLevel(root));
     }
 
+    @SuppressWarnings("deprecation")
     @Test public void ensureChildOfRootNodeHas1Level() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");
@@ -208,6 +210,7 @@ public class TreeItemTest {
         assertEquals(1, TreeView.getNodeLevel(child1));
     }
 
+    @SuppressWarnings("deprecation")
     @Test public void ensureGrandchildOfRootNodeHas2Level() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");
@@ -217,6 +220,7 @@ public class TreeItemTest {
         assertEquals(2, TreeView.getNodeLevel(grandchild1));
     }
 
+    @SuppressWarnings("deprecation")
     @Test public void detachNodeFromParent_observeThatLevelDecreases() {
         final TreeItem root = new TreeItem("Node");
         final TreeItem child1 = new TreeItem("child1");

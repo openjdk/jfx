@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiPredicate;
+
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import static org.junit.Assert.* ;
@@ -94,8 +97,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
                        List<E> removed,
                        int from,
                        int to) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkAddRemove(0, list, removed, from, to);
     }
 
@@ -103,27 +105,36 @@ public class MockListObserver<E> implements ListChangeListener<E> {
                        List<E> removed,
                        int from,
                        int to) {
+        checkAddRemove(idx, list, removed, Objects::equals, from, to);
+    }
+
+    public void checkAddRemove(int idx, ObservableList<E> list,
+                               List<E> removed,
+                               BiPredicate<E, E> equalityComparer,
+                               int from,
+                               int to) {
         if (removed == null) {
-            removed = Collections.<E>emptyList();
+            removed = Collections.emptyList();
         }
         assertFalse(tooManyCalls);
         Call<E> call = calls.get(idx);
         assertSame(list, call.list);
-        assertEquals(removed, call.removed);
+        assertEquals(removed.size(), call.removed.size());
+        for (int i = 0; i < removed.size(); ++i) {
+            assertTrue(equalityComparer.test(removed.get(i), call.removed.get(i)));
+        }
         assertEquals(from, call.from);
         assertEquals(to, call.to);
         assertEquals(0, call.permutation.length);
     }
 
     public void check1Permutation(ObservableList<E> list, int[] perm) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkPermutation(0, list, 0, list.size(), perm);
     }
 
     public void check1Permutation(ObservableList<E> list, int from, int to, int[] perm) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkPermutation(0, list, from, to, perm);
     }
 
@@ -138,8 +149,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1Update(ObservableList<E> list, int from, int to) {
-        assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        checkN(1);
         checkUpdate(0, list, from, to);
     }
 
@@ -155,8 +165,12 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     }
 
     public void check1() {
+        checkN(1);
+    }
+
+    public void checkN(int n) {
         assertFalse(tooManyCalls);
-        assertEquals(1, calls.size());
+        assertEquals(n, calls.size());
     }
 
     public void clear() {

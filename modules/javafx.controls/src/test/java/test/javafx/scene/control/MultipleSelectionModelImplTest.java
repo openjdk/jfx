@@ -37,6 +37,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
+import java.util.stream.Collectors;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.collections.FXCollections;
@@ -353,6 +355,82 @@ public class MultipleSelectionModelImplTest {
 
         observer.check1();
         observer.checkAddRemove(0, model.getSelectedIndices(), List.of(5), 1, 1);
+    }
+
+    @Test public void clearAndSelectFiresDisjointRemovedChanges() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.selectAll();
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(1);
+
+        List removed1, removed2;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed1 = List.of(new TreeItem<>(data.get(0)));
+            removed2 = data.stream().map(TreeItem::new).skip(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed1 = List.of(data.get(0));
+            removed2 = data.stream().skip(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.checkN(2);
+        observer.checkAddRemove(0, model.getSelectedItems(), removed1, equalityComparer, 0, 0);
+        observer.checkAddRemove(1, model.getSelectedItems(), removed2, equalityComparer, 1, 1);
+    }
+
+    @Test public void clearAndSelectFirstSelectedItem() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(2);
+        model.select(3);
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(1);
+
+        List removed;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed = data.stream().map(TreeItem::new).skip(2).limit(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed = data.stream().skip(2).limit(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 1, 1);
+    }
+
+    @Test public void clearAndSelectLastSelectedItem() {
+        model.setSelectionMode(SelectionMode.MULTIPLE);
+        model.select(1);
+        model.select(2);
+        model.select(3);
+
+        MockListObserver observer = new MockListObserver();
+        model.getSelectedItems().addListener(observer);
+        model.clearAndSelect(3);
+
+        List removed;
+        BiPredicate equalityComparer;
+
+        if (isTree()) {
+            removed = data.stream().map(TreeItem::new).skip(1).limit(2).collect(Collectors.toList());
+            equalityComparer = (a, b) -> Objects.equals(((TreeItem)a).getValue(), ((TreeItem)b).getValue());
+        } else {
+            removed = data.stream().skip(1).limit(2).collect(Collectors.toList());
+            equalityComparer = Objects::equals;
+        }
+
+        observer.check1();
+        observer.checkAddRemove(0, model.getSelectedItems(), removed, equalityComparer, 0, 0);
     }
 
     @Test public void testSelectedIndicesObservableListIsEmpty() {

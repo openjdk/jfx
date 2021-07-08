@@ -299,6 +299,9 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
+    // editing location at start of edit - fix for JDK-8187229
+    private TablePosition<S, T> editingCellAtStartEdit;
+
     /** {@inheritDoc} */
     @Override public void startEdit() {
         final TableView<S> table = getTableView();
@@ -333,6 +336,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             Event.fireEvent(column, editEvent);
         }
+        editingCellAtStartEdit = new TablePosition<>(table, getIndex(), column);
     }
 
     /** {@inheritDoc} */
@@ -384,7 +388,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
         // reset the editing index on the TableView
         if (table != null) {
-            TablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -395,7 +398,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
             CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
-                editingCell,
+                editingCellAtStartEdit,
                 TableColumn.editCancelEvent(),
                 null
             );
@@ -703,9 +706,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
         super.layoutChildren();
     }
-
-
-
 
     /***************************************************************************
      *                                                                         *

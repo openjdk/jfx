@@ -127,6 +127,7 @@ public class DateStringConverter extends DateTimeStringConverter {
     // --------------------------------------------------------- Private Methods
 
     /** {@inheritDoc} */
+    @SuppressWarnings("removal")
     @Override protected DateFormat getDateFormat() {
         DateFormat df = null;
 

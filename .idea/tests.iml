@@ -5,7 +5,6 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$/tests">
       <sourceFolder url="file://$MODULE_DIR$/tests/manual/printing" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/performance/VMPerformance/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/resources" type="java-resource" />
     </content>

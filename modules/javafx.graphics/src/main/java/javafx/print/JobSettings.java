@@ -462,6 +462,98 @@ public final class JobSettings {
     }
     ///////////////////////  END JOBNAME /////////////////////
 
+    ///////////////////////  START OUTPUTFILE /////////////////////
+
+    private SimpleStringProperty outputFile;
+
+    /**
+     * A {@code StringProperty} representing the
+     * name of a filesystem file, to which the platform printer
+     * driver should spool the rendered print data.
+     * <p>
+     * Applications can use this to programmatically request print-to-file
+     * behavior where the native print system is capable of spooling the
+     * output to a filesystem file, rather than the printer device.
+     * <p>
+     * This is often useful where the printer driver generates a format
+     * such as Postscript or PDF, and the application intends to distribute
+     * the result instead of printing it, or for some other reason the
+     * application does not want physical media (paper) emitted by the printer.
+     * <p>
+     * The default value is an empty string, which is interpreted as unset,
+     * equivalent to null, which means output is sent to the printer.
+     * So in order to reset to print to the printer, clear the value of
+     * this property by setting it to null or an empty string.
+     * <p>
+     * Additionally if the application displays a printer dialog which allows
+     * the user to specify a file destination, including altering an application
+     * specified file destination, the value of this property will reflect that
+     * user-specified choice, including clearing it to reset to print to
+     * the printer, if the user does so.
+     * <p>
+     * If the print system does not support print-to-file, then this
+     * setting will be ignored.
+     * <p>
+     * If the specified name specifies a non-existent path, or does not specify
+     * a user writable file, when printing the results are platform-dependent.
+     * Possible behaviours might include replacement with a default output file location,
+     * printing to the printer instead, or a platform printing error.
+     * If a {@code SecurityManager} is installed and it denies access to the
+     * specified file a {@code SecurityException} may be thrown.
+     *
+     * @defaultValue an empty string
+     *
+     * @return the name of a printer spool file
+     * @since 17
+     */
+    public final StringProperty outputFileProperty() {
+        if (outputFile == null) {
+            outputFile =
+                new SimpleStringProperty(JobSettings.this, "outputFile", "") {
+
+                @Override
+                public void set(String value) {
+                    if (!isJobNew()) {
+                        return;
+                    }
+                    if (value == null) {
+                        value = "";
+                    }
+                    super.set(value);
+                }
+
+                @Override
+                public void bind(ObservableValue<? extends String>
+                                 rawObservable) {
+                    throw new
+                        RuntimeException("OutputFile property cannot be bound");
+                }
+
+                @Override
+                public void bindBidirectional(Property<String> other) {
+                    throw new
+                        RuntimeException("OutputFile property cannot be bound");
+                }
+
+                @Override
+                public String toString() {
+                     return get();
+                }
+            };
+        }
+        return outputFile;
+    }
+
+    public String getOutputFile() {
+        return outputFileProperty().get();
+    }
+
+
+    public void setOutputFile(String filePath) {
+        outputFileProperty().set(filePath);
+    }
+    ///////////////////////  END OUTPUTFILE /////////////////////
+
     //////////////////////// START COPIES ////////////////////////
 
     private IntegerProperty copies;

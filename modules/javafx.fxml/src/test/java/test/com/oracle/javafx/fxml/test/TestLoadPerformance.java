@@ -101,6 +101,7 @@ public class TestLoadPerformance extends Application {
         System.exit(0);
     }
 
+    @SuppressWarnings("deprecation")
     protected void loadSAX(URL location) throws Exception {
         long t0 = System.currentTimeMillis();
 
