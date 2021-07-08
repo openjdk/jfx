@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.Clipboard;
 import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.Mapping;
 import com.sun.javafx.scene.control.inputmap.KeyBinding;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -108,8 +109,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         super(c);
 
         this.textInputControl = c;
-
-        textInputControl.textProperty().addListener(textListener);
 
         // create a map for text input-specific mappings (this reuses the default
         // InputMap installed on the control, if it is non-null, allowing us to pick up any user-specified mappings)
@@ -300,15 +299,28 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 }
             }
         }
-        // Install mappings
-        for (Object o : tmpMap.getMappings()) {
-            map.getMappings().add((KeyMapping)o);
+
+        if (map == getInputMap()) {
+            // install mappings in the top-level inputMap
+            // as default mappings to clear them on dispose
+            for (Mapping<?> mapping : tmpMap.getMappings()) {
+                addDefaultMapping(map, mapping);
+            }
+        } else {
+            // Install mappings in child maps
+            for (Object o : tmpMap.getMappings()) {
+                map.getMappings().add((KeyMapping)o);
+            }
         }
+
+        // temporary inputMap must be disposed to prevent memory leak
+        tmpMap.dispose();
 
         // Recursive call for child maps
         for (Object o : map.getChildInputMaps()) {
             addKeyPadMappings((InputMap<T>)o);
         }
+
     }
 
 
@@ -408,6 +420,11 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     private Bidi bidi = null;
     private Boolean mixed = null;
     private Boolean rtlText = null;
+
+    // test-only
+    Bidi getRawBidi() {
+        return bidi;
+    }
 
     private void invalidateBidi() {
         bidi = null;

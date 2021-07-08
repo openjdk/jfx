@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,18 +26,25 @@
 package test.javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
 
 import static javafx.collections.FXCollections.*;
 import static javafx.scene.control.ControlShim.*;
+import static javafx.scene.control.skin.TextInputSkinShim.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
 
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Control;
@@ -45,13 +52,17 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.control.TextField;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.InputMethodEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 /**
@@ -62,6 +73,241 @@ public class SkinCleanupTest {
     private Scene scene;
     private Stage stage;
     private Pane root;
+
+// ----------- TextField
+
+    /**
+     * NPE from listener to caretPosition
+     */
+    @Test
+    public void testTextFieldCaretPosition() {
+        TextField field = new TextField("some text");
+        showControl(field, true);
+        int index = 2;
+        field.positionCaret(index);
+        replaceSkin(field);
+        field.positionCaret(index + 1);
+    }
+
+    /**
+     * Sanity: textNode caret must be updated on change of control caret.
+     */
+    @Test
+    public void testTextFieldCaretPositionUpdate() {
+        TextField field = new TextField("some text");
+        showControl(field, true);
+        Text textNode = getTextNode(field);
+        field.positionCaret(2);
+        assertEquals("textNode caret", field.getCaretPosition(), textNode.getCaretPosition());
+    }
+
+    /**
+     * NPE from listener to selection
+     */
+    @Test
+    public void testTextFieldSelection() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        replaceSkin(field);
+        field.selectAll();
+    }
+
+    /**
+     * Sanity: ensure that skin's updating itself on selection change
+     */
+    @Test
+    public void testTextFieldSelectionUpdate() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        Text textNode = getTextNode(field);
+        field.selectAll();
+        int end = field.getLength();
+        assertEquals("sanity: field caret moved to end", end, field.getCaretPosition());
+        assertEquals("sanity: field selection updated", end, field.getSelection().getEnd());
+        assertEquals("textNode end", end, textNode.getSelectionEnd());
+    }
+
+    /**
+     * NPE on changing text: binding of text triggers internal listener to selectionShape.
+     */
+    @Test
+    public void testTextFieldText() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        replaceSkin(field);
+        field.setText("replaced");
+    }
+
+    /**
+     * NPE on changing font: binding of font triggers internal listener to selectionShape.
+     */
+    @Test
+    public void testTextFieldFont() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        replaceSkin(field);
+        field.setFont(new Font(30));
+    }
+
+    /**
+     * NPE from listener to alignment
+     */
+    @Test
+    public void testTextFieldAlignment() {
+        TextField field = new TextField("some text");
+        showControl(field, true);
+        assertTrue(field.getWidth() > 0);
+        replaceSkin(field);
+        field.setAlignment(Pos.TOP_RIGHT);
+    }
+
+    /**
+     * Sanity: alignment updates still work after the fix.
+     */
+    @Test
+    public void testTextFieldAlignmentUpdate() {
+        // field to get the textTranslateX from
+        TextField rightAligned = new TextField("dummy");
+        rightAligned.setPrefColumnCount(50);
+        rightAligned.setAlignment(Pos.CENTER_RIGHT);
+        showControl(rightAligned, true);
+        double rightTranslate = getTextTranslateX(rightAligned);
+        // field to test: start with left, then change to right align while showing
+        TextField field = new TextField("dummy");
+        field.setPrefColumnCount(50);
+        assertEquals("sanity: ", Pos.CENTER_LEFT, field.getAlignment());
+        showControl(field, true);
+        Toolkit.getToolkit().firePulse();
+        double textTranslate = getTextTranslateX(field);
+        assertEquals("sanity:", 0, textTranslate, 1);
+        field.setAlignment(Pos.CENTER_RIGHT);
+        assertEquals("translateX must be updated", rightTranslate, getTextTranslateX(field), 1);
+    }
+
+    /**
+     * NPE on changing promptText: binding to promptText triggers internal listener to usePromptText.
+     */
+    @Test
+    public void testTextFieldPrompt() {
+        TextField field = new TextField();
+        installDefaultSkin(field);
+        replaceSkin(field);
+        field.setPromptText("prompt");
+    }
+
+    /**
+     * Sanity: prompt updates still working after the fix
+     */
+    @Test
+    public void testTextFieldPromptUpdate() {
+        TextField field = new TextField();
+        installDefaultSkin(field);
+        assertNull("sanity: default prompt is null", getPromptNode(field));
+        field.setPromptText("prompt");
+        assertNotNull("prompt node must be created", getPromptNode(field));
+    }
+
+    @Test
+    public void testTextFieldChildren() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        int children = field.getChildrenUnmodifiable().size();
+        replaceSkin(field);
+        assertEquals("children size must be unchanged: ", children, field.getChildrenUnmodifiable().size());
+    }
+
+//--------------- TextInputControl
+
+    /**
+     * NPE from inputMethodRequests installed by TextInputControlSkin
+     *
+     * Note: this is a rather artificial test - in RL the replacing
+     * skin will set its own and there's no valid path to invoking the old
+     */
+    @Test
+    public void testTextInputMethodRequests() {
+        TextField field = new TextField("some text");
+        field.selectRange(2, 5);
+        String selected = field.getSelectedText();
+        installDefaultSkin(field);
+        assertEquals("sanity: skin has set requests", selected, field.getInputMethodRequests().getSelectedText());
+        field.getSkin().dispose();
+        if (field.getInputMethodRequests() != null) {
+            assertEquals(selected, field.getInputMethodRequests().getSelectedText());
+        }
+    }
+
+    @Test
+    public void testTextInputOnInputMethodTextChangedNoHandler() {
+        TextField field = new TextField("some text");
+        field.setOnInputMethodTextChanged(null);
+        installDefaultSkin(field);
+        field.getSkin().dispose();
+        assertNull("skin dispose must remove handler it has installed", field.getOnInputMethodTextChanged());
+    }
+
+    @Test
+    public void testTextInputOnInputMethodTextChangedWithHandler() {
+        TextField field = new TextField("some text");
+        EventHandler<? super InputMethodEvent> handler = e -> {};
+        field.setOnInputMethodTextChanged(handler);
+        installDefaultSkin(field);
+        assertSame("sanity: skin must not replace handler", handler, field.getOnInputMethodTextChanged());
+        field.getSkin().dispose();
+        assertSame("skin dispose must not remove handler that was installed by control",
+                handler, field.getOnInputMethodTextChanged());
+    }
+
+    /**
+     * Test that skin does not remove a handler that's installed on the field
+     * during the skin's lifetime.
+     */
+    @Test
+    public void testTextInputOnInputMethodTextChangedReplacedHandler() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        EventHandler<? super InputMethodEvent> handler = e -> {};
+        field.setOnInputMethodTextChanged(handler);
+        field.getSkin().dispose();
+        assertSame("skin dispose must not remove handler that was installed by control",
+                handler, field.getOnInputMethodTextChanged());
+    }
+
+    /**
+     * Test that handler installed by skin is reset on replacing skin.
+     * Here we test the effect by firing an inputEvent.
+     */
+    @Ignore("JDK-8268877")
+    @Test
+    public void testTextInputOnInputMethodTextChangedEvent() {
+        String initialText = "some text";
+        String prefix = "from input event";
+        TextField field = new TextField(initialText);
+        installDefaultSkin(field);
+        InputMethodEvent event = new InputMethodEvent(InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
+                List.of(), prefix, 0);
+        Event.fireEvent(field, event);
+        assertEquals("sanity: prefix must be committed", prefix + initialText, field.getText());
+        replaceSkin(field);
+        Event.fireEvent(field, event);
+        assertEquals(" prefix must be committed again", prefix + prefix + initialText, field.getText());
+    }
+
+    /**
+     * Test that handler installed by skin is reset on replacing skin.
+     * Here we test the instance of the handler.
+     */
+    @Ignore("JDK-8268877")
+    @Test
+    public void testTextInputOnInputMethodTextChangedHandler() {
+        TextField field = new TextField("some text");
+        installDefaultSkin(field);
+        EventHandler<? super InputMethodEvent> handler = field.getOnInputMethodTextChanged();
+        replaceSkin(field);
+        assertNotSame("replaced skin must replace skin handler", handler, field.getOnInputMethodTextChanged());
+        assertNotNull("handler must not be null  ", field.getOnInputMethodTextChanged());
+    }
+
 
   //---------------- TreeView
 
