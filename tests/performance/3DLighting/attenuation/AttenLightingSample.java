@@ -25,9 +25,15 @@
 
 package attenuation;
 
+import java.util.List;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.collections.ObservableList;
 import javafx.geometry.Point3D;
+import javafx.scene.DirectionalLight;
+import javafx.scene.Node;
 import javafx.scene.PointLight;
 import javafx.scene.SpotLight;
 import javafx.scene.control.Label;
@@ -36,6 +42,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.transform.Rotate;
+import javafx.scene.transform.Transform;
 import javafx.util.converter.NumberStringConverter;
 
 /**
@@ -60,27 +67,41 @@ public class AttenLightingSample extends LightingSample {
         var ia = createSliderControl("inner", light.innerAngleProperty(), 0, 180, light.getInnerAngle());
         var oa = createSliderControl("outer", light.outerAngleProperty(), 0, 180, light.getOuterAngle());
         var fo = createSliderControl("falloff", light.falloffProperty(), -5, 5, light.getFalloff());
+        vbox.getChildren().addAll(ia, oa, fo);
 
+        List<Node> directionControls = createDirectionControls(light.getTransforms(), light.directionProperty());
+        vbox.getChildren().addAll(directionControls);
+        return vbox;
+    }
+
+    @Override
+    protected VBox addDirectionalLightControls(DirectionalLight light) {
+        var vbox = super.addLightControls(light);
+        List<Node> directionControls = createDirectionControls(light.getTransforms(), light.directionProperty());
+        vbox.getChildren().addAll(directionControls);
+        return vbox;
+    }
+
+    private List<Node> createDirectionControls(ObservableList<Transform> transforms, ObjectProperty<Point3D> directionProperty) {
         var transX = new Rotate(0, Rotate.X_AXIS);
         var transY = new Rotate(0, Rotate.Y_AXIS);
         var transZ = new Rotate(0, Rotate.Z_AXIS);
-        light.getTransforms().addAll(transX, transY, transZ);
+        transforms.addAll(transX, transY, transZ);
         var rotX = createSliderControl("rot x", transX.angleProperty(), -180, 180, 0);
         var rotY = createSliderControl("rot y", transY.angleProperty(), -180, 180, 0);
         var rotZ = createSliderControl("rot z", transZ.angleProperty(), -180, 180, 0);
 
-        var sliderX = createSlider(-5, 5, light.getDirection().getX());
-        var sliderY = createSlider(-5, 5, light.getDirection().getY());
-        var sliderZ = createSlider(-5, 5, light.getDirection().getZ());
-        light.directionProperty().bind(Bindings.createObjectBinding(() ->
+        var sliderX = createSlider(-5, 5, directionProperty.get().getX());
+        var sliderY = createSlider(-5, 5, directionProperty.get().getY());
+        var sliderZ = createSlider(-5, 5, directionProperty.get().getZ());
+        directionProperty.bind(Bindings.createObjectBinding(() ->
             new Point3D(sliderX.getValue(), sliderY.getValue(), sliderZ.getValue()),
             sliderX.valueProperty(), sliderY.valueProperty(), sliderZ.valueProperty()));
         var dirX = createSliderControl("dir x", sliderX);
         var dirY = createSliderControl("dir y", sliderY);
         var dirZ = createSliderControl("dir z", sliderZ);
 
-        vbox.getChildren().addAll(ia, oa, fo, rotX, rotY, rotZ, dirX, dirY, dirZ);
-        return vbox;
+        return List.of(rotX, rotY, rotZ, dirX, dirY, dirZ);
     }
 
     private HBox createSliderControl(String name, DoubleProperty property, double min, double max, double start) {

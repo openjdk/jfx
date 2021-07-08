@@ -512,18 +512,19 @@ JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetAmbientLight
 /*
  * Class:     com_sun_prism_d3d_D3DContext
  * Method:    nSetLight
- * Signature: (JJIFFFFFFFFFFFFFFFFF)V
+ * Signature: (JJIFFFFFFFFFFFFFFFFFF)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_d3d_D3DContext_nSetLight
   (JNIEnv *env, jclass, jlong ctx, jlong nativeMeshView, jint index,
         jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-        jfloat ca, jfloat la, jfloat qa, jfloat range,
+        jfloat ca, jfloat la, jfloat qa, jfloat isAttenuated, jfloat range,
         jfloat dirX, jfloat dirY, jfloat dirZ, jfloat innerAngle, jfloat outerAngle, jfloat falloff)
 {
     TraceLn(NWT_TRACE_INFO, "D3DContext_nSetLight");
     D3DMeshView *meshView = (D3DMeshView *) jlong_to_ptr(nativeMeshView);
     RETURN_IF_NULL(meshView);
-    meshView->setLight(index, x, y, z, r, g, b, w, ca, la, qa, range, dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
+    meshView->setLight(index, x, y, z, r, g, b, w, ca, la, qa, isAttenuated, range, dirX, dirY, dirZ,
+            innerAngle, outerAngle, falloff);
 }
 
 /*

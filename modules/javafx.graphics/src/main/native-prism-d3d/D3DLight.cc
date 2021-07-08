@@ -47,7 +47,11 @@ D3DLight::D3DLight() :
     {}
 
 bool D3DLight::isPointLight() {
-    return falloff == 0 && outerAngle == 180;
+    return falloff == 0 && outerAngle == 180 && attenuation[3] > 0.5;
+}
+
+bool D3DLight::isDirectionalLight() {
+    return attenuation[3] < 0.5;
 }
 
 void D3DLight::setColor(float r, float g, float b) {

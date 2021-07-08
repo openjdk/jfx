@@ -380,7 +380,7 @@ struct MeshViewInfoRec {
     GLfloat lightColor[3];
     GLfloat lightPosition[3];
     GLfloat lightWeight;
-    GLfloat lightAttenuation[3];
+    GLfloat lightAttenuation[4];
     GLfloat lightMaxRange;
     GLfloat lightDir[3];
     GLfloat lightInnerAngle;

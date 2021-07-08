@@ -47,7 +47,7 @@ public interface MeshView extends GraphicsResource {
     public void setAmbientLight(float r, float g, float b);
 
     public void setLight(int index, float x, float y, float z, float r, float g, float b, float w,
-            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ,
+            float ca, float la, float qa, float isAttenuated, float maxRange, float dirX, float dirY, float dirZ,
             float innerAngle, float outerAngle, float falloff);
 
     public void render(Graphics g);
