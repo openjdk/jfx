@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,13 @@ package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
+import java.util.Objects;
 
 /**
  * The class {@code ObjectPropertyBase} is the base class for a property
@@ -160,14 +161,12 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
      * {@inheritDoc}
      */
     @Override
-    public void bind(final ObservableValue<? extends T> newObservable) {
-        if (newObservable == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+    public void bind(final ObservableValue<? extends T> source) {
+        Objects.requireNonNull(source, "Cannot bind to null");
 
-        if (!newObservable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            observable = newObservable;
+            observable = source;
             if (listener == null) {
                 listener = new Listener(this);
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.beans.property;
 
 import com.sun.javafx.binding.SetExpressionHelper;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -267,14 +268,12 @@ public abstract class SetPropertyBase<E> extends SetProperty<E> {
     }
 
     @Override
-    public void bind(final ObservableValue<? extends ObservableSet<E>> newObservable) {
-        if (newObservable == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+    public void bind(final ObservableValue<? extends ObservableSet<E>> source) {
+        Objects.requireNonNull(source, "Cannot bind to null");
 
-        if (newObservable != this.observable) {
+        if (source != this.observable) {
             unbind();
-            observable = newObservable;
+            observable = source;
             if (listener == null) {
                 listener = new Listener<>(this);
             }

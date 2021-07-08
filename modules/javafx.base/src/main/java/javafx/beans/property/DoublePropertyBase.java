@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,15 +27,16 @@ package javafx.beans.property;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakListener;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableDoubleValue;
+import javafx.beans.value.ObservableNumberValue;
 import javafx.beans.value.ObservableValue;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import java.lang.ref.WeakReference;
-import javafx.beans.WeakListener;
-import javafx.beans.value.ObservableDoubleValue;
-import javafx.beans.value.ObservableNumberValue;
+import java.util.Objects;
 
 /**
  * The class {@code DoublePropertyBase} is the base class for a property
@@ -161,17 +162,15 @@ public abstract class DoublePropertyBase extends DoubleProperty {
      * {@inheritDoc}
      */
     @Override
-    public void bind(final ObservableValue<? extends Number> rawObservable) {
-        if (rawObservable == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
+    public void bind(final ObservableValue<? extends Number> source) {
+        Objects.requireNonNull(source, "Cannot bind to null");
 
         ObservableDoubleValue newObservable;
-        if (rawObservable instanceof ObservableDoubleValue) {
-            newObservable = (ObservableDoubleValue)rawObservable;
-        } else if (rawObservable instanceof ObservableNumberValue) {
-            final ObservableNumberValue numberValue = (ObservableNumberValue)rawObservable;
-            newObservable = new ValueWrapper(rawObservable) {
+        if (source instanceof ObservableDoubleValue) {
+            newObservable = (ObservableDoubleValue)source;
+        } else if (source instanceof ObservableNumberValue) {
+            final ObservableNumberValue numberValue = (ObservableNumberValue)source;
+            newObservable = new ValueWrapper(source) {
 
                 @Override
                 protected double computeValue() {
@@ -179,11 +178,11 @@ public abstract class DoublePropertyBase extends DoubleProperty {
                 }
             };
         } else {
-            newObservable = new ValueWrapper(rawObservable) {
+            newObservable = new ValueWrapper(source) {
 
                 @Override
                 protected double computeValue() {
-                    final Number value = rawObservable.getValue();
+                    final Number value = source.getValue();
                     return (value == null)? 0.0 : value.doubleValue();
                 }
             };

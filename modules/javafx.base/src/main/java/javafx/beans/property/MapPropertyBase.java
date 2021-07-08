@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package javafx.beans.property;
 
 import com.sun.javafx.binding.MapExpressionHelper;
 import java.lang.ref.WeakReference;
+import java.util.Objects;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakListener;
@@ -267,13 +268,12 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     }
 
     @Override
-    public void bind(final ObservableValue<? extends ObservableMap<K, V>> newObservable) {
-        if (newObservable == null) {
-            throw new NullPointerException("Cannot bind to null");
-        }
-        if (newObservable != observable) {
+    public void bind(final ObservableValue<? extends ObservableMap<K, V>> source) {
+        Objects.requireNonNull(source, "Cannot bind to null");
+
+        if (source != observable) {
             unbind();
-            observable = newObservable;
+            observable = source;
             if (listener == null) {
                 listener = new Listener<>(this);
             }

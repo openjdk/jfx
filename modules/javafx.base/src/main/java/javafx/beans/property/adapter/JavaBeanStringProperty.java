@@ -157,15 +157,15 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
      * {@inheritDoc}
      */
     @Override
-    public void bind(ObservableValue<? extends String> observable) {
-        if (observable == null) {
+    public void bind(ObservableValue<? extends String> source) {
+        if (source == null) {
             throw new NullPointerException("Cannot bind to null");
         }
 
-        if (!observable.equals(this.observable)) {
+        if (!source.equals(this.observable)) {
             unbind();
-            set(observable.getValue());
-            this.observable = observable;
+            set(source.getValue());
+            this.observable = source;
             this.observable.addListener(listener);
         }
     }
