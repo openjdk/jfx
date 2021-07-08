@@ -29,7 +29,6 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.scene.control.TableRow;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +48,7 @@ import javafx.scene.control.TableCellShim;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TablePosition;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.skin.TableCellSkin;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
