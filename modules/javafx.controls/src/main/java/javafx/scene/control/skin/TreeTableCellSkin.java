@@ -103,10 +103,39 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeItem<S>, T, Tr
         return getSkinnable().tableColumnProperty();
     }
 
+    /** {@inheritDoc} */
+    @Override
+    protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
+    }
+
+    /** {@inheritDoc} */
     @Override
     protected void layoutChildren(double x, double y, double w, double h) {
-        x += calculateIndentation();
+        double indentation = calculateIndentation();
+        x += indentation;
+        w -= indentation;
         super.layoutChildren(x, y, w, h);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        if (isDeferToParentForPrefWidth) {
+            return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + calculateIndentation();
+        }
+
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset,
+            double leftInset) {
+        width -= calculateIndentation();
+        return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
 
     private double calculateIndentation() {
