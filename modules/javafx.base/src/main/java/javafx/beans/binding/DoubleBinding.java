@@ -113,6 +113,13 @@ public abstract class DoubleBinding extends DoubleExpression implements
 
     private double value;
     private boolean valid;
+
+    /**
+     * Invalidation listener used for observing dependencies.  This
+     * is never cleared once created as there is no way to determine
+     * when all dependencies that were previously bound were removed
+     * in one or more calls to {@link #unbind(Observable...)}.
+     */
     private BindingHelperObserver observer;
     private ExpressionHelper<Number> helper = null;
 
@@ -171,7 +178,6 @@ public abstract class DoubleBinding extends DoubleExpression implements
             for (final Observable dep : dependencies) {
                 dep.removeListener(observer);
             }
-            observer = null;
         }
     }
 
