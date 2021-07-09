@@ -44,6 +44,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
     private final InputMap<ChoiceBox<T>> choiceBoxInputMap;
 
     private TwoLevelFocusComboBehavior tlFocus;
+    private boolean showPopupOnMouseRelease = true;
 
     /**************************************************************************
      *                          Setup KeyBindings                             *
@@ -66,7 +67,8 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
             new KeyMapping(CANCEL, KeyEvent.KEY_RELEASED, e -> cancel()),
 
             new MouseMapping(MouseEvent.MOUSE_PRESSED, this::mousePressed),
-            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased)
+            new MouseMapping(MouseEvent.MOUSE_RELEASED, this::mouseReleased),
+            new MouseMapping(MouseEvent.MOUSE_DRAGGED, this::mouseDragged, false)
         );
 
         // add some special two-level focus mappings
@@ -113,6 +115,7 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * potentially arming the Button, this will transfer focus to the box
      */
     public void mousePressed(MouseEvent e) {
+        showPopupOnMouseRelease = true;
         ChoiceBox<T> choiceButton = getNode();
         if (choiceButton.isFocusTraversable()) choiceButton.requestFocus();
     }
@@ -127,9 +130,10 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
         if (choiceButton.isShowing() || !choiceButton.contains(e.getX(), e.getY())) {
             choiceButton.hide(); // hide if already showing
         }
-        else if (e.getButton() == MouseButton.PRIMARY) {
+        else if (e.getButton() == MouseButton.PRIMARY && showPopupOnMouseRelease) {
             choiceButton.show();
         }
+        showPopupOnMouseRelease = true;
     }
 
     /**
@@ -149,6 +153,18 @@ public class ChoiceBoxBehavior<T> extends BehaviorBase<ChoiceBox<T>> {
      * to fire if it was armed by a keyPress.
      */
     private void keyReleased(KeyEvent e) {
+    }
+
+    /**
+     * Invoked when the the ChoiceBox is dragged. If the box had been armed
+     * by a touch event or a mouse press and the mouse is still pressed,
+     * then this will cause the ChoiceBox to fire the box's action. This allows not to fire
+     * the box's action after dragging or scrolling the box.
+     */
+    protected void mouseDragged(MouseEvent e) {
+        if(e.isSynthesized()) {
+            showPopupOnMouseRelease = false;
+        }
     }
 
     // no-op
