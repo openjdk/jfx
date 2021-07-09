@@ -155,7 +155,10 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     public final T get() {
         if (!valid) {
             value = computeValue();
-            valid = true;
+
+            if (allowValidation()) {
+                valid = true;
+            }
         }
         return value;
     }
@@ -180,6 +183,28 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
     @Override
     public final boolean isValid() {
         return valid;
+    }
+
+    /**
+     * Returns {@code true} when this binding currently has one or more
+     * listeners, otherwise {@code false}.
+     *
+     * @return {@code true} when this binding currently has one or more
+     *     listeners, otherwise {@code false}
+     */
+    protected final boolean isObserved() {
+        return helper != null;
+    }
+
+    /**
+     * Can be overriden in extending classes to prevent a binding from becoming
+     * valid. The default implementation always allows bindings to become valid.
+     *
+     * @return {@code true} if this binding is allowed to become valid, otherwise
+     *     {@code false}
+     */
+    protected boolean allowValidation() {
+        return true;
     }
 
     /**
