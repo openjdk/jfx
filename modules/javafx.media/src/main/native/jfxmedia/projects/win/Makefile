@@ -55,7 +55,7 @@ CFLAGS = -DWIN32 \
          -DGSTREAMER_LITE \
          -D_WINDLL \
          -D_MBCS \
-	 $(INCLUDES) \
+         $(INCLUDES) \
          $(CL_COMPILER_FLAGS)
 
 ifeq ($(VS_VER), 100)
@@ -91,6 +91,12 @@ ifeq ($(ARCH), x32)
 else
     CFLAGS += -D_WIN64
     LDFLAGS += -MACHINE:x64
+endif
+
+# Enables reproducible builds when defined
+ifdef SOURCE_DATE_EPOCH
+    CFLAGS += -experimental:deterministic
+    LDFLAGS += -experimental:deterministic
 endif
 
 CPP_SOURCES = \

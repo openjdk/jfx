@@ -551,6 +551,11 @@ defineProperty("RELEASE_VERSION", relVer)
 defineProperty("RELEASE_VERSION_PADDED", "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}")
 
 def buildDate = new java.util.Date()
+def sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
+if (sourceDateEpoch != null) {
+    def ms = 1000 * Long.parseLong(sourceDateEpoch)
+    buildDate = new java.util.Date(ms)
+}
 def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss").format(buildDate)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
@@ -1347,6 +1352,7 @@ logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
 logger.quiet("HUDSON_BUILD_NUMBER: $HUDSON_BUILD_NUMBER")
 logger.quiet("PROMOTED_BUILD_NUMBER: $PROMOTED_BUILD_NUMBER")
 logger.quiet("PRODUCT_NAME: $PRODUCT_NAME")
+logger.quiet("BUILD_TIMESTAMP: $BUILD_TIMESTAMP")
 logger.quiet("RELEASE_VERSION: $RELEASE_VERSION")
 logger.quiet("RELEASE_SUFFIX: $RELEASE_SUFFIX")
 logger.quiet("RELEASE_VERSION_SHORT: $RELEASE_VERSION_SHORT")
@@ -3505,6 +3511,11 @@ project(":web") {
                     if (t.name == "win") {
                         // To enable ninja build on Windows
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                        // Adds compiler and linker flags if present
+                        def cFlags = webkitProperties.ccFlags?.join(' ') ?: ''
+                        def lFlags = webkitProperties.linkFlags?.join(' ') ?: ''
+                        cmakeArgs = "$cmakeArgs -DCMAKE_C_FLAGS='${cFlags}' -DCMAKE_CXX_FLAGS='${cFlags}'"
+                        cmakeArgs = "$cmakeArgs -DCMAKE_SHARED_LINKER_FLAGS='${lFlags}'"
                     } else if (t.name == "mac") {
                         cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
@@ -3897,6 +3908,14 @@ allprojects {
         }
     } // tasks with javaCompile
 
+    // Reproducible archives
+    tasks.withType(AbstractArchiveTask) {
+        if (sourceDateEpoch != null) {
+            preserveFileTimestamps = false
+            reproducibleFileOrder = true
+        }
+    }
+
     // If I am a module....
     if (project.hasProperty('moduleSourcePath') &&
             (project.hasProperty('buildModule') && project.buildModule)) {
@@ -4214,21 +4233,9 @@ compileTargets { t ->
             )
     }
 
-    // FIXME: do we really need the index task for this modular jar?
-    def javafxSwtIndexTask = task("javafxSwtIndex$t.capital") {
-        //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
-        dependsOn(javafxSwtTask)
-
-        doLast() {
-            def destDir = javafxSwtTask.destinationDirectory.get()
-            def afName = javafxSwtTask.archiveFileName.get()
-            ant.jar (update: true, index: true, destfile: "${destDir}/${afName}")
-        }
-    }
-
     def sdkTask = task("sdk$t.capital") {
         group = "Basic"
-        dependsOn(javafxSwtIndexTask)
+        dependsOn(javafxSwtTask)
     }
 
     sdk.dependsOn(sdkTask)
@@ -4375,16 +4382,17 @@ compileTargets { t ->
         }
         zips.dependsOn(zipsTask)
 
-        // Use native zip tool so that file permissions are preserved on Windows
-        def zipSdkTask = task("zipSdk$t.capital", dependsOn: publicExportsTask) {
-            doLast {
-                def outZipFile = "${bundlesDir}/${sdkBundleName}.zip"
-                mkdir bundlesDir
-                exec {
-                    workingDir(artifactsDir)
-                    commandLine("zip", "-q", "-r", outZipFile, sdkBundleName)
-                }
+        def zipSdkTask = task("zipSdk$t.capital", type: Zip, dependsOn: publicExportsTask) {
+            destinationDirectory = file("${bundlesDir}")
+            archiveFileName = "${sdkBundleName}.zip"
+            includeEmptyDirs = false
+            // Sets directory and file permissions in archive for Windows
+            if (IS_WINDOWS && IS_USE_CYGWIN) {
+                dirMode = 0755
+                fileMode = 0755
             }
+            from sdkArtifactsDir
+            into "${sdkBundleName}"
         }
         zipsTask.dependsOn(zipSdkTask)
 
@@ -5091,8 +5099,8 @@ compileTargets { t ->
             dependsOn(buildModuleGraphicsTask) // we copy to the graphics module
 
             if (COMPILE_SWT) {
-                def javafxSwtIndexTask = tasks.getByName("javafxSwtIndex${t.capital}");
-                dependsOn(javafxSwtIndexTask)
+                def javafxSwtTask = tasks.getByName("javafxSwt$t.capital");
+                dependsOn(javafxSwtTask)
                 //enabled = COMPILE_SWT
             }
 
