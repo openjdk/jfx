@@ -34,6 +34,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1396,4 +1397,26 @@ public class MultipleSelectionModelImplTest {
         assertEquals(2, model.getSelectedItems().size());
         assertEquals(1, counter.get());
     }
+
+    @Test
+    public void test_8256397() throws InterruptedException {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().add("item-0");
+        listView.getItems().add("item-1");
+        listView.getItems().add("item-2");
+        listView.getItems().add("item-3");
+        MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
+        selectionModel.setSelectionMode(SelectionMode.MULTIPLE);
+        selectionModel.getSelectedIndices().addListener((ListChangeListener<? super Integer>) c -> {
+            while (c.next()) {
+                try {
+                    c.getAddedSubList(); // --> java.lang.IndexOutOfBoundsException: [ fromIndex: 0, toIndex: 5, size: 3 ]
+                } catch (IndexOutOfBoundsException e) {
+                    fail(e.getMessage());
+                }
+            }
+        });
+        selectionModel.selectIndices(0, /*1, IMPORTANT: remove some index */ 2, 3);
+    }
+
 }
