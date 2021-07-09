@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -61,6 +62,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.text.HitInfo;
 import javafx.util.Duration;
@@ -1049,6 +1051,21 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
         paragraphNode.fontProperty().bind(textArea.fontProperty());
         paragraphNode.fillProperty().bind(textFillProperty());
         paragraphNode.selectionFillProperty().bind(highlightTextFillProperty());
+
+        if (i == 0 && !USE_MULTIPLE_NODES) {
+            contentView.parentProperty().addListener((ob, oldValue, newValue)->{
+                if (newValue != null && paragraphNode.getClip() == null) {
+                    final Rectangle clip = new Rectangle();
+                    newValue.boundsInParentProperty().addListener((ob2, oldValue2, newValue2)->{
+                        final Insets padding = contentView.getPadding();
+                        clip.layoutYProperty().set(Math.max(0, -newValue2.getMinY() - padding.getTop()));
+                    });
+                    clip.widthProperty().bind(contentView.widthProperty());
+                    clip.heightProperty().bind(scrollPane.heightProperty());
+                    paragraphNode.setClip(clip);
+                }
+            });
+        }
     }
 
     private double getScrollTopMax() {
