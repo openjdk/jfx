@@ -31,6 +31,7 @@ import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import static org.junit.Assert.assertEquals;
@@ -124,7 +125,7 @@ public final class TraverseInvisibleTest {
     public void traverseOverInvisible() {
         keypadNodes[fromNumber].requestFocus();
         keypadNodes[invisibleNumber].setVisible(false);
-        traversalEngine.trav(keypadNodes[fromNumber], direction);
+        traversalEngine.trav(keypadNodes[fromNumber], direction, TraversalMethod.DEFAULT);
 
         assertTrue(keypadNodes[toNumber].isFocused());
 
