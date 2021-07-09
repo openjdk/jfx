@@ -232,7 +232,7 @@ jint GetJavaModifiers(NSEvent *event)
     return GetJavaKeyModifiers(event) | GetJavaMouseModifiers([NSEvent pressedMouseButtons]);
 }
 
-jint GetJavaKeyCodeFor(unsigned short keyCode)
+static jint GetJavaKeyCodeFor(unsigned short keyCode)
 {
     // Not the fastest implementation...
     for (int i=0; i<gKeyMapSize; i++)
@@ -245,9 +245,36 @@ jint GetJavaKeyCodeFor(unsigned short keyCode)
     return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
 }
 
+static jint getJavaCodeFromString(NSString* characters)
+{
+    if (characters && characters.length == 1)
+    {
+        UniChar ascii = [characters characterAtIndex: 0];
+        if (ascii >= L'0' && ascii <= L'9')
+            return ascii;
+        if (ascii >= L'a' && ascii <= L'z')
+            return ascii + (L'A' - L'a');
+        if (ascii >= L'A' && ascii <= L'Z')
+            return ascii;
+    }
+
+    return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+}
+
 jint GetJavaKeyCode(NSEvent *event)
 {
-    return GetJavaKeyCodeFor([event keyCode]);
+    jint code = GetJavaKeyCodeFor([event keyCode]);
+
+    if ((event.modifierFlags & NSEventModifierFlagNumericPad) == 0)
+    {
+        jint better = getJavaCodeFromString(event.characters);
+        if (better == com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+            better = getJavaCodeFromString(event.charactersIgnoringModifiers);
+        if (better != com_sun_glass_events_KeyEvent_VK_UNDEFINED)
+            code = better;
+    }
+
+    return code;
 }
 
 jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)

@@ -762,7 +762,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         keyCodeForCharMap = [[NSMutableDictionary alloc] initWithCapacity:100];
         // Note: it's never released, just like, say, the jApplication reference...
     }
-    [keyCodeForCharMap setObject:[NSNumber numberWithUnsignedShort:[event keyCode]] forKey:[event characters]];
+    [keyCodeForCharMap setObject:[NSNumber numberWithUnsignedInteger:GetJavaKeyCode(event)] forKey:[event characters]];
 }
 
 + (jint)getKeyCodeForChar:(jchar)c;
@@ -771,7 +771,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     if (!v) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     } else {
-        return GetJavaKeyCodeFor([v unsignedShortValue]);
+        return [v unsignedIntegerValue];
     }
 }
 
