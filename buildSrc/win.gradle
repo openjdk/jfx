@@ -59,8 +59,11 @@ setupTools("windows_tools",
                         "CONF"       : "/$CONF", // TODO does this mean the generated properties must be reset when in a different configuration?
                         "VCARCH"     : IS_CROSS ? "${HOST_ARCH}_${TARGET_ARCH}" : TARGET_ARCH,
                         "SDKARCH"    : "/$TARGET_ARCH",
+                        // Skips sending telemetry to avoid duplicate use of standard error:
+                        // "The process cannot access the file because it is being used by another process."
+                        "VSCMD_SKIP_SENDTELEMETRY" : "1",
                 ]);
-                commandLine("cmd", "/q", "/c", "buildSrc\\genVSproperties.bat");
+                commandLine("cmd", "/c", "buildSrc\\genVSproperties.bat");
                 setStandardOutput(results);
             });
             BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
