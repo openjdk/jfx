@@ -51,7 +51,7 @@ import javafx.collections.ObservableList;
  * @see TransformationList
  * @since JavaFX 8.0
  */
-public final class SortedList<E> extends TransformationList<E, E>{
+public class SortedList<E> extends TransformationList<E, E>{
 
     private Comparator<Element<E>> elementComparator;
     private Element<E>[] sorted;
