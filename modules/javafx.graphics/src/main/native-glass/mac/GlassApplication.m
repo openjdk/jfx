@@ -793,34 +793,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
 
-    disableSyncRendering = jDisableSyncRendering ? YES : NO;
-
-    jApplicationClass = (*env)->NewGlobalRef(env, jClass);
-
-    javaIDs.Application.createPixels = (*env)->GetStaticMethodID(
-            env, jClass, "createPixels", "(II[IFF)Lcom/sun/glass/ui/Pixels;");
-    if ((*env)->ExceptionCheck(env)) return;
-
-    javaIDs.Application.getScaleFactor = (*env)->GetStaticMethodID(
-            env, jClass, "getScaleFactor", "(IIII)F");
-    if ((*env)->ExceptionCheck(env)) return;
-
-    javaIDs.Application.reportException = (*env)->GetStaticMethodID(
-            env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
-    if ((*env)->ExceptionCheck(env)) return;
-
-    javaIDs.Application.enterNestedEventLoop = (*env)->GetStaticMethodID(
-            env, jClass, "enterNestedEventLoop", "()Ljava/lang/Object;");
-    if ((*env)->ExceptionCheck(env)) return;
-
-    javaIDs.Application.leaveNestedEventLoop = (*env)->GetStaticMethodID(
-            env, jClass, "leaveNestedEventLoop", "(Ljava/lang/Object;)V");
-    if ((*env)->ExceptionCheck(env)) return;
-
-    javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
-            env, jClass, "notifyApplicationDidTerminate", "()V");
-    if ((*env)->ExceptionCheck(env)) return;
-
     // Check minimum OS version
     NSOperatingSystemVersion osVer;
     osVer = [[NSProcessInfo processInfo] operatingSystemVersion];
@@ -848,6 +820,34 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
         }
         return;
     }
+
+    disableSyncRendering = jDisableSyncRendering ? YES : NO;
+
+    jApplicationClass = (*env)->NewGlobalRef(env, jClass);
+
+    javaIDs.Application.createPixels = (*env)->GetStaticMethodID(
+            env, jClass, "createPixels", "(II[IFF)Lcom/sun/glass/ui/Pixels;");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.getScaleFactor = (*env)->GetStaticMethodID(
+            env, jClass, "getScaleFactor", "(IIII)F");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.reportException = (*env)->GetStaticMethodID(
+            env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.enterNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "enterNestedEventLoop", "()Ljava/lang/Object;");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.leaveNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "leaveNestedEventLoop", "(Ljava/lang/Object;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
+            env, jClass, "notifyApplicationDidTerminate", "()V");
+    if ((*env)->ExceptionCheck(env)) return;
 
     if (jRunnableRun == NULL)
     {
