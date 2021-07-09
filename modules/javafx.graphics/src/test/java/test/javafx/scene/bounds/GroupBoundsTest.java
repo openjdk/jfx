@@ -473,11 +473,11 @@ public class GroupBoundsTest {
     @Test
     public void testPivotXAndPivotY() {
         Rectangle rect = new Rectangle(100, 100);
-        assertEquals(50.0f, (float) NodeHelper.getPivotX(rect));
-        assertEquals(50.0f, (float) NodeHelper.getPivotY(rect));
+        assertEquals(50.0f, (float) NodeHelper.getCenterPivotX(rect));
+        assertEquals(50.0f, (float) NodeHelper.getCenterPivotY(rect));
         rect.setWidth(70.0f);
-        assertEquals(35.0f, (float) NodeHelper.getPivotX(rect));
-        assertEquals(50.0f, (float) NodeHelper.getPivotY(rect));
+        assertEquals(35.0f, (float) NodeHelper.getCenterPivotX(rect));
+        assertEquals(50.0f, (float) NodeHelper.getCenterPivotY(rect));
     }
 
     /***************************************************************************

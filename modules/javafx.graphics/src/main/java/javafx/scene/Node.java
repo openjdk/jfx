@@ -527,18 +527,18 @@ public abstract class Node implements EventTarget, Styleable {
             }
 
             @Override
-            public double getPivotX(Node node) {
-                return node.getPivotX();
+            public double getCenterPivotX(Node node) {
+                return node.getCenterPivotX();
             }
 
             @Override
-            public double getPivotY(Node node) {
-                return node.getPivotY();
+            public double getCenterPivotY(Node node) {
+                return node.getCenterPivotY();
             }
 
             @Override
-            public double getPivotZ(Node node) {
-                return node.getPivotZ();
+            public double getCenterPivotZ(Node node) {
+                return node.getCenterPivotZ();
             }
 
             @Override
@@ -4971,96 +4971,89 @@ public abstract class Node implements EventTarget, Styleable {
         invalidateLocalToSceneTransform();
     }
 
-    final double getPivotX() {
-        final Bounds bounds = getLayoutBounds();
-        return bounds.getMinX() + bounds.getWidth()/2;
+    final double getCenterPivotX() {
+        return getLayoutBounds().getCenterX();
     }
 
-    final double getPivotY() {
-        final Bounds bounds = getLayoutBounds();
-        return bounds.getMinY() + bounds.getHeight()/2;
+    final double getCenterPivotY() {
+        return getLayoutBounds().getCenterY();
     }
 
-    final double getPivotZ() {
-        final Bounds bounds = getLayoutBounds();
-        return bounds.getMinZ() + bounds.getDepth()/2;
+    final double getCenterPivotZ() {
+        return getLayoutBounds().getCenterZ();
     }
 
     /**
-     * This helper function will update the transform matrix on the peer based
-     * on the "complete" transform for this node.
+     * This helper function will update the transform matrix on the peer based on the "complete" transform
+     * for this node.
+     * <p>
+     * The transforms order is: transforms list, scale, rotate, translate. The operations are done in the
+     * reverse order as per matrix multiplication rules, T*R*S*Li. Mirroring is done last if this node is the
+     * root of its scene, or first otherwise.
      */
     void updateLocalToParentTransform() {
-        if (transformDirty) {
-            localToParentTx.setToIdentity();
-
-            boolean mirror = false;
-            double mirroringCenter = 0;
-            if (hasMirroring()) {
-                final Scene sceneValue = getScene();
-                if ((sceneValue != null) && (sceneValue.getRoot() == this)) {
-                    // handle scene mirroring in this branch
-                    // (must be the last transformation)
-                    mirroringCenter = sceneValue.getWidth() / 2;
-                    if (mirroringCenter == 0.0) {
-                        mirroringCenter = getPivotX();
-                    }
-
-                    localToParentTx = localToParentTx.deriveWithTranslation(
-                            mirroringCenter, 0.0);
-                    localToParentTx = localToParentTx.deriveWithScale(
-                            -1.0, 1.0, 1.0);
-                    localToParentTx = localToParentTx.deriveWithTranslation(
-                            -mirroringCenter, 0.0);
-                } else {
-                    // mirror later
-                    mirror = true;
-                    mirroringCenter = getPivotX();
-                }
-            }
-
-            if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1 || getRotate() != 0) {
-                // recompute pivotX, pivotY and pivotZ
-                double pivotX = getPivotX();
-                double pivotY = getPivotY();
-                double pivotZ = getPivotZ();
-
-                localToParentTx = localToParentTx.deriveWithTranslation(
-                        getTranslateX() + getLayoutX() + pivotX,
-                        getTranslateY() + getLayoutY() + pivotY,
-                        getTranslateZ() + pivotZ);
-                localToParentTx = localToParentTx.deriveWithRotation(
-                        Math.toRadians(getRotate()), getRotationAxis().getX(),
-                        getRotationAxis().getY(), getRotationAxis().getZ());
-                localToParentTx = localToParentTx.deriveWithScale(
-                        getScaleX(), getScaleY(), getScaleZ());
-                localToParentTx = localToParentTx.deriveWithTranslation(
-                        -pivotX, -pivotY, -pivotZ);
-            } else {
-                localToParentTx = localToParentTx.deriveWithTranslation(
-                        getTranslateX() + getLayoutX(),
-                        getTranslateY() + getLayoutY(),
-                        getTranslateZ());
-            }
-
-            if (hasTransforms()) {
-                for (Transform t : getTransforms()) {
-                    localToParentTx = TransformHelper.derive(t, localToParentTx);
-                }
-            }
-
-            // Check to see whether the node requires mirroring
-            if (mirror) {
-                localToParentTx = localToParentTx.deriveWithTranslation(
-                        mirroringCenter, 0);
-                localToParentTx = localToParentTx.deriveWithScale(
-                        -1.0, 1.0, 1.0);
-                localToParentTx = localToParentTx.deriveWithTranslation(
-                        -mirroringCenter, 0);
-            }
-
-            transformDirty = false;
+        if (!transformDirty) {
+            return;
         }
+
+        localToParentTx.setToIdentity();
+
+        boolean mirrorLater = false;
+        double mirroringCenter = 0;
+        if (hasMirroring()) {
+            final Scene sceneValue = getScene();
+            if ((sceneValue != null) && (sceneValue.getRoot() == this)) {
+                mirroringCenter = sceneValue.getWidth() / 2;
+                if (mirroringCenter == 0.0) {
+                    mirroringCenter = getCenterPivotX();
+                }
+                localToParentTx = localToParentTx.deriveWithTranslation(mirroringCenter, 0.0);
+                localToParentTx = localToParentTx.deriveWithScale(-1.0, 1.0, 1.0);
+                localToParentTx = localToParentTx.deriveWithTranslation(-mirroringCenter, 0.0);
+            } else {
+                mirrorLater = true;
+                mirroringCenter = getCenterPivotX();
+            }
+        }
+
+        localToParentTx = localToParentTx.deriveWithTranslation(
+                getTranslateX() + getLayoutX(), getTranslateY() + getLayoutY(), getTranslateZ());
+
+        if (getRotate() != 0) {
+            double rotPivotX = getRotationPivot().getX();
+            double rotPivotY = getRotationPivot().getY();
+            double rotPivotZ = getRotationPivot().getZ();
+            double rotAxisX = getRotationAxis().getX();
+            double rotAxisY = getRotationAxis().getY();
+            double rotAxisZ = getRotationAxis().getZ();
+            double rotAngle = Math.toRadians(getRotate());
+
+            localToParentTx = localToParentTx.deriveWithTranslation(rotPivotX, rotPivotY, rotPivotZ)
+                                             .deriveWithRotation(rotAngle, rotAxisX, rotAxisY, rotAxisZ)
+                                             .deriveWithTranslation(-rotPivotX, -rotPivotY, -rotPivotZ);
+        }
+
+        if (getScaleX() != 1 || getScaleY() != 1 || getScaleZ() != 1) {
+            double scalePivotX = getScalePivot().getX();
+            double scalePivotY = getScalePivot().getY();
+            double scalePivotZ = getScalePivot().getZ();
+
+            localToParentTx = localToParentTx.deriveWithTranslation(scalePivotX, scalePivotY, scalePivotZ)
+                                             .deriveWithScale(getScaleX(), getScaleY(), getScaleZ())
+                                             .deriveWithTranslation(-scalePivotX, -scalePivotY, -scalePivotZ);
+        }
+
+        if (hasTransforms()) {
+            getTransforms().forEach(t -> localToParentTx = TransformHelper.derive(t, localToParentTx));
+        }
+
+        if (mirrorLater) {
+            localToParentTx = localToParentTx.deriveWithTranslation(mirroringCenter, 0);
+            localToParentTx = localToParentTx.deriveWithScale(-1.0, 1.0, 1.0);
+            localToParentTx = localToParentTx.deriveWithTranslation(-mirroringCenter, 0);
+        }
+
+        transformDirty = false;
     }
 
     /**
@@ -5596,8 +5589,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleX() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_X
-                                            : nodeTransformation.getScaleX();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_X : nodeTransformation.getScaleX();
     }
 
     /**
@@ -5609,8 +5601,8 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * untransformed {@link #layoutBoundsProperty layoutBounds}.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
      * @return the scaleX for this {@code Node}
      * @defaultValue 1.0
@@ -5624,8 +5616,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleY() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_Y
-                                            : nodeTransformation.getScaleY();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_Y : nodeTransformation.getScaleY();
     }
 
     /**
@@ -5637,8 +5628,8 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * untransformed {@link #layoutBoundsProperty layoutBounds}.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
      * @return the scaleY for this {@code Node}
      * @defaultValue 1.0
@@ -5652,8 +5643,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleZ() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_Z
-                                            : nodeTransformation.getScaleZ();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_Z : nodeTransformation.getScaleZ();
     }
 
     /**
@@ -5665,9 +5655,10 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * rectangular bounds formed by taking {@link #boundsInLocalProperty boundsInLocal} and applying
-     * all the transforms in the {@link #getTransforms transforms} ObservableList.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the rectangular bounds formed by taking
+     * {@link #boundsInLocalProperty boundsInLocal} and applying all the transforms in the
+     * {@link #getTransforms transforms} {@code ObservableList}.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -5678,6 +5669,28 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public final DoubleProperty scaleZProperty() {
         return getNodeTransformation().scaleZProperty();
+    }
+
+    public final void setScalePivot(Point3D value) {
+        scalePivotProperty().set(value);
+    }
+
+    public final Point3D getScalePivot() {
+        return (nodeTransformation == null) ? defaultPivot() : nodeTransformation.getScalePivot();
+    }
+
+    /**
+     * The point of origin for the scaling of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the scale pivot for this {@code Node}
+     */
+    public final ObjectProperty<Point3D> scalePivotProperty() {
+        return getNodeTransformation().scalePivotProperty();
     }
 
     public final void setRotate(double value) {
@@ -5697,20 +5710,21 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for rotating the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the rotation occurs is the center of the
+     * The rotation axis is defined by the {@link #rotationAxisProperty() rotation axis}.
+     * The pivot point about which the rotation occurs is defined by the
+     * {@link #rotationPivotProperty() rotation pivot}, which by default is the center of the
      * untransformed {@link #layoutBoundsProperty layoutBounds}.
      * <p>
-     * Note that because the pivot point is computed as the center of this
+     * Note that in the default case where the pivot point is computed as the center of this
      * {@code Node}'s layout bounds, any change to the layout bounds will cause
      * the pivot point to change, which can move the object. For a leaf node,
      * any change to the geometry will cause the layout bounds to change.
      * For a group node, any change to any of its children, including a
      * change in a child's geometry, clip, effect, position, orientation, or
      * scale, will cause the group's layout bounds to change. If this movement
-     * of the pivot point is not
-     * desired, applications should instead use the Node's {@link #getTransforms transforms}
-     * ObservableList, and add a {@link javafx.scene.transform.Rotate} transform,
-     * which has a user-specifiable pivot point.
+     * of the pivot point is not desired, applications should instead set their own pivot or
+     * use the Node's {@link #getTransforms transforms} {@code ObservableList}, and add a
+     * {@link javafx.scene.transform.Rotate} transform, which also has a user-specifiable pivot point.
      *
      * @return the rotate for this {@code Node}
      * @defaultValue 0.0
@@ -5737,10 +5751,32 @@ public abstract class Node implements EventTarget, Styleable {
      * for more information.
      *
      * @return the rotationAxis for this {@code Node}
-     * @defaultValue Rotate.Z_AXIS
+     * @defaultValue {@code Rotate.Z_AXIS}
      */
     public final ObjectProperty<Point3D> rotationAxisProperty() {
         return getNodeTransformation().rotationAxisProperty();
+    }
+
+    public final void setRotationPivot(Point3D value) {
+        rotationPivotProperty().set(value);
+    }
+
+    public final Point3D getRotationPivot() {
+        return (nodeTransformation == null) ? defaultPivot() : nodeTransformation.getRotationPivot();
+    }
+
+    /**
+     * The rotation pivot of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
+     * <p>
+     * Note that this is a conditional feature. See
+     * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+     * for more information.
+     *
+     * @return the rotation pivot for this {@code Node}
+     */
+    public final ObjectProperty<Point3D> rotationPivotProperty() {
+        return getNodeTransformation().rotationPivotProperty();
     }
 
     /**
@@ -5830,6 +5866,13 @@ public abstract class Node implements EventTarget, Styleable {
     private static final double DEFAULT_ROTATE = 0;
     private static final Point3D DEFAULT_ROTATION_AXIS = Rotate.Z_AXIS;
 
+    /**
+     * The default rotation and scale pivot is the node center
+     */
+    private Point3D defaultPivot() {
+        return new Point3D(getCenterPivotX(), getCenterPivotY(), getCenterPivotZ());
+    }
+
     private final class NodeTransformation {
         private DoubleProperty translateX;
         private DoubleProperty translateY;
@@ -5837,8 +5880,10 @@ public abstract class Node implements EventTarget, Styleable {
         private DoubleProperty scaleX;
         private DoubleProperty scaleY;
         private DoubleProperty scaleZ;
+        private ObjectProperty<Point3D> scalePivot;
         private DoubleProperty rotate;
         private ObjectProperty<Point3D> rotationAxis;
+        private ObjectProperty<Point3D> rotationPivot;
         private ObservableList<Transform> transforms;
         private LazyTransformProperty localToParentTransform;
         private LazyTransformProperty localToSceneTransform;
@@ -6241,6 +6286,22 @@ public abstract class Node implements EventTarget, Styleable {
             return scaleZ;
         }
 
+        public Point3D getScalePivot() {
+            return (scalePivot == null) ? defaultPivot() : scalePivot.get();
+        }
+
+        public final ObjectProperty<Point3D> scalePivotProperty() {
+            if (scalePivot == null) {
+                scalePivot = new SimpleObjectProperty<>(Node.this, "scalePivot", defaultPivot()) {
+                    @Override
+                    protected void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return scalePivot;
+        }
+
         public double getRotate() {
             return (rotate == null) ? DEFAULT_ROTATE : rotate.get();
         }
@@ -6298,6 +6359,22 @@ public abstract class Node implements EventTarget, Styleable {
                 };
             }
             return rotationAxis;
+        }
+
+        public Point3D getRotationPivot() {
+            return (rotationPivot == null) ? defaultPivot() : rotationPivot.get();
+        }
+
+        public final ObjectProperty<Point3D> rotationPivotProperty() {
+            if (rotationPivot == null) {
+                rotationPivot = new SimpleObjectProperty<>(Node.this, "rotationPivot", defaultPivot()) {
+                    @Override
+                    protected void invalidated() {
+                        NodeHelper.transformsChanged(Node.this);
+                    }
+                };
+            }
+            return rotationPivot;
         }
 
         public ObservableList<Transform> getTransforms() {
